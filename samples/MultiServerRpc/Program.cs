@@ -56,7 +56,7 @@ async Task RunClient()
         })
         .AddSingleton<RpcCallRouter>(c => {
             return (methodDef, args) => {
-                if (methodDef.IsCommand && Invalidation.IsActive)
+                if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
                     return RpcPeerRef.Local; // Commands in invalidation mode must always execute locally
 
                 if (methodDef.Service.Type == typeof(IChat)) {

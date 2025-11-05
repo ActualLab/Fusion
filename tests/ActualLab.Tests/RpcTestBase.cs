@@ -133,7 +133,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
         });
         services.AddSingleton<RpcCallRouter>(_ => {
             return (method, arguments) => {
-                if (method.IsCommand && Invalidation.IsActive)
+                if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
                     return RpcPeerRef.Local; // Commands in invalidation mode must always execute locally
 
                 return RpcPeerRef.GetDefaultPeerRef(ConnectionKind, method.IsBackend);

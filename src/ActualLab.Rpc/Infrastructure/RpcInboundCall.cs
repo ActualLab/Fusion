@@ -77,14 +77,14 @@ public abstract class RpcInboundCall : RpcCall
             : $"ArgumentData: {message.ArgumentData}";
         var relatedId = message.RelatedId;
         var relatedObject = relatedId == 0 ? (object?)null
-            : MethodDef.IsStream
+            : MethodDef.SystemMethodKind.IsAnyStreaming()
                 ? Context.Peer.RemoteObjects.Get(relatedId)
                 : Context.Peer.OutboundCalls.Get(relatedId);
         var completedStageName = CompletedStageName;
 
         var result = string.Concat(
             DebugTypeName,
-            MethodDef.IsStream ? " ~" : " #",
+            MethodDef.SystemMethodKind.IsAnyStreaming() ? " ~" : " #",
             relatedId.ToString(CultureInfo.InvariantCulture),
             " ",
             MethodDef.FullName,

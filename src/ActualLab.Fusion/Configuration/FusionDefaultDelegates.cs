@@ -31,7 +31,7 @@ public static class FusionDefaultDelegates
     /// i.e., no commands are sent to remote peers while invalidation is active.
     /// </summary>
     public static RpcCallRouter CallRouter { get; set; }
-        = static (method, arguments) => method.IsCommand && Invalidation.IsActive
+        = static (method, arguments) => method.Kind is RpcMethodKind.Command && Invalidation.IsActive
             ? RpcPeerRef.Local
             : RpcPeerRef.Default;
 }

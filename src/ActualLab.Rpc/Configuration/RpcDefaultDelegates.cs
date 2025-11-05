@@ -106,11 +106,11 @@ public static class RpcDefaultDelegates
                 return RpcCallTimeouts.Defaults.Debug;
 
             if (method.IsBackend)
-                return method.IsCommand
+                return method.Kind is RpcMethodKind.Command
                     ? RpcCallTimeouts.Defaults.BackendCommand
                     : RpcCallTimeouts.Defaults.BackendQuery;
 
-            return method.IsCommand
+            return method.Kind is RpcMethodKind.Command
                 ? RpcCallTimeouts.Defaults.Command
                 : RpcCallTimeouts.Defaults.Query;
         };

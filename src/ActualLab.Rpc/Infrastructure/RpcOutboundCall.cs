@@ -68,12 +68,12 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var arguments = context.Arguments;
         var methodDef = context.MethodDef;
 
-        var isStream = methodDef?.IsStream == true;
+        var isAnyStreaming = methodDef != null && methodDef.SystemMethodKind.IsAnyStreaming();
         var relatedId = context.RelatedId;
         var completedStageName = CompletedStageName;
         var result = string.Concat(
             DebugTypeName,
-            isStream ? " ~" : " #",
+            isAnyStreaming ? " ~" : " #",
             (relatedId != 0 ? relatedId : Id).ToString(CultureInfo.InvariantCulture),
             " ",
             methodDef?.FullName ?? "n/a",

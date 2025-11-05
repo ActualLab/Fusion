@@ -18,7 +18,7 @@ public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(servi
 
     public RpcPeerRef RouteCall(RpcMethodDef method, ArgumentList arguments)
     {
-        if (method.IsCommand && Invalidation.IsActive)
+        if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
             return RpcPeerRef.Local; // Commands in invalidation mode must always execute locally
 
         // Actual routing logic. We don't want too many conditions here: the routing runs per every RPC service call.

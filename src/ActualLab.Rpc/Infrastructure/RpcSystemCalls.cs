@@ -192,11 +192,11 @@ public sealed class RpcSystemCalls(IServiceProvider services)
     {
         var call = context.Call;
         RpcStream? stream;
-        var systemCallKind = call.MethodDef.SystemCallKind;
-        if (systemCallKind == RpcSystemCallKind.OtherOrNone) // Most frequent path
+        var systemCallKind = call.MethodDef.SystemMethodKind;
+        if (!systemCallKind.HasPolymorphicResult()) // Most frequent path
             return false;
 
-        if (systemCallKind == RpcSystemCallKind.Ok) { // Next frequent path
+        if (systemCallKind == RpcSystemMethodKind.Ok) { // Next frequent path
             var outboundCall = context.Peer.OutboundCalls.Get(context.Message.RelatedId);
             if (outboundCall is null)
                 return false;
@@ -207,7 +207,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
             return true;
         }
 
-        if (systemCallKind == RpcSystemCallKind.Item) {
+        if (systemCallKind == RpcSystemMethodKind.Item) {
             stream = context.Peer.RemoteObjects.Get(context.Message.RelatedId) as RpcStream;
             if (stream is null)
                 return false;

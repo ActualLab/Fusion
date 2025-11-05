@@ -1,9 +1,9 @@
-using ActualLab.Comparison;
-
 namespace ActualLab.Rpc;
 
 public sealed class LegacyNames
 {
+    public static readonly LegacyNames Empty = new([]);
+
     private readonly LegacyName[]? _items;
 
     public int Count => _items?.Length ?? 0;
@@ -23,6 +23,10 @@ public sealed class LegacyNames
             return _items[index];
         }
     }
+
+    public LegacyNames(MethodInfo method, string nameSuffix = "")
+        : this(method.GetCustomAttributes<LegacyNameAttribute>(false).Select(x => LegacyName.New(x, nameSuffix)))
+    { }
 
     public LegacyNames(IEnumerable<LegacyName> items)
         // We could use OrderBy here, but we want to make sure there are no duplicates
