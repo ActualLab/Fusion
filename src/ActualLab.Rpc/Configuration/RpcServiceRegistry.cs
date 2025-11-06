@@ -10,6 +10,7 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
     private readonly Dictionary<Type, RpcServiceDef> _services = new();
     private readonly Dictionary<string, RpcServiceDef> _serviceByName = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<VersionSet, RpcMethodResolver> _legacyServerMethodResolvers = new();
+    private readonly ConcurrentDictionary<(Type ServiceType, MethodInfo Method), RpcMethodDef?> _methodCache = new();
 
     public static LogLevel ConstructionDumpLogLevel { get; set; } = OSInfo.IsAnyClient ? LogLevel.None : LogLevel.Information;
 

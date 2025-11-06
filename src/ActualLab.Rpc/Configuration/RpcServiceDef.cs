@@ -9,7 +9,7 @@ namespace ActualLab.Rpc;
 
 public sealed class RpcServiceDef
 {
-    private readonly ConcurrentDictionary<MethodInfo, RpcMethodDef?> _getOrFindMethodCache
+    private readonly ConcurrentDictionary<MethodInfo, RpcMethodDef?> _findMethodCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private Dictionary<MethodInfo, RpcMethodDef> _methods = null!;
     private Dictionary<string, RpcMethodDef> _methodByName = null!;
@@ -114,15 +114,16 @@ public sealed class RpcServiceDef
     public RpcMethodDef? GetMethod(string methodName)
         => _methodByName.GetValueOrDefault(methodName);
 
-    public RpcMethodDef? GetOrFindMethod(MethodInfo method)
-        => _getOrFindMethodCache.GetOrAdd(method, static (methodInfo, self) => {
-            var methodDef = self.GetMethod(methodInfo);
-            if (methodDef is not null)
-                return methodDef;
-            if (!methodInfo.IsPublic || typeof(InterfaceProxy).IsAssignableFrom(methodInfo.ReflectedType))
-                return null;
+    public RpcMethodDef? FindMethod(MethodInfo method)
+    {
+        if (!method.IsPublic)
+            return null;
 
-            // It's a class proxy, let's try to map the method to interface
+        return _findMethodCache.GetOrAdd(method, static (methodInfo, self) => {
+            if (self.GetMethod(methodInfo) is { } methodDef)
+                return methodDef;
+
+            // Lookup failed, let's try to match it to one of our methods
             var methodName = methodInfo.Name;
             var parameters = methodInfo.GetParameters();
             foreach (var m in self.Methods) {
@@ -145,4 +146,5 @@ public sealed class RpcServiceDef
 
             return null;
         }, this);
+    }
 }

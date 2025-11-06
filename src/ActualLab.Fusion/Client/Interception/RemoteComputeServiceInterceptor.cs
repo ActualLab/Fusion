@@ -35,7 +35,7 @@ public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
     protected override Func<Invocation, object?>? CreateUntypedHandler(Invocation initialInvocation, MethodDef methodDef)
     {
         var computeMethodDef = (ComputeMethodDef)methodDef;
-        var rpcMethodDef = RpcServiceDef.GetOrFindMethod(initialInvocation.Method);
+        var rpcMethodDef = RpcServiceDef.FindMethod(initialInvocation.Method);
         if (rpcMethodDef is null) {
             // Proxy is a Distributed service, and a non-RPC method is called (i.e., the local compute method)
             var function = computeMethodDef.CreateComputeMethodFunction(Hub);

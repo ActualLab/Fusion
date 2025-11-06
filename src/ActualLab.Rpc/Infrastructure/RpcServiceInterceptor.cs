@@ -18,9 +18,9 @@ public abstract class RpcServiceInterceptor : Interceptor
     }
 
     public override MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
-        => ServiceDef.GetOrFindMethod(method);
+        => ServiceDef.FindMethod(method);
 
     protected override MethodDef? CreateMethodDef(MethodInfo method,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type proxyType)
-        => ServiceDef.GetOrFindMethod(method);
+        => ServiceDef.FindMethod(method);
 }

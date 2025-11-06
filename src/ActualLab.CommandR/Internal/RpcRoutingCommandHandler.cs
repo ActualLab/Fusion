@@ -16,9 +16,6 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
     [field: AllowNull, MaybeNull]
     private ILogger Log => field ??= Services.LogFor(GetType());
 
-    // Cache for resolved RpcMethodDef by (serviceType, method)
-    private readonly ConcurrentDictionary<(Type serviceType, MethodInfo method), RpcMethodDef?> _rpcMethodCache = new();
-
     [CommandFilter(Priority = CommanderCommandHandlerPriority.RpcRoutingCommandHandler)]
     public Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
@@ -64,25 +61,22 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
     // Private methods
 
     private RpcMethodDef? GetRpcMethodDef(Type serviceType, MethodInfo method)
-        => _rpcMethodCache.GetOrAdd((serviceType, method),
-            static (key, self) => {
-                var (serviceType, method) = key;
-                var serviceDef = self.RpcHub.ServiceRegistry.Get(serviceType);
-                if (serviceDef is null || !serviceDef.Mode.IsAnyClient())
-                    return null; // Not a client or distributed RPC service
+    {
+        var serviceDef = RpcHub.ServiceRegistry.Get(serviceType);
+        if (serviceDef is null || !serviceDef.Mode.IsAnyClient())
+            return null; // Not a client or distributed RPC service
 
-                var methodDef = serviceDef.GetOrFindMethod(method);
-                if (methodDef is null)
-                    return null; // The handling method isn't exposed via RPC
+        var methodDef = serviceDef.FindMethod(method);
+        if (methodDef is null)
+            return null; // The handling method isn't exposed via RPC
 
-                if (methodDef.ParameterTypes is not { Length: 2 }) {
-                    // A bug in user code: the method must have just 2 parameters
-                    self.Log.LogError(
-                        "RpcMethodDef matching '{ServiceType}.{Method}' must have 2 parameters instead of {ParameterCount}",
-                        serviceType.GetName(), method.Name, methodDef.ParameterTypes);
-                    return null;
-                }
-
-                return methodDef;
-            }, this);
+        if (methodDef.ParameterTypes is not { Length: 2 }) {
+            // A bug in user code: the method must have just 2 parameters
+            Log.LogError(
+                "RpcMethodDef matching '{ServiceType}.{Method}' must have 2 parameters instead of {ParameterCount}",
+                serviceType.GetName(), method.Name, methodDef.ParameterTypes);
+            return null;
+        }
+        return methodDef;
+    }
 }
