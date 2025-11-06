@@ -10,7 +10,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 {
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
-    internal readonly RpcBackendServiceDetector BackendServiceDetector;
     internal readonly RpcCallTimeoutsProvider CallTimeoutsProvider;
     internal readonly RpcCallValidatorProvider CallValidatorProvider;
     internal readonly RpcServiceScopeResolver ServiceScopeResolver;
@@ -73,7 +72,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         SerializationFormats = services.GetRequiredService<RpcSerializationFormatResolver>();
         ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
-        BackendServiceDetector = services.GetRequiredService<RpcBackendServiceDetector>();
         CallTimeoutsProvider = services.GetRequiredService<RpcCallTimeoutsProvider>();
         CallValidatorProvider = services.GetRequiredService<RpcCallValidatorProvider>();
         ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();

@@ -24,8 +24,12 @@ public sealed class LegacyNames
         }
     }
 
+    public LegacyNames(Type type)
+        : this(type.GetCustomAttributes<LegacyNameAttribute>(inherit: false).Select(x => LegacyName.New(x)))
+    { }
+
     public LegacyNames(MethodInfo method, string nameSuffix = "")
-        : this(method.GetCustomAttributes<LegacyNameAttribute>(false).Select(x => LegacyName.New(x, nameSuffix)))
+        : this(method.GetCustomAttributes<LegacyNameAttribute>(inherit: false).Select(x => LegacyName.New(x, nameSuffix)))
     { }
 
     public LegacyNames(IEnumerable<LegacyName> items)

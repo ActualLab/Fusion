@@ -54,11 +54,9 @@ public sealed class RpcServiceDef
         ServerType = ServerResolver?.Type;
         ClientType = service.ClientType;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
-        IsBackend = hub.BackendServiceDetector.Invoke(service.Type);
+        IsBackend = typeof(IBackendService).IsAssignableFrom(Type);
         Scope = hub.ServiceScopeResolver.Invoke(this);
-        LegacyNames = new LegacyNames(Type
-            .GetCustomAttributes<LegacyNameAttribute>(false)
-            .Select(x => LegacyName.New(x)));
+        LegacyNames = new LegacyNames(Type);
 
         _serverLazy = new Lazy<object?>(() => ServerResolver?.Resolve(Hub.Services));
         _clientLazy = new Lazy<object?>(() => ClientType is null ? null : Hub.Services.GetRequiredService(ClientType));

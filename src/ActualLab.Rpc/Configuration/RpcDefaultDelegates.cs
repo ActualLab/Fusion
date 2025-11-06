@@ -23,9 +23,6 @@ public static class RpcDefaultDelegates
     public static RpcMethodDefBuilder MethodDefBuilder { get; set; } =
         static (service, method) => new RpcMethodDef(service, service.Type, method);
 
-    public static RpcBackendServiceDetector BackendServiceDetector { get; set; } =
-        static serviceType => typeof(IBackendService).IsAssignableFrom(serviceType);
-
     public static RpcServiceScopeResolver ServiceScopeResolver { get; set; } =
         static service => service.IsBackend
             ? RpcDefaults.BackendScope
