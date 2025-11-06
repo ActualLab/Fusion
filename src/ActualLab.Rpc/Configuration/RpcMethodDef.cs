@@ -136,14 +136,6 @@ public sealed class RpcMethodDef : MethodDef
             || this == systemCallSender.ErrorMethodDef;
     }
 
-    public bool IsStreamResultMethod()
-    {
-        var systemCallSender = Hub.SystemCallSender;
-        return this == systemCallSender.BatchMethodDef
-            || this == systemCallSender.ItemMethodDef
-            || this == systemCallSender.EndMethodDef;
-    }
-
     public static RpcMethodKind GetKind(RpcMethodDef method, out bool isBackend)
     {
         var parameterTypes = method.ParameterTypes;
