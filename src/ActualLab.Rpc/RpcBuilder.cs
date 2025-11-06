@@ -100,7 +100,6 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
         services.AddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
         services.AddSingleton(_ => RpcDefaultDelegates.CallTimeoutsProvider);
-        services.AddSingleton(_ => RpcDefaultDelegates.CallValidatorProvider);
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
         services.AddSingleton(_ => RpcDefaultDelegates.InboundCallFilter);
         services.AddSingleton(_ => RpcDefaultDelegates.CallRouter);
