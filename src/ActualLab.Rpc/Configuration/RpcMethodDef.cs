@@ -59,15 +59,12 @@ public partial class RpcMethodDef : MethodDef
     public RpcCallTracer? Tracer { get; init; }
     public PropertyBag Properties { get; init; }
 
-    public RpcMethodDef(
-        RpcServiceDef service,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        MethodInfo methodInfo
-        ) : base(serviceType, methodInfo)
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
+    public RpcMethodDef(RpcServiceDef service, MethodInfo methodInfo)
+        : base(service.Type, methodInfo)
     {
-        if (serviceType != service.Type)
-            throw new ArgumentOutOfRangeException(nameof(serviceType));
-
         Service = service;
         Hub = service.Hub;
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);

@@ -21,7 +21,7 @@ public static class RpcDefaultDelegates
         static (hub, service) => new RpcServiceDef(hub, service);
 
     public static RpcMethodDefBuilder MethodDefBuilder { get; set; } =
-        static (service, method) => new RpcMethodDef(service, service.Type, method);
+        static (service, method) => new RpcMethodDef(service, method);
 
     public static RpcServiceScopeResolver ServiceScopeResolver { get; set; } =
         static service => service.IsBackend

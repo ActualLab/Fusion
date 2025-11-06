@@ -1,6 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Interception;
-using ActualLab.Interception.Internal;
 using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Rpc.Internal.Errors;
@@ -16,8 +14,6 @@ public sealed class RpcServiceDef
     private readonly Lazy<object?> _serverLazy;
     private readonly Lazy<object?> _clientLazy;
     private string? _toStringCached;
-
-    internal Dictionary<string, RpcMethodDef> MethodByName => _methodByName;
 
     public RpcHub Hub { get; }
     public Type Type { get; }
@@ -64,7 +60,8 @@ public sealed class RpcServiceDef
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
-    internal void BuildMethods(Type serviceType)
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
+    internal void BuildMethods([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType)
     {
         if (serviceType != Type)
             throw new ArgumentOutOfRangeException(nameof(serviceType));
