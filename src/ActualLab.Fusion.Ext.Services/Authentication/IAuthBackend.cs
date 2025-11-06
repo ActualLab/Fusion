@@ -1,9 +1,10 @@
 using ActualLab.Fusion.EntityFramework;
+using ActualLab.Rpc;
 using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
-public interface IAuthBackend : IComputeService
+public interface IAuthBackend : IComputeService, IBackendService
 {
     // Commands
     [CommandHandler]
