@@ -42,13 +42,13 @@ public sealed class RpcMethodDef : MethodDef
     public readonly bool NoWait;
     public readonly bool HasPolymorphicArguments;
     public readonly bool HasPolymorphicResult;
-    public readonly bool IsSystem;
+    public bool IsSystem => Kind is RpcMethodKind.System;
     public readonly bool IsBackend;
     public RpcMethodKind Kind { get; init; }
     public RpcSystemMethodKind SystemMethodKind { get; init; }
     public LegacyNames LegacyNames { get; init; } = LegacyNames.Empty;
     public RpcCallTimeouts Timeouts { get; init; } = RpcCallTimeouts.None;
-    public Action<RpcInboundCall>? CallValidator { get; init; }
+    public Action<RpcInboundCall>? InboundCallValidator { get; init; }
     public RpcCallTracer? Tracer { get; init; }
     public PropertyBag Properties { get; init; }
 
@@ -75,7 +75,6 @@ public sealed class RpcMethodDef : MethodDef
         }
 
         if (service.IsSystem) { // System method
-            IsSystem = true;
             Kind = RpcMethodKind.System;
             SystemMethodKind = service.Type == typeof(IRpcSystemCalls)
                 ? Method.Name switch {
@@ -91,11 +90,12 @@ public sealed class RpcMethodDef : MethodDef
         }
 
         // Non-system method
-        Kind = GetKind(this, out var isBackend);
+        Kind = GetMethodKind(this, out var isBackend);
         IsBackend = service.IsBackend || isBackend;
         LegacyNames = new LegacyNames(Method, nameSuffix);
+        if (RpcDefaults.UseInboundCallValidator)
+            InboundCallValidator = GetInboundCallValidator(this);
         Timeouts = Hub.CallTimeoutsProvider.Invoke(this).Normalize();
-        CallValidator = Hub.CallValidatorProvider.Invoke(this);
         Tracer = Hub.CallTracerFactory.Invoke(this);
     }
 
@@ -136,8 +136,13 @@ public sealed class RpcMethodDef : MethodDef
             || this == systemCallSender.ErrorMethodDef;
     }
 
-    public static RpcMethodKind GetKind(RpcMethodDef method, out bool isBackend)
+    public static RpcMethodKind GetMethodKind(RpcMethodDef method, out bool isBackend)
     {
+        if (method.NoWait) {
+            isBackend = false;
+            return RpcMethodKind.Other;
+        }
+
         var parameterTypes = method.ParameterTypes;
         if (parameterTypes.Length == 2 && parameterTypes[1] == typeof(CancellationToken))
             return IsCommandType(parameterTypes[0], out isBackend)
@@ -162,5 +167,33 @@ public sealed class RpcMethodDef : MethodDef
                 return (isCommand, isBackendCommand);
             });
         return isCommand;
+    }
+
+    public static Action<RpcInboundCall>? GetInboundCallValidator(RpcMethodDef method)
+    {
+#if NET6_0_OR_GREATER // NullabilityInfoContext is available in .NET 6.0+
+        if (method.IsSystem || method.NoWait)
+            return null; // These methods are supposed to rely on built-in validation for perf. reasons
+
+        var nonNullableArgIndexesList = new List<int>();
+        var nullabilityInfoContext = new NullabilityInfoContext();
+        var parameters = method.Parameters;
+        for (var i = 0; i < parameters.Length; i++) {
+            var p = parameters[i];
+            if (p.ParameterType.IsClass && nullabilityInfoContext.Create(p).ReadState == NullabilityState.NotNull)
+                nonNullableArgIndexesList.Add(i);
+        }
+        if (nonNullableArgIndexesList.Count == 0)
+            return null;
+
+        var nonNullableArgIndexes = nonNullableArgIndexesList.ToArray();
+        return call => {
+            var args = call.Arguments!;
+            foreach (var index in nonNullableArgIndexes)
+                ArgumentNullException.ThrowIfNull(args.GetUntyped(index), parameters[index].Name);
+        };
+#else
+        return null;
+#endif
     }
 }

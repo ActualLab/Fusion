@@ -137,7 +137,7 @@ public abstract class RpcInboundCall : RpcCall
                     peer.CallLogger.LogInbound(this);
 
                 // Call
-                MethodDef.CallValidator?.Invoke(this);
+                MethodDef.InboundCallValidator?.Invoke(this);
                 ResultTask = inboundMiddlewares is not null
                     ? InvokeTarget(inboundMiddlewares)
                     : InvokeTarget();

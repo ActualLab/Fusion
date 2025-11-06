@@ -50,35 +50,6 @@ public static class RpcDefaultDelegates
 
     // Call validation & filtering
 
-    public static RpcCallValidatorProvider CallValidatorProvider { get; set; } =
-        static method => {
-#if NET6_0_OR_GREATER // NullabilityInfoContext is available in .NET 6.0+
-            if (!RpcDefaults.UseCallValidator)
-                return null;
-            if (method.NoWait || method.IsSystem)
-                return null; // These methods are supposed to rely on built-in validation for perf. reasons
-
-            var nonNullableArgIndexesList = new List<int>();
-            var nullabilityInfoContext = new NullabilityInfoContext();
-            var parameters = method.Parameters;
-            for (var i = 0; i < parameters.Length; i++) {
-                var p = parameters[i];
-                if (p.ParameterType.IsClass && nullabilityInfoContext.Create(p).ReadState == NullabilityState.NotNull)
-                    nonNullableArgIndexesList.Add(i);
-            }
-            if (nonNullableArgIndexesList.Count == 0)
-                return null;
-
-            var nonNullableArgIndexes = nonNullableArgIndexesList.ToArray();
-            return call => {
-                var args = call.Arguments!;
-                foreach (var index in nonNullableArgIndexes)
-                    ArgumentNullException.ThrowIfNull(args.GetUntyped(index), parameters[index].Name);
-            };
-#else
-            return null;
-#endif
-        };
 
     public static RpcInboundCallFilter InboundCallFilter { get; set; } =
         static (peer, method) => !method.IsBackend || peer.Ref.IsBackend;

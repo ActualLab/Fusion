@@ -12,7 +12,6 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcServiceDefBuilder ServiceDefBuilder => Hub.ServiceDefBuilder;
     public RpcMethodDefBuilder MethodDefBuilder => Hub.MethodDefBuilder;
     public RpcCallTimeoutsProvider CallTimeoutsProvider => Hub.CallTimeoutsProvider;
-    public RpcCallValidatorProvider CallValidatorProvider => Hub.CallValidatorProvider;
     public RpcServiceScopeResolver ServiceScopeResolver => Hub.ServiceScopeResolver;
     public RpcSafeCallRouter SafeCallRouter => Hub.SafeCallRouter;
     public RpcRerouteDelayer RerouteDelayer => Hub.RerouteDelayer;
