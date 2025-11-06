@@ -13,6 +13,9 @@ public static class Errors
             $"Service '{serviceType.GetName()}' got {nameof(RpcServiceMode)}.{mode:G}, "
             + "although it must be configured for a specific service mode at this point.");
 
+    public static Exception DistributedServicesMustNotHaveImplementationResolver()
+        => new InvalidOperationException("Distributed services must not have an ImplementationResolver.");
+
     public static Exception ServiceTypeConflict(Type serviceType)
         => new InvalidOperationException($"Service '{serviceType.GetName()}' is already registered.");
     public static Exception ServiceNameConflict(Type serviceType1, Type serviceType2, string serviceName)

@@ -122,20 +122,27 @@ public class RpcServiceBuilder
         }
 
         // Any server
+        var implementationResolver = ImplementationResolver?.Resolver;
         var implementationType = ImplementationResolver?.Type!;
         switch (Mode) {
             case RpcServiceMode.Local:
                 // Local services are skipped during RpcServiceRegistry construction
-                Services.AddSingleton(serviceType, implementationType);
+                if (implementationResolver is null)
+                    Services.AddSingleton(serviceType, implementationType);
                 return; // No alias is needed here
             case RpcServiceMode.Server:
-                Services.AddSingleton(implementationType);
+                if (implementationResolver is null)
+                    Services.AddSingleton(implementationType);
                 break;
             case RpcServiceMode.ServerAndClient:
-                Services.AddSingleton(implementationType);
+                if (implementationResolver is null)
+                    Services.AddSingleton(implementationType);
                 Services.AddSingleton(Proxies.GetProxyType(serviceType), CreateClient);
                 break;
             case RpcServiceMode.Distributed:
+                if (implementationResolver is not null)
+                    throw Internal.Errors.DistributedServicesMustNotHaveImplementationResolver();
+
                 Services.AddSingleton(implementationType, CreateDistributedService);
                 break;
             default:

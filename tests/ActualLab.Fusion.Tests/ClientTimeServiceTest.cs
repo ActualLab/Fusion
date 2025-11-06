@@ -13,8 +13,8 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
         if (!isClient) {
             fusion.AddService<ITimeService, TimeService>();
             // Just to trigger invocation of a few methods:
-            rpc.Service<ITimeService>().Remove();
-            rpc.Service<ITimeServer>().IsServer(typeof(TimeService)).HasName(nameof(ITimeService));
+            rpc.Configure<ITimeService>().Remove();
+            rpc.Configure<ITimeServer>().IsServer(typeof(TimeService)).HasName(nameof(ITimeService));
         }
         else
             fusion.AddClient<ITimeService>();

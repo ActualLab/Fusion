@@ -85,7 +85,7 @@ public class ScopedInterceptorTest(ITestOutputHelper @out) : TestBase(@out)
             .AddRpc(rpc => {
                 // That's how you can register a server w/ custom resolver in RPC - in this case
                 // it's a proxy for IScopedServiceTestService, which uses ScopedServiceInterceptor.
-                rpc.Service(typeof(IScopedServiceTestService)).HasServer(
+                rpc.Configure(typeof(IScopedServiceTestService)).HasServer(
                     ServiceResolver.New<IScopedServiceTestService>(c => {
                         var interceptorOptions = c.GetRequiredService<ScopedServiceInterceptor.Options>();
                         var interceptor = new ScopedServiceInterceptor(interceptorOptions, c) {

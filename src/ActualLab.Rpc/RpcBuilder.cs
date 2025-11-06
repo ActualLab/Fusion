@@ -241,7 +241,10 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
         string name = "")
     {
-        Service(serviceType).HasName(name).IsClient().Inject();
+        Configure(serviceType, tryGetExisting: false)
+            .HasName(name)
+            .IsClient()
+            .Inject();
         return this;
     }
 
@@ -266,7 +269,10 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         string name = "")
     {
-        Service(serviceType).HasName(name).IsServer(implementationType).Inject();
+        Configure(serviceType, tryGetExisting: false)
+            .HasName(name)
+            .IsServer(implementationType)
+            .Inject();
         return this;
     }
 
@@ -282,7 +288,10 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         string name = "")
     {
-        Service(serviceType).HasName(name).IsDistributed(implementationType).Inject();
+        Configure(serviceType, tryGetExisting: false)
+            .HasName(name)
+            .IsDistributed(implementationType)
+            .Inject();
         return this;
     }
 
@@ -298,16 +307,20 @@ public readonly struct RpcBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type implementationType,
         string name = "")
     {
-        Service(serviceType).HasName(name).IsServer(implementationType).HasClient().Inject();
+        Configure(serviceType, tryGetExisting: false)
+            .HasName(name)
+            .IsServer(implementationType)
+            .HasClient()
+            .Inject();
         return this;
     }
 
     // More low-level configuration options stuff
 
-    public RpcServiceBuilder Service<TService>(bool tryGetExisting = false)
-        => Service(typeof(TService), tryGetExisting);
+    public RpcServiceBuilder Configure<TService>(bool tryGetExisting = true)
+        => Configure(typeof(TService), tryGetExisting);
 
-    public RpcServiceBuilder Service(Type serviceType, bool tryGetExisting = false)
+    public RpcServiceBuilder Configure(Type serviceType, bool tryGetExisting = true)
     {
         if (tryGetExisting && Configuration.Services.TryGetValue(serviceType, out var service))
             return service;

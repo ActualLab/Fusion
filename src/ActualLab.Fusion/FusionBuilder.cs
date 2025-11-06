@@ -245,7 +245,7 @@ public readonly struct FusionBuilder
     {
         // ~ RpcBuilder.AddClient, but for Compute Service
 
-        RpcService(serviceType)
+        Configure(serviceType, tryGetExisting: false)
             .IsClient()
             .HasCommandHandlers(hasCommandHandlers)
             .Inject();
@@ -298,7 +298,7 @@ public readonly struct FusionBuilder
         // ~ RpcBuilder.AddLocalService, but for Compute Service
 
         if (lifetime is ServiceLifetime.Singleton) {
-            RpcService(serviceType)
+            Configure(serviceType, tryGetExisting: false)
                 .IsLocal(implementationType)
                 .HasCommandHandlers(hasCommandHandlers)
                 .Inject();
@@ -338,7 +338,7 @@ public readonly struct FusionBuilder
     {
         // ~ RpcBuilder.AddServer, but for Compute Service
 
-        RpcService(serviceType)
+        Configure(serviceType, tryGetExisting: false)
             .IsServer(implementationType)
             .HasCommandHandlers(hasCommandHandlers)
             .Inject();
@@ -359,7 +359,7 @@ public readonly struct FusionBuilder
     {
         // ~ RpcBuilder.AddDistributedService, but for Compute Service
 
-        RpcService(serviceType)
+        Configure(serviceType, tryGetExisting: false)
             .IsDistributed(implementationType)
             .HasCommandHandlers(hasCommandHandlers)
             .Inject();
@@ -380,7 +380,7 @@ public readonly struct FusionBuilder
     {
         // ~ RpcBuilder.AddDistributedService, but for Compute Service
 
-        RpcService(serviceType)
+        Configure(serviceType, tryGetExisting: false)
             .IsServer(implementationType)
             .HasClient()
             .HasCommandHandlers(hasCommandHandlers)
@@ -390,10 +390,10 @@ public readonly struct FusionBuilder
 
     // More low-level configuration options stuff
 
-    public FusionRpcServiceBuilder RpcService<TService>(bool tryGetExisting = false)
-        => RpcService(typeof(TService), tryGetExisting);
+    public FusionRpcServiceBuilder Configure<TService>(bool tryGetExisting = true)
+        => Configure(typeof(TService), tryGetExisting);
 
-    public FusionRpcServiceBuilder RpcService(Type serviceType, bool tryGetExisting = false)
+    public FusionRpcServiceBuilder Configure(Type serviceType, bool tryGetExisting = true)
     {
         var rpcServices = Rpc.Configuration.Services;
         if (tryGetExisting
