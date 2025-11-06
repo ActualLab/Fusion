@@ -5,7 +5,7 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc;
 
-public sealed class RpcServiceDef
+public class RpcServiceDef
 {
     private readonly ConcurrentDictionary<MethodInfo, RpcMethodDef?> _findMethodCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
