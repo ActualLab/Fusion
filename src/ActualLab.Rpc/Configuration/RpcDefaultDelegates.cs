@@ -57,8 +57,8 @@ public static class RpcDefaultDelegates
     // Call routing
 
     // If you use Fusion, FusionBuilder injects FusionRpcDefaultDelegates.CallRouter instead of this delegate!
-    public static RpcCallRouter CallRouter { get; set; }
-        = static (method, arguments) => RpcPeerRef.Default;
+    public static RpcCallRouterFactory CallRouterFactory { get; set; }
+        = static method => static args => RpcPeerRef.Default;
 
     public static RandomTimeSpan RerouteDelayerDelay { get; set; }
         = TimeSpan.FromMilliseconds(100).ToRandom(0.25);

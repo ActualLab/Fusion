@@ -10,8 +10,6 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
     private IServiceProvider Services { get; } = services;
     private RpcHub RpcHub { get; } = services.RpcHub();
     [field: AllowNull, MaybeNull]
-    private RpcSafeCallRouter SafeCallRouter => field ??= RpcHub.InternalServices.SafeCallRouter;
-    [field: AllowNull, MaybeNull]
     private RpcRerouteDelayer RerouteDelayer => field ??= RpcHub.InternalServices.RerouteDelayer;
     [field: AllowNull, MaybeNull]
     private ILogger Log => field ??= Services.LogFor(GetType());
@@ -36,7 +34,7 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
             while (true) {
                 try {
                     var arguments = ArgumentList.New(command, cancellationToken);
-                    var peer = SafeCallRouter.Invoke(rpcMethodDef, arguments);
+                    var peer = rpcMethodDef.RouteCall(arguments);
                     peer.ThrowIfRerouted();
 
                     context.ExecutionState = peer.ConnectionKind is RpcPeerConnectionKind.Local

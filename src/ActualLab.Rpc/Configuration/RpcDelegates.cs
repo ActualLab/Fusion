@@ -8,7 +8,6 @@ namespace ActualLab.Rpc;
 // Configuration related
 public delegate RpcServiceDef RpcServiceDefBuilder(RpcHub hub, RpcServiceBuilder service);
 public delegate RpcMethodDef RpcMethodDefBuilder(RpcServiceDef service, MethodInfo method);
-public delegate bool RpcBackendServiceDetector(Type serviceType);
 public delegate string RpcServiceScopeResolver(RpcServiceDef serviceDef);
 public delegate string RpcHashProvider(ReadOnlyMemory<byte> bytes);
 
@@ -20,7 +19,7 @@ public delegate RpcInboundContext RpcInboundContextFactory(
 public delegate bool RpcInboundCallFilter(RpcPeer peer, RpcMethodDef method);
 
 // Call routing
-public delegate RpcPeerRef RpcCallRouter(RpcMethodDef method, ArgumentList arguments);
+public delegate Func<ArgumentList, RpcPeerRef> RpcCallRouterFactory(RpcMethodDef method);
 public delegate Task RpcRerouteDelayer(CancellationToken cancellationToken);
 
 // Call timeouts

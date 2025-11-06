@@ -196,6 +196,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
         if (!systemCallKind.HasPolymorphicResult()) // Most frequent path
             return false;
 
+        // Only Ok, Item, and Batch calls have polymorphic results
         if (systemCallKind == RpcSystemMethodKind.Ok) { // Next frequent path
             var outboundCall = context.Peer.OutboundCalls.Get(context.Message.RelatedId);
             if (outboundCall is null)

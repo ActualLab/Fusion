@@ -20,7 +20,7 @@ public sealed class ScopedServiceInterceptor : Interceptor
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
     {
-        var rawInvoker = initialInvocation.Arguments.GetInvoker(methodDef.Method);
+        var rawInvoker = initialInvocation.Arguments.GetInvoker(methodDef.MethodInfo);
         if (!methodDef.IsAsyncMethod)
             return invocation => {
                 using var scope = Services.CreateScope();

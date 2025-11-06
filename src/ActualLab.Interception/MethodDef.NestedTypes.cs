@@ -13,26 +13,26 @@ public partial class MethodDef
                 if (methodDef.ReturnsTask)
                     return (Func<object, ArgumentList, Task<T>>)(methodDef.IsAsyncVoidMethod
                         ? (service, args) => {
-                            var result = ((Task)args.GetInvoker(methodDef.Method).Invoke(service, args)!).ToUnitTask();
+                            var result = ((Task)args.GetInvoker(methodDef.MethodInfo).Invoke(service, args)!).ToUnitTask();
                             return result as Task<T> ?? throw new InvalidCastException();
                         }
                         : (service, args)
-                            => (Task<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!);
+                            => (Task<T>)args.GetInvoker(methodDef.MethodInfo).Invoke(service, args)!);
 
                 if (methodDef.ReturnsValueTask) {
                     return methodDef.IsAsyncVoidMethod
                         ? (service, args) => {
-                            var result = ((ValueTask)args.GetInvoker(methodDef.Method).Invoke(service, args)!)
+                            var result = ((ValueTask)args.GetInvoker(methodDef.MethodInfo).Invoke(service, args)!)
                                 .ToUnitTask();
                             return result as Task<T> ?? throw new InvalidCastException();
                         }
                         : (service, args)
-                            => ((ValueTask<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!).AsTask();
+                            => ((ValueTask<T>)args.GetInvoker(methodDef.MethodInfo).Invoke(service, args)!).AsTask();
                 }
 
                 // Non-async method
                 return (object service, ArgumentList args) => {
-                    var result = Task.FromResult(args.GetInvoker(methodDef.Method).Invoke(service, args));
+                    var result = Task.FromResult(args.GetInvoker(methodDef.MethodInfo).Invoke(service, args));
                     return result as Task<T> ?? throw new InvalidCastException();
                 };
             };
@@ -106,7 +106,7 @@ public partial class MethodDef
                 if (methodDef.ReturnsTask) {
                     return (Func<object, ArgumentList, ValueTask<object?>>)(methodDef.IsAsyncVoidMethod
                         ? (service, args) => {
-                            var task = (Task)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
+                            var task = (Task)args.GetInvoker(methodDef.MethodInfo).Invoke(service, args)!;
                             var resultTask = task.ContinueWith(
                                 static t => {
                                     t.GetAwaiter().GetResult();
@@ -116,7 +116,7 @@ public partial class MethodDef
                             return new ValueTask<object?>(resultTask);
                         }
                         : (service, args) => {
-                            var task = (Task<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
+                            var task = (Task<T>)args.GetInvoker(methodDef.MethodInfo).Invoke(service, args)!;
                             var resultTask = task.ContinueWith(
                                 static t => (object?)t.GetAwaiter().GetResult(),
                                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
@@ -127,7 +127,7 @@ public partial class MethodDef
                 if (methodDef.ReturnsValueTask) {
                     return methodDef.IsAsyncVoidMethod
                         ? (service, args) => {
-                            var valueTask = (ValueTask)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
+                            var valueTask = (ValueTask)args.GetInvoker(methodDef.MethodInfo).Invoke(service, args)!;
                             if (valueTask.IsCompletedSuccessfully)
                                 return default;
 
@@ -141,7 +141,7 @@ public partial class MethodDef
                             return new ValueTask<object?>(resultTask);
                         }
                         : (service, args) => {
-                            var valueTask = (ValueTask<T>)args.GetInvoker(methodDef.Method).Invoke(service, args)!;
+                            var valueTask = (ValueTask<T>)args.GetInvoker(methodDef.MethodInfo).Invoke(service, args)!;
                             if (valueTask.IsCompletedSuccessfully)
                                 return new ValueTask<object?>(valueTask.Result);
 
@@ -155,7 +155,7 @@ public partial class MethodDef
 
                 // Non-async method
                 return (object service, ArgumentList args) => {
-                    var result = args.GetInvoker(methodDef.Method).Invoke(service, args);
+                    var result = args.GetInvoker(methodDef.MethodInfo).Invoke(service, args);
                     return new ValueTask<object?>(result);
                 };
             };

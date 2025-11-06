@@ -10,20 +10,20 @@ public sealed class CommandHandlerMethodDef : MethodDef
     [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]
     public CommandHandlerMethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        MethodInfo method
-        ) : base(type, method)
+        MethodInfo methodInfo
+        ) : base(type, methodInfo)
     {
-        var commandHandler = MethodCommandHandler.TryNew(method.ReflectedType!, method);
+        var commandHandler = MethodCommandHandler.TryNew(methodInfo.ReflectedType!, methodInfo);
         if (commandHandler is null) {
             IsValid = false;
             return; // Can be only when attr.IsEnabled == false
         }
 
-        if (!method.IsVirtual || method.IsFinal)
-            throw Errors.WrongInterceptedCommandHandlerMethodSignature(method);
+        if (!methodInfo.IsVirtual || methodInfo.IsFinal)
+            throw Errors.WrongInterceptedCommandHandlerMethodSignature(methodInfo);
 
-        var parameters = method.GetParameters();
+        var parameters = methodInfo.GetParameters();
         if (parameters.Length != 2)
-            throw Errors.WrongInterceptedCommandHandlerMethodSignature(method);
+            throw Errors.WrongInterceptedCommandHandlerMethodSignature(methodInfo);
     }
 }

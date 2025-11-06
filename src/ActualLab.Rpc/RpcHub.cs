@@ -10,9 +10,9 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 {
     internal readonly RpcServiceDefBuilder ServiceDefBuilder;
     internal readonly RpcMethodDefBuilder MethodDefBuilder;
+    internal readonly RpcCallRouterFactory CallRouterFactory;
     internal readonly RpcCallTimeoutsProvider CallTimeoutsProvider;
     internal readonly RpcServiceScopeResolver ServiceScopeResolver;
-    internal readonly RpcSafeCallRouter SafeCallRouter;
     internal readonly RpcRerouteDelayer RerouteDelayer;
     internal readonly RpcHashProvider HashProvider;
     internal readonly RpcInboundCallFilter InboundCallFilter;
@@ -71,9 +71,9 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         SerializationFormats = services.GetRequiredService<RpcSerializationFormatResolver>();
         ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
         MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
+        CallRouterFactory = services.GetRequiredService<RpcCallRouterFactory>();
         CallTimeoutsProvider = services.GetRequiredService<RpcCallTimeoutsProvider>();
         ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
-        SafeCallRouter = services.GetRequiredService<RpcSafeCallRouter>();
         RerouteDelayer = services.GetRequiredService<RpcRerouteDelayer>();
         HashProvider = services.GetRequiredService<RpcHashProvider>();
         InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();

@@ -3,11 +3,14 @@ using ActualLab.Interception;
 using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc;
 
-public sealed class RpcMethodDef : MethodDef
+#pragma warning disable CA2214 // Do not call overridable methods in constructors
+
+public partial class RpcMethodDef : MethodDef
 {
     public static string CommandInterfaceFullName { get; set; } = "ActualLab.CommandR.ICommand";
     public static string BackendCommandInterfaceFullName { get; set; } = "ActualLab.CommandR.IBackendCommand";
@@ -16,6 +19,10 @@ public sealed class RpcMethodDef : MethodDef
         = new(StringComparer.Ordinal) { "Ack", "AckEnd", "B", "I", "End" };
     private static readonly ConcurrentDictionary<Type, (bool, bool)> IsCommandTypeCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
+
+    protected Func<ArgumentList, RpcPeerRef>? CallRouter { get; init; }
+    [field: AllowNull, MaybeNull]
+    protected ILogger Log => field ??= Hub.Services.LogFor(GetType());
 
     public RpcHub Hub { get; }
     public RpcServiceDef Service { get; }
@@ -55,8 +62,8 @@ public sealed class RpcMethodDef : MethodDef
     public RpcMethodDef(
         RpcServiceDef service,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type serviceType,
-        MethodInfo method
-        ) : base(serviceType, method)
+        MethodInfo methodInfo
+        ) : base(serviceType, methodInfo)
     {
         if (serviceType != service.Type)
             throw new ArgumentOutOfRangeException(nameof(serviceType));
@@ -65,7 +72,7 @@ public sealed class RpcMethodDef : MethodDef
         Hub = service.Hub;
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
         var nameSuffix = $":{ParameterTypes.Length}";
-        Name = Method.Name + nameSuffix;
+        Name = MethodInfo.Name + nameSuffix;
         HasPolymorphicArguments = ParameterTypes.Any(RpcArgumentSerializer.IsPolymorphic);
         HasPolymorphicResult = RpcArgumentSerializer.IsPolymorphic(UnwrappedReturnType);
 
@@ -77,11 +84,12 @@ public sealed class RpcMethodDef : MethodDef
         if (service.IsSystem) { // System method
             Kind = RpcMethodKind.System;
             SystemMethodKind = service.Type == typeof(IRpcSystemCalls)
-                ? Method.Name switch {
+                ? MethodInfo.Name switch {
                     nameof(IRpcSystemCalls.Ok) => RpcSystemMethodKind.Ok,
+                    nameof(IRpcSystemCalls.Error) => RpcSystemMethodKind.Error,
                     nameof(IRpcSystemCalls.I) => RpcSystemMethodKind.Item,
                     nameof(IRpcSystemCalls.B) => RpcSystemMethodKind.Batch,
-                    _ => StreamingMethodNames.Contains(method.Name)
+                    _ => StreamingMethodNames.Contains(methodInfo.Name)
                         ? RpcSystemMethodKind.OtherStreaming
                         : RpcSystemMethodKind.OtherNonStreaming,
                 }
@@ -90,11 +98,15 @@ public sealed class RpcMethodDef : MethodDef
         }
 
         // Non-system method
-        Kind = GetMethodKind(this, out var isBackend);
+
+        // ReSharper disable once VirtualMemberCallInConstructor
+        Kind = GetMethodKind(out var isBackend);
         IsBackend = service.IsBackend || isBackend;
-        LegacyNames = new LegacyNames(Method, nameSuffix);
+        LegacyNames = new LegacyNames(MethodInfo, nameSuffix);
+        CallRouter = Hub.CallRouterFactory.Invoke(this);
         if (RpcDefaults.UseInboundCallValidator)
-            InboundCallValidator = GetInboundCallValidator(this);
+            // ReSharper disable once VirtualMemberCallInConstructor
+            InboundCallValidator = CreateInboundCallValidator();
         Timeouts = Hub.CallTimeoutsProvider.Invoke(this).Normalize();
         Tracer = Hub.CallTracerFactory.Invoke(this);
     }
@@ -109,41 +121,33 @@ public sealed class RpcMethodDef : MethodDef
         return  $"'{(useShortName ? Name : FullName)}': ({arguments}) -> {returnType}{(IsValid ? "" : " - invalid")}";
     }
 
-    // Helpers
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string ComposeFullName(string serviceName, string methodName)
-        => string.Concat(serviceName, ".", methodName);
-
-    public static (string ServiceName, string MethodName) SplitFullName(string fullName)
+    public RpcPeer RouteCall(ArgumentList arguments)
     {
-        var dotIndex = fullName.LastIndexOf('.');
-        if (dotIndex < 0)
-            return ("", fullName);
+        if (CallRouter is not { } callRouter)
+            throw Errors.SystemCallsMustBePrerouted();
 
-        var serviceName = fullName[..dotIndex];
-        var methodName = fullName[(dotIndex + 1)..];
-        return (serviceName, methodName);
+        while (true) {
+            try {
+                var peerRef = callRouter.Invoke(arguments);
+                return Hub.GetPeer(peerRef);
+            }
+            catch (RpcRerouteException e) {
+                // This should never happen, but just in case...
+                Log.LogWarning(e, "Rerouted while routing: {Method}{Arguments}", this, arguments);
+            }
+        }
     }
 
-    public bool IsCallResultMethod()
-    {
-        if (!IsSystem)
-            return false;
+    // Protected methods
 
-        var systemCallSender = Hub.SystemCallSender;
-        return this == systemCallSender.OkMethodDef
-            || this == systemCallSender.ErrorMethodDef;
-    }
-
-    public static RpcMethodKind GetMethodKind(RpcMethodDef method, out bool isBackend)
+    protected virtual RpcMethodKind GetMethodKind(out bool isBackend)
     {
-        if (method.NoWait) {
+        if (NoWait) {
             isBackend = false;
             return RpcMethodKind.Other;
         }
 
-        var parameterTypes = method.ParameterTypes;
+        var parameterTypes = ParameterTypes;
         if (parameterTypes.Length == 2 && parameterTypes[1] == typeof(CancellationToken))
             return IsCommandType(parameterTypes[0], out isBackend)
                 ? RpcMethodKind.Command
@@ -153,33 +157,16 @@ public sealed class RpcMethodDef : MethodDef
         return RpcMethodKind.Query;
     }
 
-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
-    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
-    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
-    public static bool IsCommandType(Type type, out bool isBackendCommand)
-    {
-        (var isCommand, isBackendCommand) = IsCommandTypeCache.GetOrAdd(
-            type,
-            static t => {
-                var interfaces = t.GetInterfaces();
-                var isCommand = interfaces.Any(x => CommandInterfaceFullName.Equals(x.FullName, StringComparison.Ordinal));
-                var isBackendCommand = isCommand && interfaces.Any(x => BackendCommandInterfaceFullName.Equals(x.FullName, StringComparison.Ordinal));
-                return (isCommand, isBackendCommand);
-            });
-        return isCommand;
-    }
-
-    public static Action<RpcInboundCall>? GetInboundCallValidator(RpcMethodDef method)
+    protected virtual Action<RpcInboundCall>? CreateInboundCallValidator()
     {
 #if NET6_0_OR_GREATER // NullabilityInfoContext is available in .NET 6.0+
-        if (method.IsSystem || method.NoWait)
+        if (IsSystem || NoWait)
             return null; // These methods are supposed to rely on built-in validation for perf. reasons
 
         var nonNullableArgIndexesList = new List<int>();
         var nullabilityInfoContext = new NullabilityInfoContext();
-        var parameters = method.Parameters;
-        for (var i = 0; i < parameters.Length; i++) {
-            var p = parameters[i];
+        for (var i = 0; i < Parameters.Length; i++) {
+            var p = Parameters[i];
             if (p.ParameterType.IsClass && nullabilityInfoContext.Create(p).ReadState == NullabilityState.NotNull)
                 nonNullableArgIndexesList.Add(i);
         }
@@ -190,7 +177,7 @@ public sealed class RpcMethodDef : MethodDef
         return call => {
             var args = call.Arguments!;
             foreach (var index in nonNullableArgIndexes)
-                ArgumentNullException.ThrowIfNull(args.GetUntyped(index), parameters[index].Name);
+                ArgumentNullException.ThrowIfNull(args.GetUntyped(index), Parameters[index].Name);
         };
 #else
         return null;

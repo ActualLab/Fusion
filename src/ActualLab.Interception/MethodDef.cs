@@ -18,7 +18,7 @@ public partial class MethodDef
     protected string? _toStringCached;
 
     public readonly Type Type;
-    public readonly MethodInfo Method;
+    public readonly MethodInfo MethodInfo;
     public readonly ParameterInfo[] Parameters;
     public readonly Type[] ParameterTypes;
     public readonly Type ReturnType;
@@ -26,7 +26,7 @@ public partial class MethodDef
     public readonly int Id;
 
     [field: AllowNull, MaybeNull]
-    public string FullName => field ??= $"{Type.GetName()}.{Method.Name}";
+    public string FullName => field ??= $"{Type.GetName()}.{MethodInfo.Name}";
     public readonly bool IsAsyncMethod;
     public readonly bool IsAsyncVoidMethod;
     public readonly bool ReturnsTask;
@@ -69,11 +69,11 @@ public partial class MethodDef
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result<>))]
     public MethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        MethodInfo method)
+        MethodInfo methodInfo)
     {
         Id = Interlocked.Increment(ref _lastId);
 
-        var parameters = method.GetParameters();
+        var parameters = methodInfo.GetParameters();
         var ctIndex = -1;
         for (var i = parameters.Length - 1; i >= 0; i--) {
             var p = parameters[i];
@@ -89,11 +89,11 @@ public partial class MethodDef
             parameterTypes[i] = parameters[i].ParameterType;
 
         Type = type;
-        Method = method;
+        MethodInfo = methodInfo;
         Parameters = parameters;
         ParameterTypes = parameterTypes;
 
-        ReturnType = method.ReturnType;
+        ReturnType = methodInfo.ReturnType;
         if (!ReturnType.IsGenericType) {
             ReturnsTask = ReturnType == typeof(Task);
             ReturnsValueTask = ReturnType == typeof(ValueTask);

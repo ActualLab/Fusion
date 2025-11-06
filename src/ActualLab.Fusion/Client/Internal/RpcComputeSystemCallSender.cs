@@ -12,7 +12,7 @@ public sealed class RpcComputeSystemCallSender : RpcServiceBase
 
     [field: AllowNull, MaybeNull]
     public RpcMethodDef InvalidateMethodDef
-        => field ??= ServiceDef.Methods.Single(m => Equals(m.Method.Name, nameof(IRpcComputeSystemCalls.Invalidate)));
+        => field ??= ServiceDef.Methods.Single(m => Equals(m.MethodInfo.Name, nameof(IRpcComputeSystemCalls.Invalidate)));
 
     public RpcComputeSystemCallSender(IServiceProvider services)
         : base(services)

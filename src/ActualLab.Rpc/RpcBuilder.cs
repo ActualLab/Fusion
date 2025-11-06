@@ -102,7 +102,7 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.CallTimeoutsProvider);
         services.AddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
         services.AddSingleton(_ => RpcDefaultDelegates.InboundCallFilter);
-        services.AddSingleton(_ => RpcDefaultDelegates.CallRouter);
+        services.AddSingleton(_ => RpcDefaultDelegates.CallRouterFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.HashProvider);
         services.AddSingleton(_ => RpcDefaultDelegates.RerouteDelayer);
         services.AddSingleton(_ => RpcDefaultDelegates.PeerConnectionKindResolver);
@@ -115,7 +115,6 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcDefaultDelegates.CallTracerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);
         services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFilter);
-        services.AddSingleton(c => new RpcSafeCallRouter(c));
         services.AddSingleton(c => new RpcInboundMiddlewares(c));
         services.AddSingleton(c => new RpcOutboundMiddlewares(c));
         services.AddTransient(_ => new RpcInboundCallTracker());

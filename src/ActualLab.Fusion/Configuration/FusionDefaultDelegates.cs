@@ -25,13 +25,13 @@ public static class FusionDefaultDelegates
         };
 
     /// <summary>
-    /// Used by <c>.AddFusion</c> method to replace the default <see cref="RpcCallRouter"/>.
+    /// Used by <c>.AddFusion</c> method to replace the default <see cref="RpcCallRouterFactory"/>.
     /// This call router ensures that any command method call is routed to
     /// <see cref="RpcPeerRef.Local"/> when <see cref="Invalidation.IsActive"/>,
     /// i.e., no commands are sent to remote peers while invalidation is active.
     /// </summary>
-    public static RpcCallRouter CallRouter { get; set; }
-        = static (method, arguments) => method.Kind is RpcMethodKind.Command && Invalidation.IsActive
-            ? RpcPeerRef.Local
-            : RpcPeerRef.Default;
+    public static RpcCallRouterFactory CallRouterFactory { get; set; }
+        = static method => method.Kind is RpcMethodKind.Command
+            ? static args => Invalidation.IsActive ? RpcPeerRef.Local : RpcPeerRef.Default
+            : static args => RpcPeerRef.Default;
 }

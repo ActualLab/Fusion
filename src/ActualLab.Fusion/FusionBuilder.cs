@@ -125,7 +125,7 @@ public readonly struct FusionBuilder
 
         // RPC:
         // 1. Replace RpcCallRouter
-        services.AddSingleton(_ => FusionDefaultDelegates.CallRouter);
+        services.AddSingleton(_ => FusionDefaultDelegates.CallRouterFactory);
         // 2. Register IRpcComputeSystemCalls service and RpcComputeCallType
         Rpc.AddServerAndClient(typeof(IRpcComputeSystemCalls), typeof(RpcComputeSystemCalls), RpcComputeSystemCalls.Name);
         services.AddSingleton(c => new RpcComputeSystemCallSender(c));

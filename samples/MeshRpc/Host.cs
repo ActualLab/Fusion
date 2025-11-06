@@ -73,7 +73,7 @@ public sealed class Host : WorkerBase
             };
         });
         services.AddSingleton<RpcCallTimeoutsProvider>(c => c.GetRequiredService<RpcHelpers>().GetCallTimeouts);
-        services.AddSingleton<RpcCallRouter>(c => c.GetRequiredService<RpcHelpers>().RouteCall);
+        services.AddSingleton<RpcCallRouterFactory>(c => c.GetRequiredService<RpcHelpers>().RouteCall);
         services.AddSingleton<RpcPeerConnectionKindResolver>(c => c.GetRequiredService<RpcHelpers>().GetPeerConnectionKind);
         if (UseRemoteComputedCache)
             services.AddSingleton(SharedRemoteComputedCache);

@@ -37,7 +37,7 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
                     var callArguments = call.Arguments;
                     if (callArguments is { Length: <= 2 }
                         && callServiceDef.HasServer
-                        && Equals(callMethodDef.Method.Name, invocation.Method.Name)
+                        && Equals(callMethodDef.MethodInfo.Name, invocation.Method.Name)
                         && callServiceDef.Type.IsInstanceOfType(invocation.Proxy)
                         && ReferenceEquals(callArguments.GetUntyped(0), command)) {
                         var cancellationToken = callArguments.Length == 2

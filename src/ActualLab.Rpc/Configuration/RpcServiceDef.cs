@@ -127,7 +127,7 @@ public sealed class RpcServiceDef
             var methodName = methodInfo.Name;
             var parameters = methodInfo.GetParameters();
             foreach (var m in self.Methods) {
-                if (!m.Method.Name.Equals(methodName, StringComparison.Ordinal))
+                if (!m.MethodInfo.Name.Equals(methodName, StringComparison.Ordinal))
                     continue;
 
                 if (m.Parameters.Length != parameters.Length)

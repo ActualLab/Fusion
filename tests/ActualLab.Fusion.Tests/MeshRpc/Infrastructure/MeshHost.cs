@@ -49,7 +49,7 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
         // Fusion & RPC server setup
         var fusion = services.AddFusion();
         fusion.AddWebServer();
-        services.AddSingleton<RpcCallRouter>(_ => RouteCall);
+        services.AddSingleton<RpcCallRouterFactory>(_ => RouteCall);
         services.AddSingleton<RpcPeerConnectionKindResolver>(_ => GetPeerConnectionKind);
 
         // Setup RPC client
@@ -82,23 +82,23 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
 
     // Private methods
 
-    private RpcPeerRef RouteCall(RpcMethodDef method, ArgumentList arguments)
-    {
-        if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
-            return RpcPeerRef.Local;
+    private Func<ArgumentList, RpcPeerRef> RouteCall(RpcMethodDef method)
+        => args => {
+            if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
+                return RpcPeerRef.Local;
 
-        // For testing, we route based on its argument's hash or value
-        if (arguments.Length == 0)
-            return RpcPeerRef.Local;
+            // For testing, we route based on its argument's hash or value
+            if (args.Length == 0)
+                return RpcPeerRef.Local;
 
-        var arg0 = arguments.Get0Untyped();
-        var shardKey = arg0 switch {
-            int i => i,
-            IHasShardKey hrk => hrk.ShardKey,
-            _ => arg0?.GetHashCode() ?? 0
+            var arg0 = args.Get0Untyped();
+            var shardKey = arg0 switch {
+                int i => i,
+                IHasShardKey hrk => hrk.ShardKey,
+                _ => arg0?.GetHashCode() ?? 0
+            };
+            return MeshMap.GetShardPeerRef(shardKey);
         };
-        return MeshMap.GetShardPeerRef(shardKey);
-    }
 
     private RpcPeerConnectionKind GetPeerConnectionKind(RpcHub hub, RpcPeerRef peerRef)
     {

@@ -15,17 +15,17 @@ public sealed class ComputeMethodDef : MethodDef
 
     public ComputeMethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
-        MethodInfo method,
+        MethodInfo methodInfo,
         ComputeServiceInterceptor interceptor,
         ComputeMethodDef? consolidationTargetMethodDef = null
-        ) : base(type, method)
+        ) : base(type, methodInfo)
     {
         if (!IsAsyncMethod) {
             IsValid = false;
             return;
         }
 
-        var computedOptions = interceptor.Hub.ComputedOptionsProvider.GetComputedOptions(type, method);
+        var computedOptions = interceptor.Hub.ComputedOptionsProvider.GetComputedOptions(type, methodInfo);
         if (computedOptions is null) {
             IsValid = false;
             return;
@@ -33,7 +33,7 @@ public sealed class ComputeMethodDef : MethodDef
         if (computedOptions.IsConsolidating) {
             if (consolidationTargetMethodDef is null) {
                 // We are the consolidation target, the twin we create is going to be the consolidation source
-                ConsolidationSourceMethodDef = new ComputeMethodDef(type, method, interceptor, this);
+                ConsolidationSourceMethodDef = new ComputeMethodDef(type, methodInfo, interceptor, this);
                 ConsolidationTargetMethodDef = null;
                 computedOptions = computedOptions with {
                     // All invalidation delays are disabled for the consolidation target

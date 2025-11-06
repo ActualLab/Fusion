@@ -6,6 +6,7 @@ public enum RpcSystemMethodKind
 {
     None = 0,
     Ok = 0x1001,
+    Error = 0x0002,
     OtherNonStreaming = 0x0080,
     Item = 0x1100,
     Batch = 0x1200,
@@ -25,4 +26,8 @@ public static class RpcSystemMethodKindExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsAnyNonStreaming(this RpcSystemMethodKind kind)
         => ((int)kind & 0xFF) != 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsCallResultMethod(this RpcSystemMethodKind kind)
+        => ((int)kind & 0x3) != 0;
 }

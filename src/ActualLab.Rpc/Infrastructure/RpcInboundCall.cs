@@ -178,7 +178,7 @@ public abstract class RpcInboundCall : RpcCall
     protected Exception ProcessArgumentDeserializationError(Exception error)
     {
         error = Errors.CannotDeserializeInboundCallArguments(error);
-        if (MethodDef.IsCallResultMethod())
+        if (MethodDef.SystemMethodKind.IsCallResultMethod())
             InvokeOverridenTarget(Hub.SystemCallSender.ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()));
         return error;
 

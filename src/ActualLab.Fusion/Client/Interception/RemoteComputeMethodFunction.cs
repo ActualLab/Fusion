@@ -43,7 +43,6 @@ public abstract class RemoteComputeMethodFunction(
 
     public readonly RpcHub RpcHub = hub.RpcHub;
     public readonly RpcMethodDef RpcMethodDef = rpcMethodDef;
-    public readonly RpcSafeCallRouter RpcSafeCallRouter = hub.RpcHub.InternalServices.SafeCallRouter;
     public readonly IRemoteComputedCache? RemoteComputedCache = hub.RemoteComputedCache;
 
     public override string ToString()
@@ -76,7 +75,7 @@ public abstract class RemoteComputeMethodFunction(
                 // We don't use RpcCallOptions here, because this method is typically called from
                 // a post-async-lock block, so the original RpcCallOptions.Peer won't be available
                 // at this point. And that's why there is also no need to reset it.
-                var peer = RpcSafeCallRouter.Invoke(RpcMethodDef, typedInput.Invocation.Arguments);
+                var peer = RpcMethodDef.RouteCall(typedInput.Invocation.Arguments);
                 peer.ThrowIfRerouted();
 
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {

@@ -54,12 +54,12 @@ async Task RunClient()
             });
             fusion.AddClient<IChat>();
         })
-        .AddSingleton<RpcCallRouter>(c => {
-            return (methodDef, args) => {
-                if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
+        .AddSingleton<RpcCallRouterFactory>(
+            c => method => args => {
+                if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
                     return RpcPeerRef.Local; // Commands in invalidation mode must always execute locally
 
-                if (methodDef.Service.Type == typeof(IChat)) {
+                if (method.Service.Type == typeof(IChat)) {
                     var arg0Type = args.GetType(0);
                     int hash;
                     if (arg0Type == typeof(string))
@@ -72,8 +72,7 @@ async Task RunClient()
                     return clientPeerRefs[hash.PositiveModulo(serverCount)];
                 }
                 return RpcPeerRef.Default;
-            };
-        })
+            })
         .BuildServiceProvider();
 
     Write("Enter chat ID: ");

@@ -82,7 +82,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
             return Call ?? throw ActualLab.Internal.Errors.InternalError("Call is null, which isn't expected here.");
         }
 
-        Peer ??= hub.SafeCallRouter.Invoke(methodDef, arguments);
+        Peer ??= methodDef.RouteCall(arguments);
         Call = RpcOutboundCall.New(this);
         if (Call is not null) {
             if (MethodDef.Tracer is { } tracer)
@@ -107,7 +107,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
 
         // Peer & Call
         var hub = MethodDef.Hub;
-        Peer ??= hub.SafeCallRouter.Invoke(methodDef, arguments);
+        Peer ??= methodDef.RouteCall(arguments);
         Call = RpcOutboundCall.New(this);
         return Call;
     }
@@ -121,7 +121,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         var hub = MethodDef.Hub;
         var oldPeer = Peer;
         if (oldPeer is null || oldPeer.Ref.CanBeRerouted)
-            Peer = hub.SafeCallRouter.Invoke(MethodDef, Arguments);
+            Peer = MethodDef.RouteCall(Arguments);
         Call = RpcOutboundCall.New(this);
         if (Call is not null) {
             // We don't start trace here, coz it's either started already or was sampled out

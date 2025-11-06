@@ -128,6 +128,9 @@ public static class Errors
     public static Exception InvalidWebSocketMessageType(WebSocketMessageType type, WebSocketMessageType expectedType)
         => new InvalidOperationException($"Invalid WebSocket message type: got {type:G}, but expected {expectedType:G}.");
 
+    public static Exception SystemCallsMustBePrerouted()
+        => new InvalidOperationException("System calls must be prerouted.");
+
     public static Exception GotRpcRerouteExceptionFromRemotePeer()
         => new InvalidOperationException(
             "Got RpcRerouteException from remote peer, which should never happen.");

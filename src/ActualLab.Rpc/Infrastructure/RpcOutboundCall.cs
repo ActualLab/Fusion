@@ -324,8 +324,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             return false;
         }
 
-        var methodDef = MethodDef;
-        return peer != methodDef.Hub.SafeCallRouter.Invoke(methodDef, Context.Arguments!);
+        return peer != MethodDef.RouteCall(Context.Arguments!);
     }
 
     public void SetMustRerouteError()
