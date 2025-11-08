@@ -1,4 +1,4 @@
-# Part 3: State: IState&lt;T&gt; and Its flavors
+# Part 3: State: IState&lt;T&gt; and Its Flavors
 
 Video covering this part (a bit outdated due to API changes):
 
@@ -258,5 +258,3 @@ Some observations:
   state depends on gets invalidated.
 - But the update follows in 1 second - i.e. as it was
   specified in options we've provided.
-
-#### [Next: Part 4 &raquo;](./Part04.md) | [Tutorial Home](./README.md)
