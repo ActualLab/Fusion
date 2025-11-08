@@ -1,21 +1,19 @@
 # Fusion Documentation
 
 > All project updates are published on [Fusion Place]; it's also the best place for Q/A.\
-> [![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22)
-> [![NuGetVersion](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
-> [![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Actual%20Chat-BE145B)](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo)
+> [![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22) [![NuGetVersion](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22) [![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Actual%20Chat-BE145B)](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo)
 
 ## Videos
 
 | [ActualLab.Fusion Video](https://youtu.be/eMO7AmI6ui4)<br/>[<img src=".\img\Fusion-Video.jpg" title="ActualLab.Fusion, the distributed state sync monster" width="300"/>](https://youtu.be/eMO7AmI6ui4) | [ActualLab.Rpc Video](https://youtu.be/vwm1l8eevak)<br/>[<img src="./img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc - the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak) |
-|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 ## Samples
 
-1. Clone [Fusion Samples] repository: `git clone git@github.com:ActualLab/Fusion.Samples.git`
+1. Clone [Fusion Samples] repository
 2. Follow the instructions from
-[README.md](https://github.com/ActualLab/Fusion.Samples/blob/master/README.md)
-to build and run everything.
+   [README.md](https://github.com/ActualLab/Fusion.Samples/blob/master/README.md)
+   to build and run everything.
 
 ## Documentation
 
@@ -33,14 +31,14 @@ to build and run everything.
 - <img src="https://img.shields.io/badge/-New!-brightgreen" valign="middle"> [Part 12: ActualLab.Rpc in Fusion 6.1+](./Part12.md)
 - <img src="https://img.shields.io/badge/-New!-brightgreen" valign="middle"> [Part 13: Migration to Fusion 6.1+](./Part13.md)
 - [Epilogue](./PartFF.md)
--->
+  -->
 
 ## Other Resources
 
 - [Fusion Cheat Sheet](./Fusion-Cheat-Sheet.md) - maybe add it to Favorites :)
 - [QuickStart: Learn 80% of Fusion by walking through HelloCart sample](./QuickStart.md) - a bit outdated, but still useful
 - [ActualLab.Fusion, the distributed state sync monster video](https://youtu.be/eMO7AmI6ui4) is largely based
-  [these slides](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html) 
+  [these slides](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html)
 - And finally, check out [The Story Behind Fusion](Story.md).
 
 ## Posts
@@ -52,7 +50,8 @@ to build and run everything.
 ## Credits
 
 Indirect contributors & everyone else who made Fusion possible:
-- [ServiceTitan](https://www.servicetitan.com) &ndash; Fusion was originally created there. 
+
+- [ServiceTitan](https://www.servicetitan.com) &ndash; Fusion was originally created there.
 - [Quora](https://www.quora.com) — a huge part of the inspiration for Fusion was Quora's LiveNode framework
 - [Microsoft](https://microsoft.com) &ndash; for .NET Core and Blazor.
 
