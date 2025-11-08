@@ -27,6 +27,10 @@ export default defineConfig({
           { text: "Quick Start", link: "/QuickStart" },
           { text: "Part 0: NuGet packages", link: "/Part00" },
           { text: "Part 1: Core Concepts", link: "/Part01" },
+          {
+            text: "Part 2: Distributed Real-Time Compute Services",
+            link: "/Part02",
+          },
           /*
           { text: 'Part 3: State: IState<T> and Its Flavors', link: '/Part03' },
           { text: 'Part 4: Compute Service Clients', link: '/Part04' },
