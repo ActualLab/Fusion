@@ -18,15 +18,13 @@ export default defineConfig({
   ],
   ignoreDeadLinks: false,
   themeConfig: {
-    nav: [
-      { text: "Home", link: "/" },
-      { text: "Documentation", link: "/README" },
-    ],
+    search: {
+      provider: "local",
+    },
     sidebar: [
       {
-        text: "Documentation",
         items: [
-          { text: "QuickStart", link: "/QuickStart" },
+          { text: "Quick Start", link: "/QuickStart" },
           { text: "Part 0: NuGet packages", link: "/Part00" },
           { text: "Part 1: Core Concepts", link: "/Part01" },
           /*
@@ -42,14 +40,13 @@ export default defineConfig({
           { text: 'Part 12: ActualLab.Rpc in Fusion 6.1+', link: '/Part12' },
           { text: 'Part 13: Migration to Fusion 6.1+', link: '/Part13' },
           */
+          { text: "Cheat Sheet", link: "/Fusion-Cheat-Sheet" },
         ],
       },
     ],
-
     socialLinks: [
       { icon: "github", link: "https://github.com/ActualLab/Fusion" },
     ],
-
     outline: [2, 3],
   },
 });
