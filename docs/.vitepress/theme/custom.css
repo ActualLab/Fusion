@@ -12,13 +12,15 @@
   }
 }
 
-.VPButton.medium {
-  &.VPButton.medium {
-    border-radius: 10em;
-    padding: 0 22px;
-    line-height: 48px;
-    font-size: 16px;
-  }
+.VPButton.VPButton.medium {
+  border-radius: 10em;
+  padding: 0 22px;
+  line-height: 48px;
+  font-size: 16px;
+}
+
+.prev-next.prev-next {
+  border-top: none;
 }
 
 p,
