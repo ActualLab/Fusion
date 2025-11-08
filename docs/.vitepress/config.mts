@@ -32,8 +32,8 @@ export default defineConfig({
             link: "/Part02",
           },
           { text: "Part 3: State: IState<T> and Its Flavors", link: "/Part03" },
+          { text: "Part 4: Compute Service Clients", link: "/Part04" },
           /*
-          { text: 'Part 4: Compute Service Clients', link: '/Part04' },
           { text: 'Part 5: Fusion on Server-Side Only', link: '/Part05' },
           { text: 'Part 6: Real-time UI in Blazor Apps', link: '/Part06' },
           { text: 'Part 7: Real-time UI in JS / React Apps', link: '/Part07' },
