@@ -1,6 +1,22 @@
 Source  
 <a href="https://www.youtube.com/watch?v=eMO7AmI6ui4"><img src="https://img.youtube.com/vi/eMO7AmI6ui4/maxresdefault.jpg"></a>
 
+## Table of Contents
+
+- Introduction and Background (0:00)
+- Redis Baseline (0:39)
+- Fusion Speed (1:08)
+- What is Fusion (1:47)
+- Actual Chat Demo (8:08)
+- Compute State Component (9:17)
+- Why Real-time is Hard (11:30)
+- Fusion Features (15:47)
+- Todo App Demo (18:48)
+- Code Explanation (43:59)
+- How Fusion Works (1:07:31)
+- Performance and Benchmarks (1:21:29)
+- Conclusion (1:49:23)
+
 Transcript
 
 0:00
