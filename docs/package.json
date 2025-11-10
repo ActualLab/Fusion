@@ -6,12 +6,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "docs:dev": "vitepress dev .",
+    "docs:dev8080": "vitepress dev . --port 8080",
     "docs:build": "vitepress build .",
     "docs:preview": "vitepress preview ."
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "vitepress": "^1.5.0"
+    "vitepress": "^1.6.4"
   }
 }

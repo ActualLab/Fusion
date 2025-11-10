@@ -4,14 +4,14 @@
 > in a single document. If you find it doesn't do its
 > job well, please don't hesitate to reach Alex Y. on
 > [Fusion Place](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo)
-> and tell him *everything* 😈
+> and tell him _everything_ 😈
 
 The content below implies you can browse, build, and run
 [HelloCart Sample], so before you start reading further,
 it's highly recommended to:
 
-1. Clone [https://github.com/ActualLab/Fusion.Samples](https://github.com/ActualLab/Fusion.Samples)
-2. Open `Samples.sln` in your favorite IDE.
+1. Clone [github.com/ActualLab/Fusion.Samples](https://github.com/ActualLab/Fusion.Samples)
+2. Open `HelloCart/HelloCart.csproj` in your favorite IDE.
 
 ## What is HelloCart sample?
 
@@ -27,15 +27,16 @@ The API it implements is defined in
 There are two immutable model types:
 
 ```cs
-public record Product : IHasId<string>
-{
-    public string Id { get; init; } = "";
-    public decimal Price { get; init; } = 0;
-}
+public partial record Product(
+    [property: DataMember] string Id,
+    [property: DataMember] decimal Price
+) : IHasId<string>;
 
-public record Cart : IHasId<string>
+public partial record Cart(
+    [property: DataMember] string Id
+) : IHasId<string>
 {
-    public string Id { get; init; } = "";
+    [DataMember]
     public ImmutableDictionary<string, decimal> Items { get; init; } = ImmutableDictionary<string, decimal>.Empty;
 }
 ```
@@ -48,22 +49,22 @@ totally optional.
 We're also going to implement two services:
 
 ```cs
-public interface IProductService
+public interface IProductService: IComputeService
 {
-    [CommandHandler]
-    Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default);
     [ComputeMethod]
-    Task<Product?> Get(string id, CancellationToken cancellationToken = default);
+    public Task<Product?> Get(string id, CancellationToken cancellationToken = default);
+    [CommandHandler]
+    public Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default);
 }
 
-public interface ICartService
+public interface ICartService: IComputeService
 {
+    [ComputeMethod]
+    public Task<Cart?> Get(string id, CancellationToken cancellationToken = default);
+    [ComputeMethod]
+    public Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default);
     [CommandHandler]
-    Task Edit(EditCommand<Cart> command, CancellationToken cancellationToken = default);
-    [ComputeMethod]
-    Task<Cart?> Get(string id, CancellationToken cancellationToken = default);
-    [ComputeMethod]
-    Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default);
+    public Task Edit(EditCommand<Cart> command, CancellationToken cancellationToken = default);
 }
 ```
 
@@ -74,12 +75,13 @@ is used to implement creation, update, and deletion
 mainly to save some amount of code):
 
 ```cs
-public record EditCommand<TValue>(string Id, TValue? Value = null) : ICommand<Unit>
+public partial record EditCommand<TValue>(
+    [property: DataMember] string Id,
+    [property: DataMember] TValue? Item
+) : ICommand<Unit>
     where TValue : class, IHasId<string>
 {
     public EditCommand(TValue value) : this(value.Id, value) { }
-    // Newtonsoft.Json needs this constructor to deserialize this record
-    public EditCommand() : this("") { }
 }
 ```
 
@@ -141,7 +143,7 @@ described above:
    This might be fine in some countries, but... Most of
    these countries are still living in pre-internet age,
    so it's a fictional scenario even there.
-   
+
    But even taking ethics and security aside,
    retransmitting every command to every client means
    you'll see `O(ClientCount^2)` packet rate on server,
@@ -153,7 +155,7 @@ described above:
    Let's add an extra logic to `Edit<Product>` handler
    that finds every cart this product is added to
    and notifies every customer watching these carts.
-   
+
    Here you realize you need a pub-sub to implement
    this - i.e. your clients will have to subscribe to and
    unsubscribe from topics like `"cart-[cartId]"` to
@@ -172,7 +174,7 @@ described above:
 
 4. Most of real-time messaging APIs
    [don't provide strong guarantees for message ordering](https://github.com/dotnet/aspnetcore/issues/9240) - especially for messages
-   sent to different topics / channels, and any *real* real-time
+   sent to different topics / channels, and any _real_ real-time
    app uses a number of such channels. Moreover, if you send requests
    via regular HTTP API to the same server, the order of
    these responses and the order of messages you get via SignalR
@@ -216,37 +218,38 @@ check out my other post covering another similar scenario:
 ## Can we do better than that?
 
 Yes, and that's exactly what I'm going to talk about further.
-But first, let's launch `HelloCart` and see what it does:
+But first, let's launch `HelloCart` and see what it does. And make sure `UseAutoRunner` is disabled in [AppSettings.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppSettings.cs).
 
 ![](./img/Samples-HelloCart.gif)
 
 Once you select the API implementation, the sample uses it
-to create 3 products and 2 carts:
+to create 3 products and 2 carts, [AppBase.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppBase.cs):
 
 ```cs
-// Code from AppBase.cs
-public virtual async Task InitializeAsync()
+public virtual async Task InitializeAsync(IServiceProvider services, bool startHostedServices)
 {
-    var pApple = new Product { Id = "apple", Price = 2M };
-    var pBanana = new Product { Id = "banana", Price = 0.5M };
-    var pCarrot = new Product { Id = "carrot", Price = 1M };
-    ExistingProducts = new [] { pApple, pBanana, pCarrot };
-    foreach (var product in ExistingProducts)
-        await HostProductService.Edit(new EditCommand<Product>(product));
-
-    var cart1 = new Cart() { Id = "cart:apple=1,banana=2",
+    var pApple = new Product("apple", 2);
+    var pBanana = new Product("banana", 0.5M);
+    var pCarrot = new Product("carrot", 1);
+    var cart1 = new Cart("cart1(apple=1,banana=2)") {
         Items = ImmutableDictionary<string, decimal>.Empty
             .Add(pApple.Id, 1)
             .Add(pBanana.Id, 2)
     };
-    var cart2 = new Cart() { Id = "cart:banana=1,carrot=1",
+    var cart2 = new Cart("cart2(banana=1,carrot=1)") {
         Items = ImmutableDictionary<string, decimal>.Empty
             .Add(pBanana.Id, 1)
             .Add(pCarrot.Id, 1)
     };
-    ExistingCarts = new [] { cart1, cart2 };
-    foreach (var cart in ExistingCarts)
-        await HostCartService.Edit(new EditCommand<Cart>(cart));
+    var extraProducts = Enumerable.Range(0, ExtraProductCount)
+        .Select(i => new Product($"product{i + 1}", i));
+    ExistingProducts = [pApple, pBanana, pCarrot, ..extraProducts];
+    ExistingCarts = [cart1, cart2];
+
+    // if (MustRecreateDb) ...
+
+    if (startHostedServices)
+        await services.HostedServices().Start();
 }
 ```
 
@@ -254,32 +257,32 @@ Then it creates a set of background tasks **watching for changes
 made to every one of them**:
 
 ```cs
-public Task Watch(CancellationToken cancellationToken = default)
+public Task Watch(IServiceProvider services, CancellationToken cancellationToken = default)
 {
     var tasks = new List<Task>();
     foreach (var product in ExistingProducts)
-        tasks.Add(WatchProduct(product.Id, cancellationToken));
+        tasks.Add(WatchProduct(services, product.Id, cancellationToken));
     foreach (var cart in ExistingCarts)
-        tasks.Add(WatchCartTotal(cart.Id, cancellationToken));
+        tasks.Add(WatchCartTotal(services, cart.Id, cancellationToken));
     return Task.WhenAll(tasks);
 }
 
-public async Task WatchCartTotal(string cartId, CancellationToken cancellationToken = default)
+public async Task WatchCartTotal(
+    IServiceProvider services, string cartId, CancellationToken cancellationToken = default)
 {
-    var cartService = WatchServices.GetRequiredService<ICartService>();
-    var computed = await Computed.Capture(
-        ct => cartService.GetTotal(cartId, ct), 
-        cancellationToken);
+    var cartService = services.GetRequiredService<ICartService>();
+    var computed = await Computed.Capture(() => cartService.GetTotal(cartId, cancellationToken), cancellationToken);
     while (true) {
         WriteLine($"  {cartId}: total = {computed.Value}");
         await computed.WhenInvalidated(cancellationToken);
-        computed = await computed.Update(false, cancellationToken);
+        computed = await computed.Update(cancellationToken);
     }
 }
 
-public async Task WatchProduct(string productId, CancellationToken cancellationToken = default)
+public async Task WatchProduct(
+    IServiceProvider services, string productId, CancellationToken cancellationToken = default)
 {
-    var productService = WatchServices.GetRequiredService<IProductService>();
+    var productService = services.GetRequiredService<IProductService>();
     // The rest is similar to the same code in WatchCartTotal
 }
 ```
@@ -287,17 +290,15 @@ public async Task WatchProduct(string productId, CancellationToken cancellationT
 Let's postpone the discussion of above code for now.
 The only remark I want to make at this point is that
 `Watch` is started in fire-and-forgot fashion
-in [`Program.cs`, line ~50](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/Program.cs#L52).
+in [Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/Program.cs#L52).
 
 Finally, the looped section in `Program.cs` starts to
-as you to enter `[productId]=[price]` expression, parses it,
+ask you to enter `[productId]=[price]` expression, parses it,
 and sends the following command:
 
 ```cs
 var command = new EditCommand<Product>(product with { Price = price });
-await app.ClientProductService.Edit(command);
-// You can run absolutely identical action with:
-// await app.ClientServices.Commander().Call(command);
+await app.ClientServices.Commander().Call(command);
 ```
 
 As you see, this call triggers not only the "watcher" task
@@ -335,17 +336,18 @@ Code: [src/HelloCart/v1](https://github.com/ActualLab/Fusion.Samples/tree/master
 > of this document, because it explains nearly all key abstractions.
 > Please be patient and read it carefully 🙏
 
-First, check out `InMemoryProductService` there.
+First, check out [`InMemoryProductService`](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/InMemoryProductService.cs) there.
 You might notice just a few unusual things there:
 
 1. All of its API methods (declared in `IProductService`) are
    marked as `virtual`
 2. `Edit` contains a bit unusual piece of code:
    ```cs
-    if (Invalidation.IsActive) {
-        _ = Get(productId, default);
-        return Task.CompletedTask;
-    }
+   if (Invalidation.IsActive) {
+       // Invalidation logic
+       _ = Get(productId, default);
+       return Task.CompletedTask;
+   }
    ```
 
 Everything else looks absolutely normal.
@@ -356,14 +358,14 @@ The same is equally applicable to `InMemoryCartService`:
    marked as `virtual`
 2. `Edit` contains a bit unusual piece of code:
    ```cs
-    if (Invalidation.IsActive) {
-        _ = Get(cartId, default);
-        return Task.CompletedTask;
-    }
+   if (Invalidation.IsActive) {
+       _ = Get(cartId, default);
+       return Task.CompletedTask;
+   }
    ```
 
 Finally, let's look at the code that registers these
-services in IoC container:
+services in IoC container, [AppV1.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/AppV1.cs):
 
 ```cs
 public class AppV1 : AppBase
@@ -371,11 +373,12 @@ public class AppV1 : AppBase
     public AppV1()
     {
         var services = new ServiceCollection();
+        AppLogging.Configure(services);
         services.AddFusion(fusion => {
             fusion.AddService<IProductService, InMemoryProductService>();
             fusion.AddService<ICartService, InMemoryCartService>();
         });
-        ClientServices = HostServices = services.BuildServiceProvider();
+        ClientServices = ServerServices = services.BuildServiceProvider();
     }
 }
 ```
@@ -386,7 +389,7 @@ to depict it in symbols: 🧝=🥣+🦄
 
 Seriously, so how does it work?
 
-`AddService` registers so-called [Compute Service](Part01.md) -
+`AddService` registers so-called [Compute Service](Part01.md#_1-compute-services-and-compute-methods) -
 a singleton, which proxy type is generated in the runtime,
 but derives from the type you provide, i.e.
 `InMemoryProductService` / `InMemoryCartService` in above case.
@@ -416,18 +419,18 @@ The proxy "decorates" every method marked by
 
 4. If all of this didn't help to find the cached "answer",
    the base method (i.e. your original one) is called
-   to *compute* it. But before the *computation* part start,
+   to _compute_ it. But before the _computation_ part start,
    the `IComputed` instance that's going to store its
    outcome gets temporarily exposed via `Computed.GetCurrent()`
    for the duration of the computation.
-   
+
    Why? Well, it wasn't mentioned, but once an `IComputed`
    gets "stripped" on step #2, #3, and even later on #4,
    it's also registered as a dependency of any
    other `IComputed` that's currently exposed via
    `Computed.GetCurrent()`. **And this is how `IComputed`
    instances "learn" all the components they're "built" from.**
-   
+
    When the computation completes, the newly created
    `IComputed` gets registered in `ComputedRegistry`
    and "stripped" the same way to return its `Value`
@@ -457,11 +460,11 @@ instances, there are APIs allowing you to:
   `IComputed` - either a cached or a newly computed one.
 
 Do you remember the code "watching" for cart changes in the
-beginning?
+beginning? [AppBase.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppBase.cs):
 
 ```cs
 // Computed.Capture pulls the `IComputed` storing the
-// result of a call to the first [ComputeMethod] made from 
+// result of a call to the first [ComputeMethod] made from
 // the delegate it gets, i.e. the result of
 // cartService.GetTotal(cartId, ct) in this case
 var computed = await Computed.Capture(
@@ -469,18 +472,18 @@ var computed = await Computed.Capture(
 while (true) {
     WriteLine($"  {cartId}: total = {computed.Value}");
     // IComputed.WhenInvalidated awaits for the invalidation.
-    // It returns immediately if 
+    // It returns immediately if
     // (computed.State == ConsistencyState.Invalidated)
     await computed.WhenInvalidated(cancellationToken);
     // Finally, this is how you update IComputed instances.
-    // As you might notice, they're almost immutable, 
+    // As you might notice, they're almost immutable,
     // so "update" always means creation of a new instance.
     computed = await computed.Update(false, cancellationToken);
 }
 ```
 
 Now, how these dependencies get created? Let's look at
-`InMemoryCartService.GetTotal` again:
+[`InMemoryCartService.GetTotal`](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/InMemoryCartService.cs) again:
 
 ```cs
 public virtual async Task<decimal> GetTotal(
@@ -490,6 +493,7 @@ public virtual async Task<decimal> GetTotal(
     var cart = await Get(id, cancellationToken);
     if (cart is null)
         return 0;
+
     var total = 0M;
     foreach (var (productId, quantity) in cart.Items) {
         // Dependency: _products.Get(productId)!
@@ -513,7 +517,7 @@ dependent on:
 Now it's time to demystify how `Get(productId)` call result gets
 invalidated once a product with `productId` gets changed.
 
-Again, remember this code?
+Again, remember this code? [InMemoryProductService.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/InMemoryProductService.cs):
 
 ```cs
 public virtual Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default)
@@ -521,6 +525,7 @@ public virtual Task Edit(EditCommand<Product> command, CancellationToken cancell
     var (productId, product) = command;
     if (string.IsNullOrEmpty(productId))
         throw new ArgumentOutOfRangeException(nameof(command));
+
     if (Invalidation.IsActive) {
         // This is the invalidation block.
         // Every [ComputeMethod] result you "touch" here
@@ -537,7 +542,7 @@ public virtual Task Edit(EditCommand<Product> command, CancellationToken cancell
 }
 ```
 
-And if you look into similar `Edit` for in `InMemoryCartService`,
+And if you look into similar `Edit` for in [InMemoryCartService.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/InMemoryCartService.cs),
 you'll find a very similar block there:
 
 ```cs
@@ -547,7 +552,7 @@ if (Invalidation.IsActive) {
 }
 ```
 
-So now you have *almost* the full picture:
+So now you have _almost_ the full picture:
 
 - Low-level methods (the ones that don't have any
   dependencies) are invalidated explicitly &ndash;
@@ -560,7 +565,7 @@ So now you have *almost* the full picture:
   any of invalidation blocks.
 
 What's missing is how it happens that when you call `Edit`,
-***both** `if (Invalidation.IsActive) { ... }` and the code
+**\*both** `if (Invalidation.IsActive) { ... }` and the code
 outside of this block runs, assuming this block contains `return`
 statement?
 
@@ -654,7 +659,7 @@ Code: [src/HelloCart/v2](https://github.com/ActualLab/Fusion.Samples/tree/master
 > ☝ We will move WAY FASTER now - this and every following version
 > will require just about 5 minutes of your time.
 
-Here is what code inside `AppV2` constructor does:
+Here is the actual code inside [AppV2](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v2/AppV2.cs) constructor:
 
 ```cs
 // This is exactly the same Compute Service registration code you saw earlier
@@ -662,59 +667,58 @@ services.AddFusion(fusion => {
     fusion.AddService<IProductService, DbProductService>();
     fusion.AddService<ICartService, DbCartService>();
 });
-
-// This also a usual way to add a pooled IDbContextFactory -
-// a preferable way of accessing DbContexts nowadays
-var appTempDir = PathEx.GetApplicationTempDirectory("", true);
-var dbPath = appTempDir & "HelloCart_v1.db";
-services.AddDbContextFactory<AppDbContext>(db => {
-    db.UseSqlite($"Data Source={dbPath}");
-    db.EnableSensitiveDataLogging();
-});
-
-// AddDbContextServices is just a convenience builder allowing
-// to omit DbContext type in misc. normal and extension methods 
-// it has
-services.AddDbContextServices<AppDbContext>(db => {
-    // Uncomment if you'll be using AddRedisOperationLogChangeTracking 
-    // db.AddRedisDb("localhost", "Fusion.Tutorial.Part10");
-
-    // This call enabled Operations Framework (OF) for AppDbContext. 
-    db.AddOperations(operations => {
-        operations.ConfigureOperationLogReader(_ => new() {
-            // We use FileBasedDbOperationLogChangeTracking, so unconditional wake up period
-            // can be arbitrary long - all depends on the reliability of Notifier-Monitor chain.
-            // See what .ToRandom does - most of timeouts in Fusion settings are RandomTimeSpan-s,
-            // but you can provide a normal one too - there is an implicit conversion from it.
-            UnconditionalCheckPeriod = TimeSpan.FromSeconds(Env.IsDevelopment() ? 60 : 5).ToRandom(0.05),
-        });
-        // And this call tells that hosts will use a shared file
-        // to "message" each other that operation log was updated.
-        // In fact, they'll just be "touching" this file once
-        // this happens and watch for change of its modify date.
-        // You shouldn't use this mechanism in real multi-host
-        // scenario, but it works well if you just want to test
-        // multi-host invalidation on a single host by running
-        // multiple processes there.
-        operations.AddFileBasedOperationLogChangeTracking();
-        
-        // Or, if you use PostgreSQL, use this instead of above line
-        // operations.AddNpgsqlOperationLogChangeTracking();
-        
-        // Or, if you use Redis, use this instead of above line
-        // operations.AddRedisOperationLogChangeTracking();
-    });
-});
-ClientServices = HostServices = services.BuildServiceProvider();
 ```
 
-`AppV2.InitializeAsync` simply re-created the DB:
+The `AppDb.Configure` ([AppDb.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppDb.cs)) method sets up the database-related services. Here's what it does.
+
+Adds a pooled `IDbContextFactory<AppDbContext>` for efficient database access.
 
 ```cs
-await using var dbContext = HostServices.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
+services.AddPooledDbContextFactory<AppDbContext>(db => {
+    if (AppSettings.Db.UsePostgreSql) { /* PostgreSQL setup */ }
+    else { /* SQLite setup */ }
+    db.EnableSensitiveDataLogging();
+});
+```
+
+Configures additional services for Entity Framework integration, including operations framework for multi-host invalidation.
+
+```cs
+services.AddDbContextServices<AppDbContext>(db => {
+    db.AddOperations(operations => {
+        if (!AppSettings.Db.UseOperationLogWatchers)
+            return;
+
+        if (AppSettings.Db.UseRedisOperationLogWatchers) {
+            db.AddRedisDb("localhost", "Fusion.Samples.HelloCart");
+            operations.AddRedisOperationLogWatcher();
+        }
+        else if (AppSettings.Db.UsePostgreSql)
+            operations.AddNpgsqlOperationLogWatcher();
+        else
+            operations.AddFileSystemOperationLogWatcher();
+    });
+    db.AddEntityResolver<string, DbProduct>();
+    db.AddEntityResolver<string, DbCart>(_ => new() {
+        // Cart is always loaded together with items
+        QueryTransformer = carts => carts.Include(c => c.Items),
+    });
+});
+```
+
+Operation Reprocessor is optional, it enables reprocessing of operations for reliability.
+
+```cs
+if (AppSettings.Db.UseOperationReprocessor)
+    services.AddFusion().AddOperationReprocessor();
+```
+
+`AppV2.InitializeAsync` from ([AppBase.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppBase.cs)) simply re-created the DB:
+
+```cs
+await using var dbContext = ServerServices.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
 await dbContext.Database.EnsureDeletedAsync();
 await dbContext.Database.EnsureCreatedAsync();
-await base.InitializeAsync();
 ```
 
 Now, if you look at `DbProductService` and `DbCartService`, you'll notice
@@ -727,28 +731,28 @@ reads/writes the DB:
 
 2. One of these methods is `CreateDbContext` - you may see it's typically
    used like this:
-   
+
    ```cs
-   await using var dbContext = CreateDbContext();
+   await using var dbContext = await DbHub.CreateDbContext(cancellationToken);
    // ... code using dbContext
    ```
-   
+
    By default, `CreateDbContext` returns **a read-only `DbContext` with
    change tracking disabled**.
    As you might guess, this method of getting `DbContext` is supposed
    to be used in `[ComputeMethod]`-s, i.e. query-style methods that
    aren't supposed to change anything or rely on change tracking.
-   
+
    "Read-only" means this `DbContext` "throws" on attempt to call
    `SaveChangesAsync`.
 
 3. And another one is `CreateOperationDbContext`, which is used like this:
-   
+
    ```cs
-   await using var dbContext = await CreateOperationDbContext(cancellationToken);
+   await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
    // ... code using dbContext
    ```
-   
+
    Contrary to the previous method, this method is used to create
    `DbContext` inside command handlers, and once it's called,
    it also starts the transaction associated with the current command
@@ -757,7 +761,7 @@ reads/writes the DB:
    (i.e. w/o an exception), moreover, the operation log entry
    describing the current command will be persisted as part of this
    transaction.
-   
+
    As you might guess, the `DbContext` provided by this method is
    **read-write and with enabled change tracking**. Moreover,
    if you call it multiple times, you'll get different `DbContext`-s,
@@ -779,11 +783,11 @@ And that's it. So to use Fusion with EF, you must:
 Code: [src/HelloCart/v3](https://github.com/ActualLab/Fusion.Samples/tree/master/src/HelloCart/v3)
 
 The `v2` code is actually already good enough, but one small improvement
-can make it way better:
+can make it way better, [AppDb.cs](https://github.com/ActualLab/Fusion.Samples/tree/master/src/HelloCart/AppDb.cs):
 
 ```cs
-b.AddEntityResolver<string, DbProduct>();
-b.AddEntityResolver<string, DbCart>((_, options) => {
+db.AddEntityResolver<string, DbProduct>();
+db.AddEntityResolver<string, DbCart>((_, options) => {
     // Cart is always loaded together with items
     options.QueryTransformer = carts => carts.Include(c => c.Items);
 });
@@ -809,19 +813,19 @@ while (NotDisposed()) {
 }
 ```
 
-Here is an example of how to use such resolvers:
+Here is an example of how to use such resolvers, [DbProductServiceUsingEntityResolver.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v3/DbProductServiceUsingEntityResolver.cs):
 
 ```cs
 public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)
 {
-    var dbProduct = await _productResolver.Get(id, cancellationToken);
-    if (dbProduct is null)
-        return null;
-    return new Product() { Id = dbProduct.Id, Price = dbProduct.Price };
+    var dbProduct = await ProductResolver.Get(id, cancellationToken);
+    return dbProduct is null
+        ? null
+        : new Product(dbProduct.Id, dbProduct.Price);
 }
 ```
 
-Guess why this important? Look at the production-grade `GetTotal` code:
+Guess why this important? Look at the production-grade `GetTotal` code, [DbCartServiceUsingEntityResolver.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v3/DbCartServiceUsingEntityResolver.cs):
 
 ```cs
 public virtual async Task<decimal> GetTotal(string id, CancellationToken cancellationToken = default)
@@ -829,10 +833,12 @@ public virtual async Task<decimal> GetTotal(string id, CancellationToken cancell
     var cart = await Get(id, cancellationToken);
     if (cart is null)
         return 0;
+
     var itemTotals = await Task.WhenAll(cart.Items.Select(async item => {
-        var product = await _products.Get(item.Key, cancellationToken);
+        var product = await Products.Get(item.Key, cancellationToken);
         return item.Value * (product?.Price ?? 0M);
     }));
+
     return itemTotals.Sum();
 }
 ```
@@ -874,13 +880,17 @@ So far we've learned how to build a version of our API
 that works locally. What does it take to convert it to
 a remotely callable one?
 
-Actually, almost nothing! Here is `AppV4` constructor:
+Actually, almost nothing! Here is [AppV4](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v4/AppV4.cs) constructor:
 
 ```cs
-var baseUri = new Uri("http://localhost:7005");
-Host = BuildHost(baseUri);
-HostServices = Host.Services;
-ClientServices = BuildClientServices(baseUri);
+var uri = "http://localhost:7005";
+
+// Create server
+App = CreateWebApp(uri);
+ServerServices = App.Services;
+
+// Create client
+ClientServices = BuildClientServices(uri);
 ```
 
 So this version of app:
@@ -932,26 +942,25 @@ They are Compute Services too - you can even cast them to
 
 This is a very basic description of how it works. So
 let's see what do we need to publish Compute Service first.
-We'll start from `Host` container configuration:
+We'll start from `Host` container configuration of [AppV4.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v4/AppV4.cs):
 
 ```cs
-services.AddFusion(fusion => {
-    fusion.AddServer<IProductService, DbProductService>(); // Notice we use "AddServer" here instead of "AddService" 
-    fusion.AddServer<ICartService, DbCartService>(); // Same here
-    fusion.AddWebServer(); // This is the only new line. 
+services.AddFusion(RpcServiceMode.Server, fusion => {
+    fusion.AddWebServer();
+    fusion.AddService<IProductService, DbProductServiceUsingEntityResolver>();
+    fusion.AddService<ICartService, DbCartServiceUsingEntityResolver>();
 });
 ```
 
 Let's look at web app configuration now:
 
 ```cs
-app.UseWebSockets(new WebSocketOptions() { // We obviously need this
-    KeepAliveInterval = TimeSpan.FromSeconds(30), // Just in case
+app.Urls.Add(baseUri);
+app.UseFusionSession();
+app.UseWebSockets(new WebSocketOptions() {
+    KeepAliveInterval = TimeSpan.FromSeconds(30),
 });
-app.UseRouting();
-app.UseEndpoints(endpoints => {
-    endpoints.MapRpcWebSocketServer(); // Straightforward, right?
-});
+app.MapRpcWebSocketServer();
 ```
 
 Let's switch to the client side code now. The client-side container uses
@@ -960,12 +969,13 @@ the following configuration:
 ```cs
 services.AddFusion(fusion => {
     fusion.Rpc.AddWebSocketClient(baseUri);
-    fusion.AddClient<IProductService>(); // Notice we use "AddClient" here instead of "AddService" 
-    fusion.AddClient<ICartService>(); // Same here
+    fusion.AddClient<IProductService>();
+    fusion.AddClient<ICartService>();
 });
 ```
 
 Where can you use such clients? Actually, everywhere!
+
 - In Blazor WebAssembly - obvously
 - In console or MAUI apps
 - Finally, even on the server-side - nothing prevents you to e.g.
@@ -983,28 +993,50 @@ You already know that Fusion is capable to "propagate" the
 invalidations to every host sharing the same data.
 
 Let's see what's necessary to make it work.
-This is our full `AppV5` - there is nothing else:
+This is our full [AppV5](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v5/AppV5.cs) - there is nothing else:
 
 ```cs
 public class AppV5 : AppV4
 {
-    public IHost ExtraHost { get; protected set; }
-    // We'll watch the data on Host:
-    public override IServiceProvider WatchServices => HostServices;
+    public WebApplication ExtraApp { get; }
+    // We'll modify the data on AppHost & watch it changes on App
+    public override IServiceProvider WatchedServices => ServerServices;
 
     public AppV5()
     {
-        var hostUri = new Uri("http://localhost:7005");
-        Host = BuildHost(hostUri); // Yes, it uses inherited BuildHost from v4!
-        HostServices = Host.Services;
+        // Server 1
+        App = CreateWebApp("http://localhost:7005");
+        ServerServices = App.Services;
 
-        var extraHostUri = new Uri("http://localhost:7006");
-        ExtraHost = BuildHost(extraHostUri);
-        ClientServices = BuildClientServices(extraHostUri);
+        // Server 2
+        var extraAppUri = "http://localhost:7006";
+        ExtraApp = CreateWebApp(extraAppUri);
+
+        // Client
+        ClientServices = BuildClientServices(extraAppUri);
     }
-    
-    // + InitializeAsync and DisposeAsync, but there are
-    // absolutely straightforward adjustments
+
+    public override async Task InitializeAsync(IServiceProvider services, bool startHostedServices)
+    {
+        await base.InitializeAsync(services, false);
+        if (startHostedServices) {
+            await App.StartAsync();
+            await ExtraApp.StartAsync();
+            await Task.Delay(100);
+        }
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (ClientServices is IAsyncDisposable csd)
+            await csd.DisposeAsync();
+
+        await ExtraApp.StopAsync();
+        await ExtraApp.DisposeAsync();
+
+        await App.StopAsync();
+        await App.DisposeAsync();
+    }
 }
 ```
 
@@ -1026,15 +1058,15 @@ And they really do!
 And congrats - this is the end of this part, and now you know almost everything!
 The parts we didn't touch at all are:
 
-* [Part 3: State: IState&lt;T&gt; and Its Flavors](./Part03.md).
+- [Part 3: State: IState&lt;T&gt; and Its Flavors](./Part03.md).
   The key abstraction it describes is `ComputedState<T>` -
   the type that implements "wait for change, make a delay, recompute"
   loop similar to the one we manually coded here, but in more robust
   and convenient way.
-* [Part 6: Real-time UI in Blazor Apps](./Part06.md) -
+- [Part 6: Real-time UI in Blazor Apps](./Part06.md) -
   you'll learn how `ComputedState<T>` is used by
   `LiveComponent<T>` to power real-time updates in Blazor.
-* [Part 5: Fusion on Server-Side Only](./Part05.md) -
+- [Part 5: Fusion on Server-Side Only](./Part05.md) -
   read it to fully understand how Fusion actually caches `IComputed`
   instances, and what are the levers you can use to tweak its
   caching behavior.
