@@ -82,9 +82,9 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
 
     // Private methods
 
-    private Func<ArgumentList, RpcPeerRef> RouteCall(RpcMethodDef method)
+    private Func<ArgumentList, RpcPeerRef> RouteCall(RpcMethodDef methodDef)
         => args => {
-            if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
+            if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
                 return RpcPeerRef.Local;
 
             // For testing, we route based on its argument's hash or value

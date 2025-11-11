@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.Caching;
 using ActualLab.Interception;
 using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc;
@@ -20,12 +20,11 @@ public partial class RpcMethodDef : MethodDef
     private static readonly ConcurrentDictionary<Type, (bool, bool)> IsCommandTypeCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-    protected Func<ArgumentList, RpcPeerRef>? CallRouter { get; init; }
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Hub.Services.LogFor(GetType());
 
-    public RpcHub Hub { get; }
-    public RpcServiceDef Service { get; }
+    public readonly RpcHub Hub;
+    public readonly RpcServiceDef Service;
 
     public string Name {
         get;
@@ -42,10 +41,6 @@ public partial class RpcMethodDef : MethodDef
     public new readonly string FullName = "";
     public readonly RpcMethodRef Ref;
 
-    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
-    public ArgumentListType ArgumentListType => field ??= ArgumentListType.Get(ParameterTypes);
-    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
-    public ArgumentListType ResultListType => field ??= ArgumentListType.Get(UnwrappedReturnType);
     public readonly bool NoWait;
     public readonly bool HasPolymorphicArguments;
     public readonly bool HasPolymorphicResult;
@@ -54,10 +49,8 @@ public partial class RpcMethodDef : MethodDef
     public RpcMethodKind Kind { get; init; }
     public RpcSystemMethodKind SystemMethodKind { get; init; }
     public LegacyNames LegacyNames { get; init; } = LegacyNames.Empty;
-    public RpcCallTimeouts Timeouts { get; init; } = RpcCallTimeouts.None;
-    public Action<RpcInboundCall>? InboundCallValidator { get; init; }
-    public RpcCallTracer? Tracer { get; init; }
     public PropertyBag Properties { get; init; }
+    public RpcCallTracer? Tracer { get; init; }
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
@@ -100,12 +93,19 @@ public partial class RpcMethodDef : MethodDef
         Kind = GetMethodKind(out var isBackend);
         IsBackend = service.IsBackend || isBackend;
         LegacyNames = new LegacyNames(MethodInfo, nameSuffix);
-        CallRouter = Hub.CallRouterFactory.Invoke(this);
-        if (RpcDefaults.UseInboundCallValidator)
-            // ReSharper disable once VirtualMemberCallInConstructor
-            InboundCallValidator = CreateInboundCallValidator();
-        Timeouts = Hub.CallTimeoutsProvider.Invoke(this).Normalize();
-        Tracer = Hub.CallTracerFactory.Invoke(this);
+
+        // Inbound call related
+        InboundCallFilter = GetDefaultInboundCallFilter(this);
+        InboundCallValidator = GetDefaultInboundCallValidator(this);
+        InboundCallServerInvoker = GetCachedFunc<Func<ArgumentList, Task>>(typeof(InboundCallServerInvokerFactory<>));
+        InboundCallPipelineInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
+
+        // Outbound call related
+        OutboundCallTimeouts = Hub.OutboundCallOptions.GetTimeouts(this);
+        OutboundCallRouter = Hub.OutboundCallOptions.CreateRouter(this);
+
+        // Call tracing
+        Tracer = Hub.DiagnosticsOptions.CreateCallTracer(this);
     }
 
     public override string ToString()
@@ -116,23 +116,6 @@ public partial class RpcMethodDef : MethodDef
         var arguments = ParameterTypes.Select(t => t.GetName()).ToDelimitedString();
         var returnType = UnwrappedReturnType.GetName();
         return  $"'{(useShortName ? Name : FullName)}': ({arguments}) -> {returnType}{(IsValid ? "" : " - invalid")}";
-    }
-
-    public RpcPeer RouteCall(ArgumentList arguments)
-    {
-        if (CallRouter is not { } callRouter)
-            throw Errors.SystemCallsMustBePrerouted();
-
-        while (true) {
-            try {
-                var peerRef = callRouter.Invoke(arguments);
-                return Hub.GetPeer(peerRef);
-            }
-            catch (RpcRerouteException e) {
-                // This should never happen, but just in case...
-                Log.LogWarning(e, "Rerouted while routing: {Method}{Arguments}", this, arguments);
-            }
-        }
     }
 
     // Protected methods
@@ -154,30 +137,6 @@ public partial class RpcMethodDef : MethodDef
         return RpcMethodKind.Query;
     }
 
-    protected virtual Action<RpcInboundCall>? CreateInboundCallValidator()
-    {
-#if NET6_0_OR_GREATER // NullabilityInfoContext is available in .NET 6.0+
-        if (IsSystem || NoWait)
-            return null; // These methods are supposed to rely on built-in validation for perf. reasons
-
-        var nonNullableArgIndexesList = new List<int>();
-        var nullabilityInfoContext = new NullabilityInfoContext();
-        for (var i = 0; i < Parameters.Length; i++) {
-            var p = Parameters[i];
-            if (p.ParameterType.IsClass && nullabilityInfoContext.Create(p).ReadState == NullabilityState.NotNull)
-                nonNullableArgIndexesList.Add(i);
-        }
-        if (nonNullableArgIndexesList.Count == 0)
-            return null;
-
-        var nonNullableArgIndexes = nonNullableArgIndexesList.ToArray();
-        return call => {
-            var args = call.Arguments!;
-            foreach (var index in nonNullableArgIndexes)
-                ArgumentNullException.ThrowIfNull(args.GetUntyped(index), Parameters[index].Name);
-        };
-#else
-        return null;
-#endif
-    }
+    protected TResult GetCachedFunc<TResult>(Type factoryType)
+        => GenericInstanceCache.Get<Func<RpcMethodDef, TResult>>(factoryType, UnwrappedReturnType).Invoke(this);
 }

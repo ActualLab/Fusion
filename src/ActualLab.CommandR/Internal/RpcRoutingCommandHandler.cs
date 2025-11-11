@@ -10,8 +10,6 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
     private IServiceProvider Services { get; } = services;
     private RpcHub RpcHub { get; } = services.RpcHub();
     [field: AllowNull, MaybeNull]
-    private RpcRerouteDelayer RerouteDelayer => field ??= RpcHub.InternalServices.RerouteDelayer;
-    [field: AllowNull, MaybeNull]
     private ILogger Log => field ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = CommanderCommandHandlerPriority.RpcRoutingCommandHandler)]
@@ -31,10 +29,11 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
         async Task InvokeWithRerouting() {
             var baseExecutionState = context.ExecutionState;
             var preFinalExecutionState = baseExecutionState.PreFinalState;
+            var rerouteCount = 0;
             while (true) {
                 try {
                     var arguments = ArgumentList.New(command, cancellationToken);
-                    var peer = rpcMethodDef.RouteCall(arguments);
+                    var peer = rpcMethodDef.RouteOutboundCall(arguments);
                     peer.ThrowIfRerouted();
 
                     context.ExecutionState = peer.ConnectionKind is RpcPeerConnectionKind.Local
@@ -49,8 +48,11 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                 }
                 catch (RpcRerouteException e) {
                     context.ResetResult();
-                    Log.LogWarning(e, "Rerouting command: {Command}", context.UntypedCommand);
-                    await RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
+                    ++rerouteCount;
+                    Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}", rerouteCount, context.UntypedCommand);
+                    await RpcHub.InternalServices.OutboundCallOptions
+                        .ReroutingDelay(rerouteCount, cancellationToken)
+                        .ConfigureAwait(false);
                 }
             }
         }

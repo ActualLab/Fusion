@@ -17,13 +17,19 @@ public partial class MethodDef
     // ReSharper disable once InconsistentNaming
     protected string? _toStringCached;
 
+    public readonly int Id; // Unique per instance, GetHashCode() also returns it
     public readonly Type Type;
     public readonly MethodInfo MethodInfo;
     public readonly ParameterInfo[] Parameters;
     public readonly Type[] ParameterTypes;
     public readonly Type ReturnType;
     public readonly int CancellationTokenIndex;
-    public readonly int Id;
+    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
+    public ArgumentListType ArgumentListType => field ??= ArgumentListType.Get(ParameterTypes);
+    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
+    public ArgumentListType ResultListType => field ??= ArgumentListType.Get(UnwrappedReturnType);
+    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
+    public Func<object?, ArgumentList, object?> ArgumentListInvoker => field ??= ArgumentListType.Factory.Invoke().GetInvoker(MethodInfo);
 
     [field: AllowNull, MaybeNull]
     public string FullName => field ??= $"{Type.GetName()}.{MethodInfo.Name}";
@@ -38,6 +44,7 @@ public partial class MethodDef
 
     public object? DefaultResult => _defaultResultLazy.Value;
     public object? DefaultUnwrappedResult => _defaultUnwrappedResultLazy.Value;
+
     [field: AllowNull, MaybeNull]
     public Func<object, ArgumentList, Task> TargetAsyncInvoker
         => field ??= GetCachedFunc<Func<object, ArgumentList, Task>>(typeof(TargetAsyncInvokerFactory<>));
@@ -56,13 +63,22 @@ public partial class MethodDef
     [field: AllowNull, MaybeNull]
     public Func<Invocation, ValueTask<object?>> InterceptedObjectAsyncInvoker
         => field ??= GetCachedFunc<Func<Invocation, ValueTask<object?>>>(typeof(InterceptedObjectAsyncInvokerFactory<>));
+
+    /// <summary>
+    /// A function converting its input <c>Task</c>
+    /// (which actual type can be <c>Task</c>, <c>Task{object?}</c> or <c>Task{T}</c>) to
+    /// a proper async <see cref="ReturnType"/>,
+    /// i.e. into a <c>Task</c>, <c>Task{T}</c>, <c>ValueTask</c>, or <c>ValueTask{T}</c>.
+    /// Doesn't do anything if the input task is of a proper type.
+    /// </summary>
     [field: AllowNull, MaybeNull]
-    public Func<Task, object?> UniversalAsyncResultWrapper
-        => field ??= GetCachedFunc<Func<Task, object?>>(typeof(UniversalAsyncResultWrapperFactory<>));
+    public Func<Task, object?> UniversalAsyncResultConverter
+        => field ??= GetCachedFunc<Func<Task, object?>>(typeof(UniversalAsyncResultConverterFactory<>));
+
     [field: AllowNull, MaybeNull]
-    public Func<Task, ValueTask<object?>> TaskToUntypedValueTaskConverter
+    public Func<Task, ValueTask<object?>> TaskToObjectValueTaskConverter
         => field ??= GenericInstanceCache
-            .Get<Func<Task, ValueTask<object?>>>(typeof(TaskExt.ToUntypedValueTaskFactory<>), UnwrappedReturnType);
+            .Get<Func<Task, ValueTask<object?>>>(typeof(TaskExt.ToObjectValueTaskFactory<>), UnwrappedReturnType);
 
     // Must be on KeepCodeForResult<,>, but since we can't use any params there...
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result))]
@@ -130,12 +146,6 @@ public partial class MethodDef
     public sealed override int GetHashCode()
         => Id;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsInstanceOfUnwrappedReturnType(object? candidate)
-        => candidate is null
-            ? IsUnwrappedReturnTypeClassOrNullable
-            : UnwrappedReturnType.IsInstanceOfType(candidate);
-
     public object? WrapResult<TUnwrapped>(TUnwrapped result)
     {
         if (!IsAsyncMethod)
@@ -165,7 +175,7 @@ public partial class MethodDef
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public object? WrapResultOfAsyncMethod<TUnwrapped>(TUnwrapped result)
+    public object WrapResultOfAsyncMethod<TUnwrapped>(TUnwrapped result)
         => ReturnsTask
             ? Task.FromResult(result)
             : IsAsyncVoidMethod
@@ -173,7 +183,7 @@ public partial class MethodDef
                 : ValueTaskExt.FromResult(result);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public object? WrapAsyncInvokerResultOfAsyncMethod<TUnwrapped>(Task<TUnwrapped> resultTask)
+    public object WrapAsyncInvokerResultOfAsyncMethod<TUnwrapped>(Task<TUnwrapped> resultTask)
         => ReturnsTask
             ? resultTask
             : IsAsyncVoidMethod
@@ -181,7 +191,7 @@ public partial class MethodDef
                 : resultTask.ToValueTask();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public object? WrapAsyncInvokerResultOfAsyncMethodUntyped(Task untypedResultTask)
+    public object WrapAsyncInvokerResultOfAsyncMethodUntyped(Task untypedResultTask)
         => ReturnsTask
             ? untypedResultTask
             : untypedResultTask.ToTypedValueTask(AsyncReturnTypeArgument!);
@@ -234,50 +244,26 @@ public partial class MethodDef
         return null;
     }
 
-    // Protected methods
-
-    protected internal virtual void KeepCodeForResult<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>()
-    {
-        if (CodeKeeper.AlwaysTrue)
-            return;
-
-        CodeKeeper.Keep<TResult>();
-        CodeKeeper.Keep<TUnwrapped>();
-        CodeKeeper.Keep<Result>();
-        CodeKeeper.Keep<Result<TUnwrapped>>();
-        CodeKeeper.Keep<Result<Task<TUnwrapped>>>();
-        CodeKeeper.Keep<Result<ValueTask<TUnwrapped>>>();
-
-        WrapResult<TUnwrapped>(default!);
-        WrapAsyncInvokerResult<TUnwrapped>(default!);
-        WrapResultOfAsyncMethod<TUnwrapped>(default!);
-        WrapAsyncInvokerResultOfAsyncMethod<TUnwrapped>(default!);
-        SelectAsyncInvoker<TUnwrapped>(null!);
-        GetCachedFunc<TUnwrapped>(null!);
-
-        CodeKeeper.Keep<TargetAsyncInvokerFactory<TUnwrapped>>();
-        CodeKeeper.Keep<InterceptorAsyncInvokerFactory<TUnwrapped>>();
-        CodeKeeper.Keep<InterceptedAsyncInvokerFactory<TUnwrapped>>();
-        CodeKeeper.Keep<TargetObjectAsyncInvokerFactory<TUnwrapped>>();
-        CodeKeeper.Keep<InterceptorObjectAsyncInvokerFactory<TUnwrapped>>();
-        CodeKeeper.Keep<InterceptedObjectAsyncInvokerFactory<TUnwrapped>>();
-        CodeKeeper.Keep<UniversalAsyncResultWrapperFactory<TUnwrapped>>();
-    }
-
     // Private methods
 
     private object? GetDefaultResult()
-        => !IsAsyncMethod
-            ? DefaultUnwrappedResult
-            : ReturnsValueTask
-                ? IsAsyncVoidMethod ? default(ValueTask) : ValueTaskExt.FromDefaultResult(UnwrappedReturnType)
-                : TaskExt.FromDefaultResult(UnwrappedReturnType);
+    {
+        if (!IsAsyncMethod)
+            return DefaultUnwrappedResult;
+
+        if (ReturnsValueTask)
+            return IsAsyncVoidMethod
+                ? default(ValueTask)
+                : ValueTaskExt.FromDefaultResult(UnwrappedReturnType);
+
+        return IsAsyncVoidMethod
+            ? Task.CompletedTask
+            : TaskExt.FromDefaultResult(UnwrappedReturnType);
+    }
 
     private object? GetDefaultUnwrappedResult()
         => UnwrappedReturnType.GetDefaultValue();
 
-    private TResult GetCachedFunc<TResult>(Type factoryType)
+    internal TResult GetCachedFunc<TResult>(Type factoryType)
         => GenericInstanceCache.Get<Func<MethodDef, TResult>>(factoryType, UnwrappedReturnType).Invoke(this);
 }

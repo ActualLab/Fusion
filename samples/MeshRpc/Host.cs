@@ -72,7 +72,7 @@ public sealed class Host : WorkerBase
                 HostUrlResolver = rpcHelpers.GetHostUrl,
             };
         });
-        services.AddSingleton<RpcCallTimeoutsProvider>(c => c.GetRequiredService<RpcHelpers>().GetCallTimeouts);
+        services.AddSingleton<RpcOutboundCallHandlerFactory>(method => new MeshOutboundCallHandler(method));
         services.AddSingleton<RpcCallRouterFactory>(c => c.GetRequiredService<RpcHelpers>().RouteCall);
         services.AddSingleton<RpcPeerConnectionKindResolver>(c => c.GetRequiredService<RpcHelpers>().GetPeerConnectionKind);
         if (UseRemoteComputedCache)

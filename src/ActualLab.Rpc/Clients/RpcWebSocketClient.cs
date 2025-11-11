@@ -68,8 +68,6 @@ public class RpcWebSocketClient(
     }
 
     public Options Settings { get; } = settings;
-    public RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; }
-        = services.GetRequiredService<RpcWebSocketChannelOptionsProvider>();
 
     public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
@@ -91,6 +89,7 @@ public class RpcWebSocketClient(
         var connectCts = new CancellationTokenSource();
         var connectToken = connectCts.Token;
         _ = hub.Clock
+            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
             .Delay(hub.Limits.ConnectTimeout, cancellationToken)
             .ContinueWith(_ => connectCts.CancelAndDisposeSilently(), TaskScheduler.Default);
         WebSocketOwner webSocketOwner;
@@ -127,7 +126,7 @@ public class RpcWebSocketClient(
             .KeylessSet(uri)
             .KeylessSet(webSocketOwner)
             .KeylessSet(webSocketOwner.WebSocket);
-        var webSocketChannelOptions = WebSocketChannelOptionsProvider.Invoke(clientPeer, properties);
+        var webSocketChannelOptions = Hub.WebSocketClientOptions.GetChannelOptions(clientPeer, properties);
         var channel = new WebSocketChannel<RpcMessage>(webSocketChannelOptions, webSocketOwner);
         return new RpcConnection(channel, properties);
     }

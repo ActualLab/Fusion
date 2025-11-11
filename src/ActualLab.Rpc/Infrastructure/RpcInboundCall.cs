@@ -113,7 +113,7 @@ public abstract class RpcInboundCall : RpcCall
 
             if (peer.CallLogger.IsLogged(this))
                 peer.CallLogger.LogInbound(this);
-            return InvokeTarget(); // NoWait calls must complete fast & be cheap, so the cancellationToken isn't passed
+            return InvokeServer(); // NoWait calls must complete fast & be cheap, so the cancellationToken isn't passed
         }
 
         var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
@@ -122,7 +122,6 @@ public abstract class RpcInboundCall : RpcCall
                 ?? existingCall.WhenProcessed
                 ?? Task.CompletedTask;
 
-        var inboundMiddlewares = Hub.InboundMiddlewares.NullIfEmpty();
         lock (Lock) {
             try {
                 if (MethodDef.Tracer is { } tracer)
@@ -137,10 +136,7 @@ public abstract class RpcInboundCall : RpcCall
                     peer.CallLogger.LogInbound(this);
 
                 // Call
-                MethodDef.InboundCallValidator?.Invoke(this);
-                ResultTask = inboundMiddlewares is not null
-                    ? InvokeTarget(inboundMiddlewares)
-                    : InvokeTarget();
+                ResultTask = MethodDef.InboundCallPipelineInvoker.Invoke(this);
             }
             catch (Exception error) {
                 ResultTask = TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
@@ -165,39 +161,31 @@ public abstract class RpcInboundCall : RpcCall
 
     // Protected methods
 
-    protected virtual Task InvokeTarget()
-    {
-        var methodDef = MethodDef;
-        var server = methodDef.Service.Server!;
-        return methodDef.TargetAsyncInvoker.Invoke(server, Arguments!);
-    }
-
-    protected abstract Task InvokeTarget(RpcInboundMiddlewares middlewares);
+    protected abstract Task InvokeServer();
+    protected abstract Task InvokePipeline();
     protected abstract Task SendResult();
 
     protected Exception ProcessArgumentDeserializationError(Exception error)
     {
         error = Errors.CannotDeserializeInboundCallArguments(error);
-        if (MethodDef.SystemMethodKind.IsCallResultMethod())
-            InvokeOverridenTarget(Hub.SystemCallSender.ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()));
-        return error;
+        if (!MethodDef.SystemMethodKind.IsCallResultMethod())
+            return error;
 
-        void InvokeOverridenTarget(RpcMethodDef methodDef, ArgumentList arguments)
-        {
-            var oldMethodDef = MethodDef;
-            var oldArguments = Arguments;
-            try {
-                MethodDef = methodDef;
-                Arguments = arguments;
-                var peer = Context.Peer;
-                if (peer.CallLogger.IsLogged(this))
-                    peer.CallLogger.LogInbound(this);
-                _ = InvokeTarget();
-            }
-            finally {
-                MethodDef = oldMethodDef;
-                Arguments = oldArguments;
-            }
+        var oldMethodDef = MethodDef;
+        var oldArguments = Arguments;
+        try {
+            MethodDef = Hub.SystemCallSender.ErrorMethodDef;
+            Arguments = ArgumentList.New(error.ToExceptionInfo());
+            var peer = Context.Peer;
+            if (peer.CallLogger.IsLogged(this))
+                peer.CallLogger.LogInbound(this);
+            _ = InvokeServer();
+            return error;
+        }
+        finally {
+            // Restore the original methodDef and arguments
+            MethodDef = oldMethodDef;
+            Arguments = oldArguments;
         }
     }
 
@@ -276,23 +264,33 @@ public abstract class RpcInboundCall : RpcCall
         return true;
     }
 
-    // Default implementations of InvokeTarget and SendResult
+    // Default implementations of InvokeServer, InvokePipeline, and SendResult
 
-    protected async Task<TResult> DefaultInvokeTarget<TResult>(RpcInboundMiddlewares middlewares)
+    protected Task<TResult> DefaultInvokeServer<TResult>()
     {
-        await middlewares.OnBeforeCall(this).ConfigureAwait(false);
-        Task<TResult> resultTask = null!;
-        try {
-            resultTask = (Task<TResult>)InvokeTarget();
-            return await resultTask.ConfigureAwait(false);
+        var result = MethodDef.ArgumentListInvoker.Invoke(MethodDef.Service.Server, Arguments!);
+        return MethodDef.ReturnsValueTask
+            ? MethodDef.IsAsyncVoidMethod ? FromValueTaskAsync(result) : ((ValueTask<TResult>)result!).AsTask()
+            : MethodDef.IsAsyncVoidMethod ? FromTaskAsync(result) : (Task<TResult>)result!;
+
+        static async Task<TResult> FromValueTaskAsync(object? source) {
+            await ((ValueTask)source!).ConfigureAwait(false);
+            return default!;
         }
-        catch (Exception e) {
-            resultTask ??= Task.FromException<TResult>(e);
-            throw;
+
+        static async Task<TResult> FromTaskAsync(object? source) {
+            await ((Task)source!).ConfigureAwait(false);
+            return default!;
         }
-        finally {
-            await middlewares.OnAfterCall(this, resultTask).ConfigureAwait(false);
-        }
+    }
+
+    protected async Task<TResult> DefaultInvokePipeline<TResult>()
+    {
+        if (MethodDef.InboundCallPreprocessors is { Length: not 0 } preprocessors)
+            foreach (var p in preprocessors)
+                await p.Invoke(this).ConfigureAwait(false);
+        MethodDef.InboundCallValidator?.Invoke(this);
+        return await ((Task<TResult>)InvokeServer()).ConfigureAwait(false);
     }
 
     protected Task DefaultSendResult<TResult>(Task<TResult>? resultTask)
@@ -322,8 +320,11 @@ public abstract class RpcInboundCall : RpcCall
 public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
     : RpcInboundCall(context, methodDef)
 {
-    protected override Task InvokeTarget(RpcInboundMiddlewares middlewares)
-        => DefaultInvokeTarget<TResult>(middlewares);
+    protected override Task InvokeServer()
+        => DefaultInvokeServer<TResult>();
+
+    protected override Task InvokePipeline()
+        => DefaultInvokePipeline<TResult>();
 
     protected override Task SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);

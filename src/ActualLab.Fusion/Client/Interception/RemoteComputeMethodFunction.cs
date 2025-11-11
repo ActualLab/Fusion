@@ -69,13 +69,14 @@ public abstract class RemoteComputeMethodFunction(
     {
         var typedInput = (ComputeMethodInput)input;
         var tryIndex = 0;
+        var rerouteCount = 0;
         var startedAt = CpuTimestamp.Now;
         while (true) {
             try {
                 // We don't use RpcCallOptions here, because this method is typically called from
                 // a post-async-lock block, so the original RpcCallOptions.Peer won't be available
                 // at this point. And that's why there is also no need to reset it.
-                var peer = RpcMethodDef.RouteCall(typedInput.Invocation.Arguments);
+                var peer = RpcMethodDef.RouteOutboundCall(typedInput.Invocation.Arguments);
                 peer.ThrowIfRerouted();
 
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
@@ -130,8 +131,9 @@ public abstract class RemoteComputeMethodFunction(
                 }
             }
             catch (RpcRerouteException) {
-                Log.LogWarning("Rerouting: {Input}", typedInput);
-                await RpcHub.InternalServices.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
+                ++rerouteCount;
+                Log.LogWarning("Rerouting #{RerouteCount}: {Input}", rerouteCount, typedInput);
+                await RpcHub.InternalServices.RerouteDelayer.Invoke(rerouteCount, cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -352,7 +354,6 @@ public abstract class RemoteComputeMethodFunction(
             };
             var callOptions = new RpcCallOptions() {
                 AllowRerouting = false,
-                AssumeConnected = false,
             };
             using (callOptions.Activate())
             using (context.Activate()) {
@@ -447,7 +448,7 @@ public abstract class RemoteComputeMethodFunction(
             ComputeMethodInput input, RpcPeer peer, RpcMethodDef methodDef, CancellationToken cancellationToken)
         {
             var (handshake, _) = await peer
-                .WhenConnected(methodDef.Timeouts.ConnectTimeout, cancellationToken)
+                .WhenConnected(methodDef.OutboundCallHandler.Timeouts.ConnectTimeout, cancellationToken)
                 .ConfigureAwait(false);
             if (handshake.RemoteHubId == methodDef.Hub.Id && input.Invocation.Proxy is not InterfaceProxy)
                 throw Errors.RemoteComputeMethodCallFromTheSameService(methodDef, peer.Ref);
@@ -474,7 +475,7 @@ public abstract class RemoteComputeMethodFunction(
     protected async Task InvalidateToReroute(Computed computed, Exception? error, string source)
     {
         Log.LogWarning(error, "Invalidating to reroute: {Input}", computed.Input);
-        await RpcMethodDef.Hub.InternalServices.RerouteDelayer.Invoke(default).ConfigureAwait(false);
+        await RpcMethodDef.Hub.InternalServices.RerouteDelayer.Invoke(1, default).ConfigureAwait(false);
         computed.Invalidate(immediately: true, new InvalidationSource(source));
     }
 

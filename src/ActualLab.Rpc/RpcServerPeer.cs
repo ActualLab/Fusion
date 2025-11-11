@@ -46,7 +46,7 @@ public class RpcServerPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions 
                 }
             }
             try {
-                var closeTimeout = Hub.ServerPeerCloseTimeoutProvider.Invoke(this);
+                var closeTimeout = Hub.PeerOptions.GetServerPeerCloseTimeout(this);
                 await nextConnection
                     .When(x => x is not null, cancellationToken)
                     .WaitAsync(closeTimeout, cancellationToken)

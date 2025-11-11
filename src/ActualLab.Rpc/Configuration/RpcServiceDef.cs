@@ -51,7 +51,7 @@ public class RpcServiceDef
         ClientType = service.ClientType;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
         IsBackend = typeof(IBackendService).IsAssignableFrom(Type);
-        Scope = hub.ServiceScopeResolver.Invoke(this);
+        Scope = hub.RegistryOptions.GetServiceScope(this);
         LegacyNames = new LegacyNames(Type);
 
         _serverLazy = new Lazy<object?>(() => ServerResolver?.Resolve(Hub.Services));
@@ -79,7 +79,7 @@ public class RpcServiceDef
             if (method.IsGenericMethodDefinition)
                 continue;
 
-            var methodDef = Hub.MethodDefBuilder.Invoke(this, method);
+            var methodDef = Hub.RegistryOptions.CreateMethodDef(this, method);
             if (!methodDef.IsValid)
                 continue;
 

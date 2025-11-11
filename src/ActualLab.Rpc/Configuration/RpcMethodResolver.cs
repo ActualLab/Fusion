@@ -19,7 +19,7 @@ public sealed class RpcMethodResolver
     public RpcMethodDef? this[in RpcMethodRef methodRef] {
         get {
             if (MethodByRef is not null && MethodByRef.TryGetValue(methodRef, out var methodEntry))
-                return methodEntry.Method;
+                return methodEntry.MethodDef;
 
             return NextResolver?[methodRef];
         }
@@ -28,7 +28,7 @@ public sealed class RpcMethodResolver
     public RpcMethodDef? this[string fullName] {
         get {
             if (MethodByFullName is not null && MethodByFullName.TryGetValue(fullName, out var methodEntry))
-                return methodEntry.Method;
+                return methodEntry.MethodDef;
 
             return NextResolver?[fullName];
         }
@@ -37,7 +37,7 @@ public sealed class RpcMethodResolver
     public RpcMethodDef? this[int hashCode] {
         get {
             if (MethodByHashCode is not null && MethodByHashCode.TryGetValue(hashCode, out var methodEntry))
-                return methodEntry.Method;
+                return methodEntry.MethodDef;
 
             return NextResolver?[hashCode];
         }
@@ -119,7 +119,7 @@ public sealed class RpcMethodResolver
                 var c = methodVersion.CompareTo(existingEntry.Version);
                 if (c == 0)
                     throw Errors.Constraint(
-                        $"[LegacyName] conflict: '{method.FullName}' and '{existingEntry.Method.FullName}' " +
+                        $"[LegacyName] conflict: '{method.FullName}' and '{existingEntry.MethodDef.FullName}' " +
                         $"are both mapped to '{serviceName}.{methodName}' in v{methodVersion.Format()}.");
 
                 if (c < 0) {
@@ -198,15 +198,15 @@ public sealed class RpcMethodResolver
 
     // Nested type
 
-    public readonly record struct MethodEntry(RpcMethodDef Method, Version Version) : ICanBeNone<MethodEntry>
+    public readonly record struct MethodEntry(RpcMethodDef MethodDef, Version Version) : ICanBeNone<MethodEntry>
     {
         public static MethodEntry None => default;
 
-        public bool IsNone => ReferenceEquals(Method, null);
+        public bool IsNone => ReferenceEquals(MethodDef, null);
 
         public override string ToString()
             => IsNone
                 ? "n/a"
-                : $"{Method} (v{Version.Format()})";
+                : $"{MethodDef} (v{Version.Format()})";
     }
 }

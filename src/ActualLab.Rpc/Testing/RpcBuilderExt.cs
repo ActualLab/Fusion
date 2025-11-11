@@ -16,7 +16,7 @@ public static class RpcBuilderExt
         services.AddSingleton(c => new RpcClientPeerReconnectDelayer(c) {
             Delays = RetryDelaySeq.Fixed(0.05),
         });
-        services.AddSingleton<RpcServerPeerCloseTimeoutProvider>(_ => TimeSpan.FromSeconds(10));
+        services.AddSingleton<RpcPeerOptions>(c => new RpcTestClientPeerOptions(c));
         return rpc;
     }
 }
