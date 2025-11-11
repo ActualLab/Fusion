@@ -28,12 +28,12 @@ public class RpcWebSocketServer(
     }
 
     public Options Settings { get; } = settings;
+    public RpcPeerOptions PeerOptions { get; }
+        = services.GetRequiredService<RpcPeerOptions>();
+    public RpcWebSocketClientOptions WebSocketClientOptions { get; }
+        = services.GetRequiredService<RpcWebSocketClientOptions>();
     public RpcWebSocketServerPeerRefFactory PeerRefFactory { get; }
         = services.GetRequiredService<RpcWebSocketServerPeerRefFactory>();
-    public RpcServerConnectionFactory ServerConnectionFactory { get; }
-        = services.GetRequiredService<RpcServerConnectionFactory>();
-    public RpcWebSocketChannelOptionsProvider WebSocketChannelOptionsProvider { get; }
-        = services.GetRequiredService<RpcWebSocketChannelOptionsProvider>();
 
     public virtual async Task Invoke(HttpContext context, bool isBackend)
     {
@@ -61,13 +61,13 @@ public class RpcWebSocketServer(
                 .KeylessSet(context)
                 .KeylessSet(webSocket);
             var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
-            var webSocketChannelOptions = WebSocketChannelOptionsProvider.Invoke(peer, properties);
+            var webSocketChannelOptions = WebSocketClientOptions.GetChannelOptions(peer, properties);
             var channel = new WebSocketChannel<RpcMessage>(
                 webSocketChannelOptions, webSocketOwner, cancellationToken) {
                 OwnsWebSocketOwner = false,
             };
-            connection = await ServerConnectionFactory
-                .Invoke(peer, channel, properties, cancellationToken)
+            connection = await PeerOptions
+                .CreateServerConnection(peer, channel, properties, cancellationToken)
                 .ConfigureAwait(false);
 
             if (peer.IsConnected()) {
