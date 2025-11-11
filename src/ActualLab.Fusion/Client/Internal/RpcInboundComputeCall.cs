@@ -94,11 +94,11 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
     public override Computed? UntypedComputed => Computed;
 
 #if NET5_0_OR_GREATER
-    protected override async Task<TResult> InvokeTarget()
+    protected override async Task<TResult> InvokeServer()
     {
         var ccs = Fusion.Computed.BeginCapture();
         try {
-            return await ((Task<TResult>)base.InvokeTarget()).ConfigureAwait(false);
+            return await DefaultInvokeServer<TResult>().ConfigureAwait(false);
         }
         finally {
             var computed = ccs.Context.TryGetCaptured<TResult>();
@@ -110,7 +110,7 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
         }
     }
 #else
-    protected override Task InvokeTarget()
+    protected override Task InvokeServer()
     {
         return Implementation();
 
@@ -118,7 +118,7 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
         {
             var ccs = Fusion.Computed.BeginCapture();
             try {
-                return await ((Task<TResult>)base.InvokeTarget()).ConfigureAwait(false);
+                return await ((Task<TResult>)DefaultInvokeServer()).ConfigureAwait(false);
             }
             finally {
                 var computed = ccs.Context.TryGetCaptured<TResult>();
@@ -133,8 +133,8 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
 
 #endif
 
-    protected override Task InvokeTarget(RpcInboundMiddlewares middlewares)
-        => DefaultInvokeTarget<TResult>(middlewares);
+    protected override Task InvokePipeline()
+        => DefaultInvokePipeline<TResult>();
 
     protected override Task SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);

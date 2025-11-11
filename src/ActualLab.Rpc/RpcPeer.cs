@@ -18,7 +18,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     private volatile RpcPeerStopMode _stopMode;
     private bool _resetTryIndex;
 
-    protected IServiceProvider Services => Hub.Services;
+    protected internal readonly IServiceProvider Services;
+    protected internal readonly RpcPeerOptions Options;
+    protected internal readonly RpcInboundCallOptions InboundCallOptions;
+    protected internal readonly RpcOutboundCallOptions OutboundCallOptions;
 
     protected internal ChannelWriter<RpcMessage>? Sender {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -27,7 +30,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     [field: AllowNull, MaybeNull]
     protected internal RpcCallLogger CallLogger
-        => field ??= Hub.CallLoggerFactory.Invoke(this, Hub.CallLoggerFilter, Log, CallLogLevel);
+        => field ??= Hub.DiagnosticsOptions.CreateCallLogger(this, Log, CallLogLevel);
     [field: AllowNull, MaybeNull]
     protected internal ILogger Log
         => field ??= Services.LogFor(GetType());
@@ -40,8 +43,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public VersionSet Versions { get; init; }
     public RpcSerializationFormat SerializationFormat { get; init; }
     public RpcArgumentSerializer ArgumentSerializer { get; init; }
-    public RpcInboundContextFactory InboundContextFactory { get; init; }
-    public RpcInboundCallFilter InboundCallFilter { get; init; }
     public RpcInboundCallTracker InboundCalls { get; init; }
     public RpcOutboundCallTracker OutboundCalls { get; init; }
     public RpcRemoteObjectTracker RemoteObjects { get; init; }
@@ -70,20 +71,22 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         _ = hub.ServiceRegistry;
 
         Hub = hub;
+        Services = hub.Services;
         Ref = peerRef;
-        ConnectionKind = hub.PeerConnectionKindResolver.Invoke(hub, peerRef);
+        Options = Hub.PeerOptions;
+        InboundCallOptions = Hub.InboundCallOptions;
+        OutboundCallOptions = Hub.OutboundCallOptions;
+        ConnectionKind = Options.GetConnectionKind(peerRef);
         if (ConnectionKind is RpcPeerConnectionKind.None)
             ConnectionKind = RpcPeerConnectionKind.Remote; // RpcPeer.ConnectionKind should never be None
         Versions = versions ?? peerRef.Versions;
 #pragma warning disable CA2214 // Do not call overridable methods in constructors
         // ReSharper disable once VirtualMemberCallInConstructor
-        _serverMethodResolver = GetServerMethodResolver(null);
+        _serverMethodResolver = GetServerMethodResolver(handshake: null);
 #pragma warning restore CA2214
 
         SerializationFormat = Hub.SerializationFormats.Get(peerRef);
         ArgumentSerializer = SerializationFormat.ArgumentSerializer;
-        InboundContextFactory = Hub.InboundContextFactory;
-        InboundCallFilter = Hub.InboundCallFilter;
 
         var services = hub.Services;
         InboundCalls = services.GetRequiredService<RpcInboundCallTracker>();
@@ -243,8 +246,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
         Log.LogInformation("'{PeerRef}': Started", Ref);
-        foreach (var peerTracker in Hub.PeerTrackers)
-            peerTracker.Invoke(this);
 
         // ReSharper disable once UseAwaitUsing
         using var rerouteTokenRegistration = Ref.RerouteToken.Register(() => Task.Run(DisposeAsync, CancellationToken.None));
@@ -373,7 +374,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                 readerTokenSource.CancelAndDisposeSilently();
                 if (cancellationToken.IsCancellationRequested) {
-                    var isTerminal = error is not null && Hub.PeerTerminalErrorDetector.Invoke(error);
+                    var isTerminal = error is not null && Options.IsTerminalError(error);
                     if (!isTerminal)
                         error = RpcReconnectFailedException.StopRequested(error);
                 }
@@ -398,7 +399,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 connectionState = _connectionState;
                 error = connectionState.Value.Error;
                 if (!connectionState.IsFinal) {
-                    var isTerminal = error is not null && Hub.PeerTerminalErrorDetector.Invoke(error);
+                    var isTerminal = error is not null && Options.IsTerminalError(error);
                     if (!isTerminal)
                         error = new RpcReconnectFailedException(error);
                     SetConnectionState(connectionState.Value.NextDisconnected(error));
@@ -432,7 +433,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         CancellationToken cancellationToken)
     {
         try {
-            var context = InboundContextFactory.Invoke(this, message, peerChangedToken);
+            var context = InboundCallOptions.CreateContext(this, message, peerChangedToken);
             _ = context.Call.Process(cancellationToken);
             return context;
         }
@@ -479,7 +480,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             _connectionState = connectionState = nextConnectionState;
             _serverMethodResolver = GetServerMethodResolver(newState.Handshake);
             _handshake = newState.Handshake;
-            if (newState.Error is not null && Hub.PeerTerminalErrorDetector.Invoke(newState.Error)) {
+            if (newState.Error is not null && Options.IsTerminalError(newState.Error)) {
                 terminalError = newState.Error;
                 connectionState.TrySetFinal(terminalError);
             }

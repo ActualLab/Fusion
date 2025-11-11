@@ -19,9 +19,10 @@ public class CommanderProxyCodeKeeper : RpcProxyCodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(string name = "")
     {
-        base.KeepMethodResult<TResult, TUnwrapped>(name);
         if (AlwaysTrue)
             return;
+
+        base.KeepMethodResult<TResult, TUnwrapped>(name);
 
         Keep<CommandContext<TUnwrapped>>();
         Keep<CommanderExt.TypedCallFactory<TUnwrapped>>();

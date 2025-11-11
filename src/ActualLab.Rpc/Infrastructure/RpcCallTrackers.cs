@@ -110,41 +110,32 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         continue;
 
                     inProgressCallCount++;
-                    var timeouts = call.MethodDef.Timeouts;
+                    var timeouts = call.MethodDef.OutboundCallTimeouts;
                     var startedAt = call.StartedAt;
                     if (startedAt == default)
                         continue; // Something is off: call.StartedAt wasn't set
 
                     var elapsed = startedAt.Elapsed;
-                    if (elapsed <= timeouts.Timeout)
-                        continue;
-
-                    Exception? error = null;
-                    // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-                    if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Throw) != 0) {
-                        error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.Timeout);
+                    if (elapsed >= timeouts.Timeout) {
+                        var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.Timeout);
                         call.SetError(error, context: null, assumeCancelled: false);
+                        Peer.Log.LogError(error,
+                            "{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
+                            Peer.Ref, call, elapsed.ToShortString(), timeouts.Timeout.ToShortString());
                     }
-                    else {
-                        // Reset StartedAt to make sure it won't pop up every time we're here
-                        call.StartedAt = CpuTimestamp.Now;
-                    }
-                    // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-                    if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Log) != 0) {
-                        if (error is not null)
-                            Peer.Log.LogError(error,
-                                "{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
-                                Peer.Ref, call, elapsed.ToShortString(), timeouts.Timeout.ToShortString());
-                        else if (++delayedCallCount <= RpcCallTimeouts.DelayedCallLogLimit)
-                            Peer.Log.LogWarning(
-                                "{PeerRef}': call {Call} is delayed ({Elapsed} from its start or prev. report here)",
-                                Peer.Ref, call, elapsed.ToShortString());
+                    else if (elapsed >= timeouts.LogTimeout) {
+                        if (++delayedCallCount > RpcCallTimeoutSet.DelayedCallLogLimit)
+                            continue;
+
+                        Peer.Log.LogWarning(
+                            "{PeerRef}': call {Call} is delayed ({Elapsed} from its start or prev. report here)",
+                            Peer.Ref, call, elapsed.ToShortString());
                     }
                 }
-                if (delayedCallCount > RpcCallTimeouts.DelayedCallLogLimit)
+                if (delayedCallCount > RpcCallTimeoutSet.DelayedCallLogLimit)
                     Peer.Log.LogWarning(
                         "{PeerRef}': {UnloggedDelayedCallCount} more delayed call(s) aren't logged",
-                        Peer.Ref, delayedCallCount - RpcCallTimeouts.DelayedCallLogLimit);
+                        Peer.Ref, delayedCallCount - RpcCallTimeoutSet.DelayedCallLogLimit);
 
                 var summaryLogSettings = Limits.LogOutboundCallSummarySettings;
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period

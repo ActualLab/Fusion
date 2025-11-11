@@ -98,7 +98,7 @@ public static class ClientStartup
             // Client and API host settings
 
             // Highly recommended option for client & API servers:
-            RpcDefaultDelegates.FrameDelayerProvider = RpcFrameDelayerProviders.Auto();
+            RpcDefaultDelegates.FrameDelayerProvider = RpcFrameDelayerFactories.Auto();
             // Lets ComputedState to be dependent on, e.g., current culture - use only if you need this:
             // ComputedState.DefaultOptions.FlowExecutionContext = true;
             fusion.Rpc.AddWebSocketClient(remoteRpcHostUrl);

@@ -17,11 +17,10 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public RpcHeader[]? Headers = headers;
     public RpcMethodDef? MethodDef;
     public ArgumentList? Arguments;
-    public CancellationToken CallCancelToken;
+    public CancellationToken CancellationToken; // From Arguments
     public RpcOutboundCall? Call;
     public RpcPeer? Peer;
     public long RelatedId;
-    public bool AssumeConnected;
     public int SizeHint;
     public RpcCacheInfoCapture? CacheInfoCapture;
     public RpcOutboundCallTrace? Trace;
@@ -45,14 +44,6 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Scope UseOrActivateNew()
-        => UseOrActivateNew(_current);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static Scope UseOrActivateNew(RpcOutboundContext? current)
-        => new Scope(current ?? new(), current);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Scope Activate()
         => new(this);
 
@@ -71,7 +62,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
             MethodDef = methodDef;
             Arguments = arguments;
             var ctIndex = methodDef.CancellationTokenIndex;
-            CallCancelToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
+            CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
         }
 
         // Peer & Call
@@ -82,13 +73,13 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
             return Call ?? throw ActualLab.Internal.Errors.InternalError("Call is null, which isn't expected here.");
         }
 
-        Peer ??= methodDef.RouteCall(arguments);
+        Peer ??= methodDef.RouteOutboundCall(arguments);
         Call = RpcOutboundCall.New(this);
-        if (Call is not null) {
-            if (MethodDef.Tracer is { } tracer)
-                Trace ??= tracer.StartOutboundTrace(Call);
-            hub.OutboundMiddlewares.NullIfEmpty()?.OnPrepareCall(this, false);
-        }
+        if (Call is null)
+            return Call;
+
+        if (MethodDef.Tracer is { } tracer)
+            Trace ??= tracer.StartOutboundTrace(Call);
         return Call;
     }
 
@@ -102,12 +93,11 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
             MethodDef = methodDef;
             Arguments = arguments;
             var ctIndex = methodDef.CancellationTokenIndex;
-            CallCancelToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
+            CancellationToken = ctIndex >= 0 ? arguments.GetCancellationToken(ctIndex) : default;
         }
 
         // Peer & Call
-        var hub = MethodDef.Hub;
-        Peer ??= methodDef.RouteCall(arguments);
+        Peer ??= methodDef.RouteOutboundCall(arguments);
         Call = RpcOutboundCall.New(this);
         return Call;
     }
@@ -121,12 +111,8 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         var hub = MethodDef.Hub;
         var oldPeer = Peer;
         if (oldPeer is null || oldPeer.Ref.CanBeRerouted)
-            Peer = MethodDef.RouteCall(Arguments);
+            Peer = MethodDef.RouteOutboundCall(Arguments);
         Call = RpcOutboundCall.New(this);
-        if (Call is not null) {
-            // We don't start trace here, coz it's either started already or was sampled out
-            hub.OutboundMiddlewares.NullIfEmpty()?.OnPrepareCall(this, true);
-        }
         if (ReferenceEquals(oldPeer, Peer))
             Peer?.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
         return Call;

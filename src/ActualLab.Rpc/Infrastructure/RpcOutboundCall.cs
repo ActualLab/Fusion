@@ -37,7 +37,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public string CompletedStageName => RpcCallStage.GetName(CompletedStage);
 
     public CpuTimestamp StartedAt;
-    public CancellationTokenRegistration CallCancelHandler;
+    public CancellationTokenRegistration CancellationHandler;
 
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
@@ -97,18 +97,17 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
 
         Register();
-        var sender = (ChannelWriter<RpcMessage>?)null;
-        if (Context.AssumeConnected || Peer.IsConnected(out _, out sender)) {
-            _ = SendRegistered(true, sender); // Fast path
-            return ResultTask;
-        }
-        return CompleteAsync(); // Slow path
+        if (!Peer.IsConnected(out _, out var sender))
+            return CompleteAsync(); // Slow path
+
+        _ = SendRegistered(isFirstAttempt: true, sender); // Fast path
+        return ResultTask;
 
         async Task<object?> CompleteAsync() {
             try {
                 // WhenConnected throws RpcRerouteException in case Peer.Ref.IsRerouted is true
                 var (_, sender1) = await Peer
-                    .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CallCancelToken)
+                    .WhenConnected(MethodDef.OutboundCallTimeouts.ConnectTimeout, Context.CancellationToken)
                     .ConfigureAwait(false);
                 _ = SendRegistered(true, sender1);
             }
@@ -122,10 +121,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public void Register()
     {
         Peer.OutboundCalls.Register(this);
-        if (CallCancelHandler == default)
-            CallCancelHandler = Context.CallCancelToken.Register(static state => {
+        if (CancellationHandler == default)
+            CancellationHandler = Context.CancellationToken.Register(static state => {
                 var call = (RpcOutboundCall)state!;
-                call.Cancel(call.Context.CallCancelToken);
+                call.Cancel(call.Context.CancellationToken);
             }, this, useSynchronizationContext: false);
     }
 
@@ -193,7 +192,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     {
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
-        var hash = Peer.Hub.HashProvider.Invoke(argumentData);
+        var hash = Peer.InternalServices.OutboundCallOptions.ComputeHash(argumentData);
         var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
         var message = new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
         return (message, hash);
@@ -297,7 +296,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (!Peer.OutboundCalls.CompleteKeepRegistered(this))
             return;
 
-        CallCancelHandler.Dispose();
+        CancellationHandler.Dispose();
         Context.Trace?.Complete(this);
     }
 
@@ -324,7 +323,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             return false;
         }
 
-        return peer != MethodDef.RouteCall(Context.Arguments!);
+        return peer != MethodDef.RouteOutboundCall(Context.Arguments!);
     }
 
     public void SetMustRerouteError()

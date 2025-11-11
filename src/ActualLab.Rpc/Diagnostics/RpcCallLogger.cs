@@ -2,10 +2,10 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Diagnostics;
 
-public class RpcCallLogger(RpcPeer peer, RpcCallLoggerFilter filter, ILogger? log, LogLevel logLevel)
+public class RpcCallLogger(RpcPeer peer, ILogger? log, LogLevel logLevel)
 {
     public RpcPeer Peer { get; } = peer;
-    public RpcCallLoggerFilter Filter { get; } = filter;
+    public Func<RpcPeer, RpcCall, bool> Filter { get; init; } = static (_, _) => true;
     public ILogger? Log { get; } = log.IfEnabled(logLevel);
     public LogLevel LogLevel { get; } = logLevel;
 

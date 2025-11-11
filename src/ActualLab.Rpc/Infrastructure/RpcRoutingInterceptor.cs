@@ -26,8 +26,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
         var localCallAsyncInvoker = methodDef.SelectAsyncInvokerUntyped(initialInvocation.Proxy, LocalTarget);
         return invocation => {
             Task resultTask;
-            using var scope = RpcOutboundContext.UseOrActivateNew();
-            var context = scope.Context;
+            var context = new RpcOutboundContext();
             RpcCallOptions.Use(context, out var allowRerouting);
             var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
@@ -43,7 +42,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
             }
             else
                 resultTask = call.Invoke();
-            return rpcMethodDef.UniversalAsyncResultWrapper.Invoke(resultTask);
+            return rpcMethodDef.UniversalAsyncResultConverter.Invoke(resultTask);
         };
     }
 
@@ -54,7 +53,8 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
         Func<Invocation, Task>? localCallAsyncInvoker,
         Invocation invocation)
     {
-        var cancellationToken = context.CallCancelToken;
+        var cancellationToken = context.CancellationToken;
+        var rerouteCount = 0;
         while (true) {
             try {
                 if (call is not null)
@@ -66,7 +66,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                 Task untypedResultTask;
                 using (RpcOutboundContext.Deactivate()) // No RPC expected -> hide RpcOutboundContext
                     untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
-                return await methodDef.TaskToUntypedValueTaskConverter
+                return await methodDef.TaskToObjectValueTaskConverter
                     .Invoke(untypedResultTask)
                     .ConfigureAwait(false);
             }
@@ -74,8 +74,9 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                 if (call is null && localCallAsyncInvoker is null)
                     throw; // A higher level interceptor should handle it
 
-                Log.LogWarning(e, "Rerouting: {Invocation}", invocation);
-                await Hub.RerouteDelayer.Invoke(cancellationToken).ConfigureAwait(false);
+                ++rerouteCount;
+                Log.LogWarning(e, "Rerouting #{RerouteCount}: {Invocation}", rerouteCount, invocation);
+                await Hub.OutboundCallOptions.ReroutingDelay(rerouteCount, cancellationToken).ConfigureAwait(false);
                 call = context.PrepareReroutedCall();
             }
         }

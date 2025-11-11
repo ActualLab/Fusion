@@ -26,10 +26,13 @@ public class RpcProxyCodeKeeper : ProxyCodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(string name = "")
     {
-        KeepSerializable<TUnwrapped>();
-        base.KeepMethodResult<TResult, TUnwrapped>(name);
         if (AlwaysTrue)
             return;
+
+        base.KeepMethodResult<TResult, TUnwrapped>(name);
+
+        KeepSerializable<TUnwrapped>();
+        Keep<RpcMethodDefCodeKeeper>().KeepCodeForResult<TResult, TUnwrapped>();
 
         // RpcInbound/OutboundXxx
         var outboundContext = CallSilently(() => new RpcOutboundContext());

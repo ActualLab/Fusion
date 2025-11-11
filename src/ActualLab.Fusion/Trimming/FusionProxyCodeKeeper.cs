@@ -15,7 +15,7 @@ namespace ActualLab.Fusion.Trimming;
 public class FusionProxyCodeKeeper : ProxyCodeKeeper
 {
     // CommanderProxyCodeKeeper is also RpcProxyCodeKeeper
-    private readonly CommanderProxyCodeKeeper _commanderProxyCodeKeeper = Get<CommanderProxyCodeKeeper>();
+    private static readonly CommanderProxyCodeKeeper CommanderProxyCodeKeeper = Get<CommanderProxyCodeKeeper>();
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputeMethodFunction<>))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ConsolidatingComputeMethodFunction<>))]
@@ -29,15 +29,16 @@ public class FusionProxyCodeKeeper : ProxyCodeKeeper
 
     public override void KeepMethodArgument<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(string name = "", int index = -1)
-        => _commanderProxyCodeKeeper.KeepMethodArgument<TArg>(name, index);
+        => CommanderProxyCodeKeeper.KeepMethodArgument<TArg>(name, index);
 
     public override void KeepMethodResult<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(string name = "")
     {
-        _commanderProxyCodeKeeper.KeepMethodResult<TResult, TUnwrapped>(name);
         if (AlwaysTrue)
             return;
+
+        CommanderProxyCodeKeeper.KeepMethodResult<TResult, TUnwrapped>(name);
 
         Keep<ComputeMethodFunction<TUnwrapped>>();
         Keep<ConsolidatingComputeMethodFunction<TUnwrapped>>();

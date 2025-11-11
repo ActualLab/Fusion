@@ -4,6 +4,7 @@ using ActualLab.Interception;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.Testing;
@@ -23,7 +24,6 @@ public readonly struct RpcBuilder
     static RpcBuilder() => CodeKeeper.AddFakeAction(
         static () => {
             CodeKeeper.KeepStatic(typeof(Proxies));
-            CodeKeeper.KeepStatic(typeof(RpcDefaultDelegates));
 
             // Serializable types
             CodeKeeper.KeepSerializable<TypeRef>();
@@ -33,6 +33,12 @@ public readonly struct RpcBuilder
             CodeKeeper.Keep<RpcRoutingInterceptor>();
 
             // Configuration
+            CodeKeeper.Keep<RpcRegistryOptions>();
+            CodeKeeper.Keep<RpcPeerOptions>();
+            CodeKeeper.Keep<RpcInboundCallOptions>();
+            CodeKeeper.Keep<RpcOutboundCallOptions>();
+            CodeKeeper.Keep<RpcWebSocketClientOptions>();
+            CodeKeeper.Keep<RpcDiagnosticsOptions>();
             CodeKeeper.Keep<RpcMethodDef>();
             CodeKeeper.Keep<RpcServiceDef>();
             CodeKeeper.Keep<RpcServiceRegistry>();
@@ -47,9 +53,6 @@ public readonly struct RpcBuilder
             // Per-hub
             CodeKeeper.Keep<RpcHub>();
             CodeKeeper.Keep<RpcSystemCalls>();
-            CodeKeeper.Keep<RpcInboundMiddlewares>();
-            CodeKeeper.Keep<RpcOutboundMiddlewares>();
-            CodeKeeper.Keep<RpcRandomDelayMiddleware>();
 
             // Per-peer
             CodeKeeper.Keep<RpcClientPeer>();
@@ -60,7 +63,6 @@ public readonly struct RpcBuilder
 
             // Per-call
             CodeKeeper.Keep<RpcInboundContext>();
-            CodeKeeper.Keep<RpcInboundContextFactory>();
             CodeKeeper.Keep<RpcOutboundContext>();
             CodeKeeper.Keep<RpcCacheInfoCapture>();
         });
@@ -94,29 +96,15 @@ public readonly struct RpcBuilder
         services.AddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
 
         // Core services
+        services.AddSingleton(c => new RpcRegistryOptions(c));
+        services.AddSingleton(c => new RpcPeerOptions(c));
+        services.AddSingleton(c => new RpcInboundCallOptions(c));
+        services.AddSingleton(c => new RpcOutboundCallOptions(c));
+        services.AddSingleton(c => new RpcWebSocketClientOptions(c));
+        services.AddSingleton(c => new RpcDiagnosticsOptions(c));
         services.AddSingleton(c => new RpcHub(c));
         services.AddSingleton(c => new RpcServiceRegistry(c));
         services.AddSingleton(_ => RpcSerializationFormatResolver.Default);
-        services.AddSingleton(_ => RpcDefaultDelegates.ServiceDefBuilder);
-        services.AddSingleton(_ => RpcDefaultDelegates.MethodDefBuilder);
-        services.AddSingleton(_ => RpcDefaultDelegates.CallTimeoutsProvider);
-        services.AddSingleton(_ => RpcDefaultDelegates.ServiceScopeResolver);
-        services.AddSingleton(_ => RpcDefaultDelegates.InboundCallFilter);
-        services.AddSingleton(_ => RpcDefaultDelegates.CallRouterFactory);
-        services.AddSingleton(_ => RpcDefaultDelegates.HashProvider);
-        services.AddSingleton(_ => RpcDefaultDelegates.RerouteDelayer);
-        services.AddSingleton(_ => RpcDefaultDelegates.PeerConnectionKindResolver);
-        services.AddSingleton(_ => RpcDefaultDelegates.InboundContextFactory);
-        services.AddSingleton(_ => RpcDefaultDelegates.PeerFactory);
-        services.AddSingleton(_ => RpcDefaultDelegates.ServerConnectionFactory);
-        services.AddSingleton(_ => RpcDefaultDelegates.WebSocketChannelOptionsProvider);
-        services.AddSingleton(_ => RpcDefaultDelegates.ServerPeerCloseTimeoutProvider);
-        services.AddSingleton(_ => RpcDefaultDelegates.PeerTerminalErrorDetector);
-        services.AddSingleton(_ => RpcDefaultDelegates.CallTracerFactory);
-        services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFactory);
-        services.AddSingleton(_ => RpcDefaultDelegates.CallLoggerFilter);
-        services.AddSingleton(c => new RpcInboundMiddlewares(c));
-        services.AddSingleton(c => new RpcOutboundMiddlewares(c));
         services.AddTransient(_ => new RpcInboundCallTracker());
         services.AddTransient(_ => new RpcOutboundCallTracker());
         services.AddTransient(_ => new RpcRemoteObjectTracker());
@@ -328,75 +316,5 @@ public readonly struct RpcBuilder
         service = new RpcServiceBuilder(this, serviceType);
         Configuration.Services[serviceType] = service;
         return service;
-    }
-
-    public RpcBuilder AddInboundMiddleware<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TMiddleware>
-        (Func<IServiceProvider, TMiddleware>? factory = null)
-        where TMiddleware : RpcInboundMiddleware
-        => AddInboundMiddleware(typeof(TMiddleware), factory);
-
-    public RpcBuilder AddInboundMiddleware(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type middlewareType,
-        Func<IServiceProvider, object>? factory = null)
-    {
-        if (!typeof(RpcInboundMiddleware).IsAssignableFrom(middlewareType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcInboundMiddleware>(middlewareType, nameof(middlewareType));
-
-        var descriptor = factory is not null
-            ? ServiceDescriptor.Singleton(typeof(RpcInboundMiddleware), factory)
-            : ServiceDescriptor.Singleton(typeof(RpcInboundMiddleware), middlewareType);
-        Services.TryAddEnumerable(descriptor);
-        return this;
-    }
-
-    public RpcBuilder RemoveInboundMiddleware<TMiddleware>()
-        where TMiddleware : RpcInboundMiddleware
-        => RemoveInboundMiddleware(typeof(TMiddleware));
-
-    public RpcBuilder RemoveInboundMiddleware(Type middlewareType)
-    {
-        if (!typeof(RpcInboundMiddleware).IsAssignableFrom(middlewareType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcInboundMiddleware>(middlewareType, nameof(middlewareType));
-
-        Services.RemoveAll(d =>
-            d.ImplementationType == middlewareType
-            && d.ServiceType == typeof(RpcInboundMiddleware));
-        return this;
-    }
-
-    public RpcBuilder AddOutboundMiddleware<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TMiddleware>
-        (Func<IServiceProvider, TMiddleware>? factory = null)
-        where TMiddleware : RpcOutboundMiddleware
-        => AddOutboundMiddleware(typeof(TMiddleware), factory);
-
-    public RpcBuilder AddOutboundMiddleware(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type middlewareType,
-        Func<IServiceProvider, object>? factory = null)
-    {
-        if (!typeof(RpcOutboundMiddleware).IsAssignableFrom(middlewareType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcOutboundMiddleware>(middlewareType, nameof(middlewareType));
-
-        var descriptor = factory is not null
-            ? ServiceDescriptor.Singleton(typeof(RpcOutboundMiddleware), factory)
-            : ServiceDescriptor.Singleton(typeof(RpcOutboundMiddleware), middlewareType);
-        Services.TryAddEnumerable(descriptor);
-        return this;
-    }
-
-    public RpcBuilder RemoveOutboundMiddleware<TMiddleware>()
-        where TMiddleware : RpcOutboundMiddleware
-        => RemoveOutboundMiddleware(typeof(TMiddleware));
-
-    public RpcBuilder RemoveOutboundMiddleware(Type middlewareType)
-    {
-        if (!typeof(RpcOutboundMiddleware).IsAssignableFrom(middlewareType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcOutboundMiddleware>(middlewareType, nameof(middlewareType));
-
-        Services.RemoveAll(d =>
-            d.ImplementationType == middlewareType
-            && d.ServiceType == typeof(RpcOutboundMiddleware));
-        return this;
     }
 }

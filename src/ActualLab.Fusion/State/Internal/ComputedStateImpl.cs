@@ -23,7 +23,7 @@ public static class ComputedStateImpl
     {
         public override object Generate()
         {
-            if (typeof(T) == typeof(ValueVoid))
+            if (typeof(T) == typeof(VoidSurrogate))
                 throw ActualLab.Internal.Errors.InternalError("Void-typed parameter cannot be used here.");
 
             return static (CancellationToken disposeToken)

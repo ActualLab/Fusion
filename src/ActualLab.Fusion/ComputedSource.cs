@@ -29,9 +29,9 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
     private volatile Computed _computed;
 
     [field: AllowNull, MaybeNull]
-    protected Func<Task, object?> GetUntypedTaskResultSynchronously =>
+    protected Func<Task, object?> GetTaskResultAsObjectSynchronously =>
         field ??= GenericInstanceCache.Get<Func<Task, object?>>(
-            typeof(TaskExt.GetUntypedResultSynchronouslyFactory<>), OutputType);
+            typeof(TaskExt.GetResultAsObjectSynchronouslyFactory<>), OutputType);
 
     protected AsyncLock AsyncLock { get; }
     protected object Lock => AsyncLock;
@@ -162,7 +162,7 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
                 using var _ = Computed.BeginCompute(computed);
                 var computeTask = Computer.Invoke(this, cancellationToken);
                 await computeTask.ConfigureAwait(false);
-                var value = GetUntypedTaskResultSynchronously(computeTask);
+                var value = GetTaskResultAsObjectSynchronously(computeTask);
                 computed.TrySetValue(value);
                 break;
             }

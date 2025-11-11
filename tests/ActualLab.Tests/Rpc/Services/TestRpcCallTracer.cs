@@ -4,7 +4,7 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Tests.Rpc;
 
-public class TestRpcCallTracer(RpcMethodDef method) : RpcCallTracer(method)
+public class TestRpcCallTracer(RpcMethodDef methodDef) : RpcCallTracer(methodDef)
 {
     private long _enterCount;
     private long _exitCount;

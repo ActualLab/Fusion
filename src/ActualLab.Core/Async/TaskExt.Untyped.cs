@@ -57,10 +57,10 @@ public static partial class TaskExt
     public static Task FromCancelled(CancellationToken cancellationToken, Type resultType)
 #pragma warning restore CA1068
         => GenericInstanceCache
-            .Get<Func<CancellationToken, Task>>(typeof(GetUntypedResultSynchronouslyFactory<>), resultType)
+            .Get<Func<CancellationToken, Task>>(typeof(FromCancelledTaskFactory<>), resultType)
             .Invoke(cancellationToken);
 
-    // ToTypedXxx
+    // ToXxx
 
     public static object ToTypedValueTask(this Task task, Type resultType)
         => GenericInstanceCache
@@ -73,11 +73,9 @@ public static partial class TaskExt
             .Get<Func<Task, IResult>>(typeof(ToTypedResultSynchronouslyFactory<>), resultType)
             .Invoke(task);
 
-    // ToUntypedXxx
-
-    public static ValueTask<object?> ToUntypedValueTask(this Task task, Type resultType)
+    public static ValueTask<object?> ToObjectValueTask(this Task task, Type resultType)
         => GenericInstanceCache
-            .Get<Func<Task, ValueTask<object?>>>(typeof(ToUntypedValueTaskFactory<>), resultType)
+            .Get<Func<Task, ValueTask<object?>>>(typeof(ToObjectValueTaskFactory<>), resultType)
             .Invoke(task);
 
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
@@ -86,12 +84,12 @@ public static partial class TaskExt
             .Get<Func<Task, Result>>(typeof(ToUntypedResultSynchronouslyFactory<>), resultType)
             .Invoke(task);
 
-    // GetUntypedResultXxx
+    // GetResultAsObjectSynchronously
 
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
-    public static object? GetUntypedResultSynchronously(this Task task, Type resultType)
+    public static object? GetResultAsObjectSynchronously(this Task task, Type resultType)
         => GenericInstanceCache
-            .Get<Func<Task, object?>>(typeof(GetUntypedResultSynchronouslyFactory<>), resultType)
+            .Get<Func<Task, object?>>(typeof(GetResultAsObjectSynchronouslyFactory<>), resultType)
             .Invoke(task);
 
     // Nested types
@@ -100,7 +98,7 @@ public static partial class TaskExt
     {
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]
         public override object Generate()
-            => typeof(T) == typeof(ValueVoid)
+            => typeof(T) == typeof(VoidSurrogate)
                 ? (Func<Exception, Task>)Task.FromException
                 : (Func<Exception, Task>)Task.FromException<T>;
     }
@@ -108,7 +106,7 @@ public static partial class TaskExt
     public sealed class FromCancelledTaskFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
-            => typeof(T) == typeof(ValueVoid)
+            => typeof(T) == typeof(VoidSurrogate)
                 ? static (CancellationToken cancellationToken) => Task.FromCanceled(cancellationToken)
                 : static (CancellationToken cancellationToken) => (Task)Task.FromCanceled<T>(cancellationToken);
     }
@@ -116,15 +114,15 @@ public static partial class TaskExt
     public sealed class ToTypedValueTaskFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
-            => typeof(T) == typeof(ValueVoid)
+            => typeof(T) == typeof(VoidSurrogate)
                 ? static (Task source) => (object)new ValueTask(source)
                 : static  (Task source) => (object)new ValueTask<T>((Task<T>)source);
     }
 
-    public sealed class ToUntypedValueTaskFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    public sealed class ToObjectValueTaskFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
-            => typeof(T) == typeof(ValueVoid)
+            => typeof(T) == typeof(VoidSurrogate)
                 ? static (Task source) => {
                     if (source.IsCompletedSuccessfully())
                         return new ValueTask<object?>(null!);
@@ -163,7 +161,7 @@ public static partial class TaskExt
                 : new Result<T>(default!, task.AssertCompleted().GetBaseException());
 
         public override object Generate()
-            => typeof(T) == typeof(ValueVoid)
+            => typeof(T) == typeof(VoidSurrogate)
                 ? (Func<Task, IResult>)ConvertVoid
                 : (Func<Task, IResult>)Convert;
     }
@@ -171,7 +169,7 @@ public static partial class TaskExt
     public sealed class ToUntypedResultSynchronouslyFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
-            => typeof(T) == typeof(ValueVoid)
+            => typeof(T) == typeof(VoidSurrogate)
                 ? static (Task source) => {
                     _ = source.AssertCompleted();
                     try {
@@ -194,10 +192,10 @@ public static partial class TaskExt
                 };
     }
 
-    public sealed class GetUntypedResultSynchronouslyFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    public sealed class GetResultAsObjectSynchronouslyFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
-            => typeof(T) == typeof(ValueVoid)
+            => typeof(T) == typeof(VoidSurrogate)
                 ? static (Task source) => {
                     _ = source.AssertCompleted();
                     source.GetAwaiter().GetResult();

@@ -9,13 +9,12 @@ public sealed class RpcCallOptions(RpcPeer? peerOverride = null)
 
     public RpcPeer? PeerOverride { get; init; } = peerOverride;
     public bool AllowRerouting { get; init; }
-    public bool AssumeConnected { get; init; }
 
     public Scope Activate()
         => new(this);
 
-    public static Scope Activate(RpcPeer peerOverride, bool allowRerouting = false, bool assumeConnected = false)
-        => new(new(peerOverride) { AllowRerouting = false, AssumeConnected = assumeConnected});
+    public static Scope Activate(RpcPeer peerOverride, bool allowRerouting = false)
+        => new(new(peerOverride) { AllowRerouting = false });
 
     public static Scope Deactivate()
         => new(null);
@@ -30,7 +29,6 @@ public sealed class RpcCallOptions(RpcPeer? peerOverride = null)
 
         if (value.PeerOverride is not null)
             context.Peer = value.PeerOverride;
-        context.AssumeConnected = value.AssumeConnected;
         allowRerouting = value.AllowRerouting;
         return value;
     }

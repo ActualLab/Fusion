@@ -8,27 +8,13 @@ namespace ActualLab.Rpc;
 
 public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 {
-    internal readonly RpcServiceDefBuilder ServiceDefBuilder;
-    internal readonly RpcMethodDefBuilder MethodDefBuilder;
-    internal readonly RpcCallRouterFactory CallRouterFactory;
-    internal readonly RpcCallTimeoutsProvider CallTimeoutsProvider;
-    internal readonly RpcServiceScopeResolver ServiceScopeResolver;
-    internal readonly RpcRerouteDelayer RerouteDelayer;
-    internal readonly RpcHashProvider HashProvider;
-    internal readonly RpcInboundCallFilter InboundCallFilter;
-    internal readonly RpcInboundContextFactory InboundContextFactory;
-    internal readonly RpcInboundMiddlewares InboundMiddlewares;
-    internal readonly RpcOutboundMiddlewares OutboundMiddlewares;
-    internal readonly RpcPeerFactory PeerFactory;
-    internal readonly RpcPeerConnectionKindResolver PeerConnectionKindResolver;
+    internal readonly RpcRegistryOptions RegistryOptions;
+    internal readonly RpcPeerOptions PeerOptions;
+    internal readonly RpcInboundCallOptions InboundCallOptions;
+    internal readonly RpcOutboundCallOptions OutboundCallOptions;
+    internal readonly RpcWebSocketClientOptions WebSocketClientOptions;
+    internal readonly RpcDiagnosticsOptions DiagnosticsOptions;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
-    internal readonly RpcServerPeerCloseTimeoutProvider ServerPeerCloseTimeoutProvider;
-    internal readonly RpcPeerTerminalErrorDetector PeerTerminalErrorDetector;
-    internal readonly RpcCallTracerFactory CallTracerFactory;
-    internal readonly RpcCallLoggerFactory CallLoggerFactory;
-    internal readonly RpcCallLoggerFilter CallLoggerFilter;
-    [field: AllowNull, MaybeNull]
-    internal IEnumerable<RpcPeerTracker> PeerTrackers => field ??= Services.GetRequiredService<IEnumerable<RpcPeerTracker>>();
     [field: AllowNull, MaybeNull]
     internal RpcSystemCallSender SystemCallSender => field ??= Services.GetRequiredService<RpcSystemCallSender>();
     [field: AllowNull, MaybeNull]
@@ -67,27 +53,15 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         Configuration = services.GetRequiredService<RpcConfiguration>();
         Configuration.Freeze();
 
-        // Services & delegates
+        // Services
+        RegistryOptions = services.GetRequiredService<RpcRegistryOptions>();
+        PeerOptions = services.GetRequiredService<RpcPeerOptions>();
+        InboundCallOptions = services.GetRequiredService<RpcInboundCallOptions>();
+        OutboundCallOptions = services.GetRequiredService<RpcOutboundCallOptions>();
+        WebSocketClientOptions = services.GetRequiredService<RpcWebSocketClientOptions>();
+        DiagnosticsOptions = services.GetRequiredService<RpcDiagnosticsOptions>();
         SerializationFormats = services.GetRequiredService<RpcSerializationFormatResolver>();
-        ServiceDefBuilder = services.GetRequiredService<RpcServiceDefBuilder>();
-        MethodDefBuilder = services.GetRequiredService<RpcMethodDefBuilder>();
-        CallRouterFactory = services.GetRequiredService<RpcCallRouterFactory>();
-        CallTimeoutsProvider = services.GetRequiredService<RpcCallTimeoutsProvider>();
-        ServiceScopeResolver = services.GetRequiredService<RpcServiceScopeResolver>();
-        RerouteDelayer = services.GetRequiredService<RpcRerouteDelayer>();
-        HashProvider = services.GetRequiredService<RpcHashProvider>();
-        InboundCallFilter = services.GetRequiredService<RpcInboundCallFilter>();
-        InboundContextFactory = services.GetRequiredService<RpcInboundContextFactory>();
-        InboundMiddlewares = services.GetRequiredService<RpcInboundMiddlewares>();
-        OutboundMiddlewares = services.GetRequiredService<RpcOutboundMiddlewares>();
-        PeerFactory = services.GetRequiredService<RpcPeerFactory>();
-        PeerConnectionKindResolver = services.GetRequiredService<RpcPeerConnectionKindResolver>();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
-        ServerPeerCloseTimeoutProvider = services.GetRequiredService<RpcServerPeerCloseTimeoutProvider>();
-        PeerTerminalErrorDetector = services.GetRequiredService<RpcPeerTerminalErrorDetector>();
-        CallTracerFactory = services.GetRequiredService<RpcCallTracerFactory>();
-        CallLoggerFactory = services.GetRequiredService<RpcCallLoggerFactory>();
-        CallLoggerFilter = services.GetRequiredService<RpcCallLoggerFilter>();
         Limits = services.GetRequiredService<RpcLimits>();
         Clock = services.Clocks().CpuClock;
         InternalServices = new(this); // Must go at last
@@ -144,7 +118,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
             if (WhenDisposed is not null)
                 throw Errors.AlreadyDisposed(GetType());
 
-            peer = PeerFactory.Invoke(this, peerRef);
+            peer = PeerOptions.CreatePeer(peerRef);
             Peers[peerRef] = peer;
             peer.Start(isolate: true); // We don't want to capture Activity.Current, etc. here
             if (peerRef.CanBeRerouted)
