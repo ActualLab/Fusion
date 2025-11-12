@@ -116,7 +116,7 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
     }
 
     private string HostUrlResolver(RpcClientPeer peer)
-        => peer.Ref is ShardPeerRef testPeerRef
-            ? testPeerRef.Host?.Url ?? ""
+        => peer.Ref is ShardPeerRef shardPeerRef
+            ? shardPeerRef.Host?.Url ?? ""
             : throw new ArgumentOutOfRangeException(nameof(peer));
 }

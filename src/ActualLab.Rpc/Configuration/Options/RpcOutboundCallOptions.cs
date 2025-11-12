@@ -13,27 +13,31 @@ public record RpcOutboundCallOptions
     // Delegate options
     public Func<RpcMethodDef, RpcCallTimeoutSet> TimeoutsFactory { get; init; }
     public Func<RpcMethodDef, Func<ArgumentList, RpcPeerRef>> RouterFactory { get; init; }
-    public Func<int, CancellationToken, Task> ReroutingDelayFactory { get; init; }
+    public Func<RpcOutboundCallOptions, int, CancellationToken, Task> ReroutingDelayFactory { get; init; }
     public Func<ReadOnlyMemory<byte>, string> Hasher { get; init; }
 
+    // ReSharper disable once ConvertConstructorToMemberInitializers
     public RpcOutboundCallOptions()
     {
         TimeoutsFactory = DefaultTimeoutsFactory;
         RouterFactory = DefaultRouterFactory;
-        ReroutingDelayFactory = DefaultReroutingDelay;
+        ReroutingDelayFactory = DefaultReroutingDelayFactory;
         Hasher = DefaultHasher;
     }
 
+    public Task GetReroutingDelay(int failureCount, CancellationToken cancellationToken)
+        => ReroutingDelayFactory.Invoke(this, failureCount, cancellationToken);
+
     // Protected methods
 
-    protected Func<ArgumentList, RpcPeerRef> DefaultRouterFactory(RpcMethodDef methodDef)
+    protected static Func<ArgumentList, RpcPeerRef> DefaultRouterFactory(RpcMethodDef methodDef)
         => static _ => RpcPeerRef.Default;
 
-    protected RpcCallTimeoutSet DefaultTimeoutsFactory(RpcMethodDef methodDef)
+    protected static RpcCallTimeoutSet DefaultTimeoutsFactory(RpcMethodDef methodDef)
         => RpcCallTimeoutSet.Default.Get(methodDef);
 
-    protected Task DefaultReroutingDelay(int failureCount, CancellationToken cancellationToken)
-        => Task.Delay(ReroutingDelays.GetDelay(failureCount), cancellationToken);
+    protected static Task DefaultReroutingDelayFactory(RpcOutboundCallOptions options, int failureCount, CancellationToken cancellationToken)
+        => Task.Delay(options.ReroutingDelays.GetDelay(failureCount), cancellationToken);
 
     protected static string DefaultHasher(ReadOnlyMemory<byte> bytes)
     {

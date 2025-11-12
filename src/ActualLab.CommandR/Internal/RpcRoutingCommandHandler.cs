@@ -50,8 +50,8 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                     context.ResetResult();
                     ++rerouteCount;
                     Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}", rerouteCount, context.UntypedCommand);
-                    await RpcHub.InternalServices.OutboundCallOptions.ReroutingDelayFactory
-                        .Invoke(rerouteCount, cancellationToken)
+                    await RpcHub.InternalServices.OutboundCallOptions
+                        .GetReroutingDelay(rerouteCount, cancellationToken)
                         .ConfigureAwait(false);
                 }
             }

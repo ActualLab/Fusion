@@ -11,12 +11,13 @@ public record RpcInboundCallOptions
     // Delegate options
     public Func<RpcPeer, RpcMessage, CancellationToken, RpcInboundContext> ContextFactory { get; init; }
 
+    // ReSharper disable once ConvertConstructorToMemberInitializers
     public RpcInboundCallOptions()
         => ContextFactory = DefaultContextFactory;
 
     // Protected methods
 
-    protected RpcInboundContext DefaultContextFactory(
+    protected static RpcInboundContext DefaultContextFactory(
         RpcPeer peer, RpcMessage message, CancellationToken peerChangedToken)
         => new(peer, message, peerChangedToken);
 }
