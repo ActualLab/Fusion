@@ -20,6 +20,7 @@ public record RpcWebSocketClientOptions
     public Func<RpcPeer, PropertyBag, WebSocketChannel<RpcMessage>.Options> WebSocketChannelOptionsFactory { get; init; }
     public Func<FrameDelayer?>? FrameDelayerFactory { get; init; } = FrameDelayerFactories.None;
 
+    // ReSharper disable once ConvertConstructorToMemberInitializers
     public RpcWebSocketClientOptions()
     {
         HostUrlResolver = DefaultHostUrlResolver;
@@ -32,9 +33,10 @@ public record RpcWebSocketClientOptions
     protected static string DefaultHostUrlResolver(RpcClientPeer peer)
         => peer.Ref.HostInfo;
 
-    protected Uri? DefaultConnectionUriResolver(RpcClientPeer peer)
+    protected static Uri? DefaultConnectionUriResolver(RpcClientPeer peer)
     {
-        var url = HostUrlResolver.Invoke(peer).TrimSuffix("/");
+        var options = peer.Hub.Services.GetRequiredService<RpcWebSocketClientOptions>();
+        var url = options.HostUrlResolver.Invoke(peer).TrimSuffix("/");
         if (url.IsNullOrEmpty())
             return null;
 
@@ -48,24 +50,28 @@ public record RpcWebSocketClientOptions
             else
                 url = "wss://" + url;
             var requestPath = peer.Ref.IsBackend
-                ? BackendRequestPath
-                : RequestPath;
+                ? options.BackendRequestPath
+                : options.RequestPath;
             url += requestPath;
         }
 
 #pragma warning disable CA1307
         var queryStart = url.IndexOf('?') < 0 ? '?' : '&';
 #pragma warning restore CA1307
-        url = $"{url}{queryStart}{ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
-            + $"&{SerializationFormatParameterName}={peer.SerializationFormat.Key}";
+        url = $"{url}{queryStart}{options.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
+            + $"&{options.SerializationFormatParameterName}={peer.SerializationFormat.Key}";
         return new Uri(url, UriKind.Absolute);
     }
 
-    protected WebSocketChannel<RpcMessage>.Options DefaultWebSocketChannelOptionsFactory(RpcPeer peer, PropertyBag properties)
-        => WebSocketChannel<RpcMessage>.Options.Default with {
+    protected static WebSocketChannel<RpcMessage>.Options DefaultWebSocketChannelOptionsFactory(
+        RpcPeer peer, PropertyBag properties)
+    {
+        var options = peer.Hub.Services.GetRequiredService<RpcWebSocketClientOptions>();
+        return WebSocketChannel<RpcMessage>.Options.Default with {
             Serializer = peer.Hub.SerializationFormats.Get(peer.Ref).MessageSerializerFactory.Invoke(peer),
-            FrameDelayerFactory = UseAutoFrameDelayerFactory
+            FrameDelayerFactory = options.UseAutoFrameDelayerFactory
                 ? FrameDelayerFactories.Auto(peer, properties)
-                : FrameDelayerFactory,
+                : options.FrameDelayerFactory,
         };
+    }
 }

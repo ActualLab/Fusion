@@ -72,8 +72,8 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
 
                 ++rerouteCount;
                 Log.LogWarning(e, "Rerouting #{RerouteCount}: {Invocation}", rerouteCount, invocation);
-                await Hub.OutboundCallOptions.ReroutingDelayFactory
-                    .Invoke(rerouteCount, cancellationToken)
+                await Hub.OutboundCallOptions
+                    .GetReroutingDelay(rerouteCount, cancellationToken)
                     .ConfigureAwait(false);
                 call = context.PrepareReroutedCall();
             }

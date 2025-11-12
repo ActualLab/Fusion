@@ -9,7 +9,7 @@ public record RpcPeerOptions
     // Delegate options
     public Func<RpcHub, RpcPeerRef, RpcPeer> PeerFactory { get; init; }
     public Func<RpcPeerRef, RpcPeerConnectionKind> ConnectionKindDetector { get; init; }
-    public Func<Exception, bool> TerminalErrorDetector { get; init; }
+    public Func<RpcPeer, Exception, bool> TerminalErrorDetector { get; init; }
     public Func<RpcServerPeer, Channel<RpcMessage>, PropertyBag, CancellationToken, Task<RpcConnection>> ServerConnectionFactory { get; init; }
     public Func<RpcServerPeer, TimeSpan> ServerPeerShutdownTimeoutProvider { get; init; }
 
@@ -33,7 +33,7 @@ public record RpcPeerOptions
     protected static RpcPeerConnectionKind DefaultConnectionKindDetector(RpcPeerRef peerRef)
         => peerRef.ConnectionKind;
 
-    protected static bool DefaultTerminalErrorDetector(Exception error)
+    protected static bool DefaultTerminalErrorDetector(RpcPeer peer, Exception error)
         => error is RpcReconnectFailedException;
 
     protected static Task<RpcConnection> DefaultServerConnectionFactory(

@@ -376,7 +376,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                 readerTokenSource.CancelAndDisposeSilently();
                 if (cancellationToken.IsCancellationRequested) {
-                    var isTerminal = error is not null && Options.TerminalErrorDetector.Invoke(error);
+                    var isTerminal = error is not null && Options.TerminalErrorDetector.Invoke(this, error);
                     if (!isTerminal)
                         error = RpcReconnectFailedException.StopRequested(error);
                 }
@@ -401,7 +401,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 connectionState = _connectionState;
                 error = connectionState.Value.Error;
                 if (!connectionState.IsFinal) {
-                    var isTerminal = error is not null && Options.TerminalErrorDetector.Invoke(error);
+                    var isTerminal = error is not null && Options.TerminalErrorDetector.Invoke(this, error);
                     if (!isTerminal)
                         error = new RpcReconnectFailedException(error);
                     SetConnectionState(connectionState.Value.NextDisconnected(error));
@@ -482,7 +482,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             _connectionState = connectionState = nextConnectionState;
             _serverMethodResolver = GetServerMethodResolver(newState.Handshake);
             _handshake = newState.Handshake;
-            if (newState.Error is not null && Options.TerminalErrorDetector.Invoke(newState.Error)) {
+            if (newState.Error is not null && Options.TerminalErrorDetector.Invoke(this, newState.Error)) {
                 terminalError = newState.Error;
                 connectionState.TrySetFinal(terminalError);
             }

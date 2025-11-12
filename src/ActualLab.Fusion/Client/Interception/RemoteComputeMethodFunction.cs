@@ -133,8 +133,8 @@ public abstract class RemoteComputeMethodFunction(
             catch (RpcRerouteException) {
                 ++rerouteCount;
                 Log.LogWarning("Rerouting #{RerouteCount}: {Input}", rerouteCount, typedInput);
-                await RpcHub.InternalServices.OutboundCallOptions.ReroutingDelayFactory
-                    .Invoke(rerouteCount, cancellationToken)
+                await RpcHub.InternalServices.OutboundCallOptions
+                    .GetReroutingDelay(rerouteCount, cancellationToken)
                     .ConfigureAwait(false);
             }
         }
@@ -475,8 +475,8 @@ public abstract class RemoteComputeMethodFunction(
     protected async Task InvalidateToReroute(Computed computed, Exception? error, string source)
     {
         Log.LogWarning(error, "Invalidating to reroute: {Input}", computed.Input);
-        await RpcMethodDef.Hub.InternalServices.OutboundCallOptions.ReroutingDelayFactory
-            .Invoke(1, default)
+        await RpcMethodDef.Hub.InternalServices.OutboundCallOptions
+            .GetReroutingDelay(1, default)
             .ConfigureAwait(false);
         computed.Invalidate(immediately: true, new InvalidationSource(source));
     }
