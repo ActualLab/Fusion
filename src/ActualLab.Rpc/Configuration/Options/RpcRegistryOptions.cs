@@ -1,16 +1,31 @@
 namespace ActualLab.Rpc;
 
-public class RpcRegistryOptions
+public record RpcRegistryOptions
 {
     public static RpcRegistryOptions Default { get; set; } = new();
 
-    public virtual RpcServiceDef CreateServiceDef(RpcHub hub, RpcServiceBuilder service)
+    // Delegate options
+    public Func<RpcHub, RpcServiceBuilder, RpcServiceDef> ServiceDefFactory { get; init; }
+    public Func<RpcServiceDef, MethodInfo, RpcMethodDef> MethodDefFactory { get; init; }
+    public Func<RpcServiceDef, string> ServiceScopeResolver { get; init; }
+
+    // ReSharper disable once ConvertConstructorToMemberInitializers
+    public RpcRegistryOptions()
+    {
+        ServiceDefFactory = DefaultServiceDefFactory;
+        MethodDefFactory = DefaultMethodDefFactory;
+        ServiceScopeResolver = DefaultServiceScopeResolver;
+    }
+
+    // Protected methods
+
+    protected static RpcServiceDef DefaultServiceDefFactory(RpcHub hub, RpcServiceBuilder service)
         => new(hub, service);
 
-    public virtual RpcMethodDef CreateMethodDef(RpcServiceDef serviceDef, MethodInfo methodInfo)
+    protected static RpcMethodDef DefaultMethodDefFactory(RpcServiceDef serviceDef, MethodInfo methodInfo)
         => new(serviceDef, methodInfo);
 
-    public virtual string GetServiceScope(RpcServiceDef serviceDef)
+    protected static string DefaultServiceScopeResolver(RpcServiceDef serviceDef)
         => serviceDef.IsBackend
             ? RpcDefaults.BackendScope
             : RpcDefaults.ApiScope;

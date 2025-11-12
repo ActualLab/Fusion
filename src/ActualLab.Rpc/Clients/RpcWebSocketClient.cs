@@ -1,77 +1,18 @@
 using System.Net.WebSockets;
-using System.Text.Encodings.Web;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc.Clients;
 
-public class RpcWebSocketClient(
-    RpcWebSocketClient.Options settings,
-    IServiceProvider services
-    ) : RpcClient(services)
+public class RpcWebSocketClient(IServiceProvider services)
+    : RpcClient(services)
 {
-    public record Options
-    {
-        public static Options Default { get; set; } = new();
-
-        public Func<RpcWebSocketClient, RpcClientPeer, string> HostUrlResolver { get; init; }
-            = DefaultHostUrlResolver;
-        public Func<RpcWebSocketClient, RpcClientPeer, Uri?> ConnectionUriResolver { get; init; }
-            = DefaultConnectionUriResolver;
-        public Func<RpcWebSocketClient, RpcClientPeer, WebSocketOwner> WebSocketOwnerFactory { get; init; }
-            = DefaultWebSocketOwnerFactory;
-
-        public string RequestPath { get; init; } = "/rpc/ws";
-        public string BackendRequestPath { get; init; } = "/backend/rpc/ws";
-        public string SerializationFormatParameterName { get; init; } = "f";
-        public string ClientIdParameterName { get; init; } = "clientId";
-
-        public static string DefaultHostUrlResolver(RpcWebSocketClient client, RpcClientPeer peer)
-            => peer.Ref.HostInfo;
-
-        public static Uri? DefaultConnectionUriResolver(RpcWebSocketClient client, RpcClientPeer peer)
-        {
-            var settings = client.Settings;
-            var url = settings.HostUrlResolver.Invoke(client, peer).TrimSuffix("/");
-            if (url.IsNullOrEmpty())
-                return null;
-
-            var isWebSocketUrl = url.StartsWith("ws://", StringComparison.Ordinal)
-                || url.StartsWith("wss://", StringComparison.Ordinal);
-            if (!isWebSocketUrl) {
-                if (url.StartsWith("http://", StringComparison.Ordinal))
-                    url = "ws://" + url[7..];
-                else if (url.StartsWith("https://", StringComparison.Ordinal))
-                    url = "wss://" + url[8..];
-                else
-                    url = "wss://" + url;
-                var requestPath = peer.Ref.IsBackend
-                    ? settings.BackendRequestPath
-                    : settings.RequestPath;
-                url += requestPath;
-            }
-
-#pragma warning disable CA1307
-            var queryStart = url.IndexOf('?') < 0 ? '?' : '&';
-#pragma warning restore CA1307
-            url = $"{url}{queryStart}{settings.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
-                + $"&{settings.SerializationFormatParameterName}={peer.SerializationFormat.Key}";
-            return new Uri(url, UriKind.Absolute);
-        }
-
-        public static WebSocketOwner DefaultWebSocketOwnerFactory(RpcWebSocketClient client, RpcClientPeer peer)
-        {
-            var ws = new ClientWebSocket();
-            return new WebSocketOwner(peer.Ref.ToString(), ws, client.Services);
-        }
-    }
-
-    public Options Settings { get; } = settings;
+    public RpcWebSocketClientOptions Options { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
 
     public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
-        var uri = Settings.ConnectionUriResolver(this, clientPeer);
+        var uri = Options.ConnectionUriResolver(clientPeer);
         return ConnectRemote(clientPeer, uri, cancellationToken);
     }
 
@@ -98,7 +39,7 @@ public class RpcWebSocketClient(
                 .Run(async () => {
                     WebSocketOwner? o = null;
                     try {
-                        o = Settings.WebSocketOwnerFactory.Invoke(this, clientPeer);
+                        o = CreateWebSocketOwner(clientPeer);
                         await o.ConnectAsync(uri!, connectToken).ConfigureAwait(false);
                         return o;
                     }
@@ -126,8 +67,16 @@ public class RpcWebSocketClient(
             .KeylessSet(uri)
             .KeylessSet(webSocketOwner)
             .KeylessSet(webSocketOwner.WebSocket);
-        var webSocketChannelOptions = Hub.WebSocketClientOptions.GetChannelOptions(clientPeer, properties);
+        var webSocketChannelOptions = Options.WebSocketChannelOptionsFactory(clientPeer, properties);
         var channel = new WebSocketChannel<RpcMessage>(webSocketChannelOptions, webSocketOwner);
         return new RpcConnection(channel, properties);
+    }
+
+    // Protected methods
+
+    protected virtual WebSocketOwner CreateWebSocketOwner(RpcClientPeer peer)
+    {
+        var clientWebSocket = new ClientWebSocket();
+        return new WebSocketOwner(peer.Ref.ToString(), clientWebSocket, Services);
     }
 }

@@ -36,7 +36,7 @@ public class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcService
             if (service.Mode == RpcServiceMode.Default)
                 throw Errors.UnspecifiedServiceMode(service.Type, service.Mode);
 
-            var serviceDef = hub.RegistryOptions.CreateServiceDef(hub, service);
+            var serviceDef = hub.RegistryOptions.ServiceDefFactory.Invoke(hub, service);
             if (_serviceByName.TryGetValue(serviceDef.Name, out var existingServiceDef))
                 throw Errors.ServiceNameConflict(serviceDef.Type, existingServiceDef.Type, serviceDef.Name);
 

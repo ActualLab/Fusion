@@ -11,7 +11,10 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
 {
     [ThreadStatic] private static RpcOutboundContext? _current;
 
-    public static RpcOutboundContext? Current => _current;
+    public static RpcOutboundContext? Current {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] get => _current;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] set => _current = value;
+    }
 
     public byte CallTypeId = callTypeId;
     public RpcHeader[]? Headers = headers;

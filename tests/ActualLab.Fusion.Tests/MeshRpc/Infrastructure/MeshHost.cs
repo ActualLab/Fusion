@@ -2,6 +2,7 @@ using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using ActualLab.Fusion.Server;
+using ActualLab.Fusion.Server.Rpc;
 using ActualLab.Rpc.Clients;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -49,12 +50,16 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
         // Fusion & RPC server setup
         var fusion = services.AddFusion();
         fusion.AddWebServer();
-        services.AddSingleton<RpcCallRouterFactory>(_ => RouteCall);
-        services.AddSingleton<RpcPeerConnectionKindResolver>(_ => GetPeerConnectionKind);
+        services.AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptionsForFusion.Default with {
+            RouterFactory = RouterFactory,
+        });
+        services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptionsForFusion.Default with {
+            ConnectionKindDetector = ConnectionKindDetector,
+        });
 
         // Setup RPC client
-        fusion.Rpc.AddWebSocketClient(_ => RpcWebSocketClient.Options.Default with {
-            HostUrlResolver = GetClientPeerHostUrl,
+        fusion.Rpc.AddWebSocketClient(_ => RpcWebSocketClientOptions.Default with {
+            HostUrlResolver = HostUrlResolver,
         });
 
         // Custom service configuration
@@ -82,7 +87,7 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
 
     // Private methods
 
-    private Func<ArgumentList, RpcPeerRef> RouteCall(RpcMethodDef methodDef)
+    private Func<ArgumentList, RpcPeerRef> RouterFactory(RpcMethodDef methodDef)
         => args => {
             if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
                 return RpcPeerRef.Local;
@@ -100,7 +105,7 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
             return MeshMap.GetShardPeerRef(shardKey);
         };
 
-    private RpcPeerConnectionKind GetPeerConnectionKind(RpcHub hub, RpcPeerRef peerRef)
+    private RpcPeerConnectionKind ConnectionKindDetector(RpcPeerRef peerRef)
     {
         if (peerRef is not ShardPeerRef testPeerRef)
             return peerRef.ConnectionKind;
@@ -110,7 +115,7 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
             : RpcPeerConnectionKind.Remote;
     }
 
-    private string GetClientPeerHostUrl(RpcWebSocketClient client, RpcClientPeer peer)
+    private string HostUrlResolver(RpcClientPeer peer)
         => peer.Ref is ShardPeerRef testPeerRef
             ? testPeerRef.Host?.Url ?? ""
             : throw new ArgumentOutOfRangeException(nameof(peer));

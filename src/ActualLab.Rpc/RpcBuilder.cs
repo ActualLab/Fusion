@@ -133,23 +133,22 @@ public readonly struct RpcBuilder
     public RpcBuilder AddWebSocketClient(Uri hostUri)
         => AddWebSocketClient(_ => hostUri.ToString());
 
-    public RpcBuilder AddWebSocketClient(string hostUrl)
-        => AddWebSocketClient(_ => hostUrl);
+    public RpcBuilder AddWebSocketClient(string hostNameOrUrl)
+        => AddWebSocketClient(_ => hostNameOrUrl);
 
     public RpcBuilder AddWebSocketClient(Func<IServiceProvider, string> hostUrlResolver)
-        => AddWebSocketClient(c => RpcWebSocketClient.Options.Default with {
-            HostUrlResolver = (_, _) => hostUrlResolver.Invoke(c),
+        => AddWebSocketClient(c => RpcWebSocketClientOptions.Default with {
+            HostUrlResolver = _ => hostUrlResolver.Invoke(c),
         });
 
-    public RpcBuilder AddWebSocketClient(Func<IServiceProvider, RpcWebSocketClient.Options>? optionsFactory = null)
+    public RpcBuilder AddWebSocketClient(Func<IServiceProvider, RpcWebSocketClientOptions>? optionsFactory = null)
     {
         var services = Services;
-        services.AddSingleton(optionsFactory, _ => RpcWebSocketClient.Options.Default);
+        services.AddSingleton(optionsFactory, _ => RpcWebSocketClientOptions.Default);
         if (services.HasService<RpcWebSocketClient>())
             return this;
 
-        services.AddSingleton(c => new RpcWebSocketClient(
-            c.GetRequiredService<RpcWebSocketClient.Options>(), c));
+        services.AddSingleton(c => new RpcWebSocketClient(c));
         services.AddAlias<RpcClient, RpcWebSocketClient>();
         return this;
     }
@@ -317,4 +316,40 @@ public readonly struct RpcBuilder
         Configuration.Services[serviceType] = service;
         return service;
     }
-}
+
+    // Add/Remove IRpcInboundCallPreprocessor
+
+    public RpcBuilder AddInboundCallPreprocessor<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TPreprocessor>
+        (Func<IServiceProvider, TPreprocessor>? factory = null)
+        where TPreprocessor : class, IRpcInboundCallPreprocessor
+        => AddInboundCallPreprocessor(typeof(TPreprocessor), factory);
+
+    public RpcBuilder AddInboundCallPreprocessor(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type preprocessorType,
+        Func<IServiceProvider, object>? factory = null)
+    {
+        if (!typeof(IRpcInboundCallPreprocessor).IsAssignableFrom(preprocessorType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcInboundCallPreprocessor>(preprocessorType, nameof(preprocessorType));
+
+        var descriptor = factory is not null
+            ? ServiceDescriptor.Singleton(typeof(IRpcInboundCallPreprocessor), factory)
+            : ServiceDescriptor.Singleton(typeof(IRpcInboundCallPreprocessor), preprocessorType);
+        Services.TryAddEnumerable(descriptor);
+        return this;
+    }
+
+    public RpcBuilder RemoveInboundCallPreprocessor<TPreprocessor>()
+        where TPreprocessor : class, IRpcInboundCallPreprocessor
+        => RemoveInboundCallPreprocessor(typeof(TPreprocessor));
+
+    public RpcBuilder RemoveInboundCallPreprocessor(Type preprocessorType)
+    {
+        if (!typeof(IRpcInboundCallPreprocessor).IsAssignableFrom(preprocessorType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcInboundCallPreprocessor>(preprocessorType, nameof(preprocessorType));
+
+        Services.RemoveAll(d =>
+            d.ImplementationType == preprocessorType
+            && d.ServiceType == typeof(IRpcInboundCallPreprocessor));
+        return this;
+    }}

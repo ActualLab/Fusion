@@ -30,7 +30,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     [field: AllowNull, MaybeNull]
     protected internal RpcCallLogger CallLogger
-        => field ??= Hub.DiagnosticsOptions.CreateCallLogger(this, Log, CallLogLevel);
+        => field ??= Hub.DiagnosticsOptions.CallLoggerFactory.Invoke(this, Log, CallLogLevel);
     [field: AllowNull, MaybeNull]
     protected internal ILogger Log
         => field ??= Services.LogFor(GetType());
@@ -76,7 +76,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         Options = Hub.PeerOptions;
         InboundCallOptions = Hub.InboundCallOptions;
         OutboundCallOptions = Hub.OutboundCallOptions;
-        ConnectionKind = Options.GetConnectionKind(peerRef);
+        ConnectionKind = Options.ConnectionKindDetector.Invoke(peerRef);
         if (ConnectionKind is RpcPeerConnectionKind.None)
             ConnectionKind = RpcPeerConnectionKind.Remote; // RpcPeer.ConnectionKind should never be None
         Versions = versions ?? peerRef.Versions;
@@ -374,7 +374,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                 readerTokenSource.CancelAndDisposeSilently();
                 if (cancellationToken.IsCancellationRequested) {
-                    var isTerminal = error is not null && Options.IsTerminalError(error);
+                    var isTerminal = error is not null && Options.TerminalErrorDetector.Invoke(error);
                     if (!isTerminal)
                         error = RpcReconnectFailedException.StopRequested(error);
                 }
@@ -399,7 +399,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 connectionState = _connectionState;
                 error = connectionState.Value.Error;
                 if (!connectionState.IsFinal) {
-                    var isTerminal = error is not null && Options.IsTerminalError(error);
+                    var isTerminal = error is not null && Options.TerminalErrorDetector.Invoke(error);
                     if (!isTerminal)
                         error = new RpcReconnectFailedException(error);
                     SetConnectionState(connectionState.Value.NextDisconnected(error));
@@ -433,7 +433,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         CancellationToken cancellationToken)
     {
         try {
-            var context = InboundCallOptions.CreateContext(this, message, peerChangedToken);
+            var context = InboundCallOptions.ContextFactory.Invoke(this, message, peerChangedToken);
             _ = context.Call.Process(cancellationToken);
             return context;
         }
@@ -480,7 +480,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             _connectionState = connectionState = nextConnectionState;
             _serverMethodResolver = GetServerMethodResolver(newState.Handshake);
             _handshake = newState.Handshake;
-            if (newState.Error is not null && Options.IsTerminalError(newState.Error)) {
+            if (newState.Error is not null && Options.TerminalErrorDetector.Invoke(newState.Error)) {
                 terminalError = newState.Error;
                 connectionState.TrySetFinal(terminalError);
             }

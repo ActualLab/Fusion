@@ -4,10 +4,13 @@ using ActualLab.Rpc.Internal;
 namespace ActualLab.Rpc.Infrastructure;
 
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-public sealed class RpcOutgoingCallSettings(RpcPeer? peer = null)
+public sealed class RpcOutboundCallSetup(RpcPeer? peer = null)
 {
     [field: ThreadStatic]
-    public static RpcOutgoingCallSettings? Value { get; internal set; }
+    public static RpcOutboundCallSetup? Value {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] get;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] internal set;
+    }
 
     public byte CallTypeId { get; init; } // You typically shouldn't set it!
     public RpcHeader[]? Headers { get; init; } // You typically shouldn't set it!
@@ -44,21 +47,21 @@ public sealed class RpcOutgoingCallSettings(RpcPeer? peer = null)
 
     public readonly struct Scope : IDisposable
     {
-        private readonly RpcOutgoingCallSettings? _oldValue;
+        private readonly RpcOutboundCallSetup? _oldValue;
 
         // ReSharper disable once MemberHidesStaticFromOuterClass
-        public readonly RpcOutgoingCallSettings? Value;
+        public readonly RpcOutboundCallSetup? Value;
 
-        internal Scope(RpcOutgoingCallSettings? value)
-            : this(value, RpcOutgoingCallSettings.Value)
+        internal Scope(RpcOutboundCallSetup? value)
+            : this(value, RpcOutboundCallSetup.Value)
         { }
 
-        internal Scope(RpcOutgoingCallSettings? value, RpcOutgoingCallSettings? oldValue)
+        internal Scope(RpcOutboundCallSetup? value, RpcOutboundCallSetup? oldValue)
         {
             Value = value;
             _oldValue = oldValue;
             if (!ReferenceEquals(Value, _oldValue))
-                RpcOutgoingCallSettings.Value = Value;
+                RpcOutboundCallSetup.Value = Value;
         }
 
         public void Dispose()
@@ -66,11 +69,11 @@ public sealed class RpcOutgoingCallSettings(RpcPeer? peer = null)
             if (ReferenceEquals(Value, _oldValue))
                 return; // Default or no-op instance
 
-            var value = RpcOutgoingCallSettings.Value;
+            var value = RpcOutboundCallSetup.Value;
             if (value is not null && !ReferenceEquals(Value, value))
-                throw Errors.RpcCallOptionsChanged();
+                throw Errors.RpcOutboundCallSetupChanged();
 
-            RpcOutgoingCallSettings.Value = _oldValue;
+            RpcOutboundCallSetup.Value = _oldValue;
         }
     }
 

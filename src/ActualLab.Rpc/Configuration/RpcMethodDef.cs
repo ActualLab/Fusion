@@ -107,11 +107,11 @@ public partial class RpcMethodDef : MethodDef
         InboundCallPipelineInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
 
         // Outbound call related
-        OutboundCallTimeouts = Hub.OutboundCallOptions.GetTimeouts(this);
-        OutboundCallRouter = Hub.OutboundCallOptions.CreateRouter(this);
+        OutboundCallTimeouts = Hub.OutboundCallOptions.TimeoutsFactory.Invoke(this);
+        OutboundCallRouter = Hub.OutboundCallOptions.RouterFactory.Invoke(this);
 
         // Call tracing
-        Tracer = Hub.DiagnosticsOptions.CreateCallTracer(this);
+        Tracer = Hub.DiagnosticsOptions.CallTracerFactory.Invoke(this);
     }
 
     public override string ToString()

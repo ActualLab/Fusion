@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
+using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using Errors = ActualLab.Internal.Errors;
@@ -12,10 +13,9 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcPeerOptions PeerOptions;
     internal readonly RpcInboundCallOptions InboundCallOptions;
     internal readonly RpcOutboundCallOptions OutboundCallOptions;
-    internal readonly RpcWebSocketClientOptions WebSocketClientOptions;
     internal readonly RpcDiagnosticsOptions DiagnosticsOptions;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
-    internal readonly IRpcInboundCallPreprocessor[] InboundCallPreprocessorFactories;
+    internal readonly IRpcInboundCallPreprocessor[] InboundCallPreprocessors;
     [field: AllowNull, MaybeNull]
     internal RpcSystemCallSender SystemCallSender => field ??= Services.GetRequiredService<RpcSystemCallSender>();
     [field: AllowNull, MaybeNull]
@@ -59,10 +59,9 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         PeerOptions = services.GetRequiredService<RpcPeerOptions>();
         InboundCallOptions = services.GetRequiredService<RpcInboundCallOptions>();
         OutboundCallOptions = services.GetRequiredService<RpcOutboundCallOptions>();
-        WebSocketClientOptions = services.GetRequiredService<RpcWebSocketClientOptions>();
         DiagnosticsOptions = services.GetRequiredService<RpcDiagnosticsOptions>();
         SerializationFormats = services.GetRequiredService<RpcSerializationFormatResolver>();
-        InboundCallPreprocessorFactories = services.GetServices<IRpcInboundCallPreprocessor>().ToArray();
+        InboundCallPreprocessors = services.GetServices<IRpcInboundCallPreprocessor>().ToArray();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
         Limits = services.GetRequiredService<RpcLimits>();
         Clock = services.Clocks().CpuClock;
@@ -120,7 +119,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
             if (WhenDisposed is not null)
                 throw Errors.AlreadyDisposed(GetType());
 
-            peer = PeerOptions.CreatePeer(this, peerRef);
+            peer = PeerOptions.PeerFactory.Invoke(this, peerRef);
             Peers[peerRef] = peer;
             peer.Start(isolate: true); // We don't want to capture Activity.Current, etc. here
             if (peerRef.CanBeRerouted)

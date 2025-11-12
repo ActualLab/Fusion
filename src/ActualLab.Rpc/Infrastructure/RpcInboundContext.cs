@@ -9,8 +9,8 @@ public sealed class RpcInboundContext
     private static readonly AsyncLocal<RpcInboundContext?> CurrentLocal = new();
 
     public static RpcInboundContext? Current {
-        get => CurrentLocal.Value;
-        set => CurrentLocal.Value = value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] get => CurrentLocal.Value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] set => CurrentLocal.Value = value;
     }
 
     public readonly RpcPeer Peer;

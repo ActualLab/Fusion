@@ -48,11 +48,11 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
 
         var rpc = services.AddRpc();
         rpc.AddTestClient();
-        services.AddSingleton<RpcPeerFactory>(_ =>
-            (hub, peerRef) => peerRef.IsServer
+        services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptions.Default with {
+            PeerFactory = (hub, peerRef) => peerRef.IsServer
                 ? new RpcServerPeer(hub, peerRef)
-                : new RpcClientPeer(hub, peerRef)
-        );
+                : new RpcClientPeer(hub, peerRef),
+        });
         services.AddSingleton<RpcSerializationFormatResolver>(
             _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
     }
