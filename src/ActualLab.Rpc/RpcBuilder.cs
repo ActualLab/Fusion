@@ -4,10 +4,8 @@ using ActualLab.Interception;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Diagnostics;
-using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
-using ActualLab.Rpc.Testing;
 using ActualLab.Rpc.Trimming;
 using ActualLab.Trimming;
 
@@ -95,23 +93,25 @@ public readonly struct RpcBuilder
         services.TryAddSingleton(_ => MomentClockSet.Default);
         services.AddSingleton(c => c.GetRequiredService<MomentClockSet>().SystemClock);
 
+        // Options
+        services.AddSingleton(_ => RpcRegistryOptions.Default);
+        services.AddSingleton(_ => RpcPeerOptions.Default);
+        services.AddSingleton(_ => RpcInboundCallOptions.Default);
+        services.AddSingleton(_ => RpcOutboundCallOptions.Default);
+        services.AddSingleton(_ => RpcWebSocketClientOptions.Default);
+        services.AddSingleton(_ => RpcDiagnosticsOptions.Default);
+        services.AddSingleton(_ => RpcSerializationFormatResolver.Default);
+        services.AddSingleton(_ => RpcRoutingInterceptor.Options.Default);
+        services.AddSingleton(_ => RpcLimits.Default);
+
         // Core services
-        services.AddSingleton(c => new RpcRegistryOptions(c));
-        services.AddSingleton(c => new RpcPeerOptions(c));
-        services.AddSingleton(c => new RpcInboundCallOptions(c));
-        services.AddSingleton(c => new RpcOutboundCallOptions(c));
-        services.AddSingleton(c => new RpcWebSocketClientOptions(c));
-        services.AddSingleton(c => new RpcDiagnosticsOptions(c));
         services.AddSingleton(c => new RpcHub(c));
         services.AddSingleton(c => new RpcServiceRegistry(c));
-        services.AddSingleton(_ => RpcSerializationFormatResolver.Default);
         services.AddTransient(_ => new RpcInboundCallTracker());
         services.AddTransient(_ => new RpcOutboundCallTracker());
         services.AddTransient(_ => new RpcRemoteObjectTracker());
         services.AddTransient(_ => new RpcSharedObjectTracker());
         services.AddSingleton(c => new RpcClientPeerReconnectDelayer(c));
-        services.AddSingleton(_ => RpcLimits.Default);
-        services.AddSingleton(_ => RpcRoutingInterceptor.Options.Default);
 
         // System services
         AddServerAndClient(typeof(IRpcSystemCalls), typeof(RpcSystemCalls), RpcSystemCalls.Name);

@@ -23,7 +23,7 @@ public class RpcWebHost(
 {
     public IServiceCollection BaseServices { get; } = baseServices;
     public Assembly? ControllerAssembly { get; set; } = controllerAssembly;
-    public RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; }
+    public Func<FrameDelayer?>? RpcFrameDelayerFactory { get; set; }
     public bool ExposeBackend { get; set; } = false;
 
     protected override void ConfigureHost(IHostBuilder builder)
@@ -39,12 +39,9 @@ public class RpcWebHost(
                 var defaultOptions = RpcWebSocketServer.Options.Default;
                 return defaultOptions with { ExposeBackend = ExposeBackend };
             });
-            if (RpcFrameDelayerFactory is { } rpcFrameDelayerFactory)
-                services.AddSingleton<RpcWebSocketChannelOptionsProvider>(_ => {
-                    return (_, _) => {
-                        var options = WebSocketChannel<RpcMessage>.Options.Default;
-                        return options with { FrameDelayerFactory = rpcFrameDelayerFactory };
-                    };
+            if (RpcFrameDelayerFactory is not null)
+                services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
+                    FrameDelayerFactory = RpcFrameDelayerFactory,
                 });
             if (ControllerAssembly is not null) {
 #if NETFRAMEWORK

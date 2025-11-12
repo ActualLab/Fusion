@@ -5,6 +5,9 @@ namespace ActualLab.Rpc.Server;
 
 public static class ServiceProviderExt
 {
-    public static IDependencyResolver ToDependencyResolver(this IServiceProvider services)
-        => new DependencyResolver(services);
+    extension(IServiceProvider services)
+    {
+        public IDependencyResolver ToDependencyResolver()
+            => new DependencyResolver(services);
+    }
 }

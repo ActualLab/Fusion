@@ -6,122 +6,123 @@ public static partial class AsyncEnumerableExt
 {
     // SkipNullItems
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IAsyncEnumerable<T> SkipNullItems<T>(this IAsyncEnumerable<T?> source)
+    extension<T>(IAsyncEnumerable<T?> source)
         where T : class
-        => source.Where(x => x is not null)!;
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IAsyncEnumerable<T> SkipNullItems() => source.Where(x => x is not null)!;
+    }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IAsyncEnumerable<T> SkipNullItems<T>(this IAsyncEnumerable<T?> source)
+    extension<T>(IAsyncEnumerable<T?> source)
         where T : struct
-        => source.Where(x => x is not null).Select(x => x!.Value);
-
-    // SkipSyncItems
-
-    public static IAsyncEnumerable<T> SkipSyncItems<T>(
-        this IAsyncEnumerable<T> items,
-        CancellationToken cancellationToken = default)
-        => items.SkipSyncItems(false, cancellationToken);
-
-    public static async IAsyncEnumerable<T> SkipSyncItems<T>(
-        this IAsyncEnumerable<T> items,
-        bool alwaysYieldFirstItem,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        // ReSharper disable once NotDisposedResource
-        var enumerator = items.GetAsyncEnumerator(cancellationToken);
-        await using var _1 = enumerator.ConfigureAwait(false);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IAsyncEnumerable<T> SkipNullItems() => source.Where(x => x is not null).Select(x => x!.Value);
+    }
 
-        var last = default(T);
-        var hasLast = false;
-        var error = (ExceptionDispatchInfo?)null;
-        while (true) {
-            ValueTask<bool> hasNextTask;
-            try {
-                hasNextTask = enumerator.MoveNextAsync();
-            }
-            catch (Exception e) {
-                error = ExceptionDispatchInfo.Capture(e);
-                break;
-            }
+    extension<T>(IAsyncEnumerable<T> source)
+    {
+        // SkipSyncItems
 
-            if (hasLast && (alwaysYieldFirstItem || !hasNextTask.IsCompleted)) {
-                alwaysYieldFirstItem = hasLast = false;
-                yield return last!;
-            }
+        public IAsyncEnumerable<T> SkipSyncItems(CancellationToken cancellationToken = default)
+            => source.SkipSyncItems(false, cancellationToken);
 
-            try {
-                if (!await hasNextTask.ConfigureAwait(false))
+        public async IAsyncEnumerable<T> SkipSyncItems(
+            bool alwaysYieldFirstItem,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            // ReSharper disable once NotDisposedResource
+            var enumerator = source.GetAsyncEnumerator(cancellationToken);
+            await using var _1 = enumerator.ConfigureAwait(false);
+
+            var last = default(T);
+            var hasLast = false;
+            var error = (ExceptionDispatchInfo?)null;
+            while (true) {
+                ValueTask<bool> hasNextTask;
+                try {
+                    hasNextTask = enumerator.MoveNextAsync();
+                }
+                catch (Exception e) {
+                    error = ExceptionDispatchInfo.Capture(e);
                     break;
-            }
-            catch (Exception e) {
-                error = ExceptionDispatchInfo.Capture(e);
-                break;
-            }
+                }
 
-            last = enumerator.Current;
-            hasLast = true;
+                if (hasLast && (alwaysYieldFirstItem || !hasNextTask.IsCompleted)) {
+                    alwaysYieldFirstItem = hasLast = false;
+                    yield return last!;
+                }
+
+                try {
+                    if (!await hasNextTask.ConfigureAwait(false))
+                        break;
+                }
+                catch (Exception e) {
+                    error = ExceptionDispatchInfo.Capture(e);
+                    break;
+                }
+
+                last = enumerator.Current;
+                hasLast = true;
+            }
+            if (hasLast)
+                yield return last!;
+            error?.Throw();
         }
-        if (hasLast)
-            yield return last!;
-        error?.Throw();
-    }
+        // SuppressXxx
 
-    // SuppressXxx
+        public async IAsyncEnumerable<T> SuppressExceptions(
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            // ReSharper disable once NotDisposedResource
+            var enumerator = source.GetAsyncEnumerator(cancellationToken);
+            await using var _ = enumerator.ConfigureAwait(false);
 
-    public static async IAsyncEnumerable<T> SuppressExceptions<T>(
-        this IAsyncEnumerable<T> source,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        // ReSharper disable once NotDisposedResource
-        var enumerator = source.GetAsyncEnumerator(cancellationToken);
-        await using var _ = enumerator.ConfigureAwait(false);
-
-        while (true) {
-            bool hasMore;
-            T item = default!;
-            try {
+            while (true) {
+                bool hasMore;
+                T item = default!;
+                try {
 #pragma warning disable MA0040
-                hasMore = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    hasMore = await enumerator.MoveNextAsync().ConfigureAwait(false);
 #pragma warning restore MA0040
+                    if (hasMore)
+                        item = enumerator.Current;
+                }
+                catch (Exception) {
+                    yield break;
+                }
                 if (hasMore)
-                    item = enumerator.Current;
+                    yield return item;
+                else
+                    yield break;
             }
-            catch (Exception) {
-                yield break;
-            }
-            if (hasMore)
-                yield return item;
-            else
-                yield break;
         }
-    }
 
-    public static async IAsyncEnumerable<T> SuppressCancellation<T>(
-        this IAsyncEnumerable<T> source,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        // ReSharper disable once NotDisposedResource
-        var enumerator = source.GetAsyncEnumerator(cancellationToken);
-        await using var _ = enumerator.ConfigureAwait(false);
+        public async IAsyncEnumerable<T> SuppressCancellation(
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            // ReSharper disable once NotDisposedResource
+            var enumerator = source.GetAsyncEnumerator(cancellationToken);
+            await using var _ = enumerator.ConfigureAwait(false);
 
-        while (true) {
-            bool hasMore;
-            T item = default!;
-            try {
+            while (true) {
+                bool hasMore;
+                T item = default!;
+                try {
 #pragma warning disable MA0040
-                hasMore = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    hasMore = await enumerator.MoveNextAsync().ConfigureAwait(false);
 #pragma warning restore MA0040
+                    if (hasMore)
+                        item = enumerator.Current;
+                }
+                catch (OperationCanceledException) {
+                    yield break;
+                }
                 if (hasMore)
-                    item = enumerator.Current;
+                    yield return item;
+                else
+                    yield break;
             }
-            catch (OperationCanceledException) {
-                yield break;
-            }
-            if (hasMore)
-                yield return item;
-            else
-                yield break;
         }
     }
 }

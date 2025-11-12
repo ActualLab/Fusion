@@ -2,10 +2,13 @@ namespace ActualLab.Time;
 
 public static class ServiceProviderExt
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static MomentClockSet Clocks(this IServiceProvider services)
+    extension(IServiceProvider services)
     {
-        var clocks = services.GetService<MomentClockSet>();
-        return clocks ?? MomentClockSet.Default;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public MomentClockSet Clocks()
+        {
+            var clocks = services.GetService<MomentClockSet>();
+            return clocks ?? MomentClockSet.Default;
+        }
     }
 }

@@ -20,6 +20,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public CancellationToken CancellationToken; // From Arguments
     public RpcOutboundCall? Call;
     public RpcPeer? Peer;
+    public bool AllowRerouting = true;
     public long RelatedId;
     public int SizeHint;
     public RpcCacheInfoCapture? CacheInfoCapture;

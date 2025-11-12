@@ -29,7 +29,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
     {
         Settings = settings;
         DefaultLog = Log.IfEnabled(Settings.LogLevel);
-        ArgumentSerializer = Hub.InternalServices.SerializationFormats.GetDefault(false).ArgumentSerializer;
+        ArgumentSerializer = Hub.SerializationFormats.GetDefault(false).ArgumentSerializer;
         AnyMethodResolver = Hub.ServiceRegistry.AnyMethodResolver;
         if (initialize)
             // ReSharper disable once VirtualMemberCallInConstructor

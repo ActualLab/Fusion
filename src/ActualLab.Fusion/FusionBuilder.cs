@@ -124,8 +124,8 @@ public readonly struct FusionBuilder
         services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
 
         // RPC:
-        // 1. Replace RpcOutboundCallHandlerFactory
-        services.AddSingleton(_ => FusionDefaultDelegates.OutboundCallHandlerFactory);
+        // 1. Replace RpcOutboundCallOptions with FusionRpcOutboundCallOptions
+        services.AddSingleton<RpcOutboundCallOptions>(_ => FusionRpcOutboundCallOptions.Default);
         // 2. Register IRpcComputeSystemCalls service and RpcComputeCallType
         Rpc.AddServerAndClient(typeof(IRpcComputeSystemCalls), typeof(RpcComputeSystemCalls), RpcComputeSystemCalls.Name);
         services.AddSingleton(c => new RpcComputeSystemCallSender(c));

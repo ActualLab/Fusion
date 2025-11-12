@@ -90,7 +90,6 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         try {
 #pragma warning disable MA0100
             var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
-            using var _ = context.Activate();
             var call = context.PrepareCallForSendNoWait(OkMethodDef, ArgumentList.New(result))!;
             var inboundHash = inboundCall.Context.Message.Headers.TryGet(WellKnownRpcHeaders.Hash);
             if (inboundHash is null)
@@ -177,7 +176,6 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, int sizeHint, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
-        using var _ = context.Activate();
 #pragma warning disable MA0100
         var call = context.PrepareCallForSendNoWait(ItemMethodDef, ArgumentList.New(index, item))!;
         return call.SendNoWait(true);
@@ -187,7 +185,6 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     public Task Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, int sizeHint, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
-        using var _ = context.Activate();
 #pragma warning disable MA0100
         var itemType = typeof(TItem);
         var arguments = itemType.IsAbstract || itemType == typeof(object)

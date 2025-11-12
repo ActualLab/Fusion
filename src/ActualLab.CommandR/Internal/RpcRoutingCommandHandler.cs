@@ -41,7 +41,7 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                         : preFinalExecutionState; // Remote call -> trigger just RPC call by invoking the final handler only
 
                     Task invokeRemainingHandlersTask;
-                    using (RpcCallOptions.Activate(peer))
+                    using (new RpcOutgoingCallSettings(peer).Activate())
                         invokeRemainingHandlersTask = context.InvokeRemainingHandlers(cancellationToken);
                     await invokeRemainingHandlersTask.ConfigureAwait(false);
                     return;

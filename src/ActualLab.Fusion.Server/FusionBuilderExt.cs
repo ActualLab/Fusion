@@ -4,16 +4,19 @@ namespace ActualLab.Fusion.Server;
 
 public static class FusionBuilderExt
 {
-    public static FusionWebServerBuilder AddWebServer(this FusionBuilder fusion)
-        => new(fusion, null);
-
-    public static FusionWebServerBuilder AddWebServer(this FusionBuilder fusion, bool exposeBackend)
+    extension(FusionBuilder fusion)
     {
-        var webServer = new FusionWebServerBuilder(fusion, null);
-        fusion.Rpc.AddWebSocketServer(true);
-        return webServer;
-    }
+        public FusionWebServerBuilder AddWebServer()
+            => new(fusion, null);
 
-    public static FusionBuilder AddWebServer(this FusionBuilder fusion, Action<FusionWebServerBuilder> configure)
-        => new FusionWebServerBuilder(fusion, configure).Fusion;
+        public FusionWebServerBuilder AddWebServer(bool exposeBackend)
+        {
+            var webServer = new FusionWebServerBuilder(fusion, null);
+            fusion.Rpc.AddWebSocketServer(true);
+            return webServer;
+        }
+
+        public FusionBuilder AddWebServer(Action<FusionWebServerBuilder> configure)
+            => new FusionWebServerBuilder(fusion, configure).Fusion;
+    }
 }

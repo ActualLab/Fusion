@@ -26,7 +26,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     private IServiceProvider? _clientServices;
 
     protected RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
-    protected RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => FrameDelayers.Delay(1); // Just for testing
+    protected Func<FrameDelayer?>? RpcFrameDelayerFactory { get; set; } = () => FrameDelayers.Delay(1); // Just for testing
     protected string SerializationFormat { get; set; } = DefaultSerializationFormat;
     protected bool ExposeBackend { get; init; } = false;
     protected bool UseTestClock { get; init; }
@@ -140,11 +140,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
             });
         services.AddSingleton<RpcSerializationFormatResolver>(
             _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
-        services.AddSingleton<RpcWebSocketChannelOptionsProvider>(_ => {
-            return (peer, _) => WebSocketChannel<RpcMessage>.Options.Default with {
-                Serializer = peer.Hub.SerializationFormats.Get(peer.Ref).MessageSerializerFactory.Invoke(peer),
-                FrameDelayerFactory = RpcFrameDelayerFactory,
-            };
+        services.AddSingleton<RpcWebSocketClientOptions>(c => new RpcWebSocketClientOptions(c) {
+            FrameDelayerFactory = RpcFrameDelayerFactory,
         });
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {

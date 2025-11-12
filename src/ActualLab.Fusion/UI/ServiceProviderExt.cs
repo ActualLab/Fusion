@@ -2,11 +2,14 @@ namespace ActualLab.Fusion.UI;
 
 public static class ServiceProviderExt
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static UIActionTracker UIActionTracker(this IServiceProvider services)
-        => services.GetRequiredService<UIActionTracker>();
+    extension(IServiceProvider services)
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public UIActionTracker UIActionTracker()
+            => services.GetRequiredService<UIActionTracker>();
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static UICommander UICommander(this IServiceProvider services)
-        => services.GetRequiredService<UICommander>();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public UICommander UICommander()
+            => services.GetRequiredService<UICommander>();
+    }
 }
