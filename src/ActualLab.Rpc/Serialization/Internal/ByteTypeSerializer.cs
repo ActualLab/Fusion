@@ -2,7 +2,6 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 using ActualLab.IO;
-using ActualLab.IO.Internal;
 using ActualLab.OS;
 using Errors = ActualLab.Rpc.Internal.Errors;
 

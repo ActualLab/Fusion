@@ -98,7 +98,8 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
     {
         var ccs = Fusion.Computed.BeginCapture();
         try {
-            return await DefaultInvokeServer<TResult>().ConfigureAwait(false);
+            var invokeTask = (Task<TResult>)MethodDef.InboundCallServerInvoker.Invoke(Arguments!);
+            return await invokeTask.ConfigureAwait(false);
         }
         finally {
             var computed = ccs.Context.TryGetCaptured<TResult>();
@@ -133,8 +134,8 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
 
 #endif
 
-    protected override Task InvokePipeline()
-        => DefaultInvokePipeline<TResult>();
+    // protected override Task InvokePipeline()
+    //     => DefaultInvokePipeline<TResult>();
 
     protected override Task SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);

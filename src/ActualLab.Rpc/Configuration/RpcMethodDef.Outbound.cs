@@ -24,7 +24,4 @@ public partial class RpcMethodDef
             }
         }
     }
-
-    public virtual Func<ArgumentList, RpcPeerRef> CreateOutboundCallRouter()
-        => static _ => RpcPeerRef.Default;
 }

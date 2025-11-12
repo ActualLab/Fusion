@@ -174,6 +174,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public RpcMessage CreateMessage(long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
     {
         var oldOutboundContext = RpcOutboundContext.Current;
+        RpcOutboundContext.Current = Context;
         try {
             var arguments = Context.Arguments!;
             var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
@@ -192,10 +193,11 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public (RpcMessage Message, string Hash) CreateMessageWithHashHeader(long relatedId, bool needsPolymorphism)
     {
         var oldOutboundContext = RpcOutboundContext.Current;
+        RpcOutboundContext.Current = Context;
         try {
             var arguments = Context.Arguments!;
             var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
-            var hash = Peer.InternalServices.OutboundCallOptions.Hasher.Invoke(argumentData);
+            var hash = Peer.Hasher.Invoke(argumentData);
             var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
             var message = new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
             return (message, hash);

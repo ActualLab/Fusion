@@ -1,37 +1,9 @@
-
-using System.Diagnostics;
-
 namespace ActualLab.Rpc;
 
-public sealed record RpcCallTimeoutSet
+public sealed partial record RpcCallTimeoutSet
 {
     public static readonly RpcCallTimeoutSet None = new();
-    public static int DelayedCallLogLimit { get; set; } = 10;
-
-    public static class Defaults
-    {
-        public static bool UseDebug { get; set; } = Debugger.IsAttached;
-        public static RpcCallTimeoutSet Debug { get; set; } = new(null, 3);
-
-        public static RpcCallTimeoutSet Query { get; set; } = None;
-        public static RpcCallTimeoutSet Command { get; set; } = new(1.5, 10);
-        public static RpcCallTimeoutSet BackendQuery { get; set; } = None;
-        public static RpcCallTimeoutSet BackendCommand { get; set; } = new(300, 300);
-        public static TimeSpan LogTimeout { get; set; } = TimeSpan.FromSeconds(30);
-    }
-
-    public static RpcCallTimeoutSet GetDefault(RpcMethodDef methodDef)
-    {
-        if (Defaults.UseDebug)
-            return Defaults.Debug;
-
-        return (methodDef.Kind is RpcMethodKind.Command, methodDef.IsBackend) switch {
-            (true, true) => Defaults.BackendCommand,
-            (true, false) => Defaults.Command,
-            (false, true) => Defaults.BackendQuery,
-            (false, false) => Defaults.Query,
-        };
-    }
+    public static TimeSpan DefaultLogTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public TimeSpan ConnectTimeout { get; init => field = value.Positive(); }
     public TimeSpan Timeout { get; init => field = value.Positive(); }
@@ -51,7 +23,7 @@ public sealed record RpcCallTimeoutSet
     {
         ConnectTimeout = connectTimeout;
         Timeout = timeout;
-        LogTimeout = Defaults.LogTimeout;
+        LogTimeout = DefaultLogTimeout;
     }
 
     // TimeSpan? overloads

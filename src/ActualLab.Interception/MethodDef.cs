@@ -145,6 +145,12 @@ public partial class MethodDef
     public sealed override int GetHashCode()
         => Id;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsInstanceOfUnwrappedReturnType(object? candidate)
+        => candidate is null
+            ? IsUnwrappedReturnTypeClassOrNullable
+            : UnwrappedReturnType.IsInstanceOfType(candidate);
+
     public object? WrapResult<TUnwrapped>(TUnwrapped result)
     {
         if (!IsAsyncMethod)

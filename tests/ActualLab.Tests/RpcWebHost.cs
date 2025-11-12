@@ -17,10 +17,8 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace ActualLab.Tests;
 
-public class RpcWebHost(
-    IServiceCollection baseServices,
-    Assembly? controllerAssembly = null
-    ) : TestWebHostBase
+public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAssembly = null)
+    : TestWebHostBase
 {
     public IServiceCollection BaseServices { get; } = baseServices;
     public Assembly? ControllerAssembly { get; set; } = controllerAssembly;

@@ -84,6 +84,10 @@ public partial class RpcMethodDef : MethodDef
                         : RpcSystemMethodKind.OtherNonStreaming,
                 }
                 : RpcSystemMethodKind.OtherNonStreaming;
+            // InboundCallFilter, InboundCallPreprocessors, InboundCallValidator
+            // must be the default ones for system calls.
+            InboundCallServerInvoker = GetCachedFunc<Func<ArgumentList, Task>>(typeof(InboundCallServerInvokerFactory<>));
+            InboundCallPipelineInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
             return;
         }
 
