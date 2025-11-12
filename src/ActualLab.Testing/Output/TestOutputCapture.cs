@@ -1,4 +1,3 @@
-using System.CommandLine.IO;
 using System.Text;
 using AwesomeAssertions.Execution;
 using AwesomeAssertions.Primitives;
@@ -6,8 +5,7 @@ using Xunit.Abstractions;
 
 namespace ActualLab.Testing.Output;
 
-public class TestOutputCapture(TestTextWriter? downstream = null)
-    : IStandardStreamWriter, ITestOutputHelper
+public class TestOutputCapture(TestTextWriter? downstream = null) : ITestOutputHelper
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();

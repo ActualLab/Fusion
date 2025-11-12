@@ -10,7 +10,7 @@
   <!-- Constants -->
   <PropertyGroup>
     <!-- Core packages -->
-    <AspNetCoreVersion>[10.0.0-rc.2.25502.107,)</AspNetCoreVersion>
+    <AspNetCoreVersion>[10.0.0,)</AspNetCoreVersion>
     <AspNetCoreVersion9>[9.0.0,)</AspNetCoreVersion9>
     <AspNetCoreVersion8>[8.0.4,)</AspNetCoreVersion8>
     <AspNetCoreVersion7>[7.0.0,)</AspNetCoreVersion7>
@@ -24,7 +24,7 @@
     <BlazorVersion6>$(AspNetCoreVersion6)</BlazorVersion6>
     <BlazorVersion5>$(AspNetCoreVersion5)</BlazorVersion5>
     <BlazorVersion3>$(AspNetCoreVersion3)</BlazorVersion3>
-    <MicrosoftExtensionsVersion>[10.0.0-rc.2.25502.107,)</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion>[10.0.0,)</MicrosoftExtensionsVersion>
     <MicrosoftExtensionsVersion9>[9.0.0,)</MicrosoftExtensionsVersion9>
     <MicrosoftExtensionsVersion8>[8.0.0,)</MicrosoftExtensionsVersion8>
     <MicrosoftExtensionsVersion7>[7.0.0,)</MicrosoftExtensionsVersion7>
@@ -47,7 +47,7 @@
     <EntityFrameworkCoreNpgsqlVersion6>[6.0.29,)</EntityFrameworkCoreNpgsqlVersion6>
     <EntityFrameworkCoreNpgsqlVersion5>[5.0.10,)</EntityFrameworkCoreNpgsqlVersion5>
     <EntityFrameworkCoreNpgsqlVersion3>[3.1.18,)</EntityFrameworkCoreNpgsqlVersion3>
-    <MySqlConnectorVersion>[2.4.0,)</MySqlConnectorVersion>
+    <MySqlConnectorVersion>[2.5.0,)</MySqlConnectorVersion>
     <MySqlConnectorVersion9>[2.4.0,)</MySqlConnectorVersion9>
     <MySqlConnectorVersion8>[2.3.7,)</MySqlConnectorVersion8>
     <MySqlConnectorVersion7>[2.2.7,)</MySqlConnectorVersion7>
@@ -69,11 +69,11 @@
     <!-- Other -->
     <RedisVersion>[2.9.32,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
-    <OpenTelemetryVersion>[1.12.0,)</OpenTelemetryVersion>
+    <OpenTelemetryVersion>[1.13.0,)</OpenTelemetryVersion>
     <!-- Build & Samples -->
-    <AspireSdkVersion>9.5.2</AspireSdkVersion>
-    <BlazoriseVersion>[1.8.5,)</BlazoriseVersion>
-    <FusionVersion>[10.5.52,)</FusionVersion>
+    <AspireSdkVersion>13.0.0</AspireSdkVersion>
+    <BlazoriseVersion>[1.8.6,)</BlazoriseVersion>
+    <FusionVersion>[11.1.4,)</FusionVersion>
   </PropertyGroup>
   <!-- Dependencies -->
   <ItemGroup>
@@ -115,11 +115,11 @@
     <PackageVersion Include="Microsoft.Identity.Web" Version="2.21.1" />
     <PackageVersion Include="MsgPack.Cli" Version="1.0.1" />
     <PackageVersion Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-    <PackageVersion Include="Pastel" Version="7.0.0" />
+    <PackageVersion Include="Pastel" Version="7.0.1" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="$(EntityFrameworkCoreMySqlVersion)" />
     <PackageVersion Include="RestEase" Version="$(RestEaseVersion)" />
     <PackageVersion Include="StackExchange.Redis" Version="$(RedisVersion)" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0" />
     <PackageVersion Include="System.CommandLine.DragonFruit" Version="0.4.0-alpha.22272.1" />
     <PackageVersion Include="System.IO.Abstractions" Version="19.2.87" />
     <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
@@ -169,8 +169,8 @@
     <!-- Used only in TodoApp sample -->
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireSdkVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.1" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(MicrosoftExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(MicrosoftExtensionsVersion)" />
     <!-- Legacy support only -->
     <PackageVersion Include="IndexRange" Version="1.0.3" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
@@ -184,7 +184,7 @@
     <PackageVersion Include="Castle.Core" Version="5.2.1" />
     <PackageVersion Include="AutoFixture.AutoMoq" Version="4.18.1" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <PackageVersion Include="AwesomeAssertions" Version="9.2.0" />
+    <PackageVersion Include="AwesomeAssertions" Version="9.3.0" />
     <PackageVersion Include="ILogger.Moq" Version="2.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
@@ -212,14 +212,14 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(EntityFrameworkCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EntityFrameworkCoreVersion)" />
-    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.8.118" />
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.9.50" />
     <PackageVersion Include="PolySharp" Version="1.15.0" />
     <!-- Analyzers -->
     <PackageVersion Include="Moq.Analyzers" Version="0.3.0" />
-    <PackageVersion Include="xunit.analyzers" Version="1.24.0" />
+    <PackageVersion Include="xunit.analyzers" Version="1.25.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.14.1" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.226" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.252" />
     <!-- Generators -->
     <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(CSharpVersion)" />
