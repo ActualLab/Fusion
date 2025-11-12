@@ -4,9 +4,12 @@ namespace ActualLab.CommandR;
 
 public static class CommandServiceExt
 {
-    public static IServiceProvider GetServices(this ICommandService service)
-        => ProxyExt.GetServices(service);
+    extension(ICommandService service)
+    {
+        public IServiceProvider GetServices()
+            => ProxyExt.GetServices(service);
 
-    public static ICommander GetCommander(this ICommandService service)
-        => service.GetServices().Commander();
+        public ICommander GetCommander()
+            => service.GetServices().Commander();
+    }
 }

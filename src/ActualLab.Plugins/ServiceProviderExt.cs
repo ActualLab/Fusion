@@ -2,7 +2,10 @@ namespace ActualLab.Plugins;
 
 public static class ServiceProviderExt
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IPluginHost Plugins(this IServiceProvider services)
-        => services.GetRequiredService<IPluginHost>();
+    extension(IServiceProvider services)
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IPluginHost Plugins()
+            => services.GetRequiredService<IPluginHost>();
+    }
 }

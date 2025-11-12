@@ -193,7 +193,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     return calls; // All calls have to be re-sent
 
                 Task<byte[]> reconnectTask;
-                using (new RpcCallOptions(Peer).Activate()) // No "await" inside this block!
+                using (new RpcOutgoingCallSettings(Peer).Activate()) // No "await" inside this block!
                     reconnectTask = Peer.Hub.SystemCallSender.Client
                         .Reconnect(handshake.Index, completedStages, cancellationToken);
                 var failedCallData = await reconnectTask.ConfigureAwait(false);

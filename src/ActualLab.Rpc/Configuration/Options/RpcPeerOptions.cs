@@ -2,12 +2,14 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
-public class RpcPeerOptions(IServiceProvider services) : RpcServiceBase(services)
+public class RpcPeerOptions
 {
-    public virtual RpcPeer CreatePeer(RpcPeerRef peerRef)
+    public static RpcPeerOptions Default { get; set; } = new();
+
+    public virtual RpcPeer CreatePeer(RpcHub hub, RpcPeerRef peerRef)
         => peerRef.IsServer
-            ? new RpcServerPeer(Hub, peerRef)
-            : new RpcClientPeer(Hub, peerRef);
+            ? new RpcServerPeer(hub, peerRef)
+            : new RpcClientPeer(hub, peerRef);
 
     public virtual RpcPeerConnectionKind GetConnectionKind(RpcPeerRef peerRef)
         => peerRef.ConnectionKind;

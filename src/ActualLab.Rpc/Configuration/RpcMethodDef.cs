@@ -95,8 +95,14 @@ public partial class RpcMethodDef : MethodDef
         LegacyNames = new LegacyNames(MethodInfo, nameSuffix);
 
         // Inbound call related
-        InboundCallFilter = GetDefaultInboundCallFilter(this);
-        InboundCallValidator = GetDefaultInboundCallValidator(this);
+#pragma warning disable CA2214
+        // ReSharper disable once VirtualMemberCallInConstructor
+        InboundCallFilter = CreateInboundCallFilter();
+        // ReSharper disable once VirtualMemberCallInConstructor
+        InboundCallPreprocessors = CreateInboundCallPreprocessors();
+        // ReSharper disable once VirtualMemberCallInConstructor
+        InboundCallValidator = CreateInboundCallValidator();
+#pragma warning restore CA2214
         InboundCallServerInvoker = GetCachedFunc<Func<ArgumentList, Task>>(typeof(InboundCallServerInvokerFactory<>));
         InboundCallPipelineInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
 

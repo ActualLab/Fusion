@@ -1,11 +1,11 @@
-using ActualLab.Rpc.Infrastructure;
-
 namespace ActualLab.Rpc;
 
-public class RpcRegistryOptions(IServiceProvider services) : RpcServiceBase(services)
+public class RpcRegistryOptions
 {
-    public virtual RpcServiceDef CreateServiceDef(RpcServiceBuilder service)
-        => new(Hub, service);
+    public static RpcRegistryOptions Default { get; set; } = new();
+
+    public virtual RpcServiceDef CreateServiceDef(RpcHub hub, RpcServiceBuilder service)
+        => new(hub, service);
 
     public virtual RpcMethodDef CreateMethodDef(RpcServiceDef serviceDef, MethodInfo methodInfo)
         => new(serviceDef, methodInfo);

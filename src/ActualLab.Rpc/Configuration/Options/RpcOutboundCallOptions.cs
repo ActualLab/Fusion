@@ -1,12 +1,13 @@
 using System.Security.Cryptography;
 using ActualLab.Interception;
-using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
-public class RpcOutboundCallOptions(IServiceProvider services) : RpcServiceBase(services)
+public class RpcOutboundCallOptions
 {
-    public static RetryDelaySeq ReroutingDelays { get; set; } = RetryDelaySeq.Exp(0.1, 5);
+    public static RpcOutboundCallOptions Default { get; set; } = new();
+
+    public RetryDelaySeq ReroutingDelays { get; set; } = RetryDelaySeq.Exp(0.1, 5);
 
     public virtual Func<ArgumentList, RpcPeerRef> CreateRouter(RpcMethodDef methodDef)
         => static _ => RpcPeerRef.Default;

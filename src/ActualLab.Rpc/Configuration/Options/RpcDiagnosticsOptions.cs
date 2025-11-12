@@ -4,8 +4,10 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
-public class RpcDiagnosticsOptions(IServiceProvider services) : RpcServiceBase(services)
+public class RpcDiagnosticsOptions
 {
+    public static RpcDiagnosticsOptions Default { get; set; } = new();
+
     protected static readonly string KeepAliveMethodName = $"{nameof(IRpcSystemCalls.KeepAlive)}:1";
 
     public virtual RpcCallTracer? CreateCallTracer(RpcMethodDef method)

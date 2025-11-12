@@ -130,7 +130,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public void RegisterCacheKeyOnly()
     {
-        using var _ = Context.Activate(); // CreateMessage may use it
         var message = CreateMessage(Id, MethodDef.HasPolymorphicArguments);
         Context.CacheInfoCapture?.CaptureKey(Context, message);
     }
@@ -156,7 +155,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     {
         RpcMessage message;
         var context = Context;
-        var scope = context.Activate(); // CreateMessage may use it
         try {
             var cacheInfoCapture = context.CacheInfoCapture;
             var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
@@ -168,9 +166,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             SetError(error, context: null, assumeCancelled: isFirstAttempt);
             return Task.CompletedTask;
         }
-        finally {
-            scope.Dispose();
-        }
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
         return Peer.Send(message, sender);
@@ -178,6 +173,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public RpcMessage CreateMessage(long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
     {
+        using var _ = Context.Activate();
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
         var headers = Context.Headers;
@@ -190,6 +186,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public (RpcMessage Message, string Hash) CreateMessageWithHashHeader(long relatedId, bool needsPolymorphism)
     {
+        using var _ = Context.Activate();
         var arguments = Context.Arguments!;
         var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
         var hash = Peer.InternalServices.OutboundCallOptions.ComputeHash(argumentData);

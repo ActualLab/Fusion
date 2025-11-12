@@ -12,21 +12,21 @@ public static class RpcPeerRefExt
             (false, false) => "server",
         };
 
-    public static TPeerRef RequireClient<TPeerRef>(this TPeerRef peerRef)
-        where TPeerRef : RpcPeerRef
-        => !peerRef.IsServer
-            ? peerRef
-            : throw Errors.ClientRpcPeerRefExpected(nameof(peerRef));
+    extension<TPeerRef>(TPeerRef peerRef) where TPeerRef : RpcPeerRef
+    {
+        public TPeerRef RequireClient()
+            => !peerRef.IsServer
+                ? peerRef
+                : throw Errors.ClientRpcPeerRefExpected(nameof(peerRef));
 
-    public static TPeerRef RequireServer<TPeerRef>(this TPeerRef peerRef)
-        where TPeerRef : RpcPeerRef
-        => peerRef.IsServer
-            ? peerRef
-            : throw Errors.ServerRpcPeerRefExpected(nameof(peerRef));
+        public TPeerRef RequireServer()
+            => peerRef.IsServer
+                ? peerRef
+                : throw Errors.ServerRpcPeerRefExpected(nameof(peerRef));
 
-    public static TPeerRef RequireBackend<TPeerRef>(this TPeerRef peerRef)
-        where TPeerRef : RpcPeerRef
-        => !peerRef.IsBackend
-            ? peerRef
-            : throw Errors.BackendRpcPeerRefExpected(nameof(peerRef));
+        public TPeerRef RequireBackend()
+            => !peerRef.IsBackend
+                ? peerRef
+                : throw Errors.BackendRpcPeerRefExpected(nameof(peerRef));
+    }
 }

@@ -16,22 +16,26 @@ public partial class RpcMethodDef
     public Func<ArgumentList, Task> InboundCallServerInvoker { get; protected set; } = null!;
     public Func<RpcInboundCall, Task> InboundCallPipelineInvoker { get; protected set; } = null!;
 
-    public static Func<RpcPeer, bool>? GetDefaultInboundCallFilter(RpcMethodDef methodDef)
-        => methodDef.IsBackend
+    public virtual Func<RpcPeer, bool>? CreateInboundCallFilter()
+        => IsBackend
             ? peer => peer.Ref.IsBackend
             : null;
 
-    public static Action<RpcInboundCall>? GetDefaultInboundCallValidator(RpcMethodDef methodDef)
+    public virtual Func<RpcInboundCall, Task>[] CreateInboundCallPreprocessors()
+        => Hub.InboundCallPreprocessorFactories
+            .Select(x => x.CreateInboundCallPreprocessor(this))
+            .ToArray();
+
+    public virtual Action<RpcInboundCall>? CreateInboundCallValidator()
     {
 #if NET6_0_OR_GREATER // NullabilityInfoContext is available in .NET 6.0+
-        if (methodDef.IsSystem || methodDef.NoWait)
+        if (IsSystem || NoWait)
             return null; // These methods are supposed to rely on built-in validation for perf. reasons
 
         var nonNullableArgIndexesList = new List<int>();
         var nullabilityInfoContext = new NullabilityInfoContext();
-        var parameters = methodDef.Parameters;
-        for (var i = 0; i < parameters.Length; i++) {
-            var p = parameters[i];
+        for (var i = 0; i < Parameters.Length; i++) {
+            var p = Parameters[i];
             if (p.ParameterType.IsClass && nullabilityInfoContext.Create(p).ReadState == NullabilityState.NotNull)
                 nonNullableArgIndexesList.Add(i);
         }
@@ -42,7 +46,7 @@ public partial class RpcMethodDef
         return call => {
             var args = call.Arguments!;
             foreach (var index in nonNullableArgIndexes)
-                ArgumentNullException.ThrowIfNull(args.GetUntyped(index), parameters[index].Name);
+                ArgumentNullException.ThrowIfNull(args.GetUntyped(index), Parameters[index].Name);
         };
 #else
         return null;

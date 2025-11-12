@@ -2,7 +2,10 @@ namespace ActualLab.Conversion;
 
 public static class ServiceProviderExt
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IConverterProvider Converters(this IServiceProvider services)
-        => services.GetService<IConverterProvider>() ?? ConverterProvider.Default;
+    extension(IServiceProvider services)
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IConverterProvider Converters()
+            => services.GetService<IConverterProvider>() ?? ConverterProvider.Default;
+    }
 }
