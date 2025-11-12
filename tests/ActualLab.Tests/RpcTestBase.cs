@@ -18,8 +18,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     public static string DefaultSerializationFormat => "mempack4c";
 
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
-    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.GetDefaultPeerRef();
-    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.GetDefaultPeerRef(true);
+    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.Default;
+    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.DefaultBackend;
 
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
@@ -127,7 +127,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
             });
 
         var rpc = services.AddRpc();
-        rpc.AddWebSocketClient(WebHost.ServerUri.ToString());
+        rpc.AddWebSocketClient(_ => WebHost.ServerUri.ToString());
         services.AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptions.Default with {
             RouterFactory = methodDef => args => {
                 if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
@@ -139,6 +139,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
         services.AddSingleton<RpcSerializationFormatResolver>(
             _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
         services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
+            HostUrlResolver = _ => WebHost.ServerUri.ToString(),
             FrameDelayerFactory = RpcFrameDelayerFactory,
         });
         if (!isClient) {

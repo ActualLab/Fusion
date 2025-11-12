@@ -12,7 +12,7 @@ public class RpcWebSocketClient(IServiceProvider services)
 
     public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
-        var uri = Options.ConnectionUriResolver(clientPeer);
+        var uri = Options.ConnectionUriResolver.Invoke(clientPeer);
         return ConnectRemote(clientPeer, uri, cancellationToken);
     }
 

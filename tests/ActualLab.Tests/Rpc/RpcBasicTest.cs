@@ -223,9 +223,20 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         }
     }
 
-    [Fact]
-    public async Task PolymorphTest()
+    [InlineData("json3")]
+    [InlineData("njson3")]
+    [InlineData("mempack3")]
+    [InlineData("mempack3c")]
+    [InlineData("mempack4")]
+    [InlineData("mempack4c")]
+    [InlineData("msgpack3")]
+    [InlineData("msgpack3c")]
+    [InlineData("msgpack4")]
+    [InlineData("msgpack4c")]
+    [Theory]
+    public async Task PolymorphTest(string serializationFormat)
     {
+        SerializationFormat = serializationFormat;
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.RpcHub().GetClient<ITestRpcService>();

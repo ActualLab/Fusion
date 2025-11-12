@@ -4,15 +4,14 @@ public static class RpcBuilderExt
 {
     extension(RpcBuilder rpc)
     {
-        public RpcBuilder AddTestClient(Func<IServiceProvider, RpcTestClient.Options>? optionsFactory = null)
+        public RpcBuilder AddTestClient(Func<IServiceProvider, RpcTestClientOptions>? optionsFactory = null)
         {
             var services = rpc.Services;
-            services.AddSingleton(optionsFactory, _ => RpcTestClient.Options.Default);
+            services.AddSingleton(optionsFactory, _ => RpcTestClientOptions.Default);
             if (services.HasService<RpcTestClient>())
                 return rpc;
 
-            services.AddSingleton(c => new RpcTestClient(
-                c.GetRequiredService<RpcTestClient.Options>(), c));
+            services.AddSingleton(c => new RpcTestClient(c));
             services.AddAlias<RpcClient, RpcTestClient>();
             services.AddSingleton(c => new RpcClientPeerReconnectDelayer(c) {
                 Delays = RetryDelaySeq.Fixed(0.05),

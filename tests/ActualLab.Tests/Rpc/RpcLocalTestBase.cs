@@ -26,8 +26,10 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
     protected virtual void StartServices(IServiceProvider services)
     {
         var testClient = services.GetRequiredService<RpcTestClient>();
-        var connection = testClient.CreateDefaultConnection();
-        _ = connection.Connect();
+        var c1 = testClient.CreateDefaultConnection(isBackend: false);
+        _ = c1.Connect();
+        var c2 = testClient.CreateDefaultConnection(isBackend: true);
+        _ = c2.Connect();
     }
 
     protected virtual void ConfigureServices(ServiceCollection services)
@@ -48,6 +50,11 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
 
         var rpc = services.AddRpc();
         rpc.AddTestClient();
+        services.AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptions.Default with {
+            RouterFactory = methodDef => methodDef.IsBackend
+                ? static _ => RpcPeerRef.DefaultBackend
+                : static _ => RpcPeerRef.Default,
+        });
         services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptions.Default with {
             PeerFactory = (hub, peerRef) => peerRef.IsServer
                 ? new RpcServerPeer(hub, peerRef)

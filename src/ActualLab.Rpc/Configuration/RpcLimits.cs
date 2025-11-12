@@ -5,13 +5,7 @@ namespace ActualLab.Rpc;
 
 public record RpcLimits
 {
-    public static RpcLimits Default { get; set; } = Debugger.IsAttached ? DebugDefaults : new();
-    public static RpcLimits DebugDefaults => new() {
-        HandshakeTimeout = TimeSpan.FromSeconds(60),
-        KeepAlivePeriod = TimeSpan.FromSeconds(300),
-        KeepAliveTimeout = TimeSpan.FromSeconds(1000),
-        CallTimeoutCheckPeriod = TimeSpan.FromSeconds(1),
-    };
+    public static RpcLimits Default { get; set; } = new(Debugger.IsAttached);
 
     // Connect timeout; if connecting takes longer, reconnect starts
     public TimeSpan ConnectTimeout { get; init; } = TimeSpan.FromSeconds(10);
@@ -39,4 +33,15 @@ public record RpcLimits
         = RuntimeInfo.IsServer
             ? (1000, TimeSpan.FromMinutes(10))
             : (1, TimeSpan.FromMinutes(1));
+
+    public RpcLimits(bool useDebugDefaults)
+    {
+        if (!useDebugDefaults)
+            return;
+
+        HandshakeTimeout = TimeSpan.FromSeconds(60);
+        KeepAlivePeriod = TimeSpan.FromSeconds(300);
+        KeepAliveTimeout = TimeSpan.FromSeconds(1000);
+        CallTimeoutCheckPeriod = TimeSpan.FromSeconds(1);
+    }
 }

@@ -161,8 +161,8 @@ public abstract class RpcInboundCall : RpcCall
 
     // Protected methods
 
-    protected abstract Task InvokeServer();
-    protected abstract Task InvokePipeline();
+    protected internal abstract Task InvokeServer();
+    // protected abstract Task InvokePipeline();
     protected abstract Task SendResult();
 
     protected Exception ProcessArgumentDeserializationError(Exception error)
@@ -320,11 +320,11 @@ public abstract class RpcInboundCall : RpcCall
 public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
     : RpcInboundCall(context, methodDef)
 {
-    protected override Task InvokeServer()
-        => DefaultInvokeServer<TResult>();
+    protected internal override Task InvokeServer()
+        => MethodDef.InboundCallServerInvoker.Invoke(Arguments!);
 
-    protected override Task InvokePipeline()
-        => DefaultInvokePipeline<TResult>();
+    // protected override Task InvokePipeline()
+    //     => DefaultInvokePipeline<TResult>();
 
     protected override Task SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);

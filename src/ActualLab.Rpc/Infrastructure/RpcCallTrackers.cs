@@ -58,6 +58,8 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 
 public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 {
+    public static int DelayedCallLogLimit { get; set; } = 10;
+
     private readonly ConcurrentDictionary<long, RpcOutboundCall> _inProgressCalls = new(HardwareInfo.ProcessorCountPo2, 131);
     private long _lastId;
 
@@ -124,7 +126,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                             Peer.Ref, call, elapsed.ToShortString(), timeouts.Timeout.ToShortString());
                     }
                     else if (elapsed >= timeouts.LogTimeout) {
-                        if (++delayedCallCount > RpcCallTimeoutSet.DelayedCallLogLimit)
+                        if (++delayedCallCount > DelayedCallLogLimit)
                             continue;
 
                         Peer.Log.LogWarning(
@@ -132,10 +134,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                             Peer.Ref, call, elapsed.ToShortString());
                     }
                 }
-                if (delayedCallCount > RpcCallTimeoutSet.DelayedCallLogLimit)
+                if (delayedCallCount > DelayedCallLogLimit)
                     Peer.Log.LogWarning(
                         "{PeerRef}': {UnloggedDelayedCallCount} more delayed call(s) aren't logged",
-                        Peer.Ref, delayedCallCount - RpcCallTimeoutSet.DelayedCallLogLimit);
+                        Peer.Ref, delayedCallCount - DelayedCallLogLimit);
 
                 var summaryLogSettings = Limits.LogOutboundCallSummarySettings;
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period

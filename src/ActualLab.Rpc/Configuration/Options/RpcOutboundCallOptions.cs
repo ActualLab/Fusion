@@ -27,10 +27,10 @@ public record RpcOutboundCallOptions
     // Protected methods
 
     protected Func<ArgumentList, RpcPeerRef> DefaultRouterFactory(RpcMethodDef methodDef)
-        => _ => RpcPeerRef.Default;
+        => static _ => RpcPeerRef.Default;
 
     protected RpcCallTimeoutSet DefaultTimeoutsFactory(RpcMethodDef methodDef)
-        => RpcCallTimeoutSet.GetDefault(methodDef);
+        => RpcCallTimeoutSet.Default.Get(methodDef);
 
     protected Task DefaultReroutingDelay(int failureCount, CancellationToken cancellationToken)
         => Task.Delay(ReroutingDelays.GetDelay(failureCount), cancellationToken);
