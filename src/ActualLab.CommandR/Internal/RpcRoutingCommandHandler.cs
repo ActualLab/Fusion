@@ -41,7 +41,7 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                         : preFinalExecutionState; // Remote call -> trigger just RPC call by invoking the final handler only
 
                     Task invokeRemainingHandlersTask;
-                    using (new RpcOutgoingCallSettings(peer).Activate())
+                    using (new RpcOutboundCallSetup(peer).Activate())
                         invokeRemainingHandlersTask = context.InvokeRemainingHandlers(cancellationToken);
                     await invokeRemainingHandlersTask.ConfigureAwait(false);
                     return;
@@ -50,8 +50,8 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                     context.ResetResult();
                     ++rerouteCount;
                     Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}", rerouteCount, context.UntypedCommand);
-                    await RpcHub.InternalServices.OutboundCallOptions
-                        .ReroutingDelay(rerouteCount, cancellationToken)
+                    await RpcHub.InternalServices.OutboundCallOptions.ReroutingDelayFactory
+                        .Invoke(rerouteCount, cancellationToken)
                         .ConfigureAwait(false);
                 }
             }

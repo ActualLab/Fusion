@@ -19,13 +19,13 @@ public readonly struct RpcWebSocketServerBuilder
         }
 
         services.AddSingleton(_ => RpcWebSocketServerDefaultDelegates.PeerRefFactory);
-        services.AddSingleton(_ => RpcWebSocketServer.Options.Default);
-        services.AddSingleton(c => new RpcWebSocketServer(c.GetRequiredService<RpcWebSocketServer.Options>(), c));
+        services.AddSingleton(_ => RpcWebSocketServerOptions.Default);
+        services.AddSingleton(c => new RpcWebSocketServer(c.GetRequiredService<RpcWebSocketServerOptions>(), c));
 
         configure?.Invoke(this);
     }
 
-    public RpcWebSocketServerBuilder Configure(Func<IServiceProvider, RpcWebSocketServer.Options> serverOptionsFactory)
+    public RpcWebSocketServerBuilder Configure(Func<IServiceProvider, RpcWebSocketServerOptions> serverOptionsFactory)
     {
         Services.AddSingleton(serverOptionsFactory);
         return this;

@@ -19,8 +19,9 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         if (isClient) {
             rpc.AddClient<ITestRpcService>();
             commander.AddService<ITestRpcService>();
-            services.AddSingleton<RpcPeerFactory>(_ =>
-                (hub, peerRef) => new RpcClientPeer(hub, peerRef, ClientPeerVersions));
+            services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptions.Default with {
+                PeerFactory = (hub, peerRef) => new RpcClientPeer(hub, peerRef, ClientPeerVersions),
+            });
         }
         else {
             rpc.AddServer<ITestRpcService, TestRpcService>();

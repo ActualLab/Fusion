@@ -5,10 +5,8 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Server.Rpc;
 
-public class DefaultSessionRpcInboundCallPreprocessor : IRpcInboundCallPreprocessor
+public class RpcDefaultSessionInboundCallPreprocessor : IRpcInboundCallPreprocessor
 {
-    public static readonly DefaultSessionRpcInboundCallPreprocessor Instance = new();
-
     public virtual Func<RpcInboundCall, Task> CreateInboundCallPreprocessor(RpcMethodDef methodDef)
     {
         var parameters = methodDef.Parameters;

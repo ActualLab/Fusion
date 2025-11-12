@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Hosting;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Server;
 using ActualLab.Rpc.WebSockets;
@@ -36,7 +37,7 @@ public class RpcWebHost(
             // only web-related ones must be added to services
             var webSocketServer = services.AddRpc().AddWebSocketServer();
             webSocketServer.Configure(_ => {
-                var defaultOptions = RpcWebSocketServer.Options.Default;
+                var defaultOptions = RpcWebSocketServerOptions.Default;
                 return defaultOptions with { ExposeBackend = ExposeBackend };
             });
             if (RpcFrameDelayerFactory is not null)

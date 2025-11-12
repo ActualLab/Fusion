@@ -26,7 +26,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
         var localCallAsyncInvoker = methodDef.SelectAsyncInvokerUntyped(initialInvocation.Proxy, LocalTarget);
         return invocation => {
             Task resultTask;
-            var context = RpcOutgoingCallSettings.ProduceContext();
+            var context = RpcOutboundCallSetup.ProduceContext();
             var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
 
@@ -72,7 +72,9 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
 
                 ++rerouteCount;
                 Log.LogWarning(e, "Rerouting #{RerouteCount}: {Invocation}", rerouteCount, invocation);
-                await Hub.OutboundCallOptions.ReroutingDelay(rerouteCount, cancellationToken).ConfigureAwait(false);
+                await Hub.OutboundCallOptions.ReroutingDelayFactory
+                    .Invoke(rerouteCount, cancellationToken)
+                    .ConfigureAwait(false);
                 call = context.PrepareReroutedCall();
             }
         }

@@ -161,7 +161,7 @@ void ConfigureServices()
     var fusionServer = fusion.AddWebServer(hostKind == HostKind.BackendServer);
 #if false
     // Enable this to test how the client behaves w/ a delay
-    fusion.Rpc.AddInboundMiddleware(c => new RpcRandomDelayMiddleware(c) {
+    fusion.Rpc.AddInboundCallPreprocessor(c => new RpcRandomDelayInboundCallPreprocessor() {
         Delay = new(1, 0.1),
     });
 #endif

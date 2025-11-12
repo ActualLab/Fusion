@@ -18,13 +18,10 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var rpc = services.AddRpc();
         rpc.AddServerAndClient<ITestRpcService, TestRpcService>();
         rpc.AddServerAndClient<ITestRpcBackend, TestRpcBackend>();
-        services.AddSingleton<RpcPeerFactory>(_ => static (hub, peerRef) => {
-            return peerRef.IsServer
-                ? new RpcServerPeer(hub, peerRef) {
-                    InboundCallFilter = static (peer, method)
-                        => !method.IsBackend || method.Service.Type == typeof(ITestRpcBackend),
-                }
-                : new RpcClientPeer(hub, peerRef);
+        services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptions.Default with {
+            PeerFactory = (hub, peerRef) => peerRef.IsServer
+                ? new RpcServerPeer(hub, peerRef)
+                : new RpcClientPeer(hub, peerRef)
         });
     }
 
@@ -65,7 +62,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     public async Task TraceTest()
     {
         await using var services = CreateServices(s => {
-            s.AddSingleton<RpcCallTracerFactory>(method => new TestRpcCallTracer(method));
+            s.AddSingleton<RpcDiagnosticsOptions>(_ => RpcDiagnosticsOptions.Default with {
+                CallTracerFactory = methodDef => new TestRpcCallTracer(methodDef),
+            });
         });
         var clientPeer = services.GetRequiredService<RpcTestClient>().Connections.First().Value.ClientPeer;
         var client = services.RpcHub().GetClient<ITestRpcService>();

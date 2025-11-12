@@ -2,11 +2,21 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
-public class RpcInboundCallOptions
+#pragma warning disable CA1822
+
+public record RpcInboundCallOptions
 {
     public static RpcInboundCallOptions Default { get; set; } = new();
 
-    public virtual RpcInboundContext CreateContext(
+    // Delegate options
+    public Func<RpcPeer, RpcMessage, CancellationToken, RpcInboundContext> ContextFactory { get; init; }
+
+    public RpcInboundCallOptions()
+        => ContextFactory = DefaultContextFactory;
+
+    // Protected methods
+
+    protected RpcInboundContext DefaultContextFactory(
         RpcPeer peer, RpcMessage message, CancellationToken peerChangedToken)
         => new(peer, message, peerChangedToken);
 }

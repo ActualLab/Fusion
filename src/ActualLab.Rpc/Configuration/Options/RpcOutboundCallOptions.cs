@@ -3,23 +3,39 @@ using ActualLab.Interception;
 
 namespace ActualLab.Rpc;
 
-public class RpcOutboundCallOptions
+#pragma warning disable CA1822
+
+public record RpcOutboundCallOptions
 {
     public static RpcOutboundCallOptions Default { get; set; } = new();
 
-    public RetryDelaySeq ReroutingDelays { get; set; } = RetryDelaySeq.Exp(0.1, 5);
+    public RetryDelaySeq ReroutingDelays { get; init; } = RetryDelaySeq.Exp(0.1, 5);
+    // Delegate options
+    public Func<RpcMethodDef, RpcCallTimeoutSet> TimeoutsFactory { get; init; }
+    public Func<RpcMethodDef, Func<ArgumentList, RpcPeerRef>> RouterFactory { get; init; }
+    public Func<int, CancellationToken, Task> ReroutingDelayFactory { get; init; }
+    public Func<ReadOnlyMemory<byte>, string> Hasher { get; init; }
 
-    public virtual Func<ArgumentList, RpcPeerRef> CreateRouter(RpcMethodDef methodDef)
-        => static _ => RpcPeerRef.Default;
+    public RpcOutboundCallOptions()
+    {
+        TimeoutsFactory = DefaultTimeoutsFactory;
+        RouterFactory = DefaultRouterFactory;
+        ReroutingDelayFactory = DefaultReroutingDelay;
+        Hasher = DefaultHasher;
+    }
 
+    // Protected methods
 
-    public virtual Task ReroutingDelay(int failureCount, CancellationToken cancellationToken)
-        => Task.Delay(ReroutingDelays.GetDelay(failureCount), cancellationToken);
+    protected Func<ArgumentList, RpcPeerRef> DefaultRouterFactory(RpcMethodDef methodDef)
+        => _ => RpcPeerRef.Default;
 
-    public virtual RpcCallTimeoutSet GetTimeouts(RpcMethodDef methodDef)
+    protected RpcCallTimeoutSet DefaultTimeoutsFactory(RpcMethodDef methodDef)
         => RpcCallTimeoutSet.GetDefault(methodDef);
 
-    public virtual string ComputeHash(ReadOnlyMemory<byte> bytes)
+    protected Task DefaultReroutingDelay(int failureCount, CancellationToken cancellationToken)
+        => Task.Delay(ReroutingDelays.GetDelay(failureCount), cancellationToken);
+
+    protected static string DefaultHasher(ReadOnlyMemory<byte> bytes)
     {
         // It's better to use a more efficient hash function here, e.g., Blake3.
         // We use SHA256 mainly to minimize the number of dependencies.

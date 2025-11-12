@@ -22,7 +22,7 @@ public partial class RpcMethodDef
             : null;
 
     public virtual Func<RpcInboundCall, Task>[] CreateInboundCallPreprocessors()
-        => Hub.InboundCallPreprocessorFactories
+        => Hub.InboundCallPreprocessors
             .Select(x => x.CreateInboundCallPreprocessor(this))
             .ToArray();
 

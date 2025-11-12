@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
-using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Internal;
@@ -13,9 +12,8 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcPeerOptions PeerOptions => Hub.PeerOptions;
     public RpcInboundCallOptions InboundCallOptions => Hub.InboundCallOptions;
     public RpcOutboundCallOptions OutboundCallOptions => Hub.OutboundCallOptions;
-    public RpcWebSocketClientOptions WebSocketClientOptions => Hub.WebSocketClientOptions;
     public RpcDiagnosticsOptions DiagnosticsOptions => Hub.DiagnosticsOptions;
-    public IRpcInboundCallPreprocessor[]  InboundCallPreprocessorFactories => Hub.InboundCallPreprocessorFactories;
+    public IRpcInboundCallPreprocessor[]  InboundCallPreprocessors => Hub.InboundCallPreprocessors;
     public RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer => Hub.ClientPeerReconnectDelayer;
     public RpcSystemCallSender SystemCallSender => Hub.SystemCallSender;
     public RpcClient Client => Hub.Client;

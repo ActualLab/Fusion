@@ -8,6 +8,7 @@ using ActualLab.Fusion.EntityFramework.Npgsql;
 using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Server;
+using ActualLab.Fusion.Server.Rpc;
 using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Locking;
 using ActualLab.Rpc;
@@ -101,10 +102,11 @@ public abstract class FusionTestBase : RpcTestBase
             return;
 
         // Common client services that should remain in base class
-        services.AddSingleton<RpcPeerFactory>(_ => (hub, peerRef)
-            => peerRef.IsServer
+        services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptionsForFusion.Default with {
+            PeerFactory = (hub, peerRef) => peerRef.IsServer
                 ? new RpcServerPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
-                : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel });
+                : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
+        });
         if (UseRemoteComputedCache)
             services.AddSingleton(c => {
                 lock (_lock) {

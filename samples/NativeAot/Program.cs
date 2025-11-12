@@ -39,7 +39,9 @@ var services = new ServiceCollection()
         // We could use .AddDistributedService, but Loopback connection = infinite call loop there
         fusion.AddServerAndClient<ITestService, TestService>();
     })
-    .AddSingleton<RpcCallRouterFactory>(static c => static method => static args => RpcPeerRef.Loopback)
+    .AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptionsForFusion.Default with {
+        RouterFactory = methodDef => args => RpcPeerRef.Loopback,
+    })
     .BuildServiceProvider();
 
 var client = services.RpcHub().GetClient<ITestService>();

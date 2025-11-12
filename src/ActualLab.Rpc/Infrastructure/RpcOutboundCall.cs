@@ -173,26 +173,36 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public RpcMessage CreateMessage(long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
     {
-        using var _ = Context.Activate();
-        var arguments = Context.Arguments!;
-        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
-        var headers = Context.Headers;
-        if (hash is not null)
-            headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
-        if (activity is not null)
-            headers = RpcActivityInjector.Inject(headers, activity.Context);
-        return new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+        var oldOutboundContext = RpcOutboundContext.Current;
+        try {
+            var arguments = Context.Arguments!;
+            var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
+            var headers = Context.Headers;
+            if (hash is not null)
+                headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
+            if (activity is not null)
+                headers = RpcActivityInjector.Inject(headers, activity.Context);
+            return new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+        }
+        finally {
+            RpcOutboundContext.Current = oldOutboundContext;
+        }
     }
 
     public (RpcMessage Message, string Hash) CreateMessageWithHashHeader(long relatedId, bool needsPolymorphism)
     {
-        using var _ = Context.Activate();
-        var arguments = Context.Arguments!;
-        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
-        var hash = Peer.InternalServices.OutboundCallOptions.ComputeHash(argumentData);
-        var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
-        var message = new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
-        return (message, hash);
+        var oldOutboundContext = RpcOutboundContext.Current;
+        try {
+            var arguments = Context.Arguments!;
+            var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
+            var hash = Peer.InternalServices.OutboundCallOptions.Hasher.Invoke(argumentData);
+            var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
+            var message = new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+            return (message, hash);
+        }
+        finally {
+            RpcOutboundContext.Current = oldOutboundContext;
+        }
     }
 
     public virtual void SetResult(object? result, RpcInboundContext? context)

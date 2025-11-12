@@ -9,7 +9,7 @@ public static class RpcBuilderExt
     {
         var webSocketServer = new RpcWebSocketServerBuilder(rpc, null);
         if (exposeBackend)
-            webSocketServer.Configure(static _ => RpcWebSocketServer.Options.Default with {
+            webSocketServer.Configure(static _ => RpcWebSocketServerOptions.Default with {
                 ExposeBackend = true,
             });
         return webSocketServer;

@@ -13,11 +13,11 @@ public static class EndpointRouteBuilderExt
 
         var services = endpoints.ServiceProvider;
         var server = services.GetRequiredService<RpcWebSocketServer>();
-        var settings = server.Settings;
+        var options = server.Options;
 
-        endpoints.Map(settings.RequestPath, HandleRequest(isBackend: false));
-        if (settings.ExposeBackend)
-            endpoints.Map(settings.BackendRequestPath, HandleRequest(isBackend: true));
+        endpoints.Map(options.RequestPath, HandleRequest(isBackend: false));
+        if (options.ExposeBackend)
+            endpoints.Map(options.BackendRequestPath, HandleRequest(isBackend: true));
         return endpoints;
 
         RequestDelegate HandleRequest(bool isBackend)

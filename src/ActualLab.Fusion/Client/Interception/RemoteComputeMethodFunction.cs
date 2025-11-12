@@ -90,7 +90,7 @@ public abstract class RemoteComputeMethodFunction(
                     try {
                         ValueTask<object?> invokeInterceptedUntypedTask;
                         // Force distributed service to route to local
-                        using (new RpcOutgoingCallSettings(peer).Activate()) {
+                        using (new RpcOutboundCallSetup(peer).Activate()) {
                             // No "await" inside this block!
                             invokeInterceptedUntypedTask = typedInput.InvokeInterceptedUntyped(cancellationToken);
                         }
@@ -133,8 +133,8 @@ public abstract class RemoteComputeMethodFunction(
             catch (RpcRerouteException) {
                 ++rerouteCount;
                 Log.LogWarning("Rerouting #{RerouteCount}: {Input}", rerouteCount, typedInput);
-                await RpcHub.InternalServices.OutboundCallOptions
-                    .ReroutingDelay(rerouteCount, cancellationToken)
+                await RpcHub.InternalServices.OutboundCallOptions.ReroutingDelayFactory
+                    .Invoke(rerouteCount, cancellationToken)
                     .ConfigureAwait(false);
             }
         }
@@ -350,7 +350,7 @@ public abstract class RemoteComputeMethodFunction(
 
         RpcOutboundComputeCall? call = null;
         try {
-            var settings = new RpcOutgoingCallSettings() {
+            var settings = new RpcOutboundCallSetup() {
                 CallTypeId = RpcComputeCallType.Id,
                 Peer = peer,
                 AllowRerouting = false,
@@ -475,8 +475,8 @@ public abstract class RemoteComputeMethodFunction(
     protected async Task InvalidateToReroute(Computed computed, Exception? error, string source)
     {
         Log.LogWarning(error, "Invalidating to reroute: {Input}", computed.Input);
-        await RpcMethodDef.Hub.InternalServices.OutboundCallOptions
-            .ReroutingDelay(1, default)
+        await RpcMethodDef.Hub.InternalServices.OutboundCallOptions.ReroutingDelayFactory
+            .Invoke(1, default)
             .ConfigureAwait(false);
         computed.Invalidate(immediately: true, new InvalidationSource(source));
     }

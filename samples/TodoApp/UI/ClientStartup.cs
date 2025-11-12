@@ -11,6 +11,7 @@ using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.UI;
 using ActualLab.OS;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Clients;
 using Blazored.LocalStorage;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
@@ -99,7 +100,7 @@ public static class ClientStartup
 
             // Highly recommended option for client & API servers:
             RpcWebSocketClientOptions.Default = new RpcWebSocketClientOptions() {
-                UseAutoFrameDelayerFactory = true
+                UseAutoFrameDelayerFactory = true,
             };
             // Lets ComputedState to be dependent on, e.g., current culture - use only if you need this:
             // ComputedState.DefaultOptions.FlowExecutionContext = true;

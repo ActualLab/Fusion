@@ -1,5 +1,6 @@
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Server;
+using ActualLab.Fusion.Server.Rpc;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Server;
@@ -68,13 +69,22 @@ public sealed class Host : WorkerBase
         services.AddSingleton<RpcHelpers>();
         fusion.Rpc.AddWebSocketClient(c => {
             var rpcHelpers = c.GetRequiredService<RpcHelpers>();
-            return new RpcWebSocketClient.Options() {
-                HostUrlResolver = rpcHelpers.GetHostUrl,
+            return RpcWebSocketClientOptions.Default with {
+                HostUrlResolver = rpcHelpers.HostUrlResolver,
             };
         });
-        services.AddSingleton<RpcOutboundCallHandlerFactory>(method => new MeshOutboundCallHandler(method));
-        services.AddSingleton<RpcCallRouterFactory>(c => c.GetRequiredService<RpcHelpers>().RouteCall);
-        services.AddSingleton<RpcPeerConnectionKindResolver>(c => c.GetRequiredService<RpcHelpers>().GetPeerConnectionKind);
+        services.AddSingleton<RpcOutboundCallOptions>(c => {
+            var rpcHelpers = c.GetRequiredService<RpcHelpers>();
+            return RpcOutboundCallOptionsForFusion.Default with {
+                RouterFactory = rpcHelpers.RouterFactory,
+            };
+        });
+        services.AddSingleton<RpcPeerOptions>(c => {
+            var rpcHelpers = c.GetRequiredService<RpcHelpers>();
+            return RpcPeerOptionsForFusion.Default with {
+                ConnectionKindDetector = rpcHelpers.ConnectionKindDetector,
+            };
+        });
         if (UseRemoteComputedCache)
             services.AddSingleton(SharedRemoteComputedCache);
 

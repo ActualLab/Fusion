@@ -7,33 +7,13 @@ using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc.Server;
 
-public class RpcWebSocketServer(
-    RpcWebSocketServer.Options settings,
-    IServiceProvider services
-    ) : RpcServiceBase(services)
+public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvider services)
+    : RpcServiceBase(services)
 {
-    public record Options
-    {
-        public static Options Default { get; set; } = new();
-
-        public bool ExposeBackend { get; init; } = false;
-        public string RequestPath { get; init; } = RpcWebSocketClient.Options.Default.RequestPath;
-        public string BackendRequestPath { get; init; } = RpcWebSocketClient.Options.Default.BackendRequestPath;
-        public string SerializationFormatParameterName { get; init; } = RpcWebSocketClient.Options.Default.SerializationFormatParameterName;
-        public string ClientIdParameterName { get; init; } = RpcWebSocketClient.Options.Default.ClientIdParameterName;
-        public TimeSpan ChangeConnectionDelay { get; init; } = TimeSpan.FromSeconds(0.5);
-#if NET6_0_OR_GREATER
-        public Func<WebSocketAcceptContext> ConfigureWebSocket { get; init; } = () => new();
-#endif
-    }
-
-    public Options Settings { get; } = settings;
-    public RpcPeerOptions PeerOptions { get; }
-        = services.GetRequiredService<RpcPeerOptions>();
-    public RpcWebSocketClientOptions WebSocketClientOptions { get; }
-        = services.GetRequiredService<RpcWebSocketClientOptions>();
-    public RpcWebSocketServerPeerRefFactory PeerRefFactory { get; }
-        = services.GetRequiredService<RpcWebSocketServerPeerRefFactory>();
+    public RpcWebSocketServerOptions Options { get; } = options;
+    public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
+    public RpcWebSocketClientOptions WebSocketClientOptions { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
+    public RpcWebSocketServerPeerRefFactory PeerRefFactory { get; } = services.GetRequiredService<RpcWebSocketServerPeerRefFactory>();
 
     public virtual async Task Invoke(HttpContext context, bool isBackend)
     {
@@ -50,7 +30,7 @@ public class RpcWebSocketServer(
             var peer = Hub.GetServerPeer(peerRef);
 
 #if NET6_0_OR_GREATER
-            var webSocketAcceptContext = Settings.ConfigureWebSocket.Invoke();
+            var webSocketAcceptContext = Options.ConfigureWebSocket.Invoke();
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync(webSocketAcceptContext);
 #else
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync();
@@ -61,17 +41,17 @@ public class RpcWebSocketServer(
                 .KeylessSet(context)
                 .KeylessSet(webSocket);
             var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
-            var webSocketChannelOptions = WebSocketClientOptions.GetChannelOptions(peer, properties);
+            var webSocketChannelOptions = WebSocketClientOptions.WebSocketChannelOptionsFactory.Invoke(peer, properties);
             var channel = new WebSocketChannel<RpcMessage>(
                 webSocketChannelOptions, webSocketOwner, cancellationToken) {
                 OwnsWebSocketOwner = false,
             };
-            connection = await PeerOptions
-                .CreateServerConnection(peer, channel, properties, cancellationToken)
+            connection = await PeerOptions.ServerConnectionFactory
+                .Invoke(peer, channel, properties, cancellationToken)
                 .ConfigureAwait(false);
 
             if (peer.IsConnected()) {
-                var delay = Settings.ChangeConnectionDelay;
+                var delay = Options.ChangeConnectionDelay;
                 Log.LogWarning("{Peer} is already connected, will change its connection in {Delay}...",
                     peer, delay.ToShortString());
                 await peer.Hub.Clock.Delay(delay, cancellationToken).ConfigureAwait(false);
