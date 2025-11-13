@@ -41,16 +41,17 @@ public partial class RpcMethodDef : MethodDef
     public new readonly string FullName = "";
     public readonly RpcMethodRef Ref;
 
+    public byte CallTypeId { get; init; } = RpcCallTypes.Regular;
     public readonly bool NoWait;
     public readonly bool HasPolymorphicArguments;
     public readonly bool HasPolymorphicResult;
     public bool IsSystem => Kind is RpcMethodKind.System;
     public readonly bool IsBackend;
-    public RpcMethodKind Kind { get; init; }
-    public RpcSystemMethodKind SystemMethodKind { get; init; }
-    public LegacyNames LegacyNames { get; init; } = LegacyNames.Empty;
-    public PropertyBag Properties { get; init; }
+    public readonly RpcMethodKind Kind;
+    public readonly RpcSystemMethodKind SystemMethodKind;
+    public readonly LegacyNames LegacyNames = LegacyNames.Empty;
     public RpcCallTracer? Tracer { get; init; }
+    public PropertyBag Properties { get; protected set; }
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
@@ -77,6 +78,7 @@ public partial class RpcMethodDef : MethodDef
                 ? MethodInfo.Name switch {
                     nameof(IRpcSystemCalls.Ok) => RpcSystemMethodKind.Ok,
                     nameof(IRpcSystemCalls.Error) => RpcSystemMethodKind.Error,
+                    nameof(IRpcSystemCalls.NotFound) => RpcSystemMethodKind.NotFound,
                     nameof(IRpcSystemCalls.I) => RpcSystemMethodKind.Item,
                     nameof(IRpcSystemCalls.B) => RpcSystemMethodKind.Batch,
                     _ => StreamingMethodNames.Contains(methodInfo.Name)
@@ -84,38 +86,52 @@ public partial class RpcMethodDef : MethodDef
                         : RpcSystemMethodKind.OtherNonStreaming,
                 }
                 : RpcSystemMethodKind.OtherNonStreaming;
-            // InboundCallFilter, InboundCallPreprocessors, InboundCallValidator
-            // must be the default ones for system calls.
-            InboundCallServerInvoker = GetCachedFunc<Func<ArgumentList, Task>>(typeof(InboundCallServerInvokerFactory<>));
-            InboundCallPipelineInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
             return;
         }
 
         // Non-system method
-
+#pragma warning disable CA2214
         // ReSharper disable once VirtualMemberCallInConstructor
         Kind = GetMethodKind(out var isBackend);
+#pragma warning restore CA2214
         IsBackend = service.IsBackend || isBackend;
         LegacyNames = new LegacyNames(MethodInfo, nameSuffix);
 
-        // Inbound call related
-#pragma warning disable CA2214
-        // ReSharper disable once VirtualMemberCallInConstructor
-        InboundCallFilter = CreateInboundCallFilter();
-        // ReSharper disable once VirtualMemberCallInConstructor
-        InboundCallPreprocessors = CreateInboundCallPreprocessors();
-        // ReSharper disable once VirtualMemberCallInConstructor
-        InboundCallValidator = CreateInboundCallValidator();
-#pragma warning restore CA2214
-        InboundCallServerInvoker = GetCachedFunc<Func<ArgumentList, Task>>(typeof(InboundCallServerInvokerFactory<>));
-        InboundCallPipelineInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
-
-        // Outbound call related
-        OutboundCallTimeouts = Hub.OutboundCallOptions.TimeoutsFactory.Invoke(this);
-        OutboundCallRouter = Hub.OutboundCallOptions.RouterFactory.Invoke(this);
-
         // Call tracing
         Tracer = Hub.DiagnosticsOptions.CallTracerFactory.Invoke(this);
+    }
+
+    /// <summary>
+    /// This method is called after the constructor, but only when <see cref="MethodDef.IsValid"/> is true.
+    /// </summary>
+    public virtual void InitializeOverridableProperties()
+    {
+        InboundCallFactory = RpcInboundCall.GetFactory(this);
+        OutboundCallFactory = RpcOutboundCall.GetFactory(this);
+
+        // Inbound call related
+
+        if (!IsSystem) {
+            InboundCallFilter = CreateInboundCallFilter();
+            InboundCallPreprocessors = CreateInboundCallPreprocessors();
+            InboundCallValidator = CreateInboundCallValidator();
+        }
+
+        // We assume CallTypeId is set by that moment, and maybe InboundCallUseFastPipelineInvoker
+        var inboundCallType = RpcCallTypeRegistry.Resolve(CallTypeId).InboundCallType;
+        InboundCallUseFastPipelineInvoker ??=
+            inboundCallType == typeof(RpcInboundCall<>) // It's a regular call
+            && SystemMethodKind != RpcSystemMethodKind.NotFound; // And not a NotFound method, which overrides InvokeServer
+
+        InboundCallServerInvoker = GetCachedFunc<Func<ArgumentList, Task>>(typeof(InboundCallServerInvokerFactory<>));
+        InboundCallPipelineInvoker = InboundCallUseFastPipelineInvoker.Value
+            ? GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineFastInvokerFactory<>))
+            : GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
+
+        // Outbound call related
+
+        OutboundCallTimeouts = Hub.OutboundCallOptions.TimeoutsFactory.Invoke(this);
+        OutboundCallRouter = Hub.OutboundCallOptions.RouterFactory.Invoke(this);
     }
 
     public override string ToString()

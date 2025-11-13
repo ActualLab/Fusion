@@ -102,7 +102,7 @@ public abstract class FusionTestBase : RpcTestBase
             return;
 
         // Common client services that should remain in base class
-        services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptionsForFusion.Default with {
+        services.AddSingleton(_ => FusionServerRpcOptionOverrides.DefaultPeerOptions with {
             PeerFactory = (hub, peerRef) => peerRef.IsServer
                 ? new RpcServerPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
                 : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }

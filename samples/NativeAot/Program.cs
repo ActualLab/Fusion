@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using ActualLab.Fusion.Rpc;
 using ActualLab.Fusion.Trimming;
 using ActualLab.Interception;
 using ActualLab.Interception.Trimming;
@@ -39,7 +40,7 @@ var services = new ServiceCollection()
         // We could use .AddDistributedService, but Loopback connection = infinite call loop there
         fusion.AddServerAndClient<ITestService, TestService>();
     })
-    .AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptionsForFusion.Default with {
+    .AddSingleton(_ => FusionRpcOptionOverrides.DefaultOutboundCallOptions with {
         RouterFactory = methodDef => args => RpcPeerRef.Loopback,
     })
     .BuildServiceProvider();

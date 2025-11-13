@@ -5,16 +5,16 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Server.Rpc;
 
-public static class RpcOptionsForFusionServer
+public static class FusionServerRpcOptionOverrides
 {
     public const string SessionParameterName = "session";
 
     public static RpcPeerOptions DefaultPeerOptions { get; set; }
-        = new() { ServerConnectionFactory = FusionServerConnectionFactory };
+        = new() { ServerConnectionFactory = ServerConnectionFactory };
 
     // Private methods
 
-    private static Task<RpcConnection> FusionServerConnectionFactory(
+    private static Task<RpcConnection> ServerConnectionFactory(
         RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties,
         CancellationToken cancellationToken)
     {

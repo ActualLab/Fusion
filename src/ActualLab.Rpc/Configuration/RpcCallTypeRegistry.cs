@@ -31,6 +31,15 @@ public static class RpcCallTypeRegistry
     public static (Type? InboundCallType, Type? OutboundCallType) Get(byte callTypeId)
         => _callTypes[callTypeId];
 
+    public static string GetDescription(byte callTypeId)
+    {
+        var (inboundCallType, outboundCallType) = Get(callTypeId);
+        if (inboundCallType is null || outboundCallType is null)
+            return $"{callTypeId}: Unknown";
+
+        return $"{callTypeId}: {inboundCallType.GetName()} / {outboundCallType.GetName()}";
+    }
+
     public static void Register(byte callTypeId, Type inboundCallType, Type outboundCallType)
     {
         if (!typeof(RpcInboundCall).IsAssignableFrom(inboundCallType))

@@ -43,6 +43,8 @@ public static class Errors
         => new RpcException("Remote peer has been changed.");
     public static Exception EndpointNotFound(string serviceName, string methodName)
         => new RpcException($"Endpoint not found: '{serviceName}.{methodName}'.");
+    public static Exception InvalidCallTypeId(string serviceName, string methodName, string expected, string actual)
+        => new RpcException($"Invalid CallTypeId: '{serviceName}.{methodName}' expected '{expected}', but got '{actual}'.");
     public static Exception MatchButNoCachedEntry()
         => new RpcException("The remote server responded with 'Match', but the outbound call has no cached entry.");
     public static Exception TooLateToReconnect()

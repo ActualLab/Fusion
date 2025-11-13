@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ActualLab.Interception;
-using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Internal;
 
@@ -11,8 +10,9 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcInboundCall : RpcCall
 {
-    private static readonly ConcurrentDictionary<RpcCallTypeKey, Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>> FactoryCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<
+        (byte CallTypeId, Type ReturnType),
+        Func<RpcInboundContext, RpcInboundCall>> FactoryCache = new();
 
     protected readonly CancellationTokenSource? CallCancelSource;
     protected ILogger Log => Context.Peer.Log;
@@ -31,31 +31,19 @@ public abstract class RpcInboundCall : RpcCall
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
-    public static RpcInboundCall New(byte callTypeId, RpcInboundContext context, RpcMethodDef? methodDef)
-    {
-        if (methodDef is null) {
-            var notFoundMethodDef = context.Peer.Hub.SystemCallSender.NotFoundMethodDef;
-            var message = context.Message;
-            var (service, method) = message.MethodRef.GetServiceAndMethodName();
-            return new RpcInbound404Call<Unit>(context, notFoundMethodDef) {
-                // This prevents argument deserialization
-                Arguments = ArgumentList.New(service, method)
-            };
-        }
-
-        return FactoryCache.GetOrAdd(new(callTypeId, methodDef.UnwrappedReturnType),
+    public static Func<RpcInboundContext, RpcInboundCall> GetFactory(RpcMethodDef methodDef)
+        => FactoryCache.GetOrAdd(
+            (methodDef.CallTypeId, methodDef.UnwrappedReturnType),
             static key => {
-                var (callTypeId, tResult) = key;
-                var type = RpcCallTypeRegistry.Resolve(callTypeId)
+                var type = RpcCallTypeRegistry.Resolve(key.CallTypeId)
                     .InboundCallType
-                    .MakeGenericType(tResult);
-                return (Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>)type
-                    .GetConstructorDelegate(typeof(RpcInboundContext), typeof(RpcMethodDef))!;
-            }).Invoke(context, methodDef);
-    }
+                    .MakeGenericType(key.ReturnType);
+                return (Func<RpcInboundContext, RpcInboundCall>)type
+                    .GetConstructorDelegate(typeof(RpcInboundContext))!;
+            });
 
-    protected RpcInboundCall(RpcInboundContext context, RpcMethodDef methodDef)
-        : base(methodDef)
+    protected RpcInboundCall(RpcInboundContext context)
+        : base(context.MethodDef)
     {
         Context = context;
         Id = NoWait ? 0 : context.Message.RelatedId;
@@ -317,8 +305,8 @@ public abstract class RpcInboundCall : RpcCall
     }
 }
 
-public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
-    : RpcInboundCall(context, methodDef)
+public class RpcInboundCall<TResult>(RpcInboundContext context)
+    : RpcInboundCall(context)
 {
     protected internal override Task InvokeServer()
         => MethodDef.InboundCallServerInvoker.Invoke(Arguments!);

@@ -16,8 +16,8 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
         => CompletedStage switch { 0 => "", 1 => "ResultReady", _ => "Invalidated" };
     public abstract Computed? UntypedComputed { get; }
 
-    protected RpcInboundComputeCall(RpcInboundContext context, RpcMethodDef methodDef)
-        : base(context, methodDef)
+    protected RpcInboundComputeCall(RpcInboundContext context)
+        : base(context)
     {
         if (NoWait)
             throw Errors.InternalError($"{GetType().GetName()} is incompatible with NoWait option.");
@@ -87,8 +87,8 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
     }
 }
 
-public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
-    : RpcInboundComputeCall(context, methodDef)
+public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context)
+    : RpcInboundComputeCall(context)
 {
     public Computed<TResult>? Computed { get; private set; }
     public override Computed? UntypedComputed => Computed;

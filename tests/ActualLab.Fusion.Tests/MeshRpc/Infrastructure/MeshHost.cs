@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Rpc;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
@@ -50,10 +51,10 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
         // Fusion & RPC server setup
         var fusion = services.AddFusion();
         fusion.AddWebServer();
-        services.AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptionsForFusion.Default with {
+        services.AddSingleton(_ => FusionRpcOptionOverrides.DefaultOutboundCallOptions with {
             RouterFactory = RouterFactory,
         });
-        services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptionsForFusion.Default with {
+        services.AddSingleton(_ => FusionServerRpcOptionOverrides.DefaultPeerOptions with {
             ConnectionKindDetector = ConnectionKindDetector,
         });
 

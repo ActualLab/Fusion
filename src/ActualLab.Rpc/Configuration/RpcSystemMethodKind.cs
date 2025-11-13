@@ -7,6 +7,8 @@ public enum RpcSystemMethodKind
     None = 0,
     Ok = 0x1001,
     Error = 0x0002,
+    Cancel = 0x0003,
+    NotFound = 0x0004,
     OtherNonStreaming = 0x0080,
     Item = 0x1100,
     Batch = 0x1200,

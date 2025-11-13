@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Client.Caching;
+using ActualLab.Fusion.Rpc;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Rpc;
 using ActualLab.Rpc;
@@ -75,13 +76,13 @@ public sealed class Host : WorkerBase
         });
         services.AddSingleton<RpcOutboundCallOptions>(c => {
             var rpcHelpers = c.GetRequiredService<RpcHelpers>();
-            return RpcOutboundCallOptionsForFusion.Default with {
+            return FusionRpcOptionOverrides.DefaultOutboundCallOptions with {
                 RouterFactory = rpcHelpers.RouterFactory,
             };
         });
         services.AddSingleton<RpcPeerOptions>(c => {
             var rpcHelpers = c.GetRequiredService<RpcHelpers>();
-            return RpcPeerOptionsForFusion.Default with {
+            return FusionServerRpcOptionOverrides.DefaultPeerOptions with {
                 ConnectionKindDetector = rpcHelpers.ConnectionKindDetector,
             };
         });
