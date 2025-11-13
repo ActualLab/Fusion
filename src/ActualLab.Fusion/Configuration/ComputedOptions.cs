@@ -7,6 +7,8 @@ namespace ActualLab.Fusion;
 
 public record ComputedOptions
 {
+    private static readonly ConcurrentDictionary<(Type, MethodInfo), ComputedOptions?> Cache = new();
+
     public static ComputedOptions Default { get; set; } = new();
     public static ComputedOptions ClientDefault { get; set; } = new() {
         MinCacheDuration = TimeSpan.FromMinutes(1),
@@ -42,45 +44,46 @@ public record ComputedOptions
     public static ComputedOptions? Get(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method)
-    {
-        var isRemoteServiceMethod = type.IsInterface || typeof(InterfaceProxy).IsAssignableFrom(type);
-        var cma = method.GetAttribute<ComputeMethodAttribute>(inheritFromInterfaces: true, inheritFromBaseTypes: true);
-        var rma = isRemoteServiceMethod
-            ? method.GetAttribute<RemoteComputeMethodAttribute>(inheritFromInterfaces: true, inheritFromBaseTypes: true)
-            : null;
-        var a = rma ?? cma;
-        if (a is null)
-            return null;
+        => Cache.GetOrAdd((type, method), static key => {
+            var (type, method) = key;
+            var isRemoteServiceMethod = type.IsInterface || typeof(InterfaceProxy).IsAssignableFrom(type);
+            var cma = method.GetAttribute<ComputeMethodAttribute>(inheritFromInterfaces: true, inheritFromBaseTypes: true);
+            var rma = isRemoteServiceMethod
+                ? method.GetAttribute<RemoteComputeMethodAttribute>(inheritFromInterfaces: true, inheritFromBaseTypes: true)
+                : null;
+            var a = rma ?? cma;
+            if (a is null)
+                return null;
 
-        var defaultOptions = isRemoteServiceMethod ? ClientDefault : Default;
-        // (Auto)InvalidationDelay for replicas should be taken from ReplicaMethodAttribute only
-        var autoInvalidationDelay = isRemoteServiceMethod
-            ? rma?.AutoInvalidationDelay ?? double.NaN
-            : a.AutoInvalidationDelay;
-        var invalidationDelay = isRemoteServiceMethod
-            ? rma?.InvalidationDelay ?? double.NaN
-            : a.InvalidationDelay;
-        if (rma is not null && rma.ConsolidationDelay is not double.NaN)
-            throw new InvalidOperationException(
-                $"{nameof(ConsolidationDelay)} cannot be used with {nameof(RemoteComputeMethodAttribute)}.");
-        var consolidationDelay = a.ConsolidationDelay;
+            var defaultOptions = isRemoteServiceMethod ? ClientDefault : Default;
+            // (Auto)InvalidationDelay for replicas should be taken from ReplicaMethodAttribute only
+            var autoInvalidationDelay = isRemoteServiceMethod
+                ? rma?.AutoInvalidationDelay ?? double.NaN
+                : a.AutoInvalidationDelay;
+            var invalidationDelay = isRemoteServiceMethod
+                ? rma?.InvalidationDelay ?? double.NaN
+                : a.InvalidationDelay;
+            if (rma is not null && rma.ConsolidationDelay is not double.NaN)
+                throw new InvalidOperationException(
+                    $"{nameof(ConsolidationDelay)} cannot be used with {nameof(RemoteComputeMethodAttribute)}.");
+            var consolidationDelay = a.ConsolidationDelay;
 
-        // Default cache behavior must be changed to null to let it "inherit" defaultOptions.ClientCacheMode
-        var rmaCacheMode = rma?.CacheMode;
-        if (rmaCacheMode == RemoteComputedCacheMode.Default)
-            rmaCacheMode = null;
+            // Default cache behavior must be changed to null to let it "inherit" defaultOptions.ClientCacheMode
+            var rmaCacheMode = rma?.CacheMode;
+            if (rmaCacheMode == RemoteComputedCacheMode.Default)
+                rmaCacheMode = null;
 
-        var options = defaultOptions with {
-            MinCacheDuration = ToTimeSpan(a.MinCacheDuration) ?? defaultOptions.MinCacheDuration,
-            TransientErrorInvalidationDelay = ToTimeSpan(a.TransientErrorInvalidationDelay) ?? defaultOptions.TransientErrorInvalidationDelay,
-            AutoInvalidationDelay = ToTimeSpan(autoInvalidationDelay) ?? defaultOptions.AutoInvalidationDelay,
-            InvalidationDelay = ToTimeSpan(invalidationDelay) ?? defaultOptions.InvalidationDelay,
-            ConsolidationDelay = ToTimeSpan(consolidationDelay) ?? defaultOptions.ConsolidationDelay,
-            RemoteComputedCacheMode = rmaCacheMode ?? defaultOptions.RemoteComputedCacheMode,
-        };
-        // We don't want to multiply instances of ComputedOptions here unless they differ from the default ones
-        return options == defaultOptions ? defaultOptions : options;
-    }
+            var options = defaultOptions with {
+                MinCacheDuration = ToTimeSpan(a.MinCacheDuration) ?? defaultOptions.MinCacheDuration,
+                TransientErrorInvalidationDelay = ToTimeSpan(a.TransientErrorInvalidationDelay) ?? defaultOptions.TransientErrorInvalidationDelay,
+                AutoInvalidationDelay = ToTimeSpan(autoInvalidationDelay) ?? defaultOptions.AutoInvalidationDelay,
+                InvalidationDelay = ToTimeSpan(invalidationDelay) ?? defaultOptions.InvalidationDelay,
+                ConsolidationDelay = ToTimeSpan(consolidationDelay) ?? defaultOptions.ConsolidationDelay,
+                RemoteComputedCacheMode = rmaCacheMode ?? defaultOptions.RemoteComputedCacheMode,
+            };
+            // We don't want to multiply instances of ComputedOptions here unless they differ from the default ones
+            return options == defaultOptions ? defaultOptions : options;
+        });
 
     protected virtual bool PrintMembers(StringBuilder sb)
     {
