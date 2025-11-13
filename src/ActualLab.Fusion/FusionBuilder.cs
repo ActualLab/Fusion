@@ -8,6 +8,7 @@ using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Fusion.Operations.Reprocessing;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Client.Internal;
+using ActualLab.Fusion.Rpc;
 using ActualLab.Fusion.Trimming;
 using ActualLab.Fusion.UI;
 using ActualLab.Resilience;
@@ -125,7 +126,8 @@ public readonly struct FusionBuilder
 
         // RPC:
         // 1. Replace the defaults for some of RpcXxxOptions
-        services.AddSingleton(_ => RpcOptionsForFusion.DefaultOutboundCallOptions);
+        services.AddSingleton(_ => FusionRpcOptionOverrides.DefaultRegistryOptions);
+        services.AddSingleton(_ => FusionRpcOptionOverrides.DefaultOutboundCallOptions);
         // 2. Register IRpcComputeSystemCalls service and RpcComputeCallType
         Rpc.AddServerAndClient(typeof(IRpcComputeSystemCalls), typeof(RpcComputeSystemCalls), RpcComputeSystemCalls.Name);
         services.AddSingleton(c => new RpcComputeSystemCallSender(c));

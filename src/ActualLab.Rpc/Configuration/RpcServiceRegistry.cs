@@ -37,10 +37,12 @@ public class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcService
                 throw Errors.UnspecifiedServiceMode(service.Type, service.Mode);
 
             var serviceDef = hub.RegistryOptions.ServiceDefFactory.Invoke(hub, service);
+            serviceDef.InitializeOverridableProperties(methodsReady: false);
             if (_serviceByName.TryGetValue(serviceDef.Name, out var existingServiceDef))
                 throw Errors.ServiceNameConflict(serviceDef.Type, existingServiceDef.Type, serviceDef.Name);
 
             serviceDef.BuildMethods(serviceDef.Type);
+            serviceDef.InitializeOverridableProperties(methodsReady: true);
             if (!_services.TryAdd(serviceDef.Type, serviceDef))
                 throw Errors.ServiceTypeConflict(service.Type);
             if (serviceDef.ClientType is { } clientType && clientType != serviceDef.Type)

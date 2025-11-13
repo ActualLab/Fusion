@@ -25,7 +25,7 @@ public sealed class RpcOutboundCallSetup(RpcPeer? peer = null)
         if (value is null)
             return new RpcOutboundContext();
 
-        var context = new RpcOutboundContext(value.CallTypeId, value.Headers);
+        var context = new RpcOutboundContext(value.Headers);
         if (value.Peer is not null)
             context.Peer = value.Peer;
         context.AllowRerouting = value.AllowRerouting;

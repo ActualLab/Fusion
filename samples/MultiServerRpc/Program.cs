@@ -1,4 +1,5 @@
-﻿using Samples.MultiServerRpc;
+﻿using ActualLab.Fusion.Rpc;
+using Samples.MultiServerRpc;
 using ActualLab.Fusion.Server;
 using ActualLab.IO;
 using ActualLab.Mathematics;
@@ -52,7 +53,7 @@ async Task RunClient()
             fusion.Rpc.AddWebSocketClient();
             fusion.AddClient<IChat>();
         })
-        .AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptionsForFusion.Default with {
+        .AddSingleton(_ => FusionRpcOptionOverrides.DefaultOutboundCallOptions with {
             RouterFactory = method => args => {
                 if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
                     return RpcPeerRef.Local; // Commands in invalidation mode must always execute locally

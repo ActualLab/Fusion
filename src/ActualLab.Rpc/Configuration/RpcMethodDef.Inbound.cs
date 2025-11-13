@@ -1,4 +1,3 @@
-using ActualLab.Caching;
 using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
 
@@ -6,13 +5,15 @@ namespace ActualLab.Rpc;
 
 public partial class RpcMethodDef
 {
-    public Func<RpcPeer, bool>? InboundCallFilter { get; init; } = null;
-    public Func<RpcInboundCall, Task>[] InboundCallPreprocessors { get; init; } = [];
-    public Action<RpcInboundCall>? InboundCallValidator { get; init; } = null;
+    public Func<RpcInboundContext, RpcInboundCall> InboundCallFactory { get; protected set; } = null!;
+    public Func<RpcPeer, bool>? InboundCallFilter { get; protected set; } = null;
+    public Func<RpcInboundCall, Task>[] InboundCallPreprocessors { get; protected set; } = [];
+    public Action<RpcInboundCall>? InboundCallValidator { get; protected set; } = null;
 
     // The delegates and properties below must be initialized in Initialize(),
     // they are supposed to be as efficient as possible (i.e., do less, if possible)
     // taking the values of other properties into account.
+    public bool? InboundCallUseFastPipelineInvoker { get; protected set; }
     public Func<ArgumentList, Task> InboundCallServerInvoker { get; protected set; } = null!;
     public Func<RpcInboundCall, Task> InboundCallPipelineInvoker { get; protected set; } = null!;
 

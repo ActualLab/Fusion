@@ -11,8 +11,9 @@ namespace ActualLab.Rpc.Infrastructure;
 public abstract class RpcOutboundCall(RpcOutboundContext context)
     : RpcCall(context.MethodDef!)
 {
-    private static readonly ConcurrentDictionary<RpcCallTypeKey, Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<
+        (byte CallTypeId, Type ReturnType),
+        Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache = new();
 
     protected AsyncTaskMethodBuilder<object?> ResultSource;
 
@@ -42,24 +43,16 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
-    public static RpcOutboundCall? New(RpcOutboundContext context)
-    {
-        var peer = context.Peer;
-        if (peer is null)
-            throw Errors.InternalError("context.Peer is null.");
-
-        if (peer.ConnectionKind is RpcPeerConnectionKind.Local)
-            return null;
-
-        return FactoryCache.GetOrAdd(new(context.CallTypeId, context.MethodDef!.UnwrappedReturnType),
+    public static Func<RpcOutboundContext, RpcOutboundCall> GetFactory(RpcMethodDef methodDef)
+        => FactoryCache.GetOrAdd(
+            (methodDef.CallTypeId, methodDef.UnwrappedReturnType),
             static key => {
                 var type = RpcCallTypeRegistry.Resolve(key.CallTypeId)
                     .OutboundCallType
-                    .MakeGenericType(key.CallResultType);
+                    .MakeGenericType(key.ReturnType);
                 return (Func<RpcOutboundContext, RpcOutboundCall>)type
                     .GetConstructorDelegate(typeof(RpcOutboundContext))!;
-            }).Invoke(context);
-    }
+            });
 
     public override string ToString()
     {
@@ -183,7 +176,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
                 headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
             if (activity is not null)
                 headers = RpcActivityInjector.Inject(headers, activity.Context);
-            return new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+            return new RpcMessage(MethodDef.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
         }
         finally {
             RpcOutboundContext.Current = oldOutboundContext;
@@ -199,7 +192,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
             var hash = Peer.Hasher.Invoke(argumentData);
             var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
-            var message = new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+            var message = new RpcMessage(MethodDef.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
             return (message, hash);
         }
         finally {

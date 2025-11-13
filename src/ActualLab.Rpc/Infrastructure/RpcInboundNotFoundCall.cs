@@ -2,8 +2,8 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public sealed class RpcInbound404Call<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
-    : RpcInboundCall<TResult>(context, methodDef)
+public sealed class RpcInboundNotFoundCall<TResult>(RpcInboundContext context)
+    : RpcInboundCall<TResult>(context)
 {
     public override string DebugTypeName => "<- [not found]";
 

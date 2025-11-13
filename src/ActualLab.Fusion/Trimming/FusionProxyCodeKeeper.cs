@@ -49,6 +49,6 @@ public class FusionProxyCodeKeeper : ProxyCodeKeeper
         var outboundContext = CallSilently(() => new RpcOutboundContext());
         var inboundContext = CallSilently(() => new RpcInboundContext(null!, null!, default));
         CallSilently(() => new RpcOutboundComputeCall<TUnwrapped>(outboundContext));
-        CallSilently(() => new RpcInboundComputeCall<TUnwrapped>(inboundContext, null!));
+        CallSilently(() => new RpcInboundComputeCall<TUnwrapped>(inboundContext));
     }
 }

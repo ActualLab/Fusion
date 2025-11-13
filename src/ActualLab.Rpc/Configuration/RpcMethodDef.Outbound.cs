@@ -1,12 +1,25 @@
 using ActualLab.Interception;
+using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
 
 public partial class RpcMethodDef
 {
-    public RpcCallTimeoutSet OutboundCallTimeouts { get; init; } = RpcCallTimeoutSet.None;
-    public Func<ArgumentList, RpcPeerRef>? OutboundCallRouter { get; init; } = null;
+    public Func<RpcOutboundContext, RpcOutboundCall> OutboundCallFactory { get; protected set; } = null!;
+    public RpcCallTimeoutSet OutboundCallTimeouts { get; protected set; } = RpcCallTimeoutSet.None;
+    public Func<ArgumentList, RpcPeerRef>? OutboundCallRouter { get; protected set; } = null;
+
+    public RpcOutboundCall? CreateOutboundCall(RpcOutboundContext context)
+    {
+        var peer = context.Peer;
+        if (peer is null)
+            throw ActualLab.Internal.Errors.InternalError("context.Peer is null.");
+
+        return peer.ConnectionKind is RpcPeerConnectionKind.Local
+            ? null
+            : OutboundCallFactory.Invoke(context);
+    }
 
     public RpcPeer RouteOutboundCall(ArgumentList args)
     {

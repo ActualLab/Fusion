@@ -50,8 +50,41 @@ public partial class RpcMethodDef
                 if (!methodDef.IsAsyncMethod)
                     throw new ArgumentOutOfRangeException(nameof(methodDef), "Async method is required here.");
 
-                // var server = methodDef.Service.Server!;
-                // var invoker = methodDef.ArgumentListInvoker;
+                var preprocessors = methodDef.InboundCallPreprocessors.Length != 0
+                    ? methodDef.InboundCallPreprocessors
+                    : null;
+                var validator = methodDef.InboundCallValidator;
+
+                return methodDef.IsAsyncVoidMethod
+                    ? (Func<RpcInboundCall, Task<T>>)(async call => {
+                        // Task (returns Task<Unit>)
+                        if (preprocessors is not null)
+                            foreach (var p in preprocessors)
+                                await p.Invoke(call).ConfigureAwait(false);
+                        validator?.Invoke(call);
+                        await call.InvokeServer().ConfigureAwait(false);
+                        return default!;
+                    })
+                    : async call => {
+                        // Task<T>
+                        if (preprocessors is not null)
+                            foreach (var p in preprocessors)
+                                await p.Invoke(call).ConfigureAwait(false);
+                        validator?.Invoke(call);
+                        return await ((Task<T>)call.InvokeServer()).ConfigureAwait(false);
+                    };
+            };
+    }
+
+    public sealed class InboundCallPipelineFastInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    {
+        public override object Generate()
+            => (RpcMethodDef methodDef) => {
+                if (!methodDef.IsAsyncMethod)
+                    throw new ArgumentOutOfRangeException(nameof(methodDef), "Async method is required here.");
+
+                object? server = null;
+                var invoker = methodDef.ArgumentListInvoker;
                 var preprocessors = methodDef.InboundCallPreprocessors.Length != 0
                     ? methodDef.InboundCallPreprocessors
                     : null;
@@ -63,9 +96,8 @@ public partial class RpcMethodDef
                         if (preprocessors is not null)
                             foreach (var p in preprocessors)
                                 await p.Invoke(call).ConfigureAwait(false);
-                        validator?.Invoke(call);
-                        // await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        await call.InvokeServer().ConfigureAwait(false);
+                        server ??= methodDef.Service.Server!;
+                        await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                         return default!;
                     },
                     (true, false) => async call => {
@@ -74,8 +106,8 @@ public partial class RpcMethodDef
                             foreach (var p in preprocessors)
                                 await p.Invoke(call).ConfigureAwait(false);
                         validator?.Invoke(call);
-                        // return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        return await ((Task<T>)call.InvokeServer()).ConfigureAwait(false);
+                        server ??= methodDef.Service.Server!;
+                        return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                     },
                     (false, true) => async call => {
                         // ValueTask (returns Task<Unit>)
@@ -83,8 +115,8 @@ public partial class RpcMethodDef
                             foreach (var p in preprocessors)
                                 await p.Invoke(call).ConfigureAwait(false);
                         validator?.Invoke(call);
-                        // await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        await call.InvokeServer().ConfigureAwait(false);
+                        server ??= methodDef.Service.Server!;
+                        await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                         return default!;
                     },
                     (false, false) => async call => {
@@ -93,8 +125,8 @@ public partial class RpcMethodDef
                             foreach (var p in preprocessors)
                                 await p.Invoke(call).ConfigureAwait(false);
                         validator?.Invoke(call);
-                        // return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        return await ((Task<T>)call.InvokeServer()).ConfigureAwait(false);
+                        server ??= methodDef.Service.Server!;
+                        return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                     },
                 });
             };

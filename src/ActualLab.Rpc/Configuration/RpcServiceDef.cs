@@ -31,7 +31,7 @@ public class RpcServiceDef
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
     public string Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }
-    public PropertyBag Properties { get; init; }
+    public PropertyBag Properties { get; protected set; }
 
     public RpcMethodDef this[MethodInfo method] => GetMethod(method) ?? throw Errors.NoMethod(Type, method);
     public RpcMethodDef this[string methodName] => GetMethod(methodName) ?? throw Errors.NoMethod(Type, methodName);
@@ -83,6 +83,7 @@ public class RpcServiceDef
             if (!methodDef.IsValid)
                 continue;
 
+            methodDef.InitializeOverridableProperties();
             if (!_methodByName.TryAdd(methodDef.Name, methodDef))
                 throw Errors.MethodNameConflict(methodDef);
 
@@ -144,4 +145,7 @@ public class RpcServiceDef
             return null;
         }, this);
     }
+
+    public virtual void InitializeOverridableProperties(bool methodsReady)
+    { }
 }

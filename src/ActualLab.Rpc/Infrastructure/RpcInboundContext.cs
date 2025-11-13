@@ -1,3 +1,4 @@
+using ActualLab.Interception;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -17,6 +18,7 @@ public sealed class RpcInboundContext
     public readonly RpcMessage Message;
     public readonly CancellationToken PeerChangedToken;
     public readonly CpuTimestamp CreatedAt = CpuTimestamp.Now;
+    public readonly RpcMethodDef? MethodDef;
     public readonly RpcInboundCall Call;
 
     public static RpcInboundContext GetCurrent()
@@ -27,7 +29,28 @@ public sealed class RpcInboundContext
         Peer = peer;
         Message = message;
         PeerChangedToken = peerChangedToken;
-        Call = RpcInboundCall.New(message.CallTypeId, this, GetMethodDef());
+        MethodDef = GetMethodDef();
+        if (MethodDef is null) {
+            MethodDef = Peer.Hub.SystemCallSender.NotFoundMethodDef;
+            var (service, method) = message.MethodRef.GetServiceAndMethodName();
+            Call = new RpcInboundNotFoundCall<Unit>(this) {
+                // This prevents argument deserialization
+                Arguments = ArgumentList.New(service, method)
+            };
+            return;
+        }
+
+        if (MethodDef.CallTypeId != message.CallTypeId) {
+            MethodDef = Peer.Hub.SystemCallSender.NotFoundMethodDef;
+            var (service, method) = message.MethodRef.GetServiceAndMethodName();
+            Call = new RpcInboundInvalidCallTypeCall<Unit>(this, MethodDef.CallTypeId, message.CallTypeId) {
+                // This prevents argument deserialization
+                Arguments = ArgumentList.New(service, method)
+            };
+            return;
+        }
+
+        Call = MethodDef.InboundCallFactory.Invoke(this);
     }
 
     // Nested types

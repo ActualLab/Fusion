@@ -7,7 +7,7 @@ namespace ActualLab.Rpc.Infrastructure;
 
 #pragma warning disable CA1721
 
-public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = null)
+public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
 {
     [ThreadStatic] private static RpcOutboundContext? _current;
 
@@ -16,7 +16,6 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         [MethodImpl(MethodImplOptions.AggressiveInlining)] set => _current = value;
     }
 
-    public byte CallTypeId = callTypeId;
     public RpcHeader[]? Headers = headers;
     public RpcMethodDef? MethodDef;
     public ArgumentList? Arguments;
@@ -30,18 +29,13 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
     public RpcOutboundCallTrace? Trace;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public RpcOutboundContext(RpcHeader[]? headers = null)
-        : this(0, headers)
-    { }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundContext(RpcPeer peer, RpcHeader[]? headers = null)
-        : this(0, headers)
+        : this(headers)
         => Peer = peer;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundContext(RpcPeer peer, long relatedId, RpcHeader[]? headers = null)
-        : this(0, headers)
+        : this(headers)
     {
         Peer = peer;
         RelatedId = relatedId;
@@ -73,12 +67,12 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
         var hub = MethodDef.Hub;
         if (CacheInfoCapture is { CaptureMode: RpcCacheInfoCaptureMode.KeyOnly }) {
             Peer ??= hub.LoopbackPeer; // Peer must be set, but invoking the router makes no sense here
-            Call = RpcOutboundCall.New(this);
+            Call = methodDef.CreateOutboundCall(this);
             return Call ?? throw ActualLab.Internal.Errors.InternalError("Call is null, which isn't expected here.");
         }
 
         Peer ??= methodDef.RouteOutboundCall(arguments);
-        Call = RpcOutboundCall.New(this);
+        Call = methodDef.CreateOutboundCall(this);
         if (Call is null)
             return Call;
 
@@ -102,7 +96,7 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
 
         // Peer & Call
         Peer ??= methodDef.RouteOutboundCall(arguments);
-        Call = RpcOutboundCall.New(this);
+        Call = methodDef.CreateOutboundCall(this);
         return Call;
     }
 
@@ -112,11 +106,10 @@ public sealed class RpcOutboundContext(byte callTypeId, RpcHeader[]? headers = n
             throw ActualLab.Internal.Errors.NotInvoked(nameof(PrepareCall));
 
         // Peer & Call
-        var hub = MethodDef.Hub;
         var oldPeer = Peer;
         if (oldPeer is null || oldPeer.Ref.CanBeRerouted)
             Peer = MethodDef.RouteOutboundCall(Arguments);
-        Call = RpcOutboundCall.New(this);
+        Call = MethodDef.CreateOutboundCall(this);
         if (ReferenceEquals(oldPeer, Peer))
             Peer?.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
         return Call;
