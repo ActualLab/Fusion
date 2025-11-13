@@ -5,7 +5,7 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Fusion;
 
-public record ComputedOptions
+public sealed record ComputedOptions
 {
     private static readonly ConcurrentDictionary<(Type, MethodInfo), ComputedOptions?> Cache = new();
 
@@ -85,7 +85,9 @@ public record ComputedOptions
             return options == defaultOptions ? defaultOptions : options;
         });
 
-    protected virtual bool PrintMembers(StringBuilder sb)
+    // Private methods
+
+    private bool PrintMembers(StringBuilder sb)
     {
         var ic = CultureInfo.InvariantCulture;
         var initialLength = sb.Length;
@@ -121,8 +123,6 @@ public record ComputedOptions
         sb.Length -= 2; // Remove the last comma
         return true;
     }
-
-    // Private methods
 
     private static TimeSpan? ToTimeSpan(double value)
     {
