@@ -44,10 +44,24 @@ public partial class RpcMethodDef
             return null;
 
         var nonNullableArgIndexes = nonNullableArgIndexesList.ToArray();
-        return call => {
-            var args = call.Arguments!;
-            foreach (var index in nonNullableArgIndexes)
-                ArgumentNullException.ThrowIfNull(args.GetUntyped(index), Parameters[index].Name);
+        var index0 = nonNullableArgIndexes.GetValueOrDefault(0);
+        var index1 = nonNullableArgIndexes.GetValueOrDefault(1);
+        var p0Name = Parameters.GetValueOrDefault(index0)?.Name;
+        var p1Name = Parameters.GetValueOrDefault(index1)?.Name;
+        return nonNullableArgIndexes.Length switch {
+            1 => call => {
+                ArgumentNullException.ThrowIfNull(call.Arguments!.GetUntyped(index0), p0Name);
+            },
+            2 => call => {
+                var args = call.Arguments!;
+                ArgumentNullException.ThrowIfNull(args.GetUntyped(index0), p0Name);
+                ArgumentNullException.ThrowIfNull(args.GetUntyped(index1), p1Name);
+            },
+            _ => call => {
+                var args = call.Arguments!;
+                foreach (var index in nonNullableArgIndexes)
+                    ArgumentNullException.ThrowIfNull(args.GetUntyped(index), Parameters[index].Name);
+            },
         };
 #else
         return null;
