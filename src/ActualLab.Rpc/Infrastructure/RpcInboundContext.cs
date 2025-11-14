@@ -20,6 +20,7 @@ public sealed class RpcInboundContext
     public readonly CpuTimestamp CreatedAt = CpuTimestamp.Now;
     public readonly RpcMethodDef? MethodDef;
     public readonly RpcInboundCall Call;
+    public object? RelatedObject; // IRpcPolymorphicArgumentHandler and the actual call handler may use this field
 
     public static RpcInboundContext GetCurrent()
         => CurrentLocal.Value ?? throw Errors.NoCurrentRpcInboundContext();
