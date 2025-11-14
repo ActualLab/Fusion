@@ -118,7 +118,7 @@ public partial class RpcMethodDef : MethodDef
 
         // Outbound call properties
 
-        OutboundCallTimeouts = Hub.OutboundCallOptions.TimeoutsFactory.Invoke(this);
+        OutboundCallTimeouts = Hub.OutboundCallOptions.TimeoutsProvider.Invoke(this);
         OutboundCallRouter = IsSystem
             ? _ => throw Errors.InternalError("All system calls must be pre-routed.")
             : Hub.OutboundCallOptions.RouterFactory.Invoke(this);
@@ -127,21 +127,20 @@ public partial class RpcMethodDef : MethodDef
 
         if (IsSystem) {
             // System calls have no inbound call filter, preprocessors, and validator;
-            // thus all pipeline invokers there must be identical to the server invoker.
-            InboundCallUsesFastPipelineInvoker = true;
+            // thus most of the pipeline invokers there must be identical to the server invoker.
+            // NotFound call overrides InvokeServer, so it requires a regular invoker.
+            InboundCallUsesFastPipelineInvoker ??= SystemMethodKind != RpcSystemMethodKind.NotFound;
             InboundCallServerInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
-            InboundCallPipelineInvoker = InboundCallServerInvoker;
+            InboundCallPipelineInvoker = InboundCallUsesFastPipelineInvoker.Value
+                ? InboundCallServerInvoker
+                : GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
         }
         else {
             InboundCallFilter = CreateInboundCallFilter();
             InboundCallPreprocessors = CreateInboundCallPreprocessors();
             InboundCallValidator = CreateInboundCallValidator();
 
-            var inboundCallType = RpcCallTypeRegistry.Resolve(CallTypeId).InboundCallType;
-            InboundCallUsesFastPipelineInvoker ??=
-                inboundCallType == typeof(RpcInboundCall<>) // It's a regular call
-                && SystemMethodKind != RpcSystemMethodKind.NotFound; // And not a NotFound method, which overrides InvokeServer
-
+            InboundCallUsesFastPipelineInvoker ??= CallTypeId == RpcCallTypes.Regular;
             InboundCallServerInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
             InboundCallPipelineInvoker = InboundCallUsesFastPipelineInvoker.Value
                 ? GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineFastInvokerFactory<>))
