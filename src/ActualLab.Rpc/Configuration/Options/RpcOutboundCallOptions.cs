@@ -13,30 +13,30 @@ public record RpcOutboundCallOptions
     // Delegate options
     public Func<RpcMethodDef, RpcCallTimeouts> TimeoutsProvider { get; init; }
     public Func<RpcMethodDef, Func<ArgumentList, RpcPeerRef>> RouterFactory { get; init; }
-    public Func<RpcOutboundCallOptions, int, CancellationToken, Task> ReroutingDelayFactory { get; init; }
+    public Func<RpcOutboundCallOptions, int, CancellationToken, Task> ReroutingDelayer { get; init; }
     public Func<ReadOnlyMemory<byte>, string> Hasher { get; init; }
 
     // ReSharper disable once ConvertConstructorToMemberInitializers
     public RpcOutboundCallOptions()
     {
-        TimeoutsProvider = DefaultTimeoutsFactory;
+        TimeoutsProvider = DefaultTimeoutsProvider;
         RouterFactory = DefaultRouterFactory;
-        ReroutingDelayFactory = DefaultReroutingDelayFactory;
+        ReroutingDelayer = DefaultReroutingDelayer;
         Hasher = DefaultHasher;
     }
 
     public Task GetReroutingDelay(int failureCount, CancellationToken cancellationToken)
-        => ReroutingDelayFactory.Invoke(this, failureCount, cancellationToken);
+        => ReroutingDelayer.Invoke(this, failureCount, cancellationToken);
 
     // Protected methods
 
     protected static Func<ArgumentList, RpcPeerRef> DefaultRouterFactory(RpcMethodDef methodDef)
         => static _ => RpcPeerRef.Default;
 
-    protected static RpcCallTimeouts DefaultTimeoutsFactory(RpcMethodDef methodDef)
+    protected static RpcCallTimeouts DefaultTimeoutsProvider(RpcMethodDef methodDef)
         => RpcCallTimeouts.Default.Get(methodDef);
 
-    protected static Task DefaultReroutingDelayFactory(RpcOutboundCallOptions options, int failureCount, CancellationToken cancellationToken)
+    protected static Task DefaultReroutingDelayer(RpcOutboundCallOptions options, int failureCount, CancellationToken cancellationToken)
         => Task.Delay(options.ReroutingDelays.GetDelay(failureCount), cancellationToken);
 
     protected static string DefaultHasher(ReadOnlyMemory<byte> bytes)
