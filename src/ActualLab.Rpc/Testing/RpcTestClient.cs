@@ -26,7 +26,7 @@ public class RpcTestClient(IServiceProvider services) : RpcClient(services)
     public RpcTestConnection CreateConnection(string clientHostInfo, string serverHostInfo, bool isBackend = false)
     {
         var serializationFormatResolver = Services.GetRequiredService<RpcSerializationFormatResolver>();
-        var defaultClientFormatKey = serializationFormatResolver.DefaultClientFormatKey;
+        var defaultClientFormatKey = serializationFormatResolver.DefaultFormatKey;
         var serializationFormat = Options.SerializationFormatKey;
         if (serializationFormat.IsNullOrEmpty())
             serializationFormat = defaultClientFormatKey;

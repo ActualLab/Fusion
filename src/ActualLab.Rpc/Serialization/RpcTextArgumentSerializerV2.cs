@@ -100,7 +100,7 @@ public sealed class RpcTextArgumentSerializerV1(ITextSerializer baseSerializer, 
     {
         public override void OnClass(Type type, object? item, int index)
         {
-            Writer.WriteLiteral(TextTypeSerializer.NullTypeSpan);
+            Writer.WriteLiteral(TextTypeSerializer.ExpectedTypeSpan);
             Serializer.Write(Writer, item, type);
             Writer.WriteLiteral(Delimiter);
         }
@@ -116,7 +116,7 @@ public sealed class RpcTextArgumentSerializerV1(ITextSerializer baseSerializer, 
                 return;
             }
 
-            Writer.WriteLiteral(TextTypeSerializer.NullTypeSpan);
+            Writer.WriteLiteral(TextTypeSerializer.ExpectedTypeSpan);
             Serializer.Write(Writer, item, type);
             Writer.WriteLiteral(Delimiter);
         }

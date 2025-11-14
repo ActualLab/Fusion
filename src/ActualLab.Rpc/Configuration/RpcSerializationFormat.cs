@@ -14,10 +14,18 @@ public sealed class RpcSerializationFormat(
     public static readonly RpcSerializationFormat SystemJsonV3 = new("json3",
         () => new RpcTextArgumentSerializerV3(SystemJsonSerializer.Default),
         peer => new RpcTextMessageSerializerV3(peer));
+    // "json5"
+    public static readonly RpcSerializationFormat SystemJsonV5 = new("json5",
+        () => new RpcTextArgumentSerializerV4(SystemJsonSerializer.Default),
+        peer => new RpcTextMessageSerializerV3(peer));
 
     // "njson3"
     public static readonly RpcSerializationFormat NewtonsoftJsonV3 = new("njson3",
         () => new RpcTextArgumentSerializerV3(NewtonsoftJsonSerializer.Default),
+        peer => new RpcTextMessageSerializerV3(peer));
+    // "njson5"
+    public static readonly RpcSerializationFormat NewtonsoftJsonV5 = new("njson5",
+        () => new RpcTextArgumentSerializerV4(NewtonsoftJsonSerializer.Default),
         peer => new RpcTextMessageSerializerV3(peer));
 
     // "mempack1"
@@ -53,6 +61,13 @@ public sealed class RpcSerializationFormat(
     public static readonly RpcSerializationFormat MemoryPackV4C = new("mempack4c",
         () => new RpcByteArgumentSerializerV3(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV4Compact(peer));
+    // "mempack4"
+    public static readonly RpcSerializationFormat MemoryPackV5 = new("mempack5",
+        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        peer => new RpcByteMessageSerializerV4(peer));
+    public static readonly RpcSerializationFormat MemoryPackV5C = new("mempack5c",
+        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        peer => new RpcByteMessageSerializerV4Compact(peer));
 
     // "msgpack1"
     public static readonly RpcSerializationFormat MessagePackV1 = new("msgpack1",
@@ -87,18 +102,27 @@ public sealed class RpcSerializationFormat(
     public static readonly RpcSerializationFormat MessagePackV4C = new("msgpack4c",
         () => new RpcByteArgumentSerializerV3(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV4Compact(peer));
+    // "msgpack5"
+    public static readonly RpcSerializationFormat MessagePackV5 = new("msgpack5",
+        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        peer => new RpcByteMessageSerializerV4(peer));
+    public static readonly RpcSerializationFormat MessagePackV5C = new("msgpack5c",
+        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        peer => new RpcByteMessageSerializerV4Compact(peer));
 
     public static ImmutableList<RpcSerializationFormat> All { get; set; } = ImmutableList.Create(
-        SystemJsonV3,
-        NewtonsoftJsonV3,
+        SystemJsonV3, SystemJsonV5,
+        NewtonsoftJsonV3, NewtonsoftJsonV5,
         MemoryPackV1,
         MemoryPackV2, MemoryPackV2C, MemoryPackV2NP, MemoryPackV2CNP,
         MemoryPackV3, MemoryPackV3C,
         MemoryPackV4, MemoryPackV4C,
+        MemoryPackV5, MemoryPackV5C,
         MessagePackV1,
         MessagePackV2, MessagePackV2C, MessagePackV2NP, MessagePackV2CNP,
         MessagePackV3, MessagePackV3C,
-        MessagePackV4, MessagePackV4C);
+        MessagePackV4, MessagePackV4C,
+        MessagePackV5, MessagePackV5C);
 
     // Instance members
 

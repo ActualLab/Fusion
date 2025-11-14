@@ -12,10 +12,14 @@ public static class TextTypeSerializer
 
     public static ReadOnlySpan<byte> Prefix => "/* @="u8;
     public static ReadOnlySpan<byte> Suffix => " */"u8;
-    public static ReadOnlySpan<byte> NullTypeSpan => "/* @= */"u8; // Must be Prefix + Suffix
+    public static ReadOnlySpan<byte> ExpectedTypeSpan => "/* @= */"u8; // Must be Prefix + Suffix
+    public static ReadOnlySpan<byte> NullValueTypeSpan => "/* @=0 */"u8; // Must be Prefix + Suffix
 
     public static ByteString ToBytes(Type type) =>
         ToBytesCache.GetOrAdd(type, static t => {
+            if (t == typeof(NullValue))
+                return new ByteString(NullValueTypeSpan.ToArray());
+
             var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName;
             using var sb = ZString.CreateUtf8StringBuilder();
             sb.AppendLiteral(Prefix);
@@ -27,6 +31,9 @@ public static class TextTypeSerializer
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
     public static Type? FromBytes(ByteString bytes)
         => FromBytesCache.GetOrAdd(bytes, static b => {
+            if (b.Span.SequenceEqual(NullValueTypeSpan))
+                return typeof(NullValue);
+
             var utf8Name = new ByteString(b.Bytes[Prefix.Length..^Suffix.Length]);
             var typeRef = new TypeRef(utf8Name.ToStringAsUtf8());
             return typeRef.Resolve();
@@ -36,7 +43,7 @@ public static class TextTypeSerializer
     public static void WriteDerivedItemType(Utf8TextWriter writer, Type expectedType, Type itemType)
     {
         var span = itemType == expectedType
-            ? NullTypeSpan
+            ? ExpectedTypeSpan
             : ToBytes(itemType).Span;
         writer.WriteLiteral(span);
     }
@@ -57,13 +64,15 @@ public static class TextTypeSerializer
             return expectedType;
         if (expectedType.IsAssignableFrom(itemType))
             return itemType;
+        if (itemType == typeof(NullValue))
+            return itemType;
 
         throw Errors.CannotDeserializeUnexpectedPolymorphicArgumentType(expectedType, itemType);
     }
 
     public static Type? ReadItemType(ref ReadOnlyMemory<byte> data)
     {
-        if (data.Length < NullTypeSpan.Length)
+        if (data.Length < ExpectedTypeSpan.Length)
             throw Errors.InvalidItemTypeFormat();
         if (!data.Span[..Prefix.Length].SequenceEqual(Prefix))
             throw Errors.InvalidItemTypeFormat();
@@ -73,7 +82,7 @@ public static class TextTypeSerializer
             throw Errors.InvalidItemTypeFormat();
 
         if (suffixIndex == 0) {
-            data = data[NullTypeSpan.Length..];
+            data = data[ExpectedTypeSpan.Length..];
             return null;
         }
 

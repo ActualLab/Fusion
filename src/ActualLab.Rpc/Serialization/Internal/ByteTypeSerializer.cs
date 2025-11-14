@@ -14,11 +14,14 @@ public static class ByteTypeSerializer
     private static readonly ConcurrentDictionary<ByteString, Type?> FromBytesCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-    public static readonly byte[] NullTypeBytes = [0, 0];
-    public static ReadOnlySpan<byte> NullTypeSpan => NullTypeBytes;
+    public static ReadOnlySpan<byte> ExpectedTypeSpan => "\0\0"u8;
+    public static ReadOnlySpan<byte> NullValueTypeSpan => "\u0001\0"u8;
 
     public static ByteString ToBytes(Type type) =>
         ToBytesCache.GetOrAdd(type, static t => {
+            if (t == typeof(NullValue))
+                return NullValueTypeSpan.ToArray().AsByteString();
+
             var name = new TypeRef(t).WithoutAssemblyVersions().AssemblyQualifiedName;
             var nameSpan = ByteString.FromStringAsUtf8(name).Span;
             var fullLength = nameSpan.Length + 4;
@@ -40,19 +43,23 @@ public static class ByteTypeSerializer
         => FromBytesCache.GetOrAdd(bytes, static b => {
             var memory = b.Bytes;
             var length = memory.Span.ReadUnchecked<ushort>();
-            if (length == 0)
+            switch (length) {
+            case 0:
                 return null;
-
-            var utf8 = new ByteString(memory[4..(length + 4)]);
-            var typeRef = new TypeRef(utf8.ToStringAsUtf8());
-            return typeRef.Resolve();
+            case 1:
+                return typeof(NullValue);
+            default:
+                var utf8 = new ByteString(memory[4..(length + 4)]);
+                var typeRef = new TypeRef(utf8.ToStringAsUtf8());
+                return typeRef.Resolve();
+            }
         });
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WriteDerivedItemType(IBufferWriter<byte> buffer, Type expectedType, Type itemType)
     {
         var span = itemType == expectedType
-            ? NullTypeSpan
+            ? ExpectedTypeSpan
             : ToBytes(itemType).Span;
         buffer.Append(span);
     }
@@ -73,6 +80,8 @@ public static class ByteTypeSerializer
             return expectedType;
         if (expectedType.IsAssignableFrom(itemType))
             return itemType;
+        if (itemType == typeof(NullValue))
+            return itemType;
 
         throw Errors.CannotDeserializeUnexpectedPolymorphicArgumentType(expectedType, itemType);
     }
@@ -80,14 +89,18 @@ public static class ByteTypeSerializer
     public static Type? ReadItemType(ref ReadOnlyMemory<byte> data)
     {
         var length = data.Span.ReadUnchecked<ushort>();
-        if (length == 0) {
+        switch (length) {
+        case 0:
             data = data[2..];
             return null;
+        case 1:
+            data = data[2..];
+            return typeof(NullValue);
+        default:
+            var fullLength = length + 4;
+            var itemType = FromBytes(data[..fullLength].AsByteString());
+            data = data[fullLength..];
+            return itemType;
         }
-
-        var fullLength = length + 4;
-        var itemType = FromBytes(data[..fullLength].AsByteString());
-        data = data[fullLength..];
-        return itemType;
     }
 }

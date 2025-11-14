@@ -2,59 +2,68 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.Rpc;
 
-public sealed record RpcSerializationFormatResolver(
-    string DefaultServerFormatKey,
-    string DefaultClientFormatKey,
-    IReadOnlyDictionary<string, RpcSerializationFormat> Items
-    ) : SimpleResolver<string, RpcSerializationFormat>(Items)
+public sealed record RpcSerializationFormatResolver
 {
     // Static members
 
     [field: AllowNull, MaybeNull]
     public static ImmutableList<RpcSerializationFormat> DefaultFormats {
-        get => field ??= RpcSerializationFormat.All;
+        get => field ??= RpcSerializationFormat.All; // Default format set
         set;
     }
 
     [field: AllowNull, MaybeNull]
     public static RpcSerializationFormatResolver Default {
-        get => field ??= NewDefault(
-            RpcSerializationFormat.MemoryPackV1.Key, // Default server format, MemoryPackV1 to support pre-v8 Fusion clients
-            RpcSerializationFormat.MemoryPackV4.Key); // Default client format
+        get => field ??= new(RpcSerializationFormat.MemoryPackV5.Key); // Default format
         set;
     }
 
-    public static RpcSerializationFormatResolver NewDefault(string defaultFormatKey)
-        => NewDefault(defaultFormatKey, defaultFormatKey);
-    public static RpcSerializationFormatResolver NewDefault(string defaultServerFormatKey, string defaultClientFormatKey)
-        => new(defaultServerFormatKey, defaultClientFormatKey, DefaultFormats.ToArray());
-
     // Instance members
 
-    public RpcSerializationFormatResolver(string defaultFormatKey, params RpcSerializationFormat[] formats)
-        : this(defaultFormatKey, defaultFormatKey, formats)
+    public string DefaultFormatKey { get; init; }
+    public RpcSerializationFormat DefaultFormat => Get(DefaultFormatKey);
+    public IReadOnlyDictionary<string, RpcSerializationFormat> Formats { get; init; }
+
+    public RpcSerializationFormatResolver(string defaultFormatKey)
+        : this(defaultFormatKey, DefaultFormats)
     { }
 
-    public RpcSerializationFormatResolver(
-        string defaultServerFormatKey,
-        string defaultClientFormatKey,
-        params RpcSerializationFormat[] formats)
-        : this(defaultServerFormatKey, defaultClientFormatKey, formats.ToDictionary(x => x.Key, StringComparer.Ordinal))
+    public RpcSerializationFormatResolver(string defaultFormatKey, IEnumerable<RpcSerializationFormat> formats)
+        : this(defaultFormatKey, formats.ToDictionary(x => x.Key, StringComparer.Ordinal))
     { }
+
+    public RpcSerializationFormatResolver(string defaultFormatKey, IReadOnlyDictionary<string, RpcSerializationFormat> formats)
+    {
+        if (defaultFormatKey.IsNullOrEmpty())
+            throw new ArgumentException("defaultFormatKey is null or empty.", nameof(defaultFormatKey));
+        if (!formats.ContainsKey(defaultFormatKey))
+            throw new ArgumentException($"No format with key '{defaultFormatKey}'.", nameof(formats));
+
+        DefaultFormatKey = defaultFormatKey;
+        Formats = formats;
+    }
 
     public override string ToString()
-        => $"{GetType().GetName()}([{Items.Keys.ToDelimitedString()}])";
+        => $"{GetType().GetName()}({DefaultFormatKey}, [{Formats.Keys.ToDelimitedString()}])";
 
-    public RpcSerializationFormat GetDefault(bool isServer)
-        => this.Get(isServer ? DefaultServerFormatKey : DefaultClientFormatKey);
+    // Get and TryGet
+
+    public RpcSerializationFormat Get(RpcPeer peer)
+        => Get(peer.Ref.SerializationFormat);
 
     public RpcSerializationFormat Get(RpcPeerRef peerRef)
-        => Get(peerRef.SerializationFormat, peerRef.IsServer);
+        => Get(peerRef.SerializationFormat);
 
-    public RpcSerializationFormat Get(string key, bool isServer)
+    public RpcSerializationFormat Get(string key)
+        => TryGet(key, out var value)
+            ? value
+            : throw new KeyNotFoundException($"No format with key '{key}'.");
+
+    public bool TryGet(string key, [MaybeNullWhen(false)] out RpcSerializationFormat value)
     {
         if (key.IsNullOrEmpty())
-            key = isServer ? DefaultServerFormatKey : DefaultClientFormatKey;
-        return this.Get(key);
+            key = DefaultFormatKey;
+
+        return Formats.TryGetValue(key, out value);
     }
 }

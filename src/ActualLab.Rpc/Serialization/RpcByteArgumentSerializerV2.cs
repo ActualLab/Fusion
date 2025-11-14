@@ -77,7 +77,7 @@ public sealed class RpcByteArgumentSerializerV2(IByteSerializer baseSerializer, 
     {
         public override void OnClass(Type type, object? item, int index)
         {
-            Buffer.Append(ByteTypeSerializer.NullTypeSpan);
+            Buffer.Append(ByteTypeSerializer.ExpectedTypeSpan);
             Serializer.Write(Buffer, item, type);
         }
 
@@ -89,7 +89,7 @@ public sealed class RpcByteArgumentSerializerV2(IByteSerializer baseSerializer, 
                 return;
             }
 
-            Buffer.Append(ByteTypeSerializer.NullTypeSpan);
+            Buffer.Append(ByteTypeSerializer.ExpectedTypeSpan);
             Serializer.Write(Buffer, item, type);
         }
     }
