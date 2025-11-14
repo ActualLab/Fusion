@@ -86,7 +86,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         _serverMethodResolver = GetServerMethodResolver(handshake: null);
 #pragma warning restore CA2214
 
-        SerializationFormat = Hub.SerializationFormats.Get(peerRef);
+        SerializationFormat = Hub.SerializationFormats.Get(peerRef.SerializationFormat);
         ArgumentSerializer = SerializationFormat.ArgumentSerializer;
         Hasher = OutboundCallOptions.Hasher;
 
