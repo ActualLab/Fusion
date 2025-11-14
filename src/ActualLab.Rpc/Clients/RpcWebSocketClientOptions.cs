@@ -1,3 +1,4 @@
+using System.Net.WebSockets;
 using System.Text.Encodings.Web;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
@@ -18,7 +19,8 @@ public record RpcWebSocketClientOptions
     public Func<RpcClientPeer, string> HostUrlResolver { get; init; }
     public Func<RpcClientPeer, Uri?> ConnectionUriResolver { get; init; }
     public Func<RpcPeer, PropertyBag, WebSocketChannel<RpcMessage>.Options> WebSocketChannelOptionsFactory { get; init; }
-    public Func<FrameDelayer?>? FrameDelayerFactory { get; init; } = FrameDelayerFactories.None;
+    public Func<RpcClientPeer, WebSocketOwner> WebSocketOwnerFactory { get; init; }
+    public Func<FrameDelayer?>? FrameDelayerFactory { get; init; }
 
     // ReSharper disable once ConvertConstructorToMemberInitializers
     public RpcWebSocketClientOptions()
@@ -26,6 +28,8 @@ public record RpcWebSocketClientOptions
         HostUrlResolver = DefaultHostUrlResolver;
         ConnectionUriResolver = DefaultConnectionUriResolver;
         WebSocketChannelOptionsFactory = DefaultWebSocketChannelOptionsFactory;
+        WebSocketOwnerFactory = DefaultWebSocketOwnerFactory;
+        FrameDelayerFactory = FrameDelayerFactories.None;
     }
 
     // Protected methods
@@ -73,5 +77,11 @@ public record RpcWebSocketClientOptions
                 ? FrameDelayerFactories.Auto(peer, properties)
                 : options.FrameDelayerFactory,
         };
+    }
+
+    private WebSocketOwner DefaultWebSocketOwnerFactory(RpcClientPeer peer)
+    {
+        var clientWebSocket = new ClientWebSocket();
+        return new WebSocketOwner(peer.Ref.ToString(), clientWebSocket, peer.Hub.Services);
     }
 }
