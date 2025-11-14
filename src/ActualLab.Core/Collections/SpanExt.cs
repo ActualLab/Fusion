@@ -1,5 +1,7 @@
 namespace ActualLab.Collections;
 
+#pragma warning disable CA1708 // Identifiers should differ by more than case (false positive for .extension members)
+
 public static partial class SpanExt
 {
     // AsSpanUnsafe

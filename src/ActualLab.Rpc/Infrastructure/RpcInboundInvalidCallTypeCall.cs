@@ -7,7 +7,7 @@ public sealed class RpcInboundInvalidCallTypeCall<TResult>(RpcInboundContext con
 {
     public override string DebugTypeName => "<- [invalid call type]";
 
-    protected internal override Task<TResult> InvokeServer()
+    protected internal override Task InvokeServer()
     {
         var message = Context.Message;
         var (service, method) = message.MethodRef.GetServiceAndMethodName();
