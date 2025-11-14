@@ -7,6 +7,8 @@ namespace Samples.MeshRpc;
 
 public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(services)
 {
+    private static readonly RpcCallTimeouts OutboundCallTimeouts = new(null, 60);
+
     [field: AllowNull, MaybeNull]
     public Host OwnHost => field ??= Services.GetRequiredService<Host>();
 
@@ -60,4 +62,7 @@ public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(servi
             ? RpcPeerConnectionKind.Local
             : RpcPeerConnectionKind.Remote;
     }
+
+    public RpcCallTimeouts TimeoutsProvider(RpcMethodDef method)
+        => OutboundCallTimeouts;
 }
