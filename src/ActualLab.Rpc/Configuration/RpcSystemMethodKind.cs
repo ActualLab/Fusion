@@ -8,7 +8,8 @@ public enum RpcSystemMethodKind
     Ok = 0x1001,
     Error = 0x0002,
     Cancel = 0x0003,
-    NotFound = 0x0004,
+    Match = 0x0004,
+    NotFound = 0x0010,
     OtherNonStreaming = 0x0080,
     Item = 0x1100,
     Batch = 0x1200,
@@ -17,19 +18,22 @@ public enum RpcSystemMethodKind
 
 public static class RpcSystemMethodKindExt
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool HasPolymorphicResult(this RpcSystemMethodKind kind)
-        => ((int)kind & 0x1000) != 0;
+    extension(RpcSystemMethodKind kind)
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool HasPolymorphicResult()
+            => ((int)kind & 0x1000) != 0;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsAnyStreaming(this RpcSystemMethodKind kind)
-        => ((int)kind & 0xF00) != 0;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsAnyStreaming()
+            => ((int)kind & 0xF00) != 0;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsAnyNonStreaming(this RpcSystemMethodKind kind)
-        => ((int)kind & 0xFF) != 0;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsAnyNonStreaming()
+            => ((int)kind & 0xFF) != 0;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsCallResultMethod(this RpcSystemMethodKind kind)
-        => ((int)kind & 0x3) != 0;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsCallResultMethod()
+            => ((int)kind & 0x3) != 0;
+    }
 }

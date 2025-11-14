@@ -13,6 +13,23 @@ public partial class RpcMethodDef
                 if (!methodDef.IsAsyncMethod)
                     throw new ArgumentOutOfRangeException(nameof(methodDef), "Async method is required here.");
 
+                if (methodDef.IsSystem && methodDef.Service.Type == typeof(IRpcSystemCalls)) {
+                    // "Handcrafted" invokers for the most frequent system calls
+                    var systemCalls = (RpcSystemCalls)methodDef.Service.Server!;
+                    switch (methodDef.SystemMethodKind) {
+                    case RpcSystemMethodKind.Ok:
+                        return (Func<ArgumentList, Task>)(args => systemCalls.Ok(args.Get0Untyped()));
+                    case RpcSystemMethodKind.Match:
+                        return (Func<ArgumentList, Task>)(_ => systemCalls.M());
+                    case RpcSystemMethodKind.Item:
+                        return (Func<ArgumentList, Task>)(
+                            args => systemCalls.I((long)args.Get0Untyped()!, args.Get1Untyped()));
+                    case RpcSystemMethodKind.Batch:
+                        return (Func<ArgumentList, Task>)(
+                            args => systemCalls.B((long)args.Get0Untyped()!, args.Get1Untyped()));
+                    }
+                }
+
                 object? server = null;
                 var invoker = methodDef.ArgumentListInvoker;
 
