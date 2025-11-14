@@ -48,12 +48,6 @@ public sealed record RpcSerializationFormatResolver
 
     // Get and TryGet
 
-    public RpcSerializationFormat Get(RpcPeer peer)
-        => Get(peer.Ref.SerializationFormat);
-
-    public RpcSerializationFormat Get(RpcPeerRef peerRef)
-        => Get(peerRef.SerializationFormat);
-
     public RpcSerializationFormat Get(string key)
         => TryGet(key, out var value)
             ? value

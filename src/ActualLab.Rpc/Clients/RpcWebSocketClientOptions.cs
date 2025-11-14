@@ -68,7 +68,7 @@ public record RpcWebSocketClientOptions
     {
         var options = peer.Hub.Services.GetRequiredService<RpcWebSocketClientOptions>();
         return WebSocketChannel<RpcMessage>.Options.Default with {
-            Serializer = peer.Hub.SerializationFormats.Get(peer).MessageSerializerFactory.Invoke(peer),
+            Serializer = peer.SerializationFormat.MessageSerializerFactory.Invoke(peer),
             FrameDelayerFactory = options.UseAutoFrameDelayerFactory
                 ? FrameDelayerFactories.Auto(peer, properties)
                 : options.FrameDelayerFactory,

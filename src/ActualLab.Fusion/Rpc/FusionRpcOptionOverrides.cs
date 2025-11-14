@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 
@@ -20,6 +21,9 @@ public static class FusionRpcOptionOverrides
             ? new RpcComputeServiceDef(hub, service)
             : new RpcServiceDef(hub, service);
 
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
     private static RpcMethodDef MethodDefFactory(RpcServiceDef serviceDef, MethodInfo methodInfo)
     {
         if (serviceDef is not RpcComputeServiceDef computeServiceDef)
