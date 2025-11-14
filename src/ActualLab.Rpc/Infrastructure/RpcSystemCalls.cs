@@ -79,9 +79,8 @@ public sealed class RpcSystemCalls(IServiceProvider services)
     public Task<RpcNoWait> Ok(object? result)
     {
         var context = RpcInboundContext.GetCurrent();
-        var peer = context.Peer;
-        var outboundCallId = context.Message.RelatedId;
-        peer.OutboundCalls.Get(outboundCallId)?.SetResult(result, context);
+        if (context.RelatedObject is RpcOutboundCall outboundCall) // IsValidCall sets it
+            outboundCall.SetResult(result, context);
         return RpcNoWait.Tasks.Completed;
     }
 
@@ -159,9 +158,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
     public Task<RpcNoWait> I(long index, object? item)
     {
         var context = RpcInboundContext.GetCurrent();
-        var peer = context.Peer;
-        var localId = context.Message.RelatedId;
-        return peer.RemoteObjects.Get(localId) is RpcStream stream
+        return context.RelatedObject is RpcStream stream // IsValidCall sets it
             ? RpcNoWait.Tasks.From(stream.OnItem(index, item))
             : RpcNoWait.Tasks.Completed;
     }
@@ -169,9 +166,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
     public Task<RpcNoWait> B(long index, object? items)
     {
         var context = RpcInboundContext.GetCurrent();
-        var peer = context.Peer;
-        var localId = context.Message.RelatedId;
-        return peer.RemoteObjects.Get(localId) is RpcStream stream
+        return context.RelatedObject is RpcStream stream // IsValidCall sets it
             ? RpcNoWait.Tasks.From(stream.OnBatch(index, items))
             : RpcNoWait.Tasks.Completed;
     }
@@ -202,6 +197,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
             if (outboundCall is null)
                 return false;
 
+            context.RelatedObject = outboundCall;
             var outboundMethodDef = outboundCall.MethodDef;
             arguments = outboundMethodDef.ResultListType.Factory.Invoke();
             needsArgumentPolymorphism = outboundMethodDef.HasPolymorphicResult;
@@ -213,6 +209,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
             if (stream is null)
                 return false;
 
+            context.RelatedObject = stream;
             arguments = stream.CreateStreamItemArguments();
             needsArgumentPolymorphism = RpcArgumentSerializer.IsPolymorphic(stream.ItemType);
             return true;
@@ -223,6 +220,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
         if (stream is null)
             return false;
 
+        context.RelatedObject = stream;
         needsArgumentPolymorphism = RpcArgumentSerializer.IsPolymorphic(stream.ItemType);
         arguments = needsArgumentPolymorphism
             // We need to force polymorphic deserialization of the second argument in RpcArgumentSerializer
