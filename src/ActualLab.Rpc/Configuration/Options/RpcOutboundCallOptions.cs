@@ -11,7 +11,7 @@ public record RpcOutboundCallOptions
 
     public RetryDelaySeq ReroutingDelays { get; init; } = RetryDelaySeq.Exp(0.1, 5);
     // Delegate options
-    public Func<RpcMethodDef, RpcCallTimeoutSet> TimeoutsFactory { get; init; }
+    public Func<RpcMethodDef, RpcCallTimeouts> TimeoutsFactory { get; init; }
     public Func<RpcMethodDef, Func<ArgumentList, RpcPeerRef>> RouterFactory { get; init; }
     public Func<RpcOutboundCallOptions, int, CancellationToken, Task> ReroutingDelayFactory { get; init; }
     public Func<ReadOnlyMemory<byte>, string> Hasher { get; init; }
@@ -33,8 +33,8 @@ public record RpcOutboundCallOptions
     protected static Func<ArgumentList, RpcPeerRef> DefaultRouterFactory(RpcMethodDef methodDef)
         => static _ => RpcPeerRef.Default;
 
-    protected static RpcCallTimeoutSet DefaultTimeoutsFactory(RpcMethodDef methodDef)
-        => RpcCallTimeoutSet.Default.Get(methodDef);
+    protected static RpcCallTimeouts DefaultTimeoutsFactory(RpcMethodDef methodDef)
+        => RpcCallTimeouts.Default.Get(methodDef);
 
     protected static Task DefaultReroutingDelayFactory(RpcOutboundCallOptions options, int failureCount, CancellationToken cancellationToken)
         => Task.Delay(options.ReroutingDelays.GetDelay(failureCount), cancellationToken);

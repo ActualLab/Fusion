@@ -2,19 +2,19 @@ using System.Diagnostics;
 
 namespace ActualLab.Rpc;
 
-public sealed partial record RpcCallTimeoutSet
+public sealed partial record RpcCallTimeouts
 {
     public static class Default
     {
         public static bool UseDebug { get; set; } = Debugger.IsAttached;
 
-        public static RpcCallTimeoutSet Debug { get; set; } = new(connectTimeout: null, 300);
-        public static RpcCallTimeoutSet Query { get; set; } = RpcCallTimeoutSet.None;
-        public static RpcCallTimeoutSet Command { get; set; } = new(1.5, 10);
-        public static RpcCallTimeoutSet BackendQuery { get; set; } = RpcCallTimeoutSet.None;
-        public static RpcCallTimeoutSet BackendCommand { get; set; } = new(300, 300);
+        public static RpcCallTimeouts Debug { get; set; } = new(double.NaN, 300);
+        public static RpcCallTimeouts Query { get; set; } = None;
+        public static RpcCallTimeouts Command { get; set; } = new(1.5, 10);
+        public static RpcCallTimeouts BackendQuery { get; set; } = None;
+        public static RpcCallTimeouts BackendCommand { get; set; } = new(300, 300);
 
-        public static RpcCallTimeoutSet Get(RpcMethodDef methodDef)
+        public static RpcCallTimeouts Get(RpcMethodDef methodDef)
         {
             if (UseDebug)
                 return Debug;

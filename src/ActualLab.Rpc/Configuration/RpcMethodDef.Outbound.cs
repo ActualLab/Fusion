@@ -7,7 +7,7 @@ namespace ActualLab.Rpc;
 public partial class RpcMethodDef
 {
     public Func<RpcOutboundContext, RpcOutboundCall> OutboundCallFactory { get; protected set; } = null!;
-    public RpcCallTimeoutSet OutboundCallTimeouts { get; protected set; } = RpcCallTimeoutSet.None;
+    public RpcCallTimeouts OutboundCallTimeouts { get; protected set; } = RpcCallTimeouts.None;
     public Func<ArgumentList, RpcPeerRef>? OutboundCallRouter { get; protected set; } = null;
 
     public RpcOutboundCall? CreateOutboundCall(RpcOutboundContext context)
