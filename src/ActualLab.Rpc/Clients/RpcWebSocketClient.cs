@@ -39,7 +39,7 @@ public class RpcWebSocketClient(IServiceProvider services)
                 .Run(async () => {
                     WebSocketOwner? o = null;
                     try {
-                        o = CreateWebSocketOwner(clientPeer);
+                        o = Options.WebSocketOwnerFactory.Invoke(clientPeer);
                         await o.ConnectAsync(uri!, connectToken).ConfigureAwait(false);
                         return o;
                     }
@@ -70,13 +70,5 @@ public class RpcWebSocketClient(IServiceProvider services)
         var webSocketChannelOptions = Options.WebSocketChannelOptionsFactory(clientPeer, properties);
         var channel = new WebSocketChannel<RpcMessage>(webSocketChannelOptions, webSocketOwner);
         return new RpcConnection(channel, properties);
-    }
-
-    // Protected methods
-
-    protected virtual WebSocketOwner CreateWebSocketOwner(RpcClientPeer peer)
-    {
-        var clientWebSocket = new ClientWebSocket();
-        return new WebSocketOwner(peer.Ref.ToString(), clientWebSocket, Services);
     }
 }
