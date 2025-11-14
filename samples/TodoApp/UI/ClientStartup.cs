@@ -40,11 +40,7 @@ public static class ClientStartup
         };
 #endif
         // Default RPC client serialization format
-        RpcSerializationFormatResolver.Default = RpcSerializationFormatResolver.Default with {
-            DefaultFormatKey = "msgpack5c",
-            // DefaultClientFormatKey = "mempack5c",
-            // DefaultClientFormatKey = "json5",
-        };
+        RpcSerializationFormatResolver.Default = new("msgpack5c"); // mempack5c, mempack5, json5, etc.
 
         // The block of code below is totally optional.
         // It makes Fusion to delay initial compute method RCP calls if they're resolved as "hit" into the local cache.
