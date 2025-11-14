@@ -14,6 +14,8 @@ public class RpcTestClient(IServiceProvider services) : RpcClient(services)
 
     public IReadOnlyDictionary<RpcPeerRef, RpcTestConnection> Connections => _connections;
 
+    // CreateXxx
+
     public RpcTestConnection CreateDefaultConnection(bool isBackend = false)
         => CreateConnection(RpcPeerRef.DefaultHostId, RpcPeerRef.DefaultHostId, isBackend);
 
@@ -50,6 +52,15 @@ public class RpcTestClient(IServiceProvider services) : RpcClient(services)
         _connections.TryAdd(serverPeerRef, connection);
         return connection;
     }
+
+    // FindConnection
+
+    public RpcTestConnection GetConnection(RpcPeerRef peerRef)
+        => Connections.First(kv => kv.Key == peerRef).Value;
+    public RpcTestConnection GetConnection(Func<RpcPeerRef, bool> predicate)
+        => Connections.First(kv => predicate.Invoke(kv.Key)).Value;
+
+    // RpcClient implementation
 
     public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {

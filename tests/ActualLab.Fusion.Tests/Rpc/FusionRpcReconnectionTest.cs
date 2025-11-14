@@ -20,7 +20,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     public async Task Case1Test()
     {
         await using var services = CreateServices();
-        var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var clientPeer = connection.ClientPeer;
         var client = services.RpcHub().GetClient<IReconnectTester>();
 
@@ -51,7 +51,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     {
         var waitMultiplier = TestRunnerInfo.IsBuildAgent() ? 10 : 1;
         await using var services = CreateServices();
-        var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var clientPeer = connection.ClientPeer;
         var client = services.RpcHub().GetClient<IReconnectTester>();
 
@@ -82,7 +82,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     {
         var waitMultiplier = TestRunnerInfo.IsBuildAgent() ? 10 : 1;
         await using var services = CreateServices();
-        var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var clientPeer = connection.ClientPeer;
         var client = services.RpcHub().GetClient<IReconnectTester>();
 
@@ -117,7 +117,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     public async Task Case4Test()
     {
         await using var services = CreateServices();
-        var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var clientPeer = connection.ClientPeer;
         var client = services.RpcHub().GetClient<IReconnectTester>();
 
@@ -139,7 +139,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
     public async Task Case5Test()
     {
         await using var services = CreateServices();
-        var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var clientPeer = connection.ClientPeer;
         var client = services.RpcHub().GetClient<IReconnectTester>();
         var server = services.GetRequiredService<ReconnectTester>();
@@ -191,7 +191,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         Write("started");
         var (successCount, timeoutCount, cancellationCount) = (0L, 0L, 0L);
         await using var services = CreateServices();
-        var connection = services.GetRequiredService<RpcTestClient>().Connections.First().Value;
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IReconnectTester>();
         await client.Delay(1, 1); // Warm-up
 
