@@ -104,7 +104,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
     [Theory]
     [InlineData("json3")]
+    [InlineData("json5")]
     [InlineData("njson3")]
+    [InlineData("njson5")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
     [InlineData("mempack2c")]
@@ -112,6 +114,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [InlineData("mempack3c")]
     [InlineData("mempack4")]
     [InlineData("mempack4c")]
+    [InlineData("mempack5")]
+    [InlineData("mempack5c")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
     [InlineData("msgpack2c")]
@@ -119,6 +123,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [InlineData("msgpack3c")]
     [InlineData("msgpack4")]
     [InlineData("msgpack4c")]
+    [InlineData("msgpack5")]
+    [InlineData("msgpack5c")]
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -224,15 +230,21 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [InlineData("json3")]
+    [InlineData("json5")]
     [InlineData("njson3")]
+    [InlineData("njson5")]
     [InlineData("mempack3")]
     [InlineData("mempack3c")]
     [InlineData("mempack4")]
     [InlineData("mempack4c")]
+    [InlineData("mempack5")]
+    [InlineData("mempack5c")]
     [InlineData("msgpack3")]
     [InlineData("msgpack3c")]
     [InlineData("msgpack4")]
     [InlineData("msgpack4c")]
+    [InlineData("msgpack5")]
+    [InlineData("msgpack5c")]
     [Theory]
     public async Task PolymorphTest(string serializationFormat)
     {
@@ -242,8 +254,14 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var client = services.RpcHub().GetClient<ITestRpcService>();
         var backendClient = services.RpcHub().GetClient<ITestRpcBackend>();
 
-        await Assert.ThrowsAnyAsync<Exception>(
-            () => backendClient.Polymorph(null!)); // Should fail on deserialization
+        var canHandleNulls =
+            serializationFormat.Contains("json", StringComparison.Ordinal)
+            || serializationFormat.EndsWith('5')
+            || serializationFormat.EndsWith("5c", StringComparison.Ordinal);
+        if (canHandleNulls)
+            await backendClient.Polymorph(null!);
+        else
+            await Assert.ThrowsAnyAsync<Exception>(() => backendClient.Polymorph(null!));
 
         var t = new Tuple<int>(1);
         (await backendClient.Polymorph(t)).Should().Be(t);
