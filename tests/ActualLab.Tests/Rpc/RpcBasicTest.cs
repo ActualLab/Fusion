@@ -160,14 +160,14 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await connection.Disconnect();
         // NOTE: It won't throw under the debugger due to debug mode timeouts
         await Assert.ThrowsAsync<TimeoutException>(
-            () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(2))));
+            () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(3)))); // Default connect timeout is 1.5s
         await Delay(0.1);
         await AssertNoCalls(clientPeer, Out);
 
         await connection.Connect();
         // NOTE: It won't throw under the debugger due to debug mode timeouts
         await Assert.ThrowsAsync<TimeoutException>(
-            () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(30))));
+            () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(15)))); // Default eval timeout is 10s
 
         await AssertNoCalls(clientPeer, Out);
     }

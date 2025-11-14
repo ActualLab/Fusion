@@ -118,12 +118,12 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         continue; // Something is off: call.StartedAt wasn't set
 
                     var elapsed = startedAt.Elapsed;
-                    if (elapsed >= timeouts.Timeout) {
-                        var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.Timeout);
+                    if (elapsed >= timeouts.RunTimeout) {
+                        var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.RunTimeout);
                         call.SetError(error, context: null, assumeCancelled: false);
                         Peer.Log.LogError(error,
                             "{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
-                            Peer.Ref, call, elapsed.ToShortString(), timeouts.Timeout.ToShortString());
+                            Peer.Ref, call, elapsed.ToShortString(), timeouts.RunTimeout.ToShortString());
                     }
                     else if (elapsed >= timeouts.LogTimeout) {
                         if (++delayedCallCount > DelayedCallLogLimit)

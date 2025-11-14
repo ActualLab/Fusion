@@ -20,7 +20,7 @@ public class ComputedOptionsProvider(IServiceProvider services)
         if (options is null || options.RemoteComputedCacheMode == RemoteComputedCacheMode.NoCache)
             return options;
 
-        if (RemoteComputedCache is not null)
+        if (RemoteComputedCache is null)
             options = options with { RemoteComputedCacheMode = RemoteComputedCacheMode.NoCache };
         return options;
     }

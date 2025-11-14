@@ -1,45 +1,45 @@
 namespace ActualLab.Rpc;
 
-public sealed partial record RpcCallTimeoutSet
+public sealed partial record RpcCallTimeouts
 {
-    public static readonly RpcCallTimeoutSet None = new();
+    public static readonly RpcCallTimeouts None = new();
     public static TimeSpan DefaultLogTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public TimeSpan ConnectTimeout { get; init => field = value.Positive(); }
-    public TimeSpan Timeout { get; init => field = value.Positive(); }
+    public TimeSpan RunTimeout { get; init => field = value.Positive(); }
     public TimeSpan LogTimeout { get; init => field = value.Positive(); }
 
     // TimeSpan overloads
 
-    public RpcCallTimeoutSet()
+    public RpcCallTimeouts()
         : this(TimeSpan.MaxValue, TimeSpan.MaxValue)
     { }
 
-    public RpcCallTimeoutSet(TimeSpan timeout)
-        : this(TimeSpan.MaxValue, timeout.Positive())
+    public RpcCallTimeouts(TimeSpan runTimeout)
+        : this(TimeSpan.MaxValue, runTimeout.Positive())
     { }
 
-    public RpcCallTimeoutSet(TimeSpan connectTimeout, TimeSpan timeout)
+    public RpcCallTimeouts(TimeSpan connectTimeout, TimeSpan runTimeout)
     {
         ConnectTimeout = connectTimeout;
-        Timeout = timeout;
+        RunTimeout = runTimeout;
         LogTimeout = DefaultLogTimeout;
     }
 
     // TimeSpan? overloads
 
-    public RpcCallTimeoutSet(TimeSpan? timeout)
-        : this(TimeSpan.MaxValue, ToTimeout(timeout))
+    public RpcCallTimeouts(TimeSpan? runTimeout)
+        : this(TimeSpan.MaxValue, ToTimeout(runTimeout))
     { }
 
     // double? overloads
 
-    public RpcCallTimeoutSet(double? timeout)
-        : this(TimeSpan.MaxValue, ToTimeout(timeout))
+    public RpcCallTimeouts(double? runTimeout)
+        : this(TimeSpan.MaxValue, ToTimeout(runTimeout))
     { }
 
-    public RpcCallTimeoutSet(double? connectTimeout, double? timeout)
-        : this(ToTimeout(connectTimeout), ToTimeout(timeout))
+    public RpcCallTimeouts(double? connectTimeout, double? runTimeout)
+        : this(ToTimeout(connectTimeout), ToTimeout(runTimeout))
     { }
 
     // Private methods
@@ -49,7 +49,7 @@ public sealed partial record RpcCallTimeoutSet
         => timeout ?? TimeSpan.MaxValue;
 
     private static TimeSpan ToTimeout(double? timeout)
-        => timeout is { } value
+        => timeout is { } value and not double.NaN and not double.PositiveInfinity
             ? TimeSpan.FromSeconds(value)
             : TimeSpan.MaxValue;
 }
