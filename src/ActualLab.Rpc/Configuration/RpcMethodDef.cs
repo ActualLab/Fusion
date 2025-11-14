@@ -78,6 +78,8 @@ public partial class RpcMethodDef : MethodDef
                 ? MethodInfo.Name switch {
                     nameof(IRpcSystemCalls.Ok) => RpcSystemMethodKind.Ok,
                     nameof(IRpcSystemCalls.Error) => RpcSystemMethodKind.Error,
+                    nameof(IRpcSystemCalls.Cancel) => RpcSystemMethodKind.Cancel,
+                    nameof(IRpcSystemCalls.M) => RpcSystemMethodKind.Match,
                     nameof(IRpcSystemCalls.NotFound) => RpcSystemMethodKind.NotFound,
                     nameof(IRpcSystemCalls.I) => RpcSystemMethodKind.Item,
                     nameof(IRpcSystemCalls.B) => RpcSystemMethodKind.Batch,
