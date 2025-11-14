@@ -18,43 +18,47 @@ public partial class RpcMethodDef
                     var systemCalls = (RpcSystemCalls)methodDef.Service.Server!;
                     switch (methodDef.SystemMethodKind) {
                     case RpcSystemMethodKind.Ok:
-                        return (Func<ArgumentList, Task>)(args => systemCalls.Ok(args.Get0Untyped()));
+                        return (Func<RpcInboundCall, Task>)(call => systemCalls.Ok(call.Arguments!.Get0Untyped()));
                     case RpcSystemMethodKind.Match:
-                        return (Func<ArgumentList, Task>)(_ => systemCalls.M());
+                        return (Func<RpcInboundCall, Task>)(_ => systemCalls.M());
                     case RpcSystemMethodKind.Item:
-                        return (Func<ArgumentList, Task>)(
-                            args => systemCalls.I((long)args.Get0Untyped()!, args.Get1Untyped()));
+                        return (Func<RpcInboundCall, Task>)(call => {
+                            var args = call.Arguments!;
+                            return systemCalls.I((long)args.Get0Untyped()!, args.Get1Untyped());
+                        });
                     case RpcSystemMethodKind.Batch:
-                        return (Func<ArgumentList, Task>)(
-                            args => systemCalls.B((long)args.Get0Untyped()!, args.Get1Untyped()));
+                        return (Func<RpcInboundCall, Task>)(call => {
+                            var args = call.Arguments!;
+                            return systemCalls.B((long)args.Get0Untyped()!, args.Get1Untyped());
+                        });
                     }
                 }
 
                 object? server = null;
                 var invoker = methodDef.ArgumentListInvoker;
 
-                return (Func<ArgumentList, Task<T>>)((methodDef.ReturnsTask, methodDef.IsAsyncVoidMethod) switch {
-                    (true, true) => async args => {
+                return (Func<RpcInboundCall, Task<T>>)((methodDef.ReturnsTask, methodDef.IsAsyncVoidMethod) switch {
+                    (true, true) => async call => {
                         // Task (returns Task<Unit>)
                         server ??= methodDef.Service.Server!;
-                        await ((Task)invoker.Invoke(server, args)!).ConfigureAwait(false);
+                        await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                         return default!;
                     },
-                    (true, false) => async args => {
+                    (true, false) => async call => {
                         // Task<T>
                         server ??= methodDef.Service.Server!;
-                        return await ((Task<T>)invoker.Invoke(server, args)!).ConfigureAwait(false);
+                        return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                     },
-                    (false, true) => async args => {
+                    (false, true) => async call => {
                         // ValueTask (returns Task<Unit>)
                         server ??= methodDef.Service.Server!;
-                        await ((ValueTask)invoker.Invoke(server, args)!).ConfigureAwait(false);
+                        await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                         return default!;
                     },
-                    (false, false) => async args => {
+                    (false, false) => async call => {
                         // ValueTask<T> (returns Task<T>)
                         server ??= methodDef.Service.Server!;
-                        return await ((ValueTask<T>)invoker.Invoke(server, args)!).ConfigureAwait(false);
+                        return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                     },
                 });
             };
