@@ -4,7 +4,6 @@ using ActualLab.Locking;
 using ActualLab.RestEase;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
-using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
 using ActualLab.Testing.Collections;
 using ActualLab.Time.Testing;
@@ -16,17 +15,17 @@ namespace ActualLab.Tests;
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
-    public static string DefaultSerializationFormat => "mempack4c";
+    public static string DefaultSerializationFormat => "mempack5c";
 
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
-    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.GetDefaultPeerRef();
-    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.GetDefaultPeerRef(true);
+    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.Default;
+    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.DefaultBackend;
 
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
 
     protected RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
-    protected RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
+    protected Func<FrameDelayer?>? RpcFrameDelayerFactory { get; set; } = () => FrameDelayers.Delay(1); // Just for testing
     protected string SerializationFormat { get; set; } = DefaultSerializationFormat;
     protected bool ExposeBackend { get; init; } = false;
     protected bool UseTestClock { get; init; }
@@ -128,23 +127,20 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
             });
 
         var rpc = services.AddRpc();
-        rpc.AddWebSocketClient(_ => RpcWebSocketClient.Options.Default with {
-            HostUrlResolver = (_, _) => WebHost.ServerUri.ToString(),
-        });
-        services.AddSingleton<RpcCallRouterFactory>(
-            _ => method => args => {
-                if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
+        rpc.AddWebSocketClient(_ => WebHost.ServerUri.ToString());
+        services.AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptions.Default with {
+            RouterFactory = methodDef => args => {
+                if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
                     return RpcPeerRef.Local; // Commands in invalidation mode must always execute locally
 
-                return RpcPeerRef.GetDefaultPeerRef(ConnectionKind, method.IsBackend);
-            });
+                return RpcPeerRef.GetDefaultPeerRef(ConnectionKind, methodDef.IsBackend);
+            },
+        });
         services.AddSingleton<RpcSerializationFormatResolver>(
             _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
-        services.AddSingleton<RpcWebSocketChannelOptionsProvider>(_ => {
-            return (peer, _) => WebSocketChannel<RpcMessage>.Options.Default with {
-                Serializer = peer.Hub.SerializationFormats.Get(peer.Ref).MessageSerializerFactory.Invoke(peer),
-                FrameDelayerFactory = RpcFrameDelayerFactory,
-            };
+        services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
+            HostUrlResolver = _ => WebHost.ServerUri.ToString(),
+            FrameDelayerFactory = RpcFrameDelayerFactory,
         });
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {

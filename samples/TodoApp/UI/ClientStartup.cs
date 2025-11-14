@@ -11,6 +11,7 @@ using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.UI;
 using ActualLab.OS;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Clients;
 using Blazored.LocalStorage;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
@@ -39,11 +40,7 @@ public static class ClientStartup
         };
 #endif
         // Default RPC client serialization format
-        RpcSerializationFormatResolver.Default = RpcSerializationFormatResolver.Default with {
-            DefaultClientFormatKey = "msgpack4c",
-            // DefaultClientFormatKey = "mempack4c",
-            // DefaultClientFormatKey = "json3",
-        };
+        RpcSerializationFormatResolver.Default = new("msgpack5c"); // mempack5c, mempack5, json5, etc.
 
         // The block of code below is totally optional.
         // It makes Fusion to delay initial compute method RCP calls if they're resolved as "hit" into the local cache.
@@ -98,7 +95,9 @@ public static class ClientStartup
             // Client and API host settings
 
             // Highly recommended option for client & API servers:
-            RpcDefaultDelegates.FrameDelayerProvider = RpcFrameDelayerProviders.Auto();
+            RpcWebSocketClientOptions.Default = new RpcWebSocketClientOptions() {
+                UseAutoFrameDelayerFactory = true,
+            };
             // Lets ComputedState to be dependent on, e.g., current culture - use only if you need this:
             // ComputedState.DefaultOptions.FlowExecutionContext = true;
             fusion.Rpc.AddWebSocketClient(remoteRpcHostUrl);

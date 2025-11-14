@@ -51,7 +51,7 @@ public class RpcTestConnection
     }
 
     public Task Connect(CancellationToken cancellationToken = default)
-        => Connect(TestClient.Settings.ConnectionFactory.Invoke(TestClient), cancellationToken);
+        => Connect(TestClient.Options.ConnectionFactory.Invoke(TestClient), cancellationToken);
 
     public async Task Connect(ChannelPair<RpcMessage> channels, CancellationToken cancellationToken = default)
     {

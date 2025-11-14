@@ -21,12 +21,12 @@ public class RpcDefaultCallTracer : RpcCallTracer
         get => InboundDurationHistogram.Enabled;
     }
 
-    public RpcDefaultCallTracer(RpcMethodDef method, bool mustTraceInbound = true, bool mustTraceOutbound = true)
-        : base(method)
+    public RpcDefaultCallTracer(RpcMethodDef methodDef, bool mustTraceInbound = true, bool mustTraceOutbound = true)
+        : base(methodDef)
     {
         MustTraceInbound = mustTraceInbound;
         MustTraceOutbound = mustTraceOutbound;
-        var fullMethodName = DiagnosticsExt.FixName($"{method.Service.Name}/{method.Name}");
+        var fullMethodName = DiagnosticsExt.FixName($"{methodDef.Service.Name}/{methodDef.Name}");
         InboundCallName = "in." + fullMethodName;
         OutboundCallName = "out." + fullMethodName;
         ActivitySource = RpcInstruments.ActivitySource;

@@ -49,7 +49,7 @@ public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
     public RpcHeader With(string value)
         => new(Key, value);
 
-    // Equality is based solely on header name
+    // Equality is based solely on the header name
     public bool Equals(RpcHeader other)
         => Key == other.Key;
     public override int GetHashCode()

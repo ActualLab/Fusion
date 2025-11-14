@@ -46,9 +46,9 @@ public abstract class State : ComputedInput, IState
     protected object Lock => AsyncLock;
 
     [field: AllowNull, MaybeNull]
-    protected Func<Task, object?> GetUntypedTaskResultSynchronously =>
+    protected Func<Task, object?> GetTaskResultAsObjectSynchronously =>
         field ??= GenericInstanceCache.Get<Func<Task, object?>>(
-            typeof(TaskExt.GetUntypedResultSynchronouslyFactory<>), OutputType);
+            typeof(TaskExt.GetResultAsObjectSynchronouslyFactory<>), OutputType);
 
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
@@ -189,7 +189,7 @@ public abstract class State : ComputedInput, IState
                 using var _ = Computed.BeginCompute(computed);
                 var computeTask = Compute(cancellationToken);
                 await computeTask.ConfigureAwait(false);
-                var value = GetUntypedTaskResultSynchronously(computeTask);
+                var value = GetTaskResultAsObjectSynchronously.Invoke(computeTask);
                 computed.TrySetValue(value);
                 break;
             }

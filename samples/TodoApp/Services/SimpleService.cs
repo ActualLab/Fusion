@@ -27,7 +27,7 @@ public class SimpleService(ISimpleClientSideService clientSideService) : ISimple
     {
         var peer = RpcInboundContext.GetCurrent().Peer; // Get the peer for the current call
         Task<RpcNoWait> pongTask;
-        using (RpcCallOptions.Activate(peer, assumeConnected: true)) // No "await" inside this block!
+        using (new RpcOutboundCallSetup(peer).Activate()) // No "await" inside this block!
             pongTask = clientSideService.Pong($"Pong to '{message}'");
         await pongTask.ConfigureAwait(false);
         return default;

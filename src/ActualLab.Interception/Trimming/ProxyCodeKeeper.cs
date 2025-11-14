@@ -14,6 +14,23 @@ public class ProxyCodeKeeper : CodeKeeper
     static ProxyCodeKeeper()
         => _ = Proxies.Cache;
 
+    public ProxyCodeKeeper()
+    {
+        if (AlwaysTrue)
+            return;
+
+#pragma warning disable CA2214
+        // ReSharper disable once VirtualMemberCallInConstructor
+        KeepMethodResult<Task, Unit>();
+        // ReSharper disable once VirtualMemberCallInConstructor
+        KeepMethodResult<Task, VoidSurrogate>();
+        // ReSharper disable once VirtualMemberCallInConstructor
+        KeepMethodResult<ValueTask, Unit>();
+        // ReSharper disable once VirtualMemberCallInConstructor
+        KeepMethodResult<ValueTask, VoidSurrogate>();
+#pragma warning restore CA2214
+    }
+
     public virtual void KeepProxy<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TBase,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxy>()
@@ -472,12 +489,12 @@ public class ProxyCodeKeeper : CodeKeeper
         Keep<TaskExt.FromCancelledTaskFactory<TUnwrapped>>();
         Keep<TaskExt.ToTypedValueTaskFactory<TUnwrapped>>();
         Keep<TaskExt.ToTypedResultSynchronouslyFactory<TUnwrapped>>();
-        Keep<TaskExt.ToUntypedValueTaskFactory<TUnwrapped>>();
+        Keep<TaskExt.ToObjectValueTaskFactory<TUnwrapped>>();
         Keep<TaskExt.ToUntypedResultSynchronouslyFactory<TUnwrapped>>();
-        Keep<TaskExt.GetUntypedResultSynchronouslyFactory<TUnwrapped>>();
+        Keep<TaskExt.GetResultAsObjectSynchronouslyFactory<TUnwrapped>>();
 
+        Keep<Interceptor>().CreateTypedHandler<TUnwrapped>(default, null!);
         MethodDefCodeKeeper.KeepCodeForResult<TResult, TUnwrapped>();
-        Keep<Interceptor>().KeepCodeForResult<TResult, TUnwrapped>();
     }
 
     public virtual void KeepArgumentListArgument<

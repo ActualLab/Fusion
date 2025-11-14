@@ -1,6 +1,5 @@
 using ActualLab.Fusion.Server.Authentication;
 using ActualLab.Fusion.Server.Endpoints;
-using ActualLab.Fusion.Server.Internal;
 using ActualLab.Fusion.Server.Middlewares;
 using ActualLab.Fusion.Server.Rpc;
 using ActualLab.Rpc;
@@ -34,10 +33,10 @@ public readonly struct FusionWebServerBuilder
         // Add Rpc-related services
         var rpc = fusion.Rpc;
         rpc.AddWebSocketServer();
-        rpc.AddInboundMiddleware<DefaultSessionReplacerRpcMiddleware>();
-        services.AddSingleton(_ => new SessionBoundRpcConnectionFactory());
-        services.AddSingleton<RpcServerConnectionFactory>(
-            c => c.GetRequiredService<SessionBoundRpcConnectionFactory>().Invoke);
+        // 1. Replace the defaults for some of RpcXxxOptions
+        services.AddSingleton(_ => FusionServerRpcOptionOverrides.DefaultPeerOptions);
+        // 2. Add RpcDefaultSessionInboundCallPreprocessor
+        rpc.AddInboundCallPreprocessor<RpcDefaultSessionInboundCallPreprocessor>();
 
         // Add other services
         services.AddSingleton(_ => SessionMiddleware.Options.Default);

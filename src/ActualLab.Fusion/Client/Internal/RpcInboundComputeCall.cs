@@ -16,8 +16,8 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
         => CompletedStage switch { 0 => "", 1 => "ResultReady", _ => "Invalidated" };
     public abstract Computed? UntypedComputed { get; }
 
-    protected RpcInboundComputeCall(RpcInboundContext context, RpcMethodDef methodDef)
-        : base(context, methodDef)
+    protected RpcInboundComputeCall(RpcInboundContext context)
+        : base(context)
     {
         if (NoWait)
             throw Errors.InternalError($"{GetType().GetName()} is incompatible with NoWait option.");
@@ -87,18 +87,19 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
     }
 }
 
-public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
-    : RpcInboundComputeCall(context, methodDef)
+public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context)
+    : RpcInboundComputeCall(context)
 {
     public Computed<TResult>? Computed { get; private set; }
     public override Computed? UntypedComputed => Computed;
 
 #if NET5_0_OR_GREATER
-    protected override async Task<TResult> InvokeTarget()
+    protected override async Task<TResult> InvokeServer()
     {
         var ccs = Fusion.Computed.BeginCapture();
         try {
-            return await ((Task<TResult>)base.InvokeTarget()).ConfigureAwait(false);
+            var invokeTask = (Task<TResult>)MethodDef.InboundCallServerInvoker.Invoke(this);
+            return await invokeTask.ConfigureAwait(false);
         }
         finally {
             var computed = ccs.Context.TryGetCaptured<TResult>();
@@ -110,7 +111,7 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
         }
     }
 #else
-    protected override Task InvokeTarget()
+    protected override Task InvokeServer()
     {
         return Implementation();
 
@@ -118,7 +119,8 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
         {
             var ccs = Fusion.Computed.BeginCapture();
             try {
-                return await ((Task<TResult>)base.InvokeTarget()).ConfigureAwait(false);
+                var invokeTask = (Task<TResult>)MethodDef.InboundCallServerInvoker.Invoke(this);
+                return await invokeTask.ConfigureAwait(false);
             }
             finally {
                 var computed = ccs.Context.TryGetCaptured<TResult>();
@@ -130,11 +132,7 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context, Rp
             }
         }
     }
-
 #endif
-
-    protected override Task InvokeTarget(RpcInboundMiddlewares middlewares)
-        => DefaultInvokeTarget<TResult>(middlewares);
 
     protected override Task SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);

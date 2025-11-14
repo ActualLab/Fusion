@@ -6,7 +6,7 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
 
-public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcServiceDef>
+public class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcServiceDef>
 {
     private readonly Dictionary<Type, RpcServiceDef> _services = new();
     private readonly Dictionary<string, RpcServiceDef> _serviceByName = new(StringComparer.Ordinal);
@@ -36,11 +36,13 @@ public sealed class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<Rpc
             if (service.Mode == RpcServiceMode.Default)
                 throw Errors.UnspecifiedServiceMode(service.Type, service.Mode);
 
-            var serviceDef = hub.ServiceDefBuilder.Invoke(hub, service);
+            var serviceDef = hub.RegistryOptions.ServiceDefFactory.Invoke(hub, service);
+            serviceDef.InitializeOverridableProperties(methodsReady: false);
             if (_serviceByName.TryGetValue(serviceDef.Name, out var existingServiceDef))
                 throw Errors.ServiceNameConflict(serviceDef.Type, existingServiceDef.Type, serviceDef.Name);
 
             serviceDef.BuildMethods(serviceDef.Type);
+            serviceDef.InitializeOverridableProperties(methodsReady: true);
             if (!_services.TryAdd(serviceDef.Type, serviceDef))
                 throw Errors.ServiceTypeConflict(service.Type);
             if (serviceDef.ClientType is { } clientType && clientType != serviceDef.Type)

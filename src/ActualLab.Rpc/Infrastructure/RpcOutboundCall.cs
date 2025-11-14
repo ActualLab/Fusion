@@ -11,8 +11,9 @@ namespace ActualLab.Rpc.Infrastructure;
 public abstract class RpcOutboundCall(RpcOutboundContext context)
     : RpcCall(context.MethodDef!)
 {
-    private static readonly ConcurrentDictionary<RpcCallTypeKey, Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<
+        (byte CallTypeId, Type ReturnType),
+        Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache = new();
 
     protected AsyncTaskMethodBuilder<object?> ResultSource;
 
@@ -37,29 +38,21 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public string CompletedStageName => RpcCallStage.GetName(CompletedStage);
 
     public CpuTimestamp StartedAt;
-    public CancellationTokenRegistration CallCancelHandler;
+    public CancellationTokenRegistration CancellationHandler;
 
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
-    public static RpcOutboundCall? New(RpcOutboundContext context)
-    {
-        var peer = context.Peer;
-        if (peer is null)
-            throw Errors.InternalError("context.Peer is null.");
-
-        if (peer.ConnectionKind is RpcPeerConnectionKind.Local)
-            return null;
-
-        return FactoryCache.GetOrAdd(new(context.CallTypeId, context.MethodDef!.UnwrappedReturnType),
+    public static Func<RpcOutboundContext, RpcOutboundCall> GetFactory(RpcMethodDef methodDef)
+        => FactoryCache.GetOrAdd(
+            (methodDef.CallTypeId, methodDef.UnwrappedReturnType),
             static key => {
                 var type = RpcCallTypeRegistry.Resolve(key.CallTypeId)
                     .OutboundCallType
-                    .MakeGenericType(key.CallResultType);
+                    .MakeGenericType(key.ReturnType);
                 return (Func<RpcOutboundContext, RpcOutboundCall>)type
                     .GetConstructorDelegate(typeof(RpcOutboundContext))!;
-            }).Invoke(context);
-    }
+            });
 
     public override string ToString()
     {
@@ -97,18 +90,17 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
 
         Register();
-        var sender = (ChannelWriter<RpcMessage>?)null;
-        if (Context.AssumeConnected || Peer.IsConnected(out _, out sender)) {
-            _ = SendRegistered(true, sender); // Fast path
-            return ResultTask;
-        }
-        return CompleteAsync(); // Slow path
+        if (!Peer.IsConnected(out _, out var sender))
+            return CompleteAsync(); // Slow path
+
+        _ = SendRegistered(isFirstAttempt: true, sender); // Fast path
+        return ResultTask;
 
         async Task<object?> CompleteAsync() {
             try {
                 // WhenConnected throws RpcRerouteException in case Peer.Ref.IsRerouted is true
                 var (_, sender1) = await Peer
-                    .WhenConnected(MethodDef.Timeouts.ConnectTimeout, Context.CallCancelToken)
+                    .WhenConnected(MethodDef.OutboundCallTimeouts.ConnectTimeout, Context.CancellationToken)
                     .ConfigureAwait(false);
                 _ = SendRegistered(true, sender1);
             }
@@ -122,16 +114,15 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public void Register()
     {
         Peer.OutboundCalls.Register(this);
-        if (CallCancelHandler == default)
-            CallCancelHandler = Context.CallCancelToken.Register(static state => {
+        if (CancellationHandler == default)
+            CancellationHandler = Context.CancellationToken.Register(static state => {
                 var call = (RpcOutboundCall)state!;
-                call.Cancel(call.Context.CallCancelToken);
+                call.Cancel(call.Context.CancellationToken);
             }, this, useSynchronizationContext: false);
     }
 
     public void RegisterCacheKeyOnly()
     {
-        using var _ = Context.Activate(); // CreateMessage may use it
         var message = CreateMessage(Id, MethodDef.HasPolymorphicArguments);
         Context.CacheInfoCapture?.CaptureKey(Context, message);
     }
@@ -157,7 +148,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     {
         RpcMessage message;
         var context = Context;
-        var scope = context.Activate(); // CreateMessage may use it
         try {
             var cacheInfoCapture = context.CacheInfoCapture;
             var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
@@ -169,9 +159,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             SetError(error, context: null, assumeCancelled: isFirstAttempt);
             return Task.CompletedTask;
         }
-        finally {
-            scope.Dispose();
-        }
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
         return Peer.Send(message, sender);
@@ -179,24 +166,38 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public RpcMessage CreateMessage(long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
     {
-        var arguments = Context.Arguments!;
-        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
-        var headers = Context.Headers;
-        if (hash is not null)
-            headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
-        if (activity is not null)
-            headers = RpcActivityInjector.Inject(headers, activity.Context);
-        return new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+        var oldOutboundContext = RpcOutboundContext.Current;
+        RpcOutboundContext.Current = Context;
+        try {
+            var arguments = Context.Arguments!;
+            var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
+            var headers = Context.Headers;
+            if (hash is not null)
+                headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
+            if (activity is not null)
+                headers = RpcActivityInjector.Inject(headers, activity.Context);
+            return new RpcMessage(MethodDef.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+        }
+        finally {
+            RpcOutboundContext.Current = oldOutboundContext;
+        }
     }
 
     public (RpcMessage Message, string Hash) CreateMessageWithHashHeader(long relatedId, bool needsPolymorphism)
     {
-        var arguments = Context.Arguments!;
-        var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
-        var hash = Peer.Hub.HashProvider.Invoke(argumentData);
-        var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
-        var message = new RpcMessage(Context.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
-        return (message, hash);
+        var oldOutboundContext = RpcOutboundContext.Current;
+        RpcOutboundContext.Current = Context;
+        try {
+            var arguments = Context.Arguments!;
+            var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
+            var hash = Peer.Hasher.Invoke(argumentData);
+            var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
+            var message = new RpcMessage(MethodDef.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+            return (message, hash);
+        }
+        finally {
+            RpcOutboundContext.Current = oldOutboundContext;
+        }
     }
 
     public virtual void SetResult(object? result, RpcInboundContext? context)
@@ -297,7 +298,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (!Peer.OutboundCalls.CompleteKeepRegistered(this))
             return;
 
-        CallCancelHandler.Dispose();
+        CancellationHandler.Dispose();
         Context.Trace?.Complete(this);
     }
 
@@ -324,7 +325,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             return false;
         }
 
-        return peer != MethodDef.RouteCall(Context.Arguments!);
+        return peer != MethodDef.RouteOutboundCall(Context.Arguments!);
     }
 
     public void SetMustRerouteError()

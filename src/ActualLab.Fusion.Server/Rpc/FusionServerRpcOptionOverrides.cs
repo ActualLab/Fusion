@@ -5,11 +5,16 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Server.Rpc;
 
-public class SessionBoundRpcConnectionFactory
+public static class FusionServerRpcOptionOverrides
 {
-    public string SessionParameterName { get; init; } = "session";
+    public const string SessionParameterName = "session";
 
-    public Task<RpcConnection> Invoke(
+    public static RpcPeerOptions DefaultPeerOptions { get; set; }
+        = new() { ServerConnectionFactory = ServerConnectionFactory };
+
+    // Private methods
+
+    private static Task<RpcConnection> ServerConnectionFactory(
         RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties,
         CancellationToken cancellationToken)
     {
@@ -28,11 +33,11 @@ public class SessionBoundRpcConnectionFactory
         return CreateRpcConnectionAsync(channel, properties);
     }
 
-    protected static Task<RpcConnection> CreateSessionBoundRpcConnectionAsync(
+    private static Task<RpcConnection> CreateSessionBoundRpcConnectionAsync(
         Channel<RpcMessage> channel, PropertyBag properties, Session session)
         => Task.FromResult<RpcConnection>(new SessionBoundRpcConnection(channel, properties, session));
 
-    protected static Task<RpcConnection> CreateRpcConnectionAsync(
+    private static Task<RpcConnection> CreateRpcConnectionAsync(
         Channel<RpcMessage> channel, PropertyBag properties)
         => Task.FromResult(new RpcConnection(channel, properties));
 }

@@ -1,6 +1,6 @@
 namespace ActualLab.Rpc.Infrastructure;
 
-public abstract class RpcCall(RpcMethodDef methodDef)
+public abstract class RpcCall(RpcMethodDef? methodDef)
 {
     public object Lock {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -9,7 +9,7 @@ public abstract class RpcCall(RpcMethodDef methodDef)
 
     public abstract string DebugTypeName { get; }
 
-    public RpcMethodDef MethodDef = methodDef;
+    public RpcMethodDef MethodDef = methodDef ?? throw new ArgumentNullException(nameof(methodDef));
 
     public RpcHub Hub {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

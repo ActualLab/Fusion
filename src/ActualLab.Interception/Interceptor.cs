@@ -217,12 +217,4 @@ public abstract class Interceptor : IHasServices
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
         Type type)
     { }
-
-    protected internal virtual void KeepCodeForResult<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>()
-    {
-        if (CodeKeeper.AlwaysFalse)
-            CreateTypedHandler<TUnwrapped>(default, null!);
-    }
 }

@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ActualLab.Interception;
-using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Internal;
 
@@ -11,8 +10,9 @@ namespace ActualLab.Rpc.Infrastructure;
 
 public abstract class RpcInboundCall : RpcCall
 {
-    private static readonly ConcurrentDictionary<RpcCallTypeKey, Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>> FactoryCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<
+        (byte CallTypeId, Type ReturnType),
+        Func<RpcInboundContext, RpcInboundCall>> FactoryCache = new();
 
     protected readonly CancellationTokenSource? CallCancelSource;
     protected ILogger Log => Context.Peer.Log;
@@ -31,31 +31,19 @@ public abstract class RpcInboundCall : RpcCall
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
-    public static RpcInboundCall New(byte callTypeId, RpcInboundContext context, RpcMethodDef? methodDef)
-    {
-        if (methodDef is null) {
-            var notFoundMethodDef = context.Peer.Hub.SystemCallSender.NotFoundMethodDef;
-            var message = context.Message;
-            var (service, method) = message.MethodRef.GetServiceAndMethodName();
-            return new RpcInbound404Call<Unit>(context, notFoundMethodDef) {
-                // This prevents argument deserialization
-                Arguments = ArgumentList.New(service, method)
-            };
-        }
-
-        return FactoryCache.GetOrAdd(new(callTypeId, methodDef.UnwrappedReturnType),
+    public static Func<RpcInboundContext, RpcInboundCall> GetFactory(RpcMethodDef methodDef)
+        => FactoryCache.GetOrAdd(
+            (methodDef.CallTypeId, methodDef.UnwrappedReturnType),
             static key => {
-                var (callTypeId, tResult) = key;
-                var type = RpcCallTypeRegistry.Resolve(callTypeId)
+                var type = RpcCallTypeRegistry.Resolve(key.CallTypeId)
                     .InboundCallType
-                    .MakeGenericType(tResult);
-                return (Func<RpcInboundContext, RpcMethodDef, RpcInboundCall>)type
-                    .GetConstructorDelegate(typeof(RpcInboundContext), typeof(RpcMethodDef))!;
-            }).Invoke(context, methodDef);
-    }
+                    .MakeGenericType(key.ReturnType);
+                return (Func<RpcInboundContext, RpcInboundCall>)type
+                    .GetConstructorDelegate(typeof(RpcInboundContext))!;
+            });
 
-    protected RpcInboundCall(RpcInboundContext context, RpcMethodDef methodDef)
-        : base(methodDef)
+    protected RpcInboundCall(RpcInboundContext context)
+        : base(context.MethodDef)
     {
         Context = context;
         Id = NoWait ? 0 : context.Message.RelatedId;
@@ -113,7 +101,7 @@ public abstract class RpcInboundCall : RpcCall
 
             if (peer.CallLogger.IsLogged(this))
                 peer.CallLogger.LogInbound(this);
-            return InvokeTarget(); // NoWait calls must complete fast & be cheap, so the cancellationToken isn't passed
+            return InvokeServer(); // NoWait calls must complete fast & be cheap, so the cancellationToken isn't passed
         }
 
         var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
@@ -122,7 +110,6 @@ public abstract class RpcInboundCall : RpcCall
                 ?? existingCall.WhenProcessed
                 ?? Task.CompletedTask;
 
-        var inboundMiddlewares = Hub.InboundMiddlewares.NullIfEmpty();
         lock (Lock) {
             try {
                 if (MethodDef.Tracer is { } tracer)
@@ -137,10 +124,7 @@ public abstract class RpcInboundCall : RpcCall
                     peer.CallLogger.LogInbound(this);
 
                 // Call
-                MethodDef.InboundCallValidator?.Invoke(this);
-                ResultTask = inboundMiddlewares is not null
-                    ? InvokeTarget(inboundMiddlewares)
-                    : InvokeTarget();
+                ResultTask = MethodDef.InboundCallPipelineInvoker.Invoke(this);
             }
             catch (Exception error) {
                 ResultTask = TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
@@ -165,39 +149,30 @@ public abstract class RpcInboundCall : RpcCall
 
     // Protected methods
 
-    protected virtual Task InvokeTarget()
-    {
-        var methodDef = MethodDef;
-        var server = methodDef.Service.Server!;
-        return methodDef.TargetAsyncInvoker.Invoke(server, Arguments!);
-    }
-
-    protected abstract Task InvokeTarget(RpcInboundMiddlewares middlewares);
+    protected internal abstract Task InvokeServer();
     protected abstract Task SendResult();
 
     protected Exception ProcessArgumentDeserializationError(Exception error)
     {
         error = Errors.CannotDeserializeInboundCallArguments(error);
-        if (MethodDef.SystemMethodKind.IsCallResultMethod())
-            InvokeOverridenTarget(Hub.SystemCallSender.ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()));
-        return error;
+        if (!MethodDef.SystemMethodKind.IsCallResultMethod())
+            return error;
 
-        void InvokeOverridenTarget(RpcMethodDef methodDef, ArgumentList arguments)
-        {
-            var oldMethodDef = MethodDef;
-            var oldArguments = Arguments;
-            try {
-                MethodDef = methodDef;
-                Arguments = arguments;
-                var peer = Context.Peer;
-                if (peer.CallLogger.IsLogged(this))
-                    peer.CallLogger.LogInbound(this);
-                _ = InvokeTarget();
-            }
-            finally {
-                MethodDef = oldMethodDef;
-                Arguments = oldArguments;
-            }
+        var oldMethodDef = MethodDef;
+        var oldArguments = Arguments;
+        try {
+            MethodDef = Hub.SystemCallSender.ErrorMethodDef;
+            Arguments = ArgumentList.New(error.ToExceptionInfo());
+            var peer = Context.Peer;
+            if (peer.CallLogger.IsLogged(this))
+                peer.CallLogger.LogInbound(this);
+            _ = InvokeServer();
+            return error;
+        }
+        finally {
+            // Restore the original methodDef and arguments
+            MethodDef = oldMethodDef;
+            Arguments = oldArguments;
         }
     }
 
@@ -276,24 +251,7 @@ public abstract class RpcInboundCall : RpcCall
         return true;
     }
 
-    // Default implementations of InvokeTarget and SendResult
-
-    protected async Task<TResult> DefaultInvokeTarget<TResult>(RpcInboundMiddlewares middlewares)
-    {
-        await middlewares.OnBeforeCall(this).ConfigureAwait(false);
-        Task<TResult> resultTask = null!;
-        try {
-            resultTask = (Task<TResult>)InvokeTarget();
-            return await resultTask.ConfigureAwait(false);
-        }
-        catch (Exception e) {
-            resultTask ??= Task.FromException<TResult>(e);
-            throw;
-        }
-        finally {
-            await middlewares.OnAfterCall(this, resultTask).ConfigureAwait(false);
-        }
-    }
+    // Default implementations for SendResult; InvokeServer doesn't need one, coz it's 1-liner
 
     protected Task DefaultSendResult<TResult>(Task<TResult>? resultTask)
     {
@@ -319,11 +277,13 @@ public abstract class RpcInboundCall : RpcCall
     }
 }
 
-public class RpcInboundCall<TResult>(RpcInboundContext context, RpcMethodDef methodDef)
-    : RpcInboundCall(context, methodDef)
+public class RpcInboundCall<TResult>(RpcInboundContext context)
+    : RpcInboundCall(context)
 {
-    protected override Task InvokeTarget(RpcInboundMiddlewares middlewares)
-        => DefaultInvokeTarget<TResult>(middlewares);
+    protected internal override Task InvokeServer()
+        // This method is actually never called directly: regular inbound calls use fast pipeline invoker
+        // produced by InboundCallPipelineFastInvokerFactory, which "inlines" it right into the pipeline invoker.
+        => MethodDef.InboundCallServerInvoker.Invoke(this);
 
     protected override Task SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);

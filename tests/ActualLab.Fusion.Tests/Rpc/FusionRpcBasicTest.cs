@@ -21,7 +21,7 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
     {
         var services = CreateServices();
         var testClient = services.GetRequiredService<RpcTestClient>();
-        var clientPeer = testClient.Connections.First().Value.ClientPeer;
+        var clientPeer = testClient.GetConnection(x => !x.IsBackend).ClientPeer;
         await clientPeer.WhenConnected();
 
         var counters = services.GetRequiredService<ICounterService>();
@@ -43,7 +43,7 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
     {
         var services = CreateServices();
         var testClient = services.GetRequiredService<RpcTestClient>();
-        var clientPeer = testClient.Connections.First().Value.ClientPeer;
+        var clientPeer = testClient.GetConnection(x => !x.IsBackend).ClientPeer;
         var monitor = new RpcPeerStateMonitor(services, clientPeer.Ref);
         var state = monitor.State;
         await state.Computed.When(x => x.Kind == RpcPeerStateKind.JustConnected).WaitAsync(TimeSpan.FromSeconds(1));

@@ -1,58 +1,35 @@
 using System.Globalization;
-using ActualLab.Channels;
-using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc.Testing;
 
-public class RpcTestClient(
-    RpcTestClient.Options settings,
-    IServiceProvider services
-    ) : RpcClient(services)
+public class RpcTestClient(IServiceProvider services) : RpcClient(services)
 {
-    public record Options
-    {
-        public static Options Default { get; set; } = new();
-
-        public string SerializationFormatKey { get; init; } = "";
-        public ChannelOptions ChannelOptions { get; init; } = WebSocketChannel<RpcMessage>.Options.Default.WriteChannelOptions;
-        public Func<RpcTestClient, ChannelPair<RpcMessage>> ConnectionFactory { get; init; } = DefaultConnectionFactory;
-
-        public static ChannelPair<RpcMessage> DefaultConnectionFactory(RpcTestClient testClient)
-        {
-            var settings = testClient.Settings;
-            var channel1 = ChannelExt.Create<RpcMessage>(settings.ChannelOptions);
-            var channel2 = ChannelExt.Create<RpcMessage>(settings.ChannelOptions);
-            var connection = ChannelPair.CreateTwisted(channel1, channel2);
-            return connection;
-        }
-    }
-
     private readonly ConcurrentDictionary<RpcPeerRef, RpcTestConnection> _connections = new();
     private long _lastPairId;
 
-    public Options Settings { get; init; } = settings;
-    public new RpcHub Hub => base.Hub;
+    public RpcTestClientOptions Options { get; init; } = services.GetRequiredService<RpcTestClientOptions>();
 
     public RpcTestConnection this[RpcPeerRef peerRef]
         => _connections.GetValueOrDefault(peerRef) ?? throw new KeyNotFoundException();
 
     public IReadOnlyDictionary<RpcPeerRef, RpcTestConnection> Connections => _connections;
 
-    public RpcTestConnection CreateDefaultConnection()
-        => CreateConnection(RpcPeerRef.DefaultHostId, RpcPeerRef.DefaultHostId);
+    // CreateXxx
 
-    public RpcTestConnection CreateRandomConnection()
+    public RpcTestConnection CreateDefaultConnection(bool isBackend = false)
+        => CreateConnection(RpcPeerRef.DefaultHostId, RpcPeerRef.DefaultHostId, isBackend);
+
+    public RpcTestConnection CreateRandomConnection(bool isBackend = false)
     {
         var pairId = Interlocked.Increment(ref _lastPairId).ToString("x8", CultureInfo.InvariantCulture);
-        return CreateConnection(pairId, pairId);
+        return CreateConnection(pairId, pairId, isBackend);
     }
 
-    public RpcTestConnection CreateConnection(string clientHostInfo, string serverHostInfo)
+    public RpcTestConnection CreateConnection(string clientHostInfo, string serverHostInfo, bool isBackend = false)
     {
         var serializationFormatResolver = Services.GetRequiredService<RpcSerializationFormatResolver>();
-        var defaultClientFormatKey = serializationFormatResolver.DefaultClientFormatKey;
-        var serializationFormat = Settings.SerializationFormatKey;
+        var defaultClientFormatKey = serializationFormatResolver.DefaultFormatKey;
+        var serializationFormat = Options.SerializationFormatKey;
         if (serializationFormat.IsNullOrEmpty())
             serializationFormat = defaultClientFormatKey;
         var clientSerializationFormat =
@@ -60,8 +37,8 @@ public class RpcTestClient(
             ? serializationFormat
             : "";
 
-        var clientPeerRef = RpcPeerRef.NewClient(clientHostInfo, clientSerializationFormat);
-        var serverPeerRef = RpcPeerRef.NewServer(serverHostInfo, serializationFormat);
+        var clientPeerRef = RpcPeerRef.NewClient(clientHostInfo, clientSerializationFormat, isBackend);
+        var serverPeerRef = RpcPeerRef.NewServer(serverHostInfo, serializationFormat, isBackend);
         return CreateConnection(clientPeerRef, serverPeerRef);
     }
 
@@ -75,6 +52,15 @@ public class RpcTestClient(
         _connections.TryAdd(serverPeerRef, connection);
         return connection;
     }
+
+    // FindConnection
+
+    public RpcTestConnection GetConnection(RpcPeerRef peerRef)
+        => Connections.First(kv => kv.Key == peerRef).Value;
+    public RpcTestConnection GetConnection(Func<RpcPeerRef, bool> predicate)
+        => Connections.First(kv => predicate.Invoke(kv.Key)).Value;
+
+    // RpcClient implementation
 
     public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {

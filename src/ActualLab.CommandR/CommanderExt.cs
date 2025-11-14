@@ -5,55 +5,50 @@ namespace ActualLab.CommandR;
 
 public static class CommanderExt
 {
-    // Start overloads
-
-    public static CommandContext Start(this ICommander commander,
-        ICommand command, CancellationToken cancellationToken = default)
-        => commander.Start(command, false, cancellationToken);
-
-    public static CommandContext Start(this ICommander commander,
-        ICommand command, bool isOutermost, CancellationToken cancellationToken = default)
+    extension(ICommander commander)
     {
-        var context = CommandContext.New(commander, command, isOutermost);
-        _ = commander.Run(context, cancellationToken);
-        return context;
+        // Start overloads
+
+        public CommandContext Start(ICommand command, CancellationToken cancellationToken = default)
+            => commander.Start(command, false, cancellationToken);
+
+        public CommandContext Start(ICommand command, bool isOutermost, CancellationToken cancellationToken = default)
+        {
+            var context = CommandContext.New(commander, command, isOutermost);
+            _ = commander.Run(context, cancellationToken);
+            return context;
+        }
+
+        // Run overloads
+
+        public Task<CommandContext> Run(ICommand command, CancellationToken cancellationToken = default)
+            => commander.Run(command, false, cancellationToken);
+
+        public async Task<CommandContext> Run(ICommand command, bool isOutermost, CancellationToken cancellationToken = default)
+        {
+            var context = CommandContext.New(commander, command, isOutermost);
+            await commander.Run(context, cancellationToken).ConfigureAwait(false);
+            return context;
+        }
+
+        // Call overloads
+
+        public Task<TResult> Call<TResult>(ICommand<TResult> command, bool isOutermost, CancellationToken cancellationToken = default)
+            => TypedCallFactory<TResult>.TypedCall(commander, command, isOutermost, cancellationToken);
+
+        public Task Call(ICommand command, bool isOutermost, CancellationToken cancellationToken = default)
+            => GetTypedCallInvoker(command.GetResultType())
+                .Invoke(commander, command, isOutermost, cancellationToken);
+
+        public Task<TResult> Call<TResult>(ICommand<TResult> command,
+            CancellationToken cancellationToken = default)
+            => TypedCallFactory<TResult>.TypedCall(commander, command, false, cancellationToken);
+
+        public Task Call(ICommand command,
+            CancellationToken cancellationToken = default)
+            => GetTypedCallInvoker(command.GetResultType())
+                .Invoke(commander, command, false, cancellationToken);
     }
-
-    // Run overloads
-
-    public static Task<CommandContext> Run(this ICommander commander,
-        ICommand command, CancellationToken cancellationToken = default)
-        => commander.Run(command, false, cancellationToken);
-
-    public static async Task<CommandContext> Run(this ICommander commander,
-        ICommand command, bool isOutermost, CancellationToken cancellationToken = default)
-    {
-        var context = CommandContext.New(commander, command, isOutermost);
-        await commander.Run(context, cancellationToken).ConfigureAwait(false);
-        return context;
-    }
-
-    // Call overloads
-
-    public static Task<TResult> Call<TResult>(this ICommander commander,
-        ICommand<TResult> command, bool isOutermost, CancellationToken cancellationToken = default)
-        => TypedCallFactory<TResult>.TypedCall(commander, command, isOutermost, cancellationToken);
-
-    public static Task Call(this ICommander commander,
-        ICommand command, bool isOutermost, CancellationToken cancellationToken = default)
-        => GetTypedCallInvoker(command.GetResultType())
-            .Invoke(commander, command, isOutermost, cancellationToken);
-
-    public static Task<TResult> Call<TResult>(this ICommander commander,
-        ICommand<TResult> command,
-        CancellationToken cancellationToken = default)
-        => TypedCallFactory<TResult>.TypedCall(commander, command, false, cancellationToken);
-
-    public static Task Call(this ICommander commander,
-        ICommand command,
-        CancellationToken cancellationToken = default)
-        => GetTypedCallInvoker(command.GetResultType())
-            .Invoke(commander, command, false, cancellationToken);
 
     public static Func<ICommander, ICommand, bool, CancellationToken, Task> GetTypedCallInvoker(Type commandResultType)
         => GenericInstanceCache

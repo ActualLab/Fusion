@@ -21,7 +21,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
         public int MinReadBufferSize { get; init; } = 24_000; // Rented ~just once, so it can be large
         public int RetainedBufferSize { get; init; } = 120_000; // Read buffer is released when it hits this size
         public int BufferRenewPeriod { get; init; } = 100; // Per flush/read cycle
-        public RpcFrameDelayerFactory? FrameDelayerFactory { get; init; }
+        public Func<FrameDelayer?>? FrameDelayerFactory { get; init; } = FrameDelayerFactories.None;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
         public WebSocketChannelReadMode ReadMode { get; init; } = WebSocketChannelReadMode.Unbuffered;
@@ -237,7 +237,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
         }
     }
 
-    private async Task RunWriterWithFrameDelayer(RpcFrameDelayer frameDelayer, CancellationToken cancellationToken)
+    private async Task RunWriterWithFrameDelayer(FrameDelayer frameDelayer, CancellationToken cancellationToken)
     {
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;

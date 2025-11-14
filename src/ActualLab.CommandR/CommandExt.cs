@@ -10,10 +10,13 @@ public static class CommandExt
     private static readonly ConcurrentDictionary<(object, object, object, object), string> OperationNameCache = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly Type CommandWithResultType = typeof(ICommand<>);
 
-    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Type GetResultType(this ICommand command)
-        => GetResultType(command.GetType());
+    extension(ICommand command)
+    {
+        [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Type GetResultType()
+            => GetResultType(command.GetType());
+    }
 
     [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume all command handling code is preserved")]
     public static Type GetResultType(

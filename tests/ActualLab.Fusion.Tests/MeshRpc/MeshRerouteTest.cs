@@ -1,5 +1,4 @@
 using ActualLab.Fusion.Testing;
-using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Tests.MeshRpc;
 

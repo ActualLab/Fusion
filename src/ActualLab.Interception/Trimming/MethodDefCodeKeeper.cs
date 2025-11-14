@@ -15,6 +15,29 @@ public class MethodDefCodeKeeper : CodeKeeper
         if (AlwaysTrue)
             return;
 
-        Keep<MethodDef>().KeepCodeForResult<TResult, TUnwrapped>();
+        // TResult, TUnwrapped, Result<...> code
+        Keep<TResult>();
+        Keep<TUnwrapped>();
+        Keep<Result>();
+        Keep<Result<TUnwrapped>>();
+        Keep<Result<Task<TUnwrapped>>>();
+        Keep<Result<ValueTask<TUnwrapped>>>();
+        Keep<Result>(); // Untyped
+
+        var methodDef = Keep<MethodDef>();
+        methodDef.WrapResult<TUnwrapped>(default!);
+        methodDef.WrapAsyncInvokerResult<TUnwrapped>(default!);
+        methodDef.WrapResultOfAsyncMethod<TUnwrapped>(default!);
+        methodDef.WrapAsyncInvokerResultOfAsyncMethod<TUnwrapped>(default!);
+        methodDef.SelectAsyncInvoker<TUnwrapped>(null!);
+        methodDef.GetCachedFunc<TUnwrapped>(null!);
+
+        Keep<MethodDef.TargetAsyncInvokerFactory<TUnwrapped>>();
+        Keep<MethodDef.InterceptorAsyncInvokerFactory<TUnwrapped>>();
+        Keep<MethodDef.InterceptedAsyncInvokerFactory<TUnwrapped>>();
+        Keep<MethodDef.TargetObjectAsyncInvokerFactory<TUnwrapped>>();
+        Keep<MethodDef.InterceptorObjectAsyncInvokerFactory<TUnwrapped>>();
+        Keep<MethodDef.InterceptedObjectAsyncInvokerFactory<TUnwrapped>>();
+        Keep<MethodDef.UniversalAsyncResultConverterFactory<TUnwrapped>>();
     }
 }

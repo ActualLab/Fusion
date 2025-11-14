@@ -12,10 +12,14 @@ public class RetryDelayer : IRetryDelayer
     protected readonly object Lock = new();
 #endif
 
-    public Func<MomentClock> ClockProvider { get; init; } = static () => CpuClock.Instance;
+    public Func<MomentClock> ClockProvider { get; set; } = static () => CpuClock.Instance;
 
     [field: AllowNull, MaybeNull]
-    public MomentClock Clock => field ??= ClockProvider.Invoke();
+    public MomentClock Clock {
+        get => field ??= ClockProvider.Invoke();
+        set;
+    }
+
     public RetryDelaySeq Delays { get; set; } = RetryDelaySeq.Fixed(1);
     public int? Limit { get; set; }
 

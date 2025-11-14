@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Hosting;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Server;
 using ActualLab.Rpc.WebSockets;
@@ -16,14 +17,12 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace ActualLab.Tests;
 
-public class RpcWebHost(
-    IServiceCollection baseServices,
-    Assembly? controllerAssembly = null
-    ) : TestWebHostBase
+public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAssembly = null)
+    : TestWebHostBase
 {
     public IServiceCollection BaseServices { get; } = baseServices;
     public Assembly? ControllerAssembly { get; set; } = controllerAssembly;
-    public RpcFrameDelayerFactory? RpcFrameDelayerFactory { get; set; }
+    public Func<FrameDelayer?>? RpcFrameDelayerFactory { get; set; }
     public bool ExposeBackend { get; set; } = false;
 
     protected override void ConfigureHost(IHostBuilder builder)
@@ -36,15 +35,12 @@ public class RpcWebHost(
             // only web-related ones must be added to services
             var webSocketServer = services.AddRpc().AddWebSocketServer();
             webSocketServer.Configure(_ => {
-                var defaultOptions = RpcWebSocketServer.Options.Default;
+                var defaultOptions = RpcWebSocketServerOptions.Default;
                 return defaultOptions with { ExposeBackend = ExposeBackend };
             });
-            if (RpcFrameDelayerFactory is { } rpcFrameDelayerFactory)
-                services.AddSingleton<RpcWebSocketChannelOptionsProvider>(_ => {
-                    return (_, _) => {
-                        var options = WebSocketChannel<RpcMessage>.Options.Default;
-                        return options with { FrameDelayerFactory = rpcFrameDelayerFactory };
-                    };
+            if (RpcFrameDelayerFactory is not null)
+                services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
+                    FrameDelayerFactory = RpcFrameDelayerFactory,
                 });
             if (ControllerAssembly is not null) {
 #if NETFRAMEWORK

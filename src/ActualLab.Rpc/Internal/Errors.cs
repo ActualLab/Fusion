@@ -43,6 +43,8 @@ public static class Errors
         => new RpcException("Remote peer has been changed.");
     public static Exception EndpointNotFound(string serviceName, string methodName)
         => new RpcException($"Endpoint not found: '{serviceName}.{methodName}'.");
+    public static Exception InvalidCallTypeId(string serviceName, string methodName, string expected, string actual)
+        => new RpcException($"Invalid CallTypeId: '{serviceName}.{methodName}' expected '{expected}', but got '{actual}'.");
     public static Exception MatchButNoCachedEntry()
         => new RpcException("The remote server responded with 'Match', but the outbound call has no cached entry.");
     public static Exception TooLateToReconnect()
@@ -59,9 +61,9 @@ public static class Errors
             $"Most likely the scope was disposed in async continuation / another thread, which should never happen - " +
             $"this scope should be used only in synchronous part of your code that happens " +
             $"right before the async method triggering the outgoing RPC call is invoked.");
-    public static Exception RpcCallOptionsChanged()
+    public static Exception RpcOutboundCallSetupChanged()
         => new InvalidOperationException(
-            $"The scope returned from {nameof(RpcCallOptions)}.{nameof(RpcCallOptions.Activate)} " +
+            $"The scope returned from {nameof(RpcOutboundCallSetup)}.{nameof(RpcOutboundCallSetup.Activate)} " +
             $"detected Peer change on its disposal. " +
             $"Most likely the scope was disposed in async continuation / another thread, which should never happen - " +
             $"this scope should be used only in synchronous part of your code that happens " +

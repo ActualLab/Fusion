@@ -56,12 +56,12 @@ public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
         Assert.Throws<InvalidOperationException>(() => t4.ToUntypedResultSynchronously(typeof(int)));
         Assert.Throws<InvalidOperationException>(() => t5.ToUntypedResultSynchronously(typeof(void)));
         Assert.Throws<InvalidOperationException>(() => t6.ToUntypedResultSynchronously(typeof(int)));
-        Assert.Throws<InvalidOperationException>(() => t1.GetUntypedResultSynchronously(typeof(void)));
-        Assert.Throws<InvalidOperationException>(() => t2.GetUntypedResultSynchronously(typeof(int)));
-        Assert.Throws<InvalidOperationException>(() => t3.GetUntypedResultSynchronously(typeof(void)));
-        Assert.Throws<InvalidOperationException>(() => t4.GetUntypedResultSynchronously(typeof(int)));
-        Assert.Throws<InvalidOperationException>(() => t5.GetUntypedResultSynchronously(typeof(void)));
-        Assert.Throws<InvalidOperationException>(() => t6.GetUntypedResultSynchronously(typeof(int)));
+        Assert.Throws<InvalidOperationException>(() => t1.GetResultAsObjectSynchronously(typeof(void)));
+        Assert.Throws<InvalidOperationException>(() => t2.GetResultAsObjectSynchronously(typeof(int)));
+        Assert.Throws<InvalidOperationException>(() => t3.GetResultAsObjectSynchronously(typeof(void)));
+        Assert.Throws<InvalidOperationException>(() => t4.GetResultAsObjectSynchronously(typeof(int)));
+        Assert.Throws<InvalidOperationException>(() => t5.GetResultAsObjectSynchronously(typeof(void)));
+        Assert.Throws<InvalidOperationException>(() => t6.GetResultAsObjectSynchronously(typeof(int)));
 
         (await t1.ToResultAsync()).HasValue.Should().BeTrue();
         (await t2.ToResultAsync()).Value.Should().Be(1);
@@ -91,12 +91,12 @@ public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
         t5.ToUntypedResultSynchronously(typeof(void)).Error.Should().BeAssignableTo<OperationCanceledException>();
         t6.ToUntypedResultSynchronously(typeof(int)).Error.Should().BeAssignableTo<OperationCanceledException>();
 
-        t1.GetUntypedResultSynchronously(typeof(void)).Should().Be(null);
-        t2.GetUntypedResultSynchronously(typeof(int)).Should().Be(1);
-        Assert.ThrowsAny<InvalidOperationException>(() => t3.GetUntypedResultSynchronously(typeof(void)));
-        Assert.ThrowsAny<InvalidOperationException>(() => t4.GetUntypedResultSynchronously(typeof(int)));
-        Assert.ThrowsAny<OperationCanceledException>(() => t5.GetUntypedResultSynchronously(typeof(void)));
-        Assert.ThrowsAny<OperationCanceledException>(() => t6.GetUntypedResultSynchronously(typeof(int)));
+        t1.GetResultAsObjectSynchronously(typeof(void)).Should().Be(null);
+        t2.GetResultAsObjectSynchronously(typeof(int)).Should().Be(1);
+        Assert.ThrowsAny<InvalidOperationException>(() => t3.GetResultAsObjectSynchronously(typeof(void)));
+        Assert.ThrowsAny<InvalidOperationException>(() => t4.GetResultAsObjectSynchronously(typeof(int)));
+        Assert.ThrowsAny<OperationCanceledException>(() => t5.GetResultAsObjectSynchronously(typeof(void)));
+        Assert.ThrowsAny<OperationCanceledException>(() => t6.GetResultAsObjectSynchronously(typeof(int)));
     }
 
     [Fact]

@@ -40,7 +40,7 @@ public static class GenericInstanceCache
             static key => {
                 var (factoryType, argType) = key;
                 if (argType is null || argType == typeof(void))
-                    argType = typeof(ValueVoid);
+                    argType = typeof(VoidSurrogate);
                 var factory = factoryType.IsGenericType
                     ? (GenericInstanceFactory)Activator.CreateInstance(factoryType.MakeGenericType(argType))!
                     : (GenericInstanceFactory)Activator.CreateInstance(factoryType, argType)!;
@@ -56,9 +56,9 @@ public static class GenericInstanceCache
             static key => {
                 var (factoryType, argType1, argType2) = key;
                 if (argType1 is null || argType1 == typeof(void))
-                    argType1 = typeof(ValueVoid);
+                    argType1 = typeof(VoidSurrogate);
                 if (argType2 is null || argType2 == typeof(void))
-                    argType2 = typeof(ValueVoid);
+                    argType2 = typeof(VoidSurrogate);
                 var factory = factoryType.IsGenericType
                     ? (GenericInstanceFactory)Activator.CreateInstance(factoryType.MakeGenericType(argType1, argType2))!
                     : (GenericInstanceFactory)Activator.CreateInstance(factoryType, argType1, argType2)!;

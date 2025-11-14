@@ -31,7 +31,7 @@ public class RpcServiceDef
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
     public string Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }
-    public PropertyBag Properties { get; init; }
+    public PropertyBag Properties { get; protected set; }
 
     public RpcMethodDef this[MethodInfo method] => GetMethod(method) ?? throw Errors.NoMethod(Type, method);
     public RpcMethodDef this[string methodName] => GetMethod(methodName) ?? throw Errors.NoMethod(Type, methodName);
@@ -51,7 +51,7 @@ public class RpcServiceDef
         ClientType = service.ClientType;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
         IsBackend = typeof(IBackendService).IsAssignableFrom(Type);
-        Scope = hub.ServiceScopeResolver.Invoke(this);
+        Scope = hub.RegistryOptions.ServiceScopeResolver.Invoke(this);
         LegacyNames = new LegacyNames(Type);
 
         _serverLazy = new Lazy<object?>(() => ServerResolver?.Resolve(Hub.Services));
@@ -79,10 +79,11 @@ public class RpcServiceDef
             if (method.IsGenericMethodDefinition)
                 continue;
 
-            var methodDef = Hub.MethodDefBuilder.Invoke(this, method);
+            var methodDef = Hub.RegistryOptions.MethodDefFactory.Invoke(this, method);
             if (!methodDef.IsValid)
                 continue;
 
+            methodDef.InitializeOverridableProperties();
             if (!_methodByName.TryAdd(methodDef.Name, methodDef))
                 throw Errors.MethodNameConflict(methodDef);
 
@@ -144,4 +145,7 @@ public class RpcServiceDef
             return null;
         }, this);
     }
+
+    public virtual void InitializeOverridableProperties(bool methodsReady)
+    { }
 }

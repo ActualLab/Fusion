@@ -58,6 +58,8 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 
 public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 {
+    public static int DelayedCallLogLimit { get; set; } = 10;
+
     private readonly ConcurrentDictionary<long, RpcOutboundCall> _inProgressCalls = new(HardwareInfo.ProcessorCountPo2, 131);
     private long _lastId;
 
@@ -110,41 +112,32 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         continue;
 
                     inProgressCallCount++;
-                    var timeouts = call.MethodDef.Timeouts;
+                    var timeouts = call.MethodDef.OutboundCallTimeouts;
                     var startedAt = call.StartedAt;
                     if (startedAt == default)
                         continue; // Something is off: call.StartedAt wasn't set
 
                     var elapsed = startedAt.Elapsed;
-                    if (elapsed <= timeouts.Timeout)
-                        continue;
-
-                    Exception? error = null;
-                    // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-                    if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Throw) != 0) {
-                        error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.Timeout);
+                    if (elapsed >= timeouts.RunTimeout) {
+                        var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.RunTimeout);
                         call.SetError(error, context: null, assumeCancelled: false);
+                        Peer.Log.LogError(error,
+                            "{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
+                            Peer.Ref, call, elapsed.ToShortString(), timeouts.RunTimeout.ToShortString());
                     }
-                    else {
-                        // Reset StartedAt to make sure it won't pop up every time we're here
-                        call.StartedAt = CpuTimestamp.Now;
-                    }
-                    // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-                    if ((timeouts.TimeoutAction & RpcCallTimeoutAction.Log) != 0) {
-                        if (error is not null)
-                            Peer.Log.LogError(error,
-                                "{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
-                                Peer.Ref, call, elapsed.ToShortString(), timeouts.Timeout.ToShortString());
-                        else if (++delayedCallCount <= RpcCallTimeouts.DelayedCallLogLimit)
-                            Peer.Log.LogWarning(
-                                "{PeerRef}': call {Call} is delayed ({Elapsed} from its start or prev. report here)",
-                                Peer.Ref, call, elapsed.ToShortString());
+                    else if (elapsed >= timeouts.LogTimeout) {
+                        if (++delayedCallCount > DelayedCallLogLimit)
+                            continue;
+
+                        Peer.Log.LogWarning(
+                            "{PeerRef}': call {Call} is delayed ({Elapsed} from its start or prev. report here)",
+                            Peer.Ref, call, elapsed.ToShortString());
                     }
                 }
-                if (delayedCallCount > RpcCallTimeouts.DelayedCallLogLimit)
+                if (delayedCallCount > DelayedCallLogLimit)
                     Peer.Log.LogWarning(
                         "{PeerRef}': {UnloggedDelayedCallCount} more delayed call(s) aren't logged",
-                        Peer.Ref, delayedCallCount - RpcCallTimeouts.DelayedCallLogLimit);
+                        Peer.Ref, delayedCallCount - DelayedCallLogLimit);
 
                 var summaryLogSettings = Limits.LogOutboundCallSummarySettings;
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period
@@ -202,7 +195,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     return calls; // All calls have to be re-sent
 
                 Task<byte[]> reconnectTask;
-                using (new RpcCallOptions(Peer).Activate()) // No "await" inside this block!
+                using (new RpcOutboundCallSetup(Peer).Activate()) // No "await" inside this block!
                     reconnectTask = Peer.Hub.SystemCallSender.Client
                         .Reconnect(handshake.Index, completedStages, cancellationToken);
                 var failedCallData = await reconnectTask.ConfigureAwait(false);

@@ -1,15 +1,11 @@
-using System.CommandLine;
-using System.CommandLine.IO;
 using AwesomeAssertions.Execution;
 using AwesomeAssertions.Primitives;
 using Xunit.Abstractions;
 
 namespace ActualLab.Testing.Output;
 
-public class TestConsole : IConsole
+public class TestConsole
 {
-    IStandardStreamWriter IStandardOut.Out => Out;
-    IStandardStreamWriter IStandardError.Error => Error;
     public TestOutputCapture Out { get; protected set; } = new();
     public TestOutputCapture Error { get; protected set; } = new();
 

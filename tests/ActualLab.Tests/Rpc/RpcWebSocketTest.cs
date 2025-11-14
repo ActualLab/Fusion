@@ -31,7 +31,9 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Theory]
     [InlineData("json3")]
+    [InlineData("json5")]
     [InlineData("njson3")]
+    [InlineData("njson5")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
     [InlineData("mempack2-np")]
@@ -41,6 +43,8 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("mempack3c")]
     [InlineData("mempack4")]
     [InlineData("mempack4c")]
+    [InlineData("mempack5")]
+    [InlineData("mempack5c")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
     [InlineData("msgpack2-np")]
@@ -50,6 +54,8 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("msgpack3c")]
     [InlineData("msgpack4")]
     [InlineData("msgpack4c")]
+    [InlineData("msgpack5")]
+    [InlineData("msgpack5c")]
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -160,7 +166,9 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Theory]
     [InlineData("json3")]
+    [InlineData("json5")]
     [InlineData("njson3")]
+    [InlineData("njson5")]
     [InlineData("mempack1")]
     [InlineData("mempack2")]
     [InlineData("mempack2c")]
@@ -168,6 +176,8 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("mempack3c")]
     [InlineData("mempack4")]
     [InlineData("mempack4c")]
+    [InlineData("mempack5")]
+    [InlineData("mempack5c")]
     [InlineData("msgpack1")]
     [InlineData("msgpack2")]
     [InlineData("msgpack2c")]
@@ -175,6 +185,8 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("msgpack3c")]
     [InlineData("msgpack4")]
     [InlineData("msgpack4c")]
+    [InlineData("msgpack5")]
+    [InlineData("msgpack5c")]
     public async Task PolymorphTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -369,25 +381,29 @@ public class RpcWebSocketTest : RpcTestBase
     [Theory]
     [InlineData(50_000, "json3")]
     [InlineData(50_000, "njson3")]
+    [InlineData(50_000, "json5")]
+    [InlineData(50_000, "njson5")]
     [InlineData(50_000, "mempack1")]
     [InlineData(50_000, "mempack2")]
     [InlineData(50_000, "mempack2-np")]
     [InlineData(50_000, "mempack2c")]
     [InlineData(50_000, "mempack3")]
     [InlineData(50_000, "mempack4")]
+    [InlineData(50_000, "mempack5")]
     [InlineData(50_000, "msgpack1")]
     [InlineData(50_000, "msgpack2")]
     [InlineData(50_000, "msgpack2-np")]
     [InlineData(50_000, "msgpack2c")]
     [InlineData(50_000, "msgpack3")]
     [InlineData(50_000, "msgpack4")]
+    [InlineData(50_000, "msgpack5")]
     // Fastest options
-    [InlineData(200_000, "mempack2c-np")]
-    [InlineData(200_000, "msgpack2c-np")]
     [InlineData(200_000, "mempack3c")]
     [InlineData(200_000, "msgpack3c")]
     [InlineData(200_000, "mempack4c")]
     [InlineData(200_000, "msgpack4c")]
+    [InlineData(200_000, "mempack5c")]
+    [InlineData(200_000, "msgpack5c")]
     public async Task PerformanceTest(int iterationCount, string serializationFormat)
     {
         SerializationFormat = serializationFormat;

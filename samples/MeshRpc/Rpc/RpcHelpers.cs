@@ -1,24 +1,29 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc;
-using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 
 namespace Samples.MeshRpc;
 
 public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(services)
 {
-    private static readonly RpcCallTimeouts CallTimeouts = new(null, 60);
+    private static readonly RpcCallTimeouts OutboundCallTimeouts = new(null, 60);
 
     [field: AllowNull, MaybeNull]
     public Host OwnHost => field ??= Services.GetRequiredService<Host>();
 
-    public RpcCallTimeouts GetCallTimeouts(RpcMethodDef method)
-        => CallTimeouts;
+    public string HostUrlResolver(RpcClientPeer peer)
+    {
+        if (peer.Ref is not IMeshPeerRef meshPeerRef)
+            return "";
 
-    public Func<ArgumentList, RpcPeerRef> RouteCall(RpcMethodDef method)
+        var host = MeshState.State.Value.HostById.GetValueOrDefault(meshPeerRef.HostId);
+        return host?.Url ?? "";
+    }
+
+    public Func<ArgumentList, RpcPeerRef> RouterFactory(RpcMethodDef methodDef)
         => args => {
-            if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
+            if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
                 return RpcPeerRef.Local; // Commands in invalidation mode must always execute locally
 
             // Actual routing logic. We don't want too many conditions here: the routing runs per every RPC service call.
@@ -42,16 +47,7 @@ public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(servi
             return RpcShardPeerRef.Get(ShardRef.New(args.GetUntyped(0)));
         };
 
-    public string GetHostUrl(RpcWebSocketClient client, RpcClientPeer peer)
-    {
-        if (peer.Ref is not IMeshPeerRef meshPeerRef)
-            return "";
-
-        var host = MeshState.State.Value.HostById.GetValueOrDefault(meshPeerRef.HostId);
-        return host?.Url ?? "";
-    }
-
-    public RpcPeerConnectionKind GetPeerConnectionKind(RpcHub hub, RpcPeerRef peerRef)
+    public RpcPeerConnectionKind ConnectionKindDetector(RpcPeerRef peerRef)
     {
         var connectionKind = peerRef.ConnectionKind;
         var hostId = peerRef switch {
@@ -66,4 +62,7 @@ public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(servi
             ? RpcPeerConnectionKind.Local
             : RpcPeerConnectionKind.Remote;
     }
+
+    public RpcCallTimeouts TimeoutsProvider(RpcMethodDef method)
+        => OutboundCallTimeouts;
 }

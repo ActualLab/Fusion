@@ -1,5 +1,4 @@
 using ActualLab.Fusion.Internal;
-using ActualLab.Rpc;
 
 namespace ActualLab.Fusion;
 
@@ -23,15 +22,4 @@ public static class FusionDefaultDelegates
 
             return y.Error is null && Equals(x.Value, y.Value);
         };
-
-    /// <summary>
-    /// Used by <c>.AddFusion</c> method to replace the default <see cref="RpcCallRouterFactory"/>.
-    /// This call router ensures that any command method call is routed to
-    /// <see cref="RpcPeerRef.Local"/> when <see cref="Invalidation.IsActive"/>,
-    /// i.e., no commands are sent to remote peers while invalidation is active.
-    /// </summary>
-    public static RpcCallRouterFactory CallRouterFactory { get; set; }
-        = static method => method.Kind is RpcMethodKind.Command
-            ? static args => Invalidation.IsActive ? RpcPeerRef.Local : RpcPeerRef.Default
-            : static args => RpcPeerRef.Default;
 }
