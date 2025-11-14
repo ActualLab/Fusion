@@ -7,7 +7,7 @@ public sealed class RpcInboundNotFoundCall<TResult>(RpcInboundContext context)
 {
     public override string DebugTypeName => "<- [not found]";
 
-    protected internal override Task<TResult> InvokeServer()
+    protected internal override Task InvokeServer()
     {
         var message = Context.Message;
         var (service, method) = message.MethodRef.GetServiceAndMethodName();
