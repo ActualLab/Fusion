@@ -150,7 +150,6 @@ public abstract class RpcInboundCall : RpcCall
     // Protected methods
 
     protected internal abstract Task InvokeServer();
-    // protected abstract Task InvokePipeline();
     protected abstract Task SendResult();
 
     protected Exception ProcessArgumentDeserializationError(Exception error)
@@ -252,34 +251,7 @@ public abstract class RpcInboundCall : RpcCall
         return true;
     }
 
-    // Default implementations of InvokeServer, InvokePipeline, and SendResult
-
-    protected Task<TResult> DefaultInvokeServer<TResult>()
-    {
-        var result = MethodDef.ArgumentListInvoker.Invoke(MethodDef.Service.Server, Arguments!);
-        return MethodDef.ReturnsValueTask
-            ? MethodDef.IsAsyncVoidMethod ? FromValueTaskAsync(result) : ((ValueTask<TResult>)result!).AsTask()
-            : MethodDef.IsAsyncVoidMethod ? FromTaskAsync(result) : (Task<TResult>)result!;
-
-        static async Task<TResult> FromValueTaskAsync(object? source) {
-            await ((ValueTask)source!).ConfigureAwait(false);
-            return default!;
-        }
-
-        static async Task<TResult> FromTaskAsync(object? source) {
-            await ((Task)source!).ConfigureAwait(false);
-            return default!;
-        }
-    }
-
-    protected async Task<TResult> DefaultInvokePipeline<TResult>()
-    {
-        if (MethodDef.InboundCallPreprocessors is { Length: not 0 } preprocessors)
-            foreach (var p in preprocessors)
-                await p.Invoke(this).ConfigureAwait(false);
-        MethodDef.InboundCallValidator?.Invoke(this);
-        return await ((Task<TResult>)InvokeServer()).ConfigureAwait(false);
-    }
+    // Default implementations for SendResult; InvokeServer doesn't need one, coz it's 1-liner
 
     protected Task DefaultSendResult<TResult>(Task<TResult>? resultTask)
     {
@@ -309,10 +281,9 @@ public class RpcInboundCall<TResult>(RpcInboundContext context)
     : RpcInboundCall(context)
 {
     protected internal override Task InvokeServer()
-        => MethodDef.InboundCallServerInvoker.Invoke(Arguments!);
-
-    // protected override Task InvokePipeline()
-    //     => DefaultInvokePipeline<TResult>();
+        // This method is actually never called directly: regular inbound calls use fast pipeline invoker
+        // produced by InboundCallPipelineFastInvokerFactory, which "inlines" it right into the pipeline invoker.
+        => MethodDef.InboundCallServerInvoker.Invoke(this);
 
     protected override Task SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);

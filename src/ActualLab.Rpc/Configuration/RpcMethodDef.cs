@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.Caching;
 using ActualLab.Interception;
+using ActualLab.Internal;
 using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -108,32 +109,44 @@ public partial class RpcMethodDef : MethodDef
     /// </summary>
     public virtual void InitializeOverridableProperties()
     {
+        // We assume that at that moment:
+        // - Correct CallTypeId is already set for this MethodDef
+        // - InboundCallUseFastPipelineInvoker is optionally set; if not, we'll compute its value.
+
         InboundCallFactory = RpcInboundCall.GetFactory(this);
         OutboundCallFactory = RpcOutboundCall.GetFactory(this);
 
-        // Inbound call related
+        // Outbound call properties
 
-        if (!IsSystem) {
+        OutboundCallTimeouts = Hub.OutboundCallOptions.TimeoutsFactory.Invoke(this);
+        OutboundCallRouter = IsSystem
+            ? _ => throw Errors.InternalError("All system calls must be pre-routed.")
+            : Hub.OutboundCallOptions.RouterFactory.Invoke(this);
+
+        // Inbound call properties
+
+        if (IsSystem) {
+            // System calls have no inbound call filter, preprocessors, and validator;
+            // thus all pipeline invokers there must be identical to the server invoker.
+            InboundCallUsesFastPipelineInvoker = true;
+            InboundCallServerInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
+            InboundCallPipelineInvoker = InboundCallServerInvoker;
+        }
+        else {
             InboundCallFilter = CreateInboundCallFilter();
             InboundCallPreprocessors = CreateInboundCallPreprocessors();
             InboundCallValidator = CreateInboundCallValidator();
+
+            var inboundCallType = RpcCallTypeRegistry.Resolve(CallTypeId).InboundCallType;
+            InboundCallUsesFastPipelineInvoker ??=
+                inboundCallType == typeof(RpcInboundCall<>) // It's a regular call
+                && SystemMethodKind != RpcSystemMethodKind.NotFound; // And not a NotFound method, which overrides InvokeServer
+
+            InboundCallServerInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
+            InboundCallPipelineInvoker = InboundCallUsesFastPipelineInvoker.Value
+                ? GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineFastInvokerFactory<>))
+                : GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
         }
-
-        // We assume CallTypeId is set by that moment, and maybe InboundCallUseFastPipelineInvoker
-        var inboundCallType = RpcCallTypeRegistry.Resolve(CallTypeId).InboundCallType;
-        InboundCallUseFastPipelineInvoker ??=
-            inboundCallType == typeof(RpcInboundCall<>) // It's a regular call
-            && SystemMethodKind != RpcSystemMethodKind.NotFound; // And not a NotFound method, which overrides InvokeServer
-
-        InboundCallServerInvoker = GetCachedFunc<Func<ArgumentList, Task>>(typeof(InboundCallServerInvokerFactory<>));
-        InboundCallPipelineInvoker = InboundCallUseFastPipelineInvoker.Value
-            ? GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineFastInvokerFactory<>))
-            : GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
-
-        // Outbound call related
-
-        OutboundCallTimeouts = Hub.OutboundCallOptions.TimeoutsFactory.Invoke(this);
-        OutboundCallRouter = Hub.OutboundCallOptions.RouterFactory.Invoke(this);
     }
 
     public override string ToString()
