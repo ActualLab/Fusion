@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
@@ -17,8 +18,12 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
-    protected RpcArgumentSerializer ArgumentSerializer;
-    protected RpcMethodResolver AnyMethodResolver;
+    [field: AllowNull, MaybeNull]
+    protected RpcArgumentSerializer ArgumentSerializer
+        => field ??= Hub.SerializationFormats.DefaultFormat.ArgumentSerializer;
+    [field: AllowNull, MaybeNull]
+    protected RpcMethodResolver AnyMethodResolver
+        => field ??= Hub.ServiceRegistry.AnyMethodResolver;
     protected ILogger? DefaultLog;
 
     public Options Settings { get; }
@@ -29,8 +34,6 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
     {
         Settings = settings;
         DefaultLog = Log.IfEnabled(Settings.LogLevel);
-        ArgumentSerializer = Hub.SerializationFormats.DefaultFormat.ArgumentSerializer;
-        AnyMethodResolver = Hub.ServiceRegistry.AnyMethodResolver;
         if (initialize)
             // ReSharper disable once VirtualMemberCallInConstructor
 #pragma warning disable MA0040, CA2214

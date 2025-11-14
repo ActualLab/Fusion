@@ -6,8 +6,11 @@ namespace ActualLab.Fusion.Interception;
 // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
 public class ComputedOptionsProvider(IServiceProvider services)
 {
-    protected readonly bool HasRemoteComputedCache =
-        services.GetService<IRemoteComputedCache>() is not null;
+    private readonly LazySlim<IRemoteComputedCache?> _remoteComputedCacheLazy
+        = new(services.GetService<IRemoteComputedCache>);
+
+    protected IServiceProvider Services { get; } = services;
+    protected IRemoteComputedCache? RemoteComputedCache => _remoteComputedCacheLazy.Value;
 
     public virtual ComputedOptions? GetComputedOptions(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
@@ -17,7 +20,7 @@ public class ComputedOptionsProvider(IServiceProvider services)
         if (options is null || options.RemoteComputedCacheMode == RemoteComputedCacheMode.NoCache)
             return options;
 
-        if (!HasRemoteComputedCache)
+        if (RemoteComputedCache is not null)
             options = options with { RemoteComputedCacheMode = RemoteComputedCacheMode.NoCache };
         return options;
     }
