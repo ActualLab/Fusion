@@ -19,6 +19,8 @@ public interface ITestRpcService : ICommandService
 {
     public Task<int?> Div(int? a, int b);
     public Task<int?> Add(int? a, int b);
+    [RpcMethod(Name = "RenamedMethod", RunTimeout = 0.5)]
+    public Task<int> AddWithAttribute(int a, int b);
     public Task<TimeSpan> Delay(TimeSpan duration, CancellationToken cancellationToken = default);
     public Task<int> GetCancellationCount();
     public Task<byte[]> GetBytes(int count);
@@ -100,6 +102,12 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
 
     public virtual Task<ITuple> PolymorphResult(int argument, CancellationToken cancellationToken = default)
         => Task.FromResult((ITuple)Tuple.Create(argument));
+
+    public virtual Task<int> AddWithAttribute(int a, int b)
+        => Task.FromResult(a + b);
+
+    public virtual Task<int> AddWithAttribute2(int a, int b)
+        => Task.FromResult(a - b);
 
     public virtual ValueTask<RpcNoWait> MaybeSet(string key, string? value)
     {

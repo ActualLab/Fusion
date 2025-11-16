@@ -142,6 +142,20 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Fact]
+    public async Task RpcMethodAttributeTest()
+    {
+        await using var services = CreateServices();
+        var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["RenamedMethod"];
+        method.OutboundCallTimeouts.RunTimeout.Should().Be(TimeSpan.FromSeconds(0.5));
+
+        (await client.AddWithAttribute(3, 4)).Should().Be(7);
+        await AssertNoCalls(clientPeer, Out);
+    }
+
+    [Fact]
     public async Task CommandTest()
     {
         await using var services = CreateServices();

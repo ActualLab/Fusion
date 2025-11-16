@@ -53,6 +53,7 @@ public partial class RpcMethodDef : MethodDef
     public readonly LegacyNames LegacyNames = LegacyNames.Empty;
     public RpcCallTracer? Tracer { get; init; }
     public PropertyBag Properties { get; protected set; }
+    public RpcMethodAttribute? Attribute { get; protected set; }
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
@@ -93,6 +94,9 @@ public partial class RpcMethodDef : MethodDef
         }
 
         // Non-system method
+        Attribute = MethodInfo.GetCustomAttribute<RpcMethodAttribute>(inherit: false);
+        if (Attribute?.Name is { } name && !name.IsNullOrEmpty())
+            Name = name;
 #pragma warning disable CA2214
         // ReSharper disable once VirtualMemberCallInConstructor
         Kind = GetMethodKind(out var isBackend);

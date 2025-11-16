@@ -34,7 +34,21 @@ public record RpcOutboundCallOptions
         => static _ => RpcPeerRef.Default;
 
     protected static RpcCallTimeouts DefaultTimeoutsProvider(RpcMethodDef methodDef)
-        => RpcCallTimeouts.Default.Get(methodDef);
+    {
+        var defaultTimeouts = RpcCallTimeouts.Default.Get(methodDef);
+        if (methodDef.Attribute is not { } attribute)
+            return defaultTimeouts;
+
+        var connectTimeout = attribute.ConnectTimeout is double.NaN ? defaultTimeouts.ConnectTimeout : ToTimeout(attribute.ConnectTimeout);
+        var runTimeout = attribute.RunTimeout is double.NaN ? defaultTimeouts.RunTimeout : ToTimeout(attribute.RunTimeout);
+        var logTimeout = attribute.LogTimeout is double.NaN ? defaultTimeouts.LogTimeout : ToTimeout(attribute.LogTimeout);
+        return new RpcCallTimeouts(connectTimeout, runTimeout) { LogTimeout = logTimeout };
+    }
+
+    private static TimeSpan ToTimeout(double? timeout)
+        => timeout is { } value and not double.NaN and not double.PositiveInfinity
+            ? TimeSpan.FromSeconds(value)
+            : TimeSpan.MaxValue;
 
     protected static Task DefaultReroutingDelayer(RpcOutboundCallOptions options, int failureCount, CancellationToken cancellationToken)
         => Task.Delay(options.ReroutingDelays.GetDelay(failureCount), cancellationToken);
