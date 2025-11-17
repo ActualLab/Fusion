@@ -38,9 +38,11 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
 
                     CancellationTokenSource? linkedCts = null;
                     CancellationToken linkedToken;
+                    CancellationToken rerouteToken = default;
                     if (peer.Ref.CanBeRerouted) {
                         linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken);
                         linkedToken = linkedCts.Token;
+                        rerouteToken = peer.Ref.RerouteToken;
                     } else
                         linkedToken = cancellationToken;
 
@@ -54,7 +56,12 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                             invokeRemainingHandlersTask = context.InvokeRemainingHandlers(linkedToken);
                         await invokeRemainingHandlersTask.ConfigureAwait(false);
                         return;
-                    } finally {
+                    }
+                    catch (OperationCanceledException) when (rerouteToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+                        // RerouteToken was cancelled -> convert to RpcRerouteException to trigger reprocessing
+                        throw new RpcRerouteException();
+                    }
+                    finally {
                         linkedCts.DisposeSilently();
                     }
                 }
