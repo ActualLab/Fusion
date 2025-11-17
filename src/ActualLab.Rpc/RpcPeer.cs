@@ -175,7 +175,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 if (!ConnectionState.IsFinal)
                     continue;
-                if (Ref.IsRerouted)
+                if (Ref.RouteState?.IsRerouted ?? false)
                     throw RpcRerouteException.MustReroute();
                 throw;
             }
@@ -237,7 +237,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ThrowIfRerouted()
-        => Ref.ThrowIfRerouted();
+        => Ref.RouteState?.ThrowIfRerouted();
 
     // Protected methods
 
@@ -250,7 +250,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         Log.LogInformation("'{PeerRef}': Started", Ref);
 
         // ReSharper disable once UseAwaitUsing
-        using var rerouteTokenRegistration = Ref.RerouteToken.Register(() => Task.Run(DisposeAsync, CancellationToken.None));
+        using var rerouteTokenRegistration = Ref.RouteState?.RerouteToken.Register(() => Task.Run(DisposeAsync, CancellationToken.None));
 
         var handshakeIndex = 0;
         var connectionState = ConnectionState;

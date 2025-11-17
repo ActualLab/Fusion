@@ -30,7 +30,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
             var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
 
-            if (context.AllowRerouting && peer.Ref.CanBeRerouted)
+            if (context.AllowRerouting && peer.Ref.RouteState is not null)
                 resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
             else if (call is null) { // Local call
                 if (localCallAsyncInvoker is null)
@@ -58,7 +58,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                 var peer = context.Peer!;
                 peer.ThrowIfRerouted();
 
-                var rerouteToken = peer.Ref.RerouteToken;
+                var rerouteToken = peer.Ref.RouteState!.RerouteToken;
                 CancellationTokenSource? linkedCts = null;
                 try {
                     if (call is not null)
@@ -68,7 +68,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                         throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
                     Task untypedResultTask;
-                    if (rerouteToken.CanBeCanceled) {
+                    if (true) { // RerouteToken in RouteState is always cancellable
                         linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
                         if (methodDef.CancellationTokenIndex >= 0)
                             invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex,
@@ -76,8 +76,6 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
 
                         untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
                     }
-                    else
-                        untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
 
                     return await methodDef.TaskToObjectValueTaskConverter
                         .Invoke(untypedResultTask)

@@ -88,12 +88,12 @@ public abstract class RemoteComputeMethodFunction(
                     var computed = NewReplicaComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     try {
-                        var rerouteToken = peer.Ref.RerouteToken;
+                        var rerouteToken = peer.Ref.RouteState?.RerouteToken ?? default;
                         CancellationTokenSource? linkedCts = null;
                         try {
                             CancellationToken linkedToken;
-                            if (rerouteToken.CanBeCanceled) {
-                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken);
+                            if (peer.Ref.RouteState is not null) {
+                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
                                 linkedToken = linkedCts.Token;
                             } else
                                 linkedToken = cancellationToken;
@@ -102,7 +102,7 @@ public abstract class RemoteComputeMethodFunction(
                             computed.TrySetValue(result);
                             return computed;
                         }
-                        catch (OperationCanceledException) when (rerouteToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+                        catch (OperationCanceledException) when ((peer.Ref.RouteState?.IsRerouted ?? false) && !cancellationToken.IsCancellationRequested) {
                             throw new RpcRerouteException(rerouteToken);
                         }
                         finally {

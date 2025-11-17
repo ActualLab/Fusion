@@ -11,7 +11,6 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
 
     public ShardRef ShardRef { get; }
     public string HostId { get; }
-    public override CancellationToken RerouteToken => _rerouteTokenSource?.Token ?? CancellationToken.None;
 
     public static RpcShardPeerRef Get(ShardRef shardRef)
     {
@@ -21,7 +20,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
                 static shardRef1 => new LazySlim<ShardRef, RpcShardPeerRef>(shardRef1,
                     static shardRef2 => new RpcShardPeerRef(shardRef2)));
             var shardPeerRef = lazy.Value;
-            if (!shardPeerRef.RerouteToken.IsCancellationRequested) {
+            if (!(shardPeerRef.RouteState?.IsRerouted ?? false)) {
                 shardPeerRef.TryStart(lazy);
                 return shardPeerRef;
             }
@@ -49,6 +48,9 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
         var rerouteTokenSource = new CancellationTokenSource();
         if (Interlocked.CompareExchange(ref _rerouteTokenSource, rerouteTokenSource, null) is not null)
             return;
+
+        // Initialize RouteState once we have a token source
+        RouteState = new RpcRouteState(rerouteTokenSource.Token);
 
         _ = Task.Run(async () => {
             Console.WriteLine($"{Address}: created.".Pastel(ConsoleColor.Green));

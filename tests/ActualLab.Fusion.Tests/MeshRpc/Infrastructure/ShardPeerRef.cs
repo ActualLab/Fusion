@@ -11,7 +11,6 @@ public sealed class ShardPeerRef : RpcPeerRef
     public MeshMap MeshMap { get; }
     public int ShardIndex { get; }
     public MeshHost? Host { get; }
-    public override CancellationToken RerouteToken { get; }
 
     internal ShardPeerRef(MeshMap meshMap, int shardIndex, LazySlim<int, MeshMap, ShardPeerRef> entry)
     {
@@ -24,7 +23,7 @@ public sealed class ShardPeerRef : RpcPeerRef
         UseReferentialEquality = true;
 
         var rerouteTokenSource = new CancellationTokenSource();
-        RerouteToken = rerouteTokenSource.Token;
+        RouteState = new RpcRouteState(rerouteTokenSource.Token);
         _ = Task.Run(async () => {
             await hostMapComputed
                 .When(x => x.GetHostByShardIndex(ShardIndex) != Host)

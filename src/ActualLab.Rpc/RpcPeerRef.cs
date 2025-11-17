@@ -27,10 +27,8 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
         set;
     } = VersionSet.Empty;
 
-    // Rerouting-related properties
-    public virtual CancellationToken RerouteToken => default;
-    public bool CanBeRerouted => RerouteToken.CanBeCanceled;
-    public bool IsRerouted => RerouteToken.IsCancellationRequested;
+    // Rerouting-related properties moved to RpcRouteState
+    public RpcRouteState? RouteState { get; protected set; }
 
     // Protected properties
     protected bool IsInitialized { get; set; }
@@ -49,7 +47,7 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
 
     public override string ToString()
     {
-        if (!IsRerouted)
+        if (!(RouteState?.IsRerouted ?? false))
             return Address;
 
         return _toStringCached ??= "<*>" + Address;
@@ -75,30 +73,7 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
         return this;
     }
 
-    // WhenXxx
-
-    public async Task WhenRerouted()
-        => await TaskExt.NeverEnding(RerouteToken).SilentAwait(false);
-
-    public Task WhenRerouted(CancellationToken cancellationToken)
-    {
-        return cancellationToken.CanBeCanceled
-            ? WhenReroutedWithCancellationToken(cancellationToken)
-            : WhenRerouted();
-
-        async Task WhenReroutedWithCancellationToken(CancellationToken cancellationToken1) {
-            using var commonCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken1, RerouteToken);
-            await TaskExt.NeverEnding(commonCts.Token).SilentAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void ThrowIfRerouted()
-    {
-        if (IsRerouted)
-            throw RpcRerouteException.MustReroute();
-    }
+    // WhenXxx moved to RpcRouteState
 
 #pragma warning disable MA0001
 
