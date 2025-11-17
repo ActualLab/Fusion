@@ -45,8 +45,10 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                         invokeRemainingHandlersTask = context.InvokeRemainingHandlers(cancellationToken);
 
                     // Honor RerouteToken for local calls
-                    if (peer.ConnectionKind is RpcPeerConnectionKind.Local && peer.Ref.RerouteToken.CanBeCanceled) {
-                        var whenReroutedTask = TaskExt.NeverEnding(peer.Ref.RerouteToken);
+                    if (peer.ConnectionKind is RpcPeerConnectionKind.Local && peer.Ref.CanBeRerouted) {
+#pragma warning disable CA2016 // We intentionally don't forward cancellationToken - we want to wait for rerouting independently
+                        var whenReroutedTask = peer.Ref.WhenRerouted();
+#pragma warning restore CA2016
                         var completedTask = await Task.WhenAny(invokeRemainingHandlersTask, whenReroutedTask).ConfigureAwait(false);
                         if (ReferenceEquals(completedTask, whenReroutedTask))
                             throw RpcRerouteException.MustReroute();

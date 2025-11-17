@@ -95,9 +95,8 @@ public abstract class RemoteComputeMethodFunction(
                             invokeInterceptedUntypedTask = typedInput.InvokeInterceptedUntyped(cancellationToken);
                         }
                         // Honor RerouteToken for local calls
-                        var rerouteToken = peer.Ref.RerouteToken;
-                        var result = rerouteToken.CanBeCanceled
-                            ? await InvokeWithRerouting(invokeInterceptedUntypedTask, rerouteToken).ConfigureAwait(false)
+                        var result = peer.Ref.CanBeRerouted
+                            ? await InvokeWithRerouting(invokeInterceptedUntypedTask, peer.Ref).ConfigureAwait(false)
                             : await invokeInterceptedUntypedTask.ConfigureAwait(false);
                         computed.TrySetValue(result);
                         return computed;
@@ -335,10 +334,10 @@ public abstract class RemoteComputeMethodFunction(
 
     protected static async ValueTask<object?> InvokeWithRerouting(
         ValueTask<object?> invokeTask,
-        CancellationToken rerouteToken)
+        RpcPeerRef peerRef)
     {
         var invokeTaskAsTask = invokeTask.AsTask();
-        var whenReroutedTask = TaskExt.NeverEnding(rerouteToken);
+        var whenReroutedTask = peerRef.WhenRerouted();
         var completedTask = await Task.WhenAny(invokeTaskAsTask, whenReroutedTask).ConfigureAwait(false);
         if (ReferenceEquals(completedTask, whenReroutedTask))
             throw RpcRerouteException.MustReroute();
