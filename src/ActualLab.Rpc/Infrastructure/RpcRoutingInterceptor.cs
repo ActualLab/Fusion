@@ -65,6 +65,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                 Task untypedResultTask;
                 if (peer.Ref.CanBeRerouted) {
                     var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken);
+                    var rerouteToken = peer.Ref.RerouteToken;
                     if (methodDef.CancellationTokenIndex >= 0)
                         invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
 
@@ -80,6 +81,18 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                         static (_, state) => (state as CancellationTokenSource)?.Dispose(),
                         linkedCts,
                         CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+                    try {
+                        return await methodDef.TaskToObjectValueTaskConverter
+                            .Invoke(untypedResultTask)
+                            .ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (rerouteToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+                        // RerouteToken was cancelled -> convert to RpcRerouteException to trigger reprocessing
+                        if (methodDef.CancellationTokenIndex >= 0)
+                            invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
+                        throw new RpcRerouteException();
+                    }
                 } else
                     untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
                 return await methodDef.TaskToObjectValueTaskConverter
