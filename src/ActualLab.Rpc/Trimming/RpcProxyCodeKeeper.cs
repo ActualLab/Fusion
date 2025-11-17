@@ -9,9 +9,6 @@ namespace ActualLab.Rpc.Trimming;
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
 public class RpcProxyCodeKeeper : ProxyCodeKeeper
 {
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundCall<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundNotFoundCall<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcOutboundCall<>))]
     static RpcProxyCodeKeeper()
         => _ = default(RpcBuilder).Services;
 

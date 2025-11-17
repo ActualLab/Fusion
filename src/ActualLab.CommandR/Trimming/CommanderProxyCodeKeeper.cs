@@ -9,9 +9,6 @@ namespace ActualLab.CommandR.Trimming;
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
 public class CommanderProxyCodeKeeper : RpcProxyCodeKeeper
 {
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(CommandContext<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MethodCommandHandler<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(InterfaceCommandHandler<>))]
     static CommanderProxyCodeKeeper()
         => _ = default(CommanderBuilder).Services;
 

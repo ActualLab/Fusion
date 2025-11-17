@@ -81,7 +81,6 @@ public partial class MethodDef
 
     // Must be on KeepCodeForResult<,>, but since we can't use any params there...
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Result<>))]
     public MethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo methodInfo)

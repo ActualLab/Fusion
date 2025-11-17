@@ -17,13 +17,6 @@ public class FusionProxyCodeKeeper : ProxyCodeKeeper
     // CommanderProxyCodeKeeper is also RpcProxyCodeKeeper
     private static readonly CommanderProxyCodeKeeper CommanderProxyCodeKeeper = Get<CommanderProxyCodeKeeper>();
 
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputeMethodFunction<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ConsolidatingComputeMethodFunction<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcInboundComputeCall<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RpcOutboundComputeCall<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(RemoteComputeMethodFunction<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(FuncComputedState<>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ComputedSource<>))]
     static FusionProxyCodeKeeper()
         => _ = default(FusionBuilder).Services;
 

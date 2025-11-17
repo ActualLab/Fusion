@@ -14,7 +14,6 @@ public class DefaultSourceConverterProvider<TSource>(IServiceProvider services) 
 
     protected IServiceProvider Services { get; } = services;
 
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(DefaultSourceConverterProvider<>))]
     public override Converter<TSource> To(Type targetType)
         => (Converter<TSource>) _cache.GetOrAdd(targetType, static (targetType1, self) => {
             var mGetConverter = self.GetType()
