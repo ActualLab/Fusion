@@ -43,6 +43,15 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                     Task invokeRemainingHandlersTask;
                     using (new RpcOutboundCallSetup(peer).Activate())
                         invokeRemainingHandlersTask = context.InvokeRemainingHandlers(cancellationToken);
+
+                    // Honor RerouteToken for local calls
+                    if (peer.ConnectionKind is RpcPeerConnectionKind.Local && peer.Ref.RerouteToken.CanBeCanceled) {
+                        var whenReroutedTask = TaskExt.NeverEnding(peer.Ref.RerouteToken);
+                        var completedTask = await Task.WhenAny(invokeRemainingHandlersTask, whenReroutedTask).ConfigureAwait(false);
+                        if (ReferenceEquals(completedTask, whenReroutedTask))
+                            throw RpcRerouteException.MustReroute();
+                    }
+
                     await invokeRemainingHandlersTask.ConfigureAwait(false);
                     return;
                 }
