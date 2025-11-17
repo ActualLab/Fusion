@@ -89,9 +89,13 @@ public abstract class RemoteComputeMethodFunction(
                     using var _ = Computed.BeginCompute(computed);
                     try {
                         ValueTask<object?> invokeInterceptedUntypedTask;
+                        var effectiveCancellationToken = peer.Ref.CanBeRerouted
+                            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken).Token
+                            : cancellationToken;
                         // Force distributed service to route to local
                         using (new RpcOutboundCallSetup(peer).Activate()) {
                             // No "await" inside this block!
+                            invokeInterceptedUntypedTask = typedInput.InvokeInterceptedUntyped(effectiveCancellationToken);
                             invokeInterceptedUntypedTask = typedInput.InvokeInterceptedUntyped(cancellationToken);
                         }
                         var result = await invokeInterceptedUntypedTask.ConfigureAwait(false);
