@@ -36,10 +36,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                 if (localCallAsyncInvoker is null)
                     throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
-                // Honor RerouteToken for local calls
-                resultTask = peer.Ref.CanBeRerouted
-                    ? InvokeLocalWithRerouting(localCallAsyncInvoker, invocation, peer.Ref)
-                    : localCallAsyncInvoker.Invoke(invocation);
+                resultTask = localCallAsyncInvoker.Invoke(invocation);
             }
             else
                 resultTask = call.Invoke();
@@ -64,7 +61,15 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                 if (localCallAsyncInvoker is null)
                     throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
+                // Local call - honor RerouteToken
+                var peer = context.Peer!;
                 var untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
+                if (peer.Ref.CanBeRerouted) {
+                    var raceTask = RaceWithRerouting(untypedResultTask, peer.Ref.RerouteToken);
+                    return await methodDef.TaskToObjectValueTaskConverter
+                        .Invoke(raceTask)
+                        .ConfigureAwait(false);
+                }
                 return await methodDef.TaskToObjectValueTaskConverter
                     .Invoke(untypedResultTask)
                     .ConfigureAwait(false);
@@ -83,17 +88,14 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
         }
     }
 
-    private static async Task InvokeLocalWithRerouting(
-        Func<Invocation, Task> localCallAsyncInvoker,
-        Invocation invocation,
-        RpcPeerRef peerRef)
+    private static async Task RaceWithRerouting(Task task, CancellationToken rerouteToken)
     {
-        var invokeTask = localCallAsyncInvoker.Invoke(invocation);
-        var whenReroutedTask = peerRef.WhenRerouted();
-        var completedTask = await Task.WhenAny(invokeTask, whenReroutedTask).ConfigureAwait(false);
-        if (ReferenceEquals(completedTask, whenReroutedTask))
-            throw RpcRerouteException.MustReroute();
-
-        await invokeTask.ConfigureAwait(false);
+        var tcs = new TaskCompletionSource<Unit>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using (rerouteToken.Register(static state => ((TaskCompletionSource<Unit>)state!).TrySetResult(default), tcs).ConfigureAwait(false)) {
+            var completedTask = await Task.WhenAny(task, tcs.Task).ConfigureAwait(false);
+            if (ReferenceEquals(completedTask, tcs.Task))
+                throw RpcRerouteException.MustReroute();
+        }
+        await task.ConfigureAwait(false);
     }
 }

@@ -96,7 +96,7 @@ public abstract class RemoteComputeMethodFunction(
                         }
                         // Honor RerouteToken for local calls
                         var result = peer.Ref.CanBeRerouted
-                            ? await InvokeWithRerouting(invokeInterceptedUntypedTask, peer.Ref).ConfigureAwait(false)
+                            ? await RaceWithRerouting(invokeInterceptedUntypedTask, peer.Ref.RerouteToken).ConfigureAwait(false)
                             : await invokeInterceptedUntypedTask.ConfigureAwait(false);
                         computed.TrySetValue(result);
                         return computed;
@@ -332,16 +332,17 @@ public abstract class RemoteComputeMethodFunction(
 
     // Protected methods
 
-    protected static async ValueTask<object?> InvokeWithRerouting(
+    protected static async ValueTask<object?> RaceWithRerouting(
         ValueTask<object?> invokeTask,
-        RpcPeerRef peerRef)
+        CancellationToken rerouteToken)
     {
         var invokeTaskAsTask = invokeTask.AsTask();
-        var whenReroutedTask = peerRef.WhenRerouted();
-        var completedTask = await Task.WhenAny(invokeTaskAsTask, whenReroutedTask).ConfigureAwait(false);
-        if (ReferenceEquals(completedTask, whenReroutedTask))
-            throw RpcRerouteException.MustReroute();
-
+        var tcs = new TaskCompletionSource<Unit>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using (rerouteToken.Register(static state => ((TaskCompletionSource<Unit>)state!).TrySetResult(default), tcs).ConfigureAwait(false)) {
+            var completedTask = await Task.WhenAny(invokeTaskAsTask, tcs.Task).ConfigureAwait(false);
+            if (ReferenceEquals(completedTask, tcs.Task))
+                throw RpcRerouteException.MustReroute();
+        }
         return await invokeTaskAsTask.ConfigureAwait(false);
     }
 
