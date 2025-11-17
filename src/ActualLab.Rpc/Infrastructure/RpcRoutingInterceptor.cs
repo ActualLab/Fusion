@@ -31,7 +31,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
             var peer = context.Peer!;
 
             if (context.AllowRerouting && peer.Ref.CanBeRerouted)
-                resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation, peer);
+                resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
             else if (call is null) { // Local call
                 if (localCallAsyncInvoker is null)
                     throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
@@ -49,57 +49,50 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
         RpcOutboundContext context,
         RpcOutboundCall? call,
         Func<Invocation, Task>? localCallAsyncInvoker,
-        Invocation invocation,
-        RpcPeer peer)
+        Invocation invocation)
     {
         var cancellationToken = context.CancellationToken;
         var rerouteCount = 0;
         while (true) {
             try {
-                if (call is not null)
-                    return await call.Invoke().ConfigureAwait(false);
+                var peer = context.Peer!;
+                peer.ThrowIfRerouted();
 
-                if (localCallAsyncInvoker is null)
-                    throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
+                var rerouteToken = peer.Ref.RerouteToken;
+                CancellationTokenSource? linkedCts = null;
+                try {
+                    if (call is not null)
+                        return await call.Invoke().ConfigureAwait(false);
 
-                Task untypedResultTask;
-                if (peer.Ref.CanBeRerouted) {
-                    var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken);
-                    var rerouteToken = peer.Ref.RerouteToken;
-                    if (methodDef.CancellationTokenIndex >= 0)
-                        invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
+                    if (localCallAsyncInvoker is null)
+                        throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
-                    try {
+                    Task untypedResultTask;
+                    if (rerouteToken.CanBeCanceled) {
+                        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
+                        if (methodDef.CancellationTokenIndex >= 0)
+                            invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex,
+                                linkedCts.Token);
+
                         untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
-                    } catch {
-                        if (methodDef.CancellationTokenIndex >= 0)
-                            invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
-                        linkedCts.DisposeSilently();
-                        throw;
                     }
-                    _ = untypedResultTask.ContinueWith(
-                        static (_, state) => (state as CancellationTokenSource)?.Dispose(),
-                        linkedCts,
-                        CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    else
+                        untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
 
-                    try {
-                        return await methodDef.TaskToObjectValueTaskConverter
-                            .Invoke(untypedResultTask)
-                            .ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException) when (rerouteToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
-                        // RerouteToken was cancelled -> convert to RpcRerouteException to trigger reprocessing
-                        if (methodDef.CancellationTokenIndex >= 0)
-                            invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
-                        throw new RpcRerouteException();
-                    }
-                } else
-                    untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
-                return await methodDef.TaskToObjectValueTaskConverter
-                    .Invoke(untypedResultTask)
-                    .ConfigureAwait(false);
+                    return await methodDef.TaskToObjectValueTaskConverter
+                        .Invoke(untypedResultTask)
+                        .ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)when (rerouteToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+                    throw new RpcRerouteException(rerouteToken);
+                }
+                finally {
+                    linkedCts.DisposeSilently();
+                }
             }
             catch (RpcRerouteException e) {
+                if (methodDef.CancellationTokenIndex >= 0)
+                    invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
                 if (call is null && localCallAsyncInvoker is null)
                     throw; // A higher level interceptor should handle it
 

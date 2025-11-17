@@ -88,24 +88,22 @@ public abstract class RemoteComputeMethodFunction(
                     var computed = NewReplicaComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     try {
+                        var rerouteToken = peer.Ref.RerouteToken;
                         CancellationTokenSource? linkedCts = null;
-                        CancellationToken linkedToken;
-                        CancellationToken rerouteToken = default;
-                        if (peer.Ref.CanBeRerouted) {
-                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken);
-                            linkedToken = linkedCts.Token;
-                            rerouteToken = peer.Ref.RerouteToken;
-                        } else
-                            linkedToken = cancellationToken;
-
                         try {
+                            CancellationToken linkedToken;
+                            if (rerouteToken.CanBeCanceled) {
+                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken);
+                                linkedToken = linkedCts.Token;
+                            } else
+                                linkedToken = cancellationToken;
+
                             var result = await typedInput.InvokeInterceptedUntyped(linkedToken).ConfigureAwait(false);
                             computed.TrySetValue(result);
                             return computed;
                         }
                         catch (OperationCanceledException) when (rerouteToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
-                            // RerouteToken was cancelled -> convert to RpcRerouteException to trigger reprocessing
-                            throw new RpcRerouteException();
+                            throw new RpcRerouteException(rerouteToken);
                         }
                         finally {
                             linkedCts?.Dispose();
