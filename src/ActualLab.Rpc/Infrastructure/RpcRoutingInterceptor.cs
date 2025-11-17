@@ -36,7 +36,15 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                 if (localCallAsyncInvoker is null)
                     throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
-                resultTask = localCallAsyncInvoker.Invoke(invocation);
+                if (peer.Ref.CanBeRerouted) {
+                    var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, peer.Ref.RerouteToken);
+                    var modifiedArguments = invocation.Arguments.Duplicate();
+                    if (rpcMethodDef.CancellationTokenIndex >= 0)
+                        modifiedArguments.SetCancellationToken(rpcMethodDef.CancellationTokenIndex, linkedCts.Token);
+                    var modifiedInvocation = invocation.With(modifiedArguments);
+                    resultTask = localCallAsyncInvoker.Invoke(modifiedInvocation);
+                } else
+                    resultTask = localCallAsyncInvoker.Invoke(invocation);
             }
             else
                 resultTask = call.Invoke();

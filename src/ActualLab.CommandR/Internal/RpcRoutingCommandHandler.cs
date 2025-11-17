@@ -36,13 +36,17 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                     var peer = rpcMethodDef.RouteOutboundCall(arguments);
                     peer.ThrowIfRerouted();
 
+                    var effectiveCancellationToken = peer.Ref.CanBeRerouted
+                        ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken).Token
+                        : cancellationToken;
+
                     context.ExecutionState = peer.ConnectionKind is RpcPeerConnectionKind.Local
                         ? baseExecutionState // Local call -> continue the pipeline
                         : preFinalExecutionState; // Remote call -> trigger just RPC call by invoking the final handler only
 
                     Task invokeRemainingHandlersTask;
                     using (new RpcOutboundCallSetup(peer).Activate())
-                        invokeRemainingHandlersTask = context.InvokeRemainingHandlers(cancellationToken);
+                        invokeRemainingHandlersTask = context.InvokeRemainingHandlers(effectiveCancellationToken);
                     await invokeRemainingHandlersTask.ConfigureAwait(false);
                     return;
                 }
