@@ -36,19 +36,27 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                     var peer = rpcMethodDef.RouteOutboundCall(arguments);
                     peer.ThrowIfRerouted();
 
-                    var effectiveCancellationToken = peer.Ref.CanBeRerouted
-                        ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken).Token
-                        : cancellationToken;
+                    CancellationTokenSource? linkedCts = null;
+                    CancellationToken linkedToken;
+                    if (peer.Ref.CanBeRerouted) {
+                        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken);
+                        linkedToken = linkedCts.Token;
+                    } else
+                        linkedToken = cancellationToken;
 
-                    context.ExecutionState = peer.ConnectionKind is RpcPeerConnectionKind.Local
-                        ? baseExecutionState // Local call -> continue the pipeline
-                        : preFinalExecutionState; // Remote call -> trigger just RPC call by invoking the final handler only
+                    try {
+                        context.ExecutionState = peer.ConnectionKind is RpcPeerConnectionKind.Local
+                            ? baseExecutionState // Local call -> continue the pipeline
+                            : preFinalExecutionState; // Remote call -> trigger just RPC call by invoking the final handler only
 
-                    Task invokeRemainingHandlersTask;
-                    using (new RpcOutboundCallSetup(peer).Activate())
-                        invokeRemainingHandlersTask = context.InvokeRemainingHandlers(effectiveCancellationToken);
-                    await invokeRemainingHandlersTask.ConfigureAwait(false);
-                    return;
+                        Task invokeRemainingHandlersTask;
+                        using (new RpcOutboundCallSetup(peer).Activate())
+                            invokeRemainingHandlersTask = context.InvokeRemainingHandlers(linkedToken);
+                        await invokeRemainingHandlersTask.ConfigureAwait(false);
+                        return;
+                    } finally {
+                        linkedCts.DisposeSilently();
+                    }
                 }
                 catch (RpcRerouteException e) {
                     context.ResetResult();

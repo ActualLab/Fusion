@@ -88,19 +88,21 @@ public abstract class RemoteComputeMethodFunction(
                     var computed = NewReplicaComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     try {
-                        ValueTask<object?> invokeInterceptedUntypedTask;
-                        var effectiveCancellationToken = peer.Ref.CanBeRerouted
-                            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken).Token
-                            : cancellationToken;
-                        // Force distributed service to route to local
-                        using (new RpcOutboundCallSetup(peer).Activate()) {
-                            // No "await" inside this block!
-                            invokeInterceptedUntypedTask = typedInput.InvokeInterceptedUntyped(effectiveCancellationToken);
-                            invokeInterceptedUntypedTask = typedInput.InvokeInterceptedUntyped(cancellationToken);
+                        CancellationTokenSource? linkedCts = null;
+                        CancellationToken linkedToken;
+                        if (peer.Ref.CanBeRerouted) {
+                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, peer.Ref.RerouteToken);
+                            linkedToken = linkedCts.Token;
+                        } else
+                            linkedToken = cancellationToken;
+
+                        try {
+                            var result = await typedInput.InvokeInterceptedUntyped(linkedToken).ConfigureAwait(false);
+                            computed.TrySetValue(result);
+                            return computed;
+                        } finally {
+                            linkedCts?.Dispose();
                         }
-                        var result = await invokeInterceptedUntypedTask.ConfigureAwait(false);
-                        computed.TrySetValue(result);
-                        return computed;
                     }
                     catch (Exception e) {
                         var delayTask = ComputedImpl.FinalizeAndTryReprocessInternalCancellation(
