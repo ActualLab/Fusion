@@ -68,7 +68,7 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
         var mustSendInvalidation = true;
         try {
             if (UntypedComputed is { } computed) {
-                using var commonCts = cancellationToken.LinkWith(CallCancelToken);
+                using var commonCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, CallCancelToken);
                 await computed.WhenInvalidated(commonCts.Token).ConfigureAwait(false);
             }
             else

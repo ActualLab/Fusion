@@ -44,7 +44,7 @@ public class RetryDelayer : IRetryDelayer
 
         async Task DelayImpl() {
             var cancelDelaysToken = CancelDelaysToken;
-            using var commonCts = cancellationToken.LinkWith(cancelDelaysToken);
+            using var commonCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cancelDelaysToken);
             var commonToken = commonCts.Token;
             try {
                 await Clock.Delay(delay, commonToken).ConfigureAwait(false);
