@@ -31,24 +31,33 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
             var preFinalExecutionState = baseExecutionState.PreFinalState;
             var rerouteCount = 0;
             while (true) {
+                var arguments = ArgumentList.New(command, cancellationToken);
+                var peer = rpcMethodDef.RouteOutboundCall(arguments);
+                var isLocalCall = peer.ConnectionKind is RpcPeerConnectionKind.Local;
+                var routeState = peer.Ref.RouteState;
+                var shardRouteState = routeState.AsShardRouteState(rpcMethodDef);
                 try {
-                    var arguments = ArgumentList.New(command, cancellationToken);
-                    var peer = rpcMethodDef.RouteOutboundCall(arguments);
                     peer.Ref.RouteState.ThrowIfChanged();
-
-                    CancellationToken routeChangedToken = default;
+                    var routeChangedToken = routeState?.ChangedToken ?? default;
                     CancellationTokenSource? linkedCts = null;
                     var linkedToken = cancellationToken;
-                    if (peer.Ref.RouteState is { } routeState) {
-                        routeChangedToken = routeState.ChangedToken;
-                        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
-                        linkedToken = linkedCts.Token;
-                    }
-
                     try {
-                        context.ExecutionState = peer.ConnectionKind is RpcPeerConnectionKind.Local
-                            ? baseExecutionState // Local call -> continue the pipeline
-                            : preFinalExecutionState; // Remote call -> trigger just RPC call by invoking the final handler only
+                        if (isLocalCall) {
+                            // Local call -> continue the pipeline
+                            context.ExecutionState = baseExecutionState;
+                            if (shardRouteState is not null)
+                                // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                                routeChangedToken = await shardRouteState.WhenShardOwned(cancellationToken).ConfigureAwait(false);
+                        }
+                        else {
+                            // Remote call -> trigger just RPC call by invoking the final handler only
+                            context.ExecutionState = preFinalExecutionState;
+                        }
+
+                        if (routeChangedToken.CanBeCanceled) {
+                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
+                            linkedToken = linkedCts.Token;
+                        }
 
                         Task invokeRemainingHandlersTask;
                         using (new RpcOutboundCallSetup(peer).Activate())
@@ -65,6 +74,11 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                 }
                 catch (RpcRerouteException e) {
                     context.ResetResult();
+                    if (shardRouteState is not null && !shardRouteState.IsChanged()) {
+                        Log.LogWarning(e, "Re-acquiring shard ownership for command: {Command}", context.UntypedCommand);
+                        continue;
+                    }
+
                     ++rerouteCount;
                     Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}", rerouteCount, context.UntypedCommand);
                     await RpcHub.InternalServices.OutboundCallOptions

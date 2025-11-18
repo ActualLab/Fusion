@@ -86,9 +86,11 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                     else if (routeState is not null)
                         routeChangedToken = routeState.ChangedToken;
 
-                    linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
-                    if (methodDef.CancellationTokenIndex >= 0)
-                        invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
+                    if (routeChangedToken.CanBeCanceled) {
+                        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
+                        if (methodDef.CancellationTokenIndex >= 0)
+                            invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
+                    }
 
                     var untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
                     return await methodDef.TaskToObjectValueTaskConverter

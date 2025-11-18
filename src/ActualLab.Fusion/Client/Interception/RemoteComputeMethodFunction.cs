@@ -88,11 +88,16 @@ public abstract class RemoteComputeMethodFunction(
                     var computed = NewReplicaComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     try {
-                        CancellationToken routeChangedToken = default;
+                        var routeState = peer.Ref.RouteState;
+                        var shardRouteState = routeState.AsShardRouteState(RpcMethodDef);
+                        var routeChangedToken = routeState?.ChangedToken ?? default;
                         CancellationTokenSource? linkedCts = null;
                         var linkedToken = cancellationToken;
-                        if (peer.Ref.RouteState is { } routeState) {
-                            routeChangedToken = routeState.ChangedToken;
+                        if (shardRouteState is not null)
+                            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                            routeChangedToken = await shardRouteState.WhenShardOwned(cancellationToken).ConfigureAwait(false);
+
+                        if (routeChangedToken.CanBeCanceled) {
                             linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
                             linkedToken = linkedCts.Token;
                         }
@@ -106,7 +111,7 @@ public abstract class RemoteComputeMethodFunction(
                             throw new RpcRerouteException(routeChangedToken);
                         }
                         finally {
-                            linkedCts?.Dispose();
+                            linkedCts.DisposeSilently();
                         }
                     }
                     catch (Exception e) {
@@ -364,7 +369,6 @@ public abstract class RemoteComputeMethodFunction(
             var settings = new RpcOutboundCallSetup() {
                 CallTypeId = RpcComputeCallType.Id,
                 Peer = peer,
-                IsPrerouted = true,
                 CacheInfoCapture = cacheInfoCapture,
             };
             using (settings.Activate()) {
