@@ -340,7 +340,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionState.Value.Connection != connection)
                         continue; // Somehow disconnected
 
-                    routeChangedTokenRegistration = Task.Run(() => {
+                    _ = Task.Run(() => {
                         var tasks = new List<Task> {
                             SharedObjects.Maintain(handshake, readerToken),
                             RemoteObjects.Maintain(handshake, readerToken),
@@ -357,7 +357,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     Activity.Current = null;
                     try {
                         while (await reader.MoveNextAsync().ConfigureAwait(false))
-                            routeChangedTokenRegistration = ProcessMessage(reader.Current, peerChangedToken, readerToken);
+                            _ = ProcessMessage(reader.Current, peerChangedToken, readerToken);
                     }
                     finally {
                         // Reset AsyncLocals that might be set by ProcessMessage
@@ -388,7 +388,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
         finally {
             Log.LogInformation("'{PeerRef}': Stopping", Ref);
-            routeChangedTokenRegistration = Task.Run(async () => {
+            _ = Task.Run(async () => {
                 await Hub.Clock.Delay(Hub.PeerRemoveDelay, CancellationToken.None).ConfigureAwait(false);
                 Hub.RemovePeer(this);
             }, CancellationToken.None);
