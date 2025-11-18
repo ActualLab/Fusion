@@ -123,7 +123,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
             Peers[peerRef] = peer;
             peer.Start(isolate: true); // We don't want to capture Activity.Current, etc. here
             if (peerRef.RouteState is { } routeState)
-                _ = routeState.WhenRerouted().ContinueWith(_ => {
+                _ = routeState.WhenChanged().ContinueWith(_ => {
                     peer.Dispose();
                     peer.Log.LogWarning("'{PeerRef}': Ref is rerouted, peer {Peer} is disposed", peer.Ref, peer);
                 }, TaskScheduler.Default);

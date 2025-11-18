@@ -175,7 +175,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 if (!ConnectionState.IsFinal)
                     continue;
-                if (Ref.RouteState.IsRerouted())
+                if (Ref.RouteState.IsChanged())
                     throw RpcRerouteException.MustReroute();
                 throw;
             }
@@ -246,7 +246,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         Log.LogInformation("'{PeerRef}': Started", Ref);
 
         // ReSharper disable once UseAwaitUsing
-        using var rerouteTokenRegistration = Ref.RouteState?.RerouteToken.Register(() => Task.Run(DisposeAsync, CancellationToken.None));
+        // ReSharper disable once RedundantAssignment
+        using var routeChangedTokenRegistration = Ref.RouteState?.ChangedToken.Register(
+            () => Task.Run(DisposeAsync, CancellationToken.None));
 
         var handshakeIndex = 0;
         var connectionState = ConnectionState;
@@ -338,7 +340,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionState.Value.Connection != connection)
                         continue; // Somehow disconnected
 
-                    _ = Task.Run(() => {
+                    routeChangedTokenRegistration = Task.Run(() => {
                         var tasks = new List<Task> {
                             SharedObjects.Maintain(handshake, readerToken),
                             RemoteObjects.Maintain(handshake, readerToken),
@@ -355,7 +357,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     Activity.Current = null;
                     try {
                         while (await reader.MoveNextAsync().ConfigureAwait(false))
-                            _ = ProcessMessage(reader.Current, peerChangedToken, readerToken);
+                            routeChangedTokenRegistration = ProcessMessage(reader.Current, peerChangedToken, readerToken);
                     }
                     finally {
                         // Reset AsyncLocals that might be set by ProcessMessage
@@ -386,7 +388,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
         finally {
             Log.LogInformation("'{PeerRef}': Stopping", Ref);
-            _ = Task.Run(async () => {
+            routeChangedTokenRegistration = Task.Run(async () => {
                 await Hub.Clock.Delay(Hub.PeerRemoveDelay, CancellationToken.None).ConfigureAwait(false);
                 Hub.RemovePeer(this);
             }, CancellationToken.None);

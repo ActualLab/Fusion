@@ -50,7 +50,7 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
 
     public override string ToString()
     {
-        if (!RouteState.IsRerouted())
+        if (!RouteState.IsChanged())
             return Address; // Nothing to cache in this case
 
         return _toStringCached ??= "<rerouted>" + Address;

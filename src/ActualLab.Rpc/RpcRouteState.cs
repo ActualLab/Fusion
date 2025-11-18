@@ -2,11 +2,11 @@ namespace ActualLab.Rpc;
 
 public class RpcRouteState
 {
-    public CancellationToken RerouteToken { get; }
+    public CancellationToken ChangedToken { get; }
 
-    public RpcRouteState(CancellationToken rerouteToken)
+    public RpcRouteState(CancellationToken changedToken)
     {
-        RerouteToken = rerouteToken;
+        ChangedToken = changedToken;
 #if DEBUG
         // RerouteToken must always be cancellable per contract
         if (!RerouteToken.CanBeCanceled)

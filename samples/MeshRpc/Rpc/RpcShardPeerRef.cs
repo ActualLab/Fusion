@@ -20,7 +20,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
                 static shardRef1 => new LazySlim<ShardRef, RpcShardPeerRef>(shardRef1,
                     static shardRef2 => new RpcShardPeerRef(shardRef2)));
             var shardPeerRef = lazy.Value;
-            if (!shardPeerRef.RouteState.IsRerouted()) {
+            if (!shardPeerRef.RouteState.IsChanged()) {
                 shardPeerRef.TryStart(lazy);
                 return shardPeerRef;
             }

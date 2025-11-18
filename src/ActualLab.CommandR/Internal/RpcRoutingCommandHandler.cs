@@ -34,14 +34,14 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                 try {
                     var arguments = ArgumentList.New(command, cancellationToken);
                     var peer = rpcMethodDef.RouteOutboundCall(arguments);
-                    peer.Ref.RouteState.ThrowIfRerouted();
+                    peer.Ref.RouteState.ThrowIfChanged();
 
-                    CancellationToken rerouteToken = default;
+                    CancellationToken routeChangedToken = default;
                     CancellationTokenSource? linkedCts = null;
                     var linkedToken = cancellationToken;
                     if (peer.Ref.RouteState is { } routeState) {
-                        rerouteToken = routeState.RerouteToken;
-                        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
+                        routeChangedToken = routeState.ChangedToken;
+                        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
                         linkedToken = linkedCts.Token;
                     }
 
@@ -56,8 +56,8 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                         await invokeRemainingHandlersTask.ConfigureAwait(false);
                         return;
                     }
-                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && rerouteToken.IsCancellationRequested) {
-                        throw new RpcRerouteException(rerouteToken);
+                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && routeChangedToken.IsCancellationRequested) {
+                        throw new RpcRerouteException(routeChangedToken);
                     }
                     finally {
                         linkedCts.DisposeSilently();

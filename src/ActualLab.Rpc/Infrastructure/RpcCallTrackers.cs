@@ -89,7 +89,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
     public void TryReroute()
     {
-        if (!Peer.Ref.RouteState.IsRerouted())
+        if (!Peer.Ref.RouteState.IsChanged())
             return;
 
         foreach (var call in this)

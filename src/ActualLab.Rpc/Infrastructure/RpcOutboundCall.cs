@@ -319,7 +319,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public bool IsPeerChanged()
     {
         var peer = Peer;
-        if (!peer.Ref.RouteState.IsRerouted()) {
+        if (!peer.Ref.RouteState.IsChanged()) {
             // IsPeerChanged() is called from TryReroute(), which checks this condition,
             // but since this is a public method, we need to check it here as well.
             return false;

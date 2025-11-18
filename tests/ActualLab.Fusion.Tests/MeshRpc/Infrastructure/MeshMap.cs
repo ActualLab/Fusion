@@ -62,7 +62,7 @@ public sealed class MeshMap(StateFactory stateFactory)
             var peerRef = _peerRefs.GetOrAdd(shardIndex,
                 static (shardKey, self, holder) => new(self, shardKey, holder),
                 this);
-            if (!peerRef.RouteState.IsRerouted())
+            if (!peerRef.RouteState.IsChanged())
                 return peerRef;
 
             sw.SpinOnce();

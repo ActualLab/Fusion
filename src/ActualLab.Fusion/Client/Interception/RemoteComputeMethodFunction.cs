@@ -77,7 +77,7 @@ public abstract class RemoteComputeMethodFunction(
                 // a post-async-lock block, so the original RpcOutgoingCallSettings.Peer won't be available
                 // at this point. And that's why there is also no need to reset it.
                 var peer = RpcMethodDef.RouteOutboundCall(typedInput.Invocation.Arguments);
-                peer.Ref.RouteState.ThrowIfRerouted();
+                peer.Ref.RouteState.ThrowIfChanged();
 
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                     // Local computation / no RPC call scenario
@@ -88,12 +88,12 @@ public abstract class RemoteComputeMethodFunction(
                     var computed = NewReplicaComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     try {
-                        CancellationToken rerouteToken = default;
+                        CancellationToken routeChangedToken = default;
                         CancellationTokenSource? linkedCts = null;
                         var linkedToken = cancellationToken;
                         if (peer.Ref.RouteState is { } routeState) {
-                            rerouteToken = routeState.RerouteToken;
-                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
+                            routeChangedToken = routeState.ChangedToken;
+                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
                             linkedToken = linkedCts.Token;
                         }
 
@@ -102,8 +102,8 @@ public abstract class RemoteComputeMethodFunction(
                             computed.TrySetValue(result);
                             return computed;
                         }
-                        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && rerouteToken.IsCancellationRequested) {
-                            throw new RpcRerouteException(rerouteToken);
+                        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && routeChangedToken.IsCancellationRequested) {
+                            throw new RpcRerouteException(routeChangedToken);
                         }
                         finally {
                             linkedCts?.Dispose();

@@ -57,10 +57,10 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
             try {
                 var peer = context.Peer!;
                 var routeState = peer.Ref.RouteState;
-                routeState.ThrowIfRerouted();
+                routeState.ThrowIfChanged();
 
-                var rerouteToken = routeState?.RerouteToken ?? default;
-                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
+                var routeChangedToken = routeState?.ChangedToken ?? default;
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
                 if (methodDef.CancellationTokenIndex >= 0)
                     invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
 
@@ -77,8 +77,8 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                         .Invoke(untypedResultTask)
                         .ConfigureAwait(false);
                 }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && rerouteToken.IsCancellationRequested) {
-                    throw new RpcRerouteException(rerouteToken);
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && routeChangedToken.IsCancellationRequested) {
+                    throw new RpcRerouteException(routeChangedToken);
                 }
                 finally {
                     linkedCts.DisposeSilently();
