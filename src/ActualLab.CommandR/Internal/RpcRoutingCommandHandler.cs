@@ -34,18 +34,18 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                 try {
                     var arguments = ArgumentList.New(command, cancellationToken);
                     var peer = rpcMethodDef.RouteOutboundCall(arguments);
-                    peer.ThrowIfRerouted();
+                    peer.Ref.RouteState.ThrowIfRerouted();
 
-                    var rerouteToken = peer.Ref.RouteState?.RerouteToken ?? default;
+                    CancellationToken rerouteToken = default;
                     CancellationTokenSource? linkedCts = null;
-                    try {
-                        CancellationToken linkedToken;
-                        if (peer.Ref.RouteState is not null) {
-                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
-                            linkedToken = linkedCts.Token;
-                        } else
-                            linkedToken = cancellationToken;
+                    var linkedToken = cancellationToken;
+                    if (peer.Ref.RouteState is { } routeState) {
+                        rerouteToken = routeState.RerouteToken;
+                        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
+                        linkedToken = linkedCts.Token;
+                    }
 
+                    try {
                         context.ExecutionState = peer.ConnectionKind is RpcPeerConnectionKind.Local
                             ? baseExecutionState // Local call -> continue the pipeline
                             : preFinalExecutionState; // Remote call -> trigger just RPC call by invoking the final handler only
@@ -56,7 +56,7 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                         await invokeRemainingHandlersTask.ConfigureAwait(false);
                         return;
                     }
-                    catch (OperationCanceledException) when ((peer.Ref.RouteState?.IsRerouted ?? false) && !cancellationToken.IsCancellationRequested) {
+                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && rerouteToken.IsCancellationRequested) {
                         throw new RpcRerouteException(rerouteToken);
                     }
                     finally {

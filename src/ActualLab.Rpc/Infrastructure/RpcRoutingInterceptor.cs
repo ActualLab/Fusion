@@ -56,10 +56,14 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
         while (true) {
             try {
                 var peer = context.Peer!;
-                peer.ThrowIfRerouted();
+                var routeState = peer.Ref.RouteState;
+                routeState.ThrowIfRerouted();
 
-                var rerouteToken = peer.Ref.RouteState!.RerouteToken;
-                CancellationTokenSource? linkedCts = null;
+                var rerouteToken = routeState?.RerouteToken ?? default;
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
+                if (methodDef.CancellationTokenIndex >= 0)
+                    invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
+
                 try {
                     if (call is not null)
                         return await call.Invoke().ConfigureAwait(false);
@@ -67,21 +71,13 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
                     if (localCallAsyncInvoker is null)
                         throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
 
-                    Task untypedResultTask;
-                    if (true) { // RerouteToken in RouteState is always cancellable
-                        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
-                        if (methodDef.CancellationTokenIndex >= 0)
-                            invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex,
-                                linkedCts.Token);
 
-                        untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
-                    }
-
+                    var untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
                     return await methodDef.TaskToObjectValueTaskConverter
                         .Invoke(untypedResultTask)
                         .ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)when (rerouteToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && rerouteToken.IsCancellationRequested) {
                     throw new RpcRerouteException(rerouteToken);
                 }
                 finally {

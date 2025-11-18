@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Tests.MeshRpc;
 
@@ -61,7 +62,7 @@ public sealed class MeshMap(StateFactory stateFactory)
             var peerRef = _peerRefs.GetOrAdd(shardIndex,
                 static (shardKey, self, holder) => new(self, shardKey, holder),
                 this);
-            if (!(peerRef.RouteState?.IsRerouted ?? false))
+            if (!peerRef.RouteState.IsRerouted())
                 return peerRef;
 
             sw.SpinOnce();

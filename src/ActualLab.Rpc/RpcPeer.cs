@@ -175,7 +175,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 if (!ConnectionState.IsFinal)
                     continue;
-                if (Ref.RouteState?.IsRerouted ?? false)
+                if (Ref.RouteState.IsRerouted())
                     throw RpcRerouteException.MustReroute();
                 throw;
             }
@@ -234,10 +234,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         lock (Lock)
             _resetTryIndex = true;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void ThrowIfRerouted()
-        => Ref.RouteState?.ThrowIfRerouted();
 
     // Protected methods
 

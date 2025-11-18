@@ -27,7 +27,7 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
         set;
     } = VersionSet.Empty;
 
-    // Rerouting-related properties moved to RpcRouteState
+    // Rerouting-related properties
     public RpcRouteState? RouteState { get; protected set; }
 
     // Protected properties
@@ -38,6 +38,9 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
             if (field != 0)
                 return field;
 
+            if (!IsInitialized)
+                throw Errors.NotInitialized();
+
             field = Address.GetOrdinalHashCode();
             if (field == 0)
                 field = -1;
@@ -47,10 +50,10 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
 
     public override string ToString()
     {
-        if (!(RouteState?.IsRerouted ?? false))
-            return Address;
+        if (!RouteState.IsRerouted())
+            return Address; // Nothing to cache in this case
 
-        return _toStringCached ??= "<*>" + Address;
+        return _toStringCached ??= "<rerouted>" + Address;
     }
 
     /// <summary>

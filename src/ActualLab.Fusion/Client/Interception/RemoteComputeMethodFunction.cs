@@ -77,7 +77,7 @@ public abstract class RemoteComputeMethodFunction(
                 // a post-async-lock block, so the original RpcOutgoingCallSettings.Peer won't be available
                 // at this point. And that's why there is also no need to reset it.
                 var peer = RpcMethodDef.RouteOutboundCall(typedInput.Invocation.Arguments);
-                peer.ThrowIfRerouted();
+                peer.Ref.RouteState.ThrowIfRerouted();
 
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                     // Local computation / no RPC call scenario
@@ -88,21 +88,21 @@ public abstract class RemoteComputeMethodFunction(
                     var computed = NewReplicaComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     try {
-                        var rerouteToken = peer.Ref.RouteState?.RerouteToken ?? default;
+                        CancellationToken rerouteToken = default;
                         CancellationTokenSource? linkedCts = null;
-                        try {
-                            CancellationToken linkedToken;
-                            if (peer.Ref.RouteState is not null) {
-                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
-                                linkedToken = linkedCts.Token;
-                            } else
-                                linkedToken = cancellationToken;
+                        var linkedToken = cancellationToken;
+                        if (peer.Ref.RouteState is { } routeState) {
+                            rerouteToken = routeState.RerouteToken;
+                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, rerouteToken);
+                            linkedToken = linkedCts.Token;
+                        }
 
+                        try {
                             var result = await typedInput.InvokeInterceptedUntyped(linkedToken).ConfigureAwait(false);
                             computed.TrySetValue(result);
                             return computed;
                         }
-                        catch (OperationCanceledException) when ((peer.Ref.RouteState?.IsRerouted ?? false) && !cancellationToken.IsCancellationRequested) {
+                        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && rerouteToken.IsCancellationRequested) {
                             throw new RpcRerouteException(rerouteToken);
                         }
                         finally {
