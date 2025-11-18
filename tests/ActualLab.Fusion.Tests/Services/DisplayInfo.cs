@@ -17,7 +17,17 @@ public static class DisplayInfo
                     var p = new Process() {
                         StartInfo = new ProcessStartInfo() {
                             FileName = "cmd.exe",
-                            Arguments = "/c wmic path Win32_VideoController get CurrentHorizontalResolution,CurrentVerticalResolution",
+                            Arguments =
+                                "/c powershell -NoProfile -Command " +
+                                "\"$sig = '[DllImport(\\\"user32.dll\\\")] public static extern IntPtr GetDC(IntPtr h); " +
+                                "[DllImport(\\\"user32.dll\\\")] public static extern int ReleaseDC(IntPtr h, IntPtr dc); " +
+                                "[DllImport(\\\"gdi32.dll\\\")] public static extern int GetDeviceCaps(IntPtr hdc, int n);'; " +
+                                "Add-Type -MemberDefinition $sig -Name Native -Namespace Win32; " +
+                                "$dc = [Win32.Native]::GetDC([IntPtr]::Zero); " +
+                                "$w = [Win32.Native]::GetDeviceCaps($dc, 118); " +
+                                "$h = [Win32.Native]::GetDeviceCaps($dc, 117); " +
+                                "[Win32.Native]::ReleaseDC([IntPtr]::Zero, $dc); " +
+                                "Write-Output \\\"$($w) x $($h)\\\"\"",
                             UseShellExecute = false,
                             RedirectStandardOutput = true,
                             CreateNoWindow = true
@@ -27,9 +37,9 @@ public static class DisplayInfo
                     p.WaitForExit();
                     var wh = p.StandardOutput.ReadToEnd().TrimEnd()
                         .Split("\r\n").Last()
-                        .Split(" ", StringSplitOptions.RemoveEmptyEntries);
-                    var w = int.Parse(wh[0], NumberStyles.Integer, CultureInfo.InvariantCulture);
-                    var h = int.Parse(wh[1], NumberStyles.Integer, CultureInfo.InvariantCulture);
+                        .Split("x", StringSplitOptions.RemoveEmptyEntries);
+                    var w = int.Parse(wh[0].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture);
+                    var h = int.Parse(wh[1].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture);
                     PrimaryDisplayDimensions = new Rectangle(0, 0, w, h);
                     break;
             }
