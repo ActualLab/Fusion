@@ -117,6 +117,7 @@ public partial class RpcMethodDef
                         if (preprocessors is not null)
                             foreach (var p in preprocessors)
                                 await p.Invoke(call).ConfigureAwait(false);
+                        validator?.Invoke(call);
                         server ??= methodDef.Service.Server!;
                         await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                         return default!;
