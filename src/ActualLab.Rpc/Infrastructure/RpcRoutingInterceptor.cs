@@ -68,10 +68,8 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
         var rerouteCount = 0;
         while (true) {
             var peer = context.Peer!;
-            var routeState = peer.Ref.RouteState;
-            var shardRouteState = methodDef.OutboundCallShardRoutingMode is RpcShardRoutingMode.Default
-                ? routeState as RpcShardRouteState
-                : null;
+            var routeState = peer.Ref.RouteState; // May become null after rerouting
+            var shardRouteState = routeState.AsShardRouteState(methodDef);
             CancellationToken routeChangedToken = default;
             try {
                 routeState.ThrowIfChanged();

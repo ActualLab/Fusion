@@ -37,5 +37,11 @@ public static class RpcRouteStateExt
                 cancellationToken.ThrowIfCancellationRequested();
             }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public RpcShardRouteState? AsShardRouteState(RpcMethodDef methodDef)
+            => methodDef.OutboundCallShardRoutingMode is RpcShardRoutingMode.Unused
+                ? null
+                : routeState as RpcShardRouteState;
     }
 }
