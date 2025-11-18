@@ -50,10 +50,10 @@ public partial class RpcMethodDef : MethodDef
     public readonly bool IsBackend;
     public readonly RpcMethodKind Kind;
     public readonly RpcSystemMethodKind SystemMethodKind;
-    public readonly LegacyNames LegacyNames = LegacyNames.Empty;
+    public RpcMethodAttribute? Attribute { get; protected set; }
+    public LegacyNames LegacyNames { get; init; } = LegacyNames.Empty;
     public RpcCallTracer? Tracer { get; init; }
     public PropertyBag Properties { get; protected set; }
-    public RpcMethodAttribute? Attribute { get; protected set; }
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
@@ -126,6 +126,7 @@ public partial class RpcMethodDef : MethodDef
         OutboundCallRouter = IsSystem
             ? _ => throw Errors.InternalError("All system calls must be pre-routed.")
             : Hub.OutboundCallOptions.RouterFactory.Invoke(this);
+        OutboundCallShardRoutingMode = Hub.OutboundCallOptions.ShardRoutingModeProvider.Invoke(this);
 
         // Inbound call properties
 

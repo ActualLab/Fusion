@@ -22,7 +22,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     public CancellationToken CancellationToken; // From Arguments
     public RpcOutboundCall? Call;
     public RpcPeer? Peer;
-    public bool AllowRerouting = true;
+    public bool IsPrerouted; // if true, Peer != null
     public long RelatedId;
     public int SizeHint;
     public RpcCacheInfoCapture? CacheInfoCapture;

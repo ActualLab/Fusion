@@ -364,7 +364,7 @@ public abstract class RemoteComputeMethodFunction(
             var settings = new RpcOutboundCallSetup() {
                 CallTypeId = RpcComputeCallType.Id,
                 Peer = peer,
-                AllowRerouting = false,
+                IsPrerouted = true,
                 CacheInfoCapture = cacheInfoCapture,
             };
             using (settings.Activate()) {

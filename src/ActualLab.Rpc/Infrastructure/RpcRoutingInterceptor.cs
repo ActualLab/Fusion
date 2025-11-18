@@ -1,4 +1,6 @@
 using ActualLab.Interception;
+using ActualLab.Reflection.Internal;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -30,16 +32,27 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
             var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
             var peer = context.Peer!;
 
-            if (context.AllowRerouting && peer.Ref.RouteState is not null)
-                resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
-            else if (call is null) { // Local call
-                if (localCallAsyncInvoker is null)
-                    throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
+            if (context.IsPrerouted) {
+                // The call is prerouted, which implies it has to be an RPC call
+                if (call is null)
+                    throw RpcRerouteException.MustReroutePrerouted();
 
-                resultTask = localCallAsyncInvoker.Invoke(invocation);
-            }
-            else
                 resultTask = call.Invoke();
+            }
+            else if (peer.Ref.RouteState is null) {
+                // There is no RoutingState, and thus no rerouting and no shard routing
+                if (call is null) {
+                    if (localCallAsyncInvoker is null)
+                        throw Errors.CannotExecuteInterfaceCallLocally();
+
+                    resultTask = localCallAsyncInvoker.Invoke(invocation);
+                }
+                else
+                    resultTask = call.Invoke();
+            }
+            else // There is a RoutingState, and thus rerouting / shard routing is possible
+                resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
+
             return rpcMethodDef.UniversalAsyncResultConverter.Invoke(resultTask);
         };
     }
@@ -54,23 +67,30 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
         var cancellationToken = context.CancellationToken;
         var rerouteCount = 0;
         while (true) {
+            var peer = context.Peer!;
+            var routeState = peer.Ref.RouteState;
+            var shardRouteState = methodDef.OutboundCallShardRoutingMode is RpcShardRoutingMode.Default
+                ? routeState as RpcShardRouteState
+                : null;
+            CancellationToken routeChangedToken = default;
             try {
-                var peer = context.Peer!;
-                var routeState = peer.Ref.RouteState;
                 routeState.ThrowIfChanged();
-
-                var routeChangedToken = routeState?.ChangedToken ?? default;
-                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
-                if (methodDef.CancellationTokenIndex >= 0)
-                    invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
-
+                CancellationTokenSource? linkedCts = null;
                 try {
-                    if (call is not null)
+                    if (call is not null) // Outbound RPC call
                         return await call.Invoke().ConfigureAwait(false);
 
                     if (localCallAsyncInvoker is null)
-                        throw RpcRerouteException.MustRerouteToLocal(); // A higher level interceptor should handle it
+                        throw Errors.CannotExecuteInterfaceCallLocally();
 
+                    if (shardRouteState is not null)
+                        routeChangedToken = await shardRouteState.WhenShardOwned(cancellationToken).ConfigureAwait(false);
+                    else if (routeState is not null)
+                        routeChangedToken = routeState.ChangedToken;
+
+                    linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
+                    if (methodDef.CancellationTokenIndex >= 0)
+                        invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
 
                     var untypedResultTask = localCallAsyncInvoker.Invoke(invocation);
                     return await methodDef.TaskToObjectValueTaskConverter
@@ -87,8 +107,10 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
             catch (RpcRerouteException e) {
                 if (methodDef.CancellationTokenIndex >= 0)
                     invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
-                if (call is null && localCallAsyncInvoker is null)
-                    throw; // A higher level interceptor should handle it
+                if (shardRouteState is not null && !shardRouteState.IsChanged()) {
+                    Log.LogWarning(e, "Re-acquiring shard ownership: {Invocation}", invocation);
+                    continue;
+                }
 
                 ++rerouteCount;
                 Log.LogWarning(e, "Rerouting #{RerouteCount}: {Invocation}", rerouteCount, invocation);

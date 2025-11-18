@@ -25,4 +25,9 @@ public sealed class RpcMethodAttribute : Attribute
     /// <code>double.NaN</code> means "use default".
     /// </summary>
     public double LogTimeout { get; set; } = double.NaN;
+
+    /// <summary>
+    /// Shard routing mode.
+    /// </summary>
+    public RpcShardRoutingMode? ShardRoutingMode { get; set; }
 }

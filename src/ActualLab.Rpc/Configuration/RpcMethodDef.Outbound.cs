@@ -9,6 +9,7 @@ public partial class RpcMethodDef
     public Func<RpcOutboundContext, RpcOutboundCall> OutboundCallFactory { get; protected set; } = null!;
     public RpcCallTimeouts OutboundCallTimeouts { get; protected set; } = RpcCallTimeouts.None;
     public Func<ArgumentList, RpcPeerRef>? OutboundCallRouter { get; protected set; } = null;
+    public RpcShardRoutingMode OutboundCallShardRoutingMode { get; protected set; } = RpcShardRoutingMode.Unused;
 
     public RpcOutboundCall? CreateOutboundCall(RpcOutboundContext context)
     {

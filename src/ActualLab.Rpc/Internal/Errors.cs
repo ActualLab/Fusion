@@ -133,6 +133,10 @@ public static class Errors
     public static Exception InvalidWebSocketMessageType(WebSocketMessageType type, WebSocketMessageType expectedType)
         => new InvalidOperationException($"Invalid WebSocket message type: got {type:G}, but expected {expectedType:G}.");
 
+    public static Exception CannotExecuteInterfaceCallLocally()
+        => new InvalidOperationException(
+            "Cannot execute interface call locally (no local call invoker). "
+            + "This error may occur due to a bug in RPC proxy or interceptor setup.");
     public static Exception SystemCallsMustBePrerouted()
         => new InvalidOperationException("System calls must be prerouted.");
 

@@ -15,9 +15,10 @@ public sealed class RpcOutboundCallSetup(RpcPeer? peer = null)
     public byte CallTypeId { get; init; } // You typically shouldn't set it!
     public RpcHeader[]? Headers { get; init; } // You typically shouldn't set it!
     public RpcPeer? Peer { get; init; } = peer;
-    public bool AllowRerouting { get; init; }
     public RpcCacheInfoCapture? CacheInfoCapture { get; init; }
     public RpcOutboundContext? ProducedContext { get; private set; } // Set by ProduceContext
+
+    // Static methods
 
     public static RpcOutboundContext ProduceContext()
     {
@@ -28,7 +29,7 @@ public sealed class RpcOutboundCallSetup(RpcPeer? peer = null)
         var context = new RpcOutboundContext(value.Headers);
         if (value.Peer is not null)
             context.Peer = value.Peer;
-        context.AllowRerouting = value.AllowRerouting;
+        context.IsPrerouted = value.Peer is not null;
         if (value.CacheInfoCapture is not null)
             context.CacheInfoCapture = value.CacheInfoCapture;
         value.ProducedContext = context;
