@@ -33,7 +33,6 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
             while (true) {
                 var arguments = ArgumentList.New(command, cancellationToken);
                 var peer = rpcMethodDef.RouteOutboundCall(arguments);
-                var isLocalCall = peer.ConnectionKind is RpcPeerConnectionKind.Local;
                 var routeState = peer.Ref.RouteState;
                 var shardRouteState = routeState.AsShardRouteState(rpcMethodDef);
                 try {
@@ -42,26 +41,30 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                     CancellationTokenSource? linkedCts = null;
                     var linkedToken = cancellationToken;
                     try {
-                        if (isLocalCall) {
-                            // Local call -> continue the pipeline
-                            context.ExecutionState = baseExecutionState;
+                        Task invokeRemainingHandlersTask;
+                        if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                             if (shardRouteState is not null)
                                 // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                                 routeChangedToken = await shardRouteState.WhenShardOwned(cancellationToken).ConfigureAwait(false);
+
+                            if (routeChangedToken.CanBeCanceled) {
+                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
+                                linkedToken = linkedCts.Token;
+                            }
+
+                            // Local call -> continue the pipeline
+                            context.ExecutionState = baseExecutionState;
+                            invokeRemainingHandlersTask = context.InvokeRemainingHandlers(linkedToken);
                         }
                         else {
                             // Remote call -> trigger just RPC call by invoking the final handler only
                             context.ExecutionState = preFinalExecutionState;
+                            using (new RpcOutboundCallSetup(peer).Activate()) {
+                                // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                                invokeRemainingHandlersTask = context.InvokeRemainingHandlers(linkedToken);
+                            }
                         }
 
-                        if (routeChangedToken.CanBeCanceled) {
-                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
-                            linkedToken = linkedCts.Token;
-                        }
-
-                        Task invokeRemainingHandlersTask;
-                        using (new RpcOutboundCallSetup(peer).Activate())
-                            invokeRemainingHandlersTask = context.InvokeRemainingHandlers(linkedToken);
                         await invokeRemainingHandlersTask.ConfigureAwait(false);
                         return;
                     }
