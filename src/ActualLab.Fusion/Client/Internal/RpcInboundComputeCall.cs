@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using ActualLab.Internal;
-using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Versioning;
 
@@ -55,7 +54,7 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
                 ResultHeaders = ResultHeaders.WithOrReplace(versionHeader);
             }
             if (CallCancelToken.IsCancellationRequested) {
-                // The call is cancelled by remote party
+                // The call is cancelled by the remote party
                 UnregisterFromLock();
                 return;
             }
@@ -73,11 +72,12 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
                 await computed.WhenInvalidated(commonCts.Token).ConfigureAwait(false);
             }
             else
-                await TickSource.Default.WhenNextTick()
+                await TickSource.Default
+                    .WhenNextTick()
                     .ConfigureAwait(false); // A bit of extra delay in case there is no computed
         }
         catch (OperationCanceledException) when (CallCancelToken.IsCancellationRequested) {
-            // The call is cancelled by remote party
+            // The call is cancelled by the remote party
             mustSendInvalidation = false;
         }
         Unregister();
@@ -94,7 +94,7 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context)
     public Computed<TResult>? Computed { get; private set; }
     public override Computed? UntypedComputed => Computed;
 
-#if NET5_0_OR_GREATER1
+#if NET5_0_OR_GREATER
     protected override async Task<TResult> InvokeServer()
     {
         Debug.Assert(ComputeContext.Current == ComputeContext.None);
@@ -121,6 +121,7 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context)
         async Task<TResult> Implementation() {
             Debug.Assert(ComputeContext.Current == ComputeContext.None);
             var context = new ComputeContext(CallOptions.Capture | CallOptions.RerouteUnlessLocal);
+            ComputeContext.Current = context;
             try {
                 var invokeTask = (Task<TResult>)MethodDef.InboundCallServerInvoker.Invoke(this);
                 return await invokeTask.ConfigureAwait(false);

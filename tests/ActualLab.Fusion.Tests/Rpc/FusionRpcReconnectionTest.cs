@@ -39,9 +39,11 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var startedAt = CpuTimestamp.Now;
         await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1));
+        Out.WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
+
         var elapsed = CpuTimestamp.Now - startedAt;
         if (!TestRunnerInfo.IsBuildAgent())
-            elapsed.TotalSeconds.Should().BeGreaterThan(0.1);
+            elapsed.TotalSeconds.Should().BeGreaterThan(0.1); // Invalidation should originate from invDelay
 
         await AssertNoCalls(clientPeer, Out);
     }
@@ -72,7 +74,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var elapsed = CpuTimestamp.Now - startedAt;
         if (!TestRunnerInfo.IsBuildAgent())
-            elapsed.TotalSeconds.Should().BeGreaterThan(0.1);
+            elapsed.TotalSeconds.Should().BeGreaterThan(0.1); // Invalidation should originate from invDelay
 
         await AssertNoCalls(clientPeer, Out);
     }
@@ -108,7 +110,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var elapsed = CpuTimestamp.Now - startedAt;
         if (!TestRunnerInfo.IsBuildAgent())
-            elapsed.TotalSeconds.Should().BeGreaterThan(0.1);
+            elapsed.TotalSeconds.Should().BeGreaterThan(0.1); // Invalidation should originate from invDelay
 
         await AssertNoCalls(clientPeer, Out);
     }

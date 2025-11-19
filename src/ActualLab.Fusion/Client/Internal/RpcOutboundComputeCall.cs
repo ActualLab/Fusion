@@ -32,7 +32,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
                 // The best we can do is to invalidate it.
                 const string reason =
                     $"<FusionRpc>.{nameof(GetReconnectStage)}: peer change for an already started call";
-                SetInvalidated(false, reason);
+                SetInvalidated(notifyCancelled: false, reason);
                 return null;
             }
 
