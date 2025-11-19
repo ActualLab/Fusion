@@ -1,14 +1,6 @@
-using System.Diagnostics;
-
 namespace ActualLab.Rpc;
 
-public class RpcRouteState
+public class RpcRouteState(CancellationToken changedToken)
 {
-    public CancellationToken ChangedToken { get; }
-
-    public RpcRouteState(CancellationToken changedToken)
-    {
-        Debug.Assert(changedToken.CanBeCanceled);
-        ChangedToken = changedToken;
-    }
+    public CancellationToken ChangedToken { get; protected set; } = changedToken;
 }

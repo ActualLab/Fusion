@@ -14,7 +14,7 @@ public record RpcOutboundCallOptions
     public Func<RpcMethodDef, RpcCallTimeouts> TimeoutsProvider { get; init; }
     public Func<RpcMethodDef, Func<ArgumentList, RpcPeerRef>> RouterFactory { get; init; }
     public Func<RpcOutboundCallOptions, int, CancellationToken, Task> ReroutingDelayer { get; init; }
-    public Func<RpcMethodDef, RpcShardRoutingMode> ShardRoutingModeProvider { get; init; }
+    public Func<RpcMethodDef, RpcLocalExecutionMode> LocalExecutionModeResolver { get; init; }
     public Func<ReadOnlyMemory<byte>, string> Hasher { get; init; }
 
     // ReSharper disable once ConvertConstructorToMemberInitializers
@@ -23,7 +23,7 @@ public record RpcOutboundCallOptions
         TimeoutsProvider = DefaultTimeoutsProvider;
         RouterFactory = DefaultRouterFactory;
         ReroutingDelayer = DefaultReroutingDelayer;
-        ShardRoutingModeProvider = DefaultShardRoutingModeProvider;
+        LocalExecutionModeResolver = DefaultLocalExecutionModeResolver;
         Hasher = DefaultHasher;
     }
 
@@ -55,12 +55,13 @@ public record RpcOutboundCallOptions
     protected static Task DefaultReroutingDelayer(RpcOutboundCallOptions options, int failureCount, CancellationToken cancellationToken)
         => Task.Delay(options.ReroutingDelays.GetDelay(failureCount), cancellationToken);
 
-    protected static RpcShardRoutingMode DefaultShardRoutingModeProvider(RpcMethodDef methodDef)
+    protected static RpcLocalExecutionMode DefaultLocalExecutionModeResolver(RpcMethodDef methodDef)
     {
         if (methodDef.Service.Mode is not RpcServiceMode.Distributed)
-            return RpcShardRoutingMode.Unused;
+            return RpcLocalExecutionMode.Unconstrained;
 
-        return methodDef.Attribute?.ShardRoutingMode ?? RpcShardRoutingMode.Default;
+        // By default, all distributed service methods require shard lock.
+        return methodDef.Attribute?.LocalExecutionMode ?? RpcLocalExecutionMode.RequireShardLock;
     }
 
     protected static string DefaultHasher(ReadOnlyMemory<byte> bytes)

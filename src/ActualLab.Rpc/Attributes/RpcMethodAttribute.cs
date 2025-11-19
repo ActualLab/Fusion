@@ -29,5 +29,5 @@ public sealed class RpcMethodAttribute : Attribute
     /// <summary>
     /// Shard routing mode.
     /// </summary>
-    public RpcShardRoutingMode? ShardRoutingMode { get; set; }
+    public RpcLocalExecutionMode? LocalExecutionMode { get; set; }
 }
