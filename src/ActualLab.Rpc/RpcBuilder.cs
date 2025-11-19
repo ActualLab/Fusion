@@ -24,7 +24,7 @@ public readonly struct RpcBuilder
     {
         RpcModuleInitializer.Touch();
         CodeKeeper.AddFakeAction(static () => {
-            CodeKeeper.KeepStatic(typeof(Proxies));
+            CodeKeeper.KeepUnconstructable(typeof(Proxies));
 
             // Serializable types
             CodeKeeper.KeepSerializable<TypeRef>();
