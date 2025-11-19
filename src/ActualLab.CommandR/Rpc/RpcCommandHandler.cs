@@ -59,8 +59,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                                     .ConfigureAwait(false);
 
                             if (routeChangedToken.CanBeCanceled) {
-                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
-                                    routeChangedToken);
+                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
                                 linkedToken = linkedCts.Token;
                             }
 
