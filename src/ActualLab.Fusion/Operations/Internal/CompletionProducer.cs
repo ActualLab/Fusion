@@ -1,9 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
-public class CompletionProducer(CompletionProducer.Options settings, ICommander commander)
+public class CompletionProducer(CompletionProducer.Options settings, IServiceProvider services)
     : IOperationCompletionListener
 {
     public record Options
@@ -13,7 +15,8 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
     }
 
     protected Options Settings { get; } = settings;
-    protected ICommander Commander { get; } = commander;
+    protected ICommander Commander { get; } = services.Commander();
+    protected RpcHub RpcHub { get; } = services.RpcHub();
     protected IServiceProvider Services => Commander.Services;
     [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
@@ -27,7 +30,10 @@ public class CompletionProducer(CompletionProducer.Options settings, ICommander 
             var isLocal = commandContext is not null;
             var operationType = isLocal ? "Local" : "External";
             try {
-                await Commander.Call(Completion.New(operation), true).ConfigureAwait(false);
+                var completion = Completion.New(operation);
+                var context = CommandContext.New(Commander, completion, isOutermost: true);
+                context.Items.KeylessSet(new RpcOutboundCallSetup(RpcHub.LocalPeer)); // Override possible routing to a remote peer
+                await context.Call(CancellationToken.None).ConfigureAwait(false);
                 if (command is not INotLogged || Settings.IgnoreNotLogged)
                     Log.IfEnabled(Settings.LogLevel)?.Log(Settings.LogLevel,
                         "{OperationType} operation completion succeeded. Host: {HostId}, Command: {Command}",

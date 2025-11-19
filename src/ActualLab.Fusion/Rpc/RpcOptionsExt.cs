@@ -11,7 +11,6 @@ public static class RpcOptionsExt
         {
             optionDefaults.ApplyCommanderOverrides();
             RpcRegistryOptions.Default = RpcRegistryOptions.Default.WithFusionOverrides();
-            RpcOutboundCallOptions.Default = RpcOutboundCallOptions.Default.WithFusionOverrides();
             return optionDefaults;
         }
     }

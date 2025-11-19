@@ -93,7 +93,9 @@ public abstract class RemoteComputeMethodFunction(
                         var linkedToken = cancellationToken;
                         if (shardRouteState is not null)
                             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                            routeChangedToken = await shardRouteState.WhenShardOwned(cancellationToken).ConfigureAwait(false);
+                            routeChangedToken = await shardRouteState.ShardLockAwaiter
+                                .Invoke(cancellationToken)
+                                .ConfigureAwait(false);
 
                         if (routeChangedToken.CanBeCanceled) {
                             linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);

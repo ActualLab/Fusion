@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
@@ -31,7 +32,7 @@ public class InvalidatingCommandCompletionHandler(
     {
         var operation = completion.Operation;
         var command = operation.Command;
-        if (Invalidation.IsActive || !IsRequired(command, out _)) {
+        if (Invalidation.IsActive || !IsRequired(command, out _, out _)) {
             // The handler is unused for the current completion
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
@@ -74,8 +75,11 @@ public class InvalidatingCommandCompletionHandler(
         }
     }
 
-    public virtual bool IsRequired(ICommand? command, [MaybeNullWhen(false)] out IMethodCommandHandler finalHandler)
+    public virtual bool IsRequired(ICommand? command,
+        [MaybeNullWhen(false)] out IMethodCommandHandler finalHandler,
+        out RpcServiceDef? rpcServiceDef)
     {
+        rpcServiceDef = null;
         if (command is null or IDelegatingCommand) {
             finalHandler = null;
             return false;
@@ -85,12 +89,12 @@ public class InvalidatingCommandCompletionHandler(
         if (finalHandler is null || finalHandler.ParameterTypes.Length != 2)
             return false;
 
-        var rpcServiceDef = RpcHub.ServiceRegistry.Get(finalHandler.ServiceType);
+        rpcServiceDef = RpcHub.ServiceRegistry.Get(finalHandler.ServiceType);
         if (rpcServiceDef is { Mode: RpcServiceMode.Client }) {
             // The command is handled by a pure RPC client. It means that:
             // - Another host will process it, and thus it is responsible for adding it to the operation log, etc.
             // - This host cannot process its invalidation anyway, since Invalidation.Begin() block
-            //   enforces local routing for any command method call (see FusionRpcDefaultDelegates.CallRouter),
+            //   enforces local routing for any command method call (see RpcOutboundCallOptionsExt.RouterFactory)
             //   and this host doesn't have a service (server) to handle such a call.
             return false;
         }
@@ -107,20 +111,30 @@ public class InvalidatingCommandCompletionHandler(
         MutablePropertyBag operationItems,
         int index)
     {
-        if (!IsRequired(command, out var handler))
+        if (!IsRequired(command, out var finalHandler, out var rpcServiceDef))
             return index;
 
         operation.Items = operationItems;
         Log.IfEnabled(Settings.LogLevel)?.Log(Settings.LogLevel,
             "- Invalidation #{Index}: {Service}.{Method} <- {Command}",
-            index, handler.ServiceType.GetName(), handler.Method.Name, command);
+            index, finalHandler.ServiceType.GetName(), finalHandler.Method.Name, command);
         try {
-            await handler.Invoke(command, context, default).ConfigureAwait(false);
+            Task task;
+            if (rpcServiceDef is { Mode: RpcServiceMode.Distributed }
+                && rpcServiceDef.GetMethod(finalHandler.Method) is not null) {
+                // We're going to execute the distributed service method directly here,
+                // so make RpcInterceptor to execute it locally, without any kind of rerouting / reprocessing.
+                using (new RpcOutboundCallSetup(RpcHub.LocalPeer).Activate())
+                    task = finalHandler.Invoke(command, context, default);
+            }
+            else
+                task = finalHandler.Invoke(command, context, default);
+            await task.ConfigureAwait(false);
         }
         catch (Exception) {
             Log.LogError(
                 "Invalidation #{Index} failed: {Service}.{Method} <- {Command}",
-                index, handler.ServiceType.GetName(), handler.Method.Name, command);
+                index, finalHandler.ServiceType.GetName(), finalHandler.Method.Name, command);
         }
         return index + 1;
     }
