@@ -54,10 +54,8 @@ public class TestRunner(IServiceProvider services) : WorkerBase
                 var command = useFusion
                     ? (ICommand<CounterWithOrigin>)new FusionCounter_Increment(key)
                     : new SimpleCounter_Increment(key);
-                try {
-                    var result = await Commander.Call(command, cancellationToken);
-                    Console.WriteLine($"{prefix} -> {result}");
-                }
+                var result = await Commander.Call(command, cancellationToken);
+                Console.WriteLine($"{prefix} -> {result}");
             }
             else {
                 prefix += $".Get({key})";
