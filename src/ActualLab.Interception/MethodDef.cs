@@ -126,7 +126,7 @@ public partial class MethodDef
         UnwrappedReturnType = AsyncReturnTypeArgument ?? ReturnType;
         if (UnwrappedReturnType == typeof(void))
             UnwrappedReturnType = typeof(Unit);
-        IsUnwrappedReturnTypeClassOrNullable = UnwrappedReturnType.IsClass
+        IsUnwrappedReturnTypeClassOrNullable = !UnwrappedReturnType.IsValueType
             || (UnwrappedReturnType.IsGenericType && UnwrappedReturnType.GetGenericTypeDefinition() == typeof(Nullable<>));
 
         _defaultResultLazy = new LazySlim<MethodDef, object?>(this, static self => self.GetDefaultResult());

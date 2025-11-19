@@ -39,7 +39,7 @@ public partial class RpcMethodDef
         var nullabilityInfoContext = new NullabilityInfoContext();
         for (var i = 0; i < Parameters.Length; i++) {
             var p = Parameters[i];
-            if (p.ParameterType.IsClass && nullabilityInfoContext.Create(p).ReadState == NullabilityState.NotNull)
+            if (!p.ParameterType.IsValueType && nullabilityInfoContext.Create(p).ReadState == NullabilityState.NotNull)
                 nonNullableArgIndexesList.Add(i);
         }
         if (nonNullableArgIndexesList.Count == 0)
