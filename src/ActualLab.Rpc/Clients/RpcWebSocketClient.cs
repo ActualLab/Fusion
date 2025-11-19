@@ -56,9 +56,10 @@ public class RpcWebSocketClient(IServiceProvider services)
                 .WaitAsync(connectToken) // MAUI sometimes stucks in the sync part of ConnectAsync
                 .ConfigureAwait(false);
         }
-        catch (OperationCanceledException) {
-            if (!cancellationToken.IsCancellationRequested && connectToken.IsCancellationRequested)
+        catch (Exception e) {
+            if (e.IsCancellationOf(connectToken) && !cancellationToken.IsCancellationRequested)
                 throw Errors.ConnectTimeout();
+
             throw;
         }
 

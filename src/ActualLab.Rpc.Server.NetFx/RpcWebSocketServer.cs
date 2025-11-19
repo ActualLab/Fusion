@@ -79,7 +79,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
                     peer, delay.ToShortString());
                 await peer.Hub.Clock.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
-            await peer.SetConnection(connection, cancellationToken).ConfigureAwait(false);
+            await peer.SetNextConnection(connection, cancellationToken).ConfigureAwait(false);
             await channel.WhenClosed.ConfigureAwait(false);
         }
         catch (Exception e) {

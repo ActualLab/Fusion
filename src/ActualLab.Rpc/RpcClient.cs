@@ -37,7 +37,7 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
         var serverConnection = new RpcConnection(channelPair.Channel2, PropertyBag.Empty.KeylessSet((RpcPeer)serverPeer)) {
             IsLocal = true,
         };
-        await serverPeer.SetConnection(serverConnection, cancellationToken).ConfigureAwait(false);
+        await serverPeer.SetNextConnection(serverConnection, cancellationToken).ConfigureAwait(false);
         return clientConnection;
     }
 }

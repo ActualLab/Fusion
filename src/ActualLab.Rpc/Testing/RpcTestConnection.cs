@@ -101,7 +101,7 @@ public class RpcTestConnection
         // ReSharper disable once InconsistentlySynchronizedField
         var channels = await WhenChannelsReady(cancellationToken).ConfigureAwait(false);
         var serverConnection = new RpcConnection(channels.Channel2);
-        await ServerPeer.SetConnection(serverConnection, cancellationToken).ConfigureAwait(false);
+        await ServerPeer.SetNextConnection(serverConnection, cancellationToken).ConfigureAwait(false);
         return channels.Channel1;
     }
 

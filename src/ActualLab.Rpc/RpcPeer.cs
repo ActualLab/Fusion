@@ -272,7 +272,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionState.IsFinal)
                         return;
 
-                    if (connectionState.Value.IsConnected())
+                    if (connectionState.Value.Connection is not null)
                         connectionState = SetConnectionState(connectionState.Value.NextDisconnected(), connectionState).RequireNonFinal();
 
                     // ReSharper disable once PossiblyMistakenUseOfCancellationToken
