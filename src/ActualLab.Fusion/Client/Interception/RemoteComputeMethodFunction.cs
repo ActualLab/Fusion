@@ -272,7 +272,7 @@ public abstract class RemoteComputeMethodFunction(
             }
             catch (Exception whenConnectedError) {
                 const string reason =
-                    $"<FusionRPC>.{nameof(ApplyRpcUpdate)}: {nameof(WhenConnectedChecked)} failure";
+                    $"<FusionRpc>.{nameof(ApplyRpcUpdate)}: {nameof(WhenConnectedChecked)} failure";
                 await InvalidateOnError(cachedComputed, whenConnectedError, reason).ConfigureAwait(false);
                 return;
             }
@@ -286,13 +286,13 @@ public abstract class RemoteComputeMethodFunction(
         var (value, error) = result;
         if (call is null) {
             const string reason =
-                $"<FusionRPC>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} requested rerouting (call is null)";
+                $"<FusionRpc>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} requested rerouting (call is null)";
             await InvalidateToReroute(cachedComputed, result.Error, reason).ConfigureAwait(false);
             return;
         }
         if (error is RpcRerouteException) {
             const string reason =
-                $"<FusionRPC>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} requested rerouting ({nameof(RpcRerouteException)})";
+                $"<FusionRpc>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} requested rerouting ({nameof(RpcRerouteException)})";
             await InvalidateToReroute(cachedComputed, result.Error, reason).ConfigureAwait(false);
             return;
         }
@@ -317,7 +317,7 @@ public abstract class RemoteComputeMethodFunction(
                 input.Category, delay.ToShortString());
             await Task.Delay(delay).ConfigureAwait(false);
             const string reason =
-                $"<FusionRPC>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} got server-side cancellation";
+                $"<FusionRpc>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} got server-side cancellation";
             call.SetInvalidated(true, reason);
             return;
         }

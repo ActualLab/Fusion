@@ -20,7 +20,7 @@ public class RpcComputeSystemCalls(IServiceProvider services)
         var outboundCallId = context.Message.RelatedId;
         if (peer.OutboundCalls.Get(outboundCallId) is RpcOutboundComputeCall outboundCall) {
             const string reason =
-                $"<FusionRPC>.{nameof(Invalidate)}";
+                $"<FusionRpc>.{nameof(Invalidate)}";
             outboundCall.SetInvalidated(context, reason);
         }
         return RpcNoWait.Tasks.Completed;
