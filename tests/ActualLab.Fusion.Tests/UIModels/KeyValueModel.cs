@@ -39,6 +39,11 @@ public class StringKeyValueModelState : ComputedState<KeyValueModel<string>>
             if (IsDisposed) // Never complete if the state is already disposed
                 await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
 
+            Fusion.Computed.GetCurrent().Invalidated += c => {
+                Debug.WriteLine($"{nameof(StringKeyValueModelState)}: invalidated by: {c.InvalidationSource}");
+            };
+
+            Debug.WriteLine($"{nameof(StringKeyValueModelState)}: Compute");
             var updateCount = ValueOrDefault?.UpdateCount ?? 0;
             var key = Locals.ValueOrDefault ?? "";
             var value = await KeyValueService.Get(key, cancellationToken).ConfigureAwait(false);

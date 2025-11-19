@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Testing;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Fusion.Tests.UIModels;
 
@@ -36,25 +37,25 @@ public class KeyValueModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
         c.IsConsistent().Should().BeFalse();
         c.Value.Should().Be(null);
 
-        await TestExt.When(() => {
+        await ComputedTest.When(async ct => {
+            await kvm.Computed.UseUntyped(ct);
             var snapshot = kvm.Snapshot;
-            snapshot.Computed.HasValue.Should().BeTrue();
             var c = (Computed<KeyValueModel<string>>)snapshot.Computed;
             c.IsConsistent().Should().BeTrue();
             c.Value.Key.Should().Be("");
             c.Value.Value.Should().Be("1");
             c.Value.UpdateCount.Should().Be(1);
-        }, TimeSpan.FromSeconds(1));
+        }, TimeSpan.FromSeconds(2));
 
         // Update
         await kvc.Set(kvm.Computed.Value.Key, "2");
-        await Task.Delay(300);
+        var s = kvm.Snapshot;
         c = kvm.Computed;
-        c.IsConsistent().Should().BeFalse();
         c.Value.Value.Should().Be("1");
         c.Value.UpdateCount.Should().Be(1);
 
-        await Task.Delay(1000);
+        await c.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(0.3)); // Invalidations are instant
+        await s.WhenUpdated().WaitAsync(TimeSpan.FromSeconds(0.8)); // Update delay is 0.5s
         c = kvm.Computed;
         c.IsConsistent().Should().BeTrue();
         c.Value.Value.Should().Be("2");
