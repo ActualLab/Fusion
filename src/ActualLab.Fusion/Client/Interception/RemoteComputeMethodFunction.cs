@@ -105,7 +105,7 @@ public abstract class RemoteComputeMethodFunction(
                             computed.TrySetValue(result);
                             return computed;
                         }
-                        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && routeChangedToken.IsCancellationRequested) {
+                        catch (Exception e) when (e.IsCancellationOf(routeChangedToken) && !cancellationToken.IsCancellationRequested) {
                             throw new RpcRerouteException(routeChangedToken);
                         }
                         finally {
@@ -363,7 +363,7 @@ public abstract class RemoteComputeMethodFunction(
         var invocation = input.Invocation;
         var proxy = (IProxy)invocation.Proxy;
         var remoteComputeServiceInterceptor = (RemoteComputeServiceInterceptor)proxy.Interceptor;
-        var rpcRoutingInterceptor = remoteComputeServiceInterceptor.RpcServiceInterceptor;
+        var rpcInterceptor = remoteComputeServiceInterceptor.RpcInterceptor;
 
         var ctIndex = input.MethodDef.CancellationTokenIndex;
         if (ctIndex >= 0 && invocation.Arguments.GetCancellationToken(ctIndex) != cancellationToken) {
@@ -381,7 +381,7 @@ public abstract class RemoteComputeMethodFunction(
             };
             using (settings.Activate()) {
                 // No "await" inside this block!
-                _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(rpcRoutingInterceptor, invocation);
+                _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(rpcInterceptor, invocation);
             }
             call = settings.ProducedContext!.Call as RpcOutboundComputeCall;
             if (call is null) { // This should never happen, but it's better to be safe than sorry

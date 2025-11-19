@@ -73,7 +73,7 @@ public partial class RpcMethodDef
                             throw RpcRerouteException.MustRerouteInbound();
 
                         Task task;
-                        using (new RpcOutboundCallSetup(peer).Activate())
+                        using (new RpcOutboundCallSetup(peer, RpcRoutingMode.LocalOnly).Activate())
                             task = (Task)invoker.Invoke(server, call.Arguments!)!;
                         await task.ConfigureAwait(false);
                         return default!;
@@ -86,7 +86,7 @@ public partial class RpcMethodDef
                             throw RpcRerouteException.MustRerouteInbound();
 
                         Task<T> task;
-                        using (new RpcOutboundCallSetup(peer).Activate())
+                        using (new RpcOutboundCallSetup(peer, RpcRoutingMode.LocalOnly).Activate())
                             task = (Task<T>)invoker.Invoke(server, call.Arguments!)!;
                         return await task.ConfigureAwait(false);
                     },
@@ -98,7 +98,7 @@ public partial class RpcMethodDef
                             throw RpcRerouteException.MustRerouteInbound();
 
                         ValueTask valueTask;
-                        using (new RpcOutboundCallSetup(peer).Activate())
+                        using (new RpcOutboundCallSetup(peer, RpcRoutingMode.LocalOnly).Activate())
                             valueTask = (ValueTask)invoker.Invoke(server, call.Arguments!)!;
                         await valueTask.ConfigureAwait(false);
                         return default!;
@@ -111,7 +111,7 @@ public partial class RpcMethodDef
                             throw RpcRerouteException.MustRerouteInbound();
 
                         ValueTask<T> valueTask;
-                        using (new RpcOutboundCallSetup(peer).Activate())
+                        using (new RpcOutboundCallSetup(peer, RpcRoutingMode.LocalOnly).Activate())
                             valueTask = (ValueTask<T>)invoker.Invoke(server, call.Arguments!)!;
                         return await valueTask.ConfigureAwait(false);
                     },

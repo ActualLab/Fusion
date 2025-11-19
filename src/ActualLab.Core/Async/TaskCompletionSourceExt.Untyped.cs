@@ -1,3 +1,5 @@
+using ActualLab.Rpc;
+
 namespace ActualLab.Async;
 
 #pragma warning disable CA2016
@@ -38,7 +40,7 @@ public static partial class TaskCompletionSourceExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TaskCompletionSource WithException(this TaskCompletionSource target, Exception error)
     {
-        if (error is OperationCanceledException oce)
+        if (error is OperationCanceledException oce and not RpcRerouteException)
             target.TrySetCanceled(oce.CancellationToken);
         else
             target.TrySetException(error);
@@ -109,7 +111,7 @@ public static partial class TaskCompletionSourceExt
         var error = result.Error;
         if (error is null)
             target.SetResult();
-        else if (error is OperationCanceledException) {
+        else if (error is OperationCanceledException and not RpcRerouteException) {
 #if NET5_0_OR_GREATER
             if (cancellationToken.IsCancellationRequested)
                 target.SetCanceled(cancellationToken);
@@ -129,7 +131,7 @@ public static partial class TaskCompletionSourceExt
         var error = result.Error;
         return error is null
             ? target.TrySetResult()
-            : error is OperationCanceledException
+            : error is OperationCanceledException and not RpcRerouteException
                 ? cancellationToken.IsCancellationRequested
                     ? target.TrySetCanceled(cancellationToken)
                     : target.TrySetCanceled()

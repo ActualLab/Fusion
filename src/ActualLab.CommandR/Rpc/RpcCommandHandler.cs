@@ -6,7 +6,7 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.CommandR.Rpc;
 
-public sealed class RpcCommandRoutingHandler(IServiceProvider services) : ICommandHandler<ICommand>
+public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandler<ICommand>
 {
     private IServiceProvider Services { get; } = services;
     private RpcHub RpcHub { get; } = services.RpcHub();
@@ -52,34 +52,32 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                     CancellationTokenSource? linkedCts = null;
                     var linkedToken = cancellationToken;
                     try {
-                        Task invokeRemainingHandlersTask;
                         if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                             if (shardRouteState is not null)
                                 // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                                routeChangedToken = await shardRouteState.WhenShardOwned(cancellationToken).ConfigureAwait(false);
+                                routeChangedToken = await shardRouteState.WhenShardOwned(cancellationToken)
+                                    .ConfigureAwait(false);
 
                             if (routeChangedToken.CanBeCanceled) {
-                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
+                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
+                                    routeChangedToken);
                                 linkedToken = linkedCts.Token;
                             }
 
                             // Local call -> continue the pipeline
                             context.ExecutionState = baseExecutionState;
-                            invokeRemainingHandlersTask = context.InvokeRemainingHandlers(linkedToken);
                         }
                         else {
                             // Remote call -> trigger just RPC call by invoking the final handler only
                             context.ExecutionState = preFinalExecutionState;
-                            using (new RpcOutboundCallSetup(peer).Activate()) {
-                                // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                                invokeRemainingHandlersTask = context.InvokeRemainingHandlers(linkedToken);
-                            }
                         }
 
-                        await invokeRemainingHandlersTask.ConfigureAwait(false);
+                        // MethodCommandHandler picks up RpcOutboundCallSetup (if any) and activates it
+                        context.Items.KeylessSet(new RpcOutboundCallSetup(peer));
+                        await context.InvokeRemainingHandlers(linkedToken).ConfigureAwait(false);
                         return;
                     }
-                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && routeChangedToken.IsCancellationRequested) {
+                    catch (Exception e) when (e.IsCancellationOf(routeChangedToken) && !cancellationToken.IsCancellationRequested) {
                         throw new RpcRerouteException(routeChangedToken);
                     }
                     finally {
@@ -89,12 +87,14 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
                 catch (RpcRerouteException e) {
                     context.ResetResult();
                     if (shardRouteState is not null && !shardRouteState.IsChanged()) {
-                        Log.LogWarning(e, "Re-acquiring shard ownership for command: {Command}", context.UntypedCommand);
+                        Log.LogWarning(e, "Re-acquiring shard ownership for command: {Command}",
+                            context.UntypedCommand);
                         continue;
                     }
 
                     ++rerouteCount;
-                    Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}", rerouteCount, context.UntypedCommand);
+                    Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}", rerouteCount,
+                        context.UntypedCommand);
                     await RpcHub.InternalServices.OutboundCallOptions
                         .GetReroutingDelay(rerouteCount, cancellationToken)
                         .ConfigureAwait(false);

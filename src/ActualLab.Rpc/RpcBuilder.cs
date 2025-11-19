@@ -31,7 +31,7 @@ public readonly struct RpcBuilder
 
             // Interceptors
             CodeKeeper.Keep<RpcProxyCodeKeeper>();
-            CodeKeeper.Keep<RpcRoutingInterceptor>();
+            CodeKeeper.Keep<RpcInterceptor>();
 
             // Configuration
             CodeKeeper.Keep<RpcRegistryOptions>();
@@ -105,7 +105,7 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcWebSocketClientOptions.Default);
         services.AddSingleton(_ => RpcDiagnosticsOptions.Default);
         services.AddSingleton(_ => RpcSerializationFormatResolver.Default);
-        services.AddSingleton(_ => RpcRoutingInterceptor.Options.Default);
+        services.AddSingleton(_ => RpcInterceptor.Options.Default);
         services.AddSingleton(_ => RpcLimits.Default);
 
         // Core services

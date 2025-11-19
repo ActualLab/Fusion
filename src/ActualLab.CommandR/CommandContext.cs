@@ -3,6 +3,7 @@ using System.Runtime.ExceptionServices;
 using ActualLab.CommandR.Internal;
 using ActualLab.CommandR.Operations;
 using ActualLab.OS;
+using ActualLab.Rpc;
 
 namespace ActualLab.CommandR;
 
@@ -12,7 +13,6 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
 
     protected static readonly AsyncLocal<CommandContext?> CurrentLocal = new();
 
-    private readonly MutablePropertyBag _items = null!;
     private Operation? _operation;
 
 #pragma warning disable CA1721
@@ -34,13 +34,8 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
     public CommandExecutionState ExecutionState { get; set; }
     public IServiceProvider Services => ServiceScope.ServiceProvider;
 
-    public MutablePropertyBag Items {
-        get => OutermostContext._items;
-        protected init => _items = value;
-    }
-
-    public Operation Operation
-        => OutermostContext._operation ?? throw Errors.CommandContextHasNoOperation();
+    public Operation Operation => OutermostContext._operation ?? throw Errors.CommandContextHasNoOperation();
+    public MutablePropertyBag Items { get; protected init; } = new();
 
     // Static methods
 
@@ -124,7 +119,12 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
 public sealed class CommandContext<TResult> : CommandContext
 {
     public ICommand<TResult> Command { get; }
-    public Task<TResult> ResultTask => ResultSource.Task;
+
+    public Task<TResult> ResultTask {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => ResultSource.Task;
+    }
+
     public readonly TaskCompletionSource<TResult> ResultSource; // Set at the very end of the pipeline (via Complete)
 
     // Result may change while the pipeline runs
@@ -163,7 +163,6 @@ public sealed class CommandContext<TResult> : CommandContext
             OuterContext = null;
             OutermostContext = this;
             ServiceScope = Commander.Services.CreateScope();
-            Items = new MutablePropertyBag();
         }
         else {
             OuterContext = outerContext;

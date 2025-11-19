@@ -3,8 +3,8 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-[method: MethodImpl(MethodImplOptions.AggressiveInlining)]
-public sealed class RpcOutboundCallSetup(RpcPeer? peer = null)
+
+public sealed class RpcOutboundCallSetup
 {
     [field: ThreadStatic]
     public static RpcOutboundCallSetup? Value {
@@ -12,11 +12,32 @@ public sealed class RpcOutboundCallSetup(RpcPeer? peer = null)
         [MethodImpl(MethodImplOptions.AggressiveInlining)] internal set;
     }
 
+    public RpcPeer? Peer { get; }
+    public RpcRoutingMode RoutingMode { get; }
     public byte CallTypeId { get; init; } // You typically shouldn't set it!
     public RpcHeader[]? Headers { get; init; } // You typically shouldn't set it!
-    public RpcPeer? Peer { get; init; } = peer;
     public RpcCacheInfoCapture? CacheInfoCapture { get; init; }
     public RpcOutboundContext? ProducedContext { get; private set; } // Set by ProduceContext
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcOutboundCallSetup()
+        => RoutingMode = RpcRoutingMode.Full;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcOutboundCallSetup(RpcPeer peer)
+    {
+        Peer = peer;
+        RoutingMode = RpcRoutingMode.None;
+    }
+
+    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcOutboundCallSetup(RpcPeer peer, RpcRoutingMode routingMode)
+    {
+        if (routingMode is RpcRoutingMode.Full)
+            throw new ArgumentOutOfRangeException(nameof(routingMode));
+        Peer = peer;
+        RoutingMode = routingMode;
+    }
 
     // Static methods
 
@@ -29,7 +50,7 @@ public sealed class RpcOutboundCallSetup(RpcPeer? peer = null)
         var context = new RpcOutboundContext(value.Headers);
         if (value.Peer is not null)
             context.Peer = value.Peer;
-        context.IsPrerouted = value.Peer is not null;
+        context.RoutingMode = value.RoutingMode;
         if (value.CacheInfoCapture is not null)
             context.CacheInfoCapture = value.CacheInfoCapture;
         value.ProducedContext = context;

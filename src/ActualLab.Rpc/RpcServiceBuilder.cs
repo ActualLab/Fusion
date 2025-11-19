@@ -153,9 +153,9 @@ public class RpcServiceBuilder
         return;
 
         object CreateClient(IServiceProvider c)
-            => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, serviceType);
+            => c.RpcHub().InternalServices.NewProxy(serviceType, serviceType);
 
         object CreateDistributedService(IServiceProvider c)
-            => c.RpcHub().InternalServices.NewRoutingProxy(serviceType, implementationType);
+            => c.RpcHub().InternalServices.NewProxy(serviceType, implementationType);
     }
 }

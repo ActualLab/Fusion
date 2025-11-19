@@ -129,7 +129,8 @@ public sealed class Host : WorkerBase
             }
         }
         catch (Exception e) when (!cancellationToken.IsCancellationRequested) {
-            await Console.Error.WriteLineAsync($"{this} failed: {e.Message}".PastelBg(ConsoleColor.DarkRed));
+            await Console.Error.WriteLineAsync(
+                $"{this} failed: {e.Message}".PastelBg(ConsoleColor.DarkRed));
         }
         finally {
             MeshState.Unregister(this);

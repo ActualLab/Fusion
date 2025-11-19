@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace ActualLab.Rpc;
 
 public class RpcRouteState
@@ -6,11 +8,7 @@ public class RpcRouteState
 
     public RpcRouteState(CancellationToken changedToken)
     {
+        Debug.Assert(changedToken.CanBeCanceled);
         ChangedToken = changedToken;
-#if DEBUG
-        // RerouteToken must always be cancellable per contract
-        if (!RerouteToken.CanBeCanceled)
-            throw new ArgumentException("RerouteToken must be cancellable", nameof(rerouteToken));
-#endif
     }
 }

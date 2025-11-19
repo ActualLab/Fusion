@@ -65,10 +65,9 @@ public static class CommanderExt
     }
 
     public static Func<ICommander, CommandContext, CancellationToken, Task> GetTypedCallInvoker(Type commandResultType)
-        => GenericInstanceCache
-            .Get<Func<ICommander, CommandContext, CancellationToken, Task>>(
-                typeof(TypedCallFactory<>),
-                commandResultType);
+        => GenericInstanceCache.Get<Func<ICommander, CommandContext, CancellationToken, Task>>(
+            typeof(TypedCallFactory<>),
+            commandResultType);
 
     // Nested types
 
@@ -79,9 +78,9 @@ public static class CommanderExt
             CommandContext context,
             CancellationToken cancellationToken = default)
         {
-            await commander.Run(context, cancellationToken).ConfigureAwait(false);
             var typedContext = (CommandContext<T>)context;
-            return await typedContext.ResultSource.Task.ConfigureAwait(false);
+            await commander.Run(context, cancellationToken).ConfigureAwait(false);
+            return await typedContext.ResultTask.ConfigureAwait(false);
         }
 
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]

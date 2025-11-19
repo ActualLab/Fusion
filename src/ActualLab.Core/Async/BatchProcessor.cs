@@ -1,4 +1,5 @@
 using ActualLab.Internal;
+using ActualLab.Rpc;
 
 namespace ActualLab.Async;
 
@@ -310,7 +311,7 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
     private static Task CompleteProcessBatch(List<Item> batch, Exception? error = null)
     {
         error ??= Errors.UnprocessedBatchItem();
-        if (error is OperationCanceledException oce) {
+        if (error is OperationCanceledException oce and not RpcRerouteException) {
             var cancellationToken = oce.CancellationToken;
             foreach (var item in batch)
                 item.TrySetCanceled(cancellationToken);

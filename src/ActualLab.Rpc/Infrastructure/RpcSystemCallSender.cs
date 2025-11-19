@@ -112,7 +112,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         RpcHeader[]? headers = null)
     {
         if (peer.StopToken.IsCancellationRequested) {
-            // The peer is stopping, we may omit sending call result here
+            // The peer is stopping, we may omit sending the call result here
             var stopMode = RpcPeerStopModeExt.ComputeFor(peer);
             if (stopMode == RpcPeerStopMode.KeepInboundCallsIncomplete) {
                 // We must keep all inbound calls incomplete - assuming they're getting aborted with

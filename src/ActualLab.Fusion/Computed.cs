@@ -377,7 +377,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
             return;
         }
 
-        if (error is OperationCanceledException) {
+        if (error is OperationCanceledException) { // Also handles RpcRerouteException
             // This error requires instant invalidation
             Invalidate(immediately: true, InvalidationSource.ComputedStartAutoInvalidationCancellationError);
             return;
@@ -522,7 +522,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
     protected internal bool IsTransientError(Exception error)
     {
-        if (error is OperationCanceledException)
+        if (error is OperationCanceledException) // Also handles RpcRerouteException
             return true; // Must be transient under any circumstances in IComputed
 
         TransiencyResolver<Computed>? transiencyResolver = null;

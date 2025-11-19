@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
+using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.CommandR.Configuration;
 
@@ -46,13 +47,22 @@ public sealed record MethodCommandHandler<
             var value = GetParameterValue(p, context, services);
             arguments[i] = value;
         }
+
+        // Pass setup to the RpcInterceptor
+        var rpcOutboundCallSetup = context.Items.KeylessGet<RpcOutboundCallSetup>();
+        var rpcOutboundCallSetupScope = rpcOutboundCallSetup?.Activate() ?? default;
         try {
             return (Task)Method.Invoke(service, arguments)!;
         }
         catch (TargetInvocationException tie) {
             if (tie.InnerException is not null)
                 throw tie.InnerException;
+
             throw;
+        }
+        finally {
+            if (rpcOutboundCallSetup is not null)
+                rpcOutboundCallSetupScope.Dispose();
         }
     }
 

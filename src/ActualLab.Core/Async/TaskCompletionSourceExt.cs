@@ -1,3 +1,5 @@
+using ActualLab.Rpc;
+
 namespace ActualLab.Async;
 
 #pragma warning disable CA2016
@@ -111,7 +113,7 @@ public static partial class TaskCompletionSourceExt
         var (value, error) = result;
         if (error is null)
             target.SetResult(value);
-        else if (error is OperationCanceledException)
+        else if (error is OperationCanceledException and not RpcRerouteException)
             target.SetCanceled();
         else
             target.SetException(error);
@@ -122,7 +124,7 @@ public static partial class TaskCompletionSourceExt
         var (value, error) = result;
         if (error is null)
             target.SetResult(value);
-        else if (error is OperationCanceledException) {
+        else if (error is OperationCanceledException and not RpcRerouteException) {
 #if NET5_0_OR_GREATER
             if (cancellationToken.IsCancellationRequested)
                 target.SetCanceled(cancellationToken);
@@ -142,7 +144,7 @@ public static partial class TaskCompletionSourceExt
         var (value, error) = result;
         return error is null
             ? target.TrySetResult(value)
-            : error is OperationCanceledException
+            : error is OperationCanceledException and not RpcRerouteException
                 ? target.TrySetCanceled()
                 : target.TrySetException(error);
     }
@@ -152,10 +154,14 @@ public static partial class TaskCompletionSourceExt
         var (value, error) = result;
         return error is null
             ? target.TrySetResult(value)
-            : error is OperationCanceledException
+            : error is OperationCanceledException and not RpcRerouteException
                 ? cancellationToken.IsCancellationRequested
                     ? target.TrySetCanceled(cancellationToken)
                     : target.TrySetCanceled()
                 : target.TrySetException(error);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsCancellation(Exception e)
+        => e is OperationCanceledException and not RpcRerouteException;
 }
