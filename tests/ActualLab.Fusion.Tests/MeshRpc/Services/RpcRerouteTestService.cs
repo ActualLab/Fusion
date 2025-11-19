@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ActualLab.Fusion.Operations.Internal;
 
 namespace ActualLab.Fusion.Tests.MeshRpc;
 
@@ -22,12 +23,16 @@ public class RpcRerouteTestService(MeshHost ownHost) : IRpcRerouteTestService
 
     public virtual async Task<ValueWithHostId> SetValue(RpcRerouteTestService_SetValue command, CancellationToken cancellationToken = default)
     {
+        if (Invalidation.IsActive) {
+            _ = GetValue(command.ShardKey, command.Key, cancellationToken);
+            return default!;
+        }
+
         var value = command.Value;
         _storage[command.Key] = value;
-        using (Invalidation.Begin())
-            _ = GetValue(command.ShardKey, command.Key, cancellationToken);
+        InMemoryOperationScope.Require(); // We want to trigger operation invalidation handling here
 
-        // Make recursive call if ExtraCount > 0
+        // Make a recursive call if ExtraCount > 0
         if (command.ExtraCount > 0) {
             var nextKey = $"next_{command.Key}";
             var nextShardKey = command.ShardKey + 1;

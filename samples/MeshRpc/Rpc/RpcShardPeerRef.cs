@@ -45,14 +45,24 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
         if (_rerouteTokenSource is not null)
             return;
 
-        var rerouteTokenSource = new CancellationTokenSource();
-        if (Interlocked.CompareExchange(ref _rerouteTokenSource, rerouteTokenSource, null) is not null)
+        var changeTokenSource = new CancellationTokenSource();
+        if (Interlocked.CompareExchange(ref _rerouteTokenSource, changeTokenSource, null) is not null)
             return;
 
         // Initialize RouteState once we have a token source
-        RouteState = new RpcRouteState(rerouteTokenSource.Token);
+        var changeToken = changeTokenSource.Token;
+        var shardLockDelayTask = Task.Delay(1000, changeToken);
+        RouteState = new RpcShardRouteState(WhenShardLocked, changeToken);
+        _ = Task.Run(CancelChangeTokenSourceWhenRerouted, CancellationToken.None);
+        return;
 
-        _ = Task.Run(async () => {
+        async ValueTask<CancellationToken> WhenShardLocked(CancellationToken cancellationToken) {
+            await shardLockDelayTask.WaitAsync(cancellationToken).SilentAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return changeToken;
+        }
+
+        async Task? CancelChangeTokenSourceWhenRerouted() {
             Console.WriteLine($"{Address}: created.".Pastel(ConsoleColor.Green));
             var computed = MeshState.State.Computed;
             if (HostId == "null")
@@ -62,6 +72,6 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
             Cache.TryRemove(ShardRef, lazy);
             await _rerouteTokenSource.CancelAsync();
             Console.WriteLine($"{Address}: rerouted.".Pastel(ConsoleColor.Yellow));
-        }, CancellationToken.None);
+        }
     }
 }
