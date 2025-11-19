@@ -1,3 +1,4 @@
+using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
@@ -8,16 +9,14 @@ public record RpcInboundCallOptions
 {
     public static RpcInboundCallOptions Default { get; set; } = new();
 
+    public bool UseNullabilityArgumentValidator { get; init; } = RuntimeInfo.IsServer;
     // Delegate options
     public Func<RpcPeer, RpcMessage, CancellationToken, RpcInboundContext> ContextFactory { get; init; }
+    public Func<RpcMethodDef, Func<RpcInboundCall, Task>, Func<RpcInboundCall, Task>>? InboundCallServerInvokerDecorator { get; init; }
 
-    // ReSharper disable once ConvertConstructorToMemberInitializers
     public RpcInboundCallOptions()
-        => ContextFactory = DefaultContextFactory;
-
-    // Protected methods
-
-    protected static RpcInboundContext DefaultContextFactory(
-        RpcPeer peer, RpcMessage message, CancellationToken peerChangedToken)
-        => new(peer, message, peerChangedToken);
+    {
+        ContextFactory = static (peer, message, peerChangedToken) => new(peer, message, peerChangedToken);
+        InboundCallServerInvokerDecorator = null;
+    }
 }

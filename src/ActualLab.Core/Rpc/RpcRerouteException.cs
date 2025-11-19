@@ -7,12 +7,10 @@ namespace ActualLab.Rpc;
 [Serializable]
 public class RpcRerouteException : OperationCanceledException, ITransientException
 {
-    private const string DefaultMessage = "Call must be re-routed to another RPC peer.";
-    private const string ReroutePreroutedMessage = "Pre-routed call must be re-routed (resolved to a local peer).";
-    private const string RerouteToLocalMessage = "Call must be re-routed to local service.";
+    private const string DefaultMessage = "RPC call must be re-routed.";
+    private const string RerouteInboundMessage = "RPC call must be re-routed: inbound call was routed to a non-local peer.";
 
-    public static RpcRerouteException MustRerouteToLocal() => new(RerouteToLocalMessage);
-    public static RpcRerouteException MustReroutePrerouted() => new(ReroutePreroutedMessage);
+    public static RpcRerouteException MustRerouteInbound() => new(RerouteInboundMessage);
     public static RpcRerouteException MustReroute() => new(DefaultMessage);
     public static RpcRerouteException MustReroute(object peer)
         => new($"'{peer}' is already gone. {DefaultMessage}");

@@ -76,14 +76,14 @@ public sealed class Host : WorkerBase
         });
         services.AddSingleton<RpcOutboundCallOptions>(c => {
             var rpcHelpers = c.GetRequiredService<RpcHelpers>();
-            return FusionRpcOptionOverrides.DefaultOutboundCallOptions with {
+            return RpcOutboundCallOptions.Default with {
                 RouterFactory = rpcHelpers.RouterFactory,
                 TimeoutsProvider = rpcHelpers.TimeoutsProvider,
             };
         });
         services.AddSingleton<RpcPeerOptions>(c => {
             var rpcHelpers = c.GetRequiredService<RpcHelpers>();
-            return FusionServerRpcOptionOverrides.DefaultPeerOptions with {
+            return RpcPeerOptions.Default with {
                 ConnectionKindDetector = rpcHelpers.ConnectionKindDetector,
             };
         });

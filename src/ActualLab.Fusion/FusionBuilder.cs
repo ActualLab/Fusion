@@ -28,8 +28,10 @@ public readonly struct FusionBuilder
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
     [UnconditionalSuppressMessage("Trimming", "IL2110", Justification = "CodeKeepers are used only to retain the code")]
     [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
-    static FusionBuilder() => CodeKeeper.AddFakeAction(
-        static () => {
+    static FusionBuilder()
+    {
+        FusionModuleInitializer.Touch();
+        CodeKeeper.AddFakeAction(static () => {
             CodeKeeper.Keep<CommanderBuilder>();
             CodeKeeper.Keep<RpcBuilder>();
 
@@ -41,6 +43,7 @@ public readonly struct FusionBuilder
             // Other services
             CodeKeeper.Keep<RpcComputeSystemCalls>();
         });
+    }
 
     internal FusionBuilder(
         IServiceCollection services,
@@ -124,11 +127,7 @@ public readonly struct FusionBuilder
         services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
         services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
 
-        // RPC:
-        // 1. Replace the defaults for some of RpcXxxOptions
-        services.AddSingleton(_ => FusionRpcOptionOverrides.DefaultRegistryOptions);
-        services.AddSingleton(_ => FusionRpcOptionOverrides.DefaultOutboundCallOptions);
-        // 2. Register IRpcComputeSystemCalls service and RpcComputeCallType
+        // RPC: Register IRpcComputeSystemCalls service and RpcComputeCallType
         Rpc.AddServerAndClient(typeof(IRpcComputeSystemCalls), typeof(RpcComputeSystemCalls), RpcComputeSystemCalls.Name);
         services.AddSingleton(c => new RpcComputeSystemCallSender(c));
         RpcComputeCallType.Register();

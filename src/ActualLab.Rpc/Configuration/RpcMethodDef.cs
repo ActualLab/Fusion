@@ -134,9 +134,9 @@ public partial class RpcMethodDef : MethodDef
             // System calls have no inbound call filter, preprocessors, and validator;
             // thus most of the pipeline invokers there must be identical to the server invoker.
             // NotFound call overrides InvokeServer, so it requires a regular invoker.
-            InboundCallUsesFastPipelineInvoker ??= SystemMethodKind != RpcSystemMethodKind.NotFound;
+            InboundCallUseFastPipelineInvoker ??= SystemMethodKind != RpcSystemMethodKind.NotFound;
             InboundCallServerInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
-            InboundCallPipelineInvoker = InboundCallUsesFastPipelineInvoker.Value
+            InboundCallPipelineInvoker = InboundCallUseFastPipelineInvoker.Value
                 ? InboundCallServerInvoker
                 : GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
         }
@@ -145,9 +145,20 @@ public partial class RpcMethodDef : MethodDef
             InboundCallPreprocessors = CreateInboundCallPreprocessors();
             InboundCallValidator = CreateInboundCallValidator();
 
-            InboundCallUsesFastPipelineInvoker ??= CallTypeId == RpcCallTypes.Regular;
+
+            InboundCallUseFastPipelineInvoker ??= CallTypeId == RpcCallTypes.Regular;
+            InboundCallUseDistributedModeServerInvoker ??= Service.Mode is RpcServiceMode.Distributed;
+
             InboundCallServerInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
-            InboundCallPipelineInvoker = InboundCallUsesFastPipelineInvoker.Value
+            if (Hub.InboundCallOptions.InboundCallServerInvokerDecorator is { } decorator) {
+                var newInboundCallServerInvoker = decorator.Invoke(this, InboundCallServerInvoker);
+                if (!ReferenceEquals(newInboundCallServerInvoker, InboundCallServerInvoker)) {
+                    // Fast pipeline invoker doesn't use InboundCallServerInvoker, so it can't be used in this case
+                    InboundCallUseFastPipelineInvoker = false;
+                    InboundCallServerInvoker = newInboundCallServerInvoker;
+                }
+            }
+            InboundCallPipelineInvoker = InboundCallUseFastPipelineInvoker.Value
                 ? GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineFastInvokerFactory<>))
                 : GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
         }

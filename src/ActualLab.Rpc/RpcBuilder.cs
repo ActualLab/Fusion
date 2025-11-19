@@ -5,6 +5,7 @@ using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.Trimming;
 using ActualLab.Trimming;
@@ -19,8 +20,10 @@ public readonly struct RpcBuilder
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
     [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
-    static RpcBuilder() => CodeKeeper.AddFakeAction(
-        static () => {
+    static RpcBuilder()
+    {
+        RpcModuleInitializer.Touch();
+        CodeKeeper.AddFakeAction(static () => {
             CodeKeeper.KeepStatic(typeof(Proxies));
 
             // Serializable types
@@ -64,6 +67,7 @@ public readonly struct RpcBuilder
             CodeKeeper.Keep<RpcOutboundContext>();
             CodeKeeper.Keep<RpcCacheInfoCapture>();
         });
+    }
 
     internal RpcBuilder(
         IServiceCollection services,

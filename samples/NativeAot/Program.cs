@@ -33,14 +33,12 @@ var services = new ServiceCollection()
         l.SetMinimumLevel(LogLevel.Debug);
         l.AddSimpleConsole();
     })
-    .AddRpc(rpc => {
-        rpc.AddWebSocketClient();
-    })
     .AddFusion(fusion => {
-        // We could use .AddDistributedService, but Loopback connection = infinite call loop there
+        fusion.Rpc.AddWebSocketClient();
+        // .AddDistributedService can't be used w/ a router returning Loopback connection for it (see below)
         fusion.AddServerAndClient<ITestService, TestService>();
     })
-    .AddSingleton(_ => FusionRpcOptionOverrides.DefaultOutboundCallOptions with {
+    .AddSingleton(_ => RpcOutboundCallOptions.Default with {
         RouterFactory = methodDef => args => RpcPeerRef.Loopback,
     })
     .BuildServiceProvider();

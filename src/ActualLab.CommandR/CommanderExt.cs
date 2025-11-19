@@ -33,26 +33,40 @@ public static class CommanderExt
 
         // Call overloads
 
-        public Task<TResult> Call<TResult>(ICommand<TResult> command, bool isOutermost, CancellationToken cancellationToken = default)
-            => TypedCallFactory<TResult>.TypedCall(commander, command, isOutermost, cancellationToken);
-
-        public Task Call(ICommand command, bool isOutermost, CancellationToken cancellationToken = default)
-            => GetTypedCallInvoker(command.GetResultType())
-                .Invoke(commander, command, isOutermost, cancellationToken);
-
-        public Task<TResult> Call<TResult>(ICommand<TResult> command,
+        public Task<TResult> Call<TResult>(
+            ICommand<TResult> command, bool isOutermost,
             CancellationToken cancellationToken = default)
-            => TypedCallFactory<TResult>.TypedCall(commander, command, false, cancellationToken);
+        {
+            var context = CommandContext.New(commander, command, isOutermost);
+            return TypedCallFactory<TResult>.TypedCall(commander, context, cancellationToken);
+        }
 
-        public Task Call(ICommand command,
+        public Task Call(
+            ICommand command, bool isOutermost,
             CancellationToken cancellationToken = default)
-            => GetTypedCallInvoker(command.GetResultType())
-                .Invoke(commander, command, false, cancellationToken);
+        {
+            var context = CommandContext.New(commander, command, isOutermost);
+            return GetTypedCallInvoker(command.GetResultType()).Invoke(commander, context, cancellationToken);
+        }
+
+        public Task<TResult> Call<TResult>(
+            ICommand<TResult> command,
+            CancellationToken cancellationToken = default)
+        {
+            var context = CommandContext.New(commander, command, isOutermost: false);
+            return TypedCallFactory<TResult>.TypedCall(commander, context, cancellationToken);
+        }
+
+        public Task Call(ICommand command, CancellationToken cancellationToken = default)
+        {
+            var context = CommandContext.New(commander, command, isOutermost: false);
+            return GetTypedCallInvoker(command.GetResultType()).Invoke(commander, context, cancellationToken);
+        }
     }
 
-    public static Func<ICommander, ICommand, bool, CancellationToken, Task> GetTypedCallInvoker(Type commandResultType)
+    public static Func<ICommander, CommandContext, CancellationToken, Task> GetTypedCallInvoker(Type commandResultType)
         => GenericInstanceCache
-            .Get<Func<ICommander, ICommand, bool, CancellationToken, Task>>(
+            .Get<Func<ICommander, CommandContext, CancellationToken, Task>>(
                 typeof(TypedCallFactory<>),
                 commandResultType);
 
@@ -62,17 +76,16 @@ public static class CommanderExt
     {
         public static async Task<T> TypedCall(
             ICommander commander,
-            ICommand command,
-            bool isOutermost,
+            CommandContext context,
             CancellationToken cancellationToken = default)
         {
-            var context = await commander.Run(command, isOutermost, cancellationToken).ConfigureAwait(false);
+            await commander.Run(context, cancellationToken).ConfigureAwait(false);
             var typedContext = (CommandContext<T>)context;
             return await typedContext.ResultSource.Task.ConfigureAwait(false);
         }
 
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]
         public override object Generate()
-            => (Func<ICommander, ICommand, bool, CancellationToken, Task>)TypedCall;
+            => (Func<ICommander, CommandContext, CancellationToken, Task>)TypedCall;
     }
 }

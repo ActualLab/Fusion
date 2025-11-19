@@ -51,10 +51,10 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
         // Fusion & RPC server setup
         var fusion = services.AddFusion();
         fusion.AddWebServer();
-        services.AddSingleton(_ => FusionRpcOptionOverrides.DefaultOutboundCallOptions with {
+        services.AddSingleton(_ => RpcOutboundCallOptions.Default.WithFusionOverrides() with {
             RouterFactory = RouterFactory,
         });
-        services.AddSingleton(_ => FusionServerRpcOptionOverrides.DefaultPeerOptions with {
+        services.AddSingleton(_ => RpcPeerOptions.Default.WithFusionServerOverrides() with {
             ConnectionKindDetector = ConnectionKindDetector,
         });
 

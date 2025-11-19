@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
@@ -93,21 +94,23 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context)
     public Computed<TResult>? Computed { get; private set; }
     public override Computed? UntypedComputed => Computed;
 
-#if NET5_0_OR_GREATER
+#if NET5_0_OR_GREATER1
     protected override async Task<TResult> InvokeServer()
     {
-        var ccs = Fusion.Computed.BeginCapture();
+        Debug.Assert(ComputeContext.Current == ComputeContext.None);
+        var context = new ComputeContext(CallOptions.Capture | CallOptions.RerouteUnlessLocal);
+        ComputeContext.Current = context;
         try {
             var invokeTask = (Task<TResult>)MethodDef.InboundCallServerInvoker.Invoke(this);
             return await invokeTask.ConfigureAwait(false);
         }
         finally {
-            var computed = ccs.Context.TryGetCaptured<TResult>();
+            ComputeContext.Current = null!;
+            var computed = context.TryGetCaptured<TResult>();
             if (computed is not null) {
                 lock (Lock)
                     Computed ??= computed;
             }
-            ccs.Dispose();
         }
     }
 #else
@@ -115,20 +118,20 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context)
     {
         return Implementation();
 
-        async Task<TResult> Implementation()
-        {
-            var ccs = Fusion.Computed.BeginCapture();
+        async Task<TResult> Implementation() {
+            Debug.Assert(ComputeContext.Current == ComputeContext.None);
+            var context = new ComputeContext(CallOptions.Capture | CallOptions.RerouteUnlessLocal);
             try {
                 var invokeTask = (Task<TResult>)MethodDef.InboundCallServerInvoker.Invoke(this);
                 return await invokeTask.ConfigureAwait(false);
             }
             finally {
-                var computed = ccs.Context.TryGetCaptured<TResult>();
+                ComputeContext.Current = null!;
+                var computed = context.TryGetCaptured<TResult>();
                 if (computed is not null) {
                     lock (Lock)
                         Computed ??= computed;
                 }
-                ccs.Dispose();
             }
         }
     }

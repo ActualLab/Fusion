@@ -12,5 +12,6 @@ public class RpcComputeMethodDef : RpcMethodDef
     {
         CallTypeId = RpcComputeCallType.Id;
         ComputedOptions = computedOptions;
+        InboundCallUseDistributedModeServerInvoker = false; // RpcInboundComputeCall + Function handle that
     }
 }

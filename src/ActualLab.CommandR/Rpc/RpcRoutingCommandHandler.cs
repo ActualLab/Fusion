@@ -1,9 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
+using ActualLab.CommandR.Internal;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 
-namespace ActualLab.CommandR.Internal;
+namespace ActualLab.CommandR.Rpc;
 
 public sealed class RpcCommandRoutingHandler(IServiceProvider services) : ICommandHandler<ICommand>
 {
@@ -21,22 +22,32 @@ public sealed class RpcCommandRoutingHandler(IServiceProvider services) : IComma
 
         var serviceType = methodHandler.ServiceType;
         var method = methodHandler.Method;
-        var rpcMethodDef = GetRpcMethodDef(serviceType, method);
-        return rpcMethodDef is null
-            ? context.InvokeRemainingHandlers(cancellationToken) // Not an RPC method we can (re)route
-            : InvokeWithRerouting();
+        if (GetRpcMethodDef(serviceType, method) is { } rpcMethodDef)
+            return HandleRpcCommand();
 
-        async Task InvokeWithRerouting() {
+        return context.InvokeRemainingHandlers(cancellationToken);
+
+        async Task HandleRpcCommand() {
+            // See RpcInboundCallOptionsExt.InboundCallServerInvokerDecorator,
+            // it replaces the default InboundCallServerInvoker for any command method with a logic that:
+            // - Creates outermost CommandContext with RpcInboundCall item set
+            // - Sends the call to Commander (with this context) instead of invoking service.Method directly.
+            var mustRerouteUnlessLocal = context.IsOutermost && context.Items.KeylessGet<RpcInboundCall>() is not null;
             var baseExecutionState = context.ExecutionState;
             var preFinalExecutionState = baseExecutionState.PreFinalState;
             var rerouteCount = 0;
             while (true) {
                 var arguments = ArgumentList.New(command, cancellationToken);
                 var peer = rpcMethodDef.RouteOutboundCall(arguments);
+                if (peer.ConnectionKind is not RpcPeerConnectionKind.Local && mustRerouteUnlessLocal) {
+                    // Inbound RPC calls must be routed to local peers only
+                    throw RpcRerouteException.MustRerouteInbound();
+                }
+
                 var routeState = peer.Ref.RouteState;
                 var shardRouteState = routeState.AsShardRouteState(rpcMethodDef);
                 try {
-                    peer.Ref.RouteState.ThrowIfChanged();
+                    peer.Ref.RouteState.RerouteIfChanged();
                     var routeChangedToken = routeState?.ChangedToken ?? default;
                     CancellationTokenSource? linkedCts = null;
                     var linkedToken = cancellationToken;

@@ -71,13 +71,11 @@ public abstract class RemoteComputeMethodFunction(
         var tryIndex = 0;
         var rerouteCount = 0;
         var startedAt = CpuTimestamp.Now;
+        var context = ComputeContext.Current;
         while (true) {
             try {
-                // We don't use RpcOutgoingCallSettings here, because this method is typically called from
-                // a post-async-lock block, so the original RpcOutgoingCallSettings.Peer won't be available
-                // at this point. And that's why there is also no need to reset it.
                 var peer = RpcMethodDef.RouteOutboundCall(typedInput.Invocation.Arguments);
-                peer.Ref.RouteState.ThrowIfChanged();
+                peer.Ref.RouteState.RerouteIfChanged();
 
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                     // Local computation / no RPC call scenario
@@ -127,7 +125,18 @@ public abstract class RemoteComputeMethodFunction(
                     }
                 }
 
-                // RPC call scenario
+                // If we're here, we're sending an RPC call
+
+                if ((context.CallOptions & CallOptions.RerouteUnlessLocal) != 0) {
+                    // ComputeContext.Current with CallOptions.RerouteUnlessLocal indicates we're processing an inbound
+                    // RPC call, so we must either process it locally or reroute (via RpcRerouteException).
+                    //
+                    // We can't use RpcOutgoingCallSettings for the same purpose here, because ProduceComputedImpl
+                    // is typically called from a post-async-lock block, so the original RpcOutgoingCallSettings.Peer
+                    // won't be available at this point.
+                    throw RpcRerouteException.MustRerouteInbound();
+                }
+
                 try {
                     var cache = GetCache(typedInput);
                     // existing is not null -> it's invalidated, and since the cached value is even more outdated,
@@ -167,7 +176,7 @@ public abstract class RemoteComputeMethodFunction(
         // so we await for the connection here.
         var whenConnected = WhenConnectedChecked(input, peer, cancellationToken);
         if (!whenConnected.IsCompletedSuccessfully()) // Slow path
-            await whenConnected.ConfigureAwait(false);
+            await whenConnected.ConfigureAwait(false); // May throw RpcRerouteException!
 
         var existingRemoteComputed = existing as IRemoteComputed;
         var existingCacheEntry = existingRemoteComputed?.CacheEntry;
@@ -259,7 +268,7 @@ public abstract class RemoteComputeMethodFunction(
         var whenConnected = WhenConnectedChecked(input, peer);
         if (!whenConnected.IsCompletedSuccessfully()) { // Slow path
             try {
-                await whenConnected.ConfigureAwait(false);
+                await whenConnected.ConfigureAwait(false); // May throw RpcRerouteException!
             }
             catch (Exception whenConnectedError) {
                 const string reason =
@@ -366,9 +375,8 @@ public abstract class RemoteComputeMethodFunction(
 
         RpcOutboundComputeCall? call = null;
         try {
-            var settings = new RpcOutboundCallSetup() {
+            var settings = new RpcOutboundCallSetup(peer) {
                 CallTypeId = RpcComputeCallType.Id,
-                Peer = peer,
                 CacheInfoCapture = cacheInfoCapture,
             };
             using (settings.Activate()) {
@@ -376,11 +384,11 @@ public abstract class RemoteComputeMethodFunction(
                 _ = input.MethodDef.InterceptorAsyncInvoker.Invoke(rpcRoutingInterceptor, invocation);
             }
             call = settings.ProducedContext!.Call as RpcOutboundComputeCall;
-            if (call is null) {
+            if (call is null) { // This should never happen, but it's better to be safe than sorry
                 Log.LogWarning(
                     "SendRpcCall({Input}, {Peer}, ...) got null call somehow - will try to reroute...",
                     input, peer);
-                throw RpcRerouteException.MustRerouteToLocal();
+                throw RpcRerouteException.MustReroute();
             }
 
             var resultTask = call.ResultTask;
@@ -462,6 +470,7 @@ public abstract class RemoteComputeMethodFunction(
         static async Task WhenConnectedCheckedAsync(
             ComputeMethodInput input, RpcPeer peer, RpcMethodDef methodDef, CancellationToken cancellationToken)
         {
+            // WhenConnected may throw RpcRerouteException!
             var (handshake, _) = await peer
                 .WhenConnected(methodDef.OutboundCallTimeouts.ConnectTimeout, cancellationToken)
                 .ConfigureAwait(false);

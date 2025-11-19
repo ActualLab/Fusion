@@ -33,11 +33,16 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
             var peer = context.Peer!;
 
             if (context.IsPrerouted) {
-                // The call is prerouted, which implies it has to be an RPC call
-                if (call is null)
-                    throw RpcRerouteException.MustReroutePrerouted();
-
-                resultTask = call.Invoke();
+                // The call is prerouted via RpcOutboundCallSetup, and there are two cases:
+                // - It can be pre-routed to a non-local peer. It's typically done for NoWait and System calls,
+                //   and all we need is to send it right away.
+                // - And it can be pre-routed to a local peer. The only reason it may happen is
+                //   when an RPC service with Distributed service mode gets an inbound RPC call.
+                //   See InboundCallUseDistributedModeServerInvoker usages to understand how it works.
+                //   That's why we must use InvokeWithRerouting for local calls here.
+                resultTask = call is null
+                    ? InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation)
+                    : call.Invoke(); // Prerouted outbound RPC call
             }
             else if (peer.Ref.RouteState is null) {
                 // There is no RoutingState, and thus no rerouting and no shard routing
@@ -64,6 +69,7 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
         Func<Invocation, Task>? localCallAsyncInvoker,
         Invocation invocation)
     {
+        var mustRerouteUnlessLocal = context.IsPrerouted && call is null;
         var cancellationToken = context.CancellationToken;
         var rerouteCount = 0;
         while (true) {
@@ -72,11 +78,20 @@ public sealed class RpcRoutingInterceptor : RpcServiceInterceptor
             var shardRouteState = routeState.AsShardRouteState(methodDef);
             CancellationToken routeChangedToken = default;
             try {
-                routeState.ThrowIfChanged();
+                routeState.RerouteIfChanged();
                 CancellationTokenSource? linkedCts = null;
                 try {
-                    if (call is not null) // Outbound RPC call
+                    if (call is not null) {
+                        if (mustRerouteUnlessLocal) {
+                            // If we're here, the call was prerouted to a local peer,
+                            // but was re-routed to a non-local peer later.
+                            // See InboundCallUseDistributedModeServerInvoker usages to understand when
+                            // such a prerouting occurs.
+                            throw RpcRerouteException.MustRerouteInbound();
+                        }
+
                         return await call.Invoke().ConfigureAwait(false);
+                    }
 
                     if (localCallAsyncInvoker is null)
                         throw Errors.CannotExecuteInterfaceCallLocally();

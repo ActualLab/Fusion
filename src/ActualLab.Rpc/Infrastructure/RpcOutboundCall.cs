@@ -98,7 +98,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         async Task<object?> CompleteAsync() {
             try {
-                // WhenConnected throws RpcRerouteException in case Peer.Ref.IsRerouted is true
+                // WhenConnected may throw RpcRerouteException!
                 var (_, sender1) = await Peer
                     .WhenConnected(MethodDef.OutboundCallTimeouts.ConnectTimeout, Context.CancellationToken)
                     .ConfigureAwait(false);

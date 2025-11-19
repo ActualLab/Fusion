@@ -1,5 +1,4 @@
 using ActualLab.Caching;
-using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
@@ -36,29 +35,85 @@ public partial class RpcMethodDef
 
                 object? server = null;
                 var invoker = methodDef.ArgumentListInvoker;
+                if (methodDef.InboundCallUseDistributedModeServerInvoker != true)
+                    return (Func<RpcInboundCall, Task<T>>)((methodDef.ReturnsTask, methodDef.IsAsyncVoidMethod) switch {
+                        (true, true) => async call => {
+                            // Task (returns Task<Unit>)
+                            server ??= methodDef.Service.Server!;
+                            await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                            return default!;
+                        },
+                        (true, false) => async call => {
+                            // Task<T>
+                            server ??= methodDef.Service.Server!;
+                            return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        },
+                        (false, true) => async call => {
+                            // ValueTask (returns Task<Unit>)
+                            server ??= methodDef.Service.Server!;
+                            await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                            return default!;
+                        },
+                        (false, false) => async call => {
+                            // ValueTask<T> (returns Task<T>)
+                            server ??= methodDef.Service.Server!;
+                            return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        },
+                    });
 
+                // Distributed mode server invoker. It takes two additional actions:
+                // 1. It re-routes (via RpcRerouteException) in case the outbound call router routes it to a non-local peer
+                // 2. And uses RpcOutboundCallSetup to preroute the call to that (local) peer.
                 return (Func<RpcInboundCall, Task<T>>)((methodDef.ReturnsTask, methodDef.IsAsyncVoidMethod) switch {
                     (true, true) => async call => {
                         // Task (returns Task<Unit>)
                         server ??= methodDef.Service.Server!;
-                        await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        var peer = call.MethodDef.RouteOutboundCall(call.Arguments!);
+                        if (peer.ConnectionKind is not RpcPeerConnectionKind.Local)
+                            throw RpcRerouteException.MustRerouteInbound();
+
+                        Task task;
+                        using (new RpcOutboundCallSetup(peer).Activate())
+                            task = (Task)invoker.Invoke(server, call.Arguments!)!;
+                        await task.ConfigureAwait(false);
                         return default!;
                     },
                     (true, false) => async call => {
                         // Task<T>
                         server ??= methodDef.Service.Server!;
-                        return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        var peer = call.MethodDef.RouteOutboundCall(call.Arguments!);
+                        if (peer.ConnectionKind is not RpcPeerConnectionKind.Local)
+                            throw RpcRerouteException.MustRerouteInbound();
+
+                        Task<T> task;
+                        using (new RpcOutboundCallSetup(peer).Activate())
+                            task = (Task<T>)invoker.Invoke(server, call.Arguments!)!;
+                        return await task.ConfigureAwait(false);
                     },
                     (false, true) => async call => {
                         // ValueTask (returns Task<Unit>)
                         server ??= methodDef.Service.Server!;
-                        await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        var peer = call.MethodDef.RouteOutboundCall(call.Arguments!);
+                        if (peer.ConnectionKind is not RpcPeerConnectionKind.Local)
+                            throw RpcRerouteException.MustRerouteInbound();
+
+                        ValueTask valueTask;
+                        using (new RpcOutboundCallSetup(peer).Activate())
+                            valueTask = (ValueTask)invoker.Invoke(server, call.Arguments!)!;
+                        await valueTask.ConfigureAwait(false);
                         return default!;
                     },
                     (false, false) => async call => {
                         // ValueTask<T> (returns Task<T>)
                         server ??= methodDef.Service.Server!;
-                        return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        var peer = call.MethodDef.RouteOutboundCall(call.Arguments!);
+                        if (peer.ConnectionKind is not RpcPeerConnectionKind.Local)
+                            throw RpcRerouteException.MustRerouteInbound();
+
+                        ValueTask<T> valueTask;
+                        using (new RpcOutboundCallSetup(peer).Activate())
+                            valueTask = (ValueTask<T>)invoker.Invoke(server, call.Arguments!)!;
+                        return await valueTask.ConfigureAwait(false);
                     },
                 });
             };

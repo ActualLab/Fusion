@@ -1,18 +1,18 @@
 using System.Diagnostics.CodeAnalysis;
-using ActualLab.Interception;
 using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Rpc;
 
-public static class FusionRpcOptionOverrides
+public static class RpcRegistryOptionsExt
 {
-    public static RpcRegistryOptions DefaultRegistryOptions { get; set; }
-        = new() {
-            ServiceDefFactory = ServiceDefFactory,
-            MethodDefFactory = MethodDefFactory
-        };
-    public static RpcOutboundCallOptions DefaultOutboundCallOptions { get; set; }
-        = new() { RouterFactory = RouterFactory };
+    extension(RpcRegistryOptions options)
+    {
+        public RpcRegistryOptions WithFusionOverrides()
+            => options with {
+                ServiceDefFactory = ServiceDefFactory,
+                MethodDefFactory = MethodDefFactory,
+            };
+    }
 
     // Private methods
 
@@ -34,9 +34,4 @@ public static class FusionRpcOptionOverrides
             ? new RpcComputeMethodDef(computeServiceDef, methodInfo, computedOptions)
             : new RpcMethodDef(serviceDef, methodInfo);
     }
-
-    private static Func<ArgumentList, RpcPeerRef> RouterFactory(RpcMethodDef methodDef)
-        => methodDef.Kind is RpcMethodKind.Command
-            ? static args => Invalidation.IsActive ? RpcPeerRef.Local : RpcPeerRef.Default
-            : static args => RpcPeerRef.Default;
 }

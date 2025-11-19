@@ -1,5 +1,3 @@
-using ActualLab.OS;
-
 namespace ActualLab.Rpc;
 
 public static class RpcDefaults
@@ -12,7 +10,7 @@ public static class RpcDefaults
     private static volatile VersionSet? _backendPeerVersions;
     private static volatile VersionSet? _apiPeerVersions;
 
-    public static bool UseInboundCallValidator { get; set; } = RuntimeInfo.IsServer;
+    public static RpcOptionDefaults OptionDefaults { get; } = new();
     public static string ApiScope { get; set; } = "Api";
     public static string BackendScope { get; set; } = "Backend";
     public static Version ApiVersion { get; set; } = new(1, 0);

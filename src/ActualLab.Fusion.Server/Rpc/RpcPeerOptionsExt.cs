@@ -1,16 +1,19 @@
-using Microsoft.AspNetCore.Http;
 using ActualLab.Fusion.Server.Middlewares;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Fusion.Server.Rpc;
 
-public static class FusionServerRpcOptionOverrides
+public static class RpcPeerOptionsExt
 {
     public const string SessionParameterName = "session";
 
-    public static RpcPeerOptions DefaultPeerOptions { get; set; }
-        = new() { ServerConnectionFactory = ServerConnectionFactory };
+    extension(RpcPeerOptions options)
+    {
+        public RpcPeerOptions WithFusionServerOverrides()
+            => options with { ServerConnectionFactory = ServerConnectionFactory };
+    }
 
     // Private methods
 
@@ -40,4 +43,5 @@ public static class FusionServerRpcOptionOverrides
     private static Task<RpcConnection> CreateRpcConnectionAsync(
         Channel<RpcMessage> channel, PropertyBag properties)
         => Task.FromResult(new RpcConnection(channel, properties));
+
 }

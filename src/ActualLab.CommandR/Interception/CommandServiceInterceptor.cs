@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
 using ActualLab.Interception;
 using ActualLab.OS;
-using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.CommandR.Interception;
 
@@ -24,49 +23,18 @@ public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options 
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>
         (Invocation initialInvocation, MethodDef methodDef)
         => invocation => {
-            var arguments = invocation.Arguments;
-            var command = arguments.Get<ICommand>(0);
-            var context = CommandContext.Current;
-            if (context is null) {
-                // The logic below detects inbound RPC calls and reroutes them to local Commander
-                var rpcInboundContext = RpcInboundContext.Current;
-                if (rpcInboundContext is not null) {
-                    var call = rpcInboundContext.Call;
-                    var callMethodDef = call.MethodDef;
-                    var callServiceDef = callMethodDef.Service;
-                    var callArguments = call.Arguments;
-                    if (callArguments is { Length: <= 2 }
-                        && callServiceDef.HasServer
-                        && Equals(callMethodDef.MethodInfo.Name, invocation.Method.Name)
-                        && callServiceDef.Type.IsInstanceOfType(invocation.Proxy)
-                        && ReferenceEquals(callArguments.GetUntyped(0), command)) {
-                        var cancellationToken = callArguments.Length == 2
-                            ? arguments.GetCancellationToken(1)
-                            : default;
-
-                        // "isOutermost: true" also guarantees that RpcInboundContext.Current is null
-                        // when it enters the same interceptor once again
-                        var resultTask = Commander.Call(command, isOutermost: true, cancellationToken);
-                        return methodDef.ReturnsTask
-                            ? resultTask
-                            : methodDef.IsAsyncVoidMethod
-                                ? resultTask.ToValueTask()
-                                : ((Task<TUnwrapped>)resultTask).ToValueTask();
-                    }
-                }
-
-                // We're outside the ICommander pipeline,
-                // and the current inbound Rpc call isn't "ours"
+            if (CommandContext.Current is not { } context)
+                // We're outside the Commander pipeline
                 throw Errors.DirectCommandHandlerCallsAreNotAllowed();
-            }
 
             var contextCommand = context.UntypedCommand;
-            if (!ReferenceEquals(command, contextCommand) && contextCommand is not ISystemCommand) {
-                // We're outside the ICommander pipeline
+            var invocationCommand = (ICommand?)invocation.Arguments.Get0Untyped();
+            if (!ReferenceEquals(invocationCommand, contextCommand) && contextCommand is not ISystemCommand) {
+                // The context command doesn't match the invocation command
                 throw Errors.DirectCommandHandlerCallsAreNotAllowed();
             }
 
-            // We're already inside the ICommander pipeline created for exactly this command
+            // All checks passed, so it's safe to proceed
             return invocation.InvokeInterceptedUntyped();
         };
 

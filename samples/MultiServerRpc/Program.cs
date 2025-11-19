@@ -53,7 +53,7 @@ async Task RunClient()
             fusion.Rpc.AddWebSocketClient();
             fusion.AddClient<IChat>();
         })
-        .AddSingleton(_ => FusionRpcOptionOverrides.DefaultOutboundCallOptions with {
+        .AddSingleton(_ => RpcOutboundCallOptions.Default with {
             RouterFactory = method => args => {
                 if (method.Kind is RpcMethodKind.Command && Invalidation.IsActive)
                     return RpcPeerRef.Local; // Commands in invalidation mode must always execute locally

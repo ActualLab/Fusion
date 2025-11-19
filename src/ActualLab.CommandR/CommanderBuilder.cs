@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.CommandR.Diagnostics;
 using ActualLab.CommandR.Interception;
 using ActualLab.CommandR.Internal;
+using ActualLab.CommandR.Rpc;
 using ActualLab.CommandR.Trimming;
 using ActualLab.Generators;
 using ActualLab.Interception;
@@ -23,8 +24,10 @@ public readonly struct CommanderBuilder
     public IServiceCollection Services { get; }
     public HashSet<CommandHandler> Handlers { get; }
 
-    static CommanderBuilder() => CodeKeeper.AddFakeAction(
-        static () => {
+    static CommanderBuilder()
+    {
+        CommanderModuleInitializer.Touch();
+        CodeKeeper.AddFakeAction(static () => {
             CodeKeeper.KeepStatic(typeof(Proxies));
 
             // Configuration
@@ -40,6 +43,7 @@ public readonly struct CommanderBuilder
             var c = CodeKeeper.Get<ProxyCodeKeeper>();
             c.KeepAsyncMethod<Unit, ICommand<Unit>, CancellationToken>();
         });
+    }
 
     internal CommanderBuilder(
         IServiceCollection services,

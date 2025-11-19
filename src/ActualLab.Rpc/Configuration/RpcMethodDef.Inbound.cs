@@ -12,7 +12,8 @@ public partial class RpcMethodDef
     // The delegates and properties below must be initialized in Initialize(),
     // they are supposed to be as efficient as possible (i.e., do less, if possible)
     // taking the values of other properties into account.
-    public bool? InboundCallUsesFastPipelineInvoker { get; protected set; }
+    public bool? InboundCallUseFastPipelineInvoker { get; protected set; }
+    public bool? InboundCallUseDistributedModeServerInvoker { get; protected set; }
     public Func<RpcInboundCall, Task> InboundCallServerInvoker { get; protected set; } = null!;
     public Func<RpcInboundCall, Task> InboundCallPipelineInvoker { get; protected set; } = null!;
 
@@ -31,6 +32,8 @@ public partial class RpcMethodDef
 #if NET6_0_OR_GREATER // NullabilityInfoContext is available in .NET 6.0+
         if (IsSystem || NoWait)
             return null; // These methods are supposed to rely on built-in validation for perf. reasons
+        if (!Hub.InboundCallOptions.UseNullabilityArgumentValidator)
+            return null;
 
         var nonNullableArgIndexesList = new List<int>();
         var nullabilityInfoContext = new NullabilityInfoContext();

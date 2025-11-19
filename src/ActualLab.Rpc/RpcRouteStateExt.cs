@@ -9,7 +9,7 @@ public static class RpcRouteStateExt
             => routeState is not null && routeState.ChangedToken.IsCancellationRequested;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ThrowIfChanged()
+        public void RerouteIfChanged()
         {
             if (routeState.IsChanged())
                 throw RpcRerouteException.MustReroute();
