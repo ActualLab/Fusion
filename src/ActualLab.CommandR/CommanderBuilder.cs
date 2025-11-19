@@ -28,7 +28,7 @@ public readonly struct CommanderBuilder
     {
         CommanderModuleInitializer.Touch();
         CodeKeeper.AddFakeAction(static () => {
-            CodeKeeper.KeepStatic(typeof(Proxies));
+            CodeKeeper.KeepUnconstructable(typeof(Proxies));
 
             // Configuration
             CodeKeeper.Keep<CommandHandlerMethodDef>();

@@ -3,7 +3,6 @@ using System.Runtime.ExceptionServices;
 using ActualLab.CommandR.Internal;
 using ActualLab.CommandR.Operations;
 using ActualLab.OS;
-using ActualLab.Rpc;
 
 namespace ActualLab.CommandR;
 
@@ -15,18 +14,17 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
 
     private Operation? _operation;
 
-#pragma warning disable CA1721
+#pragma warning disable CA1721 // Property names should not match get methods
     public static CommandContext? Current => CurrentLocal.Value;
 #pragma warning restore CA1721
 
     protected internal IServiceScope ServiceScope { get; protected init; } = null!;
     public ICommander Commander { get; } = commander;
-#pragma warning disable CA2119
+    public abstract Type ResultType { get; }
     public abstract ICommand UntypedCommand { get; }
     public abstract Task UntypedResultTask { get; }
     public abstract Result UntypedResult { get; }
     public abstract bool IsCompleted { get; }
-#pragma warning restore CA2119
 
     public CommandContext? OuterContext { get; protected init; }
     public CommandContext OutermostContext { get; protected init; } = null!;
@@ -52,6 +50,15 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
             tCommandResult,
             static t => typeof(CommandContext<>).MakeGenericType(t));
         return (CommandContext)tContext.CreateInstance(commander, command, isOutermost);
+    }
+
+    public static CommandContext<TResult> New<TResult>(
+        ICommander commander, ICommand<TResult> command, bool isOutermost)
+    {
+        if (!isOutermost && (command is IOutermostCommand || Current?.UntypedCommand is IDelegatingCommand))
+            isOutermost = true;
+
+        return new CommandContext<TResult>(commander, command, isOutermost);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -118,6 +125,11 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
 
 public sealed class CommandContext<TResult> : CommandContext
 {
+    public override Type ResultType => typeof(TResult);
+    public override ICommand UntypedCommand => Command;
+    public override Task UntypedResultTask => ResultTask;
+    public override Result UntypedResult => Result.ToUntypedResult();
+
     public ICommand<TResult> Command { get; }
 
     public Task<TResult> ResultTask {
@@ -139,10 +151,6 @@ public sealed class CommandContext<TResult> : CommandContext
     }
 
     public override bool IsCompleted => ResultTask.IsCompleted;
-
-    public override ICommand UntypedCommand => Command;
-    public override Task UntypedResultTask => ResultTask;
-    public override Result UntypedResult => Result.ToUntypedResult();
 
     public CommandContext(ICommander commander, ICommand command, bool isOutermost)
         : base(commander)

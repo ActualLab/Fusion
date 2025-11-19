@@ -6,5 +6,5 @@ public interface ICommander : IHasServices
 {
     public CommanderHub Hub { get; }
 
-    public Task Run(CommandContext context, CancellationToken cancellationToken = default);
+    public Task<CommandContext> Run(CommandContext context, CancellationToken cancellationToken = default);
 }

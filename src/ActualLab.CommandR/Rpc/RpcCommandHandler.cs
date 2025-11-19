@@ -55,7 +55,8 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                         if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                             if (shardRouteState is not null)
                                 // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                                routeChangedToken = await shardRouteState.WhenShardOwned(cancellationToken)
+                                routeChangedToken = await shardRouteState.ShardLockAwaiter
+                                    .Invoke(cancellationToken)
                                     .ConfigureAwait(false);
 
                             if (routeChangedToken.CanBeCanceled) {

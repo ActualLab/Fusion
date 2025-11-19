@@ -22,9 +22,9 @@ public class Commander : ICommander
         Hub = new CommanderHub(this, services);
     }
 
-    public Task Run(CommandContext context, CancellationToken cancellationToken = default)
+    public Task<CommandContext> Run(CommandContext context, CancellationToken cancellationToken = default)
     {
-#pragma warning disable MA0100
+#pragma warning disable MA0100 // Do not use generic Task.Run
         if (context.UntypedCommand is IEventCommand eventCommand && eventCommand.ChainId.IsNullOrEmpty())
             return RunEvent(eventCommand, (CommandContext<Unit>)context, cancellationToken);
 
@@ -41,7 +41,9 @@ public class Commander : ICommander
 #pragma warning restore MA0100
     }
 
-    protected virtual async Task RunCommand(
+    // Protected methods
+
+    protected virtual async Task<CommandContext> RunCommand(
         CommandContext context, CancellationToken cancellationToken = default)
     {
         try {
@@ -61,9 +63,11 @@ public class Commander : ICommander
             context.TryComplete(cancellationToken);
             await context.DisposeAsync().ConfigureAwait(false);
         }
+
+        return context;
     }
 
-    protected virtual async Task RunEvent(
+    protected virtual async Task<CommandContext> RunEvent(
         IEventCommand command, CommandContext<Unit> context, CancellationToken cancellationToken = default)
     {
         try {
@@ -74,7 +78,7 @@ public class Commander : ICommander
             var handlerChains = handlers.HandlerChains;
             if (handlerChains.Count == 0) {
                 await OnUnhandledEvent(command, context, cancellationToken).ConfigureAwait(false);
-                return;
+                return context;
             }
             var callTasks = new Task[handlerChains.Count];
             var i = 0;
@@ -92,6 +96,8 @@ public class Commander : ICommander
             context.TryComplete(cancellationToken);
             await context.DisposeAsync().ConfigureAwait(false);
         }
+
+        return context;
     }
 
     protected virtual Task OnUnhandledCommand(

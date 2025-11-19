@@ -27,8 +27,7 @@ public static class RpcInboundCallOptionsExt
             var cancellationToken = args.GetCancellationToken(1);
             var context = CommandContext.New(commander, command, isOutermost: true);
             context.Items.KeylessSet(call); // This is the reason we manually create CommandContext here
-            var typedCallInvoker = CommanderExt.GetTypedCallInvoker(command.GetResultType());
-            return typedCallInvoker.Invoke(commander, context, cancellationToken);
+            return context.Call(cancellationToken);
         };
     }
 }

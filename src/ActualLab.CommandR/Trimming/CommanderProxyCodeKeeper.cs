@@ -22,7 +22,7 @@ public class CommanderProxyCodeKeeper : RpcProxyCodeKeeper
         base.KeepMethodResult<TResult, TUnwrapped>(name);
 
         Keep<CommandContext<TUnwrapped>>();
-        Keep<CommanderExt.TypedCallFactory<TUnwrapped>>();
+        Keep<CommandContextExt.TypedCallFactory<TUnwrapped>>();
         Keep<Expression<Func<ICommander, ICommand, bool, CommandContext<string>>>>();
     }
 }
