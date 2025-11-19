@@ -3,7 +3,6 @@ using ActualLab.CommandR.Trimming;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
-using ActualLab.Fusion.Internal;
 using ActualLab.Interception.Trimming;
 using ActualLab.Rpc.Infrastructure;
 
@@ -22,7 +21,13 @@ public class FusionProxyCodeKeeper : ProxyCodeKeeper
 
     public override void KeepMethodArgument<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(string name = "", int index = -1)
-        => CommanderProxyCodeKeeper.KeepMethodArgument<TArg>(name, index);
+    {
+        if (AlwaysTrue)
+            return;
+
+        CommanderProxyCodeKeeper.KeepMethodArgument<TArg>(name, index);
+        KeepUnconstructable(typeof(Completion<>).MakeGenericType(typeof(TArg)));
+    }
 
     public override void KeepMethodResult<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,

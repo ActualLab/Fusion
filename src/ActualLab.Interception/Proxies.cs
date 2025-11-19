@@ -18,7 +18,7 @@ public static class Proxies
 
     static Proxies() => CodeKeeper.AddFakeAction(
         static () => {
-            CodeKeeper.KeepStatic(typeof(ProxyHelper));
+            CodeKeeper.KeepUnconstructable(typeof(ProxyHelper));
 
             // ArgumentList
             CodeKeeper.Keep<ArgumentListType>();

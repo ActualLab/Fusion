@@ -64,8 +64,8 @@ public abstract class CodeKeeper
     public static T KeepSerializable<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()
         => Get<SerializableTypeCodeKeeper>().KeepType<T>();
 
-    public static void KeepStatic([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
-        => KeepStaticTypeImpl(type);
+    public static void KeepUnconstructable([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
+    { }
 
     public static T CallSilently<T>(Func<T> func)
     {
@@ -93,11 +93,6 @@ public abstract class CodeKeeper
         if (AlwaysFalse)
             CallSilently(action);
     }
-
-    // Private methods
-
-    private static void KeepStaticTypeImpl([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
-    { }
 
     // Nested types
 
