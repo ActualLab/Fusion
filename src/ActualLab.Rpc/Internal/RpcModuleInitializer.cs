@@ -5,8 +5,6 @@ namespace ActualLab.Rpc.Internal;
 
 #pragma warning disable CA2255
 
-#if NET8_0_OR_GREATER
-
 internal static class RpcModuleInitializer
 {
     static RpcModuleInitializer()
@@ -25,9 +23,9 @@ internal static class RpcModuleInitializer
         _ = RpcCallTypeRegistry.Get(RpcCallTypes.Regular);
     }
 
+#if NET8_0_OR_GREATER
     [ModuleInitializer]
+#endif
     internal static void Touch()
     { }
 }
-
-#endif

@@ -5,8 +5,6 @@ namespace ActualLab.Fusion.Internal;
 
 #pragma warning disable CA2255
 
-#if NET8_0_OR_GREATER
-
 internal static class FusionModuleInitializer
 {
     static FusionModuleInitializer()
@@ -17,9 +15,9 @@ internal static class FusionModuleInitializer
         ComputedVersion.Next();
     }
 
+#if NET8_0_OR_GREATER
     [ModuleInitializer]
+#endif
     internal static void Touch()
     { }
 }
-
-#endif
