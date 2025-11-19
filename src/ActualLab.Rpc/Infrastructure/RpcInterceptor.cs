@@ -59,7 +59,7 @@ public sealed class RpcInterceptor : Interceptor
                     resultTask = call.Invoke();
                 }
                 else { // call is null
-                    if (routingMode is RpcRoutingMode.LocalOnly) {
+                    if (routingMode is RpcRoutingMode.None) {
                         if (localCallAsyncInvoker is null)
                             throw Errors.CannotExecuteInterfaceCallLocally();
 
@@ -127,7 +127,9 @@ public sealed class RpcInterceptor : Interceptor
                         throw Errors.CannotExecuteInterfaceCallLocally();
 
                     if (shardRouteState is not null)
-                        routeChangedToken = await shardRouteState.WhenShardOwned(cancellationToken).ConfigureAwait(false);
+                        routeChangedToken = await shardRouteState.ShardLockAwaiter
+                            .Invoke(cancellationToken)
+                            .ConfigureAwait(false);
                     else if (routeState is not null)
                         routeChangedToken = routeState.ChangedToken;
 
