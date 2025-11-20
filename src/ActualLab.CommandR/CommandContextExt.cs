@@ -14,13 +14,11 @@ public static class CommandContextExt
             => GetTypedCallInvoker(context.ResultType).Invoke(context, cancellationToken);
     }
 
-    extension<TResult>(CommandContext<TResult> context)
+    public static async Task<TResult> Call<TResult>(
+        this CommandContext<TResult> context, CancellationToken cancellationToken = default)
     {
-        public async Task<TResult> Call(CancellationToken cancellationToken = default)
-        {
-            await context.Commander.Run(context, cancellationToken).ConfigureAwait(false);
-            return await context.ResultTask.ConfigureAwait(false);
-        }
+        await context.Commander.Run(context, cancellationToken).ConfigureAwait(false);
+        return await context.ResultTask.ConfigureAwait(false);
     }
 
     // Private methods

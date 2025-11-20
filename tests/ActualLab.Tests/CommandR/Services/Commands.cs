@@ -1,6 +1,6 @@
 namespace ActualLab.Tests.CommandR.Services;
 
-public record LogCommand : ICommand<Unit>
+public record LogCommand : ICommand<object?>
 {
     public string Message { get; init; } = "";
 }
