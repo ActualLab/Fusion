@@ -242,7 +242,7 @@ public static class Part01
                             (s, e) => WriteLine($"{clock.Elapsed:g}s: {e}, Value: {s.Value}, Computed: {s.Computed}"));
                     },
                 },
-                // This lambda describes how the computed state is computed -
+                // This lambda describes how the computed state is computed –
                 // essentially, it's a compute method written as a lambda.
                 async (state, cancellationToken) => {
                     // We intentionally delay the computation here to show how the initial value works

@@ -23,7 +23,7 @@ Namely:
   So it's exactly the same behavior as for Compute Services if we replace
   the "computation" with "RPC call".
 
-Compute Service clients communicate with the server over WebSocket channel -
+Compute Service clients communicate with the server over WebSocket channel &ndash;
 internally they use `ActualLab.Rpc` infrastructure to make such calls, as well as
 to receive notifications about server-side invalidations.
 

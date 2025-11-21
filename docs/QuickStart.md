@@ -389,7 +389,7 @@ to depict it in symbols: 🧝=🥣+🦄
 
 Seriously, so how does it work?
 
-`AddService` registers so-called [Compute Service](Part01.md#_1-compute-services-and-compute-methods) -
+`AddService` registers so-called [Compute Service](Part01.md#_1-compute-services-and-compute-methods) &ndash;
 a singleton, which proxy type is generated in the runtime,
 but derives from the type you provide, i.e.
 `InMemoryProductService` / `InMemoryCartService` in above case.
@@ -406,7 +406,7 @@ The proxy "decorates" every method marked by
    weak references to all of `IComputed` instances and
    helps to find them.
    If `IComputed` instance is found and it's still `Consistent`,
-   the wrapper "strips" it by returning its `Value` -
+   the wrapper "strips" it by returning its `Value` &ndash;
    in other words, it returns the cached answer.
    Note that `Value` may throw an exception &ndash; as you
    might guess, exceptions are cached the same way
@@ -584,7 +584,7 @@ I'll give a brief answer here:
   call and "the invalidation call" were completed for it locally.
 
 Under the hood all of this is powered by similar AOP-style
-decorators and [CommandR](Part09.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) -
+decorators and [CommandR](Part09.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) &ndash;
 style abstraction used by Fusion to implement its command processing
 pipeline.
 
@@ -859,7 +859,7 @@ But why?
 
 So crafting highly efficient Compute Services based on EF Core is actually
 quite easy &ndash; if you think what's the extra code you have to write,
-you'll find it's mainly `if (Invalidation.IsActive) { ... }` blocks -
+you'll find it's mainly `if (Invalidation.IsActive) { ... }` blocks &ndash;
 the rest is something you'd likely have otherwise at some point as well!
 
 And if you're curious how much of this "extra" a real app is expected to
@@ -936,7 +936,7 @@ They are Compute Services too &ndash; you can even cast them to
   and sends only what's ok to deserialize on server side.
   So once the first call passes through, every further update
   of the same result can be requested via WebSocket channel.
-  As you might guess, the arguments aren't sent in this case -
+  As you might guess, the arguments aren't sent in this case &ndash;
   client uses `publicationId` it got from server earlier to
   reference the `IComputed` that has to be updated.
 
@@ -1059,14 +1059,14 @@ And congrats &ndash; this is the end of this part, and now you know almost every
 The parts we didn't touch at all are:
 
 - [Part 3: IState&lt;T&gt; and Its Flavors](./Part03.md).
-  The key abstraction it describes is `ComputedState<T>` -
+  The key abstraction it describes is `ComputedState<T>` &ndash;
   the type that implements "wait for change, make a delay, recompute"
   loop similar to the one we manually coded here, but in more robust
   and convenient way.
-- [Part 6: Real-time UI in Blazor Apps](./Part06.md) -
+- [Part 6: Real-time UI in Blazor Apps](./Part06.md) &ndash;
   you'll learn how `ComputedState<T>` is used by
   `LiveComponent<T>` to power real-time updates in Blazor.
-- [Part 5: Fusion on Server-Side Only](./Part05.md) -
+- [Part 5: Fusion on Server-Side Only](./Part05.md) &ndash;
   read it to fully understand how Fusion actually caches `IComputed`
   instances, and what are the levers you can use to tweak its
   caching behavior.
