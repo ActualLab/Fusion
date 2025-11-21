@@ -5,7 +5,7 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Server.Rpc;
 
-public class RpcDefaultSessionInboundCallPreprocessor : RpcInboundCallPreprocessor
+public class RpcDefaultSessionReplacer : RpcInboundCallPreprocessor
 {
     public override Func<RpcInboundCall, Task> CreateInboundCallPreprocessor(RpcMethodDef methodDef)
     {

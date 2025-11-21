@@ -33,7 +33,7 @@ public readonly struct FusionWebServerBuilder
         // Add Rpc-related services
         var rpc = fusion.Rpc;
         rpc.AddWebSocketServer();
-        rpc.AddInboundCallPreprocessor<RpcDefaultSessionInboundCallPreprocessor>();
+        rpc.AddInboundCallPreprocessor<RpcDefaultSessionReplacer>();
 
         // Add other services
         services.AddSingleton(_ => SessionMiddleware.Options.Default);
