@@ -97,7 +97,8 @@ The remaining part of this document relies on it.
 Time to write some code! We'll be using the same "stub"
 with `CounterService` and `CreateServices` here:
 
-```cs --editable false --region Part03_CounterService --source-file Part03.cs
+<!-- snippet: Part03_CounterService -->
+```cs
 public class CounterService : IComputeService
 {
     private readonly ConcurrentDictionary<string, int> _counters = new ConcurrentDictionary<string, int>();
@@ -125,10 +126,12 @@ public static IServiceProvider CreateServices()
     return services.BuildServiceProvider();
 }
 ```
+<!-- endSnippet -->
 
 Here is how you use `MutableState<T>`:
 
-```cs --region Part03_MutableState --source-file Part03.cs
+<!-- snippet: Part03_MutableState -->
+```cs
 var services = CreateServices();
 var stateFactory = services.StateFactory();
 var state = stateFactory.NewMutable<int>(1);
@@ -138,6 +141,7 @@ state.Value = 2;
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 WriteLine($"Old computed: {computed}"); // Should be invalidated
 ```
+<!-- endSnippet -->
 
 The output:
 
@@ -154,24 +158,24 @@ Note that:
 
 Let's look at error handling example:
 
-```cs --region Part03_MutableStateError --source-file Part03.cs
+<!-- snippet: Part03_MutableStateError -->
+```cs
 var services = CreateServices();
 var stateFactory = services.StateFactory();
 var state = stateFactory.NewMutable<int>();
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 WriteLine("Setting state.Error.");
 state.Error = new ApplicationException("Just a test");
-try
-{
+try {
     WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 }
-catch (ApplicationException)
-{
+catch (ApplicationException) {
     WriteLine($"Error: {state.Error.GetType()}, Computed: {state.Computed}");
 }
 WriteLine($"LastNonErrorValue: {state.LastNonErrorValue}");
 WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}");
 ```
+<!-- endSnippet -->
 
 The output:
 
@@ -195,13 +199,15 @@ via `LatestNonErrorValueComputed`.
 
 Let's play with `IComputedState<T>` now:
 
-```cs --region Part03_LiveState --source-file Part03.cs
+<!-- snippet: Part03_LiveState -->
+```cs
 var services = CreateServices();
 var counters = services.GetRequiredService<CounterService>();
 var stateFactory = services.StateFactory();
 WriteLine("Creating state.");
 using var state = stateFactory.NewComputed(
     new ComputedState<string>.Options() {
+        InitialValue = "<initial>",
         UpdateDelayer = FixedDelayer.Get(1), // 1 second update delay
         EventConfigurator = state1 => {
             // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
@@ -209,8 +215,7 @@ using var state = stateFactory.NewComputed(
                 (s, e) => WriteLine($"{DateTime.Now}: {e}, Value: {s.Value}, Computed: {s.Computed}"));
         },
     },
-    async (state, cancellationToken) =>
-    {
+    async (state, cancellationToken) => {
         var counter = await counters.Get("a");
         return $"counters.Get(a) -> {counter}";
     });
@@ -221,6 +226,7 @@ counters.Increment("a");
 await Task.Delay(2000);
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 ```
+<!-- endSnippet -->
 
 The output:
 
