@@ -1,4 +1,4 @@
-﻿## Source
+## Source
 
 <a href="https://img.youtube.com/vi/vwm1l8eevak/maxresdefault.jpg"><img src="https://img.youtube.com/vi/eMO7AmI6ui4/maxresdefault.jpg"></a>
 
