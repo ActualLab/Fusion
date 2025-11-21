@@ -36,7 +36,6 @@ namespace Tutorial
             services.AddFusion().AddService<CounterService>();
             return services.BuildServiceProvider();
         }
-
         #endregion
 
         public static async Task MutableState()
@@ -82,6 +81,7 @@ namespace Tutorial
             WriteLine("Creating state.");
             using var state = stateFactory.NewComputed(
                 new ComputedState<string>.Options() {
+                    InitialValue = "<initial>",
                     UpdateDelayer = FixedDelayer.Get(1), // 1 second update delay
                     EventConfigurator = state1 => {
                         // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
@@ -100,6 +100,15 @@ namespace Tutorial
             await Task.Delay(2000);
             WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
             #endregion
+        }
+
+        public static async Task Run()
+        {
+            await MutableState();
+            WriteLine();
+            await MutableStateError();
+            WriteLine();
+            await ComputedState();
         }
     }
 }
