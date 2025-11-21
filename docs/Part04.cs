@@ -12,10 +12,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ActualLab.Fusion;
 using ActualLab.Fusion.Server;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using static System.Console;
 
-namespace Tutorial.Part04_Classes
+namespace Tutorial
 {
     #region Part04_CommonServices
     // Ideally, we want Compute Service client to be exactly the same as corresponding
@@ -65,13 +66,8 @@ namespace Tutorial.Part04_Classes
         }
     }
     #endregion
-}
 
-namespace Tutorial
-{
-    using Part04_Classes;
-
-    public static class Part04
+    public static partial class Part04
     {
         #region Part04_CreateXxx
         public static IHost CreateHost()
@@ -82,10 +78,11 @@ namespace Tutorial
             builder.ConfigureLogging(logging =>
                 logging.ClearProviders().SetMinimumLevel(LogLevel.Information).AddDebug());
             builder.ConfigureServices((b, services) => {
+                services.AddRouting();
                 var fusion = services.AddFusion();
                 fusion.AddWebServer();
                 // Registering Compute Service
-                fusion.AddService<ICounterService, CounterService>();
+                fusion.AddService<ICounterService, CounterService>(RpcServiceMode.Server);
             });
             builder.ConfigureWebHost(webHost => {
                 webHost.UseKestrel();
@@ -158,7 +155,7 @@ namespace Tutorial
             using var host = CreateHost();
             await host.StartAsync();
             WriteLine("Host started.");
-
+    
             var services = CreateClientServices();
             var counters = services.GetRequiredService<ICounterService>();
             var stateFactory = services.StateFactory();
@@ -180,9 +177,16 @@ namespace Tutorial
             await Task.Delay(2000);
             await counters.SetOffset(10);
             await Task.Delay(2000);
-
+    
             await host.StopAsync();
             #endregion
+        }
+    
+        public static async Task Run()
+        {
+            await ReplicaService();
+            WriteLine();
+            await LiveStateFromReplica();
         }
     }
 }
