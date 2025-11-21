@@ -35,8 +35,8 @@ export default defineConfig({
           { text: "Part 4: Compute Service Clients", link: "/Part04" },
           { text: "Part 5: Fusion on Server-Side Only", link: "/Part05" },
           { text: "Part 6: Real-time UI in Blazor Apps", link: "/Part06" },
+          { text: "Part 7: Real-time UI in JS / React Apps", link: "/Part07" },
           /*
-          { text: 'Part 7: Real-time UI in JS / React Apps', link: '/Part07' },
           { text: 'Part 8: Scaling Fusion Services', link: '/Part08' },
           { text: 'Part 9: CommandR', link: '/Part09' },
           { text: 'Part 10: Multi-Host Invalidation and CQRS with Operations Framework', link: '/Part10' },
