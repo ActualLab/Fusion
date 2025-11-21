@@ -19,11 +19,16 @@ public class RpcDefaultSessionReplacer : RpcInboundCallPreprocessor
                 if (!HasSessionBoundRpcConnection(call, out var connection))
                     return Task.CompletedTask;
 
-                var arguments = call.Arguments!;
-                var session = arguments.Get<Session>(0);
+                var args = call.Arguments!;
+                var session = (Session?)args.Get0Untyped();
+                if (session is null) {
+                    // We assume the nullability is validated by RpcInboundCallOptions.UseNullabilityArgumentValidator
+                    return Task.CompletedTask;
+                }
+
                 if (session.IsDefault()) {
                     session = connection.Session;
-                    arguments.Set(0, session);
+                    args.Set(0, session);
                 }
                 else
                     session.RequireValid();
@@ -35,8 +40,13 @@ public class RpcDefaultSessionReplacer : RpcInboundCallPreprocessor
                 if (!HasSessionBoundRpcConnection(call, out var connection))
                     return Task.CompletedTask;
 
-                var arguments = call.Arguments!;
-                var command = arguments.Get<ISessionCommand>(0);
+                var args = call.Arguments!;
+                var command = (ISessionCommand?)args.Get0Untyped();
+                if (command is null) {
+                    // We assume the nullability is validated by RpcInboundCallOptions.UseNullabilityArgumentValidator
+                    return Task.CompletedTask;
+                }
+
                 var session = command.Session;
                 if (session.IsDefault())
                     command.SetSession(connection.Session);
