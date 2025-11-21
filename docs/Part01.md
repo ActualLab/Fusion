@@ -193,13 +193,13 @@ computedForSumAB.Invalidated += _ => WriteLine("Sum(a, b) is invalidated");
 // Manually invalidate computedForGetA, i.e. the result of counters.Get("a") call
 computedForGetA.Invalidate(); // Prints: Sum(a, b) is invalidated
 WriteLine(computedForGetA.IsConsistent());  // False
-WriteLine(computedForSumAB.IsConsistent()); // False - invalidation is always cascading
+WriteLine(computedForSumAB.IsConsistent()); // False – invalidation is always cascading
 
 // Manually update computedForSumAB
 var newComputedForSumAB = await computedForSumAB.Update();
 // Prints:
 // Get(a) = 2, we invalidated it, so it was of Sum(a, b)
-// Sum(a, b) = 2, Update() call above actually triggered this call
+// Sum(a, b) = 2, .Update() call above actually triggered this call
 
 WriteLine(newComputedForSumAB.IsConsistent()); // True
 WriteLine(newComputedForSumAB.Value); // 2
