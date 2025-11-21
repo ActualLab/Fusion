@@ -23,7 +23,7 @@ RestEase Client [-> HTTP -> ASP.NET Core -> Regular Service -> EF Core -> SQL Se
 Last two results are the most interesting in the context of this part:
 
 - A tiny EF Core-based service exposed via ASP.NET Core controller
-  serves **20,500** requests per second. That's already a lot -
+  serves **20,500** requests per second. That's already a lot &ndash;
   mostly, because its data set fully fits in RAM on SQL Server.
 - An identical service relying on Fusion (it's literally the same code
   plus Fusion's `[ComputeMethod]` and `Invalidation.Begin` calls)
@@ -404,6 +404,6 @@ scale much better than `Task.Delay` (which relies on
 though this comes at cost of fire precision: Fusion timers fire only
 [4 times per second](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Internal/Timeouts.cs#L20).
 Under the hood, `ConcurrentTimerSet` uses
-[RadixHeapSet](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Collections/RadixHeapSet.cs) -
+[RadixHeapSet](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Collections/RadixHeapSet.cs) &ndash;
 basically, a [Radix Heap](http://ssp.impulsetrain.com/radix-heap.html)
 supporting `O(1)` find and delete operations.

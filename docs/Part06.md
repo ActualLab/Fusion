@@ -61,7 +61,7 @@ protected StatefulComponentBase()
 }
 ```
 
-Finally, it also disposes the state once the component gets disposed -
+Finally, it also disposes the state once the component gets disposed &ndash;
 unless its `OwnsState` property is set to `false`. And that's nearly all
 it does.
 
@@ -132,7 +132,7 @@ constructs it using `StateFactory` &ndash; and moreover:
   consequently, `StateChanged` event on the component. And since we're using
   `IComputedState` here, the state itself will use its `UpdateDelayer` to wait
   a bit and recompute itself using the same `ComputeState` method.
-- This state is configured by its own `GetStateOptions` method -
+- This state is configured by its own `GetStateOptions` method &ndash;
   in particular, you can provide its initial value, `UpdateDelayer`, etc.
 - By default:
   - Change of component parameters triggers state recomputation
@@ -149,7 +149,7 @@ Compute Service (or a set of such services) changes, all you need is to:
 - Override its `ComputeState` method
 - Possibly, override its `GetStateOptions` method.
 
-A good example of such component is `Counter.razor` from "HelloBlazorServer" example -
+A good example of such component is `Counter.razor` from "HelloBlazorServer" example &ndash;
 check out [its source code](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Pages/Counter.razor).
 Note that it already computes a complex value using two compute methods
 (`CounterService.GetCounterAsync` and `GetMomentsAgoAsync`):
@@ -167,7 +167,7 @@ protected override async Task<string> ComputeState(CancellationToken cancellatio
 
 It's pretty common for UI components to have its own (local) state
 (e.g. a text entered into a few form fields)
-and compute their `State` using some values from this local state -
+and compute their `State` using some values from this local state &ndash;
 in other words, to have their `State` dependent on its local state.
 
 There are a few ways to enforce `State` recomputation in such cases:
@@ -236,7 +236,7 @@ public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 If you read about [Compute Service Clients in Part 4](./Part04.md), you
 probably already know that WASM case actually isn't that different:
 
-- Server-side should be configured to "share" Compute Services -
+- Server-side should be configured to "share" Compute Services &ndash;
   i.e. its DI container should be able to resolve Compute Services and
   `ActualLab.Rpc.RpcHub` should expose them as servers (services available
   for remote clients).

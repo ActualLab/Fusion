@@ -133,7 +133,7 @@ These two videos cover the most interesting parts of Fusion:
 
 [<img align="right" width="150" src="./docs/img/FusionSlides.jpg"/>](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html)
 If you prefer slides, check out
-["Why real-time web apps need Blazor and Fusion?" talk](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html) -
+["Why real-time web apps need Blazor and Fusion?" talk](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html) &ndash;
 it explains how many problems we tackle are connected, how Fusion addresses the root cause, and how to code a simplified version of Fusion's key abstraction in C#.
 
 > The slides are slightly outdated &ndash; e.g. now Fusion clients use `ActualLab.Rpc` rather than HTTP to communicate with the server, but all the concepts they cover are still intact.
@@ -310,15 +310,15 @@ Now, I guess you're curious how the UI code looks like with Fusion You'll be sur
 [actual code](https://github.com/ActualLab/Fusion.Samples/blob/master/templates/TodoApp/UI/Shared/MomentsAgoBadge.razor),
 which is a bit more complex due to `null` handling.
 
-You see it uses `IFusionTime` - one of built-in compute services that provides `GetUtcNow` and `GetMomentsAgo` methods. As you might guess,the results of these methods are invalidated automatically; check out [`FusionTime` service](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Extensions/Internal/FusionTime.cs#L46) to see how it works.
+You see it uses `IFusionTime` &ndash; one of built-in compute services that provides `GetUtcNow` and `GetMomentsAgo` methods. As you might guess,the results of these methods are invalidated automatically; check out [`FusionTime` service](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Extensions/Internal/FusionTime.cs#L46) to see how it works.
 
 But what's important here is that `MomentsAgoBadge` is inherited from
-[ComputedStateComponent<T>](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/ComputedStateComponent.cs) -
+[ComputedStateComponent<T>](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/ComputedStateComponent.cs) &ndash;
 an abstract type which provides `ComputeState` method. As you might guess, this method behaves like a [Compute Method].
 
 `ComputedStateComponent<T>` exposes `State` property (of `ComputedState<T>` type),
 which allows you to get the most recent output of `ComputeState()`' via its
-`Value` property. "State" is another key Fusion abstraction - it implements a ["wait for invalidation and recompute" loop
+`Value` property. "State" is another key Fusion abstraction &ndash; it implements a ["wait for invalidation and recompute" loop
 similar to this one](https://github.com/ActualLab/Fusion/blob/master/samples/TodoApp/ConsoleClient/Program.cs#L18):
 
 ```cs

@@ -327,7 +327,7 @@ There are two implementations of `State<T>`:
    Its `Computed` property returns an always-consistent computed, which gets
    replaced once the `MutableState.Value` (or `Error`, etc.) is set;
    the old computed gets invalidated.
-   You can use mutable states in compute methods or computed states -
+   You can use mutable states in compute methods or computed states &ndash;
    since any state tracks some `Computed<T>`, it can be a dependency
    of another computed value.
    Typically such states are used to describe the client-side state
@@ -417,7 +417,7 @@ using var computedState = stateFactory.NewComputed(
                 (s, e) => WriteLine($"{clock.Elapsed:g}s: {e}, Value: {s.Value}, Computed: {s.Computed}"));
         },
     },
-    // This lambda describes how the computed state is computed -
+    // This lambda describes how the computed state is computed –
     // essentially, it's a compute method written as a lambda.
     async (state, cancellationToken) => {
         // We intentionally delay the computation here to show how the initial value works
