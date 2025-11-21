@@ -121,7 +121,7 @@ public static class Part01
             var newComputedForSumAB = await computedForSumAB.Update();
             // Prints:
             // Get(a) = 2, we invalidated it, so it was of Sum(a, b)
-            // Sum(a, b) = 2, Update() call above actually triggered this call
+            // Sum(a, b) = 2, .Update() call above actually triggered this call
 
             WriteLine(newComputedForSumAB.IsConsistent()); // True
             WriteLine(newComputedForSumAB.Value); // 2
