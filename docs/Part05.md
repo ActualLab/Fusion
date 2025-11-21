@@ -6,17 +6,17 @@ Below is the output of
 
 ```text
 Local services:
-Fusion's Compute Service [→ EF Core → SQL Server]:
+Fusion's Compute Service [-> EF Core -> SQL Server]:
   Reads         : 27.55M operations/s
-Regular Service [→ EF Core → SQL Server]:
+Regular Service [-> EF Core -> SQL Server]:
   Reads         : 25.05K operations/s
 
 Remote services:
-Fusion's Compute Service Client [→ HTTP+WebSocket → ASP.NET Core → Compute Service → EF Core → SQL Server]:
+Fusion's Compute Service Client [-> HTTP+WebSocket -> ASP.NET Core -> Compute Service -> EF Core -> SQL Server]:
   Reads         : 20.29M operations/s
-RestEase Client [→ HTTP → ASP.NET Core → Compute Service → EF Core → SQL Server]:
+RestEase Client [-> HTTP -> ASP.NET Core -> Compute Service -> EF Core -> SQL Server]:
   Reads         : 127.96K operations/s
-RestEase Client [→ HTTP → ASP.NET Core → Regular Service → EF Core → SQL Server]:
+RestEase Client [-> HTTP -> ASP.NET Core -> Regular Service -> EF Core -> SQL Server]:
   Reads         : 20.46K operations/s
 ```
 
