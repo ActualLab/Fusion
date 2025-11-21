@@ -14,12 +14,12 @@ You already know two key concepts of Fusion:
 
 The last missing piece of a puzzle is `IState<T>`, or simply speaking,
 a "state". If you used Knockout.js or MobX earlier, state would correspond
-to their versions of computed values - i.e. in fact, state simply tracks
+to their versions of computed values &ndash; i.e. in fact, state simply tracks
 the most recent version of some `Computed<T>`.
 
 Ok, probably it's not quite clear what I just said, but remember that:
 
-- Computed values are immutable - once created in `Computing` state,
+- Computed values are immutable &ndash; once created in `Computing` state,
   they turn `Consistent` first, but eventually become `Inconsistent`.
 - The rules of the game set in such a way that, if we ignore `Computing`
   state, there can be only one `Consistent` version of a computed value corresponding to the same computation at any given moment.
@@ -35,11 +35,11 @@ So `IState<T>` is what "tracks" the most up-to-date version. There are two imple
   to make its output dependent on it, or similarly use it in other
   computed state. But describing client-side state of UI components (e.g.
   a value entered into a search box) is its most frequent use case.
-- `IComputedState<T>` - a computed state that triggers its own recomputation
+- `IComputedState<T>` &ndash; a computed state that triggers its own recomputation
   (update) after the invalidation. And if you think what are the "levers"
   it might have, you'll quickly conclude the only option it needs to control
   is a delay between the invalidation and the update. And that's exactly
-  what it offers - its `UpdateDelayer` property references `IUpdateDelayer`,
+  what it offers &ndash; its `UpdateDelayer` property references `IUpdateDelayer`,
   which implements the delay. Moreover, any `IUpdateDelayer` also supports
   cancellation of any active delays.
 
@@ -65,7 +65,7 @@ And finally, states have a few extra properties:
   - Doing the same via `Snapshot.Computed` property ensures
     this can't happen.
 - Both `IState<T>` and `IStateSnapshot<T>` expose
-  `LastNonErrorValue` and `LatestNonErrorValueComputed` properties - they
+  `LastNonErrorValue` and `LatestNonErrorValueComputed` properties &ndash; they
   allow to access the last valid `Value` and its `Computed<T>`
   exposed by the state. In other words, when state exposes
   an `Error`, `LastNonErrorValue` still exposes the previous `Value`.
@@ -98,6 +98,7 @@ Time to write some code! We'll be using the same "stub"
 with `CounterService` and `CreateServices` here:
 
 <!-- snippet: Part03_CounterService -->
+
 ```cs
 public class CounterService : IComputeService
 {
@@ -126,11 +127,13 @@ public static IServiceProvider CreateServices()
     return services.BuildServiceProvider();
 }
 ```
+
 <!-- endSnippet -->
 
 Here is how you use `MutableState<T>`:
 
 <!-- snippet: Part03_MutableState -->
+
 ```cs
 var services = CreateServices();
 var stateFactory = services.StateFactory();
@@ -141,6 +144,7 @@ state.Value = 2;
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 WriteLine($"Old computed: {computed}"); // Should be invalidated
 ```
+
 <!-- endSnippet -->
 
 The output:
@@ -159,6 +163,7 @@ Note that:
 Let's look at error handling example:
 
 <!-- snippet: Part03_MutableStateError -->
+
 ```cs
 var services = CreateServices();
 var stateFactory = services.StateFactory();
@@ -175,6 +180,7 @@ catch (ApplicationException) {
 WriteLine($"LastNonErrorValue: {state.LastNonErrorValue}");
 WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}");
 ```
+
 <!-- endSnippet -->
 
 The output:
@@ -200,6 +206,7 @@ via `LatestNonErrorValueComputed`.
 Let's play with `IComputedState<T>` now:
 
 <!-- snippet: Part03_LiveState -->
+
 ```cs
 var services = CreateServices();
 var counters = services.GetRequiredService<CounterService>();
@@ -226,6 +233,7 @@ counters.Increment("a");
 await Task.Delay(2000);
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 ```
+
 <!-- endSnippet -->
 
 The output:
@@ -257,10 +265,10 @@ Some observations:
   `stateFactory.NewLive<T>(...)` runs)
 - `aCounterState.Update(false)` triggers its update.
   Interestingly, though, that this update will anyway happen
-  immediately by default - the very first update delay is
+  immediately by default &ndash; the very first update delay is
   always zero. You can check this by replacing the line
   with `Update(false)` to `await Task.Delay(100)`
 - Later the invalidation happens right after the value
   state depends on gets invalidated.
-- But the update follows in 1 second - i.e. as it was
+- But the update follows in 1 second &ndash; i.e. as it was
   specified in options we've provided.
