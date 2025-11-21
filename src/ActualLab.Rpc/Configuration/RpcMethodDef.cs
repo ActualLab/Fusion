@@ -145,7 +145,6 @@ public partial class RpcMethodDef : MethodDef
             InboundCallPreprocessors = CreateInboundCallPreprocessors();
             InboundCallValidator = CreateInboundCallValidator();
 
-
             InboundCallUseFastPipelineInvoker ??= CallTypeId == RpcCallTypes.Regular;
             InboundCallUseDistributedModeServerInvoker ??= Service.Mode is RpcServiceMode.Distributed;
 
