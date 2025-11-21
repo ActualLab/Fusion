@@ -71,7 +71,7 @@ public static IServiceProvider CreateServices()
 }
 ```
 
-First, `IComputed` instances aren't "cached" by default – they're just
+First, `IComputed` instances aren't "cached" by default &ndash; they're just
 reused while it's possible:
 
 <!-- snippet: Part05_Caching1 -->
@@ -100,7 +100,7 @@ a
 ```
 
 As you see, `GC.Collect()` call removes cached `IComputed`
-for `Get("a")` – and that's why `Get(a)` is printed
+for `Get("a")` &ndash; and that's why `Get(a)` is printed
 twice here.
 
 All of this means that most likely Fusion holds a
@@ -250,7 +250,7 @@ But why Fusion behaves this way? The answer is actually super simple:
   or simply shouldn't be .NET object references, coz if they were strong
   references, this would almost certainly keep the whole graph of `IComputed`
   in memory, which is highly undesirable. That's why Fusion uses the second
-  option here – it stores keys of direct dependants of every `IComputed`
+  option here &ndash; it stores keys of direct dependants of every `IComputed`
   and resolves them via the same registry as it uses to resolve `IComputed`
   instances for method calls.
 - Interestingly, there is a fundamental reason to weak reference every
@@ -260,11 +260,11 @@ But why Fusion behaves this way? The answer is actually super simple:
   you invalidate the first one (and thus all of its dependants), but
   don't do anything with the second one (so its dependants stay valid).
   As you see, it's a partial invalidation, i.e. something that may cause
-  a long-term inconsistency – which is why Fusion ensures that at any
+  a long-term inconsistency &ndash; which is why Fusion ensures that at any
   moment of time there can be only one `IComptuted` instance describing
   given computation.
 
-**Default caching behavior – a summary:**
+**Default caching behavior &ndash; a summary:**
 
 - Nothing is really cached, but everything is weak-referenced
 - When you compute a new value, every value used to produce it
@@ -381,7 +381,7 @@ That's basically it on `MinCacheDuration`.
 
 A few tips on how to use it:
 
-- You should apply it mainly to the final outputs – i.e. compute
+- You should apply it mainly to the final outputs &ndash; i.e. compute
   methods that are either exposed via API or used in your UI.
 - Applying it to other compute methods is fine too, though keep in mind
   that whatever is used by top level methods with `MinCacheDuration`
@@ -392,7 +392,7 @@ A few tips on how to use it:
   from the downstream method &ndash; do this, because this won't incur
   use of extra RAM.
 - This is also why you might want to return just immutable objects from
-  compute methods&nbsp;&ndash; and C# 9 records come quite handy here.
+  compute methods &ndash; and C# 9 records come quite handy here.
 
 ---
 

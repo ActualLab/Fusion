@@ -93,7 +93,7 @@ just about a single thing: **the total cost of items in
 user's cart**. We want to update this cost in real-time
 once anything impacting it changes.
 
-This is why `ICartService.GetTotal` exists - this
+This is why `ICartService.GetTotal` exists &ndash; this
 method is expected to return the right total.
 But... Looks like there is nothing in our API that could
 tell the client that total for the specific cart changes,
@@ -132,11 +132,11 @@ a fair amount of code on the client side:
   you might prefer to request a new cart directly from
   server once you see a command impacting it.
   On a downside, it will definitely increase the load on
-  server - fetching the cart requires fetching its items,
+  server &ndash; fetching the cart requires fetching its items,
   products, etc... So you almost certainly need to cache
   carts there.
 
-And that's just the beginning of our problems - the implementation
+And that's just the beginning of our problems &ndash; the implementation
 described above:
 
 1. Allows everyone to watch everyone else's purchases.
@@ -157,12 +157,12 @@ described above:
    and notifies every customer watching these carts.
 
    Here you realize you need a pub-sub to implement
-   this - i.e. your clients will have to subscribe to and
+   this &ndash; i.e. your clients will have to subscribe to and
    unsubscribe from topics like `"cart-[cartId]"` to
    watch for...
    Wait, are we still going to send `Edit<Product>` commands
    to these topics, or we better go with a separate
-   model for these notifications? And if yes - we'll definitely
+   model for these notifications? And if yes &ndash; we'll definitely
    need a separate logic to process these...
 
 3. What if your client temporarily loses its connection
@@ -173,7 +173,7 @@ described above:
    once reconnection happens, right?
 
 4. Most of real-time messaging APIs
-   [don't provide strong guarantees for message ordering](https://github.com/dotnet/aspnetcore/issues/9240) - especially for messages
+   [don't provide strong guarantees for message ordering](https://github.com/dotnet/aspnetcore/issues/9240) &ndash; especially for messages
    sent to different topics / channels, and any _real_ real-time
    app uses a number of such channels. Moreover, if you send requests
    via regular HTTP API to the same server, the order of
@@ -182,7 +182,7 @@ described above:
    In other words, you might receive `EditCommand("apple", 5)`
    message first (which sets "apple" price to 5),
    and after that get the "current" cart content, which is
-   already an outdated now - you requested it few second ago
+   already an outdated now &ndash; you requested it few second ago
    due to reconnect, and this request was completed by
    server before processing `EditCommand("apple", 5)` command,
    but the message describing this command somehow got
@@ -306,7 +306,7 @@ for the product you change, **but surprisingly, for cart's
 total as well😲**
 
 And it happens not just for a single cart, but **for any cart that
-contains the product you modify** - try typing `banana=100` expression
+contains the product you modify** &ndash; try typing `banana=100` expression
 ("banana" is contained in both carts) to see both carts' totals are
 updated!
 
@@ -315,7 +315,7 @@ updated!
 We've just shown there is a way to propagate any changes
 made to a relatively small component to a derivative
 that uses this component. And further I'll show this is
-done completely automatically - except a relatively small
+done completely automatically &ndash; except a relatively small
 part.
 
 So... We have a tool allowing us to recompute any
@@ -408,7 +408,7 @@ The proxy "decorates" every method marked by
    If `IComputed` instance is found and it's still `Consistent`,
    the wrapper "strips" it by returning its `Value` -
    in other words, it returns the cached answer.
-   Note that `Value` may throw an exception - as you
+   Note that `Value` may throw an exception &ndash; as you
    might guess, exceptions are cached the same way
    as well, though by default they auto-expire in 1 second.
 
@@ -457,7 +457,7 @@ instances, there are APIs allowing you to:
 - Invalidate it, i.e. mark it inconsistent
 - Await for its invalidation
 - Or even get the most up-to-date version of a possibly invalidated
-  `IComputed` - either a cached or a newly computed one.
+  `IComputed` &ndash; either a cached or a newly computed one.
 
 Do you remember the code "watching" for cart changes in the
 beginning? [AppBase.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/AppBase.cs):
@@ -507,7 +507,7 @@ public virtual async Task<decimal> GetTotal(
 As you see, any result of `GetTotal(id)` becomes
 dependent on:
 
-- Cart content - for the cart with this `id`
+- Cart content &ndash; for the cart with this `id`
 - Every product that's referenced by items in this cart.
 
 > If you want to learn more about Compute Services and
@@ -574,8 +574,8 @@ I'll give a brief answer here:
 - Yes, in reality any Compute Service method decorated with
   `[CommandHandler]` is called `N + 1` times, where `N` is the
   number of servers in your cluster 🙀
-- The first call is the normal one - it makes all the changes
-- `N` more calls are made inside so-called invalidation scope - i.e. inside
+- The first call is the normal one &ndash; it makes all the changes
+- `N` more calls are made inside so-called invalidation scope &ndash; i.e. inside
   `using (Invalidation.Begin()) { ... }` block, and they are reliably
   executed on every server in your cluster, including the one
   where the command was originally executed.
@@ -584,16 +584,16 @@ I'll give a brief answer here:
   call and "the invalidation call" were completed for it locally.
 
 Under the hood all of this is powered by similar AOP-style
-decorators and [CommandR](Part09.md) - a [MediatR](https://github.com/jbogard/MediatR) -
+decorators and [CommandR](Part09.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) -
 style abstraction used by Fusion to implement its command processing
 pipeline.
 
 Methods marked with `[CommandHandler]` behave very differently
-from methods marked by `[ComputeMethod]` - in fact, there
+from methods marked by `[ComputeMethod]` &ndash; in fact, there
 is nothing common at all.
 The wrapper logic for command handlers does nothing but routes
 every call to `ICommander`. This allows you to call such methods
-directly - note that if this logic won't exist, calling such a method
+directly &ndash; note that if this logic won't exist, calling such a method
 directly would be a mistake, because such call won't trigger
 the whole command processing pipeline for the used command.
 
@@ -633,7 +633,7 @@ Btw, "replaying the command in the invalidation mode" means:
   `using (Invalidation.Begin()) { ... }` block.
 
 ☝ The pipeline described above is called **"Operations Framework"**
-(**OF** further) - in fact, it's just a set of handlers and services
+(**OF** further) &ndash; in fact, it's just a set of handlers and services
 for CommandR providing this multi-host invalidation pipeline for every
 Fusion's Compute Service.
 
@@ -648,7 +648,7 @@ And a few final remarks on this:
    client** (e.g. Blazor WASM running in your browser).
    This pipeline is server-side only.
 
-> If you want to learn all the details about this - check out
+> If you want to learn all the details about this &ndash; check out
 > [Part 8](Part08.md), [Part 9](Part09.md), and [Part 10](Part10.md)
 > of the Tutorial 😎
 
@@ -656,7 +656,7 @@ And a few final remarks on this:
 
 Code: [src/HelloCart/v2](https://github.com/ActualLab/Fusion.Samples/tree/master/src/HelloCart/v2)
 
-> ☝ We will move WAY FASTER now - this and every following version
+> ☝ We will move WAY FASTER now &ndash; this and every following version
 > will require just about 5 minutes of your time.
 
 Here is the actual code inside [AppV2](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v2/AppV2.cs) constructor:
@@ -729,7 +729,7 @@ reads/writes the DB:
    is just a convenience helper providing a few protected methods
    for services that are supposed to access the DB.
 
-2. One of these methods is `CreateDbContext` - you may see it's typically
+2. One of these methods is `CreateDbContext` &ndash; you may see it's typically
    used like this:
 
    ```cs
@@ -793,8 +793,8 @@ db.AddEntityResolver<string, DbCart>((_, options) => {
 });
 ```
 
-This code registers two entity resolvers - one for `DbProduct` type,
-and another one - for `DbCart` type (`string` is the type of key of
+This code registers two entity resolvers &ndash; one for `DbProduct` type,
+and another one &ndash; for `DbCart` type (`string` is the type of key of
 these entities).
 
 Entity resolvers are helpers grouping multiple requests to
@@ -853,17 +853,17 @@ But why?
   store the result of `Get` for every product that's in the cart.
   This is where entity resolver used in `Get` kicks in: most
   likely it will run just 1 or 2 queries to resolve every remaining
-  product that `GetTotal` throws - and moreover, since all
+  product that `GetTotal` throws &ndash; and moreover, since all
   these calls "flow" through `Get`, these results will be
   cached in Fusion's cache too!
 
 So crafting highly efficient Compute Services based on EF Core is actually
-quite easy - if you think what's the extra code you have to write,
+quite easy &ndash; if you think what's the extra code you have to write,
 you'll find it's mainly `if (Invalidation.IsActive) { ... }` blocks -
 the rest is something you'd likely have otherwise at some point as well!
 
 And if you're curious how much of this "extra" a real app is expected to
-have - check out [Board Games](https://github.com/alexyakunin/BoardGames).
+have &ndash; check out [Board Games](https://github.com/alexyakunin/BoardGames).
 It's mentioned in its
 [README.md](https://github.com/alexyakunin/BoardGames/blob/main/README.md)
 that this whole app has
@@ -914,7 +914,7 @@ completely, including everything related to invalidation
 and dependency tracking.
 
 Such clients are called [Compute Service Clients](Part04.md).
-They are Compute Services too - you can even cast them to
+They are Compute Services too &ndash; you can even cast them to
 `IComputeService` as any other compute service. But:
 
 - They're auto-generated
@@ -976,9 +976,9 @@ services.AddFusion(fusion => {
 
 Where can you use such clients? Actually, everywhere!
 
-- In Blazor WebAssembly - obvously
+- In Blazor WebAssembly &ndash; obvously
 - In console or MAUI apps
-- Finally, even on the server-side - nothing prevents you to e.g.
+- Finally, even on the server-side &ndash; nothing prevents you to e.g.
   aggregate the data on a dedicated set of servers there,
   but keep the results of aggregation similarly reactive to
   the changes in underlying data.
@@ -993,7 +993,7 @@ You already know that Fusion is capable to "propagate" the
 invalidations to every host sharing the same data.
 
 Let's see what's necessary to make it work.
-This is our full [AppV5](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v5/AppV5.cs) - there is nothing else:
+This is our full [AppV5](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v5/AppV5.cs) &ndash; there is nothing else:
 
 ```cs
 public class AppV5 : AppV4
@@ -1043,7 +1043,7 @@ public class AppV5 : AppV4
 So we create an extra host here, but both hosts use
 the same container configuration we started to use
 in `v2`. In other words, no extra is needed to
-use multi-host invalidation - `v2` configuration
+use multi-host invalidation &ndash; `v2` configuration
 is already tuned for it.
 
 And if you run this app, it will:
@@ -1055,10 +1055,10 @@ So if you see it reacts to some change, it means that
 both Compute Service client and multi-host invalidation works.
 And they really do!
 
-And congrats - this is the end of this part, and now you know almost everything!
+And congrats &ndash; this is the end of this part, and now you know almost everything!
 The parts we didn't touch at all are:
 
-- [Part 3: State: IState&lt;T&gt; and Its Flavors](./Part03.md).
+- [Part 3: IState&lt;T&gt; and Its Flavors](./Part03.md).
   The key abstraction it describes is `ComputedState<T>` -
   the type that implements "wait for change, make a delay, recompute"
   loop similar to the one we manually coded here, but in more robust

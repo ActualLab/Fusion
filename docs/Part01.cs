@@ -89,7 +89,7 @@ public static class Part01
             // That's why Sum(a, b) is going to be recomputed on the next call, as well as Get(a),
             // which is called by Sum(a, b).
             await counters.Sum("a", "b"); // Prints: Get(a) = 2, Sum(a, b) = 2
-            await counters.Sum("a", "b"); // Prints nothing - it's a cache hit; the result is 0
+            await counters.Sum("a", "b"); // Prints nothing, it's a cache hit; the result is 0
 
             // Even though we expect Sum(a, b) == Sum(b, a), Fusion doesn't know that.
             // Remember, "cache key" for any compute method call is (service, method, args...),
@@ -115,13 +115,13 @@ public static class Part01
             // Manually invalidate computedForGetA, i.e. the result of counters.Get("a") call
             computedForGetA.Invalidate(); // Prints: Sum(a, b) is invalidated
             WriteLine(computedForGetA.IsConsistent());  // False
-            WriteLine(computedForSumAB.IsConsistent()); // False - invalidation is always cascading
+            WriteLine(computedForSumAB.IsConsistent()); // False, invalidation is always cascading
 
             // Manually update computedForSumAB
             var newComputedForSumAB = await computedForSumAB.Update();
             // Prints:
-            // Get(a) = 2 - we invalidated it, so it was of Sum(a, b)
-            // Sum(a, b) = 2 - .Update() call above actually triggered this call
+            // Get(a) = 2, we invalidated it, so it was of Sum(a, b)
+            // Sum(a, b) = 2, Update() call above actually triggered this call
 
             WriteLine(newComputedForSumAB.IsConsistent()); // True
             WriteLine(newComputedForSumAB.Value); // 2

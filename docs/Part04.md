@@ -14,7 +14,7 @@ Namely:
 
 - They similarly back the result to any call with `Computed<T>` that mimics
   matching `Computed<T>` on the server side. So such client-side proxies
-  can be used in other client-side Compute Services - and as you might guess,
+  can be used in other client-side Compute Services &ndash; and as you might guess,
   invalidation of a server-side dependency will trigger invalidation of
   its client-side replica (`Computed<T>` too), which in turn will invalidate
   every client-side computed that uses it.
@@ -28,7 +28,7 @@ internally they use `ActualLab.Rpc` infrastructure to make such calls, as well a
 to receive notifications about server-side invalidations.
 
 Resilience (reconnect on disconnect, refresh of every replica of `Computed<T>` on reconnect, etc.)
-is bundled - `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
+is bundled &ndash; `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
 
 Finally, Compute Service clients are just interfaces. They typically
 declare every method of a Compute Service they "mimic".
@@ -38,7 +38,7 @@ mapped to corresponding HTTP endpoints.
 ## Setting Up the Example
 
 Ok, let's write some code to learn how it works. Unfortunately this time the amount of
-code is going to explode a bit - that's mostly due to the fact we'll need a web server
+code is going to explode a bit &ndash; that's mostly due to the fact we'll need a web server
 hosting Compute Service itself, a controller publishing its invocable endpoints, etc.
 
 ### 1. Common Interface
@@ -46,6 +46,7 @@ hosting Compute Service itself, a controller publishing its invocable endpoints,
 Common interface (don't run this code yet):
 
 <!-- snippet: Part04_CommonServices -->
+
 ```cs
 // Ideally, we want Compute Service client to be exactly the same as corresponding
 // Compute Service. A good way to enforce this is to expose an interface
@@ -59,6 +60,7 @@ public interface ICounterService : IComputeService
     Task SetOffset(int offset, CancellationToken cancellationToken = default);
 }
 ```
+
 <!-- endSnippet -->
 
 ### 2. Web Host Services
@@ -66,6 +68,7 @@ public interface ICounterService : IComputeService
 Web host services (don't run this code yet):
 
 <!-- snippet: Part04_HostServices -->
+
 ```cs
 public class CounterService : ICounterService
 {
@@ -100,6 +103,7 @@ public class CounterService : ICounterService
     }
 }
 ```
+
 <!-- endSnippet -->
 
 ### 3. Host and Client Setup
@@ -107,6 +111,7 @@ public class CounterService : ICounterService
 `CreateHost` and `CreateClientServices` methods (don't run this code yet):
 
 <!-- snippet: Part04_CreateXxx -->
+
 ```cs
 public static IHost CreateHost()
 {
@@ -148,6 +153,7 @@ public static IServiceProvider CreateClientServices()
     return services.BuildServiceProvider();
 }
 ```
+
 <!-- endSnippet -->
 
 ## Using Compute Service Clients
@@ -155,6 +161,7 @@ public static IServiceProvider CreateClientServices()
 And finally, we're ready to try our Compute Service client:
 
 <!-- snippet: Part04_ReplicaService -->
+
 ```cs
 using var host = CreateHost();
 await host.StartAsync();
@@ -189,6 +196,7 @@ await Task.Delay(200);
 stopCts.Cancel();
 await host.StopAsync();
 ```
+
 <!-- endSnippet -->
 
 The output:
@@ -232,6 +240,7 @@ is almost the same as you saw in previous part showcasing `ComputedState<T>`,
 but it uses Compute Service client instead of Computed Service.
 
 <!-- snippet: Part04_LiveStateFromReplica -->
+
 ```cs
 using var host = CreateHost();
 await host.StartAsync();
@@ -261,6 +270,7 @@ await Task.Delay(2000);
 
 await host.StopAsync();
 ```
+
 <!-- endSnippet -->
 
 The output:
@@ -292,7 +302,7 @@ Get(a)
 
 As you might guess, this is exactly the logic out Blazor samples use to update
 the UI in real time. Moreover, we similarly use the same interface both for
-Compute Services and their clients - and that's precisely what allows
+Compute Services and their clients &ndash; and that's precisely what allows
 use to have the same UI components working in WASM and Server-Side Blazor mode:
 
 - When UI components are rendered on the server side, they pick server-side
@@ -305,5 +315,5 @@ use to have the same UI components working in WASM and Server-Side Blazor mode:
 
 ## Summary
 
-**That's pretty much it - now you learned all key features of Fusion.**
+**That's pretty much it &ndash; now you learned all key features of Fusion.**
 There are details, of course, and the rest of the tutorial is mostly about them.

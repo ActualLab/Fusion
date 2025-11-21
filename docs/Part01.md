@@ -13,6 +13,7 @@ Fusion is built around three key abstractions:
 Here's a simple counter service that demonstrates Fusion's basic capabilities:
 
 <!-- snippet: Part01_Declare_Service -->
+
 ```cs
 public class CounterService : IComputeService // This is a tagging interface any compute service must "implement"
 {
@@ -48,11 +49,13 @@ public class CounterService : IComputeService // This is a tagging interface any
     }
 }
 ```
+
 <!-- endSnippet -->
 
 To use this service, first register it with dependency injection:
 
 <!-- snippet: Part01_Register_Services -->
+
 ```cs
 var services = new ServiceCollection();
 var fusion = services.AddFusion(); // You can also use services.AddFusion(fusion => ...) pattern
@@ -62,6 +65,7 @@ var sp = services.BuildServiceProvider();
 // And that's how we get our first compute service:
 var counters = sp.GetRequiredService<CounterService>();
 ```
+
 <!-- endSnippet -->
 
 Let's see how the behavior of compute methods in `CounterService` differs from the expected one:
@@ -69,27 +73,31 @@ Let's see how the behavior of compute methods in `CounterService` differs from t
 ### Automatic Caching
 
 <!-- snippet: Part01_Automatic_Caching -->
+
 ```cs
 await counters.Get("a"); // Prints: Get(a) = 0
 await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
 ```
+
 <!-- endSnippet -->
 
-Moreover, it works even when compute methods call each other. 
+Moreover, it works even when compute methods call each other.
 Notice that the `Sum("a", "b")` call here calls `Get("a")`, which gets resolved without an actual computation.
 On the other hand, `Get("b")` gets computed. But once we call it again, it also gets resolved from the cache.
 
 <!-- snippet: Part01_Automatic_Dependency_Tracking -->
+
 ```cs
 await counters.Sum("a", "b"); // Prints: Get(b) = 0, Sum(a, b) = 0 -- Get(b) was called from Sum(a, b)
 await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
 await counters.Get("b");      // Prints nothing -- it's a cache hit; the result is 0
 ```
+
 <!-- endSnippet -->
 
 ### Invalidation
 
-Invalidation means marking a certain computed value as "outdated". 
+Invalidation means marking a certain computed value as "outdated".
 If you have a `Computed<T>` instance, you can do this directly.
 But if it's about invalidating a value that corresponds to a certain compute method call,
 you can also do this by making this call inside `using (Invalidation.Begin()) { ... }` block:
@@ -107,11 +115,13 @@ And if you look at the code of the `CounterService.Increment` method, that's exa
 there to invalidate the `Get(key)` call on every increment.
 
 <!-- snippet: Part01_Invalidation -->
+
 ```cs
 counters.Increment("a"); // Prints: Increment(a) + invalidates Get(a) call result
 await counters.Get("a"); // Prints: Get(a) = 1
 await counters.Get("b"); // Prints nothing -- Get(b) call wasn't invalidated, so it's a cache hit
 ```
+
 <!-- endSnippet -->
 
 ### Automatic Dependency Tracking and Cascading Invalidation
@@ -120,15 +130,17 @@ We know that when a compute method gets called, it builds or uses an existing `C
 which stores the cached call result and tracks its invalidation. But there is one other thing `Computed<T>` does: it tracks dependencies of a computation that produced this computed value.
 
 Each `Computed<T>` instance knows all other `Computed<T>` instances that were "used" to produce it,
-and vice versa - each computed value can enumerate every other computed value that depends on it, directly or indirectly.
+and vice versa &ndash; each computed value can enumerate every other computed value that depends on it, directly or indirectly.
 
 Mathematically speaking, computed values form a Directed Acyclic Graph (DAG) of dependencies between each other. And this graph evolves at runtime:
-- When a compute method gets called, it produces a new node (`Computed<T>` instance) in this graph. The edges of this node point to every other node it "uses"; they're added when the compute method runs - specifically, when it calls other compute methods.
+
+- When a compute method gets called, it produces a new node (`Computed<T>` instance) in this graph. The edges of this node point to every other node it "uses"; they're added when the compute method runs &ndash; specifically, when it calls other compute methods.
 - When `Computed<T>` gets invalidated, all of its dependencies (i.e. nodes that use it directly or indirectly) get invalidated as well. Any invalidated node is implicitly removed from the graph, because there can be no edges pointing to it.
 
 Let's see all of this in action:
 
 <!-- snippet: Part01_Cascading_Invalidation -->
+
 ```cs
 counters.Increment("a"); // Prints: Increment(a)
 
@@ -137,7 +149,7 @@ counters.Increment("a"); // Prints: Increment(a)
 // That's why Sum(a, b) is going to be recomputed on the next call, as well as Get(a),
 // which is called by Sum(a, b).
 await counters.Sum("a", "b"); // Prints: Get(a) = 2, Sum(a, b) = 2
-await counters.Sum("a", "b"); // Prints nothing - it's a cache hit; the result is 0
+await counters.Sum("a", "b"); // Prints nothing, it's a cache hit; the result is 0
 
 // Even though we expect Sum(a, b) == Sum(b, a), Fusion doesn't know that.
 // Remember, "cache key" for any compute method call is (service, method, args...),
@@ -146,23 +158,26 @@ await counters.Sum("a", "b"); // Prints nothing - it's a cache hit; the result i
 // But note that Get(a) and Get(b) calls it makes are still resolved from cache.
 await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) results are already cached
 ```
+
 <!-- endSnippet -->
 
 ## 2. Computed Values
 
-You already know that compute methods produce computed values (`Computed<T>` instances) 
+You already know that compute methods produce computed values (`Computed<T>` instances)
 behind the scenes.
 
-Computed values follow a simple lifecycle: 
+Computed values follow a simple lifecycle:
+
 - They start as mutable objects in the `Computing` state while being computed; you can observe a `Computed<T>` in this state by calling `Computed.GetCurrent()` inside a compute method
 - Once the computation ends, they become `Consistent` and immutable
 - Finally, they may eventually turn `Inconsistent`.
- 
+
 At any given time, there can be only one `Consistent` version of a computed value that corresponds to a certain computation, even though older `Inconsistent` versions may still reside in memory.
 
 Let's pull a `Computed<T>` instance that is associated with a given call and play with it:
 
 <!-- snippet: Part01_Accessing_Computed_Values -->
+
 ```cs
 var computedForGetA = await Computed.Capture(() => counters.Get("a"));
 WriteLine(computedForGetA.IsConsistent()); // True
@@ -183,8 +198,8 @@ WriteLine(computedForSumAB.IsConsistent()); // False - invalidation is always ca
 // Manually update computedForSumAB
 var newComputedForSumAB = await computedForSumAB.Update();
 // Prints:
-// Get(a) = 2 - we invalidated it, so it was of Sum(a, b)
-// Sum(a, b) = 2 - .Update() call above actually triggered this call
+// Get(a) = 2, we invalidated it, so it was of Sum(a, b)
+// Sum(a, b) = 2, Update() call above actually triggered this call
 
 WriteLine(newComputedForSumAB.IsConsistent()); // True
 WriteLine(newComputedForSumAB.Value); // 2
@@ -198,6 +213,7 @@ WriteLine(newComputedForSumAB == await computedForSumAB.Update()); // True
 WriteLine(computedForSumAB.IsConsistent()); // False
 WriteLine(computedForSumAB.Value); // 2
 ```
+
 <!-- endSnippet -->
 
 ### Reactive Updates on Invalidation
@@ -205,6 +221,7 @@ WriteLine(computedForSumAB.Value); // 2
 Now we are ready to write a basic reactive update loop:
 
 <!-- snippet: Part01_Reactive_Updates -->
+
 ```cs
 _ = Task.Run(async () => {
     // This is going to be our update loop
@@ -223,23 +240,26 @@ for (var i = 0; i <= 3; i++) {
     WriteLine($"{clock.Elapsed:g}s: {computed}, Value = {computed.Value}");
 }
 ```
+
 <!-- endSnippet -->
 
 ### Computed.When() and Changes() Methods
 
 You already saw `WhenInvalidated()` method in action. Let's look at two more useful methods:
-- `When()` method allows you to await for a computed value to satisfy certain predicate. 
+
+- `When()` method allows you to await for a computed value to satisfy certain predicate.
   It returns a `Task<Computed<T>>`.
-- `Changes()` method allows you to observe changes in a computed value over time. 
+- `Changes()` method allows you to observe changes in a computed value over time.
   It returns an `IAsyncEnumerable<Computed<T>>`, which yields the current value first,
-  and new computed values as they become available. 
+  and new computed values as they become available.
   The async enumerable it builds is going to yield the items until the moment it gets canceled.
 
-And finally, the example below shows that you can deconstruct a `Computed<T>` instance to get 
-its `ValueOrDefault` and `Error` properties. Since `Value` property is not accessed during 
+And finally, the example below shows that you can deconstruct a `Computed<T>` instance to get
+its `ValueOrDefault` and `Error` properties. Since `Value` property is not accessed during
 the deconstruction, it doesn't throw an exception if the computed value has an `Error`.
 
 <!-- snippet: Part01_When_And_Changes_Methods -->
+
 ```cs
 _ = Task.Run(async () => {
     // This is going to be our update loop
@@ -264,19 +284,21 @@ _ = Task.Run(async () => {
 });
 await Task.Delay(5000); // Wait for the changes to be processed
 ```
+
 <!-- endSnippet -->
 
 ## 3. `State<T>` and Its Variants
 
-State is the last missing piece of a puzzle. 
-If you are familiar with [Knockout.js](https://knockoutjs.com/) 
+State is the last missing piece of a puzzle.
+If you are familiar with [Knockout.js](https://knockoutjs.com/)
 or [MobX](https://mobx.js.org/), state would correspond
-to their versions of "computed observables". 
+to their versions of "computed observables".
 
 Every state tracks the most recent version of some `Computed<T>`.
 That's why states are so useful for reactive updates.
 
 Any `State<T>`:
+
 - Has `Computed` property, which points to the most recent version of `Computed<T>` it tracks.
 - Has a `Snapshot` property of `StateSnapshot<T>` type.
   This property is updated atomically and returns an immutable object describing the current "state" of the `State<T>`. If you
@@ -287,7 +309,7 @@ Any `State<T>`:
   - But a subsequent attempt to read `state.Value` fails because
     the state was updated right between these two reads.
 - Both `State<T>` and `StateSnapshot<T>` expose
-  `LastNonErrorValue` and `LastNonErrorComputed` properties - these
+  `LastNonErrorValue` and `LastNonErrorComputed` properties &ndash; these
   allow access to the last valid `Value` and its `Computed<T>`
   exposed by the state. In other words, when a state exposes
   an `Error`, `LastNonErrorValue` still exposes the previous `Value`.
@@ -300,20 +322,21 @@ Any `State<T>`:
   and untyped versions of any `IState` interface.
 
 There are two implementations of `State<T>`:
+
 1. `MutableState<T>` is a mutable value (variable) in `Computed<T>` envelope.
-  Its `Computed` property returns an always-consistent computed, which gets
-  replaced once the `MutableState.Value` (or `Error`, etc.) is set;
-  the old computed gets invalidated.
-  You can use mutable states in compute methods or computed states -
-  since any state tracks some `Computed<T>`, it can be a dependency 
-  of another computed value.
-  Typically such states are used to describe the client-side state 
-  of certain UI elements (e.g. a value entered into a search box).
+   Its `Computed` property returns an always-consistent computed, which gets
+   replaced once the `MutableState.Value` (or `Error`, etc.) is set;
+   the old computed gets invalidated.
+   You can use mutable states in compute methods or computed states -
+   since any state tracks some `Computed<T>`, it can be a dependency
+   of another computed value.
+   Typically such states are used to describe the client-side state
+   of certain UI elements (e.g. a value entered into a search box).
 1. `ComputedState<T>` is, in fact, a compute method and an update loop that
-  triggers the recomputation after a certain delay following invalidation.
-  The delay is just a `Task` provided by `IUpdateDelayer` bound to this state,
-  so it can vary from state to state, from time to time, or even end instantly
-  when, for example, a user action occurs - to make every state instantly reflect the change.
+   triggers the recomputation after a certain delay following invalidation.
+   The delay is just a `Task` provided by `IUpdateDelayer` bound to this state,
+   so it can vary from state to state, from time to time, or even end instantly
+   when, for example, a user action occurs &ndash; to make every state instantly reflect the change.
 
 `ComputedState<T>` powers the UI updates in Fusion+Blazor apps. It is used by `ComputedStateComponent<T>`, a Blazor component that automatically re-renders when changes occur in its computed state.
 
@@ -323,7 +346,7 @@ Here is a brief description of key differences between these two states:
 
 ### Constructing States
 
-States are constructed using `StateFactory` - one of the singletons that
+States are constructed using `StateFactory` &ndash; one of the singletons that
 `.AddFusion()` injects into `IServiceProvider`.
 
 There is also `StateFactory.Default`, which is intended to be used
@@ -335,6 +358,7 @@ it will use its own "minimal" service provider.
 Let's play with `MutableState<int>`:
 
 <!-- snippet: Part01_MutableState -->
+
 ```cs
 var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
 var state = stateFactory.NewMutable(1);
@@ -363,6 +387,7 @@ WriteLine($"LastNonErrorValue: {state.LastNonErrorValue}");
 WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}");
 // Snapshot.LastNonErrorComputed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=39252654 v.h2, State: Invalidated)
 ```
+
 <!-- endSnippet -->
 
 ## Computed State
@@ -370,6 +395,7 @@ WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}
 Here is an example showing what `ComputedState<T>` and `MutableState<T>` can do together:
 
 <!-- snippet: Part01_ComputedState -->
+
 ```cs
 var stateFactory = sp.StateFactory();
 var clock = Stopwatch.StartNew();
@@ -427,6 +453,7 @@ Get(a) = 7
 0:00:03.2524918s: Updated, Value: (7, y), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.gq, State: Consistent)
 */
 ```
+
 <!-- endSnippet -->
 
-#### [Next: Part 02 &raquo;](./Part02.md) | [Documentation Home](./README.md) 
+#### [Next: Part 02 &raquo;](./Part02.md) | [Documentation Home](./README.md)
