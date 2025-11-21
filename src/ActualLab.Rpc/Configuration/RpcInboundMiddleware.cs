@@ -1,9 +1,13 @@
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Middlewares;
 
 namespace ActualLab.Rpc;
 
-public interface IRpcInboundMiddleware
+public interface IRpcMiddleware
 {
-    public Func<RpcInboundCall, Task>? CreatePreprocessor(RpcMethodDef methodDef);
-    public Func<RpcInboundCall, Task>? CreatePostprocessor(RpcMethodDef methodDef);
+    public double Priority { get; }
+
+    public Func<RpcInboundCall, Task<T>> Create<T>(
+        RpcMiddlewareContext<T> context,
+        Func<RpcInboundCall, Task<T>> next);
 }

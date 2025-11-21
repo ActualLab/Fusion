@@ -42,7 +42,7 @@ public partial class RpcMethodDef : MethodDef
     public new readonly string FullName = "";
     public readonly RpcMethodRef Ref;
 
-    public byte CallTypeId { get; init; } = RpcCallTypes.Regular;
+    public RpcCallType CallType { get; init; } = RpcCallTypes.Regular;
     public readonly bool NoWait;
     public readonly bool HasPolymorphicArguments;
     public readonly bool HasPolymorphicResult;
@@ -117,16 +117,11 @@ public partial class RpcMethodDef : MethodDef
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
     public virtual void InitializeOverridableProperties()
     {
-        // We assume that at that moment:
-        // - Correct CallTypeId is already set for this MethodDef
-        // - InboundCallUseFastPipelineInvoker is optionally set; if not, we'll compute its value.
-
-        InboundCallFactory = RpcInboundCall.GetFactory(this);
-        OutboundCallFactory = RpcOutboundCall.GetFactory(this);
-        var callType = RpcCallTypeRegistry.Resolve(CallTypeId);
+        // We assume that at that moment CallType is already set for this MethodDef
 
         // Outbound call properties
 
+        OutboundCallFactory = RpcOutboundCall.GetFactory(this);
         OutboundCallTimeouts = Hub.OutboundCallOptions.TimeoutsProvider.Invoke(this);
         OutboundCallRouter = IsSystem
             ? _ => throw Errors.InternalError("All system calls must be pre-routed.")
@@ -135,35 +130,24 @@ public partial class RpcMethodDef : MethodDef
 
         // Inbound call properties
 
+        if (!IsSystem && !Service.HasServer)
+            return; // Pure clients shouldn't waste any time on building the inbound call pipeline
+
+        InboundCallFactory = RpcInboundCall.GetFactory(this);
+        if (IsSystem || NoWait)
+            MiddlewareFilter = _ => false; // Middlewares are unused for System and NoWait calls
+
         if (IsSystem) {
             // System calls have no inbound call filter, middlewares, and validator;
             // thus most of the pipeline invokers there must be identical to the server invoker.
             // NotFound call overrides InvokeServer, so it requires a regular invoker.
-            InboundCallServerInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
-            InboundCallPipelineInvoker = SystemMethodKind == RpcSystemMethodKind.NotFound
-                ? GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>))
-                : InboundCallServerInvoker; // No pipeline for system calls
+            InboundCallInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
         }
         else {
-            InboundCallFilter = CreateInboundCallFilter();
-            InboundCallPreprocessors = CreateInboundCallPreprocessors();
-            InboundCallPostprocessors = CreateInboundCallPostprocessors();
-            InboundCallValidator = CreateInboundCallValidator();
-            InboundCallUseDistributedModeServerInvoker ??= Service.Mode is RpcServiceMode.Distributed;
-            var useFastPipelineInvoker = !callType.InboundCallTypeOverridesInvokeServer;
-
-            InboundCallServerInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
-            if (Hub.InboundCallOptions.InboundCallServerInvokerDecorator is { } decorator) {
-                var newInboundCallServerInvoker = decorator.Invoke(this, InboundCallServerInvoker);
-                if (!ReferenceEquals(newInboundCallServerInvoker, InboundCallServerInvoker)) {
-                    // Fast pipeline invoker doesn't use InboundCallServerInvoker, so it can't be used in this case
-                    useFastPipelineInvoker = false;
-                    InboundCallServerInvoker = newInboundCallServerInvoker;
-                }
-            }
-            InboundCallPipelineInvoker = useFastPipelineInvoker
-                ? GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineFastInvokerFactory<>))
-                : GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallPipelineInvokerFactory<>));
+            // InboundCallMiddlewareInvokerFactory uses InboundCallInvoker produced by InboundCallInvokerFactory
+            // as the very first "next" delegate - that's why we build the final invoker in two steps here.
+            InboundCallInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
+            InboundCallInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallMiddlewareInvokerFactory<>));
         }
     }
 

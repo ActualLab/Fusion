@@ -6,10 +6,14 @@ namespace ActualLab.Rpc;
 
 public partial class RpcMethodDef
 {
-    public Func<RpcOutboundContext, RpcOutboundCall> OutboundCallFactory { get; protected set; } = null!;
     public RpcCallTimeouts OutboundCallTimeouts { get; protected set; } = RpcCallTimeouts.None;
     public Func<ArgumentList, RpcPeerRef>? OutboundCallRouter { get; protected set; } = null;
     public RpcLocalExecutionMode OutboundCallLocalExecutionMode { get; protected set; } = RpcLocalExecutionMode.Unconstrained;
+
+    // The delegates and properties below must be initialized in Initialize(),
+    // they are supposed to be as efficient as possible (i.e., do less, if possible)
+    // taking the values of other properties into account.
+    public Func<RpcOutboundContext, RpcOutboundCall> OutboundCallFactory { get; protected set; } = null!;
 
     public RpcOutboundCall? CreateOutboundCall(RpcOutboundContext context)
     {

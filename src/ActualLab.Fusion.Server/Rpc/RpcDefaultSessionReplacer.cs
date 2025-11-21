@@ -2,28 +2,32 @@ using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Middlewares;
 
 namespace ActualLab.Fusion.Server.Rpc;
 
-public sealed class RpcDefaultSessionReplacer : IRpcInboundMiddleware
+public sealed record RpcDefaultSessionReplacer : IRpcMiddleware
 {
-    public Func<RpcInboundCall, Task>? CreatePreprocessor(RpcMethodDef methodDef)
+    public double Priority { get; init; } = RpcInboundMiddlewarePriority.ArgumentValidation - 1;
+
+    public Func<RpcInboundCall, Task<T>> Create<T>(RpcMiddlewareContext<T> context, Func<RpcInboundCall, Task<T>> next)
     {
+        var methodDef = context.MethodDef;
         var parameters = methodDef.Parameters;
         if (parameters.Length == 0)
-            return null;
+            return next;
 
         var p0Type = parameters[0].ParameterType;
         if (p0Type == typeof(Session))
-            return static call => {
+            return call => {
                 if (!HasSessionBoundRpcConnection(call, out var connection))
-                    return Task.CompletedTask;
+                    return next.Invoke(call);
 
                 var args = call.Arguments!;
                 var session = (Session?)args.Get0Untyped();
                 if (session is null) {
                     // We assume the nullability is validated by RpcInboundCallOptions.UseNullabilityArgumentValidator
-                    return Task.CompletedTask;
+                    return next.Invoke(call);
                 }
 
                 if (session.IsDefault()) {
@@ -32,19 +36,19 @@ public sealed class RpcDefaultSessionReplacer : IRpcInboundMiddleware
                 }
                 else
                     session.RequireValid();
-                return Task.CompletedTask;
+                return next.Invoke(call);
             };
 
         if (typeof(ISessionCommand).IsAssignableFrom(p0Type))
-            return static call => {
+            return call => {
                 if (!HasSessionBoundRpcConnection(call, out var connection))
-                    return Task.CompletedTask;
+                    return next.Invoke(call);
 
                 var args = call.Arguments!;
                 var command = (ISessionCommand?)args.Get0Untyped();
                 if (command is null) {
                     // We assume the nullability is validated by RpcInboundCallOptions.UseNullabilityArgumentValidator
-                    return Task.CompletedTask;
+                    return next.Invoke(call);
                 }
 
                 var session = command.Session;
@@ -52,14 +56,11 @@ public sealed class RpcDefaultSessionReplacer : IRpcInboundMiddleware
                     command.SetSession(connection.Session);
                 else
                     session.RequireValid();
-                return Task.CompletedTask;
+                return next.Invoke(call);
             };
 
-        return null;
+        return next;
     }
-
-    public Func<RpcInboundCall, Task>? CreatePostprocessor(RpcMethodDef methodDef)
-        => null;
 
     // Protected methods
 

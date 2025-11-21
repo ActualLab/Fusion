@@ -14,7 +14,6 @@ public sealed class RpcOutboundCallSetup
 
     public RpcPeer? Peer { get; }
     public RpcRoutingMode RoutingMode { get; }
-    public byte CallTypeId { get; init; } // You typically shouldn't set it!
     public RpcHeader[]? Headers { get; init; } // You typically shouldn't set it!
     public RpcCacheInfoCapture? CacheInfoCapture { get; init; }
     public RpcOutboundContext? ProducedContext { get; private set; } // Set by ProduceContext

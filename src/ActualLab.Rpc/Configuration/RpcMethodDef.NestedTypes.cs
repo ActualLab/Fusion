@@ -1,5 +1,6 @@
 using ActualLab.Caching;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Middlewares;
 
 namespace ActualLab.Rpc;
 
@@ -13,7 +14,10 @@ public partial class RpcMethodDef
                     throw new ArgumentOutOfRangeException(nameof(methodDef), "Async method is required here.");
 
                 if (methodDef.IsSystem && methodDef.Service.Type == typeof(IRpcSystemCalls)) {
-                    // "Handcrafted" invokers for the most frequent system calls
+                    // "Handcrafted" invokers for the most frequent system calls.
+                    // Note that NoWait calls (such as 'Ok') typically return Task or Task<RpcNoWait>
+                    // instead of Task<T>, where T is UnwrapResultType, so the assumption is that
+                    // invokers for these calls
                     var systemCalls = (RpcSystemCalls)methodDef.Service.Server!;
                     switch (methodDef.SystemMethodKind) {
                     case RpcSystemMethodKind.Ok:
@@ -30,230 +34,54 @@ public partial class RpcMethodDef
                             var args = call.Arguments!;
                             return systemCalls.B((long)args.Get0Untyped()!, args.Get1Untyped());
                         });
+                    case RpcSystemMethodKind.NotFound:
+                        return (Func<RpcInboundCall, Task>)(call => ((IRpcInboundNotFoundCall)call).InvokeImpl());
                     }
                 }
 
                 object? server = null;
                 var invoker = methodDef.ArgumentListInvoker;
-                if (methodDef.InboundCallUseDistributedModeServerInvoker != true)
-                    return (Func<RpcInboundCall, Task<T>>)((methodDef.ReturnsTask, methodDef.IsAsyncVoidMethod) switch {
-                        (true, true) => async call => {
-                            // Task (returns Task<Unit>)
-                            server ??= methodDef.Service.Server!;
-                            await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                            return default!;
-                        },
-                        (true, false) => async call => {
-                            // Task<T>
-                            server ??= methodDef.Service.Server!;
-                            return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        },
-                        (false, true) => async call => {
-                            // ValueTask (returns Task<Unit>)
-                            server ??= methodDef.Service.Server!;
-                            await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                            return default!;
-                        },
-                        (false, false) => async call => {
-                            // ValueTask<T> (returns Task<T>)
-                            server ??= methodDef.Service.Server!;
-                            return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        },
-                    });
-
-                // Distributed mode server invoker. It takes two additional actions:
-                // 1. It re-routes (via RpcRerouteException) in case the outbound call router routes it to a non-local peer
-                // 2. And uses RpcOutboundCallSetup to preroute the call to that (local) peer.
                 return (Func<RpcInboundCall, Task<T>>)((methodDef.ReturnsTask, methodDef.IsAsyncVoidMethod) switch {
                     (true, true) => async call => {
                         // Task (returns Task<Unit>)
                         server ??= methodDef.Service.Server!;
-                        var peer = call.MethodDef.RouteOutboundCall(call.Arguments!);
-                        if (peer.ConnectionKind is not RpcPeerConnectionKind.Local)
-                            throw RpcRerouteException.MustRerouteInbound();
-
-                        Task task;
-                        using (new RpcOutboundCallSetup(peer, RpcRoutingMode.LocalOnly).Activate())
-                            task = (Task)invoker.Invoke(server, call.Arguments!)!;
-                        await task.ConfigureAwait(false);
+                        await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                         return default!;
                     },
                     (true, false) => async call => {
                         // Task<T>
                         server ??= methodDef.Service.Server!;
-                        var peer = call.MethodDef.RouteOutboundCall(call.Arguments!);
-                        if (peer.ConnectionKind is not RpcPeerConnectionKind.Local)
-                            throw RpcRerouteException.MustRerouteInbound();
-
-                        Task<T> task;
-                        using (new RpcOutboundCallSetup(peer, RpcRoutingMode.LocalOnly).Activate())
-                            task = (Task<T>)invoker.Invoke(server, call.Arguments!)!;
-                        return await task.ConfigureAwait(false);
+                        return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                     },
                     (false, true) => async call => {
                         // ValueTask (returns Task<Unit>)
                         server ??= methodDef.Service.Server!;
-                        var peer = call.MethodDef.RouteOutboundCall(call.Arguments!);
-                        if (peer.ConnectionKind is not RpcPeerConnectionKind.Local)
-                            throw RpcRerouteException.MustRerouteInbound();
-
-                        ValueTask valueTask;
-                        using (new RpcOutboundCallSetup(peer, RpcRoutingMode.LocalOnly).Activate())
-                            valueTask = (ValueTask)invoker.Invoke(server, call.Arguments!)!;
-                        await valueTask.ConfigureAwait(false);
+                        await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                         return default!;
                     },
                     (false, false) => async call => {
                         // ValueTask<T> (returns Task<T>)
                         server ??= methodDef.Service.Server!;
-                        var peer = call.MethodDef.RouteOutboundCall(call.Arguments!);
-                        if (peer.ConnectionKind is not RpcPeerConnectionKind.Local)
-                            throw RpcRerouteException.MustRerouteInbound();
-
-                        ValueTask<T> valueTask;
-                        using (new RpcOutboundCallSetup(peer, RpcRoutingMode.LocalOnly).Activate())
-                            valueTask = (ValueTask<T>)invoker.Invoke(server, call.Arguments!)!;
-                        return await valueTask.ConfigureAwait(false);
+                        return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
                     },
                 });
             };
     }
 
-    public sealed class InboundCallPipelineInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    public sealed class InboundCallMiddlewareInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
             => (RpcMethodDef methodDef) => {
-                if (!methodDef.IsAsyncMethod)
-                    throw new ArgumentOutOfRangeException(nameof(methodDef), "Async method is required here.");
-
-                var validator = methodDef.InboundCallValidator;
-                var preprocessors = methodDef.InboundCallPreprocessors.Length > 0
-                    ? methodDef.InboundCallPreprocessors
-                    : null;
-                var postprocessors = methodDef.InboundCallPostprocessors.Length != 0
-                    ? methodDef.InboundCallPostprocessors
-                    : null;
-
-                return methodDef.IsAsyncVoidMethod
-                    ? (Func<RpcInboundCall, Task<T>>)(async call => {
-                        // Task (returns Task<Unit>)
-                        try {
-                            if (preprocessors is not null)
-                                foreach (var p in preprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                            validator?.Invoke(call);
-                            await call.InvokeServer().ConfigureAwait(false);
-                            return default!;
-                        }
-                        finally {
-                            if (postprocessors is not null)
-                                foreach (var p in postprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                        }
-                    })
-                    : async call => {
-                        // Task<T>
-                        try {
-                            if (preprocessors is not null)
-                                foreach (var p in preprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                            validator?.Invoke(call);
-                            return await ((Task<T>)call.InvokeServer()).ConfigureAwait(false);
-                        }
-                        finally {
-                            if (postprocessors is not null)
-                                foreach (var p in postprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                        }
-                    };
-            };
-    }
-
-    public sealed class InboundCallPipelineFastInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
-    {
-        public override object Generate()
-            => (RpcMethodDef methodDef) => {
-                if (!methodDef.IsAsyncMethod)
-                    throw new ArgumentOutOfRangeException(nameof(methodDef), "Async method is required here.");
-
-                object? server = null;
-                var invoker = methodDef.ArgumentListInvoker;
-                var preprocessors = methodDef.InboundCallPreprocessors.Length != 0
-                    ? methodDef.InboundCallPreprocessors
-                    : null;
-                var postprocessors = methodDef.InboundCallPostprocessors.Length != 0
-                    ? methodDef.InboundCallPostprocessors
-                    : null;
-                var validator = methodDef.InboundCallValidator;
-
-                return (Func<RpcInboundCall, Task<T>>)((methodDef.ReturnsTask, methodDef.IsAsyncVoidMethod) switch {
-                    (true, true) => async call => {
-                        // Task (returns Task<Unit>)
-                        try {
-                            if (preprocessors is not null)
-                                foreach (var p in preprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                            validator?.Invoke(call);
-                            server ??= methodDef.Service.Server!;
-                            await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                            return default!;
-                        }
-                        finally {
-                            if (postprocessors is not null)
-                                foreach (var p in postprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                        }
-                    },
-                    (true, false) => async call => {
-                        // Task<T>
-                        try {
-                            if (preprocessors is not null)
-                                foreach (var p in preprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                            validator?.Invoke(call);
-                            server ??= methodDef.Service.Server!;
-                            return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        }
-                        finally {
-                            if (postprocessors is not null)
-                                foreach (var p in postprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                        }
-                    },
-                    (false, true) => async call => {
-                        // ValueTask (returns Task<Unit>)
-                        try {
-                            if (preprocessors is not null)
-                                foreach (var p in preprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                            validator?.Invoke(call);
-                            server ??= methodDef.Service.Server!;
-                            await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                            return default!;
-                        }
-                        finally {
-                            if (postprocessors is not null)
-                                foreach (var p in postprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                        }
-                    },
-                    (false, false) => async call => {
-                        // ValueTask<T>
-                        try {
-                            if (preprocessors is not null)
-                                foreach (var p in preprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                            validator?.Invoke(call);
-                            server ??= methodDef.Service.Server!;
-                            return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        }
-                        finally {
-                            if (postprocessors is not null)
-                                foreach (var p in postprocessors)
-                                    await p.Invoke(call).ConfigureAwait(false);
-                        }
-                    },
-                });
+                var context = new RpcMiddlewareContext<T>(methodDef);
+                while (context.RemainingMiddlewares.Count > 0) {
+                    var lastMiddlewareIndex = context.RemainingMiddlewares.Count - 1;
+                    var middleware = context.RemainingMiddlewares[lastMiddlewareIndex];
+                    context.RemainingMiddlewares.RemoveAt(lastMiddlewareIndex);
+                    var prevInvoker = context.Outputs[^1].Invoker;
+                    var invoker = middleware.Create(context, prevInvoker);
+                    context.Outputs.Add(new(middleware, invoker));
+                }
+                return context.Outputs[^1].Invoker; // Last middleware's output
             };
     }
 }

@@ -127,10 +127,12 @@ public readonly struct FusionBuilder
         services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
         services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
 
-        // RPC: Register IRpcComputeSystemCalls service and RpcComputeCallType
+        // RPC:
+        // 1. Register IRpcComputeSystemCalls service and RpcComputeCallType
         Rpc.AddServerAndClient(typeof(IRpcComputeSystemCalls), typeof(RpcComputeSystemCalls), RpcComputeSystemCalls.Name);
         services.AddSingleton(c => new RpcComputeSystemCallSender(c));
-        RpcComputeCallType.Register();
+        // 2. Add middlewares
+        Rpc.AddMiddleware(_ => new RpcInboundComputeCallHandler());
 
         // And finally, invoke the configuration action
         configure?.Invoke(this);

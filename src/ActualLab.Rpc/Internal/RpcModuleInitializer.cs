@@ -20,7 +20,7 @@ internal static class RpcModuleInitializer
         _ = new RpcOutboundCallSetup();
         _ = new RpcOutboundContext();
         _ = RpcInboundContext.Current;
-        _ = RpcCallTypeRegistry.Get(RpcCallTypes.Regular);
+        _ = RpcCallTypes.Get(RpcCallTypes.Regular.Id);
     }
 
 #if NET8_0_OR_GREATER

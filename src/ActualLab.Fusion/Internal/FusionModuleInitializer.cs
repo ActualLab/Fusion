@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Rpc;
 using ActualLab.Rpc;
 
@@ -9,6 +10,7 @@ internal static class FusionModuleInitializer
 {
     static FusionModuleInitializer()
     {
+        _ = RpcComputeCallType.Value;
         RpcDefaults.OptionDefaults.ApplyFusionOverrides();
         // Access a bunch of types here to ensure JIT generates calls
         // to their methods w/o type initializer check further.

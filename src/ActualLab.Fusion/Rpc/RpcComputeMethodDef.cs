@@ -10,8 +10,7 @@ public class RpcComputeMethodDef : RpcMethodDef
     public RpcComputeMethodDef(RpcServiceDef service, MethodInfo methodInfo, ComputedOptions computedOptions)
         : base(service, methodInfo)
     {
-        CallTypeId = RpcComputeCallType.Id;
+        CallType = RpcComputeCallType.Value;
         ComputedOptions = computedOptions;
-        InboundCallUseDistributedModeServerInvoker = false; // RpcInboundComputeCall + Function handle that
     }
 }

@@ -1,4 +1,3 @@
-using ActualLab.CommandR.Rpc;
 using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Rpc;
@@ -9,7 +8,6 @@ public static class RpcOptionsExt
     {
         public RpcOptionDefaults ApplyFusionOverrides()
         {
-            optionDefaults.ApplyCommanderOverrides();
             RpcRegistryOptions.Default = RpcRegistryOptions.Default.WithFusionOverrides();
             return optionDefaults;
         }

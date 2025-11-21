@@ -18,7 +18,6 @@ public class RpcMethodDefCodeKeeper : MethodDefCodeKeeper
 
         base.KeepCodeForResult<TResult, TUnwrapped>();
         Keep<RpcMethodDef.InboundCallServerInvokerFactory<TUnwrapped>>();
-        Keep<RpcMethodDef.InboundCallPipelineInvokerFactory<TUnwrapped>>();
-        Keep<RpcMethodDef.InboundCallPipelineFastInvokerFactory<TUnwrapped>>();
+        Keep<RpcMethodDef.InboundCallMiddlewareInvokerFactory<TUnwrapped>>();
     }
 }

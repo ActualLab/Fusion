@@ -6,6 +6,7 @@ using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
+using ActualLab.Rpc.Middlewares;
 using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.Trimming;
 using ActualLab.Trimming;
@@ -120,6 +121,10 @@ public readonly struct RpcBuilder
         // System services
         AddServerAndClient(typeof(IRpcSystemCalls), typeof(RpcSystemCalls), RpcSystemCalls.Name);
         services.AddSingleton(c => new RpcSystemCallSender(c));
+
+        // Middlewares
+        AddMiddleware(_ => new RpcArgumentNullabilityValidator());
+        AddMiddleware(_ => new RpcRerouteUnlessLocalMiddleware());
 
         // And finally, invoke the configuration action
         configure?.Invoke(this);
@@ -321,40 +326,41 @@ public readonly struct RpcBuilder
         return service;
     }
 
-    // Add/Remove IRpcInboundMiddleware
+    // Add/Remove IRpcMiddleware
 
-    public RpcBuilder AddInboundMiddleware<
+    public RpcBuilder AddMiddleware<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TMiddleware>
         (Func<IServiceProvider, TMiddleware>? factory = null)
-        where TMiddleware : class, IRpcInboundMiddleware
-        => AddInboundMiddleware(typeof(TMiddleware), factory);
+        where TMiddleware : class, IRpcMiddleware
+        => AddMiddleware(typeof(TMiddleware), factory, mustValidate: false);
 
-    public RpcBuilder AddInboundMiddleware(
+    public RpcBuilder AddMiddleware(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type middlewareType,
-        Func<IServiceProvider, object>? factory = null)
+        Func<IServiceProvider, IRpcMiddleware>? factory = null,
+        bool mustValidate = true)
     {
-        if (!typeof(IRpcInboundMiddleware).IsAssignableFrom(middlewareType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcInboundMiddleware>(middlewareType, nameof(middlewareType));
+        if (mustValidate && !typeof(IRpcMiddleware).IsAssignableFrom(middlewareType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcMiddleware>(middlewareType, nameof(middlewareType));
 
         var descriptor = factory is not null
-            ? ServiceDescriptor.Singleton(typeof(IRpcInboundMiddleware), factory)
-            : ServiceDescriptor.Singleton(typeof(IRpcInboundMiddleware), middlewareType);
+            ? ServiceDescriptor.Singleton(typeof(IRpcMiddleware), factory)
+            : ServiceDescriptor.Singleton(typeof(IRpcMiddleware), middlewareType);
         Services.TryAddEnumerable(descriptor);
         return this;
     }
 
-    public RpcBuilder RemoveInboundMiddleware<TMiddleware>()
-        where TMiddleware : class, IRpcInboundMiddleware
-        => RemoveInboundMiddleware(typeof(TMiddleware));
+    public RpcBuilder RemoveMiddleware<TMiddleware>()
+        where TMiddleware : class, IRpcMiddleware
+        => RemoveMiddleware(typeof(TMiddleware), mustValidate: false);
 
-    public RpcBuilder RemoveInboundMiddleware(Type middlewareType)
+    public RpcBuilder RemoveMiddleware(Type middlewareType, bool mustValidate = true)
     {
-        if (!typeof(IRpcInboundMiddleware).IsAssignableFrom(middlewareType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcInboundMiddleware>(middlewareType, nameof(middlewareType));
+        if (mustValidate && !typeof(IRpcMiddleware).IsAssignableFrom(middlewareType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcMiddleware>(middlewareType, nameof(middlewareType));
 
         Services.RemoveAll(d =>
             d.ImplementationType == middlewareType
-            && d.ServiceType == typeof(IRpcInboundMiddleware));
+            && d.ServiceType == typeof(IRpcMiddleware));
         return this;
     }
 }

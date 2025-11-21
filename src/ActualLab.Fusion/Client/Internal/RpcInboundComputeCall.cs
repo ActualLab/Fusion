@@ -91,52 +91,8 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
 public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context)
     : RpcInboundComputeCall(context)
 {
-    public Computed<TResult>? Computed { get; private set; }
+    public Computed<TResult>? Computed;
     public override Computed? UntypedComputed => Computed;
-
-#if NET5_0_OR_GREATER
-    protected override async Task<TResult> InvokeServer()
-    {
-        Debug.Assert(ComputeContext.Current == ComputeContext.None);
-        var context = new ComputeContext(CallOptions.Capture | CallOptions.RerouteUnlessLocal);
-        ComputeContext.Current = context;
-        try {
-            var invokeTask = (Task<TResult>)MethodDef.InboundCallServerInvoker.Invoke(this);
-            return await invokeTask.ConfigureAwait(false);
-        }
-        finally {
-            ComputeContext.Current = null!;
-            var computed = context.TryGetCaptured<TResult>();
-            if (computed is not null) {
-                lock (Lock)
-                    Computed ??= computed;
-            }
-        }
-    }
-#else
-    protected override Task InvokeServer()
-    {
-        return Implementation();
-
-        async Task<TResult> Implementation() {
-            Debug.Assert(ComputeContext.Current == ComputeContext.None);
-            var context = new ComputeContext(CallOptions.Capture | CallOptions.RerouteUnlessLocal);
-            ComputeContext.Current = context;
-            try {
-                var invokeTask = (Task<TResult>)MethodDef.InboundCallServerInvoker.Invoke(this);
-                return await invokeTask.ConfigureAwait(false);
-            }
-            finally {
-                ComputeContext.Current = null!;
-                var computed = context.TryGetCaptured<TResult>();
-                if (computed is not null) {
-                    lock (Lock)
-                        Computed ??= computed;
-                }
-            }
-        }
-    }
-#endif
 
     protected override Task SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);

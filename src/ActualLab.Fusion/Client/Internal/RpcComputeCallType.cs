@@ -4,12 +4,15 @@ namespace ActualLab.Fusion.Client.Internal;
 
 public static class RpcComputeCallType
 {
-    public static readonly byte Id = 1;
+    public const byte Id = 1;
+    public static readonly RpcCallType Value;
 
-    public static void Register()
-        => RpcCallTypeRegistry.Register(new(Id) {
+    static RpcComputeCallType()
+    {
+        Value = new RpcCallType(Id) {
             InboundCallType = typeof(RpcInboundComputeCall<>),
             OutboundCallType = typeof(RpcOutboundComputeCall<>),
-            InboundCallTypeOverridesInvokeServer = true,
-        });
+        };
+        RpcCallTypes.Register(Value);
+    }
 }

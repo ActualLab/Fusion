@@ -9,14 +9,9 @@ public record RpcInboundCallOptions
 {
     public static RpcInboundCallOptions Default { get; set; } = new();
 
-    public bool UseNullabilityArgumentValidator { get; init; } = RuntimeInfo.IsServer;
     // Delegate options
     public Func<RpcPeer, RpcMessage, CancellationToken, RpcInboundContext> ContextFactory { get; init; }
-    public Func<RpcMethodDef, Func<RpcInboundCall, Task>, Func<RpcInboundCall, Task>>? InboundCallServerInvokerDecorator { get; init; }
 
     public RpcInboundCallOptions()
-    {
-        ContextFactory = static (peer, message, peerChangedToken) => new(peer, message, peerChangedToken);
-        InboundCallServerInvokerDecorator = null;
-    }
+        => ContextFactory = static (peer, message, peerChangedToken) => new(peer, message, peerChangedToken);
 }

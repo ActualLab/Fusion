@@ -34,9 +34,9 @@ public abstract class RpcInboundCall : RpcCall
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
     public static Func<RpcInboundContext, RpcInboundCall> GetFactory(RpcMethodDef methodDef)
         => FactoryCache.GetOrAdd(
-            (methodDef.CallTypeId, methodDef.UnwrappedReturnType),
+            (methodDef.CallType.Id, methodDef.UnwrappedReturnType),
             static key => {
-                var type = RpcCallTypeRegistry.Resolve(key.CallTypeId)
+                var type = RpcCallTypes.Resolve(key.CallTypeId)
                     .InboundCallType
                     .MakeGenericType(key.ReturnType);
                 return (Func<RpcInboundContext, RpcInboundCall>)type
@@ -93,8 +93,6 @@ public abstract class RpcInboundCall : RpcCall
                 Arguments ??= DeserializeArguments();
                 if (Arguments is null)
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
-
-                // NoWait call arguments aren't validated
             }
             catch (Exception error) {
                 throw ProcessArgumentDeserializationError(error);
@@ -102,7 +100,8 @@ public abstract class RpcInboundCall : RpcCall
 
             if (peer.CallLogger.IsLogged(this))
                 peer.CallLogger.LogInbound(this);
-            return InvokeServer(); // NoWait calls must complete fast & be cheap, so the cancellationToken isn't passed
+
+            return MethodDef.InboundCallInvoker.Invoke(this);
         }
 
         var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
@@ -120,12 +119,10 @@ public abstract class RpcInboundCall : RpcCall
                 if (Arguments is null)
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
 
-                // Before call
                 if (peer.CallLogger.IsLogged(this))
                     peer.CallLogger.LogInbound(this);
 
-                // Call, pipeline invoker must set ResultTask
-                ResultTask = MethodDef.InboundCallPipelineInvoker.Invoke(this);
+                ResultTask = MethodDef.InboundCallInvoker.Invoke(this);
             }
             catch (Exception error) {
                 ResultTask = TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
@@ -150,7 +147,6 @@ public abstract class RpcInboundCall : RpcCall
 
     // Protected methods
 
-    protected internal abstract Task InvokeServer();
     protected abstract Task SendResult();
 
     protected Exception ProcessArgumentDeserializationError(Exception error)
@@ -167,7 +163,7 @@ public abstract class RpcInboundCall : RpcCall
             var peer = Context.Peer;
             if (peer.CallLogger.IsLogged(this))
                 peer.CallLogger.LogInbound(this);
-            _ = InvokeServer();
+            _ = MethodDef.InboundCallInvoker.Invoke(this);
             return error;
         }
         finally {
@@ -278,14 +274,8 @@ public abstract class RpcInboundCall : RpcCall
     }
 }
 
-public class RpcInboundCall<TResult>(RpcInboundContext context)
-    : RpcInboundCall(context)
+public class RpcInboundCall<TResult>(RpcInboundContext context) : RpcInboundCall(context)
 {
-    protected internal override Task InvokeServer()
-        // This method is actually never called directly: regular inbound calls use fast pipeline invoker
-        // produced by InboundCallPipelineFastInvokerFactory, which "inlines" it right into the pipeline invoker.
-        => MethodDef.InboundCallServerInvoker.Invoke(this);
-
     protected override Task SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);
 }

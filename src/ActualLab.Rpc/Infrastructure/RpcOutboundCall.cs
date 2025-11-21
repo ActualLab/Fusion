@@ -46,9 +46,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
     public static Func<RpcOutboundContext, RpcOutboundCall> GetFactory(RpcMethodDef methodDef)
         => FactoryCache.GetOrAdd(
-            (methodDef.CallTypeId, methodDef.UnwrappedReturnType),
+            (methodDef.CallType.Id, methodDef.UnwrappedReturnType),
             static key => {
-                var type = RpcCallTypeRegistry.Resolve(key.CallTypeId)
+                var type = RpcCallTypes.Resolve(key.CallTypeId)
                     .OutboundCallType
                     .MakeGenericType(key.ReturnType);
                 return (Func<RpcOutboundContext, RpcOutboundCall>)type
@@ -177,7 +177,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
                 headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
             if (activity is not null)
                 headers = RpcActivityInjector.Inject(headers, activity.Context);
-            return new RpcMessage(MethodDef.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+            return new RpcMessage(MethodDef.CallType.Id, relatedId, MethodDef.Ref, argumentData, headers);
         }
         finally {
             RpcOutboundContext.Current = oldOutboundContext;
@@ -193,7 +193,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             var argumentData = Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, Context.SizeHint);
             var hash = Peer.Hasher.Invoke(argumentData);
             var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
-            var message = new RpcMessage(MethodDef.CallTypeId, relatedId, MethodDef.Ref, argumentData, headers);
+            var message = new RpcMessage(MethodDef.CallType.Id, relatedId, MethodDef.Ref, argumentData, headers);
             return (message, hash);
         }
         finally {

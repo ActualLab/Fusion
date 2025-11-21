@@ -30,7 +30,8 @@ public sealed class RpcInboundContext
         Peer = peer;
         Message = message;
         PeerChangedToken = peerChangedToken;
-        MethodDef = GetMethodDef();
+        var methodRef = Message.MethodRef;
+        MethodDef = methodRef.Target ?? Peer.ServerMethodResolver[methodRef];
         if (MethodDef is null) {
             MethodDef = Peer.Hub.SystemCallSender.NotFoundMethodDef;
             var (service, method) = message.MethodRef.GetServiceAndMethodName();
@@ -41,10 +42,10 @@ public sealed class RpcInboundContext
             return;
         }
 
-        if (MethodDef.CallTypeId != message.CallTypeId) {
+        if (MethodDef.CallType.Id != message.CallTypeId) {
             MethodDef = Peer.Hub.SystemCallSender.NotFoundMethodDef;
             var (service, method) = message.MethodRef.GetServiceAndMethodName();
-            Call = new RpcInboundInvalidCallTypeCall<Unit>(this, MethodDef.CallTypeId, message.CallTypeId) {
+            Call = new RpcInboundInvalidCallTypeCall<Unit>(this, MethodDef.CallType.Id, message.CallTypeId) {
                 // This prevents argument deserialization
                 Arguments = ArgumentList.New(service, method)
             };
@@ -52,17 +53,5 @@ public sealed class RpcInboundContext
         }
 
         Call = MethodDef.InboundCallFactory.Invoke(this);
-    }
-
-    // Nested types
-
-    private RpcMethodDef? GetMethodDef()
-    {
-        var methodRef = Message.MethodRef;
-        var method = methodRef.Target ?? Peer.ServerMethodResolver[methodRef];
-        if (method is null || method.IsSystem || method.InboundCallFilter is not { } filter)
-            return method;
-
-        return filter.Invoke(Peer) ? method : null;
     }
 }

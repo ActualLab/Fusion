@@ -14,7 +14,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcOutboundCallOptions OutboundCallOptions;
     internal readonly RpcDiagnosticsOptions DiagnosticsOptions;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
-    internal readonly IRpcInboundMiddleware[] InboundMiddlewares;
+    internal readonly IRpcMiddleware[] Middlewares;
     [field: AllowNull, MaybeNull]
     internal RpcSystemCallSender SystemCallSender => field ??= Services.GetRequiredService<RpcSystemCallSender>();
     [field: AllowNull, MaybeNull]
@@ -60,7 +60,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         OutboundCallOptions = services.GetRequiredService<RpcOutboundCallOptions>();
         DiagnosticsOptions = services.GetRequiredService<RpcDiagnosticsOptions>();
         SerializationFormats = services.GetRequiredService<RpcSerializationFormatResolver>();
-        InboundMiddlewares = services.GetServices<IRpcInboundMiddleware>().ToArray();
+        Middlewares = services.GetServices<IRpcMiddleware>().OrderByDescending(x => x.Priority).ToArray();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
         Limits = services.GetRequiredService<RpcLimits>();
         Clock = services.Clocks().CpuClock;

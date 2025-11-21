@@ -9,6 +9,7 @@ using ActualLab.Generators;
 using ActualLab.Interception;
 using ActualLab.Interception.Trimming;
 using ActualLab.Resilience;
+using ActualLab.Rpc;
 using ActualLab.Trimming;
 using ActualLab.Versioning;
 using ActualLab.Versioning.Providers;
@@ -26,7 +27,6 @@ public readonly struct CommanderBuilder
 
     static CommanderBuilder()
     {
-        CommanderModuleInitializer.Touch();
         CodeKeeper.AddFakeAction(static () => {
             CodeKeeper.KeepUnconstructable(typeof(Proxies));
 
@@ -85,6 +85,12 @@ public readonly struct CommanderBuilder
         AddHandlers<RpcCommandHandler>();
         services.AddSingleton(_ => new LocalCommandRunner());
         AddHandlers<LocalCommandRunner>();
+
+        // ActualLab.Rpc middleware; .AddRpc().AddMiddleware() implies adding RPC as well, so we do this manually
+        Services.TryAddEnumerable(
+            ServiceDescriptor.Singleton(
+                typeof(IRpcMiddleware),
+                (Func<IServiceProvider, RpcInboundCommandHandler>)(_ => new RpcInboundCommandHandler())));
 
         configure?.Invoke(this);
     }

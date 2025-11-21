@@ -1,5 +1,6 @@
 using ActualLab.OS;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Middlewares;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
 
@@ -158,7 +159,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
 
     protected override ServiceProvider CreateServices(Action<IServiceCollection>? configureServices = null)
         => base.CreateServices(services => {
-            services.AddRpc().AddInboundMiddleware<RpcRandomDelayInboundMiddleware>();
+            services.AddRpc().AddMiddleware<RpcInboundCallDelayer>();
             configureServices?.Invoke(services);
         });
 }
