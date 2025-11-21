@@ -45,7 +45,8 @@ hosting Compute Service itself, a controller publishing its invocable endpoints,
 
 Common interface (don't run this code yet):
 
-```cs --editable false --region Part04_CommonServices --source-file Part04.cs
+<!-- snippet: Part04_CommonServices -->
+```cs
 // Ideally, we want Compute Service client to be exactly the same as corresponding
 // Compute Service. A good way to enforce this is to expose an interface
 // that should be implemented by Compute Service + tell Fusion to "expose"
@@ -58,12 +59,14 @@ public interface ICounterService : IComputeService
     Task SetOffset(int offset, CancellationToken cancellationToken = default);
 }
 ```
+<!-- endSnippet -->
 
 ### 2. Web Host Services
 
 Web host services (don't run this code yet):
 
-```cs --editable false --region Part04_HostServices --source-file Part04.cs
+<!-- snippet: Part04_HostServices -->
+```cs
 public class CounterService : ICounterService
 {
     private readonly ConcurrentDictionary<string, int> _counters = new ConcurrentDictionary<string, int>();
@@ -97,31 +100,32 @@ public class CounterService : ICounterService
     }
 }
 ```
+<!-- endSnippet -->
 
 ### 3. Host and Client Setup
 
 `CreateHost` and `CreateClientServices` methods (don't run this code yet):
 
-```cs --editable false --region Part04_CreateXxx --source-file Part04.cs
+<!-- snippet: Part04_CreateXxx -->
+```cs
 public static IHost CreateHost()
 {
     var builder = Host.CreateDefaultBuilder();
     builder.ConfigureHostConfiguration(cfg =>
-        cfg.AddInMemoryCollection(new Dictionary<string, string>() { { "Environment", "Development" } }));
+        cfg.AddInMemoryCollection(new Dictionary<string, string>() {{"Environment", "Development"}}));
     builder.ConfigureLogging(logging =>
         logging.ClearProviders().SetMinimumLevel(LogLevel.Information).AddDebug());
-    builder.ConfigureServices((b, services) =>
-    {
+    builder.ConfigureServices((b, services) => {
+        services.AddRouting();
         var fusion = services.AddFusion();
         fusion.AddWebServer();
         // Registering Compute Service
-        fusion.AddService<ICounterService, CounterService>();
+        fusion.AddService<ICounterService, CounterService>(RpcServiceMode.Server);
     });
-    builder.ConfigureWebHost(b =>
-    {
-        b.UseKestrel();
-        b.UseUrls("http://localhost:50050/");
-        b.Configure((ctx, app) => {
+    builder.ConfigureWebHost(webHost => {
+        webHost.UseKestrel();
+        webHost.UseUrls("http://localhost:50050/");
+        webHost.Configure((ctx, app) => {
             app.UseWebSockets();
             app.UseRouting();
             app.UseEndpoints(endpoints => {
@@ -144,12 +148,14 @@ public static IServiceProvider CreateClientServices()
     return services.BuildServiceProvider();
 }
 ```
+<!-- endSnippet -->
 
 ## Using Compute Service Clients
 
 And finally, we're ready to try our Compute Service client:
 
-```cs --region Part04_ReplicaService --source-file Part04.cs
+<!-- snippet: Part04_ReplicaService -->
+```cs
 using var host = CreateHost();
 await host.StartAsync();
 WriteLine("Host started.");
@@ -159,8 +165,7 @@ var cancellationToken = stopCts.Token;
 
 async Task Watch<T>(string name, Computed<T> computed)
 {
-    for (; ; )
-    {
+    for (;;) {
         WriteLine($"{name}: {computed.Value}, {computed}");
         await computed.WhenInvalidated(cancellationToken);
         WriteLine($"{name}: {computed.Value}, {computed}");
@@ -184,6 +189,7 @@ await Task.Delay(200);
 stopCts.Cancel();
 await host.StopAsync();
 ```
+<!-- endSnippet -->
 
 The output:
 
@@ -225,7 +231,8 @@ to "observe" the output of server-side Compute Service. The code below
 is almost the same as you saw in previous part showcasing `ComputedState<T>`,
 but it uses Compute Service client instead of Computed Service.
 
-```cs --region Part04_LiveStateFromReplica --source-file Part04.cs
+<!-- snippet: Part04_LiveStateFromReplica -->
+```cs
 using var host = CreateHost();
 await host.StartAsync();
 WriteLine("Host started.");
@@ -242,8 +249,7 @@ using var state = stateFactory.NewComputed(
                 (s, e) => WriteLine($"{DateTime.Now}: {e}, Value: {s.Value}, Computed: {s.Computed}"));
         },
     },
-    async (state, cancellationToken) =>
-    {
+    async (state, cancellationToken) => {
         var counter = await counters.Get("a", cancellationToken);
         return $"counters.Get(a) -> {counter}";
     });
@@ -255,6 +261,7 @@ await Task.Delay(2000);
 
 await host.StopAsync();
 ```
+<!-- endSnippet -->
 
 The output:
 
