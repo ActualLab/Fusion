@@ -7,12 +7,12 @@ public partial class RpcMethodDef
     public Func<RpcInboundContext, RpcInboundCall> InboundCallFactory { get; protected set; } = null!;
     public Func<RpcPeer, bool>? InboundCallFilter { get; protected set; } = null;
     public Func<RpcInboundCall, Task>[] InboundCallPreprocessors { get; protected set; } = [];
+    public Func<RpcInboundCall, Task>[] InboundCallPostprocessors { get; protected set; } = [];
     public Action<RpcInboundCall>? InboundCallValidator { get; protected set; } = null;
 
     // The delegates and properties below must be initialized in Initialize(),
     // they are supposed to be as efficient as possible (i.e., do less, if possible)
     // taking the values of other properties into account.
-    public bool? InboundCallUseFastPipelineInvoker { get; protected set; }
     public bool? InboundCallUseDistributedModeServerInvoker { get; protected set; }
     public Func<RpcInboundCall, Task> InboundCallServerInvoker { get; protected set; } = null!;
     public Func<RpcInboundCall, Task> InboundCallPipelineInvoker { get; protected set; } = null!;
@@ -23,8 +23,15 @@ public partial class RpcMethodDef
             : null;
 
     public virtual Func<RpcInboundCall, Task>[] CreateInboundCallPreprocessors()
-        => Hub.InboundCallPreprocessors
-            .Select(x => x.CreateInboundCallPreprocessor(this))
+        => Hub.InboundMiddlewares
+            .Select(x => x.CreatePreprocessor(this))
+            .SkipNullItems()
+            .ToArray();
+
+    public virtual Func<RpcInboundCall, Task>[] CreateInboundCallPostprocessors()
+        => Hub.InboundMiddlewares
+            .Select(x => x.CreatePostprocessor(this))
+            .SkipNullItems()
             .ToArray();
 
     public virtual Action<RpcInboundCall>? CreateInboundCallValidator()

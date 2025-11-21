@@ -35,7 +35,7 @@ public sealed class ComputedGraphPruner : WorkerBase
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
         if (ComputedRegistry.ChangeGraphPruner(this, out var prevPruner) && prevPruner is not null)
-            await prevPruner.DisposeAsync().SilentAwait();
+            await prevPruner.DisposeAsync().SilentAwait(false);
 
         await Task.Delay(Settings.CheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
         var chain = CreatePruneOnceChain()

@@ -41,6 +41,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public CancellationTokenRegistration CancellationHandler;
 
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
     public static Func<RpcOutboundContext, RpcOutboundCall> GetFactory(RpcMethodDef methodDef)

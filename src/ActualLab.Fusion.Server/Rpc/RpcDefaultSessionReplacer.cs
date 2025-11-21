@@ -5,13 +5,13 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Server.Rpc;
 
-public class RpcDefaultSessionReplacer : RpcInboundCallPreprocessor
+public sealed class RpcDefaultSessionReplacer : IRpcInboundMiddleware
 {
-    public override Func<RpcInboundCall, Task> CreateInboundCallPreprocessor(RpcMethodDef methodDef)
+    public Func<RpcInboundCall, Task>? CreatePreprocessor(RpcMethodDef methodDef)
     {
         var parameters = methodDef.Parameters;
         if (parameters.Length == 0)
-            return None;
+            return null;
 
         var p0Type = parameters[0].ParameterType;
         if (p0Type == typeof(Session))
@@ -55,11 +55,16 @@ public class RpcDefaultSessionReplacer : RpcInboundCallPreprocessor
                 return Task.CompletedTask;
             };
 
-        return None;
+        return null;
     }
 
+    public Func<RpcInboundCall, Task>? CreatePostprocessor(RpcMethodDef methodDef)
+        => null;
+
+    // Protected methods
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected static bool HasSessionBoundRpcConnection(
+    private static bool HasSessionBoundRpcConnection(
         RpcInboundCall call,
         [NotNullWhen(true)] out SessionBoundRpcConnection? connection)
     {

@@ -321,39 +321,40 @@ public readonly struct RpcBuilder
         return service;
     }
 
-    // Add/Remove IRpcInboundCallPreprocessor
+    // Add/Remove IRpcInboundMiddleware
 
-    public RpcBuilder AddInboundCallPreprocessor<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TPreprocessor>
-        (Func<IServiceProvider, TPreprocessor>? factory = null)
-        where TPreprocessor : class, IRpcInboundCallPreprocessor
-        => AddInboundCallPreprocessor(typeof(TPreprocessor), factory);
+    public RpcBuilder AddInboundMiddleware<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TMiddleware>
+        (Func<IServiceProvider, TMiddleware>? factory = null)
+        where TMiddleware : class, IRpcInboundMiddleware
+        => AddInboundMiddleware(typeof(TMiddleware), factory);
 
-    public RpcBuilder AddInboundCallPreprocessor(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type preprocessorType,
+    public RpcBuilder AddInboundMiddleware(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type middlewareType,
         Func<IServiceProvider, object>? factory = null)
     {
-        if (!typeof(IRpcInboundCallPreprocessor).IsAssignableFrom(preprocessorType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcInboundCallPreprocessor>(preprocessorType, nameof(preprocessorType));
+        if (!typeof(IRpcInboundMiddleware).IsAssignableFrom(middlewareType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcInboundMiddleware>(middlewareType, nameof(middlewareType));
 
         var descriptor = factory is not null
-            ? ServiceDescriptor.Singleton(typeof(IRpcInboundCallPreprocessor), factory)
-            : ServiceDescriptor.Singleton(typeof(IRpcInboundCallPreprocessor), preprocessorType);
+            ? ServiceDescriptor.Singleton(typeof(IRpcInboundMiddleware), factory)
+            : ServiceDescriptor.Singleton(typeof(IRpcInboundMiddleware), middlewareType);
         Services.TryAddEnumerable(descriptor);
         return this;
     }
 
-    public RpcBuilder RemoveInboundCallPreprocessor<TPreprocessor>()
-        where TPreprocessor : class, IRpcInboundCallPreprocessor
-        => RemoveInboundCallPreprocessor(typeof(TPreprocessor));
+    public RpcBuilder RemoveInboundMiddleware<TMiddleware>()
+        where TMiddleware : class, IRpcInboundMiddleware
+        => RemoveInboundMiddleware(typeof(TMiddleware));
 
-    public RpcBuilder RemoveInboundCallPreprocessor(Type preprocessorType)
+    public RpcBuilder RemoveInboundMiddleware(Type middlewareType)
     {
-        if (!typeof(IRpcInboundCallPreprocessor).IsAssignableFrom(preprocessorType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcInboundCallPreprocessor>(preprocessorType, nameof(preprocessorType));
+        if (!typeof(IRpcInboundMiddleware).IsAssignableFrom(middlewareType))
+            throw ActualLab.Internal.Errors.MustBeAssignableTo<IRpcInboundMiddleware>(middlewareType, nameof(middlewareType));
 
         Services.RemoveAll(d =>
-            d.ImplementationType == preprocessorType
-            && d.ServiceType == typeof(IRpcInboundCallPreprocessor));
+            d.ImplementationType == middlewareType
+            && d.ServiceType == typeof(IRpcInboundMiddleware));
         return this;
-    }}
+    }
+}

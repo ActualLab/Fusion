@@ -158,7 +158,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
 
     protected override ServiceProvider CreateServices(Action<IServiceCollection>? configureServices = null)
         => base.CreateServices(services => {
-            services.AddRpc().AddInboundCallPreprocessor<RpcRandomDelayInboundCallPreprocessor>();
+            services.AddRpc().AddInboundMiddleware<RpcRandomDelayInboundMiddleware>();
             configureServices?.Invoke(services);
         });
 }

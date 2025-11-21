@@ -249,7 +249,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
     protected override ServiceProvider CreateServices(Action<IServiceCollection>? configureServices = null)
         => base.CreateServices(services => {
-            services.AddRpc().AddInboundCallPreprocessor<RpcRandomDelayInboundCallPreprocessor>();
+            services.AddRpc().AddInboundMiddleware<RpcRandomDelayInboundMiddleware>();
             configureServices?.Invoke(services);
         });
 }

@@ -13,7 +13,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcInboundCallOptions InboundCallOptions => Hub.InboundCallOptions;
     public RpcOutboundCallOptions OutboundCallOptions => Hub.OutboundCallOptions;
     public RpcDiagnosticsOptions DiagnosticsOptions => Hub.DiagnosticsOptions;
-    public IRpcInboundCallPreprocessor[]  InboundCallPreprocessors => Hub.InboundCallPreprocessors;
+    public IRpcInboundMiddleware[] InboundMiddlewares => Hub.InboundMiddlewares;
     public RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer => Hub.ClientPeerReconnectDelayer;
     public RpcSystemCallSender SystemCallSender => Hub.SystemCallSender;
     public RpcClient Client => Hub.Client;

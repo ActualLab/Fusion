@@ -126,28 +126,45 @@ public partial class RpcMethodDef
                 if (!methodDef.IsAsyncMethod)
                     throw new ArgumentOutOfRangeException(nameof(methodDef), "Async method is required here.");
 
-                var preprocessors = methodDef.InboundCallPreprocessors.Length != 0
+                var validator = methodDef.InboundCallValidator;
+                var preprocessors = methodDef.InboundCallPreprocessors.Length > 0
                     ? methodDef.InboundCallPreprocessors
                     : null;
-                var validator = methodDef.InboundCallValidator;
+                var postprocessors = methodDef.InboundCallPostprocessors.Length != 0
+                    ? methodDef.InboundCallPostprocessors
+                    : null;
 
                 return methodDef.IsAsyncVoidMethod
                     ? (Func<RpcInboundCall, Task<T>>)(async call => {
                         // Task (returns Task<Unit>)
-                        if (preprocessors is not null)
-                            foreach (var p in preprocessors)
-                                await p.Invoke(call).ConfigureAwait(false);
-                        validator?.Invoke(call);
-                        await call.InvokeServer().ConfigureAwait(false);
-                        return default!;
+                        try {
+                            if (preprocessors is not null)
+                                foreach (var p in preprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                            validator?.Invoke(call);
+                            await call.InvokeServer().ConfigureAwait(false);
+                            return default!;
+                        }
+                        finally {
+                            if (postprocessors is not null)
+                                foreach (var p in postprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                        }
                     })
                     : async call => {
                         // Task<T>
-                        if (preprocessors is not null)
-                            foreach (var p in preprocessors)
-                                await p.Invoke(call).ConfigureAwait(false);
-                        validator?.Invoke(call);
-                        return await ((Task<T>)call.InvokeServer()).ConfigureAwait(false);
+                        try {
+                            if (preprocessors is not null)
+                                foreach (var p in preprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                            validator?.Invoke(call);
+                            return await ((Task<T>)call.InvokeServer()).ConfigureAwait(false);
+                        }
+                        finally {
+                            if (postprocessors is not null)
+                                foreach (var p in postprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                        }
                     };
             };
     }
@@ -164,46 +181,77 @@ public partial class RpcMethodDef
                 var preprocessors = methodDef.InboundCallPreprocessors.Length != 0
                     ? methodDef.InboundCallPreprocessors
                     : null;
+                var postprocessors = methodDef.InboundCallPostprocessors.Length != 0
+                    ? methodDef.InboundCallPostprocessors
+                    : null;
                 var validator = methodDef.InboundCallValidator;
 
                 return (Func<RpcInboundCall, Task<T>>)((methodDef.ReturnsTask, methodDef.IsAsyncVoidMethod) switch {
                     (true, true) => async call => {
                         // Task (returns Task<Unit>)
-                        if (preprocessors is not null)
-                            foreach (var p in preprocessors)
-                                await p.Invoke(call).ConfigureAwait(false);
-                        validator?.Invoke(call);
-                        server ??= methodDef.Service.Server!;
-                        await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        return default!;
+                        try {
+                            if (preprocessors is not null)
+                                foreach (var p in preprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                            validator?.Invoke(call);
+                            server ??= methodDef.Service.Server!;
+                            await ((Task)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                            return default!;
+                        }
+                        finally {
+                            if (postprocessors is not null)
+                                foreach (var p in postprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                        }
                     },
                     (true, false) => async call => {
                         // Task<T>
-                        if (preprocessors is not null)
-                            foreach (var p in preprocessors)
-                                await p.Invoke(call).ConfigureAwait(false);
-                        validator?.Invoke(call);
-                        server ??= methodDef.Service.Server!;
-                        return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        try {
+                            if (preprocessors is not null)
+                                foreach (var p in preprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                            validator?.Invoke(call);
+                            server ??= methodDef.Service.Server!;
+                            return await ((Task<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        }
+                        finally {
+                            if (postprocessors is not null)
+                                foreach (var p in postprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                        }
                     },
                     (false, true) => async call => {
                         // ValueTask (returns Task<Unit>)
-                        if (preprocessors is not null)
-                            foreach (var p in preprocessors)
-                                await p.Invoke(call).ConfigureAwait(false);
-                        validator?.Invoke(call);
-                        server ??= methodDef.Service.Server!;
-                        await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
-                        return default!;
+                        try {
+                            if (preprocessors is not null)
+                                foreach (var p in preprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                            validator?.Invoke(call);
+                            server ??= methodDef.Service.Server!;
+                            await ((ValueTask)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                            return default!;
+                        }
+                        finally {
+                            if (postprocessors is not null)
+                                foreach (var p in postprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                        }
                     },
                     (false, false) => async call => {
-                        // ValueTask<T> (returns Task<T>)
-                        if (preprocessors is not null)
-                            foreach (var p in preprocessors)
-                                await p.Invoke(call).ConfigureAwait(false);
-                        validator?.Invoke(call);
-                        server ??= methodDef.Service.Server!;
-                        return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        // ValueTask<T>
+                        try {
+                            if (preprocessors is not null)
+                                foreach (var p in preprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                            validator?.Invoke(call);
+                            server ??= methodDef.Service.Server!;
+                            return await ((ValueTask<T>)invoker.Invoke(server, call.Arguments!)!).ConfigureAwait(false);
+                        }
+                        finally {
+                            if (postprocessors is not null)
+                                foreach (var p in postprocessors)
+                                    await p.Invoke(call).ConfigureAwait(false);
+                        }
                     },
                 });
             };

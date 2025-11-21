@@ -103,6 +103,6 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
 
         var whenComputed = State.Recompute();
         if (!whenComputed.IsCompleted)
-            await whenComputed.SilentAwait(); // Recompute errors are exposed via State.Value/Error
+            await whenComputed.SilentAwait(false); // Recompute errors are exposed via State.Value/Error
     }
 }

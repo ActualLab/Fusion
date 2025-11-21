@@ -10,61 +10,46 @@ public static class RpcCallTypeRegistry
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile (Type? InboundCallType, Type? OutboundCallType)[] _callTypes;
+    private static volatile RpcCallTypeRegistration?[] _callTypes;
 
     static RpcCallTypeRegistry()
     {
-        _callTypes = new (Type?, Type?)[8];
-        _callTypes[RpcCallTypes.Regular] = (typeof(RpcInboundCall<>), typeof(RpcOutboundCall<>));
+        _callTypes = new RpcCallTypeRegistration?[8];
+        _callTypes[RpcCallTypes.Regular] = new(RpcCallTypes.Regular) {
+            InboundCallTypeOverridesInvokeServer = false,
+        };
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static (Type InboundCallType, Type OutboundCallType) Resolve(byte callTypeId)
-    {
-        var item = _callTypes[callTypeId];
-        if (item.InboundCallType is null)
-            throw Errors.UnknownCallType(callTypeId);
-        return item!;
-    }
+    public static RpcCallTypeRegistration Resolve(byte callTypeId)
+        => _callTypes[callTypeId] ?? throw Errors.UnknownCallType(callTypeId);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static (Type? InboundCallType, Type? OutboundCallType) Get(byte callTypeId)
+    public static RpcCallTypeRegistration? Get(byte callTypeId)
         => _callTypes[callTypeId];
 
     public static string GetDescription(byte callTypeId)
+        => Get(callTypeId) is { } registration
+            ? registration.ToString()
+            : $"{callTypeId}: Unknown";
+
+    public static bool Register(RpcCallTypeRegistration registration)
     {
-        var (inboundCallType, outboundCallType) = Get(callTypeId);
-        if (inboundCallType is null || outboundCallType is null)
-            return $"{callTypeId}: Unknown";
+        var ict = registration.InboundCallType;
+        if (!typeof(RpcInboundCall).IsAssignableFrom(ict) || !ict.IsGenericType || ict.GetGenericArguments().Length != 1)
+            throw ActualLab.Internal.Errors.InternalError("InboundCallType must be an open generic descendant of RpcInboundCall<>.");
 
-        return $"{callTypeId}: {inboundCallType.GetName()} / {outboundCallType.GetName()}";
-    }
+        var oct = registration.OutboundCallType;
+        if (!typeof(RpcOutboundCall).IsAssignableFrom(oct) || !oct.IsGenericType || oct.GetGenericArguments().Length != 1)
+            throw ActualLab.Internal.Errors.InternalError("OutboundCallType must be an open generic descendant of RpcOutboundCall<>.");
 
-    public static void Register(byte callTypeId, Type inboundCallType, Type outboundCallType)
-    {
-        if (!typeof(RpcInboundCall).IsAssignableFrom(inboundCallType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcInboundCall>(inboundCallType, nameof(inboundCallType));
-        if (!typeof(RpcOutboundCall).IsAssignableFrom(outboundCallType))
-            throw ActualLab.Internal.Errors.MustBeAssignableTo<RpcOutboundCall>(outboundCallType, nameof(outboundCallType));
-
-        if (!inboundCallType.IsGenericType || inboundCallType.GetGenericArguments().Length != 1)
-            throw new ArgumentOutOfRangeException(nameof(inboundCallType));
-        if (!outboundCallType.IsGenericType || outboundCallType.GetGenericArguments().Length != 1)
-            throw new ArgumentOutOfRangeException(nameof(outboundCallType));
-
-        var item = (inboundCallType, outboundCallType);
-        if (Get(callTypeId) == item)
-            return;
+        if (Get(registration.Id) is not null) return false;
 
         lock (StaticLock) {
-            var existingItem = Get(callTypeId);
-            if (existingItem == item)
-                return;
+            if (Get(registration.Id) is not null) return false;
 
-            if (existingItem.InboundCallType is not null)
-                throw ActualLab.Internal.Errors.KeyAlreadyExists();
-
-            _callTypes[callTypeId] = item;
+            _callTypes[registration.Id] = registration;
+            return true;
         }
     }
 }

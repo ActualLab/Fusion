@@ -29,6 +29,7 @@ public abstract class RpcInboundCall : RpcCall
     public RpcInboundCallTrace? Trace;
 
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
     public static Func<RpcInboundContext, RpcInboundCall> GetFactory(RpcMethodDef methodDef)
@@ -123,7 +124,7 @@ public abstract class RpcInboundCall : RpcCall
                 if (peer.CallLogger.IsLogged(this))
                     peer.CallLogger.LogInbound(this);
 
-                // Call
+                // Call, pipeline invoker must set ResultTask
                 ResultTask = MethodDef.InboundCallPipelineInvoker.Invoke(this);
             }
             catch (Exception error) {
@@ -183,7 +184,7 @@ public abstract class RpcInboundCall : RpcCall
             : CompleteAsync();
 
         async Task CompleteAsync() {
-            await ResultTask!.SilentAwait(false);
+            await ResultTask.SilentAwait(false);
             await Complete().ConfigureAwait(false);
         }
 
