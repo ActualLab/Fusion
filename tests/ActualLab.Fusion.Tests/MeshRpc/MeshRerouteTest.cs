@@ -51,7 +51,7 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         }, TimeSpan.FromSeconds(5));
         Out.WriteLine($"After first swap, computed now points to {host1.Id}");
 
-        // Verify with direct call after first swap
+        // Verify with direct call after the first swap
         directResult = await service.GetValueDirect(0, "test-key");
         directResult.HostId.Should().Be(host1.Id, "direct call should also route to host1");
         directResult.Value.Should().Be("");
@@ -69,7 +69,7 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         }, TimeSpan.FromSeconds(5));
         Out.WriteLine($"After second swap, computed points back to {host0.Id}");
 
-        // Verify with direct call after second swap
+        // Verify with direct call after the second swap
         directResult = await service.GetValueDirect(0, "test-key");
         directResult.HostId.Should().Be(host0.Id, "direct call should route back to host0");
         directResult.Value.Should().Be("value-from-host0");
