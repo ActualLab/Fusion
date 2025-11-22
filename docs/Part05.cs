@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ActualLab.Fusion;
 using static System.Console;
 
-namespace Docs
+namespace Tutorial
 {
     #region Part05_Service1
     public partial class Service1 : IComputeService
