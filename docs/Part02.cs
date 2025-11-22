@@ -5,7 +5,7 @@ using ActualLab.Rpc.Server;
 using Microsoft.AspNetCore.Builder;
 using static System.Console;
 
-namespace Docs;
+namespace Tutorial;
 
 #region Part02_SharedApi
 // The interface for our chat service
