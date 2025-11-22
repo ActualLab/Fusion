@@ -52,7 +52,7 @@
 Indirect contributors & everyone else who made Fusion possible:
 
 - [ServiceTitan](https://www.servicetitan.com) &ndash; Fusion was originally created there.
-- [Quora](https://www.quora.com) — a huge part of the inspiration for Fusion was Quora's LiveNode framework
+- [Quora](https://www.quora.com) &ndash; a huge part of the inspiration for Fusion was Quora's LiveNode framework
 - [Microsoft](https://microsoft.com) &ndash; for .NET Core and Blazor.
 
 [Fusion]: https://github.com/ActualLab/Fusion

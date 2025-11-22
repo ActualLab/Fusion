@@ -4,7 +4,7 @@ using ActualLab.Fusion.EntityFramework.Operations;
 
 namespace Tutorial
 {
-    public class AppDbContext(DbContextOptions options) : DbContextBase(options)
+    public partial class AppDbContext(DbContextOptions options) : DbContextBase(options)
     {
         // ActualLab.Fusion.EntityFramework.Operations tables
         #region Part10_DbSet
