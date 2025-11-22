@@ -59,7 +59,9 @@ earlier.
 
 Let's declare our first command and its MediatR-style handler:
 
-<!-- snippet: Part09_PrintCommandSession --> ```cs
+<!-- snippet: Part09_PrintCommandSession -->
+
+```cs
 
 public class PrintCommand : ICommand<Unit>
 {
@@ -80,11 +82,13 @@ public void Dispose() => WriteLine("Disposing PrintCommandHandler");
 
 }
 
-````
+```
 
 Using CommandR and MediatR is quite similar:
 
-<!-- snippet: Part09_PrintCommandSession2 --> ```cs
+<!-- snippet: Part09_PrintCommandSession2 -->
+
+```cs
 // Building IoC container
 var serviceBuilder = new ServiceCollection()
     .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
@@ -95,7 +99,7 @@ var services = serviceBuilder.BuildServiceProvider();
 var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
 await commander.Call(new PrintCommand() { Message = "Are you operational?" });
 await commander.Call(new PrintCommand() { Message = "Are you operational?" });
-````
+```
 
 The output:
 
@@ -126,7 +130,9 @@ Try changing `AddScoped` to `AddSingleton` in above example.
 Let's write a bit more complex handler to see how
 `CommandContext` works.
 
-<!-- snippet: Part09_RecSumCommandSession --> ```cs
+<!-- snippet: Part09_RecSumCommandSession -->
+
+```cs
 
 public class RecSumCommand : ICommand<long>
 {
@@ -181,19 +187,23 @@ public void Dispose() => WriteLine("Disposing RecSumCommandHandler");
 
 }
 
-````
+```
 
-<!-- snippet: Part09_RecSumCommandSession2 --> ```cs
+<!-- snippet: Part09_RecSumCommandSession2 -->
+
+```cs
+
 // Building IoC container
 var serviceBuilder = new ServiceCollection()
-    .AddScoped<RecSumCommandHandler>();
+.AddScoped<RecSumCommandHandler>();
 var commanderBuilder = serviceBuilder.AddCommander()
-    .AddHandlers<RecSumCommandHandler>();
+.AddHandlers<RecSumCommandHandler>();
 var services = serviceBuilder.BuildServiceProvider();
 
 var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
 WriteLine(await commander.Call(new RecSumCommand() { Numbers = new[] { 1L, 2, 3 } }));
-````
+
+```
 
 The output:
 
@@ -323,7 +333,9 @@ All these methods take up to 3 arguments:
 The most interesting way to register command handlers
 are to declare them inside so-called Command Service:
 
-<!-- snippet: Part09_RecSumCommandServiceSession --> ```cs
+<!-- snippet: Part09_RecSumCommandServiceSession -->
+
+```cs
 
 public class RecSumCommandService : ICommandService
 {
@@ -367,17 +379,19 @@ return head + tailSum;
     }
 
 }
-
-````
+```
 
 Such services has to be registered via `AddCommandService` method
 of the `CommanderBuilder`:
 
-<!-- snippet: Part09_RecSumCommandServiceSession2 --> ```cs
+<!-- snippet: Part09_RecSumCommandServiceSession2 -->
+
+```cs
+
 // Building IoC container
 var serviceBuilder = new ServiceCollection();
 var commanderBuilder = serviceBuilder.AddCommander()
-    .AddCommandService<RecSumCommandService>(); // Such services are auto-registered as singletons
+.AddCommandService<RecSumCommandService>(); // Such services are auto-registered as singletons
 var services = serviceBuilder.BuildServiceProvider();
 
 var commander = services.Commander();
@@ -385,7 +399,8 @@ var recSumService = services.GetRequiredService<RecSumCommandService>();
 WriteLine(recSumService.GetType());
 WriteLine(await commander.Call(new RecSumCommand() { Numbers = new[] { 1L, 2 } }));
 WriteLine(await recSumService.RecSum(new RecSumCommand() { Numbers = new[] { 3L, 4 } }));
-````
+
+```
 
 The output:
 
@@ -411,5 +426,3 @@ As you see, the proxy type generated for such services routes
 **every direct invocation of a command handler** through `ICommander.Call`.
 So contrary to regular handlers, you can invoke such handlers
 directly - the whole CommandR pipeline gets invoked for them anyway.
-
-#### [Next: Multi-Host Invalidation and CQRS with Fusion + CommandR + Operations Framework &raquo;](./Part10.md) | [Tutorial Home](./README.md)
