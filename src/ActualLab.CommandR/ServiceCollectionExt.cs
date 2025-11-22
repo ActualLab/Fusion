@@ -2,12 +2,9 @@ namespace ActualLab.CommandR;
 
 public static class ServiceCollectionExt
 {
-    extension(IServiceCollection services)
-    {
-        public CommanderBuilder AddCommander()
-            => new(services, null);
+    public static CommanderBuilder AddCommander(this IServiceCollection services)
+        => new(services, null);
 
-        public IServiceCollection AddCommander(Action<CommanderBuilder> configure)
-            => new CommanderBuilder(services, configure).Services;
-    }
+    public static IServiceCollection AddCommander(this IServiceCollection services, Action<CommanderBuilder> configure)
+        => new CommanderBuilder(services, configure).Services;
 }

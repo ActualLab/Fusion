@@ -5,13 +5,10 @@ namespace ActualLab.Fusion.Server.Rpc;
 
 public static class RpcOptionsExt
 {
-    extension(RpcOptionDefaults optionDefaults)
+    public static RpcOptionDefaults ApplyFusionServerOverrides(this RpcOptionDefaults optionDefaults)
     {
-        public RpcOptionDefaults ApplyFusionServerOverrides()
-        {
-            optionDefaults.ApplyFusionOverrides();
-            RpcPeerOptions.Default = RpcPeerOptions.Default.WithFusionServerOverrides();
-            return optionDefaults;
-        }
+        optionDefaults.ApplyFusionOverrides();
+        RpcPeerOptions.Default = RpcPeerOptions.Default.WithFusionServerOverrides();
+        return optionDefaults;
     }
 }

@@ -2,13 +2,10 @@ namespace ActualLab.Resilience;
 
 public static class ServiceProviderExt
 {
-    extension(IServiceProvider services)
-    {
-        public TransiencyResolver TransiencyResolver()
-            => services.GetRequiredService<TransiencyResolver>();
+    public static TransiencyResolver TransiencyResolver(this IServiceProvider services)
+        => services.GetRequiredService<TransiencyResolver>();
 
-        public TransiencyResolver<TContext> TransiencyResolver<TContext>()
-            where TContext : class
-            => services.GetRequiredService<TransiencyResolver<TContext>>();
-    }
+    public static TransiencyResolver<TContext> TransiencyResolver<TContext>(this IServiceProvider services)
+        where TContext : class
+        => services.GetRequiredService<TransiencyResolver<TContext>>();
 }

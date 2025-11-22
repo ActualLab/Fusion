@@ -5,14 +5,11 @@ namespace ActualLab.Fusion.Rpc;
 
 public static class RpcRegistryOptionsExt
 {
-    extension(RpcRegistryOptions options)
-    {
-        public RpcRegistryOptions WithFusionOverrides()
-            => options with {
-                ServiceDefFactory = ServiceDefFactory,
-                MethodDefFactory = MethodDefFactory,
-            };
-    }
+    public static RpcRegistryOptions WithFusionOverrides(this RpcRegistryOptions options)
+        => options with {
+            ServiceDefFactory = ServiceDefFactory,
+            MethodDefFactory = MethodDefFactory,
+        };
 
     // Private methods
 

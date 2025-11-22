@@ -4,14 +4,11 @@ namespace ActualLab.CommandR;
 
 public static class ServiceProviderExt
 {
-    extension(IServiceProvider services)
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ICommander Commander()
-            => services.GetRequiredService<ICommander>();
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ICommander Commander(this IServiceProvider services)
+        => services.GetRequiredService<ICommander>();
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public CommanderHub CommanderHub()
-            => services.GetRequiredService<CommanderHub>();
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static CommanderHub CommanderHub(this IServiceProvider services)
+        => services.GetRequiredService<CommanderHub>();
 }

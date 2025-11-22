@@ -8,19 +8,16 @@ public static class FusionBuilderExt
     static FusionBuilderExt()
         => FusionServerModuleInitializer.Touch();
 
-    extension(FusionBuilder fusion)
+    public static FusionWebServerBuilder AddWebServer(this FusionBuilder fusion)
+        => new(fusion, null);
+
+    public static FusionWebServerBuilder AddWebServer(this FusionBuilder fusion, bool exposeBackend)
     {
-        public FusionWebServerBuilder AddWebServer()
-            => new(fusion, null);
-
-        public FusionWebServerBuilder AddWebServer(bool exposeBackend)
-        {
-            var webServer = new FusionWebServerBuilder(fusion, null);
-            fusion.Rpc.AddWebSocketServer(true);
-            return webServer;
-        }
-
-        public FusionBuilder AddWebServer(Action<FusionWebServerBuilder> configure)
-            => new FusionWebServerBuilder(fusion, configure).Fusion;
+        var webServer = new FusionWebServerBuilder(fusion, null);
+        fusion.Rpc.AddWebSocketServer(true);
+        return webServer;
     }
+
+    public static FusionBuilder AddWebServer(this FusionBuilder fusion, Action<FusionWebServerBuilder> configure)
+        => new FusionWebServerBuilder(fusion, configure).Fusion;
 }

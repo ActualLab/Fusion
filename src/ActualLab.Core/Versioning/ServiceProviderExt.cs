@@ -2,11 +2,8 @@ namespace ActualLab.Versioning;
 
 public static class ServiceProviderExt
 {
-    extension(IServiceProvider services)
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public VersionGenerator<TVersion> VersionGenerator<TVersion>()
-            where TVersion : notnull
-            => services.GetRequiredService<VersionGenerator<TVersion>>();
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static VersionGenerator<TVersion> VersionGenerator<TVersion>(this IServiceProvider services)
+        where TVersion : notnull
+        => services.GetRequiredService<VersionGenerator<TVersion>>();
 }

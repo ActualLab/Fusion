@@ -9,11 +9,8 @@ public static class RpcPeerOptionsExt
 {
     public const string SessionParameterName = "session";
 
-    extension(RpcPeerOptions options)
-    {
-        public RpcPeerOptions WithFusionServerOverrides()
-            => options with { ServerConnectionFactory = ServerConnectionFactory };
-    }
+    public static RpcPeerOptions WithFusionServerOverrides(this RpcPeerOptions options)
+        => options with { ServerConnectionFactory = ServerConnectionFactory };
 
     // Private methods
 

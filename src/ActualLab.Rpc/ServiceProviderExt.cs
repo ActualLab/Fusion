@@ -2,10 +2,7 @@ namespace ActualLab.Rpc;
 
 public static class ServiceProviderExt
 {
-    extension(IServiceProvider services)
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public RpcHub RpcHub()
-            => services.GetRequiredService<RpcHub>();
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static RpcHub RpcHub(this IServiceProvider services)
+        => services.GetRequiredService<RpcHub>();
 }

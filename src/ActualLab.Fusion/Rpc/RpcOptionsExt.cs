@@ -4,12 +4,9 @@ namespace ActualLab.Fusion.Rpc;
 
 public static class RpcOptionsExt
 {
-    extension(RpcOptionDefaults optionDefaults)
+    public static RpcOptionDefaults ApplyFusionOverrides(this RpcOptionDefaults optionDefaults)
     {
-        public RpcOptionDefaults ApplyFusionOverrides()
-        {
-            RpcRegistryOptions.Default = RpcRegistryOptions.Default.WithFusionOverrides();
-            return optionDefaults;
-        }
+        RpcRegistryOptions.Default = RpcRegistryOptions.Default.WithFusionOverrides();
+        return optionDefaults;
     }
 }

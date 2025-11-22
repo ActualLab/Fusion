@@ -5,14 +5,11 @@ namespace ActualLab.CommandR;
 
 public static class CommandContextExt
 {
-    extension(CommandContext context)
-    {
-        public Task<CommandContext> Run(CancellationToken cancellationToken = default)
-            => context.Commander.Run(context, cancellationToken);
+    public static Task<CommandContext> Run(this CommandContext context, CancellationToken cancellationToken = default)
+        => context.Commander.Run(context, cancellationToken);
 
-        public Task Call(CancellationToken cancellationToken = default)
-            => GetTypedCallInvoker(context.ResultType).Invoke(context, cancellationToken);
-    }
+    public static Task Call(this CommandContext context, CancellationToken cancellationToken = default)
+        => GetTypedCallInvoker(context.ResultType).Invoke(context, cancellationToken);
 
     public static async Task<TResult> Call<TResult>(
         this CommandContext<TResult> context, CancellationToken cancellationToken = default)
