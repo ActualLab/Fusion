@@ -29,11 +29,12 @@ namespace Tutorial
                     _ = Get(key);
             }
         }
-
+        
         public static IServiceProvider CreateServices()
         {
             var services = new ServiceCollection();
-            services.AddFusion().AddService<CounterService>();
+            var fusion = services.AddFusion();
+            fusion.AddComputeService<CounterService>();
             return services.BuildServiceProvider();
         }
         #endregion
