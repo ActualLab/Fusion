@@ -387,8 +387,6 @@ Of course, this isn't a complete set of options you have &ndash; e.g. you can
 also trade consistency for performance by delaying invalidations. But
 the main point is: **yes, Fusion-based services scale**.
 
----
-
 [Consistent Hashing]: https://en.wikipedia.org/wiki/Consistent_hashing
 [Rendezvous Hashing]: https://medium.com/i0exception/rendezvous-hashing-8c00e2fb58b0
 [Compute Service Clients]: ./Part04.md
