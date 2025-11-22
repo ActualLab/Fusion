@@ -39,8 +39,11 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var services = ClientServices;
         var client = services.GetRequiredService<ITestRpcService>();
         (await client.Add(1, 1)).Should().Be(2);
+
         var version = await client.GetVersion();
-        var serverMethodResolver = WebHost.Services.RpcHub().InternalServices.Peers.First().Value.ServerMethodResolver;
+        var peer = WebHost.Services.RpcHub().InternalServices.Peers.Values
+            .First(x => x.ServerMethodResolver.NextResolver != null);
+        var serverMethodResolver = peer.ServerMethodResolver;
         Out.WriteLine(serverMethodResolver.ToString());
 
         serverMethodResolver.MethodByRef!.Count.Should().Be(1);
@@ -55,8 +58,11 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var services = ClientServices;
         var client = services.GetRequiredService<ITestRpcService>();
         (await client.Add(1, 1)).Should().Be(2);
+
         var version = await client.GetVersion();
-        var serverMethodResolver = WebHost.Services.RpcHub().InternalServices.Peers.First().Value.ServerMethodResolver;
+        var peer = WebHost.Services.RpcHub().InternalServices.Peers.Values
+            .First(x => x.ServerMethodResolver.NextResolver != null);
+        var serverMethodResolver = peer.ServerMethodResolver;
         Out.WriteLine(serverMethodResolver.ToString());
 
         serverMethodResolver.MethodByRef!.Count.Should().Be(1);
@@ -70,8 +76,11 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var services = ClientServices;
         var client = services.GetRequiredService<ITestRpcService>();
         (await client.Add(1, 1)).Should().Be(2);
+
         var version = await client.GetVersion();
-        var serverMethodResolver = WebHost.Services.RpcHub().InternalServices.Peers.First().Value.ServerMethodResolver;
+        var peer = WebHost.Services.RpcHub().InternalServices.Peers.Values
+            .First(x => x.ServerMethodResolver.NextResolver != null);
+        var serverMethodResolver = peer.ServerMethodResolver;
         Out.WriteLine(serverMethodResolver.ToString());
 
         serverMethodResolver.MethodByRef!.Count.Should().Be(2);
