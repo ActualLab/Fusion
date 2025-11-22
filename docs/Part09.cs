@@ -8,31 +8,40 @@ using Microsoft.Extensions.DependencyInjection;
 using ActualLab.Collections;
 using ActualLab.CommandR;
 using ActualLab.CommandR.Configuration;
+using ActualLab.Rpc;
 using static System.Console;
 
-namespace Tutorial
+namespace Docs
 {
+    #region Part09_PrintCommandSession
+    public class PrintCommand : ICommand<Unit>
+    {
+        public string Message { get; set; } = "";
+    }
+
+    // Interface-based command handler
+    public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
+    {
+        public PrintCommandHandler() => WriteLine("Creating PrintCommandHandler.");
+        public void Dispose() => WriteLine("Disposing PrintCommandHandler");
+
+        public async Task OnCommand(PrintCommand command, CommandContext context, CancellationToken cancellationToken)
+        {
+            WriteLine(command.Message);
+            WriteLine("Sir, yes, sir!");
+        }
+    }
+    #endregion
+
+    #region Part09_RecSumCommandSession
+    public class RecSumCommand : ICommand<long>
+    {
+        public long[] Numbers { get; set; } = Array.Empty<long>();
+    }
+    #endregion
+
     public static class Part09
     {
-        #region Part09_PrintCommandSession
-        public class PrintCommand : ICommand<Unit>
-        {
-            public string Message { get; set; } = "";
-        }
-
-        // Interface-based command handler
-        public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
-        {
-            public PrintCommandHandler() => WriteLine("Creating PrintCommandHandler.");
-            public void Dispose() => WriteLine("Disposing PrintCommandHandler");
-
-            public async Task OnCommand(PrintCommand command, CommandContext context, CancellationToken cancellationToken)
-            {
-                WriteLine(command.Message);
-                WriteLine("Sir, yes, sir!");
-            }
-        }
-        #endregion
 
         public static async Task PrintCommandSession()
         {
@@ -40,6 +49,7 @@ namespace Tutorial
             // Building IoC container
             var serviceBuilder = new ServiceCollection()
                 .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
+            var rpc = serviceBuilder.AddRpc();
             var commanderBuilder = serviceBuilder.AddCommander()
                 .AddHandlers<PrintCommandHandler>();
             var services = serviceBuilder.BuildServiceProvider();
@@ -48,12 +58,6 @@ namespace Tutorial
             await commander.Call(new PrintCommand() { Message = "Are you operational?" });
             await commander.Call(new PrintCommand() { Message = "Are you operational?" });
             #endregion
-        }
-
-        #region Part09_RecSumCommandSession
-        public class RecSumCommand : ICommand<long>
-        {
-            public long[] Numbers { get; set; } = Array.Empty<long>();
         }
 
         public class RecSumCommandHandler
@@ -101,7 +105,6 @@ namespace Tutorial
                 return head + tailSum;
             }
         }
-        #endregion
 
         public static async Task RecSumCommandSession()
         {
@@ -109,6 +112,7 @@ namespace Tutorial
             // Building IoC container
             var serviceBuilder = new ServiceCollection()
                 .AddScoped<RecSumCommandHandler>();
+            var rpc = serviceBuilder.AddRpc();
             var commanderBuilder = serviceBuilder.AddCommander()
                 .AddHandlers<RecSumCommandHandler>();
             var services = serviceBuilder.BuildServiceProvider();
@@ -118,55 +122,13 @@ namespace Tutorial
             #endregion
         }
 
-        #region Part09_RecSumCommandServiceSession
-        public class RecSumCommandService : ICommandService
-        {
-            [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
-            public virtual async Task<long> RecSum( // Notice "public virtual"!
-                RecSumCommand command,
-                // You can't have any extra arguments here
-                CancellationToken cancellationToken = default)
-            {
-                if (command.Numbers.Length == 0)
-                    return 0;
-                var head = command.Numbers[0];
-                var tail = command.Numbers[1..];
-                var tailSum = await RecSum( // Note it's a direct call, but the whole pipeline still gets invoked!
-                    new RecSumCommand() { Numbers = tail },
-                    cancellationToken);
-                return head + tailSum;
-            }
-
-            // This handler is associated with ANY command (ICommand)
-            // Priority = 10 means it runs earlier than any handler with the default priority 0
-            // IsFilter tells it triggers other handlers via InvokeRemainingHandlers
-            [CommandHandler(Priority = 10, IsFilter = true)]
-            protected virtual async Task DepthTracker(ICommand command, CancellationToken cancellationToken)
-            {
-                var context = CommandContext.GetCurrent();
-                var depth = 1 + (int) (context.Items["Depth"] ?? 0);
-                context.Items["Depth"] = depth;
-                WriteLine($"Depth via context.Items: {depth}");
-
-                await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
-            }
-
-            // Another filter for RecSumCommand
-            [CommandHandler(Priority = 9, IsFilter = true)]
-            protected virtual Task ArgumentWriter(RecSumCommand command, CancellationToken cancellationToken)
-            {
-                WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
-                var context = CommandContext.GetCurrent();
-                return context.InvokeRemainingHandlers(cancellationToken);
-            }
-        }
-        #endregion
 
         public static async Task RecSumCommandServiceSession()
         {
             #region Part09_RecSumCommandServiceSession2
             // Building IoC container
             var serviceBuilder = new ServiceCollection();
+            var rpc = serviceBuilder.AddRpc();
             var commanderBuilder = serviceBuilder.AddCommander()
                 .AddService<RecSumCommandService>(); // Such services are auto-registered as singletons
             var services = serviceBuilder.BuildServiceProvider();
@@ -175,9 +137,61 @@ namespace Tutorial
             var recSumService = services.GetRequiredService<RecSumCommandService>();
             WriteLine(recSumService.GetType());
             WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2 }}));
-            WriteLine(await recSumService.RecSum(new RecSumCommand() { Numbers = new [] { 3L, 4 }}));
+            WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 3L, 4 }}));
             #endregion
         }
 
+        public static async Task Run()
+        {
+            await PrintCommandSession();
+            await RecSumCommandSession();
+            await RecSumCommandServiceSession();
+        }
+
     }
+
+    #region Part09_RecSumCommandServiceSession
+    public class RecSumCommandService : ICommandService
+    {
+        [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
+        public virtual async Task<long> RecSum( // Notice "public virtual"!
+            RecSumCommand command,
+            // You can't have any extra arguments here
+            CancellationToken cancellationToken = default)
+        {
+            if (command.Numbers.Length == 0)
+                return 0;
+            var head = command.Numbers[0];
+            var tail = command.Numbers[1..];
+            var context = CommandContext.GetCurrent();
+            var tailSum = await context.Commander.Call( // Note it's a direct call, but the whole pipeline still gets invoked!
+                new RecSumCommand() { Numbers = tail },
+                cancellationToken);
+            return head + tailSum;
+        }
+
+        // This handler is associated with ANY command (ICommand)
+        // Priority = 10 means it runs earlier than any handler with the default priority 0
+        // IsFilter tells it triggers other handlers via InvokeRemainingHandlers
+        [CommandHandler(Priority = 10, IsFilter = true)]
+        protected virtual async Task DepthTracker(ICommand command, CancellationToken cancellationToken)
+        {
+            var context = CommandContext.GetCurrent();
+            var depth = 1 + (int) (context.Items["Depth"] ?? 0);
+            context.Items["Depth"] = depth;
+            WriteLine($"Depth via context.Items: {depth}");
+
+            await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Another filter for RecSumCommand
+        [CommandHandler(Priority = 9, IsFilter = true)]
+        protected virtual Task ArgumentWriter(RecSumCommand command, CancellationToken cancellationToken)
+        {
+            WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
+            var context = CommandContext.GetCurrent();
+            return context.InvokeRemainingHandlers(cancellationToken);
+        }
+    }
+    #endregion
 }
