@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ActualLab.Fusion;
 using static System.Console;
 
-namespace Tutorial;
+namespace Tutorial06;
 #region Part06_Initialize
 // Note: This is illustrative code from StatefulComponentBase
 public partial class StatefulComponentBaseExample

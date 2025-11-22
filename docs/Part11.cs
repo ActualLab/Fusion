@@ -3,7 +3,7 @@ using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Fusion.Authentication.Services;
 
-namespace Tutorial;
+namespace Tutorial11;
 public partial class AppDbContext
 {
     // Authentication-related tables

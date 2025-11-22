@@ -11,7 +11,7 @@ using ActualLab.CommandR.Configuration;
 using ActualLab.Rpc;
 using static System.Console;
 
-namespace Tutorial;
+namespace Tutorial09;
     #region Part09_PrintCommandSession
     public class PrintCommand : ICommand<Unit>
     {

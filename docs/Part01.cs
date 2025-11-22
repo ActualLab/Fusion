@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using static System.Console;
 
-namespace Tutorial;
+namespace Tutorial01;
 
 #region Part01_Declare_Service
 public class CounterService : IComputeService // This is a tagging interface any compute service must "implement"

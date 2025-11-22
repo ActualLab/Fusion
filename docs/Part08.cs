@@ -1,7 +1,7 @@
 using System;
 using static System.Console;
 
-namespace Tutorial;
+namespace Tutorial08;
 public static class Part08
 {
     public static async Task Run()
