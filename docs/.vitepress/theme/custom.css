@@ -19,6 +19,15 @@
   font-size: 16px;
 }
 
+.VPSidebarItem.level-1.is-active > .item .link > .text.text {
+  color: var(--vp-c-black);
+
+  &:hover {
+    color: var(--vp-c-black);
+    cursor: default;
+  }
+}
+
 .prev-next.prev-next {
   border-top: none;
 }
