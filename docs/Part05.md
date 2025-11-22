@@ -46,9 +46,8 @@ and returns the same value as its input. We'll be using it to
 find out when `IComputed` instances are actually reused.
 
 <!-- snippet: Part05_Service1 -->
-
 ```cs
-public class Service1 : IComputeService
+public partial class Service1 : IComputeService
 {
     [ComputeMethod]
     public virtual async Task<string> Get(string key)
@@ -57,25 +56,13 @@ public class Service1 : IComputeService
         return key;
     }
 }
-
-public static IServiceProvider CreateServices()
-{
-    var services = new ServiceCollection();
-    services.AddSingleton<ISwapService, DemoSwapService>();
-    services.AddFusion()
-        .AddService<Service1>()
-        .AddService<Service2>() // We'll use Service2 & other services later
-        .AddService<Service3>()
-        .AddService<Service4>();
-    return services.BuildServiceProvider();
-}
 ```
+<!-- endSnippet -->
 
 First, `IComputed` instances aren't "cached" by default &ndash; they're just
 reused while it's possible:
 
 <!-- snippet: Part05_Caching1 -->
-
 ```cs
 var service = CreateServices().GetRequiredService<Service1>();
 // var computed = await Computed.Capture(() => counters.Get("a"));
@@ -86,6 +73,7 @@ WriteLine("GC.Collect()");
 WriteLine(await service.Get("a"));
 WriteLine(await service.Get("a"));
 ```
+<!-- endSnippet -->
 
 The output:
 
@@ -111,7 +99,6 @@ technically they do the same).
 Let's prove this by uncomment the commented line:
 
 <!-- snippet: Part05_Caching2 -->
-
 ```cs
 var service = CreateServices().GetRequiredService<Service1>();
 var computed = await Computed.Capture(() => service.Get("a"));
@@ -122,6 +109,7 @@ WriteLine("GC.Collect()");
 WriteLine(await service.Get("a"));
 WriteLine(await service.Get("a"));
 ```
+<!-- endSnippet -->
 
 The output:
 
@@ -145,9 +133,8 @@ a computed for its output to ensure its dependencies
 are cached too? Let's test this:
 
 <!-- snippet: Part05_Service2 -->
-
 ```cs
-public class Service2 : IComputeService
+public partial class Service2 : IComputeService
 {
     [ComputeMethod]
     public virtual async Task<string> Get(string key)
@@ -164,9 +151,9 @@ public class Service2 : IComputeService
     }
 }
 ```
+<!-- endSnippet -->
 
 <!-- snippet: Part05_Caching3 -->
-
 ```cs
 var service = CreateServices().GetRequiredService<Service2>();
 var computed = await Computed.Capture(() => service.Combine("a", "b"));
@@ -181,6 +168,7 @@ WriteLine(await service.Get("a"));
 WriteLine(await service.Get("b"));
 WriteLine(await service.Combine("a", "c"));
 ```
+<!-- endSnippet -->
 
 The output:
 
@@ -211,7 +199,6 @@ As you see, yes,
 Let's check if the opposite is true as well:
 
 <!-- snippet: Part05_Caching4 -->
-
 ```cs
 var service = CreateServices().GetRequiredService<Service2>();
 var computed = await Computed.Capture(() => service.Get("a"));
@@ -221,6 +208,7 @@ GC.Collect();
 WriteLine("GC.Collect() completed");
 WriteLine(await service.Combine("a", "b"));
 ```
+<!-- endSnippet -->
 
 The output:
 
@@ -301,9 +289,8 @@ Let's look at how they work.
 Let's just add `MinCacheDuration` to the service we were using previously:
 
 <!-- snippet: Part05_Service3 -->
-
 ```cs
-public class Service3 : IComputeService
+public partial class Service3 : IComputeService
 {
     [ComputeMethod]
     public virtual async Task<string> Get(string key)
@@ -320,11 +307,11 @@ public class Service3 : IComputeService
     }
 }
 ```
+<!-- endSnippet -->
 
 And run this code:
 
 <!-- snippet: Part05_Caching5 -->
-
 ```cs
 var service = CreateServices().GetRequiredService<Service3>();
 WriteLine(await service.Combine("a", "b"));
@@ -342,6 +329,7 @@ WriteLine(await service.Combine("a", "b"));
 WriteLine(await service.Get("a"));
 WriteLine(await service.Get("x"));
 ```
+<!-- endSnippet -->
 
 The output:
 

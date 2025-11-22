@@ -29,16 +29,26 @@ own event handler (`StateChanged` delegate &ndash; don't confuse it with Blazor'
 `StateHasChanged` method) to all `State`'s events (by default):
 
 <!-- snippet: Part06_Initialize -->
-
 ```cs
-protected TState State {get;private set;} = null;
-protected override void OnInitialized(){
-     State ??=CreateState();
-    UntypedState.AddEventHandler(StateEventKind.All,StateChanged);
+// Note: This is illustrative code from StatefulComponentBase
+public partial class StatefulComponentBaseExample
+{
+    protected object? State { get; private set; }
+
+    protected void OnInitialized()
+    {
+        State ??= CreateState();
+        // UntypedState.AddEventHandler(StateEventKind.All, StateChanged);
+    }
+
+    protected virtual object CreateState()
+        => Services.GetRequiredService<object>();
+
+    // Assuming Services is available
+    protected IServiceProvider Services { get; } = null!;
 }
-protected virtual TState CreateState()
-=> Services.GetRequiredService<TState>();
 ```
+<!-- endSnippet -->
 
 As you see, by default any `StatefulComponentBase` triggers `StateHasChanged`
 once its `State` gets updated.
@@ -46,20 +56,24 @@ once its `State` gets updated.
 And this is how the default `StateChanged` handler looks:
 
 <!-- snippet: Part06_StateEventKind -->
-
 ```cs
-protected StateEventKind StateHasChangedTriggers {get;set;} =
-StateEventKind.Updated;
-
-protected StatefulComponentBase()
+// Note: This is illustrative code from StatefulComponentBase
+public partial class StatefulComponentBaseExample
 {
-    StateChanged = (_,eventKind) => {
-        if((eventKind & StateHasChangedTriggers) == 0)
-        return;
-        this.NotifyStateHasChanged();
-    };
+    protected StateEventKind StateHasChangedTriggers { get; set; } =
+        StateEventKind.Updated;
+
+    public StatefulComponentBaseExample()
+    {
+        // StateChanged = (_, eventKind) => {
+        //     if ((eventKind & StateHasChangedTriggers) == 0)
+        //         return;
+        //     this.NotifyStateHasChanged();
+        // };
+    }
 }
 ```
+<!-- endSnippet -->
 
 Finally, it also disposes the state once the component gets disposed &ndash;
 unless its `OwnsState` property is set to `false`. And that's nearly all

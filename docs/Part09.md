@@ -60,38 +60,35 @@ earlier.
 Let's declare our first command and its MediatR-style handler:
 
 <!-- snippet: Part09_PrintCommandSession -->
-
 ```cs
-
 public class PrintCommand : ICommand<Unit>
 {
-public string Message { get; set; } = "";
+    public string Message { get; set; } = "";
 }
 
 // Interface-based command handler
 public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
 {
-public PrintCommandHandler() => WriteLine("Creating PrintCommandHandler.");
-public void Dispose() => WriteLine("Disposing PrintCommandHandler");
+    public PrintCommandHandler() => WriteLine("Creating PrintCommandHandler.");
+    public void Dispose() => WriteLine("Disposing PrintCommandHandler");
 
     public async Task OnCommand(PrintCommand command, CommandContext context, CancellationToken cancellationToken)
     {
         WriteLine(command.Message);
         WriteLine("Sir, yes, sir!");
     }
-
 }
-
 ```
+<!-- endSnippet -->
 
 Using CommandR and MediatR is quite similar:
 
 <!-- snippet: Part09_PrintCommandSession2 -->
-
 ```cs
 // Building IoC container
 var serviceBuilder = new ServiceCollection()
     .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
+var rpc = serviceBuilder.AddRpc();
 var commanderBuilder = serviceBuilder.AddCommander()
     .AddHandlers<PrintCommandHandler>();
 var services = serviceBuilder.BuildServiceProvider();
@@ -100,6 +97,7 @@ var commander = services.Commander(); // Same as .GetRequiredService<ICommander>
 await commander.Call(new PrintCommand() { Message = "Are you operational?" });
 await commander.Call(new PrintCommand() { Message = "Are you operational?" });
 ```
+<!-- endSnippet -->
 
 The output:
 
@@ -131,79 +129,28 @@ Let's write a bit more complex handler to see how
 `CommandContext` works.
 
 <!-- snippet: Part09_RecSumCommandSession -->
-
 ```cs
-
 public class RecSumCommand : ICommand<long>
 {
-public long[] Numbers { get; set; } = Array.Empty<long>();
+    public long[] Numbers { get; set; } = Array.Empty<long>();
 }
-
-public class RecSumCommandHandler
-{
-public RecSumCommandHandler() => WriteLine("Creating RecSumCommandHandler.");
-public void Dispose() => WriteLine("Disposing RecSumCommandHandler");
-
-    [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
-    private async Task<long> RecSum(
-        RecSumCommand command,
-        IServiceProvider services, // Resolved via CommandContext.Services
-        ICommander commander, // Resolved via CommandContext.Services
-        CancellationToken cancellationToken)
-    {
-        var context = CommandContext.GetCurrent();
-        Debug.Assert(services == context.Services); // context.Services is a scoped IServiceProvider
-        Debug.Assert(commander == services.Commander()); // ICommander is singleton
-        Debug.Assert(services != commander.Services); // Scoped IServiceProvider != top-level IServiceProvider
-        WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
-
-        // Each call creates a new CommandContext
-        var contextStack = new List<CommandContext>();
-        var currentContext = context;
-        while (currentContext != null)
-        {
-            contextStack.Add(currentContext);
-            currentContext = currentContext.OuterContext;
-        }
-        WriteLine($"CommandContext stack size: {contextStack.Count}");
-        Debug.Assert(contextStack[^1] == context.OutermostContext);
-
-        // Finally, CommandContext.Items is ~ like HttpContext.Items, and similarly to
-        // service scope, they are the same for all contexts in recursive call chain.
-        var depth = 1 + (int)(context.Items["Depth"] ?? 0);
-        context.Items["Depth"] = depth;
-        WriteLine($"Depth via context.Items: {depth}");
-
-        // Finally, the actual handler logic :)
-        if (command.Numbers.Length == 0)
-            return 0;
-        var head = command.Numbers[0];
-        var tail = command.Numbers[1..];
-        var tailSum = await context.Commander.Call(
-            new RecSumCommand() { Numbers = tail }, false, // Try changing it to true
-            cancellationToken);
-        return head + tailSum;
-    }
-
-}
-
 ```
+<!-- endSnippet -->
 
 <!-- snippet: Part09_RecSumCommandSession2 -->
-
 ```cs
-
 // Building IoC container
 var serviceBuilder = new ServiceCollection()
-.AddScoped<RecSumCommandHandler>();
+    .AddScoped<RecSumCommandHandler>();
+var rpc = serviceBuilder.AddRpc();
 var commanderBuilder = serviceBuilder.AddCommander()
-.AddHandlers<RecSumCommandHandler>();
+    .AddHandlers<RecSumCommandHandler>();
 var services = serviceBuilder.BuildServiceProvider();
 
 var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
-WriteLine(await commander.Call(new RecSumCommand() { Numbers = new[] { 1L, 2, 3 } }));
-
+WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2, 3 }}));
 ```
+<!-- endSnippet -->
 
 The output:
 
@@ -334,26 +281,25 @@ The most interesting way to register command handlers
 are to declare them inside so-called Command Service:
 
 <!-- snippet: Part09_RecSumCommandServiceSession -->
-
 ```cs
-
 public class RecSumCommandService : ICommandService
 {
-[CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
-public virtual async Task<long> RecSum( // Notice "public virtual"!
-RecSumCommand command,
-// You can't have any extra arguments here
-CancellationToken cancellationToken = default)
-{
-if (command.Numbers.Length == 0)
-return 0;
-var head = command.Numbers[0];
-var tail = command.Numbers[1..];
-var tailSum = await RecSum( // Note it's a direct call, but the whole pipeline still gets invoked!
-new RecSumCommand() { Numbers = tail },
-cancellationToken);
-return head + tailSum;
-}
+    [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
+    public virtual async Task<long> RecSum( // Notice "public virtual"!
+        RecSumCommand command,
+        // You can't have any extra arguments here
+        CancellationToken cancellationToken = default)
+    {
+        if (command.Numbers.Length == 0)
+            return 0;
+        var head = command.Numbers[0];
+        var tail = command.Numbers[1..];
+        var context = CommandContext.GetCurrent();
+        var tailSum = await context.Commander.Call( // Note it's a direct call, but the whole pipeline still gets invoked!
+            new RecSumCommand() { Numbers = tail },
+            cancellationToken);
+        return head + tailSum;
+    }
 
     // This handler is associated with ANY command (ICommand)
     // Priority = 10 means it runs earlier than any handler with the default priority 0
@@ -362,7 +308,7 @@ return head + tailSum;
     protected virtual async Task DepthTracker(ICommand command, CancellationToken cancellationToken)
     {
         var context = CommandContext.GetCurrent();
-        var depth = 1 + (int)(context.Items["Depth"] ?? 0);
+        var depth = 1 + (int) (context.Items["Depth"] ?? 0);
         context.Items["Depth"] = depth;
         WriteLine($"Depth via context.Items: {depth}");
 
@@ -377,30 +323,29 @@ return head + tailSum;
         var context = CommandContext.GetCurrent();
         return context.InvokeRemainingHandlers(cancellationToken);
     }
-
 }
 ```
+<!-- endSnippet -->
 
 Such services has to be registered via `AddCommandService` method
 of the `CommanderBuilder`:
 
 <!-- snippet: Part09_RecSumCommandServiceSession2 -->
-
 ```cs
-
 // Building IoC container
 var serviceBuilder = new ServiceCollection();
+var rpc = serviceBuilder.AddRpc();
 var commanderBuilder = serviceBuilder.AddCommander()
-.AddCommandService<RecSumCommandService>(); // Such services are auto-registered as singletons
+    .AddService<RecSumCommandService>(); // Such services are auto-registered as singletons
 var services = serviceBuilder.BuildServiceProvider();
 
 var commander = services.Commander();
 var recSumService = services.GetRequiredService<RecSumCommandService>();
 WriteLine(recSumService.GetType());
-WriteLine(await commander.Call(new RecSumCommand() { Numbers = new[] { 1L, 2 } }));
-WriteLine(await recSumService.RecSum(new RecSumCommand() { Numbers = new[] { 3L, 4 } }));
-
+WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2 }}));
+WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 3L, 4 }}));
 ```
+<!-- endSnippet -->
 
 The output:
 
