@@ -33,7 +33,9 @@ namespace Tutorial
             #region Part12_MapRpcWebSocketServer
             // And assuming you use minimal ASP.NET Core API:
             app.UseWebSockets(); // Adds WebSocket support to ASP.NET Core host
-            app.MapRpcWebSocketServer(); // Registers "/rpc/ws" endpoint
+            app.UseEndpoints(endpoints => {
+                endpoints.MapRpcWebSocketServer(); // Registers "/rpc/ws" endpoint
+            });
             #endregion
         }
     }

@@ -59,11 +59,9 @@ Absolutely.
 #2. Register its services in `IServiceCollection`:
 
 <!-- snippet: Part12_AddRpc -->
-
 ```cs
 var rpc = services.AddRpc(); // returns RpcBuilder
 ```
-
 <!-- endSnippet -->
 
 ### On the server side:
@@ -73,14 +71,12 @@ var rpc = services.AddRpc(); // returns RpcBuilder
 #2. Expose singleton services you want to call from the client:
 
 <!-- snippet: Part12_AddServer -->
-
 ```cs
 rpc.AddServer<IMyService>();
 // Some of alternatives:
 rpc.AddServer<IMyService, MyService>(); // Expose IMyService resolved as MyService
 rpc.AddServer<IMyService>("myService"); // Expose IMyService under "myService" name
 ```
-
 <!-- endSnippet -->
 
 See [RpcBuilder](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Rpc/RpcBuilder.cs) for other overloads of `AddServer`.
@@ -88,21 +84,18 @@ See [RpcBuilder](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.R
 #3: Expose a WebSocket endpoint RPC clients will connect to:
 
 <!-- snippet: Part12_AddWebSocketServer -->
-
 ```cs
 rpc.AddWebSocketServer();
 ```
-
 <!-- endSnippet -->
 
 <!-- snippet: Part12_MapRpcWebSocketServer -->
-
 ```cs
-// And assuming you use minimal ASP.NET Core API:
 app.UseWebSockets(); // Adds WebSocket support to ASP.NET Core host
-app.MapRpcWebSocketServer(); // Registers "/rpc/ws" endpoint
+app.UseEndpoints(endpoints => {
+    endpoints.MapRpcWebSocketServer(); // Registers "/rpc/ws" endpoint
+});
 ```
-
 <!-- endSnippet -->
 
 Note that `IMyService` above (as any other RPC service interface) must:
@@ -119,34 +112,28 @@ And any RPC service implementation (e.g. `MyService` above):
 #1. Register clients of services you want to use:
 
 <!-- snippet: Part12_AddClient -->
-
 ```cs
 rpc.AddClient<IMyService>(); // Adds a singleton IMyService, which is a client for this service
 // Some of alternatives:
 rpc.AddClient<IMyService>("myService"); // Consumes a IMyService named as "myService" on the server side
 ```
-
 <!-- endSnippet -->
 
 #2. Add a WebSocket client for `ActualLab.Rpc`:
 
 <!-- snippet: Part12_AddWebSocketClient -->
-
 ```cs
 rpc.AddWebSocketClient(serverUrl);
 ```
-
 <!-- endSnippet -->
 
 #3. Call client methods & get the results:
 
 <!-- snippet: Part12_CallService -->
-
 ```cs
 var myService = serviceProvider.GetRequiredService<IMyService>();
 Console.WriteLine(await myService.Ping());
 ```
-
 <!-- endSnippet -->
 
 ## What else ActualLab.Rpc can do?

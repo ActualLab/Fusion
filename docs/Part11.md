@@ -113,23 +113,11 @@ Our `DbContext` needs to contain `DbSet`-s for the classes provided here as type
 The `DbSessionInfo` and `DbUser` classes are very simple entities provided by Fusion for storing authentication data.
 
 <!-- snippet: Part11_AppDbContext -->
-
 ```cs
-public class AppDbContext : DbContextBase
-{
-    // Authentication-related tables
-    public DbSet<DbUser<long>> Users { get; protected set; } = null!;
-    public DbSet<DbUserIdentity<long>> UserIdentities { get; protected set; } = null!;
-    public DbSet<DbSessionInfo<long>> Sessions { get; protected set; } = null!;
-    // Operations Framework's operation log
-    public DbSet<DbOperation> Operations { get; protected set; } = null!;
-
-    public AppDbContext(DbContextOptions options) : base(options) { }
-}
+public DbSet<DbUser<long>> Users { get; protected set; } = null!;
+public DbSet<DbUserIdentity<long>> UserIdentities { get; protected set; } = null!;
+public DbSet<DbSessionInfo<long>> Sessions { get; protected set; } = null!;
 ```
-
-<sup><a href='./Part11.cs#L8-L16' title='Snippet source file'>snippet source</a> | <a href='#snippet-Part11_AppDbContext' title='Start of snippet'>anchor</a></sup>
-
 <!-- endSnippet -->
 
 And that's how these entity types look:

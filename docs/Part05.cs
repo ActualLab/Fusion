@@ -16,7 +16,9 @@ namespace Tutorial
             return key;
         }
     }
+    #endregion
 
+    #region Part05_Service2
     public partial class Service2 : IComputeService
     {
         [ComputeMethod]
@@ -33,7 +35,9 @@ namespace Tutorial
             return await Get(key1) + await Get(key2);
         }
     }
+    #endregion
 
+    #region Part05_Service3
     public partial class Service3 : IComputeService
     {
         [ComputeMethod]
