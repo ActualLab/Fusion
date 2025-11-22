@@ -25,19 +25,11 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
         if (GetRpcMethodDef(serviceType, method) is not { } rpcMethodDef)
             return context.InvokeRemainingHandlers(cancellationToken);
 
-        var isDistributed = rpcMethodDef.Service.Mode is RpcServiceMode.Distributed;
-        var routingMode = context.IsOutermost && context.Items.KeylessGet<RpcInboundCall>() is not null
-            // It's an inbound RPC call
-            ? isDistributed
-                ? RpcRoutingMode.Inbound // The final handler is a distributed service -> inbound call
-                : RpcRoutingMode.Prerouted // The final handler is a local service -> local call
-            // It's an outbound or local call
-            : !isDistributed && serviceType.NonProxyType().IsInterface
-                ? RpcRoutingMode.Outbound // The final handler is an RPC client -> outbound call
-                : RpcRoutingMode.Prerouted; // The final handler is a local service -> local call
-
-        if (routingMode is RpcRoutingMode.Prerouted) {
-            // It's going to be a local call, so we continue the pipeline,
+        var isDistributedOrClient =
+            rpcMethodDef.Service.Mode is RpcServiceMode.Distributed
+            || serviceType.NonProxyType().IsInterface; // The final handler is an RPC client
+        if (!isDistributedOrClient) {
+            // It's going to be a prerouted local call, so we continue the pipeline,
             // but put RpcOutboundCallSetup into context.Items to be consistent.
             // MethodCommandHandler picks up RpcOutboundCallSetup (if any) and activates it,
             // so if we end up calling an RPC client (it's a mistake), prerouting to local peer
@@ -46,6 +38,8 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
             return context.InvokeRemainingHandlers(cancellationToken);
         }
 
+        var isInboundRpc = context.IsOutermost && context.Items.KeylessGet<RpcInboundCall>() is not null;
+        var routingMode = isInboundRpc ? RpcRoutingMode.Inbound : RpcRoutingMode.Outbound;
         return HandleWithRerouting();
 
         async Task HandleWithRerouting() {
