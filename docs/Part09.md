@@ -19,16 +19,16 @@ a few new features:
   or as the final one. MediatR supports pipeline behaviors, which
   are similar to filtering handlers in CommandR, but
   they are the same for all commands.
-  And this feature is actually quite useful - e.g.
+  And this feature is actually quite useful &ndash; e.g.
   built-in filter for `IPreparedCommand` helps to unify validation.
-- `CommandContext` - an `HttpContext`-like type helping to
+- `CommandContext` &ndash; an `HttpContext`-like type helping to
   non-handler code to store and access the state associated with
   the currently running command. Even though command contexts can
   be nested (commands may invoke other commands), the whole
   hierarchy of them is always available.
 - Convention-based command handler discovery and invocation.
   You don't have to implement `ICommandHandler<TCommand, TResult>`
-  every time you want to add a handler - any async method tagged
+  every time you want to add a handler &ndash; any async method tagged
   with `[CommandHandler]`
   and having command as its first parameter, and `CancellationToken` as the
   last one works; all other arguments are resolved via IoC container.
@@ -36,12 +36,12 @@ a few new features:
   Such handlers are virtual async methods with two arguments:
   `(command, cancellationToken)`. To make AOP part work,
   the type declaring such handlers must be registered with
-  `AddCommandService(...)` -
+  `AddCommandService(...)` &ndash;
   an extension method to `IServiceCollection` that registers
   a runtime-generated proxy instead of the actual implementation type.
   The proxy ensures any call to such method is _still_ routed via
   `Commander.Call(command)` to invoke the whole pipeline
-  for this command - i.e. all other handlers associated
+  for this command &ndash; i.e. all other handlers associated
   with it.
   In other words, such handlers can be invoked directly or via
   `Commander`, but the result is always the same.
@@ -51,7 +51,7 @@ of its terms to CommandR terms:
 
 ![](./img/MediatR-vs-CommandR.jpg)
 
-You might notice the API offered by CommandR is somewhat simpler -
+You might notice the API offered by CommandR is somewhat simpler &ndash;
 at least while you don't use some of its unique features mentioned
 earlier.
 
@@ -116,7 +116,7 @@ Disposing PrintCommandHandler
 
 Notice that:
 
-- CommandR doesn't auto-register command handler services - it
+- CommandR doesn't auto-register command handler services &ndash; it
   cares only about figuring out how to map commands to
   command handlers available in these services.
   That's why you have to register services separately.
@@ -237,13 +237,13 @@ A few things are interesting here:
      i.e. a scoped service provider.
 
 But the most complex part of this example covers `CommandContext`.
-Contexts are "typed" - even though they all are inherited from
+Contexts are "typed" &ndash; even though they all are inherited from
 `CommandContext`, their actual type is `CommandContext<TResult>`.
 
 Command context allows to:
 
 - Find currently running command
-- Set or read its result. Usually you don't have to set the result manually -
+- Set or read its result. Usually you don't have to set the result manually &ndash;
   the code invoking command handlers ensures the result is set once
   the "deepest" handler exist, but you may want to read it
   in some handlers in your pipeline.
@@ -252,7 +252,7 @@ Command context allows to:
   helping to store any info associated with the current command.
 
 Finally, `CommandContext` is a class, but there is also
-[`ICommandContext` - an internal interface defining its API](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/Internal/ICommandContext.cs) - check it out.
+[`ICommandContext` – an internal interface defining its API](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/Internal/ICommandContext.cs) &ndash; check it out.
 And if you're looking for details, check out
 [`CommandContext` itself](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/CommandContext.cs).
 
@@ -304,7 +304,7 @@ The actual options are implemented in
   It "invokes" the command and returns its result.
 - `Run` acts like `Call`, but returns `CommandContext`
   instead. Which is why it doesn't throw an exception
-  even when one of the command handlers does - it completes
+  even when one of the command handlers does &ndash; it completes
   successfully in any case.
   You can use e.g. `CommandContext.UntypedResult` to
   get the actual command completion result or exception.
@@ -319,13 +319,13 @@ The actual options are implemented in
 
 All these methods take up to 3 arguments:
 
-- `ICommand` - obviously
-- `bool isolate = false` - an optional parameter indicating whether
+- `ICommand` &ndash; obviously
+- `bool isolate = false` &ndash; an optional parameter indicating whether
   the command should be executed in isolated fashion. If it's true,
   the command will be executed inside
   [`ExecutionContext.TrySuppressFlow` block](https://docs.microsoft.com/en-us/dotnet/api/system.threading.executioncontext.suppressflow?view=net-5.0),
   so it will also be the outermost for sure.
-- `CancellationToken cancellationToken = default` -
+- `CancellationToken cancellationToken = default` &ndash;
   a usual argument of almost any async method.
 
 ## Command Services and filtering handlers
@@ -425,4 +425,4 @@ Numbers:
 As you see, the proxy type generated for such services routes
 **every direct invocation of a command handler** through `ICommander.Call`.
 So contrary to regular handlers, you can invoke such handlers
-directly - the whole CommandR pipeline gets invoked for them anyway.
+directly &ndash; the whole CommandR pipeline gets invoked for them anyway.

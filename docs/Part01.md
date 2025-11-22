@@ -13,7 +13,6 @@ Fusion is built around three key abstractions:
 Here's a simple counter service that demonstrates Fusion's basic capabilities:
 
 <!-- snippet: Part01_Declare_Service -->
-
 ```cs
 public class CounterService : IComputeService // This is a tagging interface any compute service must "implement"
 {
@@ -49,13 +48,11 @@ public class CounterService : IComputeService // This is a tagging interface any
     }
 }
 ```
-
 <!-- endSnippet -->
 
 To use this service, first register it with dependency injection:
 
 <!-- snippet: Part01_Register_Services -->
-
 ```cs
 var services = new ServiceCollection();
 var fusion = services.AddFusion(); // You can also use services.AddFusion(fusion => ...) pattern
@@ -65,7 +62,6 @@ var sp = services.BuildServiceProvider();
 // And that's how we get our first compute service:
 var counters = sp.GetRequiredService<CounterService>();
 ```
-
 <!-- endSnippet -->
 
 Let's see how the behavior of compute methods in `CounterService` differs from the expected one:
@@ -73,12 +69,10 @@ Let's see how the behavior of compute methods in `CounterService` differs from t
 ### Automatic Caching
 
 <!-- snippet: Part01_Automatic_Caching -->
-
 ```cs
 await counters.Get("a"); // Prints: Get(a) = 0
 await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
 ```
-
 <!-- endSnippet -->
 
 Moreover, it works even when compute methods call each other.
@@ -86,13 +80,11 @@ Notice that the `Sum("a", "b")` call here calls `Get("a")`, which gets resolved 
 On the other hand, `Get("b")` gets computed. But once we call it again, it also gets resolved from the cache.
 
 <!-- snippet: Part01_Automatic_Dependency_Tracking -->
-
 ```cs
 await counters.Sum("a", "b"); // Prints: Get(b) = 0, Sum(a, b) = 0 -- Get(b) was called from Sum(a, b)
 await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
 await counters.Get("b");      // Prints nothing -- it's a cache hit; the result is 0
 ```
-
 <!-- endSnippet -->
 
 ### Invalidation
@@ -115,13 +107,11 @@ And if you look at the code of the `CounterService.Increment` method, that's exa
 there to invalidate the `Get(key)` call on every increment.
 
 <!-- snippet: Part01_Invalidation -->
-
 ```cs
 counters.Increment("a"); // Prints: Increment(a) + invalidates Get(a) call result
 await counters.Get("a"); // Prints: Get(a) = 1
 await counters.Get("b"); // Prints nothing -- Get(b) call wasn't invalidated, so it's a cache hit
 ```
-
 <!-- endSnippet -->
 
 ### Automatic Dependency Tracking and Cascading Invalidation
@@ -140,7 +130,6 @@ Mathematically speaking, computed values form a Directed Acyclic Graph (DAG) of 
 Let's see all of this in action:
 
 <!-- snippet: Part01_Cascading_Invalidation -->
-
 ```cs
 counters.Increment("a"); // Prints: Increment(a)
 
@@ -158,7 +147,6 @@ await counters.Sum("a", "b"); // Prints nothing, it's a cache hit; the result is
 // But note that Get(a) and Get(b) calls it makes are still resolved from cache.
 await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) results are already cached
 ```
-
 <!-- endSnippet -->
 
 ## 2. Computed Values
@@ -177,7 +165,6 @@ At any given time, there can be only one `Consistent` version of a computed valu
 Let's pull a `Computed<T>` instance that is associated with a given call and play with it:
 
 <!-- snippet: Part01_Accessing_Computed_Values -->
-
 ```cs
 var computedForGetA = await Computed.Capture(() => counters.Get("a"));
 WriteLine(computedForGetA.IsConsistent()); // True
@@ -193,7 +180,7 @@ computedForSumAB.Invalidated += _ => WriteLine("Sum(a, b) is invalidated");
 // Manually invalidate computedForGetA, i.e. the result of counters.Get("a") call
 computedForGetA.Invalidate(); // Prints: Sum(a, b) is invalidated
 WriteLine(computedForGetA.IsConsistent());  // False
-WriteLine(computedForSumAB.IsConsistent()); // False – invalidation is always cascading
+WriteLine(computedForSumAB.IsConsistent()); // False, invalidation is always cascading
 
 // Manually update computedForSumAB
 var newComputedForSumAB = await computedForSumAB.Update();
@@ -213,7 +200,6 @@ WriteLine(newComputedForSumAB == await computedForSumAB.Update()); // True
 WriteLine(computedForSumAB.IsConsistent()); // False
 WriteLine(computedForSumAB.Value); // 2
 ```
-
 <!-- endSnippet -->
 
 ### Reactive Updates on Invalidation
@@ -221,7 +207,6 @@ WriteLine(computedForSumAB.Value); // 2
 Now we are ready to write a basic reactive update loop:
 
 <!-- snippet: Part01_Reactive_Updates -->
-
 ```cs
 _ = Task.Run(async () => {
     // This is going to be our update loop
@@ -240,7 +225,6 @@ for (var i = 0; i <= 3; i++) {
     WriteLine($"{clock.Elapsed:g}s: {computed}, Value = {computed.Value}");
 }
 ```
-
 <!-- endSnippet -->
 
 ### Computed.When() and Changes() Methods
@@ -259,7 +243,6 @@ its `ValueOrDefault` and `Error` properties. Since `Value` property is not acces
 the deconstruction, it doesn't throw an exception if the computed value has an `Error`.
 
 <!-- snippet: Part01_When_And_Changes_Methods -->
-
 ```cs
 _ = Task.Run(async () => {
     // This is going to be our update loop
@@ -284,7 +267,6 @@ _ = Task.Run(async () => {
 });
 await Task.Delay(5000); // Wait for the changes to be processed
 ```
-
 <!-- endSnippet -->
 
 ## 3. `State<T>` and Its Variants
@@ -358,7 +340,6 @@ it will use its own "minimal" service provider.
 Let's play with `MutableState<int>`:
 
 <!-- snippet: Part01_MutableState -->
-
 ```cs
 var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
 var state = stateFactory.NewMutable(1);
@@ -387,7 +368,6 @@ WriteLine($"LastNonErrorValue: {state.LastNonErrorValue}");
 WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}");
 // Snapshot.LastNonErrorComputed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=39252654 v.h2, State: Invalidated)
 ```
-
 <!-- endSnippet -->
 
 ## Computed State
@@ -395,7 +375,6 @@ WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}
 Here is an example showing what `ComputedState<T>` and `MutableState<T>` can do together:
 
 <!-- snippet: Part01_ComputedState -->
-
 ```cs
 var stateFactory = sp.StateFactory();
 var clock = Stopwatch.StartNew();
@@ -437,7 +416,7 @@ await Task.Delay(2000);
 mutableState.Value = "y";
 await Task.Delay(2000);
 
-/* The output - pay attention to timestamps:
+/* The output – pay attention to timestamps:
 0:00:00.0080204s: Invalidated, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
 0:00:00.0126295s: Updating, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
 0:00:00.0161148s: CREATED, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
@@ -453,7 +432,6 @@ Get(a) = 7
 0:00:03.2524918s: Updated, Value: (7, y), Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.gq, State: Consistent)
 */
 ```
-
 <!-- endSnippet -->
 
 #### [Next: Part 02 &raquo;](./Part02.md) | [Documentation Home](./README.md)

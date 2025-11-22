@@ -98,7 +98,6 @@ Time to write some code! We'll be using the same "stub"
 with `CounterService` and `CreateServices` here:
 
 <!-- snippet: Part03_CounterService -->
-
 ```cs
 public class CounterService : IComputeService
 {
@@ -127,13 +126,11 @@ public static IServiceProvider CreateServices()
     return services.BuildServiceProvider();
 }
 ```
-
 <!-- endSnippet -->
 
 Here is how you use `MutableState<T>`:
 
 <!-- snippet: Part03_MutableState -->
-
 ```cs
 var services = CreateServices();
 var stateFactory = services.StateFactory();
@@ -144,7 +141,6 @@ state.Value = 2;
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 WriteLine($"Old computed: {computed}"); // Should be invalidated
 ```
-
 <!-- endSnippet -->
 
 The output:
@@ -163,7 +159,6 @@ Note that:
 Let's look at error handling example:
 
 <!-- snippet: Part03_MutableStateError -->
-
 ```cs
 var services = CreateServices();
 var stateFactory = services.StateFactory();
@@ -180,7 +175,6 @@ catch (ApplicationException) {
 WriteLine($"LastNonErrorValue: {state.LastNonErrorValue}");
 WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}");
 ```
-
 <!-- endSnippet -->
 
 The output:
@@ -206,7 +200,6 @@ via `LatestNonErrorValueComputed`.
 Let's play with `IComputedState<T>` now:
 
 <!-- snippet: Part03_LiveState -->
-
 ```cs
 var services = CreateServices();
 var counters = services.GetRequiredService<CounterService>();
@@ -233,7 +226,6 @@ counters.Increment("a");
 await Task.Delay(2000);
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 ```
-
 <!-- endSnippet -->
 
 The output:

@@ -46,7 +46,6 @@ hosting Compute Service itself, a controller publishing its invocable endpoints,
 Common interface (don't run this code yet):
 
 <!-- snippet: Part04_CommonServices -->
-
 ```cs
 // Ideally, we want Compute Service client to be exactly the same as corresponding
 // Compute Service. A good way to enforce this is to expose an interface
@@ -60,7 +59,6 @@ public interface ICounterService : IComputeService
     Task SetOffset(int offset, CancellationToken cancellationToken = default);
 }
 ```
-
 <!-- endSnippet -->
 
 ### 2. Web Host Services
@@ -68,7 +66,6 @@ public interface ICounterService : IComputeService
 Web host services (don't run this code yet):
 
 <!-- snippet: Part04_HostServices -->
-
 ```cs
 public class CounterService : ICounterService
 {
@@ -103,7 +100,6 @@ public class CounterService : ICounterService
     }
 }
 ```
-
 <!-- endSnippet -->
 
 ### 3. Host and Client Setup
@@ -111,7 +107,6 @@ public class CounterService : ICounterService
 `CreateHost` and `CreateClientServices` methods (don't run this code yet):
 
 <!-- snippet: Part04_CreateXxx -->
-
 ```cs
 public static IHost CreateHost()
 {
@@ -153,7 +148,6 @@ public static IServiceProvider CreateClientServices()
     return services.BuildServiceProvider();
 }
 ```
-
 <!-- endSnippet -->
 
 ## Using Compute Service Clients
@@ -161,7 +155,6 @@ public static IServiceProvider CreateClientServices()
 And finally, we're ready to try our Compute Service client:
 
 <!-- snippet: Part04_ReplicaService -->
-
 ```cs
 using var host = CreateHost();
 await host.StartAsync();
@@ -196,7 +189,6 @@ await Task.Delay(200);
 stopCts.Cancel();
 await host.StopAsync();
 ```
-
 <!-- endSnippet -->
 
 The output:
@@ -240,7 +232,6 @@ is almost the same as you saw in previous part showcasing `ComputedState<T>`,
 but it uses Compute Service client instead of Computed Service.
 
 <!-- snippet: Part04_LiveStateFromReplica -->
-
 ```cs
 using var host = CreateHost();
 await host.StartAsync();
@@ -270,7 +261,6 @@ await Task.Delay(2000);
 
 await host.StopAsync();
 ```
-
 <!-- endSnippet -->
 
 The output:
