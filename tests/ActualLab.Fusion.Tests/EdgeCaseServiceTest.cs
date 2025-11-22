@@ -71,6 +71,10 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
         c2.Error.Should().BeAssignableTo<ArgumentException>();
         c2.Error!.Message.Should().StartWith("Error!");
 
+        var c3 = await Computed.Capture(() => service.ThrowIfContainsError(null!)); // RPC arg. validator should throw
+        c3.Error.Should().BeAssignableTo<ArgumentNullException>();
+        await c3.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(2));
+
         await service.SetSuffix("z");
         c1 = await Update(c1);
         c1.Value.Should().Be("az");
