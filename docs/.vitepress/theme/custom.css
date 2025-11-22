@@ -19,6 +19,13 @@
   font-size: 16px;
 }
 
+.VPSidebarItem.level-1 > .item .link {
+  padding-block: 4px;
+}
+.VPSidebarItem.level-1 > .item .link > .text.text {
+  line-height: 20px;
+}
+
 .VPSidebarItem.level-1.is-active > .item .link > .text.text {
   color: var(--vp-c-black);
 

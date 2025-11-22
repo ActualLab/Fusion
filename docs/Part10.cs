@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Operations;
 
-namespace Docs
+namespace Tutorial
 {
     public class AppDbContext(DbContextOptions options) : DbContextBase(options)
     {

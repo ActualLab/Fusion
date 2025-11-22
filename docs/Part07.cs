@@ -1,7 +1,7 @@
 using System;
 using static System.Console;
 
-namespace Docs
+namespace Tutorial
 {
     public static class Part07
     {
