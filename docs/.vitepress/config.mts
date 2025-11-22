@@ -43,8 +43,8 @@ export default defineConfig({
             link: "/Part10",
           },
           { text: "Part 11: Authentication in Fusion", link: "/Part11" },
+          { text: "Part 12: ActualLab.Rpc in Fusion 6.1+", link: "/Part12" },
           /*
-          { text: 'Part 12: ActualLab.Rpc in Fusion 6.1+', link: '/Part12' },
           { text: 'Part 13: Migration to Fusion 6.1+', link: '/Part13' },
           */
           { text: "Cheat Sheet", link: "/Fusion-Cheat-Sheet" },
