@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using static System.Console;
 
-namespace Docs;
+namespace Tutorial01;
 
 #region Part01_Declare_Service
 public class CounterService : IComputeService // This is a tagging interface any compute service must "implement"
@@ -89,7 +89,7 @@ public static class Part01
             // That's why Sum(a, b) is going to be recomputed on the next call, as well as Get(a),
             // which is called by Sum(a, b).
             await counters.Sum("a", "b"); // Prints: Get(a) = 2, Sum(a, b) = 2
-            await counters.Sum("a", "b"); // Prints nothing - it's a cache hit; the result is 0
+            await counters.Sum("a", "b"); // Prints nothing, it's a cache hit; the result is 0
 
             // Even though we expect Sum(a, b) == Sum(b, a), Fusion doesn't know that.
             // Remember, "cache key" for any compute method call is (service, method, args...),
@@ -115,13 +115,13 @@ public static class Part01
             // Manually invalidate computedForGetA, i.e. the result of counters.Get("a") call
             computedForGetA.Invalidate(); // Prints: Sum(a, b) is invalidated
             WriteLine(computedForGetA.IsConsistent());  // False
-            WriteLine(computedForSumAB.IsConsistent()); // False - invalidation is always cascading
+            WriteLine(computedForSumAB.IsConsistent()); // False, invalidation is always cascading
 
             // Manually update computedForSumAB
             var newComputedForSumAB = await computedForSumAB.Update();
             // Prints:
-            // Get(a) = 2 - we invalidated it, so it was of Sum(a, b)
-            // Sum(a, b) = 2 - .Update() call above actually triggered this call
+            // Get(a) = 2, we invalidated it, so it was of Sum(a, b)
+            // Sum(a, b) = 2, .Update() call above actually triggered this call
 
             WriteLine(newComputedForSumAB.IsConsistent()); // True
             WriteLine(newComputedForSumAB.Value); // 2
@@ -243,7 +243,7 @@ public static class Part01
                             (s, e) => WriteLine($"{clock.Elapsed:g}s: {e}, Value: {s.Value}, Computed: {s.Computed}"));
                     },
                 },
-                // This lambda describes how the computed state is computed -
+                // This lambda describes how the computed state is computed –
                 // essentially, it's a compute method written as a lambda.
                 async (state, cancellationToken) => {
                     // We intentionally delay the computation here to show how the initial value works
@@ -263,7 +263,7 @@ public static class Part01
             mutableState.Set("y");
             await Task.Delay(2000);
 
-            /* The output - pay attention to timestamps:
+            /* The output – pay attention to timestamps:
             0:00:00.0080204s: Invalidated, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
             0:00:00.0126295s: Updating, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
             0:00:00.0161148s: CREATED, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)

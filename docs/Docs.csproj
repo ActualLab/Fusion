@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>Docs</AssemblyName>
     <RootNamespace>Docs</RootNamespace>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,7 +13,7 @@
 
   <!-- Roslyn generators/analyzers -->
   <ItemGroup>
-    <ProjectReference Include="..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\src\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
