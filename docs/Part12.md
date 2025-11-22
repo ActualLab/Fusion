@@ -91,6 +91,7 @@ rpc.AddWebSocketServer();
 
 <!-- snippet: Part12_MapRpcWebSocketServer -->
 ```cs
+// And assuming you use minimal ASP.NET Core API:
 app.UseWebSockets(); // Adds WebSocket support to ASP.NET Core host
 app.UseEndpoints(endpoints => {
     endpoints.MapRpcWebSocketServer(); // Registers "/rpc/ws" endpoint
