@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ActualLab.Fusion;
 using static System.Console;
 
-namespace Tutorial;
+namespace Tutorial03;
 public static class Part03
 {
     #region Part03_CounterService

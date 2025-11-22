@@ -3,7 +3,7 @@ using ActualLab.Rpc.Server;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Tutorial;
+namespace Tutorial12;
 public partial class Program
 {
     public static void ConfigureServices(IServiceCollection services)

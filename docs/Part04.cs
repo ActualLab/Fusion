@@ -16,7 +16,7 @@ using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using static System.Console;
 
-namespace Tutorial;
+namespace Tutorial04;
 #region Part04_CommonServices
 // Ideally, we want Compute Service client to be exactly the same as corresponding
 // Compute Service. A good way to enforce this is to expose an interface
