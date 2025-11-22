@@ -12,28 +12,29 @@ public sealed class RpcOutboundCallSetup
         [MethodImpl(MethodImplOptions.AggressiveInlining)] internal set;
     }
 
-    public RpcPeer? Peer { get; }
-    public RpcRoutingMode RoutingMode { get; }
+    public readonly RpcPeer? Peer;
+    public readonly RpcRoutingMode RoutingMode;
     public RpcHeader[]? Headers { get; init; } // You typically shouldn't set it!
     public RpcCacheInfoCapture? CacheInfoCapture { get; init; }
     public RpcOutboundContext? ProducedContext { get; private set; } // Set by ProduceContext
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundCallSetup()
-        => RoutingMode = RpcRoutingMode.Full;
+        => RoutingMode = RpcRoutingMode.Outbound;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundCallSetup(RpcPeer peer)
     {
         Peer = peer;
-        RoutingMode = RpcRoutingMode.None;
+        RoutingMode = RpcRoutingMode.Prerouted;
     }
 
     [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundCallSetup(RpcPeer peer, RpcRoutingMode routingMode)
     {
-        if (routingMode is RpcRoutingMode.Full)
+        if (routingMode is RpcRoutingMode.Outbound)
             throw new ArgumentOutOfRangeException(nameof(routingMode));
+
         Peer = peer;
         RoutingMode = routingMode;
     }

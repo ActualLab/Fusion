@@ -40,26 +40,45 @@ public sealed class RpcInterceptor : Interceptor
             var peer = context.Peer!;
             var routingMode = context.RoutingMode;
 
-            if (routingMode is not RpcRoutingMode.Full) {
-                // The call is prerouted via RpcOutboundCallSetup, and there are two cases:
-                // - It can be pre-routed to a non-local peer. It's typically done for NoWait and System calls,
-                //   and all we need is to send it right away.
-                // - And it can be pre-routed to a local peer.
-                //   It may happen when an RPC service with Distributed service mode gets an inbound RPC call,
-                //   and there are two paths of activating this option: one via RpcCommandHandler (it uses None mode),
-                //   and another one is via InboundCallUseDistributedModeServerInvoker option (it uses LocalOnly mode).
-                if (call is not null) {
-                    if (routingMode is RpcRoutingMode.LocalOnly)
-                        throw ActualLab.Internal.Errors.InternalError(
-                            $"{nameof(RpcRoutingMode)} is {nameof(RpcRoutingMode.LocalOnly)}, "
-                            + $"but the call is pre-routed to a remote {nameof(RpcPeer)}.");
-                    // RoutingMode is None
+            if (routingMode is RpcRoutingMode.Outbound) {
+                if (peer.Ref.RouteState is null) {
+                    // There is no RoutingState, and thus no rerouting and no shard routing
+                    if (call is not null) {
+                        // Direct outbound RPC call
+                        resultTask = call.Invoke();
+                    }
+                    else {
+                        // call is null
+                        if (localCallAsyncInvoker is null)
+                            throw Errors.CannotExecuteInterfaceCallLocally();
 
+                        // Direct local call
+                        resultTask = localCallAsyncInvoker.Invoke(invocation);
+                    }
+                }
+                else // There is a RoutingState, and thus rerouting / shard routing is possible
+                    resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
+            }
+            else { // RoutingMode is Inbound or None
+                // The call is prerouted via RpcOutboundCallSetup, and there are two cases:
+                // - It can be pre-routed to a non-local peer. It's typically done for NoWait and System calls, and all we need is to send it right away.
+                // - And it can be pre-routed to a local peer.
+                //   It may happen when an RPC service gets an inbound RPC call, and typically the mode is:
+                //   - Inbound (= route, throw reroute exception if non-local) for Distributed services, and
+                //   - None (= always route to the local peer) for any other service type.
+                if (call is not null) {
+                    if (routingMode is RpcRoutingMode.Inbound) // This should never happen
+                        throw ActualLab.Internal.Errors.InternalError(
+                            $"{nameof(RpcRoutingMode)} is {nameof(RpcRoutingMode.Inbound)}, "
+                            + $"but the call is pre-routed to a remote {nameof(RpcPeer)}.");
+
+                    // RoutingMode is None
                     // Direct outbound RPC call
                     resultTask = call.Invoke();
                 }
-                else { // call is null
-                    if (routingMode is RpcRoutingMode.None) {
+                else {
+                    // call is null
+                    if (routingMode is RpcRoutingMode.Prerouted) {
                         if (localCallAsyncInvoker is null)
                             throw Errors.CannotExecuteInterfaceCallLocally();
 
@@ -68,27 +87,11 @@ public sealed class RpcInterceptor : Interceptor
                     }
                     else {
                         // Local call, but with rerouting / shard routing
-                        resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
+                        resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker,
+                            invocation);
                     }
                 }
             }
-            // RoutingMode is Full
-            else if (peer.Ref.RouteState is null) {
-                // There is no RoutingState, and thus no rerouting and no shard routing
-                if (call is not null) {
-                    // Direct outbound RPC call
-                    resultTask = call.Invoke();
-                }
-                else { // call is null
-                    if (localCallAsyncInvoker is null)
-                        throw Errors.CannotExecuteInterfaceCallLocally();
-
-                    // Direct local call
-                    resultTask = localCallAsyncInvoker.Invoke(invocation);
-                }
-            }
-            else // There is a RoutingState, and thus rerouting / shard routing is possible
-                resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
 
             return rpcMethodDef.UniversalAsyncResultConverter.Invoke(resultTask);
         };
@@ -101,7 +104,7 @@ public sealed class RpcInterceptor : Interceptor
         Func<Invocation, Task>? localCallAsyncInvoker,
         Invocation invocation)
     {
-        var mustRerouteUnlessLocal = context.RoutingMode is RpcRoutingMode.LocalOnly;
+        var mustRerouteUnlessLocal = context.RoutingMode is RpcRoutingMode.Inbound;
         var cancellationToken = context.CancellationToken;
         var rerouteCount = 0;
         while (true) {

@@ -22,28 +22,39 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
 
         var serviceType = methodHandler.ServiceType;
         var method = methodHandler.Method;
-        if (GetRpcMethodDef(serviceType, method) is { } rpcMethodDef)
-            return HandleRpcCommand();
+        if (GetRpcMethodDef(serviceType, method) is not { } rpcMethodDef)
+            return context.InvokeRemainingHandlers(cancellationToken);
 
-        return context.InvokeRemainingHandlers(cancellationToken);
+        var isDistributed = rpcMethodDef.Service.Mode is RpcServiceMode.Distributed;
+        var routingMode = context.IsOutermost && context.Items.KeylessGet<RpcInboundCall>() is not null
+            // It's an inbound RPC call
+            ? isDistributed
+                ? RpcRoutingMode.Inbound // The final handler is a distributed service -> inbound call
+                : RpcRoutingMode.Prerouted // The final handler is a local service -> local call
+            // It's an outbound or local call
+            : !isDistributed && serviceType.NonProxyType().IsInterface
+                ? RpcRoutingMode.Outbound // The final handler is an RPC client -> outbound call
+                : RpcRoutingMode.Prerouted; // The final handler is a local service -> local call
 
-        async Task HandleRpcCommand() {
-            // See RpcInboundCallOptionsExt.InboundCallServerInvokerDecorator,
-            // it replaces the default InboundCallServerInvoker for any command method with a logic that:
-            // - Creates outermost CommandContext with RpcInboundCall item set
-            // - Sends the call to Commander (with this context) instead of invoking service.Method directly.
-            var mustRerouteUnlessLocal = context.IsOutermost && context.Items.KeylessGet<RpcInboundCall>() is not null;
+        if (routingMode is RpcRoutingMode.Prerouted) {
+            // It's going to be a local call, so we continue the pipeline,
+            // but put RpcOutboundCallSetup into context.Items to be consistent.
+            // MethodCommandHandler picks up RpcOutboundCallSetup (if any) and activates it,
+            // so if we end up calling an RPC client (it's a mistake), prerouting to local peer
+            // here is going to trigger an exception in RpcInterceptor.
+            context.Items.KeylessSet(new RpcOutboundCallSetup(rpcMethodDef.Hub.LocalPeer));
+            return context.InvokeRemainingHandlers(cancellationToken);
+        }
+
+        return HandleWithRerouting();
+
+        async Task HandleWithRerouting() {
             var baseExecutionState = context.ExecutionState;
             var preFinalExecutionState = baseExecutionState.PreFinalState;
             var rerouteCount = 0;
             while (true) {
-                var arguments = ArgumentList.New(command, cancellationToken);
-                var peer = rpcMethodDef.RouteOutboundCall(arguments);
-                if (peer.ConnectionKind is not RpcPeerConnectionKind.Local && mustRerouteUnlessLocal) {
-                    // Inbound RPC calls must be routed to local peers only
-                    throw RpcRerouteException.MustRerouteInbound();
-                }
-
+                var args = ArgumentList.New(command, cancellationToken);
+                var peer = rpcMethodDef.RouteCall(args, routingMode);
                 var routeState = peer.Ref.RouteState;
                 var shardRouteState = routeState.AsShardRouteState(rpcMethodDef);
                 try {
@@ -68,7 +79,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                             context.ExecutionState = baseExecutionState;
                         }
                         else {
-                            // Remote call -> trigger just RPC call by invoking the final handler only
+                            // Remote call -> send the RPC call by invoking the final handler
                             context.ExecutionState = preFinalExecutionState;
                         }
 

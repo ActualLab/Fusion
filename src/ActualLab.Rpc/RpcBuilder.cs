@@ -124,7 +124,7 @@ public readonly struct RpcBuilder
 
         // Middlewares
         AddMiddleware(_ => new RpcArgumentNullabilityValidator());
-        AddMiddleware(_ => new RpcRerouteUnlessLocalMiddleware());
+        AddMiddleware(_ => new RpcRouteValidator());
 
         // And finally, invoke the configuration action
         configure?.Invoke(this);

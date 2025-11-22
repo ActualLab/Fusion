@@ -8,6 +8,6 @@ public enum CallOptions
     GetExisting = 1,
     Invalidate = 2 + GetExisting,
     Capture = 4,
-    RerouteUnlessLocal = 8,
+    InboundRpc = 8,
 }
 #pragma warning restore MA0062

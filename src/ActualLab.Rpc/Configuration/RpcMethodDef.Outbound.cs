@@ -26,6 +26,23 @@ public partial class RpcMethodDef
             : OutboundCallFactory.Invoke(context);
     }
 
+    public RpcPeer RouteCall(ArgumentList args, RpcRoutingMode routingMode)
+        => routingMode switch {
+            RpcRoutingMode.Outbound => RouteOutboundCall(args),
+            RpcRoutingMode.Inbound => RouteInboundCall(args),
+            RpcRoutingMode.Prerouted => Hub.LocalPeer, // This overload assumes the peer is local in this case!
+            _ => throw new ArgumentOutOfRangeException(nameof(routingMode), routingMode, null),
+        };
+
+
+    public RpcPeer RouteCall(ArgumentList args, RpcRoutingMode routingMode, RpcPeer? preroutedPeer)
+        => routingMode switch {
+            RpcRoutingMode.Outbound => RouteOutboundCall(args),
+            RpcRoutingMode.Inbound => RouteInboundCall(args),
+            RpcRoutingMode.Prerouted => preroutedPeer ?? throw new ArgumentNullException(nameof(preroutedPeer)),
+            _ => throw new ArgumentOutOfRangeException(nameof(routingMode), routingMode, null),
+        };
+
     public RpcPeer RouteOutboundCall(ArgumentList args)
     {
         if (IsSystem)
@@ -41,5 +58,18 @@ public partial class RpcMethodDef
                 Log.LogWarning(e, "Rerouted while routing: {Method}{Arguments}", this, args);
             }
         }
+    }
+
+    public RpcPeer RouteInboundCall(ArgumentList args)
+    {
+        if (Service.Mode is not RpcServiceMode.Distributed)
+            return Hub.LocalPeer;
+
+        var peer = RouteOutboundCall(args);
+        if (peer.ConnectionKind is RpcPeerConnectionKind.Local)
+            return peer;
+
+        // Inbound RPC calls to distributed services must be routed to local peers only
+        throw RpcRerouteException.MustRerouteInbound();
     }
 }

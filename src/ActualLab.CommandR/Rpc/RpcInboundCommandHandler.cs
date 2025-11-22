@@ -19,7 +19,7 @@ public sealed record RpcInboundCommandHandler : IRpcMiddleware
 
         // RpcCommandHandler.HandleRpcCommand handles "reroute unless local" logic.
         // Search for ".RouteOutboundCall" there to see how it works.
-        context.RemainingMiddlewares.RemoveAll(x => x is RpcRerouteUnlessLocalMiddleware);
+        context.RemainingMiddlewares.RemoveAll(x => x is RpcRouteValidator);
 
         ICommander? commander = null;
         return call => {

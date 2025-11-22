@@ -72,9 +72,15 @@ public abstract class RemoteComputeMethodFunction(
         var rerouteCount = 0;
         var startedAt = CpuTimestamp.Now;
         var context = ComputeContext.Current;
+
+        // If we're here, it's either a client or distributed service, i.e., it can't be a pure server.
+        // So the only possible routing modes are Inbound and Outbound, but not Prerouted.
+        var routingMode = (context.CallOptions & CallOptions.InboundRpc) != 0
+            ? RpcRoutingMode.Inbound
+            : RpcRoutingMode.Outbound;
         while (true) {
             try {
-                var peer = RpcMethodDef.RouteOutboundCall(typedInput.Invocation.Arguments);
+                var peer = RpcMethodDef.RouteCall(typedInput.Invocation.Arguments, routingMode);
                 peer.Ref.RouteState.RerouteIfChanged();
 
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
@@ -125,18 +131,6 @@ public abstract class RemoteComputeMethodFunction(
                         await delayTask.ConfigureAwait(false);
                         continue;
                     }
-                }
-
-                // If we're here, we're sending an RPC call
-
-                if ((context.CallOptions & CallOptions.RerouteUnlessLocal) != 0) {
-                    // ComputeContext.Current with CallOptions.RerouteUnlessLocal indicates we're processing an inbound
-                    // RPC call, so we must either process it locally or reroute (via RpcRerouteException).
-                    //
-                    // We can't use RpcOutgoingCallSettings for the same purpose here, because ProduceComputedImpl
-                    // is typically called from a post-async-lock block, so the original RpcOutgoingCallSettings.Peer
-                    // won't be available at this point.
-                    throw RpcRerouteException.MustRerouteInbound();
                 }
 
                 try {

@@ -31,13 +31,17 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundContext(RpcPeer peer, RpcHeader[]? headers = null)
         : this(headers)
-        => Peer = peer;
+    {
+        Peer = peer;
+        RoutingMode = RpcRoutingMode.Prerouted;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundContext(RpcPeer peer, long relatedId, RpcHeader[]? headers = null)
         : this(headers)
     {
         Peer = peer;
+        RoutingMode = RpcRoutingMode.Prerouted;
         RelatedId = relatedId;
     }
 
@@ -71,7 +75,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
             return Call ?? throw ActualLab.Internal.Errors.InternalError("Call is null, which isn't expected here.");
         }
 
-        Peer ??= methodDef.RouteOutboundCall(arguments);
+        Peer = methodDef.RouteCall(arguments, RoutingMode, Peer);
         Call = methodDef.CreateOutboundCall(this);
         if (Call is null)
             return Call;
@@ -95,7 +99,12 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
         }
 
         // Peer & Call
-        Peer ??= methodDef.RouteOutboundCall(arguments);
+        if (Peer is null)
+            throw ActualLab.Internal.Errors.InternalError(
+                $"Peer is null, which isn't expected in {nameof(PrepareCallForSendNoWait)}.");
+        if (RoutingMode is not RpcRoutingMode.Prerouted)
+            throw ActualLab.Internal.Errors.InternalError(
+                $"RoutingMode is not {nameof(RoutingMode.Prerouted)}, which isn't expected in {nameof(PrepareCallForSendNoWait)}.");
         Call = methodDef.CreateOutboundCall(this);
         return Call;
     }

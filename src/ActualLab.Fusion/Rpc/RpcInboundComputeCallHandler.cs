@@ -21,12 +21,16 @@ public class RpcInboundComputeCallHandler : IRpcMiddleware
 
         // RemoteComputeMethodFunction.ProduceComputedImpl handles "reroute unless local" logic.
         // Search for ".RouteOutboundCall" there to see how it works.
-        context.RemainingMiddlewares.RemoveAll(x => x is RpcRerouteUnlessLocalMiddleware);
+        context.RemainingMiddlewares.RemoveAll(x => x is RpcRouteValidator);
 
         return async call => {
             var typedCall = (RpcInboundComputeCall<T>)call;
             Debug.Assert(ComputeContext.Current == ComputeContext.None);
-            var computeContext = new ComputeContext(CallOptions.Capture | CallOptions.RerouteUnlessLocal);
+
+            // We can't use RpcOutgoingCallSettings for the same purpose here, because ProduceComputedImpl
+            // is typically called from a post-async-lock block, so the original RpcOutgoingCallSettings.Peer
+            // won't be available at this point.
+            var computeContext = new ComputeContext(CallOptions.Capture | CallOptions.InboundRpc);
             ComputeContext.Current = computeContext;
             try {
                 return await next.Invoke(call).ConfigureAwait(false);
