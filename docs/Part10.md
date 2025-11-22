@@ -45,9 +45,11 @@ its Fusion-specific behaviors.
 1. Add the following `DbSet` to your `DbContext` (`AppDbContext` further):
 
 <!-- snippet: Part10_DbSet -->
+
 ```cs
 public DbSet<DbOperation> Operations { get; protected set; } = null!;
 ```
+
 <!-- endSnippet -->
 
 2. Add the following code to your server-side IoC container
@@ -744,5 +746,3 @@ parts inside. And probably, some bugs.
 So if you get stuck, please don't hesistate reaching me out
 on [Fusion Place](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 My nickname there is "Alex Y.", I'll be happy to help.
-
-#### [Part 11: Authentication in Fusion &raquo;](./Part11.md) | [Tutorial Home](./README.md)
