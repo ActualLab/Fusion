@@ -28,14 +28,17 @@ Most likely you declare interfaces for any of such services to consume them on t
 **2.** Decorate any non-primitive type which "travels" between the client & server with `MemoryPack` serialization attributes and make them `partial`. E.g. if you had:
 
 <!-- snippet: Part13_PostCommand -->
+
 ```cs
 public record PostCommand(string Name,string Text) : ICommand<Unit>;
 ```
+
 <!-- endSnippet -->
 
 You should convert it to ~ this:
 
 <!-- snippet: Part13_Chat_Post -->
+
 ```cs
 // 1. MemoryPack doesn't support nested types, so it has to be moved out of IXxxService; Rider/ReSharper has a refactoring for this, as for VS.NET, I am not sure.
 // 2. All `[MemoryPackable]` types must be declared as `partial`
@@ -47,6 +50,7 @@ public partial record Chat_Post(
     [property: DataMember, MemoryPackOrder(1)] string Text
     ) : ICommand<Unit>;
 ```
+
 <!-- endSnippet -->
 
 Note that any assembly which declares such types should reference `MemoryPack.Generator` package.
@@ -222,5 +226,3 @@ These calls must be executed:
 - `using ActualLab.Fusion.EntityFramework.Extensions` (if you are using `IKeyValueStore`, etc.) to `using ActualLab.Fusion.Extensions`; on the server side, you'll also need to add `using ActualLab.Fusion.Extensions.Services`.
 
 **2.** `TaskSource<T>` type is gone (its performance was arguable). Use `TaskCompletionSource<T>` instead. You can use `TaskCompletionSourceExt.New` instead of `TaskSource.New` - it behaves identically, but returns similarly configured `TaskCompletionSource` instead of `TaskSource`.
-
-#### [Next: Epilogue &raquo;](./PartFF.md) | [Tutorial Home](./README.md)
