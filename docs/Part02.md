@@ -47,7 +47,6 @@ in our code, so we can map the interface to:
 - a compute service client on the client side (WASM, MAUI, etc.).
 
 <!-- snippet: Part02_SharedApi -->
-
 ```cs
 // The interface for our chat service
 public interface IChatService : IComputeService
@@ -64,7 +63,6 @@ public interface IChatService : IComputeService
     Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default);
 }
 ```
-
 <!-- endSnippet -->
 
 ### 2. Server-Side Compute Service (Implementation)
@@ -72,7 +70,6 @@ public interface IChatService : IComputeService
 Now let's implement the server-side compute service:
 
 <!-- snippet: Part02_ServerImplementation -->
-
 ```cs
 public class ChatService : IChatService
 {
@@ -115,7 +112,6 @@ public class ChatService : IChatService
     }
 }
 ```
-
 <!-- endSnippet -->
 
 ### 3. Configuration
@@ -124,7 +120,6 @@ We'll use ASP.NET Core Web Host to host the ActualLab.Rpc server
 that exposes `IChatService`:
 
 <!-- snippet: Part02_ServerSetup -->
-
 ```cs
 var builder = WebApplication.CreateBuilder();
 builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
@@ -140,11 +135,9 @@ var app = builder.Build();
 app.UseWebSockets(); // Enable WebSockets support on Kestrel server
 app.MapRpcWebSocketServer(); // Map the ActualLab.Rpc WebSocket server endpoint ("/rpc/ws")
 ```
-
 <!-- endSnippet -->
 
 <!-- snippet: Part02_RunServer -->
-
 ```cs
 try {
     await app.RunAsync("http://localhost:22222/").WaitAsync(cancellationToken);
@@ -156,7 +149,6 @@ catch (Exception error) {
         Error.WriteLine($"Server failed: {error.Message}");
 }
 ```
-
 <!-- endSnippet -->
 
 As for the client-side, we need to:
@@ -165,14 +157,12 @@ As for the client-side, we need to:
 2. Make Fusion to register Compute Service Client (in fact, an "advanced" RPC client) for `IChatService`.
 
 <!-- snippet: Part02_ClientSetup -->
-
 ```cs
 var fusion = services.AddFusion(); // No default RpcServiceMode, so it will be set to RpcServiceMode.Local
 var rpc = fusion.Rpc; // The same as services.AddRpc(), but slightly faster, since FusionBuilder already did it
 rpc.AddWebSocketClient("http://localhost:22222/"); // Adds the WebSocket client for ActualLab.Rpc
 fusion.AddClient<IChatService>(); // Adds the chat service client (Compute Service Client)
 ```
-
 <!-- endSnippet -->
 
 ### 4. Client Usage
@@ -208,7 +198,6 @@ the server-side Compute Service outputs. So:
 - which, in turn, triggers re-rendering of corresponding `ComputedStateComponent<T>`-s.
 
 <!-- snippet: Part02_RunClient -->
-
 ```cs
 var services = CreateClientServiceProvider();
 var chatClient = services.GetRequiredService<IChatService>();
@@ -245,13 +234,11 @@ await Task.Delay(1000);
 await chatClient.Post("Done counting!");
 await Task.Delay(1000);
 ```
-
 <!-- endSnippet -->
 
 The output:
 
 <!-- snippet: Part02_Output -->
-
 ```cs
 /* The output:
 GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
@@ -297,7 +284,6 @@ GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessa
 - Done counting!
 */
 ```
-
 <!-- endSnippet -->
 
 ## Client Performance
@@ -322,7 +308,6 @@ and implementation &ndash; and since it's not a compute method, it won't benefit
 for compute methods.
 
 <!-- snippet: Part02_Benchmark -->
-
 ```cs
 // Benchmarking remote compute method calls and plain RPC calls – run in Release mode!
 WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc():");
@@ -341,13 +326,11 @@ for (int i = 0; i < 100_000; i++)
     await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
 WriteLine($"- GetWordCountPlainRpc(): {stopwatch.Elapsed.ToShortString()}");
 ```
-
 <!-- endSnippet -->
 
 The output:
 
 <!-- snippet: Part02_Benchmark_Output -->
-
 ```cs
 /* The output:
 100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release!
@@ -357,7 +340,6 @@ The output:
 - GetWordCountPlainRpc(): 2.474s
 */
 ```
-
 <!-- endSnippet -->
 
 As you can see, Compute Service Client processes about **10,000,000 calls/s**

@@ -10,11 +10,11 @@
 > [http://boardgames.alexyakunin.com](http://boardgames.alexyakunin.com)
 
 Scaling Fusion services is actually simpler than it may seem
-at first - and mostly, you should take into account two
+at first &ndash; and mostly, you should take into account two
 key factors:
 
 1. You should treat any Fusion-based service host as one of your
-   caching servers and scale it accordingly - but most importantly
+   caching servers and scale it accordingly &ndash; but most importantly
    you should ensure these servers share a limited subset of data.
    The more data they share, the lower is cache hit ratio (assuming
    the amount of RAM is fixed).
@@ -37,7 +37,7 @@ multi-tenant service, and:
 
 The simplest way to achieve a desirable distribution of
 load in this case is to use [Rendezvous Hashing] or [Consistent Hashing].
-Almost any industry standard load balancer supports the later one -
+Almost any industry standard load balancer supports the later one &ndash;
 in particular, you can use:
 
 - [`hash` directive](http://nginx.org/en/docs/stream/ngx_stream_upstream_module.html#hash)
@@ -73,7 +73,7 @@ up by `K - 1` hosts from the same set plus one extra host, so the
 % of users experiencing slowdown in this case (`1 / K`) could be reduced
 to any desirable number at cost of extra RAM.
 
-Above code is pretty inefficient - its time complexity is `O(N*log(N))`,
+Above code is pretty inefficient &ndash; its time complexity is `O(N*log(N))`,
 but notice that while your set of hosts is stable,
 you can cache the following list per each tenant to reduce the complexity
 to `O(1)`:
@@ -92,7 +92,7 @@ Host[] GetTenantHosts(string tenantId)
 ```
 
 In practice, such load balancing can be implemented by having this logic on
-your own proxy - and you can use e.g.
+your own proxy &ndash; and you can use e.g.
 [AspNetCore.Proxy](https://github.com/twitchax/AspNetCore.Proxy)
 or [YARP](https://devblogs.microsoft.com/dotnet/introducing-yarp-preview-1/)
 to implement it.
@@ -110,11 +110,11 @@ In particular, you can use:
 A few important things to keep in mind:
 
 - Your load balancer somehow has to identify a tenant for every request.
-  And it makes sense to think about this in advance - and agree to
+  And it makes sense to think about this in advance &ndash; and agree to
   use a request header or cookie bearing tenant ID or token, or even use a
   subdomain name for this.
 - Supporting multiple ways of identifying a tenant might be a good idea
-  as well - especially if your tenants are actually partitions
+  as well &ndash; especially if your tenants are actually partitions
   (the following section explains this).
 - Finally, if you use [Compute Service Clients], keep in mind the requests
   they send should bear the same token, and moreover, WebSocket
@@ -150,7 +150,7 @@ to every host that serves its data.
 
 Now, some tricky aspects:
 
-- The invalidation must happen _eventually_ - in other words, it's fine to delay it,
+- The invalidation must happen _eventually_ &ndash; in other words, it's fine to delay it,
   but it's not fine to skip it at all.
 - The smaller is the invalidation delay, the lower is the probability to observe
   an inconsistent state.
@@ -188,11 +188,11 @@ And we need two extra services:
    in DB to the current one and pumps back the identical _operation_
    to the matching pub/sub topic.
    "A while" here should be long enough to ensure a very high chance
-   of message propagation through the pub/sub pipeline - e.g.
+   of message propagation through the pub/sub pipeline &ndash; e.g.
    you may set it to 99.9999 percentile of message propagation time.
 
 As you might guess, the "recovery pump" service might be a part
-of invalidation service - all you need is to ensure that if such
+of invalidation service &ndash; all you need is to ensure that if such
 service runs on every host, they don't race with each other
 and don't overload the DB with identical "delete operation"
 requests (+ batching these requests is a good idea anyway).
@@ -206,7 +206,7 @@ all of this.
 
 Overall, you can't horizontally scale a service that doesn't
 allow some kind of partitioning. This isn't a limitation
-imposed by Fusion - it's just what horizontal scaling implies.
+imposed by Fusion &ndash; it's just what horizontal scaling implies.
 
 The process of scaling such a service is actually quite similar
 to scaling the monolith:
@@ -220,17 +220,17 @@ to scaling the monolith:
 Identifying partitioning dimensions is the most interesting part
 here. Ideally, you want to ensure that a single partition can be:
 
-- **Stored on a single device** - i.e. you won't ever need to
+- **Stored on a single device** &ndash; i.e. you won't ever need to
   tear it apart onto multiple devices to be able to store its data.
   As an example, a singe Twitter or Facebook account could be
   viewed as a partition, but e.g. a single Google Drive account
   probably can't play the same role (though e.g. a single file can).
-- **Served to a single user from a single service host** -
+- **Served to a single user from a single service host** &ndash;
   this is almost always the case.
 
 These two criteria ensure you can horizontally scale both the data
 and compute capacity without a need to repartition existing
-partitions - in other words, this is what allows you to view
+partitions &ndash; in other words, this is what allows you to view
 your partitions as "tenants".
 
 ## Scaling Reads via Replica Hosts
@@ -243,7 +243,7 @@ you can re-expose them as the next layer of hosts (let's call them
 
 The downsides of such an approach are straightforward:
 
-- Slower queries & invalidations - basically, you add ~ a network
+- Slower queries & invalidations &ndash; basically, you add ~ a network
   round-trip time to both timings by adding an extra layer of replicas.
 - Currently replicas are transitioned to failed state once the connection
   to publisher gets broken, so shutting down the host of the original
@@ -254,7 +254,7 @@ The downsides of such an approach are straightforward:
 
 As for the upsides:
 
-- You can use different caching rules for replica services -
+- You can use different caching rules for replica services &ndash;
   they "inherit" caching attributes from service interface,
   though the original service can "override" them by applying
   the same attributes (but with different options) to its own methods.
@@ -262,7 +262,7 @@ As for the upsides:
   their hardware selection is way more straightforward
   (just optimize for RAM & IO capacity).
 - When you spin up a regular service, it's expected to be slower
-  in the beginning - because nothing is cached there yet.
+  in the beginning &ndash; because nothing is cached there yet.
   But a set of new "replica hosts" connected to a "regular host"
   that's already spun up should improve the performance instantly,
   because the cache of the original host is still going to be used,
@@ -275,7 +275,7 @@ As for the upsides:
   in a single process. And "replica hosts" provide one
   of easy ways to "redistribute" the cache among multiple
   processes. Note that you can run these processes on the
-  same host too - in other words, this might be a totally
+  same host too &ndash; in other words, this might be a totally
   viable option to run hosts with > 32 GB RAM.
 
 Alleviation of instant fluxes in traffic to certain content is a good example
@@ -312,14 +312,14 @@ There is no silver bullet resolving this issue completely,
 but there are plenty of workarounds you can use to nearly
 eliminate it:
 
-Decrease the number of objects in heap - by:
+Decrease the number of objects in heap &ndash; by:
 
 - Reusing existing objects (immutable or [`IFrozen` objects](./Part05))
 - Returning more of serialized data (byte arrays or strings)
 - Returning structs pointing to serialized data in large buffers
 - Relying on Fusion's [`[Swap]` attribute](./Part05.md).
 
-Limit the size of your working set to run `N` processes per host - by:
+Limit the size of your working set to run `N` processes per host &ndash; by:
 
 - Setting `COMPlus_GCHeapHardLimit` environment variable
 - Using Docker containers
@@ -363,7 +363,7 @@ In other words, of course there are details you need to factor in
 to use it efficiently.
 
 And if you look at its [Compute Service Clients], you'll quickly conclude
-all the same statements are equally applicable to them as well -
+all the same statements are equally applicable to them as well &ndash;
 the only difference is that this `O(1)` cost can have a much higher
 (but still fixed) absolute value there, because every computation and
 invalidation requires an extra network roundtrip there.
@@ -376,18 +376,18 @@ So:
 1. You have all the levers to control the frequency of such updates,
    and in particular, you can throttle them down on any popular piece of
    content or when your service experiences high load.
-2. "Update" rarely triggers actual recomputation - it triggers the
+2. "Update" rarely triggers actual recomputation &ndash; it triggers the
    recomputation only when it's the first update request after some change,
    otherwise it just delivers the cached value.
-3. And finally, note that recomputations are incremental with Fusion -
+3. And finally, note that recomputations are incremental with Fusion &ndash;
    [as with incremental builds](https://medium.com/@alexyakunin/stl-fusion-in-simple-terms-65b1975967ab?source=friends_link&sk=04e73e75a52768cf7c3330744a9b1e38),
    you recompute just what's changed.
 
-Of course, this isn't a complete set of options you have - e.g. you can
+Of course, this isn't a complete set of options you have &ndash; e.g. you can
 also trade consistency for performance by delaying invalidations. But
 the main point is: **yes, Fusion-based services scale**.
 
-#### [Part 9: CommandR - Intro &raquo;](./Part09.md) | [Tutorial Home](./README.md)
+---
 
 [Consistent Hashing]: https://en.wikipedia.org/wiki/Consistent_hashing
 [Rendezvous Hashing]: https://medium.com/i0exception/rendezvous-hashing-8c00e2fb58b0

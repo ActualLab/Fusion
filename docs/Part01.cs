@@ -262,7 +262,7 @@ public static class Part01
             mutableState.Value = "y";
             await Task.Delay(2000);
 
-            /* The output - pay attention to timestamps:
+            /* The output – pay attention to timestamps:
             0:00:00.0080204s: Invalidated, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
             0:00:00.0126295s: Updating, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)
             0:00:00.0161148s: CREATED, Value: <initial>, Computed: StateBoundComputed<String>(FuncComputedStateEx<String>-Hash=27401660 v.st, State: Invalidated)

@@ -11,7 +11,7 @@ namespace Docs;
 // The interface for our chat service
 public interface IChatService : IComputeService
 {
-    // Compute methods - they cache the output not only on the server side
+    // Compute methods – they cache the output not only on the server side
     // but on the client side as well!
     [ComputeMethod]
     Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
@@ -218,7 +218,7 @@ public static class Part02
         #endregion
 
         #region Part02_Benchmark
-        // Benchmarking remote compute method calls and plain RPC calls - run in Release mode!
+        // Benchmarking remote compute method calls and plain RPC calls – run in Release mode!
         WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc():");
         WriteLine("- Warmup...");
         for (int i = 0; i < 100_000; i++)
@@ -238,7 +238,7 @@ public static class Part02
 
         #region Part02_Benchmark_Output
         /* The output:
-        100K calls to GetWordCount() vs GetWordCountPlainRpc() - run in Release!
+        100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release!
         - Warmup...
         - Benchmarking...
         - GetWordCount():         12.187ms
