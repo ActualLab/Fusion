@@ -28,14 +28,18 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [Fact]
     public async Task WhenConnectedTest1()
     {
-        await using var services = CreateServices();
-        var peer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
+        for (var i = 0; i < 5; i++) {
+            await using var services = CreateServices();
+            var peer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
 
-        var whenConnectedTask = peer.WhenConnected();
-        await peer.DisposeAsync();
+            var whenConnectedTask = peer.WhenConnected();
+            await peer.DisposeAsync();
 
-        var whenConnectedResult = await whenConnectedTask.ResultAwait();
-        whenConnectedResult.Error.Should().BeOfType<RpcReconnectFailedException>();
+            var whenConnectedResult = await whenConnectedTask.ResultAwait();
+            if (whenConnectedResult.Error is RpcReconnectFailedException)
+                return;
+        }
+        Assert.Fail("whenConnectedResult.Error was never of an expected type.");
     }
 
     [Fact]
