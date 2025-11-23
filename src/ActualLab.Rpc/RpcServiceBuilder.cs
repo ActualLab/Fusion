@@ -12,6 +12,7 @@ public class RpcServiceBuilder
     public string Name { get; private set; }
     public RpcServiceMode Mode { get; private set; }
     public ServiceResolver? ImplementationResolver { get; private set; }
+    public RpcLocalExecutionMode LocalExecutionMode { get; private set; }
 
     public Type? ClientType => Mode switch {
         RpcServiceMode.Client => Type,
@@ -102,6 +103,13 @@ public class RpcServiceBuilder
         Mode |= mode;
         ImplementationResolver = serverResolver;
         return this;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcServiceBuilder HasLocalExecutionMode(RpcLocalExecutionMode mode)
+    {
+        LocalExecutionMode = mode;
+        return  this;
     }
 
     public RpcBuilder Remove()

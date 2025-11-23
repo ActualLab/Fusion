@@ -150,6 +150,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
         var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["RenamedMethod"];
         method.OutboundCallTimeouts.RunTimeout.Should().Be(TimeSpan.FromSeconds(0.5));
+        method.LocalExecutionMode.Should().Be(RpcLocalExecutionMode.Unconstrained);
 
         (await client.AddWithAttribute(3, 4)).Should().Be(7);
         await AssertNoCalls(clientPeer, Out);

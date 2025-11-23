@@ -38,7 +38,7 @@ public static class RpcRouteStateExt
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static RpcShardRouteState? AsShardRouteState(this RpcRouteState? routeState, RpcMethodDef methodDef)
-        => methodDef.OutboundCallLocalExecutionMode is RpcLocalExecutionMode.RequireShardLock
+        => methodDef.LocalExecutionMode is RpcLocalExecutionMode.RequireShardLock
             ? routeState as RpcShardRouteState
             : null;
 }

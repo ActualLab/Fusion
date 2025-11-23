@@ -29,6 +29,7 @@ public class RpcServiceDef
     public bool HasClient => ClientType is not null;
     public bool HasServer => ServerResolver is not null;
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
+    public RpcLocalExecutionMode LocalExecutionMode { get; init; }
     public string Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }
     public PropertyBag Properties { get; protected set; }
@@ -38,10 +39,7 @@ public class RpcServiceDef
 
     public RpcServiceDef(RpcHub hub, RpcServiceBuilder service)
     {
-        var name = service.Name;
-        if (name.IsNullOrEmpty())
-            name = service.Type.GetName();
-
+        var name = service.Name.NullIfEmpty() ?? service.Type.GetName();
         Hub = hub;
         Name = name;
         Mode = service.Mode;
@@ -51,6 +49,7 @@ public class RpcServiceDef
         ClientType = service.ClientType;
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
         IsBackend = typeof(IBackendService).IsAssignableFrom(Type);
+        LocalExecutionMode = service.LocalExecutionMode;
         Scope = hub.RegistryOptions.ServiceScopeResolver.Invoke(this);
         LegacyNames = new LegacyNames(Type);
 

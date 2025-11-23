@@ -5,16 +5,21 @@ namespace ActualLab.Rpc;
 /// Non-distributed RPC services ignore the value of this enum.
 /// </summary>
 /// <remarks>
-/// The resolved mode is stored in <see cref="RpcMethodDef.OutboundCallLocalExecutionMode"/>,
+/// The resolved mode is stored in <see cref="RpcMethodDef.LocalExecutionMode"/>,
 /// you can use <see cref="RpcOutboundCallOptions.LocalExecutionModeResolver"/> and
 /// <see cref="RpcMethodAttribute.LocalExecutionMode"/> to override it.
 /// </remarks>
 public enum RpcLocalExecutionMode
 {
     /// <summary>
+    /// Default mode (check the context to see what it resolves to).
+    /// </summary>
+    Default = 0,
+
+    /// <summary>
     /// <see cref="RpcShardRouteState.ShardLockAwaiter"/> is unused.
     /// </summary>
-    Unconstrained = 0,
+    Unconstrained,
 
     /// <summary>
     /// <see cref="RpcShardRouteState.ShardLockAwaiter"/> is used to await for the shard lock acquisition.
@@ -28,4 +33,10 @@ public enum RpcLocalExecutionMode
     /// And if it returns the latter, the execution is performed as if <see cref="Unconstrained"/> mode is used.
     /// </summary>
     RequireShardLock,
+}
+
+public static class RpcLocalExecutionModeExt
+{
+    public static RpcLocalExecutionMode Or(this RpcLocalExecutionMode mode, RpcLocalExecutionMode modeIfDefault)
+        => mode == RpcLocalExecutionMode.Default ? modeIfDefault : mode;
 }

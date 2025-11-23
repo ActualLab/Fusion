@@ -57,11 +57,14 @@ public record RpcOutboundCallOptions
 
     protected static RpcLocalExecutionMode DefaultLocalExecutionModeResolver(RpcMethodDef methodDef)
     {
-        if (methodDef.Service.Mode is not RpcServiceMode.Distributed)
+        var serviceDef = methodDef.Service;
+        if (serviceDef.Mode is not RpcServiceMode.Distributed)
             return RpcLocalExecutionMode.Unconstrained;
 
         // By default, all distributed service methods require shard lock.
-        return methodDef.Attribute?.LocalExecutionMode ?? RpcLocalExecutionMode.RequireShardLock;
+        return (methodDef.Attribute?.LocalExecutionMode ?? RpcLocalExecutionMode.Default)
+            .Or(serviceDef.LocalExecutionMode)
+            .Or(RpcLocalExecutionMode.RequireShardLock);
     }
 
     protected static string DefaultHasher(ReadOnlyMemory<byte> bytes)

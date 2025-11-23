@@ -8,7 +8,7 @@ public partial class RpcMethodDef
 {
     public RpcCallTimeouts OutboundCallTimeouts { get; protected set; } = RpcCallTimeouts.None;
     public Func<ArgumentList, RpcPeerRef>? OutboundCallRouter { get; protected set; } = null;
-    public RpcLocalExecutionMode OutboundCallLocalExecutionMode { get; protected set; } = RpcLocalExecutionMode.Unconstrained;
+    public RpcLocalExecutionMode LocalExecutionMode { get; protected set; }
 
     // The delegates and properties below must be initialized in Initialize(),
     // they are supposed to be as efficient as possible (i.e., do less, if possible)

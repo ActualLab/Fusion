@@ -172,4 +172,11 @@ public class FusionRpcServiceBuilder : RpcServiceBuilder
         base.HasServer(serviceResolver, mode);
         return this;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public new FusionRpcServiceBuilder HasLocalExecutionMode(RpcLocalExecutionMode mode)
+    {
+        base.HasLocalExecutionMode(mode);
+        return  this;
+    }
 }

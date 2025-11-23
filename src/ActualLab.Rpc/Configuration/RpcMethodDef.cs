@@ -126,7 +126,10 @@ public partial class RpcMethodDef : MethodDef
         OutboundCallRouter = IsSystem
             ? _ => throw Errors.InternalError("All system calls must be pre-routed.")
             : Hub.OutboundCallOptions.RouterFactory.Invoke(this);
-        OutboundCallLocalExecutionMode = Hub.OutboundCallOptions.LocalExecutionModeResolver.Invoke(this);
+        LocalExecutionMode = Hub.OutboundCallOptions.LocalExecutionModeResolver.Invoke(this);
+        if (LocalExecutionMode is RpcLocalExecutionMode.Default)
+            throw Errors.InternalError(
+                $"{nameof(LocalExecutionMode)} cannot be {nameof(RpcLocalExecutionMode.Default)} here.");
 
         // Inbound call properties
 
