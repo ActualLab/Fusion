@@ -39,6 +39,15 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         directResult.Value.Should().Be("value-from-host0");
         Out.WriteLine($"Direct call confirmed: {directResult.HostId} = {directResult.Value}");
 
+        initialResult = await commander.Call(
+            new RpcRerouteTestService_SetValue(0, "test-key", "value-from-host0", 0));
+        initialResult.HostId.Should().Be(host0.Id);
+        Out.WriteLine($"Set value on {initialResult.HostId} once more");
+        // The line below checks that RpcRerouteTestService (distributed service) can invalidate
+        // its own Computed<T> produced when it ran locally;
+        // see the invalidation block in RpcRerouteTestService.SetValue method
+        await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1));
+
         // First swap: hosts 0 <-> 1
         Out.WriteLine("Swapping hosts (0 <-> 1)...");
         testHosts.MeshMap.Swap(0, 1);

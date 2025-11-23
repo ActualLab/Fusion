@@ -20,13 +20,10 @@ public sealed class RemoteComputeMethodFunction<T>(
     ) : RemoteComputeMethodFunction(hub, methodDef, rpcMethodDef)
 {
     protected override Computed NewComputed(ComputeMethodInput input)
-        => throw ActualLab.Internal.Errors.InternalError($"This method should never be called in {GetType().GetName()}.");
+        => new ComputeMethodComputed<T>(ComputedOptions, input);
 
-    protected override Computed NewReplicaComputed(ComputeMethodInput input)
-        => new ReplicaComputed<T>(ComputedOptions, input);
-
-    protected override Computed NewRemoteComputed(ComputedOptions options, ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
-        => new RemoteComputed<T>(options, input, output, cacheEntry, call);
+    protected override Computed NewRemoteComputed(ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
+        => new RemoteComputed<T>(ComputedOptions, input, output, cacheEntry, call);
 }
 
 public abstract class RemoteComputeMethodFunction(
@@ -89,7 +86,7 @@ public abstract class RemoteComputeMethodFunction(
                     // - a pure client (interface proxy), so InvokeIntercepted will fail for it
                     //   (there is no base.Method)
                     // - or a Distributed mode service, so its base.Method should be invoked
-                    var computed = NewReplicaComputed(typedInput);
+                    var computed = NewComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     try {
                         var routeState = peer.Ref.RouteState;
@@ -209,7 +206,7 @@ public abstract class RemoteComputeMethodFunction(
             }
         }
 
-        var computed = NewRemoteComputed(input.MethodDef.ComputedOptions, input, result, cacheEntry, call);
+        var computed = NewRemoteComputed(input, result, cacheEntry, call);
         existingRemoteComputed?.SynchronizedSource.TrySetResult();
         return computed;
     }
@@ -239,8 +236,7 @@ public abstract class RemoteComputeMethodFunction(
             // No cacheEntry was captured -> perform RPC call and update cache
             return await ComputeRpc(input, cache, null, peer, cancellationToken).ConfigureAwait(false);
 
-        var cachedComputed = NewRemoteComputed(
-            input.MethodDef.ComputedOptions, input, Result.NewUntyped(cacheEntry.DeserializedValue), cacheEntry);
+        var cachedComputed = NewRemoteComputed(input, Result.NewUntyped(cacheEntry.DeserializedValue), cacheEntry);
 
         // We suppress execution context flow here to ensure that
         // "true" computed won't be registered as a dependency -
@@ -353,7 +349,7 @@ public abstract class RemoteComputeMethodFunction(
         }
 
         // 8. Create the new computed - it invalidates the cached one upon registering
-        var computed = NewRemoteComputed(input.MethodDef.ComputedOptions, input, result, cacheEntry, call);
+        var computed = NewRemoteComputed(input, result, cacheEntry, call);
         computed.RenewTimeouts(true);
         remoteCachedComputed.SynchronizedSource.TrySetResult();
     }
@@ -512,10 +508,7 @@ public abstract class RemoteComputeMethodFunction(
 
     // Abstract methods
 
-    protected abstract Computed NewReplicaComputed(ComputeMethodInput input);
-
     protected abstract Computed NewRemoteComputed(
-        ComputedOptions options,
         ComputeMethodInput input,
         Result output,
         RpcCacheEntry? cacheEntry,
