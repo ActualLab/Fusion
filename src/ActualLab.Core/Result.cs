@@ -1,15 +1,15 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
+using ActualLab.Caching;
 using ActualLab.Conversion;
 using ActualLab.Internal;
-using ActualLab.OS;
 using MessagePack;
 
 namespace ActualLab;
 
 /// <summary>
-/// Describes untyped result of a computation.
+/// Describes an untyped result of a computation.
 /// </summary>
 public interface IResult
 {
@@ -49,7 +49,7 @@ public interface IResult
 }
 
 /// <summary>
-/// Describes untyped result of a computation that can be changed.
+/// Describes an untyped result of a computation that can be changed.
 /// </summary>
 public interface IMutableResult : IResult
 {
@@ -138,26 +138,20 @@ public interface IMutableResult<T> : IResult<T>, IMutableResult
 [DebuggerDisplay("({" + nameof(DebugValue) + "}, Error = {" + nameof(Error) + "})")]
 public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
 {
-    private static readonly ConcurrentDictionary<Type, Func<Exception, IResult>> ErrorCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly MethodInfo ErrorInternalMethod
-        = typeof(Result).GetMethod(nameof(ErrorInternal), BindingFlags.Static | BindingFlags.NonPublic)!;
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> New<T>(T value, Exception? error = null) => new(value, error);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> NewError<T>(Exception error) => new(default!, error);
 
-    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume ErrorInternal method is preserved")]
-    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ErrorInternal method is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
     public static IResult NewError(Type resultType, Exception error)
-        => ErrorCache.GetOrAdd(
-            resultType,
-            static tResult => (Func<Exception, IResult>)ErrorInternalMethod
-                .MakeGenericMethod(tResult)
-                .CreateDelegate(typeof(Func<Exception, IResult>))
-        ).Invoke(error);
+        => GenericInstanceCache
+            .GetUnsafe<Func<Exception, IResult>>(typeof(NewErrorFactory<>), resultType)
+            .Invoke(error);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result NewUntyped(object? untypedValueOrErrorBox)
@@ -258,11 +252,14 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
     public static bool operator ==(Result left, Result right) => left.Equals(right);
     public static bool operator !=(Result left, Result right) => !left.Equals(right);
 
-    // Private methods
+    // Nested types
 
-    private static IResult ErrorInternal<T>(Exception error)
+    public sealed class NewErrorFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    {
         // ReSharper disable once HeapView.BoxingAllocation
-        => new Result<T>(default!, error);
+        public override object Generate()
+            => (Func<Exception, IResult>)(static e => new Result<T>(default!, e));
+    }
 }
 
 /// <summary>
