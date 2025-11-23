@@ -13,4 +13,9 @@ public class RpcComputeMethodDef : RpcMethodDef
         CallType = RpcComputeCallType.Value;
         ComputedOptions = computedOptions;
     }
+
+    protected override RpcLocalExecutionMode GetDefaultLocalExecutionMode()
+        => Service.Mode is RpcServiceMode.Distributed
+            ? RpcLocalExecutionMode.AwaitShardLock
+            : RpcLocalExecutionMode.Unconstrained;
 }

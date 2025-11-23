@@ -94,18 +94,28 @@ public abstract class RemoteComputeMethodFunction(
                     try {
                         var routeState = peer.Ref.RouteState;
                         var shardRouteState = routeState.AsShardRouteState(RpcMethodDef);
-                        var routeChangedToken = routeState?.ChangedToken ?? default;
-                        CancellationTokenSource? linkedCts = null;
+                        var routeChangedToken = default(CancellationToken);
+                        var linkedCts = (CancellationTokenSource?)null;
                         var linkedToken = cancellationToken;
+
                         if (shardRouteState is not null)
                             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                             routeChangedToken = await shardRouteState.ShardLockAwaiter
                                 .Invoke(cancellationToken)
                                 .ConfigureAwait(false);
+                        else if (routeState is not null)
+                            routeChangedToken = routeState.ChangedToken;
 
                         if (routeChangedToken.CanBeCanceled) {
-                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
-                            linkedToken = linkedCts.Token;
+                            if (RpcMethodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock) {
+                                // That's the only place where RpcRerouteException could be produced in this case
+                                routeChangedToken.ThrowIfCancellationRequested();
+                                routeChangedToken = default; // Ignore this token further
+                            }
+                            else { // RpcLocalExecutionMode.RequireShardLock
+                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
+                                linkedToken = linkedCts.Token;
+                            }
                         }
 
                         try {

@@ -19,7 +19,19 @@ public enum RpcLocalExecutionMode
     /// <summary>
     /// <see cref="RpcShardRouteState.ShardLockAwaiter"/> is unused.
     /// </summary>
-    Unconstrained,
+    Unconstrained = 1,
+
+    /// <summary>
+    /// <see cref="RpcShardRouteState.ShardLockAwaiter"/> is used to await for the shard lock acquisition.
+    /// The cancellation token returned by the awaiter is ignored.
+    /// The lock is used only if <see cref="RpcPeerRef.RouteState"/> is <see cref="RpcShardRouteState"/>,
+    /// i.e., when a peer offers a way to acquire this lock.
+    /// So "Require" here actually means "Prefer", and that's because it's up to the
+    /// <see cref="RpcOutboundCallOptions.RouterFactory"/> to return either the lock-enabled <see cref="RpcPeerRef"/>-s
+    /// (with <see cref="RpcShardRouteState"/>) or the regular ones (with <see cref="RpcRouteState"/>).
+    /// And if it returns the latter, the execution is performed as if <see cref="Unconstrained"/> mode is used.
+    /// </summary>
+    AwaitShardLock = 0x10,
 
     /// <summary>
     /// <see cref="RpcShardRouteState.ShardLockAwaiter"/> is used to await for the shard lock acquisition.
@@ -32,7 +44,7 @@ public enum RpcLocalExecutionMode
     /// (with <see cref="RpcShardRouteState"/>) or the regular ones (with <see cref="RpcRouteState"/>).
     /// And if it returns the latter, the execution is performed as if <see cref="Unconstrained"/> mode is used.
     /// </summary>
-    RequireShardLock,
+    RequireShardLock = AwaitShardLock | 0x20,
 }
 
 public static class RpcLocalExecutionModeExt

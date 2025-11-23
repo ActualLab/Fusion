@@ -53,8 +53,8 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                 var shardRouteState = routeState.AsShardRouteState(rpcMethodDef);
                 try {
                     peer.Ref.RouteState.RerouteIfChanged();
-                    var routeChangedToken = routeState?.ChangedToken ?? default;
-                    CancellationTokenSource? linkedCts = null;
+                    var routeChangedToken = default(CancellationToken);
+                    var linkedCts = (CancellationTokenSource?)null;
                     var linkedToken = cancellationToken;
                     try {
                         if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
@@ -63,10 +63,19 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                                 routeChangedToken = await shardRouteState.ShardLockAwaiter
                                     .Invoke(cancellationToken)
                                     .ConfigureAwait(false);
+                            else if (routeState is not null)
+                                routeChangedToken = routeState.ChangedToken;
 
                             if (routeChangedToken.CanBeCanceled) {
-                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
-                                linkedToken = linkedCts.Token;
+                                if (rpcMethodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock) {
+                                    // That's the only place where RpcRerouteException could be produced in this case
+                                    routeChangedToken.ThrowIfCancellationRequested();
+                                    routeChangedToken = default; // Ignore this token further
+                                }
+                                else { // RpcLocalExecutionMode.RequireShardLock
+                                    linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
+                                    linkedToken = linkedCts.Token;
+                                }
                             }
 
                             // Local call -> continue the pipeline

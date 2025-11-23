@@ -111,7 +111,7 @@ public sealed class RpcInterceptor : Interceptor
             var peer = context.Peer!;
             var routeState = peer.Ref.RouteState; // May become null after rerouting
             var shardRouteState = routeState.AsShardRouteState(methodDef);
-            CancellationToken routeChangedToken = default;
+            var routeChangedToken = default(CancellationToken);
             try {
                 routeState.RerouteIfChanged();
                 CancellationTokenSource? linkedCts = null;
@@ -137,9 +137,16 @@ public sealed class RpcInterceptor : Interceptor
                         routeChangedToken = routeState.ChangedToken;
 
                     if (routeChangedToken.CanBeCanceled) {
-                        linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
-                        if (methodDef.CancellationTokenIndex >= 0)
-                            invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
+                        if (methodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock) {
+                            // That's the only place where RpcRerouteException could be produced in this case
+                            routeChangedToken.ThrowIfCancellationRequested();
+                            routeChangedToken = default; // Ignore this token further
+                        }
+                        else { // RpcLocalExecutionMode.RequireShardLock
+                            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
+                            if (methodDef.CancellationTokenIndex >= 0)
+                                invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);
+                        }
                     }
 
                     var untypedResultTask = localCallAsyncInvoker.Invoke(invocation);

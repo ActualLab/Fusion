@@ -102,6 +102,8 @@ public partial class RpcMethodDef : MethodDef
         Kind = GetMethodKind(out var isBackend);
 #pragma warning restore CA2214
         IsBackend = service.IsBackend || isBackend;
+        LocalExecutionMode = (Attribute?.LocalExecutionMode ?? RpcLocalExecutionMode.Default)
+            .Or(Service.LocalExecutionMode);
         LegacyNames = new LegacyNames(MethodInfo, nameSuffix);
 
         // Call tracing
@@ -126,10 +128,7 @@ public partial class RpcMethodDef : MethodDef
         OutboundCallRouter = IsSystem
             ? _ => throw Errors.InternalError("All system calls must be pre-routed.")
             : Hub.OutboundCallOptions.RouterFactory.Invoke(this);
-        LocalExecutionMode = Hub.OutboundCallOptions.LocalExecutionModeResolver.Invoke(this);
-        if (LocalExecutionMode is RpcLocalExecutionMode.Default)
-            throw Errors.InternalError(
-                $"{nameof(LocalExecutionMode)} cannot be {nameof(RpcLocalExecutionMode.Default)} here.");
+        LocalExecutionMode = LocalExecutionMode.Or(GetDefaultLocalExecutionMode());
 
         // Inbound call properties
 

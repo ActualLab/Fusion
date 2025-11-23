@@ -72,4 +72,11 @@ public partial class RpcMethodDef
         // Inbound RPC calls to distributed services must be routed to local peers only
         throw RpcRerouteException.MustRerouteInbound();
     }
+
+    // Protected methods
+
+    protected virtual RpcLocalExecutionMode GetDefaultLocalExecutionMode()
+        => Service.Mode is RpcServiceMode.Distributed
+            ? RpcLocalExecutionMode.RequireShardLock
+            : RpcLocalExecutionMode.Unconstrained;
 }

@@ -14,7 +14,6 @@ public record RpcOutboundCallOptions
     public Func<RpcMethodDef, RpcCallTimeouts> TimeoutsProvider { get; init; }
     public Func<RpcMethodDef, Func<ArgumentList, RpcPeerRef>> RouterFactory { get; init; }
     public Func<RpcOutboundCallOptions, int, CancellationToken, Task> ReroutingDelayer { get; init; }
-    public Func<RpcMethodDef, RpcLocalExecutionMode> LocalExecutionModeResolver { get; init; }
     public Func<ReadOnlyMemory<byte>, string> Hasher { get; init; }
 
     // ReSharper disable once ConvertConstructorToMemberInitializers
@@ -23,7 +22,6 @@ public record RpcOutboundCallOptions
         TimeoutsProvider = DefaultTimeoutsProvider;
         RouterFactory = DefaultRouterFactory;
         ReroutingDelayer = DefaultReroutingDelayer;
-        LocalExecutionModeResolver = DefaultLocalExecutionModeResolver;
         Hasher = DefaultHasher;
     }
 
@@ -54,18 +52,6 @@ public record RpcOutboundCallOptions
 
     protected static Task DefaultReroutingDelayer(RpcOutboundCallOptions options, int failureCount, CancellationToken cancellationToken)
         => Task.Delay(options.ReroutingDelays.GetDelay(failureCount), cancellationToken);
-
-    protected static RpcLocalExecutionMode DefaultLocalExecutionModeResolver(RpcMethodDef methodDef)
-    {
-        var serviceDef = methodDef.Service;
-        if (serviceDef.Mode is not RpcServiceMode.Distributed)
-            return RpcLocalExecutionMode.Unconstrained;
-
-        // By default, all distributed service methods require shard lock.
-        return (methodDef.Attribute?.LocalExecutionMode ?? RpcLocalExecutionMode.Default)
-            .Or(serviceDef.LocalExecutionMode)
-            .Or(RpcLocalExecutionMode.RequireShardLock);
-    }
 
     protected static string DefaultHasher(ReadOnlyMemory<byte> bytes)
     {
