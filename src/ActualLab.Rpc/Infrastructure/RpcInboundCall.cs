@@ -261,7 +261,7 @@ public abstract class RpcInboundCall : RpcCall
         else if (resultTask.IsCanceled)
             result = new Result<TResult>(default!, new TaskCanceledException()); // Technically it's covered by prev. "else if"
         else
-            result = resultTask.Result;
+            result = resultTask.GetAwaiter().GetResult();
         if (result.Error is { } e and not OperationCanceledException)
             Log.IfEnabled(LogLevel.Error)?.LogError(e, "Remote call completed with an error: {Call}", this);
 

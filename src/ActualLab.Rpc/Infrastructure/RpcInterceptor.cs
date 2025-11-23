@@ -111,7 +111,7 @@ public sealed class RpcInterceptor : Interceptor
             var peer = context.Peer!;
             var routeState = peer.Ref.RouteState; // May become null after rerouting
             var shardRouteState = routeState.AsShardRouteState(methodDef);
-            var routeChangedToken = default(CancellationToken);
+            var routeChangedToken = routeState?.ChangedToken ?? default;
             try {
                 routeState.RerouteIfChanged();
                 CancellationTokenSource? linkedCts = null;
@@ -133,15 +133,10 @@ public sealed class RpcInterceptor : Interceptor
                         routeChangedToken = await shardRouteState.ShardLockAwaiter
                             .Invoke(cancellationToken)
                             .ConfigureAwait(false);
-                    else if (routeState is not null)
-                        routeChangedToken = routeState.ChangedToken;
 
                     if (routeChangedToken.CanBeCanceled) {
-                        if (methodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock) {
-                            // That's the only place where RpcRerouteException could be produced in this case
+                        if (methodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock)
                             routeChangedToken.ThrowIfCancellationRequested();
-                            routeChangedToken = default; // Ignore this token further
-                        }
                         else { // RpcLocalExecutionMode.RequireShardLock
                             linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
                             if (methodDef.CancellationTokenIndex >= 0)
@@ -166,6 +161,7 @@ public sealed class RpcInterceptor : Interceptor
                     invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
                 if (shardRouteState is not null && !shardRouteState.IsChanged()) {
                     Log.LogWarning(e, "Re-acquiring shard ownership: {Invocation}", invocation);
+                    call = context.PrepareReroutedCall(); // Old call cannot be reused!
                     continue;
                 }
 

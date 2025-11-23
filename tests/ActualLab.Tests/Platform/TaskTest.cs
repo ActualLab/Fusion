@@ -1,10 +1,30 @@
+using ActualLab.Rpc;
 using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Platform;
 
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public class TaskDelayTest(ITestOutputHelper @out) : TestBase(@out)
+public class TaskTest(ITestOutputHelper @out) : TestBase(@out)
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ThrowRpcRerouteExceptionTest(bool useDelay)
+    {
+        var task = Failing().ContinueWith(t => {
+            t.GetAwaiter().GetResult();
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        await Assert.ThrowsAsync<RpcRerouteException>(() => task);
+        return;
+
+        async Task<bool> Failing()
+        {
+            if (useDelay)
+                await Task.Delay(100).ConfigureAwait(false);
+            throw RpcRerouteException.MustReroute();
+        }
+    }
+
     [Fact]
     public async Task DelayTest()
     {

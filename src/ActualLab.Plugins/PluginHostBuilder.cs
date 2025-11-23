@@ -38,7 +38,7 @@ public class PluginHostBuilder
     }
 
     public IPluginHost Build()
-        => Task.Run(() => BuildAsync()).Result;
+        => Task.Run(() => BuildAsync()).GetAwaiter().GetResult();
 
     public virtual async Task<IPluginHost> BuildAsync(CancellationToken cancellationToken = default)
     {

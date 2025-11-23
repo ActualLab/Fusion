@@ -1,5 +1,4 @@
 using System.Text;
-using CommunityToolkit.HighPerformance;
 using StringBuilderExt = ActualLab.Text.StringBuilderExt;
 
 namespace ActualLab.Scalability;
@@ -8,8 +7,8 @@ public class ShardMap<TNode>
     where TNode : class
 {
     public int ShardCount { get; }
-    public ImmutableArray<TNode> Nodes { get; }
-    public ImmutableArray<int?> NodeIndexes { get; }
+    public TNode[] Nodes { get; }
+    public int?[] NodeIndexes { get; }
     public bool IsEmpty => Nodes.Length == 0;
 
     // Indexers
@@ -29,14 +28,14 @@ public class ShardMap<TNode>
 
     public ShardMap(
         int shardCount,
-        ImmutableArray<TNode> nodes,
+        TNode[] nodes,
         Func<TNode, IEnumerable<int>>? nodeHashSequenceProvider = null)
     {
         ShardCount = shardCount;
         Nodes = nodes;
         nodeHashSequenceProvider ??= node => GetDefaultHashSequence(node.ToString() ?? "");
         var remainingNodeCount = nodes.Length;
-        var shards = new int?[shardCount];
+        var nodeIndexes = new int?[shardCount];
         var remainingShardCount = shardCount;
         while (remainingNodeCount != 0) {
             var nodeIndex = nodes.Length - remainingNodeCount;
@@ -45,7 +44,7 @@ public class ShardMap<TNode>
             var nodeHashes = nodeHashSequenceProvider.Invoke(node).Take(nodeShardCount);
             foreach (var nodeHash in nodeHashes) {
                 for (var i = 0; i < shardCount; i++) {
-                    ref var shard = ref shards[(nodeHash + i).PositiveModulo(shardCount)];
+                    ref var shard = ref nodeIndexes[(nodeHash + i).PositiveModulo(shardCount)];
                     if (!shard.HasValue) {
                         shard = nodeIndex;
                         break;
@@ -55,7 +54,7 @@ public class ShardMap<TNode>
             remainingShardCount -= nodeShardCount;
             remainingNodeCount--;
         }
-        NodeIndexes = ImmutableArray.Create(shards);
+        NodeIndexes = nodeIndexes;
     }
 
     public override string ToString()

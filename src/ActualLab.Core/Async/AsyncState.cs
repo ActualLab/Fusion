@@ -35,7 +35,7 @@ public sealed class AsyncState<T>(T value)
     // Next
     IAsyncState? IAsyncState.Next => Next;
     IAsyncState<T>? IAsyncState<T>.Next => Next;
-    public AsyncState<T>? Next => _nextSource.Task.IsCompleted ? _nextSource.Task.Result : null;
+    public AsyncState<T>? Next => _nextSource.Task.IsCompleted ? _nextSource.Task.GetAwaiter().GetResult() : null;
     public bool HasNext => _nextSource.Task.IsCompleted;
 
     // Last
@@ -57,7 +57,7 @@ public sealed class AsyncState<T>(T value)
         get {
             var current = this;
             while (current._nextSource.Task is { } nextTask && nextTask.IsCompletedSuccessfully())
-                current = nextTask.Result;
+                current = nextTask.GetAwaiter().GetResult();
             return current;
         }
     }

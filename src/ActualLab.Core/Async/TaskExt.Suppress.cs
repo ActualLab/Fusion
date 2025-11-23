@@ -27,7 +27,9 @@ public static partial class TaskExt
         => task.IsCompletedSuccessfully()
             ? task
             : task.ContinueWith(
-                static t => t.IsCompletedSuccessfully() ? t.Result : default!,
+                static t => t.IsCompletedSuccessfully()
+                    ? t.GetAwaiter().GetResult()
+                    : default!,
                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
     public static async Task<T> SuppressExceptions<T>(this Task<T> task, Func<Exception, bool>? filter)

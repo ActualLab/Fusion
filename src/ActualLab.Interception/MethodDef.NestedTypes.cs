@@ -329,7 +329,7 @@ public partial class MethodDef
 
                     static ValueTask<T> ToTypedValueTaskAsync(Task<object?> task) {
                         if (task.IsCompletedSuccessfully())
-                            return new ValueTask<T>((T)task.Result!);
+                            return new ValueTask<T>((T)task.GetAwaiter().GetResult()!);
 
                         var resultTask = task.ContinueWith(
                             static t => {

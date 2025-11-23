@@ -23,7 +23,7 @@ public class SessionResolver(IServiceProvider services) : ISessionResolver
 
     public Session Session {
         get => HasSession
-            ? SessionTask.Result
+            ? SessionTask.GetAwaiter().GetResult()
             : throw ActualLab.Internal.Errors.NotInitialized(nameof(Session));
         set {
             if (!Services.IsScoped())

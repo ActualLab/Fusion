@@ -14,6 +14,7 @@ Console.CancelKeyPress += (_, e) => {
 };
 
 await AddHosts(stopToken).ConfigureAwait(false);
+return;
 
 async Task AddHosts(CancellationToken cancellationToken = default)
 {
@@ -21,13 +22,10 @@ async Task AddHosts(CancellationToken cancellationToken = default)
     clientHost.Start();
 
     var meshState = MeshState.State;
-    var maxAddProbability = (MaxHostCount - MinHostCount) / MaxHostCount;
     try {
         while (true) {
             var hostCount = meshState.Value.Hosts.Length;
-            var addProbability = (MaxHostCount - hostCount) / MaxHostCount;
-            if (addProbability > maxAddProbability)
-                addProbability = 1;
+            var addProbability = (MaxHostCount - hostCount) / (MaxHostCount - MinHostCount);
             if (Random.Shared.NextDouble() <= addProbability)
                 AddHost();
 

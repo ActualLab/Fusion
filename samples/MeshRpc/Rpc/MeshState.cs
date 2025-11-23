@@ -10,7 +10,7 @@ public sealed class MeshState
     public static MutableState<MeshState> State { get; }
 
     public long Version { get; } = Interlocked.Increment(ref _lastVersion);
-    public ImmutableArray<Host> Hosts { get; }
+    public Host[] Hosts { get; }
     public IReadOnlyDictionary<string, Host> HostById { get; }
     public ShardMap<Host> ShardMap { get; }
 
@@ -24,7 +24,7 @@ public sealed class MeshState
     {
         State = StateFactory.Default.NewMutable(new MeshState());
         _ = Task.Run(async () => {
-            await foreach (var (state, _) in State.Computed.Changes())
+            await foreach (var (state, _) in State.Computed.Changes(FixedDelayer.NoneUnsafe))
                 Console.WriteLine(state.ShardMap.ToString().PastelBg(ConsoleColor.DarkBlue));
         });
     }

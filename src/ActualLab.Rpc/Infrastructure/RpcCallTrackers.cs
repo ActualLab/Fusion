@@ -100,12 +100,13 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
         var lastSummaryReportAt = CpuTimestamp.Now;
+        var delayedCalls = new List<RpcOutboundCall>();
         try {
             // This loop aborts timed out calls every CallTimeoutCheckPeriod
             while (!cancellationToken.IsCancellationRequested) {
                 var callCount = 0;
                 var inProgressCallCount = 0;
-                var delayedCallCount = 0;
+                delayedCalls.Clear();
                 foreach (var call in this) {
                     callCount++;
                     if (call.ResultTask.IsCompleted)
@@ -122,32 +123,43 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.RunTimeout);
                         call.SetError(error, context: null, assumeCancelled: false);
                         Peer.Log.LogError(error,
-                            "{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
+                            "'{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
                             Peer.Ref, call, elapsed.ToShortString(), timeouts.RunTimeout.ToShortString());
                     }
                     else if (elapsed >= timeouts.LogTimeout) {
-                        if (++delayedCallCount > DelayedCallLogLimit)
+                        delayedCalls.Add(call);
+                        if (delayedCalls.Count > DelayedCallLogLimit)
                             continue;
 
                         Peer.Log.LogWarning(
-                            "{PeerRef}': call {Call} is delayed ({Elapsed} from its start or prev. report here)",
+                            "'{PeerRef}': call {Call} is delayed ({Elapsed} from its start or prev. report here)",
                             Peer.Ref, call, elapsed.ToShortString());
                     }
                 }
-                if (delayedCallCount > DelayedCallLogLimit)
+
+#if false // Ugly debugging piece
+                if (delayedCalls.Count > 0)
+                    WriteLine(
+                        $"--- {Peer.Ref}: {Peer.ConnectionState.Value.Handshake}, "
+                        + $"delayed calls ({delayedCalls.Count}: "
+                        + $"{delayedCalls.Select(x => x.MethodDef).ToDelimitedString()}");
+#endif
+                if (delayedCalls.Count > DelayedCallLogLimit) {
                     Peer.Log.LogWarning(
-                        "{PeerRef}': {UnloggedDelayedCallCount} more delayed call(s) aren't logged",
-                        Peer.Ref, delayedCallCount - DelayedCallLogLimit);
+                        "'{PeerRef}': {UnloggedDelayedCallCount} more delayed call(s) aren't logged",
+                        Peer.Ref, delayedCalls.Count - DelayedCallLogLimit);
+                }
 
                 var summaryLogSettings = Limits.LogOutboundCallSummarySettings;
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period
                     && callCount > summaryLogSettings.MinCount) {
                     lastSummaryReportAt = CpuTimestamp.Now;
                     Peer.Log.LogInformation(
-                        "{PeerRef}': Tracking {CallCount} outbound calls (in progress: {InProgressCallCount}, delayed: {DelayedCallCount})",
-                        Peer.Ref, callCount, inProgressCallCount, delayedCallCount);
+                        "'{PeerRef}': Tracking {CallCount} outbound calls (in progress: {InProgressCallCount}, delayed: {DelayedCallCount})",
+                        Peer.Ref, callCount, inProgressCallCount, delayedCalls.Count);
                 }
 
+                delayedCalls.Clear();
                 await Task.Delay(Limits.CallTimeoutCheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
             }
         }

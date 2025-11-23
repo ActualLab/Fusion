@@ -38,7 +38,7 @@ public class CounterSumService : IComputeService
         var t2 = Get1(counterIndex2, cancellationToken);
         await Task.WhenAll(t1, t2);
 #pragma warning disable VSTHRD103
-        return t1.Result + t2.Result;
+        return t1.GetAwaiter().GetResult() + t2.GetAwaiter().GetResult();
 #pragma warning restore VSTHRD103
     }
 }

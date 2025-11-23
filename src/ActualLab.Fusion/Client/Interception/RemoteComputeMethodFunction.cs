@@ -91,7 +91,7 @@ public abstract class RemoteComputeMethodFunction(
                     try {
                         var routeState = peer.Ref.RouteState;
                         var shardRouteState = routeState.AsShardRouteState(RpcMethodDef);
-                        var routeChangedToken = default(CancellationToken);
+                        var routeChangedToken = routeState?.ChangedToken ?? default;
                         var linkedCts = (CancellationTokenSource?)null;
                         var linkedToken = cancellationToken;
 
@@ -100,15 +100,10 @@ public abstract class RemoteComputeMethodFunction(
                             routeChangedToken = await shardRouteState.ShardLockAwaiter
                                 .Invoke(cancellationToken)
                                 .ConfigureAwait(false);
-                        else if (routeState is not null)
-                            routeChangedToken = routeState.ChangedToken;
 
                         if (routeChangedToken.CanBeCanceled) {
-                            if (RpcMethodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock) {
-                                // That's the only place where RpcRerouteException could be produced in this case
+                            if (RpcMethodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock)
                                 routeChangedToken.ThrowIfCancellationRequested();
-                                routeChangedToken = default; // Ignore this token further
-                            }
                             else { // RpcLocalExecutionMode.RequireShardLock
                                 linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
                                 linkedToken = linkedCts.Token;
@@ -188,8 +183,10 @@ public abstract class RemoteComputeMethodFunction(
             : null;
         var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
         var (value, error) = result;
-        if (error is OperationCanceledException e) // Also handles RpcRerouteException
+        if (error is OperationCanceledException e) { // Also handles RpcRerouteException
+            // WriteLine($"ComputeRpc got OCE: {e}");
             throw e; // We treat server-side cancellations the same way as client-side cancellations
+        }
 
         RpcCacheEntry? cacheEntry = null;
         if (cacheInfoCapture is not null && cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueOrError)) {

@@ -64,7 +64,7 @@ public sealed class Connector<TConnection> : WorkerBase
             if (!prevState.Value.ConnectionTask.IsCompleted)
                 return; // Nothing to do: not yet connected
 #pragma warning disable VSTHRD104
-            if (connection != prevState.Value.ConnectionTask.Result)
+            if (connection != prevState.Value.ConnectionTask.GetAwaiter().GetResult())
                 return; // The connection is already renewed
 #pragma warning restore VSTHRD104
 

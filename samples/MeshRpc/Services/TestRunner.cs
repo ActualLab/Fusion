@@ -19,8 +19,6 @@ public class TestRunner(IServiceProvider services) : WorkerBase
         if (!mustRun)
             return Task.CompletedTask;
 
-        using var stopTokenSource = cancellationToken.CreateDelayedTokenSource(TestStopDelay);
-        cancellationToken = stopTokenSource.Token;
         var testTasks = Enumerable.Range(0, ProcessesPerHost)
             .Select(async workerId => {
                 try {
@@ -31,7 +29,7 @@ public class TestRunner(IServiceProvider services) : WorkerBase
                         return;
 
                     await Console.Error.WriteLineAsync(
-                        $"{OwnHost} T{workerId} failed: {e.Message}".PastelBg(ConsoleColor.DarkRed));
+                        $"{OwnHost} T{workerId} failed: {e.GetType().Name}({e.Message}), {e.StackTrace}".PastelBg(ConsoleColor.DarkRed));
                 }
             })
             .ToArray();

@@ -53,7 +53,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                 var shardRouteState = routeState.AsShardRouteState(rpcMethodDef);
                 try {
                     peer.Ref.RouteState.RerouteIfChanged();
-                    var routeChangedToken = default(CancellationToken);
+                    var routeChangedToken = routeState?.ChangedToken ?? default;
                     var linkedCts = (CancellationTokenSource?)null;
                     var linkedToken = cancellationToken;
                     try {
@@ -63,15 +63,10 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                                 routeChangedToken = await shardRouteState.ShardLockAwaiter
                                     .Invoke(cancellationToken)
                                     .ConfigureAwait(false);
-                            else if (routeState is not null)
-                                routeChangedToken = routeState.ChangedToken;
 
                             if (routeChangedToken.CanBeCanceled) {
-                                if (rpcMethodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock) {
-                                    // That's the only place where RpcRerouteException could be produced in this case
+                                if (rpcMethodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock)
                                     routeChangedToken.ThrowIfCancellationRequested();
-                                    routeChangedToken = default; // Ignore this token further
-                                }
                                 else { // RpcLocalExecutionMode.RequireShardLock
                                     linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
                                     linkedToken = linkedCts.Token;

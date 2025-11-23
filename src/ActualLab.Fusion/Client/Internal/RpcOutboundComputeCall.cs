@@ -104,6 +104,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
         // SetError call not only sets the error, but also invalidates computed method calls
         // awaiting the invalidation if context is null.
 
+        // WriteLine($"C-Error: {error.GetType().GetName()}, {error.Message}");
         var oce = error as OperationCanceledException;
         if (error is RpcRerouteException)
             oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
@@ -129,6 +130,7 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 
     public override bool Cancel(CancellationToken cancellationToken)
     {
+        // WriteLine("C-Cancel");
         // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
         lock (Lock) {
             var isResultSet = ResultSource.TrySetCanceled(cancellationToken);

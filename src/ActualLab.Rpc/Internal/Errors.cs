@@ -140,10 +140,6 @@ public static class Errors
     public static Exception SystemCallsMustBePrerouted()
         => new InvalidOperationException("System calls must be prerouted.");
 
-    public static Exception GotRpcRerouteExceptionFromRemotePeer()
-        => new InvalidOperationException(
-            "Got RpcRerouteException from remote peer, which should never happen.");
-
     public static Exception InvalidRpcPeerRefAddress(string id)
         => new ArgumentException($"Invalid {nameof(RpcPeerRef)}.{nameof(RpcPeerRef.Address)}: \"{id}\".", id);
 }

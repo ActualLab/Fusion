@@ -22,7 +22,7 @@ public class UIAction<TResult> : UIAction
 
     // Computed properties
     public override IUIActionResult? UntypedResult => Result;
-    public UIActionResult<TResult>? Result => ResultTask.IsCompleted ? ResultTask.Result : null;
+    public UIActionResult<TResult>? Result => ResultTask.IsCompleted ? ResultTask.GetAwaiter().GetResult() : null;
 
     protected UIAction(ICommand<TResult> command, MomentClock clock, CancellationToken cancellationToken)
         : base(command, clock.Now, cancellationToken)

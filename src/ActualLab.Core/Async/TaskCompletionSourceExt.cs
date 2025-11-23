@@ -76,7 +76,7 @@ public static partial class TaskCompletionSourceExt
         else if (task.Exception is not null)
             target.SetException(task.Exception.GetBaseException());
         else
-            target.SetResult(task.Result);
+            target.SetResult(task.GetAwaiter().GetResult());
     }
 
     public static bool TrySetFromTask<T>(this TaskCompletionSource<T> target, Task<T> task, CancellationToken cancellationToken = default)
@@ -86,7 +86,7 @@ public static partial class TaskCompletionSourceExt
                 : target.TrySetCanceled()
             : task.Exception is not null
                 ? target.TrySetException(task.Exception.GetBaseException())
-                : target.TrySetResult(task.Result);
+                : target.TrySetResult(task.GetAwaiter().GetResult());
 
     // (Try)SetFromTaskAsync
 

@@ -117,7 +117,7 @@ public static partial class AsyncTaskMethodBuilderExt
         if (task.Exception is not null)
             target.SetException(task.Exception.GetBaseException());
         else
-            target.SetResult(task.Result);
+            target.SetResult(task.GetAwaiter().GetResult());
     }
 
     public static void TrySetFromTask<T>(this AsyncTaskMethodBuilder<T> target, Task<T> task)
@@ -125,7 +125,7 @@ public static partial class AsyncTaskMethodBuilderExt
         if (task.Exception is not null)
             target.TrySetException(task.Exception.GetBaseException());
         else
-            target.TrySetResult(task.Result);
+            target.TrySetResult(task.GetAwaiter().GetResult());
     }
 
     // (Try)SetFromTaskAsync

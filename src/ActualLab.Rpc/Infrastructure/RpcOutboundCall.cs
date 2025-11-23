@@ -253,6 +253,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public virtual void SetError(Exception error, RpcInboundContext? context, bool assumeCancelled = false)
     {
+        // WriteLine($"Error: {error.GetType().GetName()}, {error.Message}");
         var oce = error as OperationCanceledException;
         if (error is RpcRerouteException)
             oce = null; // RpcRerouteException is OperationCanceledException, but must be exposed as-is here
@@ -271,6 +272,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     public virtual bool Cancel(CancellationToken cancellationToken)
     {
+        // WriteLine("Cancel!");
         // We always use Lock to update ResultSource and call CacheInfoCapture.CaptureXxx
         lock (Lock) {
             var isResultSet = ResultSource.TrySetCanceled(cancellationToken);

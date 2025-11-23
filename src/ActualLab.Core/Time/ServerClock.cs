@@ -9,7 +9,7 @@ public class ServerClock(MomentClock? baseClock = null) : MomentClock
     public TimeSpan Offset {
         get {
             var offsetTask = _offsetSource.Task;
-            return offsetTask.IsCompleted ? offsetTask.Result : default;
+            return offsetTask.IsCompleted ? offsetTask.GetAwaiter().GetResult() : default;
         }
         set {
             if (_offsetSource.Task.IsCompleted)

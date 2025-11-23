@@ -137,7 +137,7 @@ public static partial class TaskExt
                 }
                 : static (Task source) => {
                     if (source.IsCompletedSuccessfully())
-                        return new ValueTask<object?>(((Task<T>)source).Result);
+                        return new ValueTask<object?>(((Task<T>)source).GetAwaiter().GetResult());
 
                     var task = source.ContinueWith(
                         static t => (object?)((Task<T>)t).GetAwaiter().GetResult(),

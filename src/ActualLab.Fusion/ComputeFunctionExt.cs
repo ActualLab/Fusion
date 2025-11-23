@@ -16,8 +16,10 @@ public static class ComputeFunctionExt
         CancellationToken cancellationToken = default)
     {
         var task = function.ProduceComputed(input, context, cancellationToken);
-        if (task.IsCompletedSuccessfully())
-            return task.Result.GetValuePromise(); // Happy path
+        if (task.IsCompletedSuccessfully()) {
+            var computed = task.GetAwaiter().GetResult();
+            return computed.GetValuePromise(); // Happy path
+        }
 
         return GenericInstanceCache
             .GetUnsafe<Func<Task<Computed>, Task>>(FactoryType1, function.OutputType)
@@ -34,9 +36,9 @@ public static class ComputeFunctionExt
     {
         var task = function.ProduceComputed(input, context, cancellationToken);
         if (task.IsCompletedSuccessfully()) {
-            var computed = task.Result;
+            var computed = task.GetAwaiter().GetResult();
             if (computedSynchronizer.IsSynchronized(computed))
-                return task.Result.GetValuePromise(); // Happy path
+                return computed.GetValuePromise(); // Happy path
         }
 
         return GenericInstanceCache
