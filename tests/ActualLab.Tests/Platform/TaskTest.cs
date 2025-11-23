@@ -50,6 +50,36 @@ public class TaskTest(ITestOutputHelper @out) : TestBase(@out)
         }
     }
 
+    [Fact(Skip = "Benchmark")]
+    public void GetResultBenchmark()
+    {
+        const int Iterations = 2000_000_000;
+        Task<int> completedTask = Task.FromResult(123);
+
+        // Warm-up (JIT + cache)
+        for (int i = Iterations/10; i >= 0; i--) {
+            _ = completedTask.Result;
+            _ = completedTask.GetAwaiter().GetResult();
+        }
+
+        // Benchmark task.Result
+        var start = CpuTimestamp.Now;
+        for (int i = Iterations; i > 0; i--)
+            _ = completedTask.Result;
+        var rTime = start.Elapsed;
+
+        // Benchmark task.GetAwaiter().GetResult()
+        start = CpuTimestamp.Now;
+        for (int i = Iterations; i > 0; i--)
+            _ = completedTask.GetAwaiter().GetResult();
+        var gwgrTime = start.Elapsed;
+
+        Out.WriteLine($".Result                   : {rTime.ToShortString()}");
+        Out.WriteLine($".GetAwaiter().GetResult() : {gwgrTime.ToShortString()}");
+    }
+
+    // Private methods
+
     private async Task<TimeSpan> MeasureDelay(TimeSpan delay)
     {
         var now = CpuTimestamp.Now;
