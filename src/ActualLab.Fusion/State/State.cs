@@ -47,7 +47,7 @@ public abstract class State : ComputedInput, IState
 
     [field: AllowNull, MaybeNull]
     protected Func<Task, object?> GetTaskResultAsObjectSynchronously =>
-        field ??= GenericInstanceCache.Get<Func<Task, object?>>(
+        field ??= GenericInstanceCache.GetUnsafe<Func<Task, object?>>(
             typeof(TaskExt.GetResultAsObjectSynchronouslyFactory<>), OutputType);
 
     [field: AllowNull, MaybeNull]

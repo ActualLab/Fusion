@@ -12,7 +12,7 @@ public static class ComputedStateImpl
             return null;
 
         return GenericInstanceCache
-            .Get<Func<CancellationToken, Task>>(typeof(GetComputeTaskIfDisposedFactory<>), state.OutputType)
+            .GetUnsafe<Func<CancellationToken, Task>>(typeof(GetComputeTaskIfDisposedFactory<>), state.OutputType)
             .Invoke(state.DisposeToken);
 #pragma warning restore MA0022, RCS1210
     }

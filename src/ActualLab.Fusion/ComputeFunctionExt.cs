@@ -20,7 +20,7 @@ public static class ComputeFunctionExt
             return task.Result.GetValuePromise(); // Happy path
 
         return GenericInstanceCache
-            .Get<Func<Task<Computed>, Task>>(FactoryType1, function.OutputType)
+            .GetUnsafe<Func<Task<Computed>, Task>>(FactoryType1, function.OutputType)
             .Invoke(task);
     }
 
@@ -40,7 +40,7 @@ public static class ComputeFunctionExt
         }
 
         return GenericInstanceCache
-            .Get<Func<Task<Computed>, ComputedSynchronizer, CancellationToken, Task>>(FactoryType2, function.OutputType)
+            .GetUnsafe<Func<Task<Computed>, ComputedSynchronizer, CancellationToken, Task>>(FactoryType2, function.OutputType)
             .Invoke(task, computedSynchronizer, cancellationToken);
     }
 

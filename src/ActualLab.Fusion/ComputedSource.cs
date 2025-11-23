@@ -30,7 +30,7 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
 
     [field: AllowNull, MaybeNull]
     protected Func<Task, object?> GetTaskResultAsObjectSynchronously =>
-        field ??= GenericInstanceCache.Get<Func<Task, object?>>(
+        field ??= GenericInstanceCache.GetUnsafe<Func<Task, object?>>(
             typeof(TaskExt.GetResultAsObjectSynchronouslyFactory<>), OutputType);
 
     protected AsyncLock AsyncLock { get; }

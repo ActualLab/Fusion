@@ -21,7 +21,7 @@ public static class CommandContextExt
     // Private methods
 
     private static Func<CommandContext, CancellationToken, Task> GetTypedCallInvoker(Type commandResultType)
-        => GenericInstanceCache.Get<Func<CommandContext, CancellationToken, Task>>(
+        => GenericInstanceCache.GetUnsafe<Func<CommandContext, CancellationToken, Task>>(
             typeof(TypedCallFactory<>),
             commandResultType);
 

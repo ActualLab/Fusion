@@ -31,6 +31,16 @@ public static class GenericInstanceCache
     public static TResult Get<TResult>(Type factoryType, Type? argType1, Type? argType2)
         => (TResult)Get(factoryType, argType1, argType2)!;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TResult GetUnsafe<TResult>(Type factoryType, Type? argType)
+        where TResult : class
+        => Unsafe.As<TResult>(Get(factoryType, argType)!);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TResult GetUnsafe<TResult>(Type factoryType, Type? argType1, Type? argType2)
+        where TResult : class
+        => Unsafe.As<TResult>(Get(factoryType, argType1, argType2)!);
+
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume GenericInstanceFactory descendants' methods are preserved.")]

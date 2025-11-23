@@ -47,7 +47,7 @@ public static partial class TaskExt
 
     public static Task FromException(Exception exception, Type resultType)
         => GenericInstanceCache
-            .Get<Func<Exception, Task>>(typeof(FromExceptionFactory<>), resultType)
+            .GetUnsafe<Func<Exception, Task>>(typeof(FromExceptionFactory<>), resultType)
             .Invoke(exception);
 
     // FromCancelled
@@ -57,31 +57,31 @@ public static partial class TaskExt
     public static Task FromCancelled(CancellationToken cancellationToken, Type resultType)
 #pragma warning restore CA1068
         => GenericInstanceCache
-            .Get<Func<CancellationToken, Task>>(typeof(FromCancelledTaskFactory<>), resultType)
+            .GetUnsafe<Func<CancellationToken, Task>>(typeof(FromCancelledTaskFactory<>), resultType)
             .Invoke(cancellationToken);
 
     // ToXxx
 
     public static object ToTypedValueTask(this Task task, Type resultType)
         => GenericInstanceCache
-            .Get<Func<Task, object>>(typeof(ToTypedValueTaskFactory<>), resultType)
+            .GetUnsafe<Func<Task, object>>(typeof(ToTypedValueTaskFactory<>), resultType)
             .Invoke(task);
 
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
     public static IResult ToTypedResultSynchronously(this Task task, Type resultType)
         => GenericInstanceCache
-            .Get<Func<Task, IResult>>(typeof(ToTypedResultSynchronouslyFactory<>), resultType)
+            .GetUnsafe<Func<Task, IResult>>(typeof(ToTypedResultSynchronouslyFactory<>), resultType)
             .Invoke(task);
 
     public static ValueTask<object?> ToObjectValueTask(this Task task, Type resultType)
         => GenericInstanceCache
-            .Get<Func<Task, ValueTask<object?>>>(typeof(ToObjectValueTaskFactory<>), resultType)
+            .GetUnsafe<Func<Task, ValueTask<object?>>>(typeof(ToObjectValueTaskFactory<>), resultType)
             .Invoke(task);
 
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
     public static Result ToUntypedResultSynchronously(this Task task, Type resultType)
         => GenericInstanceCache
-            .Get<Func<Task, Result>>(typeof(ToUntypedResultSynchronouslyFactory<>), resultType)
+            .GetUnsafe<Func<Task, Result>>(typeof(ToUntypedResultSynchronouslyFactory<>), resultType)
             .Invoke(task);
 
     // GetResultAsObjectSynchronously
@@ -89,7 +89,7 @@ public static partial class TaskExt
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "FromTypedTaskInternal is preserved")]
     public static object? GetResultAsObjectSynchronously(this Task task, Type resultType)
         => GenericInstanceCache
-            .Get<Func<Task, object?>>(typeof(GetResultAsObjectSynchronouslyFactory<>), resultType)
+            .GetUnsafe<Func<Task, object?>>(typeof(GetResultAsObjectSynchronouslyFactory<>), resultType)
             .Invoke(task);
 
     // Nested types
