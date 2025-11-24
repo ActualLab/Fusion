@@ -160,7 +160,7 @@ public sealed class RpcInterceptor : Interceptor
                 if (methodDef.CancellationTokenIndex >= 0)
                     invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
                 if (shardRouteState is not null && !shardRouteState.IsChanged()) {
-                    Log.LogWarning(e, "Re-acquiring shard ownership: {Invocation}", invocation);
+                    Log.LogWarning(e, "Retrying (no shard ownership): {Invocation}", invocation);
                     call = context.PrepareReroutedCall(); // Old call cannot be reused!
                     continue;
                 }

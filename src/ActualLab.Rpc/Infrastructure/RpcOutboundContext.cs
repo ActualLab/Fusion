@@ -120,7 +120,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
             Peer = MethodDef.RouteOutboundCall(Arguments);
         Call = MethodDef.CreateOutboundCall(this);
         if (ReferenceEquals(oldPeer, Peer))
-            Peer?.Log.LogWarning("The call {Call} is rerouted to the same peer {Peer}", Call, Peer);
+            Peer?.Log.LogWarning("The call {Call} is rerouted to the same peer: {Peer}", Call, Peer);
         return Call;
     }
 
