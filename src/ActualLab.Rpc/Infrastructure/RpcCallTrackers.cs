@@ -123,8 +123,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.RunTimeout);
                         call.SetError(error, context: null, assumeCancelled: false);
                         Peer.Log.LogError(error,
-                            "'{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout})",
-                            Peer.Ref, call, elapsed.ToShortString(), timeouts.RunTimeout.ToShortString());
+                            "'{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout}), completed stage: {Stage}, routing mode: {RoutingMode}",
+                            Peer.Ref, call,
+                            elapsed.ToShortString(), timeouts.RunTimeout.ToShortString(),
+                            call.CompletedStageName, call.Context.RoutingMode);
                     }
                     else if (elapsed >= timeouts.LogTimeout) {
                         delayedCalls.Add(call);
@@ -132,8 +134,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                             continue;
 
                         Peer.Log.LogWarning(
-                            "'{PeerRef}': call {Call} is delayed ({Elapsed} from its start or prev. report here)",
-                            Peer.Ref, call, elapsed.ToShortString());
+                            "'{PeerRef}': call {Call} is delayed ({Elapsed} > {LogTimeout}), completed stage: {Stage}, routing mode: {RoutingMode}",
+                            Peer.Ref, call,
+                            elapsed.ToShortString(), timeouts.LogTimeout.ToShortString(),
+                            call.CompletedStageName, call.Context.RoutingMode);
                     }
                 }
 
