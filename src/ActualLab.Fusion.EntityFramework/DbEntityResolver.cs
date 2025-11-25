@@ -190,7 +190,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
             ? eWhere
             : qt.Body.Replace(qt.Parameters[0], eWhere);
 
-        // Creating compiled query
+        // Creating the compiled query
         var lambda = Expression.Lambda(eBody, [pDbContext, pKeys]);
 #pragma warning disable EF1001
         var query = new CompiledAsyncEnumerableQuery<TDbContext, TDbEntity>(lambda);
@@ -206,7 +206,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         if (mExecute is null)
             throw Errors.CannotCompileQuery();
 
-        // Creating compiled query invoker
+        // Creating the compiled query invoker
         var eExecuteCall = Expression.Call(Expression.Constant(query), mExecute, pDbContext, pKeys);
         return (Func<TDbContext, TKey[], IAsyncEnumerable<TDbEntity>>)Expression
             .Lambda(eExecuteCall, pDbContext, pKeys)
