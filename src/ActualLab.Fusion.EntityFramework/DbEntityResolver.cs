@@ -52,7 +52,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         public int BatchSize { get; init; } = 15; // Max. EF.CompileQuery parameter count = 15
 #endif
         public Action<BatchProcessor<TKey, TDbEntity?>>? ConfigureBatchProcessor { get; init; }
-        public TimeSpan? Timeout { get; init; } = TimeSpan.FromSeconds(1);
+        public TimeSpan? Timeout { get; init; } = TimeSpan.FromSeconds(5);
         public IRetryDelayer RetryDelayer { get; init; } = new RetryDelayer() {
             Delays = RetryDelaySeq.Exp(0.125, 0.5, 0.1, 2),
             Limit = 3,
