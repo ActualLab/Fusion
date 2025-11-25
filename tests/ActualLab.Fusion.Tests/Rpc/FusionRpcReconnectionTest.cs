@@ -200,16 +200,20 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var disruptorCts = new CancellationTokenSource();
         var disruptorTask = ConnectionDisruptor(workerId, connection, disruptorCts.Token);
+        var lateStopCts = new CancellationTokenSource(-endAt.Elapsed + TimeSpan.FromSeconds(3));
+        var lateStopToken = lateStopCts.Token;
         try {
             var rnd = new Random();
             while (CpuTimestamp.Now < endAt) {
                 var delay = rnd.Next(10, 100);
                 var invDelay = rnd.Next(10, 100);
                 var maxWaitTime = TimeSpanExt.Min(endAt - CpuTimestamp.Now, TimeSpan.FromSeconds(10));
+                Task<(int, int)>? delayTask = null;
                 if (rnd.NextDouble() < 0.5) {
                     // Timeout case
                     try {
-                        var result = await client.Delay(delay, invDelay).WaitAsync(maxWaitTime);
+                        delayTask = client.Delay(delay, invDelay);
+                        var result = await delayTask.WaitAsync(maxWaitTime);
                         result.Should().Be((delay, invDelay));
                         successCount++;
                     }
@@ -220,12 +224,18 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
                 else {
                     // Cancellation case
                     var timeoutCts = new CancellationTokenSource(maxWaitTime);
+                    var timeoutToken = timeoutCts.Token;
                     try {
-                        var result = await client.Delay(delay, invDelay, timeoutCts.Token);
+                        delayTask = client.Delay(delay, invDelay, timeoutToken);
+                        var result = await delayTask.WaitAsync(lateStopToken);
                         result.Should().Be((delay, invDelay));
                         successCount++;
                     }
                     catch (OperationCanceledException) {
+                        if (lateStopToken.IsCancellationRequested && delayTask?.IsCompleted == true) {
+                            Write("couldn't cancel Delay call!");
+                            Assert.Fail("Couldn't cancel Delay call!");
+                        }
                         cancellationCount++;
                     }
                     finally {
@@ -236,6 +246,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         }
         finally {
             Write("stopping ConnectionDisruptor");
+            lateStopCts.CancelAndDisposeSilently();
             disruptorCts.CancelAndDisposeSilently();
             await disruptorTask;
         }

@@ -97,7 +97,16 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
             // Intended
         }
         Write("stopping");
-        await connection.Connect(CancellationToken.None).ConfigureAwait(false);
+        var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        try {
+            await connection.Connect(timeoutCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) {
+            Write("couldn't complete Connect in time");
+        }
+        finally {
+            timeoutCts.CancelAndDisposeSilently();
+        }
         await Delay(0.2).ConfigureAwait(false); // Just in case
         Write("stopped");
     }
