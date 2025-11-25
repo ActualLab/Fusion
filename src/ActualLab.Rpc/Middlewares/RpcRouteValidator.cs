@@ -25,11 +25,10 @@ public sealed record RpcRouteValidator : IRpcMiddleware
             };
 
         return call => {
-            // Distributed services validate the call is routed to a local peer
-            // and throw RpcRerouteException if it's not.
-            // RpcRoutingMode.Inbound means the rerouting and ShardLockAwaiter logic
-            // in RpcInterceptor must kick in.
+            // Distributed services ensure the call is routed to a local peer
+            // and throw RpcRerouteException if it's not (see RouteInboundCall logic).
             var peer = call.MethodDef.RouteInboundCall(call.Arguments!);
+            // RpcRoutingMode.Inbound means the rerouting logic in RpcInterceptor kicks in.
             using (new RpcOutboundCallSetup(peer, RpcRoutingMode.Inbound).Activate())
                 return next.Invoke(call); // No "await" is intended here!
         };

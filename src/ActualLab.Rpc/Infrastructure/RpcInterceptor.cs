@@ -56,7 +56,7 @@ public sealed class RpcInterceptor : Interceptor
                         resultTask = localCallAsyncInvoker.Invoke(invocation);
                     }
                 }
-                else // There is a RoutingState, and thus rerouting / shard routing is possible
+                else // There is a RoutingState, and thus rerouting is possible
                     resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
             }
             else { // RoutingMode is Inbound or None
@@ -85,10 +85,8 @@ public sealed class RpcInterceptor : Interceptor
                         // Direct local call
                         resultTask = localCallAsyncInvoker.Invoke(invocation);
                     }
-                    else {
-                        // Local call, but with rerouting / shard routing
-                        resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker,
-                            invocation);
+                    else { // routingMode is Inbound -> rerouting is possible
+                        resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
                     }
                 }
             }
