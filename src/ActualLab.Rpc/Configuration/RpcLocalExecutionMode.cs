@@ -2,12 +2,12 @@ namespace ActualLab.Rpc;
 
 /// <summary>
 /// Local execution mode for <see cref="RpcServiceMode.Distributed"/> RPC service methods.
-/// Non-distributed RPC services ignore the value of this enum.
+/// Non-distributed RPC servers (services exposed via RPC) don't use call routing
+/// and ignore the value of this enum.
 /// </summary>
 /// <remarks>
 /// The resolved mode is stored in <see cref="RpcMethodDef.LocalExecutionMode"/>,
-/// you can use <see cref="RpcOutboundCallOptions.LocalExecutionModeResolver"/> and
-/// <see cref="RpcMethodAttribute.LocalExecutionMode"/> to override it.
+/// you can use <see cref="RpcMethodAttribute.LocalExecutionMode"/> to override it.
 /// </remarks>
 public enum RpcLocalExecutionMode
 {
@@ -17,34 +17,24 @@ public enum RpcLocalExecutionMode
     Default = 0,
 
     /// <summary>
-    /// <see cref="RpcShardRouteState.ShardLockAwaiter"/> is unused.
+    /// <see cref="RpcRouteState.LocalExecutionAwaiter"/> isn't used,
+    /// the cancellation token passed to the local call invoker is the original cancellation token.
+    /// This mode is implicitly used for any call that is routed to an <see cref="RpcPeerRef"/>
+    /// with a <see cref="RpcPeerRef.RouteState"/> with <c>null</c> <see cref="RpcRouteState.LocalExecutionAwaiter"/>.
     /// </summary>
     Unconstrained = 1,
 
     /// <summary>
-    /// <see cref="RpcShardRouteState.ShardLockAwaiter"/> is used to await for the shard lock acquisition.
-    /// The cancellation token returned by the awaiter is ignored.
-    /// The lock is used only if <see cref="RpcPeerRef.RouteState"/> is <see cref="RpcShardRouteState"/>,
-    /// i.e., when a peer offers a way to acquire this lock.
-    /// So "Require" here actually means "Prefer", and that's because it's up to the
-    /// <see cref="RpcOutboundCallOptions.RouterFactory"/> to return either the lock-enabled <see cref="RpcPeerRef"/>-s
-    /// (with <see cref="RpcShardRouteState"/>) or the regular ones (with <see cref="RpcRouteState"/>).
-    /// And if it returns the latter, the execution is performed as if <see cref="Unconstrained"/> mode is used.
+    /// <see cref="RpcRouteState.LocalExecutionAwaiter"/> is awaited before the local call execution.
     /// </summary>
-    AwaitShardLock = 0x10,
+    ConstrainedEntry = 0x10,
 
     /// <summary>
-    /// <see cref="RpcShardRouteState.ShardLockAwaiter"/> is used to await for the shard lock acquisition.
-    /// The cancellation token returned by the awaiter is linked to the original cancellation token
-    /// to enforce instant abort on release with subsequent re-lock and reprocessing.
-    /// The lock is used only if <see cref="RpcPeerRef.RouteState"/> is <see cref="RpcShardRouteState"/>,
-    /// i.e., when a peer offers a way to acquire this lock.
-    /// So "Require" here actually means "Prefer", and that's because it's up to the
-    /// <see cref="RpcOutboundCallOptions.RouterFactory"/> to return either the lock-enabled <see cref="RpcPeerRef"/>-s
-    /// (with <see cref="RpcShardRouteState"/>) or the regular ones (with <see cref="RpcRouteState"/>).
-    /// And if it returns the latter, the execution is performed as if <see cref="Unconstrained"/> mode is used.
+    /// <see cref="RpcRouteState.LocalExecutionAwaiter"/> is awaited before the local call execution,
+    /// and the cancellation token passed to the local call invoker is linked to the
+    /// <see cref="RpcRouteState.ChangedToken"/> to enforce instant abort on rerouting.
     /// </summary>
-    RequireShardLock = AwaitShardLock | 0x20,
+    Constrained = ConstrainedEntry | 0x20,
 }
 
 public static class RpcLocalExecutionModeExt

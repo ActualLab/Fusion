@@ -7,10 +7,10 @@ public static class RpcRouteStateExt
         => routeState is not null && routeState.ChangedToken.IsCancellationRequested;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void RerouteIfChanged(this RpcRouteState? routeState)
+    public static void RerouteIfChanged(this RpcRouteState? routeState, string? reason = null)
     {
         if (routeState.IsChanged())
-            throw RpcRerouteException.MustReroute();
+            throw RpcRerouteException.MustReroute(reason);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,9 +36,52 @@ public static class RpcRouteStateExt
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static RpcShardRouteState? AsShardRouteState(this RpcRouteState? routeState, RpcMethodDef methodDef)
-        => methodDef.LocalExecutionMode >= RpcLocalExecutionMode.AwaitShardLock
-            ? routeState as RpcShardRouteState
-            : null;
+    public static ValueTask<CancellationTokenSource?> PrepareLocalExecution(
+        this RpcRouteState? routeState, RpcMethodDef methodDef, CancellationToken cancellationToken)
+    {
+        if (methodDef.LocalExecutionMode == RpcLocalExecutionMode.Unconstrained
+            || routeState?.LocalExecutionAwaiter is not { } localExecutionAwaiter)
+            return default;
+
+        var whenReadyTask = localExecutionAwaiter.Invoke(cancellationToken);
+        if (whenReadyTask.IsCompletedSuccessfully) {
+            if (methodDef.LocalExecutionMode == RpcLocalExecutionMode.ConstrainedEntry)
+                routeState.RerouteIfChanged();
+            return default;
+        }
+
+        return CompleteAsync(routeState, methodDef, whenReadyTask, cancellationToken);
+
+        static async ValueTask<CancellationTokenSource?> CompleteAsync(
+            RpcRouteState routeState, RpcMethodDef methodDef, ValueTask whenReadyTask,
+            CancellationToken cancellationToken)
+        {
+            await whenReadyTask.ConfigureAwait(false);
+            if (methodDef.LocalExecutionMode == RpcLocalExecutionMode.ConstrainedEntry) {
+                routeState.RerouteIfChanged();
+                return null;
+            }
+
+            return CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeState.ChangedToken);
+        }
+    }
+
+    public static bool MustConvertToRpcRerouteException(
+        this RpcRouteState? routeState,
+        OperationCanceledException error,
+        CancellationTokenSource? commonTokenSource,
+        CancellationToken cancellationToken)
+    {
+        if (routeState is null)
+            return false;
+        if (cancellationToken.IsCancellationRequested)
+            return false;
+        if (commonTokenSource is null)
+            return false;
+        if (error is RpcRerouteException)
+            return false;
+
+        return routeState.ChangedToken.IsCancellationRequested;
+    }
+
 }

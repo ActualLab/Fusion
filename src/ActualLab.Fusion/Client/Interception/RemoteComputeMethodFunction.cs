@@ -90,36 +90,23 @@ public abstract class RemoteComputeMethodFunction(
                     using var _ = Computed.BeginCompute(computed);
                     try {
                         var routeState = peer.Ref.RouteState;
-                        var shardRouteState = routeState.AsShardRouteState(RpcMethodDef);
-                        var routeChangedToken = routeState?.ChangedToken ?? default;
-                        var linkedCts = (CancellationTokenSource?)null;
-                        var linkedToken = cancellationToken;
-
-                        if (shardRouteState is not null)
+                        var linkedCts = await routeState
                             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                            routeChangedToken = await shardRouteState.ShardLockAwaiter
-                                .Invoke(cancellationToken)
-                                .ConfigureAwait(false);
-
-                        if (routeChangedToken.CanBeCanceled) {
-                            if (RpcMethodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock)
-                                routeChangedToken.ThrowIfCancellationRequested();
-                            else { // RpcLocalExecutionMode.RequireShardLock
-                                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
-                                linkedToken = linkedCts.Token;
-                            }
-                        }
-
+                            .PrepareLocalExecution(RpcMethodDef, cancellationToken)
+                            .ConfigureAwait(false);
                         try {
-                            var result = await typedInput.InvokeInterceptedUntyped(linkedToken).ConfigureAwait(false);
+                            var result = await typedInput
+                                .InvokeInterceptedUntyped(linkedCts?.Token ?? cancellationToken)
+                                .ConfigureAwait(false);
                             computed.TrySetValue(result);
                             return computed;
                         }
-                        catch (Exception e) when (e.IsCancellationOf(routeChangedToken) && !cancellationToken.IsCancellationRequested) {
-                            throw new RpcRerouteException(routeChangedToken);
+                        // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                        catch (OperationCanceledException e) when (routeState.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
+                            throw RpcRerouteException.MustReroute();
                         }
                         finally {
-                            linkedCts.DisposeSilently();
+                            linkedCts.CancelAndDisposeSilently();
                         }
                     }
                     catch (Exception e) {

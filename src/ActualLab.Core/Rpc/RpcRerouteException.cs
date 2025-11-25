@@ -12,6 +12,8 @@ public class RpcRerouteException : OperationCanceledException, ITransientExcepti
 
     public static RpcRerouteException MustRerouteInbound() => new(RerouteInboundMessage);
     public static RpcRerouteException MustReroute() => new(DefaultMessage);
+    public static RpcRerouteException MustReroute(string? reason)
+        => new(reason is null ? DefaultMessage : $"RPC call must be re-routed: {reason}.");
     public static RpcRerouteException MustReroute(object peer)
         => new($"'{peer}' is already gone. {DefaultMessage}");
 

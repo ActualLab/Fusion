@@ -77,6 +77,6 @@ public partial class RpcMethodDef
 
     protected virtual RpcLocalExecutionMode GetDefaultLocalExecutionMode()
         => Service.Mode is RpcServiceMode.Distributed
-            ? RpcLocalExecutionMode.RequireShardLock
+            ? RpcLocalExecutionMode.Constrained
             : RpcLocalExecutionMode.Unconstrained;
 }

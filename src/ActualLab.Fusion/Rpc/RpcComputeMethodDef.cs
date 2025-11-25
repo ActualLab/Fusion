@@ -16,6 +16,6 @@ public class RpcComputeMethodDef : RpcMethodDef
 
     protected override RpcLocalExecutionMode GetDefaultLocalExecutionMode()
         => Service.Mode is RpcServiceMode.Distributed
-            ? RpcLocalExecutionMode.AwaitShardLock
+            ? RpcLocalExecutionMode.ConstrainedEntry
             : RpcLocalExecutionMode.Unconstrained;
 }

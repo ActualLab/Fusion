@@ -22,13 +22,12 @@ public sealed class ShardPeerRef : RpcPeerRef
         Address = Host?.Url ?? "";
         UseReferentialEquality = true;
 
-        var rerouteTokenSource = new CancellationTokenSource();
-        RouteState = new RpcRouteState(rerouteTokenSource.Token);
+        RouteState = new RpcRouteState();
         _ = Task.Run(async () => {
             await hostMapComputed
                 .When(x => x.GetHostByShardIndex(ShardIndex) != Host)
                 .ConfigureAwait(false);
-            rerouteTokenSource.Cancel();
+            RouteState.MarkChanged();
             meshMap.RemoveShardPeerRef(shardIndex, entry);
         }, CancellationToken.None);
         Initialize();

@@ -50,47 +50,34 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                 var args = ArgumentList.New(command, cancellationToken);
                 var peer = rpcMethodDef.RouteCall(args, routingMode);
                 var routeState = peer.Ref.RouteState;
-                var shardRouteState = routeState.AsShardRouteState(rpcMethodDef);
                 try {
-                    peer.Ref.RouteState.RerouteIfChanged();
-                    var routeChangedToken = routeState?.ChangedToken ?? default;
-                    var linkedCts = (CancellationTokenSource?)null;
-                    var linkedToken = cancellationToken;
-                    try {
-                        if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
-                            if (shardRouteState is not null)
-                                // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                                routeChangedToken = await shardRouteState.ShardLockAwaiter
-                                    .Invoke(cancellationToken)
-                                    .ConfigureAwait(false);
-
-                            if (routeChangedToken.CanBeCanceled) {
-                                if (rpcMethodDef.LocalExecutionMode is RpcLocalExecutionMode.AwaitShardLock)
-                                    routeChangedToken.ThrowIfCancellationRequested();
-                                else { // RpcLocalExecutionMode.RequireShardLock
-                                    linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, routeChangedToken);
-                                    linkedToken = linkedCts.Token;
-                                }
-                            }
-
-                            // Local call -> continue the pipeline
-                            context.ExecutionState = baseExecutionState;
-                        }
-                        else {
-                            // Remote call -> send the RPC call by invoking the final handler
-                            context.ExecutionState = preFinalExecutionState;
-                        }
-
-                        // MethodCommandHandler picks up RpcOutboundCallSetup (if any) and activates it
+                    if (peer.ConnectionKind is not RpcPeerConnectionKind.Local) {
+                        // Remote call -> send the RPC call by invoking the final handler
+                        context.ExecutionState = preFinalExecutionState;
                         context.Items.KeylessSet(new RpcOutboundCallSetup(peer));
-                        await context.InvokeRemainingHandlers(linkedToken).ConfigureAwait(false);
-                        return;
+                        await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
                     }
-                    catch (Exception e) when (e.IsCancellationOf(routeChangedToken) && !cancellationToken.IsCancellationRequested) {
-                        throw new RpcRerouteException(routeChangedToken);
-                    }
-                    finally {
-                        linkedCts.DisposeSilently();
+                    else {
+                        // Local call -> continue the pipeline
+                        var linkedCts = await routeState
+                            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                            .PrepareLocalExecution(rpcMethodDef, cancellationToken)
+                            .ConfigureAwait(false);
+                        try {
+                            context.ExecutionState = baseExecutionState;
+                            context.Items.KeylessSet(new RpcOutboundCallSetup(peer));
+                            await context
+                                .InvokeRemainingHandlers(linkedCts?.Token ?? cancellationToken)
+                                .ConfigureAwait(false);
+                            return;
+                        }
+                        // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                        catch (OperationCanceledException e) when (routeState.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
+                            throw RpcRerouteException.MustReroute();
+                        }
+                        finally {
+                            linkedCts.CancelAndDisposeSilently();
+                        }
                     }
                 }
                 catch (RpcRerouteException e) {

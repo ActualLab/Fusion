@@ -22,20 +22,17 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
         HostInfo = $"{shardRef}-v{meshState.Version}->{HostId}";
         UseReferentialEquality = true;
 
-        var changeTokenSource = new CancellationTokenSource();
-        var changeToken = changeTokenSource.Token;
-        var shardLockDelayTask = Task.Delay(1000, changeToken);
-        RouteState = new RpcShardRouteState(ShardLockAwaiter, changeToken);
-        _ = Task.Run(CancelChangeTokenSource, CancellationToken.None);
+        RouteState = new RpcRouteState();
+        var initialExecutionDelayTask = Task.Delay(1000, RouteState.ChangedToken).SuppressExceptions();
+        RouteState.LocalExecutionAwaiter =
+            ct => initialExecutionDelayTask.IsCompleted
+                ? default // Fast path
+                : initialExecutionDelayTask.WaitAsync(ct).ToValueTask(); // Slow path
+        _ = Task.Run(MarkRouteStateChanged, CancellationToken.None);
         Initialize();
         return;
 
-        async ValueTask<CancellationToken> ShardLockAwaiter(CancellationToken cancellationToken) {
-            await shardLockDelayTask.WaitAsync(cancellationToken).SilentAwait(false);
-            return changeToken;
-        }
-
-        async Task? CancelChangeTokenSource() {
+        async Task? MarkRouteStateChanged() {
             Console.WriteLine($"{Address}: created.".Pastel(ConsoleColor.Green));
             var computed = MeshState.State.Computed;
             if (HostId == "null")
@@ -43,7 +40,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
             else
                 await computed.When(x => !x.HostById.ContainsKey(HostId), CancellationToken.None).ConfigureAwait(false);
             Cache.TryRemove(ShardRef, lazy);
-            await changeTokenSource.CancelAsync();
+            RouteState.MarkChanged();
             Console.WriteLine($"{Address}: rerouted.".Pastel(ConsoleColor.Yellow));
         }
     }
