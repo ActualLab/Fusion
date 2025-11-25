@@ -172,11 +172,19 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     spinWait.SpinOnce();
                 }
             }
-            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-                if (!ConnectionState.IsFinal)
-                    continue;
+            catch (Exception e) {
+                if (e.IsCancellationOf(cancellationToken))
+                    throw;
                 if (Ref.RouteState.IsChanged())
                     throw RpcRerouteException.MustReroute();
+
+                if (!ConnectionState.IsFinal) {
+                    // The error can be ChannelClosedException due to cancellation,
+                    // so we don't want to disregard the cancellation no matter what
+                    cancellationToken.ThrowIfCancellationRequested();
+                    continue;
+                }
+
                 throw;
             }
         }
@@ -190,14 +198,14 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             : WhenConnectedWithTimeout(this, timeout, cancellationToken);
 
         static async Task<(RpcHandshake Handshake, ChannelWriter<RpcMessage> Sender)> WhenConnectedWithTimeout(
-            RpcPeer peer, TimeSpan timeout1, CancellationToken cancellationToken1)
+            RpcPeer peer, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            using var timeoutCts = cancellationToken1.CreateLinkedTokenSource(timeout1);
+            using var timeoutCts = cancellationToken.CreateLinkedTokenSource(timeout);
             var timeoutToken = timeoutCts.Token;
             try {
                 return await peer.WhenConnected(timeoutToken).ConfigureAwait(false);
             }
-            catch (Exception e) when (e.IsCancellationOfTimeoutToken(timeoutToken, cancellationToken1)) {
+            catch (Exception e) when (e.IsCancellationOfTimeoutToken(timeoutToken, cancellationToken)) {
                 throw Errors.ConnectTimeout(peer.Ref);
             }
         }
