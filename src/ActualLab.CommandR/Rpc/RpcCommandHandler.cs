@@ -94,16 +94,10 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                     }
                 }
                 catch (RpcRerouteException e) {
-                    context.ResetResult();
-                    if (shardRouteState is not null && !shardRouteState.IsChanged()) {
-                        Log.LogWarning(e, "Re-acquiring shard ownership for command: {Command}",
-                            context.UntypedCommand);
-                        continue;
-                    }
-
                     ++rerouteCount;
-                    Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}", rerouteCount,
-                        context.UntypedCommand);
+                    context.ResetResult();
+                    Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}",
+                        rerouteCount, context.UntypedCommand);
                     await RpcHub.InternalServices.OutboundCallOptions
                         .GetReroutingDelay(rerouteCount, cancellationToken)
                         .ConfigureAwait(false);

@@ -157,15 +157,9 @@ public sealed class RpcInterceptor : Interceptor
                 }
             }
             catch (RpcRerouteException e) {
+                ++rerouteCount;
                 if (methodDef.CancellationTokenIndex >= 0)
                     invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
-                if (shardRouteState is not null && !shardRouteState.IsChanged()) {
-                    Log.LogWarning(e, "Retrying (no shard ownership): {Invocation}", invocation);
-                    call = context.PrepareReroutedCall(); // Old call cannot be reused!
-                    continue;
-                }
-
-                ++rerouteCount;
                 Log.LogWarning(e, "Rerouting #{RerouteCount}: {Invocation}", rerouteCount, invocation);
                 await Hub.OutboundCallOptions
                     .GetReroutingDelay(rerouteCount, cancellationToken)
