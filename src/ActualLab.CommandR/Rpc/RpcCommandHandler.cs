@@ -56,28 +56,28 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                         context.ExecutionState = preFinalExecutionState;
                         context.Items.KeylessSet(new RpcOutboundCallSetup(peer));
                         await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
+                        return;
                     }
-                    else {
-                        // Local call -> continue the pipeline
-                        var linkedCts = await routeState
-                            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                            .PrepareLocalExecution(rpcMethodDef, cancellationToken)
-                            .ConfigureAwait(false);
-                        try {
-                            context.ExecutionState = baseExecutionState;
-                            context.Items.KeylessSet(new RpcOutboundCallSetup(peer));
-                            await context
-                                .InvokeRemainingHandlers(linkedCts?.Token ?? cancellationToken)
-                                .ConfigureAwait(false);
-                            return;
-                        }
+
+                    // Local call -> continue the pipeline
+                    var linkedCts = await routeState
                         // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                        catch (OperationCanceledException e) when (routeState.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
-                            throw RpcRerouteException.MustReroute();
-                        }
-                        finally {
-                            linkedCts.CancelAndDisposeSilently();
-                        }
+                        .PrepareLocalExecution(rpcMethodDef, cancellationToken)
+                        .ConfigureAwait(false);
+                    try {
+                        context.ExecutionState = baseExecutionState;
+                        context.Items.KeylessSet(new RpcOutboundCallSetup(peer));
+                        await context
+                            .InvokeRemainingHandlers(linkedCts?.Token ?? cancellationToken)
+                            .ConfigureAwait(false);
+                        return;
+                    }
+                    // ReSharper disable once PossiblyMistakenUseOfCancellationToken
+                    catch (OperationCanceledException e) when (routeState.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
+                        throw RpcRerouteException.MustReroute();
+                    }
+                    finally {
+                        linkedCts.CancelAndDisposeSilently();
                     }
                 }
                 catch (RpcRerouteException e) {
