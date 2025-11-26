@@ -1,6 +1,10 @@
-## Source
+# ActualLab.Fusion, the distributed state sync monster
 
-<a href="https://www.youtube.com/watch?v=eMO7AmI6ui4"><img src="https://img.youtube.com/vi/eMO7AmI6ui4/maxresdefault.jpg"></a>
+<a href="https://www.youtube.com/watch?v=eMO7AmI6ui4">
+  <img src="https://img.youtube.com/vi/eMO7AmI6ui4/maxresdefault.jpg" 
+       alt="Watch the video" 
+       style="border: 1px solid #000; border-radius: 8px; max-height: 10em; height: auto;">
+</a>
 
 ## Table of Contents
 
@@ -3192,4 +3196,3 @@ the repository slides I guess which means that we are almost in the end of
 
 [02:00:39](https://www.youtube.com/watch?v=eMO7AmI6ui4&t=7239s)
 this talk yeah that's the URL uh you need
-

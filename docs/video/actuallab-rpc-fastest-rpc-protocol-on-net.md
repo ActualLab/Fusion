@@ -1,6 +1,10 @@
-## Source
+## ActualLab.Rpc - the fastest RPC protocol on .NET
 
-<a href="https://img.youtube.com/vi/vwm1l8eevak/maxresdefault.jpg"><img src="https://img.youtube.com/vi/eMO7AmI6ui4/maxresdefault.jpg"></a>
+<a href="https://www.youtube.com/watch?v=vwm1l8eevak">
+    <img src="https://img.youtube.com/vi/vwm1l8eevak/maxresdefault.jpg" 
+        alt="Watch the video"
+        style="border: 1px solid #000; border-radius: 8px; max-height: 15em; height: auto;">
+</a>
 
 ## Table of Contents
 
@@ -1702,4 +1706,3 @@ watching please feel free to reach me out ask any questions and yeah if you
 
 [01:04:45](https://www.youtube.com/watch?v=vwm1l8eevak&t=3885s)
 would like to contribute something then that would be amazing okay thank you
-
