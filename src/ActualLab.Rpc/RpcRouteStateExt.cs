@@ -69,14 +69,14 @@ public static class RpcRouteStateExt
     public static bool MustConvertToRpcRerouteException(
         this RpcRouteState? routeState,
         OperationCanceledException error,
-        CancellationTokenSource? commonTokenSource,
+        CancellationTokenSource? linkedTokenSource,
         CancellationToken cancellationToken)
     {
         if (routeState is null)
             return false;
         if (cancellationToken.IsCancellationRequested)
             return false;
-        if (commonTokenSource is null)
+        if (linkedTokenSource is null)
             return false;
         if (error is RpcRerouteException)
             return false;

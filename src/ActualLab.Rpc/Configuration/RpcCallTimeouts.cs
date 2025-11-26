@@ -7,7 +7,7 @@ public sealed partial record RpcCallTimeouts
 
     public TimeSpan ConnectTimeout { get; init => field = value.Positive(); }
     public TimeSpan RunTimeout { get; init => field = value.Positive(); }
-    public TimeSpan LogTimeout { get; init => field = value.Positive(); }
+    public TimeSpan LogTimeout { get; init => field = value.Positive(); } = DefaultLogTimeout;
 
     // TimeSpan overloads
 
@@ -23,7 +23,6 @@ public sealed partial record RpcCallTimeouts
     {
         ConnectTimeout = connectTimeout;
         RunTimeout = runTimeout;
-        LogTimeout = DefaultLogTimeout;
     }
 
     // TimeSpan? overloads
