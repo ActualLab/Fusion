@@ -27,7 +27,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
 
         var isDistributedOrClient =
             rpcMethodDef.Service.Mode is RpcServiceMode.Distributed
-            || serviceType.NonProxyType().IsInterface; // The final handler is an RPC client
+            || serviceType.NonProxyType().IsInterface; // The final handler's service is an interface
         if (!isDistributedOrClient) {
             // It's going to be a prerouted local call, so we continue the pipeline,
             // but put RpcOutboundCallSetup into context.Items to be consistent.
