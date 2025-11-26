@@ -1,5 +1,6 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Middlewares;
 
 namespace ActualLab.CommandR.Rpc;
@@ -14,12 +15,19 @@ public sealed record RpcInboundCommandHandler : IRpcMiddleware
     public Func<RpcInboundCall, Task<T>> Create<T>(RpcMiddlewareContext<T> context, Func<RpcInboundCall, Task<T>> next)
     {
         var methodDef = context.MethodDef;
+        if (!Filter.Invoke(methodDef))
+            return next;
         if (methodDef.Kind is not RpcMethodKind.Command || !Filter.Invoke(methodDef))
             return next;
 
+        // The line below suppresses the RpcRouteValidator middleware.
         // RpcCommandHandler.HandleRpcCommand handles "reroute unless local" logic.
         // Search for ".RouteOutboundCall" there to see how it works.
         context.RemainingMiddlewares.RemoveAll(x => x is RpcRouteValidator);
+
+        // This logic is a part of RpcRouteValidator middleware we just suppressed, so we keep it here
+        if (methodDef.Service.Mode is RpcServiceMode.Client)
+            return _ => throw Errors.PureClientCannotProcessInboundCalls(methodDef.Service.Name);
 
         ICommander? commander = null;
         return call => {

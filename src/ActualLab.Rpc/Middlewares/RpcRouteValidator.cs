@@ -1,4 +1,5 @@
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Middlewares;
 
@@ -15,23 +16,22 @@ public sealed record RpcRouteValidator : IRpcMiddleware
         if (!Filter.Invoke(methodDef))
             return next;
 
-#pragma warning disable MA0100, RCS1229
-        var hub = methodDef.Hub;
-        if (methodDef.Service.Mode is not RpcServiceMode.Distributed)
+        var serviceMode = methodDef.Service.Mode;
+        if (serviceMode is RpcServiceMode.Client)
+            return _ => throw Errors.PureClientCannotProcessInboundCalls(methodDef.Service.Name);
+
+        if (serviceMode == RpcServiceMode.Distributed)
             return call => {
-                // Regular services always process the call locally
-                using (new RpcOutboundCallSetup(hub.LocalPeer, RpcRoutingMode.Prerouted).Activate())
+                // Distributed services ensure the call is routed to a local peer
+                // and throw RpcRerouteException if it's not (see RouteInboundCall logic).
+                var peer = call.MethodDef.RouteInboundCall(call.Arguments!);
+                // RpcRoutingMode.Inbound means the rerouting logic in RpcInterceptor kicks in.
+                using (new RpcOutboundCallSetup(peer, RpcRoutingMode.Inbound).Activate())
+#pragma warning disable MA0100, RCS1229
                     return next.Invoke(call); // No "await" is intended here!
+#pragma warning restore MA0100, RCS1229
             };
 
-        return call => {
-            // Distributed services ensure the call is routed to a local peer
-            // and throw RpcRerouteException if it's not (see RouteInboundCall logic).
-            var peer = call.MethodDef.RouteInboundCall(call.Arguments!);
-            // RpcRoutingMode.Inbound means the rerouting logic in RpcInterceptor kicks in.
-            using (new RpcOutboundCallSetup(peer, RpcRoutingMode.Inbound).Activate())
-                return next.Invoke(call); // No "await" is intended here!
-        };
-#pragma warning restore MA0100, RCS1229
+        return next;
     }
 }

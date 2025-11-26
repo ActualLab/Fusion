@@ -2,6 +2,7 @@ using System.Diagnostics;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Middlewares;
 
 namespace ActualLab.Fusion.Rpc;
@@ -19,9 +20,14 @@ public class RpcInboundComputeCallHandler : IRpcMiddleware
         if (methodDef is not RpcComputeMethodDef)
             return next;
 
+        // The line below suppresses the RpcRouteValidator middleware.
         // RemoteComputeMethodFunction.ProduceComputedImpl handles "reroute unless local" logic.
         // Search for ".RouteOutboundCall" there to see how it works.
         context.RemainingMiddlewares.RemoveAll(x => x is RpcRouteValidator);
+
+        // This logic is a part of RpcRouteValidator middleware we just suppressed, so we keep it here
+        if (methodDef.Service.Mode is RpcServiceMode.Client)
+            return _ => throw Errors.PureClientCannotProcessInboundCalls(methodDef.Service.Name);
 
         return async call => {
             var typedCall = (RpcInboundComputeCall<T>)call;

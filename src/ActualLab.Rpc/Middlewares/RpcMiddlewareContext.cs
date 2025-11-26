@@ -7,6 +7,7 @@ public sealed class RpcMiddlewareContext<T>
     public readonly RpcMethodDef MethodDef;
     public readonly List<IRpcMiddleware> RemainingMiddlewares;
     public readonly List<RpcMiddlewareOutput<T>> Outputs;
+    public ILogger Log => field ??= MethodDef.Hub.Services.LogFor(GetType());
 
     public RpcMiddlewareContext(RpcMethodDef methodDef)
     {

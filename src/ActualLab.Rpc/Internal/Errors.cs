@@ -31,6 +31,8 @@ public static class Errors
         => new KeyNotFoundException($"RPC service has no client: {service}.");
     public static Exception NoServer(RpcServiceDef service)
         => new KeyNotFoundException($"RPC service has no server: {service}.");
+    public static Exception PureClientCannotProcessInboundCalls(string serviceName)
+        => new InvalidOperationException($"'{serviceName}' is a pure RPC client, it cannot process inbound RPC calls.");
 
     public static Exception NoMethod(Type serviceType, MethodInfo method)
         => new KeyNotFoundException($"Can't resolve method '{method.Name}' (by MethodInfo) of '{serviceType.GetName()}'.");
