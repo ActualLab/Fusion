@@ -41,14 +41,12 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public async Task TimerTest1()
     {
-        var epsilon = TimeSpan.FromSeconds(0.9);
-        var epsilon10 = epsilon.MultiplyBy(10);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
-        var realStart = Moment.Now;
         var clockStart = clock.Now;
 
-        var firedAt = clock.Timer(1000).Select(i => clock.Now).ToEnumerable().Single();
-        ShouldEqual(firedAt, clockStart + TimeSpan.FromSeconds(1), epsilon10);
+        // ReSharper disable once AccessToDisposedClosure
+        var firedAt = clock.Timer(3000).Select(_ => clock.Now).ToEnumerable().Single();
+        ShouldEqual(firedAt, clockStart + TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(1.5));
 
         await Task.Yield(); // Just to suppress warning.
     }
@@ -57,7 +55,6 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
     public async Task TimerTest2()
     {
         var epsilon = TimeSpan.FromSeconds(0.9);
-        var epsilon10 = epsilon.MultiplyBy(10);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
         var realStart = Moment.Now;
         var clockStart = clock.Now;
@@ -83,7 +80,6 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         var epsilon = TimeSpan.FromSeconds(1);
         using var clock = new TestClock();
         var realStart = Moment.Now;
-        var clockStart = clock.Now;
 
         var m = 10.0;
         clock.SpeedupBy(1/m);

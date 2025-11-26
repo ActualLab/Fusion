@@ -10,8 +10,8 @@ public static class ClockExt
         => clock.Delay((dueAt - clock.Now).Positive(), cancellationToken);
     public static Task Delay(this MomentClock clock, long dueInMilliseconds, CancellationToken cancellationToken = default)
     {
-        if (dueInMilliseconds == System.Threading.Timeout.Infinite)
-            return clock.Delay(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken);
+        if (dueInMilliseconds == Timeout.Infinite)
+            return clock.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         if (dueInMilliseconds < 0)
             throw new ArgumentOutOfRangeException(nameof(dueInMilliseconds));
         return clock.Delay(TimeSpan.FromMilliseconds(dueInMilliseconds), cancellationToken);
