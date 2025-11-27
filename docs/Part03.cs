@@ -1,11 +1,8 @@
-using System;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using ActualLab.Fusion;
 using static System.Console;
 
+// ReSharper disable once CheckNamespace
 namespace Tutorial03;
+
 public static class Part03
 {
     #region Part03_CounterService
@@ -60,12 +57,12 @@ public static class Part03
         var state = stateFactory.NewMutable<int>();
         WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
         WriteLine("Setting state.Error.");
-        state.Error = new ApplicationException("Just a test");
+        state.SetError(new ApplicationException("Just a test"));
         try {
             WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
         }
         catch (ApplicationException) {
-            WriteLine($"Error: {state.Error.GetType()}, Computed: {state.Computed}");
+            WriteLine($"Error: {state.Error!.GetType()}, Computed: {state.Computed}");
         }
         WriteLine($"LastNonErrorValue: {state.LastNonErrorValue}");
         WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}");

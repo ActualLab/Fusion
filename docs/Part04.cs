@@ -1,22 +1,15 @@
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using ActualLab.Fusion;
 using ActualLab.Fusion.Server;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using static System.Console;
 
+// ReSharper disable once CheckNamespace
 namespace Tutorial04;
+
 #region Part04_CommonServices
 // Ideally, we want Compute Service client to be exactly the same as corresponding
 // Compute Service. A good way to enforce this is to expose an interface
@@ -73,7 +66,7 @@ public static partial class Part04
     {
         var builder = Host.CreateDefaultBuilder();
         builder.ConfigureHostConfiguration(cfg =>
-            cfg.AddInMemoryCollection(new Dictionary<string, string>() {{"Environment", "Development"}}));
+            cfg.AddInMemoryCollection(new Dictionary<string, string>() { {"Environment", "Development"} }!));
         builder.ConfigureLogging(logging =>
             logging.ClearProviders().SetMinimumLevel(LogLevel.Information).AddDebug());
         builder.ConfigureServices((b, services) => {
@@ -154,7 +147,7 @@ public static partial class Part04
         using var host = CreateHost();
         await host.StartAsync();
         WriteLine("Host started.");
-    
+
         var services = CreateClientServices();
         var counters = services.GetRequiredService<ICounterService>();
         var stateFactory = services.StateFactory();
@@ -176,11 +169,11 @@ public static partial class Part04
         await Task.Delay(2000);
         await counters.SetOffset(10);
         await Task.Delay(2000);
-    
+
         await host.StopAsync();
         #endregion
     }
-    
+
     public static async Task Run()
     {
         await ReplicaService();

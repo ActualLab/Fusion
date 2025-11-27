@@ -5,6 +5,7 @@ using ActualLab.Rpc.Server;
 using Microsoft.AspNetCore.Builder;
 using static System.Console;
 
+// ReSharper disable once CheckNamespace
 namespace Tutorial02;
 
 #region Part02_SharedApi

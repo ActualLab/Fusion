@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using ActualLab.Fusion.EntityFramework;
-using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Fusion.Authentication.Services;
 
+// ReSharper disable once CheckNamespace
 namespace Tutorial11;
-public partial class AppDbContext
+
+public class AppDbContext
 {
     // Authentication-related tables
     #region Part11_AppDbContext

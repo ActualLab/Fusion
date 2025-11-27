@@ -54,7 +54,7 @@ The reference / embedding block in `.md` file:
 ```md
 <!-- snippet: PartXX_SnippetId -->
 ```cs
-// This snippet is referenced from AGENTS.md
+// This snippet is referenced from .instructions.md
 ```
 <!-- endSnippet -->
 ```

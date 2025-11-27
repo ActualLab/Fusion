@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using static System.Console;
 
+// ReSharper disable once CheckNamespace
 namespace Tutorial01;
 
 #region Part01_Declare_Service

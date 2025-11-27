@@ -1,8 +1,9 @@
 using System.Runtime.Serialization;
-using ActualLab.CommandR;
 using MemoryPack;
 
+// ReSharper disable once CheckNamespace
 namespace Tutorial13;
+
 #region Part13_PostCommand
 public record PostCommand(string Name,string Text) : ICommand<Unit>;
 #endregion

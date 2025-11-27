@@ -348,20 +348,21 @@ var oldComputed = state.Computed;
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 // Value: 1, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=39252654 v.d2, State: Consistent)
 
-state.Value = 2;
+state.Set(2);
 WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
 // Value: 2, Computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=39252654 v.h2, State: Consistent)
 
 WriteLine($"Old computed: {oldComputed}"); // Should be invalidated
 // Old computed: StateBoundComputed<Int32>(MutableState<Int32>-Hash=39252654 v.d2, State: Invalidated)
 
-state.Error = new ApplicationException("Just a test");
+var result = Result.NewError<int>(new ApplicationException("Just a test"));
+state.Set(1);
 try {
     WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
     // Accessing state.Value throws ApplicationException
 }
 catch (ApplicationException) {
-    WriteLine($"Error: {state.Error.GetType()}, Computed: {state.Computed}");
+    WriteLine($"Error: {state.Error?.GetType()}, Computed: {state.Computed}");
 }
 WriteLine($"LastNonErrorValue: {state.LastNonErrorValue}");
 // LastNonErrorValue: 2
@@ -413,7 +414,7 @@ WriteLine($"{clock.Elapsed:g}s: UPDATED, Value: {computedState.Value}, Computed:
 
 counters.Increment("a");
 await Task.Delay(2000);
-mutableState.Value = "y";
+mutableState.Set("y");
 await Task.Delay(2000);
 
 /* The output – pay attention to timestamps:

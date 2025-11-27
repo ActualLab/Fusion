@@ -112,7 +112,7 @@ public static IHost CreateHost()
 {
     var builder = Host.CreateDefaultBuilder();
     builder.ConfigureHostConfiguration(cfg =>
-        cfg.AddInMemoryCollection(new Dictionary<string, string>() {{"Environment", "Development"}}));
+        cfg.AddInMemoryCollection(new Dictionary<string, string>() { {"Environment", "Development"} }!));
     builder.ConfigureLogging(logging =>
         logging.ClearProviders().SetMinimumLevel(LogLevel.Information).AddDebug());
     builder.ConfigureServices((b, services) => {

@@ -1,10 +1,8 @@
-using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using ActualLab.Fusion;
 using static System.Console;
 
+// ReSharper disable once CheckNamespace
 namespace Tutorial05;
+
 #region Part05_Service1
 public partial class Service1 : IComputeService
 {

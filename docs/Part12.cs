@@ -1,10 +1,11 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
 
+// ReSharper disable once CheckNamespace
 namespace Tutorial12;
-public partial class Program
+
+public class Program
 {
     public static void ConfigureServices(IServiceCollection services)
     {
@@ -13,10 +14,7 @@ public partial class Program
         #endregion
 
         #region Part12_AddServer
-        rpc.AddServer<IMyService>();
-        // Some of alternatives:
         rpc.AddServer<IMyService, MyService>(); // Expose IMyService resolved as MyService
-        rpc.AddServer<IMyService>("myService"); // Expose IMyService under "myService" name
         #endregion
 
         #region Part12_AddWebSocketServer
@@ -65,9 +63,9 @@ public partial class ClientProgram
     }
 }
 
-public interface IMyService
+public interface IMyService : IRpcService
 {
-    Task<string> Ping();
+    public Task<string> Ping();
 }
 
 public class MyService : IMyService

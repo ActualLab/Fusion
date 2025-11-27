@@ -72,10 +72,7 @@ var rpc = services.AddRpc(); // returns RpcBuilder
 
 <!-- snippet: Part12_AddServer -->
 ```cs
-rpc.AddServer<IMyService>();
-// Some of alternatives:
 rpc.AddServer<IMyService, MyService>(); // Expose IMyService resolved as MyService
-rpc.AddServer<IMyService>("myService"); // Expose IMyService under "myService" name
 ```
 <!-- endSnippet -->
 

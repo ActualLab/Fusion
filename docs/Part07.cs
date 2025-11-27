@@ -1,7 +1,8 @@
-using System;
 using static System.Console;
 
+// ReSharper disable once CheckNamespace
 namespace Tutorial07;
+
 public static class Part07
 {
     public static async Task Run()
