@@ -34,9 +34,9 @@ jobs:
       - name: Build Docs Project
         run: dotnet build docs/Docs.csproj -c Debug
 
-#      - name: Update snippets
-#        run: dotnet mdsnippets
-#        working-directory: docs
+      - name: Update snippets
+        run: dotnet mdsnippets
+        working-directory: docs
 
       - name: Setup Node
         uses: actions/setup-node@v4
