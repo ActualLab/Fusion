@@ -23,20 +23,15 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
         var serviceType = methodHandler.ServiceType;
         var method = methodHandler.Method;
         if (GetRpcMethodDef(serviceType, method) is not { } rpcMethodDef)
-            return context.InvokeRemainingHandlers(cancellationToken);
+            return context.InvokeRemainingHandlers(cancellationToken); // Not an RPC method
 
         var isDistributedOrClient =
             rpcMethodDef.Service.Mode is RpcServiceMode.Distributed
             || serviceType.NonProxyType().IsInterface; // The final handler's service is an interface
-        if (!isDistributedOrClient) {
-            // It's going to be a prerouted local call, so we continue the pipeline,
-            // but put RpcOutboundCallSetup into context.Items to be consistent.
-            // MethodCommandHandler picks up RpcOutboundCallSetup (if any) and activates it,
-            // so if we end up calling an RPC client (it's a mistake), prerouting to local peer
-            // here is going to trigger an exception in RpcInterceptor.
-            context.Items.KeylessSet(new RpcOutboundCallSetup(rpcMethodDef.Hub.LocalPeer));
+        if (!isDistributedOrClient)
             return context.InvokeRemainingHandlers(cancellationToken);
-        }
+
+        // If we're here, the final handler's service is a distributed RPC service or a pure RPC client
 
         var isInboundRpc = context.IsOutermost && context.Items.KeylessGet<RpcInboundCall>() is not null;
         var routingMode = isInboundRpc ? RpcRoutingMode.Inbound : RpcRoutingMode.Outbound;
