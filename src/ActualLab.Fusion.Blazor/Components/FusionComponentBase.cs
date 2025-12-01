@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
@@ -9,10 +8,9 @@ public abstract class FusionComponentBase : ComponentBase, IHandleEvent
 
     protected bool MustRenderAfterEvent { get; set; } = true;
     [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume Blazor components' code is fully preserved")]
-    [field: AllowNull, MaybeNull]
     protected ComponentInfo ComponentInfo => field ??= ComponentInfo.Get(GetType());
     protected int ParameterSetIndex { get; set; }
-    [field: AllowNull, MaybeNull]
+
     internal Action StateHasChangedInvoker => field ??= StateHasChanged;
 
     public override Task SetParametersAsync(ParameterView parameters)

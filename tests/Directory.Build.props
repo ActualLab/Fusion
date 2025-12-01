@@ -121,6 +121,9 @@
     <Using Include="System.Console" Static="True" />
     <Using Include="System.Collections" />
     <Using Include="System.Collections.Immutable" />
+    <Using Include="System.Collections.Concurrent" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.Diagnostics.CodeAnalysis" />
     <Using Include="System.Diagnostics" />
     <Using Include="System.Linq" />
     <Using Include="System.Reactive" /> <!-- Mainly for Unit type -->

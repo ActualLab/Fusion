@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Net;
 
 public class RetryDelayer : IRetryDelayer
@@ -14,7 +12,6 @@ public class RetryDelayer : IRetryDelayer
 
     public Func<MomentClock> ClockProvider { get; set; } = static () => CpuClock.Instance;
 
-    [field: AllowNull, MaybeNull]
     public MomentClock Clock {
         get => field ??= ClockProvider.Invoke();
         set;

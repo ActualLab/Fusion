@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 
 namespace ActualLab.Tests.Interception.Interceptors;

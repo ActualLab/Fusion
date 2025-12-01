@@ -1,6 +1,5 @@
 using System.Data;
 using System.Data.Common;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -60,10 +59,8 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
     protected DbHub<TDbContext> DbHub { get; }
     protected HostId HostId { get; }
-    [field: AllowNull, MaybeNull]
     protected IDbShardRegistry<TDbContext> ShardRegistry
         => field ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
-    [field: AllowNull, MaybeNull]
     protected IShardDbContextFactory<TDbContext> ContextFactory
         => field ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
     protected MomentClockSet Clocks { get; }

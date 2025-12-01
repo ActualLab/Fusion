@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ActualLab.Api.Internal;
 
@@ -33,7 +32,6 @@ public readonly partial struct ApiArray<T>(T[] items)
     public static readonly ApiArray<T> Empty = default!;
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    [field: AllowNull, MaybeNull]
     public T[] Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => field ?? EmptyItems;

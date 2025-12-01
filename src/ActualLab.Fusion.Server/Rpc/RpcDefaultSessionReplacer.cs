@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;

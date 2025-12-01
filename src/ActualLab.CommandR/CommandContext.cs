@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.ExceptionServices;
 using ActualLab.CommandR.Internal;
 using ActualLab.CommandR.Operations;

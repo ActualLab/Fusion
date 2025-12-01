@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace ActualLab.Fusion.Tests.Services;
 
 public class PerUserCounterService : IComputeService

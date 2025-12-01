@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
 using ActualLab.Serialization.Internal;
 using MessagePack;
@@ -20,7 +19,6 @@ public partial class JsonString(string value) :
     public static readonly JsonString Empty= new("");
 
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
-    [field: AllowNull, MaybeNull]
     public string Value {
         get => field ?? string.Empty;
     } = value;

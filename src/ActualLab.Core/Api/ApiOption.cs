@@ -1,6 +1,5 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using ActualLab.Api.Internal;
+using ActualLab.Api.Internal; // Used in #if block
 using ActualLab.Conversion;
 using ActualLab.Internal;
 using MessagePack;

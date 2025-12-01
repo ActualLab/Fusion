@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using Errors = ActualLab.Rpc.Internal.Errors;
 

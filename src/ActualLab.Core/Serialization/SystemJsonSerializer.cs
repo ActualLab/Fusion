@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;

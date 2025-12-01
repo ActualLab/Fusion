@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Client.Caching;
 
 namespace ActualLab.Fusion.Interception;

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.OS;
 using ActualLab.Resilience;
@@ -53,17 +52,11 @@ public class OperationReprocessor : IOperationReprocessor
     protected Exception? LastError { get; set; }
 
     protected IServiceProvider Services { get; }
-
-    [field: AllowNull, MaybeNull]
     protected TransiencyResolver<IOperationReprocessor> TransiencyResolver
         => field ??= Services.TransiencyResolver<IOperationReprocessor>();
-
-    [field: AllowNull, MaybeNull]
-    public MomentClock DelayClock => field ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
-
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
+    public MomentClock DelayClock => field ??= Settings.DelayClock ?? Services.Clocks().CpuClock;
     public Options Settings { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor

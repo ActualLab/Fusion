@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Interception.Internal;
 
 public static class ProxyHelper

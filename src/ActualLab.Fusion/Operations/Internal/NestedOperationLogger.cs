@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
@@ -11,10 +9,8 @@ public class NestedOperationLogger(IServiceProvider services) : ICommandHandler<
 {
     protected IServiceProvider Services { get; } = services;
 
-    [field: AllowNull, MaybeNull]
     protected InvalidatingCommandCompletionHandler InvalidatingCommandCompletionHandler
         => field ??= Services.GetRequiredService<InvalidatingCommandCompletionHandler>();
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.NestedCommandLogger)]

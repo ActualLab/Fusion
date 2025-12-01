@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Conversion.Internal;
 
 public class DefaultConverterProvider(IServiceProvider services) : ConverterProvider

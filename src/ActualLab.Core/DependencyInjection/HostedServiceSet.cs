@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 
 namespace ActualLab.DependencyInjection;
@@ -14,7 +13,6 @@ public sealed class HostedServiceSet(IServiceProvider services)
 
     public IServiceProvider Services { get; } = services;
 
-    [field: AllowNull, MaybeNull]
     private ILogger Log => field ??= Services.LogFor(GetType());
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

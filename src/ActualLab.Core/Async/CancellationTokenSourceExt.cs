@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Async;
 
 public static class CancellationTokenSourceExt

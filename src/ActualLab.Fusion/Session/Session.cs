@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
@@ -23,8 +22,6 @@ public sealed partial class Session : IHasId<string>,
 
     [DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter]
     public string Id { get; }
-
-    [field: AllowNull, MaybeNull]
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public string Hash => field ??= ComputeHash();
 

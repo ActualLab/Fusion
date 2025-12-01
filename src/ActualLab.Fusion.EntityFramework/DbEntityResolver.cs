@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq.Expressions;
 using ActualLab.Fusion.Diagnostics;
@@ -78,7 +77,6 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
     public Func<TDbEntity, TKey> KeyExtractor { get; init; }
     public Expression<Func<TDbEntity, TKey>> KeyExtractorExpression { get; init; }
-    [field: AllowNull, MaybeNull]
     public TransiencyResolver<TDbContext> TransiencyResolver =>
         field ??= Services.GetRequiredService<TransiencyResolver<TDbContext>>();
 

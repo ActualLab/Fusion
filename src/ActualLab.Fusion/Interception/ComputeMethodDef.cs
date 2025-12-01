@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Interception;

@@ -1,18 +1,14 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Rpc;
 
 public sealed record RpcSerializationFormatResolver
 {
     // Static members
 
-    [field: AllowNull, MaybeNull]
     public static ImmutableList<RpcSerializationFormat> DefaultFormats {
         get => field ??= RpcSerializationFormat.All; // Default format set
         set;
     }
 
-    [field: AllowNull, MaybeNull]
     public static RpcSerializationFormatResolver Default {
         get => field ??= new(RpcSerializationFormat.MemoryPackV5.Key); // Default format
         set;

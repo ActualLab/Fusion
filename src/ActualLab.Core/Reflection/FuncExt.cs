@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Reflection;
 
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all used Action/Func constructors are preserved")]

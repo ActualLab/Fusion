@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
@@ -18,7 +17,6 @@ public class CompletionProducer(CompletionProducer.Options settings, IServicePro
     protected ICommander Commander { get; } = services.Commander();
     protected RpcHub RpcHub { get; } = services.RpcHub();
     protected IServiceProvider Services => Commander.Services;
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public virtual Task OnOperationCompleted(Operation operation, CommandContext? commandContext)

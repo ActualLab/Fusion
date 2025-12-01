@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Caching;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
@@ -28,19 +27,16 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
     private volatile Func<ComputedSource, CancellationToken, Task> _computer;
     private volatile Computed _computed;
 
-    [field: AllowNull, MaybeNull]
-    protected Func<Task, object?> GetTaskResultAsObjectSynchronously =>
-        field ??= GenericInstanceCache.GetUnsafe<Func<Task, object?>>(
+    protected Func<Task, object?> GetTaskResultAsObjectSynchronously
+        => field ??= GenericInstanceCache.GetUnsafe<Func<Task, object?>>(
             typeof(TaskExt.GetResultAsObjectSynchronouslyFactory<>), OutputType);
 
     protected AsyncLock AsyncLock { get; }
     protected object Lock => AsyncLock;
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; }
 
-    [field: AllowNull, MaybeNull]
     public override string Category {
         get => field ??= GetType().GetName();
         init;

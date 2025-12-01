@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Resilience;
 
 namespace ActualLab.Async;
@@ -13,7 +12,6 @@ public readonly record struct AsyncChain
     public string Name { get; init; }
     public Func<CancellationToken, Task> Start { get; init; }
 
-    [field: AllowNull, MaybeNull]
     public TransiencyResolver TransiencyResolver {
         get => field ?? TransiencyResolvers.PreferTransient;
         init;

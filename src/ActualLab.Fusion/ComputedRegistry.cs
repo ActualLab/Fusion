@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using ActualLab.Concurrency;
 using ActualLab.Fusion.Diagnostics;
@@ -50,7 +49,6 @@ public sealed class ComputedRegistry
     private static int _pruneOpCounterThreshold;
     private static Task? _pruneTask;
 
-    [field: AllowNull, MaybeNull]
     private static ILogger Log => field ??= Settings.Log ?? StaticLog.For<ComputedRegistry>();
 
     public static IEnumerable<ComputedInput> Keys => _storage.Select(p => p.Key);

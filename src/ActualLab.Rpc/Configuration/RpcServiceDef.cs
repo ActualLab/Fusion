@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Rpc.Internal.Errors;

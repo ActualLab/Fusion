@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Internal;
 
 #pragma warning disable CA2002, RCS1059 // lock(this)

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 
@@ -24,7 +23,6 @@ public abstract class ComputeFunction(FusionHub hub, Type outputType) : ICompute
 
     private LazySlim<ILogger?>? _debugLog;
 
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
     protected ILogger? DebugLog => (_debugLog ??= LazySlim.New(Log.IfEnabled(LogLevel.Debug))).Value;
 

@@ -8,6 +8,7 @@
     <Using Include="System.Collections.Immutable" />
     <Using Include="System.Collections.Concurrent" />
     <Using Include="System.Collections.Generic" />
+    <Using Include="System.Diagnostics.CodeAnalysis" />
     <Using Include="System.Linq" />
     <Using Include="System.Reactive" /> <!-- Mainly for Unit type -->
     <Using Include="System.Text" />

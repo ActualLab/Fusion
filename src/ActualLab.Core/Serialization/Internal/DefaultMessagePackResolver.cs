@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Api.Internal;
 using Cysharp.Serialization.MessagePack;
 using MessagePack;

@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Collections.Fixed;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!

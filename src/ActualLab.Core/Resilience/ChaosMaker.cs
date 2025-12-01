@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Resilience.Internal;
 
 namespace ActualLab.Resilience;

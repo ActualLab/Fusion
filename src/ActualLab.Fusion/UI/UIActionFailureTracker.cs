@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Fusion.UI;
 
 public class UIActionFailureTracker : MutableList<IUIActionResult>
@@ -10,7 +8,6 @@ public class UIActionFailureTracker : MutableList<IUIActionResult>
     }
 
     protected IServiceProvider Services { get; }
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public Options Settings  { get; }

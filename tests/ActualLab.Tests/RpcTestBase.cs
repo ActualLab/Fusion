@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Diagnostics;
 using ActualLab.Locking;
 using ActualLab.RestEase;
@@ -37,7 +36,6 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     public IServiceProvider ClientServices => _clientServices ??= CreateServices(true);
     public IServiceProvider WebServices => WebHost.Services;
 
-    [field: AllowNull, MaybeNull]
     public RpcWebHost WebHost => field ??= Services.GetRequiredService<RpcWebHost>();
     public ILogger? Log => (field ??= Services.LogFor(GetType())).IfEnabled(LogLevel.Debug, IsLogEnabled);
 

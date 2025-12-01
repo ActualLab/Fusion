@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.HighPerformance;
 using MessagePack;
 
@@ -25,7 +24,6 @@ public readonly partial record struct TextOrBytes(
 
     // Computed properties
     [MemoryPackIgnore, IgnoreMember]
-    [field: AllowNull, MaybeNull]
     public byte[] Bytes => field ?? Data.TryGetUnderlyingArray() ?? Data.ToArray();
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]

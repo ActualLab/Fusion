@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
@@ -15,20 +14,16 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal readonly RpcDiagnosticsOptions DiagnosticsOptions;
     internal readonly RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer;
     internal readonly IRpcMiddleware[] Middlewares;
-    [field: AllowNull, MaybeNull]
     internal RpcSystemCallSender SystemCallSender => field ??= Services.GetRequiredService<RpcSystemCallSender>();
-    [field: AllowNull, MaybeNull]
     internal RpcClient Client => field ??= Services.GetRequiredService<RpcClient>();
 
     internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public Guid Id { get; init; } = Guid.NewGuid();
     public TimeSpan PeerRemoveDelay { get; init; } = TimeSpan.FromMinutes(5);
-    [field: AllowNull, MaybeNull]
     public HostId HostId => field ??= Services.GetRequiredService<HostId>();
     public IServiceProvider Services { get; }
     public RpcConfiguration Configuration { get; }
-    [field: AllowNull, MaybeNull]
     public RpcServiceRegistry ServiceRegistry => field ??= Services.GetRequiredService<RpcServiceRegistry>();
     public RpcSerializationFormatResolver SerializationFormats { get; }
     public RpcInternalServices InternalServices { get; }
@@ -36,13 +31,9 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public MomentClock Clock { get; }
 
     // The most useful peers are cached
-    [field: AllowNull, MaybeNull]
     public RpcClientPeer DefaultPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Default);
-    [field: AllowNull, MaybeNull]
     public RpcClientPeer LoopbackPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Loopback);
-    [field: AllowNull, MaybeNull]
     public RpcClientPeer LocalPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Local);
-    [field: AllowNull, MaybeNull]
     public RpcClientPeer NonePeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.None);
 
     public RpcHub(IServiceProvider services)

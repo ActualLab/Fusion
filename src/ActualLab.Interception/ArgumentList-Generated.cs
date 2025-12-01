@@ -1,7 +1,6 @@
-// ReSharper disable UnusedAutoPropertyAccessor.Global
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ArrangeConstructorOrDestructorBody
-using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection.Emit;
@@ -23,6 +22,18 @@ public abstract partial record ArgumentList
     public const int MaxItemCount = 10;
     public const int MaxGenericItemCount = 4;
 
+#if NET5_0_OR_GREATER
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS1))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS2))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS3))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS4))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS5))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS6))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS7))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS8))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS9))]
+    // [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArgumentListS10))]
+#endif
     public static readonly ImmutableArray<Type> SimpleTypes = ImmutableArray.Create(new [] {
         typeof(ArgumentList0),
         typeof(ArgumentListS1),
@@ -11987,3 +11998,4 @@ public sealed record ArgumentListS10 : ArgumentList10
         }
     }
 }
+

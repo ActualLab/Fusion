@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Versioning;
 
@@ -11,12 +10,10 @@ public abstract class DbShardWorkerBase<TDbContext>(
     where TDbContext : DbContext
 {
     protected IServiceProvider Services { get; init; } = services;
-    [field: AllowNull, MaybeNull]
     protected DbHub<TDbContext> DbHub => field ??= Services.DbHub<TDbContext>();
     protected VersionGenerator<long> VersionGenerator => DbHub.VersionGenerator;
     protected MomentClockSet Clocks => DbHub.Clocks;
     protected ICommander Commander => DbHub.Commander;
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     protected virtual IState<ImmutableHashSet<string>> WorkerShards => DbHub.ShardRegistry.UsedShards;

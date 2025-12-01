@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 
 namespace ActualLab.Fusion.Operations.Internal;
@@ -10,8 +9,6 @@ namespace ActualLab.Fusion.Operations.Internal;
 public sealed class InMemoryOperationScope : IOperationScope
 {
     private IServiceProvider Services => CommandContext.Services;
-
-    [field: AllowNull, MaybeNull]
     private ILogger Log => field ??= Services.LogFor(GetType());
 
     public CommandContext CommandContext { get; }

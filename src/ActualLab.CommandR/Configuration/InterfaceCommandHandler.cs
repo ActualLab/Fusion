@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.CommandR.Configuration;
 
 public interface IInterfaceCommandHandler : ICommandHandler

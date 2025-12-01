@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using StackExchange.Redis;
 
 namespace ActualLab.Redis;

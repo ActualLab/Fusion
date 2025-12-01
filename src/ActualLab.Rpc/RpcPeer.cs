@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
@@ -28,10 +27,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         get => _sender ?? _connectionState.Value.Sender; // _sender is set after _connectionState, so can be out of sync
     }
 
-    [field: AllowNull, MaybeNull]
     protected internal RpcCallLogger CallLogger
         => field ??= Hub.DiagnosticsOptions.CallLoggerFactory.Invoke(this, Log, CallLogLevel);
-    [field: AllowNull, MaybeNull]
     protected internal ILogger Log
         => field ??= Services.LogFor(GetType());
 

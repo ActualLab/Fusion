@@ -1,19 +1,16 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 
 namespace ActualLab.CommandR.Internal;
 
 public class Commander : ICommander
 {
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
-    [field: AllowNull, MaybeNull]
     protected static Action<IEventCommand, string> ChainIdSetter
         => field ??= typeof(IEventCommand).GetProperty(nameof(IEventCommand.ChainId))!.GetSetter<string>();
 
     public IServiceProvider Services { get; }
     public CommanderHub Hub { get; }
 
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public Commander(IServiceProvider services)

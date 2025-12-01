@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Trimming;
 
 namespace ActualLab.Interception.Trimming;

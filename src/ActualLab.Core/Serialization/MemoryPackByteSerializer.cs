@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 using Errors = ActualLab.Serialization.Internal.Errors;
 

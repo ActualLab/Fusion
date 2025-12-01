@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Versioning;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +10,6 @@ public abstract class DbProcessorBase(IDbHub dbHub) : ProcessorBase
     protected VersionGenerator<long> VersionGenerator => DbHub.VersionGenerator;
     protected MomentClockSet Clocks => DbHub.Clocks;
     protected ICommander Commander => DbHub.Commander;
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 }
 
@@ -19,11 +17,9 @@ public abstract class DbProcessorBase<TDbContext>(IServiceProvider services) : P
     where TDbContext : DbContext
 {
     protected IServiceProvider Services { get; init; } = services;
-    [field: AllowNull, MaybeNull]
     protected DbHub<TDbContext> DbHub => field ??= Services.DbHub<TDbContext>();
     protected VersionGenerator<long> VersionGenerator => DbHub.VersionGenerator;
     protected MomentClockSet Clocks => DbHub.Clocks;
     protected ICommander Commander => DbHub.Commander;
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 }

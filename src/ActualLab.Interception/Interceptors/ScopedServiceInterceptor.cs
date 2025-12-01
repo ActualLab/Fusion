@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Interception.Interceptors;
 
 public sealed class ScopedServiceInterceptor : Interceptor

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Caching;
 
 namespace ActualLab.Fusion;

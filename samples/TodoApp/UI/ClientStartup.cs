@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Blazorise;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using ActualLab.Fusion.Blazor;

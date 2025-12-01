@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;

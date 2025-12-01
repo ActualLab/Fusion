@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Fusion.UI;
 
 public sealed class UIActionTracker(
@@ -18,9 +16,7 @@ public sealed class UIActionTracker(
 
     public Options Settings { get; } = settings;
     public IServiceProvider Services { get; } = services;
-    [field: AllowNull, MaybeNull]
     public MomentClock Clock => field ??= Settings.Clock ?? Services.Clocks().CpuClock;
-    [field: AllowNull, MaybeNull]
     public ILogger Log => field ??= Services.LogFor(GetType());
 
     public long RunningActionCount => Interlocked.Read(ref _runningActionCount);

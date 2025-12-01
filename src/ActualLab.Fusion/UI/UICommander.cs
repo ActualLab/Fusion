@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.OS;
 
 namespace ActualLab.Fusion.UI;
@@ -11,9 +10,7 @@ public class UICommander(IServiceProvider services) : IHasServices
         .GetMethod(nameof(CreateUIActionTyped), BindingFlags.Static | BindingFlags.NonPublic)!;
 
     public IServiceProvider Services { get; } = services;
-    [field: AllowNull, MaybeNull]
     public ICommander Commander => field ??= Services.Commander();
-    [field: AllowNull, MaybeNull]
     public UIActionTracker UIActionTracker => field ??= Services.GetRequiredService<UIActionTracker>();
     public MomentClock Clock => UIActionTracker.Clock;
 

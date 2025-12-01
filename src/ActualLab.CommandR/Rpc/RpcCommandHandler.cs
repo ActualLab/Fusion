@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
 using ActualLab.Interception;
 using ActualLab.Rpc;
@@ -10,7 +9,6 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
 {
     private IServiceProvider Services { get; } = services;
     private RpcHub RpcHub { get; } = services.RpcHub();
-    [field: AllowNull, MaybeNull]
     private ILogger Log => field ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = CommanderCommandHandlerPriority.RpcRoutingCommandHandler)]

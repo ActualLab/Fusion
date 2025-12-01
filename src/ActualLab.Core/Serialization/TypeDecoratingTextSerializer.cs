@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Serialization.Internal;
 using Errors = ActualLab.Serialization.Internal.Errors;
 

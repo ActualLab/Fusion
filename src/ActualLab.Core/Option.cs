@@ -1,7 +1,6 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
-using ActualLab.Serialization.Internal;
+using ActualLab.Serialization.Internal; // Used in #if block
 using MessagePack;
 using Errors = ActualLab.Internal.Errors;
 

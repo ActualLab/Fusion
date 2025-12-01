@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Net;
 using ActualLab.OS;
 
@@ -6,11 +5,9 @@ namespace ActualLab.Rpc;
 
 public class RpcClientPeerReconnectDelayer : RetryDelayer, IHasServices
 {
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; }
-    [field: AllowNull, MaybeNull]
     public RpcHub Hub => field ??= Services.RpcHub();
 
     public RpcClientPeerReconnectDelayer(IServiceProvider services)

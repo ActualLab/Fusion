@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Tests.Caching.Alternative;
 
 public abstract class GrowOnlyCache<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>

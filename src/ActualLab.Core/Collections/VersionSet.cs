@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Comparison;
 using ActualLab.Internal;
 using MessagePack;
@@ -18,7 +17,6 @@ public sealed partial record VersionSet(
     public static readonly VersionSet Empty = new();
 
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
-    [field: AllowNull, MaybeNull]
     public string Value => field ??= Format();
 
     // Computed properties

@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Reflection;
 
 public record MemberwiseCopier<[

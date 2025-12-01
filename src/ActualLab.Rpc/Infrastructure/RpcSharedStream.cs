@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -14,7 +13,6 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
 
     private long _lastKeepAliveAt = CpuTimestamp.Now.Value;
 
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Peer.Hub.Services.LogFor(GetType());
 
     public RpcObjectId Id { get; } = stream.Id;

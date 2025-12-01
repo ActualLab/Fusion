@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Fusion.Extensions;
 
 public static class SandboxedKeyValueStoreExt

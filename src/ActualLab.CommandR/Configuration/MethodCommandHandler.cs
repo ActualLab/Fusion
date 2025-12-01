@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
 using ActualLab.Rpc.Infrastructure;
 
@@ -20,9 +19,7 @@ public sealed record MethodCommandHandler<
         IMethodCommandHandler
     where TCommand : class, ICommand
 {
-    [field: AllowNull, MaybeNull]
     public ParameterInfo[] Parameters => field ??= Method.GetParameters();
-    [field: AllowNull, MaybeNull]
     public Type[] ParameterTypes => field ??= Parameters.Select(p => p.ParameterType).ToArray();
 
     public override Type GetHandlerServiceType()

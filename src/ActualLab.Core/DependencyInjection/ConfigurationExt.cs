@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 using Microsoft.Extensions.Configuration;
 

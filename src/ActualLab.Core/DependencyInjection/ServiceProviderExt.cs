@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.DependencyInjection;
 
 public static class ServiceProviderExt

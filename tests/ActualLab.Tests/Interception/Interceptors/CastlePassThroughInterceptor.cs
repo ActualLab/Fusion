@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Castle.DynamicProxy;
 using IInvocation = Castle.DynamicProxy.IInvocation;
 

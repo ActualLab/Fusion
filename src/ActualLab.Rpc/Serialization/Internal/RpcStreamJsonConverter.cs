@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Rpc.Serialization.Internal;
 
 public class RpcStreamJsonConverter : JsonConverterFactory

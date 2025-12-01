@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Internal;

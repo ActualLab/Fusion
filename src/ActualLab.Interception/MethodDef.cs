@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Caching;
 using ActualLab.Interception.Internal;
 
@@ -23,14 +22,11 @@ public partial class MethodDef
     public readonly Type[] ParameterTypes;
     public readonly Type ReturnType;
     public readonly int CancellationTokenIndex;
-    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
+    // Lazy properties: costly to construct but rarely used immediately
     public ArgumentListType ArgumentListType => field ??= ArgumentListType.Get(ParameterTypes);
-    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
     public ArgumentListType ResultListType => field ??= ArgumentListType.Get(UnwrappedReturnType);
-    [field: AllowNull, MaybeNull] // Lazy: costly to construct in advance (delegate creation, etc.)
     public Func<object?, ArgumentList, object?> ArgumentListInvoker => field ??= ArgumentListType.Factory.Invoke().GetInvoker(MethodInfo);
 
-    [field: AllowNull, MaybeNull]
     public string FullName => field ??= $"{Type.GetName()}.{MethodInfo.Name}";
     public readonly bool IsAsyncMethod;
     public readonly bool IsAsyncVoidMethod;
@@ -44,22 +40,16 @@ public partial class MethodDef
     public object? DefaultResult => _defaultResultLazy.Value;
     public object? DefaultUnwrappedResult => _defaultUnwrappedResultLazy.Value;
 
-    [field: AllowNull, MaybeNull]
     public Func<object, ArgumentList, Task> TargetAsyncInvoker
         => field ??= GetCachedFunc<Func<object, ArgumentList, Task>>(typeof(TargetAsyncInvokerFactory<>));
-    [field: AllowNull, MaybeNull]
     public Func<Interceptor, Invocation, Task> InterceptorAsyncInvoker
         => field ??= GetCachedFunc<Func<Interceptor, Invocation, Task>>(typeof(InterceptorAsyncInvokerFactory<>));
-    [field: AllowNull, MaybeNull]
     public Func<Invocation, Task> InterceptedAsyncInvoker
         => field ??= GetCachedFunc<Func<Invocation, Task>>(typeof(InterceptedAsyncInvokerFactory<>));
-    [field: AllowNull, MaybeNull]
     public Func<object, ArgumentList, ValueTask<object?>> TargetObjectAsyncInvoker
         => field ??= GetCachedFunc<Func<object, ArgumentList, ValueTask<object?>>>(typeof(TargetObjectAsyncInvokerFactory<>));
-    [field: AllowNull, MaybeNull]
     public Func<Interceptor, Invocation, ValueTask<object?>> InterceptorObjectAsyncInvoker
         => field ??= GetCachedFunc<Func<Interceptor, Invocation, ValueTask<object?>>>(typeof(InterceptorObjectAsyncInvokerFactory<>));
-    [field: AllowNull, MaybeNull]
     public Func<Invocation, ValueTask<object?>> InterceptedObjectAsyncInvoker
         => field ??= GetCachedFunc<Func<Invocation, ValueTask<object?>>>(typeof(InterceptedObjectAsyncInvokerFactory<>));
 
@@ -70,11 +60,9 @@ public partial class MethodDef
     /// i.e. into a <c>Task</c>, <c>Task{T}</c>, <c>ValueTask</c>, or <c>ValueTask{T}</c>.
     /// Doesn't do anything if the input task is of a proper type.
     /// </summary>
-    [field: AllowNull, MaybeNull]
     public Func<Task, object?> UniversalAsyncResultConverter
         => field ??= GetCachedFunc<Func<Task, object?>>(typeof(UniversalAsyncResultConverterFactory<>));
 
-    [field: AllowNull, MaybeNull]
     public Func<Task, ValueTask<object?>> TaskToObjectValueTaskConverter
         => field ??= GenericInstanceCache
             .Get<Func<Task, ValueTask<object?>>>(typeof(TaskExt.ToObjectValueTaskFactory<>), UnwrappedReturnType);

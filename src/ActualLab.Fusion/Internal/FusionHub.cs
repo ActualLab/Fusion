@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Internal;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Interception;
@@ -23,13 +22,11 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
     public CommanderHub CommanderHub { get; } = services.Commander().Hub;
     public MomentClockSet Clocks { get; } = services.Clocks();
     public IRemoteComputedCache? RemoteComputedCache => _remoteComputedCacheLazy.Value;
-    [field: AllowNull, MaybeNull]
     public ILogger RemoteComputedCacheLog => field ??= Services.LogFor<IRemoteComputedCache>();
     public ComputedOptionsProvider ComputedOptionsProvider { get; }
         = services.GetRequiredService<ComputedOptionsProvider>();
     public ComputedOutputEqualityComparer ComputedOutputEqualityComparer { get; }
         = services.GetRequiredService<ComputedOutputEqualityComparer>();
-    [field: AllowNull, MaybeNull]
     public ComputeServiceInterceptor ComputeServiceInterceptor
         => field ??= Services.GetRequiredService<ComputeServiceInterceptor>();
 

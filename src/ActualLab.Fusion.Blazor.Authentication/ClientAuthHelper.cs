@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.JSInterop;
 using ActualLab.Fusion.Authentication;
 
@@ -11,14 +10,10 @@ public class ClientAuthHelper(IServiceProvider services) : IHasServices
     protected (string Schema, string SchemaName)[]? CachedSchemas { get; set; }
 
     public IServiceProvider Services { get; } = services;
-    [field: AllowNull, MaybeNull]
     public IAuth Auth => field ??= Services.GetRequiredService<IAuth>();
-    [field: AllowNull, MaybeNull]
     public ISessionResolver SessionResolver => field ??= Services.GetRequiredService<ISessionResolver>();
     public Session Session => SessionResolver.Session;
-    [field: AllowNull, MaybeNull]
     public ICommander Commander => field ??= Services.Commander();
-    [field: AllowNull, MaybeNull]
     public IJSRuntime JSRuntime => field ??= Services.GetRequiredService<IJSRuntime>();
 
     public virtual async ValueTask<(string Name, string DisplayName)[]> GetSchemas()

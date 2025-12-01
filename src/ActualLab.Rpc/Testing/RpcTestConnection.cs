@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Channels;
 using ActualLab.Internal;
 using ActualLab.Rpc.Infrastructure;
@@ -18,9 +17,7 @@ public class RpcTestConnection
     public RpcHub Hub => TestClient.Hub;
     public RpcPeerRef ClientPeerRef { get; }
     public RpcPeerRef ServerPeerRef { get; }
-    [field: AllowNull, MaybeNull]
     public RpcClientPeer ClientPeer => field ??= Hub.GetClientPeer(ClientPeerRef);
-    [field: AllowNull, MaybeNull]
     public RpcServerPeer ServerPeer => field ??= Hub.GetServerPeer(ServerPeerRef);
 
     public ChannelPair<RpcMessage>? Channels {

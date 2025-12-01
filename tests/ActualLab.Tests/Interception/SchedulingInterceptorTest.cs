@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Concurrency;
 using ActualLab.Interception;
 using ActualLab.Interception.Interceptors;
@@ -9,7 +8,6 @@ public class SchedulingTestService : IRequiresAsyncProxy, IHasTaskFactory
 {
     private ConcurrentExclusiveSchedulerPair Schedulers { get; } = new();
 
-    [field: AllowNull, MaybeNull]
     TaskFactory IHasTaskFactory.TaskFactory => field ??= new(Schedulers.ConcurrentScheduler);
 
     public virtual Task TaskMethod()

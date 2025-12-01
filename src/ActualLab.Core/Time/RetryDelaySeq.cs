@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using MessagePack;
 
 namespace ActualLab.Time;
@@ -16,7 +15,6 @@ public partial record RetryDelaySeq(
 {
     public const double DefaultSpread = 0.1;
     public const double DefaultMultiplier = 1.41421356237; // Math.Sqrt(2)
-    [field: AllowNull, MaybeNull]
     public static RetryDelaySeq Zero => field ??= Fixed(TimeSpan.Zero, 0);
 
     public static RetryDelaySeq Fixed(double delayInSeconds, double spread = DefaultSpread)

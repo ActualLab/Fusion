@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
@@ -10,7 +9,6 @@ public sealed class RpcComputeSystemCallSender : RpcServiceBase
     public readonly RpcServiceDef ServiceDef;
     public readonly IRpcComputeSystemCalls Client;
 
-    [field: AllowNull, MaybeNull]
     public RpcMethodDef InvalidateMethodDef
         => field ??= ServiceDef.Methods.Single(m => Equals(m.MethodInfo.Name, nameof(IRpcComputeSystemCalls.Invalidate)));
 

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.UI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -16,8 +15,6 @@ public class CircuitHub : ProcessorBase, IHasServices
     private static long _lastId;
 
     protected readonly AsyncTaskMethodBuilder WhenInitializedSource = AsyncTaskMethodBuilderExt.New();
-
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public long Id { get; } = Interlocked.Increment(ref _lastId);
@@ -27,15 +24,10 @@ public class CircuitHub : ProcessorBase, IHasServices
     public UICommander UICommander { get; }
     public ICommander Commander { get; }
     // Some services require lazy resolution
-    [field: AllowNull, MaybeNull]
     public Session Session => field ??= Services.GetRequiredService<Session>();
-    [field: AllowNull, MaybeNull]
     public ISessionResolver SessionResolver => field ??= Services.GetRequiredService<ISessionResolver>();
-    [field: AllowNull, MaybeNull]
     public NavigationManager Nav => field ??= Services.GetRequiredService<NavigationManager>();
-    [field: AllowNull, MaybeNull]
     public JSRuntimeInfo JSRuntimeInfo => field ??= Services.GetRequiredService<JSRuntimeInfo>();
-    [field: AllowNull, MaybeNull]
     public IJSRuntime JS => field ??= Services.GetRequiredService<IJSRuntime>();
     // Useful shortcuts
     public bool IsPrerendering => JSRuntimeInfo.IsPrerendering;

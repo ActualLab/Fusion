@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Plugins.Internal;
 
 public interface IPluginFactory

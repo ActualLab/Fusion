@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
@@ -9,7 +8,6 @@ public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(servi
 {
     private static readonly RpcCallTimeouts OutboundCallTimeouts = new(null, 60);
 
-    [field: AllowNull, MaybeNull]
     public Host OwnHost => field ??= Services.GetRequiredService<Host>();
 
     public string HostUrlResolver(RpcClientPeer peer)

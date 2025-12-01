@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Fusion.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
@@ -18,12 +17,8 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
-    [field: AllowNull, MaybeNull]
-    protected RpcArgumentSerializer ArgumentSerializer
-        => field ??= Hub.SerializationFormats.DefaultFormat.ArgumentSerializer;
-    [field: AllowNull, MaybeNull]
-    protected RpcMethodResolver AnyMethodResolver
-        => field ??= Hub.ServiceRegistry.AnyMethodResolver;
+    protected RpcArgumentSerializer ArgumentSerializer => field ??= Hub.SerializationFormats.DefaultFormat.ArgumentSerializer;
+    protected RpcMethodResolver AnyMethodResolver => field ??= Hub.ServiceRegistry.AnyMethodResolver;
     protected ILogger? DefaultLog;
 
     public Options Settings { get; }

@@ -139,8 +139,7 @@ Members within a class should be ordered as follows:
     - Public properties and fields are located closer to the constructor
 5. Lazy style is often preferred for DI-injected properties,
    especially in the UI-related code.
-   Use `[field: AllowNull, MaybeNull]` with null-coalescing assignment of
-   Services.GetRequiredService<T>()`
+   Use `=> field ??= Services.GetRequiredService<T>()`.
 6. **Constructor-like static NewXxx-style methods**
 7. **Constructors** (public, then private),
    though primary constructors are preferred.
@@ -180,7 +179,6 @@ public class Chats(IServiceProvider services) : IChats
     
     // 2. Dependency-injected services
     private IAccounts Accounts { get; } = services.GetRequiredService<IAccounts>();
-    [field: AllowNull, MaybeNull]
     private IPlaces Places => field ??= services.GetRequiredService<IPlaces>();
     private ICommander Commander { get; } = services.Commander();
     private ILogger Log { get; } = services.LogFor<Chats>();
@@ -254,17 +252,14 @@ public class Chats(IServiceProvider services) : IChats
 {
     private IServiceProvider Services { get; } = services;
     private IAccounts Accounts { get; } = services.GetRequiredService<IAccounts>();
-    [field: AllowNull, MaybeNull]
     private IPlaces Places => field ??= Services.GetRequiredService<IPlaces>();
-    [field: AllowNull, MaybeNull]
     private ICommander Commander => field ??= Services.Commander();  // Rarely needed
-    [field: AllowNull, MaybeNull]
     private ILogger Log => field ??= Services.LogFor<Chats>(); // Rarely needed
 }
 ```
 
 2. **API records** should be fully serializable,
-   which typically implies presence of the following attributes:
+   which typically implies the presence of the following attributes:
 ```csharp
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 [method: MemoryPackConstructor, SerializationConstructor, JsonConstructor]

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net.WebSockets;
 using ActualLab.Internal;
 
@@ -10,7 +9,6 @@ public class WebSocketOwner(
     IServiceProvider services
     ) : SafeAsyncDisposableBase
 {
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     public IServiceProvider Services { get; } = services;

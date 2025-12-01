@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
@@ -16,15 +15,10 @@ public partial class RpcPeerRef
 
     public const string DefaultHostId = "default";
 
-    [field: AllowNull, MaybeNull]
     public static RpcPeerRef Default { get => field ??= GetDefaultPeerRef(); set; }
-    [field: AllowNull, MaybeNull]
     public static RpcPeerRef DefaultBackend { get => field ??= GetDefaultPeerRef(isBackend: true); set; }
-    [field: AllowNull, MaybeNull]
     public static RpcPeerRef Loopback { get => field ??= GetDefaultPeerRef(RpcPeerConnectionKind.Loopback, true); set; }
-    [field: AllowNull, MaybeNull]
     public static RpcPeerRef Local { get => field ??= GetDefaultPeerRef(RpcPeerConnectionKind.Local, true); set; }
-    [field: AllowNull, MaybeNull]
     public static RpcPeerRef None { get => field ??= GetDefaultPeerRef(RpcPeerConnectionKind.None, true); set; }
 
     public static RpcPeerRef FromAddress(string address)

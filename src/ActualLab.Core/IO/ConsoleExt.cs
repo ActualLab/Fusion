@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Concurrency;
 
 namespace ActualLab.IO;

@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Collections;
 
 public sealed class RecentlySeenMap<TKey, TValue>(

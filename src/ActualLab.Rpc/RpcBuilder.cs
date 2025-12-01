@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Interception;
 using ActualLab.Rpc.Caching;

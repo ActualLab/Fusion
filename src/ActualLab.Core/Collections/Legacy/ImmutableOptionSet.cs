@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Collections.Internal;
 using MessagePack;
 
@@ -21,7 +20,6 @@ public readonly partial record struct ImmutableOptionSet
     // Computed properties
 
     [JsonIgnore, MemoryPackIgnore, IgnoreMember]
-    [field: AllowNull, MaybeNull]
     public ImmutableDictionary<string, object> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => field ?? EmptyItems;

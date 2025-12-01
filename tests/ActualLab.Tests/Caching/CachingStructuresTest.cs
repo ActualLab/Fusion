@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using ActualLab.Tests.Caching.Alternative;
 
 namespace ActualLab.Tests.Caching;

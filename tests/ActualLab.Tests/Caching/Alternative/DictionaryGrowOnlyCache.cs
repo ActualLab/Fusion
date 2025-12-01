@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Tests.Caching.Alternative;
 
 #pragma warning disable RCS1059, MA0064

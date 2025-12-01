@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ActualLab.Fusion.EntityFramework;
 
 public interface IDbShardResolver : IHasServices
@@ -32,7 +30,6 @@ public class DbShardResolver<TDbContext>(IServiceProvider services)
 {
     protected override IDbShardRegistry UntypedShardRegistry => ShardRegistry;
 
-    [field: AllowNull, MaybeNull]
     public IDbShardRegistry<TDbContext> ShardRegistry
         => field ??= Services.GetRequiredService<IDbShardRegistry<TDbContext>>();
 

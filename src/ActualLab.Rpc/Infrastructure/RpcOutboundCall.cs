@@ -1,7 +1,5 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using ActualLab.OS;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Diagnostics;
 using Errors = ActualLab.Internal.Errors;
@@ -355,7 +353,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             // It's totally fine to ignore any error here:
             // peer.Hub might be already disposed at this point,
             // so SystemCallSender might not be available.
-            // In any case, peer on the other side is going to
+            // In any case, the peer on the other side is going to
             // be gone as well after that, so every call there
             // will be cancelled anyway.
         }

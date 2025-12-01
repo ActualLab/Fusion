@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 #if NETSTANDARD2_0
 
 // ReSharper disable once CheckNamespace

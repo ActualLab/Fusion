@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Conversion;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Generators;

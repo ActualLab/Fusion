@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Caching;
 using ActualLab.Interception;
 using ActualLab.Internal;
@@ -21,7 +20,6 @@ public partial class RpcMethodDef : MethodDef
     private static readonly ConcurrentDictionary<Type, (bool, bool)> IsCommandTypeCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Hub.Services.LogFor(GetType());
 
     public readonly RpcHub Hub;

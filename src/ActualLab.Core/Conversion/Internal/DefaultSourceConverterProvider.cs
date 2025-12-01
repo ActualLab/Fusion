@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Internal;
 
 namespace ActualLab.Conversion.Internal;

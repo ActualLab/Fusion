@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
@@ -32,7 +31,6 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
 
     protected IServiceProvider Services { get; }
     protected IDbShardRegistry<TDbContext> ShardRegistry { get; }
-    [field: AllowNull, MaybeNull]
     protected ShardDbContextFactoryBuilder<TDbContext> ShardDbContextFactoryBuilder
         => field ??= Services.GetRequiredService<ShardDbContextFactoryBuilder<TDbContext>>();
     protected bool HasSingleShard { get; }

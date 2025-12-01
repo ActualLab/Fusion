@@ -1,5 +1,4 @@
 using System.Data;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.Operations;
@@ -39,7 +38,6 @@ public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
 #endif
     private TDbContext? _templateDbContext;
 
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     protected TDbContext TemplateDbContext {
@@ -55,24 +53,17 @@ public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
     }
 
     public IServiceProvider Services { get; } = services;
-    [field: AllowNull, MaybeNull]
     public HostId HostId => field ??= Commander.Hub.HostId;
-    [field: AllowNull, MaybeNull]
     public IDbShardResolver<TDbContext> ShardResolver => field ??= Services.DbShardResolver<TDbContext>();
     public IDbShardRegistry<TDbContext> ShardRegistry => ShardResolver.ShardRegistry;
-    [field: AllowNull, MaybeNull]
     public IShardDbContextFactory<TDbContext> ContextFactory
         => field ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
-    [field: AllowNull, MaybeNull]
     public VersionGenerator<long> VersionGenerator
         => field ??= Commander.Hub.VersionGenerator;
-    [field: AllowNull, MaybeNull]
     public ChaosMaker ChaosMaker
         => field ??= Commander.Hub.ChaosMaker;
-    [field: AllowNull, MaybeNull]
     public MomentClockSet Clocks
         => field ??= Services.Clocks();
-    [field: AllowNull, MaybeNull]
     public ICommander Commander
         => field ??= Services.Commander();
 

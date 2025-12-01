@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Rpc;
@@ -19,12 +18,9 @@ public class InvalidatingCommandCompletionHandler(
 
     protected IServiceProvider Services { get; } = services;
     protected Options Settings { get; } = settings;
-    [field: AllowNull, MaybeNull]
     protected CommandHandlerResolver CommandHandlerResolver
         => field ??= Services.GetRequiredService<CommandHandlerResolver>();
-    [field: AllowNull, MaybeNull]
     protected RpcHub RpcHub => field ??= Services.GetRequiredService<RpcHub>();
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.InvalidatingCommandCompletionHandler)]

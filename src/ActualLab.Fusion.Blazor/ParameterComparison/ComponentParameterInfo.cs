@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
@@ -11,8 +10,6 @@ public sealed class ComponentParameterInfo
     public bool IsCapturingUnmatchedValues { get; init; }
     public string? CascadingParameterName { get; init; }
     public ParameterComparer Comparer { get; init; } = null!;
-    [field: AllowNull, MaybeNull]
     public Func<IComponent, object> Getter => field ??= Property.GetGetter<IComponent, object>(true);
-    [field: AllowNull, MaybeNull]
     public Action<IComponent, object> Setter => field ??= Property.GetSetter<IComponent, object>(true);
 }

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using ActualLab.Caching;
 using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
@@ -45,12 +44,9 @@ public abstract class State : ComputedInput, IState
     protected AsyncLock AsyncLock { get; } = new(LockReentryMode.CheckedFail);
     protected object Lock => AsyncLock;
 
-    [field: AllowNull, MaybeNull]
-    protected Func<Task, object?> GetTaskResultAsObjectSynchronously =>
-        field ??= GenericInstanceCache.GetUnsafe<Func<Task, object?>>(
+    protected Func<Task, object?> GetTaskResultAsObjectSynchronously
+        => field ??= GenericInstanceCache.GetUnsafe<Func<Task, object?>>(
             typeof(TaskExt.GetResultAsObjectSynchronouslyFactory<>), OutputType);
-
-    [field: AllowNull, MaybeNull]
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
     // Public properties
