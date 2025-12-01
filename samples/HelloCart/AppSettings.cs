@@ -20,6 +20,6 @@ public static class AppSettings
         public static readonly ChaosMaker ChaosMaker = (
             (0.1*ChaosMaker.Delay(0.75, 1)) |
             (0.1*ChaosMaker.TransientError)
-        ).Filtered("OF types", o => o is DbOperationScope or IDbLogReader).Gated();
+        ).Filtered("Operations Framework types", o => o is DbOperationScope or IDbLogReader).Gated();
     }
 }
