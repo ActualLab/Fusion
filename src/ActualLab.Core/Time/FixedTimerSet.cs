@@ -41,7 +41,9 @@ public sealed class FixedTimerSet<TItem> : WorkerBase
         TickSource = options.TickSource;
         FireDelay = options.FireDelay.Positive();
         _fireHandler = fireHandler;
+#pragma warning disable MA0040
         _ = Run();
+#pragma warning restore MA0040
     }
 
     public void Add(TItem item)

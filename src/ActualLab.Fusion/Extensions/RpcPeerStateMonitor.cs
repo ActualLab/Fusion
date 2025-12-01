@@ -61,7 +61,7 @@ public class RpcPeerStateMonitor : WorkerBase
             ? stateFactory.NewMutable(initialState, stateCategory)
             : stateFactory.NewComputed(initialState, FixedDelayer.NextTick, ComputeState, stateCategory);
         if (mustStart)
-            Start();
+            this.Start();
     }
 
     protected override async Task DisposeAsyncCore()
@@ -71,12 +71,6 @@ public class RpcPeerStateMonitor : WorkerBase
             d1.Dispose();
         if (LastReconnectDelayCancelledAt is IDisposable d2)
             d2.Dispose();
-    }
-
-    public void Start()
-    {
-        if (PeerRef is not null)
-            _ = Run();
     }
 
     protected override async Task OnRun(CancellationToken cancellationToken)

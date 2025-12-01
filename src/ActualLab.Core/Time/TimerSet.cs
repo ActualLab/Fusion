@@ -40,7 +40,9 @@ public sealed class TimerSet<TTimer> : WorkerBase
         Quanta = options.Quanta;
         _fireHandler = fireHandler;
         _start = start ?? Clock.Now;
+#pragma warning disable MA0040
         _ = Run();
+#pragma warning restore MA0040
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

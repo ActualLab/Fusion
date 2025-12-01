@@ -77,7 +77,9 @@ public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null
 
     Task IHostedService.StartAsync(CancellationToken cancellationToken)
     {
+#pragma warning disable MA0040
         _ = Run();
+#pragma warning restore MA0040
         return Task.CompletedTask;
     }
 
