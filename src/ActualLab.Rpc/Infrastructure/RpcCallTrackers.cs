@@ -97,7 +97,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
         var lastSummaryReportAt = CpuTimestamp.Now;
-        var maxDelayedCallCount = Limits.LogOutboundCallMaxDelayedCallCount;
+        var maxDelayedCallCount = Limits.LogDelayedCallMaxCount;
         var delayedCalls = new List<RpcOutboundCall>();
         try {
             // This loop aborts timed out calls every CallTimeoutCheckPeriod
@@ -152,7 +152,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         Peer.Ref, delayedCalls.Count - maxDelayedCallCount);
                 }
 
-                var summaryLogSettings = Limits.LogOutboundCallSummarySettings;
+                var summaryLogSettings = Limits.LogCallSummarySettings;
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period
                     && callCount > summaryLogSettings.MinCount) {
                     lastSummaryReportAt = CpuTimestamp.Now;
