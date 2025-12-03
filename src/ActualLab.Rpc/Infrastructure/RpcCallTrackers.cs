@@ -97,7 +97,8 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
     {
         var lastSummaryReportAt = CpuTimestamp.Now;
-        var maxDelayedCallCount = Limits.LogDelayedCallMaxCount;
+        var delayedCallLimit = Limits.LogDelayedCallLimit;
+        var summaryLogSettings = Limits.LogCallSummarySettings;
         var delayedCalls = new List<RpcOutboundCall>();
         try {
             // This loop aborts timed out calls every CallTimeoutCheckPeriod
@@ -128,7 +129,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     }
                     else if (elapsed >= timeouts.LogTimeout) {
                         delayedCalls.Add(call);
-                        if (delayedCalls.Count > maxDelayedCallCount)
+                        if (delayedCalls.Count > delayedCallLimit)
                             continue;
 
                         Peer.Log.LogWarning(
@@ -146,13 +147,12 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         + $"delayed calls ({delayedCalls.Count}: "
                         + $"{delayedCalls.Select(x => x.MethodDef).ToDelimitedString()}");
 #endif
-                if (delayedCalls.Count > maxDelayedCallCount) {
+                if (delayedCalls.Count > delayedCallLimit) {
                     Peer.Log.LogWarning(
                         "'{PeerRef}': {UnloggedDelayedCallCount} more delayed call(s) aren't logged",
-                        Peer.Ref, delayedCalls.Count - maxDelayedCallCount);
+                        Peer.Ref, delayedCalls.Count - delayedCallLimit);
                 }
 
-                var summaryLogSettings = Limits.LogCallSummarySettings;
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period
                     && callCount > summaryLogSettings.MinCount) {
                     lastSummaryReportAt = CpuTimestamp.Now;

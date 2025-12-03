@@ -28,7 +28,7 @@ public record RpcLimits
     public TimeSpan CallAbortCyclePeriod { get; set; } = TimeSpan.FromSeconds(1);
     // Call timeout check period
     public RandomTimeSpan CallTimeoutCheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.2);
-    public int LogDelayedCallMaxCount { get; init; } = 10;
+    public int LogDelayedCallLimit { get; init; } = 10;
     // Outbound call summary logging
     public (int MinCount, TimeSpan Period) LogCallSummarySettings { get; init; }
         = RuntimeInfo.IsServer
