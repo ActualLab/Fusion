@@ -15,6 +15,7 @@ using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.OS;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Middlewares;
 using ActualLab.Rpc.Server;
 using ActualLab.Rpc.Testing;
 using AspNet.Security.OAuth.GitHub;

@@ -2,8 +2,8 @@ namespace ActualLab.Rpc;
 
 public sealed partial record RpcCallTimeouts
 {
-    public static readonly RpcCallTimeouts None = new();
     public static TimeSpan DefaultLogTimeout { get; set; } = TimeSpan.FromSeconds(30);
+    public static readonly RpcCallTimeouts None = new(); // Should go after DefaultLogTimeout, coz it uses it!
 
     public TimeSpan ConnectTimeout { get; init => field = value.Positive(); }
     public TimeSpan RunTimeout { get; init => field = value.Positive(); }
