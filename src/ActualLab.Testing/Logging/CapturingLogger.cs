@@ -3,8 +3,10 @@ namespace ActualLab.Testing.Logging;
 public sealed class CapturingLogger(CapturingLoggerProvider provider, string category) : ILogger
 {
     public IDisposable BeginScope<TState>(TState state)
+#if NET7_0_OR_GREATER
         where TState : notnull
-        => default!;
+#endif
+        => null!;
 
     public bool IsEnabled(LogLevel logLevel)
         => true;
@@ -19,8 +21,8 @@ public sealed class CapturingLogger(CapturingLoggerProvider provider, string cat
         var message = formatter.Invoke(state, exception);
         provider.UseBuffer(buffer => {
             buffer
-                .Append('[').Append(provider.StartedAt.Elapsed.ToShortString()).Append("] ")
                 .Append(LogLevelChar(logLevel)).Append(' ')
+                .Append(provider.StartedAt.Elapsed.ToShortString()).Append(' ')
                 .Append(category).Append(": ")
                 .Append(message);
             if (exception != null)

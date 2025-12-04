@@ -38,9 +38,6 @@ public abstract class TestBase(ITestOutputHelper @out) : IAsyncLifetime
 
     public ITestOutputHelper Out { get; set; } = @out;
 
-    public virtual void WriteLine(string message)
-        => Out.WriteLine(message);
-
     public virtual Task InitializeAsync()
         => Task.CompletedTask;
 
@@ -48,6 +45,9 @@ public abstract class TestBase(ITestOutputHelper @out) : IAsyncLifetime
         => Task.CompletedTask;
 
     // Protected methods
+
+    protected virtual void WriteLine(string message)
+        => Out.WriteLine(message);
 
     protected string GetTestRedisKeyPrefix(string? basePrefix = null, string? suffix = null)
     {

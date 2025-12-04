@@ -27,9 +27,6 @@
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <Compile Remove="ApplicationPartsLogger.cs" />
-  </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="IndexRange" />

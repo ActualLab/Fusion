@@ -1,11 +1,10 @@
+using Microsoft.Extensions.Hosting;
 using ActualLab.IO;
+#if NETCOREAPP
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.Extensions.Hosting;
-#if NETCOREAPP
-
 #else
 using Owin;
 using System.Net.Http;

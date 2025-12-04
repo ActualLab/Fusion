@@ -1,3 +1,5 @@
+#if !NETFRAMEWORK
+
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Hosting;
@@ -26,3 +28,5 @@ public class ApplicationPartsLogger(
     public Task StopAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
 }
+
+#endif
