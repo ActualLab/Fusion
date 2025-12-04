@@ -27,5 +27,8 @@ public class CapturingLoggerTest(ITestOutputHelper @out) : TestBase(@out)
         content.Should().Contain("W ");
         content.Should().Contain("Warning");
         content.Should().Contain(GetType().GetName());
+
+        clp.Clear();
+        clp.Content.Should().BeEmpty();
     }
 }
