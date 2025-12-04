@@ -8,6 +8,9 @@ public static class WebTestHelpers
     public static Uri GetLocalUri(int port, string protocol = "http")
         => new($"{protocol}://127.0.0.1:{port}");
 
+    public static Uri GetUnusedLocalUri(string protocol = "http")
+        => GetLocalUri(GetUnusedTcpPort(), protocol);
+
     public static int GetUnusedTcpPort()
     {
         var listener = new TcpListener(IPAddress.Any, 0);
