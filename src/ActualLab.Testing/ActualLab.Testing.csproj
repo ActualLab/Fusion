@@ -41,4 +41,8 @@
     <ProjectReference Include="..\ActualLab.Core\ActualLab.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Attributes\" />
+  </ItemGroup>
+
 </Project>

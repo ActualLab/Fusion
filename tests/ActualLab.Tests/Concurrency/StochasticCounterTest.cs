@@ -36,7 +36,7 @@ public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)
         const int runCount = 5;
         var agentCount = HardwareInfo.GetProcessorCountFraction(2);
         var incrementCount = (double)(agentCount * iterationCount);
-        Out.WriteLine($"Increment count: {incrementCount}");
+        WriteLine($"Increment count: {incrementCount}");
         for (var i = 0; i < runCount; i++) {
             c.Reset();
             var startedAt = CpuTimestamp.Now;
@@ -57,7 +57,7 @@ public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)
                             min = Math.Min(min, min1);
                         }
                         if (j % 250_000 == 0)
-                            Out.WriteLine($"- {j}: ({min}, {max}), counts: ({actualIncrementCount}, {actualDecrementCount})");
+                            WriteLine($"- {j}: ({min}, {max}), counts: ({actualIncrementCount}, {actualDecrementCount})");
                     }
                     return (min, max);
                 }))
@@ -71,7 +71,7 @@ public class StochasticCounterTest(ITestOutputHelper @out) : TestBase(@out)
             var deviation = Math.Max(Math.Max(max, -min), Math.Abs(value));
             var pDeviation = deviation / incrementCount;
 
-            Out.WriteLine($"{i}: {pDeviation:P2} ({deviation}) -> {ops/1000_000:N1}M ops/s");
+            WriteLine($"{i}: {pDeviation:P2} ({deviation}) -> {ops/1000_000:N1}M ops/s");
             pDeviation.Should().BeInRange(-0.01, 0.05);
         }
     }

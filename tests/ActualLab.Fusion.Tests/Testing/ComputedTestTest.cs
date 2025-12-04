@@ -13,11 +13,11 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var t0 = await time.Now();
         var d1 = await ComputedTest.When(async _ => {
             var delta = await time.Now(TimeSpan.FromSeconds(0.1)) - t0;
-            Out.WriteLine($"* {delta.ToShortString()}");
+            WriteLine($"* {delta.ToShortString()}");
             delta.Should().BeGreaterThan(TimeSpan.FromSeconds(1));
             return delta;
         });
-        Out.WriteLine(d1.ToShortString());
+        WriteLine(d1.ToShortString());
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var t0 = await time.Now();
         await ComputedTest.When(async _ => {
             var delta = await time.Now(TimeSpan.FromSeconds(0.1)) - t0;
-            Out.WriteLine($"* {delta.ToShortString()}");
+            WriteLine($"* {delta.ToShortString()}");
             delta.Should().BeGreaterThan(TimeSpan.FromSeconds(1));
         });
     }
@@ -40,14 +40,14 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
         try {
             await ComputedTest.When(async _ => {
                 var delta = await time.Now(TimeSpan.FromSeconds(0.1)) - t0;
-                Out.WriteLine($"* {delta.ToShortString()}");
+                WriteLine($"* {delta.ToShortString()}");
                 Assert.Fail("Ok");
                 return delta;
             }, TimeSpan.FromSeconds(1));
             throw new InvalidCastException("Not ok.");
         }
         catch (FailException e) {
-            Out.WriteLine($"Expected error: {e}");
+            WriteLine($"Expected error: {e}");
         }
     }
 
@@ -59,13 +59,13 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
         try {
             await ComputedTest.When(async _ => {
                 var delta = await time.Now(TimeSpan.FromSeconds(0.1)) - t0;
-                Out.WriteLine($"* {delta.ToShortString()}");
+                WriteLine($"* {delta.ToShortString()}");
                 Assert.Fail("Ok");
             }, TimeSpan.FromSeconds(1));
             throw new InvalidCastException("Not ok.");
         }
         catch (FailException e) {
-            Out.WriteLine($"Expected error: {e}");
+            WriteLine($"Expected error: {e}");
         }
     }
 
@@ -80,7 +80,7 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
             throw new InvalidCastException("Not ok.");
         }
         catch (TimeoutException e) {
-            Out.WriteLine($"Expected error: {e}");
+            WriteLine($"Expected error: {e}");
         }
     }
 
@@ -94,7 +94,7 @@ public class ComputedTestTest(ITestOutputHelper @out) : FusionTestBase(@out)
             throw new InvalidCastException("Not ok.");
         }
         catch (TimeoutException e) {
-            Out.WriteLine($"Expected error: {e}");
+            WriteLine($"Expected error: {e}");
         }
     }
 }

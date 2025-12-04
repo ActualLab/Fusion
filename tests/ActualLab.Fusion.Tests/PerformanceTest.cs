@@ -89,15 +89,15 @@ public abstract class PerformanceTestBase : FusionTestBase
         var nonFusionIterationCount = nonFusionOpCountPerCore / nonFusionReadersPerCore;
         var nonFusionReaderCount = HardwareInfo.GetProcessorCountFactor(nonFusionReadersPerCore);
 
-        Out.WriteLine($"Database: {DbType}" + (UseEntityResolver ? " (with DbEntityResolver)" : ""));
-        Out.WriteLine("With ActualLab.Fusion:");
+        WriteLine($"Database: {DbType}" + (UseEntityResolver ? " (with DbEntityResolver)" : ""));
+        WriteLine("With ActualLab.Fusion:");
         await Test("Multiple readers, 1 mutator", users, null, true,
             fusionReaderCount, fusionIterationCount);
         await Test("Single reader, no mutators", users, null, false,
             1, fusionOpCountPerCore);
         return;
 
-        Out.WriteLine("Without ActualLab.Fusion:");
+        WriteLine("Without ActualLab.Fusion:");
         await Test("Multiple readers, 1 mutator", plainUsers, null, true,
             nonFusionReaderCount, nonFusionIterationCount);
         await Test("Single reader, no mutators", plainUsers, null, false,
@@ -126,6 +126,13 @@ public abstract class PerformanceTestBase : FusionTestBase
             bestElapsed = TimeSpanExt.Min(bestElapsed, lastElapsed);
         }
         WriteLine($"    Speed: {sb}-> {FormatCount(operationCount / bestElapsed.TotalSeconds)} calls/s");
+        return;
+
+        // ReSharper disable once LocalFunctionHidesMethod
+        void WriteLine(string line) {
+            if (!isWarmup)
+                Out.WriteLine(line);
+        }
 
         async Task<TimeSpan> Run() {
             using var stopCts = new CancellationTokenSource();
@@ -200,11 +207,6 @@ public abstract class PerformanceTestBase : FusionTestBase
                 value /= 1000;
             }
             return $"{value:N}{scale}";
-        }
-
-        void WriteLine(string line) {
-            if (!isWarmup)
-                Out.WriteLine(line);
         }
     }
 }

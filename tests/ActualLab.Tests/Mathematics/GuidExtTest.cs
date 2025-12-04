@@ -11,7 +11,7 @@ public class GuidExtTest(ITestOutputHelper @out) : TestBase(@out)
             rnd.NextBytes(buffer);
             var g0 = new Guid(buffer);
             var encoded = g0.ToBase64Url();
-            Out.WriteLine(encoded);
+            WriteLine(encoded);
             var g1 = GuidExt.FromBase64Url(encoded);
             g1.Should().Be(g0);
         }

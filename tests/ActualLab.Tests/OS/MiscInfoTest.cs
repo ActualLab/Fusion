@@ -41,6 +41,4 @@ public class MiscInfoTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
 #endif
-
-    private void WriteLine(string line) => Out.WriteLine(line);
 }

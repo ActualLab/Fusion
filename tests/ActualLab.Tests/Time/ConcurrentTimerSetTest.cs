@@ -116,9 +116,9 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
 #pragma warning restore CA2025
                 .ToArray();
             await Task.WhenAll(tasks);
-            Out.WriteLine("ConcurrentTimerSet is disposing...");
+            WriteLine("ConcurrentTimerSet is disposing...");
         }
-        Out.WriteLine("ConcurrentTimerSet is disposed.");
+        WriteLine("ConcurrentTimerSet is disposed.");
     }
 
     private async Task OneRandomTest(int timerCount, int maxDuration, int maxDelta)
@@ -144,21 +144,21 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
                 DueAt = start + TimeSpan.FromMilliseconds(rnd.Next(maxDuration))
             })
             .ToList();
-        Out.WriteLine($"{runner}: Timers created.");
+        WriteLine($"{runner}: Timers created.");
 
         foreach (var timer in timers)
             timerSet.AddOrUpdate(timer, timer.DueAt);
-        Out.WriteLine($"{runner}: Timers enqueued.");
+        WriteLine($"{runner}: Timers enqueued.");
 
         var maxDueAt = timers.Count != 0 ? timers.Max(t => t.DueAt) : start;
         await clock.Delay(maxDueAt);
         await TestExt.When(() => timerSet.Count.Should().Be(0), TimeSpan.FromSeconds(1));
-        Out.WriteLine($"{runner}: All timers should be fired.");
+        WriteLine($"{runner}: All timers should be fired.");
 
         foreach (var timer in timers) {
             var delta = timer.FiredAt - timer.DueAt;
             delta.Should().BeCloseTo(TimeSpan.Zero, TimeSpan.FromMilliseconds(maxDelta));
         }
-        Out.WriteLine($"{runner}: Checks completed.");
+        WriteLine($"{runner}: Checks completed.");
     }
 }

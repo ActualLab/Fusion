@@ -8,13 +8,13 @@ public class RunItemTasksTest(ITestOutputHelper @out) : TestBase(@out)
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await GetItems().RunItemTasks(
             async (i, ct) => {
-                Out.WriteLine($"++ {i}");
+                WriteLine($"++ {i}");
                 await TaskExt.NeverEnding(ct).SilentAwait();
-                Out.WriteLine($"-? {i}");
+                WriteLine($"-? {i}");
                 await Task.Delay(300);
-                Out.WriteLine($"-- {i}");
+                WriteLine($"-- {i}");
             },
-            (active, _, _) => Out.WriteLine($"Change to: {active.ToDelimitedString()}"),
+            (active, _, _) => WriteLine($"Change to: {active.ToDelimitedString()}"),
             cts.Token
             ).SilentAwait();
     }

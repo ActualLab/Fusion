@@ -33,7 +33,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 
         var value = new Tuple<DateTime>(DateTime.Now);
         var json = serializer.Write<object>(value);
-        Out.WriteLine(json);
+        WriteLine(json);
 
         var deserialized = (Tuple<DateTime>)serializer.Read<object>(json);
         deserialized.Item1.Should().Be(value.Item1);
@@ -93,7 +93,7 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         Assert.Throws<ArgumentException>(() => new VersionSet(("X", "1"), ("X", "2")));
 
         void Test(VersionSet? s) {
-            Out.WriteLine(s?.ToString() ?? "null");
+            WriteLine(s?.ToString() ?? "null");
             var hs = s.PassThroughAllSerializers();
             hs.Should().Be(s);
         }
@@ -146,14 +146,14 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         var x = default(RpcNoWait);
         var o = default(OldRpcNoWait);
 
-        Out.WriteLine("New:");
+        WriteLine("New:");
         x.PassThroughAllSerializers(Out);
-        Out.WriteLine("Old:");
+        WriteLine("Old:");
         o.PassThroughAllSerializers(Out);
 
-        Out.WriteLine("Old to new:");
+        WriteLine("Old to new:");
         o.AssertPassesThroughAllSerializers<OldRpcNoWait, RpcNoWait>((_, _) => {}, Out);
-        Out.WriteLine("New to old:");
+        WriteLine("New to old:");
         x.AssertPassesThroughAllSerializers<RpcNoWait, OldRpcNoWait>((_, _) => {}, Out);
     }
 
@@ -376,9 +376,9 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         s.KeylessSet(3);
         s.KeylessSet((int?)4);
         s.KeylessSet("X");
-        Out.WriteLine(s.ToString());
+        WriteLine(s.ToString());
         var s1 = s.PassThroughSystemJsonSerializer(Out);
-        Out.WriteLine(s1.ToString());
+        WriteLine(s1.ToString());
         s1.Items.Should().BeEquivalentTo(s.Items, o => o.ComparingRecordsByMembers());
     }
 
@@ -391,9 +391,9 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         s.KeylessSet(3);
         s.KeylessSet((int?)4);
         s.KeylessSet("X");
-        Out.WriteLine(s.ToString());
+        WriteLine(s.ToString());
         var s1 = s.PassThroughAllSerializers(Out);
-        Out.WriteLine(s.ToString());
+        WriteLine(s.ToString());
         s1.Items.Should().BeEquivalentTo(s.Items, o => o.ComparingRecordsByMembers());
     }
 
@@ -403,9 +403,9 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         // System.Text.Json fails to serialize ValueTuple fields, see:
         // - https://stackoverflow.com/questions/70436689/net-jsonserializer-does-not-serialize-tuples-values
         var s = (1, "X");
-        Out.WriteLine(s.ToString());
+        WriteLine(s.ToString());
         var s1 = s.PassThroughSystemJsonSerializer(Out);
-        Out.WriteLine(s1.ToString());
+        WriteLine(s1.ToString());
         s1.Should().NotBe(s);
     }
 

@@ -128,18 +128,18 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         var kv1 = ClientServices.GetRequiredService<IKeyValueService<string>>();
         var kv2 = clientServices2.GetRequiredService<IKeyValueService<string>>();
 
-        Out.WriteLine("l0");
+        WriteLine("l0");
         await kv.Set("1", "a");
-        Out.WriteLine("l0a");
+        WriteLine("l0a");
         await kv.Set("2", "b");
         var c1 = await GetComputed(kv1, "1");
-        Out.WriteLine("l1");
+        WriteLine("l1");
         c1.WhenSynchronized().IsCompleted.Should().BeTrue();
-        Out.WriteLine("l2");
+        WriteLine("l2");
         var c2 = await GetComputed(kv1, "2");
-        Out.WriteLine("l3");
+        WriteLine("l3");
         c2.WhenSynchronized().IsCompleted.Should().BeTrue();
-        Out.WriteLine("l4");
+        WriteLine("l4");
 
         var state1 = ClientServices.StateFactory().NewComputed<string>(
             FixedDelayer.Get(0.1),
@@ -157,25 +157,25 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
                 return $"{s1} {s2}";
             });
 
-        Out.WriteLine("l5");
+        WriteLine("l5");
         await state.Computed.WhenSynchronized();
-        Out.WriteLine("l6");
+        WriteLine("l6");
         state.Value.Should().Be("a b");
 
-        Out.WriteLine("l7");
+        WriteLine("l7");
         state1.WhenNonInitial().IsCompleted.Should().BeTrue();
-        Out.WriteLine("l8");
+        WriteLine("l8");
         state2.WhenNonInitial().IsCompleted.Should().BeTrue();
-        Out.WriteLine("l9");
+        WriteLine("l9");
         state.WhenNonInitial().IsCompleted.Should().BeTrue();
-        Out.WriteLine("l10");
+        WriteLine("l10");
 
         await kv.Set("2", "c");
-        Out.WriteLine("l11");
+        WriteLine("l11");
         state.Computed.WhenSynchronized().IsCompleted.Should().BeTrue();
-        Out.WriteLine("l12");
+        WriteLine("l12");
         state.Value.Should().Be("a b");
-        Out.WriteLine("l13");
+        WriteLine("l13");
         await state.Computed.When(x => x == "a c").WaitAsync(TimeSpan.FromSeconds(1));
     }
 

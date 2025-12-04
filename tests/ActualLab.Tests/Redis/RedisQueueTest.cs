@@ -13,13 +13,13 @@ public class RedisQueueTest(ITestOutputHelper @out) : RedisTestBase(@out)
         var sw = new Stopwatch();
         sw.Start();
 
-        Out.WriteLine($"{sw.ElapsedMilliseconds}: <- 1");
+        WriteLine($"{sw.ElapsedMilliseconds}: <- 1");
         await queue.Enqueue("1");
-        Out.WriteLine($"{sw.ElapsedMilliseconds}: -> {await queue.Dequeue()}");
+        WriteLine($"{sw.ElapsedMilliseconds}: -> {await queue.Dequeue()}");
 
-        Out.WriteLine($"{sw.ElapsedMilliseconds}: <- 2");
+        WriteLine($"{sw.ElapsedMilliseconds}: <- 2");
         await queue.Enqueue("2");
-        Out.WriteLine($"{sw.ElapsedMilliseconds}: -> {await queue.Dequeue()}");
+        WriteLine($"{sw.ElapsedMilliseconds}: -> {await queue.Dequeue()}");
     }
 
     [SkipOnGitHubFact]
@@ -75,7 +75,7 @@ public class RedisQueueTest(ITestOutputHelper @out) : RedisTestBase(@out)
             .Select(_ => Task.Run(Reader))
             .ToArray();
         var lists = await Task.WhenAll(readTasks).ConfigureAwait(false);
-        Out.WriteLine($"{sw.Elapsed}: completed");
+        WriteLine($"{sw.Elapsed}: completed");
 
         var items = lists.SelectMany(i => i).ToImmutableHashSet();
         items.Count.Should().Be(itemCount);

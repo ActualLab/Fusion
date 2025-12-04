@@ -11,7 +11,7 @@ public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestB
     [InlineData(true)]
     public async Task UseBenchmark(bool runGCCollect)
     {
-        Out.WriteLine($"Run GC collect in each test: {runGCCollect}");
+        WriteLine($"Run GC collect in each test: {runGCCollect}");
         var o = "test object";
         object? target = null;
         var handles = new GCHandle[IterationCount];
@@ -61,6 +61,6 @@ public class WeakReferenceSlimBenchmark(ITestOutputHelper @out) : BenchmarkTestB
         });
 
         // Just to use target
-        Out.WriteLine($"{target}"[..0]);
+        WriteLine($"{target}"[..0]);
     }
 }

@@ -25,7 +25,7 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
             },
             _ => {
                 var value = Interlocked.Increment(ref count);
-                Out.WriteLine($"Value: {value}");
+                WriteLine($"Value: {value}");
                 if (value == 3)
                     throw new InvalidOperationException("3");
                 return Task.FromResult(value);

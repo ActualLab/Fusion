@@ -75,39 +75,40 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
         Func<Random, int>? disconnectedTime,
         CancellationToken cancellationToken)
     {
-        void Write(string message)
+        // ReSharper disable once LocalFunctionHidesMethod
+        void WriteLine(string message)
             => Out.WriteLine($"ConnectionDisruptor #{workerId}: {message}");
 
-        Write("started");
+        WriteLine("started");
         connectedTime ??= rnd => rnd.Next(50, 150);
         disconnectedTime ??= rnd => rnd.Next(10, 40);
         try {
             var rnd = new Random();
             while (true) {
                 await Task.Delay(connectedTime.Invoke(rnd), cancellationToken).ConfigureAwait(false);
-                // Write("disconnecting");
+                // WriteLine("disconnecting");
                 await connection.Disconnect(cancellationToken).ConfigureAwait(false);
 
                 await Task.Delay(disconnectedTime.Invoke(rnd), cancellationToken).ConfigureAwait(false);
-                // Write("connecting");
+                // WriteLine("connecting");
                 await connection.Connect(cancellationToken).ConfigureAwait(false);
             }
         }
         catch {
             // Intended
         }
-        Write("stopping");
+        WriteLine("stopping");
         var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         try {
             await connection.Connect(timeoutCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) {
-            Write("couldn't complete Connect in time");
+            WriteLine("couldn't complete Connect in time");
         }
         finally {
             timeoutCts.CancelAndDisposeSilently();
         }
         await Delay(0.2).ConfigureAwait(false); // Just in case
-        Write("stopped");
+        WriteLine("stopped");
     }
 }

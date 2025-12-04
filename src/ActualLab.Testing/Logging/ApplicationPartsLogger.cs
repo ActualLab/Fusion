@@ -2,26 +2,20 @@ using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Hosting;
 
-namespace ActualLab.Testing;
+namespace ActualLab.Testing.Logging;
 
-public class ApplicationPartsLogger : IHostedService
+public class ApplicationPartsLogger(
+    ApplicationPartManager partManager,
+    ILogger<ApplicationPartsLogger>? log = null
+    ) : IHostedService
 {
-    private readonly ILogger _log;
-    private readonly ApplicationPartManager _partManager;
-
-    public ApplicationPartsLogger(
-        ApplicationPartManager partManager,
-        ILogger<ApplicationPartsLogger>? log = null)
-    {
-        _log = log ?? NullLogger<ApplicationPartsLogger>.Instance;
-        _partManager = partManager;
-    }
+    private readonly ILogger _log = log ?? NullLogger<ApplicationPartsLogger>.Instance;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        var applicationParts = _partManager.ApplicationParts.Select(x => x.Name);
+        var applicationParts = partManager.ApplicationParts.Select(x => x.Name);
         var controllerFeature = new ControllerFeature();
-        _partManager.PopulateFeature(controllerFeature);
+        partManager.PopulateFeature(controllerFeature);
         var controllers = controllerFeature.Controllers.Select(x => x.Name);
 
         _log.LogInformation("Application parts: {ApplicationParts}", string.Join(", ", applicationParts));

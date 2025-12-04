@@ -91,7 +91,7 @@ public abstract class FusionTestBase : RpcTestBase
             // Intended - somehow it fails on GitHub build agent
         }
         if (!IsConsoleApp)
-            Out.WriteLine("DB is recreated.");
+            WriteLine("DB is recreated.");
         await Services.HostedServices().Start();
     }
 

@@ -13,7 +13,7 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
         for (var length = 0; length <= ArgumentList.MaxItemCount; length++) {
             var itemTypes = Enumerable.Range(0, length).Select(_ => typeof(int)).ToArray();
             var listDef = ArgumentListType.Get(useGenerics, itemTypes);
-            Out.WriteLine(listDef.ToString());
+            WriteLine(listDef.ToString());
             var list = listDef.Factory.Invoke();
             Test(length, list);
         }
@@ -36,7 +36,7 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
             if (method is not null) {
                 var invoker = l1.GetInvoker(method);
                 var result = (string)invoker.Invoke(null, l1)!;
-                Out.WriteLine($"Invoker result: {result}");
+                WriteLine($"Invoker result: {result}");
                 result.Should().Be(l1.ToString());
             }
         }
@@ -140,23 +140,23 @@ public class ArgumentListTest(ITestOutputHelper @out) : TestBase(@out)
 
     private void VoidMethod0()
     {
-        Out.WriteLine(nameof(VoidMethod0));
+        WriteLine(nameof(VoidMethod0));
     }
 
     private void VoidMethod1(int x)
     {
-        Out.WriteLine(nameof(VoidMethod1));
+        WriteLine(nameof(VoidMethod1));
     }
 
     private Task<int> TaskMethod1(int x)
     {
-        Out.WriteLine($"{nameof(TaskMethod1)}({x})");
+        WriteLine($"{nameof(TaskMethod1)}({x})");
         return Task.FromResult(x);
     }
 
     private ValueTask<int> ValueTaskMethod2(int x, int y)
     {
-        Out.WriteLine($"{nameof(ValueTaskMethod2)}({x}, {y})");
+        WriteLine($"{nameof(ValueTaskMethod2)}({x}, {y})");
         return new ValueTask<int>(x * y);
     }
 

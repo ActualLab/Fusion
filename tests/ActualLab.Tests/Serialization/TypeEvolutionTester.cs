@@ -1,10 +1,10 @@
 using System.Text;
-using AwesomeAssertions;
-using Newtonsoft.Json;
+using System.Text.Json;
 using ActualLab.IO;
-using Xunit.Abstractions;
+using ActualLab.Reflection;
+using Newtonsoft.Json;
 
-namespace ActualLab.Testing;
+namespace ActualLab.Tests.Serialization;
 
 public class TypeEvolutionTester<TOld, TNew>
 {

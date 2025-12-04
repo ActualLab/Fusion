@@ -1,6 +1,7 @@
 using ActualLab.Caching;
 using ActualLab.Plugins;
 using ActualLab.Reflection;
+using ActualLab.Testing.Logging;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
@@ -8,9 +9,6 @@ namespace ActualLab.Tests.Plugins;
 
 public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
 {
-    protected bool UseLogging { get; set; } = true;
-    protected bool UseDebugLog { get; set; } = true;
-
     [Fact]
     public void PluginHostBuilderTest()
     {
@@ -60,36 +58,32 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public async Task CombinedTest()
     {
-        using (var capture = CaptureOutput()) {
-            await RunCombinedTest(true);
-            capture.Resource.Should().ContainAll("populating");
-        }
+        var logContent = await RunCombinedTest(mustClearCache: true);
+        logContent.Should().Contain("populating");
 
-        using (var capture = CaptureOutput()) {
-            await RunCombinedTest();
-            capture.Resource.Should().ContainAll("Cached plugin set info found");
-        }
+        logContent = await RunCombinedTest();
+        logContent.Should().Contain("Cached plugin set info found");
     }
 
     private PluginHostBuilder CreateHostBuilder(bool mustClearCache = false)
     {
+        var stringBuilderLoggerProvider = new CapturingLoggerProvider();
         var hostBuilder = new PluginHostBuilder()
             .UsePluginFilter(typeof(ITestPlugin))
             .ConfigureServices(services => {
-                if (UseLogging)
-                    services.AddLogging(logging => {
-                        logging.ClearProviders();
-                        logging.SetMinimumLevel(LogLevel.Debug);
-                        if (UseDebugLog)
-                            logging.AddDebug();
-                        logging.AddProvider(
+                services.AddSingleton(stringBuilderLoggerProvider);
+                services.AddLogging(logging => {
+                    logging.ClearProviders();
+                    logging.SetMinimumLevel(LogLevel.Debug);
+                    logging.AddProvider(stringBuilderLoggerProvider);
+                    logging.AddProvider(
 #pragma warning disable CS0618
-                            new XunitTestOutputLoggerProvider(
-                                new TestOutputHelperAccessor() { Output = Out },
-                                (_, level) => level >= LogLevel.Debug));
+                        new XunitTestOutputLoggerProvider(
+                            new TestOutputHelperAccessor() { Output = Out },
+                            (_, level) => level >= LogLevel.Debug));
 #pragma warning restore CS0618
-                    });
                 });
+            });
         if (mustClearCache) {
             var serviceProvider = hostBuilder.ServiceProviderFactory(hostBuilder.Services);
             var pluginFinder = serviceProvider.GetService<IPluginFinder>();
@@ -101,7 +95,7 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
         return hostBuilder;
     }
 
-    private async Task RunCombinedTest(bool mustClearCache = false)
+    private async Task<string> RunCombinedTest(bool mustClearCache = false)
     {
         var hostBuilder = CreateHostBuilder(mustClearCache);
         var host = await hostBuilder.BuildAsync();
@@ -124,12 +118,14 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
 
         var testPlugin2Deps = plugins.InfoByType[typeof(TestPlugin2)].Dependencies;
         testPlugin2Deps.Count.Should().Be(0);
+        var logContent = host.Services.GetRequiredService<CapturingLoggerProvider>().Content;
 
         hostBuilder = CreateHostBuilder()
             .UsePlugins(false, plugins.InfoByType.Keys.Select(t => t.Resolve()));
         host = await hostBuilder.BuildAsync();
 
         RunPluginHostTests(host);
+        return logContent;
     }
 
     private static void RunPluginHostTests(IPluginHost host)

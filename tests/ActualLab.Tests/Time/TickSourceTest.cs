@@ -11,8 +11,8 @@ public class TickSourceTest(ITestOutputHelper @out) : TestBase(@out)
         var delays = new[] { 1, 10, 15, 16, 30 }.Select(x => TimeSpan.FromMilliseconds(x)).ToArray();
         var maxShrinkage = TimeSpan.FromMilliseconds(3);
         foreach (var delay in delays) {
-            Out.WriteLine("");
-            Out.WriteLine($"Delay: {delay.ToShortString()}");
+            WriteLine("");
+            WriteLine($"Delay: {delay.ToShortString()}");
             var tickSource = new TickSource(delay);
             var now = CpuTimestamp.Now;
             var lastNow = now;
@@ -22,12 +22,12 @@ public class TickSourceTest(ITestOutputHelper @out) : TestBase(@out)
                 var elapsed = lastNow.Elapsed;
                 elapsed.Should().BeGreaterThanOrEqualTo(delay - maxShrinkage);
                 if (i < 5)
-                    Out.WriteLine($"- {elapsed.TotalMilliseconds:F3}ms");
+                    WriteLine($"- {elapsed.TotalMilliseconds:F3}ms");
                 if (i > 1)
                     minElapsed = TimeSpanExt.Min(minElapsed, elapsed);
                 lastNow = CpuTimestamp.Now;
             }
-            Out.WriteLine($"Min. elapsed: {minElapsed.TotalMilliseconds:F3}ms");
+            WriteLine($"Min. elapsed: {minElapsed.TotalMilliseconds:F3}ms");
         }
     }
 
@@ -43,7 +43,7 @@ public class TickSourceTest(ITestOutputHelper @out) : TestBase(@out)
             .Collect()
             ).Distinct()
             .ToList();
-        Out.WriteLine($"ThreadIDs: {threadIds.ToDelimitedString()}");
+        WriteLine($"ThreadIDs: {threadIds.ToDelimitedString()}");
         threadIds.Count.Should().BeGreaterThan(1);
     }
 }

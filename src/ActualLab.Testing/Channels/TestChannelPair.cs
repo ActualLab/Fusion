@@ -1,7 +1,7 @@
 using ActualLab.Channels;
 using Xunit.Abstractions;
 
-namespace ActualLab.Testing;
+namespace ActualLab.Testing.Channels;
 
 public class TestChannelPair<T> : ChannelPair<T>
 {

@@ -117,12 +117,12 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
 
         var clock = SystemClock.Instance;
         for (var round = 0; round < 3; round++) {
-            Out.WriteLine($"Round {round}:");
+            WriteLine($"Round {round}:");
             c.Events.Set(ImmutableList<string>.Empty);
             var when = clock.Now + TimeSpan.FromSeconds(3);
             var lastId = "";
             for (var count = 1; count <= 3; count++) {
-                Out.WriteLine($"- Count {count}...");
+                WriteLine($"- Count {count}...");
                 c.Events.Set(ImmutableList<string>.Empty);
                 var updateEvents = Enumerable.Range(0, count).Select(i => EU($"a{round}.{i}", when)).ToArray();
                 var skipEvents = Enumerable.Range(0, count).Select(i => ES($"a{round}.{i}s", when)).ToArray();
@@ -131,13 +131,13 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
                 await Enqueue(skipEvents);
                 lastId = ((EventCatcher_Event)updateEvents.Last().Value!).Id;
             }
-            Out.WriteLine($"- Enqueue to trigger: {(when - clock.Now).ToShortString()}");
+            WriteLine($"- Enqueue to trigger: {(when - clock.Now).ToShortString()}");
 
             await ComputedTest.When(async ct => {
                 var events = await c.Events.Use(ct);
                 events.Count.Should().Be(1);
             }, TimeSpan.FromSeconds(15));
-            Out.WriteLine($"- Processing delay: {(clock.Now - when).ToShortString()}");
+            WriteLine($"- Processing delay: {(clock.Now - when).ToShortString()}");
 
             c.Events.Value[0].Should().Be(lastId);
         }

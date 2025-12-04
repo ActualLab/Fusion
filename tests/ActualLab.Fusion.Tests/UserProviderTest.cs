@@ -196,9 +196,9 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         for (var i = 0; i < 5; i++) {
             var id1 = i * 2;
             var id2 = id1 + 1;
-            Out.WriteLine($"{i}: ping...");
+            WriteLine($"{i}: ping...");
             await PingPong(users, webUsers, new DbUser() { Id = id1, Name = id1.ToString()});
-            Out.WriteLine($"{i}: pong...");
+            WriteLine($"{i}: pong...");
             await PingPong(webUsers, users, new DbUser() { Id = id2, Name = id2.ToString()});
             // await PingPong(webUsers, users, new User() { Id = id2, Name = id2.ToString()});
         }

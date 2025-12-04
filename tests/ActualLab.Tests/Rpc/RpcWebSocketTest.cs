@@ -222,7 +222,7 @@ public class RpcWebSocketTest : RpcTestBase
             Assert.Fail("RpcException wasn't thrown.");
         }
         catch (RpcException e) {
-            Out.WriteLine(e.Message);
+            WriteLine(e.Message);
             e.Message.Should().StartWith("Endpoint not found:");
             e.Message.Should().ContainAny("NoSuchMethod", "Service.Method<");
         }
@@ -368,7 +368,7 @@ public class RpcWebSocketTest : RpcTestBase
                 var list = new List<int>();
                 await foreach (var j in stream.ConfigureAwait(false)) {
                     if (j % 1000 == 0)
-                        Out.WriteLine($"{taskIndex}: {j}");
+                        WriteLine($"{taskIndex}: {j}");
                     list.Add(j);
                 }
                 return list;
@@ -420,10 +420,10 @@ public class RpcWebSocketTest : RpcTestBase
         var tasks = new Task[threadCount];
         await Run(100); // Warmup
 
-        Out.WriteLine($"{iterationCount} iterations x {threadCount} threads:");
+        WriteLine($"{iterationCount} iterations x {threadCount} threads:");
         var elapsed = await Run(iterationCount);
         var totalIterationCount = threadCount * iterationCount;
-        Out.WriteLine($"{totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
+        WriteLine($"{totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
 
         await AssertNoCalls(peer, Out);
         return;
@@ -464,7 +464,7 @@ public class RpcWebSocketTest : RpcTestBase
         var elapsed = await Run(itemCount);
 
         var totalItemCount = threadCount * itemCount;
-        Out.WriteLine($"{itemCount}: {totalItemCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
+        WriteLine($"{itemCount}: {totalItemCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
         await AssertNoCalls(peer, Out);
         return;
 

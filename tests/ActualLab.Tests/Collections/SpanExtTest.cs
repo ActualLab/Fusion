@@ -23,7 +23,7 @@ public class SpanExtTest(ITestOutputHelper @out) : TestBase(@out)
             buffer.Clear();
             var size = buffer.WriteVarUInt32(value);
             size.Should().BeLessThanOrEqualTo(buffer.Length);
-            Out.WriteLine($"{value} -> {size} bytes");
+            WriteLine($"{value} -> {size} bytes");
 
             var readBuffer = buffer[..size];
             var (readValue, readSize) = readBuffer.ReadVarUInt32();
@@ -53,7 +53,7 @@ public class SpanExtTest(ITestOutputHelper @out) : TestBase(@out)
             buffer.Clear();
             var size = buffer.WriteVarUInt64(value);
             size.Should().BeLessThanOrEqualTo(buffer.Length);
-            Out.WriteLine($"{value} -> {size} bytes");
+            WriteLine($"{value} -> {size} bytes");
 
             var readBuffer = buffer[..size];
             var (readValue, readSize) = readBuffer.ReadVarUInt64();

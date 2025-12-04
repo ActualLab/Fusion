@@ -62,17 +62,17 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
                 var snapshot = computedState.Snapshot;
                 var c = (Computed<int>)snapshot.Computed;
                 if (!c.IsConsistent()) {
-                    Out.WriteLine($"Updating: {c}");
+                    WriteLine($"Updating: {c}");
                     await snapshot.WhenUpdated().WaitAsync(TimeSpan.FromSeconds(1));
                     c = computedState.Computed;
                 }
 
                 if (c.Value != iterationCount * 2) {
-                    Out.WriteLine(computedState.ToString());
-                    Out.WriteLine(snapshot.ToString());
-                    Out.WriteLine(computedState.Snapshot.ToString());
-                    Out.WriteLine(c.ToString());
-                    Out.WriteLine(c.Value.ToString());
+                    WriteLine(computedState.ToString());
+                    WriteLine(snapshot.ToString());
+                    WriteLine(computedState.Snapshot.ToString());
+                    WriteLine(c.ToString());
+                    WriteLine(c.Value.ToString());
                     Assert.Fail("One of computed instances has wrong final value!");
                 }
             }
@@ -137,14 +137,14 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
                 var source = reader.Source;
                 var c = (Computed<int>)source.Computed;
                 if (!c.IsConsistent()) {
-                    Out.WriteLine($"Updating: {c}");
+                    WriteLine($"Updating: {c}");
                     c = await c.Update();
                 }
 
                 if (c.Value != iterationCount * 2) {
-                    Out.WriteLine(source.ToString());
-                    Out.WriteLine(c.ToString());
-                    Out.WriteLine(c.Value.ToString());
+                    WriteLine(source.ToString());
+                    WriteLine(c.ToString());
+                    WriteLine(c.Value.ToString());
                     Assert.Fail("One of computed instances has wrong final value!");
                 }
             }
@@ -226,12 +226,12 @@ public class ConcurrencyTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out
                     var source = reader.Source;
                     c = source.Computed;
                     if (!c.IsConsistent()) {
-                        Out.WriteLine($"Updating: {c}");
+                        WriteLine($"Updating: {c}");
                         c = await c.Update();
                     }
                     if (c.Value != expectedValue) {
-                        Out.WriteLine(c.ToString());
-                        Out.WriteLine(c.Value.ToString());
+                        WriteLine(c.ToString());
+                        WriteLine(c.Value.ToString());
                         Assert.Fail("One of computed instances has wrong final value!");
                     }
                 }

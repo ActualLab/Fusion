@@ -76,12 +76,16 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
             .ToArray();
         await Task.Delay(testDuration);
         var callCount = (await WhenAll(tasks, Out)).Sum();
-        Out.WriteLine($"Call count: {callCount}");
+        WriteLine($"Call count: {callCount}");
         callCount.Should().BeGreaterThan(0);
     }
 
     private async Task<long> Worker(string workerId, CpuTimestamp endAt)
     {
+        // ReSharper disable once LocalFunctionHidesMethod
+        void WriteLine(string message)
+            => Out.WriteLine($"Worker #{workerId}: {message}");
+
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<ITestRpcService>();
@@ -106,7 +110,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
             }
         }
         finally {
-            Write("stopping");
+            WriteLine("stopping");
             disruptorCts.CancelAndDisposeSilently();
             await disruptorTask;
         }
@@ -114,9 +118,6 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
         await AssertNoCalls(connection.ClientPeer, Out);
         await AssertNoCalls(connection.ServerPeer, Out);
         return callCount;
-
-        void Write(string message)
-            => Out.WriteLine($"Worker #{workerId}: {message}");
     }
 
     [Fact(Timeout = 40_000)]
@@ -138,7 +139,7 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
                 await foreach (var item in stream) {
                     count++;
                     if (item % 10 == 0)
-                        Out.WriteLine($"{workerId}: {item}");
+                        WriteLine($"{workerId}: {item}");
                 }
                 count.Should().Be(totalCount);
             })

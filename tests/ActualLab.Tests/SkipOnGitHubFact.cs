@@ -1,6 +1,4 @@
-using Xunit;
-
-namespace ActualLab.Testing;
+namespace ActualLab.Tests;
 
 public sealed class SkipOnGitHubFact : FactAttribute
 {

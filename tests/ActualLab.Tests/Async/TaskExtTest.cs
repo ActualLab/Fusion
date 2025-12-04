@@ -190,11 +190,11 @@ public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
             if (whenAllTask.IsCompletedSuccessfully()) {
                 var s1 = collect.Value.ToDelimitedString();
                 var s2 = whenAll.Value.ToDelimitedString();
-                Out.WriteLine($"CL={cl}, Size={size} -> {s1}");
+                WriteLine($"CL={cl}, Size={size} -> {s1}");
                 s1.Should().Be(s2);
             }
             else {
-                Out.WriteLine($"CL={cl}, Size={size} -> error (ok)");
+                WriteLine($"CL={cl}, Size={size} -> error (ok)");
             }
         }
 

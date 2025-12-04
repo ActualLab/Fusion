@@ -42,7 +42,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     // [InlineData(1024, 6_250)]
     public async Task AddTest(int taskCount, int itemCount)
     {
-        Out.WriteLine($"Parameters: {taskCount}t x {itemCount}");
+        WriteLine($"Parameters: {taskCount}t x {itemCount}");
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.RpcHub().GetClient<ITestRpcService>();
@@ -58,7 +58,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
             var startedAt = CpuTimestamp.Now;
             await Task.WhenAll(tasks);
             if (p >= 1)
-                Out.WriteLine($"Pass time: {startedAt.Elapsed.ToShortString()}");
+                WriteLine($"Pass time: {startedAt.Elapsed.ToShortString()}");
         }
     }
 
@@ -69,7 +69,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     [InlineData(1, 3, 10_000)]
     public async Task GetBytesTest(int passCount, int taskCount, int itemCount)
     {
-        Out.WriteLine($"Parameters: {passCount}p x {taskCount}t x {itemCount}");
+        WriteLine($"Parameters: {passCount}p x {taskCount}t x {itemCount}");
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.RpcHub().GetClient<ITestRpcService>();
@@ -84,7 +84,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
             }));
             var startedAt = CpuTimestamp.Now;
             await Task.WhenAll(tasks);
-            Out.WriteLine($"Pass time: {startedAt.Elapsed.ToShortString()}");
+            WriteLine($"Pass time: {startedAt.Elapsed.ToShortString()}");
         }
     }
 
@@ -95,7 +95,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     [InlineData(1, 3, 10_000)]
     public async Task GetMemoryTest(int passCount, int taskCount, int itemCount)
     {
-        Out.WriteLine($"Parameters: {passCount}p x {taskCount}t x {itemCount}");
+        WriteLine($"Parameters: {passCount}p x {taskCount}t x {itemCount}");
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.RpcHub().GetClient<ITestRpcService>();
@@ -110,7 +110,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
             }));
             var startedAt = CpuTimestamp.Now;
             await Task.WhenAll(tasks);
-            Out.WriteLine($"Pass time: {startedAt.Elapsed.ToShortString()}");
+            WriteLine($"Pass time: {startedAt.Elapsed.ToShortString()}");
         }
     }
 }

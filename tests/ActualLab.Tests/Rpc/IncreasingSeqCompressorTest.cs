@@ -20,6 +20,6 @@ public class IncreasingSeqCompressorTest(ITestOutputHelper @out) : TestBase(@out
             var seq1 = IncreasingSeqCompressor.Deserialize(data);
             seq1.Should().Equal(seq);
         }
-        Out.WriteLine($"Tested lengths: {testedLengths.OrderBy(x => x).ToDelimitedString()}");
+        WriteLine($"Tested lengths: {testedLengths.OrderBy(x => x).ToDelimitedString()}");
     }
 }

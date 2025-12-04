@@ -14,8 +14,8 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var host1 = testHosts.NewHost();
         var client = testHosts.ClientHost;
         await Task.WhenAll(host0.WhenStarted, host1.WhenStarted, client.WhenStarted);
-        Out.WriteLine($"Created hosts: {host0.Id}, {host1.Id}");
-        Out.WriteLine($"Created client: {client.Id}");
+        WriteLine($"Created hosts: {host0.Id}, {host1.Id}");
+        WriteLine($"Created client: {client.Id}");
 
         // Get tested services from the client
         var commander = client.Commander();
@@ -25,31 +25,31 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var initialResult = await commander.Call(
             new RpcRerouteTestService_SetValue(0, "test-key", "value-from-host0"));
         initialResult.HostId.Should().Be(host0.Id);
-        Out.WriteLine($"Set value on {initialResult.HostId}");
+        WriteLine($"Set value on {initialResult.HostId}");
 
         // Capture the computed from host0
         var computed = await Computed.Capture(() => service.GetValue(0, "test-key"));
         computed.Value.Value.Should().Be("value-from-host0");
         computed.Value.HostId.Should().Be(host0.Id);
-        Out.WriteLine($"Initial computed from {computed.Value.HostId}: {computed.Value.Value}");
+        WriteLine($"Initial computed from {computed.Value.HostId}: {computed.Value.Value}");
 
         // Verify with direct call
         var directResult = await service.GetValueDirect(0, "test-key");
         directResult.HostId.Should().Be(host0.Id);
         directResult.Value.Should().Be("value-from-host0");
-        Out.WriteLine($"Direct call confirmed: {directResult.HostId} = {directResult.Value}");
+        WriteLine($"Direct call confirmed: {directResult.HostId} = {directResult.Value}");
 
         initialResult = await commander.Call(
             new RpcRerouteTestService_SetValue(0, "test-key", "value-from-host0", 0));
         initialResult.HostId.Should().Be(host0.Id);
-        Out.WriteLine($"Set value on {initialResult.HostId} once more");
+        WriteLine($"Set value on {initialResult.HostId} once more");
         // The line below checks that RpcRerouteTestService (distributed service) can invalidate
         // its own Computed<T> produced when it ran locally;
         // see the invalidation block in RpcRerouteTestService.SetValue method
         await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1));
 
         // First swap: hosts 0 <-> 1
-        Out.WriteLine("Swapping hosts (0 <-> 1)...");
+        WriteLine("Swapping hosts (0 <-> 1)...");
         testHosts.MeshMap.Swap(0, 1);
 
         // The computed should update to point to host1
@@ -58,16 +58,16 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
             v.HostId.Should().Be(host1.Id, "after first swap, calls to index 0 should go to host1");
             v.Value.Should().Be("", "host1 should have empty storage initially");
         }, TimeSpan.FromSeconds(5));
-        Out.WriteLine($"After first swap, computed now points to {host1.Id}");
+        WriteLine($"After first swap, computed now points to {host1.Id}");
 
         // Verify with direct call after the first swap
         directResult = await service.GetValueDirect(0, "test-key");
         directResult.HostId.Should().Be(host1.Id, "direct call should also route to host1");
         directResult.Value.Should().Be("");
-        Out.WriteLine($"Direct call after first swap: {directResult.HostId} = {directResult.Value}");
+        WriteLine($"Direct call after first swap: {directResult.HostId} = {directResult.Value}");
 
         // Second swap: hosts 0 <-> 1 again (back to original)
-        Out.WriteLine("Swapping hosts again (0 <-> 1)...");
+        WriteLine("Swapping hosts again (0 <-> 1)...");
         testHosts.MeshMap.Swap(0, 1);
 
         // The computed should update back to point to host0
@@ -76,13 +76,13 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
             v.HostId.Should().Be(host0.Id, "after second swap, calls to index 0 should go back to host0");
             v.Value.Should().Be("value-from-host0", "host0 should still have the original value");
         }, TimeSpan.FromSeconds(5));
-        Out.WriteLine($"After second swap, computed points back to {host0.Id}");
+        WriteLine($"After second swap, computed points back to {host0.Id}");
 
         // Verify with direct call after the second swap
         directResult = await service.GetValueDirect(0, "test-key");
         directResult.HostId.Should().Be(host0.Id, "direct call should route back to host0");
         directResult.Value.Should().Be("value-from-host0");
-        Out.WriteLine($"Direct call after second swap: {directResult.HostId} = {directResult.Value}");
+        WriteLine($"Direct call after second swap: {directResult.HostId} = {directResult.Value}");
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var host1 = testHosts.NewHost();
         var client = testHosts.ClientHost;
         await Task.WhenAll(host0.WhenStarted, host1.WhenStarted, client.WhenStarted);
-        Out.WriteLine($"Created hosts: {host0.Id}, {host1.Id}");
+        WriteLine($"Created hosts: {host0.Id}, {host1.Id}");
 
         var commander = client.Commander();
         var service = client.GetRequiredService<IRpcRerouteTestService>();
@@ -112,10 +112,10 @@ public class MeshRerouteTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var computed = await Computed.Capture(() => service.GetValue(0, "key1"));
         computed.Value.Value.Should().Be("host0-value");
         computed.Value.HostId.Should().Be(host0.Id);
-        Out.WriteLine($"Initial: {computed.Value.HostId} = {computed.Value.Value}");
+        WriteLine($"Initial: {computed.Value.HostId} = {computed.Value.Value}");
 
         // Swap hosts
-        Out.WriteLine("Swapping hosts...");
+        WriteLine("Swapping hosts...");
         testHosts.MeshMap.Swap(0, 1);
 
         // Wait for invalidation

@@ -41,13 +41,13 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
 
         var sw = Stopwatch.StartNew();
         var c1 = await GetScreenshotComputed(service1);
-        Out.WriteLine($"Miss in: {sw.ElapsedMilliseconds}ms");
+        WriteLine($"Miss in: {sw.ElapsedMilliseconds}ms");
         c1.WhenSynchronized().IsCompleted.Should().BeTrue();
         c1.Options.RemoteComputedCacheMode.Should().Be(RemoteComputedCacheMode.Cache);
 
         sw.Restart();
         var c2 = await GetScreenshotComputed(service2);
-        Out.WriteLine($"Hit in: {sw.ElapsedMilliseconds}ms");
+        WriteLine($"Hit in: {sw.ElapsedMilliseconds}ms");
         var whenSynchronized = c2.WhenSynchronized(ComputedSynchronizer.Precise.Instance);
         whenSynchronized.IsCompleted.Should().BeFalse(); // Service2.GetScreenshotComputed is pulled from cache
         await whenSynchronized;
@@ -56,11 +56,11 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
 
         sw.Restart();
         await c2.WhenInvalidated().WaitAsync(timeout);
-        Out.WriteLine($"Invalidated in: {sw.ElapsedMilliseconds}ms");
+        WriteLine($"Invalidated in: {sw.ElapsedMilliseconds}ms");
 
         sw.Restart();
         c2 = await GetScreenshotComputed(service2);
-        Out.WriteLine($"Updated in: {sw.ElapsedMilliseconds}ms");
+        WriteLine($"Updated in: {sw.ElapsedMilliseconds}ms");
         c2.WhenSynchronized().IsCompleted.Should().BeTrue();
     }
 
@@ -85,28 +85,28 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
 
         var sw = Stopwatch.StartNew();
         var c1 = await GetScreenshotAltComputed(service1);
-        Out.WriteLine($"Miss in: {sw.ElapsedMilliseconds}ms");
+        WriteLine($"Miss in: {sw.ElapsedMilliseconds}ms");
         c1.Output.Value.Should().NotBeNull();
         c1.Options.RemoteComputedCacheMode.Should().Be(RemoteComputedCacheMode.NoCache);
         c1.WhenSynchronized().IsCompleted.Should().BeTrue();
 
         sw.Restart();
         await c1.WhenInvalidated().WaitAsync(timeout);
-        Out.WriteLine($"Invalidated in: {sw.ElapsedMilliseconds}ms");
+        WriteLine($"Invalidated in: {sw.ElapsedMilliseconds}ms");
 
         sw.Restart();
         var c2 = await GetScreenshotAltComputed(service2);
-        Out.WriteLine($"2nd miss in: {sw.ElapsedMilliseconds}ms");
+        WriteLine($"2nd miss in: {sw.ElapsedMilliseconds}ms");
         c2.Output.Value.Should().NotBeNull();
         c2.WhenSynchronized().IsCompleted.Should().BeTrue();
 
         sw.Restart();
         await c2.WhenInvalidated().WaitAsync(timeout);
-        Out.WriteLine($"Invalidated in: {sw.ElapsedMilliseconds}ms");
+        WriteLine($"Invalidated in: {sw.ElapsedMilliseconds}ms");
 
         sw.Restart();
         c2 = (RemoteComputed<Screenshot>)await c2.UpdateUntyped().ConfigureAwait(false);
-        Out.WriteLine($"Updated in: {sw.ElapsedMilliseconds}ms");
+        WriteLine($"Updated in: {sw.ElapsedMilliseconds}ms");
         c2.Output.Value.Should().NotBeNull();
         c2.WhenSynchronized().IsCompleted.Should().BeTrue();
     }

@@ -5,6 +5,8 @@ using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Server;
 using ActualLab.Rpc.WebSockets;
+using ActualLab.Testing.Logging;
+using ActualLab.Testing.Web;
 
 #if NETFRAMEWORK
 using Owin;

@@ -42,7 +42,7 @@ public class PluginHostBuilder
 
     public virtual async Task<IPluginHost> BuildAsync(CancellationToken cancellationToken = default)
     {
-        var services = ServiceProviderFactory(Services);
+        var services = ServiceProviderFactory.Invoke(Services);
         var pluginFinder = services.GetRequiredService<IPluginFinder>();
         await pluginFinder.Run(cancellationToken).ConfigureAwait(false);
         var host = services.GetRequiredService<IPluginHost>();

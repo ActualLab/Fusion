@@ -373,7 +373,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             if (i != await client.Add(i, 0).ConfigureAwait(false))
                 Assert.Fail("Wrong result.");
         var elapsed = startedAt.Elapsed;
-        Out.WriteLine($"{iterationCount}: {iterationCount / elapsed.TotalSeconds:F} ops/s");
+        WriteLine($"{iterationCount}: {iterationCount / elapsed.TotalSeconds:F} ops/s");
         await AssertNoCalls(clientPeer, Out);
     }
 
@@ -398,6 +398,6 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var startedAt = CpuTimestamp.Now;
         (await stream.CountAsync()).Should().Be(itemCount);
         var elapsed = startedAt.Elapsed;
-        Out.WriteLine($"{itemCount}: {itemCount / elapsed.TotalSeconds:F} ops/s");
+        WriteLine($"{itemCount}: {itemCount / elapsed.TotalSeconds:F} ops/s");
     }
 }

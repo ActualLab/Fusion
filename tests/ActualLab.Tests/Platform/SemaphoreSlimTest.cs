@@ -15,10 +15,10 @@ public class SemaphoreSlimTest(ITestOutputHelper @out) : TestBase(@out)
         });
 
         var timestamp = CpuTimestamp.Now;
-        Out.WriteLine(timestamp.Elapsed.ToShortString());
+        WriteLine(timestamp.Elapsed.ToShortString());
         await s.WaitAsync();
         var elapsed = timestamp.Elapsed;
-        Out.WriteLine(elapsed.ToShortString());
+        WriteLine(elapsed.ToShortString());
         elapsed.TotalSeconds.Should().BeGreaterThan(0.9);
     }
 
@@ -30,10 +30,10 @@ public class SemaphoreSlimTest(ITestOutputHelper @out) : TestBase(@out)
         s.Release();
 
         var timestamp = CpuTimestamp.Now;
-        Out.WriteLine(timestamp.Elapsed.ToShortString());
+        WriteLine(timestamp.Elapsed.ToShortString());
         await s.WaitAsync();
         var elapsed = timestamp.Elapsed;
-        Out.WriteLine(elapsed.ToShortString());
+        WriteLine(elapsed.ToShortString());
         elapsed.TotalSeconds.Should().BeLessThan(0.5);
     }
 }

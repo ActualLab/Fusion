@@ -46,7 +46,7 @@ public class TaskTest(ITestOutputHelper @out) : TestBase(@out)
             await Task.WhenAll(tasks).ConfigureAwait(false);
             var minDelay = tasks.Select(t => t.Result).Min();
             var maxDelay = tasks.Select(t => t.Result).Max();
-            Out.WriteLine($"Delays: min = {minDelay.TotalMilliseconds}ms, max = {maxDelay.TotalMilliseconds}ms");
+            WriteLine($"Delays: min = {minDelay.TotalMilliseconds}ms, max = {maxDelay.TotalMilliseconds}ms");
         }
     }
 
@@ -74,8 +74,8 @@ public class TaskTest(ITestOutputHelper @out) : TestBase(@out)
             _ = completedTask.GetAwaiter().GetResult();
         var gwgrTime = start.Elapsed;
 
-        Out.WriteLine($".Result                   : {rTime.ToShortString()}");
-        Out.WriteLine($".GetAwaiter().GetResult() : {gwgrTime.ToShortString()}");
+        WriteLine($".Result                   : {rTime.ToShortString()}");
+        WriteLine($".GetAwaiter().GetResult() : {gwgrTime.ToShortString()}");
     }
 
     // Private methods

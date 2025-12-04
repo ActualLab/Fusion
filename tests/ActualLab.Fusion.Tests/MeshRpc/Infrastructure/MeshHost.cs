@@ -5,6 +5,7 @@ using ActualLab.Rpc.Server;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Rpc;
 using ActualLab.Rpc.Clients;
+using ActualLab.Testing.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 
@@ -36,7 +37,7 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
         AllowLocalRpcConnectionKind = allowLocalRpcConnectionKind;
 
         Id = $"host-{Interlocked.Increment(ref _lastId):x4}-{serviceMode:G}";
-        Port = WebTestExt.GetUnusedTcpPort();
+        Port = WebTestHelpers.GetUnusedTcpPort();
         Url = $"http://127.0.0.1:{Port}/";
 
         var builder = WebApplication.CreateBuilder();

@@ -60,14 +60,14 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
             if (!mustCancel) {
                 try {
                     var c = await counters.Get(key).WaitAsync(timeout, CancellationToken.None);
-                    Out.WriteLine($"{index}: {c} in {callStartedAt.Elapsed.ToShortString()}");
+                    WriteLine($"{index}: {c} in {callStartedAt.Elapsed.ToShortString()}");
                     for (var j = 0; j < 100; j++)
                         await Task.Yield();
                     _ = server.Increment(key);
                     return default;
                 }
                 catch (TimeoutException) {
-                    Out.WriteLine($"!!! {index}: timed-out (1) in {callStartedAt.Elapsed.ToShortString()}");
+                    WriteLine($"!!! {index}: timed-out (1) in {callStartedAt.Elapsed.ToShortString()}");
                     throw;
                 }
             }
@@ -78,15 +78,15 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
                 var elapsed = callStartedAt.Elapsed;
                 if (cts.IsCancellationRequested && elapsed >= cancellationDelayThreshold)
                     Assert.Fail("Should not be here.");
-                Out.WriteLine($"{index}: {c} in {elapsed.ToShortString()}");
+                WriteLine($"{index}: {c} in {elapsed.ToShortString()}");
             }
             catch (TimeoutException) {
-                Out.WriteLine($"!!! {index}: timed-out (2) in {callStartedAt.Elapsed.ToShortString()}");
+                WriteLine($"!!! {index}: timed-out (2) in {callStartedAt.Elapsed.ToShortString()}");
                 throw;
             }
             catch (OperationCanceledException) {
                 var elapsed = callStartedAt.Elapsed;
-                Out.WriteLine($"{index}: cancelled in {elapsed.ToShortString()}");
+                WriteLine($"{index}: cancelled in {elapsed.ToShortString()}");
             }
             return default;
         }
@@ -120,7 +120,7 @@ public class FusionRpcCancellationTest(ITestOutputHelper @out) : SimpleFusionTes
                 await client.Increment(key, cancellationToken);
                 await c.WhenInvalidated(cancellationToken).WaitAsync(timeout);
                 c = await c.Update(cancellationToken);
-                Out.WriteLine(c.ToString());
+                WriteLine(c.ToString());
                 c.Value.Should().Be(i);
             }
         }

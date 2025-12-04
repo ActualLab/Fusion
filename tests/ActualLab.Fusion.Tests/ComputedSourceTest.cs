@@ -12,7 +12,7 @@ public class ComputedSourceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
             -1,
             (_, _) => {
                 var value = Interlocked.Increment(ref id);
-                Out.WriteLine($"Computed: {value}");
+                WriteLine($"Computed: {value}");
                 return Task.FromResult(value);
             });
 
@@ -45,7 +45,7 @@ public class ComputedSourceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         var cs = new ComputedSource<int>(services,
             (_, _) => {
                 var value = Interlocked.Increment(ref id);
-                Out.WriteLine($"Computed: {value}");
+                WriteLine($"Computed: {value}");
                 return Task.FromResult(value);
             }) {
             ComputedOptions = new() {

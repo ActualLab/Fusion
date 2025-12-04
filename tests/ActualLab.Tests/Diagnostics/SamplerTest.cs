@@ -36,12 +36,12 @@ public class SamplerTest(ITestOutputHelper @out) : TestBase(@out)
             Sampler.Never,
             Sampler.Always,
         };
-        Out.WriteLine("Regular tests:");
+        WriteLine("Regular tests:");
         foreach (var sampler in samplers)
             Test(sampler);
 
-        Out.WriteLine("");
-        Out.WriteLine("Performance tests:");
+        WriteLine("");
+        WriteLine("Performance tests:");
         foreach (var sampler in samplers)
             await PerformanceTest(sampler);
 
@@ -50,7 +50,7 @@ public class SamplerTest(ITestOutputHelper @out) : TestBase(@out)
 
     private void Test(Sampler sampler)
     {
-        Out.WriteLine($"{sampler}:");
+        WriteLine($"{sampler}:");
 
         var opCount = 1_000_000;
         var replies = new bool[opCount];
@@ -64,18 +64,18 @@ public class SamplerTest(ITestOutputHelper @out) : TestBase(@out)
             var error = p > 0
                 ? p / sampler.Probability - 1
                 : p - sampler.Probability;
-            Out.WriteLine($"- Error: {error:P2}");
+            WriteLine($"- Error: {error:P2}");
             error.Should().BeLessThan(0.05);
 
             var rate = opCount / sw.Elapsed.TotalSeconds;
             if (testIndex == 2)
-                Out.WriteLine($"- {rate:N3} ops/s");
+                WriteLine($"- {rate:N3} ops/s");
         }
     }
 
     private async Task PerformanceTest(Sampler sampler)
     {
-        Out.WriteLine($"{sampler}:");
+        WriteLine($"{sampler}:");
 
         var opCount = 200_000;
         var tasks = new Task[HardwareInfo.ProcessorCount / 2];
@@ -86,7 +86,7 @@ public class SamplerTest(ITestOutputHelper @out) : TestBase(@out)
 
         sw.Stop();
         var rate = opCount / sw.Elapsed.TotalSeconds;
-        Out.WriteLine($"- {rate:N3} ops/s per thread");
+        WriteLine($"- {rate:N3} ops/s per thread");
 
         void Run() {
             for (var i = 0; i < opCount; i++)

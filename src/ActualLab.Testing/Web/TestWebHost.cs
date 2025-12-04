@@ -1,17 +1,18 @@
-using Microsoft.Extensions.Hosting;
 using ActualLab.IO;
-#if NETCOREAPP
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Hosting;
+#if NETCOREAPP
+
 #else
 using Owin;
 using System.Net.Http;
 using System.Web.Http;
 #endif
 
-namespace ActualLab.Testing;
+namespace ActualLab.Testing.Web;
 
 public interface ITestWebHost : IDisposable
 {
@@ -37,8 +38,8 @@ public abstract class TestWebHostBase : ITestWebHost
 
     protected TestWebHostBase(bool useHttps = false)
     {
-        var localPort = WebTestExt.GetUnusedTcpPort();
-        ServerUri = WebTestExt.GetLocalUri(localPort, useHttps ? "https" : "http");
+        var localPort = WebTestHelpers.GetUnusedTcpPort();
+        ServerUri = WebTestHelpers.GetLocalUri(localPort, useHttps ? "https" : "http");
         HostLazy = new Lazy<IHost>(CreateHost);
     }
 

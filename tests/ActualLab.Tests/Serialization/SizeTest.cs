@@ -45,7 +45,7 @@ public class SizeTest(ITestOutputHelper @out) : TestBase(@out)
         if (size == expectedSize)
             return;
 
-        Out.WriteLine($"Size of {typeof(T).GetName()} = {size} (expected: {expectedSize})");
+        WriteLine($"Size of {typeof(T).GetName()} = {size} (expected: {expectedSize})");
         size.Should().Be(expectedSize);
     }
 }

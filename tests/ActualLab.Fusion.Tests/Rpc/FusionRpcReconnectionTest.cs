@@ -40,7 +40,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var startedAt = CpuTimestamp.Now;
         await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1));
-        Out.WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
+        WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
 
         var elapsed = CpuTimestamp.Now - startedAt;
         if (!TestRunnerInfo.IsBuildAgent())
@@ -71,7 +71,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var startedAt = CpuTimestamp.Now;
         await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1 * waitMultiplier));
-        Out.WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
+        WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
 
         var elapsed = CpuTimestamp.Now - startedAt;
         if (!TestRunnerInfo.IsBuildAgent())
@@ -107,7 +107,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var startedAt = CpuTimestamp.Now;
         await computed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1 * waitMultiplier));
-        Out.WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
+        WriteLine(computed.ToString(InvalidationSourceFormat.WholeChain));
 
         var elapsed = CpuTimestamp.Now - startedAt;
         if (!TestRunnerInfo.IsBuildAgent())
@@ -155,12 +155,12 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
             var st = await stTask;
             var ct = await ctTask;
             if (ct == st)
-                Out.WriteLine($"{i}: In sync");
+                WriteLine($"{i}: In sync");
             else {
-                Out.WriteLine($"{i}: Syncing...");
+                WriteLine($"{i}: Syncing...");
                 var c = await Computed.Capture(() => client.GetTime());
                 await c.When(x => x >= st).WaitAsync(TimeSpan.FromSeconds(3));
-                Out.WriteLine($"{i}: Synced: {c}");
+                WriteLine($"{i}: Synced: {c}");
             }
         }
     }
@@ -182,14 +182,14 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
             .ToArray();
         await Task.Delay(testDuration);
         var counts = (await WhenAll(tasks, Out)).Aggregate(new long[3], (x, y) => [x[0] + y[0], x[1] + y[1], x[2] + y[2]]);
-        Out.WriteLine($"Call counts: {counts[0]} ok, {counts[1]} timeouts, {counts[2]} cancellations");
+        WriteLine($"Call counts: {counts[0]} ok, {counts[1]} timeouts, {counts[2]} cancellations");
         counts[0].Should().BeGreaterThan(0);
     }
 
     private async Task<long[]> Worker(string workerId, CpuTimestamp endAt)
     {
         void Write(string message)
-            => Out.WriteLine($"Worker #{workerId}: {message}");
+            => WriteLine($"Worker #{workerId}: {message}");
 
         Write("started");
         var (successCount, timeoutCount, cancellationCount) = (0L, 0L, 0L);

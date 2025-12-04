@@ -14,9 +14,9 @@ public class SessionParameterTest(ITestOutputHelper @out) : SimpleFusionTestBase
         async Task Watch<T>(string name, Computed<T> computed)
         {
             while (true) {
-                Out.WriteLine($"{name}: {computed.Value}, {computed}");
+                WriteLine($"{name}: {computed.Value}, {computed}");
                 await computed.WhenInvalidated(cancellationToken);
-                Out.WriteLine($"{name}: {computed.Value}, {computed}");
+                WriteLine($"{name}: {computed.Value}, {computed}");
                 computed = await computed.Update(cancellationToken);
             }
         }

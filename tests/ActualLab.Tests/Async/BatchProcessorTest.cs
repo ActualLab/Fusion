@@ -123,28 +123,29 @@ public class BatchProcessorTest(ITestOutputHelper @out) : TestBase(@out)
         batchDelay = 100;
         await Test(1000, 10);
         await Test(10_000, 60);
+        return;
 
         async Task Test(int taskCount, int minExpectedWorkerCount) {
-            Out.WriteLine($"Task count: {taskCount}, batch delay: {batchDelay}");
+            WriteLine($"Task count: {taskCount}, batch delay: {batchDelay}");
             var tasks = new Task<int>[taskCount];
             for (var i = 0; i < tasks.Length; i++)
                 tasks[i] = processor.Process(i);
 
             while (true) {
                 await Delay(0.5);
-                Out.WriteLine($"WorkerCount: {processor.GetWorkerCount()}");
+                WriteLine($"WorkerCount: {processor.GetWorkerCount()}");
                 if (processor.GetWorkerCount() >= minExpectedWorkerCount)
                     break;
             }
             while (true) {
                 await Delay(0.5);
-                Out.WriteLine($"WorkerCount: {processor.GetWorkerCount()}");
+                WriteLine($"WorkerCount: {processor.GetWorkerCount()}");
                 if (processor.GetWorkerCount() == 1)
                     break;
             }
             await Task.WhenAll(tasks);
             tasks.Where((t, i) => t.Result != i).Count().Should().Be(0);
-            Out.WriteLine("");
+            WriteLine("");
         }
     }
 }

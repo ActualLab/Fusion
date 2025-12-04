@@ -8,7 +8,7 @@ public class PrimeSieveTest(ITestOutputHelper @out) : TestBase(@out)
         var sieve = PrimeSieve.GetOrCompute();
         var range = Enumerable.Range(1, 10);
         foreach (var x in range)
-            Out.WriteLine($"{x} => {sieve.IsPrime(x)}");
+            WriteLine($"{x} => {sieve.IsPrime(x)}");
         Assert.Equal([
                 true,
                 false,

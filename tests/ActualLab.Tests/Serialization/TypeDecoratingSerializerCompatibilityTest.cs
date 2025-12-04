@@ -27,7 +27,7 @@ public class TypeDecoratingSerializerCompatibilityTest(ITestOutputHelper @out) :
     private void AssertPassesThrough<T>(T value, ITextSerializer serializer, ITextSerializer deserializer)
     {
         var data = serializer.Write(value);
-        Out.WriteLine($"Serialized: {data}");
+        WriteLine($"Serialized: {data}");
         var readValue = deserializer.Read<T>(data);
         readValue.Should().Be(value);
     }

@@ -1,6 +1,5 @@
 using ActualLab.IO;
 using ActualLab.OS;
-using ActualLab.Testing.Output;
 using CommunityToolkit.HighPerformance;
 
 namespace ActualLab.Tests;
@@ -39,8 +38,14 @@ public abstract class TestBase(ITestOutputHelper @out) : IAsyncLifetime
 
     public ITestOutputHelper Out { get; set; } = @out;
 
-    public virtual Task InitializeAsync() => Task.CompletedTask;
-    public virtual Task DisposeAsync() => Task.CompletedTask;
+    public virtual void WriteLine(string message)
+        => Out.WriteLine(message);
+
+    public virtual Task InitializeAsync()
+        => Task.CompletedTask;
+
+    public virtual Task DisposeAsync()
+        => Task.CompletedTask;
 
     // Protected methods
 
@@ -60,15 +65,5 @@ public abstract class TestBase(ITestOutputHelper @out) : IAsyncLifetime
     {
         suffix ??= LongTestNameHash;
         return TempDir & $"{baseName ?? "fusion_tests"}_{suffix}.db";
-    }
-
-    protected Disposable<TestOutputCapture> CaptureOutput()
-    {
-        var testOutputCapture = new TestOutputCapture(Out);
-        var oldOut = Out;
-        Out = testOutputCapture;
-        return new Disposable<TestOutputCapture>(
-            testOutputCapture,
-            _ => Out = oldOut);
     }
 }

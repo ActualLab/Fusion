@@ -1,3 +1,4 @@
+using ActualLab.Testing.Channels;
 using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Channels;
@@ -59,11 +60,11 @@ public class ChannelPairTest(ITestOutputHelper @out) : TestBase(@out)
             Channel.CreateBounded<int>(options));
         _ = cp1.Channel2.Connect(cp2.Channel1,
             m => {
-                Out.WriteLine($"-> {m}");
+                WriteLine($"-> {m}");
                 return m;
             },
             m => {
-                Out.WriteLine($"<- {m}");
+                WriteLine($"<- {m}");
                 return m;
             },
             ChannelCopyMode.CopyAllSilently

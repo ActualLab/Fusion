@@ -13,7 +13,7 @@ public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
         _ = action(opCount);
         sw.Stop();
         var rate = opCount / sw.Elapsed.TotalSeconds;
-        Out.WriteLine($"{title} ({opCount}): {rate:N3} ops/s");
+        WriteLine($"{title} ({opCount}): {rate:N3} ops/s");
     }
 
     private void RunAll(int baseOpCount)
@@ -72,11 +72,11 @@ public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
     public void RunBenchmarks()
     {
         RunAll(1_000_000);
-        Out.WriteLine("");
+        WriteLine("");
         Thread.Sleep(1000);
 
         RunAll(10_000_000);
-        Out.WriteLine("");
+        WriteLine("");
         Thread.Sleep(1000);
     }
 }

@@ -28,7 +28,7 @@ public abstract class BenchmarkTestBase(ITestOutputHelper @out) : TestBase(@out)
         params T[] variants)
         where T : notnull
     {
-        Out.WriteLine($"{title}:");
+        WriteLine($"{title}:");
         var maxVariantWidth = variants.Select(o => o.ToString()!.Length).Max();
         foreach (var variant in variants) {
             var frequency = 0d;
@@ -60,7 +60,7 @@ public abstract class BenchmarkTestBase(ITestOutputHelper @out) : TestBase(@out)
             var sVariant = string.Format($"{{0,-{maxVariantWidth}}}", variant);
             var sFrequency = $"{f:F3}{fSuffix} ops/s";
             var sAllocated = $"{b:0.#} {bSuffix}/op";
-            Out.WriteLine($"  {sVariant} : {sFrequency,14}, {sAllocated}");
+            WriteLine($"  {sVariant} : {sFrequency,14}, {sAllocated}");
         }
     }
 

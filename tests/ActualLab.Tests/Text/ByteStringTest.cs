@@ -43,7 +43,7 @@ public class ByteStringTest(ITestOutputHelper @out) : TestBase(@out)
                 var s = new ByteString(bytes);
                 var encoded = s.ToBase64Url(); // Let's also test this
                 if (iteration < 1 && length < 32)
-                    Out.WriteLine($"{length}: {encoded}");
+                    WriteLine($"{length}: {encoded}");
 
                 var decoded = ByteString.FromBase64Url(encoded);
                 decoded.Should().Be(bytes.AsByteString());
@@ -63,7 +63,7 @@ public class ByteStringTest(ITestOutputHelper @out) : TestBase(@out)
                 var s = new ByteString(bytes);
                 var encoded = s.ToBase64(); // Let's also test this
                 if (iteration < 1 && length < 32)
-                    Out.WriteLine($"{length}: {encoded}");
+                    WriteLine($"{length}: {encoded}");
 
                 var decoded = ByteString.FromBase64(encoded);
                 decoded.Should().Be(bytes.AsByteString());

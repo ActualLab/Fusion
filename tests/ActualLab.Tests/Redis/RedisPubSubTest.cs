@@ -15,14 +15,14 @@ public class RedisPubSubTest(ITestOutputHelper @out) : RedisTestBase(@out)
         await using var _ = sub.ConfigureAwait(false);
 
         await sub.WhenSubscribed!.ConfigureAwait(false);
-        Out.WriteLine($"{sw.ElapsedMilliseconds}: <- 1");
+        WriteLine($"{sw.ElapsedMilliseconds}: <- 1");
         var messageTask = sub.NextMessage();
         await pub1.Publish("1");
-        Out.WriteLine($"{sw.ElapsedMilliseconds}: -> {await messageTask}");
+        WriteLine($"{sw.ElapsedMilliseconds}: -> {await messageTask}");
 
-        Out.WriteLine($"{sw.ElapsedMilliseconds}: <- 2");
+        WriteLine($"{sw.ElapsedMilliseconds}: <- 2");
         messageTask = sub.NextMessage();
         await pub2.Publish("2");
-        Out.WriteLine($"{sw.ElapsedMilliseconds}: -> {await messageTask}");
+        WriteLine($"{sw.ElapsedMilliseconds}: -> {await messageTask}");
     }
 }

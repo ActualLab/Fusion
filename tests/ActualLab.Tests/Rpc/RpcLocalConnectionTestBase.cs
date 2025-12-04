@@ -87,7 +87,8 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         var elapsed = await Run(iterationCount);
 
         var totalIterationCount = threadCount * iterationCount;
-        Out.WriteLine($"{iterationCount}: {totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
+        WriteLine($"{iterationCount}: {totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
+        return;
 
         async Task<TimeSpan> Run(int count)
         {
@@ -127,7 +128,8 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         var elapsed = await Run(itemCount);
 
         var totalItemCount = threadCount * itemCount;
-        Out.WriteLine($"{itemCount}: {totalItemCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
+        WriteLine($"{itemCount}: {totalItemCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
+        return;
 
         async Task<TimeSpan> Run(int count)
         {

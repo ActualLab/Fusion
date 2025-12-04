@@ -13,13 +13,13 @@ public class RedisConnectorTest(ITestOutputHelper @out) : RedisTestBase(@out)
                 await hash.Clear();
                 for (var i = 0;; i++) {
                     var value = await hash.Increment("x");
-                    Out.WriteLine(value.ToString());
+                    WriteLine(value.ToString());
                     value.Should().Be(i + 1);
                     await Delay(1);
                 }
             }
             catch (Exception e) {
-                Out.WriteLine($"Error: {e.GetType()}, {e.Message}");
+                WriteLine($"Error: {e.GetType()}, {e.Message}");
             }
         }
     }

@@ -44,7 +44,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var peer = WebHost.Services.RpcHub().InternalServices.Peers.Values
             .First(x => x.ServerMethodResolver.NextResolver != null);
         var serverMethodResolver = peer.ServerMethodResolver;
-        Out.WriteLine(serverMethodResolver.ToString());
+        WriteLine(serverMethodResolver.ToString());
 
         serverMethodResolver.MethodByRef!.Count.Should().Be(1);
         version.Should().Be("0.1");
@@ -63,7 +63,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var peer = WebHost.Services.RpcHub().InternalServices.Peers.Values
             .First(x => x.ServerMethodResolver.NextResolver != null);
         var serverMethodResolver = peer.ServerMethodResolver;
-        Out.WriteLine(serverMethodResolver.ToString());
+        WriteLine(serverMethodResolver.ToString());
 
         serverMethodResolver.MethodByRef!.Count.Should().Be(1);
         version.Should().Be("0.5");
@@ -81,7 +81,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
         var peer = WebHost.Services.RpcHub().InternalServices.Peers.Values
             .First(x => x.ServerMethodResolver.NextResolver != null);
         var serverMethodResolver = peer.ServerMethodResolver;
-        Out.WriteLine(serverMethodResolver.ToString());
+        WriteLine(serverMethodResolver.ToString());
 
         serverMethodResolver.MethodByRef!.Count.Should().Be(2);
         version.Should().Be("1.0*");

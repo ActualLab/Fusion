@@ -10,11 +10,11 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
         var factory = CreateServices().StateFactory();
 
         var ms1 = factory.NewMutable<string>("A");
-        ms1.Updated += (s, _) => Out.WriteLine($"ms1 = {((IState<string>)s).ValueOrDefault}");
+        ms1.Updated += (s, _) => WriteLine($"ms1 = {((IState<string>)s).ValueOrDefault}");
         ms1.Value.Should().Be("A");
 
         var ms2 = factory.NewMutable<string>("B");
-        ms2.Updated += (s, _)  => Out.WriteLine($"ms2 = {((IState<string>)s).ValueOrDefault}");
+        ms2.Updated += (s, _)  => WriteLine($"ms2 = {((IState<string>)s).ValueOrDefault}");
         ms2.Value.Should().Be("B");
 
         var cs = factory.NewComputed<string>(
@@ -59,14 +59,14 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
         s.Value.Should().Be(null);
         await s.Update();
         var c0 = s.Computed;
-        Out.WriteLine($"Computed: {c0}");
+        WriteLine($"Computed: {c0}");
         c0.Value.Should().Be(null);
 
         s.Set(o1);
         s.Value.Should().Be(o1);
         await s.Update();
         var c1 = s.Computed;
-        Out.WriteLine($"Computed: {c1}");
+        WriteLine($"Computed: {c1}");
         c1.Value.Should().Be(o1);
         c1.Should().NotBe(c0);
 
@@ -74,7 +74,7 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
         s.Value.Should().Be(o2);
         await s.Update();
         var c2 = s.Computed;
-        Out.WriteLine($"Computed: {c2}");
+        WriteLine($"Computed: {c2}");
         c2.Value.Should().Be(o2);
         c2.Should().NotBe(c1);
     }
@@ -88,9 +88,9 @@ public class MutableStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@ou
         async Task Watch<T>(string name, Computed<T> computed)
         {
             while (true) {
-                Out.WriteLine($"{name}: {computed.Value}, {computed}");
+                WriteLine($"{name}: {computed.Value}, {computed}");
                 await computed.WhenInvalidated(cancellationToken);
-                Out.WriteLine($"{name}: {computed.Value}, {computed}");
+                WriteLine($"{name}: {computed.Value}, {computed}");
                 computed = await computed.Update(cancellationToken);
             }
         }

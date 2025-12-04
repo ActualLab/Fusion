@@ -27,7 +27,7 @@ public class TimerTest(ITestOutputHelper @out) : FusionTestBase(@out)
             FixedDelayer.NextTick,
             async ct => await ctp.GetTime(ct));
         state.Updated += (s, _) => {
-            Out.WriteLine($"Client: {s.Value}");
+            WriteLine($"Client: {s.Value}");
             count++;
         };
 

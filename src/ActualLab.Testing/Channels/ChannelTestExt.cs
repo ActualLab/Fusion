@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 
-namespace ActualLab.Testing;
+namespace ActualLab.Testing.Channels;
 
 public static class ChannelTestExt
 {

@@ -27,7 +27,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         await clock.Delay(TimeSpan.FromSeconds(5));
         ShouldEqual(realStart + TimeSpan.FromSeconds(0.5), Moment.Now, epsilon);
         ShouldEqual(clockStart + TimeSpan.FromSeconds(5), clock.Now, epsilon10);
-        Out.WriteLine(clock.Now.ToString());
+        WriteLine(clock.Now.ToString());
 
         clock.OffsetBy(1000);
         ShouldEqual(clockStart + TimeSpan.FromSeconds(6), clock.Now, epsilon10);
@@ -94,7 +94,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
             .ToEnumerable().ToArray();
         var deltas = timings.Zip(timings.Skip(1), (a, b) => b - a).ToArray();
 
-        Out.WriteLine(deltas.Select(d => (long)d.TotalMilliseconds).ToDelimitedString());
+        WriteLine(deltas.Select(d => (long)d.TotalMilliseconds).ToDelimitedString());
 
         foreach (var d in deltas.Take(2))
             ShouldEqual(TimeSpan.FromMilliseconds(100), d, epsilon);
