@@ -71,7 +71,7 @@ public class Operation : IHasUuid, IHasId<string>
     public OperationEvent AddEvent(string uuid, object? value)
         => AddEvent(new OperationEvent(uuid, value));
     public OperationEvent AddEvent(IOperationEventSource operationEventSource)
-        => AddEvent(operationEventSource.ToOperationEvent(Scope.RequireActive()));
+        => AddEvent(operationEventSource.ToOperationEvent());
     public OperationEvent AddEvent(OperationEvent @event)
     {
         var scope = Scope.RequireActive();
