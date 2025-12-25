@@ -24,6 +24,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
         }
 
         WebSocket? webSocket = null;
+        WebSocketChannel<RpcMessage>? channel = null;
         RpcConnection? connection = null;
         try {
             var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
@@ -36,13 +37,14 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync();
 #endif
             webSocket = await acceptWebSocketTask.ConfigureAwait(false);
+
             var properties = PropertyBag.Empty
                 .KeylessSet((RpcPeer)peer)
                 .KeylessSet(context)
                 .KeylessSet(webSocket);
             var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
             var webSocketChannelOptions = WebSocketClientOptions.WebSocketChannelOptionsFactory.Invoke(peer, properties);
-            var channel = new WebSocketChannel<RpcMessage>(
+            channel = new WebSocketChannel<RpcMessage>(
                 webSocketChannelOptions, webSocketOwner, cancellationToken) {
                 OwnsWebSocketOwner = false,
             };
@@ -60,8 +62,11 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             await channel.WhenClosed.ConfigureAwait(false);
         }
         catch (Exception e) {
-            if (connection is not null || e.IsCancellationOf(cancellationToken))
+            if (connection is not null || e.IsCancellationOf(cancellationToken)) {
+                if (channel is not null)
+                    await channel.DisposeAsync().ConfigureAwait(false);
                 return; // Intended: this is typically a normal connection termination
+            }
 
             var request = context.Request;
             Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}", request.Path, request.QueryString);
@@ -76,7 +81,10 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             }
         }
         finally {
-            webSocket?.Dispose();
+            if (channel is not null)
+                await channel.DisposeAsync().ConfigureAwait(false);
+            else
+                webSocket?.Dispose();
         }
     }
 }

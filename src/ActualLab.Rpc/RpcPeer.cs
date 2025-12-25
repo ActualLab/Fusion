@@ -327,6 +327,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     // Processing Handshake
                     var peerChangeKind = handshake.GetPeerChangeKind(lastHandshake);
                     lastHandshake = handshake;
+                    lock (Lock)
+                        _resetTryIndex = false;
                     if (peerChangeKind != RpcPeerChangeKind.Unchanged) {
                         // Remote RpcPeer changed -> we must abort every inbound call / shared object
                         if (peerChangeKind != RpcPeerChangeKind.ChangedToVeryFirst) {
@@ -457,6 +459,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 #endif
         var connectionState = _connectionState;
         var oldState = connectionState.Value;
+
+        if (newState.TryIndex != 0 && _resetTryIndex)
+            newState = newState with { TryIndex = 0 };
+
         if ((expectedState is not null && connectionState != expectedState) || ReferenceEquals(newState, oldState)) {
 #if NET9_0_OR_GREATER
             Lock.Exit();
@@ -467,10 +473,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
         Exception? terminalError = null;
         try {
-            if (newState.TryIndex != 0 && _resetTryIndex) {
-                _resetTryIndex = false;
-                newState = newState with { TryIndex = 0 };
-            }
             var nextConnectionState = connectionState.TrySetNext(newState);
             if (ReferenceEquals(nextConnectionState, connectionState)) {
 #if NET9_0_OR_GREATER

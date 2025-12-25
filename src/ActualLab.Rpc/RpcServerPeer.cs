@@ -11,11 +11,11 @@ public class RpcServerPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions 
     {
         AsyncState<RpcPeerConnectionState> connectionState;
         lock (Lock) {
-            connectionState = ConnectionState;
             if (_nextConnection.Value == connection)
                 return; // We already set the next connection to the specified one
 
             _nextConnection = _nextConnection.SetNext(connection);
+            connectionState = ConnectionState;
         }
         await Disconnect(null, connectionState, cancellationToken).ConfigureAwait(false);
     }
