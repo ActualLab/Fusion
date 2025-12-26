@@ -221,7 +221,9 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
             using var _ = cancellationToken.Register(
                 () => _writeChannel.Writer.TryComplete(new OperationCanceledException(cancellationToken)));
 
-            while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false)) {
+            // We can use CancellationToken.None as we have already subscribed to the cancellationToken above
+            // and push completion to the channel
+            while (await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false)) {
                 while (reader.TryRead(out var item)) {
                     if (trySerialize.Invoke(item, _writeBuffer) && _writeBuffer.WrittenCount >= _writeFrameSize)
                         await FlushFrame().ConfigureAwait(false);
@@ -261,7 +263,9 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
                 else {
                     // Flush is pending.
                     // We must await for either it or WaitToReadAsync - what comes first.
-                    waitToReadTask ??= reader.WaitToReadAsync(cancellationToken).AsTask();
+                    // We can use CancellationToken.None as we have already subscribed to the cancellationToken above
+                    // and push completion to the channel
+                    waitToReadTask ??= reader.WaitToReadAsync(CancellationToken.None).AsTask();
                     await Task.WhenAny(whenMustFlush, waitToReadTask).ConfigureAwait(false);
                     if (!waitToReadTask.IsCompleted)
                         continue; // whenMustFlush is completed, waitToReadTask is not
@@ -277,6 +281,8 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
                 waitToReadTask = null;
             }
             else
+                // We can use CancellationToken.None as we have already subscribed to the cancellationToken above
+                // and push completion to the channel
                 canRead = await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
             if (!canRead)
                 break; // Reading is done

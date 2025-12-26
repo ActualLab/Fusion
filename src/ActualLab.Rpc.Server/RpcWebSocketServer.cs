@@ -63,8 +63,11 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
         }
         catch (Exception e) {
             if (connection is not null || e.IsCancellationOf(cancellationToken)) {
-                if (channel is not null)
+                if (channel is not null) {
                     await channel.DisposeAsync().ConfigureAwait(false);
+                    channel = null;
+                }
+
                 return; // Intended: this is typically a normal connection termination
             }
 
@@ -81,6 +84,8 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             }
         }
         finally {
+            // When the channel is disposed, the web socket is disposed as well at WebSocketChannel.WhenClosed
+            // after cancelling of the StopToken
             if (channel is not null)
                 await channel.DisposeAsync().ConfigureAwait(false);
             else
