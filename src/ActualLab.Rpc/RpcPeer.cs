@@ -11,7 +11,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
 
     private volatile AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected);
-    private volatile RpcHandshake? _handshake;
     private volatile RpcMethodResolver _serverMethodResolver;
     private volatile ChannelWriter<RpcMessage>? _sender;
     private volatile RpcPeerStopMode _stopMode;
@@ -52,7 +51,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 #pragma warning disable CA1721
     public RpcMethodResolver ServerMethodResolver => _serverMethodResolver;
 #pragma warning restore CA1721
-    public RpcHandshake? Handshake => _handshake;
 
     public RpcPeerStopMode StopMode {
         get => _stopMode;
@@ -484,7 +482,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
             _connectionState = connectionState = nextConnectionState;
             _serverMethodResolver = GetServerMethodResolver(newState.Handshake);
-            _handshake = newState.Handshake;
             if (newState.Error is not null && Options.TerminalErrorDetector.Invoke(this, newState.Error)) {
                 terminalError = newState.Error;
                 connectionState.TrySetFinal(terminalError);

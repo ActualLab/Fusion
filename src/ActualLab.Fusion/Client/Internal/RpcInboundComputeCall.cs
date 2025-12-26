@@ -47,11 +47,6 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
                 trace.Complete(this);
                 Trace = null;
             }
-            if (Context.Peer.Handshake is { ProtocolVersion: <= 1 } && UntypedComputed is not null) {
-                // '@' is required to make it compatible with pre-v7.2 versions
-                var versionHeader = new RpcHeader(WellKnownRpcHeaders.Version, UntypedComputed.Version.FormatVersion('@'));
-                ResultHeaders = ResultHeaders.WithOrReplace(versionHeader);
-            }
             if (CallCancelToken.IsCancellationRequested) {
                 // The call is cancelled by the remote party
                 UnregisterFromLock();
