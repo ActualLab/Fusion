@@ -295,6 +295,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     var handshakeToken = handshakeCts.Token;
                     RpcHandshake handshake;
                     try {
+                        Log.LogDebug("'{PeerRef}': Sending Handshake", Ref);
                         handshake = await Task.Run(
                             async () => {
                                 var ownHandshake = new RpcHandshake(
@@ -317,8 +318,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                             .ConfigureAwait(false);
                         if (handshake.RemoteApiVersionSet is null)
                             handshake = handshake with { RemoteApiVersionSet = new() };
+                        Log.LogDebug("'{PeerRef}': Handshake succeeded", Ref);
                     }
                     catch (Exception e) {
+                        Log.LogWarning(e, "Failed to send Handshake: {PeerRef}", Ref);
                         isHandshakeError = true;
                         readerTokenSource.CancelAndDisposeSilently();
                         if (e.IsCancellationOfTimeoutToken(handshakeToken, cancellationToken))
@@ -328,6 +331,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                     // Processing Handshake
                     var peerChangeKind = handshake.GetPeerChangeKind(lastHandshake);
+                    Log.LogDebug("'{PeerRef}': Handshake change kind: {PeerChangeKind}", Ref, peerChangeKind);
                     lastHandshake = handshake;
                     if (peerChangeKind != RpcPeerChangeKind.Unchanged) {
                         // Remote RpcPeer changed -> we must abort every inbound call / shared object
@@ -358,6 +362,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         return Task.WhenAll(tasks);
                     }, readerToken);
 
+                    Log.LogDebug("'{PeerRef}': Reading messages", Ref);
                     RpcInboundContext.Current = null;
                     Activity.Current = null;
                     try {
@@ -371,6 +376,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }
                 }
                 catch (Exception e) {
+                    Log.LogError(e, "Failed to read messages: {PeerRef}", Ref);
                     var isReaderAbort = readerToken.IsCancellationRequested
                         && !cancellationToken.IsCancellationRequested
                         && !isHandshakeError;

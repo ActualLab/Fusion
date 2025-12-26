@@ -19,6 +19,7 @@ public class RpcWebSocketClient(IServiceProvider services)
     public virtual async Task<RpcConnection> ConnectRemote(
         RpcClientPeer clientPeer, Uri? uri, CancellationToken cancellationToken)
     {
+        Log.LogDebug("Peer '{PeerRef}' (ClientId={Id}) connecting to '{Url}'", clientPeer.Ref, clientPeer.ClientId, uri);
         if (uri is null) {
             // The expected behavior for null URI is to wait indefinitely
             Log.LogWarning("'{PeerRef}': No connection URL - waiting for peer termination", clientPeer.Ref);
@@ -60,6 +61,7 @@ public class RpcWebSocketClient(IServiceProvider services)
             if (e.IsCancellationOf(connectToken) && !cancellationToken.IsCancellationRequested)
                 throw Errors.ConnectTimeout();
 
+            Log.LogWarning(e, "Peer '{PeerRef}' failed to connect to '{Url}'", clientPeer.Ref, uri);
             throw;
         }
 
