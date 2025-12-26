@@ -283,7 +283,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
             else
                 // We can use CancellationToken.None as we have already subscribed to the cancellationToken above
                 // and push completion to the channel
-                canRead = await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
+                canRead = await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false);
             if (!canRead)
                 break; // Reading is done
 
