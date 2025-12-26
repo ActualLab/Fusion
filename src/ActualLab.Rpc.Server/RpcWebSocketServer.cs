@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http;
@@ -19,21 +18,26 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
     public virtual async Task Invoke(HttpContext context, bool isBackend)
     {
         var request = context.Request;
-        var uri = new UriBuilder(request.Scheme,request.Host.Host, request.Host.Port ?? -1,request.Path,request.QueryString.ToString());
-        var requestStr = $"{request.Method} {uri}";
+        var uri = new UriBuilder(
+            request.Scheme,
+            request.Host.Host,
+            request.Host.Port ?? -1,
+            request.Path,
+            request.QueryString.ToString());
+        var requestDescription = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
         if (!context.WebSockets.IsWebSocketRequest) {
-            Log.LogWarning("WebSocket request expected, but got {Request}", requestStr);
+            Log.LogWarning("WebSocket request expected, but got {Request}", requestDescription);
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return;
         }
 
-        Log.LogDebug("Accepting RPC connection {Request}, isBackend={IsBackend}", requestStr, isBackend);
         WebSocket? webSocket = null;
         RpcConnection? connection = null;
+        RpcPeerRef? peerRef = null;
         try {
-            var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
-            Log.LogDebug("Created peer ref {PeerRef} for WebSocket request {Request}", peerRef, requestStr);
+            peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
+            Log.LogInformation("'{PeerRef}': Accepting RPC connection for {Request}", peerRef, requestDescription);
             var peer = Hub.GetServerPeer(peerRef);
 
 #if NET6_0_OR_GREATER
@@ -59,23 +63,28 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
 
             if (peer.IsConnected()) {
                 var delay = Options.ChangeConnectionDelay;
-                Log.LogWarning("{Peer} is already connected, will change its connection in {Delay}...",
-                    peer, delay.ToShortString());
+                Log.LogWarning("'{PeerRef}': {Peer} is already connected, will change its connection in {Delay}...",
+                    peerRef, peer, delay.ToShortString());
                 await peer.Hub.Clock.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
             await peer.SetNextConnection(connection, cancellationToken).ConfigureAwait(false);
             await channel.WhenClosed.ConfigureAwait(false);
         }
         catch (Exception e) {
-            if (e.IsCancellationOf(cancellationToken))
-                return; // Intended: this is typically a normal connection termination
-
-            if (connection is not null) {
-                Log.LogDebug(e, "Normal connection termination");
+            if (e.IsCancellationOf(cancellationToken)) {
+                Log.LogInformation(e, "'{PeerRef}': Normal RPC connection termination (via cancellation) for {Request}",
+                    peerRef, requestDescription);
                 return; // Intended: this is typically a normal connection termination
             }
 
-            Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}", request.Path, request.QueryString);
+            if (connection is not null) {
+                Log.LogInformation(e, "'{PeerRef}': Normal RPC connection termination for {Request}",
+                    peerRef, requestDescription);
+                return; // Intended: this is typically a normal connection termination
+            }
+
+            Log.LogWarning(e, "'{PeerRef}': Failed to accept RPC connection for {Request}",
+                peerRef, requestDescription);
             if (webSocket is not null)
                 return;
 

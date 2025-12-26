@@ -11,7 +11,7 @@ public class RpcWebSocketClient(IServiceProvider services)
     public RpcWebSocketClientOptions Options { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
 
     public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
-    {
+{
         var uri = Options.ConnectionUriResolver.Invoke(clientPeer);
         return ConnectRemote(clientPeer, uri, cancellationToken);
     }
@@ -19,14 +19,17 @@ public class RpcWebSocketClient(IServiceProvider services)
     public virtual async Task<RpcConnection> ConnectRemote(
         RpcClientPeer clientPeer, Uri? uri, CancellationToken cancellationToken)
     {
-        Log.LogDebug("Peer '{PeerRef}' (ClientId={Id}) connecting to '{Url}'", clientPeer.Ref, clientPeer.ClientId, uri);
         if (uri is null) {
             // The expected behavior for null URI is to wait indefinitely
-            Log.LogWarning("'{PeerRef}': No connection URL - waiting for peer termination", clientPeer.Ref);
+            Log.LogWarning(
+                "'{PeerRef}': No connection URL for ClientId='{ClientId}' - waiting for peer termination",
+                clientPeer.Ref, clientPeer.ClientId);
             await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
         }
 
-        // Log.LogInformation("'{PeerRef}': Connection URL: {Url}", clientPeer.Ref, uri);
+        Log.LogInformation(
+            "'{PeerRef}': Connecting ClientId='{ClientId}' to {Url}",
+            clientPeer.Ref, clientPeer.ClientId, uri);
         var hub = clientPeer.Hub;
         var connectCts = new CancellationTokenSource();
         var connectToken = connectCts.Token;
@@ -61,7 +64,7 @@ public class RpcWebSocketClient(IServiceProvider services)
             if (e.IsCancellationOf(connectToken) && !cancellationToken.IsCancellationRequested)
                 throw Errors.ConnectTimeout();
 
-            Log.LogWarning(e, "Peer '{PeerRef}' failed to connect to '{Url}'", clientPeer.Ref, uri);
+            Log.LogWarning(e, "'{PeerRef}': Failed to connect to {Url}", clientPeer.Ref, uri);
             throw;
         }
 
