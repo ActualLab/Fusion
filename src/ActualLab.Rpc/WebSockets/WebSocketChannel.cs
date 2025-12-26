@@ -221,6 +221,8 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
             using var _ = cancellationToken.Register(
                 () => _writeChannel.Writer.TryComplete(new OperationCanceledException(cancellationToken)));
 
+            // We can use CancellationToken.None as we have already subscribed to the cancellationToken above
+            // and push completion to the channel
             while (await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false)) {
                 while (reader.TryRead(out var item)) {
                     if (trySerialize.Invoke(item, _writeBuffer) && _writeBuffer.WrittenCount >= _writeFrameSize)
@@ -261,6 +263,8 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
                 else {
                     // Flush is pending.
                     // We must await for either it or WaitToReadAsync - what comes first.
+                    // We can use CancellationToken.None as we have already subscribed to the cancellationToken above
+                    // and push completion to the channel
                     waitToReadTask ??= reader.WaitToReadAsync(CancellationToken.None).AsTask();
                     await Task.WhenAny(whenMustFlush, waitToReadTask).ConfigureAwait(false);
                     if (!waitToReadTask.IsCompleted)
@@ -277,6 +281,8 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
                 waitToReadTask = null;
             }
             else
+                // We can use CancellationToken.None as we have already subscribed to the cancellationToken above
+                // and push completion to the channel
                 canRead = await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false);
             if (!canRead)
                 break; // Reading is done
@@ -338,7 +344,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
                 var arraySegment = new ArraySegment<byte>(readBuffer.Array, readBuffer.WrittenCount, readMemory.Length);
                 WebSocketReceiveResult r;
                 try {
-                    r = await WebSocket.ReceiveAsync(arraySegment, CancellationToken.None).ConfigureAwait(false);
+                    r = await WebSocket.ReceiveAsync(arraySegment, commonCts.Token).ConfigureAwait(false);
                 }
                 catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {
                     // This is a normal closure in most of the cases,
@@ -389,7 +395,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
                 var arraySegment = new ArraySegment<byte>(readBuffer.Array, readBuffer.WrittenCount, readMemory.Length);
                 WebSocketReceiveResult r;
                 try {
-                    r = await WebSocket.ReceiveAsync(arraySegment, CancellationToken.None).ConfigureAwait(false);
+                    r = await WebSocket.ReceiveAsync(arraySegment, commonCts.Token).ConfigureAwait(false);
                 }
                 catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {
                     // This is a normal closure in most of the cases,

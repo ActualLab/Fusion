@@ -27,37 +27,21 @@ public class RpcWebSocketClient(IServiceProvider services)
 
         // Log.LogInformation("'{PeerRef}': Connection URL: {Url}", clientPeer.Ref, uri);
         var hub = clientPeer.Hub;
-        var connectCts = new CancellationTokenSource();
+        using var connectCts = cancellationToken.CreateLinkedTokenSource(hub.Limits.ConnectTimeout);
         var connectToken = connectCts.Token;
-        _ = hub.Clock
-            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-            .Delay(hub.Limits.ConnectTimeout, cancellationToken)
-            .ContinueWith(_ => connectCts.CancelAndDisposeSilently(), TaskScheduler.Default);
         WebSocketOwner webSocketOwner;
         try {
-            webSocketOwner = await Task
-                .Run(async () => {
-                    WebSocketOwner? o = null;
-                    try {
-                        o = Options.WebSocketOwnerFactory.Invoke(clientPeer);
-                        await o.ConnectAsync(uri!, connectToken).ConfigureAwait(false);
-                        return o;
-                    }
-                    catch when (o is not null) {
-                        try {
-                            await o.DisposeAsync().ConfigureAwait(false);
-                        }
-                        catch {
-                            // Intended
-                        }
-                        throw;
-                    }
-                }, connectToken)
-                .WaitAsync(connectToken) // MAUI sometimes stucks in the sync part of ConnectAsync
-                .ConfigureAwait(false);
+            webSocketOwner = Options.WebSocketOwnerFactory.Invoke(clientPeer);
+            try {
+                await webSocketOwner.ConnectAsync(uri!, connectToken).ConfigureAwait(false);
+            }
+            catch {
+                await webSocketOwner.DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
         }
         catch (Exception e) {
-            if (e.IsCancellationOf(connectToken) && !cancellationToken.IsCancellationRequested)
+            if (e.IsCancellationOfTimeoutToken(connectToken, cancellationToken))
                 throw Errors.ConnectTimeout();
 
             throw;

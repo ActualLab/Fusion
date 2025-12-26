@@ -148,6 +148,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public async Task<(RpcHandshake Handshake, ChannelWriter<RpcMessage> Sender)> WhenConnected(
         CancellationToken cancellationToken = default)
     {
+        // If a node is marked dead while a call is waiting to connect, the call aborts the wait immediately and triggers the rerouting logic.
+        if (Ref.RouteState?.IsChanged() ?? false)
+            throw RpcRerouteException.MustReroute();
+
         var connectionState = ConnectionState;
         while (true) {
             try {
@@ -161,8 +165,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 var spinWait = new SpinWait();
                 while (!connectionState.HasNext) {
                     // Waiting for _sender assignment
-                    if (ReferenceEquals(sender, _sender))
+                    if (ReferenceEquals(sender, _sender)) {
+                        // If a node is marked dead while a call is waiting to connect, the call aborts the wait immediately and triggers the rerouting logic.
+                        if (Ref.RouteState?.IsChanged() ?? false)
+                            throw RpcRerouteException.MustReroute();
                         return (handshake, sender);
+                    }
 
                     spinWait.SpinOnce();
                 }
@@ -170,7 +178,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             catch (Exception e) {
                 if (e.IsCancellationOf(cancellationToken))
                     throw;
-                if (Ref.RouteState.IsChanged())
+                if (Ref.RouteState?.IsChanged() ?? false)
                     throw RpcRerouteException.MustReroute();
 
                 if (!ConnectionState.IsFinal) {
@@ -253,6 +261,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         using var routeChangedTokenRegistration = Ref.RouteState?.ChangedToken.Register(
             () => Task.Run(DisposeAsync, CancellationToken.None));
 
+        // Start maintain loop regardless connection state to continue monitoring
+        // and rerouting "in-flight" calls even if the peer is currently disconnected.
+        _ = SharedObjects.Maintain(cancellationToken);
+        _ = OutboundCalls.Maintain(cancellationToken);
+
         var handshakeIndex = 0;
         var connectionState = ConnectionState;
         var lastHandshake = (RpcHandshake?)null;
@@ -327,6 +340,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     // Processing Handshake
                     var peerChangeKind = handshake.GetPeerChangeKind(lastHandshake);
                     lastHandshake = handshake;
+                    lock (Lock)
+                        _resetTryIndex = false;
                     if (peerChangeKind != RpcPeerChangeKind.Unchanged) {
                         // Remote RpcPeer changed -> we must abort every inbound call / shared object
                         if (peerChangeKind != RpcPeerChangeKind.ChangedToVeryFirst) {
@@ -345,9 +360,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                     _ = Task.Run(() => {
                         var tasks = new List<Task> {
-                            SharedObjects.Maintain(handshake, readerToken),
                             RemoteObjects.Maintain(handshake, readerToken),
-                            OutboundCalls.Maintain(handshake, readerToken)
                         };
                         if (peerChangeKind != RpcPeerChangeKind.ChangedToVeryFirst) {
                             var isPeerChanged = peerChangeKind == RpcPeerChangeKind.Changed;
@@ -391,6 +404,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
         finally {
             Log.LogInformation("'{PeerRef}': Stopping", Ref);
+            OutboundCalls.TryReroute();
             _ = Task.Run(async () => {
                 await Hub.Clock.Delay(Hub.PeerRemoveDelay, CancellationToken.None).ConfigureAwait(false);
                 Hub.RemovePeer(this);
@@ -457,6 +471,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 #endif
         var connectionState = _connectionState;
         var oldState = connectionState.Value;
+
+        if (newState.TryIndex != 0 && _resetTryIndex)
+            newState = newState with { TryIndex = 0 };
+
         if ((expectedState is not null && connectionState != expectedState) || ReferenceEquals(newState, oldState)) {
 #if NET9_0_OR_GREATER
             Lock.Exit();
@@ -467,10 +485,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
         Exception? terminalError = null;
         try {
-            if (newState.TryIndex != 0 && _resetTryIndex) {
-                _resetTryIndex = false;
-                newState = newState with { TryIndex = 0 };
-            }
             var nextConnectionState = connectionState.TrySetNext(newState);
             if (ReferenceEquals(nextConnectionState, connectionState)) {
 #if NET9_0_OR_GREATER

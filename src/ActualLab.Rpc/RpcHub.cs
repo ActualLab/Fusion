@@ -100,12 +100,21 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 
     public RpcPeer GetPeer(RpcPeerRef peerRef)
     {
-        if (Peers.TryGetValue(peerRef, out var peer))
-            return peer;
+        if (peerRef.RouteState?.IsChanged() ?? false)
+            throw RpcRerouteException.MustReroute();
+
+        if (Peers.TryGetValue(peerRef, out var peer)) {
+            if (!peer.IsDisposed)
+                return peer;
+            Peers.TryRemove(peerRef, peer);
+        }
 
         lock (Lock) {
-            if (Peers.TryGetValue(peerRef, out peer))
-                return peer;
+            if (Peers.TryGetValue(peerRef, out peer)) {
+                if (!peer.IsDisposed)
+                    return peer;
+                Peers.TryRemove(peerRef, peer);
+            }
             if (WhenDisposed is not null)
                 throw Errors.AlreadyDisposed(GetType());
 
@@ -114,6 +123,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
             peer.Start(isolate: true); // We don't want to capture Activity.Current, etc. here
             if (peerRef.RouteState is { } routeState)
                 _ = routeState.WhenChanged().ContinueWith(_ => {
+                    RemovePeer(peer);
                     peer.Dispose();
                     peer.Log.LogWarning("'{PeerRef}': Ref is rerouted, peer {Peer} is disposed", peer.Ref, peer);
                 }, TaskScheduler.Default);
