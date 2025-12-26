@@ -94,7 +94,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 call.SetMustRerouteError();
     }
 
-    public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
+    public async Task Maintain(RpcPeerConnectionState connectionState, CancellationToken cancellationToken)
     {
         var lastSummaryReportAt = CpuTimestamp.Now;
         var delayedCallLimit = Limits.LogDelayedCallLimit;
@@ -170,11 +170,14 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         }
     }
 
-    public async Task Reconnect(RpcHandshake handshake, bool isPeerChanged, CancellationToken cancellationToken)
+    public async Task Reconnect(
+        RpcPeerConnectionState connectionState,
+        bool isPeerChanged,
+        CancellationToken cancellationToken)
     {
         try {
             var calls = Calls.Values.ToList();
-            if (isPeerChanged || handshake.ProtocolVersion < 1) {
+            if (isPeerChanged) {
                 await Resend(calls).ConfigureAwait(false);
                 return;
             }
@@ -211,7 +214,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 Task<byte[]> reconnectTask;
                 using (new RpcOutboundCallSetup(Peer).Activate()) // No "await" inside this block!
                     reconnectTask = Peer.Hub.SystemCallSender.Client
-                        .Reconnect(handshake.Index, completedStages, cancellationToken);
+                        .Reconnect(connectionState.OwnHandshake!.Index, completedStages, cancellationToken);
                 var failedCallData = await reconnectTask.ConfigureAwait(false);
                 var failedCallIds = IncreasingSeqCompressor.Deserialize(failedCallData).ToHashSet();
                 return calls.Where(x => failedCallIds.Contains(x.Id)).ToList();

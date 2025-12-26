@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -21,7 +22,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected internal readonly RpcInboundCallOptions InboundCallOptions;
     protected internal readonly RpcOutboundCallOptions OutboundCallOptions;
 
-    protected internal ChannelWriter<RpcMessage>? Sender {
+    protected internal ChannelWriter<RpcMessage>? Sender
+    {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _sender ?? _connectionState.Value.Sender; // _sender is set after _connectionState, so can be out of sync
     }
@@ -53,9 +55,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcMethodResolver ServerMethodResolver => _serverMethodResolver;
 #pragma warning restore CA1721
 
-    public RpcPeerStopMode StopMode {
+    public RpcPeerStopMode StopMode
+    {
         get => _stopMode;
-        set {
+        set
+        {
             lock (Lock)
                 _stopMode = value;
         }
@@ -293,16 +297,17 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     using var handshakeCts = cancellationToken.CreateLinkedTokenSource(Hub.Limits.HandshakeTimeout);
                     var handshakeToken = handshakeCts.Token;
                     RpcHandshake handshake;
+                    RpcHandshake ownHandshake;
                     try {
                         DebugLog?.LogDebug("'{PeerRef}': Sending handshake", Ref);
-                        handshake = await Task.Run(
+                        (handshake, ownHandshake) = await Task.Run(
                             async () => {
-                                var ownHandshake = new RpcHandshake(
+                                var ownHandshake1 = new RpcHandshake(
                                     Id, Versions, Hub.Id,
                                     RpcHandshake.CurrentProtocolVersion,
                                     ++handshakeIndex);
                                 await Hub.SystemCallSender
-                                    .Handshake(this, sender, ownHandshake)
+                                    .Handshake(this, sender, ownHandshake1)
                                     .WaitAsync(handshakeToken)
                                     .ConfigureAwait(false);
                                 var hasMore = await reader.MoveNextAsync().ConfigureAwait(false);
@@ -311,7 +316,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                                 var message = reader.Current;
                                 var handshakeContext = ProcessMessage(message, handshakeToken, handshakeToken);
                                 var remoteHandshake = handshakeContext?.Call.Arguments?.GetUntyped(0) as RpcHandshake;
-                                return remoteHandshake ?? throw Errors.HandshakeFailed();
+                                return (remoteHandshake ?? throw Errors.HandshakeFailed(), ownHandshake1);
                             }, handshakeToken)
                             .WaitAsync(handshakeToken)
                             .ConfigureAwait(false);
@@ -344,22 +349,23 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }
 
                     // Only at this point: expose the new connection state
-                    var nextConnectionState = connectionState.Value.NextConnected(connection, handshake, readerTokenSource);
+                    var nextConnectionState = connectionState.Value.NextConnected(connection, handshake, ownHandshake, readerTokenSource);
                     connectionState = SetConnectionState(nextConnectionState, connectionState).RequireNonFinal();
-                    if (connectionState.Value.Connection != connection)
+                    var connectionStateValue = connectionState.Value;
+                    if (connectionStateValue.Connection != connection)
                         continue; // Somehow disconnected
 
-                    _ = Task.Run(() => {
+                    var maintainTasks = Task.Run(async () => {
                         var tasks = new List<Task> {
-                            SharedObjects.Maintain(handshake, readerToken),
-                            RemoteObjects.Maintain(handshake, readerToken),
-                            OutboundCalls.Maintain(handshake, readerToken)
+                            SharedObjects.Maintain(connectionStateValue, readerToken),
+                            RemoteObjects.Maintain(connectionStateValue, readerToken),
+                            OutboundCalls.Maintain(connectionStateValue, readerToken)
                         };
                         if (peerChangeKind != RpcPeerChangeKind.ChangedToVeryFirst) {
                             var isPeerChanged = peerChangeKind == RpcPeerChangeKind.Changed;
-                            tasks.Add(OutboundCalls.Reconnect(handshake, isPeerChanged, readerToken));
+                            tasks.Add(OutboundCalls.Reconnect(connectionStateValue, isPeerChanged, readerToken));
                         }
-                        return Task.WhenAll(tasks);
+                        await Task.WhenAll(tasks).SilentAwait(false);
                     }, readerToken);
 
                     DebugLog?.LogDebug("'{PeerRef}': Processing messages", Ref);
@@ -373,6 +379,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         // Reset AsyncLocals that might be set by ProcessMessage
                         RpcInboundContext.Current = null;
                         Activity.Current = null;
+                        await maintainTasks.SilentAwait(false);
                     }
                 }
                 catch (Exception e) {

@@ -50,15 +50,18 @@ public sealed class RpcSystemCalls(IServiceProvider services)
         var context = RpcInboundContext.GetCurrent();
         var peer = context.Peer;
         var connectionState = peer.ConnectionState.Value;
-        if (connectionState.Handshake is not { } handshake || handshake.Index != handshakeIndex)
-            throw Errors.TooLateToReconnect();
+        if (connectionState.Handshake is not { } handshake)
+            throw Errors.TooLateToReconnect("already disconnected");
+        if (handshake.Index != handshakeIndex)
+            throw Errors.TooLateToReconnect(
+                $"expected handshake index {handshake.Index} != provided handshake index {handshakeIndex}");
 
         CancellationToken readerToken;
         try {
             readerToken = connectionState.ReaderTokenSource!.Token;
         }
         catch (ObjectDisposedException) {
-            throw Errors.TooLateToReconnect();
+            throw Errors.TooLateToReconnect("already disposed");
         }
 
         var unknownCallIds = new HashSet<long>();

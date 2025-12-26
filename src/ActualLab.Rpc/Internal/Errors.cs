@@ -49,8 +49,8 @@ public static class Errors
         => new RpcException($"Invalid CallTypeId: '{serviceName}.{methodName}' expected '{expected}', but got '{actual}'.");
     public static Exception MatchButNoCachedEntry()
         => new RpcException("The remote server responded with 'Match', but the outbound call has no cached entry.");
-    public static Exception TooLateToReconnect()
-        => new RpcException("Peer is already changed, too late for this reconnect round.");
+    public static Exception TooLateToReconnect(string reason)
+        => new RpcException($"Too late for this reconnect round: {reason}.");
 
     public static Exception NoCurrentRpcInboundContext()
         => new InvalidOperationException($"{nameof(RpcInboundContext)}.{nameof(RpcInboundContext.Current)} is unavailable.");

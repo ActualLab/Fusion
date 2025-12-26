@@ -3,6 +3,7 @@ namespace ActualLab.Rpc.Infrastructure;
 public sealed record RpcPeerConnectionState(
     RpcConnection? Connection = null,
     RpcHandshake? Handshake = null,
+    RpcHandshake? OwnHandshake = null,
     Exception? Error = null,
     int TryIndex = 0,
     CancellationTokenSource? ReaderTokenSource = null)
@@ -23,8 +24,9 @@ public sealed record RpcPeerConnectionState(
 #pragma warning restore CA1822
         RpcConnection connection,
         RpcHandshake handshake,
+        RpcHandshake ownHandshake,
         CancellationTokenSource readerTokenSource)
-        => new(connection, handshake, null, 0, readerTokenSource);
+        => new(connection, handshake, ownHandshake, null, 0, readerTokenSource);
 
     public RpcPeerConnectionState NextDisconnected(Exception? error = null)
     {
@@ -32,6 +34,6 @@ public sealed record RpcPeerConnectionState(
             _ = connection.DisposeAsync();
         return error is null
             ? Disconnected
-            : new RpcPeerConnectionState(null, null, error, TryIndex + 1);
+            : new RpcPeerConnectionState(null, null, null, error, TryIndex + 1);
     }
 }

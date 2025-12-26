@@ -133,10 +133,10 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
         return true;
     }
 
-    public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
+    public async Task Maintain(RpcPeerConnectionState connectionState, CancellationToken cancellationToken)
     {
         try {
-            var remotePeerId = handshake.RemotePeerId;
+            var remotePeerId = connectionState.Handshake!.RemotePeerId;
             var reconnectTasks = new List<Task>();
             foreach (var (_, weakRef) in _storage)
                 if (weakRef.TryGetTarget(out var target)) {
@@ -252,7 +252,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
         return _objects.TryRemove(obj.Id.LocalId, obj);
     }
 
-    public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
+    public async Task Maintain(RpcPeerConnectionState connectionState, CancellationToken cancellationToken)
     {
         InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);
         try {
