@@ -47,5 +47,5 @@ public static class FrameDelayers
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool MustDelay(long frameIndex, int frameSize)
-        => frameSize < DelayedFrameSize || frameIndex < NoDelayFrameCount;
+        => frameSize < DelayedFrameSize && frameIndex >= NoDelayFrameCount;
 }
