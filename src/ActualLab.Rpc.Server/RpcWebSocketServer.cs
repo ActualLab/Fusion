@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http;
@@ -17,16 +18,22 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
 
     public virtual async Task Invoke(HttpContext context, bool isBackend)
     {
+        var request = context.Request;
+        var uri = new UriBuilder(request.Scheme,request.Host.Host, request.Host.Port ?? -1,request.Path,request.QueryString.ToString());
+        var requestStr = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
         if (!context.WebSockets.IsWebSocketRequest) {
+            Log.LogWarning("WebSocket request expected, but got {Request}", requestStr);
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return;
         }
 
+        Log.LogDebug("Accepting RPC connection {Request}, isBackend={IsBackend}", requestStr, isBackend);
         WebSocket? webSocket = null;
         RpcConnection? connection = null;
         try {
             var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
+            Log.LogDebug("Created peer ref {PeerRef} for WebSocket request {Request}", peerRef, requestStr);
             var peer = Hub.GetServerPeer(peerRef);
 
 #if NET6_0_OR_GREATER
@@ -60,10 +67,14 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             await channel.WhenClosed.ConfigureAwait(false);
         }
         catch (Exception e) {
-            if (connection is not null || e.IsCancellationOf(cancellationToken))
+            if (e.IsCancellationOf(cancellationToken))
                 return; // Intended: this is typically a normal connection termination
 
-            var request = context.Request;
+            if (connection is not null) {
+                Log.LogDebug(e, "Normal connection termination");
+                return; // Intended: this is typically a normal connection termination
+            }
+
             Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}", request.Path, request.QueryString);
             if (webSocket is not null)
                 return;
