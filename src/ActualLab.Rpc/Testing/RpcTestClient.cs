@@ -64,7 +64,15 @@ public class RpcTestClient(IServiceProvider services) : RpcClient(services)
 
     public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
-        var channel = await this[clientPeer.Ref].PullClientChannel(cancellationToken).ConfigureAwait(false);
-        return new RpcConnection(channel);
+        var hub = clientPeer.Hub;
+        using var connectCts = cancellationToken.CreateLinkedTokenSource(hub.Limits.ConnectTimeout);
+        var connectToken = connectCts.Token;
+        try {
+            var channel = await this[clientPeer.Ref].PullClientChannel(connectToken).ConfigureAwait(false);
+            return new RpcConnection(channel);
+        }
+        catch (Exception e) when (e.IsCancellationOfTimeoutToken(connectToken, cancellationToken)) {
+            throw ActualLab.Rpc.Internal.Errors.ConnectTimeout();
+        }
     }
 }

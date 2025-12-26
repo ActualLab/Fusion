@@ -26,6 +26,11 @@ public record RpcLimits
     public TimeSpan ObjectAbortCyclePeriod { get; init; } = TimeSpan.FromSeconds(1);
     // A single "call abort" cycle period
     public TimeSpan CallAbortCyclePeriod { get; set; } = TimeSpan.FromSeconds(1);
+    // Max reconnect count and duration
+    public int MaxReconnectCount { get; init; } = 100;
+    public TimeSpan MaxReconnectDuration { get; init; } = TimeSpan.FromMinutes(2);
+    // Max reroute count
+    public int MaxRerouteCount { get; init; } = 10;
     // Call timeout check period
     public RandomTimeSpan CallTimeoutCheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.2);
     public int LogDelayedCallLimit { get; init; } = 10;

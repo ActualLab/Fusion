@@ -16,6 +16,8 @@ public class RpcRerouteException : OperationCanceledException, ITransientExcepti
         => new(reason is null ? DefaultMessage : $"RPC call must be re-routed: {reason}.");
     public static RpcRerouteException MustReroute(object peer)
         => new($"'{peer}' is already gone. {DefaultMessage}");
+    public static RpcRerouteLimitException TooManyReroutes(int limit)
+        => new($"Too many reroutes (limit: {limit}).");
 
     public RpcRerouteException() : base(DefaultMessage) { }
     public RpcRerouteException(string? message) : base(message ?? DefaultMessage) { }
@@ -24,4 +26,11 @@ public class RpcRerouteException : OperationCanceledException, ITransientExcepti
         : base(message ?? DefaultMessage, innerException, token) { }
     public RpcRerouteException(string? message, CancellationToken token) : base(message ?? DefaultMessage, token) { }
     public RpcRerouteException(CancellationToken token) : base(DefaultMessage, token) { }
+}
+
+[Serializable]
+public class RpcRerouteLimitException : OperationCanceledException
+{
+    public RpcRerouteLimitException(string message) : base(message) { }
+    public RpcRerouteLimitException(string message, Exception? innerException) : base(message, innerException) { }
 }

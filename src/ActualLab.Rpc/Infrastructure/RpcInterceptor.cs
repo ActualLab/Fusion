@@ -33,9 +33,17 @@ public sealed class RpcInterceptor : Interceptor
         var rpcMethodDef = (RpcMethodDef)methodDef;
         var localCallAsyncInvoker = methodDef.SelectAsyncInvokerUntyped(initialInvocation.Proxy, LocalTarget);
         return invocation => {
-            Task resultTask;
             var context = RpcOutboundCallSetup.ProduceContext();
-            var call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
+            RpcOutboundCall? call;
+            try {
+                call = context.PrepareCall(rpcMethodDef, invocation.Arguments);
+            }
+            catch (RpcRerouteException) {
+                var rerouteResultTask = InvokeWithRerouting(rpcMethodDef, context, null, localCallAsyncInvoker, invocation);
+                return rpcMethodDef.UniversalAsyncResultConverter.Invoke(rerouteResultTask);
+            }
+
+            Task resultTask;
             var peer = context.Peer!;
             var routingMode = context.RoutingMode;
 
@@ -104,10 +112,17 @@ public sealed class RpcInterceptor : Interceptor
         var mustRerouteUnlessLocal = context.RoutingMode is RpcRoutingMode.Inbound;
         var cancellationToken = context.CancellationToken;
         var rerouteCount = 0;
+        var maxRerouteCount = Hub.Limits.MaxRerouteCount;
         while (true) {
-            var peer = context.Peer!;
-            var routeState = peer.Ref.RouteState; // May become null after rerouting
             try {
+                if (rerouteCount > maxRerouteCount)
+                    throw RpcRerouteException.TooManyReroutes(maxRerouteCount);
+
+                if (call is null)
+                    call = context.PrepareReroutedCall();
+
+                var peer = context.Peer!;
+                var routeState = peer.Ref.RouteState; // May become null after rerouting
                 if (call is not null) {
                     if (mustRerouteUnlessLocal) {
                         // If we're here, the call was prerouted to a local peer,
@@ -147,7 +162,7 @@ public sealed class RpcInterceptor : Interceptor
                 await Hub.OutboundCallOptions
                     .GetReroutingDelay(rerouteCount, cancellationToken)
                     .ConfigureAwait(false);
-                call = context.PrepareReroutedCall();
+                call = null;
             }
         }
     }

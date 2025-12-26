@@ -94,7 +94,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 call.SetMustRerouteError();
     }
 
-    public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
+    public async Task Maintain(CancellationToken cancellationToken)
     {
         var lastSummaryReportAt = CpuTimestamp.Now;
         var delayedCallLimit = Limits.LogDelayedCallLimit;
@@ -103,6 +103,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         try {
             // This loop aborts timed out calls every CallTimeoutCheckPeriod
             while (!cancellationToken.IsCancellationRequested) {
+                // If a node is marked dead while a call is in flight, the call aborts the wait immediately
+                // and triggers the rerouting logic.
+                TryReroute();
+
                 var callCount = 0;
                 var inProgressCallCount = 0;
                 delayedCalls.Clear();

@@ -23,6 +23,16 @@ public class RpcClientPeerReconnectDelayer : RetryDelayer, IHasServices
         RpcClientPeer peer, int tryIndex, Exception? lastError,
         CancellationToken cancellationToken = default)
     {
+        var limits = Hub.Limits;
+        if (tryIndex >= limits.MaxReconnectCount)
+            return RetryDelay.LimitExceeded;
+
+        if (tryIndex > 0) {
+            var createdAt = peer.CreatedAt;
+            if (createdAt.Elapsed > limits.MaxReconnectDuration)
+                return RetryDelay.LimitExceeded;
+        }
+
         var delayLogger = new RetryDelayLogger("reconnect", string.Concat("'", peer.Ref, "'"), Log);
         return this.GetDelay(tryIndex, delayLogger, cancellationToken);
     }

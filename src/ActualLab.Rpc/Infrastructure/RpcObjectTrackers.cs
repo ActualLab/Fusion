@@ -252,7 +252,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
         return _objects.TryRemove(obj.Id.LocalId, obj);
     }
 
-    public async Task Maintain(RpcHandshake handshake, CancellationToken cancellationToken)
+    public async Task Maintain(CancellationToken cancellationToken)
     {
         InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);
         try {
