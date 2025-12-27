@@ -24,7 +24,7 @@ public sealed class WebSocketChannel<T> : Channel<T>, IAsyncEnumerable<T>, IAsyn
         public Func<FrameDelayer?>? FrameDelayerFactory { get; init; } = FrameDelayerFactories.None;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
         public IByteSerializer<T> Serializer { get; init; } = ActualLab.Serialization.ByteSerializer.Default.ToTyped<T>();
-        public WebSocketChannelReadMode ReadMode { get; init; } = WebSocketChannelReadMode.Unbuffered;
+        public WebSocketChannelReadMode ReadMode { get; init; } = WebSocketChannelReadMode.Buffered;
 
         // ReadChannelOptions are unused when ReadMode == ChannelReadMode.Unbuffered
         public ChannelOptions ReadChannelOptions { get; init; } = new BoundedChannelOptions(100) {

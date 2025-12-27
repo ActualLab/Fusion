@@ -380,7 +380,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }
                 }
                 catch (Exception e) {
-                    Log.LogError(e, "'{PeerRef}': Failed to read the next message", Ref);
+                    Log.LogInformation(e, "'{PeerRef}': Read loop ended", Ref);
                     var isReaderAbort = readerToken.IsCancellationRequested
                         && !cancellationToken.IsCancellationRequested
                         && !isHandshakeError;
