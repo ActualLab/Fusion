@@ -50,11 +50,10 @@ public sealed class RpcSystemCalls(IServiceProvider services)
         var context = RpcInboundContext.GetCurrent();
         var peer = context.Peer;
         var connectionState = peer.ConnectionState.Value;
-        if (connectionState.Handshake is not { } handshake)
+        if (connectionState.OwnHandshake is not { } ownHandshake)
             throw Errors.TooLateToReconnect("already disconnected");
-        if (handshake.Index != handshakeIndex)
-            throw Errors.TooLateToReconnect(
-                $"expected handshake index {handshake.Index} != provided handshake index {handshakeIndex}");
+        if (ownHandshake.Index != handshakeIndex)
+            throw Errors.TooLateToReconnect($"own handshake index {ownHandshake.Index} != {handshakeIndex}");
 
         CancellationToken readerToken;
         try {

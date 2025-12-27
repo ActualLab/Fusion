@@ -214,7 +214,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 Task<byte[]> reconnectTask;
                 using (new RpcOutboundCallSetup(Peer).Activate()) // No "await" inside this block!
                     reconnectTask = Peer.Hub.SystemCallSender.Client
-                        .Reconnect(connectionState.OwnHandshake!.Index, completedStages, cancellationToken);
+                        .Reconnect(connectionState.Handshake!.Index, completedStages, cancellationToken);
                 var failedCallData = await reconnectTask.ConfigureAwait(false);
                 var failedCallIds = IncreasingSeqCompressor.Deserialize(failedCallData).ToHashSet();
                 return calls.Where(x => failedCallIds.Contains(x.Id)).ToList();

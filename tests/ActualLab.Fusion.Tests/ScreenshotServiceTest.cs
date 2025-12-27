@@ -49,6 +49,7 @@ public class ScreenshotServiceTest(ITestOutputHelper @out) : SimpleFusionTestBas
 
         var c = await GetScreenshotComputed(client);
         for (var i = 0; i < 50; i++) {
+            WriteLine($"Iteration {i}...");
             c.Value.Image.Length.Should().BeGreaterThan(0);
             await TestExt.When(
                 () => c.IsConsistent().Should().BeFalse(),
