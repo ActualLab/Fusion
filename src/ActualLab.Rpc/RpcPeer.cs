@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Diagnostics;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -229,11 +228,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             if (connectionState.Value.Sender is null || connectionState.IsFinal)
                 return Task.CompletedTask;
         }
-        connectionState.Value.Sender.TryComplete(error);
-        // NOTE(AY): It isn't critical to cancel the ReaderTokenSource:
-        // if we complete the Sender, the reader will inevitably fail as well.
-        // TODO(AY): Find out why the next line makes RpcReconnectionTest.ConcurrentTest hang on disconnects.
-        // connectionState.Value.ReaderTokenSource.CancelAndDisposeSilently();
+        connectionState.Value.ReaderTokenSource.CancelAndDisposeSilently();
+        // The line below isn't necessary: stopping the reader aborts everything
+        // connectionState.Value.Sender.TryComplete(error);
         return connectionState.WhenDisconnected(cancellationToken);
     }
 

@@ -148,6 +148,7 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
         var server = services.GetRequiredService<ReconnectTester>();
 
         for (var i = 0; i < 50; i++) {
+            WriteLine($"{i}: started...");
             var ctTask = client.GetTime();
             server.InvalidateGetTime();
             var stTask = server.GetTime();
