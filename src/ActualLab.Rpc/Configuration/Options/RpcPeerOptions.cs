@@ -6,7 +6,10 @@ public record RpcPeerOptions
 {
     public static RpcPeerOptions Default { get; set; } = new();
 
-    public bool UseRandomHandshakeIndex { get; init; } = true;
+    // Random handshake index reliably triggers Reconnect failures if there is any issue w/ handshake index check.
+    // - false = compatible w/ pre-v11.4 clients containing a bug w/ handshake index check
+    // - true = good for testing.
+    public bool UseRandomHandshakeIndex { get; init; } = false;
 
     // Delegate options
     public Func<RpcHub, RpcPeerRef, RpcPeer> PeerFactory { get; init; }
