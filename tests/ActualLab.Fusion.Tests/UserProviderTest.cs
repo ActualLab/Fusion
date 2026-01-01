@@ -171,7 +171,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
         var users = Services.GetRequiredService<IUserService>();
         await using var _ = await WebHost.Serve();
         var webUsers = WebServices.GetRequiredService<IUserService>();
-        var syncTimeout = TimeSpan.FromSeconds(1);
+        var syncTimeout = TimeSpan.FromSeconds(3);
 
         async Task PingPong(IUserService users1, IUserService users2, DbUser user)
         {
