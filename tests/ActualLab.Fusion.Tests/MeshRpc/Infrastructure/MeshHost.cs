@@ -56,6 +56,7 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
             RouterFactory = RouterFactory,
         });
         services.AddSingleton(_ => RpcPeerOptions.Default.WithFusionServerOverrides() with {
+            UseRandomHandshakeIndex = true,
             ConnectionKindDetector = ConnectionKindDetector,
         });
 

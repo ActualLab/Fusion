@@ -19,6 +19,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         rpc.AddServerAndClient<ITestRpcService, TestRpcService>();
         rpc.AddServerAndClient<ITestRpcBackend, TestRpcBackend>();
         services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptions.Default with {
+            UseRandomHandshakeIndex = true,
             PeerFactory = (hub, peerRef) => peerRef.IsServer
                 ? new RpcServerPeer(hub, peerRef)
                 : new RpcClientPeer(hub, peerRef)
