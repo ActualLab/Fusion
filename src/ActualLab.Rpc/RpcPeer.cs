@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ActualLab.Generators;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
@@ -132,6 +133,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
             catch (Exception e) when (!e.IsCancellationOf(peer.StopToken)) {
                 peer.Log.LogError(e, "Send failed");
+                var connectionState = peer.ConnectionState;
+                if (ReferenceEquals(connectionState.Value.Sender, sender))
+                    _ = peer.Disconnect(e, connectionState, CancellationToken.None);
             }
         }
     }
@@ -255,7 +259,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         using var routeChangedTokenRegistration = Ref.RouteState?.ChangedToken.Register(
             () => Task.Run(DisposeAsync, CancellationToken.None));
 
-        var handshakeIndex = 0;
+        var handshakeIndex = Options.UseRandomHandshakeIndex
+            ? RandomShared.Next().PositiveModulo(65_537) // Prime
+            : 0;
         var connectionState = ConnectionState;
         var lastHandshake = (RpcHandshake?)null;
         var peerChangedCts = cancellationToken.CreateLinkedTokenSource();
@@ -403,10 +409,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
         finally {
             Log.LogInformation("'{PeerRef}': Stopping", Ref);
-            _ = Task.Run(async () => {
-                await Hub.Clock.Delay(Hub.PeerRemoveDelay, CancellationToken.None).ConfigureAwait(false);
-                Hub.RemovePeer(this);
-            }, CancellationToken.None);
 
             // Make sure the sequence of ConnectionStates terminates
             Exception? error;
@@ -426,7 +428,16 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
 
             peerChangedCts.CancelAndDisposeSilently(); // Terminates all running ProcessMessage calls
-            await Reset(error!, true).ConfigureAwait(false);
+            await Reset(error!, isStopped: true).SilentAwait(false);
+
+            var removeDelay = Options.PeerRemoveDelayProvider.Invoke(this);
+            if (removeDelay <= TimeSpan.Zero)
+                Hub.RemovePeer(this);
+            else
+                _ = Task.Run(async () => {
+                    await Hub.Clock.Delay(removeDelay, CancellationToken.None).ConfigureAwait(false);
+                    Hub.RemovePeer(this);
+                }, CancellationToken.None);
         }
     }
 

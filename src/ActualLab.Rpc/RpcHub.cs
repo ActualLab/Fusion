@@ -20,7 +20,6 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public Guid Id { get; init; } = Guid.NewGuid();
-    public TimeSpan PeerRemoveDelay { get; init; } = TimeSpan.FromMinutes(5);
     public HostId HostId => field ??= Services.GetRequiredService<HostId>();
     public IServiceProvider Services { get; }
     public RpcConfiguration Configuration { get; }
@@ -127,8 +126,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public RpcServerPeer GetServerPeer(RpcPeerRef peerRef)
         => (RpcServerPeer)GetPeer(peerRef.RequireServer());
 
-    // You normally shouldn't call this method
-    public bool RemovePeer(RpcPeer peer)
+    internal bool RemovePeer(RpcPeer peer)
     {
         if (!Peers.TryRemove(peer.Ref, peer))
             return false;

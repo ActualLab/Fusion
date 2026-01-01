@@ -17,6 +17,7 @@ public static class RpcBuilderExt
             Delays = RetryDelaySeq.Fixed(0.05),
         });
         services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptions.Default with {
+            UseRandomHandshakeIndex = true,
             ServerPeerShutdownTimeoutProvider = static _ => TimeSpan.FromSeconds(10),
         });
         return rpc;
