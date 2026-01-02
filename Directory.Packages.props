@@ -32,15 +32,14 @@
     <MicrosoftExtensionsVersion5>[5.0.0,)</MicrosoftExtensionsVersion5>
     <CSharpVersion>4.4.0</CSharpVersion>
     <!-- EF Core -->
-    <EntityFrameworkCoreVersion>[9.0.0,)</EntityFrameworkCoreVersion>
-    <!-- MySqlConnector and Npgsql don't support .NET 10 RC1 yet -->
-    <EntityFrameworkCoreVersion8>[9.0.0,)</EntityFrameworkCoreVersion8>
+    <EntityFrameworkCoreVersion>[10.0.0,)</EntityFrameworkCoreVersion>
+    <EntityFrameworkCoreVersion9>[9.0.0,)</EntityFrameworkCoreVersion9>
     <EntityFrameworkCoreVersion8>[8.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,)</EntityFrameworkCoreVersion7>
     <EntityFrameworkCoreVersion6>[6.0.33,)</EntityFrameworkCoreVersion6>
     <EntityFrameworkCoreVersion5>[5.0.17,)</EntityFrameworkCoreVersion5>
     <EntityFrameworkCoreVersion3>[3.1.32,)</EntityFrameworkCoreVersion3>
-    <EntityFrameworkCoreNpgsqlVersion>[9.0.0,)</EntityFrameworkCoreNpgsqlVersion>
+    <EntityFrameworkCoreNpgsqlVersion>[10.0.0,)</EntityFrameworkCoreNpgsqlVersion>
     <EntityFrameworkCoreNpgsqlVersion9>[9.0.0,)</EntityFrameworkCoreNpgsqlVersion9>
     <EntityFrameworkCoreNpgsqlVersion8>[8.0.0,)</EntityFrameworkCoreNpgsqlVersion8>
     <EntityFrameworkCoreNpgsqlVersion7>[7.0.18,)</EntityFrameworkCoreNpgsqlVersion7>
