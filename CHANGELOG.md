@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
-## 11.4.8+d8ce15ec
+## 11.4.8+2f78501e
 
 Release date: 2025-01-05
 
