@@ -8,20 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
-## 11.4.5
+## 11.4.6+d8ce15ec
 
 Release date: 2025-01-05
 
 ### Added
+- Updated EntityFrameworkCore and Npgsql versions to 10.0. 
+  There is currently no MySql EF Core provider for EF10, so if you want to use Fusion with MySql,
+  the latest version that targets EF9 is 11.4.3; you can also add binding redirects for EF9 manually
+  in your project.
+- `v5` serialization formats with proper polymorphic `null` value support, 
+  including  `json5`, `njson5`, `msgpack5`, `msgpack5c`, `mempackc`, and `mempack5c`.
 - New `IRpcMiddleware` stack replacing `IRpcInboundCallPreprocessor`
-- `RpcLocalExecutionMode` enum and new `RpcLocalExecutionMode.Constrained`, `ConstrainedEntry` modes
-- `IOperationEventSource` interface `Operation.AddEvent(...)` overload that supports this interface
-- `v5` serialization formats with proper polymorphic `null` value support, including
-   `json5`, `njson5`, `msgpack5`, `mempack5c`, `msgpack5`, `msgpack5c`.
-- `IWorker.Run` overload with `CancellationToken`
-- `GetUnusedLocalUri` helper method in `WebTestHelpers`
-- `CapturingLogger` and `CapturingLoggerProvider` in `ActualLab.Testing`
-- `RpcLocalExecutionMode` default RPC services
+- `RpcLocalExecutionMode` enum and new `RpcLocalExecutionMode.Constrained`, `RpcLocalExecutionMode.ConstrainedEntry` modes
+- `IOperationEventSource` interface with `Operation.AddEvent(...)` overload for event sourcing
+- `IWorker.Run` overload with `CancellationToken`.
+- Much more robust RPC (re)routing logic in `RpcInterceptor`, `RpcRoutingCommandHandler`, 
+  and `RemoteComputeMethodFunction`.
 
 ### Changed
 - Moved all `RpcXxx` delegates to `RpcXxxOptions` members for clarity.
@@ -31,17 +34,22 @@ Release date: 2025-01-05
 - Simplified `RpcSerializationFormatResolver` (the legacy resolver for the "unspecified" format is gone)
 - Improved `RpcServiceDef` and `RpcMethodDef` constructors
 - Improved `ComputedOptions` caching
-- Much more robust (re)routing logic in `RpcRoutingCommandHandler` and `RemoteComputeMethodFunction`
 - Updated .NET SDK to version 10.0.101.
 
 ### Performance
+- Multiple improvements in inbound call processing performance, such as
+  handcrafted server invokers for most frequent RPC system calls like `$sys.Ok`
 - `WebSocketChannel.Options` got `ReadMode`, which can be `Buffered` or `Unbuffered`.
   The new `Unbuffered` mode allows reading directly from `WebSocket` bypassing `ChannelReader`,
   it's used by default now.
-- Multiple improvements in inbound call processing performance, such as
-  handcrafted server invokers for most frequent RPC system calls like `$sys.Ok`
 - `GetUnsafe` in `GenericInstanceCache` to eliminate some unnecessary type casts
 - Overall, v11.4.X is ~5-10% faster on RPC benchmarks.
+
+### Documentation
+- Migrated Parts 01-13 from the old tutorial, though only parts 01-03 are truly edited at this point
+- Added TOCs to videos on Fusion and ActualLab.Rpc
+- Added GitHub workflow for deploying documentation to GitHub Pages: https://fusion.actuallab.net/
+- Documentation is a work in progress, and you're welcome to contribute!
 
 ### Fixed
 - Multiple issues related to RPC rerouting
@@ -56,21 +64,12 @@ Release date: 2025-01-05
   which eliminates double delay for RPC compute methods that use invalidation delay
 - Various minor fixes.
 
-### Documentation
-- Migrated Parts 01-13 from the old tutorial, though only parts 01-03 are truly edited at this point
-- Added TOCs to videos on Fusion and ActualLab.Rpc
-- Added GitHub workflow for deploying documentation to GitHub Pages: https://fusion.actuallab.net/
-- Documentation is a work in progress, and you're welcome to contribute!
-
 ### Tests
+- `WebTestHelpers.GetUnusedLocalUri` helper method in `ActualLab.Testing`
+- `CapturingLogger` and `CapturingLoggerProvider` in `ActualLab.Testing`
 - Improved cancellation and timeout handling in RPC tests
 - Added benchmark tests for `Task.Result` vs `Task.GetAwaiter().GetResult()`
 - Added `CapturingLogger` unit test
-
-### Infrastructure
-- Updated EntityFrameworkCore and Npgsql versions to 10.0
-- Added GitHub Actions workflow for deploying documentation
-- Added `publish.ps1` script
 
 
 ## 11.0.15+ec823882
