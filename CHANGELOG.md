@@ -8,6 +8,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 11.4.5
+
+Release date: 2025-01-05
+
+### Added
+- New `IRpcMiddleware` stack replacing `IRpcInboundCallPreprocessor`
+- `RpcLocalExecutionMode` enum and new `RpcLocalExecutionMode.Constrained`, `ConstrainedEntry` modes
+- `IOperationEventSource` interface `Operation.AddEvent(...)` overload that supports this interface
+- `v5` serialization formats with proper polymorphic `null` value support, including
+   `json5`, `njson5`, `msgpack5`, `mempack5c`, `msgpack5`, `msgpack5c`.
+- `IWorker.Run` overload with `CancellationToken`
+- `GetUnusedLocalUri` helper method in `WebTestHelpers`
+- `CapturingLogger` and `CapturingLoggerProvider` in `ActualLab.Testing`
+- `RpcLocalExecutionMode` default RPC services
+
+### Changed
+- Moved all `RpcXxx` delegates to `RpcXxxOptions` members for clarity.
+  E.g., `RpcOutboundCallOptions.RouterFactory` replaces `RpcCallRouter` delegate.
+- Renamed `RpcShardRoutingMode` to `RpcLocalExecutionMode`
+- Renamed `RpcDefaultSessionInboundCallPreprocessor` to `RpcDefaultSessionReplacer`
+- Simplified `RpcSerializationFormatResolver` (the legacy resolver for the "unspecified" format is gone)
+- Improved `RpcServiceDef` and `RpcMethodDef` constructors
+- Improved `ComputedOptions` caching
+- Much more robust (re)routing logic in `RpcRoutingCommandHandler` and `RemoteComputeMethodFunction`
+- Updated .NET SDK to version 10.0.101.
+
+### Performance
+- `WebSocketChannel.Options` got `ReadMode`, which can be `Buffered` or `Unbuffered`.
+  The new `Unbuffered` mode allows reading directly from `WebSocket` bypassing `ChannelReader`,
+  it's used by default now.
+- Multiple improvements in inbound call processing performance, such as
+  handcrafted server invokers for most frequent RPC system calls like `$sys.Ok`
+- `GetUnsafe` in `GenericInstanceCache` to eliminate some unnecessary type casts
+- Overall, v11.4.X is ~5-10% faster on RPC benchmarks.
+
+### Fixed
+- Multiple issues related to RPC rerouting
+- `RpcCommandHandler` repeatedly sending commands to the server
+- A new bug in `FrameDelayers.MustDelay` method (introduced in late v11.3.X), 
+  which effectively disabled RPC frame delaying
+- Use of incorrect Handshake index on some reconnection attempts – the issue was rare, but once it happened,
+  it was blocking RPC reconnects for ~5 min.
+- `Task.Result` usage is replaced with `.GetAwaiter().GetResult()` everywhere (it's faster and safer)
+- `$csys.Invalidate` calls (remote invalidation notifications) now trigger 
+  `Computed.Invalidate(immediately: true)` call rather than just `Computed.Invalidate()`,
+  which eliminates double delay for RPC compute methods that use invalidation delay
+- Various minor fixes.
+
+### Documentation
+- Migrated Parts 01-13 from the old tutorial, though only parts 01-03 are truly edited at this point
+- Added TOCs to videos on Fusion and ActualLab.Rpc
+- Added GitHub workflow for deploying documentation to GitHub Pages: https://fusion.actuallab.net/
+- Documentation is a work in progress, and you're welcome to contribute!
+
+### Tests
+- Improved cancellation and timeout handling in RPC tests
+- Added benchmark tests for `Task.Result` vs `Task.GetAwaiter().GetResult()`
+- Added `CapturingLogger` unit test
+
+### Infrastructure
+- Updated EntityFrameworkCore and Npgsql versions to 10.0
+- Added GitHub Actions workflow for deploying documentation
+- Added `publish.ps1` script
+
+
 ## 11.0.15+ec823882
 
 Release date: 2025-11-05
