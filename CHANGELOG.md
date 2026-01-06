@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
-## 11.4.6+d8ce15ec
+## 11.4.8+d8ce15ec
 
 Release date: 2025-01-05
 
@@ -17,6 +17,7 @@ Release date: 2025-01-05
   There is currently no MySql EF Core provider for EF10, so if you want to use Fusion with MySql,
   the latest version that targets EF9 is 11.4.3; you can also add binding redirects for EF9 manually
   in your project.
+- `RpcMethodAttribute` for method-level RPC configuration
 - `v5` serialization formats with proper polymorphic `null` value support, 
   including  `json5`, `njson5`, `msgpack5`, `msgpack5c`, `mempackc`, and `mempack5c`.
 - New `IRpcMiddleware` stack replacing `IRpcInboundCallPreprocessor`
