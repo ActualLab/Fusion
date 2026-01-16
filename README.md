@@ -4,7 +4,7 @@
 [![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 [![MIT License](https://img.shields.io/github/license/actuallab/Fusion?)](https://github.com/ActualLab/Fusion/blob/master/LICENSE)
 <br/>
-[![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Actual%20Chat-BE145B)](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo)
+[![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 
@@ -148,16 +148,16 @@ Check out [Samples]; some of them are covered further in this document.
 
 Let's start with some big guns:
 
-> Check out [Actual Chat] &ndash; a very new chat app built by the minds behind Fusion.
+> Check out [Voxt] &ndash; a very new chat app built by the minds behind Fusion.
 >
-> Actual Chat fuses **real-time audio, live transcription, and AI assistance**
+> Voxt fuses **real-time audio, live transcription, and AI assistance**
 > to let you communicate with utmost efficiency.
 > With clients for **WebAssembly, iOS, Android, and Windows**, it boasts nearly
 > 100% code sharing across these platforms.
 > Beyond real-time updates, several of its features, like offline mode,
 > are powered by Fusion.
 >
-> We're posting some code examples from Actual Chat codebase [here](https://actual.chat/chat/san4Cohzym),
+> We're posting some code examples from Voxt codebase [here](https://voxt.ai/chat/san4Cohzym),
 > so join this chat to learn how we use it in a real app.
 
 ## Samples
@@ -182,7 +182,7 @@ including the sign-in state:
 
 ## Is Fusion fast?
 
-**Yes, it's incredibly fast.** Here is an RPC call duration distribution for one of the most frequent calls on [Actual Chat]:
+**Yes, it's incredibly fast.** Here is an RPC call duration distribution for one of the most frequent calls on [Voxt]:
 
 ![](docs/img/GetTile.jpg)
 
@@ -424,10 +424,6 @@ kills the chattiness you'd expect from a regular client-side proxy.
 - [How similar is Fusion to Knockout / MobX?](https://medium.com/@alexyakunin/how-similar-is-stl-fusion-to-knockout-mobx-fcebd0bef5d5?source=friends_link&sk=a808f7c46c4d5613605f8ada732e790e)
 - [Fusion In Simple Terms](https://medium.com/@alexyakunin/stl-fusion-in-simple-terms-65b1975967ab?source=friends_link&sk=04e73e75a52768cf7c3330744a9b1e38)
 
-**P.S.** If you've already spent some time learning about Fusion,
-please help us to make it better by completing [Fusion Feedback Form]
-(1&hellip;3 min).
-
 [Compute Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
 [Compute Service]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
 [`Computed<T>`]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
@@ -448,6 +444,5 @@ please help us to make it better by completing [Fusion Feedback Form]
 [Cheat Sheet]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Fusion-Cheat-Sheet.md
 [Slides]: https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html
 [MMORPG]: https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game
-[Actual Chat]: https://actual.chat
-[Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
-[Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6
+[Voxt]: https://voxt.ai
+[Fusion Place]: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo

@@ -885,5 +885,4 @@ especially for the companies running their server-side code on .NET Core (or .NE
 [Tutorial]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/README.md
 [Fusion In Simple Terms]: https://medium.com/@alexyakunin/stl-fusion-in-simple-terms-65b1975967ab?source=friends_link&sk=04e73e75a52768cf7c3330744a9b1e38
 
-[Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
-[Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6
+[Fusion Place]: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo

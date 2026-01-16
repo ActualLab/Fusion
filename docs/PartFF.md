@@ -2,9 +2,6 @@
 
 You've reached the end of this tutorial, and we truly hope you
 have enjoyed it and have had a good learning experience.
-If you already played with [Fusion Samples], please complete
-[Fusion Feedback Form] (1…3 min) - knowing your opinion is
-absolutely crucial for us to improve.
 
 If you're looking for more content to read, check out these posts:
 
@@ -18,5 +15,4 @@ If you're looking for more content to read, check out these posts:
 ---
 
 [Documentation Home]: https://github.com/ActualLab/Fusion/blob/master/docs/README.md
-[Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples

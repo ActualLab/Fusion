@@ -742,5 +742,5 @@ P.S. I certainly realize that even though OF's usage is fairly
 simple on the outside, there is a complex API with many moving
 parts inside. And probably, some bugs.
 So if you get stuck, please don't hesistate reaching me out
-on [Fusion Place](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo).
+on [Fusion Place](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 My nickname there is "Alex Y.", I'll be happy to help.

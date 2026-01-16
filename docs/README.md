@@ -1,7 +1,7 @@
 # Fusion Documentation
 
 > All project updates are published on [Fusion Place]; it's also the best place for Q/A.\
-> [![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22) [![NuGetVersion](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22) [![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Actual%20Chat-BE145B)](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo)
+> [![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22) [![NuGetVersion](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22) [![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
 
 ## Videos
 
@@ -56,6 +56,5 @@ Indirect contributors & everyone else who made Fusion possible:
 - [Microsoft](https://microsoft.com) &ndash; for .NET Core and Blazor.
 
 [Fusion]: https://github.com/ActualLab/Fusion
-[Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
-[Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6
+[Fusion Place]: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples

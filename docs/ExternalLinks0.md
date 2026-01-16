@@ -5,7 +5,7 @@ This file contains all unique external links found in docs/Part\*\*.md files.
 - http://boardgames.alexyakunin.com
 - http://nginx.org/en/docs/stream/ngx_stream_upstream_module.html#hash
 - http://ssp.impulsetrain.com/radix-heap.html
-- https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
+- https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
 - https://alexyakunin.medium.com/the-ungreen-web-why-our-web-apps-are-terribly-inefficient-28791ed48035?source=friends_link&sk=74fb46086ca13ff4fea387d6245cb52b
 - https://devblogs.microsoft.com/dotnet/introducing-yarp-preview-1/
 - https://developer.mozilla.org/en-US/docs/Web/API/WebTransport

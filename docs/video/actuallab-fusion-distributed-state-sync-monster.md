@@ -12,7 +12,7 @@
 - Redis Baseline ([0:39](https://www.youtube.com/watch?v=eMO7AmI6ui4&t=39s))
 - Fusion Speed ([1:08](https://www.youtube.com/watch?v=eMO7AmI6ui4&t=68s))
 - What is Fusion ([1:47](https://www.youtube.com/watch?v=eMO7AmI6ui4&t=107s))
-- Actual Chat Demo ([8:08](https://www.youtube.com/watch?v=eMO7AmI6ui4&t=488s))
+- Voxt Demo ([8:08](https://www.youtube.com/watch?v=eMO7AmI6ui4&t=488s))
 - Compute State Component ([9:17](https://www.youtube.com/watch?v=eMO7AmI6ui4&t=557s))
 - Why Real-time is Hard ([11:30](https://www.youtube.com/watch?v=eMO7AmI6ui4&t=690s))
 - Fusion Features ([15:47](https://www.youtube.com/watch?v=eMO7AmI6ui4&t=947s))

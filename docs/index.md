@@ -28,7 +28,7 @@ features:
     details: Write once, run anywhere. Fusion enables you to maintain a single codebase that works across all Blazor platforms - Server, WebAssembly, and Hybrid/MAUI - while automatically optimizing for each platform's unique characteristics.
 ---
 
-[![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22) [![NuGetVersion](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22) [![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Actual%20Chat-BE145B)](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo)
+[![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22) [![NuGetVersion](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22) [![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
 
 <br />
 <br />
@@ -40,7 +40,7 @@ features:
 <details>
   <summary>What's the best place to ask questions related to Fusion?</summary>
   <p>
-    <a href="https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo">Fusion @ Actual Chat</a> is currently the best place to ask questions and track project updates.
+    <a href="https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo">Fusion @ Voxt</a> is currently the best place to ask questions and track project updates.
   </p>
 </details>
 
@@ -107,5 +107,4 @@ nearly real-time invalidation / minimum % of inconsistent reads.</p>
 </details>
 
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
-[Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
-[Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6
+[Fusion Place]: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo

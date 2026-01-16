@@ -7,7 +7,7 @@
 [Fusion Place] is currently the best place to ask questions and
 track project updates.
 
-[![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Actual%20Chat-BE145B)](https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo)
+[![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
 
 > Q: Can I contribute to the project?
 
@@ -62,5 +62,4 @@ nearly real-time invalidation / minimum % of inconsistent reads.
 TBD.
 
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
-[Fusion Place]: https://actual.chat/chat/s-1KCdcYy9z2-uJVPKZsbEo
-[Fusion Feedback Form]: https://forms.gle/TpGkmTZttukhDMRB6
+[Fusion Place]: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
