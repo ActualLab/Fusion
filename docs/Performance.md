@@ -64,3 +64,45 @@ multiple iterations, and the best result from 3 runs is reported.
 - **Concurrent access amplifies the difference**: With many readers, Fusion's
   lock-free cache scales linearly with CPU cores, while database access becomes
   the bottleneck.
+
+## Benchmark.cmd from ActualLab.Fusion.Samples
+
+The benchmark measures throughput of a simple repository-style user lookup service that retrieves and updates user records from a database: `UserService.Get(userId)` and `Update(userId, ...)`.
+
+### Local Services
+
+| Test | Result | Speedup |
+|------|--------|---------|
+| Regular Service | 136.91K calls/s | |
+| Fusion Service | 263.62M calls/s | **~1,926x** |
+
+### Remote Services
+
+| Test | Result | Speedup |
+|------|--------|---------|
+| HTTP Client → Regular Service | 99.66K calls/s | |
+| HTTP Client → Fusion Service | 420.67K calls/s | **~4.2x** |
+| ActualLab.Rpc Client → Fusion Service | 6.10M calls/s | **~61x** |
+| Fusion Client → Fusion Service | 223.15M calls/s | **~2,239x** |
+
+## RpcBenchmark.cmd from ActualLab.Fusion.Samples
+
+This benchmark compares **ActualLab.Rpc** with **gRPC**, **SignalR**, and other RPC frameworks.
+The tables below include only **ActualLab.Rpc**, **gRPC**, and **SignalR**.
+Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so we omit them.
+
+### Calls
+
+| Test | ActualLab.Rpc | gRPC | SignalR |
+|------|---------------|------|---------|
+| Sum | 8.87M calls/s | 1.11M calls/s | 5.34M calls/s |
+| GetUser | 7.81M calls/s | 1.09M calls/s | 4.43M calls/s |
+| SayHello | 5.58M calls/s | 1.03M calls/s | 2.23M calls/s |
+
+### Streams
+
+| Test | ActualLab.Rpc | gRPC | SignalR |
+|------|---------------|------|---------|
+| Stream1 | 95.10M items/s | 38.75M items/s | 17.11M items/s |
+| Stream100 | 38.90M items/s | 20.63M items/s | 13.61M items/s |
+| Stream10K | 320.04K items/s | 636.84K items/s | 387.00K items/s |
