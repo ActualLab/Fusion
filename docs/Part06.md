@@ -247,7 +247,7 @@ public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 
 ## Real-time UI in Blazor WebAssembly apps
 
-If you read about [Compute Service Clients in Part 4](./Part04.md), you
+If you read about [Compute Service Clients in Part 2](./Part02.md), you
 probably already know that WASM case actually isn't that different:
 
 - Server-side should be configured to "share" Compute Services &ndash;
@@ -326,7 +326,7 @@ Blazor WebAssembly modes.
 All you need is to:
 
 - Ensure your Compute Services implement the same interface as their clients.
-  [Part 4](./Part04.md) explains how to achieve that, but overall,
+  [Part 2](./Part02.md) explains how to achieve that, but overall,
   you need to implement this interface on Compute Service
   and register its client via `fusion.AddClient<IService>()` call.
 - Ensure the server can host Blazor components from the client

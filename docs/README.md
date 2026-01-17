@@ -23,7 +23,6 @@
 <!--
 - [Part 5: Fusion on Server-Side Only](./Part05.md)
 - [Part 6: Real-time UI in Blazor Apps](./Part06.md)
-- [Part 7: Real-time UI in JS / React Apps](./Part07.md)
 - [Part 8: Scaling Fusion Services](./Part08.md)
 - [Part 9: CommandR](./Part09.md)
 - [Part 10: Multi-Host Invalidation and CQRS with Operations Framework](./Part10.md)

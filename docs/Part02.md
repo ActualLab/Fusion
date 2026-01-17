@@ -1,4 +1,4 @@
-# ActualLab.Rpc, Compute Service Clients, and Distributed Real-Time Updates
+# Distributed Compute Services: ActualLab.Rpc and Compute Service Clients
 
 Fusion is designed with distributed applications in mind,
 and one of its key features is the ability to expose Compute Services
@@ -123,6 +123,7 @@ that exposes `IChatService`:
 ```cs
 var builder = WebApplication.CreateBuilder();
 builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(3));
 
 // Adding Fusion.
 // RpcServiceMode.Server is going to be the default mode for further `fusion.AddService()` calls,
@@ -199,7 +200,7 @@ the server-side Compute Service outputs. So:
 
 <!-- snippet: Part02_RunClient -->
 ```cs
-var services = CreateClientServiceProvider();
+await using var services = CreateClientServiceProvider();
 var chatClient = services.GetRequiredService<IChatService>();
 
 // Start GetWordCount() change observer
@@ -353,4 +354,81 @@ speedup compared to RPC via SignalR, gRPC, or HTTP**.
 If you are interested in more robust benchmarks, check out `Benchmark` and `RpcBenchmark`
 projects in [Fusion Samples](https://github.com/ActualLab/Fusion.Samples).
 
-#### [Next: Part 04 &raquo;](./Part04.md) | [Documentation Home](./README.md)
+## Client-Side Computed State
+
+In [Part 1](./Part01.md), you learned about `ComputedState<T>` &ndash; a state that
+auto-updates once it becomes inconsistent. Now, let's show that client-side
+`ComputedState<T>` can use a Compute Service Client to "observe" the output of
+a server-side Compute Service.
+
+The code below reuses the `IChatService` and server setup from above,
+but adds a `ComputedState<T>` on the client side that tracks changes:
+
+<!-- snippet: Part02_ClientComputedState -->
+```cs
+var stateFactory = services.StateFactory();
+using var state = stateFactory.NewComputed(
+    new ComputedState<string>.Options() {
+        UpdateDelayer = FixedDelayer.Get(0.5), // 0.5 second update delay
+        EventConfigurator = state1 => {
+            // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
+            state1.AddEventHandler(StateEventKind.All,
+                (s, e) => WriteLine($"{e}: {s.Value}"));
+        },
+    },
+    async (state, cancellationToken) => {
+        var wordCount = await chatClient.GetWordCount(cancellationToken);
+        return $"Word count: {wordCount}";
+    });
+
+await state.Update(); // Ensures the state gets an up-to-date value
+
+await chatClient.Post("Hello, World!");
+await Task.Delay(1000);
+await chatClient.Post("One Two Three");
+await Task.Delay(1000);
+```
+<!-- endSnippet -->
+
+The output:
+
+```text
+Invalidated:
+Updating:
+Updated: Word count: 0
+Invalidated: Word count: 0
+Updating: Word count: 0
+Updated: Word count: 2
+Invalidated: Word count: 2
+Updating: Word count: 2
+Updated: Word count: 5
+```
+
+Notice the state lifecycle:
+1. **Updated** &ndash; state was computed (or re-computed)
+2. **Invalidated** &ndash; the state's underlying `Computed<T>` became inconsistent
+3. **Updating** &ndash; state is about to recompute (after the `UpdateDelayer` delay)
+
+This is exactly the mechanism that powers real-time UI in Fusion's Blazor components.
+
+## Real-Time UI Updates
+
+As you might guess, this is exactly the logic our Blazor samples use to update
+the UI in real time. Moreover, we similarly use the same interface both for
+Compute Services and their clients &ndash; and that's precisely what allows
+us to have the same UI components working in WASM and Server-Side Blazor mode:
+
+- When UI components are rendered on the server side, they pick server-side
+  Compute Services from host's `IServiceProvider` as implementation of
+  `IWhateverService`. Replicas aren't needed there, because everything is local.
+- And when the same UI components are rendered on the client, they pick
+  Compute Service Client as `IWhateverService` from the client-side IoC container,
+  and that's what makes any `IState<T>` update in real time there, which
+  in turn makes UI components re-render.
+
+## Summary
+
+**That's pretty much it &ndash; now you've learned all the key features of Fusion.**
+There are details, of course, and the rest of the tutorial is mostly about them.
+
+#### [Next: Part 05 &raquo;](./Part05.md) | [Documentation Home](./README.md)
