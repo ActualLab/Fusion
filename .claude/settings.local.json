@@ -10,7 +10,11 @@
       "Bash(wmic cpu:*)",
       "Bash(wmic memorychip:*)",
       "Bash(powershell -Command \"$env:USERPROFILE\")",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(npm run docs:build:*)",
+      "Bash(timeout 15 npm run docs:dev:*)",
+      "Bash(ls:*)",
+      "Bash(docker build:*)"
     ]
   },
   "outputStyle": "default"
