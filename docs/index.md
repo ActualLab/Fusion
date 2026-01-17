@@ -59,16 +59,28 @@ features:
 <a href="https://youtu.be/eMO7AmI6ui4" style="text-decoration: none;">
 <div style="text-align: center;">
 <img src="./img/Fusion-Video.jpg" alt="ActualLab.Fusion Video" width="360" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
-<p style="margin-top: 8px; font-weight: 600;">ActualLab.Fusion Overview</p>
-<p style="font-size: 0.9em; color: #666;">The distributed state sync monster</p>
+<p style="margin-top: 8px; font-weight: 600;">ActualLab.Fusion Video</p>
 </div>
 </a>
 
 <a href="https://youtu.be/vwm1l8eevak" style="text-decoration: none;">
 <div style="text-align: center;">
 <img src="./img/ActualLab-Rpc-Video.jpg" alt="ActualLab.Rpc Video" width="360" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
-<p style="margin-top: 8px; font-weight: 600;">ActualLab.Rpc Deep Dive</p>
-<p style="font-size: 0.9em; color: #666;">The fastest RPC protocol on .NET</p>
+<p style="margin-top: 8px; font-weight: 600;">ActualLab.Rpc Video</p>
+</div>
+</a>
+
+<a href="https://github.com/ActualLab/Fusion.Samples" style="text-decoration: none;">
+<div style="text-align: center;">
+<img src="./img/Samples-Blazor.gif" alt="Fusion Samples" width="360" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
+<p style="margin-top: 8px; font-weight: 600;">Fusion Samples</p>
+</div>
+</a>
+
+<a href="https://voxt.ai" style="text-decoration: none;">
+<div style="text-align: center;">
+<img src="./img/voxt-ai.jpg" alt="Voxt.ai" width="360" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
+<p style="margin-top: 8px; font-weight: 600;">Voxt.ai - voice chat powered by Fusion</p>
 </div>
 </a>
 
@@ -76,14 +88,28 @@ features:
 
 ## The Problem
 
-Building real-time apps is **hard**. Traditional approaches require:
+Building real-time apps is **hard**. Traditional approaches force you into painful trade-offs:
 
-- 📢 **Manual pub/sub systems** — SignalR hubs, event handlers, subscription management
-- 🔄 **Cache invalidation logic** — knowing what to invalidate and when
-- 🧩 **State synchronization code** — keeping clients in sync with the server
-- 📱 **Platform-specific code** — different implementations for Server, WASM, mobile
+- 🐢 **No cache = slow UI.** But caching brings the invalidation problem. Miss one case and users get stuck seeing stale data.
+- 📢 **Real-time = a lot of extra code.** Design an update notification protocol, ensure UI subscribes only to relevant updates, apply them so the UI state stays eventually consistent with the ground truth... And that's just the client side!
+- 🔗 **Complexity multiplies.** Each data type needs its own subscription groups, update messages, and client-side handlers. Reconnection? Re-negotiate everything, reconcile state. What starts as "just add SignalR" becomes thousands of lines of infrastructure.
+- 📱 **Platform-specific code multiplies it further.** We pair .NET servers with JS and mobile clients, all sharing the same data and the same complex logic for caching and real-time updates.
 
-**Fusion eliminates all of this.** It works similarly to a method call middleware that transparently adds caching, invalidation, RPC, real-time sync, and many other features to your existing code.
+But if you think about it, **caching and real-time updates are facets of the same problem.**
+Both require knowing **when something changes** and **who cares**.
+Yet we treat them as separate concerns with separate infrastructure.
+
+Fusion solves all of this:
+- 🔍 Tracks dependencies automatically
+- 🎯 Invalidates precisely what it should
+- 📡 Propagates invalidations to everyone who cares, including remote clients
+- ♻️ Works identically everywhere, turning your server farm, mobile apps, and web clients into a single distributed dependency graph.
+
+**The best part: you get all of this without turning your code into a mess.**
+You can think of Fusion as a *call middleware* or a *decorator*. 
+That's why Fusion-based code looks as if there is no Fusion at all!
+So you can *focus on building your app and ship faster* — and save yourself from dealing with a 2–3× larger codebase
+and a plethora of "why is it stale?" bugs, which are among the hardest to debug.
 
 ## Performance That Changes Everything
 
@@ -115,7 +141,7 @@ Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark det
 
 ## How It Works: The MSBuild/Make Analogy
 
-Think of Fusion as **MSBuild for your backend**:
+Think of Fusion as **MSBuild for data processed by your backend, API, and even client-side UI**:
 
 - **Targets** = Method calls like `GetUser(userId)`
 - **Artifacts** = Method call results (cached values)
@@ -231,13 +257,13 @@ When `State` gets recomputed, `StateHasChanged()` is called and the component re
 
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 2rem; margin: 2rem 0; color: white;">
 
-### Built & Battle-Tested at Voxt
+### Built & Battle-Tested at Voxt.ai
 
 [**Voxt**](https://voxt.ai) is a real-time chat app built by the creators of Fusion. It features:
 
 - 🎙️ **Real-time audio** with live transcription, translation, AI summaries, and much more
 - 📱 **Clients for WebAssembly, iOS, Android, and Windows**
-- 🔄 **~100% code sharing** across all platforms
+- ♻️ **~100% code sharing** across all platforms
 - 📴 **Offline mode** powered by Fusion's persistent caching.
 
 Check out how it works at [Fusion @ Voxt.ai](https://voxt.ai/mchat/s-1KCdcYy9z2-uJVPKZsbEo), 
@@ -256,7 +282,8 @@ Fusion handles everything related to real-time there.
 
 ### 🚀 Ship Faster
 
-No more building real-time infrastructure. Add `[ComputeMethod]` to your existing services and get real-time for free.
+Skip building real-time and caching infrastructure. 
+Add `[ComputeMethod]` to your existing services and get both for free.
 
 </div>
 
@@ -264,7 +291,17 @@ No more building real-time infrastructure. Add `[ComputeMethod]` to your existin
 
 ### 🐛 Fewer Bugs
 
-Automatic dependency tracking means no more "forgot to invalidate" bugs. If something changes, dependents update.
+No more "it's stale — find out why" debugging sessions. 
+Automatic dependency tracking ensures dependents update when something changes.
+
+</div>
+
+<div style="padding: 1.5rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+
+### 📉 Clean Code
+
+Your code stays focused on business logic, Fusion handles the rest. 
+Forget about the boilerplate for real-time updates or cache invalidation.
 
 </div>
 
@@ -272,15 +309,7 @@ Automatic dependency tracking means no more "forgot to invalidate" bugs. If some
 
 ### 📈 Scale Effortlessly
 
-Fusion's caching eliminates redundant computation. Handle 1000x more traffic without changing your code.
-
-</div>
-
-<div style="padding: 1.5rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-
-### 🔧 Stay Flexible
-
-Not locked in. Fusion services are just .NET services. Remove Fusion tomorrow and your code still works.
+Handle 1000× more traffic with almost no changes to your code. 
 
 </div>
 
@@ -297,8 +326,7 @@ dotnet add package ActualLab.Fusion
 ### 2. Register Your Services
 
 ```csharp
-services.AddFusion()
-    .AddService<UserService>();
+services.AddFusion().AddService<UserService>(); // UserService must "implement" tagging IComputeService
 ```
 
 ### 3. Add [ComputeMethod] to Your Methods
@@ -327,7 +355,7 @@ Questions? Want to see how others use Fusion? Join the discussion:
 <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin: 1.5rem 0;">
 
 <a href="https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: #BE145B; color: white; border-radius: 6px; font-weight: 500; text-decoration: none;">
-💬 Fusion @ Voxt
+💬 Fusion Place @ Voxt
 </a>
 
 <a href="https://github.com/ActualLab/Fusion" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: #24292e; color: white; border-radius: 6px; font-weight: 500; text-decoration: none;">

@@ -1,396 +1,373 @@
-# Part 5: Fusion on Server-Side Only
+# Part 9: CommandR
 
-Even though Fusion supports RPC, you can use it on server-side only to cache recurring computations.
-Below are results from [Run-Benchmark.cmd from Fusion Samples](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Benchmark):
+[ActualLab.CommandR](https://www.nuget.org/packages/ActualLab.CommandR/)
+is [MediatR](hhttps://github.com/jbogard/MediatR)-like library helping
+to implement CQRS-style command handlers.
+Together with a set of other abstractions it enables you to
+get the pipeline described in the previous section with
+almost no extra code.
 
-**Local Services:**
+> This part of the tutorial will cover CommandR itself. The next one
+> will show how to use it together with other Fusion services
+> to implement a robust CQRS pipeline.
 
-| Test | Result | Speedup |
-|------|--------|---------|
-| Regular Service | 136.91K calls/s | |
-| Fusion Service | 263.62M calls/s | **~1,926x** |
+Even though CommandR solves the same problem as MediatR, it offers
+a few new features:
 
-**Remote Services:**
+- Unified handler pipeline. Any CommandR handler
+  can act either as a filter (~ middleware-like handler)
+  or as the final one. MediatR supports pipeline behaviors, which
+  are similar to filtering handlers in CommandR, but
+  they are the same for all commands.
+  And this feature is actually quite useful &ndash; e.g.
+  built-in filter for `IPreparedCommand` helps to unify validation.
+- `CommandContext` &ndash; an `HttpContext`-like type helping to
+  non-handler code to store and access the state associated with
+  the currently running command. Even though command contexts can
+  be nested (commands may invoke other commands), the whole
+  hierarchy of them is always available.
+- Convention-based command handler discovery and invocation.
+  You don't have to implement `ICommandHandler<TCommand, TResult>`
+  every time you want to add a handler &ndash; any async method tagged
+  with `[CommandHandler]`
+  and having command as its first parameter, and `CancellationToken` as the
+  last one works; all other arguments are resolved via IoC container.
+- AOP-style command handlers.
+  Such handlers are virtual async methods with two arguments:
+  `(command, cancellationToken)`. To make AOP part work,
+  the type declaring such handlers must be registered with
+  `AddCommandService(...)` &ndash;
+  an extension method to `IServiceCollection` that registers
+  a runtime-generated proxy instead of the actual implementation type.
+  The proxy ensures any call to such method is _still_ routed via
+  `Commander.Call(command)` to invoke the whole pipeline
+  for this command &ndash; i.e. all other handlers associated
+  with it.
+  In other words, such handlers can be invoked directly or via
+  `Commander`, but the result is always the same.
 
-| Test | Result | Speedup |
-|------|--------|---------|
-| HTTP Client → Regular Service | 99.66K calls/s | |
-| HTTP Client → Fusion Service | 420.67K calls/s | **~4.2x** |
-| ActualLab.Rpc Client → Fusion Service | 6.10M calls/s | **~61x** |
-| Fusion Client → Fusion Service | 223.15M calls/s | **~2,239x** |
+Since many of you are familiar with MediatR, here is the map
+of its terms to CommandR terms:
 
-The last two rows are the most interesting in the context of this part:
+![](./img/MediatR-vs-CommandR.jpg)
 
-- A tiny EF Core-based service exposed via ASP.NET Core
-  serves about **100K** requests per second. That's already a lot &ndash;
-  mostly because its data set fully fits in RAM.
-- An identical service relying on Fusion (it's literally the same code
-  plus Fusion's `[ComputeMethod]` and `Invalidation.Begin` calls)
-  boosts this number to **420K** requests per second when accessed via HTTP.
+You might notice the API offered by CommandR is somewhat simpler &ndash;
+at least while you don't use some of its unique features mentioned
+earlier.
 
-And that's the main reason to use Fusion on server-side only:
-**4-5x performance boost** with a relatively tiny amount of changes.
-[Similarly to incremental builds](https://alexyakunin.medium.com/the-ungreen-web-why-our-web-apps-are-terribly-inefficient-28791ed48035?source=friends_link&sk=74fb46086ca13ff4fea387d6245cb52b),
-the more complex your logic is, the more you are expected to gain.
+## Hello, CommandR!
 
-## The Fundamentals
+Let's declare our first command and its MediatR-style handler:
 
-You already know that `Computed<T>` instances are reused, but so far
-we didn't talk much about the details. Let's learn some specific
-aspects of this behavior before jumping to caching.
-
-The service below prints a message once its `Get` method
-is actually computed (i.e. its cached value for a given argument isn't reused)
-and returns the same value as its input. We'll be using it to
-find out when `IComputed` instances are actually reused.
-
-<!-- snippet: Part05_Service1 -->
+<!-- snippet: Part09_PrintCommandSession -->
 ```cs
-public partial class Service1 : IComputeService
+public class PrintCommand : ICommand<Unit>
 {
-    [ComputeMethod]
-    public virtual async Task<string> Get(string key)
+    public string Message { get; set; } = "";
+}
+
+// Interface-based command handler
+public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
+{
+    public PrintCommandHandler() => WriteLine("Creating PrintCommandHandler.");
+    public void Dispose() => WriteLine("Disposing PrintCommandHandler");
+
+    public async Task OnCommand(PrintCommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        WriteLine($"{nameof(Get)}({key})");
-        return key;
+        WriteLine(command.Message);
+        WriteLine("Sir, yes, sir!");
     }
 }
 ```
 <!-- endSnippet -->
 
-First, `IComputed` instances aren't "cached" by default &ndash; they're just
-reused while it's possible:
+Using CommandR and MediatR is quite similar:
 
-<!-- snippet: Part05_Caching1 -->
+<!-- snippet: Part09_PrintCommandSession2 -->
 ```cs
-var service = CreateServices().GetRequiredService<Service1>();
-// var computed = await Computed.Capture(() => counters.Get("a"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("a"));
-GC.Collect();
-WriteLine("GC.Collect()");
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("a"));
+// Building IoC container
+var serviceBuilder = new ServiceCollection()
+    .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
+var rpc = serviceBuilder.AddRpc();
+var commanderBuilder = serviceBuilder.AddCommander()
+    .AddHandlers<PrintCommandHandler>();
+var services = serviceBuilder.BuildServiceProvider();
+
+var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
+await commander.Call(new PrintCommand() { Message = "Are you operational?" });
+await commander.Call(new PrintCommand() { Message = "Are you operational?" });
 ```
 <!-- endSnippet -->
 
 The output:
 
-```text
-Get(a)
-a
-a
-GC.Collect()
-Get(a)
-a
-a
+```
+Creating PrintCommandHandler.
+Are you operational?
+Sir, yes, sir!
+Disposing PrintCommandHandler
+Creating PrintCommandHandler.
+Are you operational?
+Sir, yes, sir!
+Disposing PrintCommandHandler
 ```
 
-As you see, `GC.Collect()` call removes cached `IComputed`
-for `Get("a")` &ndash; and that's why `Get(a)` is printed
-twice here.
+Notice that:
 
-All of this means that most likely Fusion holds a
-[weak reference](https://docs.microsoft.com/en-us/dotnet/standard/garbage-collection/weak-references)
-to this value (in reality it uses `GCHandle`-s for performance reasons, but
-technically they do the same).
+- CommandR doesn't auto-register command handler services &ndash; it
+  cares only about figuring out how to map commands to
+  command handlers available in these services.
+  That's why you have to register services separately.
+- `Call` creates its own `IServiceScope` to resolve
+  services for every command invocation.
 
-Let's prove this by uncommenting the commented line:
+Try changing `AddScoped` to `AddSingleton` in above example.
 
-<!-- snippet: Part05_Caching2 -->
+## Convention-based handlers, `CommandContext`, recursion
+
+Let's write a bit more complex handler to see how
+`CommandContext` works.
+
+<!-- snippet: Part09_RecSumCommandSession -->
 ```cs
-var service = CreateServices().GetRequiredService<Service1>();
-var computed = await Computed.Capture(() => service.Get("a"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("a"));
-GC.Collect();
-WriteLine("GC.Collect()");
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("a"));
-```
-<!-- endSnippet -->
-
-The output:
-
-```text
-Get(a)
-a
-a
-GC.Collect()
-a
-a
-```
-
-As you see, assigning a strong reference to `IComputed` is enough
-to ensure it won't recompute on the next call.
-
-> So to truly cache some `IComputed`, you need to store a strong
-> reference to it and hold it while you want it to be cached.
-
-Now, if you compute `f(x)`, is it enough to store
-a computed for its output to ensure its dependencies
-are cached too? Let's test this:
-
-<!-- snippet: Part05_Service2 -->
-```cs
-public partial class Service2 : IComputeService
+public class RecSumCommand : ICommand<long>
 {
-    [ComputeMethod]
-    public virtual async Task<string> Get(string key)
+    public long[] Numbers { get; set; } = Array.Empty<long>();
+}
+```
+<!-- endSnippet -->
+
+<!-- snippet: Part09_RecSumCommandSession2 -->
+```cs
+// Building IoC container
+var serviceBuilder = new ServiceCollection()
+    .AddScoped<RecSumCommandHandler>();
+var rpc = serviceBuilder.AddRpc();
+var commanderBuilder = serviceBuilder.AddCommander()
+    .AddHandlers<RecSumCommandHandler>();
+var services = serviceBuilder.BuildServiceProvider();
+
+var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
+WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2, 3 }}));
+```
+<!-- endSnippet -->
+
+The output:
+
+```
+Creating RecSumCommandHandler.
+Numbers: 1, 2, 3
+CommandContext stack size: 1
+Depth via context.Items: 1
+Numbers: 2, 3
+CommandContext stack size: 2
+Depth via context.Items: 2
+Numbers: 3
+CommandContext stack size: 3
+Depth via context.Items: 3
+Numbers:
+CommandContext stack size: 4
+Depth via context.Items: 4
+6
+```
+
+A few things are interesting here:
+
+1. You can use convention-based command handlers:
+   all you need is to decorate a method with `[CommandHandler]`
+   instead of implementing `ICommandHandler<TCommand>`.
+2. Such handlers are more flexible with the arguments:
+   - The first argument should always be the command
+   - The last one should always be the `CancellationToken`
+   - `CommandContext` arguments are resolved via `CommandContext.GetCurrent()`
+   - Everything else is resolved via `CommandContext.Services`,
+     i.e. a scoped service provider.
+
+But the most complex part of this example covers `CommandContext`.
+Contexts are "typed" &ndash; even though they all are inherited from
+`CommandContext`, their actual type is `CommandContext<TResult>`.
+
+Command context allows to:
+
+- Find currently running command
+- Set or read its result. Usually you don't have to set the result manually &ndash;
+  the code invoking command handlers ensures the result is set once
+  the "deepest" handler exist, but you may want to read it
+  in some handlers in your pipeline.
+- Manage `IServiceScope`
+- Access its `Items`. It's an `OptionSet`, ~ a thread-safe dictionary-like structure
+  helping to store any info associated with the current command.
+
+Finally, `CommandContext` is a class, but there is also
+[`ICommandContext` – an internal interface defining its API](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/Internal/ICommandContext.cs) &ndash; check it out.
+And if you're looking for details, check out
+[`CommandContext` itself](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/CommandContext.cs).
+
+So when you call a command, a new `CommandContext` is created.
+But what about the service scope? The code from `CommandContext<TResult>`
+constructor explains this better than a few sentences:
+
+```cs
+// PreviousContext here is CommandContext.Current,
+// which will be replaced with `this` soon after.
+if (PreviousContext?.Commander != commander) {
+    OuterContext = null;
+    OutermostContext = this;
+    ServiceScope = Commander.Services.CreateScope();
+    Items = new OptionSet();
+}
+else {
+    OuterContext = PreviousContext;
+    OutermostContext = PreviousContext!.OutermostContext;
+    ServiceScope = OutermostContext.ServiceScope;
+    Items = OutermostContext.Items;
+}
+```
+
+As you see, if you "switch" `ICommander` instances on such
+calls, the new context behaves like it's a top-level one,
+i.e. it creates a new service scope, new `Items`, and
+exposes itself as `OutermostContext`.
+
+Now it's a good time to try changing `false` to `true` in this fragment above:
+
+```cs
+var tailSum = await context.Commander.Call(
+    new RecSumCommand() { Numbers = tail }, false, // Try changing it to true
+    cancellationToken);
+```
+
+## Ways To Run A Command
+
+[`ICommander` offers just a single method to run the command](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/ICommander.cs), but in reality,
+it's the most "low-level" option, so you'll rarely need it.
+
+The actual options are implemented in
+[`CommanderExt` type](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/CommanderEx.cs)
+(`Ext` is a shortcut for `Extensions` that's used everywhere in
+`ActualLab` projects for such classes).
+
+- `Call` is the one you should normally use.
+  It "invokes" the command and returns its result.
+- `Run` acts like `Call`, but returns `CommandContext`
+  instead. Which is why it doesn't throw an exception
+  even when one of the command handlers does &ndash; it completes
+  successfully in any case.
+  You can use e.g. `CommandContext.UntypedResult` to
+  get the actual command completion result or exception.
+- `Start` is fire-and-forget way to start a command.
+  Similarly to `Run`, it returns `CommandContext`,
+  but note that it returns this context immediately,
+  i.e. while the command associated with this context is still running.
+  Even though `CommandContext` allows you to know when
+  the command produced its result (via e.g. `CommandContext.UntypedResultTask`),
+  the result itself doesn't mean the pipeline for this command
+  completed its execution, so code in its handlers might be still running.
+
+All these methods take up to 3 arguments:
+
+- `ICommand` &ndash; obviously
+- `bool isolate = false` &ndash; an optional parameter indicating whether
+  the command should be executed in isolated fashion. If it's true,
+  the command will be executed inside
+  [`ExecutionContext.TrySuppressFlow` block](https://docs.microsoft.com/en-us/dotnet/api/system.threading.executioncontext.suppressflow?view=net-5.0),
+  so it will also be the outermost for sure.
+- `CancellationToken cancellationToken = default` &ndash;
+  a usual argument of almost any async method.
+
+## Command Services and filtering handlers
+
+The most interesting way to register command handlers
+are to declare them inside so-called Command Service:
+
+<!-- snippet: Part09_RecSumCommandServiceSession -->
+```cs
+public class RecSumCommandService : ICommandService
+{
+    [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
+    public virtual async Task<long> RecSum( // Notice "public virtual"!
+        RecSumCommand command,
+        // You can't have any extra arguments here
+        CancellationToken cancellationToken = default)
     {
-        WriteLine($"{nameof(Get)}({key})");
-        return key;
+        if (command.Numbers.Length == 0)
+            return 0;
+        var head = command.Numbers[0];
+        var tail = command.Numbers[1..];
+        var context = CommandContext.GetCurrent();
+        var tailSum = await context.Commander.Call( // Note it's a direct call, but the whole pipeline still gets invoked!
+            new RecSumCommand() { Numbers = tail },
+            cancellationToken);
+        return head + tailSum;
     }
 
-    [ComputeMethod]
-    public virtual async Task<string> Combine(string key1, string key2)
+    // This handler is associated with ANY command (ICommand)
+    // Priority = 10 means it runs earlier than any handler with the default priority 0
+    // IsFilter tells it triggers other handlers via InvokeRemainingHandlers
+    [CommandHandler(Priority = 10, IsFilter = true)]
+    protected virtual async Task DepthTracker(ICommand command, CancellationToken cancellationToken)
     {
-        WriteLine($"{nameof(Combine)}({key1}, {key2})");
-        return await Get(key1) + await Get(key2);
+        var context = CommandContext.GetCurrent();
+        var depth = 1 + (int) (context.Items["Depth"] ?? 0);
+        context.Items["Depth"] = depth;
+        WriteLine($"Depth via context.Items: {depth}");
+
+        await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
+    }
+
+    // Another filter for RecSumCommand
+    [CommandHandler(Priority = 9, IsFilter = true)]
+    protected virtual Task ArgumentWriter(RecSumCommand command, CancellationToken cancellationToken)
+    {
+        WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
+        var context = CommandContext.GetCurrent();
+        return context.InvokeRemainingHandlers(cancellationToken);
     }
 }
 ```
 <!-- endSnippet -->
 
-<!-- snippet: Part05_Caching3 -->
+Such services has to be registered via `AddCommandService` method
+of the `CommanderBuilder`:
+
+<!-- snippet: Part09_RecSumCommandServiceSession2 -->
 ```cs
-var service = CreateServices().GetRequiredService<Service2>();
-var computed = await Computed.Capture(() => service.Combine("a", "b"));
-WriteLine("computed = Combine(a, b) completed");
-WriteLine(await service.Combine("a", "b"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("b"));
-WriteLine(await service.Combine("a", "c"));
-GC.Collect();
-WriteLine("GC.Collect() completed");
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("b"));
-WriteLine(await service.Combine("a", "c"));
+// Building IoC container
+var serviceBuilder = new ServiceCollection();
+var rpc = serviceBuilder.AddRpc();
+var commanderBuilder = serviceBuilder.AddCommander()
+    .AddService<RecSumCommandService>(); // Such services are auto-registered as singletons
+var services = serviceBuilder.BuildServiceProvider();
+
+var commander = services.Commander();
+var recSumService = services.GetRequiredService<RecSumCommandService>();
+WriteLine(recSumService.GetType());
+WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2 }}));
+WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 3L, 4 }}));
 ```
 <!-- endSnippet -->
 
 The output:
 
-```text
-Combine(a, b)
-Get(a)
-Get(b)
-computed = Combine(a, b) completed
-ab
-a
-b
-Combine(a, c)
-Get(c)
-ac
-GC.Collect() completed
-a
-b
-Combine(a, c)
-Get(c)
-ac
+```
+Castle.Proxies.RecSumCommandServiceProxy
+Depth via context.Items: 1
+Numbers: 1, 2
+Depth via context.Items: 2
+Numbers: 2
+Depth via context.Items: 3
+Numbers:
+3
+Depth via context.Items: 1
+Numbers: 3, 4
+Depth via context.Items: 2
+Numbers: 4
+Depth via context.Items: 3
+Numbers:
+7
 ```
 
-As you see, yes,
-
-> Strong referencing an `IComputed` ensures every other `IComputed`
-> instance it depends on also stays in memory.
-
-Let's check if the opposite is true as well:
-
-<!-- snippet: Part05_Caching4 -->
-```cs
-var service = CreateServices().GetRequiredService<Service2>();
-var computed = await Computed.Capture(() => service.Get("a"));
-WriteLine("computed = Get(a) completed");
-WriteLine(await service.Combine("a", "b"));
-GC.Collect();
-WriteLine("GC.Collect() completed");
-WriteLine(await service.Combine("a", "b"));
-```
-<!-- endSnippet -->
-
-The output:
-
-```text
-Get(a)
-computed = Get(a) completed
-Combine(a, b)
-Get(b)
-ab
-GC.Collect() completed
-Combine(a, b)
-Get(b)
-ab
-```
-
-So the opposite is not true.
-
-But why does Fusion behave this way? The answer is actually quite simple:
-
-- Fusion has to strong-reference every computed instance used to produce an output
-  because if any of them gets garbage collected before the output itself,
-  the invalidation passing through such an instance simply won't reach the output.
-- But since it has to propagate the invalidation events from dependencies
-  (used values) to dependants (values produced from the used ones),
-  it also has to reference the direct dependants from every dependency.
-  And these references have to be either weak
-  or simply shouldn't be .NET object references, because if they were strong
-  references, this would almost certainly keep the whole graph of `IComputed`
-  in memory, which is highly undesirable. That's why Fusion uses the second
-  option here &ndash; it stores keys of direct dependants of every `IComputed`
-  and resolves them via the same registry as it uses to resolve `IComputed`
-  instances for method calls.
-- Interestingly, there is a fundamental reason to weak reference every
-  `IComputed`: imagine Fusion doesn't do this, so calling the same compute
-  method twice with the same arguments may produce two different `IComputed`
-  instances representing the output (of the same computation). Now imagine
-  you invalidate the first one (and thus all of its dependants), but
-  don't do anything with the second one (so its dependants stay valid).
-  As you see, it's a partial invalidation, i.e. something that may cause
-  a long-term inconsistency &ndash; which is why Fusion ensures that at any
-  moment of time there can be only one `IComputed` instance describing
-  given computation.
-
-**Default caching behavior &ndash; a summary:**
-
-- Nothing is really cached, but everything is weak-referenced
-- When you compute a new value, every value used to produce it
-  becomes strong-referenced from the produced one
-- So if you strong reference some `IComputed`, you effectively
-  hold the whole graph of what it's composed from in memory.
-- If `IComputed` containing the output of `f(someArgs)` doesn't
-  exist in RAM, it also means none of its possible dependants
-  exist in RAM.
-
-## Caching Options
-
-As you probably already understood, Fusion allows you to
-implement any desirable caching behavior: all you need
-is your own service that will hold a strong reference
-to whatever you want to cache for as long as you want.
-
-Besides that, Fusion offers two built-in options:
-
-- `[ComputeMethod(MinCacheDuration = TimeInSeconds)]`,
-  ensures a strong reference w/ specified expiration
-  time is added to
-  [Timeouts.KeepAlive](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Internal/Timeouts.cs)
-  timer set every time the output is used. In fact, it sets a minimum
-  time the output of a function stays in RAM.
-- `[Swap(SwapTime = TimeInSeconds)]` enables swapping feature
-  for the compute method's output. It's a kind of similar to
-  OS page swapping, but stores & loads back the output instead.
-
-Let's look at how they work.
-
-### ComputeMethodAttribute.MinCacheDuration
-
-Let's just add `MinCacheDuration` to the service we were using previously:
-
-<!-- snippet: Part05_Service3 -->
-```cs
-public partial class Service3 : IComputeService
-{
-    [ComputeMethod]
-    public virtual async Task<string> Get(string key)
-    {
-        WriteLine($"{nameof(Get)}({key})");
-        return key;
-    }
-
-    [ComputeMethod(MinCacheDuration = 0.3)] // MinCacheDuration was added
-    public virtual async Task<string> Combine(string key1, string key2)
-    {
-        WriteLine($"{nameof(Combine)}({key1}, {key2})");
-        return await Get(key1) + await Get(key2);
-    }
-}
-```
-<!-- endSnippet -->
-
-And run this code:
-
-<!-- snippet: Part05_Caching5 -->
-```cs
-var service = CreateServices().GetRequiredService<Service3>();
-WriteLine(await service.Combine("a", "b"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("x"));
-GC.Collect();
-WriteLine("GC.Collect()");
-WriteLine(await service.Combine("a", "b"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("x"));
-await Task.Delay(1000);
-GC.Collect();
-WriteLine("Task.Delay(...) and GC.Collect()");
-WriteLine(await service.Combine("a", "b"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("x"));
-```
-<!-- endSnippet -->
-
-The output:
-
-```text
-Combine(a, b)
-Get(a)
-Get(b)
-ab
-a
-Get(x)
-x
-GC.Collect()
-ab
-a
-Get(x)
-x
-Task.Delay(...) and GC.Collect()
-Combine(a, b)
-Get(a)
-Get(b)
-ab
-a
-Get(x)
-x
-```
-
-As you see, `MinCacheDuration` does exactly what's expected:
-
-- It holds a strong reference to the output of `Combine` for 0.3 seconds,
-  so the output of `Combine("a", "b")` gets cached for 0.3s
-- Since `Combine` calls `Get`, the outputs of
-  `Get("a")` and `Get("b")` are cached for 0.3s too
-- But not the output of `Get("x")`, which wasn't used in any of
-  `Combine` calls in this example.
-
-That's basically it on `MinCacheDuration`.
-
-A few tips on how to use it:
-
-- You should apply it mainly to the final outputs &ndash; i.e. compute
-  methods that are either exposed via API or used in your UI.
-- Applying it to other compute methods is fine too, though keep in mind
-  that whatever is used by top level methods with `MinCacheDuration`
-  is anyway cached for the same period, so probably you don't need this.
-- And in general, keep in mind that ideally you want to "recompose"
-  or aggregate the outputs of compute methods rather than "rewrite".
-  In other words, if you have a chance to use the same object you get
-  from the downstream method &ndash; do this, because this won't incur
-  use of extra RAM.
-- This is also why you might want to return just immutable objects from
-  compute methods &ndash; and C# 9 records come quite handy here.
-
----
-
-**Note:** If you're interested in algorithms and data structures, check out
-[ConcurrentTimerSet&lt;TTimer&gt;](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Time/ConcurrentTimerSet.cs) &ndash;
-Fusion uses its own implementation of timers to ensure they
-scale much better than `Task.Delay` (which relies on
-[TimerQueue](https://referencesource.microsoft.com/#mscorlib/system/threading/timer.cs,29)),
-though this comes at cost of fire precision: Fusion timers fire only
-[4 times per second](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Internal/Timeouts.cs#L20).
-Under the hood, `ConcurrentTimerSet` uses
-[RadixHeapSet](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Collections/RadixHeapSet.cs) &ndash;
-basically, a [Radix Heap](http://ssp.impulsetrain.com/radix-heap.html)
-supporting `O(1)` find and delete operations.
+As you see, the proxy type generated for such services routes
+**every direct invocation of a command handler** through `ICommander.Call`.
+So contrary to regular handlers, you can invoke such handlers
+directly &ndash; the whole CommandR pipeline gets invoked for them anyway.
