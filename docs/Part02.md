@@ -107,7 +107,7 @@ public class ChatService : IChatService
         }
 
         using var _1 = Invalidation.Begin();
-        _ = GetRecentMessages(default); // No need to invalidate GetWordCount(), coz it depends on GetRecentMessages()
+        _ = GetRecentMessages(default); // No need to invalidate GetWordCount() – it depends on GetRecentMessages()
         return Task.CompletedTask;
     }
 }
@@ -178,7 +178,7 @@ values under the hood, so it also behaves the same. In particular:
 
 In other words, there is no difference between the Compute Service and its client.
 And that's what makes Compute Services so powerful: they allow building reactive
-services that can be local, remote, or even a mix of both (later you'll learn
+services that can be local, remote, or even a mix of both (later you'll learn that
 Fusion also supports distributed call routing and service meshes), and no matter
 which kind of service you use, they behave the same way.
 
@@ -294,8 +294,8 @@ The RPC call is deemed unnecessary, if:
 - The client finds a `Computed<T>` replica for it (i.e., for the same call to the same service with the same arguments)
 - And this replica is still in `Consistent` state (i.e., wasn't invalidated from the moment it was created).
 
-In other words, Computed Service Clients cache call results and reuse them  
-until the moment they learn from the server that some of these results are invalidated.
+In other words, Computed Service Clients cache call results and reuse them
+until they learn from the server that some of these results have been invalidated.
 
 And that's why performance-wise, such clients are almost exact replicas of server-side Compute Services:
 
@@ -304,8 +304,7 @@ And that's why performance-wise, such clients are almost exact replicas of serve
 - Otherwise, they respond instantly.
 
 Let's see this in action. We've already added the `GetWordCountPlainRpc` method to our interface
-and implementation &ndash; and since it's not a compute method, it won't benefit from Fusion's caching features
-for compute methods.
+and implementation &ndash; since it's not a compute method, it won't benefit from Fusion's caching.
 
 <!-- snippet: Part02_Benchmark -->
 ```cs
@@ -333,7 +332,7 @@ The output:
 <!-- snippet: Part02_Benchmark_Output -->
 ```cs
 /* The output:
-100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release!
+100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release mode!
 - Warmup...
 - Benchmarking...
 - GetWordCount():         12.187ms
@@ -348,8 +347,8 @@ on a single CPU core in the "cache hit" scenario.
 A bit more robust test would produce 18M call/s, or 55ns per-call timing on the same machine;
 for the comparison, a single `Dictionary<TKey, TValue>` lookup requires ~5-10ns on .NET 10.
 
-And it's 100x faster than local RPC via ActualLab.Rpc, which translates to **300-1000x
-speedup compared to RPC via SignalR, gRPC, or HTTP client**.
+And it's ~200x faster than plain RPC via ActualLab.Rpc, which translates to **600-2000x
+speedup compared to RPC via SignalR, gRPC, or HTTP**.
 
 If you are interested in more robust benchmarks, check out `Benchmark` and `RpcBenchmark`
 projects in [Fusion Samples](https://github.com/ActualLab/Fusion.Samples).

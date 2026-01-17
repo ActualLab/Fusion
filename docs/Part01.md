@@ -185,8 +185,8 @@ WriteLine(computedForSumAB.IsConsistent()); // False, invalidation is always cas
 // Manually update computedForSumAB
 var newComputedForSumAB = await computedForSumAB.Update();
 // Prints:
-// Get(a) = 2, we invalidated it, so it was of Sum(a, b)
-// Sum(a, b) = 2, .Update() call above actually triggered this call
+// Get(a) = 2 – we invalidated it, so it had to be recomputed by Sum(a, b)
+// Sum(a, b) = 2 – the .Update() call above triggered this recomputation
 
 WriteLine(newComputedForSumAB.IsConsistent()); // True
 WriteLine(newComputedForSumAB.Value); // 2
@@ -281,7 +281,7 @@ That's why states are so useful for reactive updates.
 
 Any `State<T>`:
 
-- Has `Computed` property, which points to the most recent version of `Computed<T>` it tracks.
+- Has a `Computed` property, which points to the most recent version of `Computed<T>` it tracks.
 - Has a `Snapshot` property of `StateSnapshot<T>` type.
   This property is updated atomically and returns an immutable object describing the current "state" of the `State<T>`. If you
   ever need a "consistent" view of the state, `Snapshot` is
@@ -300,21 +300,21 @@ Any `State<T>`:
   and the newly observed `Error` (to display it separately).
 - Similar to `Computed<T>`, any state implements `IResult<T>`
   by forwarding all calls to its `Computed` property.
-- Similar to `IEnumerable<T>` \ `IEnumerable`, there are typed
+- Similar to `IEnumerable<T>` / `IEnumerable`, there are typed
   and untyped versions of any `IState` interface.
 
 There are two implementations of `State<T>`:
 
-1. `MutableState<T>` is a mutable value (variable) in `Computed<T>` envelope.
+1. `MutableState<T>` is a mutable value (variable) wrapped in a `Computed<T>` envelope.
    Its `Computed` property returns an always-consistent computed, which gets
    replaced once the `MutableState.Value` (or `Error`, etc.) is set;
    the old computed gets invalidated.
    You can use mutable states in compute methods or computed states &ndash;
    since any state tracks some `Computed<T>`, it can be a dependency
    of another computed value.
-   Typically such states are used to describe the client-side state
-   of certain UI elements (e.g. a value entered into a search box).
-1. `ComputedState<T>` is, in fact, a compute method and an update loop that
+   Typically, such states are used to describe the client-side state
+   of certain UI elements (e.g., a value entered into a search box).
+2. `ComputedState<T>` is, in fact, a compute method and an update loop that
    triggers the recomputation after a certain delay following invalidation.
    The delay is just a `Task` provided by `IUpdateDelayer` bound to this state,
    so it can vary from state to state, from time to time, or even end instantly
@@ -332,7 +332,7 @@ States are constructed using `StateFactory` &ndash; one of the singletons that
 `.AddFusion()` injects into `IServiceProvider`.
 
 There is also `StateFactory.Default`, which is intended to be used
-mainly in tests. Unless you set it to a specific state factory,
+mainly in tests. Unless you assign a specific state factory to it,
 it will use its own "minimal" service provider.
 
 ### Mutable State
