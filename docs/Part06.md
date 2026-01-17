@@ -1,6 +1,6 @@
 # Part 6: Real-time UI in Blazor Apps
 
-You already know about `IState<T>` &ndash; it was described in [Part 3](./Part03.md).
+You already know about `IState<T>` &ndash; it was described in [Part 1](./Part01.md).
 It's an abstraction that "tracks" the most current version of some `Computed<T>`.
 There are a few "flavors" of the `IState` &ndash; the most important ones are:
 
@@ -139,7 +139,7 @@ It doesn't try to resolve the state via DI container, but
 constructs it using `StateFactory` &ndash; and moreover:
 
 - It constructs a state that's computed using its own `ComputeState` method.
-  As you remember from [Part 3](./Part03.md), state computation logic is
+  As you remember from [Part 1](./Part01.md), state computation logic is
   always "wrapped" into a compute method &ndash; in other words, the `IComputed` instance
   it produces under the hood tracks all the dependencies and gets invalidated
   once any of them does, which triggers `Invalidated` event on a state, and
@@ -194,7 +194,7 @@ There are a few ways to enforce `State` recomputation in such cases:
    recomputation will happen with usual update delay.
 3. Wrap full local state into e.g. `IMutableState<T> MutableState` and use
    it in `ComputeState` via `var locals = await MutableState.Use()`.
-   As you might remember from [Part 3](./Part03.md), `MutableState.Use`
+   As you might remember from [Part 1](./Part01.md), `MutableState.Use`
    is the same as `MutableState.Computed.Use`, and it makes state
    a dependency of what's computed now, so once `MutableState` gets changed,
    the recomputation of `State` will happen automatically.

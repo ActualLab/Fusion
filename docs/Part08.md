@@ -391,4 +391,4 @@ the main point is: **yes, Fusion-based services scale**.
 [Rendezvous Hashing]: https://medium.com/i0exception/rendezvous-hashing-8c00e2fb58b0
 [Compute Service Clients]: ./Part04.md
 [Compute Services]: ./Part01.md
-[IState]: ./Part03.md
+[IState]: ./Part01.md
