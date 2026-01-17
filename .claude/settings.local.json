@@ -1,8 +1,9 @@
 {
-  "outputStyle": "default",
   "permissions": {
     "allow": [
-      "Bash(dotnet run:*)"
+      "Bash(dotnet run:*)",
+      "Bash(dotnet mdsnippets:*)"
     ]
-  }
+  },
+  "outputStyle": "default"
 }
