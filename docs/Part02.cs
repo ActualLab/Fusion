@@ -3,6 +3,7 @@ using ActualLab.Fusion.Server;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
@@ -62,7 +63,7 @@ public class ChatService : IChatService
         }
 
         using var _1 = Invalidation.Begin();
-        _ = GetRecentMessages(default); // No need to invalidate GetWordCount(), coz it depends on GetRecentMessages()
+        _ = GetRecentMessages(default); // No need to invalidate GetWordCount() – it depends on GetRecentMessages()
         return Task.CompletedTask;
     }
 }
@@ -84,6 +85,7 @@ public static class Part02
         #region Part02_ServerSetup
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
+        builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(3));
 
         // Adding Fusion.
         // RpcServiceMode.Server is going to be the default mode for further `fusion.AddService()` calls,
@@ -99,7 +101,7 @@ public static class Part02
         return app;
     }
 
-    public static IServiceProvider CreateClientServiceProvider()
+    public static ServiceProvider CreateClientServiceProvider()
     {
         var services = new ServiceCollection();
         services.AddLogging(logging => {
@@ -136,7 +138,7 @@ public static class Part02
     public static async Task RunClient()
     {
         #region Part02_RunClient
-        var services = CreateClientServiceProvider();
+        await using var services = CreateClientServiceProvider();
         var chatClient = services.GetRequiredService<IChatService>();
 
         // Start GetWordCount() change observer
@@ -239,12 +241,36 @@ public static class Part02
 
         #region Part02_Benchmark_Output
         /* The output:
-        100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release!
+        100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release mode!
         - Warmup...
         - Benchmarking...
         - GetWordCount():         12.187ms
         - GetWordCountPlainRpc(): 2.474s
         */
+        #endregion
+
+        #region Part02_ClientComputedState
+        var stateFactory = services.StateFactory();
+        using var state = stateFactory.NewComputed(
+            new ComputedState<string>.Options() {
+                UpdateDelayer = FixedDelayer.Get(0.5), // 0.5 second update delay
+                EventConfigurator = state1 => {
+                    // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
+                    state1.AddEventHandler(StateEventKind.All,
+                        (s, e) => WriteLine($"{e}: {s.Value}"));
+                },
+            },
+            async (state, cancellationToken) => {
+                var wordCount = await chatClient.GetWordCount(cancellationToken);
+                return $"Word count: {wordCount}";
+            });
+
+        await state.Update(); // Ensures the state gets an up-to-date value
+
+        await chatClient.Post("Hello, World!");
+        await Task.Delay(1000);
+        await chatClient.Post("One Two Three");
+        await Task.Delay(1000);
         #endregion
     }
 }

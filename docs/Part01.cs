@@ -121,8 +121,8 @@ public static class Part01
             // Manually update computedForSumAB
             var newComputedForSumAB = await computedForSumAB.Update();
             // Prints:
-            // Get(a) = 2, we invalidated it, so it was of Sum(a, b)
-            // Sum(a, b) = 2, .Update() call above actually triggered this call
+            // Get(a) = 2 – we invalidated it, so it had to be recomputed by Sum(a, b)
+            // Sum(a, b) = 2 – the .Update() call above triggered this recomputation
 
             WriteLine(newComputedForSumAB.IsConsistent()); // True
             WriteLine(newComputedForSumAB.Value); // 2

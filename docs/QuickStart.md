@@ -913,7 +913,7 @@ client for any Compute Service that mimics its behavior
 completely, including everything related to invalidation
 and dependency tracking.
 
-Such clients are called [Compute Service Clients](Part04.md).
+Such clients are called [Compute Service Clients](Part02.md).
 They are Compute Services too &ndash; you can even cast them to
 `IComputeService` as any other compute service. But:
 
@@ -1058,8 +1058,7 @@ And they really do!
 And congrats &ndash; this is the end of this part, and now you know almost everything!
 The parts we didn't touch at all are:
 
-- [Part 3: IState&lt;T&gt; and Its Flavors](./Part03.md).
-  The key abstraction it describes is `ComputedState<T>` &ndash;
+- [Part 1: Core Concepts](./Part01.md) also covers `ComputedState<T>` &ndash;
   the type that implements "wait for change, make a delay, recompute"
   loop similar to the one we manually coded here, but in more robust
   and convenient way.

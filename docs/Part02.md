@@ -1,4 +1,4 @@
-# ActualLab.Rpc, Compute Service Clients, and Distributed Real-Time Updates
+# Distributed Compute Services: ActualLab.Rpc and Compute Service Clients
 
 Fusion is designed with distributed applications in mind,
 and one of its key features is the ability to expose Compute Services
@@ -107,7 +107,7 @@ public class ChatService : IChatService
         }
 
         using var _1 = Invalidation.Begin();
-        _ = GetRecentMessages(default); // No need to invalidate GetWordCount(), coz it depends on GetRecentMessages()
+        _ = GetRecentMessages(default); // No need to invalidate GetWordCount() – it depends on GetRecentMessages()
         return Task.CompletedTask;
     }
 }
@@ -123,6 +123,7 @@ that exposes `IChatService`:
 ```cs
 var builder = WebApplication.CreateBuilder();
 builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(3));
 
 // Adding Fusion.
 // RpcServiceMode.Server is going to be the default mode for further `fusion.AddService()` calls,
@@ -178,7 +179,7 @@ values under the hood, so it also behaves the same. In particular:
 
 In other words, there is no difference between the Compute Service and its client.
 And that's what makes Compute Services so powerful: they allow building reactive
-services that can be local, remote, or even a mix of both (later you'll learn
+services that can be local, remote, or even a mix of both (later you'll learn that
 Fusion also supports distributed call routing and service meshes), and no matter
 which kind of service you use, they behave the same way.
 
@@ -199,7 +200,7 @@ the server-side Compute Service outputs. So:
 
 <!-- snippet: Part02_RunClient -->
 ```cs
-var services = CreateClientServiceProvider();
+await using var services = CreateClientServiceProvider();
 var chatClient = services.GetRequiredService<IChatService>();
 
 // Start GetWordCount() change observer
@@ -294,8 +295,8 @@ The RPC call is deemed unnecessary, if:
 - The client finds a `Computed<T>` replica for it (i.e., for the same call to the same service with the same arguments)
 - And this replica is still in `Consistent` state (i.e., wasn't invalidated from the moment it was created).
 
-In other words, Computed Service Clients cache call results and reuse them  
-until the moment they learn from the server that some of these results are invalidated.
+In other words, Computed Service Clients cache call results and reuse them
+until they learn from the server that some of these results have been invalidated.
 
 And that's why performance-wise, such clients are almost exact replicas of server-side Compute Services:
 
@@ -304,8 +305,7 @@ And that's why performance-wise, such clients are almost exact replicas of serve
 - Otherwise, they respond instantly.
 
 Let's see this in action. We've already added the `GetWordCountPlainRpc` method to our interface
-and implementation &ndash; and since it's not a compute method, it won't benefit from Fusion's caching features
-for compute methods.
+and implementation &ndash; since it's not a compute method, it won't benefit from Fusion's caching.
 
 <!-- snippet: Part02_Benchmark -->
 ```cs
@@ -333,7 +333,7 @@ The output:
 <!-- snippet: Part02_Benchmark_Output -->
 ```cs
 /* The output:
-100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release!
+100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release mode!
 - Warmup...
 - Benchmarking...
 - GetWordCount():         12.187ms
@@ -348,10 +348,87 @@ on a single CPU core in the "cache hit" scenario.
 A bit more robust test would produce 18M call/s, or 55ns per-call timing on the same machine;
 for the comparison, a single `Dictionary<TKey, TValue>` lookup requires ~5-10ns on .NET 10.
 
-And it's 100x faster than local RPC via ActualLab.Rpc, which translates to **300-1000x
-speedup compared to RPC via SignalR, gRPC, or HTTP client**.
+And it's ~200x faster than plain RPC via ActualLab.Rpc, which translates to **600-2000x
+speedup compared to RPC via SignalR, gRPC, or HTTP**.
 
 If you are interested in more robust benchmarks, check out `Benchmark` and `RpcBenchmark`
 projects in [Fusion Samples](https://github.com/ActualLab/Fusion.Samples).
 
-#### [Next: Part 03 &raquo;](./Part03.md) | [Documentation Home](./README.md)
+## Client-Side Computed State
+
+In [Part 1](./Part01.md), you learned about `ComputedState<T>` &ndash; a state that
+auto-updates once it becomes inconsistent. Now, let's show that client-side
+`ComputedState<T>` can use a Compute Service Client to "observe" the output of
+a server-side Compute Service.
+
+The code below reuses the `IChatService` and server setup from above,
+but adds a `ComputedState<T>` on the client side that tracks changes:
+
+<!-- snippet: Part02_ClientComputedState -->
+```cs
+var stateFactory = services.StateFactory();
+using var state = stateFactory.NewComputed(
+    new ComputedState<string>.Options() {
+        UpdateDelayer = FixedDelayer.Get(0.5), // 0.5 second update delay
+        EventConfigurator = state1 => {
+            // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
+            state1.AddEventHandler(StateEventKind.All,
+                (s, e) => WriteLine($"{e}: {s.Value}"));
+        },
+    },
+    async (state, cancellationToken) => {
+        var wordCount = await chatClient.GetWordCount(cancellationToken);
+        return $"Word count: {wordCount}";
+    });
+
+await state.Update(); // Ensures the state gets an up-to-date value
+
+await chatClient.Post("Hello, World!");
+await Task.Delay(1000);
+await chatClient.Post("One Two Three");
+await Task.Delay(1000);
+```
+<!-- endSnippet -->
+
+The output:
+
+```text
+Invalidated:
+Updating:
+Updated: Word count: 0
+Invalidated: Word count: 0
+Updating: Word count: 0
+Updated: Word count: 2
+Invalidated: Word count: 2
+Updating: Word count: 2
+Updated: Word count: 5
+```
+
+Notice the state lifecycle:
+1. **Updated** &ndash; state was computed (or re-computed)
+2. **Invalidated** &ndash; the state's underlying `Computed<T>` became inconsistent
+3. **Updating** &ndash; state is about to recompute (after the `UpdateDelayer` delay)
+
+This is exactly the mechanism that powers real-time UI in Fusion's Blazor components.
+
+## Real-Time UI Updates
+
+As you might guess, this is exactly the logic our Blazor samples use to update
+the UI in real time. Moreover, we similarly use the same interface both for
+Compute Services and their clients &ndash; and that's precisely what allows
+us to have the same UI components working in WASM and Server-Side Blazor mode:
+
+- When UI components are rendered on the server side, they pick server-side
+  Compute Services from host's `IServiceProvider` as implementation of
+  `IWhateverService`. Replicas aren't needed there, because everything is local.
+- And when the same UI components are rendered on the client, they pick
+  Compute Service Client as `IWhateverService` from the client-side IoC container,
+  and that's what makes any `IState<T>` update in real time there, which
+  in turn makes UI components re-render.
+
+## Summary
+
+**That's pretty much it &ndash; now you've learned all the key features of Fusion.**
+There are details, of course, and the rest of the tutorial is mostly about them.
+
+#### [Next: Part 05 &raquo;](./Part05.md) | [Documentation Home](./README.md)
