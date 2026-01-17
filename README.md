@@ -201,36 +201,44 @@ including the sign-in state:
 
 ![](docs/img/GetTile.jpg)
 
-`IChats.GetTile` reads a small "chat tile" &ndash; typically 5 entries pinned to a specific ID range, so it can be efficiently cached. And even for these calls the typical response time is barely measurable: every X axis mark is 10x larger than the previous one, so **the highest peak you see is at `0.03ms`!**
+`IChats.GetTile` reads a small "chat tile" &ndash; typically 5 entries pinned to a specific ID range, so it can be efficiently cached. And even for these calls the typical response time is barely measurable: every X-axis mark is 10x larger than the previous one, so **the highest peak you see is at `0.03ms`!**
 
 The next bump at ~`4-5ms` is when the service actually goes to the DB &ndash; i.e., it's the time you'd expect to see without Fusion. The load would be much higher though, because _the calls you see on this chart are only the calls that "made it" to the server_ &ndash; in other words, they weren't eliminated by the client and its Fusion services.
 
-[A small synthetic benchmark in Fusion test suite](https://github.com/ActualLab/Fusion/blob/master/tests/ActualLab.Fusion.Tests/PerformanceTest.cs)
-compares "raw" [Entity Framework Core](https://docs.microsoft.com/en-us/ef/core/)-based
-Data Access Layer (DAL) against its version relying on Fusion:
+### Benchmark Highlights
 
-| Calls/s                        | PostgreSQL  | MariaDB     | SQL Server  | Sqlite      |
-| ------------------------------ | ----------- | ----------- | ----------- | ----------- |
-| Single reader                  | 1.02K       | 645.77      | 863.33      | 3.79K       |
-| 960 readers (high concurrency) | 12.96K      | 14.52K      | 16.66K      | 16.50K      |
-| Single reader + Fusion         | 9.54**M**   | 9.28**M**   | 9.05**M**   | 8.92**M**   |
-| 960 readers + Fusion           | 145.95**M** | 140.29**M** | 137.70**M** | 141.40**M** |
+Our [benchmarks](./docs/Performance.md) show Fusion delivering **over 300 million calls per second** on a consumer CPU (AMD Ryzen 9 9950X3D) with its transparent caching:
 
-The raw output for this test on Ryzen Threadripper 3960X is [here](./docs/performance-test-results/net8-amd.txt). The number of readers looks crazy at first, but it is tweaked to maximize the output for non-Fusion version of DAL (the readers are asynchronous, so they mostly wait for DB response there).
+| Scenario                                       | Without Fusion        | With Fusion     | Speedup     |
+|------------------------------------------------|-----------------------|-----------------|-------------|
+| Local DAL, almost no writes (peak performance) | 38.61K calls/s        | 313.75M calls/s | **>8,000x** |
+| Local repo-like service, non-stop writes       | 136.91K calls/s       | 263.62M calls/s | **~2,000x** |
+| Remote repo-like service, non-stop writes      | 99.66K calls/s (REST) | 223.15M calls/s | **~2,200x** |
 
-Fusion's transparent caching ensures every API call result your code produces is cached, and moreover, even when such results are recomputed, they mostly use other cached dependencies instead of hitting a much slower storage (DB in this case).
+These aren't typos &ndash; Fusion makes your services **thousands of times faster** by eliminating redundant computation, RPC, and database access.
 
-And interestingly, even when there are no "layers" of dependencies (think only "layer zero" is there), Fusion manages to speed up the API calls this test runs by **8,000 to 12,000** times.
+Note that these benchmarks test Fusion method calls with no dependency chains. Real-life Fusion-based API services typically call other compute services, forming deep dependency graphs. Each layer multiplies the savings (i.e. when something is recomputed, it's typically recomputed just partially), so real-world speedups are often *even higher* than what you see here.
+
+### ActualLab.Rpc: The Fastest RPC Protocol on .NET
+
+`ActualLab.Rpc` is an extendable RPC protocol powering Fusion's distributed features. It isn't "coupled" to Fusion, so you can use it independently. It outperforms all major alternatives on plain RPC tests, especially on call tests and small-item streaming tests:
+
+| Framework | Calls/s | Streaming |
+|-----------|---------|-----------|
+| **ActualLab.Rpc** | **8.87M** | **95.10M items/s** |
+| SignalR | 5.34M | 17.11M items/s |
+| gRPC | 1.11M | 38.75M items/s |
+
+So it's **~8x faster than gRPC** for RPC calls and **~2.5x faster** for streaming.
 
 #### What makes Fusion fast:
 
 - The concept itself is all about eliminating any unnecessary computation. Think `msbuild`, but for your method call results: what's computed and consistent is never recomputed.
-- Fusion caches call results in memory, so if it's a hit, they're instantly available. No round-trips to external caches, no serialization/deserialization, etc.
+- Fusion caches call results in memory, so if there's a cache hit, the result is instantly available. No round-trips to external caches, no serialization/deserialization, etc.
 - Moreover, there is no cloning: what's cached is the .NET object or struct returned from a call, so any call result is "shared". This is much more CPU cache-friendly than, e.g., deserializing a new copy on every hit.
-- Fusion uses its own `ActualLab.Interception` library to intercept method calls, and although there is no benchmark yet, these are the fastest call interceptors available on .NET &ndash; they're much faster than e.g. the ones provided by [Castle.DynamicProxy](http://www.castleproject.org/projects/dynamicproxy/). They don't box call arguments and require just 1 allocation per call.
-- The same is true about `ActualLab.Rpc` - a part of Fusion responsible for its RPC calls. Its [preliminary benchmark results](https://actuallab.github.io/Fusion.Samples/rpc-benchmark) show it is ~ **1.5x faster than SignalR**, and ~ **3x faster than gRPC**.
+- Fusion uses its own `ActualLab.Interception` library for method interception. Unlike [Castle.DynamicProxy](http://www.castleproject.org/projects/dynamicproxy/) and similar libraries that box arguments and allocate heavily, our interceptors require just 1 allocation per call with zero boxing &ndash; making them the fastest on .NET.
 - `ActualLab.Rpc` uses the fastest serializers available on .NET &ndash; [MemoryPack](https://github.com/Cysharp/MemoryPack) by default (it doesn't require runtime IL Emit), though you can also use [MessagePack](https://github.com/MessagePack-CSharp/MessagePack-CSharp) (it's slightly faster, but requires IL Emit) or anything else you prefer.
-- All critical execution paths in Fusion are heavily optimized. The [archived version of this page](https://web.archive.org/web/20201212144353/https://github.com/ActualLab/Fusion) shows the performance on the above test is currently 3x better than it was 2 years ago.
+- All critical execution paths in Fusion are heavily optimized. The [archived version of this page](https://web.archive.org/web/20201212144353/https://github.com/servicetitan/Stl.Fusion/) shows the performance of local compute services is currently 10x better than it was a few years ago.
 
 ## Does Fusion scale?
 
