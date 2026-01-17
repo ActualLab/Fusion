@@ -8,7 +8,9 @@
       "Bash(dotnet build:*)",
       "Bash(\"./artifacts/tests/bin/ActualLab.Fusion.Tests.PerformanceTestRunner/release_net10.0/ActualLab.Fusion.Tests.PerformanceTestRunner.exe\" npgsql sqlite)",
       "Bash(wmic cpu:*)",
-      "Bash(wmic memorychip:*)"
+      "Bash(wmic memorychip:*)",
+      "Bash(powershell -Command \"$env:USERPROFILE\")",
+      "Bash(dir:*)"
     ]
   },
   "outputStyle": "default"
