@@ -4,7 +4,7 @@ layout: home
 hero:
   name: ActualLab.Fusion
   text: The "real-time on!" switch for .NET
-  tagline: Add real-time updates to any .NET app with almost no code changes. 8,000x faster APIs. Production-proven.
+  tagline: Add real-time updates and caching to any .NET app with almost no code changes. 10,000x faster APIs. Production-proven.
   image:
     src: ./img/fusion-hero-bg.svg
     alt: Fusion Network Background
@@ -34,7 +34,7 @@ features:
     details: Like MSBuild or Make, but for every method on your API and backend. Mark one call result as changed, and every result depending on it gets invalidated—even on remote machines.
   - icon: 📡
     title: Fastest RPC on .NET
-    details: ActualLab.Rpc is 8x faster than gRPC for calls, 2.5x faster for streaming.
+    details: ActualLab.Rpc is 8x faster than gRPC for calls, 2-3x faster for streaming.
   - icon: 💾
     title: Offline Mode Ready
     details: Use persistent client-side caching to let your clients work offline and sync when connected. Reduce startup traffic to kilobytes even for very large working sets.
