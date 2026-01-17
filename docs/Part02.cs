@@ -62,7 +62,7 @@ public class ChatService : IChatService
         }
 
         using var _1 = Invalidation.Begin();
-        _ = GetRecentMessages(default); // No need to invalidate GetWordCount(), coz it depends on GetRecentMessages()
+        _ = GetRecentMessages(default); // No need to invalidate GetWordCount() – it depends on GetRecentMessages()
         return Task.CompletedTask;
     }
 }
@@ -239,7 +239,7 @@ public static class Part02
 
         #region Part02_Benchmark_Output
         /* The output:
-        100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release!
+        100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release mode!
         - Warmup...
         - Benchmarking...
         - GetWordCount():         12.187ms
