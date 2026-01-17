@@ -353,4 +353,4 @@ speedup compared to RPC via SignalR, gRPC, or HTTP**.
 If you are interested in more robust benchmarks, check out `Benchmark` and `RpcBenchmark`
 projects in [Fusion Samples](https://github.com/ActualLab/Fusion.Samples).
 
-#### [Next: Part 03 &raquo;](./Part03.md) | [Documentation Home](./README.md)
+#### [Next: Part 04 &raquo;](./Part04.md) | [Documentation Home](./README.md)

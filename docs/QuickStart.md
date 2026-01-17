@@ -1058,8 +1058,7 @@ And they really do!
 And congrats &ndash; this is the end of this part, and now you know almost everything!
 The parts we didn't touch at all are:
 
-- [Part 3: IState&lt;T&gt; and Its Flavors](./Part03.md).
-  The key abstraction it describes is `ComputedState<T>` &ndash;
+- [Part 1: Core Concepts](./Part01.md) also covers `ComputedState<T>` &ndash;
   the type that implements "wait for change, make a delay, recompute"
   loop similar to the one we manually coded here, but in more robust
   and convenient way.

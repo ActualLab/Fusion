@@ -9,17 +9,18 @@ Fusion works by combining two key concepts:
 - Smart caching: It remembers the results of computations
 - Dependency tracking: It knows which data depends on other data
 
-Think of it like a spreadsheet:
-- When you change a cell, all formulas using that cell automatically recalculate
-- But formulas that don't depend on the changed cell stay the same
-- In Excel, you create these relationships by writing formulas
+Think of it like MSBuild or Make:
+- When a source file changes, dependent build targets are marked as outdated
+- But they don't rebuild until you actually run the build
+- Only outdated targets rebuild; everything else stays cached
 
 Similarly, with Fusion:
-- When data changes, only the affected parts update
-- Everything else stays cached
-- You create these relationships in your code by calling `Invalidate()`
-- Fusion uses these invalidation calls to build a dependency tree
-- When something changes, Fusion knows exactly what needs updating
+- When data changes, dependent computed values are immediately marked as inconsistent
+- But they don't recompute until someone requests them (lazy computation)
+- Old values remain accessible—UI can keep displaying them while updates are in progress
+- You trigger invalidation in your code by calling methods inside `Invalidation.Begin()` block
+- Fusion automatically tracks which methods called which, building a dependency graph
+- When something is invalidated, Fusion knows exactly what else becomes inconsistent
 
 There's a saying that there are only two hard problems in computer science: cache invalidation and naming things. And because we are trying to solve the easier one of the two, but we need to do that perfectly (as there's nothing worse than a half-working caching system), the devil is in the details. That's why it is good to make a distinction between different degrees of complexity:
 
