@@ -913,7 +913,7 @@ client for any Compute Service that mimics its behavior
 completely, including everything related to invalidation
 and dependency tracking.
 
-Such clients are called [Compute Service Clients](Part04.md).
+Such clients are called [Compute Service Clients](Part02.md).
 They are Compute Services too &ndash; you can even cast them to
 `IComputeService` as any other compute service. But:
 
