@@ -1,3 +1,8 @@
 {
-  "outputStyle": "default"
+  "outputStyle": "default",
+  "permissions": {
+    "allow": [
+      "Bash(dotnet run:*)"
+    ]
+  }
 }
