@@ -1,36 +1,35 @@
 # Part 5: Fusion on Server-Side Only
 
-Even though Fusion supports RPC, you can use it on server-side to cache recurring computations.
-Below is the output of
-[Caching Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Caching) (slightly outdated):
+Even though Fusion supports RPC, you can use it on server-side only to cache recurring computations.
+Below are results from [Run-Benchmark.cmd from Fusion Samples](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Benchmark):
 
-```text
-Local services:
-Fusion's Compute Service [-> EF Core -> SQL Server]:
-  Reads         : 27.55M operations/s
-Regular Service [-> EF Core -> SQL Server]:
-  Reads         : 25.05K operations/s
+**Local Services:**
 
-Remote services:
-Fusion's Compute Service Client [-> HTTP+WebSocket -> ASP.NET Core -> Compute Service -> EF Core -> SQL Server]:
-  Reads         : 20.29M operations/s
-RestEase Client [-> HTTP -> ASP.NET Core -> Compute Service -> EF Core -> SQL Server]:
-  Reads         : 127.96K operations/s
-RestEase Client [-> HTTP -> ASP.NET Core -> Regular Service -> EF Core -> SQL Server]:
-  Reads         : 20.46K operations/s
-```
+| Test | Result | Speedup |
+|------|--------|---------|
+| Regular Service | 136.91K calls/s | |
+| Fusion Service | 263.62M calls/s | **~1,926x** |
 
-Last two results are the most interesting in the context of this part:
+**Remote Services:**
 
-- A tiny EF Core-based service exposed via ASP.NET Core controller
-  serves **20,500** requests per second. That's already a lot &ndash;
-  mostly, because its data set fully fits in RAM on SQL Server.
+| Test | Result | Speedup |
+|------|--------|---------|
+| HTTP Client → Regular Service | 99.66K calls/s | |
+| HTTP Client → Fusion Service | 420.67K calls/s | **~4.2x** |
+| ActualLab.Rpc Client → Fusion Service | 6.10M calls/s | **~61x** |
+| Fusion Client → Fusion Service | 223.15M calls/s | **~2,239x** |
+
+The last two rows are the most interesting in the context of this part:
+
+- A tiny EF Core-based service exposed via ASP.NET Core
+  serves about **100K** requests per second. That's already a lot &ndash;
+  mostly because its data set fully fits in RAM.
 - An identical service relying on Fusion (it's literally the same code
   plus Fusion's `[ComputeMethod]` and `Invalidation.Begin` calls)
-  boosts this number to **128,000** requests per second.
+  boosts this number to **420K** requests per second when accessed via HTTP.
 
 And that's the main reason to use Fusion on server-side only:
-5-10x performance boost with a relatively tiny amount of changes.
+**4-5x performance boost** with a relatively tiny amount of changes.
 [Similarly to incremental builds](https://alexyakunin.medium.com/the-ungreen-web-why-our-web-apps-are-terribly-inefficient-28791ed48035?source=friends_link&sk=74fb46086ca13ff4fea387d6245cb52b),
 the more complex your logic is, the more you are expected to gain.
 
@@ -96,7 +95,7 @@ All of this means that most likely Fusion holds a
 to this value (in reality it uses `GCHandle`-s for performance reasons, but
 technically they do the same).
 
-Let's prove this by uncomment the commented line:
+Let's prove this by uncommenting the commented line:
 
 <!-- snippet: Part05_Caching2 -->
 ```cs
@@ -226,7 +225,7 @@ ab
 
 So the opposite is not true.
 
-But why Fusion behaves this way? The answer is actually super simple:
+But why does Fusion behave this way? The answer is actually quite simple:
 
 - Fusion has to strong-reference every computed instance used to produce an output
   because if any of them gets garbage collected before the output itself,
@@ -235,7 +234,7 @@ But why Fusion behaves this way? The answer is actually super simple:
   (used values) to dependants (values produced from the used ones),
   it also has to reference the direct dependants from every dependency.
   And these references have to be either weak
-  or simply shouldn't be .NET object references, coz if they were strong
+  or simply shouldn't be .NET object references, because if they were strong
   references, this would almost certainly keep the whole graph of `IComputed`
   in memory, which is highly undesirable. That's why Fusion uses the second
   option here &ndash; it stores keys of direct dependants of every `IComputed`
@@ -249,7 +248,7 @@ But why Fusion behaves this way? The answer is actually super simple:
   don't do anything with the second one (so its dependants stay valid).
   As you see, it's a partial invalidation, i.e. something that may cause
   a long-term inconsistency &ndash; which is why Fusion ensures that at any
-  moment of time there can be only one `IComptuted` instance describing
+  moment of time there can be only one `IComputed` instance describing
   given computation.
 
 **Default caching behavior &ndash; a summary:**
@@ -384,7 +383,7 @@ A few tips on how to use it:
 
 ---
 
-**P.S.** If you love algorithms and data structures, check out
+**Note:** If you're interested in algorithms and data structures, check out
 [ConcurrentTimerSet&lt;TTimer&gt;](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Time/ConcurrentTimerSet.cs) &ndash;
 Fusion uses its own implementation of timers to ensure they
 scale much better than `Task.Delay` (which relies on
