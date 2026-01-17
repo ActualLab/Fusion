@@ -78,6 +78,29 @@ All the tools & scripts listed below must be started from `docs/` folder. So if 
   npm run docs:build
   ```
 
+## Running Code Snippets
+
+The `Docs.csproj` project can execute the code samples from `PartXX.cs` files. Each `PartXX.cs` file contains a class with a static `Run` method that demonstrates the concepts described in the corresponding `PartXX.md` file.
+
+To run specific parts:
+```powershell
+# Run a specific part (e.g., Part01)
+dotnet run --project Docs.csproj -- Part01
+
+# Run multiple parts
+dotnet run --project Docs.csproj -- Part01 Part02
+
+# Run all parts
+dotnet run --project Docs.csproj -- all
+
+# Interactive mode: run without arguments to see available parts
+dotnet run --project Docs.csproj
+```
+
+When run interactively (without arguments), the program will:
+1. Display all available parts (classes starting with "Part")
+2. Prompt you to enter part names (space-separated) or press Enter to run all parts
+
 ## Documentation Style Guide
 
 - Use clear, concise language
