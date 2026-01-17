@@ -1,165 +1,188 @@
+using System.Diagnostics;
+using ActualLab.Rpc;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial05;
+namespace Tutorial09;
 
-#region Part05_Service1
-public partial class Service1 : IComputeService
+#region Part09_PrintCommandSession
+public class PrintCommand : ICommand<Unit>
 {
-    [ComputeMethod]
-    public virtual async Task<string> Get(string key)
+    public string Message { get; set; } = "";
+}
+
+// Interface-based command handler
+public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
+{
+    public PrintCommandHandler() => WriteLine("Creating PrintCommandHandler.");
+    public void Dispose() => WriteLine("Disposing PrintCommandHandler");
+
+    public async Task OnCommand(PrintCommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        WriteLine($"{nameof(Get)}({key})");
-        return key;
+        WriteLine(command.Message);
+        WriteLine("Sir, yes, sir!");
     }
 }
 #endregion
 
-#region Part05_Service2
-public partial class Service2 : IComputeService
+#region Part09_RecSumCommandSession
+public class RecSumCommand : ICommand<long>
 {
-    [ComputeMethod]
-    public virtual async Task<string> Get(string key)
-    {
-        WriteLine($"{nameof(Get)}({key})");
-        return key;
-    }
-
-    [ComputeMethod]
-    public virtual async Task<string> Combine(string key1, string key2)
-    {
-        WriteLine($"{nameof(Combine)}({key1}, {key2})");
-        return await Get(key1) + await Get(key2);
-    }
+    public long[] Numbers { get; set; } = Array.Empty<long>();
 }
 #endregion
 
-#region Part05_Service3
-public partial class Service3 : IComputeService
+public static class Part09
 {
-    [ComputeMethod]
-    public virtual async Task<string> Get(string key)
-    {
-        WriteLine($"{nameof(Get)}({key})");
-        return key;
-    }
 
-    [ComputeMethod(MinCacheDuration = 0.3)] // MinCacheDuration was added
-    public virtual async Task<string> Combine(string key1, string key2)
+    public static async Task PrintCommandSession()
     {
-        WriteLine($"{nameof(Combine)}({key1}, {key2})");
-        return await Get(key1) + await Get(key2);
-    }
-}
-#endregion
+        #region Part09_PrintCommandSession2
+        // Building IoC container
+        var serviceBuilder = new ServiceCollection()
+            .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
+        var rpc = serviceBuilder.AddRpc();
+        var commanderBuilder = serviceBuilder.AddCommander()
+            .AddHandlers<PrintCommandHandler>();
+        var services = serviceBuilder.BuildServiceProvider();
 
-public static class Part05
-{
-    public static IServiceProvider CreateServices()
-    {
-        var services = new ServiceCollection();
-        services.AddFusion()
-            .AddService<Service1>()
-            .AddService<Service2>() // We'll use Service2 & other services later
-            .AddService<Service3>();
-        return services.BuildServiceProvider();
-    }
-
-    public static async Task Caching1()
-    {
-        #region Part05_Caching1
-        var service = CreateServices().GetRequiredService<Service1>();
-        // var computed = await Computed.Capture(() => counters.Get("a"));
-        WriteLine(await service.Get("a"));
-        WriteLine(await service.Get("a"));
-        GC.Collect();
-        WriteLine("GC.Collect()");
-        WriteLine(await service.Get("a"));
-        WriteLine(await service.Get("a"));
+        var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
+        await commander.Call(new PrintCommand() { Message = "Are you operational?" });
+        await commander.Call(new PrintCommand() { Message = "Are you operational?" });
         #endregion
     }
 
-    public static async Task Caching2()
+    public class RecSumCommandHandler
     {
-        #region Part05_Caching2
-        var service = CreateServices().GetRequiredService<Service1>();
-        var computed = await Computed.Capture(() => service.Get("a"));
-        WriteLine(await service.Get("a"));
-        WriteLine(await service.Get("a"));
-        GC.Collect();
-        WriteLine("GC.Collect()");
-        WriteLine(await service.Get("a"));
-        WriteLine(await service.Get("a"));
+        public RecSumCommandHandler() => WriteLine("Creating RecSumCommandHandler.");
+        public void Dispose() => WriteLine("Disposing RecSumCommandHandler");
+
+        [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
+        private async Task<long> RecSum(
+            RecSumCommand command,
+            IServiceProvider services, // Resolved via CommandContext.Services
+            ICommander commander, // Resolved via CommandContext.Services
+            CancellationToken cancellationToken)
+        {
+            var context = CommandContext.GetCurrent();
+            Debug.Assert(services == context.Services); // context.Services is a scoped IServiceProvider
+            Debug.Assert(commander == services.Commander()); // ICommander is singleton
+            Debug.Assert(services != commander.Services); // Scoped IServiceProvider != top-level IServiceProvider
+            WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
+
+            // Each call creates a new CommandContext
+            var contextStack = new List<CommandContext>();
+            var currentContext = context;
+            while (currentContext != null) {
+                contextStack.Add(currentContext);
+                currentContext = currentContext.OuterContext;
+            }
+            WriteLine($"CommandContext stack size: {contextStack.Count}");
+            Debug.Assert(contextStack[^1] == context.OutermostContext);
+
+            // Finally, CommandContext.Items is ~ like HttpContext.Items, and similarly to
+            // service scope, they are the same for all contexts in recursive call chain.
+            var depth = 1 + (int) (context.Items["Depth"] ?? 0);
+            context.Items["Depth"] = depth;
+            WriteLine($"Depth via context.Items: {depth}");
+
+            // Finally, the actual handler logic :)
+            if (command.Numbers.Length == 0)
+                return 0;
+            var head = command.Numbers[0];
+            var tail = command.Numbers[1..];
+            var tailSum = await context.Commander.Call(
+                new RecSumCommand() { Numbers = tail }, false, // Try changing it to true
+                cancellationToken);
+            return head + tailSum;
+        }
+    }
+
+    public static async Task RecSumCommandSession()
+    {
+        #region Part09_RecSumCommandSession2
+        // Building IoC container
+        var serviceBuilder = new ServiceCollection()
+            .AddScoped<RecSumCommandHandler>();
+        var rpc = serviceBuilder.AddRpc();
+        var commanderBuilder = serviceBuilder.AddCommander()
+            .AddHandlers<RecSumCommandHandler>();
+        var services = serviceBuilder.BuildServiceProvider();
+
+        var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
+        WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2, 3 }}));
         #endregion
     }
 
-    public static async Task Caching3()
-    {
-        #region Part05_Caching3
-        var service = CreateServices().GetRequiredService<Service2>();
-        var computed = await Computed.Capture(() => service.Combine("a", "b"));
-        WriteLine("computed = Combine(a, b) completed");
-        WriteLine(await service.Combine("a", "b"));
-        WriteLine(await service.Get("a"));
-        WriteLine(await service.Get("b"));
-        WriteLine(await service.Combine("a", "c"));
-        GC.Collect();
-        WriteLine("GC.Collect() completed");
-        WriteLine(await service.Get("a"));
-        WriteLine(await service.Get("b"));
-        WriteLine(await service.Combine("a", "c"));
-        #endregion
-    }
 
-    public static async Task Caching4()
+    public static async Task RecSumCommandServiceSession()
     {
-        #region Part05_Caching4
-        var service = CreateServices().GetRequiredService<Service2>();
-        var computed = await Computed.Capture(() => service.Get("a"));
-        WriteLine("computed = Get(a) completed");
-        WriteLine(await service.Combine("a", "b"));
-        GC.Collect();
-        WriteLine("GC.Collect() completed");
-        WriteLine(await service.Combine("a", "b"));
-        #endregion
-    }
+        #region Part09_RecSumCommandServiceSession2
+        // Building IoC container
+        var serviceBuilder = new ServiceCollection();
+        var rpc = serviceBuilder.AddRpc();
+        var commanderBuilder = serviceBuilder.AddCommander()
+            .AddService<RecSumCommandService>(); // Such services are auto-registered as singletons
+        var services = serviceBuilder.BuildServiceProvider();
 
-    public static async Task Caching5()
-    {
-        #region Part05_Caching5
-        var service = CreateServices().GetRequiredService<Service3>();
-        WriteLine(await service.Combine("a", "b"));
-        WriteLine(await service.Get("a"));
-        WriteLine(await service.Get("x"));
-        GC.Collect();
-        WriteLine("GC.Collect()");
-        WriteLine(await service.Combine("a", "b"));
-        WriteLine(await service.Get("a"));
-        WriteLine(await service.Get("x"));
-        await Task.Delay(1000);
-        GC.Collect();
-        WriteLine("Task.Delay(...) and GC.Collect()");
-        WriteLine(await service.Combine("a", "b"));
-        WriteLine(await service.Get("a"));
-        WriteLine(await service.Get("x"));
+        var commander = services.Commander();
+        var recSumService = services.GetRequiredService<RecSumCommandService>();
+        WriteLine(recSumService.GetType());
+        WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2 }}));
+        WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 3L, 4 }}));
         #endregion
     }
 
     public static async Task Run()
     {
-        WriteLine("Caching1:");
-        await Caching1();
-        WriteLine();
-        WriteLine("Caching2:");
-        await Caching2();
-        WriteLine();
-        WriteLine("Caching3:");
-        await Caching3();
-        WriteLine();
-        WriteLine("Caching4:");
-        await Caching4();
-        WriteLine();
-        WriteLine("Caching5:");
-        await Caching5();
+        await PrintCommandSession();
+        await RecSumCommandSession();
+        await RecSumCommandServiceSession();
+    }
+
+}
+
+#region Part09_RecSumCommandServiceSession
+public class RecSumCommandService : ICommandService
+{
+    [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
+    public virtual async Task<long> RecSum( // Notice "public virtual"!
+        RecSumCommand command,
+        // You can't have any extra arguments here
+        CancellationToken cancellationToken = default)
+    {
+        if (command.Numbers.Length == 0)
+            return 0;
+        var head = command.Numbers[0];
+        var tail = command.Numbers[1..];
+        var context = CommandContext.GetCurrent();
+        var tailSum = await context.Commander.Call( // Note it's a direct call, but the whole pipeline still gets invoked!
+            new RecSumCommand() { Numbers = tail },
+            cancellationToken);
+        return head + tailSum;
+    }
+
+    // This handler is associated with ANY command (ICommand)
+    // Priority = 10 means it runs earlier than any handler with the default priority 0
+    // IsFilter tells it triggers other handlers via InvokeRemainingHandlers
+    [CommandHandler(Priority = 10, IsFilter = true)]
+    protected virtual async Task DepthTracker(ICommand command, CancellationToken cancellationToken)
+    {
+        var context = CommandContext.GetCurrent();
+        var depth = 1 + (int) (context.Items["Depth"] ?? 0);
+        context.Items["Depth"] = depth;
+        WriteLine($"Depth via context.Items: {depth}");
+
+        await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
+    }
+
+    // Another filter for RecSumCommand
+    [CommandHandler(Priority = 9, IsFilter = true)]
+    protected virtual Task ArgumentWriter(RecSumCommand command, CancellationToken cancellationToken)
+    {
+        WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
+        var context = CommandContext.GetCurrent();
+        return context.InvokeRemainingHandlers(cancellationToken);
     }
 }
+#endregion

@@ -584,7 +584,7 @@ I'll give a brief answer here:
   call and "the invalidation call" were completed for it locally.
 
 Under the hood all of this is powered by similar AOP-style
-decorators and [CommandR](Part09.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) &ndash;
+decorators and [CommandR](Part05.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) &ndash;
 style abstraction used by Fusion to implement its command processing
 pipeline.
 
@@ -649,7 +649,7 @@ And a few final remarks on this:
    This pipeline is server-side only.
 
 > If you want to learn all the details about this &ndash; check out
-> [Part 8](Part08.md), [Part 9](Part09.md), and [Part 10](Part10.md)
+> [Part 8](Part08.md), [Part 5](Part05.md), and [Part 10](Part10.md)
 > of the Tutorial 😎
 
 ## Version 2: Switching to EF Core
@@ -913,7 +913,7 @@ client for any Compute Service that mimics its behavior
 completely, including everything related to invalidation
 and dependency tracking.
 
-Such clients are called [Compute Service Clients](Part02.md).
+Such clients are called [Compute Service Clients](Part03.md).
 They are Compute Services too &ndash; you can even cast them to
 `IComputeService` as any other compute service. But:
 
@@ -1062,10 +1062,10 @@ The parts we didn't touch at all are:
   the type that implements "wait for change, make a delay, recompute"
   loop similar to the one we manually coded here, but in more robust
   and convenient way.
-- [Part 6: Real-time UI in Blazor Apps](./Part06.md) &ndash;
+- [Part 4: Real-time UI in Blazor Apps](./Part04.md) &ndash;
   you'll learn how `ComputedState<T>` is used by
   `LiveComponent<T>` to power real-time updates in Blazor.
-- [Part 5: Fusion on Server-Side Only](./Part05.md) &ndash;
+- [Part 2: Fusion on Server-Side Only](./Part02.md) &ndash;
   read it to fully understand how Fusion actually caches `IComputed`
   instances, and what are the levers you can use to tweak its
   caching behavior.

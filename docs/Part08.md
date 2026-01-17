@@ -314,10 +314,10 @@ eliminate it:
 
 Decrease the number of objects in heap &ndash; by:
 
-- Reusing existing objects (immutable or [`IFrozen` objects](./Part05))
+- Reusing existing objects (immutable or [`IFrozen` objects](./Part02))
 - Returning more of serialized data (byte arrays or strings)
 - Returning structs pointing to serialized data in large buffers
-- Relying on Fusion's [`[Swap]` attribute](./Part05.md).
+- Relying on Fusion's [`[Swap]` attribute](./Part02.md).
 
 Limit the size of your working set to run `N` processes per host &ndash; by:
 
@@ -389,6 +389,6 @@ the main point is: **yes, Fusion-based services scale**.
 
 [Consistent Hashing]: https://en.wikipedia.org/wiki/Consistent_hashing
 [Rendezvous Hashing]: https://medium.com/i0exception/rendezvous-hashing-8c00e2fb58b0
-[Compute Service Clients]: ./Part02.md
+[Compute Service Clients]: ./Part03.md
 [Compute Services]: ./Part01.md
 [IState]: ./Part01.md
