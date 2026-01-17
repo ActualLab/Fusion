@@ -49,7 +49,7 @@ Every call to Fusion service method can benefit from:
 6. **Distributed memoization** &ndash; RPC clients of Fusion services cache results locally; calls that "hit" a still-consistent cache entry resolve instantly. In other words, remote clients of Fusion services behave exactly like the services they "mirror".
 7. **Distributed invalidation** &ndash; when a server-side result is invalidated, the server invalidates cached copies of that result on every client.
 
-**Additional performance improvements:**
+**RPC-specific optimizations:**
 8. **Automatic RPC message batching** &ndash; when possible, RPC messages are automatically grouped into a single transmission frame, reducing round-trips.
 9. **Persistent client-side caching** &ndash; allows you to persist and reuse RPC call results in e.g. IndexedDB or SQLite database, enabling offline operation and much faster cold starts for client apps.
 10. **ETag-like "cache match" responses** &ndash; paired with persistent client-side caching, this feature shrinks client app startup traffic by 10x or more: clients send the version of their cached result, and if it matches, the server responds with a lightweight "match" instead of the full payload.
