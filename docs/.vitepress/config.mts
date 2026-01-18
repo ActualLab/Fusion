@@ -36,9 +36,10 @@ export default defineConfig({
       {
         text: "Extras",
         items: [
-          { text: "Learn Fusion via HelloCart Sample", link: "/HelloCart" },
-          { text: "Cheat Sheet", link: "/Cheat-Sheet" },
           { text: "NuGet Packages", link: "/NuGet-Packages" },
+          { text: "Cheat Sheet", link: "/Cheat-Sheet" },
+          { text: "Learn Fusion via HelloCart Sample", link: "/HelloCart" },
+          { text: "Story Behind Fusion", link: "/Story" },
         ],
       },
     ],

@@ -1,11 +1,11 @@
 # The Story Behind Fusion
 
-Somewhere in 2011 I started to use [Knockout](https://knockoutjs.com/)
+Somewhere in 2011, I started to use [Knockout](https://knockoutjs.com/)
 by [Steve Sanderson](http://blog.stevensanderson.com/) &ndash;
 a JavaScript library that eventually became a de-facto standard "backbone"
 for your view models in
 [SPA](https://en.wikipedia.org/wiki/Single-page_application)s
-running on Microsoft web stack.
+running on the Microsoft web stack.
 The [computed observable abstraction](https://knockoutjs.com/documentation/computedObservables.html)
 it offers provides an astonishingly convenient way of describing how
 certain parts of the model change in response to changes made to other parts.
@@ -16,8 +16,8 @@ the company's own web framework with its own gemstone:
 in real-time. When someone upvotes an answer or writes a comment,
 other users instantly see the change without refreshing the page, and this
 applies to every piece of content! It is 2012, and as far as I remember,
-none of the top websites was capable of something remotely similar to this &ndash;
-in short, this was quite unusual, and the problem was looking really hard to tackle at such a scale.
+none of the top websites were capable of something remotely similar to this &ndash;
+in short, this was quite unusual, and the problem looked really hard to tackle at such a scale.
 You can learn more about the underlying technology in
 [Shreyes Seshasai's Tech Talk @ Stanford from May 2011: "webnode2 and LiveNode"](https://www.quora.com/q/shreyesseshasaisposts/Tech-Talk-webnode2-and-LiveNode),
 but overall, Quora used (and AFAIK, still uses) an abstraction allowing
@@ -43,7 +43,7 @@ My thoughts at that point were nearly the following:
 It took a while to get back to this problem &ndash; my first few years at
 [ServiceTitan](https://www.servicetitan.com/) were absolutely terrific,
 but also quite intense in terms of the workload. 2020 was the first
-year I've got a chance to write a fair amount of code;
+year I got a chance to write a fair amount of code;
 besides that, a few other things happened over these years:
 
 - [React](https://reactjs.org/) (I love it from the day one)
@@ -63,7 +63,7 @@ besides that, a few other things happened over these years:
   made it possible to run .NET code in browser /
   [WebAssembly](https://webassembly.org/) &ndash; and in particular,
   enable server-side and client-side code to use shared .NET assemblies.
-  FYI Blazor is also created by Steve Sanderson &ndash; yes, the same
+  FYI, Blazor was also created by Steve Sanderson &ndash; yes, the same
   person who long time ago created Knockout!
 
 So the demand for such a library was still there, and moreover,
