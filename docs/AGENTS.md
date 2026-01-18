@@ -33,8 +33,7 @@ on a similar task.
 - `docs/.vitepress/` contains the VitePress configuration for the documentation site
 - `docs/diagrams/` contains Mermaid diagrams used in the documentation
 - `docs/img/` contains images used in the documentation
-- `docs/tutorial/` contains the outdated documentation files - we are writing the new ones (`Part*.md) based on these ones.
-- `docs/outdated/` contains other outdated documentation that may still be useful.
+- `docs/outdated/` contains other outdated documentation that may still be useful. **DO NOT EDIT files in this folder.**
 
 ## Documentation Tools
 
