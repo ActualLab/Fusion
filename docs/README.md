@@ -21,16 +21,11 @@
 - [Part 1: Core Concepts: Computed Values, Compute Services, Methods, and State](./Part01.md)
 - [Part 2: Fusion on Server-Side Only](./Part02.md)
 - [Part 3: Distributed Compute Services](./Part03.md)
-<!--
 - [Part 4: Real-time UI in Blazor Apps](./Part04.md)
-- [Part 8: Scaling Fusion Services](./Part08.md)
 - [Part 5: CommandR](./Part05.md)
 - [Part 10: Multi-Host Invalidation and CQRS with Operations Framework](./Part10.md)
 - [Part 11: Authentication in Fusion](./Part11.md)
-- <img src="https://img.shields.io/badge/-New!-brightgreen" valign="middle"> [Part 12: ActualLab.Rpc in Fusion 6.1+](./Part12.md)
-- <img src="https://img.shields.io/badge/-New!-brightgreen" valign="middle"> [Part 13: Migration to Fusion 6.1+](./Part13.md)
 - [Epilogue](./PartFF.md)
-  -->
 
 ## Other Resources
 

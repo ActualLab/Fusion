@@ -3,9 +3,9 @@ using ActualLab.Rpc;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial09;
+namespace Tutorial05;
 
-#region Part09_PrintCommandSession
+#region Part05_PrintCommandSession
 public class PrintCommand : ICommand<Unit>
 {
     public string Message { get; set; } = "";
@@ -25,19 +25,19 @@ public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
 }
 #endregion
 
-#region Part09_RecSumCommandSession
+#region Part05_RecSumCommandSession
 public class RecSumCommand : ICommand<long>
 {
     public long[] Numbers { get; set; } = Array.Empty<long>();
 }
 #endregion
 
-public static class Part09
+public static class Part05
 {
 
     public static async Task PrintCommandSession()
     {
-        #region Part09_PrintCommandSession2
+        #region Part05_PrintCommandSession2
         // Building IoC container
         var serviceBuilder = new ServiceCollection()
             .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
@@ -100,7 +100,7 @@ public static class Part09
 
     public static async Task RecSumCommandSession()
     {
-        #region Part09_RecSumCommandSession2
+        #region Part05_RecSumCommandSession2
         // Building IoC container
         var serviceBuilder = new ServiceCollection()
             .AddScoped<RecSumCommandHandler>();
@@ -117,7 +117,7 @@ public static class Part09
 
     public static async Task RecSumCommandServiceSession()
     {
-        #region Part09_RecSumCommandServiceSession2
+        #region Part05_RecSumCommandServiceSession2
         // Building IoC container
         var serviceBuilder = new ServiceCollection();
         var rpc = serviceBuilder.AddRpc();
@@ -142,7 +142,7 @@ public static class Part09
 
 }
 
-#region Part09_RecSumCommandServiceSession
+#region Part05_RecSumCommandServiceSession
 public class RecSumCommandService : ICommandService
 {
     [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
