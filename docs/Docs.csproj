@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
+    <ProjectReference Include="..\src\ActualLab.Fusion.EntityFramework.Npgsql\ActualLab.Fusion.EntityFramework.Npgsql.csproj" />
+    <ProjectReference Include="..\src\ActualLab.Fusion.EntityFramework.Redis\ActualLab.Fusion.EntityFramework.Redis.csproj" />
   </ItemGroup>
 
   <!-- Roslyn generators/analyzers -->

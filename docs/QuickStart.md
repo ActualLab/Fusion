@@ -649,7 +649,7 @@ And a few final remarks on this:
    This pipeline is server-side only.
 
 > If you want to learn all the details about this &ndash; check out
-> [Part 8](Part08.md), [Part 5](Part05.md), and [Part 10](Part10.md)
+> [Part 5](Part05.md) and [Part 10](Part10.md)
 > of the Tutorial 😎
 
 ## Version 2: Switching to EF Core

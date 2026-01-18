@@ -4,18 +4,17 @@
 is a library that provides a robust way to implement multi-host invalidation
 and CQRS-style command handlers.
 
-If you read [Part 8](./Part08.md), you know that multi-host
-invalidation requires the following components:
+Multi-host invalidation requires the following components:
 
-1. **Command execution pipeline.**
-2. **Command logger** &ndash; a handler in this pipeline responsible
-   for logging commands to some persistent store &ndash; and ideally,
-   doing this as part of command's own transaction.
-3. **Command log reader** &ndash; a service watching for command log
+1. **Operation execution pipeline.**
+2. **Operation logger** &ndash; a handler in this pipeline responsible
+   for logging operations to some persistent store &ndash; and ideally,
+   doing this as part of operations' own transaction similarly to how 
+   it's done in outbox pattern.
+3. **Operation log reader** &ndash; a service watching for operation log
    updates made by other processes.
-4. An API allowing to "replay" a command in invalidation mode &ndash;
-   i.e. run a part of command's logic responsible solely for
-   invalidation.
+4. An API allowing to "replay" an operation in invalidation mode &ndash;
+   i.e. run a part of its logic responsible solely for invalidation.
 
 Operations Framework implements this in a very robust way.
 
@@ -28,12 +27,12 @@ OF
 
 Operation
 : An action that could be logged into operation log and replayed.
-So far only commands could act as such actions, but for now
+Currently only commands can act as such actions, but
 the framework implies there might be other kinds of
 operations too. So operation is ~ whatever OF can handle as
 an operation, including commands.
 
-It worth mentioning that OF has almost zero dependency on
+It's worth mentioning that OF has almost zero dependency on
 Fusion. You can use it for other purposes too
 (e.g. audit logging) &ndash; with or without Fusion.
 Moreover, you can easily remove all Fusion-specific services
@@ -47,6 +46,7 @@ its Fusion-specific behaviors.
 <!-- snippet: Part10_DbSet -->
 ```cs
 public DbSet<DbOperation> Operations { get; protected set; } = null!;
+public DbSet<DbEvent> Events { get; protected set; } = null!;
 ```
 <!-- endSnippet -->
 
@@ -54,31 +54,36 @@ public DbSet<DbOperation> Operations { get; protected set; } = null!;
    configuration block
    (typically it is `Startup.ConfigureServices` method or similar):
 
+<!-- snippet: Part10_AddDbContextServices -->
 ```cs
-services.AddDbContextServices<AppDbContext>(db => {
-    // Uncomment if you'll be using AddRedisOperationLogChangeTracking
-    // db.AddRedisDb("localhost", "Fusion.Tutorial.Part10");
+public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
+{
+    services.AddDbContextServices<AppDbContext>(db => {
+        // Uncomment if you'll be using AddRedisOperationLogWatcher
+        // db.AddRedisDb("localhost", "Fusion.Tutorial.Part10");
 
-    db.AddOperations(operations => {
-        // This call enabled Operations Framework (OF) for AppDbContext.
-        operations.ConfigureOperationLogReader(_ => new() {
-            // We use FileBasedDbOperationLogChangeTracking, so unconditional wake up period
-            // can be arbitrary long – all depends on the reliability of Notifier-Monitor chain.
-            // See what .ToRandom does – most of timeouts in Fusion settings are RandomTimeSpan-s,
-            // but you can provide a normal one too – there is an implicit conversion from it.
-            UnconditionalCheckPeriod = TimeSpan.FromSeconds(Env.IsDevelopment() ? 60 : 5).ToRandom(0.05),
+        db.AddOperations(operations => {
+            // This call enabled Operations Framework (OF) for AppDbContext.
+            operations.ConfigureOperationLogReader(_ => new() {
+                // We use AddFileSystemOperationLogWatcher, so unconditional wake up period
+                // can be arbitrary long – all depends on the reliability of Notifier-Monitor chain.
+                // See what .ToRandom does – most of timeouts in Fusion settings are RandomTimeSpan-s,
+                // but you can provide a normal one too – there is an implicit conversion from it.
+                CheckPeriod = TimeSpan.FromSeconds(Env.IsDevelopment() ? 60 : 5).ToRandom(0.05),
+            });
+            // Optionally enable file-based operation log watcher
+            operations.AddFileSystemOperationLogWatcher();
+
+            // Or, if you use PostgreSQL, use this instead of above line
+            // operations.AddNpgsqlOperationLogWatcher();
+
+            // Or, if you use Redis, use this instead of above line
+            // operations.AddRedisOperationLogWatcher();
         });
-        // Optionally enable file-based log change tracker
-        operations.AddFileBasedOperationLogChangeTracking();
-
-        // Or, if you use PostgreSQL, use this instead of above line
-        // operations.AddNpgsqlOperationLogChangeTracking();
-
-        // Or, if you use Redis, use this instead of above line
-        // operations.AddRedisOperationLogChangeTracking();
     });
-});
+}
 ```
+<!-- endSnippet -->
 
 > Note that OF works solely on server side, so you don't have
 > to make similar changes in Blazor app's IoC container
@@ -96,25 +101,25 @@ What happens here?
   `TDbContext` type.
 - `AddOperations` does nearly all the job. I'll cover every service
   it registers in details further.
-- And finally, `AddXxxDbOperationLogChangeTracking` adds one of two
-  services implementing log change tracking notification / listening.
+- And finally, `AddXxxOperationLogWatcher` adds one of
+  the services that watch for operation log updates.
   It's totally fine to omit any of these calls &ndash; in this case
   operation log reader will be waking up only unconditionally, which
   happens 4 times per second by default, so other hosts running
   your code may see 0.25s delay in invalidations of data changed by
   their peers. You can reduce this delay, of course, but doing this
   means you'll be hitting the database more frequently with operation
-  log tail requests. `AddXxxDbOperationLogChangeTracking` methods
+  log tail requests. `AddXxxOperationLogWatcher` methods
   make this part way more efficient by explicitly notifying the log
   reader to read the tail as soon as they know for sure one of their
   peers updated it:
-  - `AddFileBasedOperationLogChangeTracking` relies on a shared file
+  - `AddFileSystemOperationLogWatcher` relies on a shared file
     to pass these notifications. Any peer that updates operation log
     also "touches" this file (just update its modify date), and all
     other peers are using `FileSystemWatcher`-s to know about these
     touches as soon as they happen. And once they happen, they "wake up"
     the operation log reader.
-  - `AddNpgsqlOperationLogChangeTracking` does ~ the same, but
+  - `AddNpgsqlOperationLogWatcher` does ~ the same, but
     relying on PostgreSQL's
     [NOTIFY / LISTEN](https://www.postgresql.org/docs/13/sql-notify.html)
     feature &ndash; basically, a built-in message queue.
@@ -122,10 +127,10 @@ What happens here?
     It's also a bit more efficient than file-based notifications,
     because such notifications also bear the Id of the agent
     that made the change, so the listening process on that agent
-    has a change to ignore any of its own notifications.
-  - Right now there are no other log change tracking options, but
+    has a chance to ignore any of its own notifications.
+  - Right now there are no other operation log watcher options, but
     more are upcoming. And it's fairly easy to add your own &ndash;
-    e.g. [PostgreSQL log change tracking](https://github.com/ActualLab/Fusion/tree/master/src/ActualLab.Fusion.EntityFramework.Npgsql/Operations)
+    e.g. [PostgreSQL operation log watcher](https://github.com/ActualLab/Fusion/tree/master/src/ActualLab.Fusion.EntityFramework.Npgsql)
     requires less than 200 lines of code, and you need to change
     maybe just 30-40 of these lines in your own tracker.
 
@@ -136,12 +141,14 @@ the code of your old action handlers:
 
 **Pre-OF handler:**
 
+<!-- snippet: Part10_PreOfHandler -->
 ```cs
 public async Task<ChatMessage> PostMessage(
     Session session, string text, CancellationToken cancellationToken = default)
 {
-    await using var dbContext = CreateDbContext().ReadWrite();
+    await using var dbContext = await DbHub.CreateDbContext(cancellationToken).ConfigureAwait(false);
     // Actual code...
+    var message = await PostMessageImpl(dbContext, session, text, cancellationToken);
 
     // Invalidation
     using (Invalidation.Begin())
@@ -149,18 +156,17 @@ public async Task<ChatMessage> PostMessage(
     return message;
 }
 ```
+<!-- endSnippet -->
 
 **Post-OF handler:**
 
-‎1. Create a dedicated command type for this action:
+1. Create a dedicated command type for this action:
 
+<!-- snippet: Part10_PostMessageCommand -->
 ```cs
-public record PostMessageCommand(Session Session, string Text) : ICommand<ChatMessage>
-{
-    // Newtonsoft.Json needs this constructor to deserialize this record
-    public PostMessageCommand() : this(Session.Null, "") { }
-}
+public record PostMessageCommand(Session Session, string Text) : ICommand<ChatMessage>;
 ```
+<!-- endSnippet -->
 
 Notice that above type implements `ICommand<ChatMessage>` &ndash; the
 generic parameter `ChatMessage` here is the type of result of
@@ -171,8 +177,9 @@ like "every command has to be a record". Any JSON-serializable
 class will work equally well; I prefer to use records mostly due
 to their immutability.
 
-‎2. Refactor action to command handler:
+2. Refactor action to command handler:
 
+<!-- snippet: Part10_PostOfHandler -->
 ```cs
 [CommandHandler]
 public virtual async Task<ChatMessage> PostMessage(
@@ -183,13 +190,15 @@ public virtual async Task<ChatMessage> PostMessage(
         return default!;
     }
 
-    await using var dbContext = await CreateOperationDbContext(cancellationToken);
-    // The same action handler code as it was in example above.
+    await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
+    // Actual code...
+    var message = await PostMessageImpl(dbContext, command, cancellationToken);
+    return message;
 }
 ```
+<!-- endSnippet -->
 
-A recap from [Part 8](./Part08.md) of how `[CommandHandler]`s
-should look like:
+A recap of how `[CommandHandler]`s should look like:
 
 - Add `virtual` + tag the method with `[CommandHandler]`.
 - New method arguments: `(PostCommand, CancellationToken)`
@@ -213,7 +222,7 @@ The invalidation block inside the handler should be transformed too:
 
 And two last things 😋:
 
-‎1. You can't pass values from the "main" block to the
+1. You can't pass values from the "main" block to the
 invalidation block directly.
 It's not just due to their new order &ndash; the code from your
 invalidation blocks will run a few times for every command
@@ -224,6 +233,7 @@ So to pass some data to your invalidation blocks, use
 `CommandContext.Operation.Items` collection &ndash;
 nearly as follows:
 
+<!-- snippet: Part10_SignOutHandler -->
 ```cs
 public virtual async Task SignOut(
     SignOutCommand command, CancellationToken cancellationToken = default)
@@ -232,7 +242,7 @@ public virtual async Task SignOut(
     var context = CommandContext.GetCurrent();
     if (Invalidation.IsActive) {
         // Fetch operation item
-        var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
+        var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
         if (invSessionInfo is not null) {
             // Use it
             _ = GetUser(invSessionInfo.UserId, default);
@@ -241,20 +251,21 @@ public virtual async Task SignOut(
         return;
     }
 
-    await using var dbContext = await CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
+    await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
 
-    var dbSessionInfo = await Sessions.FindOrCreate(dbContext, session, cancellationToken).ConfigureAwait(false);
+    var dbSessionInfo = await Sessions.FindOrCreate(dbContext, command.Session, cancellationToken).ConfigureAwait(false);
     var sessionInfo = dbSessionInfo.ToModel();
     if (sessionInfo.IsSignOutForced)
         return;
 
     // Store operation item for invalidation logic
-    context.Operation.Items.Set(sessionInfo);
+    context.Operation.Items.KeylessSet(sessionInfo);
     // ...
 }
 ```
+<!-- endSnippet -->
 
-‎2. Calling some other commands from your own commands is totally fine:
+2. Calling some other commands from your own commands is totally fine:
 OF logs & "plays" their invalidation logic on other hosts too,
 it also isolates their own operation items.
 
@@ -280,38 +291,31 @@ heavy-lifting.
 
 Here is the list of such handlers in their invocation order:
 
-### 1. `PreparedCommandHandler`, priority: `1_000_000_001` and `1_000_000_000`
+### 1. `PreparedCommandHandler`, priority: 1_000_000_000
 
-This filtering handler simply invokes `IPreparedCommand.Prepare`
-(higher priority) and `IAsyncPreparedCommand.PrepareAsync` (lower priority)
-on commands that implement these interfaces, where some pre-execution
-validation or fixup is supposed to happen. And as you might judge by
-the priority, this supposed to happen before anything else.
+This filtering handler invokes `IPreparedCommand.Prepare`
+on commands that implement this interface, where some pre-execution
+validation or fixup is supposed to happen. As you might judge by
+the priority, this is supposed to happen before anything else.
 
 You may find out this handler is actually a part of `ActualLab.CommandR`,
 and it's auto-registered when you call `.AddCommander(...)`, so
 it's a "system" command validation handler.
 
-The only command that currently implements validation is
-`ServerSideCommandBase<TResult>` &ndash; actually, a super-important
-base type for commands that can be invoked on server-side only.
-Check out
-[its source code](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/Commands/ServerSideCommandBase.cs) &ndash;
-it's super simple, and it's clear how it's supposed to work:
+Commands that should only run on the server-side should implement
+`IBackendCommand` or `IBackendCommand<TResult>`. These are tagging
+interfaces that mark commands as backend-only:
 
-- If you inherit your command from `ServerSideCommandBase<TResult>`
-  it will expose `IsServerSide` property, which isn't serialized.
-  So creating a command with `IsServerSide = true` is possible
-  on the client, but this flag will be lost once it gets
-  deserialized on the server side.
-- `IServerSideCommand` implements `IPreparedCommand`, and
-  `ServerSideCommandBase.Prepare` fails if `IsServerSide == false`.
-  So you can run such commands on server by explicitly settings
-  this flag to `true` there &ndash; the best way to do this is to use
-  `MarkServerSide()` extension method, which returns the command
-  of the same type, but with this flag set to `true`
+```cs
+public interface IBackendCommand : ICommand;
+public interface IBackendCommand<TResult> : ICommand<TResult>, IBackendCommand;
+```
 
-### 2. `NestedCommandLogger`, priority: 11_000
+When a command implements `IBackendCommand`, Fusion's RPC layer ensures
+it can only be processed by backend peers (servers), not by clients.
+This replaced the older `ServerSideCommandBase<TResult>` pattern.
+
+### 2. `NestedOperationLogger`, priority: 11_000
 
 This filter is responsible for logging all nested commands,
 i.e. commands called while running other commands.
@@ -325,7 +329,7 @@ block &ndash; it happens automatically.
 I won't dig into the details of how it works just yet,
 let's just assume it does the job &ndash; for now.
 
-### 3. `TransientOperationScopeProvider`, priority: 10_000
+### 3. `InMemoryOperationScopeProvider`, priority: 10_000
 
 It is the outermost, "catch-all" operation scope provider
 for commands that don't use any other (real) operation scopes.
@@ -350,7 +354,7 @@ to the underlying storage. Here is how this happens, if we're
 talking about EF:
 
 - `DbOperationScopeProvider<TDbContext>`
-  [creates and "injects"](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/Operations/DbOperationScopeProvider.cs#L54)
+  [creates and "injects"](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/Operations/DbOperationScopeProvider.cs)
   `DbOperationScope<TDbContext>` into
   `CommandContext.GetCurrent().Items` collection.
 - Once your service needs to access `AppDbContext` from the
@@ -365,11 +369,11 @@ you get via it share the same connection and transaction.
 In addition, it ensures that
 [an operation entry is added to the operation log before this
 transaction gets committed, and the fact commit actually happened
-is verified in case of failure](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/DbOperationScope.cs#L133).
+is verified in case of failure](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/Operations/DbOperationScope.cs).
 If you're curious why it makes sense to do this,
 [see this page](https://docs.microsoft.com/en-us/ef/ef6/fundamentals/connection-resiliency/commit-failures).
 
-Now, back to `TransientOperationScopeProvider` &ndash; its job
+Now, back to `InMemoryOperationScopeProvider` &ndash; its job
 is to provide an operation scope for commands that don't use
 other operation scopes &ndash; e.g. the ones that change only
 in-memory state. If your command doesn't use one of APIs
@@ -392,13 +396,13 @@ it remembers up to 10K of up to 1-hour-old operations (more precisely,
 their `Id`-s and commit times).
 
 Even though it invokes all the handlers concurrently,
-`NotifyCompletedAsync` completes when _all_
+`NotifyCompleted` completes when _all_
 `IOperationCompletionListener.OnOperationCompletedAsync` handlers
-complete. So once `NotifyCompletedAsync` completes, you
+complete. So once `NotifyCompleted` completes, you
 can be certain that every of these "follow up" actions is already
 completed as well.
 
-[`CompletionProducer` (check it out, it's tiny)](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Operations/Internal/CompletionProducer.cs#L34) &ndash;
+[`CompletionProducer` (check it out, it's tiny)](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Operations/Internal/CompletionProducer.cs) &ndash;
 is probably the most important one of such listeners.
 The critical part of its job is actually a single line:
 
@@ -424,22 +428,26 @@ For the note, it's a kind of overkill, because
 `OperationCompletionNotifier` also suppresses `ExecutionContext`
 flow when it runs listeners. But... Just in case :)
 
-Any `IMetaCommand` implements `IServerSideCommand`,
-so it will run successfully only when it's marked as such.
-And indeed, the `Completion.New` does this:
+`ICompletion` implements both `ISystemCommand` and `IBackendCommand`.
+`ISystemCommand` marks commands that are part of Fusion's internal machinery,
+while `IBackendCommand` marks commands that can only be processed on the
+backend (server) side. These interfaces replaced the older `IMetaCommand`
+and `IServerSideCommand` interfaces.
+
+Here's how `Completion.New` creates a completion command:
 
 ```cs
-public static ICompletion New(IOperation operation)
+public static ICompletion New(Operation operation)
 {
-    var command = (ICommand?) operation.Command
+    var command = (ICommand?)operation.Command
         ?? throw Errors.OperationHasNoCommand(nameof(operation));
     var tCompletion = typeof(Completion<>).MakeGenericType(command.GetType());
-    var completion = (ICompletion) tCompletion.CreateInstance(operation)!;
-    return completion.MarkServerSide();
+    var completion = (ICompletion)tCompletion.CreateInstance(operation);
+    return completion;
 }
 ```
 
-Above code also shows that the actual type of command becomes
+The actual type of command becomes
 a value of generic parameter of `Completion<T>` type.
 So if you want to implement a _reaction to completion_ of e.g.
 `MyCommand` &ndash; just declare a filtering command handler
@@ -452,9 +460,8 @@ So what is operation completion?
   `OperationCompletionNotifier.NotifyCompleted(operation)`
 - Which in turn invokes all operation completion listeners
   - One of such listeners &ndash; `CompletionProducer` &ndash; reacts
-    to this by creating a "meta command" of
-    `ICompletion<TCommand>` type and invoking `Commander` for
-    this new command.
+    to this by creating a `ICompletion<TCommand>` instance (a system command) 
+    and invoking `Commander` for this new command.
     Later you'll learn the invalidation pass is actually
     triggered by a handler reacting to this command.
   - And if you registered any of operation log change notifiers,
@@ -463,11 +470,11 @@ So what is operation completion?
 
 Now, a couple good questions:
 
-> Q: Why `NotifyCompletedAsync` doesn't return instantly?
+> Q: Why `NotifyCompleted` doesn't return instantly?
 > Why it bothers to await completion of each and every handler?
 
 This ensures that once the invocation of this method
-from `TransientOperationScopeProvider`
+from `InMemoryOperationScopeProvider`
 is completed, every follow-up action related to it is
 completed as well, including invalidation.
 
@@ -476,10 +483,10 @@ in such a way that once a command completes, you can be
 fully certain that any pipeline-based follow-up action
 is completed for it as well &ndash; including invalidation.
 
-> Q: What else invokes `NotifyCompletedAsync`?
+> Q: What else invokes `NotifyCompleted`?
 
 Just `DbOperationLogReader` &ndash;
-[see how it does this](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/Operations/DbOperationLogReader.cs#L51).
+[see how it does this](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/Operations/LogProcessing/DbOperationLogReader.cs).
 
 As you might notice, it skips all local commands, and a big
 comment there explains why it does so.
@@ -506,7 +513,7 @@ Yes. All of this means that:
 
 For the note, invalidations are extremely fast &ndash;
 it's safe to assume they are ~ as fast as identical
-calls resolving via `IComptuted` instances, i.e.
+calls resolving via `IComputed` instances, i.e.
 it's safe to assume you can run ~ a 1 million of
 invalidations per second per HT core, which
 means that an extremely high command rate is
@@ -527,7 +534,7 @@ doesn't mean it always creates some `DbContext` and
 transaction to commit the operation to.
 This happens if and only if:
 
-- You the `DbOperationScope<TDbContext>` it created for you &ndash; e.g. by calling
+- You use the `DbOperationScope<TDbContext>` it created for you &ndash; e.g. by calling
   `CommandContext.GetCurrent().Items.Get<DbOperationScope<AppDbContext>>()`
 - And ask this scope to provide a `DbContext` by calling its
   `CreateDbContextAsync` method, which indicates
@@ -539,10 +546,11 @@ This happens if and only if:
 > derive your service from one of these types or their descendants
 > like `DbWakeSleepProcessBase`.
 
-### 5. `InvalidateOnCompletionCommandHandler`, priority: 100
+### 5. `InvalidatingCommandCompletionHandler`, priority: 100
 
 Let's look at its handler declaration first:
 
+<!-- snippet: Part10_InvalidatingHandler -->
 ```cs
 [CommandHandler(Priority = 100, IsFilter = true)]
 public async Task OnCommand(
@@ -551,6 +559,7 @@ public async Task OnCommand(
     //  ...
 }
 ```
+<!-- endSnippet -->
 
 As you might guess, it reacts to the _completion_ of any command,
 and runs the original command **plus** every nested
@@ -560,10 +569,10 @@ This is why your command handlers need a branch checking for
 `Invalidation.IsActive == true` running the invalidation logic
 there!
 
-You're [welcome to see what it actually does](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Operations/Internal/InvalidateOnCompletionCommandHandler.cs#L45) &ndash;
+You're [welcome to see what it actually does](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Operations/Internal/InvalidatingCommandCompletionHandler.cs) &ndash;
 it's a fairly simple code, the only tricky piece is related to nested operations.
 
-On a positive side, `InvalidateOnCompletionCommandHandler` is the last
+On a positive side, `InvalidatingCommandCompletionHandler` is the last
 filter in the pipeline, so we can switch to this topic + one other important
 aspect &ndash; **operation items**.
 
@@ -576,7 +585,7 @@ some data together with the operation &ndash; so once its completion
 is "played" on this or other hosts, this data is readily available.
 
 I'll show how it's used in one of Fusion's built-in command handlers &ndash;
-[`SignOutCommand` handler of `DbAuthService`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/Authentication/DbAuthService.cs#L39):
+[`SignOutCommand` handler of `DbAuthService`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Services/Authentication/Services/DbAuthService.cs):
 
 ```cs
 public override async Task SignOut(
@@ -591,7 +600,7 @@ public override async Task SignOut(
             _ = IsSignOutForced(session, default);
             _ = GetOptions(session, default);
         }
-        var invSessionInfo = context.Operation.Items.Get<SessionInfo>();
+        var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
         if (invSessionInfo is not null) {
             _ = GetUser(invSessionInfo.UserId, default);
             _ = GetUserSessions(invSessionInfo.UserId, default);
@@ -607,7 +616,7 @@ public override async Task SignOut(
     if (sessionInfo.IsSignOutForced)
         return;
 
-    context.Operation.Items.Set(sessionInfo);
+    context.Operation.Items.KeylessSet(sessionInfo);
     sessionInfo = sessionInfo with {
         LastSeenAt = Clocks.SystemClock.Now,
         AuthenticatedIdentity = "",
@@ -621,7 +630,7 @@ public override async Task SignOut(
 First, look at this line inside the invalidation block:
 
 ```cs
-var invSessionInfo = context.Operation.Items.Get<SessionInfo>()
+var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>()
 ```
 
 It tries to pull `SessionInfo` object from `Operation.Items`. But why?
@@ -632,7 +641,7 @@ a few other methods related to this user.
 The code that stores this info is located below:
 
 ```cs
-context.Operation.Items.Set(sessionInfo);
+context.Operation.Items.KeylessSet(sessionInfo);
 ```
 
 As you see, it stores `sessionInfo` object into
@@ -653,17 +662,17 @@ running their own invalidation logic.
 They aren't persisted anywhere, and thus they won't be available
 on peer hosts too.
 
-But importantly, both these objects are `OptionSet`-s.
-Check out [its source code](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Collections/OptionSet.cs)
+But importantly, both these objects are `MutablePropertyBag`-s.
+Check out [its source code](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Collections/MutablePropertyBag.cs)
 to learn how it works &ndash; again, it's a fairly tiny class.
 
 ## Nested command logging
 
-I'll be brief here. Nested commands are logged into one
-of operation items &ndash; you may quickly find that its type is
-`ImmutableList<NestedCommandEntry>`.
+I'll be brief here. Nested commands are logged into
+`Operation.NestedOperations`, which is of type
+`ImmutableList<NestedOperation>`.
 
-- The logging is happening in `NestedCommandLogger` type.
+- The logging is happening in `NestedOperationLogger` type.
   You might notice that nested commands of nested commands
   are properly logged too &ndash; moreover, their `Operation.Items`
   are captured & stored independently as well! In other words,
@@ -671,7 +680,7 @@ of operation items &ndash; you may quickly find that its type is
   to worry about their invalidation piece of work (it will happen)
   or collisions of their operation items with yours.
 - The "invalidation mode replay" of these commands is performed by
-  `InvalidateOnCompletionCommandHandler`.
+  `InvalidatingCommandCompletionHandler`.
 
 There is nothing like a "generic" handler triggering completion
 for such commands &ndash; as you might guess, completion is meaningful
@@ -689,51 +698,40 @@ Framework is to see the implementation of `DbContextBuilder.AddOperations`
 and `IServiceCollection.AddFusion`. Both methods invoke corresponding
 builder's constructor first, which I highly recommend to view:
 
-- https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/DbOperationsBuilder.cs#L25
-- https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/FusionBuilder.cs#L46
+- https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/DbOperationsBuilder.cs
+- https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/FusionBuilder.cs
 
 Below is a brief description of some of the services I didn't mention yet;
 as for anything else, above code is the best place to start digging
 into the Operations Framework a bit deeper.
 
-`AgentInfo` is a simple type allowing Operations Framework to check
+`HostId` is a simple type allowing Operations Framework to check
 if an operation is originating from this or some other process.
-Check out its [source code](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Operations/AgentInfo.cs) &ndash;
+Check out its [source code](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/HostId.cs) &ndash;
 it's tiny.
 
-> You might be confused by `Symbol` type there &ndash; it's actually
-> just a string with cached result of `GetHashCode` (actually,
-> a struct with both these fields + a number of overloaded
-> operations & implicit conversions).
-> `Symbol`-s are used in Fusion to speed up string comparisons
-> and dictionary lookups. If you know for sure that for
-> certain strings you'll do lots of equality comparisons &ndash;
-> try using `Symbol` instead.
-
-As you see, `AgentInfo.Id` is ~ a `Symbol` that includes:
+`HostId.Id` is a string that includes:
 
 - Machine name
 - Unique process ID
-- Unique ID for every new `AgentInfo` you create. This
+- Unique ID for every new `HostId` you create. This
   ensures that you can run a number of IoC containers with
   different services inside the same process & use OF
   to "sync" them. This is super useful for testing any
   OF related aspects (e.g. that all of your commands are
   actually "replayed" in invalidation mode on other hosts).
 
-`InvalidationInfoProvider` is a service that tells whether
-a given command requires invalidation.
-Its default implementation returns `true` for any command with
-a final handler that lives inside `IComputeService`, but
-not `IReplicaService`
-([details](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Operations/InvalidationInfoProvider.cs#L38)).
+The logic that determines whether a command requires invalidation
+is now built into `InvalidatingCommandCompletionHandler.IsRequired()`.
+It returns `true` for any command with a final handler whose service
+implements `IComputeService`, but not if it's a compute service client
+(i.e., when `RpcServiceMode.Client` is set).
 
-Why not `IReplicaService`, you might guess? Because
-replica services are allowed to register their command
-handlers on the client side too, and since these handler
-are routing commands to corresponding server-side services,
-the invalidation and any other post-processing should
-happen there, but not on the client.
+Why exclude compute service clients? Because when a command is handled
+by a client-side proxy, another host will process it and is
+responsible for adding it to the operation log and running invalidation.
+The client host cannot process invalidation anyway, since
+`Invalidation.Begin()` enforces local routing for any command method call.
 
 `IDbOperationLog` is a repository-like service providing access
 to DB operation log.
@@ -741,6 +739,6 @@ to DB operation log.
 P.S. I certainly realize that even though OF's usage is fairly
 simple on the outside, there is a complex API with many moving
 parts inside. And probably, some bugs.
-So if you get stuck, please don't hesistate reaching me out
+So if you get stuck, please don't hesitate to reach out
 on [Fusion Place](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 My nickname there is "Alex Y.", I'll be happy to help.

@@ -1,8 +1,16 @@
-# Part 9: CommandR
+# Part 5: CommandR
 
 [ActualLab.CommandR](https://www.nuget.org/packages/ActualLab.CommandR/)
-is [MediatR](hhttps://github.com/jbogard/MediatR)-like library helping
+is a [MediatR](https://github.com/jbogard/MediatR)-like library helping
 to implement CQRS-style command handlers.
+
+> **Why does CommandR exist?**
+> The primary reason is the **Operations Framework** described in [Part 10](./Part10.md).
+> Operations Framework requires a command execution pipeline to implement
+> multi-host invalidation, operation logging, and other features that make
+> Fusion work reliably in distributed scenarios. CommandR provides exactly
+> the extensible pipeline needed for this.
+
 Together with a set of other abstractions it enables you to
 get the pipeline described in the previous section with
 almost no extra code.
@@ -49,7 +57,21 @@ a few new features:
 Since many of you are familiar with MediatR, here is the map
 of its terms to CommandR terms:
 
-![](./img/MediatR-vs-CommandR.jpg)
+| MediatR | CommandR |
+|---------|----------|
+| `IMediator` | `ICommander` |
+| `IServiceCollection.AddMediatR` | `IServiceCollection.AddCommander` |
+| `IServiceProvider.GetRequiredService<IMediator>` | `.GetRequiredService<ICommander>()` or `.Commander()` |
+| `IMediatR.Send(command, ct)` | `ICommander.Call(command, ct)` |
+| `IRequest<TResult>` | `ICommand<TResult>` |
+| `IRequest` | `ICommand<Unit>` |
+| `IRequestHandler<TCommand, TResult>` | `ICommandHandler<TCommand>` &ndash; result type is encoded in `TCommand` |
+| `IRequestHandler<TCommand, Unit>` | `ICommandHandler<TCommand>` |
+| `RequestHandler<T, Unit>` (sync) | No synchronous handlers |
+| `INotification` | `IEventCommand` &ndash; may have multiple final handlers invoked in parallel |
+| `IPipelineBehavior<TReq, TResp>` | Any filtering handler is a pipeline behavior |
+| Exception handlers | Any filtering handler can do this |
+| All IoC containers supported | Only `IServiceProvider` &ndash; Fusion follows the same philosophy |
 
 You might notice the API offered by CommandR is somewhat simpler &ndash;
 at least while you don't use some of its unique features mentioned
@@ -59,7 +81,7 @@ earlier.
 
 Let's declare our first command and its MediatR-style handler:
 
-<!-- snippet: Part09_PrintCommandSession -->
+<!-- snippet: Part05_PrintCommandSession -->
 ```cs
 public class PrintCommand : ICommand<Unit>
 {
@@ -83,7 +105,7 @@ public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
 
 Using CommandR and MediatR is quite similar:
 
-<!-- snippet: Part09_PrintCommandSession2 -->
+<!-- snippet: Part05_PrintCommandSession2 -->
 ```cs
 // Building IoC container
 var serviceBuilder = new ServiceCollection()
@@ -128,7 +150,7 @@ Try changing `AddScoped` to `AddSingleton` in above example.
 Let's write a bit more complex handler to see how
 `CommandContext` works.
 
-<!-- snippet: Part09_RecSumCommandSession -->
+<!-- snippet: Part05_RecSumCommandSession -->
 ```cs
 public class RecSumCommand : ICommand<long>
 {
@@ -137,7 +159,7 @@ public class RecSumCommand : ICommand<long>
 ```
 <!-- endSnippet -->
 
-<!-- snippet: Part09_RecSumCommandSession2 -->
+<!-- snippet: Part05_RecSumCommandSession2 -->
 ```cs
 // Building IoC container
 var serviceBuilder = new ServiceCollection()
@@ -161,13 +183,13 @@ CommandContext stack size: 1
 Depth via context.Items: 1
 Numbers: 2, 3
 CommandContext stack size: 2
-Depth via context.Items: 2
+Depth via context.Items: 1
 Numbers: 3
 CommandContext stack size: 3
-Depth via context.Items: 3
+Depth via context.Items: 1
 Numbers:
 CommandContext stack size: 4
-Depth via context.Items: 4
+Depth via context.Items: 1
 6
 ```
 
@@ -208,25 +230,28 @@ But what about the service scope? The code from `CommandContext<TResult>`
 constructor explains this better than a few sentences:
 
 ```cs
-// PreviousContext here is CommandContext.Current,
-// which will be replaced with `this` soon after.
-if (PreviousContext?.Commander != commander) {
+// outerContext here is CommandContext.Current (if using the same commander)
+var outerContext = isOutermost ? null : Current;
+if (outerContext is not null && outerContext.Commander != commander)
+    outerContext = null;
+
+if (outerContext is null) {
     OuterContext = null;
     OutermostContext = this;
     ServiceScope = Commander.Services.CreateScope();
-    Items = new OptionSet();
 }
 else {
-    OuterContext = PreviousContext;
-    OutermostContext = PreviousContext!.OutermostContext;
+    OuterContext = outerContext;
+    OutermostContext = outerContext.OutermostContext;
     ServiceScope = OutermostContext.ServiceScope;
-    Items = OutermostContext.Items;
 }
 ```
 
-As you see, if you "switch" `ICommander` instances on such
-calls, the new context behaves like it's a top-level one,
-i.e. it creates a new service scope, new `Items`, and
+Note that each `CommandContext` has its own `Items` property (a `MutablePropertyBag`).
+The `ServiceScope` is shared between nested contexts when using the same `ICommander`.
+
+If you "switch" `ICommander` instances on nested calls, the new context behaves
+like it's a top-level one, i.e. it creates a new service scope and
 exposes itself as `OutermostContext`.
 
 Now it's a good time to try changing `false` to `true` in this fragment above:
@@ -280,7 +305,7 @@ All these methods take up to 3 arguments:
 The most interesting way to register command handlers
 are to declare them inside so-called Command Service:
 
-<!-- snippet: Part09_RecSumCommandServiceSession -->
+<!-- snippet: Part05_RecSumCommandServiceSession -->
 ```cs
 public class RecSumCommandService : ICommandService
 {
@@ -330,7 +355,7 @@ public class RecSumCommandService : ICommandService
 Such services has to be registered via `AddCommandService` method
 of the `CommanderBuilder`:
 
-<!-- snippet: Part09_RecSumCommandServiceSession2 -->
+<!-- snippet: Part05_RecSumCommandServiceSession2 -->
 ```cs
 // Building IoC container
 var serviceBuilder = new ServiceCollection();
@@ -350,21 +375,30 @@ WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 3L, 4 }}
 The output:
 
 ```
-Castle.Proxies.RecSumCommandServiceProxy
+ActualLabProxies.RecSumCommandServiceProxy
 Depth via context.Items: 1
 Numbers: 1, 2
-Depth via context.Items: 2
+Depth via context.Items: 1
 Numbers: 2
-Depth via context.Items: 3
+Depth via context.Items: 1
 Numbers:
 3
 Depth via context.Items: 1
 Numbers: 3, 4
-Depth via context.Items: 2
+Depth via context.Items: 1
 Numbers: 4
-Depth via context.Items: 3
+Depth via context.Items: 1
 Numbers:
 7
+```
+
+Notice that `Depth via context.Items` is always 1 because each `CommandContext`
+has its own `Items`. If you need to share data across nested command calls,
+use `context.OutermostContext.Items` instead:
+
+```cs
+var depth = 1 + (int) (context.OutermostContext.Items["Depth"] ?? 0);
+context.OutermostContext.Items["Depth"] = depth;
 ```
 
 As you see, the proxy type generated for such services routes

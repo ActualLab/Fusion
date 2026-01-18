@@ -14,24 +14,49 @@ This adds `SessionMiddleware` to the request pipeline. The actual class contains
 ```cs
 public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
 {
-    // Note that now it's slightly more complex due to
-    // newly introduced multitenancy support in Fusion 3.x.
-    // But you'll get the idea.
-
-    var cookies = httpContext.Request.Cookies;
-    var cookieName = Cookie.Name ?? "";
-    cookies.TryGetValue(cookieName, out var sessionId);
-    var session = string.IsNullOrEmpty(sessionId) ? null : new Session(sessionId);
-
-    if (session is null) {
-        session = SessionFactory.CreateSession();
-        var responseCookies = httpContext.Response.Cookies;
-        responseCookies.Append(cookieName, session.Id, Cookie.Build(httpContext));
-    }
-    SessionProvider.Session = session;
+    if (Settings.RequestFilter.Invoke(httpContext))
+        SessionResolver.Session = await GetOrCreateSession(httpContext).ConfigureAwait(false);
     await next(httpContext).ConfigureAwait(false);
 }
+
+public virtual Session? GetSession(HttpContext httpContext)
+{
+    var cookies = httpContext.Request.Cookies;
+    var cookieName = Settings.Cookie.Name ?? "";
+    cookies.TryGetValue(cookieName, out var sessionId);
+    return sessionId.IsNullOrEmpty() ? null : new Session(sessionId);
+}
+
+public virtual async Task<Session> GetOrCreateSession(HttpContext httpContext)
+{
+    var cancellationToken = httpContext.RequestAborted;
+    var originalSession = GetSession(httpContext);
+    var session = originalSession;
+    if (session is not null && Auth is not null) {
+        try {
+            var isSignOutForced = await Auth.IsSignOutForced(session, cancellationToken).ConfigureAwait(false);
+            if (isSignOutForced) {
+                await Settings.ForcedSignOutHandler(this, httpContext).ConfigureAwait(false);
+                session = null;
+            }
+        }
+        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+            Log.LogError(e, "Session is unavailable: {Session}", session);
+            session = null;
+        }
+    }
+    session ??= Session.New();
+    session = Settings.TagProvider?.Invoke(session, httpContext) ?? session;
+    if (Settings.AlwaysUpdateCookie || session != originalSession) {
+        var cookieName = Settings.Cookie.Name ?? "";
+        var responseCookies = httpContext.Response.Cookies;
+        responseCookies.Append(cookieName, session.Id, Settings.Cookie.Build(httpContext));
+    }
+    return session;
+}
 ```
+
+See [SessionMiddleware.cs:54](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Middlewares/SessionMiddleware.cs#L54) for the actual source.
 
 The `Session` class in itself is very simple, it stores a single `Symbol Id` value. `Symbol` is a struct storing a string with its cached `HashCode`, its only role is to speedup dictionary lookups when it's used. Besides that, `Session` overrides equality &ndash; they're compared by `Id`.
 
@@ -48,21 +73,17 @@ public sealed class Session : IHasId<Symbol>, IEquatable<Session>,
 }
 ```
 
-When you call `fusion.AddAuthentication()`, a number of services registered in you dependency injection container, and the most crucial ones are:
+When you call `services.AddFusion()`, core session services are registered in your dependency injection container:
 
 ```cs
-Services.TryAddSingleton<ISessionFactory, SessionFactory>();
-Services.TryAddScoped<ISessionProvider, SessionProvider>();
-Services.TryAddTransient(c => (ISessionResolver) c.GetRequiredService<ISessionProvider>());
-Services.TryAddTransient(c => c.GetRequiredService<ISessionProvider>().Session);
+services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
+services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
 ```
 
 Here is what you need to know about these services:
 
-- `ISessionFactory` generates new sessions; you may want to override it to e.g. make all of your sessions digitally signed
-- `ISessionProvider` keeps track of the current session; it implements `ISessionResolver`
-- `ISessionResolver` allows to get the current session
-- And finally, `Session` is registered as a transient service as well &ndash; it's mapped to a session resolved by `ISessionResolver`: `c => c.GetRequiredService<ISessionProvider>().Session`.
+- `ISessionResolver` keeps track of the current session and allows to get/set it
+- `Session` is registered as a scoped service &ndash; it's mapped to the session resolved by `ISessionResolver`: `c => c.GetRequiredService<ISessionResolver>().Session`.
 
 We'll cover how they're used in Blazor apps later, for now let's just remember they exist.
 
@@ -97,17 +118,36 @@ to the following code snippet.
 The Operations Framework is also needed for any of these services &ndash;
 hopefully you read [Part 10](./Part10.md), which covers it.
 
+<!-- snippet: Part10_AddDbContextServices -->
 ```cs
-services.AddDbContextServices<FusionDbContext>(dbContext => {
-    db.AddOperations(operations => {
-        operations.ConfigureOperationLogReader(_ => new() {
-            UnconditionalCheckPeriod = TimeSpan.FromSeconds(10).ToRandom(0.05),
+public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
+{
+    services.AddDbContextServices<AppDbContext>(db => {
+        // Uncomment if you'll be using AddRedisOperationLogWatcher
+        // db.AddRedisDb("localhost", "Fusion.Tutorial.Part10");
+
+        db.AddOperations(operations => {
+            // This call enabled Operations Framework (OF) for AppDbContext.
+            operations.ConfigureOperationLogReader(_ => new() {
+                // We use AddFileSystemOperationLogWatcher, so unconditional wake up period
+                // can be arbitrary long – all depends on the reliability of Notifier-Monitor chain.
+                // See what .ToRandom does – most of timeouts in Fusion settings are RandomTimeSpan-s,
+                // but you can provide a normal one too – there is an implicit conversion from it.
+                CheckPeriod = TimeSpan.FromSeconds(Env.IsDevelopment() ? 60 : 5).ToRandom(0.05),
+            });
+            // Optionally enable file-based operation log watcher
+            operations.AddFileSystemOperationLogWatcher();
+
+            // Or, if you use PostgreSQL, use this instead of above line
+            // operations.AddNpgsqlOperationLogWatcher();
+
+            // Or, if you use Redis, use this instead of above line
+            // operations.AddRedisOperationLogWatcher();
         });
-        operations.AddFileBasedOperationLogChangeTracking();
     });
-    dbContext.AddAuthentication<long>();
-});
+}
 ```
+<!-- endSnippet -->
 
 Our `DbContext` needs to contain `DbSet`-s for the classes provided here as type parameters.
 The `DbSessionInfo` and `DbUser` classes are very simple entities provided by Fusion for storing authentication data.
@@ -120,66 +160,33 @@ public DbSet<DbSessionInfo<long>> Sessions { get; protected set; } = null!;
 ```
 <!-- endSnippet -->
 
-And that's how these entity types look:
-
-```cs
-public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
-{
-    [Key] [StringLength(32)] public string Id { get; set; }
-    [ConcurrencyCheck] public long Version { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime LastSeenAt { get; set; }
-    public string IPAddress { get; set; }
-    public string UserAgent { get; set; }
-    public string AuthenticatedIdentity { get; set; }
-    public TDbUserId UserId { get; set; }
-    public bool IsSignOutForced { get; set; }
-    public string OptionsJson { get; set; }
-}
-```
-
-`DbSessionInfo` stores our sessions, and these sessions (if authenticated) can be associated with a `DbUser`
-
-```cs
-public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long> where TDbUserId : notnull
-{
-    public DbUser();
-
-    [Key] public TDbUserId Id { get; set; }
-    [ConcurrencyCheck] public long Version { get; set; }
-    [MinLength(3)] public string Name { get; set; }
-    public string ClaimsJson { get; set; }
-    public List<DbUserIdentity<TDbUserId>> Identities { get; }
-
-    [JsonIgnore, NotMapped]
-    public ImmutableDictionary<string, string> Claims { get; set; }
-}
-```
+These entity types are defined in:
+- [`DbSessionInfo`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Services/Authentication/Services/DbSessionInfo.cs) &ndash; stores sessions, which (if authenticated) can be associated with a `DbUser`
+- [`DbUser`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Services/Authentication/Services/DbUser.cs) &ndash; stores user information
+- [`DbUserIdentity`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Services/Authentication/Services/DbUserIdentity.cs) &ndash; stores user identities (e.g., OAuth providers)
 
 ## Using session in Compute Services for authorization
 
 Our Compute Services can receive a `Session` object that we can use to decide if we are authenticated or not and who the signed in user is:
 
+<!-- snippet: Part11_GetMyOrders -->
 ```cs
 [ComputeMethod]
 public virtual async Task<List<OrderHeaderDto>> GetMyOrders(Session session, CancellationToken cancellationToken = default)
 {
     // We assume that _auth is of IAuth type here.
-    var sessionInfo = await _auth.GetSessionInfo(session, cancellationToken);
-    // You can use any of such methods
-    var user = await _authService.RequireUser(session, true, CancellationToken);
-
-    await using var dbContext = CreateDbContext();
-
-    if (user.IsAuthenticated && user.Claims.ContainsKey("read_orders")) {
+    var user = await _auth.GetUser(session, cancellationToken).Require();
+    if (await CanReadOrders(user, cancellationToken)) {
         // Read orders
     }
+    return new List<OrderHeaderDto>();
 }
 ```
+<!-- endSnippet -->
 
-`RequireUser` here calls `GetUser` and throws an error if the result of this call is `null`; `true` argument passed to it indicates it has to wrap `ArgumentNullException` into `ResultException`, which is viewed by Fusion as a "normal" result, so it won't auto-invalidate this result in 1 second (which by default happens for any other exception thrown from compute method &ndash; Fusion assumes any of such failures might be transient). You can read more about this behavior in [our Discord channel](https://discord.com/channels/729970863419424788/729971920476307554/995865256201027614).
+`.Require()` here throws an error if the user is `null`.
 
-`GetSessionInfo`, `GetUser` and all other `IAuth` and `IAuthBackend` methods are compute methods, which means that the result of `GetMyOrders` call will invalidate once you sign-in into the provided `session` or sign out &ndash; generally, whenever a change that impacts on their result happens.
+`GetUser` and all other `IAuth` and `IAuthBackend` methods are compute methods, which means that the result of `GetMyOrders` call will invalidate once you sign-in into the provided `session` or sign out &ndash; generally, whenever a change that impacts on their result happens.
 
 ## Synchronizing Fusion and ASP.NET Core authentication states
 
@@ -190,106 +197,117 @@ If you look at `IAuth` and `IAuthBackend` APIs, it's easy to conclude there is n
 
 So in fact, these APIs just maintain the authentication state. It's assumed that you authenticate users using something else, and use these services in "Fusion world" to access the authentication info. Since these are compute services, they'll ensure that compute services calling them will invalidate their results once authentication info changes.
 
-The proposed way to sync the authentication state between ASP.NET Core and Fusion is to embed this logic into `Host.cshtml`, which is typically mapped to every unmapped route in Blazor apps, and simply propagate the authentication state from ASP.NET Core to Fusion right when it loads. We assume here that when user signs in or signs out, `Host.cshtml` gets loaded by the end of any of these flows, so it's the best place to sync.
+The proposed way to sync the authentication state between ASP.NET Core and Fusion is to embed this logic into `_HostPage.razor`, which serves as the root component for your Blazor app. The authentication state is synced from ASP.NET Core to Fusion right when the page loads. When user signs in or signs out, `_HostPage.razor` gets loaded by the end of any of these flows, so it's the best place to sync.
 
-The synchronization is done by the `ServerAuthHelper.UpdateAuthState` method. [`ServerAuthHelper`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Authentication/ServerAuthHelper.cs) is a built-in Fusion helper doing exactly what's described above. It compares the authentication state exposed by `IAuth` for the current `Session` vs the state exposed in `HttpContext` and states calls `IAuthBackend.SignIn()` / `IAuthBackend.SignOut` to sync it.
+The synchronization is done by the `ServerAuthHelper.UpdateAuthState` method. [`ServerAuthHelper`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Authentication/ServerAuthHelper.cs) is a built-in Fusion helper doing exactly what's described above. It compares the authentication state exposed by `IAuth` for the current `Session` vs the state exposed in `HttpContext` and calls `IAuthBackend.SignIn()` / `IAuthBackend.SignOut` to sync it.
 
-The following code snippet shows how you embed it into `Host.cshtml`:
+The following code snippet shows how you embed it into `_HostPage.razor`:
 
 ```xml
-@page "/"
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
-@namespace Templates.TodoApp.Host.Pages
 @using ActualLab.Fusion.Blazor
 @using ActualLab.Fusion.Server.Authentication
 @using ActualLab.Fusion.Server.Endpoints
-@using Templates.TodoApp.UI
-@inject ServerAuthHelper ServerAuthHelper
-@inject BlazorCircuitContext BlazorCircuitContext
-@{
-    await ServerAuthHelper.UpdateAuthState(HttpContext);
-    var authSchemas = await ServerAuthHelper.GetSchemas(HttpContext);
-    var sessionId = ServerAuthHelper.Session.Id.Value;
-    var isBlazorServer = BlazorModeEndpoint.IsBlazorServer(HttpContext);
-    var isCloseWindowRequest = ServerAuthHelper.IsCloseWindowRequest(HttpContext, out var closeWindowFlowName);
-    Layout = null;
-}
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    // This part has to be somewhere in <head> section
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Fusion App</title>
+    <base href="/" />
     <script src="_content/ActualLab.Fusion.Blazor.Authentication/scripts/fusionAuth.js"></script>
     <script>
-        window.FusionAuth.schemas = "@authSchemas";
+        window.FusionAuth.schemas = "@_authSchemas";
     </script>
+    <HeadOutlet @rendermode="@(_renderMode?.Mode)" />
 </head>
 <body>
-// And this part has to be somewhere in the beginning of <body> section
-@if (isCloseWindowRequest) {
-    <script>
-        setTimeout(function () {
-            window.close();
-        }, 500)
-    </script>
-    <div class="alert alert-primary">
-        @(closeWindowFlowName) completed, you can close this window.
-    </div>
+    <App @rendermode="@(_renderMode?.Mode)" SessionId="@_sessionId" RenderModeKey="@(_renderMode?.Key)"/>
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>
+
+@code {
+    private bool _isInitialized;
+    private RenderModeDef? _renderMode;
+    private string _authSchemas = "";
+    private string _sessionId = "";
+
+    [Inject] private ServerAuthHelper ServerAuthHelper { get; init; } = null!;
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = null!;
+
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        if (!_isInitialized) {
+            _isInitialized = true;
+            parameters.SetParameterProperties(this);
+            if (HttpContext.AcceptsInteractiveRouting())
+                _renderMode = RenderModeEndpoint.GetRenderMode(HttpContext);
+            await ServerAuthHelper.UpdateAuthState(HttpContext);
+            _authSchemas = await ServerAuthHelper.GetSchemas(HttpContext);
+            _sessionId = ServerAuthHelper.Session.Id;
+        }
+        await base.SetParametersAsync(parameters);
+    }
 }
 ```
 
-Notice that it assumes there is [`fusionAuth.js`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor.Authentication/wwwroot/scripts/fusionAuth.js) &ndash; a small script embedded into `ActualLab.Fusion.Blazor` assembly, which is responsible for opening authentication window or performing a redirect.
+Notice that it assumes there is [`fusionAuth.js`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor.Authentication/wwwroot/scripts/fusionAuth.js) &ndash; a small script embedded into `ActualLab.Fusion.Blazor.Authentication` assembly, which is responsible for opening authentication window or performing a redirect.
 
 Besides that, you need to add a couple extras to your ASP.NET Core app service container configuration:
 
+<!-- snippet: Part11_ServiceConfiguration -->
 ```cs
-var fusion = services.AddFusion();
-var fusionServer = fusion.AddWebServer();
-var fusionAuth = fusion.AddAuthentication().AddServer(
-    signInControllerOptionsFactory: _ => new() {
+public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
+{
+    var fusion = services.AddFusion();
+    var fusionServer = fusion.AddWebServer();
+    fusion.AddDbAuthService<AppDbContext, string>();
+    fusionServer.ConfigureAuthEndpoint(_ => new() {
         // Set to the desired one
         DefaultSignInScheme = MicrosoftAccountDefaults.AuthenticationScheme,
         SignInPropertiesBuilder = (_, properties) => {
             properties.IsPersistent = true;
         }
-    },
-    serverAuthHelperOptionsFactory: _ => new() {
+    });
+    fusionServer.ConfigureServerAuthHelper(_ => new() {
         // These are the claims mapped to User.Name once a new
         // User is created on sign-in; if they absent or this list
         // is empty, ClaimsPrincipal.Identity.Name is used.
-        NameClaimKeys = Array.Empty<string>(),
+        NameClaimKeys = [],
     });
 
-// You need this only if you plan to use Blazor WASM
-var fusionClient = fusion.AddRestEaseClient();
-// Configure Fusion client here
-
-// Configure ASP.NET Core authentication providers:
-services.AddAuthentication(options => {
-    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-}).AddCookie(options => {
-    // You can use whatever you prefer to store the authentication info
-    // in ASP.NET Core, this specific example uses a cookie.
-    options.LoginPath = "/signIn"; // Mapped to
-    options.LogoutPath = "/signOut";
-    if (Env.IsDevelopment())
-        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
-    // This controls the expiration time stored in the cookie itself
-    options.ExpireTimeSpan = TimeSpan.FromDays(7);
-    options.SlidingExpiration = true;
-    // And this controls when the browser forgets the cookie
-    options.Events.OnSigningIn = ctx => {
-        ctx.CookieOptions.Expires = DateTimeOffset.UtcNow.AddDays(28);
-        return Task.CompletedTask;
-    };
-}).AddGitHub(options => {
-    // Again, this is just an example of using GitHub account
-    // OAuth provider to authenticate. There is nothing specific
-    // to Fusion in the code below.
-    options.ClientId = "...";
-    options.ClientSecret = "..."
-    options.Scope.Add("read:user");
-    options.Scope.Add("user:email");
-    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
-});
+    // Configure ASP.NET Core authentication providers:
+    services.AddAuthentication(options => {
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    }).AddCookie(options => {
+        // You can use whatever you prefer to store the authentication info
+        // in ASP.NET Core, this specific example uses a cookie.
+        options.LoginPath = "/signIn"; // Mapped to
+        options.LogoutPath = "/signOut";
+        if (Env.IsDevelopment())
+            options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+        // This controls the expiration time stored in the cookie itself
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+        // And this controls when the browser forgets the cookie
+        options.Events.OnSigningIn = ctx => {
+            ctx.CookieOptions.Expires = DateTimeOffset.UtcNow.AddDays(28);
+            return Task.CompletedTask;
+        };
+    }).AddGitHub(options => {
+        // Again, this is just an example of using GitHub account
+        // OAuth provider to authenticate. There is nothing specific
+        // to Fusion in the code below.
+        options.ClientId = "...";
+        options.ClientSecret = "...";
+        options.Scope.Add("read:user");
+        options.Scope.Add("user:email");
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    });
+}
 ```
+<!-- endSnippet -->
 
 Notice that we use `/signIn` and `/signOut` paths above &ndash; they're mapped to the Fusion's [`AuthController`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Controllers/AuthController.cs).
 
@@ -297,28 +315,32 @@ If you want to use some other logic for these actions, you can map them to simil
 
 And finally, you need a bit of extras in app configuration:
 
+<!-- snippet: Part11_AppConfiguration -->
 ```cs
-// You need this only if you use Blazor WASM w/ Fusion client
-app.UseWebSockets(new WebSocketOptions() {
-    KeepAliveInterval = TimeSpan.FromSeconds(30),
-});
-// Required by Blazor
-app.UseBlazorFrameworkFiles();
-// Required by Blazor + it serves embedded content, such as  `fusionAuth.js`
-app.UseStaticFiles();
+public static void ConfigureApp(WebApplication app)
+{
+    app.UseWebSockets(new WebSocketOptions() {
+        KeepAliveInterval = TimeSpan.FromSeconds(30),
+    });
+    app.UseFusionSession();
+    app.UseRouting();
+    app.UseAuthentication();
+    app.UseAntiforgery();
 
-// Endpoints
-app.UseRouting();
-app.UseAuthentication();
-app.UseEndpoints(endpoints => {
-    endpoints.MapBlazorHub();
-    endpoints.MapRpcWebSocketServer();
-    endpoints.MapFusionAuth();
-    endpoints.MapFusionBlazorMode();
-    // endpoints.MapControllers();
-    endpoints.MapFallbackToPage("/_Host"); // Maps every unmapped route to _Host.cshtml
-});
+    // Razor components
+    app.MapStaticAssets();
+    app.MapRazorComponents<_HostPage>()
+        .AddInteractiveServerRenderMode()
+        .AddInteractiveWebAssemblyRenderMode()
+        .AddAdditionalAssemblies(typeof(App).Assembly);
+
+    // Fusion endpoints
+    app.MapRpcWebSocketServer();
+    app.MapFusionAuthEndpoints();
+    app.MapFusionRenderModeEndpoints();
+}
 ```
+<!-- endSnippet -->
 
 ## Using Fusion authentication in a Blazor WASM components
 
@@ -337,7 +359,7 @@ public sealed class Session : IHasId<Symbol>, IEquatable<Session>,
 }
 ```
 
-Default session is a specially named `Session` which is automatically substituted by `SessionModelBinder` to the one provided by `ISessionResolver`. In other words, if you pass `Session.Default` as an argument to some Compute Service client, it will get its true value on controller method invocation on the server side.
+Default session is a specially named `Session` which is automatically substituted by [`RpcDefaultSessionReplacer`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Rpc/RpcDefaultSessionReplacer.cs) middleware to the one provided by `ISessionResolver`. In other words, if you pass `Session.Default` as an argument to some Compute Service client, it will get its true value on the server side.
 
 All of this means your Blazor WASM client doesn't need to know the actual `Session` value to work &ndash; all you need is to configure `ISessionResolver` there to return `Session.Default` as the current session.
 
@@ -346,20 +368,17 @@ And you want your Blazor components to work on Blazor Server, you need to use th
 Now, if you still remember the beginning of this document, there is a number of services managing `Session` in Fusion:
 
 ```cs
-Services.TryAddScoped<ISessionProvider, SessionProvider>();
-Services.TryAddTransient(c => (ISessionResolver) c.GetRequiredService<ISessionProvider>());
-Services.TryAddTransient(c => c.GetRequiredService<ISessionProvider>().Session);
+services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
+services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
 ```
 
-So all we need is to make `ISessionResolver` to resolve `Session.Default` on the Blazor WASM client. One of ways to do this is to use this `App.razor` (your root Blazor component):
+So all we need is to make `ISessionResolver` to resolve `Session.Default` on the Blazor WASM client. The modern way to do this is to inherit your `App.razor` from `CircuitHubComponentBase`:
 
 ```xml
 @using ActualLab.OS
-@implements IDisposable
-@inject BlazorCircuitContext BlazorCircuitContext
-@inject ISessionProvider SessionProvider
+@inherits CircuitHubComponentBase
 
-<CascadingAuthState>
+<CascadingAuthState UsePresenceReporter="true">
     <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
             <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
@@ -373,46 +392,42 @@ So all we need is to make `ISessionResolver` to resolve `Session.Default` on the
 </CascadingAuthState>
 
 @code {
-    private Theme Theme { get; } = new() { IsGradient = true, IsRounded = false };
+    private ISessionResolver SessionResolver => CircuitHub.SessionResolver;
 
-    [Parameter]
-    public string SessionId { get; set; } = Session.Default.Id;
+    [Parameter] public string SessionId { get; set; } = "";
+    [Parameter] public string RenderModeKey { get; set; } = "";
 
     protected override void OnInitialized()
     {
-        SessionProvider.Session = OSInfo.IsWebAssembly
-            ? Session.Default
-            : new Session(SessionId);
-        if (!BlazorCircuitContext.IsPrerendering)
-            BlazorCircuitContext.RootComponent = this;
+        if (OSInfo.IsWebAssembly) {
+            // RPC auto-substitutes Session.Default to the cookie-based one on the server side
+            SessionResolver.Session = Session.Default;
+            // That's how WASM app starts hosted services
+            var rootServices = Services.Commander().Services;
+            _ = rootServices.HostedServices().Start();
+        }
+        else {
+            SessionResolver.Session = new Session(SessionId);
+        }
+        if (CircuitHub.IsInteractive)
+            CircuitHub.Initialize(this.GetDispatcher(), RenderModeDef.GetOrDefault(RenderModeKey));
     }
-
-    public void Dispose()
-        => BlazorCircuitContext.Dispose();
 }
 ```
 
-You can see that when this component is initialized, it sets `SessionProvider.Session` to the value it gets as a parameter &ndash; unless we're running Blazor WASM. In this case it sets it to `Session.Default`. Any attempt to resolve `Session` (either via `ISessionResolver`, or via service provider) will return this value.
+You can see that when this component is initialized, it sets `SessionResolver.Session` to the value it gets as a parameter &ndash; unless we're running Blazor WASM. In this case it sets it to `Session.Default`. Any attempt to resolve `Session` (either via `ISessionResolver`, or via service provider) will return this value.
+
+The `CircuitHubComponentBase` base class provides access to `CircuitHub`, which manages Blazor circuit lifecycle and session resolution.
 
 You may notice that `App.razor` wraps its content into [`CascadingAuthState`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor.Authentication/CascadingAuthState.razor), which makes Blazor authentication to work as expected as well by embedding its `ChildContent` into Blazor's `<CascadingAuthenticationState>`.
 
-All of this implies you also need a bit special logic in `_Host.cshtml` to spawn `App.razor` on the server side:
+As shown in the `_HostPage.razor` example above, the `SessionId` and `RenderModeKey` parameters are passed directly to the `App` component:
 
 ```xml
-<app id="app">
-    @{
-        using var prerendering = BlazorCircuitContext.Prerendering();
-        var prerenderedApp = await Html.RenderComponentAsync<App>(
-            isBlazorServer ? RenderMode.ServerPrerendered : RenderMode.WebAssemblyPrerendered,
-            isBlazorServer ? new { SessionId = sessionId } : null);
-    }
-    @(prerenderedApp)
-</app>
+<App @rendermode="@(_renderMode?.Mode)" SessionId="@_sessionId" RenderModeKey="@(_renderMode?.Key)"/>
 ```
 
-The most important part here is that we pass `new { SessionId = sessionId }` parameter to the `Html.RenderComponentAsync<App>(...)` call in case Blazor Server is used, and `null` instead.
-
-This also explains why we use `BlazorCircuitContext` here &ndash; it's a handy helper embedded in Fusion allowing, in particular, to detect if Blazor circuit runs in prerendering mode.
+This passes the session ID from the server-side authentication state to the `App.razor` component, which then uses it to initialize `SessionResolver.Session`.
 
 Ok, now all preps are done, and we're ready to write our first Blazor component relying on `IAuth`:
 
@@ -431,41 +446,22 @@ Ok, now all preps are done, and we're ready to write our first Blazor component 
 @code {
     protected override async Task<List<OrderHeader>> ComputeState(CancellationToken cancellationToken)
     {
-        var user = await Auth.RequireUser(Session, true, cancellationToken);
-        var sessionInfo = await Auth.GetSessionInfo(Session, cancellationToken);
+        var user = await Auth.GetUser(Session, cancellationToken).Require();
 
         if (!user.Claims.ContainsKey("required-claim"))
             return new List<OrderHeader>();
 
-        return await OrderService.GetMyOrders(Session);
+        return await OrderService.GetMyOrders(Session, cancellationToken);
     }
-}
-```
-
-Note that to make it work with Blazor WASM, you need a controller like this:
-
-```cs
-[Route("api/[controller]/[action]")]
-[ApiController, UseDefaultSession] // <<< You need UseDefaultSession filter here!
-public class OrderController : ControllerBase, IOrderService
-{
-    private readonly IOrderService _orderService;
-
-    public OrderController(IOrderService orderService, ISessionResolver sessionResolver)
-        => _orderService = orderService;
-
-    [HttpGet, Publish]
-    public async Task<List<OrderHeader>> GetMyOrders(Session session, CancellationToken cancellationToken = default)
-        => await _orderService.GetMyOrders(Session, cancellationToken);
 }
 ```
 
 ## Signing out
 
-As you already know, Fusion's authentication state is synced once `_Host.cshtml` is requested. Since this happens on almost any request, typical sign-out flow implies:
+Fusion's authentication state is synced once `_HostPage.razor` is loaded. Since this happens on almost any request, typical sign-out flow implies:
 
 - First, you run a regular sign-out by e.g. redirecting a browser to `~/signOut` page
-- Second, you redirect the browser to some regular page, which loads `_Host.cshtml`.
+- Second, you redirect the browser to some regular page, which loads `_HostPage.razor`.
 
 Since Fusion auth state change instantly hits all the clients, you can do all of this in e.g. a separate window &ndash; this is enough to make sure every browser window that shares the same session gets signed out.
 
@@ -481,89 +477,3 @@ This is how `Authentication.razor` page in `TodoApp` template uses it:
 ```
 
 And if you are curious, `SignOutEverywhere()` signs out _every_ session of the current user. This is possible, since `IAuthBackend` actually has a method allowing to enumerate these sessions. Because... Why not?
-
-## Creating your own registration/login system with ASP.NET Core Identity
-
-You can use Fusion's authentication on top of ASP.NET Core Identity. If you follow this approach then you will need to synchronize the authentication state between the two frameworks, the following code shows a very a basic implementation of this.
-
-Our `SignIn` methods needs to receive the username and password of the user that wants to sign in, and also the current Fusion session. Then we can check if the provided data is valid in the example we basically check if
-
-- The user exists
-- If the user is already signed in or not in Fusions authentication state
-- Whether the password/email pair is correct
-
-```cs
-public async Task SignIn(Session session, EmailPasswordDto signInDto, CancellationToken cancellationToken)
-{
-    var user = await _userManager.FindByNameAsync(signInDto.Email);
-    if (user is ApplicationUser) {
-        var sessionInfo = await _authService.GetSessionInfo(session, cancellationToken);
-        if (sessionInfo.IsAuthenticated)
-            throw new InvalidOperationException("You are already signed in!");
-
-        var signInResult = await _signInManager.CheckPasswordSignInAsync(user, signInDto.Password, lockoutOnFailure: false);
-    }
-}
-```
-
-If everything was correct then we can proceed with signing the user in. The basic idea here is that we store what the claims and roles of each user with the Identity framework, inside the database, and during the sign-in process we query these roles and claims from here using the `UserManager` service that Identity provides and we can create a `ClaimsPrincipal` from these values that we can pass to the Fusion SignIn method.
-
-```cs
-if (signInResult.Succeeded) {
-    var claims = await _userManager.GetClaimsAsync(user);
-    var roles = await _userManager.GetRolesAsync(user);
-    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-    foreach (var role in roles)
-        identity.AddClaim(new Claim(ClaimTypes.Role, role));
-
-    identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()));
-    identity.AddClaim(new Claim(ClaimTypes.Name, user.UserName));
-    var principal = new ClaimsPrincipal(identity);
-
-    var ipAddress = _httpContextAccessor.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-    var userAgent = _httpContextAccessor.HttpContext.Request.Headers.TryGetValue("User-Agent", out var userAgentValues)
-                    ? userAgentValues.FirstOrDefault() ?? ""
-                    : "";
-
-    var mustUpdateSessionInfo =
-        !StringComparer.Ordinal.Equals(sessionInfo.IPAddress, ipAddress)
-        || !StringComparer.Ordinal.Equals(sessionInfo.UserAgent, userAgent);
-    if (mustUpdateSessionInfo) {
-        var setupSessionCommand = new SetupSessionCommand(session, ipAddress, userAgent);
-        await _auth.SetupSession(setupSessionCommand, cancellationToken);
-    }
-
-    var fusionUser = new User(session.Id);
-    var (newUser, authenticatedIdentity) = CreateFusionUser(fusionUser, principal, CookieAuthenticationDefaults.AuthenticationScheme);
-    var signInCommand = new SignInCommand(session, newUser, authenticatedIdentity);
-    signInCommand.IsServerSide = true;
-    await _authBackend.SignIn(signInCommand, cancellationToken);
-    }
-
-    protected virtual (User User, UserIdentity AuthenticatedIdentity) CreateFusionUser(User user, ClaimsPrincipal httpUser, string schema)
-    {
-        var httpUserIdentityName = httpUser.Identity?.Name ?? "";
-        var claims = httpUser.Claims.ToImmutableDictionary(c => c.Type, c => c.Value);
-        var id = FirstClaimOrDefault(claims, IdClaimKeys) ?? httpUserIdentityName;
-        var name = FirstClaimOrDefault(claims, NameClaimKeys) ?? httpUserIdentityName;
-        var identity = new UserIdentity(schema, id);
-        var identities = ImmutableDictionary<UserIdentity, string>.Empty.Add(identity, "");
-        var user = new User("", name) {
-            Claims = claims,
-            Identities = identities
-        };
-        return (user, identity);
-    }
-
-    protected static string? FirstClaimOrDefault(IReadOnlyDictionary<string, string> claims, string[] keys)
-    {
-        foreach (var key in keys)
-            if (claims.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value))
-                return value;
-        return null;
-    }
-```
-
-After calling Fusion's `IAuthBackend.SignIn()` the authentication state will be stored inside Fusion's storage and a cookie will also be created, so we can proceed as usual.
-
-One thing we need to be careful with is if we edit the roles/claims of a certain user inside Identity, we will need to invalidate this inside Fusion's storage or maybe even force the user to sign out, in order to keep the two frameworks in sync. To update the authentication state inside Fusion we can simply call `IAuthBackend.SignIn` with a newly constructed `ClaimsPrincipal` object containing the updated roles/claims.
