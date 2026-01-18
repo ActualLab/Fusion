@@ -6,7 +6,7 @@ hero:
   text: The "real-time on!" switch for .NET
   tagline: Add real-time updates and caching to any .NET app with almost no code changes. 10,000x faster APIs. Production-proven.
   image:
-    src: ./img/fusion-hero-bg.svg
+    src: /img/fusion-hero-bg.svg
     alt: Fusion Network Background
   actions:
     - theme: brand
