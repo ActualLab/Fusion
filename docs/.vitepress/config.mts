@@ -11,11 +11,8 @@ export default defineConfig({
     "mdsource",
     "node-modules",
     "outdated",
-    "performance-test-results",
-    "tables",
     "tasks",
     "to-be-used",
-    "tutorial",
   ],
   ignoreDeadLinks: false,
   themeConfig: {
@@ -24,23 +21,23 @@ export default defineConfig({
     },
     sidebar: [
       {
+        text: "Documentation",
         items: [
-          { text: "Quick Start", link: "/QuickStart" },
-          { text: "Part 0: NuGet packages", link: "/Part00" },
-          { text: "Part 1: Core Concepts", link: "/Part01" },
-          { text: "Part 2: Fusion on Server-Side Only", link: "/Part02" },
-          {
-            text: "Part 3: Distributed Compute Services",
-            link: "/Part03",
-          },
-          { text: "Part 4: Real-time UI in Blazor Apps", link: "/Part04" },
-          { text: "Part 5: CommandR", link: "/Part05" },
-          {
-            text: "Part 10: Multi-Host Invalidation and CQRS with Operations Framework",
-            link: "/Part10",
-          },
-          { text: "Part 11: Authentication in Fusion", link: "/Part11" },
-          { text: "Cheat Sheet", link: "/Fusion-Cheat-Sheet" },
+          { text: "1. Core Concepts", link: "/Part01" },
+          { text: "2. Local Compute Services on Server-Side", link: "/Part02" },
+          { text: "3. Distributed Compute Services", link: "/Part03" },
+          { text: "4. Real-time UI in Blazor App", link: "/Part04" },
+          { text: "5. CommandR", link: "/Part05" },
+          { text: "6. Multi-Host Invalidation with Operations Framework", link: "/Part06" },
+          { text: "7. Authentication in Fusion", link: "/Part07" },
+        ],
+      },
+      {
+        text: "Extras",
+        items: [
+          { text: "Learn Fusion via HelloCart Sample", link: "/HelloCart" },
+          { text: "Cheat Sheet", link: "/Cheat-Sheet" },
+          { text: "NuGet Packages", link: "/NuGet-Packages" },
         ],
       },
     ],

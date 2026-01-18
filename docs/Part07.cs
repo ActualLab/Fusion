@@ -21,7 +21,7 @@ using static System.Console;
 // are in a separate assembly and verified below by name only.
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial11;
+namespace Tutorial07;
 
 // Fake types for snippet compilation
 public class _HostPage : ComponentBase { }
@@ -52,7 +52,7 @@ public static class BlazorRenderModeExtensions
 public class AppDbContext : DbContext
 {
     // Authentication-related tables
-    #region Part11_AppDbContext
+    #region Part07_AppDbContext
     public DbSet<DbUser<long>> Users { get; protected set; } = null!;
     public DbSet<DbUserIdentity<long>> UserIdentities { get; protected set; } = null!;
     public DbSet<DbSessionInfo<long>> Sessions { get; protected set; } = null!;
@@ -75,7 +75,7 @@ public class OrderService(IAuth auth) : IOrderService
 {
     private readonly IAuth _auth = auth;
 
-    #region Part11_GetMyOrders
+    #region Part07_GetMyOrders
     [ComputeMethod]
     public virtual async Task<List<OrderHeaderDto>> GetMyOrders(Session session, CancellationToken cancellationToken = default)
     {
@@ -95,7 +95,7 @@ public static class Part11
 {
     public static async Task Run()
     {
-        WriteLine("Part 11: Authentication in Fusion");
+        WriteLine("Part 7: Authentication in Fusion");
         WriteLine();
 
         // === Reference verification section ===
@@ -186,7 +186,7 @@ public static class Part11
     }
 
     // Example: Service configuration with authentication
-    #region Part11_ServiceConfiguration
+    #region Part07_ServiceConfiguration
     public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
     {
         var fusion = services.AddFusion();
@@ -238,7 +238,7 @@ public static class Part11
     #endregion
 
     // Example: App configuration
-    #region Part11_AppConfiguration
+    #region Part07_AppConfiguration
     public static void ConfigureApp(WebApplication app)
     {
         app.UseWebSockets(new WebSocketOptions() {

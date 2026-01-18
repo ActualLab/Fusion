@@ -14,5 +14,4 @@ If you're looking for more content to read, check out these posts:
 
 ---
 
-[Documentation Home]: https://github.com/ActualLab/Fusion/blob/master/docs/README.md
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples

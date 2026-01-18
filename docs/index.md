@@ -10,13 +10,16 @@ hero:
     alt: Fusion Network Background
   actions:
     - theme: brand
-      text: Quick Start
-      link: /QuickStart
+      text: Documentation
+      link: /Part01
     - theme: alt
-      text: Watch the Video
-      link: /README
+      text: Cheat Sheet
+      link: /Cheat-Sheet
     - theme: alt
-      text: View on GitHub
+      text: Samples
+      link: https://github.com/ActualLab/Fusion.Samples
+    - theme: alt
+      text: Source
       link: https://github.com/ActualLab/Fusion
 
 features:
@@ -340,9 +343,7 @@ public virtual async Task<User> GetUser(long id) { ... }
 
 <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 2rem 0;">
 
-<a href="/QuickStart" style="display: inline-block; padding: 0.875rem 1.75rem; background: #3451b2; color: white; border-radius: 8px; font-weight: 600; text-decoration: none;">Quick Start Guide →</a>
-
-<a href="/Part01" style="display: inline-block; padding: 0.875rem 1.75rem; background: #f3f4f6; color: #374151; border-radius: 8px; font-weight: 600; text-decoration: none;">Full Tutorial →</a>
+<a href="/Part01" style="display: inline-block; padding: 0.875rem 1.75rem; background: #3451b2; color: white; border-radius: 8px; font-weight: 600; text-decoration: none;">Tutorial →</a>
 
 <a href="https://github.com/ActualLab/Fusion.Samples" style="display: inline-block; padding: 0.875rem 1.75rem; background: #f3f4f6; color: #374151; border-radius: 8px; font-weight: 600; text-decoration: none;">Sample Projects →</a>
 
@@ -364,11 +365,16 @@ Questions? Want to see how others use Fusion? Join the discussion:
 
 </div>
 
-<p style="text-align: center; color: #666; font-size: 0.9em; margin-top: 3rem;">
+## Credits
 
-**ActualLab.Fusion** is the successor to [Stl.Fusion](https://github.com/servicetitan/Stl.Fusion), originally created at [ServiceTitan](https://www.servicetitan.com).<br/>
-Now maintained by [ActualLab](https://github.com/ActualLab) and the creators of [Voxt](https://voxt.ai).
+Indirect contributors & everyone else who made Fusion possible:
 
-</p>
+- [ServiceTitan](https://www.servicetitan.com) &ndash; Fusion was originally created there.
+- [Quora](https://www.quora.com) &ndash; a huge part of the inspiration for Fusion was Quora's LiveNode framework
+- [Microsoft](https://microsoft.com) &ndash; for .NET Core and Blazor.
+
+**ActualLab.Fusion** is developed by the creators of [Voxt](https://voxt.ai)
+and is the successor of [Stl.Fusion](https://github.com/servicetitan/Stl.Fusion), originally created at [ServiceTitan](https://www.servicetitan.com).
+Check out [The Story Behind Fusion](Story.md) to learn more about its origins.
 
 </div>

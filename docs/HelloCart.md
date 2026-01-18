@@ -1,4 +1,4 @@
-# QuickStart: Learn 80% of Fusion by walking through HelloCart sample
+# Learn Fusion step-by-step via HelloCart Sample
 
 > This part is an attempt to introduce all key Fusion features
 > in a single document. If you find it doesn't do its
@@ -75,13 +75,13 @@ is used to implement creation, update, and deletion
 mainly to save some amount of code):
 
 ```cs
-public partial record EditCommand<TValue>(
+public partial record EditCommand<TItem>(
     [property: DataMember] string Id,
-    [property: DataMember] TValue? Item
+    [property: DataMember] TItem? Item
 ) : ICommand<Unit>
-    where TValue : class, IHasId<string>
+    where TItem : class, IHasId<string>
 {
-    public EditCommand(TValue value) : this(value.Id, value) { }
+    public EditCommand(TItem value) : this(value.Id, value) { }
 }
 ```
 
@@ -356,12 +356,12 @@ The same is equally applicable to `InMemoryCartService`:
 
 1. All of its API methods (declared in `ICartService`) are
    marked as `virtual`
-2. `Edit` contains a bit unusual piece of code:
+2. `Edit` contains a bit unusual piece of code that triggers invalidation
+   after making changes:
    ```cs
-   if (Invalidation.IsActive) {
-       _ = Get(cartId, default);
-       return Task.CompletedTask;
-   }
+   // Invalidation logic
+   using var _1 = Invalidation.Begin();
+   _ = Get(cartId, default);
    ```
 
 Finally, let's look at the code that registers these
@@ -478,7 +478,7 @@ while (true) {
     // Finally, this is how you update IComputed instances.
     // As you might notice, they're almost immutable,
     // so "update" always means creation of a new instance.
-    computed = await computed.Update(false, cancellationToken);
+    computed = await computed.Update(cancellationToken);
 }
 ```
 
@@ -496,8 +496,8 @@ public virtual async Task<decimal> GetTotal(
 
     var total = 0M;
     foreach (var (productId, quantity) in cart.Items) {
-        // Dependency: _products.Get(productId)!
-        var product = await _products.Get(productId, cancellationToken);
+        // Dependency: products.Get(productId)!
+        var product = await products.Get(productId, cancellationToken);
         total += (product?.Price ?? 0M) * quantity;
     }
     return total;
@@ -534,6 +534,9 @@ public virtual Task Edit(EditCommand<Product> command, CancellationToken cancell
         return Task.CompletedTask;
     }
 
+    // This call triggers Operations Framework use for this command,
+    // which is responsible for triggering invalidation pass.
+    InMemoryOperationScope.Require();
     if (product is null)
         _products.Remove(productId, out _);
     else
@@ -543,13 +546,13 @@ public virtual Task Edit(EditCommand<Product> command, CancellationToken cancell
 ```
 
 And if you look into similar `Edit` for in [InMemoryCartService.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloCart/v1/InMemoryCartService.cs),
-you'll find a very similar block there:
+you'll find it handles invalidation differently &ndash; it explicitly enters
+the invalidation scope after making changes:
 
 ```cs
-if (Invalidation.IsActive) {
-    _ = Get(cartId, default);
-    return Task.CompletedTask;
-}
+// Invalidation logic
+using var _1 = Invalidation.Begin();
+_ = Get(cartId, default);
 ```
 
 So now you have _almost_ the full picture:
@@ -649,7 +652,7 @@ And a few final remarks on this:
    This pipeline is server-side only.
 
 > If you want to learn all the details about this &ndash; check out
-> [Part 5](Part05.md) and [Part 10](Part10.md)
+> [Part 5](Part05.md) and [Part 10](Part06.md)
 > of the Tutorial 😎
 
 ## Version 2: Switching to EF Core
@@ -865,7 +868,7 @@ the rest is something you'd likely have otherwise at some point as well!
 And if you're curious how much of this "extra" a real app is expected to
 have &ndash; check out [Board Games](https://github.com/alexyakunin/BoardGames).
 It's mentioned in its
-[README.md](https://github.com/alexyakunin/BoardGames/blob/main/README.md)
+[index.md](https://github.com/alexyakunin/BoardGames/blob/main/index.md)
 that this whole app has
 [just about 35 extra lines of code](https://github.com/alexyakunin/BoardGames/search?q=IsInvalidating)
 responsible for the invalidation!
@@ -1070,7 +1073,6 @@ The parts we didn't touch at all are:
   instances, and what are the levers you can use to tweak its
   caching behavior.
 
-#### [Next: Part 0 &raquo;](./Part00.md) | [Tutorial Home](./README.md)
 
 [HelloCart]: https://github.com/ActualLab/Fusion.Samples/tree/master/src/HelloCart
 [HelloCart Sample]: https://github.com/ActualLab/Fusion.Samples/tree/master/src/HelloCart

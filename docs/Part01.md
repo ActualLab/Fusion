@@ -435,4 +435,3 @@ Get(a) = 7
 ```
 <!-- endSnippet -->
 
-#### [Next: Part 02 &raquo;](./Part02.md) | [Documentation Home](./README.md)
