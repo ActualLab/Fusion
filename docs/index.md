@@ -345,7 +345,7 @@ public virtual async Task<User> GetUser(long id) { ... }
 
 <a href="/Part01" style="display: inline-block; padding: 0.875rem 1.75rem; background: #3451b2; color: white; border-radius: 8px; font-weight: 600; text-decoration: none;">Documentation →</a>
 
-<a href="https://github.com/ActualLab/Fusion.Samples" style="display: inline-block; padding: 0.875rem 1.75rem; background: #f3f4f6; color: #374151; border-radius: 8px; font-weight: 600; text-decoration: none;">Sample Projects →</a>
+<a href="https://github.com/ActualLab/Fusion.Samples" style="display: inline-block; padding: 0.875rem 1.75rem; background: #f3f4f6; color: #374151; border-radius: 8px; font-weight: 600; text-decoration: none;">Samples →</a>
 
 </div>
 
