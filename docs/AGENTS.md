@@ -4,6 +4,8 @@
 
 This file applies to all documentation files in the `docs/` directory and its subdirectories.
 
+The documentation in this folder is published to the VitePress website at https://fusion.actuallab.net/
+
 `../AGENTS.md` (located in the root folder) describes agent instructions for the entire project. 
 
 Before you proceed further, you ABSOLUTELY need to read the following files:

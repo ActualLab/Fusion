@@ -152,7 +152,7 @@ it explains how many problems we tackle are connected, how Fusion addresses the 
 
 > The slides are slightly outdated &ndash; e.g. now Fusion clients use `ActualLab.Rpc` rather than HTTP to communicate with the server, but all the concepts they cover are still intact.
 
-[Quick Start], [Cheat Sheet], and the [Tutorial] are the best places to start from.
+[Documentation] is the best place to start from.
 
 Check out [Samples]; some of them are covered further in this document.
 
@@ -250,7 +250,6 @@ And that's exactly what Fusion does:
 - Ensures the dependency graph backing this part of the state stays in memory while someone uses it
 - Destroys what's unobserved.
 
-Check out ["Scaling Fusion Services" part of the Tutorial](https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part08.md) to see a much more robust description of how Fusion scales.
 
 ## Enough talk. Show me the code!
 
@@ -433,7 +432,7 @@ eliminates the chattiness you'd expect from a regular client-side proxy.
 
 ## Next Steps
 
-- Read [Quick Start], [Cheat Sheet], or the whole [Tutorial]
+- Read [Documentation]
 - Check out [Samples]
 - Join [Fusion Place] to ask questions and track project updates.
 
@@ -461,9 +460,7 @@ eliminates the chattiness you'd expect from a regular client-side proxy.
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
 [Samples]: https://github.com/ActualLab/Fusion.Samples
 [Board Games]: https://github.com/alexyakunin/BoardGames
-[Tutorial]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/README.md
-[Quick Start]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/QuickStart.md
-[Cheat Sheet]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Fusion-Cheat-Sheet.md
+[Documentation]: https://fusion.actuallab.net/
 [Slides]: https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html
 [MMORPG]: https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game
 [Voxt]: https://voxt.ai
