@@ -43,14 +43,14 @@ features:
 <div class="vp-doc" style="padding: 0 24px; max-width: 1152px; margin: 0 auto;">
 
 <!-- Badges -->
-<p align="center" style="margin-top: 2rem;">
+<div align="center" style="margin-top: 2rem;">
 
 [![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22)
 [![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 [![MIT License](https://img.shields.io/github/license/actuallab/Fusion?)](https://github.com/ActualLab/Fusion/blob/master/LICENSE)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 
-</p>
+</div>
 
 ## See It In Action
 
