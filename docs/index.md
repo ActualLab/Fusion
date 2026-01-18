@@ -153,7 +153,7 @@ Think of Fusion as **MSBuild for data processed by your backend, API, and even c
 
 ```
 GetUserProfile(3) ──calls──► GetUser(3)
-        ├───────────calls──► GetUserAvatar(3) ──calls──► GetThumbnail("user_3_avatar", 64)
+        └───────────calls──► GetUserAvatar(3) ──calls──► GetThumbnail("user_3_avatar", 64)
 
 When GetThumbnail(imgId, 64) is invalidated:
   - GetUserAvatar(3) is immediately marked as inconsistent
