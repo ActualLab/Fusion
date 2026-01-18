@@ -6,7 +6,7 @@ export default defineConfig({
   title: "ActualLab.Fusion",
   description:
     "Fusion is a reactive framework for building scalable, real-time applications. This site hosts Fusion documentation.",
-  head: [["link", { rel: "icon", href: "/img/fusion-docs-icon.png" }]],
+  head: [["link", { rel: "icon", href: "/img/favicon.ico" }]],
   srcExclude: [
     "mdsource",
     "node-modules",

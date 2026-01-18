@@ -11,11 +11,12 @@ ENV TZ="$TZ"
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
-# Install dev tools, CLI utilities, Python 3
+# Install dev tools, CLI utilities, Python 3, image tools
 RUN apt-get update && apt-get install -y \
     git procps sudo fzf zsh man-db unzip gnupg2 \
     gh jq wget curl less ca-certificates \
     python3 python3-pip python3-venv \
+    imagemagick \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Python charting and data analysis libraries
