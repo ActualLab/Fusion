@@ -6,9 +6,7 @@ If your project folder is `/project`, you are running inside a Docker container 
 
 # ActualLab.Fusion.Samples Location
 
-The Fusion Samples repository is available at different paths depending on your environment:
+The Fusion Samples repository (https://github.com/ActualLab/Fusion.Samples on GitHub) is available at different paths depending on your environment:
 - **Docker container**: `/samples-project`
 - **Windows (outside Docker)**: `D:\Projects\ActualLab.Fusion.Samples`
-
-This repository corresponds to https://github.com/ActualLab/Fusion.Samples on GitHub.
 
