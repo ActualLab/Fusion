@@ -6,7 +6,7 @@ Compute service interface:
 
 ```cs
 // IComputeService is just an optional tagging interface.
-// Nevertheless, we highly recommend to "implement" it –
+// Nevertheless, we highly recommend implementing it –
 // it allows you to use a few extension methods, such as
 // .GetServices() and .GetCommander().
 public interface ICartService : IComputeService
@@ -68,7 +68,7 @@ Register Compute Service client:
 fusion.AddClient<ICartService>();
 ```
 
-Use use it:
+Use it:
 
 ```cs
 // Just call it the same way you call the original one.
@@ -166,5 +166,3 @@ computed.Invalidated += c => Console.WriteLine("Invalidated!");
 ```
 
 To be continued.
-
-#### [&gt; Back to Tutorial](./index.md) | [Documentation Home](./)
