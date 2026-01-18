@@ -16,6 +16,7 @@ export default defineConfig({
   ],
   ignoreDeadLinks: false,
   themeConfig: {
+    logo: "/img/Logo128.jpg",
     search: {
       provider: "local",
     },
