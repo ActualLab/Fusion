@@ -27,10 +27,10 @@
 }
 
 .VPSidebarItem.level-1.is-active > .item .link > .text.text {
-  color: var(--vp-c-black);
+  color: var(--vp-c-text-1);
 
   &:hover {
-    color: var(--vp-c-black);
+    color: var(--vp-c-text-1);
     cursor: default;
   }
 }
