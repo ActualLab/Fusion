@@ -1,4 +1,4 @@
-# Part 0: NuGet Packages
+# NuGet Packages
 
 All Fusion packages are
 [available on NuGet](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22).  

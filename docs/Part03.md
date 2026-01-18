@@ -1,4 +1,4 @@
-# Part 3: Distributed Compute Services
+# Distributed Compute Services
 
 Fusion is designed with distributed applications in mind,
 and one of its key features is the ability to expose Compute Services
@@ -431,4 +431,3 @@ us to have the same UI components working in WASM and Server-Side Blazor mode:
 **That's pretty much it &ndash; now you've learned all the key features of Fusion.**
 There are details, of course, and the rest of the tutorial is mostly about them.
 
-#### [Next: Part 04 &raquo;](./Part04.md) | [Documentation Home](./README.md)

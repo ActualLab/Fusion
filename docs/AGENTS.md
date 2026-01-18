@@ -7,8 +7,8 @@ This file applies to all documentation files in the `docs/` directory and its su
 `../AGENTS.md` (located in the root folder) describes agent instructions for the entire project. 
 
 Before you proceed further, you ABSOLUTELY need to read the following files:
-- `README.md` (located in `docs/` folder)
-- `../README.md` (located in the root folder)
+- `index.md` (located in `docs/` folder)
+- `../index.md` (located in the root folder)
 - `../AGENTS.md` (located in the root folder)
 
 ## General Instructions  
@@ -27,7 +27,7 @@ on a similar task.
 
 ## Documentation Structure
 
-- Starting point: `docs/README.md`
+- Starting point: `docs/index.md`
 - Main documentation files: `Part*.md` files that contain the core documentation
 - Source code snippets: `Part*.cs` files that are used to generate code examples in the documentation.
 - `docs/.vitepress/` contains the VitePress configuration for the documentation site

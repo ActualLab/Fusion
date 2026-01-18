@@ -1,4 +1,4 @@
-# Part 11: Authentication in Fusion
+# Authentication in Fusion
 
 [ActualLab.Fusion](https://www.nuget.org/packages/ActualLab.Fusion/)
 is a library that provides a robust way to implement authentication
@@ -116,9 +116,9 @@ When you add authentication, `InMemoryAuthService` is registered as `IAuth` and 
 to the following code snippet.
 
 The Operations Framework is also needed for any of these services &ndash;
-hopefully you read [Part 10](./Part10.md), which covers it.
+hopefully you read [Part 10](./Part06.md), which covers it.
 
-<!-- snippet: Part10_AddDbContextServices -->
+<!-- snippet: Part06_AddDbContextServices -->
 ```cs
 public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
@@ -152,7 +152,7 @@ public static void ConfigureServices(IServiceCollection services, IHostEnvironme
 Our `DbContext` needs to contain `DbSet`-s for the classes provided here as type parameters.
 The `DbSessionInfo` and `DbUser` classes are very simple entities provided by Fusion for storing authentication data.
 
-<!-- snippet: Part11_AppDbContext -->
+<!-- snippet: Part07_AppDbContext -->
 ```cs
 public DbSet<DbUser<long>> Users { get; protected set; } = null!;
 public DbSet<DbUserIdentity<long>> UserIdentities { get; protected set; } = null!;
@@ -169,7 +169,7 @@ These entity types are defined in:
 
 Our Compute Services can receive a `Session` object that we can use to decide if we are authenticated or not and who the signed in user is:
 
-<!-- snippet: Part11_GetMyOrders -->
+<!-- snippet: Part07_GetMyOrders -->
 ```cs
 [ComputeMethod]
 public virtual async Task<List<OrderHeaderDto>> GetMyOrders(Session session, CancellationToken cancellationToken = default)
@@ -256,7 +256,7 @@ Notice that it assumes there is [`fusionAuth.js`](https://github.com/ActualLab/F
 
 Besides that, you need to add a couple extras to your ASP.NET Core app service container configuration:
 
-<!-- snippet: Part11_ServiceConfiguration -->
+<!-- snippet: Part07_ServiceConfiguration -->
 ```cs
 public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
@@ -315,7 +315,7 @@ If you want to use some other logic for these actions, you can map them to simil
 
 And finally, you need a bit of extras in app configuration:
 
-<!-- snippet: Part11_AppConfiguration -->
+<!-- snippet: Part07_AppConfiguration -->
 ```cs
 public static void ConfigureApp(WebApplication app)
 {

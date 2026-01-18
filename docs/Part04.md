@@ -1,4 +1,4 @@
-# Part 6: Real-time UI in Blazor Apps
+# Real-time UI in Blazor Apps
 
 You already know about `IState<T>` &ndash; it was described in [Part 1](./Part01.md).
 It's an abstraction that "tracks" the most current version of some `Computed<T>`.
@@ -246,35 +246,45 @@ For Server-Side Blazor, you need to:
 
 See [HelloBlazorServer/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Program.cs) for a complete example. The key parts are:
 
+<!-- snippet: Part04_ServerSideBlazor_Services -->
 ```cs
-// Configure services
-var fusion = services.AddFusion();
+public static void ConfigureServerSideBlazorServices(IServiceCollection services)
+{
+    // Configure services
+    var fusion = services.AddFusion();
 
-// Add your Fusion compute services
-fusion.AddFusionTime(); // Built-in time service
-fusion.AddService<CounterService>();
-fusion.AddService<WeatherForecastService>();
+    // Add your Fusion compute services
+    fusion.AddFusionTime(); // Built-in time service
+    fusion.AddService<CounterService>();
+    fusion.AddService<WeatherForecastService>();
 
-// ASP.NET Core / Blazor services
-services.AddServerSideBlazor(o => o.DetailedErrors = true);
-builder.Services.AddRazorComponents().AddInteractiveServerComponents();
-fusion.AddBlazor();
+    // ASP.NET Core / Blazor services
+    services.AddServerSideBlazor(o => o.DetailedErrors = true);
+    services.AddRazorComponents().AddInteractiveServerComponents();
+    fusion.AddBlazor();
 
-// Default update delay for ComputedStateComponents
-services.AddScoped<IUpdateDelayer>(_ => FixedDelayer.MinDelay);
+    // Default update delay for ComputedStateComponents
+    services.AddScoped<IUpdateDelayer>(_ => FixedDelayer.MinDelay);
+}
 ```
+<!-- endSnippet -->
 
 And for the app configuration:
 
+<!-- snippet: Part04_ServerSideBlazor_App -->
 ```cs
-app.UseFusionSession();
-app.UseRouting();
-app.UseAntiforgery();
+public static void ConfigureServerSideBlazorApp(WebApplication app)
+{
+    app.UseFusionSession();
+    app.UseRouting();
+    app.UseAntiforgery();
 
-app.MapStaticAssets();
-app.MapRazorComponents<_HostPage>()
-    .AddInteractiveServerRenderMode();
+    app.MapStaticAssets();
+    app.MapRazorComponents<_HostPage>()
+        .AddInteractiveServerRenderMode();
+}
 ```
+<!-- endSnippet -->
 
 ## Real-time UI in Blazor WebAssembly / Hybrid Apps
 
@@ -286,57 +296,73 @@ See [TodoApp](https://github.com/ActualLab/Fusion.Samples/tree/master/src/TodoAp
 
 See [TodoApp/Host/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/Host/Program.cs) for a complete example. The key parts are:
 
+<!-- snippet: Part04_Hybrid_ServerServices -->
 ```cs
-// Fusion services with RPC server mode
-var fusion = services.AddFusion(RpcServiceMode.Server, true);
-var fusionServer = fusion.AddWebServer();
+public static void ConfigureHybridServerServices(IServiceCollection services)
+{
+    // Fusion services with RPC server mode
+    var fusion = services.AddFusion(RpcServiceMode.Server, true);
+    var fusionServer = fusion.AddWebServer();
 
-// Add your Fusion compute services as servers
-fusion.AddServer<ITodoApi, TodoApi>();
+    // Add your Fusion compute services as servers
+    fusion.AddServer<ITodoApi, TodoApi>();
 
-// ASP.NET Core / Blazor services
-services.AddServerSideBlazor(o => o.DetailedErrors = true);
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents();
-fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
+    // ASP.NET Core / Blazor services
+    services.AddServerSideBlazor(o => o.DetailedErrors = true);
+    services.AddRazorComponents()
+        .AddInteractiveServerComponents()
+        .AddInteractiveWebAssemblyComponents();
+    fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
+}
 ```
+<!-- endSnippet -->
 
 And for the app configuration:
 
+<!-- snippet: Part04_Hybrid_ServerApp -->
 ```cs
-app.UseWebSockets(new WebSocketOptions() {
-    KeepAliveInterval = TimeSpan.FromSeconds(30),
-});
-app.UseFusionSession();
-app.UseRouting();
-app.UseAuthentication();
-app.UseAntiforgery();
+public static void ConfigureHybridServerApp(WebApplication app)
+{
+    app.UseWebSockets(new WebSocketOptions() {
+        KeepAliveInterval = TimeSpan.FromSeconds(30),
+    });
+    app.UseFusionSession();
+    app.UseRouting();
+    app.UseAuthentication();
+    app.UseAntiforgery();
 
-// Razor components with both Server and WebAssembly render modes
-app.MapStaticAssets();
-app.MapRazorComponents<_HostPage>()
-    .AddInteractiveServerRenderMode()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(App).Assembly);
+    // Razor components with both Server and WebAssembly render modes
+    app.MapStaticAssets();
+    app.MapRazorComponents<_HostPage>()
+        .AddInteractiveServerRenderMode()
+        .AddInteractiveWebAssemblyRenderMode()
+        .AddAdditionalAssemblies(typeof(App).Assembly);
 
-// Fusion RPC endpoints
-app.MapRpcWebSocketServer();
+    // Fusion RPC endpoints
+    app.MapRpcWebSocketServer();
+}
 ```
+<!-- endSnippet -->
 
 ### Client-side configuration (WebAssembly)
 
 See [TodoApp/UI/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/UI/Program.cs) and [ClientStartup.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/UI/ClientStartup.cs) for a complete example. The key parts are:
 
+<!-- snippet: Part04_Wasm_Main -->
 ```cs
-var builder = WebAssemblyHostBuilder.CreateDefault(args);
-ConfigureServices(builder.Services, builder);
-var host = builder.Build();
-await host.RunAsync();
+public static async Task WasmMain(string[] args)
+{
+    var builder = WebAssemblyHostBuilder.CreateDefault(args);
+    ConfigureWasmServices(builder.Services, builder);
+    var host = builder.Build();
+    await host.RunAsync();
+}
 ```
+<!-- endSnippet -->
 
+<!-- snippet: Part04_Wasm_Services -->
 ```cs
-public static void ConfigureServices(IServiceCollection services, WebAssemblyHostBuilder builder)
+public static void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
 {
     // Fusion services
     var fusion = services.AddFusion();
@@ -353,6 +379,7 @@ public static void ConfigureServices(IServiceCollection services, WebAssemblyHos
     services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
 }
 ```
+<!-- endSnippet -->
 
 ### _HostPage.razor
 

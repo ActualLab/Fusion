@@ -1,11 +1,11 @@
-# Part 5: CommandR
+# CommandR
 
 [ActualLab.CommandR](https://www.nuget.org/packages/ActualLab.CommandR/)
 is a [MediatR](https://github.com/jbogard/MediatR)-like library helping
 to implement CQRS-style command handlers.
 
 > **Why does CommandR exist?**
-> The primary reason is the **Operations Framework** described in [Part 10](./Part10.md).
+> The primary reason is the **Operations Framework** described in [Part 10](./Part06.md).
 > Operations Framework requires a command execution pipeline to implement
 > multi-host invalidation, operation logging, and other features that make
 > Fusion work reliably in distributed scenarios. CommandR provides exactly

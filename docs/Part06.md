@@ -1,4 +1,4 @@
-# Part 10: Multi-Host Invalidation and CQRS with Operations Framework
+# Multi-Host Invalidation and CQRS with Operations Framework
 
 [ActualLab.Fusion](https://www.nuget.org/packages/ActualLab.Fusion/)
 is a library that provides a robust way to implement multi-host invalidation
@@ -43,7 +43,7 @@ its Fusion-specific behaviors.
 
 1. Add the following `DbSet` to your `DbContext` (`AppDbContext` further):
 
-<!-- snippet: Part10_DbSet -->
+<!-- snippet: Part06_DbSet -->
 ```cs
 public DbSet<DbOperation> Operations { get; protected set; } = null!;
 public DbSet<DbEvent> Events { get; protected set; } = null!;
@@ -54,7 +54,7 @@ public DbSet<DbEvent> Events { get; protected set; } = null!;
    configuration block
    (typically it is `Startup.ConfigureServices` method or similar):
 
-<!-- snippet: Part10_AddDbContextServices -->
+<!-- snippet: Part06_AddDbContextServices -->
 ```cs
 public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
@@ -141,7 +141,7 @@ the code of your old action handlers:
 
 **Pre-OF handler:**
 
-<!-- snippet: Part10_PreOfHandler -->
+<!-- snippet: Part06_PreOfHandler -->
 ```cs
 public async Task<ChatMessage> PostMessage(
     Session session, string text, CancellationToken cancellationToken = default)
@@ -162,7 +162,7 @@ public async Task<ChatMessage> PostMessage(
 
 1. Create a dedicated command type for this action:
 
-<!-- snippet: Part10_PostMessageCommand -->
+<!-- snippet: Part06_PostMessageCommand -->
 ```cs
 public record PostMessageCommand(Session Session, string Text) : ICommand<ChatMessage>;
 ```
@@ -179,7 +179,7 @@ to their immutability.
 
 2. Refactor action to command handler:
 
-<!-- snippet: Part10_PostOfHandler -->
+<!-- snippet: Part06_PostOfHandler -->
 ```cs
 [CommandHandler]
 public virtual async Task<ChatMessage> PostMessage(
@@ -233,7 +233,7 @@ So to pass some data to your invalidation blocks, use
 `CommandContext.Operation.Items` collection &ndash;
 nearly as follows:
 
-<!-- snippet: Part10_SignOutHandler -->
+<!-- snippet: Part06_SignOutHandler -->
 ```cs
 public virtual async Task SignOut(
     SignOutCommand command, CancellationToken cancellationToken = default)
@@ -550,7 +550,7 @@ This happens if and only if:
 
 Let's look at its handler declaration first:
 
-<!-- snippet: Part10_InvalidatingHandler -->
+<!-- snippet: Part06_InvalidatingHandler -->
 ```cs
 [CommandHandler(Priority = 100, IsFilter = true)]
 public async Task OnCommand(

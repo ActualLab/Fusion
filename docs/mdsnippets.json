@@ -2,5 +2,5 @@
     "$schema": "https://raw.githubusercontent.com/SimonCropp/MarkdownSnippets/master/schema.json",
     "Convention": "InPlaceOverwrite",
     "OmitSnippetLinks": true,
-    "ExcludeMarkdownDirectories": [ "tutorial" ]
+    "ExcludeMarkdownDirectories": [ "outdated" ]
 }

@@ -1,4 +1,4 @@
-# Part 2: Fusion on Server-Side Only
+# Using Local Compute Services on Server-Side
 
 Even though Fusion supports RPC, you can use it on server-side only to cache recurring computations.
 Below are results from [Run-Benchmark.cmd from Fusion Samples](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Benchmark):
@@ -395,4 +395,3 @@ Under the hood, `ConcurrentTimerSet` uses
 basically, a [Radix Heap](http://ssp.impulsetrain.com/radix-heap.html)
 supporting `O(1)` find and delete operations.
 
-#### [Next: Part 03 &raquo;](./Part03.md) | [Documentation Home](./README.md)
