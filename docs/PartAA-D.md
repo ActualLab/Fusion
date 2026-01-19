@@ -73,7 +73,7 @@ ASCII diagrams illustrating Fusion's authentication architecture and flows.
      │────────────>│               │                  │
      │             │               │                  │
      │ _HostPage loads             │                  │
-     │─────────────────────────────────────────────-->│
+     │───────────────────────────────────────────────>│
      │             │               │                  │
      │             │               │  UpdateAuthState │
      │             │               │  (syncs to IAuth)│
