@@ -95,7 +95,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
         ],
       },
       {
-        text: "Advanced Concepts",
+        text: "Advanced Topics",
         items: [
           {
             text: "Authentication in Fusion",
