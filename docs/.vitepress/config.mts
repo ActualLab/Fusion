@@ -24,6 +24,7 @@ export default defineConfig({
       {
         text: "Documentation",
         items: [
+          { text: "NuGet Packages", link: "/NuGet-Packages" },
           {
             text: "1. Compute Services, Computed<T>, and States",
             link: "/Part01",
@@ -84,7 +85,6 @@ export default defineConfig({
               { text: "Cheat Sheet", link: "/Part05-CS" },
             ],
           },
-          { text: "NuGet Packages", link: "/NuGet-Packages" },
         ],
       },
       {
