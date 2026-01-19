@@ -6,7 +6,14 @@ export default defineConfig({
   title: "ActualLab.Fusion",
   description:
     "Fusion is a reactive framework for building scalable, real-time applications. This site hosts Fusion documentation.",
-  head: [["link", { rel: "icon", href: "/favicon.ico" }]],
+  head: [
+    ["link", { rel: "icon", href: "/favicon.ico" }],
+    ["script", { async: "", src: "https://www.googletagmanager.com/gtag/js?id=G-PX4G7HX4CM" }],
+    ["script", {}, `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-PX4G7HX4CM');`],
+  ],
   srcExclude: [
     "mdsource",
     "node-modules",
