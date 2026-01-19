@@ -10,9 +10,6 @@ hero:
       text: Documentation
       link: /Part01
     - theme: alt
-      text: Cheat Sheet
-      link: /Cheat-Sheet
-    - theme: alt
       text: Samples
       link: https://github.com/ActualLab/Fusion.Samples
     - theme: alt
