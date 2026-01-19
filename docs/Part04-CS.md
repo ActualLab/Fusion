@@ -1,102 +1,252 @@
 # CommandR: Cheat Sheet
 
-Quick reference for commands and handlers.
+Quick reference for commands, handlers, and the CommandR pipeline.
 
-## Define Command
+## Defining Commands
+
+Basic command with result:
 
 ```cs
-public record UpdateCartCommand(long CartId, Dictionary<long, long?> Updates)
-    : ICommand<Unit>
+public record CreateOrderCommand(long UserId, List<OrderItem> Items) : ICommand<Order>
 {
-    public UpdateCartCommand() : this(0, null!) { } // For deserialization
+    public CreateOrderCommand() : this(0, new()) { } // Parameterless constructor for serialization
 }
 ```
 
-## Command Handler
-
-In compute service interface:
+Command without result:
 
 ```cs
-public interface ICartService : IComputeService
+public record DeleteOrderCommand(long OrderId) : ICommand<Unit>
 {
-    [CommandHandler]
-    Task<Unit> UpdateCart(UpdateCartCommand command, CancellationToken cancellationToken = default);
+    public DeleteOrderCommand() : this(0) { }
 }
 ```
 
-Implementation (without Operations Framework):
+## Command Interfaces
+
+| Interface | Purpose |
+|-----------|---------|
+| `ICommand` | Base marker interface |
+| `ICommand<TResult>` | Command with typed result |
+| `IBackendCommand` | Server-only execution |
+| `IOutermostCommand` | Forces top-level execution |
+| `IDelegatingCommand` | Orchestrates other commands |
+| `IPreparedCommand` | Requires `Prepare()` before execution |
+| `ISystemCommand` | Framework-triggered commands |
+| `ILocalCommand` | Self-executing commands |
+| `IEventCommand` | Multi-handler events |
+| `ISessionCommand` | Fusion session-bound commands |
+
+## Registering CommandR
 
 ```cs
-public virtual async Task<Unit> UpdateCart(UpdateCartCommand command, CancellationToken cancellationToken)
+var services = new ServiceCollection();
+
+// Add CommandR
+var commander = services.AddCommander();
+
+// Add handler classes
+commander.AddHandlers<OrderHandlers>();
+
+// Add command services (creates proxy)
+commander.AddService<OrderService>();
+```
+
+## Handler Patterns
+
+### Interface-Based Handler
+
+```cs
+public class CreateOrderHandler : ICommandHandler<CreateOrderCommand>
 {
-    // Actual command logic
-    var cart = await GetCart(command.CartId, cancellationToken);
-    // ... apply updates ...
-
-    // Invalidate affected compute methods (if not using Operations Framework)
-    using (Invalidation.Begin()) {
-        _ = GetCart(command.CartId, default);
-    }
-
-    return default;
-}
-```
-
-> **Note:** For multi-host invalidation, use the Operations Framework pattern with `Invalidation.IsActive` instead. See [Operations Framework Cheat Sheet](Part05-CS.md).
-
-## Execute Command
-
-```cs
-var commander = services.Commander();
-await commander.Call(new UpdateCartCommand(cartId, updates), cancellationToken);
-```
-
-## Invalidation Patterns
-
-Invalidate multiple methods:
-
-```cs
-using (Invalidation.Begin()) {
-    _ = GetOrder(orderId, default);
-    _ = GetOrderList(userId, default);
-    _ = GetOrderCount(userId, default);
-}
-```
-
-Conditional invalidation:
-
-```cs
-using (Invalidation.Begin()) {
-    _ = GetOrder(orderId, default);
-    if (statusChanged)
-        _ = GetOrdersByStatus(oldStatus, default);
-}
-```
-
-Check if invalidation scope is used:
-
-```cs
-using (var scope = Invalidation.Begin()) {
-    _ = GetItem(itemId, default);
-    if (scope.IsUsed) {
-        // At least one invalidation happened
-    }
-}
-```
-
-## Standalone Command Handlers
-
-For handlers outside compute services:
-
-```cs
-public class MyCommandHandler : ICommandHandler<MyCommand, Unit>
-{
-    public async Task OnCommand(MyCommand command, CommandContext context, CancellationToken ct)
+    public async Task OnCommand(
+        CreateOrderCommand command,
+        CommandContext context,
+        CancellationToken ct)
     {
         // Handle command
     }
 }
 
-// Register
-services.AddFusion().Commander.AddHandlers<MyCommandHandler>();
+// Registration
+services.AddScoped<CreateOrderHandler>();
+commander.AddHandlers<CreateOrderHandler>();
 ```
+
+### Convention-Based Handler
+
+```cs
+public class OrderHandlers
+{
+    [CommandHandler]
+    public async Task<Order> CreateOrder(
+        CreateOrderCommand command,
+        IOrderRepository repo, // Resolved from DI
+        CancellationToken ct)
+    {
+        return await repo.Create(command, ct);
+    }
+}
+
+// Registration
+services.AddScoped<OrderHandlers>();
+commander.AddHandlers<OrderHandlers>();
+```
+
+### Command Service (AOP-Style)
+
+```cs
+public class OrderService : ICommandService
+{
+    [CommandHandler]
+    public virtual async Task<Order> CreateOrder( // Must be virtual
+        CreateOrderCommand command,
+        CancellationToken ct)
+    {
+        // ...
+    }
+}
+
+// Registration (creates proxy automatically)
+commander.AddService<OrderService>();
+
+// Both go through full pipeline:
+await commander.Call(new CreateOrderCommand(...), ct);
+await orderService.CreateOrder(new CreateOrderCommand(...), ct);
+```
+
+### Filter Handler
+
+```cs
+[CommandHandler(Priority = 100, IsFilter = true)]
+public async Task LoggingFilter(ICommand command, CancellationToken ct)
+{
+    var context = CommandContext.GetCurrent();
+    Console.WriteLine($"Before: {command.GetType().Name}");
+    try {
+        await context.InvokeRemainingHandlers(ct);
+    }
+    finally {
+        Console.WriteLine($"After: {command.GetType().Name}");
+    }
+}
+```
+
+## Executing Commands
+
+```cs
+var commander = services.Commander();
+
+// Call - returns result, throws on error
+var order = await commander.Call(new CreateOrderCommand(...), ct);
+
+// Run - returns context, never throws
+var context = await commander.Run(new CreateOrderCommand(...), ct);
+if (context.UntypedResult is { Error: { } error })
+    Console.WriteLine($"Error: {error}");
+
+// Start - fire and forget
+var context = commander.Start(new CreateOrderCommand(...));
+```
+
+## CommandContext
+
+```cs
+[CommandHandler]
+public async Task<Order> CreateOrder(CreateOrderCommand command, CancellationToken ct)
+{
+    var context = CommandContext.GetCurrent();
+
+    // Access services
+    var db = context.Services.GetRequiredService<AppDbContext>();
+
+    // Store data for other handlers
+    context.Items["Key"] = value;
+
+    // Access outer context (for nested commands)
+    var root = context.OutermostContext;
+
+    // Share data across nested calls
+    root.Items["SharedKey"] = sharedValue;
+
+    // Get commander
+    var commander = context.Commander;
+}
+```
+
+## Handler Priority
+
+Higher priority = runs first. Default is 0.
+
+| Range | Purpose |
+|-------|---------|
+| > 100,000 | Infrastructure (validation, tracing) |
+| 10,000 - 100,000 | Cross-cutting concerns |
+| 1,000 - 10,000 | Database/transaction |
+| 0 - 1,000 | Business logic (default: 0) |
+| < 0 | Post-processing |
+
+## Built-in Handlers (Execution Order)
+
+| Handler | Priority | Assembly |
+|---------|----------|----------|
+| `PreparedCommandHandler` | 1,000,000,000 | CommandR |
+| `CommandTracer` | 998,000,000 | CommandR |
+| `LocalCommandRunner` | 900,000,000 | CommandR |
+| `RpcCommandHandler` | 800,000,000 | CommandR |
+| `OperationReprocessor` | 100,000 | Fusion |
+| `NestedOperationLogger` | 11,000 | Fusion |
+| `InMemoryOperationScopeProvider` | 10,000 | Fusion |
+| `DbOperationScopeProvider` | 1,000 | Fusion.EF |
+| Your handlers | 0 | - |
+| `InvalidatingCommandCompletionHandler` | 100 | Fusion |
+| `CompletionTerminator` | -1,000,000,000 | Fusion |
+
+## Local Commands
+
+```cs
+// Using LocalCommand factory
+var cmd = LocalCommand.New(() => Console.WriteLine("Hello"));
+var cmd = LocalCommand.New(async ct => await DoWorkAsync(ct));
+var cmd = LocalCommand.New<int>(() => 42);
+
+await commander.Call(cmd);
+```
+
+## Prepared Commands
+
+```cs
+public record CreateOrderCommand(...) : IPreparedCommand, ICommand<Order>
+{
+    public Task Prepare(CommandContext context, CancellationToken ct)
+    {
+        if (Items.Count == 0)
+            throw new ArgumentException("Order must have items");
+        return Task.CompletedTask;
+    }
+}
+```
+
+## With Operations Framework
+
+```cs
+[CommandHandler]
+public virtual async Task<Order> CreateOrder(
+    CreateOrderCommand command, CancellationToken ct)
+{
+    // Invalidation block (runs on all hosts)
+    if (Invalidation.IsActive) {
+        _ = GetOrders(command.UserId, default);
+        return default!;
+    }
+
+    // Main logic (runs on originating host only)
+    await using var db = await DbHub.CreateOperationDbContext(ct);
+    var order = new Order { ... };
+    db.Orders.Add(order);
+    await db.SaveChangesAsync(ct);
+    return order;
+}
+```
+
+See [Part 5: Operations Framework](Part05.md) for details.

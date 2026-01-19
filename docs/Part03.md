@@ -1,5 +1,16 @@
 # Real-time UI in Blazor Apps
 
+This part covers how to build real-time Blazor applications with Fusion. Fusion provides a comprehensive set of component base classes, services, and utilities that make it easy to create UIs that automatically update when underlying data changes.
+
+**Related Documentation:**
+- [Services](Part03-Services.md) &ndash; CircuitHub, JSRuntimeInfo, RenderModeHelper
+- [Authentication](Part03-Auth.md) &ndash; AuthState, AuthStateProvider, PresenceReporter
+- [Parameter Comparison](Part03-Parameters.md) &ndash; Optimized parameter handling
+- [Diagrams](Part03-D.md) &ndash; Visual diagrams of component architecture
+- [Cheat Sheet](Part03-CS.md) &ndash; Quick reference
+
+## Key Concepts
+
 You already know about `IState<T>` &ndash; it was described in [Part 1](./Part01.md).
 It's an abstraction that "tracks" the most current version of some `Computed<T>`.
 There are a few "flavors" of the `IState` &ndash; the most important ones are:
@@ -60,6 +71,8 @@ Extends `FusionComponentBase` to provide access to `CircuitHub` and commonly use
 ### Purpose
 
 Acts as a convenience layer that injects `CircuitHub` and exposes shortcuts to frequently needed services like `StateFactory`, `UICommander`, and `Session`.
+
+> **See also**: [Blazor Services](Part03-Services.md) for detailed documentation of `CircuitHub`, `JSRuntimeInfo`, `RenderModeHelper`, and `RenderModeDef`.
 
 ### How It Works
 
@@ -386,3 +399,18 @@ The host page is a Razor component that bootstraps the Blazor app. See [TodoApp/
 Fusion provides `MapFusionRenderModeEndpoints()` to handle render mode switching. Users can switch between Server-Side Blazor and WebAssembly modes at runtime, and Fusion handles the session and authentication state transfer seamlessly.
 
 Check out the [TodoApp Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/TodoApp) or [Blazor Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Blazor) to see how all of this works together.
+
+
+## What's Next
+
+This document covered the core component base classes. For more advanced topics, see:
+
+- **[Blazor Services](Part03-Services.md)**: Deep dive into `CircuitHub`, `JSRuntimeInfo`, `RenderModeHelper`, and `RenderModeDef`. Learn how to detect prerendering, manage render modes, and access services efficiently.
+
+- **[Blazor Authentication](Part03-Auth.md)**: Complete guide to authentication in Blazor apps, including `AuthStateProvider`, `ClientAuthHelper`, `CascadingAuthState`, and the `PresenceReporter` for tracking active users.
+
+- **[Parameter Comparison](Part03-Parameters.md)**: How Fusion optimizes Blazor component updates through custom parameter comparison. Covers `ParameterComparisonMode`, `ParameterComparer`, and customization options.
+
+- **[Diagrams](Part03-D.md)**: Visual diagrams of component hierarchy, lifecycle, and data flow.
+
+- **[Cheat Sheet](Part03-CS.md)**: Quick reference for common patterns.

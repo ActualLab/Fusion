@@ -105,6 +105,7 @@ When run interactively (without arguments), the program will:
 ## Documentation Style Guide
 
 - Do NOT use `---` (horizontal rule) as a separator between sections. The VitePress CSS already adds visual separators before top-level headers (`##`). The only valid use of `---` is for YAML frontmatter at the start of a file.
+- Do NOT use `▶` (U+25B6, BLACK RIGHT-POINTING TRIANGLE) or `◀` (U+25C0, BLACK LEFT-POINTING TRIANGLE) symbols in ASCII diagrams or code blocks. These characters render with inconsistent width in many monospace fonts, breaking diagram alignment. Use `>` and `<` instead.
 - Use clear, concise language
 - Provide practical examples
 - Use relative links for internal documentation references

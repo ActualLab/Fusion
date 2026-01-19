@@ -48,7 +48,7 @@ blockquote {
 
 /* Code blocks */
 .vp-doc div[class*="language-"] code {
-  line-height: 1.1;
+  line-height: 1.2;
 }
 
 /* Accordion */
