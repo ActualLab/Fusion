@@ -1,0 +1,222 @@
+# ComputedOptions: Fine-Tuning Compute Methods
+
+This document covers the advanced configuration options available for compute methods via the `[ComputeMethod]` attribute and `ComputedOptions`.
+
+## Overview
+
+Every compute method uses `ComputedOptions` to control:
+- How long computed values stay in memory
+- When and how they auto-invalidate
+- How invalidation timing works
+- How multiple concurrent updates are consolidated
+
+You configure these options via the `[ComputeMethod]` attribute:
+
+```csharp
+[ComputeMethod(MinCacheDuration = 10, AutoInvalidationDelay = 60)]
+public virtual async Task<UserProfile> GetProfile(string userId) { ... }
+```
+
+## How Values Are Interpreted
+
+All `[ComputeMethod]` properties are `double` values representing seconds. They use special values to express "use default" and "infinite/disabled":
+
+| `double` value | Meaning |
+|----------------|---------|
+| `double.NaN` | "Use default" — inherits from `ComputedOptions.Default` |
+| `double.PositiveInfinity` | "Infinite" / disabled — translates to `TimeSpan.MaxValue` |
+| `>= 0` | Actual duration in seconds |
+| `< 0` | Invalid — throws `ArgumentOutOfRangeException` |
+
+All attribute properties default to `double.NaN`, so omitting an option means "use the global default":
+
+```csharp
+// These are equivalent:
+[ComputeMethod(MinCacheDuration = double.NaN)]
+[ComputeMethod] // MinCacheDuration not specified = use default
+
+// Explicitly disable auto-invalidation:
+[ComputeMethod(AutoInvalidationDelay = double.PositiveInfinity)]
+```
+
+## Option Reference
+
+### MinCacheDuration
+
+**Type:** `double` (seconds)
+**Default:** `0` (no minimum)
+
+Minimum time a `Computed<T>` instance stays in RAM via a strong reference.
+
+```csharp
+[ComputeMethod(MinCacheDuration = 60)] // Keep in memory for at least 60 seconds
+public virtual async Task<User> Get(string id) { ... }
+```
+
+**How it works:**
+- When a computed value is created, Fusion holds a strong reference to it for this duration
+- Without this, computed values may be garbage-collected as soon as no code references them
+- Invalidation trims this time — there's no reason to cache an outdated value
+
+**When to use:**
+- For frequently accessed data that's expensive to compute
+- For data that's shared across many UI components
+- Authentication/session data that shouldn't be recomputed on every access
+
+### TransientErrorInvalidationDelay
+
+**Type:** `double` (seconds)
+**Default:** `1`
+
+Auto-invalidation delay for computed values that store a transient error (e.g., network failures).
+
+```csharp
+[ComputeMethod(TransientErrorInvalidationDelay = 5)] // Retry after 5 seconds
+public virtual async Task<Data> FetchFromExternalApi() { ... }
+```
+
+**How it works:**
+- If a compute method throws a transient exception, the error is cached
+- After this delay, the computed value auto-invalidates, triggering a retry
+- Helps recover from temporary failures without manual intervention
+
+**When to use:**
+- External API calls that may fail temporarily
+- Database operations that might hit connection limits
+- Any operation where retry after a delay makes sense
+
+### AutoInvalidationDelay
+
+**Type:** `double` (seconds)
+**Default:** `TimeSpan.MaxValue` (no auto-invalidation)
+
+Time after which a computed value automatically invalidates itself.
+
+```csharp
+[ComputeMethod(AutoInvalidationDelay = 30)] // Auto-refresh every 30 seconds
+public virtual async Task<DateTime> GetServerTime() { ... }
+```
+
+**How it works:**
+- The computed value schedules its own invalidation after this delay
+- Useful for data that naturally becomes stale over time
+- Works even if no external invalidation occurs
+
+**When to use:**
+- Clock/time-based data
+- Polling external systems where push notifications aren't available
+- Data with known expiration (e.g., cached tokens)
+- Rate-limited refresh of volatile data
+
+### InvalidationDelay
+
+**Type:** `double` (seconds)
+**Default:** `0` (immediate)
+
+Delay before invalidation actually takes effect.
+
+```csharp
+[ComputeMethod(InvalidationDelay = 0.5)] // Debounce invalidations by 500ms
+public virtual async Task<Summary> GetSummary() { ... }
+```
+
+**How it works:**
+- When `Invalidate()` is called, the actual invalidation is postponed
+- Multiple rapid invalidations during this period are coalesced into one
+- Reduces recomputation storms during batch updates
+
+**When to use:**
+- Aggregate computations that depend on many rapidly-changing values
+- Debouncing UI updates during batch operations
+- Reducing server load during bulk data imports
+
+### ConsolidationDelay
+
+**Type:** `double` (seconds)
+**Default:** `TimeSpan.MaxValue` (no consolidation)
+
+Time window during which multiple concurrent requests for the same computation are consolidated into one.
+
+```csharp
+[ComputeMethod(ConsolidationDelay = 0.5)] // Consolidate requests within 500ms
+public virtual async Task<List<Item>> GetItems() { ... }
+```
+
+**How it works:**
+- If a compute method is called while another call for the same key is in progress, subsequent callers wait for the first computation
+- With consolidation enabled, even calls arriving slightly after completion may share the just-computed result
+- Reduces redundant computations when many clients request the same data simultaneously
+
+**When to use:**
+- High-traffic endpoints where many clients request the same data
+- Expensive computations that shouldn't run in parallel for the same input
+- APIs exposed to Blazor components that may mount simultaneously
+
+## Combining Options
+
+Options can be combined for sophisticated caching strategies:
+
+```csharp
+// Long-lived cache with automatic refresh
+[ComputeMethod(
+    MinCacheDuration = 300,        // Keep in memory 5 minutes
+    AutoInvalidationDelay = 60)]   // But refresh every minute
+public virtual async Task<Stats> GetDashboardStats() { ... }
+
+// Resilient external call with debouncing
+[ComputeMethod(
+    TransientErrorInvalidationDelay = 10,  // Retry errors after 10s
+    InvalidationDelay = 1)]                 // Debounce updates by 1s
+public virtual async Task<Price> GetExternalPrice(string symbol) { ... }
+
+// High-traffic endpoint with request consolidation
+[ComputeMethod(
+    MinCacheDuration = 60,
+    ConsolidationDelay = 0.2)]    // Consolidate requests within 200ms
+public virtual async Task<Catalog> GetProductCatalog() { ... }
+```
+
+## Default Values
+
+Fusion provides different defaults for server-side and client-side (remote) compute services:
+
+| Option | Server Default | Client Default |
+|--------|---------------|----------------|
+| MinCacheDuration | 0 | 60 seconds |
+| TransientErrorInvalidationDelay | 1 second | 1 second |
+| AutoInvalidationDelay | ∞ (none) | ∞ (none) |
+| InvalidationDelay | 0 | 0 |
+| ConsolidationDelay | ∞ (none) | ∞ (none) |
+
+You can change global defaults by modifying `ComputedOptions.Default` and `ComputedOptions.ClientDefault` at startup:
+
+```csharp
+ComputedOptions.Default = ComputedOptions.Default with {
+    MinCacheDuration = TimeSpan.FromSeconds(30),
+};
+```
+
+## Remote Compute Methods
+
+For distributed scenarios, use `[RemoteComputeMethod]` which extends `[ComputeMethod]` with caching options:
+
+```csharp
+public interface IProductService : IComputeService
+{
+    [RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.Cache)]
+    Task<Product> Get(string id);
+}
+```
+
+**RemoteComputedCacheMode values:**
+- `Default` — inherit from `ComputedOptions.ClientDefault`
+- `Cache` — enable client-side caching of remote results
+- `NoCache` — disable caching, always fetch from server
+
+## Tips
+
+1. **Start simple** — use defaults first, add options when you identify specific needs
+2. **Measure before optimizing** — profile to find hot spots before adding caching
+3. **Consider memory** — `MinCacheDuration` trades memory for CPU; balance accordingly
+4. **Mind the invalidation chain** — delayed invalidation affects all dependent computed values
+5. **Test consolidation carefully** — too long a delay can show stale data; too short defeats the purpose

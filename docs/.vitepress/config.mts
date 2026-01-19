@@ -24,7 +24,16 @@ export default defineConfig({
       {
         text: "Documentation",
         items: [
-          { text: "1. Core Concepts", link: "/Part01" },
+          {
+            text: "1. Core Concepts",
+            link: "/Part01",
+            collapsed: true,
+            items: [
+              { text: "Computed<T>", link: "/Part01-C" },
+              { text: "ComputedOptions", link: "/Part01-CO" },
+              { text: "States", link: "/Part01-ST" },
+            ],
+          },
           { text: "2. Local Compute Services on Server-Side", link: "/Part02" },
           { text: "3. Distributed Compute Services", link: "/Part03" },
           { text: "4. Real-time UI in Blazor App", link: "/Part04" },
