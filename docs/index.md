@@ -13,7 +13,7 @@ hero:
       text: Samples
       link: https://github.com/ActualLab/Fusion.Samples
     - theme: alt
-      text: Source
+      text: GitHub
       link: https://github.com/ActualLab/Fusion
 
 features:
