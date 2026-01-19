@@ -33,6 +33,7 @@ export default defineConfig({
               { text: "ComputedOptions", link: "/Part01-CO" },
               { text: "States", link: "/Part01-ST" },
               { text: "Diagrams", link: "/Part01-D" },
+              { text: "Cheat Sheet", link: "/Part01-CS" },
             ],
           },
           { text: "2. Local Compute Services on Server-Side", link: "/Part02" },
@@ -43,19 +44,47 @@ export default defineConfig({
             items: [
               { text: "Core Concepts", link: "/Part03-CC" },
               { text: "Configuration Options", link: "/Part03-CO" },
+              { text: "Cheat Sheet", link: "/Part03-CS" },
             ],
           },
-          { text: "4. Real-time UI in Blazor App", link: "/Part04" },
-          { text: "5. CommandR", link: "/Part05" },
-          { text: "6. Multi-Host Invalidation with Operations Framework", link: "/Part06" },
-          { text: "7. Authentication in Fusion", link: "/Part07" },
+          {
+            text: "4. Real-time UI in Blazor App",
+            link: "/Part04",
+            collapsed: true,
+            items: [
+              { text: "Cheat Sheet", link: "/Part04-CS" },
+            ],
+          },
+          {
+            text: "5. CommandR",
+            link: "/Part05",
+            collapsed: true,
+            items: [
+              { text: "Cheat Sheet", link: "/Part05-CS" },
+            ],
+          },
+          {
+            text: "6. Multi-Host Invalidation with Operations Framework",
+            link: "/Part06",
+            collapsed: true,
+            items: [
+              { text: "Cheat Sheet", link: "/Part06-CS" },
+            ],
+          },
+          {
+            text: "7. Authentication in Fusion",
+            link: "/Part07",
+            collapsed: true,
+            items: [
+              { text: "Cheat Sheet", link: "/Part07-CS" },
+            ],
+          },
+          { text: "NuGet Packages", link: "/NuGet-Packages" },
         ],
       },
       {
         text: "Extras",
         items: [
-          { text: "NuGet Packages", link: "/NuGet-Packages" },
-          { text: "Cheat Sheet", link: "/Cheat-Sheet" },
           { text: "Learn Fusion via HelloCart Sample", link: "/HelloCart" },
           { text: "Story Behind Fusion", link: "/Story" },
         ],

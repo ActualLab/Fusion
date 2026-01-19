@@ -177,7 +177,7 @@ Configures WebSocket-based RPC client connections.
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `RequestPath` | `string` | `"/rpc/ws"` | WebSocket endpoint path for API calls |
-| `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls |
+| `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
 | `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
 | `UseAutoFrameDelayerFactory` | `bool` | `false` | Enable automatic frame delaying |
@@ -193,7 +193,7 @@ Configures WebSocket-based RPC client connections.
 services.AddRpc().Configure<RpcWebSocketClientOptions>(options => {
     // Custom endpoint paths
     options.RequestPath = "/api/rpc";
-    options.BackendRequestPath = "/internal/rpc";
+    options.BackendRequestPath = "/internal/rpc"; // Must NOT be publicly exposed!
 
     // Custom host URL resolution
     options.HostUrlResolver = peer => {
@@ -206,6 +206,8 @@ services.AddRpc().Configure<RpcWebSocketClientOptions>(options => {
 });
 ```
 
+> **Warning:** `BackendRequestPath` must never be publicly exposed. It should only be accessible between backend services within your infrastructure.
+
 ## `RpcWebSocketServerOptions`
 
 Configures WebSocket-based RPC server endpoints.
@@ -214,9 +216,9 @@ Configures WebSocket-based RPC server endpoints.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `ExposeBackend` | `bool` | `false` | Whether to expose backend services via WebSocket |
+| `ExposeBackend` | `bool` | `false` | Whether to expose backend services via WebSocket. **Use with caution!** |
 | `RequestPath` | `string` | `"/rpc/ws"` | WebSocket endpoint path for API calls |
-| `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls |
+| `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
 | `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
 | `ChangeConnectionDelay` | `TimeSpan` | `0.5 seconds` | Delay when switching connections |
@@ -231,12 +233,14 @@ services.AddRpc().Configure<RpcWebSocketServerOptions>(options => {
 
     // Custom endpoint paths (must match client)
     options.RequestPath = "/api/rpc";
-    options.BackendRequestPath = "/internal/rpc";
+    options.BackendRequestPath = "/internal/rpc"; // Must NOT be publicly exposed!
 
     // Longer delay for connection switching
     options.ChangeConnectionDelay = TimeSpan.FromSeconds(1);
 });
 ```
+
+> **Warning:** `BackendRequestPath` must never be publicly exposed. Ensure this endpoint is only accessible within your internal network or via service mesh. If `ExposeBackend` is `true`, take extra care to secure this endpoint.
 
 ## `RpcTestClientOptions`
 
