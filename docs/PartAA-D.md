@@ -100,9 +100,9 @@ ASCII diagrams illustrating Fusion's authentication architecture and flows.
 │                                                          │    │
 │  2. Cookie exists? ─────────────────────────────────┐    │    │
 │     │                                               │    │    │
-│     ├─ Yes ─> Check IsSignOutForced ───────┐        │    │    │
-│     │         │                            │        │    │    │
-│     │         ├─ Yes ─> Handle forced  ───>│        │    │    │
+│     ├─ Yes ─> Check IsSignOutForced                 │    │    │
+│     │         │                                     │    │    │
+│     │         ├─ Yes ─> Handle forced  ────┐        │    │    │
 │     │         │         sign-out           ▼        │    │    │
 │     │         │                  Create new session │    │    │
 │     │         │                                │    │    │    │
