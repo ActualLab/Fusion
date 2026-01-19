@@ -260,7 +260,8 @@ switch ($mode) {
         $wslArgs += $claudeArgs
 
         # Build project path env vars for WSL
-        $wslProjectEnvVars = @()
+        $wslProjectPath = ConvertTo-WSLPath $projectRoot
+        $wslProjectEnvVars = @("AC_ProjectPath='$wslProjectPath'")
         for ($i = 0; $i -lt $Projects.Count; $i++) {
             $winProjPath = Join-Path $env:AC_ProjectRoot $Projects[$i]
             $wslProjPath = ConvertTo-WSLPath $winProjPath
@@ -276,6 +277,7 @@ switch ($mode) {
             $wslEnvVars = @{
                 "AC_ProjectRoot" = $wslProjectRoot
                 "AC_Project" = $projectName
+                "AC_ProjectPath" = $wslProjectPath
                 "AC_OS" = "Linux on WSL"
             }
             for ($i = 0; $i -lt $Projects.Count; $i++) {
@@ -306,6 +308,7 @@ switch ($mode) {
     "os" {
         # Run Claude directly on the host OS
         $env:AC_Project = $projectName
+        $env:AC_ProjectPath = $projectRoot
 
         # Set AC_OS based on detected environment
         $env:AC_OS = switch ($currentOS) {
@@ -326,6 +329,7 @@ switch ($mode) {
         $envVars = @{
             "AC_ProjectRoot" = $env:AC_ProjectRoot
             "AC_Project" = $env:AC_Project
+            "AC_ProjectPath" = $env:AC_ProjectPath
             "AC_OS" = $env:AC_OS
         }
         for ($i = 0; $i -lt $Projects.Count; $i++) {
@@ -386,7 +390,8 @@ switch ($mode) {
         $dockerScriptArgs += $claudeArgs
 
         # Build project path env vars for Docker
-        $projectEnvVars = @()
+        $dockerProjectPath = "/proj/$projectName"
+        $projectEnvVars = @("-e", "AC_ProjectPath=$dockerProjectPath")
         for ($i = 0; $i -lt $Projects.Count; $i++) {
             $projectEnvVars += "-e"
             $projectEnvVars += "AC_Project${i}Path=/proj/$($Projects[$i])"
@@ -411,6 +416,7 @@ switch ($mode) {
             $dockerEnvVars = @{
                 "AC_ProjectRoot" = "/proj"
                 "AC_Project" = $projectName
+                "AC_ProjectPath" = $dockerProjectPath
                 "AC_OS" = "Linux in Docker"
             }
             for ($i = 0; $i -lt $Projects.Count; $i++) {

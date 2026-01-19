@@ -17,6 +17,8 @@
       "Bash(docker build:*)",
       "Bash(findstr:*)",
       "Bash(git *)",
+      "Bash(AC_ProjectRoot='D:\\\\Projects' pwsh -ExecutionPolicy Bypass -File c.ps1 --dry-run)",
+      "Bash(AC_ProjectRoot='D:\\\\Projects' pwsh -ExecutionPolicy Bypass -File c.ps1 os --dry-run)"
     ]
   },
   "outputStyle": "default"
