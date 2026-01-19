@@ -1,28 +1,24 @@
 {
   "permissions": {
     "allow": [
+      "Bash(git *)",
       "Bash(dotnet run:*)",
       "Bash(dotnet mdsnippets:*)",
+      "Bash(dotnet build:*)",
       "Bash(Run-PerformanceTest.cmd net10.0 npgsql sqlite)",
       "Bash(cmd /c \"Run-PerformanceTest.cmd net10.0 npgsql sqlite\")",
-      "Bash(dotnet build:*)",
       "Bash(\"./artifacts/tests/bin/ActualLab.Fusion.Tests.PerformanceTestRunner/release_net10.0/ActualLab.Fusion.Tests.PerformanceTestRunner.exe\" npgsql sqlite)",
       "Bash(wmic cpu:*)",
       "Bash(wmic memorychip:*)",
-      "Bash(powershell -Command \"$env:USERPROFILE\")",
-      "Bash(dir:*)",
       "Bash(npm run docs:build:*)",
-      "Bash(timeout 15 npm run docs:dev:*)",
-      "Bash(ls:*)",
-      "Bash(docker build:*)",
-      "Bash(findstr:*)",
-      "Bash(git *)",
-      "Bash(AC_ProjectRoot='D:\\\\Projects' pwsh -ExecutionPolicy Bypass -File c.ps1 --dry-run)",
-      "Bash(AC_ProjectRoot='D:\\\\Projects' pwsh -ExecutionPolicy Bypass -File c.ps1 os --dry-run)",
-      "Bash(echo:*)",
       "Bash(npm run build:*)",
+      "Bash(docker build:*)",
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(findstr:*)",
+      "Bash(echo:*)",
       "Bash(grep:*)",
-      "Bash(find:*)"
+      "Bash(printenv:*)"
     ]
   },
   "outputStyle": "default"
