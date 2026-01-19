@@ -2,7 +2,7 @@
 
 Text-based diagrams for the core concepts introduced in [Part 01](Part01.md).
 
-## 1. Core Abstractions Overview
+## Core Abstractions Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -10,21 +10,49 @@ Text-based diagrams for the core concepts introduced in [Part 01](Part01.md).
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   ┌─────────────────┐    produces    ┌─────────────────┐                    │
-│   │  Compute Method │ ─────────────► │   Computed<T>   │                    │
-│   │  [ComputeMethod]│                │  (cached value) │                    │
+│   │ Compute Method  │ ─────────────► │   Computed<T>   │                    │
+│   │ [ComputeMethod] │                │  (cached value) │                    │
 │   └─────────────────┘                └─────────────────┘                    │
 │           │                                   │                             │
 │           │ defined in                        │ tracked by                  │
 │           ▼                                   ▼                             │
-│   ┌─────────────────┐                ┌─────────────────┐                    │
-│   │ Compute Service │                │    State<T>     │                    │
-│   │ :IComputeService│                │  (auto-update)  │                    │
-│   └─────────────────┘                └─────────────────┘                    │
+│   ┌──────────────────┐               ┌─────────────────┐                    │
+│   │ Compute Service  │               │    State<T>     │                    │
+│   │ :IComputeService │               │  (auto-update)  │                    │
+│   └──────────────────┘               └─────────────────┘                    │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 2. `Computed<T>` Lifecycle States
+## Compute Service Registration Flow
+
+```
+    var services = new ServiceCollection();
+              │
+              ▼
+    ┌─────────────────────────────────┐
+    │  services.AddFusion()           │ ──► Returns FusionBuilder
+    └────────────────┬────────────────┘
+                     │
+                     ▼
+    ┌─────────────────────────────────┐
+    │  fusion.AddComputeService       │ ──► Registers service with
+    │        <CounterService>()       │     proxy generation for
+    └────────────────┬────────────────┘     [ComputeMethod] interception
+                     │
+                     ▼
+    ┌─────────────────────────────────┐
+    │  services.BuildServiceProvider()│ ──► IServiceProvider
+    └────────────────┬────────────────┘
+                     │
+                     ▼
+    ┌─────────────────────────────────┐
+    │  sp.GetRequiredService          │ ──► Returns proxied service
+    │    <CounterService>()           │     with caching + tracking
+    └─────────────────────────────────┘
+```
+
+## `Computed<T>` Lifecycle States
 
 ```
                         ┌──────────────────┐
@@ -47,7 +75,122 @@ Text-based diagrams for the core concepts introduced in [Part 01](Part01.md).
                         └──────────────────┘
 ```
 
-## 3. `State<T>` Inheritance Hierarchy
+## Capturing `Computed<T>` Values
+
+```
+    // Direct call - just returns the value
+    await counters.Get("a");  ──────────►  int (value only)
+
+
+    // Computed.Capture - returns the Computed<T> wrapper
+    await Computed.Capture(() => counters.Get("a"));
+
+                     │
+                     ▼
+            ┌─────────────────────────────────────────┐
+            │            Computed<int>                │
+            ├─────────────────────────────────────────┤
+            │  .Value           → int                 │
+            │  .IsConsistent()  → bool                │
+            │  .Invalidate()    → void                │
+            │  .Update()        → Task<Computed<T>>   │
+            │  .WhenInvalidated()→ Task               │
+            │  .When(predicate) → Task<Computed<T>>   │
+            │  .Changes()       → IAsyncEnumerable    │
+            │  .Invalidated     → event               │
+            └─────────────────────────────────────────┘
+```
+
+## Invalidation Block Behavior
+
+```
+    using (Invalidation.Begin()) {
+        _ = Get(key);  // Does NOT execute method body
+    }
+
+    ┌──────────────────────────────────────────────────────────────┐
+    │                  Inside Invalidation Block                   │
+    ├──────────────────────────────────────────────────────────────┤
+    │  Compute method call behavior:                               │
+    │  ┌─────────────────────────────────────────────────────────┐ │
+    │  │ 1. Does NOT execute method body                         │ │
+    │  │ 2. Returns completed Task<T> with default(T)            │ │
+    │  │ 3. Invalidates cached Computed<T> for this call         │ │
+    │  └─────────────────────────────────────────────────────────┘ │
+    └──────────────────────────────────────────────────────────────┘
+```
+
+## Computed Value Dependency Graph (DAG)
+
+Example from Part01: `Sum("a", "b")` depends on `Get("a")` and `Get("b")`.
+
+```
+                    ┌─────────────────────────┐
+                    │     Sum("a", "b")       │
+                    │   Computed<int> = 2     │
+                    └───────────┬─────────────┘
+                                │
+                    depends on  │
+                ┌───────────────┴───────────────┐
+                │                               │
+                ▼                               ▼
+    ┌───────────────────────┐       ┌───────────────────────┐
+    │        Get("a")       │       │       Get("b")        │
+    │   Computed<int> = 2   │       │   Computed<int> = 0   │
+    └───────────────────────┘       └───────────────────────┘
+```
+
+### Cascading Invalidation Flow
+
+```
+    ┌─────────────────────────────────────────────────┐
+    │  counters.Increment("a");                       │
+    │  // Inside Increment():                         │
+    │  //   _counters.AddOrUpdate(key, ...);          │
+    │  //   using (Invalidation.Begin()) {            │
+    │  //       _ = Get(key); // invalidates Get("a") │
+    │  //   }                                         │
+    └─────────────────────────────────────────────────┘
+          │
+          │ invalidates
+          ▼
+    ┌───────────────────────┐
+    │      Get("a")         │ ──► Inconsistent
+    └───────────────────────┘
+                │
+                │ cascades to dependents
+                ▼
+    ┌───────────────────────┐
+    │     Sum("a", "b")     │ ──► Inconsistent
+    └───────────────────────┘
+```
+
+## Compute Method Cache Resolution
+
+```
+                     Call: counters.Get("a")
+                              │
+                              ▼
+                ┌─────────────────────────────┐
+                │  Lookup cache key:          │
+                │  (service, method, args)    │
+                │  = (counters, Get, "a")     │
+                └──────────────┬──────────────┘
+                               │
+           ┌───────────────────┴───────────────────┐
+           │                                       │
+     Cache Hit                               Cache Miss
+     (Consistent)                            (or Inconsistent)
+           │                                       │
+           ▼                                       ▼
+    ┌─────────────┐                      ┌─────────────────────┐
+    │   Return    │                      │  Execute method     │
+    │   cached    │                      │  body, create new   │
+    │   value     │                      │  Computed<T>        │
+    └─────────────┘                      └─────────────────────┘
+```
+
+## `State<T>` Inheritance Hierarchy
 
 ```
                               IState
@@ -75,95 +218,7 @@ Text-based diagrams for the core concepts introduced in [Part 01](Part01.md).
                                         └───────────────────┘
 ```
 
-## 4. Invalidation Block Behavior
-
-```
-    using (Invalidation.Begin()) {
-        _ = Get(key);  // Does NOT execute method body
-    }
-
-    ┌─────────────────────────────────────────────────────────────┐
-    │                  Inside Invalidation Block                   │
-    ├─────────────────────────────────────────────────────────────┤
-    │  Compute method call behavior:                               │
-    │  ┌─────────────────────────────────────────────────────────┐│
-    │  │ 1. Does NOT execute method body                         ││
-    │  │ 2. Returns completed Task<T> with default(T)            ││
-    │  │ 3. Invalidates cached Computed<T> for this call         ││
-    │  └─────────────────────────────────────────────────────────┘│
-    └─────────────────────────────────────────────────────────────┘
-```
-
-## 5. Computed Value Dependency Graph (DAG)
-
-Example from Part01: `Sum("a", "b")` depends on `Get("a")` and `Get("b")`.
-
-```
-                    ┌─────────────────────────┐
-                    │     Sum("a", "b")       │
-                    │  Computed<int> = 2      │
-                    └───────────┬─────────────┘
-                                │
-                    depends on  │
-                ┌───────────────┴───────────────┐
-                │                               │
-                ▼                               ▼
-    ┌───────────────────────┐       ┌───────────────────────┐
-    │      Get("a")         │       │       Get("b")        │
-    │   Computed<int> = 2   │       │   Computed<int> = 0   │
-    └───────────────────────┘       └───────────────────────┘
-
-
-Cascading Invalidation Flow:
-
-    ┌─────────────────────────────────────────────────┐
-    │  counters.Increment("a");                       │
-    │  // Inside Increment():                         │
-    │  //   _counters.AddOrUpdate(key, ...);          │
-    │  //   using (Invalidation.Begin()) {            │
-    │  //       _ = Get(key); // invalidates Get("a") │
-    │  //   }                                         │
-    └─────────────────────────────────────────────────┘
-          │
-          │ invalidates
-          ▼
-    ┌───────────────────────┐
-    │      Get("a")         │ ──► Inconsistent
-    └───────────────────────┘
-                │
-                │ cascades to dependents
-                ▼
-    ┌───────────────────────┐
-    │     Sum("a", "b")     │ ──► Inconsistent
-    └───────────────────────┘
-```
-
-## 6. Compute Method Cache Resolution
-
-```
-                     Call: counters.Get("a")
-                              │
-                              ▼
-                ┌─────────────────────────────┐
-                │  Lookup cache key:          │
-                │  (service, method, args)    │
-                │  = (counters, Get, "a")     │
-                └──────────────┬──────────────┘
-                               │
-           ┌───────────────────┴───────────────────┐
-           │                                       │
-     Cache Hit                               Cache Miss
-     (Consistent)                            (or Inconsistent)
-           │                                       │
-           ▼                                       ▼
-    ┌─────────────┐                      ┌─────────────────────┐
-    │   Return    │                      │  Execute method     │
-    │   cached    │                      │  body, create new   │
-    │   value     │                      │  Computed<T>        │
-    └─────────────┘                      └─────────────────────┘
-```
-
-## 7. `ComputedState<T>` Update Loop
+## `ComputedState<T>` Update Loop
 
 ```
     ┌─────────────────────────────────────────────────────────────────────┐
@@ -200,7 +255,7 @@ Cascading Invalidation Flow:
     └─────────────────────┘
 ```
 
-## 8. `MutableState<T>` vs `ComputedState<T>`
+## `MutableState<T>` vs `ComputedState<T>`
 
 ```
 ┌────────────────────────────────────┬────────────────────────────────────┐
@@ -226,58 +281,4 @@ Cascading Invalidation Flow:
 │ Use case: UI input state           │ Use case: Derived/reactive values  │
 │ (e.g., search box text)            │ (e.g., filtered list, totals)      │
 └────────────────────────────────────┴────────────────────────────────────┘
-```
-
-## 9. Capturing `Computed<T>` Values
-
-```
-    // Direct call - just returns the value
-    await counters.Get("a");  ──────────►  int (value only)
-
-
-    // Computed.Capture - returns the Computed<T> wrapper
-    await Computed.Capture(() => counters.Get("a"));
-
-                     │
-                     ▼
-            ┌─────────────────────────────────────────┐
-            │            Computed<int>                │
-            ├─────────────────────────────────────────┤
-            │  .Value           → int                 │
-            │  .IsConsistent()  → bool                │
-            │  .Invalidate()    → void                │
-            │  .Update()        → Task<Computed<T>>   │
-            │  .WhenInvalidated()→ Task               │
-            │  .When(predicate) → Task<Computed<T>>   │
-            │  .Changes()       → IAsyncEnumerable    │
-            │  .Invalidated     → event               │
-            └─────────────────────────────────────────┘
-```
-
-## 10. Service Registration Flow
-
-```
-    var services = new ServiceCollection();
-              │
-              ▼
-    ┌─────────────────────────────────┐
-    │  services.AddFusion()           │ ──► Returns FusionBuilder
-    └────────────────┬────────────────┘
-                     │
-                     ▼
-    ┌─────────────────────────────────┐
-    │  fusion.AddComputeService       │ ──► Registers service with
-    │        <CounterService>()       │     proxy generation for
-    └────────────────┬────────────────┘     [ComputeMethod] interception
-                     │
-                     ▼
-    ┌─────────────────────────────────┐
-    │  services.BuildServiceProvider()│ ──► IServiceProvider
-    └────────────────┬────────────────┘
-                     │
-                     ▼
-    ┌─────────────────────────────────┐
-    │  sp.GetRequiredService          │ ──► Returns proxied service
-    │    <CounterService>()           │     with caching + tracking
-    └─────────────────────────────────┘
 ```

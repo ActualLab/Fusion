@@ -46,6 +46,11 @@ blockquote {
   }
 }
 
+/* Code blocks */
+.vp-doc div[class*="language-"] code {
+  line-height: 1.1;
+}
+
 /* Accordion */
 .vp-doc details,
 details {
