@@ -24,7 +24,7 @@ Text-based diagrams for the core concepts introduced in [Part 01](Part01.md).
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 2. Computed<T> Lifecycle States
+## 2. `Computed<T>` Lifecycle States
 
 ```
                         ┌──────────────────┐
@@ -47,7 +47,7 @@ Text-based diagrams for the core concepts introduced in [Part 01](Part01.md).
                         └──────────────────┘
 ```
 
-## 3. State<T> Inheritance Hierarchy
+## 3. `State<T>` Inheritance Hierarchy
 
 ```
                               IState
@@ -163,7 +163,7 @@ Cascading Invalidation Flow:
     └─────────────┘                      └─────────────────────┘
 ```
 
-## 7. ComputedState<T> Update Loop
+## 7. `ComputedState<T>` Update Loop
 
 ```
     ┌─────────────────────────────────────────────────────────────────────┐
@@ -200,7 +200,7 @@ Cascading Invalidation Flow:
     └─────────────────────┘
 ```
 
-## 8. MutableState<T> vs ComputedState<T>
+## 8. `MutableState<T>` vs `ComputedState<T>`
 
 ```
 ┌────────────────────────────────────┬────────────────────────────────────┐
@@ -228,7 +228,7 @@ Cascading Invalidation Flow:
 └────────────────────────────────────┴────────────────────────────────────┘
 ```
 
-## 9. Capturing Computed<T> Values
+## 9. Capturing `Computed<T>` Values
 
 ```
     // Direct call - just returns the value
