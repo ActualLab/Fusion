@@ -1,4 +1,4 @@
-# Core Concepts
+# Compute Services, Computed\<T>, and States
 
 Fusion is a library that brings real-time capabilities to your .NET applications with minimal effort. This guide will introduce you to the core concepts and show you how to get started.
 

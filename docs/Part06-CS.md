@@ -1,4 +1,4 @@
-# Authentication Cheat Sheet
+# Authentication: Cheat Sheet
 
 Quick reference for Fusion authentication.
 

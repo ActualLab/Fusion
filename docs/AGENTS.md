@@ -104,6 +104,7 @@ When run interactively (without arguments), the program will:
 
 ## Documentation Style Guide
 
+- Do NOT use `---` (horizontal rule) as a separator between sections. The VitePress CSS already adds visual separators before top-level headers (`##`). The only valid use of `---` is for YAML frontmatter at the start of a file.
 - Use clear, concise language
 - Provide practical examples
 - Use relative links for internal documentation references

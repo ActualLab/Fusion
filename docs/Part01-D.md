@@ -1,4 +1,4 @@
-# Part 01 - Diagrams
+# Compute Services: Diagrams
 
 Text-based diagrams for the core concepts introduced in [Part 01](Part01.md).
 

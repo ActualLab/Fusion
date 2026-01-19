@@ -1,4 +1,4 @@
-# Blazor Integration Cheat Sheet
+# Blazor: Cheat Sheet
 
 Quick reference for Fusion + Blazor.
 

@@ -1,4 +1,4 @@
-# Operations Framework Cheat Sheet
+# Operations Framework: Cheat Sheet
 
 Quick reference for multi-host invalidation.
 

@@ -1,4 +1,4 @@
-# Core Concepts Cheat Sheet
+# Compute Services: Cheat Sheet
 
 Quick reference for Fusion core concepts.
 

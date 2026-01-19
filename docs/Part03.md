@@ -24,7 +24,6 @@ Fusion provides a hierarchy of Blazor component base classes, each building upon
 | `ComputedRenderStateComponent<T>` | Optimized rendering that skips unchanged states |
 | `MixedStateComponent<T, TMutableState>` | Combines computed state with local mutable state |
 
----
 
 ## FusionComponentBase
 
@@ -51,7 +50,6 @@ Provides optimized parameter comparison and event handling for Blazor components
 | `ComponentInfo` | `ComponentInfo` | Cached metadata about the component type for parameter comparison |
 | `ParameterSetIndex` | `int` | Tracks how many times parameters have been set (0 = not initialized) |
 
----
 
 ## CircuitHubComponentBase
 
@@ -80,7 +78,6 @@ Acts as a convenience layer that injects `CircuitHub` and exposes shortcuts to f
 | `Nav` | `NavigationManager` | Blazor's navigation manager |
 | `JS` | `IJSRuntime` | JavaScript interop runtime |
 
----
 
 ## StatefulComponentBase and StatefulComponentBase&lt;T&gt;
 
@@ -114,7 +111,6 @@ Override `CreateState()` to provide your own state, or call `SetState()` from `O
 | `SetState(state, ...)` | Method | Explicitly sets the state and attaches event handlers |
 | `DisposeAsync()` | Method | Disposes the state when component is disposed |
 
----
 
 ## ComputedStateComponent and ComputedStateComponent&lt;T&gt;
 
@@ -163,7 +159,6 @@ The component also optimizes the Blazor lifecycle:
 
 `ComputedStateComponent.DefaultOptions` is set to `RecomputeStateOnParameterChange | UseAllRenderPoints`.
 
----
 
 ## ComputedRenderStateComponent&lt;T&gt;
 
@@ -194,7 +189,6 @@ This is useful for components that may receive multiple render requests but shou
 
 `ComputedRenderStateComponent.DefaultOptions` is set to `RecomputeStateOnParameterChange` only (no extra render points needed).
 
----
 
 ## MixedStateComponent&lt;T, TMutableState&gt;
 
@@ -223,7 +217,6 @@ This means you don't need to manually call `MutableState.Use()` inside `ComputeS
 | `GetMutableStateOptions()` | Virtual method | Override to customize mutable state options |
 | `SetMutableState(state)` | Method | Explicitly sets the mutable state |
 
----
 
 ## Using These Components
 
@@ -235,7 +228,6 @@ To have a component that automatically updates once the output of some Compute S
 
 Check out the [Counter.razor example](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Components/Pages/Counter.razor) from HelloBlazorServer sample to see this in action.
 
----
 
 ## Real-time UI in Server-Side Blazor Apps
 

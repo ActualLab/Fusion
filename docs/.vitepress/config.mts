@@ -42,7 +42,7 @@ export default defineConfig({
             link: "/Part02",
             collapsed: true,
             items: [
-              { text: "Core Concepts", link: "/Part02-CC" },
+              { text: "Key Concepts", link: "/Part02-CC" },
               { text: "Configuration Options", link: "/Part02-CO" },
               { text: "Cheat Sheet", link: "/Part02-CS" },
             ],

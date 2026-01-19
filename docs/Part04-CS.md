@@ -1,4 +1,4 @@
-# CommandR Cheat Sheet
+# CommandR: Cheat Sheet
 
 Quick reference for commands and handlers.
 

@@ -1,4 +1,4 @@
-# Server-Only Use Case
+# Compute Services: Server-Only Use Case
 
 Even though Fusion supports RPC, you can use it on server-side only to cache recurring computations.
 Below are results from [Run-Benchmark.cmd from Fusion Samples](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Benchmark):
@@ -381,7 +381,6 @@ A few tips on how to use it:
 - This is also why you might want to return just immutable objects from
   compute methods &ndash; and C# 9 records come quite handy here.
 
----
 
 **Note:** If you're interested in algorithms and data structures, check out
 [ConcurrentTimerSet&lt;TTimer&gt;](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Time/ConcurrentTimerSet.cs) &ndash;

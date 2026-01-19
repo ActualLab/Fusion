@@ -1,4 +1,4 @@
-# ActualLab.Rpc Core Concepts
+# ActualLab.Rpc Key Concepts
 
 This document describes the key abstractions in ActualLab.Rpc that power distributed compute services.
 

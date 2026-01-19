@@ -1,4 +1,4 @@
-# ActualLab.Rpc Cheat Sheet
+# RPC: Cheat Sheet
 
 Quick reference for RPC setup and configuration.
 
