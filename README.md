@@ -38,21 +38,24 @@ You can think of Fusion as:
 Every call to Fusion service method can benefit from:
 
 **In-process capabilities:**
-1. **Memoization** &ndash; Fusion service call results are memoized by their arguments; repeated calls return instantly without re-executing the method body while the memoized result is still "consistent".
-2. **Automatic dependency tracking** &ndash; when such methods call each other, Fusion records the dependencies between their cached results automatically.
-3. **Cascading invalidation** &ndash; when a cached result gets invalidated (marked as "inconsistent"), all results that depend on it are invalidated too, propagating through the entire dependency graph.
+
+- **Memoization** &ndash; Fusion service call results are memoized by their arguments; repeated calls return instantly without re-executing the method body while the memoized result is still "consistent".
+- **Automatic dependency tracking** &ndash; when such methods call each other, Fusion records the dependencies between their cached results automatically.
+- **Cascading invalidation** &ndash; when a cached result gets invalidated (marked as "inconsistent"), all results that depend on it are invalidated too, propagating through the entire dependency graph.
 
 **Distributed capabilities:**
-4. **RPC** &ndash; Fusion services can be exposed and invoked via `ActualLab.Rpc`, a WebSocket-based protocol similar to gRPC and SignalR, but 2-5x more efficient. It supports regular methods, Fusion service methods, and streaming.
-5. **Distributed call routing** &ndash; calls can be dynamically routed to different backends based on arguments, load, or other criteria &ndash; enabling sharding and horizontal scaling.
-6. **Distributed memoization** &ndash; RPC clients of Fusion services cache results locally; calls that "hit" a still-consistent cache entry resolve instantly. In other words, remote clients of Fusion services behave exactly like the services they "mirror".
-7. **Distributed invalidation** &ndash; when a server-side result is invalidated, the server invalidates cached copies of that result on every client.
+
+- **RPC** &ndash; Fusion services can be exposed and invoked via `ActualLab.Rpc`, a WebSocket-based protocol similar to gRPC and SignalR, but 2-5x more efficient. It supports regular methods, Fusion service methods, and streaming.
+- **Distributed call routing** &ndash; calls can be dynamically routed to different backends based on arguments, load, or other criteria &ndash; enabling sharding and horizontal scaling.
+- **Distributed memoization** &ndash; RPC clients of Fusion services cache results locally; calls that "hit" a still-consistent cache entry resolve instantly. In other words, remote clients of Fusion services behave exactly like the services they "mirror".
+- **Distributed invalidation** &ndash; when a server-side result is invalidated, the server invalidates cached copies of that result on every client.
 
 **RPC-specific optimizations:**
-8. **Automatic RPC message batching** &ndash; when possible, RPC messages are automatically grouped into a single transmission frame, reducing round-trips.
-9. **Persistent client-side caching** &ndash; allows you to persist and reuse RPC call results in e.g. IndexedDB or SQLite database, enabling offline operation and much faster cold starts for client apps.
-10. **ETag-like "cache match" responses** &ndash; paired with persistent client-side caching, this feature shrinks client app startup traffic by 10x or more: clients send the version of their cached result, and if it matches, the server responds with a lightweight "match" instead of the full payload.
-11. **Speculative execution** &ndash; since nearly everything is cached in the client-side persistent cache, clients speculatively move forward during app startup without waiting for actual RPC calls to complete. This speeds up the startup itself, but importantly, it also allows batching startup RPC messages into just a few transmission frames.
+
+- **Automatic RPC message batching** &ndash; when possible, RPC messages are automatically grouped into a single transmission frame, reducing round-trips.
+- **Persistent client-side caching** &ndash; allows you to persist and reuse RPC call results in e.g. IndexedDB or SQLite database, enabling offline operation and much faster cold starts for client apps.
+- **ETag-like "cache match" responses** &ndash; paired with persistent client-side caching, this feature shrinks client app startup traffic by 10x or more: clients send the version of their cached result, and if it matches, the server responds with a lightweight "match" instead of the full payload.
+- **Speculative execution** &ndash; since nearly everything is cached in the client-side persistent cache, clients speculatively move forward during app startup without waiting for actual RPC calls to complete. This speeds up the startup itself, but importantly, it also allows batching startup RPC messages into just a few transmission frames.
 
 **What this means for you:**
 - **Real-time state synchronization** &ndash; without writing any pub/sub or event-handling code.
