@@ -36,7 +36,15 @@ export default defineConfig({
             ],
           },
           { text: "2. Local Compute Services on Server-Side", link: "/Part02" },
-          { text: "3. Distributed Compute Services", link: "/Part03" },
+          {
+            text: "3. ActualLab.Rpc and Distributed Compute Services",
+            link: "/Part03",
+            collapsed: true,
+            items: [
+              { text: "Core Concepts", link: "/Part03-CC" },
+              { text: "Configuration Options", link: "/Part03-CO" },
+            ],
+          },
           { text: "4. Real-time UI in Blazor App", link: "/Part04" },
           { text: "5. CommandR", link: "/Part05" },
           { text: "6. Multi-Host Invalidation with Operations Framework", link: "/Part06" },

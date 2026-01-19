@@ -1,4 +1,4 @@
-# Distributed Compute Services
+# ActualLab.Rpc and Distributed Compute Services
 
 Fusion is designed with distributed applications in mind,
 and one of its key features is the ability to expose Compute Services
