@@ -334,7 +334,11 @@ There are two implementations of `State<T>`:
 
 Here is a brief description of key differences between these two states:
 
-![](./diagrams/state/states-table.dio.svg)
+| Property | `MutableState<T>` | `ComputedState<T>` |
+|----------|-------------------|---------------------|
+| Is mutable? (has `state.Value` / `Error` setters) | Yes | No |
+| Is `state.Computed` always consistent? | Yes | No |
+| Has `UpdateDelayer`? | No | Yes |
 
 ### Constructing States
 
