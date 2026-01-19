@@ -100,17 +100,17 @@ ASCII diagrams illustrating Fusion's authentication architecture and flows.
 │                                                          │    │
 │  2. Cookie exists? ─────────────────────────────────┐    │    │
 │     │                                               │    │    │
-│     ├─ Yes ─> Check IsSignOutForced ───┐            │    │    │
-│     │         │                        │            │    │    │
-│     │         ├─ Yes ─> Handle forced  │            │    │    │
-│     │         │         sign-out       ▼            │    │    │
-│     │         │                  ┌──────────┐       │    │    │
-│     │         │                  │Create new│       │    │    │
-│     │         └─ No ──> Use existing session        │    │    │
-│     │                            │                  │    │    │
+│     ├─ Yes ─> Check IsSignOutForced ───────┐        │    │    │
+│     │         │                            │        │    │    │
+│     │         ├─ Yes ─> Handle forced  ───>│        │    │    │
+│     │         │         sign-out           ▼        │    │    │
+│     │         │                  Create new session │    │    │
+│     │         │                                │    │    │    │
+│     │         └─ No ──> Use existing session ─>|    │    │    │
+│     │                                          │    │    │    │
 │     └─ No ────────────────────────────────────>│    │    │    │
 │                                                │    │    │    │
-│  3. Apply tags (if TagProvider configured)    <┴────┘    │    │
+│  3. Apply tags (if TagProvider configured) <───┴────┘    │    │
 │                                                          │    │
 │  4. Update cookie (if AlwaysUpdateCookie = true)         │    │
 │                                                          │    │
