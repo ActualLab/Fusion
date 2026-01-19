@@ -1,58 +1,122 @@
-# Multi-Host Invalidation and CQRS with Operations Framework
+# Authentication in Fusion
 
 [ActualLab.Fusion](https://www.nuget.org/packages/ActualLab.Fusion/)
-is a library that provides a robust way to implement multi-host invalidation
-and CQRS-style command handlers.
+is a library that provides a robust way to implement authentication
+in Fusion applications.
 
-Multi-host invalidation requires the following components:
+## Fusion Session
 
-1. **Operation execution pipeline.**
-2. **Operation logger** &ndash; a handler in this pipeline responsible
-   for logging operations to some persistent store &ndash; and ideally,
-   doing this as part of operations' own transaction similarly to how 
-   it's done in outbox pattern.
-3. **Operation log reader** &ndash; a service watching for operation log
-   updates made by other processes.
-4. An API allowing to "replay" an operation in invalidation mode &ndash;
-   i.e. run a part of its logic responsible solely for invalidation.
+One of the important elements in this authentication system is Fusion's own session. A session is essentially a string value, that is stored in HTTP only cookie. If the client sends this cookie with a request then we use the session specified there; if not, `SessionMiddleware` creates it.
 
-Operations Framework implements this in a very robust way.
+To enable Fusion session we need to call `UseFusionSession` inside the `Configure` method of the `Startup` class.
+This adds `SessionMiddleware` to the request pipeline. The actual class contains a bit more logic, but the important parts for now are the following:
 
-## Operations Framework
-
-Useful definitions:
-
-OF
-: A shortcut for Operations Framework used further
-
-Operation
-: An action that could be logged into operation log and replayed.
-Currently only commands can act as such actions, but
-the framework implies there might be other kinds of
-operations too. So operation is ~ whatever OF can handle as
-an operation, including commands.
-
-It's worth mentioning that OF has almost zero dependency on
-Fusion. You can use it for other purposes too
-(e.g. audit logging) &ndash; with or without Fusion.
-Moreover, you can easily remove all Fusion-specific services
-it has from IoC container to completely disable
-its Fusion-specific behaviors.
-
-### Enabling Operations Framework
-
-1. Add the following `DbSet` to your `DbContext` (`AppDbContext` further):
-
-<!-- snippet: Part06_DbSet -->
 ```cs
-public DbSet<DbOperation> Operations { get; protected set; } = null!;
-public DbSet<DbEvent> Events { get; protected set; } = null!;
-```
-<!-- endSnippet -->
+public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
+{
+    if (Settings.RequestFilter.Invoke(httpContext))
+        SessionResolver.Session = await GetOrCreateSession(httpContext).ConfigureAwait(false);
+    await next(httpContext).ConfigureAwait(false);
+}
 
-2. Add the following code to your server-side IoC container
-   configuration block
-   (typically it is `Startup.ConfigureServices` method or similar):
+public virtual Session? GetSession(HttpContext httpContext)
+{
+    var cookies = httpContext.Request.Cookies;
+    var cookieName = Settings.Cookie.Name ?? "";
+    cookies.TryGetValue(cookieName, out var sessionId);
+    return sessionId.IsNullOrEmpty() ? null : new Session(sessionId);
+}
+
+public virtual async Task<Session> GetOrCreateSession(HttpContext httpContext)
+{
+    var cancellationToken = httpContext.RequestAborted;
+    var originalSession = GetSession(httpContext);
+    var session = originalSession;
+    if (session is not null && Auth is not null) {
+        try {
+            var isSignOutForced = await Auth.IsSignOutForced(session, cancellationToken).ConfigureAwait(false);
+            if (isSignOutForced) {
+                await Settings.ForcedSignOutHandler(this, httpContext).ConfigureAwait(false);
+                session = null;
+            }
+        }
+        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+            Log.LogError(e, "Session is unavailable: {Session}", session);
+            session = null;
+        }
+    }
+    session ??= Session.New();
+    session = Settings.TagProvider?.Invoke(session, httpContext) ?? session;
+    if (Settings.AlwaysUpdateCookie || session != originalSession) {
+        var cookieName = Settings.Cookie.Name ?? "";
+        var responseCookies = httpContext.Response.Cookies;
+        responseCookies.Append(cookieName, session.Id, Settings.Cookie.Build(httpContext));
+    }
+    return session;
+}
+```
+
+See [SessionMiddleware.cs:54](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Middlewares/SessionMiddleware.cs#L54) for the actual source.
+
+The `Session` class in itself is very simple, it stores a single `Symbol Id` value. `Symbol` is a struct storing a string with its cached `HashCode`, its only role is to speedup dictionary lookups when it's used. Besides that, `Session` overrides equality &ndash; they're compared by `Id`.
+
+```cs
+public sealed class Session : IHasId<Symbol>, IEquatable<Session>,
+    IConvertibleTo<string>, IConvertibleTo<Symbol>
+{
+    public static Session Null { get; } = null!; // To gracefully bypass some nullability checks
+    public static Session Default { get; } = new("~"); // We'll cover this later
+
+    [DataMember(Order = 0)]
+    public Symbol Id { get; }
+    ...
+}
+```
+
+When you call `services.AddFusion()`, core session services are registered in your dependency injection container:
+
+```cs
+services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
+services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
+```
+
+Here is what you need to know about these services:
+
+- `ISessionResolver` keeps track of the current session and allows to get/set it
+- `Session` is registered as a scoped service &ndash; it's mapped to the session resolved by `ISessionResolver`: `c => c.GetRequiredService<ISessionResolver>().Session`.
+
+We'll cover how they're used in Blazor apps later, for now let's just remember they exist.
+
+# Authentication services in the backend application
+
+`Session`'s role is quite similar to ASP.NET sessions &ndash; it allows to identify everything related to the current user. Technically it's up to you what to associate with it, but Fusion's built-in services address a single kind of this information: authentication info.
+
+If the session is authenticated, it allows you to get the user information, claims associated with this user, etc.
+On the server side the following Fusion services interact with authentication data.
+
+- `InMemoryAuthService`
+- `DbAuthService<...>`
+
+They implement the same interfaces, so they can be used interchangeably &ndash; the only difference between them is where they store the data: in memory on in the database. `InMemoryAuthService` is there primarily for debugging or quick prototyping &ndash; you don't want to use it in the real app.
+
+Speaking of interfaces, these services implement two of them:
+[`IAuth`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Contracts/Authentication/IAuth.cs) and [`IAuthBackend`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Services/Authentication/IAuthBackend.cs). The first one is intended to be used on the client; the second one must be used on the server side.
+
+The key difference is:
+
+- `IAuth` allows to just read the data associated with the current session
+- `IAuthBackend` allows to modify it and read the information about any user.
+
+This, btw, is a recommended way for designing Fusion services:
+
+- `IXxx` is your front-end, it gets `Session` as the very first parameter and provides only the data current user is allowed to access
+- `IXxxBackend` doesn't require `Session` and allows to access everything.
+
+When you add authentication, `InMemoryAuthService` is registered as `IAuth` and `IAuthBackend` implementation by default. In order to register the `DbAuthService` in the DI container, we need to call the `AddAuthentication` method in a similar way
+to the following code snippet.
+
+The Operations Framework is also needed for any of these services &ndash;
+hopefully you read [Part 10](./Part06.md), which covers it.
 
 <!-- snippet: Part06_AddDbContextServices -->
 ```cs
@@ -85,660 +149,331 @@ public static void ConfigureServices(IServiceCollection services, IHostEnvironme
 ```
 <!-- endSnippet -->
 
-> Note that OF works solely on server side, so you don't have
-> to make similar changes in Blazor app's IoC container
-> configuration code.
+Our `DbContext` needs to contain `DbSet`-s for the classes provided here as type parameters.
+The `DbSessionInfo` and `DbUser` classes are very simple entities provided by Fusion for storing authentication data.
 
-What happens here?
-
-- `AddDbContextServices<TDbContext>(Action<DbContextBuilder<TDbcontext>>)`
-  is a convenience helper allowing methods like `AddOperations`
-  to be implemented as extension methods to `DbContextBuilder<TDbcontext>`,
-  so you as a user of such methods need to specify `TDbContext` type
-  just once &ndash; when you call `AddDbContextServices`. In other
-  words, `AddDbContextServices` does nothing itself, but allows
-  services registered inside its builder block to be dependent on
-  `TDbContext` type.
-- `AddOperations` does nearly all the job. I'll cover every service
-  it registers in details further.
-- And finally, `AddXxxOperationLogWatcher` adds one of
-  the services that watch for operation log updates.
-  It's totally fine to omit any of these calls &ndash; in this case
-  operation log reader will be waking up only unconditionally, which
-  happens 4 times per second by default, so other hosts running
-  your code may see 0.25s delay in invalidations of data changed by
-  their peers. You can reduce this delay, of course, but doing this
-  means you'll be hitting the database more frequently with operation
-  log tail requests. `AddXxxOperationLogWatcher` methods
-  make this part way more efficient by explicitly notifying the log
-  reader to read the tail as soon as they know for sure one of their
-  peers updated it:
-  - `AddFileSystemOperationLogWatcher` relies on a shared file
-    to pass these notifications. Any peer that updates operation log
-    also "touches" this file (just update its modify date), and all
-    other peers are using `FileSystemWatcher`-s to know about these
-    touches as soon as they happen. And once they happen, they "wake up"
-    the operation log reader.
-  - `AddNpgsqlOperationLogWatcher` does ~ the same, but
-    relying on PostgreSQL's
-    [NOTIFY / LISTEN](https://www.postgresql.org/docs/13/sql-notify.html)
-    feature &ndash; basically, a built-in message queue.
-    If you use PostgreSQL, you should almost definitely use it.
-    It's also a bit more efficient than file-based notifications,
-    because such notifications also bear the Id of the agent
-    that made the change, so the listening process on that agent
-    has a chance to ignore any of its own notifications.
-  - Right now there are no other operation log watcher options, but
-    more are upcoming. And it's fairly easy to add your own &ndash;
-    e.g. [PostgreSQL operation log watcher](https://github.com/ActualLab/Fusion/tree/master/src/ActualLab.Fusion.EntityFramework.Npgsql)
-    requires less than 200 lines of code, and you need to change
-    maybe just 30-40 of these lines in your own tracker.
-
-## Using Operations Framework
-
-Here is how Operations Framework requires you to transform
-the code of your old action handlers:
-
-**Pre-OF handler:**
-
-<!-- snippet: Part06_PreOfHandler -->
+<!-- snippet: Part06_AppDbContext -->
 ```cs
-public async Task<ChatMessage> PostMessage(
-    Session session, string text, CancellationToken cancellationToken = default)
-{
-    await using var dbContext = await DbHub.CreateDbContext(cancellationToken).ConfigureAwait(false);
-    // Actual code...
-    var message = await PostMessageImpl(dbContext, session, text, cancellationToken);
-
-    // Invalidation
-    using (Invalidation.Begin())
-        _ = PseudoGetAnyChatTail();
-    return message;
-}
+public DbSet<DbUser<long>> Users { get; protected set; } = null!;
+public DbSet<DbUserIdentity<long>> UserIdentities { get; protected set; } = null!;
+public DbSet<DbSessionInfo<long>> Sessions { get; protected set; } = null!;
 ```
 <!-- endSnippet -->
 
-**Post-OF handler:**
+These entity types are defined in:
+- [`DbSessionInfo`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Services/Authentication/Services/DbSessionInfo.cs) &ndash; stores sessions, which (if authenticated) can be associated with a `DbUser`
+- [`DbUser`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Services/Authentication/Services/DbUser.cs) &ndash; stores user information
+- [`DbUserIdentity`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Services/Authentication/Services/DbUserIdentity.cs) &ndash; stores user identities (e.g., OAuth providers)
 
-1. Create a dedicated command type for this action:
+## Using session in Compute Services for authorization
 
-<!-- snippet: Part06_PostMessageCommand -->
+Our Compute Services can receive a `Session` object that we can use to decide if we are authenticated or not and who the signed in user is:
+
+<!-- snippet: Part06_GetMyOrders -->
 ```cs
-public record PostMessageCommand(Session Session, string Text) : ICommand<ChatMessage>;
-```
-<!-- endSnippet -->
-
-Notice that above type implements `ICommand<ChatMessage>` &ndash; the
-generic parameter `ChatMessage` here is the type of result of
-this command.
-
-Even though it's a record type in this example, there is no requirement
-like "every command has to be a record". Any JSON-serializable
-class will work equally well; I prefer to use records mostly due
-to their immutability.
-
-2. Refactor action to command handler:
-
-<!-- snippet: Part06_PostOfHandler -->
-```cs
-[CommandHandler]
-public virtual async Task<ChatMessage> PostMessage(
-    PostMessageCommand command, CancellationToken cancellationToken = default)
+[ComputeMethod]
+public virtual async Task<List<OrderHeaderDto>> GetMyOrders(Session session, CancellationToken cancellationToken = default)
 {
-    if (Invalidation.IsActive) {
-        _ = PseudoGetAnyChatTail();
-        return default!;
+    // We assume that _auth is of IAuth type here.
+    var user = await _auth.GetUser(session, cancellationToken).Require();
+    if (await CanReadOrders(user, cancellationToken)) {
+        // Read orders
     }
-
-    await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
-    // Actual code...
-    var message = await PostMessageImpl(dbContext, command, cancellationToken);
-    return message;
+    return new List<OrderHeaderDto>();
 }
 ```
 <!-- endSnippet -->
 
-A recap of how `[CommandHandler]`s should look like:
+`.Require()` here throws an error if the user is `null`.
 
-- Add `virtual` + tag the method with `[CommandHandler]`.
-- New method arguments: `(PostCommand, CancellationToken)`
-- New return type: `Task<ChatMessage>`. Notice that
-  `ChatMessage` is a generic parameter of its command too &ndash;
-  and these types should match unless your command implements
-  `ICommand<Unit>` or you write filtering handler (in these case
-  it can be `Task` too).
-- The method must be `public` or `protected`.
+`GetUser` and all other `IAuth` and `IAuthBackend` methods are compute methods, which means that the result of `GetMyOrders` call will invalidate once you sign-in into the provided `session` or sign out &ndash; generally, whenever a change that impacts on their result happens.
 
-The invalidation block inside the handler should be transformed too:
+## Synchronizing Fusion and ASP.NET Core authentication states
 
-- Move it to the very beginning of the method
-- Replace `using (Invalidation.Begin()) { Code(); }` construction
-  with
-  `if (Invalidation.IsActive) { Code(); return default!; }`.
-- If your service derives from `DbServiceBase` or `DbAsyncProcessBase`,
-  you should use its protected `CreateOperationDbContext` method
-  to get `DbContext` where you are going to make changes.
-  You still have to call `SaveAsync` on this `DbContext` in the end.
+If you look at `IAuth` and `IAuthBackend` APIs, it's easy to conclude there is no authentication per se:
 
-And two last things 😋:
+- `IAuth` allows to retrieve the authentication state &ndash; i.e. get `SessionInfo`, `User` and session options (key-value pairs represented as `ImmutableOptionSet`) associated with a `Session`
+- `IAuthBackend`, on contrary, allows to set them.
 
-1. You can't pass values from the "main" block to the
-invalidation block directly.
-It's not just due to their new order &ndash; the code from your
-invalidation blocks will run a few times for every command
-execution (once on every host), but the "main" block's code
-will run only on the host where the command was started.
+So in fact, these APIs just maintain the authentication state. It's assumed that you authenticate users using something else, and use these services in "Fusion world" to access the authentication info. Since these are compute services, they'll ensure that compute services calling them will invalidate their results once authentication info changes.
 
-So to pass some data to your invalidation blocks, use
-`CommandContext.Operation.Items` collection &ndash;
-nearly as follows:
+The proposed way to sync the authentication state between ASP.NET Core and Fusion is to embed this logic into `_HostPage.razor`, which serves as the root component for your Blazor app. The authentication state is synced from ASP.NET Core to Fusion right when the page loads. When user signs in or signs out, `_HostPage.razor` gets loaded by the end of any of these flows, so it's the best place to sync.
 
-<!-- snippet: Part06_SignOutHandler -->
+The synchronization is done by the `ServerAuthHelper.UpdateAuthState` method. [`ServerAuthHelper`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Authentication/ServerAuthHelper.cs) is a built-in Fusion helper doing exactly what's described above. It compares the authentication state exposed by `IAuth` for the current `Session` vs the state exposed in `HttpContext` and calls `IAuthBackend.SignIn()` / `IAuthBackend.SignOut` to sync it.
+
+The following code snippet shows how you embed it into `_HostPage.razor`:
+
+```xml
+@using ActualLab.Fusion.Blazor
+@using ActualLab.Fusion.Server.Authentication
+@using ActualLab.Fusion.Server.Endpoints
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Fusion App</title>
+    <base href="/" />
+    <script src="_content/ActualLab.Fusion.Blazor.Authentication/scripts/fusionAuth.js"></script>
+    <script>
+        window.FusionAuth.schemas = "@_authSchemas";
+    </script>
+    <HeadOutlet @rendermode="@(_renderMode?.Mode)" />
+</head>
+<body>
+    <App @rendermode="@(_renderMode?.Mode)" SessionId="@_sessionId" RenderModeKey="@(_renderMode?.Key)"/>
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>
+
+@code {
+    private bool _isInitialized;
+    private RenderModeDef? _renderMode;
+    private string _authSchemas = "";
+    private string _sessionId = "";
+
+    [Inject] private ServerAuthHelper ServerAuthHelper { get; init; } = null!;
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = null!;
+
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        if (!_isInitialized) {
+            _isInitialized = true;
+            parameters.SetParameterProperties(this);
+            if (HttpContext.AcceptsInteractiveRouting())
+                _renderMode = RenderModeEndpoint.GetRenderMode(HttpContext);
+            await ServerAuthHelper.UpdateAuthState(HttpContext);
+            _authSchemas = await ServerAuthHelper.GetSchemas(HttpContext);
+            _sessionId = ServerAuthHelper.Session.Id;
+        }
+        await base.SetParametersAsync(parameters);
+    }
+}
+```
+
+Notice that it assumes there is [`fusionAuth.js`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor.Authentication/wwwroot/scripts/fusionAuth.js) &ndash; a small script embedded into `ActualLab.Fusion.Blazor.Authentication` assembly, which is responsible for opening authentication window or performing a redirect.
+
+Besides that, you need to add a couple extras to your ASP.NET Core app service container configuration:
+
+<!-- snippet: Part06_ServiceConfiguration -->
 ```cs
-public virtual async Task SignOut(
-    SignOutCommand command, CancellationToken cancellationToken = default)
+public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
+    var fusion = services.AddFusion();
+    var fusionServer = fusion.AddWebServer();
+    fusion.AddDbAuthService<AppDbContext, string>();
+    fusionServer.ConfigureAuthEndpoint(_ => new() {
+        // Set to the desired one
+        DefaultSignInScheme = MicrosoftAccountDefaults.AuthenticationScheme,
+        SignInPropertiesBuilder = (_, properties) => {
+            properties.IsPersistent = true;
+        }
+    });
+    fusionServer.ConfigureServerAuthHelper(_ => new() {
+        // These are the claims mapped to User.Name once a new
+        // User is created on sign-in; if they absent or this list
+        // is empty, ClaimsPrincipal.Identity.Name is used.
+        NameClaimKeys = [],
+    });
+
+    // Configure ASP.NET Core authentication providers:
+    services.AddAuthentication(options => {
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    }).AddCookie(options => {
+        // You can use whatever you prefer to store the authentication info
+        // in ASP.NET Core, this specific example uses a cookie.
+        options.LoginPath = "/signIn"; // Mapped to
+        options.LogoutPath = "/signOut";
+        if (Env.IsDevelopment())
+            options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+        // This controls the expiration time stored in the cookie itself
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+        // And this controls when the browser forgets the cookie
+        options.Events.OnSigningIn = ctx => {
+            ctx.CookieOptions.Expires = DateTimeOffset.UtcNow.AddDays(28);
+            return Task.CompletedTask;
+        };
+    }).AddGitHub(options => {
+        // Again, this is just an example of using GitHub account
+        // OAuth provider to authenticate. There is nothing specific
+        // to Fusion in the code below.
+        options.ClientId = "...";
+        options.ClientSecret = "...";
+        options.Scope.Add("read:user");
+        options.Scope.Add("user:email");
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    });
+}
+```
+<!-- endSnippet -->
+
+Notice that we use `/signIn` and `/signOut` paths above &ndash; they're mapped to the Fusion's [`AuthController`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Controllers/AuthController.cs).
+
+If you want to use some other logic for these actions, you can map them to similar actions in another controller & update the paths (+ set `window.FusionAuth.signInPath` and `window.FusionAuth.signInPath` in JS as well), or replace this controller. There is a handy helper for this: `services.AddFusion().AddServer().AddControllerFilter(...)`.
+
+And finally, you need a bit of extras in app configuration:
+
+<!-- snippet: Part06_AppConfiguration -->
+```cs
+public static void ConfigureApp(WebApplication app)
+{
+    app.UseWebSockets(new WebSocketOptions() {
+        KeepAliveInterval = TimeSpan.FromSeconds(30),
+    });
+    app.UseFusionSession();
+    app.UseRouting();
+    app.UseAuthentication();
+    app.UseAntiforgery();
+
+    // Razor components
+    app.MapStaticAssets();
+    app.MapRazorComponents<_HostPage>()
+        .AddInteractiveServerRenderMode()
+        .AddInteractiveWebAssemblyRenderMode()
+        .AddAdditionalAssemblies(typeof(App).Assembly);
+
+    // Fusion endpoints
+    app.MapRpcWebSocketServer();
+    app.MapFusionAuthEndpoints();
+    app.MapFusionRenderModeEndpoints();
+}
+```
+<!-- endSnippet -->
+
+## Using Fusion authentication in a Blazor WASM components
+
+As you know, client-side Compute Service Clients have the same interface as their server-side Compute Service counterparts, so the client needs to pass the `Session` as an argument for methods that require it. However the `Session` is stored in a http-only cookie, so the client can't read its value directly. This is intentional &ndash; since `Session` allows anyone to impersonate as a user associated with it, ideally we don't want it to be available on the client side.
+
+Fusion uses so-called "default session" to make it work. Let's quote the beginning of `Session` class code again:
+
+```cs
+public sealed class Session : IHasId<Symbol>, IEquatable<Session>,
+    IConvertibleTo<string>, IConvertibleTo<Symbol>
+{
+    public static Session Null { get; } = null!; // To gracefully bypass some nullability checks
+    public static Session Default { get; } = new("~"); // Default session
+
     // ...
-    var context = CommandContext.GetCurrent();
-    if (Invalidation.IsActive) {
-        // Fetch operation item
-        var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-        if (invSessionInfo is not null) {
-            // Use it
-            _ = GetUser(invSessionInfo.UserId, default);
-            _ = GetUserSessions(invSessionInfo.UserId, default);
+}
+```
+
+Default session is a specially named `Session` which is automatically substituted by [`RpcDefaultSessionReplacer`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Rpc/RpcDefaultSessionReplacer.cs) middleware to the one provided by `ISessionResolver`. In other words, if you pass `Session.Default` as an argument to some Compute Service client, it will get its true value on the server side.
+
+All of this means your Blazor WASM client doesn't need to know the actual `Session` value to work &ndash; all you need is to configure `ISessionResolver` there to return `Session.Default` as the current session.
+
+And you want your Blazor components to work on Blazor Server, you need to use the right `Session`, which is available there.
+
+Now, if you still remember the beginning of this document, there is a number of services managing `Session` in Fusion:
+
+```cs
+services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
+services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
+```
+
+So all we need is to make `ISessionResolver` to resolve `Session.Default` on the Blazor WASM client. The modern way to do this is to inherit your `App.razor` from `CircuitHubComponentBase`:
+
+```xml
+@using ActualLab.OS
+@inherits CircuitHubComponentBase
+
+<CascadingAuthState UsePresenceReporter="true">
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p>Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthState>
+
+@code {
+    private ISessionResolver SessionResolver => CircuitHub.SessionResolver;
+
+    [Parameter] public string SessionId { get; set; } = "";
+    [Parameter] public string RenderModeKey { get; set; } = "";
+
+    protected override void OnInitialized()
+    {
+        if (OSInfo.IsWebAssembly) {
+            // RPC auto-substitutes Session.Default to the cookie-based one on the server side
+            SessionResolver.Session = Session.Default;
+            // That's how WASM app starts hosted services
+            var rootServices = Services.Commander().Services;
+            _ = rootServices.HostedServices().Start();
         }
-        return;
+        else {
+            SessionResolver.Session = new Session(SessionId);
+        }
+        if (CircuitHub.IsInteractive)
+            CircuitHub.Initialize(this.GetDispatcher(), RenderModeDef.GetOrDefault(RenderModeKey));
     }
-
-    await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
-
-    var dbSessionInfo = await Sessions.FindOrCreate(dbContext, command.Session, cancellationToken).ConfigureAwait(false);
-    var sessionInfo = dbSessionInfo.ToModel();
-    if (sessionInfo.IsSignOutForced)
-        return;
-
-    // Store operation item for invalidation logic
-    context.Operation.Items.KeylessSet(sessionInfo);
-    // ...
-}
-```
-<!-- endSnippet -->
-
-2. Calling some other commands from your own commands is totally fine:
-OF logs & "plays" their invalidation logic on other hosts too,
-it also isolates their own operation items.
-
-That's mostly it. Now, if you're curious how it works &ndash; continue reading.
-Otherwise you can simply try this. To see this in action, try running:
-
-- `Run-Sample-Blazor-MultiHost.cmd` from
-  [Fusion Samples](https://github.com/ActualLab/Fusion.Samples)
-- `Run-MultiHost.cmd` from
-  [Board Games](https://github.com/alexyakunin/BoardGames).
-
-## How all of this works?
-
-OF adds a number of generic filtering command handlers to `Commander`'s
-pipeline, and they &ndash; together with a couple other services &ndash; do all the
-heavy-lifting.
-
-- "Generic" means they handle `ICommand` &ndash; the very base type for
-  any command you create
-- "Filtering" means they act like middlewares in ASP.NET Core, so
-  in fact, they "wrap" the execution of downstream handlers with
-  their own prologue/epilogue logic.
-
-Here is the list of such handlers in their invocation order:
-
-### 1. `PreparedCommandHandler`, priority: 1_000_000_000
-
-This filtering handler invokes `IPreparedCommand.Prepare`
-on commands that implement this interface, where some pre-execution
-validation or fixup is supposed to happen. As you might judge by
-the priority, this is supposed to happen before anything else.
-
-You may find out this handler is actually a part of `ActualLab.CommandR`,
-and it's auto-registered when you call `.AddCommander(...)`, so
-it's a "system" command validation handler.
-
-Commands that should only run on the server-side should implement
-`IBackendCommand` or `IBackendCommand<TResult>`. These are tagging
-interfaces that mark commands as backend-only:
-
-```cs
-public interface IBackendCommand : ICommand;
-public interface IBackendCommand<TResult> : ICommand<TResult>, IBackendCommand;
-```
-
-When a command implements `IBackendCommand`, Fusion's RPC layer ensures
-it can only be processed by backend peers (servers), not by clients.
-This replaced the older `ServerSideCommandBase<TResult>` pattern.
-
-### 2. `NestedOperationLogger`, priority: 11_000
-
-This filter is responsible for logging all nested commands,
-i.e. commands called while running other commands.
-
-It's implied that each command implements its own invalidation logic,
-so "parent" commands shouldn't do anything special to process
-invalidation for "child" commands &ndash; and thanks to this handler,
-they shouldn't even call them explicitly inside the invalidation
-block &ndash; it happens automatically.
-
-I won't dig into the details of how it works just yet,
-let's just assume it does the job &ndash; for now.
-
-### 3. `InMemoryOperationScopeProvider`, priority: 10_000
-
-It is the outermost, "catch-all" operation scope provider
-for commands that don't use any other (real) operation scopes.
-
-Let me explain what all of this means now 😈
-
-Your app may have a few different types of `DbContext`-s,
-or maybe even other (non-EF) storages.
-And since it's a bad idea to assume we run distributed
-transactions across all of them, OF assumes each of these
-storages (i.e. `DbContext` types) has its own operation log,
-and an operation entry is added to this log inside the same
-transaction, that run operation's own logic.
-
-So to achieve that, OF assumes there are "operation scope providers" &ndash;
-command filters that publish different implementations of
-`IOperationScope` via `CommandContext.Items` (in case you don't
-remember, `CommandContext.Items` is `HttpContext.Items` analog
-in CommandR-s world). And when the final command handler runs,
-it should pick the right one of these scopes to get access
-to the underlying storage. Here is how this happens, if we're
-talking about EF:
-
-- `DbOperationScopeProvider<TDbContext>`
-  [creates and "injects"](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/Operations/DbOperationScopeProvider.cs)
-  `DbOperationScope<TDbContext>` into
-  `CommandContext.GetCurrent().Items` collection.
-- Once your service needs to access `AppDbContext` from the
-  command handler, it typically calls its protected
-  `CreateOperationDbContext` method, which is actually
-  a shortcut for above actions. If you like the idea of such shortcuts,
-  derive your service from one of these types or their descendants
-  like `DbWakeSleepProcessBase`.
-
-In other words, `DbOperationScope` ensures that all `DbContext`-s
-you get via it share the same connection and transaction.
-In addition, it ensures that
-[an operation entry is added to the operation log before this
-transaction gets committed, and the fact commit actually happened
-is verified in case of failure](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/Operations/DbOperationScope.cs).
-If you're curious why it makes sense to do this,
-[see this page](https://docs.microsoft.com/en-us/ef/ef6/fundamentals/connection-resiliency/commit-failures).
-
-Now, back to `InMemoryOperationScopeProvider` &ndash; its job
-is to provide an operation scope for commands that don't use
-other operation scopes &ndash; e.g. the ones that change only
-in-memory state. If your command doesn't use one of APIs
-"pinning" it to some other operation scope, this is the
-scope it's going to use implicitly.
-
-Finally, it has another grand role: it runs so-called
-operation completion for all operations, i.e. not only
-the transient ones. And this piece deserves its own
-section:
-
-### What is Operation Completion?
-
-It's a process that happens on invocation of
-`OperationCompletionNotifier.NotifyCompleted(operation)`.
-`IOperationCompletionNotifier` is a service simply "distributes" such
-notifications to `IOperationCompletionListener`-s after eliminating
-all _duplicate notifications_ (based on `IOperation.Id`). By default,
-it remembers up to 10K of up to 1-hour-old operations (more precisely,
-their `Id`-s and commit times).
-
-Even though it invokes all the handlers concurrently,
-`NotifyCompleted` completes when _all_
-`IOperationCompletionListener.OnOperationCompletedAsync` handlers
-complete. So once `NotifyCompleted` completes, you
-can be certain that every of these "follow up" actions is already
-completed as well.
-
-[`CompletionProducer` (check it out, it's tiny)](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Operations/Internal/CompletionProducer.cs) &ndash;
-is probably the most important one of such listeners.
-The critical part of its job is actually a single line:
-
-```cs
-await Commander.Call(Completion.New(operation), true).ConfigureAwait(false);
-```
-
-Two things are happening here:
-
-1. It creates [`Completion<TCommand>` object](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Operations/Completion.cs) &ndash;
-   in fact, a command as well!
-2. It runs this command via `Commander.Call(completion, true)`.
-
-The last argument (`isolate = true`) indicates that `ExecutionContext`
-flow will be suppressed for this `Commander` invocation,
-so the pipeline for this command won't "inherit" any of
-`AsyncLocal`-s, including `CommandContext.Current`.
-In other words, the command will run in a new top-level
-`CommandContext` and won't have a chance to "inherit"
-any state via async locals.
-
-For the note, it's a kind of overkill, because
-`OperationCompletionNotifier` also suppresses `ExecutionContext`
-flow when it runs listeners. But... Just in case :)
-
-`ICompletion` implements both `ISystemCommand` and `IBackendCommand`.
-`ISystemCommand` marks commands that are part of Fusion's internal machinery,
-while `IBackendCommand` marks commands that can only be processed on the
-backend (server) side. These interfaces replaced the older `IMetaCommand`
-and `IServerSideCommand` interfaces.
-
-Here's how `Completion.New` creates a completion command:
-
-```cs
-public static ICompletion New(Operation operation)
-{
-    var command = (ICommand?)operation.Command
-        ?? throw Errors.OperationHasNoCommand(nameof(operation));
-    var tCompletion = typeof(Completion<>).MakeGenericType(command.GetType());
-    var completion = (ICompletion)tCompletion.CreateInstance(operation);
-    return completion;
 }
 ```
 
-The actual type of command becomes
-a value of generic parameter of `Completion<T>` type.
-So if you want to implement a _reaction to completion_ of e.g.
-`MyCommand` &ndash; just declare a filtering command handler
-for `ICompletion<MyCommand>`. And yes, it's better to use
-`ICompletion<T>` rather than `Completion<T>` in such handlers.
+You can see that when this component is initialized, it sets `SessionResolver.Session` to the value it gets as a parameter &ndash; unless we're running Blazor WASM. In this case it sets it to `Session.Default`. Any attempt to resolve `Session` (either via `ISessionResolver`, or via service provider) will return this value.
 
-So what is operation completion?
+The `CircuitHubComponentBase` base class provides access to `CircuitHub`, which manages Blazor circuit lifecycle and session resolution.
 
-- It's invocation of
-  `OperationCompletionNotifier.NotifyCompleted(operation)`
-- Which in turn invokes all operation completion listeners
-  - One of such listeners &ndash; `CompletionProducer` &ndash; reacts
-    to this by creating a `ICompletion<TCommand>` instance (a system command) 
-    and invoking `Commander` for this new command.
-    Later you'll learn the invalidation pass is actually
-    triggered by a handler reacting to this command.
-  - And if you registered any of operation log change notifiers,
-    all of them currently implement `IOperationCompletionListener`
-    notifying their peers that operation log was just updated.
+You may notice that `App.razor` wraps its content into [`CascadingAuthState`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor.Authentication/CascadingAuthState.razor), which makes Blazor authentication to work as expected as well by embedding its `ChildContent` into Blazor's `<CascadingAuthenticationState>`.
 
-Now, a couple good questions:
+As shown in the `_HostPage.razor` example above, the `SessionId` and `RenderModeKey` parameters are passed directly to the `App` component:
 
-> Q: Why `NotifyCompleted` doesn't return instantly?
-> Why it bothers to await completion of each and every handler?
-
-This ensures that once the invocation of this method
-from `InMemoryOperationScopeProvider`
-is completed, every follow-up action related to it is
-completed as well, including invalidation.
-
-In other words, our command processing pipeline is built
-in such a way that once a command completes, you can be
-fully certain that any pipeline-based follow-up action
-is completed for it as well &ndash; including invalidation.
-
-> Q: What else invokes `NotifyCompleted`?
-
-Just `DbOperationLogReader` &ndash;
-[see how it does this](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/Operations/LogProcessing/DbOperationLogReader.cs).
-
-As you might notice, it skips all local commands, and a big
-comment there explains why it does so.
-
-> Q: So every host invokes some logic for every command
-> running on other hosts?
-
-Yes. All of this means that:
-
-- Even though there are typically way more queries than
-  commands, some actions (e.g. presence info updates)
-  might be quite frequent. And you should avoid hitting
-  the DB or running any resource-consuming activities
-  inside your invalidation blocks. Especially &ndash;
-  inside such blocks for frequent actions.
-- If you know for sure that at some point you'll
-  reach the scale that won't allow you to rely on
-  a single operation log (e.g. an extremely high
-  frequency of "read tail" calls from ~ hundreds of
-  hosts may bring it down), or e.g. that even
-  replaying the invalidations for every command
-  won't be possible &ndash; you need to think how to
-  partition your system.
-
-For the note, invalidations are extremely fast &ndash;
-it's safe to assume they are ~ as fast as identical
-calls resolving via `IComputed` instances, i.e.
-it's safe to assume you can run ~ a 1 million of
-invalidations per second per HT core, which
-means that an extremely high command rate is
-needed to "flood" OF's invalidation pipeline,
-and most likely it won't be due to the cost of
-invalidation. JSON deserialization and
-CommandR pipeline itself is much more likely
-to become a bottleneck under extreme load.
-
-Ok, back to our command execution pipeline 😁
-
-### 4. `DbOperationScopeProvider<TDbContext>`, priority: 1000
-
-This filter provides `DbOperationScope<TDbContext>`, i.e. the
-"real" operation scope for your operations. As you probably
-already guessed, the fact this filter exists in the pipeline
-doesn't mean it always creates some `DbContext` and
-transaction to commit the operation to.
-This happens if and only if:
-
-- You use the `DbOperationScope<TDbContext>` it created for you &ndash; e.g. by calling
-  `CommandContext.GetCurrent().Items.Get<DbOperationScope<AppDbContext>>()`
-- And ask this scope to provide a `DbContext` by calling its
-  `CreateDbContextAsync` method, which indicates
-  you're going to use this operation scope.
-
-> Note: if your service derives from `DbServiceBase` or `DbAsyncProcessBase`,
-> they provide `CreateOperationDbContext` method, which is actually
-> a shortcut for above actions. If you like the idea of such shortcuts,
-> derive your service from one of these types or their descendants
-> like `DbWakeSleepProcessBase`.
-
-### 5. `InvalidatingCommandCompletionHandler`, priority: 100
-
-Let's look at its handler declaration first:
-
-<!-- snippet: Part06_InvalidatingHandler -->
-```cs
-[CommandHandler(Priority = 100, IsFilter = true)]
-public async Task OnCommand(
-  ICompletion command, CommandContext context, CancellationToken cancellationToken)
-{
-    //  ...
-}
+```xml
+<App @rendermode="@(_renderMode?.Mode)" SessionId="@_sessionId" RenderModeKey="@(_renderMode?.Key)"/>
 ```
-<!-- endSnippet -->
 
-As you might guess, it reacts to the _completion_ of any command,
-and runs the original command **plus** every nested
-command logged during its execution in the "invalidation mode" &ndash;
-i.e. inside `Invalidation.Begin()` block.
-This is why your command handlers need a branch checking for
-`Invalidation.IsActive == true` running the invalidation logic
-there!
+This passes the session ID from the server-side authentication state to the `App.razor` component, which then uses it to initialize `SessionResolver.Session`.
 
-You're [welcome to see what it actually does](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Operations/Internal/InvalidatingCommandCompletionHandler.cs) &ndash;
-it's a fairly simple code, the only tricky piece is related to nested operations.
+Ok, now all preps are done, and we're ready to write our first Blazor component relying on `IAuth`:
 
-On a positive side, `InvalidatingCommandCompletionHandler` is the last
-filter in the pipeline, so we can switch to this topic + one other important
-aspect &ndash; **operation items**.
+```xml
+@page "/myOrders"
+@inherits ComputedStateComponent<List<OrderHeaderDto>>
+@inject IOrderService OrderService
+@inject IAuth Auth
+@inject Session Session // We resolve the Session via DI container
+@{
+    var orders = State.Value;
+}
 
-## Operation items
+// Rendering orders
 
-API endpoint: `commandContext.Operation.Items`
+@code {
+    protected override async Task<List<OrderHeader>> ComputeState(CancellationToken cancellationToken)
+    {
+        var user = await Auth.GetUser(Session, cancellationToken).Require();
 
-It's actually a pretty simple abstraction allowing you to store
-some data together with the operation &ndash; so once its completion
-is "played" on this or other hosts, this data is readily available.
+        if (!user.Claims.ContainsKey("required-claim"))
+            return new List<OrderHeader>();
 
-I'll show how it's used in one of Fusion's built-in command handlers &ndash;
-[`SignOutCommand` handler of `DbAuthService`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Ext.Services/Authentication/Services/DbAuthService.cs):
-
-```cs
-public override async Task SignOut(
-    SignOutCommand command, CancellationToken cancellationToken = default)
-{
-    var (session, force) = command;
-    var context = CommandContext.GetCurrent();
-    if (Invalidation.IsActive) {
-        _ = GetAuthInfo(session, default);
-        _ = GetSessionInfo(session, default);
-        if (force) {
-            _ = IsSignOutForced(session, default);
-            _ = GetOptions(session, default);
-        }
-        var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-        if (invSessionInfo is not null) {
-            _ = GetUser(invSessionInfo.UserId, default);
-            _ = GetUserSessions(invSessionInfo.UserId, default);
-        }
-        return;
+        return await OrderService.GetMyOrders(Session, cancellationToken);
     }
-
-    var dbContext = await CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
-    await using var _1 = dbContext.ConfigureAwait(false);
-
-    var dbSessionInfo = await Sessions.GetOrCreate(dbContext, session.Id, cancellationToken).ConfigureAwait(false);
-    var sessionInfo = SessionConverter.ToModel(dbSessionInfo);
-    if (sessionInfo.IsSignOutForced)
-        return;
-
-    context.Operation.Items.KeylessSet(sessionInfo);
-    sessionInfo = sessionInfo with {
-        LastSeenAt = Clocks.SystemClock.Now,
-        AuthenticatedIdentity = "",
-        UserId = "",
-        IsSignOutForced = force,
-    };
-    await Sessions.Upsert(dbContext, sessionInfo, cancellationToken).ConfigureAwait(false);
 }
 ```
 
-First, look at this line inside the invalidation block:
+## Signing out
 
-```cs
-var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>()
+Fusion's authentication state is synced once `_HostPage.razor` is loaded. Since this happens on almost any request, typical sign-out flow implies:
+
+- First, you run a regular sign-out by e.g. redirecting a browser to `~/signOut` page
+- Second, you redirect the browser to some regular page, which loads `_HostPage.razor`.
+
+Since Fusion auth state change instantly hits all the clients, you can do all of this in e.g. a separate window &ndash; this is enough to make sure every browser window that shares the same session gets signed out.
+
+[`ClientAuthHelper`](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor.Authentication/ClientAuthHelper.cs) is a helper embedded into `ActualLab.Fusion.Blazor` that helps to run these flows by triggering corresponding methods on `window.fusionAuth`.
+
+This is how `Authentication.razor` page in `TodoApp` template uses it:
+
+```xml
+<Button Color="Color.Warning"
+        @onclick="_ => ClientAuthHelper.SignOut()">Sign out</Button>
+<Button Color="Color.Danger"
+        @onclick="_ => ClientAuthHelper.SignOutEverywhere()">Sign out everywhere</Button>
 ```
 
-It tries to pull `SessionInfo` object from `Operation.Items`. But why?
-Well, because needs **pre-sign-out** `SessionInfo` that still contains
-`UserId`. And the code that goes after this call invalidates results of
-a few other methods related to this user.
-
-The code that stores this info is located below:
-
-```cs
-context.Operation.Items.KeylessSet(sessionInfo);
-```
-
-As you see, it stores `sessionInfo` object into
-`context.Operation.Items` right before creating its copy
-with wiped out `UserId` &ndash; in other words, _it saves
-the info it wipes for the invalidation logic_.
-
-And this is precisely the purpose of this API &ndash; to pass
-some information related to the operation to "follow up" actions
-(currently "invalidation pass" is the only follow-up action).
-As you might guess, this info is stored in the DB along with
-the operation, so peer hosts will see it as well while
-running their own invalidation logic.
-
-> Q: How this differs from `CommandContext.Items`?
-
-`CommandContext.Items` live only while the top-level command runs.
-They aren't persisted anywhere, and thus they won't be available
-on peer hosts too.
-
-But importantly, both these objects are `MutablePropertyBag`-s.
-Check out [its source code](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Collections/MutablePropertyBag.cs)
-to learn how it works &ndash; again, it's a fairly tiny class.
-
-## Nested command logging
-
-I'll be brief here. Nested commands are logged into
-`Operation.NestedOperations`, which is of type
-`ImmutableList<NestedOperation>`.
-
-- The logging is happening in `NestedOperationLogger` type.
-  You might notice that nested commands of nested commands
-  are properly logged too &ndash; moreover, their `Operation.Items`
-  are captured & stored independently as well! In other words,
-  you're free to call other commands from your commands w/o a need
-  to worry about their invalidation piece of work (it will happen)
-  or collisions of their operation items with yours.
-- The "invalidation mode replay" of these commands is performed by
-  `InvalidatingCommandCompletionHandler`.
-
-There is nothing like a "generic" handler triggering completion
-for such commands &ndash; as you might guess, completion is meaningful
-for top-level commands only. Nested commands are captured
-and stored solely to simplify invalidation, and if this piece
-won't be there, you'd have to manually duplicate any logic
-triggering commands both in the "main" and in the "invalidation"
-sections. Luckily, I'm a big fan of DRY, so I had no choice
-other than solving this problem once and forever 😎
-
-## How can I learn Operation Framework deeper?
-
-The easiest way to find all the components used by Operations
-Framework is to see the implementation of `DbContextBuilder.AddOperations`
-and `IServiceCollection.AddFusion`. Both methods invoke corresponding
-builder's constructor first, which I highly recommend to view:
-
-- https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.EntityFramework/DbOperationsBuilder.cs
-- https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/FusionBuilder.cs
-
-Below is a brief description of some of the services I didn't mention yet;
-as for anything else, above code is the best place to start digging
-into the Operations Framework a bit deeper.
-
-`HostId` is a simple type allowing Operations Framework to check
-if an operation is originating from this or some other process.
-Check out its [source code](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/HostId.cs) &ndash;
-it's tiny.
-
-`HostId.Id` is a string that includes:
-
-- Machine name
-- Unique process ID
-- Unique ID for every new `HostId` you create. This
-  ensures that you can run a number of IoC containers with
-  different services inside the same process & use OF
-  to "sync" them. This is super useful for testing any
-  OF related aspects (e.g. that all of your commands are
-  actually "replayed" in invalidation mode on other hosts).
-
-The logic that determines whether a command requires invalidation
-is now built into `InvalidatingCommandCompletionHandler.IsRequired()`.
-It returns `true` for any command with a final handler whose service
-implements `IComputeService`, but not if it's a compute service client
-(i.e., when `RpcServiceMode.Client` is set).
-
-Why exclude compute service clients? Because when a command is handled
-by a client-side proxy, another host will process it and is
-responsible for adding it to the operation log and running invalidation.
-The client host cannot process invalidation anyway, since
-`Invalidation.Begin()` enforces local routing for any command method call.
-
-`IDbOperationLog` is a repository-like service providing access
-to DB operation log.
-
-P.S. I certainly realize that even though OF's usage is fairly
-simple on the outside, there is a complex API with many moving
-parts inside. And probably, some bugs.
-So if you get stuck, please don't hesitate to reach out
-on [Fusion Place](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
-My nickname there is "Alex Y.", I'll be happy to help.
+And if you are curious, `SignOutEverywhere()` signs out _every_ session of the current user. This is possible, since `IAuthBackend` actually has a method allowing to enumerate these sessions. Because... Why not?

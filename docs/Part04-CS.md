@@ -1,103 +1,102 @@
-# Blazor Integration Cheat Sheet
+# CommandR Cheat Sheet
 
-Quick reference for Fusion + Blazor.
+Quick reference for commands and handlers.
 
-## `ComputedStateComponent<T>`
+## Define Command
 
-Basic usage:
-
-```razor
-@inherits ComputedStateComponent<MyData>
-@inject IMyService MyService
-
-@if (State.HasValue) {
-    <div>@State.Value.Name</div>
-}
-
-@code {
-    [Parameter] public long Id { get; set; }
-
-    protected override Task<MyData> ComputeState(CancellationToken cancellationToken)
-        => MyService.Get(Id, cancellationToken);
+```cs
+public record UpdateCartCommand(long CartId, Dictionary<long, long?> Updates)
+    : ICommand<Unit>
+{
+    public UpdateCartCommand() : this(0, null!) { } // For deserialization
 }
 ```
 
-Configure update delay:
+## Command Handler
 
-```razor
-@code {
-    protected override ComputedState<MyData>.Options GetStateOptions()
-        => new() {
-            UpdateDelayer = FixedDelayer.Get(0.5), // 0.5 second delay
-        };
+In compute service interface:
+
+```cs
+public interface ICartService : IComputeService
+{
+    [CommandHandler]
+    Task<Unit> UpdateCart(UpdateCartCommand command, CancellationToken cancellationToken = default);
 }
 ```
 
-Force immediate update:
+Implementation (without Operations Framework):
 
-```razor
-@code {
-    private async Task OnButtonClick() {
-        await SomeAction();
-        _ = State.Recompute(); // Trigger immediate recomputation
+```cs
+public virtual async Task<Unit> UpdateCart(UpdateCartCommand command, CancellationToken cancellationToken)
+{
+    // Actual command logic
+    var cart = await GetCart(command.CartId, cancellationToken);
+    // ... apply updates ...
+
+    // Invalidate affected compute methods (if not using Operations Framework)
+    using (Invalidation.Begin()) {
+        _ = GetCart(command.CartId, default);
+    }
+
+    return default;
+}
+```
+
+> **Note:** For multi-host invalidation, use the Operations Framework pattern with `Invalidation.IsActive` instead. See [Operations Framework Cheat Sheet](Part05-CS.md).
+
+## Execute Command
+
+```cs
+var commander = services.Commander();
+await commander.Call(new UpdateCartCommand(cartId, updates), cancellationToken);
+```
+
+## Invalidation Patterns
+
+Invalidate multiple methods:
+
+```cs
+using (Invalidation.Begin()) {
+    _ = GetOrder(orderId, default);
+    _ = GetOrderList(userId, default);
+    _ = GetOrderCount(userId, default);
+}
+```
+
+Conditional invalidation:
+
+```cs
+using (Invalidation.Begin()) {
+    _ = GetOrder(orderId, default);
+    if (statusChanged)
+        _ = GetOrdersByStatus(oldStatus, default);
+}
+```
+
+Check if invalidation scope is used:
+
+```cs
+using (var scope = Invalidation.Begin()) {
+    _ = GetItem(itemId, default);
+    if (scope.IsUsed) {
+        // At least one invalidation happened
     }
 }
 ```
 
-## Handling Loading and Errors
+## Standalone Command Handlers
 
-```razor
-@inherits ComputedStateComponent<MyData>
+For handlers outside compute services:
 
-@if (!State.HasValue) {
-    <Loading />
-} else if (State.Error != null) {
-    <Error Message="@State.Error.Message" />
-} else {
-    <Content Data="@State.Value" />
-}
-```
-
-## Using `LastNonErrorValue`
-
-Keep showing last valid data while error occurs:
-
-```razor
-@if (State.LastNonErrorValue is { } data) {
-    <Content Data="@data" />
-}
-@if (State.Error != null) {
-    <ErrorBanner Message="@State.Error.Message" />
-}
-```
-
-## Multiple States
-
-```razor
-@inherits ComputedStateComponent<(User User, List<Order> Orders)>
-
-@code {
-    [Parameter] public long UserId { get; set; }
-
-    protected override async Task<(User, List<Order>)> ComputeState(CancellationToken ct)
+```cs
+public class MyCommandHandler : ICommandHandler<MyCommand, Unit>
+{
+    public async Task OnCommand(MyCommand command, CommandContext context, CancellationToken ct)
     {
-        var user = await UserService.Get(UserId, ct);
-        var orders = await OrderService.GetByUser(UserId, ct);
-        return (user, orders);
+        // Handle command
     }
 }
-```
 
-## Parameter Change Handling
-
-State automatically recomputes when parameters change:
-
-```razor
-@code {
-    [Parameter] public long Id { get; set; }
-
-    // ComputeState is called automatically when Id changes
-    protected override Task<MyData> ComputeState(CancellationToken cancellationToken)
-        => MyService.Get(Id, cancellationToken);
-}
+// Register
+services.AddFusion().Commander.AddHandlers<MyCommandHandler>();
 ```

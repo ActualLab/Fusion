@@ -1,102 +1,153 @@
-# CommandR Cheat Sheet
+# Operations Framework Cheat Sheet
 
-Quick reference for commands and handlers.
+Quick reference for multi-host invalidation.
 
-## Define Command
+## Setup
+
+Register operations framework:
 
 ```cs
-public record UpdateCartCommand(long CartId, Dictionary<long, long?> Updates)
-    : ICommand<Unit>
+var fusion = services.AddFusion();
+fusion.AddOperationReprocessor();
+
+fusion.AddDbContextServices<AppDbContext>(db => {
+    db.AddOperations(operations => {
+        operations.ConfigureOperationLogReader(_ => new() {
+            CheckPeriod = TimeSpan.FromSeconds(1),
+        });
+    });
+});
+```
+
+## Command Handler with Operations
+
+```cs
+public class OrderService : DbServiceBase<AppDbContext>, IOrderService
 {
-    public UpdateCartCommand() : this(0, null!) { } // For deserialization
+    public virtual async Task<Order> CreateOrder(
+        CreateOrderCommand command,
+        CancellationToken cancellationToken)
+    {
+        if (Invalidation.IsActive) {
+            // Runs on ALL cluster nodes after successful execution
+            _ = GetOrders(command.UserId, default);
+            _ = GetOrderCount(command.UserId, default);
+            return default!;
+        }
+
+        // Use CreateOperationDbContext for operation logging
+        var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
+        await using var _ = dbContext.ConfigureAwait(false);
+
+        var order = new Order { UserId = command.UserId };
+        dbContext.Orders.Add(order);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return order;
+    }
 }
 ```
 
-## Command Handler
-
-In compute service interface:
+## DbServiceBase Pattern
 
 ```cs
-public interface ICartService : IComputeService
+public class MyService : DbServiceBase<AppDbContext>, IMyService
 {
-    [CommandHandler]
-    Task<Unit> UpdateCart(UpdateCartCommand command, CancellationToken cancellationToken = default);
+    public MyService(IServiceProvider services) : base(services) { }
+
+    [ComputeMethod]
+    public virtual async Task<Data> GetData(long id, CancellationToken ct)
+    {
+        // Read-only: use CreateDbContext
+        var db = await DbHub.CreateDbContext(ct);
+        await using var _ = db.ConfigureAwait(false);
+        return await db.Data.FindAsync([id], ct);
+    }
+
+    public virtual async Task UpdateData(UpdateCommand cmd, CancellationToken ct)
+    {
+        if (Invalidation.IsActive) {
+            _ = GetData(cmd.Id, default);
+            return;
+        }
+
+        // Write: use CreateOperationDbContext
+        var db = await DbHub.CreateOperationDbContext(ct);
+        await using var _ = db.ConfigureAwait(false);
+        // ... make changes ...
+        await db.SaveChangesAsync(ct);
+    }
 }
 ```
 
-Implementation (without Operations Framework):
+## Invalidation Patterns with Operations Framework
+
+The `Invalidation.IsActive` pattern ensures invalidation runs on ALL cluster nodes:
 
 ```cs
 public virtual async Task<Unit> UpdateCart(UpdateCartCommand command, CancellationToken cancellationToken)
 {
-    // Actual command logic
-    var cart = await GetCart(command.CartId, cancellationToken);
-    // ... apply updates ...
-
-    // Invalidate affected compute methods (if not using Operations Framework)
-    using (Invalidation.Begin()) {
+    if (Invalidation.IsActive) {
+        // This block runs:
+        // 1. After successful execution on the originating node
+        // 2. On ALL other cluster nodes via operation log reprocessing
         _ = GetCart(command.CartId, default);
+        return default!;
     }
 
+    // Actual command logic (runs only on originating node)
+    var cart = await GetCart(command.CartId, cancellationToken);
+    // ... apply updates ...
     return default;
-}
-```
-
-> **Note:** For multi-host invalidation, use the Operations Framework pattern with `Invalidation.IsActive` instead. See [Operations Framework Cheat Sheet](Part06-CS.md).
-
-## Execute Command
-
-```cs
-var commander = services.Commander();
-await commander.Call(new UpdateCartCommand(cartId, updates), cancellationToken);
-```
-
-## Invalidation Patterns
-
-Invalidate multiple methods:
-
-```cs
-using (Invalidation.Begin()) {
-    _ = GetOrder(orderId, default);
-    _ = GetOrderList(userId, default);
-    _ = GetOrderCount(userId, default);
 }
 ```
 
 Conditional invalidation:
 
 ```cs
-using (Invalidation.Begin()) {
-    _ = GetOrder(orderId, default);
-    if (statusChanged)
-        _ = GetOrdersByStatus(oldStatus, default);
+if (Invalidation.IsActive) {
+    _ = GetOrder(command.OrderId, default);
+    if (command.StatusChanged)
+        _ = GetOrdersByStatus(command.OldStatus, default);
+    return default!;
 }
 ```
 
-Check if invalidation scope is used:
+Invalidate multiple methods:
 
 ```cs
-using (var scope = Invalidation.Begin()) {
-    _ = GetItem(itemId, default);
-    if (scope.IsUsed) {
-        // At least one invalidation happened
-    }
+if (Invalidation.IsActive) {
+    _ = GetOrder(command.OrderId, default);
+    _ = GetOrderList(command.UserId, default);
+    _ = GetOrderCount(command.UserId, default);
+    return default!;
 }
 ```
 
-## Standalone Command Handlers
-
-For handlers outside compute services:
+## Operation Log Configuration
 
 ```cs
-public class MyCommandHandler : ICommandHandler<MyCommand, Unit>
+operations.ConfigureOperationLogReader(_ => new() {
+    CheckPeriod = TimeSpan.FromSeconds(1),    // How often to check for new operations
+    MaxCommitDuration = TimeSpan.FromSeconds(5), // Max time to wait for commit
+    MaxOperationAge = TimeSpan.FromMinutes(5),   // Ignore operations older than this
+});
+```
+
+## Database Setup
+
+Ensure your DbContext has operation and event log tables:
+
+```cs
+public class AppDbContext : DbContextBase
 {
-    public async Task OnCommand(MyCommand command, CommandContext context, CancellationToken ct)
+    public DbSet<DbOperation> Operations => Set<DbOperation>();
+    public DbSet<DbEvent> Events => Set<DbEvent>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Handle command
+        modelBuilder.Entity<DbOperation>().ToTable("_Operations");
+        modelBuilder.Entity<DbEvent>().ToTable("_Events");
     }
 }
-
-// Register
-services.AddFusion().Commander.AddHandlers<MyCommandHandler>();
 ```

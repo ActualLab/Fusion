@@ -1,188 +1,314 @@
-using System.Diagnostics;
-using ActualLab.Rpc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using ActualLab.CommandR.Internal;
+using ActualLab.CommandR.Operations;
+using ActualLab.Fusion.Authentication;
+using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.Operations;
+using ActualLab.Fusion.Operations;
+using ActualLab.Fusion.Operations.Internal;
+using ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
+using ActualLab.Fusion.EntityFramework.LogProcessing;
+using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.Fusion.EntityFramework.Npgsql;
+using ActualLab.Fusion.EntityFramework.Redis;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
 namespace Tutorial05;
 
-#region Part05_PrintCommandSession
-public class PrintCommand : ICommand<Unit>
+// Sample DbContext for Part 6
+public class AppDbContext(DbContextOptions options) : DbContextBase(options)
 {
-    public string Message { get; set; } = "";
+    // ActualLab.Fusion.EntityFramework.Operations tables
+    #region Part05_DbSet
+    public DbSet<DbOperation> Operations { get; protected set; } = null!;
+    public DbSet<DbEvent> Events { get; protected set; } = null!;
+    #endregion
 }
 
-// Interface-based command handler
-public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
-{
-    public PrintCommandHandler() => WriteLine("Creating PrintCommandHandler.");
-    public void Dispose() => WriteLine("Disposing PrintCommandHandler");
-
-    public async Task OnCommand(PrintCommand command, CommandContext context, CancellationToken cancellationToken)
-    {
-        WriteLine(command.Message);
-        WriteLine("Sir, yes, sir!");
-    }
-}
+#region Part05_PostMessageCommand
+public record PostMessageCommand(Session Session, string Text) : ICommand<ChatMessage>;
 #endregion
 
-#region Part05_RecSumCommandSession
-public class RecSumCommand : ICommand<long>
-{
-    public long[] Numbers { get; set; } = Array.Empty<long>();
-}
-#endregion
+// Placeholder for ChatMessage type (actual type would be in your domain)
+public record ChatMessage(long Id, string Text);
 
-public static class Part05
+// Example: Pre-OF handler (old pattern, before Operations Framework)
+public class PreOfChatService(IServiceProvider services) : DbServiceBase<AppDbContext>(services), IComputeService
 {
-
-    public static async Task PrintCommandSession()
+    #region Part05_PreOfHandler
+    public async Task<ChatMessage> PostMessage(
+        Session session, string text, CancellationToken cancellationToken = default)
     {
-        #region Part05_PrintCommandSession2
-        // Building IoC container
-        var serviceBuilder = new ServiceCollection()
-            .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
-        var rpc = serviceBuilder.AddRpc();
-        var commanderBuilder = serviceBuilder.AddCommander()
-            .AddHandlers<PrintCommandHandler>();
-        var services = serviceBuilder.BuildServiceProvider();
+        await using var dbContext = await DbHub.CreateDbContext(cancellationToken).ConfigureAwait(false);
+        // Actual code...
+        var message = await PostMessageImpl(dbContext, session, text, cancellationToken);
 
-        var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
-        await commander.Call(new PrintCommand() { Message = "Are you operational?" });
-        await commander.Call(new PrintCommand() { Message = "Are you operational?" });
-        #endregion
+        // Invalidation
+        using (Invalidation.Begin())
+            _ = PseudoGetAnyChatTail();
+        return message;
     }
+    #endregion
 
-    public class RecSumCommandHandler
+    [ComputeMethod]
+    public virtual Task<ChatMessage[]> PseudoGetAnyChatTail() => Task.FromResult(Array.Empty<ChatMessage>());
+
+    // Fake implementation placeholder
+    private Task<ChatMessage> PostMessageImpl(AppDbContext db, Session session, string text, CancellationToken ct)
+        => Task.FromResult(new ChatMessage(0, text));
+}
+
+// Sample service demonstrating command handler pattern
+public class ChatService(IServiceProvider services) : DbServiceBase<AppDbContext>(services), IComputeService
+{
+    #region Part05_PostOfHandler
+    [CommandHandler]
+    public virtual async Task<ChatMessage> PostMessage(
+        PostMessageCommand command, CancellationToken cancellationToken = default)
     {
-        public RecSumCommandHandler() => WriteLine("Creating RecSumCommandHandler.");
-        public void Dispose() => WriteLine("Disposing RecSumCommandHandler");
-
-        [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
-        private async Task<long> RecSum(
-            RecSumCommand command,
-            IServiceProvider services, // Resolved via CommandContext.Services
-            ICommander commander, // Resolved via CommandContext.Services
-            CancellationToken cancellationToken)
-        {
-            var context = CommandContext.GetCurrent();
-            Debug.Assert(services == context.Services); // context.Services is a scoped IServiceProvider
-            Debug.Assert(commander == services.Commander()); // ICommander is singleton
-            Debug.Assert(services != commander.Services); // Scoped IServiceProvider != top-level IServiceProvider
-            WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
-
-            // Each call creates a new CommandContext
-            var contextStack = new List<CommandContext>();
-            var currentContext = context;
-            while (currentContext != null) {
-                contextStack.Add(currentContext);
-                currentContext = currentContext.OuterContext;
-            }
-            WriteLine($"CommandContext stack size: {contextStack.Count}");
-            Debug.Assert(contextStack[^1] == context.OutermostContext);
-
-            // Finally, CommandContext.Items is ~ like HttpContext.Items, and similarly to
-            // service scope, they are the same for all contexts in recursive call chain.
-            var depth = 1 + (int) (context.Items["Depth"] ?? 0);
-            context.Items["Depth"] = depth;
-            WriteLine($"Depth via context.Items: {depth}");
-
-            // Finally, the actual handler logic :)
-            if (command.Numbers.Length == 0)
-                return 0;
-            var head = command.Numbers[0];
-            var tail = command.Numbers[1..];
-            var tailSum = await context.Commander.Call(
-                new RecSumCommand() { Numbers = tail }, false, // Try changing it to true
-                cancellationToken);
-            return head + tailSum;
+        if (Invalidation.IsActive) {
+            _ = PseudoGetAnyChatTail();
+            return default!;
         }
+
+        await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
+        // Actual code...
+        var message = await PostMessageImpl(dbContext, command, cancellationToken);
+        return message;
     }
+    #endregion
 
-    public static async Task RecSumCommandSession()
-    {
-        #region Part05_RecSumCommandSession2
-        // Building IoC container
-        var serviceBuilder = new ServiceCollection()
-            .AddScoped<RecSumCommandHandler>();
-        var rpc = serviceBuilder.AddRpc();
-        var commanderBuilder = serviceBuilder.AddCommander()
-            .AddHandlers<RecSumCommandHandler>();
-        var services = serviceBuilder.BuildServiceProvider();
+    // Placeholder compute method for invalidation
+    [ComputeMethod]
+    public virtual Task<ChatMessage[]> PseudoGetAnyChatTail() => Task.FromResult(Array.Empty<ChatMessage>());
 
-        var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
-        WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2, 3 }}));
-        #endregion
-    }
+    // Fake implementation placeholder
+    private Task<ChatMessage> PostMessageImpl(AppDbContext db, PostMessageCommand command, CancellationToken ct)
+        => Task.FromResult(new ChatMessage(0, command.Text));
+}
 
-
-    public static async Task RecSumCommandServiceSession()
-    {
-        #region Part05_RecSumCommandServiceSession2
-        // Building IoC container
-        var serviceBuilder = new ServiceCollection();
-        var rpc = serviceBuilder.AddRpc();
-        var commanderBuilder = serviceBuilder.AddCommander()
-            .AddService<RecSumCommandService>(); // Such services are auto-registered as singletons
-        var services = serviceBuilder.BuildServiceProvider();
-
-        var commander = services.Commander();
-        var recSumService = services.GetRequiredService<RecSumCommandService>();
-        WriteLine(recSumService.GetType());
-        WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2 }}));
-        WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 3L, 4 }}));
-        #endregion
-    }
-
+public static class Part10
+{
     public static async Task Run()
     {
-        await PrintCommandSession();
-        await RecSumCommandSession();
-        await RecSumCommandServiceSession();
+        WriteLine("Part 6: Multi-Host Invalidation and CQRS with Operations Framework");
+        WriteLine();
+
+        // === Reference verification section ===
+        // This section references all identifiers from Part10.md to verify they exist
+
+        // 1. DbOperation - entity for operation log
+        _ = typeof(DbOperation); // "DbOperation" from docs
+
+        // 2. DbServiceBase - base class for services using EF
+        _ = typeof(DbServiceBase<>); // "DbServiceBase" from docs
+
+        // 3. Invalidation - for checking/starting invalidation mode
+        _ = typeof(Invalidation); // "Invalidation" from docs
+        _ = Invalidation.IsActive; // "Invalidation.IsActive" from docs
+
+        // 4. CommandContext - context for current command
+        _ = typeof(CommandContext); // "CommandContext" from docs
+        // CommandContext.GetCurrent() - for getting current context
+        // CommandContext.Operation.Items - for passing data to invalidation
+
+        // 5. ICommand<TResult> - command interface
+        _ = typeof(ICommand<Unit>); // "ICommand<TResult>" from docs
+
+        // 6. Command handler priorities
+        // CommanderCommandHandlerPriority (ActualLab.CommandR)
+        _ = CommanderCommandHandlerPriority.PreparedCommandHandler; // Priority: 1_000_000_000
+        _ = CommanderCommandHandlerPriority.CommandTracer; // Priority: 998_000_000
+        _ = CommanderCommandHandlerPriority.LocalCommandRunner; // Priority: 900_000_000
+        _ = CommanderCommandHandlerPriority.RpcRoutingCommandHandler; // Priority: 800_000_000
+
+        // FusionOperationsCommandHandlerPriority (ActualLab.Fusion)
+        _ = FusionOperationsCommandHandlerPriority.OperationReprocessor; // Priority: 100_000
+        _ = FusionOperationsCommandHandlerPriority.NestedCommandLogger; // Priority: 11_000
+        _ = FusionOperationsCommandHandlerPriority.InMemoryOperationScopeProvider; // Priority: 10_000
+        _ = FusionOperationsCommandHandlerPriority.InvalidatingCommandCompletionHandler; // Priority: 100
+        _ = FusionOperationsCommandHandlerPriority.CompletionTerminator; // Priority: -1_000_000_000
+
+        // FusionEntityFrameworkCommandHandlerPriority (ActualLab.Fusion.EntityFramework)
+        _ = FusionEntityFrameworkCommandHandlerPriority.DbOperationScopeProvider; // Priority: 1000
+
+        // 7. PreparedCommandHandler - validates IPreparedCommand
+        _ = typeof(PreparedCommandHandler); // "PreparedCommandHandler" from docs
+        _ = typeof(IPreparedCommand); // "IPreparedCommand" from docs
+
+        // 8. NestedOperationLogger - logs nested commands (was "NestedCommandLogger" in docs)
+        _ = typeof(NestedOperationLogger); // "NestedCommandLogger" from docs - RENAMED
+        _ = typeof(NestedOperation); // Nested operations are logged into Operation.NestedOperations
+
+        // 9. InMemoryOperationScopeProvider - catch-all operation scope (was "TransientOperationScopeProvider" in docs)
+        _ = typeof(InMemoryOperationScopeProvider); // "TransientOperationScopeProvider" from docs - RENAMED
+
+        // 10. OperationCompletionNotifier - notifies completion listeners
+        _ = typeof(OperationCompletionNotifier); // "OperationCompletionNotifier" from docs
+
+        // 11. IOperationCompletionListener - listens for operation completion
+        _ = typeof(IOperationCompletionListener); // "IOperationCompletionListener" from docs
+
+        // 12. CompletionProducer - produces completion commands
+        _ = typeof(CompletionProducer); // "CompletionProducer" from docs
+
+        // 13. Completion<T> / ICompletion<T> - completion command wrapper
+        _ = typeof(Completion<>); // "Completion<TCommand>" from docs
+        _ = typeof(ICompletion<>); // "ICompletion<TCommand>" from docs
+
+        // 14. InvalidatingCommandCompletionHandler - runs invalidation on completion (was "InvalidateOnCompletionCommandHandler")
+        _ = typeof(InvalidatingCommandCompletionHandler); // "InvalidateOnCompletionCommandHandler" from docs - RENAMED
+
+        // 15. DbOperationLogReader - reads operation log
+        _ = typeof(DbOperationLogReader<>); // "DbOperationLogReader" from docs
+
+        // 16. DbHub - modern way to get operation DbContext
+        _ = typeof(DbHub<>); // "DbHub" - modern API, docs mention "CreateOperationDbContext"
+
+        // 17. Operation log watchers - for multi-host invalidation
+        _ = typeof(DbOperationsBuilder<>); // Builder for configuring operation log watchers
+        _ = typeof(FileSystemDbLogWatcher<,>); // AddFileSystemOperationLogWatcher
+        _ = typeof(NpgsqlDbLogWatcher<,>); // AddNpgsqlOperationLogWatcher
+        _ = typeof(RedisDbLogWatcher<,>); // AddRedisOperationLogWatcher
+
+        // 18. HostId - identifies the host/process (was "AgentInfo" in docs)
+        _ = typeof(HostId); // "AgentInfo" from docs - RENAMED to HostId
+
+        WriteLine("All identifier references verified successfully!");
+        WriteLine();
+
+        // === Name changes summary ===
+        WriteLine("=== Name Changes from Documentation ===");
+        WriteLine("- NestedCommandLogger -> NestedOperationLogger");
+        WriteLine("- TransientOperationScopeProvider -> InMemoryOperationScopeProvider");
+        WriteLine("- InvalidateOnCompletionCommandHandler -> InvalidatingCommandCompletionHandler");
+        WriteLine("- DbServiceBase.CreateOperationDbContext() -> DbHub.CreateOperationDbContext()");
+        WriteLine("- AgentInfo -> HostId (moved to ActualLab.Core)");
+        WriteLine();
+
+        // === Priority values ===
+        WriteLine("=== Command Handler Priorities ===");
+        WriteLine($"- PreparedCommandHandler: {CommanderCommandHandlerPriority.PreparedCommandHandler:N0}");
+        WriteLine($"- NestedCommandLogger: {FusionOperationsCommandHandlerPriority.NestedCommandLogger:N0}");
+        WriteLine($"- InMemoryOperationScopeProvider: {FusionOperationsCommandHandlerPriority.InMemoryOperationScopeProvider:N0}");
+        WriteLine($"- InvalidatingCommandCompletionHandler: {FusionOperationsCommandHandlerPriority.InvalidatingCommandCompletionHandler:N0}");
+
+        await Task.CompletedTask;
     }
 
+    // Example: AddDbContextServices configuration
+    #region Part05_AddDbContextServices
+    public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
+    {
+        services.AddDbContextServices<AppDbContext>(db => {
+            // Uncomment if you'll be using AddRedisOperationLogWatcher
+            // db.AddRedisDb("localhost", "FusionDocumentation.Part05");
+
+            db.AddOperations(operations => {
+                // This call enabled Operations Framework (OF) for AppDbContext.
+                operations.ConfigureOperationLogReader(_ => new() {
+                    // We use AddFileSystemOperationLogWatcher, so unconditional wake up period
+                    // can be arbitrary long – all depends on the reliability of Notifier-Monitor chain.
+                    // See what .ToRandom does – most of timeouts in Fusion settings are RandomTimeSpan-s,
+                    // but you can provide a normal one too – there is an implicit conversion from it.
+                    CheckPeriod = TimeSpan.FromSeconds(Env.IsDevelopment() ? 60 : 5).ToRandom(0.05),
+                });
+                // Optionally enable file-based operation log watcher
+                operations.AddFileSystemOperationLogWatcher();
+
+                // Or, if you use PostgreSQL, use this instead of above line
+                // operations.AddNpgsqlOperationLogWatcher();
+
+                // Or, if you use Redis, use this instead of above line
+                // operations.AddRedisOperationLogWatcher();
+            });
+        });
+    }
+    #endregion
 }
 
-#region Part05_RecSumCommandServiceSession
-public class RecSumCommandService : ICommandService
+// Example: Command with operation items pattern
+#region Part05_SignOutCommand
+public record SignOutCommand(Session Session, bool Force = false) : ICommand<Unit>
 {
-    [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
-    public virtual async Task<long> RecSum( // Notice "public virtual"!
-        RecSumCommand command,
-        // You can't have any extra arguments here
-        CancellationToken cancellationToken = default)
-    {
-        if (command.Numbers.Length == 0)
-            return 0;
-        var head = command.Numbers[0];
-        var tail = command.Numbers[1..];
-        var context = CommandContext.GetCurrent();
-        var tailSum = await context.Commander.Call( // Note it's a direct call, but the whole pipeline still gets invoked!
-            new RecSumCommand() { Numbers = tail },
-            cancellationToken);
-        return head + tailSum;
-    }
-
-    // This handler is associated with ANY command (ICommand)
-    // Priority = 10 means it runs earlier than any handler with the default priority 0
-    // IsFilter tells it triggers other handlers via InvokeRemainingHandlers
-    [CommandHandler(Priority = 10, IsFilter = true)]
-    protected virtual async Task DepthTracker(ICommand command, CancellationToken cancellationToken)
-    {
-        var context = CommandContext.GetCurrent();
-        var depth = 1 + (int) (context.Items["Depth"] ?? 0);
-        context.Items["Depth"] = depth;
-        WriteLine($"Depth via context.Items: {depth}");
-
-        await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
-    }
-
-    // Another filter for RecSumCommand
-    [CommandHandler(Priority = 9, IsFilter = true)]
-    protected virtual Task ArgumentWriter(RecSumCommand command, CancellationToken cancellationToken)
-    {
-        WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
-        var context = CommandContext.GetCurrent();
-        return context.InvokeRemainingHandlers(cancellationToken);
-    }
+    public SignOutCommand() : this(default!) { }
 }
 #endregion
+
+// Example: Service demonstrating operation items usage
+public class AuthServiceExample(IServiceProvider services) : DbServiceBase<AppDbContext>(services), IComputeService
+{
+    #region Part05_SignOutHandler
+    public virtual async Task SignOut(
+        SignOutCommand command, CancellationToken cancellationToken = default)
+    {
+        // ...
+        var context = CommandContext.GetCurrent();
+        if (Invalidation.IsActive) {
+            // Fetch operation item
+            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
+            if (invSessionInfo is not null) {
+                // Use it
+                _ = GetUser(invSessionInfo.UserId, default);
+                _ = GetUserSessions(invSessionInfo.UserId, default);
+            }
+            return;
+        }
+
+        await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
+
+        var dbSessionInfo = await Sessions.FindOrCreate(dbContext, command.Session, cancellationToken).ConfigureAwait(false);
+        var sessionInfo = dbSessionInfo.ToModel();
+        if (sessionInfo.IsSignOutForced)
+            return;
+
+        // Store operation item for invalidation logic
+        context.Operation.Items.KeylessSet(sessionInfo);
+        // ...
+    }
+    #endregion
+
+    // Placeholder types and methods for the example
+    protected DbSessionInfoRepo Sessions { get; } = null!;
+    [ComputeMethod] public virtual Task<User?> GetUser(string userId, CancellationToken ct) => Task.FromResult<User?>(null);
+    [ComputeMethod] public virtual Task<SessionInfo[]> GetUserSessions(string userId, CancellationToken ct) => Task.FromResult(Array.Empty<SessionInfo>());
+}
+
+// Placeholder types for SignOut example
+public record SessionInfo(string UserId, bool IsSignOutForced);
+public record User(string Id, string Name);
+public class DbSessionInfoRepo
+{
+    public Task<DbSessionInfo> FindOrCreate(AppDbContext db, Session session, CancellationToken ct) => Task.FromResult(new DbSessionInfo());
+}
+public record DbSessionInfo
+{
+    public SessionInfo ToModel() => new("", false);
+}
+
+// Example: Completion command invocation
+public static class CompletionExample
+{
+    #region Part05_CompletionCall
+    public static async Task InvokeCompletion(ICommander Commander, Operation operation)
+    {
+        await Commander.Call(Completion.New(operation), true).ConfigureAwait(false);
+    }
+    #endregion
+}
+
+// Example: InvalidatingCommandCompletionHandler signature
+public class InvalidatingHandlerExample
+{
+    #region Part05_InvalidatingHandler
+    [CommandHandler(Priority = 100, IsFilter = true)]
+    public async Task OnCommand(
+      ICompletion command, CommandContext context, CancellationToken cancellationToken)
+    {
+        //  ...
+    }
+    #endregion
+}

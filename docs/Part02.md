@@ -1,397 +1,433 @@
-# Using Local Compute Services on Server-Side
+# ActualLab.Rpc and Distributed Compute Services
 
-Even though Fusion supports RPC, you can use it on server-side only to cache recurring computations.
-Below are results from [Run-Benchmark.cmd from Fusion Samples](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Benchmark):
+Fusion is designed with distributed applications in mind,
+and one of its key features is the ability to expose Compute Services
+over the network via `ActualLab.Rpc` and consume such services
+via Compute Service Clients.
 
-**Local Services:**
+## What is ActualLab.Rpc?
 
-| Test | Result | Speedup |
-|------|--------|---------|
-| Regular Service | 136.91K calls/s | |
-| Fusion Service | 263.62M calls/s | **~1,926x** |
+ActualLab.Rpc is a high-performance RPC framework for .NET that provides
+a way to call methods on remote services as if they were local.
+It uses **WebSockets** as low-level transport, but it's built to run on top of
+nearly any packet-based or streaming protocol, so it will support
+WebTransport in the near future.
 
-**Remote Services:**
+It is designed to be fast, efficient, and extensible enough
+to support Fusion's Remote Compute Service scenario.
 
-| Test | Result | Speedup |
-|------|--------|---------|
-| HTTP Client → Regular Service | 99.66K calls/s | |
-| HTTP Client → Fusion Service | 420.67K calls/s | **~4.2x** |
-| ActualLab.Rpc Client → Fusion Service | 6.10M calls/s | **~61x** |
-| Fusion Client → Fusion Service | 223.15M calls/s | **~2,239x** |
+If you want to learn more about ActualLab.Rpc performance, check out this video:<br/>
+[<img src="./img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc – the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak)
 
-The last two rows are the most interesting in the context of this part:
+## What is Compute Service Client?
 
-- A tiny EF Core-based service exposed via ASP.NET Core
-  serves about **100K** requests per second. That's already a lot &ndash;
-  mostly because its data set fully fits in RAM.
-- An identical service relying on Fusion (it's literally the same code
-  plus Fusion's `[ComputeMethod]` and `Invalidation.Begin` calls)
-  boosts this number to **420K** requests per second when accessed via HTTP.
+Compute Service Clients are remote (client-side) proxies for Compute Services built on top of the ActualLab.Rpc
+infrastructure. They take the behavior of `Computed<T>` into account to be significantly more
+efficient than equivalent plain RPC clients:
 
-And that's the main reason to use Fusion on server-side only:
-**4-5x performance boost** with a relatively tiny amount of changes.
-[Similarly to incremental builds](https://alexyakunin.medium.com/the-ungreen-web-why-our-web-apps-are-terribly-inefficient-28791ed48035?source=friends_link&sk=74fb46086ca13ff4fea387d6245cb52b),
-the more complex your logic is, the more you are expected to gain.
+1. **Consistent Behavior**: They back the result of any call with `Computed<T>` that mimics the matching `Computed<T>` on the server side. This means client-side proxies can be used in other client-side Compute Services, and invalidation of a server-side dependency will trigger invalidation of its client-side replica.
 
-## The Fundamentals
+2. **Efficient Caching**: They cache consistent `Computed<T>` replicas, and they won't make a remote call when a _consistent_ replica is still available. This provides exactly the same behavior as Compute Services, replacing "computation" with an "RPC call responsible for the computation."
 
-You already know that `Computed<T>` instances are reused, but so far
-we didn't talk much about the details. Let's learn some specific
-aspects of this behavior before jumping to caching.
+3. **Automatic Invalidation**: Client-side replicas of `Computed<T>` are automatically invalidated when their server-side counterparts get invalidated, ensuring eventual consistency across the network.
 
-The service below prints a message once its `Get` method
-is actually computed (i.e. its cached value for a given argument isn't reused)
-and returns the same value as its input. We'll be using it to
-find out when `IComputed` instances are actually reused.
+4. Resilience features like transparent reconnection on disconnect, persistent client-side caching, and ETag-style checks for every computed replica on reconnect are bundled &ndash; `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
 
-<!-- snippet: Part02_Service1 -->
+## Using ActualLab.Rpc to create Compute Service Client
+
+Let's create a simple chat service that demonstrates how Compute Service Clients work.
+
+### 1. Shared Service Interface
+
+First, we define a common interface that both the server-side service
+and client-side proxy will implement. It will allow us to use them interchangeably
+in our code, so we can map the interface to:
+
+- a compute service implementation on the server side (e.g., in Blazor Server)
+- a compute service client on the client side (WASM, MAUI, etc.).
+
+<!-- snippet: Part02_SharedApi -->
 ```cs
-public partial class Service1 : IComputeService
+// The interface for our chat service
+public interface IChatService : IComputeService
 {
+    // Compute methods – they cache the output not only on the server side
+    // but on the client side as well!
     [ComputeMethod]
-    public virtual async Task<string> Get(string key)
+    Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
+    [ComputeMethod]
+    Task<int> GetWordCount(CancellationToken cancellationToken = default);
+
+    // Regular methods
+    Task Post(string message, CancellationToken cancellationToken = default);
+    Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default);
+}
+```
+<!-- endSnippet -->
+
+### 2. Server-Side Compute Service (Implementation)
+
+Now let's implement the server-side compute service:
+
+<!-- snippet: Part02_ServerImplementation -->
+```cs
+public class ChatService : IChatService
+{
+    private readonly Lock _lock = new();
+    private List<string> _posts = new();
+
+    // It's a [ComputeMethod] method -> it has to be virtual to allow Fusion to override it
+    public virtual Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default)
+        => Task.FromResult(_posts);
+
+    // It's a [ComputeMethod] method -> it has to be virtual to allow Fusion to override it
+    public virtual async Task<int> GetWordCount(CancellationToken cancellationToken = default)
     {
-        WriteLine($"{nameof(Get)}({key})");
-        return key;
+        // NOTE: GetRecentMessages() is a compute method, so the GetWordCount() call becomes dependent on it,
+        // and that's why it gets invalidated automatically when GetRecentMessages() is invalidated.
+        var messages = await GetRecentMessages(cancellationToken).ConfigureAwait(false);
+        return messages
+            .Select(m => m.Split(" ", StringSplitOptions.RemoveEmptyEntries).Length)
+            .Sum();
+    }
+
+    // Regular method
+    public Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default)
+        => GetWordCount(cancellationToken);
+
+    // Regular method
+    public Task Post(string message, CancellationToken cancellationToken = default)
+    {
+        lock (_lock) {
+            var posts = _posts.ToList(); // We can't update the list itself (it's shared), but we can re-create it
+            posts.Add(message);
+            if (posts.Count > 10)
+                posts.RemoveAt(0);
+            _posts = posts;
+        }
+
+        using var _1 = Invalidation.Begin();
+        _ = GetRecentMessages(default); // No need to invalidate GetWordCount() – it depends on GetRecentMessages()
+        return Task.CompletedTask;
     }
 }
 ```
 <!-- endSnippet -->
 
-First, `IComputed` instances aren't "cached" by default &ndash; they're just
-reused while it's possible:
+### 3. Configuration
 
-<!-- snippet: Part02_Caching1 -->
+We'll use ASP.NET Core Web Host to host the ActualLab.Rpc server
+that exposes `IChatService`:
+
+<!-- snippet: Part02_ServerSetup -->
 ```cs
-var service = CreateServices().GetRequiredService<Service1>();
-// var computed = await Computed.Capture(() => counters.Get("a"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("a"));
-GC.Collect();
-WriteLine("GC.Collect()");
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("a"));
+var builder = WebApplication.CreateBuilder();
+builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
+builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(3));
+
+// Adding Fusion.
+// RpcServiceMode.Server is going to be the default mode for further `fusion.AddService()` calls,
+// which means that any compute service added via `fusion.AddService()` will be shared via RPC as well.
+var fusion = builder.Services.AddFusion(RpcServiceMode.Server);
+fusion.AddWebServer(); // Adds the RPC server middleware
+fusion.AddService<IChatService, ChatService>(RpcServiceMode.Server); // Adds the chat service impl. (Compute Service)
+
+var app = builder.Build();
+app.UseWebSockets(); // Enable WebSockets support on Kestrel server
+app.MapRpcWebSocketServer(); // Map the ActualLab.Rpc WebSocket server endpoint ("/rpc/ws")
 ```
 <!-- endSnippet -->
 
-The output:
-
-```text
-Get(a)
-a
-a
-GC.Collect()
-Get(a)
-a
-a
-```
-
-As you see, `GC.Collect()` call removes cached `IComputed`
-for `Get("a")` &ndash; and that's why `Get(a)` is printed
-twice here.
-
-All of this means that most likely Fusion holds a
-[weak reference](https://docs.microsoft.com/en-us/dotnet/standard/garbage-collection/weak-references)
-to this value (in reality it uses `GCHandle`-s for performance reasons, but
-technically they do the same).
-
-Let's prove this by uncommenting the commented line:
-
-<!-- snippet: Part02_Caching2 -->
+<!-- snippet: Part02_RunServer -->
 ```cs
-var service = CreateServices().GetRequiredService<Service1>();
-var computed = await Computed.Capture(() => service.Get("a"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("a"));
-GC.Collect();
-WriteLine("GC.Collect()");
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("a"));
-```
-<!-- endSnippet -->
-
-The output:
-
-```text
-Get(a)
-a
-a
-GC.Collect()
-a
-a
-```
-
-As you see, assigning a strong reference to `IComputed` is enough
-to ensure it won't recompute on the next call.
-
-> So to truly cache some `IComputed`, you need to store a strong
-> reference to it and hold it while you want it to be cached.
-
-Now, if you compute `f(x)`, is it enough to store
-a computed for its output to ensure its dependencies
-are cached too? Let's test this:
-
-<!-- snippet: Part02_Service2 -->
-```cs
-public partial class Service2 : IComputeService
-{
-    [ComputeMethod]
-    public virtual async Task<string> Get(string key)
-    {
-        WriteLine($"{nameof(Get)}({key})");
-        return key;
-    }
-
-    [ComputeMethod]
-    public virtual async Task<string> Combine(string key1, string key2)
-    {
-        WriteLine($"{nameof(Combine)}({key1}, {key2})");
-        return await Get(key1) + await Get(key2);
-    }
+try {
+    await app.RunAsync("http://localhost:22222/").WaitAsync(cancellationToken);
+}
+catch (Exception error) {
+    if (error.IsCancellationOf(cancellationToken))
+        await app.StopAsync();
+    else
+        Error.WriteLine($"Server failed: {error.Message}");
 }
 ```
 <!-- endSnippet -->
 
-<!-- snippet: Part02_Caching3 -->
+As for the client-side, we need to:
+
+1. Configure `IServiceProvider` to use both Fusion and ActualLab.Rpc
+2. Make Fusion to register Compute Service Client (in fact, an "advanced" RPC client) for `IChatService`.
+
+<!-- snippet: Part02_ClientSetup -->
 ```cs
-var service = CreateServices().GetRequiredService<Service2>();
-var computed = await Computed.Capture(() => service.Combine("a", "b"));
-WriteLine("computed = Combine(a, b) completed");
-WriteLine(await service.Combine("a", "b"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("b"));
-WriteLine(await service.Combine("a", "c"));
-GC.Collect();
-WriteLine("GC.Collect() completed");
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("b"));
-WriteLine(await service.Combine("a", "c"));
+var fusion = services.AddFusion(); // No default RpcServiceMode, so it will be set to RpcServiceMode.Local
+var rpc = fusion.Rpc; // The same as services.AddRpc(), but slightly faster, since FusionBuilder already did it
+rpc.AddWebSocketClient("http://localhost:22222/"); // Adds the WebSocket client for ActualLab.Rpc
+fusion.AddClient<IChatService>(); // Adds the chat service client (Compute Service Client)
 ```
 <!-- endSnippet -->
 
-The output:
+### 4. Client Usage
 
-```text
-Combine(a, b)
-Get(a)
-Get(b)
-computed = Combine(a, b) completed
-ab
-a
-b
-Combine(a, c)
-Get(c)
-ac
-GC.Collect() completed
-a
-b
-Combine(a, c)
-Get(c)
-ac
-```
+API-wise, there is no difference between the Compute Service and its client.
 
-As you see, yes,
+But the similarity goes even further: it serves the replicas of server-side computed
+values under the hood, so it also behaves the same. In particular:
 
-> Strong referencing an `IComputed` ensures every other `IComputed`
-> instance it depends on also stays in memory.
+- `Computed.Capture(...)` and `Computed<T>.Changes()` work the same way with the client
+- If your client hosts local Compute Services, the computed values they
+  produce can be dependent on computed values produced by Compute Service Client.
 
-Let's check if the opposite is true as well:
+In other words, there is no difference between the Compute Service and its client.
+And that's what makes Compute Services so powerful: they allow building reactive
+services that can be local, remote, or even a mix of both (later you'll learn that
+Fusion also supports distributed call routing and service meshes), and no matter
+which kind of service you use, they behave the same way.
 
-<!-- snippet: Part02_Caching4 -->
+And finally, this is what powers the client-side reactivity in all Fusion + Blazor samples.
+
+Fusion's `ComputedStateComponent<T>` uses `ComputedState<T>` under the hood,
+so when such states get (re)computed, their outputs become dependent on
+the output of Compute Service Client(s) they call, which, in turn, "mirror"
+the server-side Compute Service outputs. So:
+
+- when the corresponding server-side `Computed<T>` gets invalidated,
+- ActualLab.Rpc call tracker subscribed to it sends ~ `Invalidate(callId)` message to the client,
+- which invalidates the client-side `Computed<T>` replica of that server-side computed value,
+- which triggers the invalidation of the client-side `Computed<T>` values depending on it,
+- some of such computed instances are associated with `ComputedStateComponent<T>.State`-s,
+- which triggers re-computation of these states,
+- which, in turn, triggers re-rendering of corresponding `ComputedStateComponent<T>`-s.
+
+<!-- snippet: Part02_RunClient -->
 ```cs
-var service = CreateServices().GetRequiredService<Service2>();
-var computed = await Computed.Capture(() => service.Get("a"));
-WriteLine("computed = Get(a) completed");
-WriteLine(await service.Combine("a", "b"));
-GC.Collect();
-WriteLine("GC.Collect() completed");
-WriteLine(await service.Combine("a", "b"));
-```
-<!-- endSnippet -->
+await using var services = CreateClientServiceProvider();
+var chatClient = services.GetRequiredService<IChatService>();
 
-The output:
+// Start GetWordCount() change observer
+var cWordCount0 = await Computed.Capture(() => chatClient.GetWordCount());
+_ = Task.Run(async () => {
+    await foreach (var cWordCount in cWordCount0.Changes())
+        WriteLine($"GetWordCount() -> {cWordCount}, Value: {cWordCount.Value}");
+});
 
-```text
-Get(a)
-computed = Get(a) completed
-Combine(a, b)
-Get(b)
-ab
-GC.Collect() completed
-Combine(a, b)
-Get(b)
-ab
-```
-
-So the opposite is not true.
-
-But why does Fusion behave this way? The answer is actually quite simple:
-
-- Fusion has to strong-reference every computed instance used to produce an output
-  because if any of them gets garbage collected before the output itself,
-  the invalidation passing through such an instance simply won't reach the output.
-- But since it has to propagate the invalidation events from dependencies
-  (used values) to dependants (values produced from the used ones),
-  it also has to reference the direct dependants from every dependency.
-  And these references have to be either weak
-  or simply shouldn't be .NET object references, because if they were strong
-  references, this would almost certainly keep the whole graph of `IComputed`
-  in memory, which is highly undesirable. That's why Fusion uses the second
-  option here &ndash; it stores keys of direct dependants of every `IComputed`
-  and resolves them via the same registry as it uses to resolve `IComputed`
-  instances for method calls.
-- Interestingly, there is a fundamental reason to weak reference every
-  `IComputed`: imagine Fusion doesn't do this, so calling the same compute
-  method twice with the same arguments may produce two different `IComputed`
-  instances representing the output (of the same computation). Now imagine
-  you invalidate the first one (and thus all of its dependants), but
-  don't do anything with the second one (so its dependants stay valid).
-  As you see, it's a partial invalidation, i.e. something that may cause
-  a long-term inconsistency &ndash; which is why Fusion ensures that at any
-  moment of time there can be only one `IComputed` instance describing
-  given computation.
-
-**Default caching behavior &ndash; a summary:**
-
-- Nothing is really cached, but everything is weak-referenced
-- When you compute a new value, every value used to produce it
-  becomes strong-referenced from the produced one
-- So if you strong reference some `IComputed`, you effectively
-  hold the whole graph of what it's composed from in memory.
-- If `IComputed` containing the output of `f(someArgs)` doesn't
-  exist in RAM, it also means none of its possible dependants
-  exist in RAM.
-
-## Caching Options
-
-As you probably already understood, Fusion allows you to
-implement any desirable caching behavior: all you need
-is your own service that will hold a strong reference
-to whatever you want to cache for as long as you want.
-
-Besides that, Fusion offers two built-in options:
-
-- `[ComputeMethod(MinCacheDuration = TimeInSeconds)]`,
-  ensures a strong reference w/ specified expiration
-  time is added to
-  [Timeouts.KeepAlive](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Internal/Timeouts.cs)
-  timer set every time the output is used. In fact, it sets a minimum
-  time the output of a function stays in RAM.
-- `[Swap(SwapTime = TimeInSeconds)]` enables swapping feature
-  for the compute method's output. It's a kind of similar to
-  OS page swapping, but stores & loads back the output instead.
-
-Let's look at how they work.
-
-### ComputeMethodAttribute.MinCacheDuration
-
-Let's just add `MinCacheDuration` to the service we were using previously:
-
-<!-- snippet: Part02_Service3 -->
-```cs
-public partial class Service3 : IComputeService
-{
-    [ComputeMethod]
-    public virtual async Task<string> Get(string key)
-    {
-        WriteLine($"{nameof(Get)}({key})");
-        return key;
+// Start GetRecentMessages() change observer
+var cMessages0 = await Computed.Capture(() => chatClient.GetRecentMessages());
+_ = Task.Run(async () => {
+    await foreach (var cMessages in cMessages0.Changes()) {
+        await Task.Delay(25); // We delay the output to print GetWordCount() first
+        WriteLine($"GetRecentMessages() -> {cMessages}, Value:");
+        foreach (var message in cMessages.Value)
+            WriteLine($"- {message}");
+        WriteLine();
     }
+});
 
-    [ComputeMethod(MinCacheDuration = 0.3)] // MinCacheDuration was added
-    public virtual async Task<string> Combine(string key1, string key2)
-    {
-        WriteLine($"{nameof(Combine)}({key1}, {key2})");
-        return await Get(key1) + await Get(key2);
-    }
+// Post some messages
+await chatClient.Post("Hello, World!");
+await Task.Delay(100);
+await chatClient.Post("Let's count to 3!");
+string[] data = ["One", "Two", "Three"];
+for (var i = 1; i <= 3; i++) {
+    await Task.Delay(1000);
+    await chatClient.Post(data.Take(i).ToDelimitedString());
 }
-```
-<!-- endSnippet -->
-
-And run this code:
-
-<!-- snippet: Part02_Caching5 -->
-```cs
-var service = CreateServices().GetRequiredService<Service3>();
-WriteLine(await service.Combine("a", "b"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("x"));
-GC.Collect();
-WriteLine("GC.Collect()");
-WriteLine(await service.Combine("a", "b"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("x"));
 await Task.Delay(1000);
-GC.Collect();
-WriteLine("Task.Delay(...) and GC.Collect()");
-WriteLine(await service.Combine("a", "b"));
-WriteLine(await service.Get("a"));
-WriteLine(await service.Get("x"));
+await chatClient.Post("Done counting!");
+await Task.Delay(1000);
+```
+<!-- endSnippet -->
+
+The output:
+
+<!-- snippet: Part02_Output -->
+```cs
+/* The output:
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.d5, State: Invalidated), Value:
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h5, State: Consistent), Value: 2
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.l5, State: Consistent), Value:
+- Hello, World!
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.p5, State: Consistent), Value: 6
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.4q, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.d0, State: Consistent), Value: 7
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.cp, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+- One
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4v, State: Consistent), Value: 9
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.gp, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+- One
+- One, Two
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.ou, State: Consistent), Value: 12
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.8v, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+- One
+- One, Two
+- One, Two, Three
+
+GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h0, State: Consistent), Value: 14
+GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.kp, State: Consistent), Value:
+- Hello, World!
+- Let's count to 3!
+- One
+- One, Two
+- One, Two, Three
+- Done counting!
+*/
+```
+<!-- endSnippet -->
+
+## Client Performance
+
+Computed Service Clients are invalidation-aware, which means they also eliminate unnecessary RPC calls.
+The RPC call is deemed unnecessary, if:
+
+- The client finds a `Computed<T>` replica for it (i.e., for the same call to the same service with the same arguments)
+- And this replica is still in `Consistent` state (i.e., wasn't invalidated from the moment it was created).
+
+In other words, Computed Service Clients cache call results and reuse them
+until they learn from the server that some of these results have been invalidated.
+
+And that's why performance-wise, such clients are almost exact replicas of server-side Compute Services:
+
+- They resort to RPC only when they don't have a cached value for a given call,
+  or a re-computation (due to invalidation) happened on the server side
+- Otherwise, they respond instantly.
+
+Let's see this in action. We've already added the `GetWordCountPlainRpc` method to our interface
+and implementation &ndash; since it's not a compute method, it won't benefit from Fusion's caching.
+
+<!-- snippet: Part02_Benchmark -->
+```cs
+// Benchmarking remote compute method calls and plain RPC calls – run in Release mode!
+WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc():");
+WriteLine("- Warmup...");
+for (int i = 0; i < 100_000; i++)
+    await chatClient.GetWordCount().ConfigureAwait(false);
+for (int i = 0; i < 100_000; i++)
+    await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
+WriteLine("- Benchmarking...");
+var stopwatch = Stopwatch.StartNew();
+for (int i = 0; i < 100_000; i++)
+    await chatClient.GetWordCount().ConfigureAwait(false);
+WriteLine($"- GetWordCount():         {stopwatch.Elapsed.ToShortString()}");
+stopwatch.Restart();
+for (int i = 0; i < 100_000; i++)
+    await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
+WriteLine($"- GetWordCountPlainRpc(): {stopwatch.Elapsed.ToShortString()}");
+```
+<!-- endSnippet -->
+
+The output:
+
+<!-- snippet: Part02_Benchmark_Output -->
+```cs
+/* The output:
+100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release mode!
+- Warmup...
+- Benchmarking...
+- GetWordCount():         12.187ms
+- GetWordCountPlainRpc(): 2.474s
+*/
+```
+<!-- endSnippet -->
+
+As you can see, Compute Service Client processes about **10,000,000 calls/s**
+on a single CPU core in the "cache hit" scenario.
+
+A bit more robust test would produce 18M call/s, or 55ns per-call timing on the same machine;
+for the comparison, a single `Dictionary<TKey, TValue>` lookup requires ~5-10ns on .NET 10.
+
+And it's ~200x faster than plain RPC via ActualLab.Rpc, which translates to **600-2000x
+speedup compared to RPC via SignalR, gRPC, or HTTP**.
+
+If you are interested in more robust benchmarks, check out `Benchmark` and `RpcBenchmark`
+projects in [Fusion Samples](https://github.com/ActualLab/Fusion.Samples).
+
+## Client-Side Computed State
+
+In [Part 1](./Part01.md), you learned about `ComputedState<T>` &ndash; a state that
+auto-updates once it becomes inconsistent. Now, let's show that client-side
+`ComputedState<T>` can use a Compute Service Client to "observe" the output of
+a server-side Compute Service.
+
+The code below reuses the `IChatService` and server setup from above,
+but adds a `ComputedState<T>` on the client side that tracks changes:
+
+<!-- snippet: Part02_ClientComputedState -->
+```cs
+var stateFactory = services.StateFactory();
+using var state = stateFactory.NewComputed(
+    new ComputedState<string>.Options() {
+        UpdateDelayer = FixedDelayer.Get(0.5), // 0.5 second update delay
+        EventConfigurator = state1 => {
+            // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
+            state1.AddEventHandler(StateEventKind.All,
+                (s, e) => WriteLine($"{e}: {s.Value}"));
+        },
+    },
+    async (state, cancellationToken) => {
+        var wordCount = await chatClient.GetWordCount(cancellationToken);
+        return $"Word count: {wordCount}";
+    });
+
+await state.Update(); // Ensures the state gets an up-to-date value
+
+await chatClient.Post("Hello, World!");
+await Task.Delay(1000);
+await chatClient.Post("One Two Three");
+await Task.Delay(1000);
 ```
 <!-- endSnippet -->
 
 The output:
 
 ```text
-Combine(a, b)
-Get(a)
-Get(b)
-ab
-a
-Get(x)
-x
-GC.Collect()
-ab
-a
-Get(x)
-x
-Task.Delay(...) and GC.Collect()
-Combine(a, b)
-Get(a)
-Get(b)
-ab
-a
-Get(x)
-x
+Invalidated:
+Updating:
+Updated: Word count: 0
+Invalidated: Word count: 0
+Updating: Word count: 0
+Updated: Word count: 2
+Invalidated: Word count: 2
+Updating: Word count: 2
+Updated: Word count: 5
 ```
 
-As you see, `MinCacheDuration` does exactly what's expected:
+Notice the state lifecycle:
+1. **Updated** &ndash; state was computed (or re-computed)
+2. **Invalidated** &ndash; the state's underlying `Computed<T>` became inconsistent
+3. **Updating** &ndash; state is about to recompute (after the `UpdateDelayer` delay)
 
-- It holds a strong reference to the output of `Combine` for 0.3 seconds,
-  so the output of `Combine("a", "b")` gets cached for 0.3s
-- Since `Combine` calls `Get`, the outputs of
-  `Get("a")` and `Get("b")` are cached for 0.3s too
-- But not the output of `Get("x")`, which wasn't used in any of
-  `Combine` calls in this example.
+This is exactly the mechanism that powers real-time UI in Fusion's Blazor components.
 
-That's basically it on `MinCacheDuration`.
+## Real-Time UI Updates
 
-A few tips on how to use it:
+As you might guess, this is exactly the logic our Blazor samples use to update
+the UI in real time. Moreover, we similarly use the same interface both for
+Compute Services and their clients &ndash; and that's precisely what allows
+us to have the same UI components working in WASM and Server-Side Blazor mode:
 
-- You should apply it mainly to the final outputs &ndash; i.e. compute
-  methods that are either exposed via API or used in your UI.
-- Applying it to other compute methods is fine too, though keep in mind
-  that whatever is used by top level methods with `MinCacheDuration`
-  is anyway cached for the same period, so probably you don't need this.
-- And in general, keep in mind that ideally you want to "recompose"
-  or aggregate the outputs of compute methods rather than "rewrite".
-  In other words, if you have a chance to use the same object you get
-  from the downstream method &ndash; do this, because this won't incur
-  use of extra RAM.
-- This is also why you might want to return just immutable objects from
-  compute methods &ndash; and C# 9 records come quite handy here.
+- When UI components are rendered on the server side, they pick server-side
+  Compute Services from host's `IServiceProvider` as implementation of
+  `IWhateverService`. Replicas aren't needed there, because everything is local.
+- And when the same UI components are rendered on the client, they pick
+  Compute Service Client as `IWhateverService` from the client-side IoC container,
+  and that's what makes any `IState<T>` update in real time there, which
+  in turn makes UI components re-render.
 
----
+## Summary
 
-**Note:** If you're interested in algorithms and data structures, check out
-[ConcurrentTimerSet&lt;TTimer&gt;](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Time/ConcurrentTimerSet.cs) &ndash;
-Fusion uses its own implementation of timers to ensure they
-scale much better than `Task.Delay` (which relies on
-[TimerQueue](https://referencesource.microsoft.com/#mscorlib/system/threading/timer.cs,29)),
-though this comes at cost of fire precision: Fusion timers fire only
-[4 times per second](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion/Internal/Timeouts.cs#L20).
-Under the hood, `ConcurrentTimerSet` uses
-[RadixHeapSet](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Collections/RadixHeapSet.cs) &ndash;
-basically, a [Radix Heap](http://ssp.impulsetrain.com/radix-heap.html)
-supporting `O(1)` find and delete operations.
+**That's pretty much it &ndash; now you've learned all the key features of Fusion.**
+There are details, of course, and the rest of the tutorial is mostly about them.
 

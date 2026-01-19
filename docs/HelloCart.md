@@ -586,7 +586,7 @@ I'll give a brief answer here:
   call and "the invalidation call" were completed for it locally.
 
 Under the hood all of this is powered by similar AOP-style
-decorators and [CommandR](Part05.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) &ndash;
+decorators and [CommandR](Part04.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) &ndash;
 style abstraction used by Fusion to implement its command processing
 pipeline.
 
@@ -651,7 +651,7 @@ And a few final remarks on this:
    This pipeline is server-side only.
 
 > If you want to learn all the details about this &ndash; check out
-> [Part 5](Part05.md) and [Part 6](Part06.md).
+> [Part 4](Part04.md) and [Part 5](Part05.md).
 
 ## Version 2: Switching to EF Core
 
@@ -914,7 +914,7 @@ client for any Compute Service that mimics its behavior
 completely, including everything related to invalidation
 and dependency tracking.
 
-Such clients are called [Compute Service Clients](Part03.md).
+Such clients are called [Compute Service Clients](Part02.md).
 They are Compute Services too &ndash; you can even cast them to
 `IComputeService` as any other compute service. But:
 

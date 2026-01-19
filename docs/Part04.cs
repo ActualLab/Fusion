@@ -1,201 +1,188 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using ActualLab.Fusion;
-using ActualLab.Fusion.Authentication;
-using ActualLab.Fusion.Blazor;
-using ActualLab.Fusion.Blazor.Authentication;
-using ActualLab.Fusion.Extensions;
-using ActualLab.Fusion.Server;
-using ActualLab.Fusion.UI;
+using System.Diagnostics;
 using ActualLab.Rpc;
-using ActualLab.Rpc.Server;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
 namespace Tutorial04;
 
-// Fake types for snippet compilation
-public class _HostPage : ComponentBase { }
-public class App : ComponentBase { }
-
-// Fake service interfaces and implementations
-public interface ITodoApi : IComputeService
+#region Part04_PrintCommandSession
+public class PrintCommand : ICommand<Unit>
 {
-    Task<string[]> GetTodos(CancellationToken cancellationToken = default);
+    public string Message { get; set; } = "";
 }
 
-public class TodoApi : ITodoApi
+// Interface-based command handler
+public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
 {
-    [ComputeMethod]
-    public virtual Task<string[]> GetTodos(CancellationToken cancellationToken = default)
-        => Task.FromResult(Array.Empty<string>());
-}
+    public PrintCommandHandler() => WriteLine("Creating PrintCommandHandler.");
+    public void Dispose() => WriteLine("Disposing PrintCommandHandler");
 
-public class CounterService : IComputeService
-{
-    [ComputeMethod]
-    public virtual Task<int> GetCounter(CancellationToken cancellationToken = default)
-        => Task.FromResult(0);
+    public async Task OnCommand(PrintCommand command, CommandContext context, CancellationToken cancellationToken)
+    {
+        WriteLine(command.Message);
+        WriteLine("Sir, yes, sir!");
+    }
 }
+#endregion
 
-public class WeatherForecastService : IComputeService
+#region Part04_RecSumCommandSession
+public class RecSumCommand : ICommand<long>
 {
-    [ComputeMethod]
-    public virtual Task<string[]> GetForecasts(CancellationToken cancellationToken = default)
-        => Task.FromResult(Array.Empty<string>());
+    public long[] Numbers { get; set; } = Array.Empty<long>();
 }
+#endregion
 
 public static class Part04
 {
-    #region Part04_ServerSideBlazor_Services
-    public static void ConfigureServerSideBlazorServices(IServiceCollection services)
+
+    public static async Task PrintCommandSession()
     {
-        // Configure services
-        var fusion = services.AddFusion();
+        #region Part04_PrintCommandSession2
+        // Building IoC container
+        var serviceBuilder = new ServiceCollection()
+            .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
+        var rpc = serviceBuilder.AddRpc();
+        var commanderBuilder = serviceBuilder.AddCommander()
+            .AddHandlers<PrintCommandHandler>();
+        var services = serviceBuilder.BuildServiceProvider();
 
-        // Add your Fusion compute services
-        fusion.AddFusionTime(); // Built-in time service
-        fusion.AddService<CounterService>();
-        fusion.AddService<WeatherForecastService>();
-
-        // ASP.NET Core / Blazor services
-        services.AddServerSideBlazor(o => o.DetailedErrors = true);
-        services.AddRazorComponents().AddInteractiveServerComponents();
-        fusion.AddBlazor();
-
-        // Default update delay for ComputedStateComponents
-        services.AddScoped<IUpdateDelayer>(_ => FixedDelayer.MinDelay);
+        var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
+        await commander.Call(new PrintCommand() { Message = "Are you operational?" });
+        await commander.Call(new PrintCommand() { Message = "Are you operational?" });
+        #endregion
     }
-    #endregion
 
-    #region Part04_ServerSideBlazor_App
-    public static void ConfigureServerSideBlazorApp(WebApplication app)
+    public class RecSumCommandHandler
     {
-        app.UseFusionSession();
-        app.UseRouting();
-        app.UseAntiforgery();
+        public RecSumCommandHandler() => WriteLine("Creating RecSumCommandHandler.");
+        public void Dispose() => WriteLine("Disposing RecSumCommandHandler");
 
-        app.MapStaticAssets();
-        app.MapRazorComponents<_HostPage>()
-            .AddInteractiveServerRenderMode();
+        [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
+        private async Task<long> RecSum(
+            RecSumCommand command,
+            IServiceProvider services, // Resolved via CommandContext.Services
+            ICommander commander, // Resolved via CommandContext.Services
+            CancellationToken cancellationToken)
+        {
+            var context = CommandContext.GetCurrent();
+            Debug.Assert(services == context.Services); // context.Services is a scoped IServiceProvider
+            Debug.Assert(commander == services.Commander()); // ICommander is singleton
+            Debug.Assert(services != commander.Services); // Scoped IServiceProvider != top-level IServiceProvider
+            WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
+
+            // Each call creates a new CommandContext
+            var contextStack = new List<CommandContext>();
+            var currentContext = context;
+            while (currentContext != null) {
+                contextStack.Add(currentContext);
+                currentContext = currentContext.OuterContext;
+            }
+            WriteLine($"CommandContext stack size: {contextStack.Count}");
+            Debug.Assert(contextStack[^1] == context.OutermostContext);
+
+            // Finally, CommandContext.Items is ~ like HttpContext.Items, and similarly to
+            // service scope, they are the same for all contexts in recursive call chain.
+            var depth = 1 + (int) (context.Items["Depth"] ?? 0);
+            context.Items["Depth"] = depth;
+            WriteLine($"Depth via context.Items: {depth}");
+
+            // Finally, the actual handler logic :)
+            if (command.Numbers.Length == 0)
+                return 0;
+            var head = command.Numbers[0];
+            var tail = command.Numbers[1..];
+            var tailSum = await context.Commander.Call(
+                new RecSumCommand() { Numbers = tail }, false, // Try changing it to true
+                cancellationToken);
+            return head + tailSum;
+        }
     }
-    #endregion
 
-    #region Part04_Hybrid_ServerServices
-    public static void ConfigureHybridServerServices(IServiceCollection services)
+    public static async Task RecSumCommandSession()
     {
-        // Fusion services with RPC server mode
-        var fusion = services.AddFusion(RpcServiceMode.Server, true);
-        var fusionServer = fusion.AddWebServer();
+        #region Part04_RecSumCommandSession2
+        // Building IoC container
+        var serviceBuilder = new ServiceCollection()
+            .AddScoped<RecSumCommandHandler>();
+        var rpc = serviceBuilder.AddRpc();
+        var commanderBuilder = serviceBuilder.AddCommander()
+            .AddHandlers<RecSumCommandHandler>();
+        var services = serviceBuilder.BuildServiceProvider();
 
-        // Add your Fusion compute services as servers
-        fusion.AddServer<ITodoApi, TodoApi>();
-
-        // ASP.NET Core / Blazor services
-        services.AddServerSideBlazor(o => o.DetailedErrors = true);
-        services.AddRazorComponents()
-            .AddInteractiveServerComponents()
-            .AddInteractiveWebAssemblyComponents();
-        fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
+        var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
+        WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2, 3 }}));
+        #endregion
     }
-    #endregion
 
-    #region Part04_Hybrid_ServerApp
-    public static void ConfigureHybridServerApp(WebApplication app)
+
+    public static async Task RecSumCommandServiceSession()
     {
-        app.UseWebSockets(new WebSocketOptions() {
-            KeepAliveInterval = TimeSpan.FromSeconds(30),
-        });
-        app.UseFusionSession();
-        app.UseRouting();
-        app.UseAuthentication();
-        app.UseAntiforgery();
+        #region Part04_RecSumCommandServiceSession2
+        // Building IoC container
+        var serviceBuilder = new ServiceCollection();
+        var rpc = serviceBuilder.AddRpc();
+        var commanderBuilder = serviceBuilder.AddCommander()
+            .AddService<RecSumCommandService>(); // Such services are auto-registered as singletons
+        var services = serviceBuilder.BuildServiceProvider();
 
-        // Razor components with both Server and WebAssembly render modes
-        app.MapStaticAssets();
-        app.MapRazorComponents<_HostPage>()
-            .AddInteractiveServerRenderMode()
-            .AddInteractiveWebAssemblyRenderMode()
-            .AddAdditionalAssemblies(typeof(App).Assembly);
-
-        // Fusion RPC endpoints
-        app.MapRpcWebSocketServer();
+        var commander = services.Commander();
+        var recSumService = services.GetRequiredService<RecSumCommandService>();
+        WriteLine(recSumService.GetType());
+        WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2 }}));
+        WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 3L, 4 }}));
+        #endregion
     }
-    #endregion
-
-    #region Part04_Wasm_Main
-    public static async Task WasmMain(string[] args)
-    {
-        var builder = WebAssemblyHostBuilder.CreateDefault(args);
-        ConfigureWasmServices(builder.Services, builder);
-        var host = builder.Build();
-        await host.RunAsync();
-    }
-    #endregion
-
-    #region Part04_Wasm_Services
-    public static void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
-    {
-        // Fusion services
-        var fusion = services.AddFusion();
-        fusion.AddAuthClient();
-        fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
-
-        // RPC clients for your services
-        fusion.AddClient<ITodoApi>();
-
-        // Configure WebSocket client to connect to the server
-        fusion.Rpc.AddWebSocketClient(builder.HostEnvironment.BaseAddress);
-
-        // Default update delay
-        services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
-    }
-    #endregion
 
     public static async Task Run()
     {
-        WriteLine("Part 4: Real-time UI in Blazor Apps");
-        WriteLine();
+        await PrintCommandSession();
+        await RecSumCommandSession();
+        await RecSumCommandServiceSession();
+    }
 
-        // === Reference verification section ===
+}
 
-        // Component hierarchy
-        _ = typeof(FusionComponentBase);
-        _ = typeof(CircuitHubComponentBase);
-        _ = typeof(StatefulComponentBase<>);
-        _ = typeof(ComputedStateComponent<>);
-        // _ = typeof(ComputedRenderStateComponent<>); // In ActualLab.Fusion.Blazor
-        _ = typeof(MixedStateComponent<,>);
+#region Part04_RecSumCommandServiceSession
+public class RecSumCommandService : ICommandService
+{
+    [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
+    public virtual async Task<long> RecSum( // Notice "public virtual"!
+        RecSumCommand command,
+        // You can't have any extra arguments here
+        CancellationToken cancellationToken = default)
+    {
+        if (command.Numbers.Length == 0)
+            return 0;
+        var head = command.Numbers[0];
+        var tail = command.Numbers[1..];
+        var context = CommandContext.GetCurrent();
+        var tailSum = await context.Commander.Call( // Note it's a direct call, but the whole pipeline still gets invoked!
+            new RecSumCommand() { Numbers = tail },
+            cancellationToken);
+        return head + tailSum;
+    }
 
-        // State types
-        _ = typeof(IState<>);
-        _ = typeof(IMutableState<>);
-        _ = typeof(IComputedState<>);
-        _ = typeof(ComputedState<>);
-        _ = typeof(MutableState<>);
+    // This handler is associated with ANY command (ICommand)
+    // Priority = 10 means it runs earlier than any handler with the default priority 0
+    // IsFilter tells it triggers other handlers via InvokeRemainingHandlers
+    [CommandHandler(Priority = 10, IsFilter = true)]
+    protected virtual async Task DepthTracker(ICommand command, CancellationToken cancellationToken)
+    {
+        var context = CommandContext.GetCurrent();
+        var depth = 1 + (int) (context.Items["Depth"] ?? 0);
+        context.Items["Depth"] = depth;
+        WriteLine($"Depth via context.Items: {depth}");
 
-        // Update delayer
-        _ = typeof(IUpdateDelayer);
-        _ = typeof(FixedDelayer);
-        _ = typeof(UpdateDelayer);
+        await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
+    }
 
-        // CircuitHub
-        _ = typeof(CircuitHub);
-
-        // UICommander
-        _ = typeof(UICommander);
-
-        // StateFactory
-        _ = typeof(StateFactory);
-
-        // RPC modes
-        _ = RpcServiceMode.Server;
-
-        WriteLine("All identifier references verified successfully!");
-        WriteLine();
-
-        await Task.CompletedTask;
+    // Another filter for RecSumCommand
+    [CommandHandler(Priority = 9, IsFilter = true)]
+    protected virtual Task ArgumentWriter(RecSumCommand command, CancellationToken cancellationToken)
+    {
+        WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
+        var context = CommandContext.GetCurrent();
+        return context.InvokeRemainingHandlers(cancellationToken);
     }
 }
+#endregion

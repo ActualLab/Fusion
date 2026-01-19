@@ -1,396 +1,407 @@
-# Real-time UI in Blazor Apps
-
-You already know about `IState<T>` &ndash; it was described in [Part 1](./Part01.md).
-It's an abstraction that "tracks" the most current version of some `Computed<T>`.
-There are a few "flavors" of the `IState` &ndash; the most important ones are:
-
-- `IMutableState<T>` &ndash; in fact, a variable exposed as `IState<T>`
-- `IComputedState<T>` &ndash; a state that auto-updates once it becomes inconsistent,
-  and the update delay is controlled by `UpdateDelayer` provided to it.
-
-You can use these abstractions directly in your Blazor components, but
-usually it's more convenient to use the component base classes from `ActualLab.Fusion.Blazor` NuGet package.
-
-## Component Hierarchy Overview
-
-Fusion provides a hierarchy of Blazor component base classes, each building upon the previous one:
-
-| Class | Purpose |
-|-------|---------|
-| `FusionComponentBase` | Base class with optimized parameter handling and event processing |
-| `CircuitHubComponentBase` | Adds `CircuitHub` and convenient service shortcuts |
-| `StatefulComponentBase<T>` | Adds `State` management with automatic UI updates |
-| `ComputedStateComponent<T>` | Auto-computed state with dependency tracking |
-| `ComputedRenderStateComponent<T>` | Optimized rendering that skips unchanged states |
-| `MixedStateComponent<T, TMutableState>` | Combines computed state with local mutable state |
-
----
-
-## FusionComponentBase
-
-[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/FusionComponentBase.cs)
-
-The foundation class for all Fusion Blazor components. It extends Blazor's `ComponentBase` and implements `IHandleEvent`.
-
-### Purpose
-
-Provides optimized parameter comparison and event handling for Blazor components. Unlike standard `ComponentBase`, it can skip `SetParametersAsync` calls when parameters haven't meaningfully changed.
-
-### How It Works
-
-- Overrides `SetParametersAsync` to check if parameters have actually changed before processing
-- Implements custom event handling that optionally suppresses `StateHasChanged` calls after events
-- Uses `ComponentInfo` for efficient parameter comparison based on configurable comparison modes
-
-### Key Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `DefaultParameterComparisonMode` | `ParameterComparisonMode` (static) | Controls how parameters are compared across all components |
-| `MustRenderAfterEvent` | `bool` | When `true`, calls `StateHasChanged` after event handlers complete |
-| `ComponentInfo` | `ComponentInfo` | Cached metadata about the component type for parameter comparison |
-| `ParameterSetIndex` | `int` | Tracks how many times parameters have been set (0 = not initialized) |
-
----
-
-## CircuitHubComponentBase
-
-[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/CircuitHubComponentBase.cs)
-
-Extends `FusionComponentBase` to provide access to `CircuitHub` and commonly used services.
-
-### Purpose
-
-Acts as a convenience layer that injects `CircuitHub` and exposes shortcuts to frequently needed services like `StateFactory`, `UICommander`, and `Session`.
-
-### How It Works
-
-- Injects `CircuitHub` via dependency injection
-- Exposes commonly used services as protected properties for easy access in derived components
-
-### Key Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `CircuitHub` | `CircuitHub` | The injected circuit hub containing all Fusion-related services |
-| `Services` | `IServiceProvider` | Shortcut to `CircuitHub.Services` |
-| `Session` | `Session` | Current user session |
-| `StateFactory` | `StateFactory` | Factory for creating states |
-| `UICommander` | `UICommander` | Commander for executing UI commands |
-| `Nav` | `NavigationManager` | Blazor's navigation manager |
-| `JS` | `IJSRuntime` | JavaScript interop runtime |
-
----
-
-## StatefulComponentBase and StatefulComponentBase&lt;T&gt;
-
-[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/StatefulComponent.cs)
-
-Extends `CircuitHubComponentBase` to manage a `State` that automatically triggers UI updates.
-
-### Purpose
-
-Provides the foundation for components that need to react to state changes. When the state updates, the component automatically re-renders.
-
-### How It Works
-
-- Maintains a `State` property that can be any `IState<T>` implementation
-- Attaches a `StateChanged` handler that calls `NotifyStateHasChanged()` when the state updates
-- Sets `MustRenderAfterEvent = false` by default, since these components typically render only after state changes
-- Disposes the state when the component is disposed
-
-### Creating the State
-
-Override `CreateState()` to provide your own state, or call `SetState()` from `OnInitialized` or `SetParametersAsync`. The component ensures the state is created after the sync part of initialization completes.
-
-### Key Properties and Methods
-
-| Member | Type | Description |
-|--------|------|-------------|
-| `State` | `IState<T>` | The state being tracked (typed version) |
-| `UntypedState` | `State` | Access to the untyped base state |
-| `StateChanged` | `Action<State, StateEventKind>` | Handler invoked when state events occur |
-| `CreateState()` | Method | Override to create custom state; called if state isn't set by initialization |
-| `SetState(state, ...)` | Method | Explicitly sets the state and attaches event handlers |
-| `DisposeAsync()` | Method | Disposes the state when component is disposed |
-
----
-
-## ComputedStateComponent and ComputedStateComponent&lt;T&gt;
-
-[View Source (base)](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/ComputedStateComponent.cs) | [View Source (typed)](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/ComputedStateComponent.Typed.cs)
-
-Extends `StatefulComponentBase<T>` to provide an auto-computed state with full Fusion dependency tracking.
-
-### Purpose
-
-The primary component base class for building real-time UI. You override `ComputeState` to define what data your component displays, and Fusion automatically re-renders the component whenever that data changes.
-
-### How It Works
-
-1. Creates a `ComputedState<T>` that uses your `ComputeState` method as its computation
-2. The `ComputeState` method runs inside Fusion's dependency tracking context
-3. When any dependency (e.g., a Compute Service method result) is invalidated, the state recomputes
-4. After recomputation, the component automatically re-renders
-
-The component also optimizes the Blazor lifecycle:
-- By default, triggers recomputation when parameters change (`RecomputeStateOnParameterChange`)
-- Skips rendering when state is inconsistent (unless `RenderInconsistentState` is set)
-- Controls which lifecycle render points trigger actual renders
-
-### Key Properties and Methods
-
-| Member | Type | Description |
-|--------|------|-------------|
-| `Options` | `ComputedStateComponentOptions` | Flags controlling component behavior |
-| `State` | `ComputedState<T>` | The auto-updating computed state |
-| `ComputeState(CancellationToken)` | Abstract method | Override to define how state is computed |
-| `GetStateOptions()` | Virtual method | Override to customize state options (initial value, category, etc.) |
-
-### ComputedStateComponentOptions Flags
-
-| Flag | Description |
-|------|-------------|
-| `RecomputeStateOnParameterChange` | Triggers `State.Recompute()` when parameters change |
-| `RenderInconsistentState` | Allows rendering even when state is invalidated |
-| `UseParametersSetRenderPoint` | Render after `OnParametersSet` |
-| `UseInitializedAsyncRenderPoint` | Render after `OnInitializedAsync` |
-| `UseParametersSetAsyncRenderPoint` | Render after `OnParametersSetAsync` |
-| `UseAllRenderPoints` | Combination of all render point flags |
-| `ComputeStateOnThreadPool` | Run `ComputeState` on thread pool instead of Blazor's sync context |
-
-### Default Options
-
-`ComputedStateComponent.DefaultOptions` is set to `RecomputeStateOnParameterChange | UseAllRenderPoints`.
-
----
-
-## ComputedRenderStateComponent&lt;T&gt;
-
-[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/ComputedRenderStateComponent.cs)
-
-Extends `ComputedStateComponent<T>` with optimized rendering that tracks the last rendered state.
-
-### Purpose
-
-Prevents unnecessary re-renders by tracking which state snapshot was last rendered. If `ShouldRender` is called but the state hasn't changed since the last render, it returns `false`.
-
-### How It Works
-
-- Maintains a `RenderState` property that stores the last rendered `StateSnapshot`
-- In `ShouldRender()`, compares the current state snapshot with `RenderState`
-- Only returns `true` if the state has actually changed
-
-This is useful for components that may receive multiple render requests but should only actually render when their data has changed.
-
-### Key Properties and Methods
-
-| Member | Type | Description |
-|--------|------|-------------|
-| `RenderState` | `StateSnapshot` | The last rendered state snapshot |
-| `IsRenderStateChanged()` | Method | Returns `true` if state has changed since last render |
-
-### Default Options
-
-`ComputedRenderStateComponent.DefaultOptions` is set to `RecomputeStateOnParameterChange` only (no extra render points needed).
-
----
-
-## MixedStateComponent&lt;T, TMutableState&gt;
-
-[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/MixedStateComponent.cs)
-
-Extends `ComputedStateComponent<T>` to add a local `MutableState<TMutableState>` that the computed state depends on.
-
-### Purpose
-
-Handles the common pattern where a component has local UI state (like form inputs) that affects what data it displays. Changes to the mutable state automatically trigger recomputation of the computed state.
-
-### How It Works
-
-- Creates a `MutableState<TMutableState>` alongside the computed state
-- Subscribes to the mutable state's `Updated` event
-- When mutable state changes, calls `State.Recompute()` to immediately refresh the computed state (no update delay)
-
-This means you don't need to manually call `MutableState.Use()` inside `ComputeState` &ndash; the dependency is automatically established.
-
-### Key Properties and Methods
-
-| Member | Type | Description |
-|--------|------|-------------|
-| `MutableState` | `MutableState<TMutableState>` | Local mutable state for UI inputs |
-| `CreateMutableState()` | Virtual method | Override to customize mutable state creation |
-| `GetMutableStateOptions()` | Virtual method | Override to customize mutable state options |
-| `SetMutableState(state)` | Method | Explicitly sets the mutable state |
-
----
-
-## Using These Components
-
-To have a component that automatically updates once the output of some Compute Service changes:
-
-1. Inherit from `ComputedStateComponent<T>` (or `MixedStateComponent` if you need local state)
-2. Override the `ComputeState` method to call your Compute Services
-3. Optionally override `GetStateOptions` to configure initial value, update delayer, etc.
-
-Check out the [Counter.razor example](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Components/Pages/Counter.razor) from HelloBlazorServer sample to see this in action.
-
----
-
-## Real-time UI in Server-Side Blazor Apps
-
-For Server-Side Blazor, you need to:
-
-- Add your Compute Services to the `IServiceProvider` used by ASP.NET Core
-- Inherit your components from `ComputedStateComponent<T>` or `MixedStateComponent<T, TMutableState>`
-
-See [HelloBlazorServer/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Program.cs) for a complete example. The key parts are:
-
-<!-- snippet: Part04_ServerSideBlazor_Services -->
+# CommandR
+
+[ActualLab.CommandR](https://www.nuget.org/packages/ActualLab.CommandR/)
+is a [MediatR](https://github.com/jbogard/MediatR)-like library helping
+to implement CQRS-style command handlers.
+
+> **Why does CommandR exist?**
+> The primary reason is the **Operations Framework** described in [Part 10](./Part06.md).
+> Operations Framework requires a command execution pipeline to implement
+> multi-host invalidation, operation logging, and other features that make
+> Fusion work reliably in distributed scenarios. CommandR provides exactly
+> the extensible pipeline needed for this.
+
+Together with a set of other abstractions it enables you to
+get the pipeline described in the previous section with
+almost no extra code.
+
+> This part of the tutorial will cover CommandR itself. The next one
+> will show how to use it together with other Fusion services
+> to implement a robust CQRS pipeline.
+
+Even though CommandR solves the same problem as MediatR, it offers
+a few new features:
+
+- Unified handler pipeline. Any CommandR handler
+  can act either as a filter (~ middleware-like handler)
+  or as the final one. MediatR supports pipeline behaviors, which
+  are similar to filtering handlers in CommandR, but
+  they are the same for all commands.
+  And this feature is actually quite useful &ndash; e.g.
+  built-in filter for `IPreparedCommand` helps to unify validation.
+- `CommandContext` &ndash; an `HttpContext`-like type helping to
+  non-handler code to store and access the state associated with
+  the currently running command. Even though command contexts can
+  be nested (commands may invoke other commands), the whole
+  hierarchy of them is always available.
+- Convention-based command handler discovery and invocation.
+  You don't have to implement `ICommandHandler<TCommand, TResult>`
+  every time you want to add a handler &ndash; any async method tagged
+  with `[CommandHandler]`
+  and having command as its first parameter, and `CancellationToken` as the
+  last one works; all other arguments are resolved via IoC container.
+- AOP-style command handlers.
+  Such handlers are virtual async methods with two arguments:
+  `(command, cancellationToken)`. To make AOP part work,
+  the type declaring such handlers must be registered with
+  `AddCommandService(...)` &ndash;
+  an extension method to `IServiceCollection` that registers
+  a runtime-generated proxy instead of the actual implementation type.
+  The proxy ensures any call to such method is _still_ routed via
+  `Commander.Call(command)` to invoke the whole pipeline
+  for this command &ndash; i.e. all other handlers associated
+  with it.
+  In other words, such handlers can be invoked directly or via
+  `Commander`, but the result is always the same.
+
+Since many of you are familiar with MediatR, here is the map
+of its terms to CommandR terms:
+
+| MediatR | CommandR |
+|---------|----------|
+| `IMediator` | `ICommander` |
+| `IServiceCollection.AddMediatR` | `IServiceCollection.AddCommander` |
+| `IServiceProvider.GetRequiredService<IMediator>` | `.GetRequiredService<ICommander>()` or `.Commander()` |
+| `IMediatR.Send(command, ct)` | `ICommander.Call(command, ct)` |
+| `IRequest<TResult>` | `ICommand<TResult>` |
+| `IRequest` | `ICommand<Unit>` |
+| `IRequestHandler<TCommand, TResult>` | `ICommandHandler<TCommand>` &ndash; result type is encoded in `TCommand` |
+| `IRequestHandler<TCommand, Unit>` | `ICommandHandler<TCommand>` |
+| `RequestHandler<T, Unit>` (sync) | No synchronous handlers |
+| `INotification` | `IEventCommand` &ndash; may have multiple final handlers invoked in parallel |
+| `IPipelineBehavior<TReq, TResp>` | Any filtering handler is a pipeline behavior |
+| Exception handlers | Any filtering handler can do this |
+| All IoC containers supported | Only `IServiceProvider` &ndash; Fusion follows the same philosophy |
+
+You might notice the API offered by CommandR is somewhat simpler &ndash;
+at least while you don't use some of its unique features mentioned
+earlier.
+
+## Hello, CommandR!
+
+Let's declare our first command and its MediatR-style handler:
+
+<!-- snippet: Part04_PrintCommandSession -->
 ```cs
-public static void ConfigureServerSideBlazorServices(IServiceCollection services)
+public class PrintCommand : ICommand<Unit>
 {
-    // Configure services
-    var fusion = services.AddFusion();
+    public string Message { get; set; } = "";
+}
 
-    // Add your Fusion compute services
-    fusion.AddFusionTime(); // Built-in time service
-    fusion.AddService<CounterService>();
-    fusion.AddService<WeatherForecastService>();
+// Interface-based command handler
+public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
+{
+    public PrintCommandHandler() => WriteLine("Creating PrintCommandHandler.");
+    public void Dispose() => WriteLine("Disposing PrintCommandHandler");
 
-    // ASP.NET Core / Blazor services
-    services.AddServerSideBlazor(o => o.DetailedErrors = true);
-    services.AddRazorComponents().AddInteractiveServerComponents();
-    fusion.AddBlazor();
-
-    // Default update delay for ComputedStateComponents
-    services.AddScoped<IUpdateDelayer>(_ => FixedDelayer.MinDelay);
+    public async Task OnCommand(PrintCommand command, CommandContext context, CancellationToken cancellationToken)
+    {
+        WriteLine(command.Message);
+        WriteLine("Sir, yes, sir!");
+    }
 }
 ```
 <!-- endSnippet -->
 
-And for the app configuration:
+Using CommandR and MediatR is quite similar:
 
-<!-- snippet: Part04_ServerSideBlazor_App -->
+<!-- snippet: Part04_PrintCommandSession2 -->
 ```cs
-public static void ConfigureServerSideBlazorApp(WebApplication app)
-{
-    app.UseFusionSession();
-    app.UseRouting();
-    app.UseAntiforgery();
+// Building IoC container
+var serviceBuilder = new ServiceCollection()
+    .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
+var rpc = serviceBuilder.AddRpc();
+var commanderBuilder = serviceBuilder.AddCommander()
+    .AddHandlers<PrintCommandHandler>();
+var services = serviceBuilder.BuildServiceProvider();
 
-    app.MapStaticAssets();
-    app.MapRazorComponents<_HostPage>()
-        .AddInteractiveServerRenderMode();
+var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
+await commander.Call(new PrintCommand() { Message = "Are you operational?" });
+await commander.Call(new PrintCommand() { Message = "Are you operational?" });
+```
+<!-- endSnippet -->
+
+The output:
+
+```
+Creating PrintCommandHandler.
+Are you operational?
+Sir, yes, sir!
+Disposing PrintCommandHandler
+Creating PrintCommandHandler.
+Are you operational?
+Sir, yes, sir!
+Disposing PrintCommandHandler
+```
+
+Notice that:
+
+- CommandR doesn't auto-register command handler services &ndash; it
+  cares only about figuring out how to map commands to
+  command handlers available in these services.
+  That's why you have to register services separately.
+- `Call` creates its own `IServiceScope` to resolve
+  services for every command invocation.
+
+Try changing `AddScoped` to `AddSingleton` in above example.
+
+## Convention-based handlers, `CommandContext`, recursion
+
+Let's write a bit more complex handler to see how
+`CommandContext` works.
+
+<!-- snippet: Part04_RecSumCommandSession -->
+```cs
+public class RecSumCommand : ICommand<long>
+{
+    public long[] Numbers { get; set; } = Array.Empty<long>();
 }
 ```
 <!-- endSnippet -->
 
-## Real-time UI in Blazor WebAssembly / Hybrid Apps
-
-Modern Fusion apps use a hybrid approach where the same UI components can run in both Server-Side Blazor and WebAssembly modes. The server hosts the Compute Services and exposes them via RPC, while the client can consume them either directly (SSB) or via RPC clients (WASM).
-
-See [TodoApp](https://github.com/ActualLab/Fusion.Samples/tree/master/src/TodoApp) or [Blazor Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Blazor) for complete examples.
-
-### Server-side configuration
-
-See [TodoApp/Host/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/Host/Program.cs) for a complete example. The key parts are:
-
-<!-- snippet: Part04_Hybrid_ServerServices -->
+<!-- snippet: Part04_RecSumCommandSession2 -->
 ```cs
-public static void ConfigureHybridServerServices(IServiceCollection services)
+// Building IoC container
+var serviceBuilder = new ServiceCollection()
+    .AddScoped<RecSumCommandHandler>();
+var rpc = serviceBuilder.AddRpc();
+var commanderBuilder = serviceBuilder.AddCommander()
+    .AddHandlers<RecSumCommandHandler>();
+var services = serviceBuilder.BuildServiceProvider();
+
+var commander = services.Commander(); // Same as .GetRequiredService<ICommander>()
+WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2, 3 }}));
+```
+<!-- endSnippet -->
+
+The output:
+
+```
+Creating RecSumCommandHandler.
+Numbers: 1, 2, 3
+CommandContext stack size: 1
+Depth via context.Items: 1
+Numbers: 2, 3
+CommandContext stack size: 2
+Depth via context.Items: 1
+Numbers: 3
+CommandContext stack size: 3
+Depth via context.Items: 1
+Numbers:
+CommandContext stack size: 4
+Depth via context.Items: 1
+6
+```
+
+A few things are interesting here:
+
+1. You can use convention-based command handlers:
+   all you need is to decorate a method with `[CommandHandler]`
+   instead of implementing `ICommandHandler<TCommand>`.
+2. Such handlers are more flexible with the arguments:
+   - The first argument should always be the command
+   - The last one should always be the `CancellationToken`
+   - `CommandContext` arguments are resolved via `CommandContext.GetCurrent()`
+   - Everything else is resolved via `CommandContext.Services`,
+     i.e. a scoped service provider.
+
+But the most complex part of this example covers `CommandContext`.
+Contexts are "typed" &ndash; even though they all are inherited from
+`CommandContext`, their actual type is `CommandContext<TResult>`.
+
+Command context allows to:
+
+- Find currently running command
+- Set or read its result. Usually you don't have to set the result manually &ndash;
+  the code invoking command handlers ensures the result is set once
+  the "deepest" handler exist, but you may want to read it
+  in some handlers in your pipeline.
+- Manage `IServiceScope`
+- Access its `Items`. It's an `OptionSet`, ~ a thread-safe dictionary-like structure
+  helping to store any info associated with the current command.
+
+Finally, `CommandContext` is a class, but there is also
+[`ICommandContext` – an internal interface defining its API](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/Internal/ICommandContext.cs) &ndash; check it out.
+And if you're looking for details, check out
+[`CommandContext` itself](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/CommandContext.cs).
+
+So when you call a command, a new `CommandContext` is created.
+But what about the service scope? The code from `CommandContext<TResult>`
+constructor explains this better than a few sentences:
+
+```cs
+// outerContext here is CommandContext.Current (if using the same commander)
+var outerContext = isOutermost ? null : Current;
+if (outerContext is not null && outerContext.Commander != commander)
+    outerContext = null;
+
+if (outerContext is null) {
+    OuterContext = null;
+    OutermostContext = this;
+    ServiceScope = Commander.Services.CreateScope();
+}
+else {
+    OuterContext = outerContext;
+    OutermostContext = outerContext.OutermostContext;
+    ServiceScope = OutermostContext.ServiceScope;
+}
+```
+
+Note that each `CommandContext` has its own `Items` property (a `MutablePropertyBag`).
+The `ServiceScope` is shared between nested contexts when using the same `ICommander`.
+
+If you "switch" `ICommander` instances on nested calls, the new context behaves
+like it's a top-level one, i.e. it creates a new service scope and
+exposes itself as `OutermostContext`.
+
+Now it's a good time to try changing `false` to `true` in this fragment above:
+
+```cs
+var tailSum = await context.Commander.Call(
+    new RecSumCommand() { Numbers = tail }, false, // Try changing it to true
+    cancellationToken);
+```
+
+## Ways To Run A Command
+
+[`ICommander` offers just a single method to run the command](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/ICommander.cs), but in reality,
+it's the most "low-level" option, so you'll rarely need it.
+
+The actual options are implemented in
+[`CommanderExt` type](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.CommandR/CommanderEx.cs)
+(`Ext` is a shortcut for `Extensions` that's used everywhere in
+`ActualLab` projects for such classes).
+
+- `Call` is the one you should normally use.
+  It "invokes" the command and returns its result.
+- `Run` acts like `Call`, but returns `CommandContext`
+  instead. Which is why it doesn't throw an exception
+  even when one of the command handlers does &ndash; it completes
+  successfully in any case.
+  You can use e.g. `CommandContext.UntypedResult` to
+  get the actual command completion result or exception.
+- `Start` is fire-and-forget way to start a command.
+  Similarly to `Run`, it returns `CommandContext`,
+  but note that it returns this context immediately,
+  i.e. while the command associated with this context is still running.
+  Even though `CommandContext` allows you to know when
+  the command produced its result (via e.g. `CommandContext.UntypedResultTask`),
+  the result itself doesn't mean the pipeline for this command
+  completed its execution, so code in its handlers might be still running.
+
+All these methods take up to 3 arguments:
+
+- `ICommand` &ndash; obviously
+- `bool isolate = false` &ndash; an optional parameter indicating whether
+  the command should be executed in isolated fashion. If it's true,
+  the command will be executed inside
+  [`ExecutionContext.TrySuppressFlow` block](https://docs.microsoft.com/en-us/dotnet/api/system.threading.executioncontext.suppressflow?view=net-5.0),
+  so it will also be the outermost for sure.
+- `CancellationToken cancellationToken = default` &ndash;
+  a usual argument of almost any async method.
+
+## Command Services and filtering handlers
+
+The most interesting way to register command handlers
+are to declare them inside so-called Command Service:
+
+<!-- snippet: Part04_RecSumCommandServiceSession -->
+```cs
+public class RecSumCommandService : ICommandService
 {
-    // Fusion services with RPC server mode
-    var fusion = services.AddFusion(RpcServiceMode.Server, true);
-    var fusionServer = fusion.AddWebServer();
+    [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
+    public virtual async Task<long> RecSum( // Notice "public virtual"!
+        RecSumCommand command,
+        // You can't have any extra arguments here
+        CancellationToken cancellationToken = default)
+    {
+        if (command.Numbers.Length == 0)
+            return 0;
+        var head = command.Numbers[0];
+        var tail = command.Numbers[1..];
+        var context = CommandContext.GetCurrent();
+        var tailSum = await context.Commander.Call( // Note it's a direct call, but the whole pipeline still gets invoked!
+            new RecSumCommand() { Numbers = tail },
+            cancellationToken);
+        return head + tailSum;
+    }
 
-    // Add your Fusion compute services as servers
-    fusion.AddServer<ITodoApi, TodoApi>();
+    // This handler is associated with ANY command (ICommand)
+    // Priority = 10 means it runs earlier than any handler with the default priority 0
+    // IsFilter tells it triggers other handlers via InvokeRemainingHandlers
+    [CommandHandler(Priority = 10, IsFilter = true)]
+    protected virtual async Task DepthTracker(ICommand command, CancellationToken cancellationToken)
+    {
+        var context = CommandContext.GetCurrent();
+        var depth = 1 + (int) (context.Items["Depth"] ?? 0);
+        context.Items["Depth"] = depth;
+        WriteLine($"Depth via context.Items: {depth}");
 
-    // ASP.NET Core / Blazor services
-    services.AddServerSideBlazor(o => o.DetailedErrors = true);
-    services.AddRazorComponents()
-        .AddInteractiveServerComponents()
-        .AddInteractiveWebAssemblyComponents();
-    fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
+        await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
+    }
+
+    // Another filter for RecSumCommand
+    [CommandHandler(Priority = 9, IsFilter = true)]
+    protected virtual Task ArgumentWriter(RecSumCommand command, CancellationToken cancellationToken)
+    {
+        WriteLine($"Numbers: {command.Numbers.ToDelimitedString()}");
+        var context = CommandContext.GetCurrent();
+        return context.InvokeRemainingHandlers(cancellationToken);
+    }
 }
 ```
 <!-- endSnippet -->
 
-And for the app configuration:
+Such services has to be registered via `AddCommandService` method
+of the `CommanderBuilder`:
 
-<!-- snippet: Part04_Hybrid_ServerApp -->
+<!-- snippet: Part04_RecSumCommandServiceSession2 -->
 ```cs
-public static void ConfigureHybridServerApp(WebApplication app)
-{
-    app.UseWebSockets(new WebSocketOptions() {
-        KeepAliveInterval = TimeSpan.FromSeconds(30),
-    });
-    app.UseFusionSession();
-    app.UseRouting();
-    app.UseAuthentication();
-    app.UseAntiforgery();
+// Building IoC container
+var serviceBuilder = new ServiceCollection();
+var rpc = serviceBuilder.AddRpc();
+var commanderBuilder = serviceBuilder.AddCommander()
+    .AddService<RecSumCommandService>(); // Such services are auto-registered as singletons
+var services = serviceBuilder.BuildServiceProvider();
 
-    // Razor components with both Server and WebAssembly render modes
-    app.MapStaticAssets();
-    app.MapRazorComponents<_HostPage>()
-        .AddInteractiveServerRenderMode()
-        .AddInteractiveWebAssemblyRenderMode()
-        .AddAdditionalAssemblies(typeof(App).Assembly);
-
-    // Fusion RPC endpoints
-    app.MapRpcWebSocketServer();
-}
+var commander = services.Commander();
+var recSumService = services.GetRequiredService<RecSumCommandService>();
+WriteLine(recSumService.GetType());
+WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 1L, 2 }}));
+WriteLine(await commander.Call(new RecSumCommand() { Numbers = new [] { 3L, 4 }}));
 ```
 <!-- endSnippet -->
 
-### Client-side configuration (WebAssembly)
+The output:
 
-See [TodoApp/UI/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/UI/Program.cs) and [ClientStartup.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/UI/ClientStartup.cs) for a complete example. The key parts are:
-
-<!-- snippet: Part04_Wasm_Main -->
-```cs
-public static async Task WasmMain(string[] args)
-{
-    var builder = WebAssemblyHostBuilder.CreateDefault(args);
-    ConfigureWasmServices(builder.Services, builder);
-    var host = builder.Build();
-    await host.RunAsync();
-}
 ```
-<!-- endSnippet -->
-
-<!-- snippet: Part04_Wasm_Services -->
-```cs
-public static void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
-{
-    // Fusion services
-    var fusion = services.AddFusion();
-    fusion.AddAuthClient();
-    fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
-
-    // RPC clients for your services
-    fusion.AddClient<ITodoApi>();
-
-    // Configure WebSocket client to connect to the server
-    fusion.Rpc.AddWebSocketClient(builder.HostEnvironment.BaseAddress);
-
-    // Default update delay
-    services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
-}
+ActualLabProxies.RecSumCommandServiceProxy
+Depth via context.Items: 1
+Numbers: 1, 2
+Depth via context.Items: 1
+Numbers: 2
+Depth via context.Items: 1
+Numbers:
+3
+Depth via context.Items: 1
+Numbers: 3, 4
+Depth via context.Items: 1
+Numbers: 4
+Depth via context.Items: 1
+Numbers:
+7
 ```
-<!-- endSnippet -->
 
-### _HostPage.razor
+Notice that `Depth via context.Items` is always 1 because each `CommandContext`
+has its own `Items`. If you need to share data across nested command calls,
+use `context.OutermostContext.Items` instead:
 
-The host page is a Razor component that bootstraps the Blazor app. See [TodoApp/Host/Components/Pages/_HostPage.razor](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/Host/Components/Pages/_HostPage.razor) for an example. It handles:
+```cs
+var depth = 1 + (int) (context.OutermostContext.Items["Depth"] ?? 0);
+context.OutermostContext.Items["Depth"] = depth;
+```
 
-- Determining the render mode (Static, Server, or WebAssembly)
-- Setting up authentication state
-- Passing the session ID to the app
-
-### Switching Between Render Modes
-
-Fusion provides `MapFusionRenderModeEndpoints()` to handle render mode switching. Users can switch between Server-Side Blazor and WebAssembly modes at runtime, and Fusion handles the session and authentication state transfer seamlessly.
-
-Check out the [TodoApp Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/TodoApp) or [Blazor Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Blazor) to see how all of this works together.
+As you see, the proxy type generated for such services routes
+**every direct invocation of a command handler** through `ICommander.Call`.
+So contrary to regular handlers, you can invoke such handlers
+directly &ndash; the whole CommandR pipeline gets invoked for them anyway.

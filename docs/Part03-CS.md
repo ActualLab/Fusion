@@ -1,90 +1,103 @@
-# ActualLab.Rpc Cheat Sheet
+# Blazor Integration Cheat Sheet
 
-Quick reference for RPC setup and configuration.
+Quick reference for Fusion + Blazor.
 
-## RPC Server Setup
+## `ComputedStateComponent<T>`
 
-Configure RPC server (ASP.NET Core):
+Basic usage:
 
-```cs
-var fusion = builder.Services.AddFusion();
-fusion.AddServer<ICartService, CartService>();
+```razor
+@inherits ComputedStateComponent<MyData>
+@inject IMyService MyService
 
-// In Program.cs
-app.MapRpcWebSocketServer(); // Maps /rpc/ws endpoint
+@if (State.HasValue) {
+    <div>@State.Value.Name</div>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    protected override Task<MyData> ComputeState(CancellationToken cancellationToken)
+        => MyService.Get(Id, cancellationToken);
+}
 ```
 
-Expose backend services:
+Configure update delay:
 
-```cs
-fusion.AddServer<IInternalService, InternalService>(isBackend: true);
-
-builder.Services.Configure<RpcWebSocketServerOptions>(o => {
-    o.ExposeBackend = true; // Be careful with security!
-});
+```razor
+@code {
+    protected override ComputedState<MyData>.Options GetStateOptions()
+        => new() {
+            UpdateDelayer = FixedDelayer.Get(0.5), // 0.5 second delay
+        };
+}
 ```
 
-## RPC Client Setup
+Force immediate update:
 
-Configure RPC client:
-
-```cs
-var fusion = services.AddFusion();
-var rpc = fusion.Rpc;
-
-rpc.AddWebSocketClient(new Uri("https://api.example.com"));
-fusion.AddClient<ICartService>();
+```razor
+@code {
+    private async Task OnButtonClick() {
+        await SomeAction();
+        _ = State.Recompute(); // Trigger immediate recomputation
+    }
+}
 ```
 
-Custom host URL:
+## Handling Loading and Errors
 
-```cs
-services.Configure<RpcWebSocketClientOptions>(o => {
-    o.HostUrlResolver = peer => configuration["ApiUrl"];
-});
+```razor
+@inherits ComputedStateComponent<MyData>
+
+@if (!State.HasValue) {
+    <Loading />
+} else if (State.Error != null) {
+    <Error Message="@State.Error.Message" />
+} else {
+    <Content Data="@State.Value" />
+}
 ```
 
-## Compute Service Clients
+## Using `LastNonErrorValue`
 
-Register client:
+Keep showing last valid data while error occurs:
 
-```cs
-fusion.AddClient<ICartService>();
+```razor
+@if (State.LastNonErrorValue is { } data) {
+    <Content Data="@data" />
+}
+@if (State.Error != null) {
+    <ErrorBanner Message="@State.Error.Message" />
+}
 ```
 
-Use it:
+## Multiple States
 
-```cs
-// Call it like the original service.
-// Cached results are used when available.
-// Invalidations propagate from server to clients.
-var orders = await cartService.GetOrders(cartId, cancellationToken);
+```razor
+@inherits ComputedStateComponent<(User User, List<Order> Orders)>
+
+@code {
+    [Parameter] public long UserId { get; set; }
+
+    protected override async Task<(User, List<Order>)> ComputeState(CancellationToken ct)
+    {
+        var user = await UserService.Get(UserId, ct);
+        var orders = await OrderService.GetByUser(UserId, ct);
+        return (user, orders);
+    }
+}
 ```
 
-## Common Configuration
+## Parameter Change Handling
 
-Custom endpoint paths:
+State automatically recomputes when parameters change:
 
-```cs
-// Server
-builder.Services.Configure<RpcWebSocketServerOptions>(o => {
-    o.RequestPath = "/api/rpc";
-    o.BackendRequestPath = "/internal/rpc"; // Must NOT be publicly exposed!
-});
+```razor
+@code {
+    [Parameter] public long Id { get; set; }
 
-// Client (backend-to-backend only)
-services.Configure<RpcWebSocketClientOptions>(o => {
-    o.RequestPath = "/api/rpc";
-    o.BackendRequestPath = "/internal/rpc"; // Must NOT be publicly exposed!
-});
-```
-
-> **Warning:** `BackendRequestPath` must never be publicly exposed. It should only be accessible between backend services within your infrastructure (e.g., via internal network or service mesh).
-
-Retry configuration:
-
-```cs
-services.Configure<RpcOutboundCallOptions>(o => {
-    o.ReroutingDelays = RetryDelaySeq.Exp(0.5, 10); // 0.5s to 10s
-});
+    // ComputeState is called automatically when Id changes
+    protected override Task<MyData> ComputeState(CancellationToken cancellationToken)
+        => MyService.Get(Id, cancellationToken);
+}
 ```

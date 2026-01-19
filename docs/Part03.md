@@ -1,433 +1,396 @@
-# ActualLab.Rpc and Distributed Compute Services
+# Real-time UI in Blazor Apps
 
-Fusion is designed with distributed applications in mind,
-and one of its key features is the ability to expose Compute Services
-over the network via `ActualLab.Rpc` and consume such services
-via Compute Service Clients.
+You already know about `IState<T>` &ndash; it was described in [Part 1](./Part01.md).
+It's an abstraction that "tracks" the most current version of some `Computed<T>`.
+There are a few "flavors" of the `IState` &ndash; the most important ones are:
 
-## What is ActualLab.Rpc?
+- `IMutableState<T>` &ndash; in fact, a variable exposed as `IState<T>`
+- `IComputedState<T>` &ndash; a state that auto-updates once it becomes inconsistent,
+  and the update delay is controlled by `UpdateDelayer` provided to it.
 
-ActualLab.Rpc is a high-performance RPC framework for .NET that provides
-a way to call methods on remote services as if they were local.
-It uses **WebSockets** as low-level transport, but it's built to run on top of
-nearly any packet-based or streaming protocol, so it will support
-WebTransport in the near future.
+You can use these abstractions directly in your Blazor components, but
+usually it's more convenient to use the component base classes from `ActualLab.Fusion.Blazor` NuGet package.
 
-It is designed to be fast, efficient, and extensible enough
-to support Fusion's Remote Compute Service scenario.
+## Component Hierarchy Overview
 
-If you want to learn more about ActualLab.Rpc performance, check out this video:<br/>
-[<img src="./img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc – the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak)
+Fusion provides a hierarchy of Blazor component base classes, each building upon the previous one:
 
-## What is Compute Service Client?
+| Class | Purpose |
+|-------|---------|
+| `FusionComponentBase` | Base class with optimized parameter handling and event processing |
+| `CircuitHubComponentBase` | Adds `CircuitHub` and convenient service shortcuts |
+| `StatefulComponentBase<T>` | Adds `State` management with automatic UI updates |
+| `ComputedStateComponent<T>` | Auto-computed state with dependency tracking |
+| `ComputedRenderStateComponent<T>` | Optimized rendering that skips unchanged states |
+| `MixedStateComponent<T, TMutableState>` | Combines computed state with local mutable state |
 
-Compute Service Clients are remote (client-side) proxies for Compute Services built on top of the ActualLab.Rpc
-infrastructure. They take the behavior of `Computed<T>` into account to be significantly more
-efficient than equivalent plain RPC clients:
+---
 
-1. **Consistent Behavior**: They back the result of any call with `Computed<T>` that mimics the matching `Computed<T>` on the server side. This means client-side proxies can be used in other client-side Compute Services, and invalidation of a server-side dependency will trigger invalidation of its client-side replica.
+## FusionComponentBase
 
-2. **Efficient Caching**: They cache consistent `Computed<T>` replicas, and they won't make a remote call when a _consistent_ replica is still available. This provides exactly the same behavior as Compute Services, replacing "computation" with an "RPC call responsible for the computation."
+[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/FusionComponentBase.cs)
 
-3. **Automatic Invalidation**: Client-side replicas of `Computed<T>` are automatically invalidated when their server-side counterparts get invalidated, ensuring eventual consistency across the network.
+The foundation class for all Fusion Blazor components. It extends Blazor's `ComponentBase` and implements `IHandleEvent`.
 
-4. Resilience features like transparent reconnection on disconnect, persistent client-side caching, and ETag-style checks for every computed replica on reconnect are bundled &ndash; `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
+### Purpose
 
-## Using ActualLab.Rpc to create Compute Service Client
+Provides optimized parameter comparison and event handling for Blazor components. Unlike standard `ComponentBase`, it can skip `SetParametersAsync` calls when parameters haven't meaningfully changed.
 
-Let's create a simple chat service that demonstrates how Compute Service Clients work.
+### How It Works
 
-### 1. Shared Service Interface
+- Overrides `SetParametersAsync` to check if parameters have actually changed before processing
+- Implements custom event handling that optionally suppresses `StateHasChanged` calls after events
+- Uses `ComponentInfo` for efficient parameter comparison based on configurable comparison modes
 
-First, we define a common interface that both the server-side service
-and client-side proxy will implement. It will allow us to use them interchangeably
-in our code, so we can map the interface to:
+### Key Properties
 
-- a compute service implementation on the server side (e.g., in Blazor Server)
-- a compute service client on the client side (WASM, MAUI, etc.).
+| Property | Type | Description |
+|----------|------|-------------|
+| `DefaultParameterComparisonMode` | `ParameterComparisonMode` (static) | Controls how parameters are compared across all components |
+| `MustRenderAfterEvent` | `bool` | When `true`, calls `StateHasChanged` after event handlers complete |
+| `ComponentInfo` | `ComponentInfo` | Cached metadata about the component type for parameter comparison |
+| `ParameterSetIndex` | `int` | Tracks how many times parameters have been set (0 = not initialized) |
 
-<!-- snippet: Part03_SharedApi -->
+---
+
+## CircuitHubComponentBase
+
+[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/CircuitHubComponentBase.cs)
+
+Extends `FusionComponentBase` to provide access to `CircuitHub` and commonly used services.
+
+### Purpose
+
+Acts as a convenience layer that injects `CircuitHub` and exposes shortcuts to frequently needed services like `StateFactory`, `UICommander`, and `Session`.
+
+### How It Works
+
+- Injects `CircuitHub` via dependency injection
+- Exposes commonly used services as protected properties for easy access in derived components
+
+### Key Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `CircuitHub` | `CircuitHub` | The injected circuit hub containing all Fusion-related services |
+| `Services` | `IServiceProvider` | Shortcut to `CircuitHub.Services` |
+| `Session` | `Session` | Current user session |
+| `StateFactory` | `StateFactory` | Factory for creating states |
+| `UICommander` | `UICommander` | Commander for executing UI commands |
+| `Nav` | `NavigationManager` | Blazor's navigation manager |
+| `JS` | `IJSRuntime` | JavaScript interop runtime |
+
+---
+
+## StatefulComponentBase and StatefulComponentBase&lt;T&gt;
+
+[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/StatefulComponent.cs)
+
+Extends `CircuitHubComponentBase` to manage a `State` that automatically triggers UI updates.
+
+### Purpose
+
+Provides the foundation for components that need to react to state changes. When the state updates, the component automatically re-renders.
+
+### How It Works
+
+- Maintains a `State` property that can be any `IState<T>` implementation
+- Attaches a `StateChanged` handler that calls `NotifyStateHasChanged()` when the state updates
+- Sets `MustRenderAfterEvent = false` by default, since these components typically render only after state changes
+- Disposes the state when the component is disposed
+
+### Creating the State
+
+Override `CreateState()` to provide your own state, or call `SetState()` from `OnInitialized` or `SetParametersAsync`. The component ensures the state is created after the sync part of initialization completes.
+
+### Key Properties and Methods
+
+| Member | Type | Description |
+|--------|------|-------------|
+| `State` | `IState<T>` | The state being tracked (typed version) |
+| `UntypedState` | `State` | Access to the untyped base state |
+| `StateChanged` | `Action<State, StateEventKind>` | Handler invoked when state events occur |
+| `CreateState()` | Method | Override to create custom state; called if state isn't set by initialization |
+| `SetState(state, ...)` | Method | Explicitly sets the state and attaches event handlers |
+| `DisposeAsync()` | Method | Disposes the state when component is disposed |
+
+---
+
+## ComputedStateComponent and ComputedStateComponent&lt;T&gt;
+
+[View Source (base)](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/ComputedStateComponent.cs) | [View Source (typed)](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/ComputedStateComponent.Typed.cs)
+
+Extends `StatefulComponentBase<T>` to provide an auto-computed state with full Fusion dependency tracking.
+
+### Purpose
+
+The primary component base class for building real-time UI. You override `ComputeState` to define what data your component displays, and Fusion automatically re-renders the component whenever that data changes.
+
+### How It Works
+
+1. Creates a `ComputedState<T>` that uses your `ComputeState` method as its computation
+2. The `ComputeState` method runs inside Fusion's dependency tracking context
+3. When any dependency (e.g., a Compute Service method result) is invalidated, the state recomputes
+4. After recomputation, the component automatically re-renders
+
+The component also optimizes the Blazor lifecycle:
+- By default, triggers recomputation when parameters change (`RecomputeStateOnParameterChange`)
+- Skips rendering when state is inconsistent (unless `RenderInconsistentState` is set)
+- Controls which lifecycle render points trigger actual renders
+
+### Key Properties and Methods
+
+| Member | Type | Description |
+|--------|------|-------------|
+| `Options` | `ComputedStateComponentOptions` | Flags controlling component behavior |
+| `State` | `ComputedState<T>` | The auto-updating computed state |
+| `ComputeState(CancellationToken)` | Abstract method | Override to define how state is computed |
+| `GetStateOptions()` | Virtual method | Override to customize state options (initial value, category, etc.) |
+
+### ComputedStateComponentOptions Flags
+
+| Flag | Description |
+|------|-------------|
+| `RecomputeStateOnParameterChange` | Triggers `State.Recompute()` when parameters change |
+| `RenderInconsistentState` | Allows rendering even when state is invalidated |
+| `UseParametersSetRenderPoint` | Render after `OnParametersSet` |
+| `UseInitializedAsyncRenderPoint` | Render after `OnInitializedAsync` |
+| `UseParametersSetAsyncRenderPoint` | Render after `OnParametersSetAsync` |
+| `UseAllRenderPoints` | Combination of all render point flags |
+| `ComputeStateOnThreadPool` | Run `ComputeState` on thread pool instead of Blazor's sync context |
+
+### Default Options
+
+`ComputedStateComponent.DefaultOptions` is set to `RecomputeStateOnParameterChange | UseAllRenderPoints`.
+
+---
+
+## ComputedRenderStateComponent&lt;T&gt;
+
+[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/ComputedRenderStateComponent.cs)
+
+Extends `ComputedStateComponent<T>` with optimized rendering that tracks the last rendered state.
+
+### Purpose
+
+Prevents unnecessary re-renders by tracking which state snapshot was last rendered. If `ShouldRender` is called but the state hasn't changed since the last render, it returns `false`.
+
+### How It Works
+
+- Maintains a `RenderState` property that stores the last rendered `StateSnapshot`
+- In `ShouldRender()`, compares the current state snapshot with `RenderState`
+- Only returns `true` if the state has actually changed
+
+This is useful for components that may receive multiple render requests but should only actually render when their data has changed.
+
+### Key Properties and Methods
+
+| Member | Type | Description |
+|--------|------|-------------|
+| `RenderState` | `StateSnapshot` | The last rendered state snapshot |
+| `IsRenderStateChanged()` | Method | Returns `true` if state has changed since last render |
+
+### Default Options
+
+`ComputedRenderStateComponent.DefaultOptions` is set to `RecomputeStateOnParameterChange` only (no extra render points needed).
+
+---
+
+## MixedStateComponent&lt;T, TMutableState&gt;
+
+[View Source](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Blazor/Components/MixedStateComponent.cs)
+
+Extends `ComputedStateComponent<T>` to add a local `MutableState<TMutableState>` that the computed state depends on.
+
+### Purpose
+
+Handles the common pattern where a component has local UI state (like form inputs) that affects what data it displays. Changes to the mutable state automatically trigger recomputation of the computed state.
+
+### How It Works
+
+- Creates a `MutableState<TMutableState>` alongside the computed state
+- Subscribes to the mutable state's `Updated` event
+- When mutable state changes, calls `State.Recompute()` to immediately refresh the computed state (no update delay)
+
+This means you don't need to manually call `MutableState.Use()` inside `ComputeState` &ndash; the dependency is automatically established.
+
+### Key Properties and Methods
+
+| Member | Type | Description |
+|--------|------|-------------|
+| `MutableState` | `MutableState<TMutableState>` | Local mutable state for UI inputs |
+| `CreateMutableState()` | Virtual method | Override to customize mutable state creation |
+| `GetMutableStateOptions()` | Virtual method | Override to customize mutable state options |
+| `SetMutableState(state)` | Method | Explicitly sets the mutable state |
+
+---
+
+## Using These Components
+
+To have a component that automatically updates once the output of some Compute Service changes:
+
+1. Inherit from `ComputedStateComponent<T>` (or `MixedStateComponent` if you need local state)
+2. Override the `ComputeState` method to call your Compute Services
+3. Optionally override `GetStateOptions` to configure initial value, update delayer, etc.
+
+Check out the [Counter.razor example](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Components/Pages/Counter.razor) from HelloBlazorServer sample to see this in action.
+
+---
+
+## Real-time UI in Server-Side Blazor Apps
+
+For Server-Side Blazor, you need to:
+
+- Add your Compute Services to the `IServiceProvider` used by ASP.NET Core
+- Inherit your components from `ComputedStateComponent<T>` or `MixedStateComponent<T, TMutableState>`
+
+See [HelloBlazorServer/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Program.cs) for a complete example. The key parts are:
+
+<!-- snippet: Part03_ServerSideBlazor_Services -->
 ```cs
-// The interface for our chat service
-public interface IChatService : IComputeService
+public static void ConfigureServerSideBlazorServices(IServiceCollection services)
 {
-    // Compute methods – they cache the output not only on the server side
-    // but on the client side as well!
-    [ComputeMethod]
-    Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default);
-    [ComputeMethod]
-    Task<int> GetWordCount(CancellationToken cancellationToken = default);
+    // Configure services
+    var fusion = services.AddFusion();
 
-    // Regular methods
-    Task Post(string message, CancellationToken cancellationToken = default);
-    Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default);
+    // Add your Fusion compute services
+    fusion.AddFusionTime(); // Built-in time service
+    fusion.AddService<CounterService>();
+    fusion.AddService<WeatherForecastService>();
+
+    // ASP.NET Core / Blazor services
+    services.AddServerSideBlazor(o => o.DetailedErrors = true);
+    services.AddRazorComponents().AddInteractiveServerComponents();
+    fusion.AddBlazor();
+
+    // Default update delay for ComputedStateComponents
+    services.AddScoped<IUpdateDelayer>(_ => FixedDelayer.MinDelay);
 }
 ```
 <!-- endSnippet -->
 
-### 2. Server-Side Compute Service (Implementation)
+And for the app configuration:
 
-Now let's implement the server-side compute service:
-
-<!-- snippet: Part03_ServerImplementation -->
+<!-- snippet: Part03_ServerSideBlazor_App -->
 ```cs
-public class ChatService : IChatService
+public static void ConfigureServerSideBlazorApp(WebApplication app)
 {
-    private readonly Lock _lock = new();
-    private List<string> _posts = new();
+    app.UseFusionSession();
+    app.UseRouting();
+    app.UseAntiforgery();
 
-    // It's a [ComputeMethod] method -> it has to be virtual to allow Fusion to override it
-    public virtual Task<List<string>> GetRecentMessages(CancellationToken cancellationToken = default)
-        => Task.FromResult(_posts);
-
-    // It's a [ComputeMethod] method -> it has to be virtual to allow Fusion to override it
-    public virtual async Task<int> GetWordCount(CancellationToken cancellationToken = default)
-    {
-        // NOTE: GetRecentMessages() is a compute method, so the GetWordCount() call becomes dependent on it,
-        // and that's why it gets invalidated automatically when GetRecentMessages() is invalidated.
-        var messages = await GetRecentMessages(cancellationToken).ConfigureAwait(false);
-        return messages
-            .Select(m => m.Split(" ", StringSplitOptions.RemoveEmptyEntries).Length)
-            .Sum();
-    }
-
-    // Regular method
-    public Task<int> GetWordCountPlainRpc(CancellationToken cancellationToken = default)
-        => GetWordCount(cancellationToken);
-
-    // Regular method
-    public Task Post(string message, CancellationToken cancellationToken = default)
-    {
-        lock (_lock) {
-            var posts = _posts.ToList(); // We can't update the list itself (it's shared), but we can re-create it
-            posts.Add(message);
-            if (posts.Count > 10)
-                posts.RemoveAt(0);
-            _posts = posts;
-        }
-
-        using var _1 = Invalidation.Begin();
-        _ = GetRecentMessages(default); // No need to invalidate GetWordCount() – it depends on GetRecentMessages()
-        return Task.CompletedTask;
-    }
+    app.MapStaticAssets();
+    app.MapRazorComponents<_HostPage>()
+        .AddInteractiveServerRenderMode();
 }
 ```
 <!-- endSnippet -->
 
-### 3. Configuration
+## Real-time UI in Blazor WebAssembly / Hybrid Apps
 
-We'll use ASP.NET Core Web Host to host the ActualLab.Rpc server
-that exposes `IChatService`:
+Modern Fusion apps use a hybrid approach where the same UI components can run in both Server-Side Blazor and WebAssembly modes. The server hosts the Compute Services and exposes them via RPC, while the client can consume them either directly (SSB) or via RPC clients (WASM).
 
-<!-- snippet: Part03_ServerSetup -->
+See [TodoApp](https://github.com/ActualLab/Fusion.Samples/tree/master/src/TodoApp) or [Blazor Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Blazor) for complete examples.
+
+### Server-side configuration
+
+See [TodoApp/Host/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/Host/Program.cs) for a complete example. The key parts are:
+
+<!-- snippet: Part03_Hybrid_ServerServices -->
 ```cs
-var builder = WebApplication.CreateBuilder();
-builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
-builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(3));
+public static void ConfigureHybridServerServices(IServiceCollection services)
+{
+    // Fusion services with RPC server mode
+    var fusion = services.AddFusion(RpcServiceMode.Server, true);
+    var fusionServer = fusion.AddWebServer();
 
-// Adding Fusion.
-// RpcServiceMode.Server is going to be the default mode for further `fusion.AddService()` calls,
-// which means that any compute service added via `fusion.AddService()` will be shared via RPC as well.
-var fusion = builder.Services.AddFusion(RpcServiceMode.Server);
-fusion.AddWebServer(); // Adds the RPC server middleware
-fusion.AddService<IChatService, ChatService>(RpcServiceMode.Server); // Adds the chat service impl. (Compute Service)
+    // Add your Fusion compute services as servers
+    fusion.AddServer<ITodoApi, TodoApi>();
 
-var app = builder.Build();
-app.UseWebSockets(); // Enable WebSockets support on Kestrel server
-app.MapRpcWebSocketServer(); // Map the ActualLab.Rpc WebSocket server endpoint ("/rpc/ws")
-```
-<!-- endSnippet -->
-
-<!-- snippet: Part03_RunServer -->
-```cs
-try {
-    await app.RunAsync("http://localhost:22222/").WaitAsync(cancellationToken);
-}
-catch (Exception error) {
-    if (error.IsCancellationOf(cancellationToken))
-        await app.StopAsync();
-    else
-        Error.WriteLine($"Server failed: {error.Message}");
+    // ASP.NET Core / Blazor services
+    services.AddServerSideBlazor(o => o.DetailedErrors = true);
+    services.AddRazorComponents()
+        .AddInteractiveServerComponents()
+        .AddInteractiveWebAssemblyComponents();
+    fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
 }
 ```
 <!-- endSnippet -->
 
-As for the client-side, we need to:
+And for the app configuration:
 
-1. Configure `IServiceProvider` to use both Fusion and ActualLab.Rpc
-2. Make Fusion to register Compute Service Client (in fact, an "advanced" RPC client) for `IChatService`.
-
-<!-- snippet: Part03_ClientSetup -->
+<!-- snippet: Part03_Hybrid_ServerApp -->
 ```cs
-var fusion = services.AddFusion(); // No default RpcServiceMode, so it will be set to RpcServiceMode.Local
-var rpc = fusion.Rpc; // The same as services.AddRpc(), but slightly faster, since FusionBuilder already did it
-rpc.AddWebSocketClient("http://localhost:22222/"); // Adds the WebSocket client for ActualLab.Rpc
-fusion.AddClient<IChatService>(); // Adds the chat service client (Compute Service Client)
-```
-<!-- endSnippet -->
-
-### 4. Client Usage
-
-API-wise, there is no difference between the Compute Service and its client.
-
-But the similarity goes even further: it serves the replicas of server-side computed
-values under the hood, so it also behaves the same. In particular:
-
-- `Computed.Capture(...)` and `Computed<T>.Changes()` work the same way with the client
-- If your client hosts local Compute Services, the computed values they
-  produce can be dependent on computed values produced by Compute Service Client.
-
-In other words, there is no difference between the Compute Service and its client.
-And that's what makes Compute Services so powerful: they allow building reactive
-services that can be local, remote, or even a mix of both (later you'll learn that
-Fusion also supports distributed call routing and service meshes), and no matter
-which kind of service you use, they behave the same way.
-
-And finally, this is what powers the client-side reactivity in all Fusion + Blazor samples.
-
-Fusion's `ComputedStateComponent<T>` uses `ComputedState<T>` under the hood,
-so when such states get (re)computed, their outputs become dependent on
-the output of Compute Service Client(s) they call, which, in turn, "mirror"
-the server-side Compute Service outputs. So:
-
-- when the corresponding server-side `Computed<T>` gets invalidated,
-- ActualLab.Rpc call tracker subscribed to it sends ~ `Invalidate(callId)` message to the client,
-- which invalidates the client-side `Computed<T>` replica of that server-side computed value,
-- which triggers the invalidation of the client-side `Computed<T>` values depending on it,
-- some of such computed instances are associated with `ComputedStateComponent<T>.State`-s,
-- which triggers re-computation of these states,
-- which, in turn, triggers re-rendering of corresponding `ComputedStateComponent<T>`-s.
-
-<!-- snippet: Part03_RunClient -->
-```cs
-await using var services = CreateClientServiceProvider();
-var chatClient = services.GetRequiredService<IChatService>();
-
-// Start GetWordCount() change observer
-var cWordCount0 = await Computed.Capture(() => chatClient.GetWordCount());
-_ = Task.Run(async () => {
-    await foreach (var cWordCount in cWordCount0.Changes())
-        WriteLine($"GetWordCount() -> {cWordCount}, Value: {cWordCount.Value}");
-});
-
-// Start GetRecentMessages() change observer
-var cMessages0 = await Computed.Capture(() => chatClient.GetRecentMessages());
-_ = Task.Run(async () => {
-    await foreach (var cMessages in cMessages0.Changes()) {
-        await Task.Delay(25); // We delay the output to print GetWordCount() first
-        WriteLine($"GetRecentMessages() -> {cMessages}, Value:");
-        foreach (var message in cMessages.Value)
-            WriteLine($"- {message}");
-        WriteLine();
-    }
-});
-
-// Post some messages
-await chatClient.Post("Hello, World!");
-await Task.Delay(100);
-await chatClient.Post("Let's count to 3!");
-string[] data = ["One", "Two", "Three"];
-for (var i = 1; i <= 3; i++) {
-    await Task.Delay(1000);
-    await chatClient.Post(data.Take(i).ToDelimitedString());
-}
-await Task.Delay(1000);
-await chatClient.Post("Done counting!");
-await Task.Delay(1000);
-```
-<!-- endSnippet -->
-
-The output:
-
-<!-- snippet: Part03_Output -->
-```cs
-/* The output:
-GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
-GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.d5, State: Invalidated), Value:
-
-GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h5, State: Consistent), Value: 2
-GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.l5, State: Consistent), Value:
-- Hello, World!
-
-GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.p5, State: Consistent), Value: 6
-GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.4q, State: Consistent), Value:
-- Hello, World!
-- Let's count to 3!
-
-GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.d0, State: Consistent), Value: 7
-GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.cp, State: Consistent), Value:
-- Hello, World!
-- Let's count to 3!
-- One
-
-GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4v, State: Consistent), Value: 9
-GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.gp, State: Consistent), Value:
-- Hello, World!
-- Let's count to 3!
-- One
-- One, Two
-
-GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.ou, State: Consistent), Value: 12
-GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.8v, State: Consistent), Value:
-- Hello, World!
-- Let's count to 3!
-- One
-- One, Two
-- One, Two, Three
-
-GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.h0, State: Consistent), Value: 14
-GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.kp, State: Consistent), Value:
-- Hello, World!
-- Let's count to 3!
-- One
-- One, Two
-- One, Two, Three
-- Done counting!
-*/
-```
-<!-- endSnippet -->
-
-## Client Performance
-
-Computed Service Clients are invalidation-aware, which means they also eliminate unnecessary RPC calls.
-The RPC call is deemed unnecessary, if:
-
-- The client finds a `Computed<T>` replica for it (i.e., for the same call to the same service with the same arguments)
-- And this replica is still in `Consistent` state (i.e., wasn't invalidated from the moment it was created).
-
-In other words, Computed Service Clients cache call results and reuse them
-until they learn from the server that some of these results have been invalidated.
-
-And that's why performance-wise, such clients are almost exact replicas of server-side Compute Services:
-
-- They resort to RPC only when they don't have a cached value for a given call,
-  or a re-computation (due to invalidation) happened on the server side
-- Otherwise, they respond instantly.
-
-Let's see this in action. We've already added the `GetWordCountPlainRpc` method to our interface
-and implementation &ndash; since it's not a compute method, it won't benefit from Fusion's caching.
-
-<!-- snippet: Part03_Benchmark -->
-```cs
-// Benchmarking remote compute method calls and plain RPC calls – run in Release mode!
-WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc():");
-WriteLine("- Warmup...");
-for (int i = 0; i < 100_000; i++)
-    await chatClient.GetWordCount().ConfigureAwait(false);
-for (int i = 0; i < 100_000; i++)
-    await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
-WriteLine("- Benchmarking...");
-var stopwatch = Stopwatch.StartNew();
-for (int i = 0; i < 100_000; i++)
-    await chatClient.GetWordCount().ConfigureAwait(false);
-WriteLine($"- GetWordCount():         {stopwatch.Elapsed.ToShortString()}");
-stopwatch.Restart();
-for (int i = 0; i < 100_000; i++)
-    await chatClient.GetWordCountPlainRpc().ConfigureAwait(false);
-WriteLine($"- GetWordCountPlainRpc(): {stopwatch.Elapsed.ToShortString()}");
-```
-<!-- endSnippet -->
-
-The output:
-
-<!-- snippet: Part03_Benchmark_Output -->
-```cs
-/* The output:
-100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release mode!
-- Warmup...
-- Benchmarking...
-- GetWordCount():         12.187ms
-- GetWordCountPlainRpc(): 2.474s
-*/
-```
-<!-- endSnippet -->
-
-As you can see, Compute Service Client processes about **10,000,000 calls/s**
-on a single CPU core in the "cache hit" scenario.
-
-A bit more robust test would produce 18M call/s, or 55ns per-call timing on the same machine;
-for the comparison, a single `Dictionary<TKey, TValue>` lookup requires ~5-10ns on .NET 10.
-
-And it's ~200x faster than plain RPC via ActualLab.Rpc, which translates to **600-2000x
-speedup compared to RPC via SignalR, gRPC, or HTTP**.
-
-If you are interested in more robust benchmarks, check out `Benchmark` and `RpcBenchmark`
-projects in [Fusion Samples](https://github.com/ActualLab/Fusion.Samples).
-
-## Client-Side Computed State
-
-In [Part 1](./Part01.md), you learned about `ComputedState<T>` &ndash; a state that
-auto-updates once it becomes inconsistent. Now, let's show that client-side
-`ComputedState<T>` can use a Compute Service Client to "observe" the output of
-a server-side Compute Service.
-
-The code below reuses the `IChatService` and server setup from above,
-but adds a `ComputedState<T>` on the client side that tracks changes:
-
-<!-- snippet: Part03_ClientComputedState -->
-```cs
-var stateFactory = services.StateFactory();
-using var state = stateFactory.NewComputed(
-    new ComputedState<string>.Options() {
-        UpdateDelayer = FixedDelayer.Get(0.5), // 0.5 second update delay
-        EventConfigurator = state1 => {
-            // A shortcut to attach 3 event handlers: Invalidated, Updating, Updated
-            state1.AddEventHandler(StateEventKind.All,
-                (s, e) => WriteLine($"{e}: {s.Value}"));
-        },
-    },
-    async (state, cancellationToken) => {
-        var wordCount = await chatClient.GetWordCount(cancellationToken);
-        return $"Word count: {wordCount}";
+public static void ConfigureHybridServerApp(WebApplication app)
+{
+    app.UseWebSockets(new WebSocketOptions() {
+        KeepAliveInterval = TimeSpan.FromSeconds(30),
     });
+    app.UseFusionSession();
+    app.UseRouting();
+    app.UseAuthentication();
+    app.UseAntiforgery();
 
-await state.Update(); // Ensures the state gets an up-to-date value
+    // Razor components with both Server and WebAssembly render modes
+    app.MapStaticAssets();
+    app.MapRazorComponents<_HostPage>()
+        .AddInteractiveServerRenderMode()
+        .AddInteractiveWebAssemblyRenderMode()
+        .AddAdditionalAssemblies(typeof(App).Assembly);
 
-await chatClient.Post("Hello, World!");
-await Task.Delay(1000);
-await chatClient.Post("One Two Three");
-await Task.Delay(1000);
+    // Fusion RPC endpoints
+    app.MapRpcWebSocketServer();
+}
 ```
 <!-- endSnippet -->
 
-The output:
+### Client-side configuration (WebAssembly)
 
-```text
-Invalidated:
-Updating:
-Updated: Word count: 0
-Invalidated: Word count: 0
-Updating: Word count: 0
-Updated: Word count: 2
-Invalidated: Word count: 2
-Updating: Word count: 2
-Updated: Word count: 5
+See [TodoApp/UI/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/UI/Program.cs) and [ClientStartup.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/UI/ClientStartup.cs) for a complete example. The key parts are:
+
+<!-- snippet: Part03_Wasm_Main -->
+```cs
+public static async Task WasmMain(string[] args)
+{
+    var builder = WebAssemblyHostBuilder.CreateDefault(args);
+    ConfigureWasmServices(builder.Services, builder);
+    var host = builder.Build();
+    await host.RunAsync();
+}
 ```
+<!-- endSnippet -->
 
-Notice the state lifecycle:
-1. **Updated** &ndash; state was computed (or re-computed)
-2. **Invalidated** &ndash; the state's underlying `Computed<T>` became inconsistent
-3. **Updating** &ndash; state is about to recompute (after the `UpdateDelayer` delay)
+<!-- snippet: Part03_Wasm_Services -->
+```cs
+public static void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
+{
+    // Fusion services
+    var fusion = services.AddFusion();
+    fusion.AddAuthClient();
+    fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
 
-This is exactly the mechanism that powers real-time UI in Fusion's Blazor components.
+    // RPC clients for your services
+    fusion.AddClient<ITodoApi>();
 
-## Real-Time UI Updates
+    // Configure WebSocket client to connect to the server
+    fusion.Rpc.AddWebSocketClient(builder.HostEnvironment.BaseAddress);
 
-As you might guess, this is exactly the logic our Blazor samples use to update
-the UI in real time. Moreover, we similarly use the same interface both for
-Compute Services and their clients &ndash; and that's precisely what allows
-us to have the same UI components working in WASM and Server-Side Blazor mode:
+    // Default update delay
+    services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
+}
+```
+<!-- endSnippet -->
 
-- When UI components are rendered on the server side, they pick server-side
-  Compute Services from host's `IServiceProvider` as implementation of
-  `IWhateverService`. Replicas aren't needed there, because everything is local.
-- And when the same UI components are rendered on the client, they pick
-  Compute Service Client as `IWhateverService` from the client-side IoC container,
-  and that's what makes any `IState<T>` update in real time there, which
-  in turn makes UI components re-render.
+### _HostPage.razor
 
-## Summary
+The host page is a Razor component that bootstraps the Blazor app. See [TodoApp/Host/Components/Pages/_HostPage.razor](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/Host/Components/Pages/_HostPage.razor) for an example. It handles:
 
-**That's pretty much it &ndash; now you've learned all the key features of Fusion.**
-There are details, of course, and the rest of the tutorial is mostly about them.
+- Determining the render mode (Static, Server, or WebAssembly)
+- Setting up authentication state
+- Passing the session ID to the app
 
+### Switching Between Render Modes
+
+Fusion provides `MapFusionRenderModeEndpoints()` to handle render mode switching. Users can switch between Server-Side Blazor and WebAssembly modes at runtime, and Fusion handles the session and authentication state transfer seamlessly.
+
+Check out the [TodoApp Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/TodoApp) or [Blazor Sample](https://github.com/ActualLab/Fusion.Samples/tree/master/src/Blazor) to see how all of this works together.
