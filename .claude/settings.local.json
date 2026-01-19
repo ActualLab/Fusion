@@ -18,7 +18,8 @@
       "Bash(findstr:*)",
       "Bash(git *)",
       "Bash(AC_ProjectRoot='D:\\\\Projects' pwsh -ExecutionPolicy Bypass -File c.ps1 --dry-run)",
-      "Bash(AC_ProjectRoot='D:\\\\Projects' pwsh -ExecutionPolicy Bypass -File c.ps1 os --dry-run)"
+      "Bash(AC_ProjectRoot='D:\\\\Projects' pwsh -ExecutionPolicy Bypass -File c.ps1 os --dry-run)",
+      "Bash(echo:*)"
     ]
   },
   "outputStyle": "default"

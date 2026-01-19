@@ -32,6 +32,7 @@ export default defineConfig({
               { text: "Computed<T>", link: "/Part01-C" },
               { text: "ComputedOptions", link: "/Part01-CO" },
               { text: "States", link: "/Part01-ST" },
+              { text: "Diagrams", link: "/Part01-D" },
             ],
           },
           { text: "2. Local Compute Services on Server-Side", link: "/Part02" },
