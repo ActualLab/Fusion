@@ -1,6 +1,6 @@
 # Epilogue
 
-You've reached the end of this tutorial, and we truly hope you
+You've reached the end of Fusion documentation, and we truly hope you
 have enjoyed it and have had a good learning experience.
 
 If you're looking for more content to read, check out these posts:

@@ -60,7 +60,7 @@ public static void ConfigureServices(IServiceCollection services, IHostEnvironme
 {
     services.AddDbContextServices<AppDbContext>(db => {
         // Uncomment if you'll be using AddRedisOperationLogWatcher
-        // db.AddRedisDb("localhost", "Fusion.Tutorial.Part10");
+        // db.AddRedisDb("localhost", "FusionDocumentation.Part06");
 
         db.AddOperations(operations => {
             // This call enabled Operations Framework (OF) for AppDbContext.

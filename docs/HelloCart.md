@@ -511,8 +511,7 @@ dependent on:
 - Every product that's referenced by items in this cart.
 
 > If you want to learn more about Compute Services and
-> `IComputed`, check out [Part 1](Part01.md) and [Part 2](Part02.md)
-> of this Tutorial later.
+> `IComputed`, check out [Part 1](Part01.md).
 
 Now it's time to demystify how `Get(productId)` call result gets
 invalidated once a product with `productId` gets changed.
@@ -652,8 +651,7 @@ And a few final remarks on this:
    This pipeline is server-side only.
 
 > If you want to learn all the details about this &ndash; check out
-> [Part 5](Part05.md) and [Part 10](Part06.md)
-> of the Tutorial 😎
+> [Part 5](Part05.md) and [Part 6](Part06.md).
 
 ## Version 2: Switching to EF Core
 
