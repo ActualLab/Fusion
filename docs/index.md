@@ -204,8 +204,8 @@ public class UserService(IServiceProvider services) : DbServiceBase<AppDbContext
     {
         // Calls other compute methods - dependencies tracked automatically
         var user = await GetUser(id, cancellationToken);
-        var stats = await GetUserStats(id, cancellationToken);
-        return new UserProfile(user, stats);
+        var avatar = await GetUserAvatar(id, cancellationToken);
+        return new UserProfile(user, avatar);
     }
 
     // Regular method
