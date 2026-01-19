@@ -1,4 +1,5 @@
-# Claude Code sandbox environment for ActualLab.Fusion
+# Claude Code sandbox environment for ActualLab projects
+# Supports: ActualLab.Fusion, ActualLab.Fusion.Samples, ActualChat
 # Includes: .NET 10 SDK, Node.js 20, Claude Code CLI
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0
@@ -18,6 +19,14 @@ RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv \
     imagemagick \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install PowerShell
+RUN wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb && \
+    dpkg -i packages-microsoft-prod.deb && \
+    rm packages-microsoft-prod.deb && \
+    apt-get update && \
+    apt-get install -y powershell && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Python charting and data analysis libraries
 RUN pip3 install --break-system-packages \
@@ -39,11 +48,11 @@ RUN useradd -m $USERNAME && \
     echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME && \
     chmod 0440 /etc/sudoers.d/$USERNAME
 
-# Setup directories
+# Setup directories for all projects (mounted at /proj/<project-name>)
 RUN mkdir -p /home/$USERNAME/.claude && \
     touch /home/$USERNAME/.claude.json && \
-    mkdir -p /project && \
-    chown -R $USERNAME:$USERNAME /home/$USERNAME/.claude /home/$USERNAME/.claude.json /project
+    mkdir -p /proj && \
+    chown -R $USERNAME:$USERNAME /home/$USERNAME/.claude /home/$USERNAME/.claude.json /proj
 
 # NPM global setup for user
 RUN mkdir -p /usr/local/share/npm-global && \
@@ -75,8 +84,8 @@ ENV PATH=$PATH:/usr/local/share/npm-global/bin
 ENV CLAUDE_INSTALL_METHOD=npm
 RUN npm install -g @anthropic-ai/claude-code
 
-# Working directory is the mounted project
-WORKDIR /project
+# Default working directory (overridden by -w flag in docker run)
+WORKDIR /proj
 
 # Default: launch Claude CLI
 CMD ["claude", "--dangerously-skip-permissions"]

@@ -14,7 +14,9 @@
       "Bash(npm run docs:build:*)",
       "Bash(timeout 15 npm run docs:dev:*)",
       "Bash(ls:*)",
-      "Bash(docker build:*)"
+      "Bash(docker build:*)",
+      "Bash(findstr:*)",
+      "Bash(git *)",
     ]
   },
   "outputStyle": "default"

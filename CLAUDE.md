@@ -1,12 +1,42 @@
 Before starting any task, read AGENTS.md files in every directory starting from the current one and above, up to the root one (project directory).
 
-# Environment
+# Claude Launcher (c.ps1)
 
-If your project folder is `/project`, you are running inside a Docker container defined in `claude.Dockerfile`. This overrides any statement that you run on Windows - you are running on Linux in the container.
+You may be started via `c.ps1` launcher script. This script can run Claude in different environments:
+- **Docker** (default) - sandboxed Linux container
+- **WSL** - Windows Subsystem for Linux
+- **OS** - directly on the host operating system
 
-# ActualLab.Fusion.Samples Location
+When started via the launcher, environment variables are set to help you understand your environment. Check these variables to determine where you're running and how to access projects.
 
-The Fusion Samples repository (https://github.com/ActualLab/Fusion.Samples on GitHub) is available at different paths depending on your environment:
-- **Docker container**: `/samples-project`
-- **Windows (outside Docker)**: `D:\Projects\ActualLab.Fusion.Samples`
+## Environment Variables
 
+| Variable | Description |
+|----------|-------------|
+| `AC_ProjectRoot` | Root directory containing all projects |
+| `AC_Project` | Current project name (e.g., `ActualLab.Fusion`) |
+| `AC_OS` | Operating system/environment description |
+| `AC_Project0Path` | Full path to project 0 (ActualChat) |
+| `AC_Project1Path` | Full path to project 1 (ActualLab.Fusion) |
+| `AC_Project2Path` | Full path to project 2 (ActualLab.Fusion.Samples) |
+
+If AC_OS has no value, you're started directly, so none of this is in effect.
+
+## Detecting Your Environment
+
+Check `AC_OS` to determine where you're running:
+- `Linux in Docker` - Running in a Docker container (sandboxed)
+- `Linux on WSL` - Running in Windows Subsystem for Linux
+- `Windows` - Running directly on Windows
+- `Linux` - Running directly on Linux
+- `macOS` - Running directly on macOS
+
+## Project Paths by Environment
+
+Use `AC_Project0Path`, `AC_Project1Path`, `AC_Project2Path` to get full paths to other projects you may need to access. These are automatically adjusted for the environment:
+
+| Environment | AC_ProjectRoot | AC_Project1Path (example) |
+|-------------|----------------|---------------------------|
+| Docker | `/proj` | `/proj/ActualLab.Fusion` |
+| WSL | `/mnt/d/Projects` | `/mnt/d/Projects/ActualLab.Fusion` |
+| Windows | `D:\Projects` | `D:\Projects\ActualLab.Fusion` |
