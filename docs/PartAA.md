@@ -1,8 +1,133 @@
 # Authentication in Fusion
 
-[ActualLab.Fusion](https://www.nuget.org/packages/ActualLab.Fusion/)
-is a library that provides a robust way to implement authentication
-in Fusion applications.
+Fusion provides a comprehensive authentication system that integrates with ASP.NET Core and provides real-time authentication state updates across all connected clients.
+
+## Key Features
+
+- **Real-time auth state**: Authentication changes instantly propagate to all connected clients
+- **Session management**: Cookie-based sessions with optional tags and metadata
+- **Multi-provider support**: Works with any ASP.NET Core authentication provider
+- **Database or in-memory storage**: Production-ready persistence or quick prototyping
+- **Multi-session support**: Users can manage sessions across devices
+- **Presence tracking**: Know which users are currently active
+
+
+## Required Packages
+
+| Package | Purpose |
+|---------|---------|
+| [ActualLab.Fusion.Ext.Contracts](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Contracts/) | Client-side: `IAuth`, `User`, `Session`, `SessionInfo` |
+| [ActualLab.Fusion.Ext.Services](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Services/) | Server-side: `InMemoryAuthService`, `DbAuthService`, `IAuthBackend` |
+| [ActualLab.Fusion.Server](https://www.nuget.org/packages/ActualLab.Fusion.Server/) | Server-side: `SessionMiddleware`, `ServerAuthHelper`, auth endpoints |
+| [ActualLab.Fusion.Blazor.Authentication](https://www.nuget.org/packages/ActualLab.Fusion.Blazor.Authentication/) | Blazor: `AuthStateProvider`, `ClientAuthHelper`, `CascadingAuthState` |
+| [ActualLab.Fusion.EntityFramework](https://www.nuget.org/packages/ActualLab.Fusion.EntityFramework/) | Required for `DbAuthService` (database storage) |
+
+::: tip
+`ActualLab.Fusion.Server` automatically references `ActualLab.Fusion.Ext.Services` and `ActualLab.Fusion.Ext.Contracts`.
+For Blazor apps, add `ActualLab.Fusion.Blazor.Authentication` which references `ActualLab.Fusion.Ext.Contracts`.
+:::
+
+
+## Documentation Structure
+
+| Document | Description |
+|----------|-------------|
+| [Interfaces & Commands](PartAA-Interfaces.md) | Core APIs: `IAuth`, `IAuthBackend`, `User`, `Session`, commands |
+| [Database Services](PartAA-DB.md) | `DbAuthService`, entity types, session trimmer |
+| [Server Components](PartAA-Server.md) | `SessionMiddleware`, `ServerAuthHelper`, ASP.NET Core integration |
+| [Diagrams](PartAA-D.md) | Architecture and flow diagrams |
+| [Cheat Sheet](PartAA-CS.md) | Quick reference with code snippets |
+
+
+## Quick Start
+
+### 1. Register Authentication Services
+
+```csharp
+var fusion = services.AddFusion();
+var fusionServer = fusion.AddWebServer();
+
+// For production: database storage
+fusion.AddDbAuthService<AppDbContext, long>();
+
+// For development: in-memory storage
+// fusion.AddInMemoryAuthService();
+```
+
+### 2. Configure ASP.NET Core Authentication
+
+```csharp
+services.AddAuthentication(options => {
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+}).AddCookie(options => {
+    options.LoginPath = "/signIn";
+    options.LogoutPath = "/signOut";
+    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+}).AddGoogle(options => {
+    options.ClientId = "...";
+    options.ClientSecret = "...";
+});
+```
+
+### 3. Configure App Pipeline
+
+```csharp
+app.UseFusionSession();
+app.UseRouting();
+app.UseAuthentication();
+
+app.MapRpcWebSocketServer();
+app.MapFusionAuthEndpoints();
+```
+
+### 4. Use in Components
+
+```razor
+@inherits ComputedStateComponent<User?>
+@inject IAuth Auth
+@inject Session Session
+
+@if (State.Value?.IsAuthenticated() == true) {
+    <p>Welcome, @State.Value.Name!</p>
+}
+
+@code {
+    protected override Task<User?> ComputeState(CancellationToken ct)
+        => Auth.GetUser(Session, ct);
+}
+```
+
+
+## Core Concepts
+
+### Session
+
+A `Session` identifies a user's connection, stored in an HTTP-only cookie:
+
+```csharp
+public class Session : IHasId<string>
+{
+    public static Session Default { get; } = new("~");  // For WASM clients
+    public string Id { get; }                            // Unique identifier
+    public string Hash { get; }                          // Short hash for display
+}
+```
+
+### IAuth vs IAuthBackend
+
+| Interface | Purpose | Requires Session | RPC Exposed |
+|-----------|---------|------------------|-------------|
+| `IAuth` | Client-facing queries and commands | Yes | Yes |
+| `IAuthBackend` | Server-side modifications | No | No |
+
+### Authentication Flow
+
+1. User clicks "Sign In" -> Redirects to OAuth provider
+2. Provider authenticates -> Redirects back with tokens
+3. `ServerAuthHelper.UpdateAuthState()` syncs ASP.NET Core auth to Fusion
+4. `IAuth.GetUser()` returns the authenticated user
+5. All components depending on auth state automatically update
+
 
 ## Fusion Session
 
@@ -116,15 +241,15 @@ When you add authentication, `InMemoryAuthService` is registered as `IAuth` and 
 to the following code snippet.
 
 The Operations Framework is also needed for any of these services &ndash;
-hopefully you read [Part 10](./Part06.md), which covers it.
+hopefully you read [Part 5](./Part05.md), which covers it.
 
-<!-- snippet: Part06_AddDbContextServices -->
+<!-- snippet: PartAA_AddDbContextServices -->
 ```cs
 public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
     services.AddDbContextServices<AppDbContext>(db => {
         // Uncomment if you'll be using AddRedisOperationLogWatcher
-        // db.AddRedisDb("localhost", "FusionDocumentation.Part06");
+        // db.AddRedisDb("localhost", "FusionDocumentation.PartAA");
 
         db.AddOperations(operations => {
             // This call enabled Operations Framework (OF) for AppDbContext.
@@ -152,7 +277,7 @@ public static void ConfigureServices(IServiceCollection services, IHostEnvironme
 Our `DbContext` needs to contain `DbSet`-s for the classes provided here as type parameters.
 The `DbSessionInfo` and `DbUser` classes are very simple entities provided by Fusion for storing authentication data.
 
-<!-- snippet: Part06_AppDbContext -->
+<!-- snippet: PartAA_AppDbContext -->
 ```cs
 public DbSet<DbUser<long>> Users { get; protected set; } = null!;
 public DbSet<DbUserIdentity<long>> UserIdentities { get; protected set; } = null!;
@@ -169,7 +294,7 @@ These entity types are defined in:
 
 Our Compute Services can receive a `Session` object that we can use to decide if we are authenticated or not and who the signed in user is:
 
-<!-- snippet: Part06_GetMyOrders -->
+<!-- snippet: PartAA_GetMyOrders -->
 ```cs
 [ComputeMethod]
 public virtual async Task<List<OrderHeaderDto>> GetMyOrders(Session session, CancellationToken cancellationToken = default)
@@ -256,7 +381,7 @@ Notice that it assumes there is [`fusionAuth.js`](https://github.com/ActualLab/F
 
 Besides that, you need to add a couple extras to your ASP.NET Core app service container configuration:
 
-<!-- snippet: Part06_ServiceConfiguration -->
+<!-- snippet: PartAA_ServiceConfiguration -->
 ```cs
 public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
@@ -315,7 +440,7 @@ If you want to use some other logic for these actions, you can map them to simil
 
 And finally, you need a bit of extras in app configuration:
 
-<!-- snippet: Part06_AppConfiguration -->
+<!-- snippet: PartAA_AppConfiguration -->
 ```cs
 public static void ConfigureApp(WebApplication app)
 {
@@ -477,3 +602,12 @@ This is how `Authentication.razor` page in `TodoApp` template uses it:
 ```
 
 And if you are curious, `SignOutEverywhere()` signs out _every_ session of the current user. This is possible, since `IAuthBackend` actually has a method allowing to enumerate these sessions. Because... Why not?
+
+
+## What's Next
+
+- [Interfaces & Commands](PartAA-Interfaces.md) - Deep dive into `IAuth`, `IAuthBackend`, `User`, `Session`, and commands
+- [Database Services](PartAA-DB.md) - Configure `DbAuthService`, customize entities, and manage sessions
+- [Server Components](PartAA-Server.md) - Understand `SessionMiddleware`, `ServerAuthHelper`, and ASP.NET Core integration
+- [Diagrams](PartAA-D.md) - Visual architecture and flow diagrams
+- [Cheat Sheet](PartAA-CS.md) - Quick reference with common patterns

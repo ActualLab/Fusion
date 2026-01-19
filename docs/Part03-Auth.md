@@ -2,7 +2,7 @@
 
 This document covers Fusion's Blazor authentication integration: `AuthState`, `AuthStateProvider`, `ClientAuthHelper`, `CascadingAuthState`, and `PresenceReporter`.
 
-> **Note**: For the core authentication system (`IAuth`, `User`, `Session`), see [Part 6: Authentication in Fusion](Part06.md).
+> **Note**: For the core authentication system (`IAuth`, `User`, `Session`), see [Authentication in Fusion](PartAA.md).
 
 
 ## Overview

@@ -84,15 +84,34 @@ export default defineConfig({
               { text: "Cheat Sheet", link: "/Part05-CS" },
             ],
           },
+          { text: "NuGet Packages", link: "/NuGet-Packages" },
+        ],
+      },
+      {
+        text: "Advanced Concepts",
+        items: [
           {
-            text: "6. Authentication in Fusion",
-            link: "/Part06",
+            text: "Authentication in Fusion",
+            link: "/PartAA",
             collapsed: true,
             items: [
-              { text: "Cheat Sheet", link: "/Part06-CS" },
+              { text: "Interfaces & Commands", link: "/PartAA-Interfaces" },
+              { text: "Database Services", link: "/PartAA-DB" },
+              { text: "Server Components", link: "/PartAA-Server" },
+              { text: "Diagrams", link: "/PartAA-D" },
+              { text: "Cheat Sheet", link: "/PartAA-CS" },
             ],
           },
-          { text: "NuGet Packages", link: "/NuGet-Packages" },
+          {
+            text: "Interceptors and Proxies",
+            link: "/PartAP",
+            collapsed: true,
+            items: [
+              { text: "Proxy Generation", link: "/PartAP-PG" },
+              { text: "Built-in Interceptors", link: "/PartAP-BI" },
+              { text: "Cheat Sheet", link: "/PartAP-CS" },
+            ],
+          },
         ],
       },
       {

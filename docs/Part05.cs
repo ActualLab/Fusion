@@ -90,7 +90,7 @@ public class ChatService(IServiceProvider services) : DbServiceBase<AppDbContext
         => Task.FromResult(new ChatMessage(0, command.Text));
 }
 
-public static class Part10
+public static class PartAP
 {
     public static async Task Run()
     {
@@ -98,7 +98,7 @@ public static class Part10
         WriteLine();
 
         // === Reference verification section ===
-        // This section references all identifiers from Part10.md to verify they exist
+        // This section references all identifiers from PartAP.md to verify they exist
 
         // 1. DbOperation - entity for operation log
         _ = typeof(DbOperation); // "DbOperation" from docs

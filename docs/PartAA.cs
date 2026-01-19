@@ -21,7 +21,7 @@ using static System.Console;
 // are in a separate assembly and verified below by name only.
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial06;
+namespace TutorialAA;
 
 // Fake types for snippet compilation
 public class _HostPage : ComponentBase { }
@@ -52,7 +52,7 @@ public static class BlazorRenderModeExtensions
 public class AppDbContext : DbContext
 {
     // Authentication-related tables
-    #region Part06_AppDbContext
+    #region PartAA_AppDbContext
     public DbSet<DbUser<long>> Users { get; protected set; } = null!;
     public DbSet<DbUserIdentity<long>> UserIdentities { get; protected set; } = null!;
     public DbSet<DbSessionInfo<long>> Sessions { get; protected set; } = null!;
@@ -75,7 +75,7 @@ public class OrderService(IAuth auth) : IOrderService
 {
     private readonly IAuth _auth = auth;
 
-    #region Part06_GetMyOrders
+    #region PartAA_GetMyOrders
     [ComputeMethod]
     public virtual async Task<List<OrderHeaderDto>> GetMyOrders(Session session, CancellationToken cancellationToken = default)
     {
@@ -186,7 +186,7 @@ public static class Part11
     }
 
     // Example: Service configuration with authentication
-    #region Part06_ServiceConfiguration
+    #region PartAA_ServiceConfiguration
     public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
     {
         var fusion = services.AddFusion();
@@ -238,7 +238,7 @@ public static class Part11
     #endregion
 
     // Example: App configuration
-    #region Part06_AppConfiguration
+    #region PartAA_AppConfiguration
     public static void ConfigureApp(WebApplication app)
     {
         app.UseWebSockets(new WebSocketOptions() {

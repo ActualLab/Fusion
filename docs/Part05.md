@@ -43,6 +43,19 @@ When a user on Server A updates their profile:
 
 **With Operations Framework**, all of this is handled automatically.
 
+## Required Packages
+
+| Package | Purpose |
+|---------|---------|
+| [ActualLab.Fusion](https://www.nuget.org/packages/ActualLab.Fusion/) | Core OF abstractions and in-memory implementation |
+| [ActualLab.Fusion.EntityFramework](https://www.nuget.org/packages/ActualLab.Fusion.EntityFramework/) | EF Core implementation: `DbOperationScope`, operation logging, `DbContext` integration |
+| [ActualLab.Fusion.EntityFramework.Npgsql](https://www.nuget.org/packages/ActualLab.Fusion.EntityFramework.Npgsql/) | PostgreSQL: `NpgsqlOperationLogWatcher` for LISTEN/NOTIFY |
+| [ActualLab.Fusion.EntityFramework.Redis](https://www.nuget.org/packages/ActualLab.Fusion.EntityFramework.Redis/) | Redis: `RedisOperationLogWatcher` for pub/sub notifications |
+
+::: tip
+The base `ActualLab.Fusion.EntityFramework` package includes `FileSystemOperationLogWatcher` which works with any database but requires shared filesystem access. For production multi-host deployments, use database-specific watchers (Npgsql) or Redis.
+:::
+
 ## The Outbox Pattern
 
 Operations Framework implements the **Transactional Outbox Pattern** &ndash; a well-known solution

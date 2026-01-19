@@ -33,6 +33,20 @@ efficient than equivalent plain RPC clients:
 
 4. Resilience features like transparent reconnection on disconnect, persistent client-side caching, and ETag-style checks for every computed replica on reconnect are bundled &ndash; `ActualLab.Rpc` and `ActualLab.Fusion.Client` take care of that.
 
+## Required Packages
+
+| Package | Purpose |
+|---------|---------|
+| [ActualLab.Rpc](https://www.nuget.org/packages/ActualLab.Rpc/) | RPC client: WebSocket transport, service clients |
+| [ActualLab.Rpc.Server](https://www.nuget.org/packages/ActualLab.Rpc.Server/) | RPC server: ASP.NET Core hosting, WebSocket endpoints |
+| [ActualLab.Fusion](https://www.nuget.org/packages/ActualLab.Fusion/) | *(Optional)* Adds Compute Service Clients; references `ActualLab.Rpc` |
+| [ActualLab.Fusion.Server](https://www.nuget.org/packages/ActualLab.Fusion.Server/) | *(Optional)* Adds server-side Fusion; references `ActualLab.Rpc.Server` |
+
+::: tip
+You can use `ActualLab.Rpc` standalone for high-performance RPC without Fusion's compute services.
+Add `ActualLab.Fusion` / `ActualLab.Fusion.Server` only if you need Compute Service Clients with automatic caching and invalidation propagation.
+:::
+
 ## Using ActualLab.Rpc to create Compute Service Client
 
 Let's create a simple chat service that demonstrates how Compute Service Clients work.

@@ -20,6 +20,17 @@ is a CQRS-style command handling library that powers Fusion's distributed comman
 
 If you're familiar with MediatR, see [MediatR Comparison](./Part04-MC.md) for a detailed mapping of concepts.
 
+## Required Packages
+
+| Package | Purpose |
+|---------|---------|
+| [ActualLab.CommandR](https://www.nuget.org/packages/ActualLab.CommandR/) | Core CommandR: commands, handlers, pipeline, `ICommander` |
+| [ActualLab.Rpc](https://www.nuget.org/packages/ActualLab.Rpc/) | *(Optional)* Needed only for distributed command execution over RPC |
+
+::: tip
+If you're using Fusion, `ActualLab.Fusion` already includes CommandR. You only need to reference `ActualLab.CommandR` directly if you're using it standalone without Fusion.
+:::
+
 ## Getting Started
 
 ### 1. Define a Command

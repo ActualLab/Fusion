@@ -9,6 +9,17 @@ This part covers how to build real-time Blazor applications with Fusion. Fusion 
 - [Diagrams](Part03-D.md) &ndash; Visual diagrams of component architecture
 - [Cheat Sheet](Part03-CS.md) &ndash; Quick reference
 
+## Required Packages
+
+| Package | Purpose |
+|---------|---------|
+| [ActualLab.Fusion.Blazor](https://www.nuget.org/packages/ActualLab.Fusion.Blazor/) | Component base classes: `ComputedStateComponent<T>`, `MixedStateComponent<T, TM>`, etc. |
+| [ActualLab.Fusion](https://www.nuget.org/packages/ActualLab.Fusion/) | Core Fusion (automatically referenced by Blazor package) |
+
+::: tip
+For authentication features (`AuthStateProvider`, `ClientAuthHelper`, `CascadingAuthState`), also add [ActualLab.Fusion.Blazor.Authentication](https://www.nuget.org/packages/ActualLab.Fusion.Blazor.Authentication/). See [Authentication](Part03-Auth.md) for details.
+:::
+
 ## Key Concepts
 
 You already know about `IState<T>` &ndash; it was described in [Part 1](./Part01.md).

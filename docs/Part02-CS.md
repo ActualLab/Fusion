@@ -8,9 +8,11 @@ Configure RPC server (ASP.NET Core):
 
 ```cs
 var fusion = builder.Services.AddFusion();
+fusion.AddWebServer();
 fusion.AddServer<ICartService, CartService>();
 
 // In Program.cs
+app.UseWebSockets();         // Enable WebSockets on Kestrel
 app.MapRpcWebSocketServer(); // Maps /rpc/ws endpoint
 ```
 
