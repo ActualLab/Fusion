@@ -133,24 +133,42 @@ public virtual async Task<Summary> GetSummary() { ... }
 ### ConsolidationDelay
 
 **Type:** `double` (seconds)
-**Default:** `TimeSpan.MaxValue` (no consolidation)
+**Default:** `-1` (no consolidation)
 
-Time window during which multiple concurrent requests for the same computation are consolidated into one.
+Eliminates "false" invalidations by only invalidating when the computed value actually changes.
 
 ```csharp
-[ComputeMethod(ConsolidationDelay = 0.5)] // Consolidate requests within 500ms
-public virtual async Task<List<Item>> GetItems() { ... }
+[ComputeMethod(ConsolidationDelay = 0)] // Invalidate only when value changes
+public virtual async Task<int> GetUnreadCount(string placeId) { ... }
+
+[ComputeMethod(ConsolidationDelay = 0.5)] // Wait 500ms before checking for value changes
+public virtual async Task<Summary> GetSummary() { ... }
 ```
 
 **How it works:**
-- If a compute method is called while another call for the same key is in progress, subsequent callers wait for the first computation
-- With consolidation enabled, even calls arriving slightly after completion may share the just-computed result
-- Reduces redundant computations when many clients request the same data simultaneously
+When ConsolidationDelay is zero or positive, Fusion backs the method with two computed instances:
+- **Consolidation target** — the instance everyone sees from the outside
+- **Consolidation source** — the internal instance used to detect actual value changes
+
+The consolidation target doesn't have any dependencies itself, but listens to consolidation source invalidations. When an invalidation occurs on the consolidation source:
+1. The target waits for the consolidation delay (can be zero)
+2. Then recomputes the consolidation source
+3. If the new value differs from the target's current value, the target invalidates itself
+4. If the value is the same, the invalidation is "swallowed" and the target continues listening to the new source
+
+**Why this matters:**
+Without this option, every ground truth invalidation in Fusion spreads through the entire dependency graph, hitting every dependent computed. It doesn't matter if some invalidated values recompute to exactly the same result — if your dependency is invalidated, you get invalidated too.
+
+**Example — Unread counters:**
+A single unread counter may depend on hundreds of API calls (e.g., a place counter depends on every chat counter, which depend on read/write positions). Without consolidation, a single post in any chat would invalidate the chat counter (even though it likely produces the same value), then the place counter, then the total — forcing every UI element showing these counters to refresh.
+
+With ConsolidationDelay, the counter only invalidates when its value actually changes.
 
 **When to use:**
-- High-traffic endpoints where many clients request the same data
-- Expensive computations that shouldn't run in parallel for the same input
-- APIs exposed to Blazor components that may mount simultaneously
+- Counter-like aggregations (unread counts, totals, statistics)
+- Any computed that frequently recomputes to the same value
+- Reducing invalidation cascades in deep dependency graphs
+- Preventing unnecessary UI refreshes
 
 ## Combining Options
 
@@ -169,11 +187,11 @@ public virtual async Task<Stats> GetDashboardStats() { ... }
     InvalidationDelay = 1)]                 // Debounce updates by 1s
 public virtual async Task<Price> GetExternalPrice(string symbol) { ... }
 
-// High-traffic endpoint with request consolidation
+// Aggregation that should only invalidate when value changes
 [ComputeMethod(
     MinCacheDuration = 60,
-    ConsolidationDelay = 0.2)]    // Consolidate requests within 200ms
-public virtual async Task<Catalog> GetProductCatalog() { ... }
+    ConsolidationDelay = 0)]      // Invalidate only on actual value change
+public virtual async Task<int> GetTotalUnreadCount() { ... }
 ```
 
 ## Default Values
@@ -186,7 +204,7 @@ Fusion provides different defaults for server-side and client-side (remote) comp
 | TransientErrorInvalidationDelay | 1 second | 1 second |
 | AutoInvalidationDelay | ∞ (none) | ∞ (none) |
 | InvalidationDelay | 0 | 0 |
-| ConsolidationDelay | ∞ (none) | ∞ (none) |
+| ConsolidationDelay | -1 (none) | -1 (none) |
 
 You can change global defaults by modifying `ComputedOptions.Default` and `ComputedOptions.ClientDefault` at startup:
 
