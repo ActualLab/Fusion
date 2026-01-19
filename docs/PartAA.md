@@ -243,13 +243,13 @@ to the following code snippet.
 The Operations Framework is also needed for any of these services &ndash;
 hopefully you read [Part 5](./Part05.md), which covers it.
 
-<!-- snippet: PartAA_AddDbContextServices -->
+<!-- snippet: Part05_AddDbContextServices -->
 ```cs
 public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
     services.AddDbContextServices<AppDbContext>(db => {
         // Uncomment if you'll be using AddRedisOperationLogWatcher
-        // db.AddRedisDb("localhost", "FusionDocumentation.PartAA");
+        // db.AddRedisDb("localhost", "FusionDocumentation.Part05");
 
         db.AddOperations(operations => {
             // This call enabled Operations Framework (OF) for AppDbContext.

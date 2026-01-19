@@ -74,6 +74,29 @@ return invocation => {
 };
 ```
 
+## ArgumentList API
+
+See [ArgumentList API](./PartAP-AL.md) for full documentation.
+
+```cs
+var args = invocation.Arguments;
+
+// Read arguments
+args.Get<string>(0)              // Typed access
+args.GetUntyped(0)               // As object?
+args.GetCancellationToken(1)     // Optimized for CT
+
+// Modify arguments
+args.Set(0, "new value")         // Typed
+args.SetUntyped(0, value)        // As object?
+args.SetCancellationToken(1, ct) // Optimized for CT
+
+// Properties & utilities
+args.Length                      // Argument count
+args.ToArray()                   // Convert to object?[]
+args.Duplicate()                 // Clone
+```
+
 ## MethodDef Properties
 
 | Property | Type | Description |

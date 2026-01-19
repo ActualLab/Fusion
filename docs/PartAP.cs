@@ -37,13 +37,42 @@ public sealed class LoggingInterceptor : Interceptor
     {
         // TUnwrapped is the unwrapped return type (e.g., string for Task<string>)
         // Return null to skip interception (falls through to target or throws)
+        if (methodDef.IsAsyncMethod) {
+            // For async methods, use InterceptedAsyncInvoker which returns Task<TUnwrapped>
+            var asyncInvoker = (Func<Invocation, Task<TUnwrapped>>)methodDef.InterceptedAsyncInvoker;
+            return invocation => {
+                Console.WriteLine($"Calling: {methodDef.FullName}");
+                var resultTask = LogAndWrap(methodDef, asyncInvoker.Invoke(invocation));
+                // Wrap result to proper return type (Task<T> or ValueTask<T>)
+                return methodDef.WrapAsyncInvokerResultOfAsyncMethod(resultTask);
+            };
+        }
+        // For sync methods
         return invocation => {
             Console.WriteLine($"Calling: {methodDef.FullName}");
-            // InvokeIntercepted calls the original method (or next interceptor)
-            var result = invocation.InvokeIntercepted<TUnwrapped>();
-            Console.WriteLine($"Completed: {methodDef.FullName}");
-            return methodDef.WrapResult(result); // Wraps back to Task<T>/ValueTask<T> if needed
+            try {
+                var result = invocation.InvokeInterceptedUntyped();
+                Console.WriteLine($"Completed: {methodDef.FullName}");
+                return result;
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed: {methodDef.FullName}: {e.Message}");
+                throw;
+            }
         };
+    }
+
+    private static async Task<TUnwrapped> LogAndWrap<TUnwrapped>(MethodDef methodDef, Task<TUnwrapped> task)
+    {
+        try {
+            var result = await task.ConfigureAwait(false);
+            Console.WriteLine($"Completed: {methodDef.FullName}");
+            return result;
+        }
+        catch (Exception e) {
+            Console.WriteLine($"Failed: {methodDef.FullName}: {e.Message}");
+            throw;
+        }
     }
 }
 #endregion
@@ -67,7 +96,7 @@ public sealed class DefaultResultInterceptor : Interceptor
     public DefaultResultInterceptor(Options settings, IServiceProvider services)
         : base(settings, services)
     {
-        MustInterceptSyncCalls = true;
+        // MustInterceptSyncCalls = true; // Requires IRequiresFullProxy interface
         MustInterceptAsyncCalls = true;
     }
 
@@ -97,19 +126,31 @@ public sealed class InvocationDemoInterceptor : Interceptor
     protected override Func<Invocation, object?>? CreateTypedHandler<TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
     {
+        // For async methods, use the appropriate invoker
+        if (methodDef.IsAsyncMethod) {
+            var asyncInvoker = (Func<Invocation, Task<TUnwrapped>>)methodDef.InterceptedAsyncInvoker;
+            return invocation => {
+                // Access invocation details
+                var proxy = invocation.Proxy;           // The proxy instance
+                var method = invocation.Method;         // MethodInfo being called
+                var args = invocation.Arguments;        // ArgumentList with call arguments
+                var target = invocation.InterfaceProxyTarget; // Target object (if pass-through proxy)
+
+                // Get argument values
+                var arg0 = args.Get<string>(0);         // First argument as string
+                var arg1 = args.GetCancellationToken(1); // CancellationToken helper
+
+                // Invoke the original/intercepted method and wrap result
+                return methodDef.WrapAsyncInvokerResultOfAsyncMethod(asyncInvoker.Invoke(invocation));
+            };
+        }
+        // For sync methods
         return invocation => {
-            // Access invocation details
-            var proxy = invocation.Proxy;           // The proxy instance
-            var method = invocation.Method;         // MethodInfo being called
-            var args = invocation.Arguments;        // ArgumentList with call arguments
-            var target = invocation.InterfaceProxyTarget; // Target object (if pass-through proxy)
-
-            // Get argument values
-            var arg0 = args.Get<string>(0);         // First argument as string
-            var arg1 = args.GetCancellationToken(1); // CancellationToken helper
-
-            // Invoke the original/intercepted method
-            return invocation.InvokeIntercepted<TUnwrapped>();
+            var proxy = invocation.Proxy;
+            var method = invocation.Method;
+            var args = invocation.Arguments;
+            var target = invocation.InterfaceProxyTarget;
+            return invocation.InvokeInterceptedUntyped();
         };
     }
     #endregion
@@ -129,7 +170,13 @@ public sealed class ValidatingInterceptor : Interceptor
 
     protected override Func<Invocation, object?>? CreateTypedHandler<TUnwrapped>(
         Invocation initialInvocation, MethodDef methodDef)
-        => invocation => invocation.InvokeIntercepted<TUnwrapped>();
+    {
+        if (methodDef.IsAsyncMethod) {
+            var asyncInvoker = (Func<Invocation, Task<TUnwrapped>>)methodDef.InterceptedAsyncInvoker;
+            return invocation => methodDef.WrapAsyncInvokerResultOfAsyncMethod(asyncInvoker.Invoke(invocation));
+        }
+        return invocation => invocation.InvokeInterceptedUntyped();
+    }
 
     #region PartAP_Validation
     protected override void ValidateTypeInternal(Type type)
@@ -158,9 +205,13 @@ public static class PartAP
             .BuildServiceProvider();
 
         var interceptor = services.GetRequiredService<LoggingInterceptor>();
+        var realService = new GreetingService();
 
         // Create a proxy - Proxies.New finds the generated proxy type automatically
-        var proxy = (IGreetingService)Proxies.New(typeof(IGreetingService), interceptor);
+        var proxy = (IGreetingService)Proxies.New(
+            typeof(IGreetingService),
+            interceptor,
+            proxyTarget: realService); // Pass-through to real implementation
 
         // All calls now go through your interceptor
         var greeting = await proxy.GreetAsync("World");
@@ -227,12 +278,12 @@ public static class PartAP
         #region PartAP_ScopedServiceInterceptor
         var interceptor = new ScopedServiceInterceptor(ScopedServiceInterceptor.Options.Default, services) {
             ScopedServiceType = typeof(IGreetingService),
-            MustInterceptSyncCalls = true, // If you need sync method interception
+            // MustInterceptSyncCalls = true, // Requires IRequiresFullProxy interface
         };
 
         // Each call to the proxy will:
         // 1. Create a new IServiceScope
-        // 2. Resolve IMyScopedService from that scope
+        // 2. Resolve IGreetingService from that scope
         // 3. Invoke the method on the resolved service
         // 4. Dispose the scope when the call completes
         var proxy = (IGreetingService)Proxies.New(typeof(IGreetingService), interceptor);
