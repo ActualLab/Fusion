@@ -96,6 +96,7 @@ function Find-ProjectRoot {
 # Main logic
 $currentOS = Get-CurrentOS
 $mode = "docker"  # default mode
+$fromMode = $null  # set when self-invoked (e.g., from-docker, from-wsl)
 $dryRun = $false
 $claudeArgs = @()
 
@@ -162,6 +163,11 @@ if ($args.Count -gt 0) {
             exit 0
         }
     }
+    # Check for from-* argument (indicates self-invocation)
+    if ($argIndex -lt $args.Count -and $args[$argIndex] -match "^from-(docker|wsl)$") {
+        $fromMode = $Matches[1]
+        $argIndex++
+    }
 }
 
 # Check for --dry-run in remaining args
@@ -190,10 +196,14 @@ $projectName = $projectInfo.ProjectName
 $projectRoot = $projectInfo.ProjectRoot
 $relativePath = $projectInfo.RelativePath -replace "\\", "/"
 
-Write-Host "Project: $projectName"
-Write-Host "Mode: $mode"
-if ($dryRun) {
-    Write-Host "Dry run: yes"
+# Suppress output when launching docker (inner instance will output)
+if ($mode -ne "docker" -or $dryRun) {
+    Write-Host "Project: $projectName"
+    $displayMode = if ($fromMode) { $fromMode } else { $mode }
+    Write-Host "Mode: $displayMode"
+    if ($dryRun) {
+        Write-Host "Dry run: yes"
+    }
 }
 
 # Helper function for dry run output
@@ -255,7 +265,7 @@ switch ($mode) {
         Write-Host "WSL Working Directory: $wslWorkDir"
 
         # Build args for the script running in WSL
-        $wslArgs = @("os")
+        $wslArgs = @("os", "from-wsl")
         if ($dryRun) { $wslArgs += "--dry-run" }
         $wslArgs += $claudeArgs
 
@@ -336,17 +346,20 @@ switch ($mode) {
             $envVars["AC_Project${i}Path"] = [Environment]::GetEnvironmentVariable("AC_Project${i}Path")
         }
 
-        # Only skip permissions in Docker (sandboxed environment)
-        $allArgs = if ($currentOS -eq "Docker") {
-            @("--dangerously-skip-permissions") + $claudeArgs
-        } else {
-            $claudeArgs
-        }
-
         if ($dryRun) {
+            $allArgs = if ($currentOS -eq "Docker") {
+                @("--dangerously-skip-permissions") + $claudeArgs
+            } else {
+                $claudeArgs
+            }
             Show-DryRun -EnvVars $envVars -Command "claude" -Arguments $allArgs -ModeName $env:AC_OS
         } else {
-            & claude @allArgs
+            # Only skip permissions in Docker (sandboxed environment)
+            if ($currentOS -eq "Docker") {
+                & claude --dangerously-skip-permissions @claudeArgs
+            } else {
+                & claude @claudeArgs
+            }
         }
     }
 
@@ -381,11 +394,13 @@ switch ($mode) {
         $containerName = "claude-$($projectName.ToLower())"
         $dockerScriptPath = "/proj/$projectName/c.ps1"
 
-        Write-Host "Container: $containerName"
-        Write-Host "Docker Working Directory: $dockerWorkDir"
+        if ($dryRun) {
+            Write-Host "Container: $containerName"
+            Write-Host "Docker Working Directory: $dockerWorkDir"
+        }
 
         # Build args for the script running in Docker
-        $dockerScriptArgs = @("os")
+        $dockerScriptArgs = @("os", "from-docker")
         if ($dryRun) { $dockerScriptArgs += "--dry-run" }
         $dockerScriptArgs += $claudeArgs
 
