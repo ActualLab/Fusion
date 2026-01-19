@@ -361,6 +361,7 @@ protected override void ValidateTypeInternal(Type type)
 - [ArgumentList API](./PartAP-AL.md) - Working with method arguments
 - [Proxy Generation](./PartAP-PG.md) - How the source generator creates proxy classes
 - [Built-in Interceptors](./PartAP-BI.md) - Complete list with examples
+- [Diagrams](./PartAP-D.md) - Visual representations of key concepts
 - [Cheat Sheet](./PartAP-CS.md) - Quick reference
 
 ## Fusion's Use of Interceptors

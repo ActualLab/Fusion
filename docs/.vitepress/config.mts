@@ -110,6 +110,7 @@ export default defineConfig({
               { text: "ArgumentList API", link: "/PartAP-AL" },
               { text: "Proxy Generation", link: "/PartAP-PG" },
               { text: "Built-in Interceptors", link: "/PartAP-BI" },
+              { text: "Diagrams", link: "/PartAP-D" },
               { text: "Cheat Sheet", link: "/PartAP-CS" },
             ],
           },
