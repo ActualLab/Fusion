@@ -233,8 +233,7 @@ public interface IProductService : IComputeService
 
 ## Tips
 
-1. **Start simple** — use defaults first, add options when you identify specific needs
-2. **Measure before optimizing** — profile to find hot spots before adding caching
-3. **Consider memory** — `MinCacheDuration` trades memory for CPU; balance accordingly
-4. **Mind the invalidation chain** — delayed invalidation affects all dependent computed values
-5. **Test consolidation carefully** — too long a delay can show stale data; too short defeats the purpose
+1. **Assume defaults are fine** — make changes once you know what's going on; you can also change `ComputedOptions.Default` globally
+2. **Consider memory** — `MinCacheDuration` trades memory for CPU; balance accordingly
+3. **Mind the invalidation chain** — delayed invalidation affects all dependent computed values
+4. **Test consolidation carefully** — too long a delay can show stale data; too short defeats the purpose

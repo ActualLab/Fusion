@@ -116,3 +116,25 @@ When run interactively (without arguments), the program will:
 - Ensure code examples are accurate and up-to-date
 - When adding new documentation, follow the existing structure
 - Update the documentation index if adding new pages.
+
+## Mermaid Diagrams
+
+Mermaid diagrams render directly in markdown with a custom Grafana-inspired theme on an Aurora background.
+
+**Basic usage:**
+````md
+```mermaid
+flowchart TD
+    A[Start] --> B[End]
+```
+````
+
+**Rules:**
+- Do NOT add titles inside mermaid diagrams (no `title:` or subgraph titles like "Fusion Core Abstractions"). Titles should be placed in the markdown document above the diagram using a heading.
+- Keep diagrams simple and focused
+- Use descriptive node labels
+
+**Theme configuration:**
+- Theme files: `.vitepress/config.mts` (mermaidConfig), `.vitepress/theme/mermaid.css`
+- Style: Grafana-inspired dark theme with Inter font
+- Background: Aurora (deep indigo with blue/purple/cyan gradient)

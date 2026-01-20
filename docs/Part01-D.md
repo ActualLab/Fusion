@@ -4,24 +4,16 @@ Text-based diagrams for the core concepts introduced in [Part 01](Part01.md).
 
 ## Core Abstractions Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Fusion Core Abstractions                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   ┌─────────────────┐    produces    ┌─────────────────┐                    │
-│   │ Compute Method  │ ─────────────► │   Computed<T>   │                    │
-│   │ [ComputeMethod] │                │  (cached value) │                    │
-│   └─────────────────┘                └─────────────────┘                    │
-│           │                                   │                             │
-│           │ defined in                        │ tracked by                  │
-│           ▼                                   ▼                             │
-│   ┌──────────────────┐               ┌─────────────────┐                    │
-│   │ Compute Service  │               │    State<T>     │                    │
-│   │ :IComputeService │               │  (auto-update)  │                    │
-│   └──────────────────┘               └─────────────────┘                    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    CM["Compute Method<br/>[ComputeMethod]"]
+    CT["Computed&lt;T&gt;<br/>(cached value)"]
+    CS["Compute Service<br/>: IComputeService"]
+    ST["State&lt;T&gt;<br/>(auto-update)"]
+
+    CM -->|produces| CT
+    CM -->|defined in| CS
+    CT -->|tracked by| ST
 ```
 
 ## Compute Service Registration Flow
