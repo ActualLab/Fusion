@@ -17,14 +17,12 @@
 - [Usage](#usage)
 - [Documentation](#documentation)
 - [Samples](#samples)
-- ["What is your evidence?"](#what-is-your-evidence)
 - [Is Fusion fast?](#is-fusion-fast)
 - [Does Fusion scale?](#does-fusion-scale)
 - [Show me the code!](#enough-talk-show-me-the-code)
 - [Why is Fusion a game changer for real-time apps?](#why-is-fusion-a-game-changer-for-real-time-apps)
 - [Why is Fusion a game changer for Blazor apps with complex UI?](#why-is-fusion-a-game-changer-for-blazor-apps-with-complex-ui)
 - [Next Steps](#next-steps)
-- [Posts And Other Content](#posts-and-other-content)
 
 ## Overview
 
@@ -87,7 +85,7 @@ using (Invalidation.Begin()) {
 }
 ```
 
-_The invalidation is always transitive:_ if `GetUserProfile(3)` calls `GetUserAvatar("3:ava1")`, and `GetUserAvatar("3:ava1")` gets invalidated, `GetUserProfile(3)` gets invalidated as well.
+_The invalidation is always transitive (cascading):_ if `GetUserProfile(3)` calls `GetUserAvatar("3:ava1")`, and `GetUserAvatar("3:ava1")` gets invalidated, `GetUserProfile(3)` gets invalidated as well.
 
 To make it work, Fusion maintains a dictionary-like structure that tracks every call result, where:
 
@@ -140,24 +138,6 @@ If you prefer video, check out:
 | [ActualLab.Fusion Video](https://youtu.be/eMO7AmI6ui4)<br/>[<img src=".\docs\img\Fusion-Video.jpg" title="ActualLab.Fusion, the distributed state sync monster" width="300"/>](https://youtu.be/eMO7AmI6ui4) | [ActualLab.Rpc Video](https://youtu.be/vwm1l8eevak)<br/>[<img src="./docs/img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc – the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak) |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 
-## "What is your evidence?"<sup><a href="https://www.youtube.com/watch?v=7O-aNYTtx44">\*</a></sup>
-
-**All of this sounds too good to be true, right?** That's why there are lots of visual proofs in the remaining part of this document. But if you find anything concerning in Fusion's source code or [Samples], please feel free to grill us with questions at [Fusion Place]!
-
-Let's start with some big guns:
-
-> Check out [Voxt] &ndash; a very new chat app built by the minds behind Fusion.
->
-> Voxt fuses **real-time audio, live transcription, and AI assistance**
-> to let you communicate with utmost efficiency.
-> With clients for **WebAssembly, iOS, Android, and Windows**, it boasts nearly
-> 100% code sharing across these platforms.
-> Beyond real-time updates, several of its features, like offline mode,
-> are powered by Fusion.
->
-> We're posting some code examples from Voxt codebase [here](https://voxt.ai/chat/san4Cohzym),
-> so join this chat to learn how we use it in a real app.
-
 ## Samples
 
 1. Clone [Fusion Samples] repository: `git clone git@github.com:ActualLab/Fusion.Samples.git`
@@ -180,7 +160,7 @@ including the sign-in state:
 
 ## Is Fusion fast?
 
-**Yes, it's incredibly fast.** Here is an RPC call duration distribution for one of the most frequent calls on [Voxt]:
+**Yes, it's incredibly fast.** Here is an RPC call duration distribution for one of the most frequent calls on [Voxt.ai]:
 
 ![](docs/img/GetTile.jpg)
 
@@ -420,15 +400,6 @@ eliminates the chattiness you'd expect from a regular client-side proxy.
 - Check out [Samples]
 - Join [Fusion Place] to ask questions and track project updates.
 
-## Posts And Other Content
-
-- [Popular UI architectures compared & how Blazor+Fusion UI fits in there](https://itnext.io/the-most-popular-ui-architectures-and-how-fusion-based-ui-fits-in-there-fb47e45038a7?source=friends_link&sk=bef676ccd1f3c6e6148178bf05346852)
-- [The Ungreen Web: Why our web apps are terribly inefficient?](https://alexyakunin.medium.com/the-ungreen-web-why-our-web-apps-are-terribly-inefficient-28791ed48035?source=friends_link&sk=74fb46086ca13ff4fea387d6245cb52b)
-- [Why real-time UI is inevitable future for web apps?](https://medium.com/@alexyakunin/features-of-the-future-web-apps-part-1-e32cf4e4e4f4?source=friends_link&sk=65dacdbf670ef9b5d961c4c666e223e2)
-- [How similar is Fusion to SignalR?](https://medium.com/@alexyakunin/how-similar-is-stl-fusion-to-signalr-e751c14b70c3?source=friends_link&sk=241d5293494e352f3db338d93c352249)
-- [How similar is Fusion to Knockout / MobX?](https://medium.com/@alexyakunin/how-similar-is-stl-fusion-to-knockout-mobx-fcebd0bef5d5?source=friends_link&sk=a808f7c46c4d5613605f8ada732e790e)
-- [Fusion In Simple Terms](https://medium.com/@alexyakunin/stl-fusion-in-simple-terms-65b1975967ab?source=friends_link&sk=04e73e75a52768cf7c3330744a9b1e38)
-
 [Compute Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
 [Compute Service]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
 [`Computed<T>`]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
@@ -447,5 +418,5 @@ eliminates the chattiness you'd expect from a regular client-side proxy.
 [Documentation]: https://fusion.actuallab.net/
 [Slides]: https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html
 [MMORPG]: https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game
-[Voxt]: https://voxt.ai
+[Voxt.ai]: https://voxt.ai
 [Fusion Place]: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo

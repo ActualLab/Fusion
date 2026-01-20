@@ -128,6 +128,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
         text: "Extras",
         items: [
           { text: "Learn Fusion via HelloCart Sample", link: "/HelloCart" },
+          { text: "Posts and Other Content", link: "/Posts" },
           { text: "Story Behind Fusion", link: "/Story" },
         ],
       },
