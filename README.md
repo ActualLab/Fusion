@@ -8,21 +8,6 @@
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 
-| [ActualLab.Fusion Video](https://youtu.be/eMO7AmI6ui4)<br/>[<img src=".\docs\img\Fusion-Video.jpg" title="ActualLab.Fusion, the distributed state sync monster" width="300"/>](https://youtu.be/eMO7AmI6ui4) | [ActualLab.Rpc Video](https://youtu.be/vwm1l8eevak)<br/>[<img src="./docs/img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc – the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak) |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Documentation](#documentation)
-- [Samples](#samples)
-- [Is Fusion fast?](#is-fusion-fast)
-- [Does Fusion scale?](#does-fusion-scale)
-- [Show me the code!](#enough-talk-show-me-the-code)
-- [Why is Fusion a game changer for real-time apps?](#why-is-fusion-a-game-changer-for-real-time-apps)
-- [Why is Fusion a game changer for Blazor apps with complex UI?](#why-is-fusion-a-game-changer-for-blazor-apps-with-complex-ui)
-- [Next Steps](#next-steps)
-
 ## Overview
 
 `ActualLab.Fusion` is a successor of [Stl.Fusion](https://github.com/servicetitan/Stl.Fusion). It works similarly to a **method call middleware** that transparently "plugs" a rich set of features into every call made to Fusion services &ndash; caching, invalidation, RPC, real-time sync, and many other capabilities, all without changing how you write your code.
@@ -32,7 +17,7 @@ You can think of Fusion as:
 - `make` or `msbuild`, but operating on functions and their outputs instead of source files and build artifacts. Like MSBuild, Fusion uses **lazy computation**: when something changes, dependents are immediately marked as inconsistent, but recomputation only happens when you actually request the result. Old values remain accessible in the meantime.
 - MobX, but managing an **arbitrarily large state spread across any number of machines** rather than a small UI state within a single process.
 
-Fusion solves a set of infamously hard problems with a single abstraction:
+Fusion solves a set of infamously hard problems with a 🦄 single abstraction:
 
 | Problem                         | Fusion's Answer                                                                                                                                                                  | So you don't need...                                                                                           |
 |---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
