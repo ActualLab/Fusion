@@ -133,16 +133,28 @@ services.AddDbContextServices<AppDbContext>(db => {
 | Shard | Value | Purpose |
 |-------|-------|---------|
 | `DbShard.Single` | `""` | Default single-shard mode |
-| `DbShard.Template` | `"__template"` | Schema operations in multi-shard mode |
+| `DbShard.Template` | `"__template"` | Schema access when actual shards aren't known yet |
+
+`DbShard.Template` is automatically added to the shard registry in multi-shard mode. It provides database
+connection for schema operations like generating migrations, where the actual data shards aren't relevant.
+The template shard points to a database that may be empty or contain reference data, but is never used
+to store application data. It's particularly useful for:
+- EF Core migration generation (`dotnet ef migrations add`)
+- Schema introspection (e.g., extracting primary key info in `DbEntityResolver`)
+- Creating execution strategies for transient failure detection
 
 ### IDbShardResolver
 
-The shard resolver determines which shard handles a request:
+`IDbShardResolver` is an **optional** component that resolves which database shard to use for a given
+object. It maps arbitrary objects—typically typed identifiers like `UserId`, `Session`, or commands—to
+shard identifiers.
+
+The default implementation handles common scenarios:
 
 ```cs
 public class DbShardResolver<TDbContext> : IDbShardResolver<TDbContext>
 {
-    public virtual DbShard Resolve(object? source)
+    public virtual string Resolve(object source)
     {
         // Resolution order:
         // 1. If single shard mode, return DbShard.Single
@@ -154,15 +166,50 @@ public class DbShardResolver<TDbContext> : IDbShardResolver<TDbContext>
 }
 ```
 
+**Using IDbShardResolver:**
+
+Once you resolve a shard, pass it to `DbHub.CreateDbContext()` or `DbHub.CreateOperationDbContext()`:
+
+```cs
+public class MyService(DbHub<AppDbContext> dbHub, IDbShardResolver<AppDbContext> shardResolver)
+{
+    public async Task ProcessCommand(MyCommand command, CancellationToken cancellationToken)
+    {
+        // Resolve shard from the command (e.g., from session or IHasShard)
+        var shard = shardResolver.Resolve(command);
+
+        // Create DbContext for the resolved shard
+        await using var dbContext = await dbHub.CreateOperationDbContext(shard, cancellationToken);
+
+        // Work with the shard-specific database
+        // ...
+    }
+}
+```
+
+This pattern is used internally by `DbAuthService` to resolve shards from `Session` and session-based commands:
+
+```cs
+// From DbAuthService - resolving shard for sign-out command
+var shard = ShardResolver.Resolve(command);
+var dbContext = await DbHub.CreateOperationDbContext(shard, cancellationToken);
+```
+
 **Custom Shard Resolution:**
 
 ```cs
-public class TenantShardResolver : DbShardResolver<AppDbContext>
+public class TenantShardResolver(IServiceProvider services)
+    : DbShardResolver<AppDbContext>(services)
 {
-    public override DbShard Resolve(object? source)
+    public override string Resolve(object source)
     {
+        // Custom resolution for tenant-specific commands
         if (source is ITenantCommand tenantCommand)
-            return new DbShard(tenantCommand.TenantId);
+            return tenantCommand.TenantId;
+
+        // Custom resolution for user IDs
+        if (source is UserId userId)
+            return GetShardForUser(userId);
 
         return base.Resolve(source);
     }
