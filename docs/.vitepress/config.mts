@@ -61,6 +61,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
             collapsed: true,
             items: [
               { text: "Services", link: "/Part03-Services" },
+              { text: "UICommander and UIActionTracker", link: "/Part03-UICommander" },
               { text: "Authentication", link: "/Part03-Auth" },
               { text: "Parameter Comparison", link: "/Part03-Parameters" },
               { text: "Diagrams", link: "/Part03-D" },
