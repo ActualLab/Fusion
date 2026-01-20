@@ -86,6 +86,9 @@ gtag('config', 'G-PX4G7HX4CM');`],
   ],
   ignoreDeadLinks: false,
   appearance: 'dark',
+  sitemap: {
+    hostname: 'https://fusion.actuallab.net'
+  },
   themeConfig: {
     logo: "/img/Logo128.jpg",
     search: {
