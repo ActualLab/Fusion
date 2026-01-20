@@ -42,7 +42,7 @@ and a plethora of "why is it stale?" bugs, which are among the hardest to debug.
 
 If you prefer video, check out:
 
-| [ActualLab.Fusion Video](https://youtu.be/eMO7AmI6ui4)<br/>[<img src=".\docs\img\Fusion-Video.jpg" title="ActualLab.Fusion, the distributed state sync monster" width="300"/>](https://youtu.be/eMO7AmI6ui4) | [ActualLab.Rpc Video](https://youtu.be/vwm1l8eevak)<br/>[<img src="./docs/img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc – the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak) |
+| [ActualLab.Fusion Video](https://youtu.be/eMO7AmI6ui4)<br/>[<img src="./docs/img/Fusion-Video.jpg" title="ActualLab.Fusion, the distributed state sync monster" width="300"/>](https://youtu.be/eMO7AmI6ui4) | [ActualLab.Rpc Video](https://youtu.be/vwm1l8eevak)<br/>[<img src="./docs/img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc – the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak) |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 
 ## Samples
@@ -58,7 +58,7 @@ delivering real-time updates to 3 browser windows:
 ![](docs/img/ActualLab-Fusion-Chat-Sample.gif)
 
 The sample supports [**both** Blazor Server and Blazor WebAssembly
-hosting modes](https://docs.microsoft.com/en-us/aspnet/core/blazor/hosting-models?view=aspnetcore-3.1).
+hosting modes](https://learn.microsoft.com/en-us/aspnet/core/blazor/hosting-models).
 And even if you use different modes in different windows,
 Fusion still keeps in sync literally every bit of a shared state there,
 including the sign-in state:
@@ -99,7 +99,7 @@ Note that these benchmarks test Fusion method calls with no dependency chains. R
 | SignalR | 5.34M | 17.11M items/s |
 | gRPC | 1.11M | 38.75M items/s |
 
-So it's **~8x faster than gRPC** for RPC calls and **~2.5x faster** for streaming.
+So it's **significantly faster** than gRPC and SignalR, both for calls and for streaming.
 
 #### What makes Fusion fast:
 
@@ -149,8 +149,8 @@ public class ExampleService : IComputeService
     {
         // This method uses only other [ComputeMethod]-s or static data,
         // thus it doesn't require invalidation on write
-        var v1 = await GetNonFusionData(key1);
-        var v2 = await GetNonFusionData(key2);
+        var v1 = await GetValue(key1);
+        var v2 = await GetValue(key2);
         return $"{v1}, {v2}";
     }
 
