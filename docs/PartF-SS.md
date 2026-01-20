@@ -44,7 +44,7 @@ is actually computed (i.e. its cached value for a given argument isn't reused)
 and returns the same value as its input. We'll be using it to
 find out when `IComputed` instances are actually reused.
 
-<!-- snippet: Part01SS_Service1 -->
+<!-- snippet: PartFSS_Service1 -->
 ```cs
 public partial class Service1 : IComputeService
 {
@@ -61,7 +61,7 @@ public partial class Service1 : IComputeService
 First, `IComputed` instances aren't "cached" by default &ndash; they're just
 reused while it's possible:
 
-<!-- snippet: Part01SS_Caching1 -->
+<!-- snippet: PartFSS_Caching1 -->
 ```cs
 var service = CreateServices().GetRequiredService<Service1>();
 // var computed = await Computed.Capture(() => counters.Get("a"));
@@ -97,7 +97,7 @@ technically they do the same).
 
 Let's prove this by uncommenting the commented line:
 
-<!-- snippet: Part01SS_Caching2 -->
+<!-- snippet: PartFSS_Caching2 -->
 ```cs
 var service = CreateServices().GetRequiredService<Service1>();
 var computed = await Computed.Capture(() => service.Get("a"));
@@ -131,7 +131,7 @@ Now, if you compute `f(x)`, is it enough to store
 a computed for its output to ensure its dependencies
 are cached too? Let's test this:
 
-<!-- snippet: Part01SS_Service2 -->
+<!-- snippet: PartFSS_Service2 -->
 ```cs
 public partial class Service2 : IComputeService
 {
@@ -152,7 +152,7 @@ public partial class Service2 : IComputeService
 ```
 <!-- endSnippet -->
 
-<!-- snippet: Part01SS_Caching3 -->
+<!-- snippet: PartFSS_Caching3 -->
 ```cs
 var service = CreateServices().GetRequiredService<Service2>();
 var computed = await Computed.Capture(() => service.Combine("a", "b"));
@@ -197,7 +197,7 @@ As you see, yes,
 
 Let's check if the opposite is true as well:
 
-<!-- snippet: Part01SS_Caching4 -->
+<!-- snippet: PartFSS_Caching4 -->
 ```cs
 var service = CreateServices().GetRequiredService<Service2>();
 var computed = await Computed.Capture(() => service.Get("a"));
@@ -287,7 +287,7 @@ Let's look at how they work.
 
 Let's just add `MinCacheDuration` to the service we were using previously:
 
-<!-- snippet: Part01SS_Service3 -->
+<!-- snippet: PartFSS_Service3 -->
 ```cs
 public partial class Service3 : IComputeService
 {
@@ -310,7 +310,7 @@ public partial class Service3 : IComputeService
 
 And run this code:
 
-<!-- snippet: Part01SS_Caching5 -->
+<!-- snippet: PartFSS_Caching5 -->
 ```cs
 var service = CreateServices().GetRequiredService<Service3>();
 WriteLine(await service.Combine("a", "b"));

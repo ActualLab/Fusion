@@ -22,7 +22,7 @@ This is the only package you need for basic Fusion functionality. For server-sid
 
 Here's a simple counter service that demonstrates Fusion's basic capabilities:
 
-<!-- snippet: Part01_Declare_Service -->
+<!-- snippet: PartF_Declare_Service -->
 ```cs
 public class CounterService : IComputeService // This is a tagging interface any compute service must "implement"
 {
@@ -62,7 +62,7 @@ public class CounterService : IComputeService // This is a tagging interface any
 
 To use this service, first register it with dependency injection:
 
-<!-- snippet: Part01_Register_Services -->
+<!-- snippet: PartF_Register_Services -->
 ```cs
 var services = new ServiceCollection();
 var fusion = services.AddFusion(); // You can also use services.AddFusion(fusion => ...) pattern
@@ -78,7 +78,7 @@ Let's see how the behavior of compute methods in `CounterService` differs from t
 
 ### Automatic Caching
 
-<!-- snippet: Part01_Automatic_Caching -->
+<!-- snippet: PartF_Automatic_Caching -->
 ```cs
 await counters.Get("a"); // Prints: Get(a) = 0
 await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
@@ -89,7 +89,7 @@ Moreover, it works even when compute methods call each other.
 Notice that the `Sum("a", "b")` call here calls `Get("a")`, which gets resolved without an actual computation.
 On the other hand, `Get("b")` gets computed. But once we call it again, it also gets resolved from the cache.
 
-<!-- snippet: Part01_Automatic_Dependency_Tracking -->
+<!-- snippet: PartF_Automatic_Dependency_Tracking -->
 ```cs
 await counters.Sum("a", "b"); // Prints: Get(b) = 0, Sum(a, b) = 0 -- Get(b) was called from Sum(a, b)
 await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
@@ -116,7 +116,7 @@ using (Invalidation.Begin())  {
 And if you look at the code of the `CounterService.Increment` method, that's exactly what happens
 there to invalidate the `Get(key)` call on every increment.
 
-<!-- snippet: Part01_Invalidation -->
+<!-- snippet: PartF_Invalidation -->
 ```cs
 counters.Increment("a"); // Prints: Increment(a) + invalidates Get(a) call result
 await counters.Get("a"); // Prints: Get(a) = 1
@@ -139,7 +139,7 @@ Mathematically speaking, computed values form a Directed Acyclic Graph (DAG) of 
 
 Let's see all of this in action:
 
-<!-- snippet: Part01_Cascading_Invalidation -->
+<!-- snippet: PartF_Cascading_Invalidation -->
 ```cs
 counters.Increment("a"); // Prints: Increment(a)
 
@@ -174,7 +174,7 @@ At any given time, there can be only one `Consistent` version of a computed valu
 
 Let's pull a `Computed<T>` instance that is associated with a given call and play with it:
 
-<!-- snippet: Part01_Accessing_Computed_Values -->
+<!-- snippet: PartF_Accessing_Computed_Values -->
 ```cs
 var computedForGetA = await Computed.Capture(() => counters.Get("a"));
 WriteLine(computedForGetA.IsConsistent()); // True
@@ -216,7 +216,7 @@ WriteLine(computedForSumAB.Value); // 2
 
 Now we are ready to write a basic reactive update loop:
 
-<!-- snippet: Part01_Reactive_Updates -->
+<!-- snippet: PartF_Reactive_Updates -->
 ```cs
 _ = Task.Run(async () => {
     // This is going to be our update loop
@@ -252,7 +252,7 @@ And finally, the example below shows that you can deconstruct a `Computed<T>` in
 its `ValueOrDefault` and `Error` properties. Since `Value` property is not accessed during
 the deconstruction, it doesn't throw an exception if the computed value has an `Error`.
 
-<!-- snippet: Part01_When_And_Changes_Methods -->
+<!-- snippet: PartF_When_And_Changes_Methods -->
 ```cs
 _ = Task.Run(async () => {
     // This is going to be our update loop
@@ -353,7 +353,7 @@ it will use its own "minimal" service provider.
 
 Let's play with `MutableState<int>`:
 
-<!-- snippet: Part01_MutableState -->
+<!-- snippet: PartF_MutableState -->
 ```cs
 var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
 var state = stateFactory.NewMutable(1);
@@ -389,7 +389,7 @@ WriteLine($"Snapshot.LastNonErrorComputed: {state.Snapshot.LastNonErrorComputed}
 
 Here is an example showing what `ComputedState<T>` and `MutableState<T>` can do together:
 
-<!-- snippet: Part01_ComputedState -->
+<!-- snippet: PartF_ComputedState -->
 ```cs
 var stateFactory = sp.StateFactory();
 var clock = Stopwatch.StartNew();

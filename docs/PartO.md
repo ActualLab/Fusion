@@ -13,21 +13,21 @@ It solves several critical challenges that arise when running multiple instances
 
 Consider a typical multi-server deployment:
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Server A  │     │   Server B  │     │   Server C  │
-│  (Fusion)   │     │  (Fusion)   │     │  (Fusion)   │
-│             │     │             │     │             │
-│ ┌─────────┐ │     │ ┌─────────┐ │     │ ┌─────────┐ │
-│ │ Cache   │ │     │ │ Cache   │ │     │ │ Cache   │ │
-│ └─────────┘ │     │ └─────────┘ │     │ └─────────┘ │
-└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
-       │                   │                   │
-       └───────────────────┼───────────────────┘
-                           │
-                    ┌──────┴──────┐
-                    │  Database   │
-                    └─────────────┘
+```mermaid
+flowchart TD
+    subgraph A["Server&nbsp;A&nbsp;(Fusion)"]
+        CacheA["Cache"]
+    end
+    subgraph B["Server&nbsp;B&nbsp;(Fusion)"]
+        CacheB["Cache"]
+    end
+    subgraph C["Server&nbsp;C&nbsp;(Fusion)"]
+        CacheC["Cache"]
+    end
+    DB[("Database")]
+    A --> DB
+    B --> DB
+    C --> DB
 ```
 
 When a user on Server A updates their profile:
@@ -74,28 +74,18 @@ But what if step 2 fails after step 1 succeeds? You have inconsistent state.
 Instead of publishing directly, write the message to an "outbox" table in the **same transaction**
 as your business data:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Single Transaction                    │
-│                                                          │
-│  ┌─────────────────┐        ┌─────────────────────────┐ │
-│  │ Business Data   │        │ Operation Log (Outbox)  │ │
-│  │                 │        │                         │ │
-│  │ UPDATE users    │   +    │ INSERT INTO operations  │ │
-│  │ SET name='...'  │        │ (command, items, ...)   │ │
-│  └─────────────────┘        └─────────────────────────┘ │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-              ┌───────────────────────────────┐
-              │   Operation Log Reader        │
-              │   (Background Service)        │
-              │                               │
-              │   Reads committed operations  │
-              │   Notifies other hosts        │
-              │   Triggers invalidation       │
-              └───────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph TX["Single&nbsp;Transaction"]
+        BD["Business&nbsp;Data<br/>UPDATE&nbsp;users<br/>SET&nbsp;name='...'"]
+        OL["Operation&nbsp;Log&nbsp;(Outbox)<br/>INSERT&nbsp;INTO&nbsp;operations<br/>(command,&nbsp;items,&nbsp;...)"]
+    end
+    subgraph Reader["Operation&nbsp;Log&nbsp;Reader&nbsp;(Background&nbsp;Service)"]
+        R1["Reads&nbsp;committed&nbsp;operations"]
+        R2["Notifies&nbsp;other&nbsp;hosts"]
+        R3["Triggers&nbsp;invalidation"]
+    end
+    TX --> Reader
 ```
 
 This guarantees **at-least-once delivery**: if the transaction commits, the operation will
@@ -142,7 +132,7 @@ When an operation is "replayed" on other hosts, it runs in **invalidation mode**
 
 ### 1. Add DbSet for Operations
 
-<!-- snippet: Part05_DbSet -->
+<!-- snippet: PartO_DbSet -->
 ```cs
 public DbSet<DbOperation> Operations { get; protected set; } = null!;
 public DbSet<DbEvent> Events { get; protected set; } = null!;
@@ -151,13 +141,13 @@ public DbSet<DbEvent> Events { get; protected set; } = null!;
 
 ### 2. Configure Services
 
-<!-- snippet: Part05_AddDbContextServices -->
+<!-- snippet: PartO_AddDbContextServices -->
 ```cs
 public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
     services.AddDbContextServices<AppDbContext>(db => {
         // Uncomment if you'll be using AddRedisOperationLogWatcher
-        // db.AddRedisDb("localhost", "FusionDocumentation.Part05");
+        // db.AddRedisDb("localhost", "FusionDocumentation.PartO");
 
         db.AddOperations(operations => {
             // This call enabled Operations Framework (OF) for AppDbContext.
@@ -187,13 +177,13 @@ public static void ConfigureServices(IServiceCollection services, IHostEnvironme
 
 ### 3. Create Command and Handler
 
-<!-- snippet: Part05_PostMessageCommand -->
+<!-- snippet: PartO_PostMessageCommand -->
 ```cs
 public record PostMessageCommand(Session Session, string Text) : ICommand<ChatMessage>;
 ```
 <!-- endSnippet -->
 
-<!-- snippet: Part05_PostOfHandler -->
+<!-- snippet: PartO_PostOfHandler -->
 ```cs
 [CommandHandler]
 public virtual async Task<ChatMessage> PostMessage(
@@ -252,7 +242,7 @@ public virtual async Task<TResult> HandleCommand(
 The invalidation block runs on all hosts, but the main logic only runs on the originating host.
 To pass data from main logic to invalidation, use `Operation.Items`:
 
-<!-- snippet: Part05_SignOutHandler -->
+<!-- snippet: PartO_SignOutHandler -->
 ```cs
 public virtual async Task SignOut(
     SignOutCommand command, CancellationToken cancellationToken = default)
@@ -351,12 +341,12 @@ This ensures:
 
 ## Further Reading
 
-- [Events](./Part05-EV.md) &ndash; Producing and consuming events from operations
-- [Transient Operations and Reprocessing](./Part05-TR.md) &ndash; In-memory operations and retry logic
-- [Configuration Options](./Part05-CO.md) &ndash; All configuration options explained
-- [Log Watchers](./Part05-PR.md) &ndash; PostgreSQL, Redis, FileSystem log watchers
-- [Diagrams](./Part05-D.md) &ndash; Visual representations of OF internals
-- [Cheat Sheet](./Part05-CS.md) &ndash; Quick reference
+- [Events](./PartO-EV.md) &ndash; Producing and consuming events from operations
+- [Transient Operations and Reprocessing](./PartO-TR.md) &ndash; In-memory operations and retry logic
+- [Configuration Options](./PartO-CO.md) &ndash; All configuration options explained
+- [Log Watchers](./PartO-PR.md) &ndash; PostgreSQL, Redis, FileSystem log watchers
+- [Diagrams](./PartO-D.md) &ndash; Visual representations of OF internals
+- [Cheat Sheet](./PartO-CS.md) &ndash; Quick reference
 
 ## Learning More
 

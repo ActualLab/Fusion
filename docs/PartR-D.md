@@ -1,6 +1,6 @@
 # ActualLab.Rpc: Diagrams
 
-Diagrams for the RPC concepts introduced in [Part 2](Part02.md).
+Diagrams for the RPC concepts introduced in [Part 2](PartR.md).
 
 
 ## RpcHub Architecture

@@ -1,6 +1,6 @@
 # Compute Services: Diagrams
 
-Text-based diagrams for the core concepts introduced in [Part 01](Part01.md).
+Text-based diagrams for the core concepts introduced in [Part 01](PartF.md).
 
 ## `Computed<T>` Lifecycle States
 
@@ -47,7 +47,7 @@ using (Invalidation.Begin()) {
 
 ## Computed Value Dependency Graph (DAG)
 
-Example from Part01: `Sum("a", "b")` depends on `Get("a")` and `Get("b")`.
+Example from PartF: `Sum("a", "b")` depends on `Get("a")` and `Get("b")`.
 
 ```mermaid
 flowchart LR

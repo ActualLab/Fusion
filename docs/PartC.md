@@ -4,7 +4,7 @@
 is a CQRS-style command handling library that powers Fusion's distributed command execution and multi-host invalidation.
 
 > **Why does CommandR exist?**
-> The primary reason is the **Operations Framework** described in [Part 5](./Part05.md).
+> The primary reason is the **Operations Framework** described in [Part 5](./PartO.md).
 > Operations Framework requires a command execution pipeline to implement
 > multi-host invalidation, operation logging, and other features that make
 > Fusion work reliably in distributed scenarios. CommandR provides exactly
@@ -15,10 +15,10 @@ is a CQRS-style command handling library that powers Fusion's distributed comman
 - **Unified handler pipeline**: Any handler can act as a filter (middleware) or final handler
 - **CommandContext**: An `HttpContext`-like type for accessing state during command execution
 - **Convention-based handlers**: Use `[CommandHandler]` attribute instead of implementing interfaces
-- **AOP-style command services**: Direct method calls still go through the full pipeline
+- **Command services with interceptors**: Methods marked with `[CommandHandler]` can only be invoked through Commander
 - **RPC integration**: Seamless distributed command execution with ActualLab.Rpc
 
-If you're familiar with MediatR, see [MediatR Comparison](./Part04-MC.md) for a detailed mapping of concepts.
+If you're familiar with MediatR, see [MediatR Comparison](./PartC-MC.md) for a detailed mapping of concepts.
 
 ## Required Packages
 
@@ -37,7 +37,7 @@ If you're using Fusion, `ActualLab.Fusion` already includes CommandR. You only n
 
 Commands are simple classes or records implementing `ICommand<TResult>`:
 
-<!-- snippet: Part04_PrintCommandSession -->
+<!-- snippet: PartC_PrintCommandSession -->
 ```cs
 public class PrintCommand : ICommand<Unit>
 {
@@ -61,7 +61,7 @@ public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
 
 ### 2. Register and Execute
 
-<!-- snippet: Part04_PrintCommandSession2 -->
+<!-- snippet: PartC_PrintCommandSession2 -->
 ```cs
 // Building IoC container
 var serviceBuilder = new ServiceCollection()
@@ -99,7 +99,7 @@ Key points:
 
 You don't need to implement `ICommandHandler<T>`. Any method with `[CommandHandler]` works:
 
-<!-- snippet: Part04_RecSumCommandSession -->
+<!-- snippet: PartC_RecSumCommandSession -->
 ```cs
 public class RecSumCommand : ICommand<long>
 {
@@ -108,7 +108,7 @@ public class RecSumCommand : ICommand<long>
 ```
 <!-- endSnippet -->
 
-<!-- snippet: Part04_RecSumCommandSession2 -->
+<!-- snippet: PartC_RecSumCommandSession2 -->
 ```cs
 // Building IoC container
 var serviceBuilder = new ServiceCollection()
@@ -160,7 +160,7 @@ The most powerful way to define handlers is via Command Services.
 
 > **Note:** `IComputeService` extends `ICommandService`, so all compute services are automatically command services too. This means you can add `[CommandHandler]` methods to any compute service without additional setup.
 
-<!-- snippet: Part04_RecSumCommandServiceSession -->
+<!-- snippet: PartC_RecSumCommandServiceSession -->
 ```cs
 public class RecSumCommandService : ICommandService
 {
@@ -175,7 +175,7 @@ public class RecSumCommandService : ICommandService
         var head = command.Numbers[0];
         var tail = command.Numbers[1..];
         var context = CommandContext.GetCurrent();
-        var tailSum = await context.Commander.Call( // Note it's a direct call, but the whole pipeline still gets invoked!
+        var tailSum = await context.Commander.Call( // Invoke nested command through Commander
             new RecSumCommand() { Numbers = tail },
             cancellationToken);
         return head + tailSum;
@@ -209,7 +209,7 @@ public class RecSumCommandService : ICommandService
 
 Register command services with `AddService`:
 
-<!-- snippet: Part04_RecSumCommandServiceSession2 -->
+<!-- snippet: PartC_RecSumCommandServiceSession2 -->
 ```cs
 // Building IoC container
 var serviceBuilder = new ServiceCollection();
@@ -240,7 +240,17 @@ Numbers:
 ...
 ```
 
-The proxy type routes **every direct invocation of a command handler** through `ICommander.Call`. You can call handler methods directly or via Commander &ndash; the full pipeline runs either way.
+The proxy type **prevents direct invocation of command handler methods**. If you try to call a `[CommandHandler]` method directly, it throws `NotSupportedException`. All command handler methods must be invoked through `ICommander.Call()` &ndash; this ensures the full pipeline (filters, context, scoping) always runs.
+
+::: warning Direct Calls Throw
+```cs
+// This throws NotSupportedException!
+await recSumService.RecSum(new RecSumCommand { Numbers = [1, 2, 3] }, default);
+
+// This works - always use Commander
+await commander.Call(new RecSumCommand { Numbers = [1, 2, 3] });
+```
+:::
 
 Note that each `CommandContext` has its own `Items`. To share data across nested calls, use `context.OutermostContext.Items`.
 
@@ -270,14 +280,14 @@ Key points:
 
 ## Learn More
 
-- [Command Interfaces](./Part04-CI.md) &ndash; All command interfaces and tagging interfaces
-- [Built-in Handlers](./Part04-BH.md) &ndash; Complete list of built-in handlers and their priorities
-- [MediatR Comparison](./Part04-MC.md) &ndash; Mapping from MediatR concepts
-- [Cheat Sheet](./Part04-CS.md) &ndash; Quick reference
+- [Command Interfaces](./PartC-CI.md) &ndash; All command interfaces and tagging interfaces
+- [Built-in Handlers](./PartC-BH.md) &ndash; Complete list of built-in handlers and their priorities
+- [MediatR Comparison](./PartC-MC.md) &ndash; Mapping from MediatR concepts
+- [Cheat Sheet](./PartC-CS.md) &ndash; Quick reference
 
 ## Next Steps
 
-CommandR is the foundation for Fusion's [Operations Framework](./Part05.md), which adds:
+CommandR is the foundation for Fusion's [Operations Framework](./PartO.md), which adds:
 - Multi-host invalidation
 - Operation logging and replay
 - Transaction support with Entity Framework

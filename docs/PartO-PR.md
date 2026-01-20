@@ -6,18 +6,20 @@ the database periodically (every 5 seconds by default).
 
 ## Overview
 
-```
-┌────────────────┐                            ┌────────────────┐
-│    Server A    │                            │    Server B    │
-│                │                            │                │
-│ ┌────────────┐ │    ┌────────────────┐      │ ┌────────────┐ │
-│ │ Operation  │ │───>│  Log Watcher   │─────>│ │ Operation  │ │
-│ │ Log Writer │ │    │  Notification  │      │ │ Log Reader │ │
-│ └────────────┘ │    │                │      │ └────────────┘ │
-│                │    │ - PostgreSQL   │      │                │
-│                │    │ - Redis        │      │                │
-│                │    │ - File System  │      │                │
-└────────────────┘    └────────────────┘      └────────────────┘
+```mermaid
+flowchart LR
+    subgraph A["Server&nbsp;A"]
+        Writer["Operation<br/>Log&nbsp;Writer"]
+    end
+    subgraph Notify["Log&nbsp;Watcher&nbsp;Notification"]
+        N1["PostgreSQL"]
+        N2["Redis"]
+        N3["File&nbsp;System"]
+    end
+    subgraph B["Server&nbsp;B"]
+        Reader["Operation<br/>Log&nbsp;Reader"]
+    end
+    Writer --> Notify --> Reader
 ```
 
 ## Available Watchers
@@ -292,34 +294,16 @@ while relying on polling for events from other hosts.
 
 ## Choosing a Watcher
 
-```
-┌───────────────────────────────────────────────────────┐
-│             Which watcher should I use?               │
-└───────────────────────────────────────────────────────┘
-                          │
-                          ▼
-               ┌───────────────────┐
-               │ Using PostgreSQL? │
-               └───────────────────┘
-                    │           │
-               Yes  │           │  No
-                    ▼           ▼
-          ┌──────────────┐    ┌───────────────┐
-          │    Npgsql    │    │ Have Redis?   │
-          │   Watcher    │    └───────────────┘
-          └──────────────┘         │        │
-                              Yes  │        │  No
-                                   ▼        ▼
-                       ┌──────────────┐   ┌─────────────────┐
-                       │    Redis     │   │ Single machine? │
-                       │   Watcher    │   └─────────────────┘
-                       └──────────────┘        │         │
-                                          Yes  │         │  No
-                                               ▼         ▼
-                                    ┌──────────────┐   ┌──────────────┐
-                                    │  FileSystem  │   │ Add Redis or │
-                                    │   Watcher    │   │ use polling  │
-                                    └──────────────┘   └──────────────┘
+```mermaid
+flowchart TD
+    Q["Which&nbsp;watcher&nbsp;should&nbsp;I&nbsp;use?"]
+    Q --> PG{"Using&nbsp;PostgreSQL?"}
+    PG -->|Yes| Npgsql["Npgsql&nbsp;Watcher"]
+    PG -->|No| Redis{"Have&nbsp;Redis?"}
+    Redis -->|Yes| RedisW["Redis&nbsp;Watcher"]
+    Redis -->|No| Single{"Single&nbsp;machine?"}
+    Single -->|Yes| FS["FileSystem&nbsp;Watcher"]
+    Single -->|No| Poll["Add&nbsp;Redis&nbsp;or<br/>use&nbsp;polling"]
 ```
 
 ### Recommendation Summary

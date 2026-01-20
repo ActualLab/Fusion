@@ -107,40 +107,12 @@ Use transient operations for:
 
 Whether transient or persistent, all operations go through **completion**:
 
-```
-Command Execution
-       |
-       v
-  +-----------+
-  | Operation |
-  |  Scope    |
-  +-----------+
-       |
-       v
-  +-----------------------+
-  | OperationCompletion   |
-  | Notifier              |
-  |                       |
-  | - Deduplication       |
-  | - Listener invocation |
-  +-----------------------+
-       |
-       v
-  +-----------------------+
-  | CompletionProducer    |
-  |                       |
-  | Creates Completion<T> |
-  | command               |
-  +-----------------------+
-       |
-       v
-  +-----------------------+
-  | Invalidating...       |
-  | CompletionHandler     |
-  |                       |
-  | Runs invalidation     |
-  | mode                  |
-  +-----------------------+
+```mermaid
+flowchart TD
+    Exec["Command&nbsp;Execution"] --> Scope["Operation&nbsp;Scope"]
+    Scope --> Notifier["OperationCompletionNotifier<br/><br/>•&nbsp;Deduplication<br/>•&nbsp;Listener&nbsp;invocation"]
+    Notifier --> Producer["CompletionProducer<br/><br/>Creates&nbsp;Completion&lt;T&gt;<br/>command"]
+    Producer --> Handler["InvalidatingCommandCompletionHandler<br/><br/>Runs&nbsp;invalidation&nbsp;mode"]
 ```
 
 The completion flow is the same for both transient and persistent operations,

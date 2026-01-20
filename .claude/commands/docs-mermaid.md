@@ -145,7 +145,7 @@ This is useful for vertical (`TD`) flowcharts where nodes have enough width but 
 
 Each `Part*-D.md` file should have diagrams ordered according to these rules:
 
-1. **Follow TOC order**: Diagrams should follow the order in which concepts appear in the sidebar TOC (see `config.mts`). For example, Part02-D.md should order diagrams matching: Key Concepts → RpcNoWait → RpcStream → Server-to-Client Calls → System Calls → Configuration Options.
+1. **Follow TOC order**: Diagrams should follow the order in which concepts appear in the sidebar TOC (see `config.mts`). For example, PartR-D.md should order diagrams matching: Key Concepts → RpcNoWait → RpcStream → Server-to-Client Calls → System Calls → Configuration Options.
 
 2. **Follow document section order**: Within each sub-document's scope, diagrams should match the order concepts are introduced in the prose (use `## ` headings as guide).
 
@@ -156,19 +156,19 @@ Each `Part*-D.md` file should have diagrams ordered according to these rules:
 ### Reference: TOC Structure
 
 ```
-Part01: Compute Services
+PartF: Compute Services
   └─ Computed<T> → ComputedOptions → States → Server-Only → Diagrams → Cheat Sheet
 
-Part02: ActualLab.Rpc
+PartR: ActualLab.Rpc
   └─ Key Concepts → RpcNoWait → RpcStream → Server-to-Client → System Calls → Config → Diagrams → Cheat Sheet
 
-Part03: Blazor Integration
-  └─ Services → UICommander → Authentication → Parameters → Diagrams → Cheat Sheet
-
-Part04: CommandR
+PartC: CommandR
   └─ Command Interfaces → Built-in Handlers → MediatR Comparison → Diagrams → Cheat Sheet
 
-Part05: Operations Framework
+PartB: Blazor Integration
+  └─ Services → UICommander → Authentication → Parameters → Diagrams → Cheat Sheet
+
+PartO: Operations Framework
   └─ Events → Transient Operations → Config → Log Watchers → Diagrams → Cheat Sheet
 
 PartAA: Authentication

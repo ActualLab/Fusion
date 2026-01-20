@@ -389,7 +389,7 @@ to depict it in symbols: 🧝=🥣+🦄
 
 Seriously, so how does it work?
 
-`AddService` registers so-called [Compute Service](Part01.md#_1-compute-services-and-compute-methods) &ndash;
+`AddService` registers so-called [Compute Service](PartF.md#_1-compute-services-and-compute-methods) &ndash;
 a singleton, which proxy type is generated in the runtime,
 but derives from the type you provide, i.e.
 `InMemoryProductService` / `InMemoryCartService` in above case.
@@ -511,7 +511,7 @@ dependent on:
 - Every product that's referenced by items in this cart.
 
 > If you want to learn more about Compute Services and
-> `IComputed`, check out [Part 1](Part01.md).
+> `IComputed`, check out [Part 1](PartF.md).
 
 Now it's time to demystify how `Get(productId)` call result gets
 invalidated once a product with `productId` gets changed.
@@ -586,7 +586,7 @@ I'll give a brief answer here:
   call and "the invalidation call" were completed for it locally.
 
 Under the hood all of this is powered by similar AOP-style
-decorators and [CommandR](Part04.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) &ndash;
+decorators and [CommandR](PartC.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) &ndash;
 style abstraction used by Fusion to implement its command processing
 pipeline.
 
@@ -651,7 +651,7 @@ And a few final remarks on this:
    This pipeline is server-side only.
 
 > If you want to learn all the details about this &ndash; check out
-> [Part 4](Part04.md) and [Part 5](Part05.md).
+> [Part 4](PartC.md) and [Part 5](PartO.md).
 
 ## Version 2: Switching to EF Core
 
@@ -914,7 +914,7 @@ client for any Compute Service that mimics its behavior
 completely, including everything related to invalidation
 and dependency tracking.
 
-Such clients are called [Compute Service Clients](Part02.md).
+Such clients are called [Compute Service Clients](PartR.md).
 They are Compute Services too &ndash; you can even cast them to
 `IComputeService` as any other compute service. But:
 
@@ -1059,14 +1059,14 @@ And they really do!
 And congrats &ndash; this is the end of this part, and now you know almost everything!
 The parts we didn't touch at all are:
 
-- [Part 1: Core Concepts](./Part01.md) also covers `ComputedState<T>` &ndash;
+- [Part 1: Core Concepts](./PartF.md) also covers `ComputedState<T>` &ndash;
   the type that implements "wait for change, make a delay, recompute"
   loop similar to the one we manually coded here, but in more robust
   and convenient way.
-- [Part 4: Real-time UI in Blazor Apps](./Part04.md) &ndash;
+- [Part 4: Real-time UI in Blazor Apps](./PartC.md) &ndash;
   you'll learn how `ComputedState<T>` is used by
   `LiveComponent<T>` to power real-time updates in Blazor.
-- [Part 2: Fusion on Server-Side Only](./Part02.md) &ndash;
+- [Part 2: Fusion on Server-Side Only](./PartR.md) &ndash;
   read it to fully understand how Fusion actually caches `IComputed`
   instances, and what are the levers you can use to tweak its
   caching behavior.

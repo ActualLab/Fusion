@@ -19,7 +19,7 @@
       "Bash(echo:*)",
       "Bash(grep:*)",
       "Bash(printenv:*)",
-      "Bash(for file in index.md Part03.md Part01-SS.md ExternalLinks0.md PartFF.md)",
+      "Bash(for file in index.md PartB.md PartF-SS.md ExternalLinks0.md PartFF.md)",
       "Bash(do echo '=== $file ===' grep -n -B1 -A1 ^--- $file)"
     ]
   },

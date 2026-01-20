@@ -2,7 +2,7 @@
 
 This document covers the core services that power Fusion's Blazor integration: `CircuitHub`, `JSRuntimeInfo`, `RenderModeHelper`, and `RenderModeDef`.
 
-> **See also**: [UICommander and UIActionTracker](Part03-UICommander.md) &ndash; command execution and responsive UI updates. Both are optional and can be replaced with custom abstractions.
+> **See also**: [UICommander and UIActionTracker](PartB-UICommander.md) &ndash; command execution and responsive UI updates. Both are optional and can be replaced with custom abstractions.
 
 ## CircuitHub
 
@@ -258,6 +258,6 @@ This registers:
 | `CircuitHub` | Scoped | Central service hub |
 | `JSRuntimeInfo` | Scoped/Singleton | JS runtime information |
 | `RenderModeHelper` | Scoped | Render mode utilities |
-| `UICommander` | Scoped | Command execution for UI (see [UICommander](Part03-UICommander.md)) |
-| `UIActionTracker` | Scoped | Tracks UI actions (see [UICommander](Part03-UICommander.md)) |
+| `UICommander` | Scoped | Command execution for UI (see [UICommander](PartB-UICommander.md)) |
+| `UIActionTracker` | Scoped | Tracks UI actions (see [UICommander](PartB-UICommander.md)) |
 | `UIActionFailureTracker` | Scoped | Tracks failed UI actions |

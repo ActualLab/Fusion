@@ -3,12 +3,12 @@
 This part covers how to build real-time Blazor applications with Fusion. Fusion provides a comprehensive set of component base classes, services, and utilities that make it easy to create UIs that automatically update when underlying data changes.
 
 **Related Documentation:**
-- [Services](Part03-Services.md) &ndash; CircuitHub, JSRuntimeInfo, RenderModeHelper
-- [UICommander](Part03-UICommander.md) &ndash; UICommander, UIActionTracker, UpdateDelayer
-- [Authentication](Part03-Auth.md) &ndash; AuthState, AuthStateProvider, PresenceReporter
-- [Parameter Comparison](Part03-Parameters.md) &ndash; Optimized parameter handling
-- [Diagrams](Part03-D.md) &ndash; Visual diagrams of component architecture
-- [Cheat Sheet](Part03-CS.md) &ndash; Quick reference
+- [Services](PartB-Services.md) &ndash; CircuitHub, JSRuntimeInfo, RenderModeHelper
+- [UICommander](PartB-UICommander.md) &ndash; UICommander, UIActionTracker, UpdateDelayer
+- [Authentication](PartB-Auth.md) &ndash; AuthState, AuthStateProvider, PresenceReporter
+- [Parameter Comparison](PartB-Parameters.md) &ndash; Optimized parameter handling
+- [Diagrams](PartB-D.md) &ndash; Visual diagrams of component architecture
+- [Cheat Sheet](PartB-CS.md) &ndash; Quick reference
 
 ## Required Packages
 
@@ -18,12 +18,12 @@ This part covers how to build real-time Blazor applications with Fusion. Fusion 
 | [ActualLab.Fusion](https://www.nuget.org/packages/ActualLab.Fusion/) | Core Fusion (automatically referenced by Blazor package) |
 
 ::: tip
-For authentication features (`AuthStateProvider`, `ClientAuthHelper`, `CascadingAuthState`), also add [ActualLab.Fusion.Blazor.Authentication](https://www.nuget.org/packages/ActualLab.Fusion.Blazor.Authentication/). See [Authentication](Part03-Auth.md) for details.
+For authentication features (`AuthStateProvider`, `ClientAuthHelper`, `CascadingAuthState`), also add [ActualLab.Fusion.Blazor.Authentication](https://www.nuget.org/packages/ActualLab.Fusion.Blazor.Authentication/). See [Authentication](PartB-Auth.md) for details.
 :::
 
 ## Key Concepts
 
-You already know about `IState<T>` &ndash; it was described in [Part 1](./Part01.md).
+You already know about `IState<T>` &ndash; it was described in [Part 1](./PartF.md).
 It's an abstraction that "tracks" the most current version of some `Computed<T>`.
 There are a few "flavors" of the `IState` &ndash; the most important ones are:
 
@@ -84,7 +84,7 @@ Extends `FusionComponentBase` to provide access to `CircuitHub` and commonly use
 
 Acts as a convenience layer that injects `CircuitHub` and exposes shortcuts to frequently needed services like `StateFactory`, `UICommander`, and `Session`.
 
-> **See also**: [Blazor Services](Part03-Services.md) for detailed documentation of `CircuitHub`, `JSRuntimeInfo`, `RenderModeHelper`, and `RenderModeDef`.
+> **See also**: [Blazor Services](PartB-Services.md) for detailed documentation of `CircuitHub`, `JSRuntimeInfo`, `RenderModeHelper`, and `RenderModeDef`.
 
 ### How It Works
 
@@ -263,7 +263,7 @@ For Server-Side Blazor, you need to:
 
 See [HelloBlazorServer/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/HelloBlazorServer/Program.cs) for a complete example. The key parts are:
 
-<!-- snippet: Part03_ServerSideBlazor_Services -->
+<!-- snippet: PartB_ServerSideBlazor_Services -->
 ```cs
 public static void ConfigureServerSideBlazorServices(IServiceCollection services)
 {
@@ -288,7 +288,7 @@ public static void ConfigureServerSideBlazorServices(IServiceCollection services
 
 And for the app configuration:
 
-<!-- snippet: Part03_ServerSideBlazor_App -->
+<!-- snippet: PartB_ServerSideBlazor_App -->
 ```cs
 public static void ConfigureServerSideBlazorApp(WebApplication app)
 {
@@ -313,7 +313,7 @@ See [TodoApp](https://github.com/ActualLab/Fusion.Samples/tree/master/src/TodoAp
 
 See [TodoApp/Host/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/Host/Program.cs) for a complete example. The key parts are:
 
-<!-- snippet: Part03_Hybrid_ServerServices -->
+<!-- snippet: PartB_Hybrid_ServerServices -->
 ```cs
 public static void ConfigureHybridServerServices(IServiceCollection services)
 {
@@ -336,7 +336,7 @@ public static void ConfigureHybridServerServices(IServiceCollection services)
 
 And for the app configuration:
 
-<!-- snippet: Part03_Hybrid_ServerApp -->
+<!-- snippet: PartB_Hybrid_ServerApp -->
 ```cs
 public static void ConfigureHybridServerApp(WebApplication app)
 {
@@ -365,7 +365,7 @@ public static void ConfigureHybridServerApp(WebApplication app)
 
 See [TodoApp/UI/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/UI/Program.cs) and [ClientStartup.cs](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/UI/ClientStartup.cs) for a complete example. The key parts are:
 
-<!-- snippet: Part03_Wasm_Main -->
+<!-- snippet: PartB_Wasm_Main -->
 ```cs
 public static async Task WasmMain(string[] args)
 {
@@ -377,7 +377,7 @@ public static async Task WasmMain(string[] args)
 ```
 <!-- endSnippet -->
 
-<!-- snippet: Part03_Wasm_Services -->
+<!-- snippet: PartB_Wasm_Services -->
 ```cs
 public static void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
 {
@@ -417,12 +417,12 @@ Check out the [TodoApp Sample](https://github.com/ActualLab/Fusion.Samples/tree/
 
 This document covered the core component base classes. For more advanced topics, see:
 
-- **[Blazor Services](Part03-Services.md)**: Deep dive into `CircuitHub`, `JSRuntimeInfo`, `RenderModeHelper`, and `RenderModeDef`. Learn how to detect prerendering, manage render modes, and access services efficiently.
+- **[Blazor Services](PartB-Services.md)**: Deep dive into `CircuitHub`, `JSRuntimeInfo`, `RenderModeHelper`, and `RenderModeDef`. Learn how to detect prerendering, manage render modes, and access services efficiently.
 
-- **[Blazor Authentication](Part03-Auth.md)**: Complete guide to authentication in Blazor apps, including `AuthStateProvider`, `ClientAuthHelper`, `CascadingAuthState`, and the `PresenceReporter` for tracking active users.
+- **[Blazor Authentication](PartB-Auth.md)**: Complete guide to authentication in Blazor apps, including `AuthStateProvider`, `ClientAuthHelper`, `CascadingAuthState`, and the `PresenceReporter` for tracking active users.
 
-- **[Parameter Comparison](Part03-Parameters.md)**: How Fusion optimizes Blazor component updates through custom parameter comparison. Covers `ParameterComparisonMode`, `ParameterComparer`, and customization options.
+- **[Parameter Comparison](PartB-Parameters.md)**: How Fusion optimizes Blazor component updates through custom parameter comparison. Covers `ParameterComparisonMode`, `ParameterComparer`, and customization options.
 
-- **[Diagrams](Part03-D.md)**: Visual diagrams of component hierarchy, lifecycle, and data flow.
+- **[Diagrams](PartB-D.md)**: Visual diagrams of component hierarchy, lifecycle, and data flow.
 
-- **[Cheat Sheet](Part03-CS.md)**: Quick reference for common patterns.
+- **[Cheat Sheet](PartB-CS.md)**: Quick reference for common patterns.

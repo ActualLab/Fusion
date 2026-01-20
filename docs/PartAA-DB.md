@@ -390,7 +390,7 @@ services.AddDbContextServices<AppDbContext>(db => {
 });
 ```
 
-See [Part 5: Operations Framework](Part05.md) for details.
+See [Part 5: Operations Framework](PartO.md) for details.
 
 
 ## Migrations

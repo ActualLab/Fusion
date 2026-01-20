@@ -1,6 +1,6 @@
 # CommandR: Diagrams
 
-Diagrams for the CommandR concepts introduced in [Part 4](Part04.md).
+Diagrams for the CommandR concepts introduced in [Part 4](PartC.md).
 
 
 ## Command Handler Pipeline
@@ -11,11 +11,8 @@ flowchart TD
 
     subgraph Pipeline ["&nbsp;Handler&nbsp;Pipeline&nbsp;(Descending&nbsp;Priority)&nbsp;"]
         direction TB
-        P1["PreparedCommandHandler&nbsp;[Filter]<br/>Priority:&nbsp;1,000,000,000"]
-        P1 --> P2["CommandTracer&nbsp;[Filter]<br/>Priority:&nbsp;998,000,000"]
-        P2 --> P3["LocalCommandRunner&nbsp;[Filter]<br/>Priority:&nbsp;900,000,000"]
-        P3 --> P4["RpcCommandHandler&nbsp;[Filter]<br/>Priority:&nbsp;800,000,000"]
-        P4 --> Ops["Operations&nbsp;Framework&nbsp;Handlers<br/>(See&nbsp;Part&nbsp;5)"]
+        Filters["Filtering&nbsp;Handlers<br/>PreparedCommandHandler,&nbsp;CommandTracer,<br/>LocalCommandRunner,&nbsp;RpcCommandHandler"]
+        Filters --> Ops["Operations&nbsp;Framework&nbsp;Handlers<br/>(See&nbsp;PartO)"]
         Ops --> Final["Your&nbsp;Command&nbsp;Handler&nbsp;[Final]<br/>Priority:&nbsp;0"]
     end
 
@@ -154,7 +151,7 @@ flowchart TD
         Handler["Command&nbsp;Handler&nbsp;—&nbsp;cmd.Session&nbsp;is&nbsp;now&nbsp;valid!"]
 
         Inbound --> Replacer
-        Replacer -->|"Session.Default&nbsp;→&nbsp;actual-session-id"| Handler
+        Replacer -->|"Session.Default&nbsp;→&nbsp;actual&#8209;session&#8209;id"| Handler
     end
 ```
 
@@ -189,7 +186,7 @@ flowchart TD
     Handlers --> Scan1["Scan&nbsp;for:<br/>•&nbsp;ICommandHandler&lt;T&gt;&nbsp;interfaces<br/>•&nbsp;Methods&nbsp;with&nbsp;[CommandHandler]"]
     Scan1 --> Desc["Create&nbsp;CommandHandler&nbsp;descriptors:<br/>ServiceType,&nbsp;CommandType,&nbsp;Priority,&nbsp;IsFilter"]
 
-    Service --> Scan2["1.&nbsp;Register&nbsp;with&nbsp;proxy<br/>2.&nbsp;Scan&nbsp;for&nbsp;[CommandHandler]&nbsp;methods<br/>3.&nbsp;Proxy&nbsp;ensures&nbsp;direct&nbsp;calls&nbsp;go&nbsp;through&nbsp;pipeline"]
+    Service --> Scan2["1.&nbsp;Register&nbsp;with&nbsp;proxy<br/>2.&nbsp;Scan&nbsp;for&nbsp;[CommandHandler]&nbsp;methods<br/>3.&nbsp;Proxy&nbsp;prevents&nbsp;direct&nbsp;calls&nbsp;(throws)"]
 ```
 
 ### Resolution (at runtime)

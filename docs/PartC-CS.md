@@ -93,7 +93,7 @@ services.AddScoped<OrderHandlers>();
 commander.AddHandlers<OrderHandlers>();
 ```
 
-### Command Service (AOP-Style)
+### Command Service
 
 ```cs
 public class OrderService : ICommandService
@@ -110,9 +110,9 @@ public class OrderService : ICommandService
 // Registration (creates proxy automatically)
 commander.AddService<OrderService>();
 
-// Both go through full pipeline:
+// Always use Commander - direct calls throw!
 await commander.Call(new CreateOrderCommand(...), ct);
-await orderService.CreateOrder(new CreateOrderCommand(...), ct);
+// await orderService.CreateOrder(...); // Throws NotSupportedException!
 ```
 
 ### Filter Handler
@@ -249,4 +249,4 @@ public virtual async Task<Order> CreateOrder(
 }
 ```
 
-See [Part 5: Operations Framework](Part05.md) for details.
+See [Part 5: Operations Framework](PartO.md) for details.

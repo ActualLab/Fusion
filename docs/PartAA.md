@@ -241,15 +241,15 @@ When you add authentication, `InMemoryAuthService` is registered as `IAuth` and 
 to the following code snippet.
 
 The Operations Framework is also needed for any of these services &ndash;
-hopefully you read [Part 5](./Part05.md), which covers it.
+hopefully you read [Part 5](./PartO.md), which covers it.
 
-<!-- snippet: Part05_AddDbContextServices -->
+<!-- snippet: PartO_AddDbContextServices -->
 ```cs
 public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
     services.AddDbContextServices<AppDbContext>(db => {
         // Uncomment if you'll be using AddRedisOperationLogWatcher
-        // db.AddRedisDb("localhost", "FusionDocumentation.Part05");
+        // db.AddRedisDb("localhost", "FusionDocumentation.PartO");
 
         db.AddOperations(operations => {
             // This call enabled Operations Framework (OF) for AppDbContext.

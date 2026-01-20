@@ -68,4 +68,4 @@ await simpleService.Ping("Now it's very likely to be sent!");
 
 ## Server-to-Client Calls
 
-`RpcNoWait` is commonly used for server-to-client (reverse RPC) calls. See [Server-to-Client Calls](./Part02-ReverseRpc.md) for details.
+`RpcNoWait` is commonly used for server-to-client (reverse RPC) calls. See [Server-to-Client Calls](./PartR-ReverseRpc.md) for details.

@@ -1,6 +1,6 @@
 # Blazor Integration: Diagrams
 
-Diagrams for the Blazor integration concepts introduced in [Part 3](Part03.md).
+Diagrams for the Blazor integration concepts introduced in [Part 3](PartB.md).
 
 
 ## Component Hierarchy
@@ -185,12 +185,12 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Server["Blazor Server<br/>(running in circuit)"]
-    Server -->|"User clicks 'Switch to WASM'"| ChangeMode["RenderModeHelper.ChangeMode()<br/>Navigates to: /fusion/renderMode/w?redirectTo=/current-page"]
-    ChangeMode --> Endpoint["Server Endpoint<br/>MapFusionRenderModeEndpoints"]
-    Endpoint --> SetCookie["1. Sets render mode cookie<br/>2. Redirects to redirectTo"]
-    SetCookie --> HostPage["_HostPage.razor<br/>Reads mode from cookie<br/>RenderModeDef.GetOrDefault"]
-    HostPage --> WASM["Blazor WebAssembly<br/>(now running in browser)"]
+    Server["Blazor&nbsp;Server<br/>(running&nbsp;in&nbsp;circuit)"]
+    Server -->|"User&nbsp;clicks&nbsp;'Switch&nbsp;to&nbsp;WASM'"| ChangeMode["RenderModeHelper.ChangeMode()<br/>Navigates&nbsp;to:&nbsp;/fusion/renderMode/w?redirectTo=/current-page"]
+    ChangeMode --> Endpoint["Server&nbsp;Endpoint<br/>MapFusionRenderModeEndpoints"]
+    Endpoint --> SetCookie["1.&nbsp;Sets&nbsp;render&nbsp;mode&nbsp;cookie<br/>2.&nbsp;Redirects&nbsp;to&nbsp;redirectTo"]
+    SetCookie --> HostPage["_HostPage.razor<br/>Reads&nbsp;mode&nbsp;from&nbsp;cookie<br/>RenderModeDef.GetOrDefault"]
+    HostPage --> WASM["Blazor&nbsp;WebAssembly<br/>(now&nbsp;running&nbsp;in&nbsp;browser)"]
 ```
 
 | Mode | Code | Description |

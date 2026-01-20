@@ -192,26 +192,14 @@ public Func<ArgumentList, RpcPeerRef> RouterFactory(RpcMethodDef methodDef)
 
 When a peer's route state changes, the following sequence occurs:
 
-```
-1. RouteState.MarkChanged() called
-           |
-           v
-2. Active calls receive RpcRerouteException
-           |
-           v
-3. RpcInterceptor catches exception
-           |
-           v
-4. Wait for ReroutingDelays[rerouteCount]
-           |
-           v
-5. Call RouterFactory again with same arguments
-           |
-           v
-6. Get new RpcPeerRef (possibly different peer)
-           |
-           v
-7. Retry call on new peer
+```mermaid
+flowchart TD
+    A["RouteState.MarkChanged()&nbsp;called"] --> B["Active&nbsp;calls&nbsp;receive&nbsp;RpcRerouteException"]
+    B --> C["RpcInterceptor&nbsp;catches&nbsp;exception"]
+    C --> D["Wait&nbsp;for&nbsp;ReroutingDelays[rerouteCount]"]
+    D --> E["Call&nbsp;RouterFactory&nbsp;again&nbsp;with&nbsp;same&nbsp;arguments"]
+    E --> F["Get&nbsp;new&nbsp;RpcPeerRef&nbsp;(possibly&nbsp;different&nbsp;peer)"]
+    F --> G["Retry&nbsp;call&nbsp;on&nbsp;new&nbsp;peer"]
 ```
 
 

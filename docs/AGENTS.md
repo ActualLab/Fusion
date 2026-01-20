@@ -21,8 +21,8 @@ files in `docs/` folder. Our goal is to make it better:
 easier to read, cleaner, and factually correct - 
 based on the most current source code.
 
-For your reference, `docs/Part01.*` files were generated
-as a request to merge and update `docs/tutorial/Part01.md`-`Part03.md` 
+For your reference, `docs/PartF.*` files were generated
+as a request to merge and update `docs/tutorial/PartF.md`-`PartB.md` 
 from the old Fusion documentation.
 YOU MUST ABSOLUTELY SEE THESE FILES before starting to work 
 on a similar task.
@@ -85,11 +85,11 @@ The `Docs.csproj` project can execute the code samples from `PartXX.cs` files. E
 
 To run specific parts:
 ```powershell
-# Run a specific part (e.g., Part01)
-dotnet run --project Docs.csproj -- Part01
+# Run a specific part (e.g., PartF)
+dotnet run --project Docs.csproj -- PartF
 
 # Run multiple parts
-dotnet run --project Docs.csproj -- Part01 Part02
+dotnet run --project Docs.csproj -- PartF PartR
 
 # Run all parts
 dotnet run --project Docs.csproj -- all

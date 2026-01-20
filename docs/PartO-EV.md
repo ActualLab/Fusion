@@ -1,7 +1,12 @@
 # Operations Framework: Events
 
 Operations Framework supports producing **events** from commands. Events are stored in the database
-alongside the operation and processed asynchronously with guaranteed delivery.
+alongside the operation and processed asynchronously with guaranteed execution.
+
+This is a pure **Transactional Outbox** implementation. Since Operations Framework already provides
+infrastructure for on-commit actions (operation logging, invalidation), events are a natural fit.
+The key benefit: **if the transaction fails, the event is never committed or processed** &ndash;
+you get atomic "business data + event" writes without distributed transactions.
 
 ## Overview
 
@@ -9,7 +14,7 @@ Events enable:
 - **Asynchronous processing**: Trigger actions after a command completes
 - **Delayed execution**: Schedule events for future processing
 - **Deduplication**: Prevent duplicate event processing via UUID-based conflict strategies
-- **Reliable delivery**: Events are stored in the same transaction as the operation
+- **Transactional safety**: Events are stored in the same transaction as the operation &ndash; no event is processed if the transaction rolls back
 
 ## DbEvent Entity
 
@@ -178,15 +183,10 @@ The processor:
 
 ### Event States
 
-```
-┌───────┐     ┌───────────┐
-│  New  │────>│ Processed │  (Successful handling)
-└───────┘     └───────────┘
-    │
-    ▼
-┌───────────┐
-│ Discarded │  (Failed after retries)
-└───────────┘
+```mermaid
+flowchart TD
+    New["New"] -->|Successful&nbsp;handling| Processed["Processed"]
+    New -->|Failed&nbsp;after&nbsp;retries| Discarded["Discarded"]
 ```
 
 ## Event Log Reader

@@ -16,19 +16,19 @@ using ActualLab.Fusion.EntityFramework.Redis;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial05;
+namespace TutorialO;
 
 // Sample DbContext for Part 6
 public class AppDbContext(DbContextOptions options) : DbContextBase(options)
 {
     // ActualLab.Fusion.EntityFramework.Operations tables
-    #region Part05_DbSet
+    #region PartO_DbSet
     public DbSet<DbOperation> Operations { get; protected set; } = null!;
     public DbSet<DbEvent> Events { get; protected set; } = null!;
     #endregion
 }
 
-#region Part05_PostMessageCommand
+#region PartO_PostMessageCommand
 public record PostMessageCommand(Session Session, string Text) : ICommand<ChatMessage>;
 #endregion
 
@@ -38,7 +38,7 @@ public record ChatMessage(long Id, string Text);
 // Example: Pre-OF handler (old pattern, before Operations Framework)
 public class PreOfChatService(IServiceProvider services) : DbServiceBase<AppDbContext>(services), IComputeService
 {
-    #region Part05_PreOfHandler
+    #region PartO_PreOfHandler
     public async Task<ChatMessage> PostMessage(
         Session session, string text, CancellationToken cancellationToken = default)
     {
@@ -64,7 +64,7 @@ public class PreOfChatService(IServiceProvider services) : DbServiceBase<AppDbCo
 // Sample service demonstrating command handler pattern
 public class ChatService(IServiceProvider services) : DbServiceBase<AppDbContext>(services), IComputeService
 {
-    #region Part05_PostOfHandler
+    #region PartO_PostOfHandler
     [CommandHandler]
     public virtual async Task<ChatMessage> PostMessage(
         PostMessageCommand command, CancellationToken cancellationToken = default)
@@ -90,7 +90,7 @@ public class ChatService(IServiceProvider services) : DbServiceBase<AppDbContext
         => Task.FromResult(new ChatMessage(0, command.Text));
 }
 
-public static class PartAP
+public static class PartO
 {
     public static async Task Run()
     {
@@ -200,12 +200,12 @@ public static class PartAP
     }
 
     // Example: AddDbContextServices configuration
-    #region Part05_AddDbContextServices
+    #region PartO_AddDbContextServices
     public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
     {
         services.AddDbContextServices<AppDbContext>(db => {
             // Uncomment if you'll be using AddRedisOperationLogWatcher
-            // db.AddRedisDb("localhost", "FusionDocumentation.Part05");
+            // db.AddRedisDb("localhost", "FusionDocumentation.PartO");
 
             db.AddOperations(operations => {
                 // This call enabled Operations Framework (OF) for AppDbContext.
@@ -231,7 +231,7 @@ public static class PartAP
 }
 
 // Example: Command with operation items pattern
-#region Part05_SignOutCommand
+#region PartO_SignOutCommand
 public record SignOutCommand(Session Session, bool Force = false) : ICommand<Unit>
 {
     public SignOutCommand() : this(default!) { }
@@ -241,7 +241,7 @@ public record SignOutCommand(Session Session, bool Force = false) : ICommand<Uni
 // Example: Service demonstrating operation items usage
 public class AuthServiceExample(IServiceProvider services) : DbServiceBase<AppDbContext>(services), IComputeService
 {
-    #region Part05_SignOutHandler
+    #region PartO_SignOutHandler
     public virtual async Task SignOut(
         SignOutCommand command, CancellationToken cancellationToken = default)
     {
@@ -292,7 +292,7 @@ public record DbSessionInfo
 // Example: Completion command invocation
 public static class CompletionExample
 {
-    #region Part05_CompletionCall
+    #region PartO_CompletionCall
     public static async Task InvokeCompletion(ICommander Commander, Operation operation)
     {
         await Commander.Call(Completion.New(operation), true).ConfigureAwait(false);
@@ -303,7 +303,7 @@ public static class CompletionExample
 // Example: InvalidatingCommandCompletionHandler signature
 public class InvalidatingHandlerExample
 {
-    #region Part05_InvalidatingHandler
+    #region PartO_InvalidatingHandler
     [CommandHandler(Priority = 100, IsFilter = true)]
     public async Task OnCommand(
       ICompletion command, CommandContext context, CancellationToken cancellationToken)

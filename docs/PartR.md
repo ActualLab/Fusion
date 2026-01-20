@@ -60,7 +60,7 @@ in our code, so we can map the interface to:
 - a compute service implementation on the server side (e.g., in Blazor Server)
 - a compute service client on the client side (WASM, MAUI, etc.).
 
-<!-- snippet: Part02_SharedApi -->
+<!-- snippet: PartR_SharedApi -->
 ```cs
 // The interface for our chat service
 public interface IChatService : IComputeService
@@ -83,7 +83,7 @@ public interface IChatService : IComputeService
 
 Now let's implement the server-side compute service:
 
-<!-- snippet: Part02_ServerImplementation -->
+<!-- snippet: PartR_ServerImplementation -->
 ```cs
 public class ChatService : IChatService
 {
@@ -133,7 +133,7 @@ public class ChatService : IChatService
 We'll use ASP.NET Core Web Host to host the ActualLab.Rpc server
 that exposes `IChatService`:
 
-<!-- snippet: Part02_ServerSetup -->
+<!-- snippet: PartR_ServerSetup -->
 ```cs
 var builder = WebApplication.CreateBuilder();
 builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
@@ -152,7 +152,7 @@ app.MapRpcWebSocketServer(); // Map the ActualLab.Rpc WebSocket server endpoint 
 ```
 <!-- endSnippet -->
 
-<!-- snippet: Part02_RunServer -->
+<!-- snippet: PartR_RunServer -->
 ```cs
 try {
     await app.RunAsync("http://localhost:22222/").WaitAsync(cancellationToken);
@@ -171,7 +171,7 @@ As for the client-side, we need to:
 1. Configure `IServiceProvider` to use both Fusion and ActualLab.Rpc
 2. Make Fusion to register Compute Service Client (in fact, an "advanced" RPC client) for `IChatService`.
 
-<!-- snippet: Part02_ClientSetup -->
+<!-- snippet: PartR_ClientSetup -->
 ```cs
 var fusion = services.AddFusion(); // No default RpcServiceMode, so it will be set to RpcServiceMode.Local
 var rpc = fusion.Rpc; // The same as services.AddRpc(), but slightly faster, since FusionBuilder already did it
@@ -212,7 +212,7 @@ the server-side Compute Service outputs. So:
 - which triggers re-computation of these states,
 - which, in turn, triggers re-rendering of corresponding `ComputedStateComponent<T>`-s.
 
-<!-- snippet: Part02_RunClient -->
+<!-- snippet: PartR_RunClient -->
 ```cs
 await using var services = CreateClientServiceProvider();
 var chatClient = services.GetRequiredService<IChatService>();
@@ -253,7 +253,7 @@ await Task.Delay(1000);
 
 The output:
 
-<!-- snippet: Part02_Output -->
+<!-- snippet: PartR_Output -->
 ```cs
 /* The output:
 GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
@@ -321,7 +321,7 @@ And that's why performance-wise, such clients are almost exact replicas of serve
 Let's see this in action. We've already added the `GetWordCountPlainRpc` method to our interface
 and implementation &ndash; since it's not a compute method, it won't benefit from Fusion's caching.
 
-<!-- snippet: Part02_Benchmark -->
+<!-- snippet: PartR_Benchmark -->
 ```cs
 // Benchmarking remote compute method calls and plain RPC calls – run in Release mode!
 WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc():");
@@ -344,7 +344,7 @@ WriteLine($"- GetWordCountPlainRpc(): {stopwatch.Elapsed.ToShortString()}");
 
 The output:
 
-<!-- snippet: Part02_Benchmark_Output -->
+<!-- snippet: PartR_Benchmark_Output -->
 ```cs
 /* The output:
 100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release mode!
@@ -370,7 +370,7 @@ projects in [Fusion Samples](https://github.com/ActualLab/Fusion.Samples).
 
 ## Client-Side Computed State
 
-In [Part 1](./Part01.md), you learned about `ComputedState<T>` &ndash; a state that
+In [Part 1](./PartF.md), you learned about `ComputedState<T>` &ndash; a state that
 auto-updates once it becomes inconsistent. Now, let's show that client-side
 `ComputedState<T>` can use a Compute Service Client to "observe" the output of
 a server-side Compute Service.
@@ -378,7 +378,7 @@ a server-side Compute Service.
 The code below reuses the `IChatService` and server setup from above,
 but adds a `ComputedState<T>` on the client side that tracks changes:
 
-<!-- snippet: Part02_ClientComputedState -->
+<!-- snippet: PartR_ClientComputedState -->
 ```cs
 var stateFactory = services.StateFactory();
 using var state = stateFactory.NewComputed(
@@ -446,8 +446,8 @@ ActualLab.Rpc provides additional features beyond standard request-response call
 
 | Feature | Description | Documentation |
 |---------|-------------|---------------|
-| **RpcNoWait** | Fire-and-forget calls that don't wait for responses | [RpcNoWait Guide](Part02-RpcNoWait.md) |
-| **RpcStream** | Bidirectional streaming of data over RPC | [RpcStream Guide](Part02-RpcStream.md) |
+| **RpcNoWait** | Fire-and-forget calls that don't wait for responses | [RpcNoWait Guide](PartR-RpcNoWait.md) |
+| **RpcStream** | Bidirectional streaming of data over RPC | [RpcStream Guide](PartR-RpcStream.md) |
 
 ### RpcNoWait (Fire-and-Forget)
 
@@ -461,7 +461,7 @@ public interface ISimpleService : IRpcService
 ```
 
 RpcNoWait also enables **reverse RPC** &ndash; the server calling methods on the client.
-See [RpcNoWait Guide](Part02-RpcNoWait.md) for details.
+See [RpcNoWait Guide](PartR-RpcNoWait.md) for details.
 
 ### RpcStream (Streaming)
 
@@ -479,7 +479,7 @@ public interface ISimpleService : IRpcService
 ```
 
 RpcStream supports nesting &ndash; streams can contain records with their own streams.
-See [RpcStream Guide](Part02-RpcStream.md) for details.
+See [RpcStream Guide](PartR-RpcStream.md) for details.
 
 
 ## Summary

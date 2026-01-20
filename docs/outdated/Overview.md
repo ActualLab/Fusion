@@ -872,12 +872,12 @@ especially for the companies running their server-side code on .NET Core (or .NE
 * Join [Fusion Place] to ask questions and track project updates.
 
 
-[Compute Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
-[Compute Service]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
-[`IComputed<T>`]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Computed Value]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Live State]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part03.md
-[Replica Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
+[Compute Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/PartF.md
+[Compute Service]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/PartF.md
+[`IComputed<T>`]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/PartR.md
+[Computed Value]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/PartR.md
+[Live State]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/PartB.md
+[Replica Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/PartC.md
 
 [Documentation Home]: README.md
 [Q/A]: QA.md

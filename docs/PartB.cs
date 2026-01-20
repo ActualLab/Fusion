@@ -14,7 +14,7 @@ using ActualLab.Rpc.Server;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial03;
+namespace TutorialB;
 
 // Fake types for snippet compilation
 public class _HostPage : ComponentBase { }
@@ -47,9 +47,9 @@ public class WeatherForecastService : IComputeService
         => Task.FromResult(Array.Empty<string>());
 }
 
-public static class Part03
+public static class PartB
 {
-    #region Part03_ServerSideBlazor_Services
+    #region PartB_ServerSideBlazor_Services
     public static void ConfigureServerSideBlazorServices(IServiceCollection services)
     {
         // Configure services
@@ -70,7 +70,7 @@ public static class Part03
     }
     #endregion
 
-    #region Part03_ServerSideBlazor_App
+    #region PartB_ServerSideBlazor_App
     public static void ConfigureServerSideBlazorApp(WebApplication app)
     {
         app.UseFusionSession();
@@ -83,7 +83,7 @@ public static class Part03
     }
     #endregion
 
-    #region Part03_Hybrid_ServerServices
+    #region PartB_Hybrid_ServerServices
     public static void ConfigureHybridServerServices(IServiceCollection services)
     {
         // Fusion services with RPC server mode
@@ -102,7 +102,7 @@ public static class Part03
     }
     #endregion
 
-    #region Part03_Hybrid_ServerApp
+    #region PartB_Hybrid_ServerApp
     public static void ConfigureHybridServerApp(WebApplication app)
     {
         app.UseWebSockets(new WebSocketOptions() {
@@ -125,7 +125,7 @@ public static class Part03
     }
     #endregion
 
-    #region Part03_Wasm_Main
+    #region PartB_Wasm_Main
     public static async Task WasmMain(string[] args)
     {
         var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -135,7 +135,7 @@ public static class Part03
     }
     #endregion
 
-    #region Part03_Wasm_Services
+    #region PartB_Wasm_Services
     public static void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
     {
         // Fusion services

@@ -3,9 +3,9 @@ using ActualLab.Rpc;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial04;
+namespace TutorialC;
 
-#region Part04_PrintCommandSession
+#region PartC_PrintCommandSession
 public class PrintCommand : ICommand<Unit>
 {
     public string Message { get; set; } = "";
@@ -25,19 +25,19 @@ public class PrintCommandHandler : ICommandHandler<PrintCommand>, IDisposable
 }
 #endregion
 
-#region Part04_RecSumCommandSession
+#region PartC_RecSumCommandSession
 public class RecSumCommand : ICommand<long>
 {
     public long[] Numbers { get; set; } = Array.Empty<long>();
 }
 #endregion
 
-public static class Part04
+public static class PartC
 {
 
     public static async Task PrintCommandSession()
     {
-        #region Part04_PrintCommandSession2
+        #region PartC_PrintCommandSession2
         // Building IoC container
         var serviceBuilder = new ServiceCollection()
             .AddScoped<PrintCommandHandler>(); // Try changing this to AddSingleton
@@ -100,7 +100,7 @@ public static class Part04
 
     public static async Task RecSumCommandSession()
     {
-        #region Part04_RecSumCommandSession2
+        #region PartC_RecSumCommandSession2
         // Building IoC container
         var serviceBuilder = new ServiceCollection()
             .AddScoped<RecSumCommandHandler>();
@@ -117,7 +117,7 @@ public static class Part04
 
     public static async Task RecSumCommandServiceSession()
     {
-        #region Part04_RecSumCommandServiceSession2
+        #region PartC_RecSumCommandServiceSession2
         // Building IoC container
         var serviceBuilder = new ServiceCollection();
         var rpc = serviceBuilder.AddRpc();
@@ -142,7 +142,7 @@ public static class Part04
 
 }
 
-#region Part04_RecSumCommandServiceSession
+#region PartC_RecSumCommandServiceSession
 public class RecSumCommandService : ICommandService
 {
     [CommandHandler] // Note that ICommandHandler<RecSumCommand, long> support isn't needed
@@ -156,7 +156,7 @@ public class RecSumCommandService : ICommandService
         var head = command.Numbers[0];
         var tail = command.Numbers[1..];
         var context = CommandContext.GetCurrent();
-        var tailSum = await context.Commander.Call( // Note it's a direct call, but the whole pipeline still gets invoked!
+        var tailSum = await context.Commander.Call( // Invoke nested command through Commander
             new RecSumCommand() { Numbers = tail },
             cancellationToken);
         return head + tailSum;

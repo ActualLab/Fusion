@@ -2,9 +2,9 @@ using System.Diagnostics;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial01;
+namespace TutorialF;
 
-#region Part01_Declare_Service
+#region PartF_Declare_Service
 public class CounterService : IComputeService // This is a tagging interface any compute service must "implement"
 {
     private readonly ConcurrentDictionary<string, int> _counters = new();
@@ -40,11 +40,11 @@ public class CounterService : IComputeService // This is a tagging interface any
 }
 #endregion
 
-public static class Part01
+public static class PartF
 {
     public static async Task Run()
     {
-        #region Part01_Register_Services
+        #region PartF_Register_Services
         var services = new ServiceCollection();
         var fusion = services.AddFusion(); // You can also use services.AddFusion(fusion => ...) pattern
         fusion.AddComputeService<CounterService>();
@@ -56,7 +56,7 @@ public static class Part01
 
         {
             WriteLine("Automatic Caching:");
-            #region Part01_Automatic_Caching
+            #region PartF_Automatic_Caching
             await counters.Get("a"); // Prints: Get(a) = 0
             await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
             #endregion
@@ -64,7 +64,7 @@ public static class Part01
 
         {
             WriteLine($"{Environment.NewLine}Automatic Dependency Tracking:");
-            #region Part01_Automatic_Dependency_Tracking
+            #region PartF_Automatic_Dependency_Tracking
             await counters.Sum("a", "b"); // Prints: Get(b) = 0, Sum(a, b) = 0 -- Get(b) was called from Sum(a, b)
             await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
             await counters.Get("b");      // Prints nothing -- it's a cache hit; the result is 0
@@ -73,7 +73,7 @@ public static class Part01
 
         {
             WriteLine($"{Environment.NewLine}Invalidation:");
-            #region Part01_Invalidation
+            #region PartF_Invalidation
             counters.Increment("a"); // Prints: Increment(a) + invalidates Get(a) call result
             await counters.Get("a"); // Prints: Get(a) = 1
             await counters.Get("b"); // Prints nothing -- Get(b) call wasn't invalidated, so it's a cache hit
@@ -82,7 +82,7 @@ public static class Part01
 
         {
             WriteLine($"{Environment.NewLine}Cascading Invalidation:");
-            #region Part01_Cascading_Invalidation
+            #region PartF_Cascading_Invalidation
             counters.Increment("a"); // Prints: Increment(a)
 
             // Increment(a) invalidated Get(a), but since invalidations are cascading,
@@ -101,7 +101,7 @@ public static class Part01
             #endregion
 
             WriteLine($"{Environment.NewLine}Accessing Computed Values:");
-            #region Part01_Accessing_Computed_Values
+            #region PartF_Accessing_Computed_Values
             var computedForGetA = await Computed.Capture(() => counters.Get("a"));
             WriteLine(computedForGetA.IsConsistent()); // True
             WriteLine(computedForGetA.Value);          // 2
@@ -140,7 +140,7 @@ public static class Part01
 
         {
             WriteLine($"{Environment.NewLine}Reactive updates:");
-            #region Part01_Reactive_Updates
+            #region PartF_Reactive_Updates
             _ = Task.Run(async () => {
                 // This is going to be our update loop
                 for (var i = 0; i <= 3; i++) {
@@ -162,7 +162,7 @@ public static class Part01
 
         {
             WriteLine($"{Environment.NewLine}Computed<T>.When() and .Changes() methods:");
-            #region Part01_When_And_Changes_Methods
+            #region PartF_When_And_Changes_Methods
             _ = Task.Run(async () => {
                 // This is going to be our update loop
                 for (var i = 0; i <= 5; i++) {
@@ -190,7 +190,7 @@ public static class Part01
 
         {
             WriteLine($"{Environment.NewLine}MutableState:");
-            #region Part01_MutableState
+            #region PartF_MutableState
             var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
             var state = stateFactory.NewMutable(1);
             var oldComputed = state.Computed;
@@ -223,7 +223,7 @@ public static class Part01
 
         {
             WriteLine($"{Environment.NewLine}ComputedState:");
-            #region Part01_ComputedState
+            #region PartF_ComputedState
             var stateFactory = sp.StateFactory();
             var clock = Stopwatch.StartNew();
 

@@ -92,7 +92,7 @@ Retries failed commands with transient errors using configurable retry policies.
 fusion.AddOperationReprocessor();
 ```
 
-See [Part 5: Operations Framework](Part05.md) for details.
+See [Part 5: Operations Framework](PartO.md) for details.
 
 ### NestedOperationLogger
 
@@ -106,7 +106,7 @@ services.AddSingleton(c => new NestedOperationLogger(c));
 commander.AddHandlers<NestedOperationLogger>();
 ```
 
-See [Part 5: Operations Framework](Part05.md) for details.
+See [Part 5: Operations Framework](PartO.md) for details.
 
 ### InMemoryOperationScopeProvider
 
@@ -120,7 +120,7 @@ services.AddSingleton(c => new InMemoryOperationScopeProvider(c));
 commander.AddHandlers<InMemoryOperationScopeProvider>();
 ```
 
-See [Part 5: Operations Framework](Part05.md) for details.
+See [Part 5: Operations Framework](PartO.md) for details.
 
 ### InvalidatingCommandCompletionHandler
 
@@ -135,7 +135,7 @@ services.AddSingleton(c => new InvalidatingCommandCompletionHandler(...));
 commander.AddHandlers<InvalidatingCommandCompletionHandler>();
 ```
 
-See [Part 5: Operations Framework](Part05.md) for details.
+See [Part 5: Operations Framework](PartO.md) for details.
 
 ### CompletionTerminator
 
@@ -174,7 +174,7 @@ services.AddDbContextServices<AppDbContext>(db => {
 });
 ```
 
-See [Part 5: Operations Framework](Part05.md) for details.
+See [Part 5: Operations Framework](PartO.md) for details.
 
 ## Complete Pipeline Visualization
 

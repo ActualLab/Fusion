@@ -101,9 +101,9 @@ public class OrderHandlers
 }
 ```
 
-### 4. AOP-Style Command Services
+### 4. Command Services with Interceptors
 
-Command services allow direct method calls that still go through the full pipeline:
+Command services use interceptors to enforce that all handler methods go through the Commander pipeline:
 
 ```cs
 public class OrderService : ICommandService
@@ -119,10 +119,14 @@ public class OrderService : ICommandService
 // Registration creates a proxy
 commander.AddService<OrderService>();
 
-// Both invoke the full pipeline:
+// Correct - use Commander:
 await commander.Call(new CreateOrderCommand(...), ct);
-await orderService.CreateOrder(new CreateOrderCommand(...), ct); // Same result!
+
+// Direct calls throw NotSupportedException!
+await orderService.CreateOrder(new CreateOrderCommand(...), ct); // Throws!
 ```
+
+This design ensures all command executions go through the full pipeline (filters, scoping, Operations Framework integration).
 
 ### 5. Handler Registration
 

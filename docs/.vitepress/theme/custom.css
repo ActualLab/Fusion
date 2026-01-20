@@ -46,6 +46,12 @@ blockquote {
   }
 }
 
+/* Badges */
+img[src*="img.shields.io"],
+img[src*="github.com"][src*="badge"] {
+  margin: 1px;
+}
+
 /* Code blocks */
 .vp-doc div[class*="language-"] code {
   line-height: 1.2;

@@ -2,11 +2,12 @@
 
 [![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22)
 [![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
-[![MIT License](https://img.shields.io/github/license/actuallab/Fusion?)](https://github.com/ActualLab/Fusion/blob/master/LICENSE)
-<br/>
-[![Fusion Place](https://img.shields.io/badge/Fusion%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
+<br/>
+[![Documentation](https://img.shields.io/badge/Documentation-6B5B95)](https://fusion.actuallab.net/)
+[![Samples](https://img.shields.io/badge/Samples-88B04B)](https://github.com/ActualLab/Fusion.Samples)
+[![Chat @ Voxt](https://img.shields.io/badge/Chat%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
 
 ## Overview
 
@@ -23,7 +24,7 @@ Fusion solves a set of infamously hard problems with a 🦄 single abstraction:
 |---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
 | ⚡ Caching                      | In-memory memoization by call arguments                                                                                                                                          | Redis, memcached, ...                                                                                          |
 | 🔄 Cache&nbsp;invalidation      | Automatic dependency tracking + cascading invalidation                                                                                                                           | Manual tracking &ndash; an [infamously hard problem](https://martinfowler.com/bliki/TwoHardThings.html) |
-| 🚀 Real-time updates            | Fusion client automatically propagates server-side cache invalidation back to the client making it aware of state changes on the server side                                      | SignalR, WebSockets, custom pub/sub, ...                                                                       |
+| 🪄 Real-time updates            | Fusion client automatically propagates server-side cache invalidation back to the client making it aware of state changes on the server side                                      | SignalR, WebSockets, custom pub/sub, ...                                                                       |
 | ✈️ Offline operation            | Client-side persistent cache support (IndexedDB, SQLite) is integrated right into the Fusion RPC client, so you get offline mode for free!                                       | Service workers, sync logic, conflict resolution, ...                                                          |
 | 🤬 Network chattiness           | Persistent cache enables speculative execution on the client side, allowing `ActualLab.Rpc` to batch hundreds of RPC calls into a single transmission frame                      | Request batching, debouncing, manual optimization, ...                                                         |
 | 📡 Network traffic              | `ActualLab.Rpc` is 2-5x faster than gRPC and SignalR even in its "raw" mode; Fusion integration, if enabled, turns it into an efficiency beast by adding "cache match" responses | Protocol tuning, custom serialization, ...                                                                     |
@@ -314,14 +315,14 @@ eliminates the chattiness you'd expect from a regular client-side proxy.
 - Check out [Samples]
 - Join [Fusion Place] to ask questions and track project updates.
 
-[Compute Services]: https://fusion.actuallab.net/Part01#_1-compute-services-and-compute-methods
-[Compute Service]: https://fusion.actuallab.net/Part01#_1-compute-services-and-compute-methods
-[Compute Method]: https://fusion.actuallab.net/Part01#_1-compute-services-and-compute-methods
-[`Computed<T>`]: https://fusion.actuallab.net/Part01-C
-[Computed Value]: https://fusion.actuallab.net/Part01-C
-[Computed Values]: https://fusion.actuallab.net/Part01-C
-[Compute Service Clients]: https://fusion.actuallab.net/Part02#what-is-compute-service-client
-[Compute Service Client]: https://fusion.actuallab.net/Part02#what-is-compute-service-client
+[Compute Services]: https://fusion.actuallab.net/PartF#_1-compute-services-and-compute-methods
+[Compute Service]: https://fusion.actuallab.net/PartF#_1-compute-services-and-compute-methods
+[Compute Method]: https://fusion.actuallab.net/PartF#_1-compute-services-and-compute-methods
+[`Computed<T>`]: https://fusion.actuallab.net/PartF-C
+[Computed Value]: https://fusion.actuallab.net/PartF-C
+[Computed Values]: https://fusion.actuallab.net/PartF-C
+[Compute Service Clients]: https://fusion.actuallab.net/PartR#what-is-compute-service-client
+[Compute Service Client]: https://fusion.actuallab.net/PartR#what-is-compute-service-client
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
 [Samples]: https://github.com/ActualLab/Fusion.Samples
 [Board Games]: https://github.com/alexyakunin/BoardGames

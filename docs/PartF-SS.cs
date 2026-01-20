@@ -1,9 +1,9 @@
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial01SS;
+namespace TutorialFSS;
 
-#region Part01SS_Service1
+#region PartFSS_Service1
 public partial class Service1 : IComputeService
 {
     [ComputeMethod]
@@ -15,7 +15,7 @@ public partial class Service1 : IComputeService
 }
 #endregion
 
-#region Part01SS_Service2
+#region PartFSS_Service2
 public partial class Service2 : IComputeService
 {
     [ComputeMethod]
@@ -34,7 +34,7 @@ public partial class Service2 : IComputeService
 }
 #endregion
 
-#region Part01SS_Service3
+#region PartFSS_Service3
 public partial class Service3 : IComputeService
 {
     [ComputeMethod]
@@ -53,7 +53,7 @@ public partial class Service3 : IComputeService
 }
 #endregion
 
-public static class Part01SS
+public static class PartFSS
 {
     public static IServiceProvider CreateServices()
     {
@@ -67,7 +67,7 @@ public static class Part01SS
 
     public static async Task Caching1()
     {
-        #region Part01SS_Caching1
+        #region PartFSS_Caching1
         var service = CreateServices().GetRequiredService<Service1>();
         // var computed = await Computed.Capture(() => counters.Get("a"));
         WriteLine(await service.Get("a"));
@@ -81,7 +81,7 @@ public static class Part01SS
 
     public static async Task Caching2()
     {
-        #region Part01SS_Caching2
+        #region PartFSS_Caching2
         var service = CreateServices().GetRequiredService<Service1>();
         var computed = await Computed.Capture(() => service.Get("a"));
         WriteLine(await service.Get("a"));
@@ -95,7 +95,7 @@ public static class Part01SS
 
     public static async Task Caching3()
     {
-        #region Part01SS_Caching3
+        #region PartFSS_Caching3
         var service = CreateServices().GetRequiredService<Service2>();
         var computed = await Computed.Capture(() => service.Combine("a", "b"));
         WriteLine("computed = Combine(a, b) completed");
@@ -113,7 +113,7 @@ public static class Part01SS
 
     public static async Task Caching4()
     {
-        #region Part01SS_Caching4
+        #region PartFSS_Caching4
         var service = CreateServices().GetRequiredService<Service2>();
         var computed = await Computed.Capture(() => service.Get("a"));
         WriteLine("computed = Get(a) completed");
@@ -126,7 +126,7 @@ public static class Part01SS
 
     public static async Task Caching5()
     {
-        #region Part01SS_Caching5
+        #region PartFSS_Caching5
         var service = CreateServices().GetRequiredService<Service3>();
         WriteLine(await service.Combine("a", "b"));
         WriteLine(await service.Get("a"));

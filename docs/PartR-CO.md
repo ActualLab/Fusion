@@ -54,9 +54,9 @@ Configures outbound RPC call behavior including routing, timeouts, and rerouting
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `ReroutingDelays` | `RetryDelaySeq` | `Exp(0.1, 5)` | Exponential backoff for rerouting delays (0.1s to 5s). See [Call Routing](./Part02-CallRouting.md). |
+| `ReroutingDelays` | `RetryDelaySeq` | `Exp(0.1, 5)` | Exponential backoff for rerouting delays (0.1s to 5s). See [Call Routing](./PartR-CallRouting.md). |
 | `TimeoutsProvider` | `Func<...>` | Based on method kind | Provides `RpcCallTimeouts` for specific methods |
-| `RouterFactory` | `Func<...>` | Routes to `RpcPeerRef.Default` | Creates routers to select target peer. See [Call Routing](./Part02-CallRouting.md). |
+| `RouterFactory` | `Func<...>` | Routes to `RpcPeerRef.Default` | Creates routers to select target peer. See [Call Routing](./PartR-CallRouting.md). |
 | `ReroutingDelayer` | `Func<...>` | `Task.Delay()` | Async function to apply rerouting delays |
 | `Hasher` | `Func<...>` | SHA256, 24-char Base64 | Hashes byte data for consistency checking |
 
@@ -94,7 +94,7 @@ services.AddRpc().Configure<RpcOutboundCallOptions>(options => {
     };
 
     // Custom router (e.g., for sharding or load balancing)
-    // See Part02-CallRouting.md for detailed examples
+    // See PartR-CallRouting.md for detailed examples
     options.RouterFactory = methodDef => args => RpcPeerRef.Default;
 });
 ```

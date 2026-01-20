@@ -44,11 +44,11 @@ These should be accurate, detailed, and help developers actually use Fusion.
 
 | File | Purpose |
 |------|---------|
-| `Part01*.md/cs` | Core concepts - Computed Values, Compute Services |
-| `Part02*.md/cs` | Replicas, Compute Service Clients |
-| `Part03*.md/cs` | Commands, Authentication |
-| `Part04*.md/cs` | Blazor integration |
-| `Part05*.md/cs` | Advanced topics |
+| `PartF*.md/cs` | Fusion - Core concepts - Computed Values, Compute Services |
+| `PartR*.md/cs` | Rpc - Replicas, Compute Service Clients |
+| `PartC*.md/cs` | Commander - Commands |
+| `PartB*.md/cs` | Blazor - Blazor integration |
+| `PartO*.md/cs` | Operations Framework - Advanced topics |
 | `PartAA*.md/cs` | Sample app walkthrough |
 | `PartAP*.md/cs` | API reference |
 | `Performance.md` | Benchmarks and performance data |
@@ -83,7 +83,7 @@ Run from `/docs`: `dotnet mdsnippets`
 
 ```powershell
 cd docs
-dotnet run --project Docs.csproj -- Part01    # Run specific part
+dotnet run --project Docs.csproj -- PartF     # Run specific part
 dotnet run --project Docs.csproj -- all       # Run all parts
 dotnet run --project Docs.csproj              # Interactive mode
 ```

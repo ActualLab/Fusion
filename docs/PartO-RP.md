@@ -24,27 +24,14 @@ fusion.AddOperationReprocessor();  // Enable operation reprocessing
 4. If allowed, waits for delay and retries the command
 5. Repeats until success or max retries exceeded
 
-```
-Command Execution
-       |
-       v
-  +---------+     Success
-  | Execute |---------------------> Done
-  +---------+
-       |
-       | Transient Error
-       v
-  +--------------+     Not Retryable
-  | Can Retry?   |---------------------> Throw
-  +--------------+
-       |
-       | Yes
-       v
-  +--------------+
-  | Wait Delay   |
-  +--------------+
-       |
-       +----------------------------> Retry
+```mermaid
+flowchart TD
+    Start["Command&nbsp;Execution"] --> Execute["Execute"]
+    Execute -->|Success| Done["Done"]
+    Execute -->|Transient&nbsp;Error| CanRetry{"Can&nbsp;Retry?"}
+    CanRetry -->|No| Throw["Throw"]
+    CanRetry -->|Yes| Wait["Wait&nbsp;Delay"]
+    Wait --> Execute
 ```
 
 

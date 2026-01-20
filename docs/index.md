@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: Documentation
-      link: /Part01
+      link: /PartF
     - theme: alt
       text: Samples
       link: https://github.com/ActualLab/Fusion.Samples
@@ -20,19 +20,19 @@ features:
   - icon: ⚡
     title: Blazing Fast
     details: 20 million cache-resolving calls per core per second. 1,000x–8,000x faster APIs than traditional approaches.
-  - icon: 🔄
+  - icon: 🪄
     title: Real-Time, Zero Effort
     details: Automatic state synchronization across your server cluster and every client connected to it. No SignalR hubs. No event handlers. No manual pub/sub.
-  - icon: 🌐
+  - icon: 💰
     title: One Codebase, Every Platform
     details: Same code runs on Blazor Server, WebAssembly, and MAUI. Fusion works everywhere.
-  - icon: 🧠
+  - icon: 🔄
     title: Cache Dependency Tracking
     details: Like MSBuild or Make, but for every method on your API and backend. Mark one call result as changed, and every result depending on it gets invalidated—even on remote machines.
   - icon: 📡
     title: Fastest RPC on .NET
     details: ActualLab.Rpc is 8x faster than gRPC for calls, 2-3x faster for streaming.
-  - icon: 💾
+  - icon: ✈️
     title: Offline Mode Ready
     details: Use persistent client-side caching to let your clients work offline and sync when connected. Reduce startup traffic to kilobytes even for very large working sets.
 ---
@@ -44,8 +44,10 @@ features:
 
 [![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22)
 [![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
-[![MIT License](https://img.shields.io/github/license/actuallab/Fusion?)](https://github.com/ActualLab/Fusion/blob/master/LICENSE)
+![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
+[![Samples](https://img.shields.io/badge/Samples-88B04B)](https://github.com/ActualLab/Fusion.Samples)
+[![Chat @ Voxt](https://img.shields.io/badge/Chat%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
 
 </div>
 
@@ -88,19 +90,19 @@ features:
 Building real-time apps is **hard**. Traditional approaches force you into painful trade-offs:
 
 - 🐢 **No cache = slow UI.** But caching brings the invalidation problem. Miss one case and users get stuck seeing stale data.
-- 📢 **Real-time = a lot of extra code.** Design an update notification protocol, ensure UI subscribes only to relevant updates, apply them so the UI state stays eventually consistent with the ground truth... And that's just the client side!
-- 🔗 **Complexity multiplies.** Each data type needs its own subscription groups, update messages, and client-side handlers. Reconnection? Re-negotiate everything, reconcile state. What starts as "just add SignalR" becomes thousands of lines of infrastructure.
-- 📱 **Platform-specific code multiplies it further.** We pair .NET servers with JS and mobile clients, all sharing the same data and the same complex logic for caching and real-time updates.
+- 📚 **Real-time = a lot of extra code.** Design an update notification protocol, ensure UI subscribes only to relevant updates, apply them so the UI state stays eventually consistent with the ground truth... And that's just the client side!
+- 🤯 **Complexity multiplies.** Each data type needs its own subscription groups, update messages, and client-side handlers. Reconnection? Re-negotiate everything, reconcile state. What starts as "just add SignalR" becomes thousands of lines of infrastructure.
+- 🌋 **Platform-specific code multiplies it further.** We pair .NET servers with JS and mobile clients, all sharing the same data and the same complex logic for caching and real-time updates.
 
 But if you think about it, **caching and real-time updates are facets of the same problem.**
 Both require knowing **when something changes** and **who cares**.
 Yet we treat them as separate concerns with separate infrastructure.
 
 Fusion solves all of this:
-- 🔍 Tracks dependencies automatically
+- 🪄 Tracks dependencies automatically
 - 🎯 Invalidates precisely what it should
 - 📡 Propagates invalidations to everyone who cares, including remote clients
-- ♻️ Works identically everywhere, turning your server farm, mobile apps, and web clients into a single distributed dependency graph.
+- 🤗 Works identically everywhere, turning your server farm, mobile apps, and web clients into a single distributed dependency graph.
 
 **The best part: you get all of this without turning your code into a mess.**
 You can think of Fusion as a *call middleware* or a *decorator*. 
@@ -146,8 +148,10 @@ Think of Fusion as **MSBuild for data processed by your backend, API, and even c
 - **Incremental builds** = When you request a result, only outdated parts recompute
 
 ```
-GetUserProfile(3) ──calls──► GetUser(3)
-        └───────────calls──► GetUserAvatar(3) ──calls──► GetThumbnail("user_3_avatar", 64)
+GetUserProfile(3)
+    ├──calls──► GetUser(3)
+    └──calls──► GetUserAvatar(3)
+                    └──calls──► GetThumbnail("user_3_avatar", 64)
 
 When GetThumbnail(imgId, 64) is invalidated:
   - GetUserAvatar(3) is immediately marked as inconsistent
@@ -258,12 +262,12 @@ When `State` gets recomputed, `StateHasChanged()` is called and the component re
 
 [**Voxt**](https://voxt.ai) is a real-time chat app built by the creators of Fusion. It features:
 
-- 🎙️ **Real-time audio** with live transcription, translation, AI summaries, and much more
+- 🎙️ **Real-time audio** with 🔤 live transcription, 🌐 translation, 📝 AI summaries, and much more
 - 📱 **Clients for WebAssembly, iOS, Android, and Windows**
-- ♻️ **~100% code sharing** across all platforms
-- 📴 **Offline mode** powered by Fusion's persistent caching.
+- 💰 **~100% code sharing** across all platforms
+- ✈️ **Offline mode** powered by Fusion's persistent caching.
 
-Check out how it works at [Fusion @ Voxt.ai](https://voxt.ai/mchat/s-1KCdcYy9z2-uJVPKZsbEo), 
+Check out how it works at [Voxt.ai](https://voxt.ai/mchat/s-1KCdcYy9z2-uJVPKZsbEo), 
 or reach out to [Alex Y. @ Voxt.ai](https://voxt.ai/u/@alex-yakunin) if you want to chat in real time. 
 Fusion handles everything related to real-time there.  
 
@@ -295,7 +299,7 @@ Automatic dependency tracking ensures dependents update when something changes.
 
 <div style="padding: 1.5rem; border: 1px solid #e2e8f0; border-radius: 8px;">
 
-### 📉 Clean Code
+### 💎 Clean Code
 
 Your code stays focused on business logic, Fusion handles the rest. 
 Forget about the boilerplate for real-time updates or cache invalidation.
@@ -337,7 +341,7 @@ public virtual async Task<User> GetUser(long id) { ... }
 
 <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 2rem 0;">
 
-<a href="/Part01" style="display: inline-block; padding: 0.875rem 1.75rem; background: #3451b2; color: white; border-radius: 8px; font-weight: 600; text-decoration: none;">Documentation →</a>
+<a href="/PartF" style="display: inline-block; padding: 0.875rem 1.75rem; background: #3451b2; color: white; border-radius: 8px; font-weight: 600; text-decoration: none;">Documentation →</a>
 
 <a href="https://github.com/ActualLab/Fusion.Samples" style="display: inline-block; padding: 0.875rem 1.75rem; background: #f3f4f6; color: #374151; border-radius: 8px; font-weight: 600; text-decoration: none;">Samples →</a>
 

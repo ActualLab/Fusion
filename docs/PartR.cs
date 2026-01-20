@@ -7,9 +7,9 @@ using Microsoft.Extensions.Hosting;
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
-namespace Tutorial02;
+namespace TutorialR;
 
-#region Part02_SharedApi
+#region PartR_SharedApi
 // The interface for our chat service
 public interface IChatService : IComputeService
 {
@@ -26,7 +26,7 @@ public interface IChatService : IComputeService
 }
 #endregion
 
-#region Part02_ServerImplementation
+#region PartR_ServerImplementation
 public class ChatService : IChatService
 {
     private readonly Lock _lock = new();
@@ -69,7 +69,7 @@ public class ChatService : IChatService
 }
 #endregion
 
-public static class Part02
+public static class PartR
 {
     public static async Task Run()
     {
@@ -82,7 +82,7 @@ public static class Part02
 
     public static WebApplication CreateHost()
     {
-        #region Part02_ServerSetup
+        #region PartR_ServerSetup
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders().SetMinimumLevel(LogLevel.Debug).AddConsole();
         builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(3));
@@ -109,7 +109,7 @@ public static class Part02
             logging.SetMinimumLevel(LogLevel.Debug).AddConsole();
         });
 
-        #region Part02_ClientSetup
+        #region PartR_ClientSetup
         var fusion = services.AddFusion(); // No default RpcServiceMode, so it will be set to RpcServiceMode.Local
         var rpc = fusion.Rpc; // The same as services.AddRpc(), but slightly faster, since FusionBuilder already did it
         rpc.AddWebSocketClient("http://localhost:22222/"); // Adds the WebSocket client for ActualLab.Rpc
@@ -122,7 +122,7 @@ public static class Part02
     public static async Task RunServer(CancellationToken cancellationToken = default)
     {
         var app = CreateHost();
-        #region Part02_RunServer
+        #region PartR_RunServer
         try {
             await app.RunAsync("http://localhost:22222/").WaitAsync(cancellationToken);
         }
@@ -137,7 +137,7 @@ public static class Part02
 
     public static async Task RunClient()
     {
-        #region Part02_RunClient
+        #region PartR_RunClient
         await using var services = CreateClientServiceProvider();
         var chatClient = services.GetRequiredService<IChatService>();
 
@@ -174,7 +174,7 @@ public static class Part02
         await Task.Delay(1000);
         #endregion
 
-        #region Part02_Output
+        #region PartR_Output
         /* The output:
         GetWordCount() -> RemoteComputed<Int32>(*IChatService.GetWordCount(ct-none)-Hash=14783957 v.4u, State: Consistent), Value: 0
         GetRecentMessages() -> RemoteComputed<List<String>>(*IChatService.GetRecentMessages(ct-none)-Hash=14783978 v.d5, State: Invalidated), Value:
@@ -220,7 +220,7 @@ public static class Part02
         */
         #endregion
 
-        #region Part02_Benchmark
+        #region PartR_Benchmark
         // Benchmarking remote compute method calls and plain RPC calls – run in Release mode!
         WriteLine("100K calls to GetWordCount() vs GetWordCountPlainRpc():");
         WriteLine("- Warmup...");
@@ -239,7 +239,7 @@ public static class Part02
         WriteLine($"- GetWordCountPlainRpc(): {stopwatch.Elapsed.ToShortString()}");
         #endregion
 
-        #region Part02_Benchmark_Output
+        #region PartR_Benchmark_Output
         /* The output:
         100K calls to GetWordCount() vs GetWordCountPlainRpc() – run in Release mode!
         - Warmup...
@@ -249,7 +249,7 @@ public static class Part02
         */
         #endregion
 
-        #region Part02_ClientComputedState
+        #region PartR_ClientComputedState
         var stateFactory = services.StateFactory();
         using var state = stateFactory.NewComputed(
             new ComputedState<string>.Options() {
