@@ -1,448 +1,276 @@
 # Authentication: Diagrams
 
-ASCII diagrams illustrating Fusion's authentication architecture and flows.
+Diagrams illustrating Fusion's authentication architecture and flows.
 
 
 ## Authentication Service Architecture
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                      Client (Blazor)                          │
-├───────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐  ┌─────────────────┐  ┌────────────────┐ │
-│  │ ClientAuthHelper│  │AuthStateProvider│  │PresenceReporter│ │
-│  └────────┬────────┘  └────────┬────────┘  └───────┬────────┘ │
-│           │                    │                   │          │
-│           ▼                    ▼                   ▼          │
-│  ┌─────────────────────────────────────────────────────────┐  │
-│  │                  IAuth (RPC Client)                     │  │
-│  └─────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────┘
-                               │
-                     WebSocket RPC
-                               │
-                               ▼
-┌───────────────────────────────────────────────────────────────┐
-│                       Server                                  │
-├───────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐  ┌─────────────────┐  ┌───────────────┐  │
-│  │SessionMiddleware│  │ ServerAuthHelper│  │  AuthEndpoint │  │
-│  └────────┬────────┘  └────────┬────────┘  └───────┬───────┘  │
-│           │                    │                   │          │
-│           ▼                    ▼                   ▼          │
-│  ┌─────────────────────────────────────────────────────────┐  │
-│  │                 IAuth / IAuthBackend                    │  │
-│  ├─────────────────────────────────────────────────────────┤  │
-│  │    InMemoryAuthService  │  DbAuthService<TDbContext>    │  │
-│  └─────────────────────────────────────────────────────────┘  │
-│                               │                               │
-│                               ▼                               │
-│  ┌─────────────────────────────────────────────────────────┐  │
-│  │                     Database                            │  │
-│  │  ┌────────────┐  ┌─────────────┐  ┌──────────────────┐  │  │
-│  │  │   Users    │  │ _Sessions   │  │  UserIdentities  │  │  │
-│  │  └────────────┘  └─────────────┘  └──────────────────┘  │  │
-│  └─────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────┘
-```
+```mermaid
+flowchart TD
+    subgraph Client ["Client&nbsp;(Blazor)"]
+        direction LR
+        CAH["ClientAuthHelper"] ~~~ ASP["AuthStateProvider"] ~~~ PR["PresenceReporter"]
+        CAH --> IAuthC["IAuth (RPC Client)"]
+        ASP --> IAuthC
+        PR --> IAuthC
+    end
 
+    IAuthC -->|WebSocket RPC| IAuth
 
-## Sign-In Flow
+    subgraph Server
+        direction TB
+        SM["SessionMiddleware"] ~~~ SAH["ServerAuthHelper"] ~~~ AE["AuthEndpoint"]
+        SM --> IAuth["IAuth / IAuthBackend"]
+        SAH --> IAuth
+        AE --> IAuth
+        IAuth --> Impl["InMemoryAuthService | DbAuthService"]
+        Impl --> DB["Database"]
+    end
 
-```
-┌─────────┐  ┌────────────┐ ┌──────────────┐ ┌─────────────────┐
-│ Browser │  │AuthEndpoint│ │OAuth Provider│ │ServerAuthHelper │
-└────┬────┘  └─────┬──────┘ └──────┬───────┘ └────────┬────────┘
-     │             │               │                  │
-     │ GET /signIn │               │                  │
-     │────────────>│               │                  │
-     │             │               │                  │
-     │             │ Challenge     │                  │
-     │             │──────────────>│                  │
-     │             │               │                  │
-     │  Redirect to OAuth          │                  │
-     │<────────────────────────────│                  │
-     │             │               │                  │
-     │ User authenticates          │                  │
-     │────────────────────────────>│                  │
-     │             │               │                  │
-     │ Callback with tokens        │                  │
-     │<────────────────────────────│                  │
-     │             │               │                  │
-     │ Redirect to app             │                  │
-     │────────────>│               │                  │
-     │             │               │                  │
-     │ _HostPage loads             │                  │
-     │───────────────────────────────────────────────>│
-     │             │               │                  │
-     │             │               │  UpdateAuthState │
-     │             │               │  (syncs to IAuth)│
-     │             │               │                  │
-     │ Page rendered (authenticated)                  │
-     │<───────────────────────────────────────────────│
-     │             │               │                  │
-```
-
-
-## Session Resolution Flow
-
-```
-┌───────────────────────────────────────────────────────────────┐
-│                    HTTP Request                               │
-└───────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌───────────────────────────────────────────────────────────────┐
-│                   SessionMiddleware                           │
-├───────────────────────────────────────────────────────────────┤
-│                                                               │
-│  1. Read session cookie ─────────────────────────────────┐    │
-│                                                          │    │
-│  2. Cookie exists? ─────────────────────────────────┐    │    │
-│     │                                               │    │    │
-│     ├─ Yes ─> Check IsSignOutForced                 │    │    │
-│     │         │                                     │    │    │
-│     │         ├─ Yes ─> Handle forced  ────┐        │    │    │
-│     │         │         sign-out           ▼        │    │    │
-│     │         │                  Create new session │    │    │
-│     │         │                                │    │    │    │
-│     │         └─ No ──> Use existing session ─>|    │    │    │
-│     │                                          │    │    │    │
-│     └─ No ────────────────────────────────────>│    │    │    │
-│                                                │    │    │    │
-│  3. Apply tags (if TagProvider configured) <───┴────┘    │    │
-│                                                          │    │
-│  4. Update cookie (if AlwaysUpdateCookie = true)         │    │
-│                                                          │    │
-│  5. Set SessionResolver.Session <────────────────────────┘    │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌───────────────────────────────────────────────────────────────┐
-│                     Next Middleware                           │
-└───────────────────────────────────────────────────────────────┘
-```
-
-
-## Default Session Replacement
-
-```
-┌───────────────────────────────────────────────────────────────┐
-│                  Blazor WASM Client                           │
-├───────────────────────────────────────────────────────────────┤
-│                                                               │
-│  SessionResolver.Session = Session.Default  ("~")             │
-│                                                               │
-│  ┌──────────────────────────────────────────────────────────┐ │
-│  │ await Auth.GetUser(Session.Default, ct)                  │ │
-│  └──────────────────────────────────────────────────────────┘ │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
-                               │
-                      RPC Call: GetUser(session: "~")
-                               │
-                               ▼
-┌───────────────────────────────────────────────────────────────┐
-│                RpcDefaultSessionReplacer                      │
-├───────────────────────────────────────────────────────────────┤
-│                                                               │
-│  Session parameter == "~" ?                                   │
-│    │                                                          │
-│    ├── Yes ──> Replace with SessionResolver.Session           │
-│    │           (real session from cookie)                     │
-│    │                                                          │
-│    └── No ───> Pass through unchanged                         │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
-                               │
-                      GetUser(session: "abc123...")
-                               │
-                               ▼
-┌───────────────────────────────────────────────────────────────┐
-│                   IAuth Implementation                        │
-└───────────────────────────────────────────────────────────────┘
+    subgraph DB ["Database"]
+        direction LR
+        Users ~~~ Sessions["_Sessions"] ~~~ UI["UserIdentities"]
+    end
 ```
 
 
 ## IAuth vs IAuthBackend
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                       IAuth                                   │
-│                   (Client-Facing)                             │
-├───────────────────────────────────────────────────────────────┤
-│                                                               │
-│  Commands:                                                    │
-│  ├── SignOut(session)         - Sign out current session      │
-│  ├── EditUser(session, name)  - Edit current user             │
-│  └── UpdatePresence(session)  - Update last-seen              │
-│                                                               │
-│  Queries (all require Session):                               │
-│  ├── GetUser(session)         - Get current user              │
-│  ├── GetSessionInfo(session)  - Get session details           │
-│  ├── GetAuthInfo(session)     - Get auth info                 │
-│  ├── IsSignOutForced(session) - Check forced sign-out         │
-│  └── GetUserSessions(session) - Get all user's sessions       │
-│                                                               │
-│  Exposed via RPC: YES                                         │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
+| Aspect | `IAuth` (Client-Facing) | `IAuthBackend` (Server-Only) |
+|--------|-------------------------|------------------------------|
+| **Exposed via RPC** | Yes | No (`IBackendService`) |
+| **Session required** | Yes (all queries) | No |
 
-┌───────────────────────────────────────────────────────────────┐
-│                     IAuthBackend                              │
-│                    (Server-Only)                              │
-├───────────────────────────────────────────────────────────────┤
-│                                                               │
-│  Commands:                                                    │
-│  ├── SignIn(session, user, identity) - Authenticate session   │
-│  ├── SetupSession(session, ip, ua)   - Create/update session  │
-│  └── SetOptions(session, options)    - Set session options    │
-│                                                               │
-│  Queries (NO Session required):                               │
-│  └── GetUser(shard, userId) - Get any user by ID              │
-│                                                               │
-│  Exposed via RPC: NO (marked as IBackendService)              │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
-```
+### IAuth Commands
+
+| Command | Description |
+|---------|-------------|
+| `SignOut(session)` | Sign out current session |
+| `EditUser(session, name)` | Edit current user |
+| `UpdatePresence(session)` | Update last-seen |
+
+### IAuth Queries
+
+| Query | Description |
+|-------|-------------|
+| `GetUser(session)` | Get current user |
+| `GetSessionInfo(session)` | Get session details |
+| `GetAuthInfo(session)` | Get auth info |
+| `IsSignOutForced(session)` | Check forced sign-out |
+| `GetUserSessions(session)` | Get all user's sessions |
+
+### IAuthBackend Commands
+
+| Command | Description |
+|---------|-------------|
+| `SignIn(session, user, identity)` | Authenticate session |
+| `SetupSession(session, ip, ua)` | Create/update session |
+| `SetOptions(session, options)` | Set session options |
+
+### IAuthBackend Queries
+
+| Query | Description |
+|-------|-------------|
+| `GetUser(shard, userId)` | Get any user by ID (no session required) |
 
 
-## Authentication State Sync
+## Sign-In Flow
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                ServerAuthHelper.UpdateAuthState               │
-└───────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────┐         ┌─────────────────────────┐
-│  ASP.NET Core State     │         │    Fusion State         │
-├─────────────────────────┤         ├─────────────────────────┤
-│ HttpContext.User        │         │ IAuth.GetUser(session)  │
-│ (ClaimsPrincipal)       │ Compare │ (User)                  │
-└────────────┬────────────┘         └────────────┬────────────┘
-             │                                   │
-             └─────────────┬─────────────────────┘
-                           │
-                           ▼
-              ┌────────────────────────┐
-              │   States Match?        │
-              └────────────┬───────────┘
-                           │
-          ┌────────────────┼────────────────┐
-          │                │                │
-          ▼                ▼                ▼
-    ┌──────────┐    ┌──────────┐    ┌──────────┐
-    │ ASP.NET  │    │   Both   │    │ Fusion   │
-    │Signed In │    │  Match   │    │Signed In │
-    │Fusion Not│    │          │    │ASP.NET No│
-    └────┬─────┘    └────┬─────┘    └────┬─────┘
-         │               │               │
-         ▼               ▼               ▼
-┌────────────────┐ ┌──────────┐ ┌────────────────┐
-│AuthBackend_    │ │  No      │ │Auth_SignOut    │
-│SignIn          │ │  Action  │ │                │
-│(sync to Fusion)│ │          │ │(sign out       │
-│                │ │          │ │ from Fusion)   │
-└────────────────┘ └──────────┘ └────────────────┘
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant AuthEndpoint
+    participant OAuth as OAuth Provider
+    participant SAH as ServerAuthHelper
+
+    Browser->>AuthEndpoint: GET /signIn
+    AuthEndpoint->>OAuth: Challenge
+    OAuth-->>Browser: Redirect to OAuth
+    Browser->>OAuth: User authenticates
+    OAuth-->>Browser: Callback with tokens
+    Browser->>AuthEndpoint: Redirect to app
+    AuthEndpoint->>SAH: _HostPage loads
+    SAH->>SAH: UpdateAuthState (syncs to IAuth)
+    SAH-->>Browser: Page rendered (authenticated)
 ```
 
 
-## Database Entity Relationships
+## Session Resolution Flow
 
+```mermaid
+flowchart TD
+    Req["HTTP Request"] --> MW["SessionMiddleware"]
+
+    MW --> Read["1. Read session cookie"]
+    Read --> Exists{"2. Cookie exists?"}
+
+    Exists -->|No| Create["Create new session"]
+    Exists -->|Yes| CheckForced{"Check IsSignOutForced"}
+
+    CheckForced -->|Yes| Create
+    CheckForced -->|No| Use["Use existing session"]
+
+    Create --> Tags["3. Apply tags (if TagProvider configured)"]
+    Use --> Tags
+
+    Tags --> Update["4. Update cookie (if AlwaysUpdateCookie = true)"]
+    Update --> Set["5. Set SessionResolver.Session"]
+    Set --> Next["Next Middleware"]
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                    Users Table                                │
-├───────────────────────────────────────────────────────────────┤
-│  Id            │  TDbUserId (PK)                              │
-│  Version       │  long                                        │
-│  Name          │  string                                      │
-│  ClaimsJson    │  string (JSON)                               │
-└───────────────────────────────────────────────────────────────┘
-         │
-         │ 1:N
-         ▼
-┌───────────────────────────────────────────────────────────────┐
-│               UserIdentities Table                            │
-├───────────────────────────────────────────────────────────────┤
-│  Id            │  string (PK)  e.g. "Google/abc123"           │
-│  DbUserId      │  TDbUserId (FK -> Users)                     │
-│  Secret        │  string                                      │
-└───────────────────────────────────────────────────────────────┘
 
-┌───────────────────────────────────────────────────────────────┐
-│                 _Sessions Table                               │
-├───────────────────────────────────────────────────────────────┤
-│  Id                    │  string (PK)                         │
-│  Version               │  long                                │
-│  CreatedAt             │  DateTime                            │
-│  LastSeenAt            │  DateTime                            │
-│  IPAddress             │  string                              │
-│  UserAgent             │  string                              │
-│  AuthenticatedIdentity │  string                              │
-│  UserId                │  TDbUserId? (FK -> Users, nullable)  │
-│  IsSignOutForced       │  bool                                │
-│  OptionsJson           │  string (JSON)                       │
-└───────────────────────────────────────────────────────────────┘
 
-Indexes:
-  - (CreatedAt, IsSignOutForced)
-  - (LastSeenAt, IsSignOutForced)  <- Used by DbSessionInfoTrimmer
-  - (UserId, IsSignOutForced)
-  - (IPAddress, IsSignOutForced)
+## Default Session Replacement
+
+```mermaid
+flowchart TD
+    subgraph Client ["Blazor&nbsp;WASM&nbsp;Client"]
+        SR["SessionResolver.Session = Session.Default (~)"]
+        Call["await Auth.GetUser(Session.Default, ct)"]
+        SR --> Call
+    end
+
+    Call -->|"RPC Call: GetUser(session: ~)"| Replacer
+
+    subgraph Server
+        Replacer["RpcDefaultSessionReplacer"]
+        Check{"Session == ~ ?"}
+        Replacer --> Check
+        Check -->|Yes| Replace["Replace with SessionResolver.Session<br/>(real session from cookie)"]
+        Check -->|No| Pass["Pass through unchanged"]
+        Replace --> IAuth["IAuth Implementation"]
+        Pass --> IAuth
+    end
 ```
 
 
 ## Session Lifecycle
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                   Session Lifecycle                           │
-└───────────────────────────────────────────────────────────────┘
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Anonymous: User visits site
 
-   ┌─────────────┐
-   │   Create    │  User visits site
-   └──────┬──────┘
-          │
-          ▼
-   ┌─────────────┐
-   │ Anonymous   │  SessionMiddleware creates new session
-   │ Session     │  Cookie set, session stored in DB
-   └──────┬──────┘
-          │
-          ▼
-   ┌─────────────┐
-   │   Sign In   │  User authenticates via OAuth
-   │             │  AuthBackend_SignIn links session to user
-   └──────┬──────┘
-          │
-          ▼
-   ┌─────────────┐
-   │Authenticated│  Session has UserId set
-   │ Session     │  User can access protected resources
-   └──────┬──────┘
-          │
-          ├────────────────────────────┐
-          │                            │
-          ▼                            ▼
-   ┌─────────────┐              ┌──────────────┐
-   │  Sign Out   │              │Force Sign Out│
-   │  (normal)   │              │              │
-   └──────┬──────┘              └──────┬───────┘
-          │                            │
-          ▼                            ▼
-   ┌─────────────┐              ┌──────────────┐
-   │ Anonymous   │              │  Invalidated │
-   │ Session     │              │  Session     │
-   │(can sign in │              │(IsSignOutFor │
-   │ again)      │              │ced = true)   │
-   └──────┬──────┘              └──────┬───────┘
-          │                            │
-          │                            ▼
-          │                     ┌─────────────┐
-          │                     │ New Session │
-          │                     │ Created     │
-          │                     └─────────────┘
-          │
-          └──────────────┐
-                         │
-                         ▼
-                  ┌─────────────┐
-                  │   Expire    │  LastSeenAt > MaxSessionAge
-                  │             │  DbSessionInfoTrimmer deletes
-                  └─────────────┘
+    Anonymous: Anonymous Session
+    Anonymous: Cookie set, session stored in DB
+
+    Authenticated: Authenticated Session
+    Authenticated: Session has UserId set
+
+    Anonymous --> Authenticated: Sign In (OAuth)
+
+    Authenticated --> Anonymous: Sign Out (normal)
+    Authenticated --> Invalidated: Force Sign Out
+
+    Invalidated: Invalidated Session
+    Invalidated: IsSignOutForced = true
+
+    Invalidated --> NewSession: New Session Created
+
+    NewSession --> Anonymous
+
+    Anonymous --> Expired: LastSeenAt > MaxSessionAge
+    Authenticated --> Expired: LastSeenAt > MaxSessionAge
+
+    Expired: Session Expired
+    Expired: DbSessionInfoTrimmer deletes
+```
+
+
+## Database Entity Relationships
+
+```mermaid
+erDiagram
+    Users ||--o{ UserIdentities : "1:N"
+    Users ||--o{ _Sessions : "1:N (nullable)"
+
+    Users {
+        TDbUserId Id PK
+        long Version
+        string Name
+        string ClaimsJson
+    }
+
+    UserIdentities {
+        string Id PK "e.g. Google/abc123"
+        TDbUserId DbUserId FK
+        string Secret
+    }
+
+    _Sessions {
+        string Id PK
+        long Version
+        DateTime CreatedAt
+        DateTime LastSeenAt
+        string IPAddress
+        string UserAgent
+        string AuthenticatedIdentity
+        TDbUserId UserId FK "nullable"
+        bool IsSignOutForced
+        string OptionsJson
+    }
+```
+
+**Indexes on `_Sessions`:**
+- `(CreatedAt, IsSignOutForced)`
+- `(LastSeenAt, IsSignOutForced)` - Used by `DbSessionInfoTrimmer`
+- `(UserId, IsSignOutForced)`
+- `(IPAddress, IsSignOutForced)`
+
+
+## Authentication State Sync
+
+```mermaid
+flowchart TD
+    Start["ServerAuthHelper.UpdateAuthState"]
+
+    subgraph Compare ["Compare&nbsp;States"]
+        direction LR
+        ASP["ASP.NET Core State<br/>HttpContext.User"]
+        Fusion["Fusion State<br/>IAuth.GetUser(session)"]
+    end
+
+    Start --> Compare
+    Compare --> Match{"States Match?"}
+
+    Match -->|"ASP.NET Signed In<br/>Fusion Not"| SignIn["AuthBackend_SignIn<br/>(sync to Fusion)"]
+    Match -->|"Both Match"| NoAction["No Action"]
+    Match -->|"Fusion Signed In<br/>ASP.NET Not"| SignOut["Auth_SignOut<br/>(sign out from Fusion)"]
 ```
 
 
 ## Presence Reporting
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                 PresenceReporter Loop                         │
-└───────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Start([Start]) --> Wait["Wait UpdatePeriod<br/>(3 min ± 5%)"]
+    Wait --> Call["IAuth.UpdatePresence(session)"]
 
-         ┌────────────────────┐
-         │ Start              │
-         └─────────┬──────────┘
-                   │
-                   ▼
-         ┌────────────────────┐
-         │ Wait UpdatePeriod  │  Default: 3 min ± 5%
-         │ (randomized)       │
-         └─────────┬──────────┘
-                   │
-                   ▼
-         ┌─────────────────────┐
-         │ Call                │
-         │ IAuth.UpdatePresence│
-         │ (session)           │
-         └─────────┬───────────┘
-                   │
-          ┌────────┴────────┐
-          │                 │
-          ▼                 ▼
-   ┌────────────┐    ┌────────────┐
-   │  Success   │    │  Failure   │
-   └─────┬──────┘    └─────┬──────┘
-         │                 │
-         │                 ▼
-         │          ┌────────────────────┐
-         │          │ Wait RetryDelay    │
-         │          │ (exponential)      │
-         │          └─────────┬──────────┘
-         │                    │
-         └────────────────────┘
-                   │
-                   ▼
-         ┌────────────────────┐
-         │ Loop (forever)     │
-         └────────────────────┘
+    Call --> Success
+    Call --> Failure
 
-Server-side effect:
-  - DbSessionInfo.LastSeenAt updated
-  - Prevents session from being trimmed
+    Success --> Wait
+    Failure --> Retry["Wait RetryDelay<br/>(exponential backoff)"]
+    Retry --> Call
 ```
+
+**Server-side effect:**
+- `DbSessionInfo.LastSeenAt` updated
+- Prevents session from being trimmed
 
 
 ## Multi-Session Management
 
+```mermaid
+flowchart TD
+    User["User (Id: 123)"]
+    User --> A["Session A<br/>Desktop / Chrome"]
+    User --> B["Session B<br/>Mobile / Safari"]
+    User --> C["Session C<br/>Tablet / Firefox"]
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                    User with Multiple Sessions                │
-└───────────────────────────────────────────────────────────────┘
 
-                    ┌──────────────┐
-                    │    User      │
-                    │   Id: 123    │
-                    └──────┬───────┘
-                           │
-           ┌───────────────┼───────────────┐
-           │               │               │
-           ▼               ▼               ▼
-    ┌────────────┐  ┌────────────┐  ┌────────────┐
-    │ Session A  │  │ Session B  │  │ Session C  │
-    │ Desktop    │  │ Mobile     │  │ Tablet     │
-    │ Chrome     │  │ Safari     │  │ Firefox    │
-    └────────────┘  └────────────┘  └────────────┘
-
-Sign Out Options:
-━━━━━━━━━━━━━━━━
-
-1. Sign out current session only:
-   Auth_SignOut(session: A)
-   └── Only Session A signed out
-
-2. Sign out specific session:
-   Auth_SignOut(session: A, kickSessionHash: B.Hash)
-   └── Session B signed out
-
-3. Sign out all sessions:
-   Auth_SignOut(session: A, kickAllUserSessions: true)
-   └── Sessions A, B, C all signed out
-
-4. Force sign out (invalidates session):
-   Auth_SignOut(session: A, force: true)
-   └── Session A permanently invalidated
-       (cannot be reused, new session created)
-```
+| Sign Out Option | Code | Effect |
+|-----------------|------|--------|
+| Current session only | `Auth_SignOut(session: A)` | Only Session A signed out |
+| Specific session | `Auth_SignOut(session: A, kickSessionHash: B.Hash)` | Session B signed out |
+| All sessions | `Auth_SignOut(session: A, kickAllUserSessions: true)` | Sessions A, B, C all signed out |
+| Force sign out | `Auth_SignOut(session: A, force: true)` | Session A permanently invalidated (new session created) |

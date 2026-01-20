@@ -109,6 +109,76 @@ classDiagram
     class MutableState_T["MutableState&lt;T&gt;"]
 ```
 
+## Text Formatting
+
+### Avoid ALL CAPS
+
+Do not use ALL CAPS for subgraph labels, node labels, or any text in diagrams. Use sentence case or title case instead:
+
+```mermaid
+flowchart TD
+    subgraph Loop [" Update Loop "]   %% Good - Title Case
+        A --> B
+    end
+```
+
+**Wrong:**
+```mermaid
+flowchart TD
+    subgraph Loop [" UPDATE LOOP "]   %% Bad - ALL CAPS
+        A --> B
+    end
+```
+
+### Preventing Line Breaks ("nbsp trick")
+
+Use `&nbsp;` instead of regular spaces to prevent word wrapping in node labels with long text:
+
+```mermaid
+flowchart TD
+    A["Context&nbsp;#1&nbsp;(Delegating&nbsp;command&nbsp;context)<br/>•&nbsp;Operations&nbsp;Framework&nbsp;handlers&nbsp;filtered&nbsp;out"]
+```
+
+This is useful for vertical (`TD`) flowcharts where nodes have enough width but mermaid still breaks lines.
+
+## Diagram Ordering in *-D.md Files
+
+Each `Part*-D.md` file should have diagrams ordered according to these rules:
+
+1. **Follow TOC order**: Diagrams should follow the order in which concepts appear in the sidebar TOC (see `config.mts`). For example, Part02-D.md should order diagrams matching: Key Concepts → RpcNoWait → RpcStream → Server-to-Client Calls → System Calls → Configuration Options.
+
+2. **Follow document section order**: Within each sub-document's scope, diagrams should match the order concepts are introduced in the prose (use `## ` headings as guide).
+
+3. **Group related diagrams**: If two diagrams are conceptually very close (e.g., a state machine and its related table, or a flow diagram and its breakdown), keep them adjacent even if it slightly deviates from strict document order.
+
+4. **Architecture/Overview first**: High-level architecture or overview diagrams should come first, before drilling into specifics.
+
+### Reference: TOC Structure
+
+```
+Part01: Compute Services
+  └─ Computed<T> → ComputedOptions → States → Server-Only → Diagrams → Cheat Sheet
+
+Part02: ActualLab.Rpc
+  └─ Key Concepts → RpcNoWait → RpcStream → Server-to-Client → System Calls → Config → Diagrams → Cheat Sheet
+
+Part03: Blazor Integration
+  └─ Services → UICommander → Authentication → Parameters → Diagrams → Cheat Sheet
+
+Part04: CommandR
+  └─ Command Interfaces → Built-in Handlers → MediatR Comparison → Diagrams → Cheat Sheet
+
+Part05: Operations Framework
+  └─ Events → Transient Operations → Config → Log Watchers → Diagrams → Cheat Sheet
+
+PartAA: Authentication
+  └─ Interfaces → Database Services → Server Components → Diagrams → Cheat Sheet
+
+PartAP: Interceptors and Proxies
+  └─ ArgumentList API → Proxy Generation → Built-in Interceptors → Diagrams → Cheat Sheet
+```
+
+
 ## When to Use Tables Instead
 
 Replace diagrams with tables when:

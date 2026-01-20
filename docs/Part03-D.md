@@ -1,482 +1,200 @@
 # Blazor Integration: Diagrams
 
-Text-based diagrams for the Blazor integration concepts introduced in [Part 3](Part03.md).
+Diagrams for the Blazor integration concepts introduced in [Part 3](Part03.md).
 
 
 ## Component Hierarchy
 
-```
-┌───────────────────────────────────────────────────────────────────────┐
-│                  Fusion Blazor Component Hierarchy                    │
-└───────────────────────────────────────────────────────────────────────┘
-
-                       ┌───────────────────────┐
-                       │    ComponentBase      │  Blazor's base class
-                       │       (Blazor)        │
-                       └───────────┬───────────┘
-                                   │
-                                   ▼
-                       ┌───────────────────────┐
-                       │  FusionComponentBase  │  Optimized parameter
-                       │    + IHandleEvent     │  comparison & events
-                       └───────────┬───────────┘
-                                   │
-                                   ▼
-                       ┌───────────────────────┐
-                       │CircuitHubComponentBase│  CircuitHub access
-                       │   + IHasCircuitHub    │  & service shortcuts
-                       └───────────┬───────────┘
-                                   │
-                                   ▼
-                       ┌───────────────────────┐
-                       │ StatefulComponentBase │  State management
-                       │         <T>           │  & auto-updates
-                       └───────────┬───────────┘
-                                   │
-         ┌─────────────────────────┼─────────────────────────┐
-         │                         │                         │
-         ▼                         ▼                         ▼
-┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
-│ComputedStateComponent│ │ComputedRenderState │ │ MixedStateComponent │
-│         <T>         │ │   Component<T>      │ │   <T, TMutable>     │
-├─────────────────────┤ ├─────────────────────┤ ├─────────────────────┤
-│ • Auto-computed     │ │ • Tracks render     │ │ • Computed state    │
-│   state             │ │   state snapshot    │ │ • + Mutable state   │
-│ • Dependency        │ │ • Optimized         │ │ • For form inputs   │
-│   tracking          │ │   re-rendering      │ │                     │
-└─────────────────────┘ └─────────────────────┘ └─────────────────────┘
+```mermaid
+flowchart TD
+    CB["ComponentBase<br/>(Blazor)"] --> FCB["FusionComponentBase<br/>+ IHandleEvent"]
+    FCB --> CHCB["CircuitHubComponentBase<br/>+ IHasCircuitHub"]
+    CHCB --> SCB["StatefulComponentBase&lt;T&gt;"]
+    SCB --> CSC["ComputedStateComponent&lt;T&gt;"]
+    SCB --> MSC["MixedStateComponent&lt;T, TMutable&gt;"]
+    CSC --> CRSC["ComputedRenderStateComponent&lt;T&gt;"]
 ```
 
+| Component | Purpose |
+|-----------|---------|
+| `ComponentBase` | Blazor's base class |
+| `FusionComponentBase` | Optimized parameter comparison & events |
+| `CircuitHubComponentBase` | CircuitHub access & service shortcuts |
+| `StatefulComponentBase<T>` | State management & auto-updates |
+| `ComputedStateComponent<T>` | Auto-computed state, dependency tracking |
+| `ComputedRenderStateComponent<T>` | Tracks render state snapshot, optimized re-rendering |
+| `MixedStateComponent<T, TMutable>` | Computed state + mutable state for form inputs |
 
-## ComputedStateComponent Lifecycle
 
+## FusionComponentBase Parameter Comparison Flow
+
+```mermaid
+flowchart TD
+    Parent([Parent Component Renders]) --> SetParams["SetParametersAsync() called on child"]
+    SetParams --> Check["Check ParameterComparisonMode"]
+    Check --> Standard
+    Check --> Custom
+
+    Standard --> Process["Process Parameters<br/>(standard Blazor)"]
+
+    Custom --> ShouldSet["ComponentInfo.ShouldSetParameters()"]
+    ShouldSet --> Compare["For each parameter:<br/>1. Get ParameterComparer for param<br/>2. Compare old value vs new value<br/>3. If ANY changed → return true"]
+    Compare --> AllSame["All Same"]
+    Compare --> Changed["Something Changed"]
+    AllSame --> Skip["SKIP - No render"]
+    Changed --> Process
 ```
-┌───────────────────────────────────────────────────────────────┐
-│             ComputedStateComponent<T> Lifecycle               │
-└───────────────────────────────────────────────────────────────┘
 
-       Component Created
-             │
-             ▼
-  ┌─────────────────────┐
-  │   OnInitialized()   │
-  │     [sync init]     │
-  └──────────┬──────────┘
-             │
-             ▼
-  ┌─────────────────────┐
-  │    CreateState()    │ ──► Creates ComputedState<T>
-  │   [state created]   │     with ComputeState as the
-  └──────────┬──────────┘     computation function
-             │
-             ▼
-  ┌─────────────────────┐
-  │OnInitializedAsync() │
-  └──────────┬──────────┘
-             │
-             ▼
-  ┌─────────────────────┐
-  │    First Render     │ ──► State.HasValue determines
-  └──────────┬──────────┘     what to render
-             │
-             │
-  ╔══════════╧════════════════════════════════════════════════╗
-  ║                      UPDATE LOOP                          ║
-  ╠═══════════════════════════════════════════════════════════╣
-  ║                                                           ║
-  ║    ┌─────────────────┐                                    ║
-  ║    │  State.Value    │◄───────────────────────────┐       ║
-  ║    │  is consistent  │                            │       ║
-  ║    └────────┬────────┘                            │       ║
-  ║             │                                     │       ║
-  ║             │ Dependency invalidated              │       ║
-  ║             ▼                                     │       ║
-  ║    ┌─────────────────┐                            │       ║
-  ║    │ State becomes   │                            │       ║
-  ║    │  inconsistent   │                            │       ║
-  ║    └────────┬────────┘                            │       ║
-  ║             │                                     │       ║
-  ║             │ UpdateDelayer.Delay()               │       ║
-  ║             ▼                                     │       ║
-  ║    ┌─────────────────┐                            │       ║
-  ║    │ ComputeState()  │ ──► Calls your compute     │       ║
-  ║    │    executed     │     methods (tracked)      │       ║
-  ║    └────────┬────────┘                            │       ║
-  ║             │                                     │       ║
-  ║             │ State updated                       │       ║
-  ║             ▼                                     │       ║
-  ║    ┌─────────────────┐                            │       ║
-  ║    │ StateChanged()  │ ──► Calls                  │       ║
-  ║    │  event fires    │     NotifyStateHasChanged()│       ║
-  ║    └────────┬────────┘                            │       ║
-  ║             │                                     │       ║
-  ║             │ Triggers render                     │       ║
-  ║             ▼                                     │       ║
-  ║    ┌─────────────────┐                            │       ║
-  ║    │   Component     │────────────────────────────┘       ║
-  ║    │   re-renders    │                                    ║
-  ║    └─────────────────┘                                    ║
-  ╚═══════════════════════════════════════════════════════════╝
-```
+| Comparer Resolution Order | Description |
+|---------------------------|-------------|
+| 1. `[ParameterComparer]` on property | If found, use it |
+| 2. `KnownComparerTypes[propertyType]` | If found, use it |
+| 3. `[ParameterComparer]` on property's type | If found, use it |
+| 4. `[ParameterComparer]` on declaring class | If found, use it |
+| 5. `DefaultParameterComparer` | Fallback |
 
 
 ## CircuitHub Service Architecture
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                   CircuitHub Architecture                     │
-└───────────────────────────────────────────────────────────────┘
+`CircuitHub` is a scoped service providing access to commonly used services and state:
 
-                      ┌─────────────────────────┐
-                      │       CircuitHub        │
-                      │    (Scoped Service)     │
-                      └────────────┬────────────┘
-                                   │
-         ┌─────────────────────────┼─────────────────────────┐
-         │                         │                         │
-         ▼                         ▼                         ▼
-  ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
-  │   Fusion    │          │   Blazor    │          │   State     │
-  │  Services   │          │  Services   │          │    Info     │
-  └─────────────┘          └─────────────┘          └─────────────┘
-         │                        │                        │
-  ┌──────┴──────┐          ┌──────┴──────┐          ┌──────┴──────┐
-  │             │          │             │          │             │
-  ▼             ▼          ▼             ▼          ▼             ▼
-┌───────┐ ┌─────────┐ ┌────────┐ ┌─────────┐ ┌────────┐ ┌─────────┐
-│Session│ │Commander│ │  Nav   │ │   JS    │ │Render  │ │  IsPre- │
-│       │ │         │ │Manager │ │ Runtime │ │ Mode   │ │rendering│
-└───────┘ └─────────┘ └────────┘ └─────────┘ └────────┘ └─────────┘
+| Category | Property | Description |
+|----------|----------|-------------|
+| **Fusion Services** | `Session` | Current user session |
+| | `Commander` | Command executor |
+| **Blazor Services** | `NavManager` | Navigation manager |
+| | `JSRuntime` | JavaScript interop runtime |
+| | `UICommander` | UI-aware command executor |
+| | `JSRuntimeInfo` | Runtime type inspection |
+| | `UIActionFailureTracker` | Tracks command failures |
+| **State Info** | `RenderMode` | Current Blazor render mode |
+| | `IsPrerendering` | Whether currently prerendering |
 
-                            │
-                   ┌────────┴────────┐
-                   │                 │
-                   ▼                 ▼
-            ┌───────────┐    ┌───────────────┐
-            │UICommander│    │ JSRuntimeInfo │
-            └───────────┘    └───────────────┘
-                   │                 │
-                   │                 │ Inspects runtime type
-                   │                 │ to detect prerendering
-                   ▼                 ▼
-            ┌─────────────────────────────┐
-            │  UIActionFailureTracker     │
-            │  (tracks command failures)  │
-            └─────────────────────────────┘
+
+## ComputedStateComponent Lifecycle
+
+```mermaid
+flowchart TD
+    Start([Component Created]) --> Init["OnInitialized()<br/>[sync init]"]
+    Init --> Create["CreateState()<br/>[state created]"]
+    Create --> InitAsync["OnInitializedAsync()"]
+    InitAsync --> FirstRender["First Render"]
+    FirstRender --> Loop
+
+    subgraph Loop ["&nbsp;Update&nbsp;Loop&nbsp;"]
+        direction TB
+        Consistent["State.Value is consistent"]
+        Consistent -->|Dependency invalidated| Inconsistent["State becomes inconsistent"]
+        Inconsistent -->|"UpdateDelayer.Delay()"| Compute["ComputeState() executed"]
+        Compute -->|State updated| Changed["StateChanged() event fires"]
+        Changed -->|Triggers render| Render["Component re-renders"]
+        Render --> Consistent
+    end
 ```
+
+| Step | Description |
+|------|-------------|
+| `CreateState()` | Creates `ComputedState<T>` with `ComputeState` as the computation function |
+| First Render | `State.HasValue` determines what to render |
+| `ComputeState()` | Calls your compute methods (tracked) |
+| `StateChanged()` | Calls `NotifyStateHasChanged()` |
+
+
+## MixedStateComponent Lifecycle
+
+```mermaid
+flowchart LR
+    subgraph Component ["MixedStateComponent"]
+        direction TB
+        Mutable["MutableState&lt;string&gt;<br/>(local form state)"]
+        Computed["ComputedState&lt;T&gt;<br/>(computed state)"]
+        Mutable -->|"On update: triggers State.Recompute()"| Computed
+    end
+
+    Input["User types in search box"] --> Mutable
+    Computed --> UI["UI renders search results"]
+```
+
+| State | Purpose |
+|-------|---------|
+| `MutableState<string>` | User input binding, always consistent, `Set()` updates value |
+| `ComputedState<T>` | Reads `MutableState.Value`, calls compute services, returns computed result |
+
+**Note:** `ComputeState` doesn't need to explicitly call `.Use()` on `MutableState` - the dependency is assumed. Any change to `MutableState` triggers an immediate re-render (no update delays).
+
+**Example Flow:**
+1. User types "react" in search box
+2. `MutableState.Value` updates to "react"
+3. `ComputeState()` executes: reads search term → calls `SearchService.Search()` → returns results
+4. UI renders search results
 
 
 ## Authentication Flow
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                  Authentication Data Flow                     │
-└───────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Server
+        IAuth["IAuth<br/>(Compute Service)"]
+    end
 
+    subgraph Client
+        ASP["AuthStateProvider<br/>(ComputedState&lt;AuthState&gt;)"]
+        ASP -->|Computes| Methods["GetUser() + IsSignOutForced()"]
+        ASP -->|On invalidation| Recompute["1. Recomputes auth state<br/>2. Fires NotifyAuthenticationStateChanged()"]
+        Recompute --> CAS["CascadingAuthState Component"]
+        CAS --> Normal["Normal update"]
+        CAS --> Forced["IsSignOutForced = true"]
+        Normal --> Children["Child Components<br/>(&lt;AuthorizeView&gt;, [CascadingParameter])"]
+        Forced -->|Force page reload| Children
+    end
 
-  ┌──────────────────┐
-  │     Server       │
-  │ ┌──────────────┐ │
-  │ │    IAuth     │ │ ──► GetUser(), IsSignOutForced()
-  │ │  (Compute    │ │     are compute methods
-  │ │   Service)   │ │
-  │ └──────┬───────┘ │
-  └────────│─────────┘
-           │
-           │ RPC / Invalidation
-           │
-  ╔════════╧══════════════════════════════════════════════════╗
-  ║                        Client                             ║
-  ╠═══════════════════════════════════════════════════════════╣
-  ║                                                           ║
-  ║  ┌────────────────────────┐                               ║
-  ║  │   AuthStateProvider    │                               ║
-  ║  │  (ComputedState<       │                               ║
-  ║  │    AuthState>)         │                               ║
-  ║  └───────────┬────────────┘                               ║
-  ║              │                                            ║
-  ║              │ Computes: GetUser() + IsSignOutForced()    ║
-  ║              │                                            ║
-  ║              │ On invalidation:                           ║
-  ║              │ 1. Recomputes auth state                   ║
-  ║              │ 2. Fires NotifyAuthenticationStateChanged()║
-  ║              ▼                                            ║
-  ║  ┌────────────────────────┐                               ║
-  ║  │   CascadingAuthState   │                               ║
-  ║  │      Component         │                               ║
-  ║  └───────────┬────────────┘                               ║
-  ║              │                                            ║
-  ║       ┌──────┴──────┐                                     ║
-  ║       │             │                                     ║
-  ║       ▼             ▼                                     ║
-  ║  ┌─────────┐  ┌──────────────┐                            ║
-  ║  │ Normal  │  │IsSignOutForced                            ║
-  ║  │ update  │  │   = true     │                            ║
-  ║  └────┬────┘  └──────┬───────┘                            ║
-  ║       │              │                                    ║
-  ║       │              │ Force page reload                  ║
-  ║       ▼              ▼                                    ║
-  ║  ┌────────────────────────┐                               ║
-  ║  │    Child Components    │                               ║
-  ║  │  (<AuthorizeView>,     │                               ║
-  ║  │   [CascadingParameter])│                               ║
-  ║  └────────────────────────┘                               ║
-  ║                                                           ║
-  ╚═══════════════════════════════════════════════════════════╝
+    IAuth -->|"RPC / Invalidation"| ASP
 ```
 
+| Method | Description |
+|--------|-------------|
+| `GetUser()` | Compute method returning current user |
+| `IsSignOutForced()` | Compute method checking forced sign-out |
 
-## PresenceReporter Timing
 
+## PresenceReporter.Run Flow
+
+```mermaid
+flowchart LR
+    Start([Start]) --> GetSession["Get Session"]
+    GetSession --> Loop
+
+    subgraph Loop ["&nbsp;Main&nbsp;Loop&nbsp;"]
+        direction TB
+        Wait["Wait UpdatePeriod<br/>(~3 min with 5% random variance)"]
+        Wait --> Update["UpdatePresence()"]
+        Update --> Success
+        Update --> Failure
+        Success --> Wait
+        Failure -->|"Wait RetryDelay (10s, then 30s)"| Wait
+    end
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                   PresenceReporter Timing                     │
-└───────────────────────────────────────────────────────────────┘
 
-  Time ─────────────────────────────────────────────────────────►
-
-       Start()
-          │
-          ▼
-  ┌───────────────┐
-  │  Get Session  │
-  └───────┬───────┘
-          │
-  ╔═══════╧═════════════════════════════════════════════════════╗
-  ║                       Main Loop                             ║
-  ╠═════════════════════════════════════════════════════════════╣
-  ║                                                             ║
-  ║  ▼                                                          ║
-  ║ ─┴─    Wait UpdatePeriod                                    ║
-  ║       (default: ~3 min with 5% random variance)             ║
-  ║  │                                                          ║
-  ║  ▼                                                          ║
-  ║ ┌────────────────────┐                                      ║
-  ║ │ UpdatePresence()   │ ──► Calls IAuth.UpdatePresence()     ║
-  ║ └─────────┬──────────┘                                      ║
-  ║           │                                                 ║
-  ║    ┌──────┴──────┐                                          ║
-  ║    │             │                                          ║
-  ║    ▼             ▼                                          ║
-  ║ Success       Failure                                       ║
-  ║    │             │                                          ║
-  ║    │             │ Wait RetryDelay (10s, then 30s)          ║
-  ║    │             │                                          ║
-  ║    └──────┬──────┘                                          ║
-  ║           │                                                 ║
-  ║           │ Loop back                                       ║
-  ║                                                             ║
-  ╚═════════════════════════════════════════════════════════════╝
-
-
-  Timeline Example:
-  ──────────────────────────────────────────────────────────────►
-  │           │                    │                    │
-  Start    Update               Update               Update
-           (~3min)             (~3min)              (~3min)
-
-  On Failure:
-  ──────────────────────────────────────────────────────────────►
-  │           │       │            │                  │
-  Start    Update   Retry        Retry             Update
-          (fail)   (10s)        (30s)            (success)
-                   (fail)      (success)          (~3min)
-```
+| Timeline | Sequence |
+|----------|----------|
+| Normal | Start → Update (~3min) → Update (~3min) → Update (~3min) |
+| On Failure | Start → Update (fail) → Retry 10s (fail) → Retry 30s (success) → Update (~3min) |
 
 
 ## Render Mode Switching
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                   Render Mode Switching                       │
-└───────────────────────────────────────────────────────────────┘
-
-       Available Modes:
-       ┌─────────────────────────────────────────────────────┐
-       │  "a" (Auto)  │  "s" (Server)  │  "w" (WebAssembly)  │
-       └─────────────────────────────────────────────────────┘
-
-
-  Current: Server Mode               User clicks "Switch to WASM"
-  ┌─────────────────────┐                      │
-  │   Blazor Server     │                      │
-  │   (running in       │                      │
-  │    circuit)         │                      │
-  └─────────────────────┘                      │
-                                               ▼
-                              ┌──────────────────────────────┐
-                              │ RenderModeHelper.ChangeMode()│
-                              │                              │
-                              │ Navigates to:                │
-                              │ /fusion/renderMode/w         │
-                              │ ?redirectTo=/current-page    │
-                              └──────────────┬───────────────┘
-                                             │
-                                             ▼
-                              ┌──────────────────────────────┐
-                              │   Server Endpoint            │
-                              │  MapFusionRenderModeEndpoints│
-                              │                              │
-                              │  1. Sets render mode cookie  │
-                              │  2. Redirects to redirectTo  │
-                              └──────────────┬───────────────┘
-                                             │
-                                             ▼
-                              ┌──────────────────────────────┐
-                              │   _HostPage.razor            │
-                              │                              │
-                              │   Reads mode from cookie     │
-                              │   RenderModeDef.GetOrDefault │
-                              │                              │
-                              │   <App @rendermode="mode"/>  │
-                              └──────────────┬───────────────┘
-                                             │
-                                             ▼
-                              ┌──────────────────────────────┐
-                              │   Blazor WebAssembly         │
-                              │   (now running in browser)   │
-                              └──────────────────────────────┘
+```mermaid
+flowchart TD
+    Server["Blazor Server<br/>(running in circuit)"]
+    Server -->|"User clicks 'Switch to WASM'"| ChangeMode["RenderModeHelper.ChangeMode()<br/>Navigates to: /fusion/renderMode/w?redirectTo=/current-page"]
+    ChangeMode --> Endpoint["Server Endpoint<br/>MapFusionRenderModeEndpoints"]
+    Endpoint --> SetCookie["1. Sets render mode cookie<br/>2. Redirects to redirectTo"]
+    SetCookie --> HostPage["_HostPage.razor<br/>Reads mode from cookie<br/>RenderModeDef.GetOrDefault"]
+    HostPage --> WASM["Blazor WebAssembly<br/>(now running in browser)"]
 ```
 
-
-## Parameter Comparison Flow
-
-```
-┌───────────────────────────────────────────────────────────────┐
-│                  Parameter Comparison Flow                    │
-└───────────────────────────────────────────────────────────────┘
-
-  Parent Component Renders
-           │
-           ▼
-  ┌───────────────────────┐
-  │  SetParametersAsync() │
-  │   called on child     │
-  └───────────┬───────────┘
-              │
-              ▼
-  ┌───────────────────────────────────────────────────────────┐
-  │            Check ParameterComparisonMode                  │
-  └───────────┬───────────────────────────────────────────────┘
-              │
-      ┌───────┴───────┐
-      │               │
-      ▼               ▼
-  Standard         Custom
-      │               │
-      │               ▼
-      │     ┌───────────────────────────────────────────────┐
-      │     │  ComponentInfo.ShouldSetParameters()          │
-      │     │                                               │
-      │     │  For each parameter:                          │
-      │     │  ┌───────────────────────────────────────┐    │
-      │     │  │ 1. Get ParameterComparer for param    │    │
-      │     │  │ 2. Compare old value vs new value     │    │
-      │     │  │ 3. If ANY changed → return true       │    │
-      │     │  └───────────────────────────────────────┘    │
-      │     └────────────────┬──────────────────────────────┘
-      │                      │
-      │               ┌──────┴──────┐
-      │               │             │
-      │               ▼             ▼
-      │          All Same    Something Changed
-      │               │             │
-      │               ▼             │
-      │       ┌─────────────┐       │
-      │       │    SKIP     │       │
-      │       │  No render  │       │
-      │       └─────────────┘       │
-      │                             │
-      └─────────────────────────────┘
-                      │
-                      ▼
-            ┌───────────────────────┐
-            │  Process Parameters   │
-            │   (standard Blazor)   │
-            └───────────────────────┘
-
-
-  Comparer Resolution (ParameterComparerProvider):
-  ────────────────────────────────────────────────
-
-  ┌───────────────────────────────────────────────────────────┐
-  │ 1. [ParameterComparer] on property                        │
-  │    └─► if found, use it                                   │
-  │                                                           │
-  │ 2. KnownComparerTypes[propertyType]                       │
-  │    └─► if found, use it                                   │
-  │                                                           │
-  │ 3. [ParameterComparer] on property's type                 │
-  │    └─► if found, use it                                   │
-  │                                                           │
-  │ 4. [ParameterComparer] on declaring class                 │
-  │    └─► if found, use it                                   │
-  │                                                           │
-  │ 5. DefaultParameterComparer                               │
-  │    └─► fallback                                           │
-  └───────────────────────────────────────────────────────────┘
-```
-
-
-## MixedStateComponent Data Flow
-
-```
-┌───────────────────────────────────────────────────────────────┐
-│            MixedStateComponent<T, TMutableState>              │
-└───────────────────────────────────────────────────────────────┘
-
-                  ┌─────────────────────────────────────┐
-                  │        MixedStateComponent          │
-                  │                                     │
-                  │  ┌───────────────────────────────┐  │
-                  │  │  MutableState<TMutableState>  │  │
-                  │  │      (local form state)       │  │
-                  │  │                               │  │
-                  │  │  • User input binding         │  │
-                  │  │  • Always consistent          │  │
-                  │  │  • Set() updates value        │  │
-                  │  └──────────────┬────────────────┘  │
-                  │                 │                   │
-                  │                 │ On update:        │
-                  │                 │ triggers          │
-                  │                 │ State.Recompute() │
-                  │                 │                   │
-                  │                 ▼                   │
-                  │  ┌───────────────────────────────┐  │
-                  │  │      ComputedState<T>         │  │
-                  │  │       (computed state)        │  │
-                  │  │                               │  │
-                  │  │  ComputeState():              │  │
-                  │  │  • Reads MutableState.Value   │  │
-                  │  │  • Calls compute services     │  │
-                  │  │  • Returns computed result    │  │
-                  │  └───────────────────────────────┘  │
-                  │                                     │
-                  └─────────────────────────────────────┘
-
-
-  Example Flow:
-  ───────────────────────────────────────────────────────────────
-
-  User types in           MutableState              ComputedState
-  search box             updates                    recomputes
-       │                      │                           │
-       ▼                      ▼                           ▼
-  ┌─────────┐          ┌────────────┐            ┌─────────────────┐
-  │"react"  │─────────►│ .Value =   │───────────►│ ComputeState()  │
-  └─────────┘          │ "react"    │            │                 │
-                       └────────────┘            │ 1. Read search  │
-                                                 │    term         │
-                                                 │ 2. Call         │
-                                                 │    SearchService│
-                                                 │    .Search()    │
-                                                 │ 3. Return       │
-                                                 │    results      │
-                                                 └────────┬────────┘
-                                                          │
-                                                          ▼
-                                                 ┌─────────────────┐
-                                                 │   UI renders    │
-                                                 │  search results │
-                                                 └─────────────────┘
-```
+| Mode | Code | Description |
+|------|------|-------------|
+| Auto | `a` | Automatic mode selection |
+| Server | `s` | Blazor Server mode |
+| WebAssembly | `w` | Blazor WebAssembly mode |

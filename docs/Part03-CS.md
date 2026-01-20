@@ -3,32 +3,63 @@
 Quick reference for Fusion + Blazor.
 
 
-## DI Setup
+## Configuration
 
-```csharp
-// Server-side Blazor
+Server-side Blazor:
+
+```cs
 services.AddFusion()
     .AddService<MyService>()
     .AddBlazor();
 
-// Hybrid (Server + WASM) with auth
+services.AddScoped<IUpdateDelayer>(_ => FixedDelayer.MinDelay);
+```
+
+Hybrid (Server + WASM) with auth:
+
+```cs
 services.AddFusion(RpcServiceMode.Server, true)
     .AddServer<IMyService, MyService>()
     .AddBlazor()
     .AddAuthentication()
     .AddPresenceReporter();
+```
 
-// WebAssembly client
+WebAssembly client:
+
+```cs
 services.AddFusion()
     .AddClient<IMyService>()
     .AddBlazor()
     .AddAuthentication()
     .AddPresenceReporter();
 fusion.Rpc.AddWebSocketClient(baseAddress);
+
+// Responsive update delayer
+services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25));
+```
+
+ASP.NET Core app configuration:
+
+```cs
+app.UseWebSockets();
+app.UseFusionSession();
+app.MapRpcWebSocketServer();
+app.MapFusionRenderModeEndpoints();  // For render mode switching
+```
+
+Component default options:
+
+```cs
+ComputedStateComponent.DefaultOptions =
+    ComputedStateComponentOptions.RecomputeStateOnParameterChange |
+    ComputedStateComponentOptions.UseAllRenderPoints;
+
+FusionComponentBase.DefaultParameterComparisonMode = ParameterComparisonMode.Custom;
 ```
 
 
-## `ComputedStateComponent<T>`
+## ComputedStateComponent&lt;T&gt;
 
 Basic usage:
 
@@ -86,7 +117,7 @@ Force immediate update:
 ```
 
 
-## Using `LastNonErrorValue`
+## Using LastNonErrorValue
 
 Keep showing last valid data while error occurs:
 
@@ -118,7 +149,7 @@ Keep showing last valid data while error occurs:
 ```
 
 
-## `MixedStateComponent` (Forms)
+## MixedStateComponent (Forms)
 
 ```razor
 @inherits MixedStateComponent<SearchResults, SearchForm>
@@ -150,17 +181,34 @@ Keep showing last valid data while error occurs:
 @code {
     protected override void OnInitialized()
     {
-        // All available via CircuitHub:
         var session = Session;          // CircuitHub.Session
         var commander = UICommander;    // CircuitHub.UICommander
         var nav = Nav;                  // CircuitHub.Nav
         var js = JS;                    // CircuitHub.JS
 
-        // Check render mode
         if (CircuitHub.IsPrerendering) {
             // Skip expensive operations
         }
     }
+}
+```
+
+
+## UICommander
+
+```razor
+@code {
+    // Execute command and get result
+    var result = await UICommander.Call(new MyCommand(data));
+
+    // Execute command with full metadata
+    var actionResult = await UICommander.Run(new MyCommand(data));
+
+    // Fire-and-forget (still tracks for instant updates)
+    _ = UICommander.Run(new MyCommand(data));
+
+    // Start without waiting
+    var action = UICommander.Start(new MyCommand(data));
 }
 ```
 
@@ -216,28 +264,9 @@ Access auth state in components:
 ```
 
 
-## Component Options
-
-```csharp
-// Set default options globally
-ComputedStateComponent.DefaultOptions =
-    ComputedStateComponentOptions.RecomputeStateOnParameterChange |
-    ComputedStateComponentOptions.UseAllRenderPoints;
-
-// Per-component override
-protected override void OnInitialized()
-{
-    Options = ComputedStateComponentOptions.RecomputeStateOnParameterChange;
-}
-```
-
-
 ## Parameter Comparison
 
-```csharp
-// Set default comparison mode
-FusionComponentBase.DefaultParameterComparisonMode = ParameterComparisonMode.Custom;
-
+```cs
 // Per-component attribute
 [FusionComponent(ParameterComparisonMode.Custom)]
 public class MyComponent : ComputedStateComponent<MyData> { }

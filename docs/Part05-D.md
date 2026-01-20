@@ -4,486 +4,187 @@ This page contains visual diagrams explaining how Operations Framework works.
 
 ## High-Level Architecture
 
+```mermaid
+flowchart TD
+    subgraph Pipeline ["Command&nbsp;Execution&nbsp;Pipeline"]
+        direction LR
+        NOL["NestedOperationLogger<br/>(11000)"]
+        IOSP["InMemory/DbOperation<br/>ScopeProvider<br/>(10000/1000)"]
+        ICH["InvalidatingCompletionHandler<br/>(100)"]
+    end
+
+    subgraph Background ["Background&nbsp;Services"]
+        direction LR
+        OLR["Operation Log Reader"] ~~~ OLT["Operation Log Trimmer"]
+        ELR["Event Log Reader"] ~~~ ELT["Event Log Trimmer"]
+    end
+
+    subgraph Notification ["Notification&nbsp;System"]
+        direction LR
+        CN["Completion Notifier"] ~~~ LW["Log Watcher<br/>(PG/Redis/FS)"]
+    end
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        Operations Framework                            │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                   Command Execution Pipeline                     │  │
-│  │                                                                  │  │
-│  │  ┌────────────┐  ┌────────────┐  ┌────────────────────────────┐  │  │
-│  │  │ Prepared   │  │ Nested     │  │ InMemory / DbOperation     │  │  │
-│  │  │ Command    │─>│ Operation  │─>│ ScopeProvider              │  │  │
-│  │  │ Handler    │  │ Logger     │  │                            │  │  │
-│  │  │ (1B)       │  │ (11K)      │  │ (10K / 1K)                 │  │  │
-│  │  └────────────┘  └────────────┘  └─────────────┬──────────────┘  │  │
-│  │                                                │                 │  │
-│  │                                                ▼                 │  │
-│  │                                       ┌────────────────┐         │  │
-│  │                                       │ Invalidating   │         │  │
-│  │                                       │ Completion     │         │  │
-│  │                                       │ Handler (100)  │         │  │
-│  │                                       └────────────────┘         │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                      Background Services                         │  │
-│  │                                                                  │  │
-│  │  ┌──────────────────┐          ┌──────────────────┐              │  │
-│  │  │ Operation Log    │          │ Operation Log    │              │  │
-│  │  │ Reader           │          │ Trimmer          │              │  │
-│  │  │ (Hosted Service) │          │ (Hosted Service) │              │  │
-│  │  └──────────────────┘          └──────────────────┘              │  │
-│  │                                                                  │  │
-│  │  ┌──────────────────┐          ┌──────────────────┐              │  │
-│  │  │ Event Log        │          │ Event Log        │              │  │
-│  │  │ Reader           │          │ Trimmer          │              │  │
-│  │  │ (Hosted Service) │          │ (Hosted Service) │              │  │
-│  │  └──────────────────┘          └──────────────────┘              │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                      Notification System                         │  │
-│  │                                                                  │  │
-│  │  ┌──────────────────┐          ┌──────────────────┐              │  │
-│  │  │ Log Watcher      │<─────────│ Completion       │              │  │
-│  │  │ (PG/Redis/FS)    │          │ Notifier         │              │  │
-│  │  └──────────────────┘          └──────────────────┘              │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
-```
+
+**Command Execution Pipeline:**
+
+| Class | Description |
+|-------|-------------|
+| `NestedOperationLogger` | Captures nested command calls |
+| `InMemoryOperationScopeProvider` | Provides transient operation scope |
+| `DbOperationScopeProvider` | Provides DB-backed operation scope |
+| `InvalidatingCompletionHandler` | Runs invalidation for completed operations |
+
+**Background Services:**
+
+| Class | Description |
+|-------|-------------|
+| `DbOperationLogReader` | Reads operations from other hosts |
+| `DbOperationLogTrimmer` | Removes old operations from log |
+| `DbEventLogReader` | Processes pending events |
+| `DbEventLogTrimmer` | Removes processed/discarded events |
+
+**Notification System:**
+
+| Class | Description |
+|-------|-------------|
+| `DbOperationCompletionNotifier` | Triggers invalidation for replayed operations |
+| `PostgreSqlDbLogWatcher` | Listens for NOTIFY signals |
+| `RedisDbLogWatcher` | Subscribes to Redis pub/sub |
+| `FileSystemDbLogWatcher` | Watches for file changes |
+
 
 ## Command Execution Flow
 
-```
-                         Command Execution Flow
-                         ══════════════════════
+```mermaid
+flowchart TD
+    Client["Client Request<br/>CreateOrderCommand(...)"] --> P1
 
-    ┌────────────────────────────────────────────────────────────┐
-    │                      Client Request                        │
-    │                  CreateOrderCommand(...)                   │
-    └────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌────────────────────────────────────────────────────────────────────┐
-│                                                                    │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                 1. PreparedCommandHandler (1B)               │  │
-│  │                                                              │  │
-│  │  - Validates IPreparedCommand implementations                │  │
-│  │  - Calls command.Prepare() if applicable                     │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                  │                                 │
-│                                  ▼                                 │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                2. NestedOperationLogger (11K)                │  │
-│  │                                                              │  │
-│  │  - Captures nested command calls                             │  │
-│  │  - Stores them in Operation.NestedOperations                 │  │
-│  │  - Isolates their Operation.Items                            │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                  │                                 │
-│                                  ▼                                 │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │            3. InMemoryOperationScopeProvider (10K)           │  │
-│  │                                                              │  │
-│  │  - Provides transient operation scope                        │  │
-│  │  - Runs operation completion after execution                 │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                  │                                 │
-│                                  ▼                                 │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │             4. DbOperationScopeProvider<T> (1K)              │  │
-│  │                                                              │  │
-│  │  - Creates DbOperationScope<TDbContext>                      │  │
-│  │  - Manages database transaction                              │  │
-│  │  - Stores operation in same transaction                      │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                  │                                 │
-│                                  ▼                                 │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                    YOUR COMMAND HANDLER                      │  │
-│  │                                                              │  │
-│  │  if (Invalidation.IsActive) {                                │  │
-│  │      _ = GetOrder(command.OrderId, default);                 │  │
-│  │      return default!;                                        │  │
-│  │  }                                                           │  │
-│  │                                                              │  │
-│  │  var db = await DbHub.CreateOperationDbContext(ct);          │  │
-│  │  // ... business logic ...                                   │  │
-│  │  await db.SaveChangesAsync(ct);                              │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                  │                                 │
-│                                  ▼                                 │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │         5. InvalidatingCommandCompletionHandler (100)        │  │
-│  │                                                              │  │
-│  │  - Reacts to ICompletion<TCommand>                           │  │
-│  │  - Runs command in Invalidation.Begin() block                │  │
-│  │  - Also runs nested commands in invalidation mode            │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
+    subgraph Handlers ["Command&nbsp;Handlers"]
+        P1["1. NestedOperationLogger (11000)<br/>Captures nested command calls<br/>Stores in Operation.NestedOperations"]
+        P1 --> P2["2. InMemoryOperationScopeProvider (10000)<br/>Provides transient operation scope<br/>Runs operation completion"]
+        P2 --> P3["3. DbOperationScopeProvider (1000)<br/>Creates DbOperationScope<br/>Manages DB transaction"]
+        P3 --> Your["YOUR COMMAND HANDLER<br/>Business logic + invalidation block"]
+        Your --> P4["4. InvalidatingCommandCompletionHandler (100)<br/>Reacts to ICompletion<br/>Runs invalidation mode"]
+    end
 ```
 
-## Multi-Host Invalidation Flow
+| Handler | Priority | Responsibility |
+|---------|----------|----------------|
+| `NestedOperationLogger` | 11,000 | Captures nested commands, isolates `Operation.Items` |
+| `InMemoryOperationScopeProvider` | 10,000 | Transient scope, completion handling |
+| `DbOperationScopeProvider` | 1,000 | DB transaction, operation persistence |
+| `InvalidatingCommandCompletionHandler` | 100 | Runs invalidation pass |
 
-```
-                     Multi-Host Invalidation Flow
-                     ════════════════════════════
-
-   Host A (Originator)                     Host B (Peer)
-   ═══════════════════                     ═════════════
-
- ┌─────────────────────┐
- │ 1. Execute Command  │
- │                     │
- │ CreateOrderCommand  │
- └──────────┬──────────┘
-            │
-            ▼
- ┌─────────────────────┐
- │ 2. Create DbContext │
- │                     │
- │ BEGIN TRANSACTION   │
- └──────────┬──────────┘
-            │
-            ▼
- ┌─────────────────────┐
- │ 3. Business Logic   │
- │                     │
- │ INSERT INTO Orders  │
- └──────────┬──────────┘
-            │
-            ▼
- ┌─────────────────────┐
- │ 4. Store Operation  │
- │                     │
- │ INSERT INTO         │
- │ _Operations         │
- └──────────┬──────────┘
-            │
-            ▼
- ┌─────────────────────┐
- │ 5. Commit           │
- │                     │
- │ COMMIT TRANSACTION  │─────────────────────────────┐
- └──────────┬──────────┘                             │
-            │                                        │
-            ▼                                        │
- ┌─────────────────────┐                             │
- │ 6. Notify Watcher   │                             │
- │                     │                             │
- │ NOTIFY / PUBLISH    │──────────────────────┐      │
- └──────────┬──────────┘                      │      │
-            │                                 │      │
-            ▼                                 │      │
- ┌─────────────────────┐                      │      │
- │ 7. Local Completion │                      │      │
- │                     │                      │      │
- │ Run Invalidation    │                      │      │
- │ _ = GetOrder(...)   │                      │      │
- └─────────────────────┘                      │      │
-                                              ▼      ▼
-                                  ┌─────────────────────┐
-                                  │ 8. Receive          │
-                                  │    Notification     │
-                                  │                     │
-                                  │ LISTEN / SUBSCRIBE  │
-                                  └──────────┬──────────┘
-                                             │
-                                             ▼
-                                  ┌─────────────────────┐
-                                  │ 9. Read Operation   │
-                                  │    Log              │
-                                  │                     │
-                                  │ SELECT FROM         │
-                                  │ _Operations         │
-                                  │ WHERE LoggedAt > ?  │
-                                  └──────────┬──────────┘
-                                             │
-                                             ▼
-                                  ┌─────────────────────┐
-                                  │ 10. Completion      │
-                                  │     Notifier        │
-                                  │                     │
-                                  │ NotifyCompleted()   │
-                                  └──────────┬──────────┘
-                                             │
-                                             ▼
-                                  ┌─────────────────────┐
-                                  │ 11. Run Invalidation│
-                                  │                     │
-                                  │ Invalidation.Begin()│
-                                  │ _ = GetOrder(...)   │
-                                  └─────────────────────┘
-```
 
 ## Operation Scope Lifecycle
 
-```
-                     Operation Scope Lifecycle
-                     ═════════════════════════
+```mermaid
+flowchart TD
+    Start["Command&nbsp;Starts"] --> Provider["InMemoryOperationScopeProvider&nbsp;Creates&nbsp;Scope"]
 
-    ┌─────────────────────────────────────────────────────────┐
-    │                     Command Starts                      │
-    └─────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-                ┌────────────────────────────────┐
-                │ InMemoryOperationScopeProvider │
-                │         Creates Scope          │
-                └───────────────┬────────────────┘
-                                │
-          ┌─────────────────────┴─────────────────────┐
-          │                                           │
-          ▼                                           ▼
-┌───────────────────────┐               ┌───────────────────────┐
-│    No DB Access       │               │    DB Access Used     │
-│                       │               │                       │
-│    InMemoryScope      │               │    DbOperationScope   │
-│    IsTransient: true  │               │    IsTransient: false │
-│    UUID: xxx-local    │               │    UUID: xxx          │
-└───────────┬───────────┘               └───────────┬───────────┘
-            │                                       │
-            ▼                                       ▼
-┌───────────────────────┐               ┌───────────────────────┐
-│   Command Executes    │               │   BEGIN TRANSACTION   │
-│                       │               │                       │
-│   In-memory only      │               │   Business Logic      │
-│   No persistence      │               │   Operation Stored    │
-└───────────┬───────────┘               └───────────┬───────────┘
-            │                                       │
-            ▼                                       ▼
-┌───────────────────────┐               ┌───────────────────────┐
-│   Scope Disposed      │               │        COMMIT         │
-│                       │               │                       │
-│   Local invalidation  │               │   Verify commit       │
-│   only                │               │   if error            │
-└───────────┬───────────┘               └───────────┬───────────┘
-            │                                       │
-            └───────────────────┬───────────────────┘
-                                │
-                                ▼
-                ┌────────────────────────────────┐
-                │     Operation Completion       │
-                │                                │
-                │   - Deduplication              │
-                │   - Listener invocation        │
-                │   - Invalidation trigger       │
-                └────────────────────────────────┘
+    Provider --> NoDb["No&nbsp;DB&nbsp;Access<br/>InMemoryScope<br/>IsTransient:&nbsp;true<br/>UUID:&nbsp;xxx-local"]
+    Provider --> WithDb["DB&nbsp;Access&nbsp;Used<br/>DbOperationScope<br/>IsTransient:&nbsp;false<br/>UUID:&nbsp;xxx"]
+
+    NoDb --> ExecNoDb["Command&nbsp;Executes<br/>In-memory&nbsp;only<br/>No&nbsp;persistence"]
+    WithDb --> ExecDb["BEGIN&nbsp;TRANSACTION<br/>Business&nbsp;Logic<br/>Operation&nbsp;Stored"]
+
+    ExecNoDb --> DisposeNoDb["Scope&nbsp;Disposed<br/>Local&nbsp;invalidation&nbsp;only"]
+    ExecDb --> CommitDb["COMMIT<br/>Verify&nbsp;commit&nbsp;if&nbsp;error"]
+
+    DisposeNoDb --> Completion["Operation&nbsp;Completion<br/>•&nbsp;Deduplication<br/>•&nbsp;Listener&nbsp;invocation<br/>•&nbsp;Invalidation&nbsp;trigger"]
+    CommitDb --> Completion
 ```
 
-## Event Processing Flow
-
-```
-                         Event Processing Flow
-                         ═════════════════════
-
-    ┌────────────────────────────────────────────────────────────┐
-    │                     Command Handler                        │
-    │                                                            │
-    │  context.Operation.AddEvent(new OrderCreatedEvent(id))     │
-    └─────────────────────────────┬──────────────────────────────┘
-                                  │
-                                  ▼
-    ┌────────────────────────────────────────────────────────────┐
-    │                    Commit Transaction                      │
-    │                                                            │
-    │  _Operations: { Command, Items, Events[] }                 │
-    │  _Events: { Uuid, Value, DelayUntil, State: New }          │
-    └─────────────────────────────┬──────────────────────────────┘
-                                  │
-                                  │ (Async - background service)
-                                  ▼
-    ┌────────────────────────────────────────────────────────────┐
-    │                    DbEventLogReader                        │
-    │                                                            │
-    │  SELECT * FROM _Events                                     │
-    │  WHERE State = 'New' AND DelayUntil <= NOW()               │
-    │  ORDER BY DelayUntil LIMIT 64                              │
-    └─────────────────────────────┬──────────────────────────────┘
-                                  │
-                                  ▼
-    ┌────────────────────────────────────────────────────────────┐
-    │                    DbEventProcessor                        │
-    │                                                            │
-    │  if (event.Value is ICommand command)                      │
-    │      await Commander.Call(command, true, ct)               │
-    └─────────────────────────────┬──────────────────────────────┘
-                                  │
-                ┌─────────────────┴─────────────────┐
-                │                                   │
-           Success                              Failure
-                │                                   │
-                ▼                                   ▼
-    ┌───────────────────────┐         ┌───────────────────────┐
-    │  State = Processed    │         │  Retry (up to 5x)     │
-    │                       │         │                       │
-    │  UPDATE _Events       │         │  If exhausted:        │
-    │  SET State = 2        │         │  State = Discarded    │
-    └───────────────────────┘         └───────────┬───────────┘
-                                                  │
-                                                  ▼
-                                      ┌───────────────────────┐
-                                      │  DbEventLogTrimmer    │
-                                      │                       │
-                                      │  DELETE FROM _Events  │
-                                      │  WHERE DelayUntil < ? │
-                                      │  AND State != 'New'   │
-                                      └───────────────────────┘
-```
-
-## Log Watcher Comparison
-
-```
-                      Log Watcher Comparison
-                      ══════════════════════
-
-┌───────────────────────────────────────────────────────────────────┐
-│                      PostgreSQL NOTIFY                            │
-│                                                                   │
-│  Host A                                          Host B           │
-│  ┌──────────┐                                 ┌──────────┐        │
-│  │ Command  │                                 │ LISTEN   │        │
-│  │ Executes │                                 │ channel  │<──┐    │
-│  └────┬─────┘                                 └──────────┘   │    │
-│       │                                                      │    │
-│       ▼                                                      │    │
-│  ┌──────────┐       ┌────────────────┐                       │    │
-│  │ NOTIFY   │──────>│   PostgreSQL   │───────────────────────┘    │
-│  │ channel  │       │   (built-in)   │                            │
-│  └──────────┘       └────────────────┘                            │
-│                                                                   │
-│  Latency: < 10ms    Infrastructure: None (uses DB)                │
-└───────────────────────────────────────────────────────────────────┘
-
-┌───────────────────────────────────────────────────────────────────┐
-│                        Redis Pub/Sub                              │
-│                                                                   │
-│  Host A                                          Host B           │
-│  ┌──────────┐                                 ┌──────────┐        │
-│  │ Command  │                                 │SUBSCRIBE │        │
-│  │ Executes │                                 │ channel  │<──┐    │
-│  └────┬─────┘                                 └──────────┘   │    │
-│       │                                                      │    │
-│       ▼                                                      │    │
-│  ┌──────────┐       ┌────────────────┐                       │    │
-│  │ PUBLISH  │──────>│     Redis      │───────────────────────┘    │
-│  │ channel  │       │   (external)   │                            │
-│  └──────────┘       └────────────────┘                            │
-│                                                                   │
-│  Latency: < 1ms     Infrastructure: Redis server                  │
-└───────────────────────────────────────────────────────────────────┘
-
-┌───────────────────────────────────────────────────────────────────┐
-│                      FileSystem Watcher                           │
-│                                                                   │
-│  Process A                                       Process B        │
-│  ┌──────────┐                                 ┌──────────┐        │
-│  │ Command  │                                 │FileSystem│        │
-│  │ Executes │                                 │ Watcher  │<──┐    │
-│  └────┬─────┘                                 └──────────┘   │    │
-│       │                                                      │    │
-│       ▼                                                      │    │
-│  ┌──────────┐       ┌────────────────┐                       │    │
-│  │ Touch    │──────>│  Shared File   │───────────────────────┘    │
-│  │ file     │       │  (temp dir)    │                            │
-│  └──────────┘       └────────────────┘                            │
-│                                                                   │
-│  Latency: < 100ms   Infrastructure: Shared filesystem             │
-└───────────────────────────────────────────────────────────────────┘
-
-┌───────────────────────────────────────────────────────────────────┐
-│                      No Watcher (Polling)                         │
-│                                                                   │
-│  Host A                                          Host B           │
-│  ┌──────────┐                                 ┌──────────┐        │
-│  │ Command  │                                 │  Poll    │        │
-│  │ Executes │                                 │  every   │        │
-│  └────┬─────┘                                 │  5 sec   │        │
-│       │                                       └────┬─────┘        │
-│       ▼                                            │              │
-│  ┌──────────┐       ┌────────────────┐             │              │
-│  │ Write to │──────>│    Database    │<────────────┘              │
-│  │ _Ops     │       │                │                            │
-│  └──────────┘       └────────────────┘                            │
-│                                                                   │
-│  Latency: 0-5s      Infrastructure: None                          │
-└───────────────────────────────────────────────────────────────────┘
-```
 
 ## Operation Items vs Context Items
 
-```
-                 Operation.Items vs CommandContext.Items
-                 ═══════════════════════════════════════
+| Property | `CommandContext.Items` | `Operation.Items` |
+|----------|------------------------|-------------------|
+| **Scope** | Single command execution | Operation + invalidation across all hosts |
+| **Lifetime** | Command start → end | Command start → invalidation on all hosts |
+| **Persistence** | In-memory only | Stored in database (JSON) |
+| **Cross-host** | No | Yes |
+| **Usage** | `context.Items.Set(...)` / `Get<T>()` | `operation.Items.KeylessSet(x)` / `KeylessGet<T>()` |
 
-┌───────────────────────────────────────────────────────────────────┐
-│                    CommandContext.Items                           │
-│                                                                   │
-│  Scope: Single command execution on originating host              │
-│  Lifetime: From command start to command end                      │
-│  Persistence: None (in-memory only)                               │
-│  Cross-host: No                                                   │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │  Host A                                                     │  │
-│  │  ┌───────────────────────────────────────────────────────┐  │  │
-│  │  │  Command Execution                                    │  │  │
-│  │  │  ┌─────────────────┐                                  │  │  │
-│  │  │  │ context.Items   │ <── Available here               │  │  │
-│  │  │  │   .Set(...)     │                                  │  │  │
-│  │  │  │   .Get<T>()     │                                  │  │  │
-│  │  │  └─────────────────┘                                  │  │  │
-│  │  └───────────────────────────────────────────────────────┘  │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph ContextItems ["CommandContext.Items&nbsp;(Local&nbsp;Only)"]
+        direction TB
+        CI1["Host A: Command Execution"]
+        CI2["context.Items.Set(...)<br/>context.Items.Get&lt;T&gt;()"]
+        CI1 --> CI2
+    end
 
-┌───────────────────────────────────────────────────────────────────┐
-│                      Operation.Items                              │
-│                                                                   │
-│  Scope: Operation and its invalidation across all hosts           │
-│  Lifetime: From command start through invalidation on all hosts   │
-│  Persistence: Stored in database with operation                   │
-│  Cross-host: Yes                                                  │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │  Host A (Originator)                                        │  │
-│  │  ┌───────────────────────────────────────────────────────┐  │  │
-│  │  │  Command Execution                                    │  │  │
-│  │  │  ┌───────────────────┐                                │  │  │
-│  │  │  │ operation.Items   │ <── Store data here            │  │  │
-│  │  │  │ .KeylessSet(x)    │                                │  │  │
-│  │  │  └─────────┬─────────┘                                │  │  │
-│  │  │            │ Serialized to JSON                       │  │  │
-│  │  │            ▼                                          │  │  │
-│  │  │  ┌───────────────────┐                                │  │  │
-│  │  │  │ _Operations       │                                │  │  │
-│  │  │  │ ItemsJson: {...}  │                                │  │  │
-│  │  │  └───────────────────┘                                │  │  │
-│  │  └───────────────────────────────────────────────────────┘  │  │
-│  │                                                             │  │
-│  │  ┌───────────────────────────────────────────────────────┐  │  │
-│  │  │  Invalidation Block                                   │  │  │
-│  │  │  ┌───────────────────┐                                │  │  │
-│  │  │  │ operation.Items   │ <── Available here too         │  │  │
-│  │  │  │ .KeylessGet<T>()  │                                │  │  │
-│  │  │  └───────────────────┘                                │  │  │
-│  │  └───────────────────────────────────────────────────────┘  │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │  Host B (Peer)                                              │  │
-│  │  ┌───────────────────────────────────────────────────────┐  │  │
-│  │  │  Invalidation Block (replayed)                        │  │  │
-│  │  │  ┌───────────────────┐                                │  │  │
-│  │  │  │ operation.Items   │ <── Same data available!       │  │  │
-│  │  │  │ .KeylessGet<T>()  │     (deserialized from DB)     │  │  │
-│  │  │  └───────────────────┘                                │  │  │
-│  │  └───────────────────────────────────────────────────────┘  │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────┘
+    subgraph OpItems ["Operation.Items&nbsp;(Cross-Host)"]
+        direction TB
+        OI1["Host A: Command Execution"]
+        OI2["operation.Items.KeylessSet(x)"]
+        OI3["Serialized to _Operations.ItemsJson"]
+        OI4["Host A: Invalidation Block<br/>operation.Items.KeylessGet&lt;T&gt;()"]
+        OI5["Host B: Invalidation Block<br/>Same data available!<br/>(deserialized from DB)"]
+
+        OI1 --> OI2
+        OI2 --> OI3
+        OI3 --> OI4
+        OI3 --> OI5
+    end
 ```
+
+
+## Multi-Host Invalidation Flow
+
+```mermaid
+sequenceDiagram
+    participant A as Host A (Originator)
+    participant DB as Database
+    participant PS as Pub/Sub (Redis/PG/FS)
+    participant B as Host B (Peer)
+
+    A->>A: 1. Execute Command
+    A->>A: 2. BEGIN TRANSACTION
+    A->>A: 3. Business Logic
+    A->>A: 4. Store Operation
+    A->>DB: 5. COMMIT
+    A->>PS: 6. Notify
+    PS->>B: Notification
+    A->>A: 7. Local Invalidation
+    B->>DB: 8. Read Operation Log
+    DB-->>B: Operation data
+    B->>B: 9. Completion Notifier
+    B->>B: 10. Run Invalidation
+```
+
+
+## Event Processing Flow
+
+```mermaid
+flowchart TD
+    Handler["Command&nbsp;Handler<br/>context.Operation.AddEvent(new&nbsp;OrderCreatedEvent(id))"]
+    Handler --> Commit["Commit&nbsp;Transaction<br/>_Operations:&nbsp;{&nbsp;Command,&nbsp;Items,&nbsp;Events[]&nbsp;}<br/>_Events:&nbsp;{&nbsp;Uuid,&nbsp;Value,&nbsp;State:&nbsp;New&nbsp;}"]
+
+    Commit -->|"Async&nbsp;(background)"| Reader["DbEventLogReader<br/>SELECT&nbsp;*&nbsp;FROM&nbsp;_Events<br/>WHERE&nbsp;State&nbsp;=&nbsp;'New'"]
+
+    Reader --> Processor["DbEventProcessor<br/>if&nbsp;(event.Value&nbsp;is&nbsp;ICommand)<br/>await&nbsp;Commander.Call(command)"]
+
+    Processor --> Success["Success<br/>State&nbsp;=&nbsp;Processed"]
+    Processor --> Failure["Failure<br/>Retry&nbsp;(up&nbsp;to&nbsp;5x)"]
+
+    Failure --> Discarded["If&nbsp;exhausted:<br/>State&nbsp;=&nbsp;Discarded"]
+    Discarded --> Trimmer["DbEventLogTrimmer<br/>DELETE&nbsp;FROM&nbsp;_Events<br/>WHERE&nbsp;State&nbsp;!=&nbsp;'New'"]
+```
+
+| Event State | Description |
+|-------------|-------------|
+| `New` | Freshly added, awaiting processing |
+| `Processed` | Successfully executed |
+| `Discarded` | Failed after max retries |
+
+
+## Log Watcher Comparison
+
+| Watcher Type | Mechanism | Latency | Infrastructure |
+|--------------|-----------|---------|----------------|
+| **PostgreSQL NOTIFY** | `NOTIFY` / `LISTEN` on channel | < 10ms | None (uses DB) |
+| **Redis Pub/Sub** | `PUBLISH` / `SUBSCRIBE` on channel | < 1ms | Redis server |
+| **FileSystem Watcher** | Touch file / Watch directory | < 100ms | Shared filesystem |
+| **No Watcher (Polling)** | Poll `_Operations` table | 0-5s | None |

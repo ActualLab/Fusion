@@ -138,3 +138,14 @@ flowchart TD
 - Theme files: `.vitepress/config.mts` (mermaidConfig), `.vitepress/theme/mermaid.css`
 - Style: Grafana-inspired dark theme with Inter font
 - Background: Aurora (deep indigo with blue/purple/cyan gradient)
+
+## Available Skills
+
+The following slash commands (skills) are available for documentation work:
+
+| Skill | Description |
+|-------|-------------|
+| `/docs-writer` | Documentation writer for Fusion docs. Use for any docs/ folder tasks. Includes style guide, structure info, and cheat sheet guidelines. |
+| `/docs-mermaid` | Mermaid diagram syntax guidelines. Use when creating or editing Mermaid diagrams in documentation. |
+
+These skills provide specialized prompts and guidelines for documentation tasks. Invoke them when working on documentation to get context-specific instructions.

@@ -1,535 +1,242 @@
 # CommandR: Diagrams
 
-Text-based diagrams for the CommandR concepts introduced in [Part 4](Part04.md).
+Diagrams for the CommandR concepts introduced in [Part 4](Part04.md).
 
 
 ## Command Handler Pipeline
 
-```
-┌───────────────────────────────────────────────────────────────────────┐
-│                    Command Handler Pipeline                           │
-└───────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Call["Commander.Call(command)"] --> Context["CommandContext&nbsp;Created<br/>•&nbsp;New&nbsp;ServiceScope&nbsp;(if&nbsp;outermost)<br/>•&nbsp;ExecutionState&nbsp;initialized"]
 
-  Commander.Call(command)
-         │
-         ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │                    CommandContext Created                           │
-  │  • New ServiceScope (if outermost)                                  │
-  │  • ExecutionState initialized with handler chain                    │
-  └────────────────────────────────┬────────────────────────────────────┘
-                                   │
-  ╔════════════════════════════════╧════════════════════════════════════╗
-  ║                       HANDLER PIPELINE                              ║
-  ║                    (Descending Priority)                            ║
-  ╠═════════════════════════════════════════════════════════════════════╣
-  ║                                                                     ║
-  ║  Priority: 1,000,000,000                                            ║
-  ║  ┌─────────────────────────────────────────────────────────────┐    ║
-  ║  │              PreparedCommandHandler [Filter]                │    ║
-  ║  │  if (command is IPreparedCommand pc)                        │    ║
-  ║  │      await pc.Prepare(context, ct);                         │    ║
-  ║  │  await context.InvokeRemainingHandlers(ct);                 │    ║
-  ║  └─────────────────────────────────────────────────────────────┘    ║
-  ║                              │                                      ║
-  ║  Priority: 998,000,000       ▼                                      ║
-  ║  ┌─────────────────────────────────────────────────────────────┐    ║
-  ║  │                  CommandTracer [Filter]                     │    ║
-  ║  │  Creates Activity for tracing, logs errors                  │    ║
-  ║  │  await context.InvokeRemainingHandlers(ct);                 │    ║
-  ║  └─────────────────────────────────────────────────────────────┘    ║
-  ║                              │                                      ║
-  ║  Priority: 900,000,000       ▼                                      ║
-  ║  ┌─────────────────────────────────────────────────────────────┐    ║
-  ║  │               LocalCommandRunner [Filter]                   │    ║
-  ║  │  if (command is ILocalCommand lc)                           │    ║
-  ║  │      await lc.Run(context, ct);                             │    ║
-  ║  │  else                                                       │    ║
-  ║  │      await context.InvokeRemainingHandlers(ct);             │    ║
-  ║  └─────────────────────────────────────────────────────────────┘    ║
-  ║                              │                                      ║
-  ║  Priority: 800,000,000       ▼                                      ║
-  ║  ┌─────────────────────────────────────────────────────────────┐    ║
-  ║  │                RpcCommandHandler [Filter]                   │    ║
-  ║  │  Routes to RPC if command should be handled remotely        │    ║
-  ║  │  await context.InvokeRemainingHandlers(ct);                 │    ║
-  ║  └─────────────────────────────────────────────────────────────┘    ║
-  ║                              │                                      ║
-  ║                              ▼                                      ║
-  ║          ┌─────────────────────────────────────┐                    ║
-  ║          │   Operations Framework Handlers     │                    ║
-  ║          │   (See Part 5 for details)          │                    ║
-  ║          │   • OperationReprocessor (100,000)  │                    ║
-  ║          │   • NestedOperationLogger (11,000)  │                    ║
-  ║          │   • OperationScopeProvider (10,000) │                    ║
-  ║          │   • DbOperationScopeProvider (1,000)│                    ║
-  ║          └─────────────────────────────────────┘                    ║
-  ║                              │                                      ║
-  ║  Priority: 0 (default)       ▼                                      ║
-  ║  ┌─────────────────────────────────────────────────────────────┐    ║
-  ║  │              Your Command Handler [Final]                   │    ║
-  ║  │  [CommandHandler]                                           │    ║
-  ║  │  public async Task<TResult> Handle(TCommand cmd, ct)        │    ║
-  ║  │  {                                                          │    ║
-  ║  │      // Your business logic                                 │    ║
-  ║  │      return result;                                         │    ║
-  ║  │  }                                                          │    ║
-  ║  └─────────────────────────────────────────────────────────────┘    ║
-  ║                                                                     ║
-  ╚═════════════════════════════════════════════════════════════════════╝
-                                   │
-                                   ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │                        Result Returned                              │
-  │  • context.TryComplete(ct)                                          │
-  │  • context.DisposeAsync()                                           │
-  └─────────────────────────────────────────────────────────────────────┘
+    subgraph Pipeline ["&nbsp;Handler&nbsp;Pipeline&nbsp;(Descending&nbsp;Priority)&nbsp;"]
+        direction TB
+        P1["PreparedCommandHandler&nbsp;[Filter]<br/>Priority:&nbsp;1,000,000,000"]
+        P1 --> P2["CommandTracer&nbsp;[Filter]<br/>Priority:&nbsp;998,000,000"]
+        P2 --> P3["LocalCommandRunner&nbsp;[Filter]<br/>Priority:&nbsp;900,000,000"]
+        P3 --> P4["RpcCommandHandler&nbsp;[Filter]<br/>Priority:&nbsp;800,000,000"]
+        P4 --> Ops["Operations&nbsp;Framework&nbsp;Handlers<br/>(See&nbsp;Part&nbsp;5)"]
+        Ops --> Final["Your&nbsp;Command&nbsp;Handler&nbsp;[Final]<br/>Priority:&nbsp;0"]
+    end
+
+    Context --> Pipeline
+    Pipeline --> Result["Result&nbsp;Returned<br/>•&nbsp;context.TryComplete<br/>•&nbsp;context.DisposeAsync"]
 ```
 
-
-## CommandContext Hierarchy (Nested Commands)
-
-```
-┌───────────────────────────────────────────────────────────────────────┐
-│                  CommandContext Hierarchy                             │
-└───────────────────────────────────────────────────────────────────────┘
-
-
-  Commander.Call(OuterCommand)
-         │
-         ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  CommandContext #1 (Outermost)                                      │
-  │  ┌───────────────────────────────────────────────────────────────┐  │
-  │  │  Command: OuterCommand                                        │  │
-  │  │  ServiceScope: New scope created                              │  │
-  │  │  OuterContext: null                                           │  │
-  │  │  OutermostContext: this (self)                                │  │
-  │  │  Items: { } (own dictionary)                                  │  │
-  │  └───────────────────────────────────────────────────────────────┘  │
-  │                              │                                      │
-  │          Handler calls Commander.Call(InnerCommand)                 │
-  │                              │                                      │
-  │                              ▼                                      │
-  │  ┌───────────────────────────────────────────────────────────────┐  │
-  │  │  CommandContext #2 (Nested)                                   │  │
-  │  │  ┌─────────────────────────────────────────────────────────┐  │  │
-  │  │  │  Command: InnerCommand                                  │  │  │
-  │  │  │  ServiceScope: Shared with #1                           │  │  │
-  │  │  │  OuterContext: Context #1                               │  │  │
-  │  │  │  OutermostContext: Context #1                           │  │  │
-  │  │  │  Items: { } (own dictionary)                            │  │  │
-  │  │  └─────────────────────────────────────────────────────────┘  │  │
-  │  │                           │                                   │  │
-  │  │       Handler calls Commander.Call(DeepCommand)               │  │
-  │  │                           │                                   │  │
-  │  │                           ▼                                   │  │
-  │  │  ┌─────────────────────────────────────────────────────────┐  │  │
-  │  │  │  CommandContext #3 (Deeply Nested)                      │  │  │
-  │  │  │  ┌───────────────────────────────────────────────────┐  │  │  │
-  │  │  │  │  Command: DeepCommand                             │  │  │  │
-  │  │  │  │  ServiceScope: Shared with #1                     │  │  │  │
-  │  │  │  │  OuterContext: Context #2                         │  │  │  │
-  │  │  │  │  OutermostContext: Context #1                     │  │  │  │
-  │  │  │  │  Items: { } (own dictionary)                      │  │  │  │
-  │  │  │  └───────────────────────────────────────────────────┘  │  │  │
-  │  │  └─────────────────────────────────────────────────────────┘  │  │
-  │  └───────────────────────────────────────────────────────────────┘  │
-  └─────────────────────────────────────────────────────────────────────┘
+| Handler | Priority | Type | Purpose |
+|---------|----------|------|---------|
+| `PreparedCommandHandler` | 1,000,000,000 | Filter | Calls `IPreparedCommand.Prepare()` if implemented |
+| `CommandTracer` | 998,000,000 | Filter | Creates Activity for tracing, logs errors |
+| `LocalCommandRunner` | 900,000,000 | Filter | Runs `ILocalCommand.Run()` if implemented |
+| `RpcCommandHandler` | 800,000,000 | Filter | Routes to RPC if command should be handled remotely |
+| `OperationReprocessor` | 100,000 | Filter | Operations Framework |
+| `NestedOperationLogger` | 11,000 | Filter | Operations Framework |
+| `OperationScopeProvider` | 10,000 | Filter | Operations Framework |
+| `DbOperationScopeProvider` | 1,000 | Filter | Operations Framework |
+| Your Handler | 0 | Final | Your business logic |
 
 
-  Key Points:
-  ───────────────────────────────────────────────────────────────────────
-  • ServiceScope is shared across all nested contexts (same ICommander)
-  • Each context has its own Items dictionary
-  • To share data across contexts, use: context.OutermostContext.Items
-  • OutermostContext always points to the root context
+## CommandContext Hierarchy for Nested Commands
+
+```mermaid
+flowchart TD
+    Call["Commander.Call(OuterCommand)"]
+    Call --> C1
+
+    subgraph C1 ["CommandContext&nbsp;#1&nbsp;(Outermost)"]
+        direction TB
+        Info1["Command:&nbsp;OuterCommand<br/>ServiceScope:&nbsp;New&nbsp;scope&nbsp;created<br/>OuterContext:&nbsp;null<br/>OutermostContext:&nbsp;this"]
+        Info1 --> CallInner["Handler&nbsp;calls&nbsp;Commander.Call(InnerCommand)"]
+
+        subgraph C2 ["CommandContext&nbsp;#2&nbsp;(Nested)"]
+            direction TB
+            Info2["Command:&nbsp;InnerCommand<br/>ServiceScope:&nbsp;Shared&nbsp;with&nbsp;#1<br/>OuterContext:&nbsp;Context&nbsp;#1<br/>OutermostContext:&nbsp;Context&nbsp;#1"]
+            Info2 --> CallDeep["Handler&nbsp;calls&nbsp;Commander.Call(DeepCommand)"]
+
+            subgraph C3 ["CommandContext&nbsp;#3&nbsp;(Deeply&nbsp;Nested)"]
+                Info3["Command:&nbsp;DeepCommand<br/>ServiceScope:&nbsp;Shared&nbsp;with&nbsp;#1<br/>OuterContext:&nbsp;Context&nbsp;#2<br/>OutermostContext:&nbsp;Context&nbsp;#1"]
+            end
+            CallDeep --> C3
+        end
+        CallInner --> C2
+    end
 ```
 
+| Property | Behavior |
+|----------|----------|
+| `ServiceScope` | Shared across all nested contexts (same `ICommander`) |
+| `Items` | Each context has its own dictionary |
+| `OutermostContext` | Always points to the root context |
+| Data sharing | Use `context.OutermostContext.Items` to share across contexts |
 
-## IOutermostCommand / IDelegatingCommand Behavior
 
+## IOutermostCommand Behavior
+
+```mermaid
+flowchart LR
+    subgraph Outermost ["IOutermostCommand&nbsp;(forced&nbsp;isolation)"]
+        direction LR
+        O1["Context #1"] --> O2["Call(OutermostCmd)"]
+        O2 --> O3["Context #2 (NEW SCOPE!)<br/>OuterContext: null<br/>ServiceScope: NEW<br/>OutermostContext: #2"]
+    end
+
+    subgraph Regular ["Regular&nbsp;Command&nbsp;(nested)"]
+        direction LR
+        R1["Context #1"] --> R2["Call(RegularCmd)"]
+        R2 --> R3["Context #2<br/>OuterContext: #1<br/>ServiceScope: shared"]
+    end
 ```
-┌───────────────────────────────────────────────────────────────────────┐
-│            IOutermostCommand / IDelegatingCommand                     │
-└───────────────────────────────────────────────────────────────────────┘
 
+### IDelegatingCommand Behavior
 
-  Regular Command (nested):              IOutermostCommand (forced isolation):
-  ─────────────────────────              ────────────────────────────────────
+```mermaid
+flowchart TD
+    Call["Commander.Call(BatchProcessCommand)<br/>// IDelegatingCommand"] --> C1["Context&nbsp;#1&nbsp;(Delegating&nbsp;command&nbsp;context)<br/>•&nbsp;Operations&nbsp;Framework&nbsp;handlers&nbsp;filtered&nbsp;out<br/>•&nbsp;No&nbsp;operation&nbsp;logging&nbsp;for&nbsp;this&nbsp;command"]
 
-  Context #1                             Context #1
-  │                                      │
-  ├─► Call(RegularCmd)                   ├─► Call(OutermostCmd)
-  │   │                                  │   │
-  │   └─► Context #2                     │   └─► Context #2 (NEW SCOPE!)
-  │       OuterContext: #1               │       OuterContext: null
-  │       ServiceScope: shared           │       ServiceScope: NEW
-  │                                      │       OutermostContext: #2 (self)
+    C1 --> Item1["Commander.Call(ProcessItemCommand)"]
+    C1 --> Item2["Commander.Call(ProcessItemCommand)"]
 
+    Item1 --> C2["Context&nbsp;#2&nbsp;(Forced&nbsp;outermost)<br/>•&nbsp;NEW&nbsp;ServiceScope<br/>•&nbsp;Full&nbsp;Operations&nbsp;Framework&nbsp;pipeline"]
+    Item2 --> C3["Context&nbsp;#3&nbsp;(Also&nbsp;forced&nbsp;outermost)<br/>•&nbsp;NEW&nbsp;ServiceScope<br/>•&nbsp;Independent&nbsp;from&nbsp;Context&nbsp;#2"]
+```
 
-  IDelegatingCommand Flow:
-  ───────────────────────────────────────────────────────────────────────
-
-  Commander.Call(BatchProcessCommand)    // IDelegatingCommand
-         │
-         ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  Context #1 (Delegating command context)                            │
-  │  • Operations Framework handlers filtered out                       │
-  │  • No operation logging for this command                            │
-  │  • No invalidation pass needed                                      │
-  └────────────────────────────────┬────────────────────────────────────┘
-                                   │
-          Handler calls Commander.Call(ProcessItemCommand)
-                                   │
-                                   ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  Context #2 (Forced outermost because parent is IDelegatingCommand) │
-  │  • NEW ServiceScope                                                 │
-  │  • Full Operations Framework pipeline                               │
-  │  • Own operation, transaction, invalidation                         │
-  └─────────────────────────────────────────────────────────────────────┘
-                                   │
-          Handler calls Commander.Call(ProcessItemCommand)
-                                   │
-                                   ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  Context #3 (Also forced outermost)                                 │
-  │  • NEW ServiceScope                                                 │
-  │  • Independent from Context #2                                      │
-  └─────────────────────────────────────────────────────────────────────┘
-
-
-  Code in CommandContext.New():
-  ───────────────────────────────────────────────────────────────────────
-  if (!isOutermost && (command is IOutermostCommand ||
-                       Current?.UntypedCommand is IDelegatingCommand))
-      isOutermost = true;
+**Code in `CommandContext.New()`:**
+```csharp
+if (!isOutermost && (command is IOutermostCommand ||
+                     Current?.UntypedCommand is IDelegatingCommand))
+    isOutermost = true;
 ```
 
 
 ## IEventCommand Parallel Execution
 
+```mermaid
+flowchart TD
+    Call["Commander.Call(OrderCreatedEvent { ChainId = #quot;#quot; })"] --> Detect["Commander.Run() detects:<br/>IEventCommand with empty ChainId"]
+    Detect --> Build["RunEvent() builds handler chains"]
+
+    Build --> Clone1["Clone #1<br/>ChainId = #quot;NotificationHandlers.SendEmail#quot;"]
+    Build --> Clone2["Clone #2<br/>ChainId = #quot;NotificationHandlers.UpdateAnalytics#quot;"]
+    Build --> Clone3["Clone #3<br/>ChainId = #quot;NotificationHandlers.NotifyWarehouse#quot;"]
+
+    Clone1 --> H1["Filters + SendEmail handler"]
+    Clone2 --> H2["Filters + UpdateAnalytics handler"]
+    Clone3 --> H3["Filters + NotifyWarehouse handler"]
+
+    H1 --> WhenAll["Task.WhenAll()<br/>All complete"]
+    H2 --> WhenAll
+    H3 --> WhenAll
 ```
-┌───────────────────────────────────────────────────────────────────────┐
-│                  IEventCommand Parallel Execution                     │
-└───────────────────────────────────────────────────────────────────────┘
 
+| Scenario | Behavior |
+|----------|----------|
+| `ChainId` is empty | `RunEvent()` builds chains, clones command for each, runs in parallel |
+| `ChainId` is set | Goes through `RunCommand()`, executes only that specific handler chain |
 
-  Commander.Call(OrderCreatedEvent { ChainId = "" })
-         │
-         ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  Commander.Run() detects: IEventCommand with empty ChainId          │
-  │  ──────────────────────────────────────────────────────────────     │
-  │  if (command is IEventCommand evt && evt.ChainId.IsNullOrEmpty())   │
-  │      return RunEvent(evt, context, ct);                             │
-  └────────────────────────────────┬────────────────────────────────────┘
-                                   │
-                                   ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  RunEvent() builds handler chains                                   │
-  │  ───────────────────────────────────────────────────────────────    │
-  │  HandlerChains = {                                                  │
-  │    "NotificationHandlers.SendEmail"      → [Filters + SendEmail],   │
-  │    "NotificationHandlers.UpdateAnalytics"→ [Filters + Analytics],   │
-  │    "NotificationHandlers.NotifyWarehouse"→ [Filters + Warehouse]    │
-  │  }                                                                  │
-  │                                                                     │
-  │  ChainId format: "{ServiceType.GetName()}.{Method.Name}"            │
-  └────────────────────────────────┬────────────────────────────────────┘
-                                   │
-                                   ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  Clone command for each chain, set ChainId, run in parallel         │
-  └────────────────────────────────┬────────────────────────────────────┘
-                                   │
-         ┌─────────────────────────┼─────────────────────────┐
-         │                         │                         │
-         ▼                         ▼                         ▼
-  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-  │ Clone #1         │    │ Clone #2         │    │ Clone #3         │
-  │ ChainId =        │    │ ChainId =        │    │ ChainId =        │
-  │ "Notification    │    │ "Notification    │    │ "Notification    │
-  │  Handlers.       │    │  Handlers.       │    │  Handlers.       │
-  │  SendEmail"      │    │  UpdateAnalytics"│    │  NotifyWarehouse"│
-  └────────┬─────────┘    └────────┬─────────┘    └────────┬─────────┘
-         │                         │                         │
-         ▼                         ▼                         ▼
-  ┌─────────────┐           ┌─────────────┐           ┌─────────────┐
-  │Commander    │           │Commander    │           │Commander    │
-  │.Call()      │           │.Call()      │           │.Call()      │
-  └──────┬──────┘           └──────┬──────┘           └──────┬──────┘
-         │                         │                         │
-         ▼                         ▼                         ▼
-  ┌─────────────┐           ┌─────────────┐           ┌─────────────┐
-  │ Filters +   │           │ Filters +   │           │ Filters +   │
-  │ SendEmail   │           │ Update      │           │ Notify      │
-  │ handler     │           │ Analytics   │           │ Warehouse   │
-  └─────────────┘           └─────────────┘           └─────────────┘
-         │                         │                         │
-         └─────────────────────────┼─────────────────────────┘
-                                   │
-                                   ▼
-                         ┌─────────────────┐
-                         │ Task.WhenAll()  │
-                         │ All complete    │
-                         └─────────────────┘
-
-
-  When ChainId is set (re-entry):
-  ───────────────────────────────────────────────────────────────────────
-  Commander.Call(OrderCreatedEvent { ChainId = "NotificationHandlers.SendEmail" })
-         │
-         ▼
-  ChainId is NOT empty → goes through RunCommand(), not RunEvent()
-         │
-         ▼
-  GetHandlerChain(command) looks up chain by ChainId
-         │
-         ▼
-  Only that specific handler chain executes
-```
+**ChainId format:** `{ServiceType.GetName()}.{Method.Name}`
 
 
 ## ISessionCommand Processing (RpcDefaultSessionReplacer)
 
+```mermaid
+flowchart TD
+    subgraph Client
+        Cmd["var&nbsp;cmd&nbsp;=&nbsp;new&nbsp;UpdateProfileCommand&nbsp;{&nbsp;Session&nbsp;=&nbsp;Session.Default&nbsp;}"]
+        Call["Commander.Call(cmd)"]
+        Cmd --> Call
+    end
+
+    Call -->|RPC Call| Inbound
+
+    subgraph Server
+        Inbound["RPC&nbsp;Inbound&nbsp;Pipeline"]
+        Replacer["RpcDefaultSessionReplacer&nbsp;(IRpcMiddleware)"]
+        Handler["Command&nbsp;Handler&nbsp;—&nbsp;cmd.Session&nbsp;is&nbsp;now&nbsp;valid!"]
+
+        Inbound --> Replacer
+        Replacer -->|"Session.Default&nbsp;→&nbsp;actual-session-id"| Handler
+    end
 ```
-┌───────────────────────────────────────────────────────────────────────┐
-│            ISessionCommand Processing via RPC                         │
-└───────────────────────────────────────────────────────────────────────┘
 
+### RpcDefaultSessionReplacer Logic
 
-  CLIENT                                          SERVER
-  ──────                                          ──────
+| Step | Action |
+|------|--------|
+| 1 | Check if first param is `ISessionCommand` |
+| 2 | Get `SessionBoundRpcConnection` from peer |
+| 3 | If `session.IsDefault()`: `command.SetSession(connection.Session)` |
+| 4 | Else: `session.RequireValid()` |
 
-  var cmd = new UpdateProfileCommand("John") {
-      Session = Session.Default    // Empty session
-  };
-  await Commander.Call(cmd);
-         │
-         │  RPC Call
-         │
-         └──────────────────────────────────────────►┐
-                                                     │
-                                                     ▼
-                                    ┌────────────────────────────────────┐
-                                    │      RPC Inbound Pipeline          │
-                                    └────────────────┬───────────────────┘
-                                                     │
-                                                     ▼
-                                    ┌────────────────────────────────────┐
-                                    │    RpcDefaultSessionReplacer       │
-                                    │    (IRpcMiddleware)                │
-                                    │    Priority: ArgumentValidation-1  │
-                                    │                                    │
-                                    │  ┌──────────────────────────────┐  │
-                                    │  │ 1. Check if first param is   │  │
-                                    │  │    ISessionCommand           │  │
-                                    │  │                              │  │
-                                    │  │ 2. Get SessionBoundRpc       │  │
-                                    │  │    Connection from peer      │  │
-                                    │  │                              │  │
-                                    │  │ 3. If session.IsDefault():   │  │
-                                    │  │    command.SetSession(       │  │
-                                    │  │      connection.Session)     │  │
-                                    │  │                              │  │
-                                    │  │ 4. Else: session.RequireValid│  │
-                                    │  └──────────────────────────────┘  │
-                                    └────────────────┬───────────────────┘
-                                                     │
-                                                     │  Session replaced:
-                                                     │  Session.Default → 
-                                                     │  "actual-session-id"
-                                                     ▼
-                                    ┌────────────────────────────────────┐
-                                    │      Command Handler               │
-                                    │                                    │
-                                    │  [CommandHandler]                  │
-                                    │  Task<Unit> UpdateProfile(         │
-                                    │      UpdateProfileCommand cmd,     │
-                                    │      CancellationToken ct)         │
-                                    │  {                                 │
-                                    │    // cmd.Session is now valid!    │
-                                    │    var user = await Auth.GetUser(  │
-                                    │        cmd.Session, ct);           │
-                                    │  }                                 │
-                                    └────────────────────────────────────┘
+### Session Resolution Flow
 
-
-  Session Resolution Flow:
-  ───────────────────────────────────────────────────────────────────────
-
-  ┌───────────────────┐     ┌─────────────────────┐     ┌─────────────────┐
-  │  RpcInboundCall   │────►│ SessionBoundRpc     │────►│    Session      │
-  │                   │     │ Connection          │     │  (from cookie/  │
-  │  call.Context     │     │                     │     │   auth token)   │
-  │  .Peer            │     │ connection.Session  │     │                 │
-  │  .ConnectionState │     │                     │     │                 │
-  └───────────────────┘     └─────────────────────┘     └─────────────────┘
+```mermaid
+flowchart LR
+    RpcCall["RpcInboundCall<br/>call.Context.Peer.ConnectionState"] --> Connection["SessionBoundRpcConnection"]
+    Connection --> Session["Session<br/>(from cookie/auth token)"]
 ```
 
 
 ## Handler Registration and Resolution
 
+### Registration (at startup)
+
+```mermaid
+flowchart TD
+    Add["services.AddCommander()"]
+    Add --> Handlers[".AddHandlers&lt;OrderHandlers&gt;()"]
+    Add --> Service[".AddService&lt;OrderService&gt;()"]
+
+    Handlers --> Scan1["Scan&nbsp;for:<br/>•&nbsp;ICommandHandler&lt;T&gt;&nbsp;interfaces<br/>•&nbsp;Methods&nbsp;with&nbsp;[CommandHandler]"]
+    Scan1 --> Desc["Create&nbsp;CommandHandler&nbsp;descriptors:<br/>ServiceType,&nbsp;CommandType,&nbsp;Priority,&nbsp;IsFilter"]
+
+    Service --> Scan2["1.&nbsp;Register&nbsp;with&nbsp;proxy<br/>2.&nbsp;Scan&nbsp;for&nbsp;[CommandHandler]&nbsp;methods<br/>3.&nbsp;Proxy&nbsp;ensures&nbsp;direct&nbsp;calls&nbsp;go&nbsp;through&nbsp;pipeline"]
 ```
-┌───────────────────────────────────────────────────────────────────────┐
-│                Handler Registration and Resolution                    │
-└───────────────────────────────────────────────────────────────────────┘
 
+### Resolution (at runtime)
 
-  Registration (at startup):
-  ───────────────────────────────────────────────────────────────────────
-
-  services.AddCommander()
-      │
-      ├──► .AddHandlers<OrderHandlers>()
-      │         │
-      │         ▼
-      │    ┌─────────────────────────────────────────────────────────┐
-      │    │  Scan OrderHandlers for:                                │
-      │    │  • ICommandHandler<T> interfaces                        │
-      │    │  • Methods with [CommandHandler] attribute              │
-      │    │                                                         │
-      │    │  Create CommandHandler descriptors:                     │
-      │    │  • ServiceType, CommandType, Priority, IsFilter         │
-      │    └─────────────────────────────────────────────────────────┘
-      │
-      └──► .AddService<OrderService>()
-                │
-                ▼
-           ┌─────────────────────────────────────────────────────────┐
-           │  1. Register OrderService with proxy                    │
-           │  2. Scan for [CommandHandler] methods                   │
-           │  3. Proxy ensures direct calls go through pipeline      │
-           └─────────────────────────────────────────────────────────┘
-
-
-  Resolution (at runtime):
-  ───────────────────────────────────────────────────────────────────────
-
-  Commander.Call(CreateOrderCommand)
-         │
-         ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  CommandHandlerResolver.GetCommandHandlers(commandType)             │
-  │                                                                     │
-  │  1. Get all base types of command (including interfaces)            │
-  │  2. Find all registered handlers matching those types               │
-  │  3. Apply handler filters (CommandHandlerFilter)                    │
-  │  4. Sort by: Priority DESC, then Type specificity DESC              │
-  │  5. Verify: only ONE non-filter handler (unless IEventCommand)      │
-  └────────────────────────────────┬────────────────────────────────────┘
-                                   │
-                                   ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  CommandHandlerChain                                                │
-  │  ─────────────────────────────────────────────────────────────────  │
-  │  [0] PreparedCommandHandler     (Priority: 1,000,000,000, Filter)   │
-  │  [1] CommandTracer              (Priority: 998,000,000, Filter)     │
-  │  [2] LocalCommandRunner         (Priority: 900,000,000, Filter)     │
-  │  [3] RpcCommandHandler          (Priority: 800,000,000, Filter)     │
-  │  [4] OperationReprocessor       (Priority: 100,000, Filter)         │
-  │  [5] NestedOperationLogger      (Priority: 11,000, Filter)          │
-  │  [6] InMemoryOperationScope     (Priority: 10,000, Filter)          │
-  │  [7] DbOperationScopeProvider   (Priority: 1,000, Filter)           │
-  │  [8] YourHandler                (Priority: 0, Final)                │
-  └─────────────────────────────────────────────────────────────────────┘
-
-
-  Handler Invocation:
-  ───────────────────────────────────────────────────────────────────────
-
-  context.ExecutionState = new CommandExecutionState(handlers)
-         │
-         ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  context.InvokeRemainingHandlers(ct)                                │
-  │                                                                     │
-  │  var handler = ExecutionState.NextHandler;                          │
-  │  ExecutionState = ExecutionState.NextState;                         │
-  │  await handler.Invoke(command, context, ct);                        │
-  │                                                                     │
-  │  // Each filter handler calls InvokeRemainingHandlers()             │
-  │  // to continue the chain                                           │
-  └─────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Call["Commander.Call(CreateOrderCommand)"] --> Resolve["CommandHandlerResolver.GetCommandHandlers(commandType)"]
+    Resolve --> Steps["1.&nbsp;Get&nbsp;all&nbsp;base&nbsp;types&nbsp;of&nbsp;command<br/>2.&nbsp;Find&nbsp;registered&nbsp;handlers<br/>3.&nbsp;Apply&nbsp;handler&nbsp;filters<br/>4.&nbsp;Sort&nbsp;by&nbsp;Priority&nbsp;DESC<br/>5.&nbsp;Verify:&nbsp;only&nbsp;ONE&nbsp;non-filter&nbsp;handler"]
+    Steps --> Chain["CommandHandlerChain"]
 ```
+
+| Index | Handler | Priority | Type |
+|-------|---------|----------|------|
+| [0] | `PreparedCommandHandler` | 1,000,000,000 | Filter |
+| [1] | `CommandTracer` | 998,000,000 | Filter |
+| [2] | `LocalCommandRunner` | 900,000,000 | Filter |
+| [3] | `RpcCommandHandler` | 800,000,000 | Filter |
+| [4] | `OperationReprocessor` | 100,000 | Filter |
+| [5] | `NestedOperationLogger` | 11,000 | Filter |
+| [6] | `InMemoryOperationScope` | 10,000 | Filter |
+| [7] | `DbOperationScopeProvider` | 1,000 | Filter |
+| [8] | `YourHandler` | 0 | Final |
 
 
 ## Command Service Proxy (AOP)
 
+```mermaid
+flowchart TD
+    subgraph Registration
+        Reg["commander.AddService&lt;OrderService&gt;()"]
+        Reg --> Gen["Runtime&nbsp;generates:<br/>OrderServiceProxy&nbsp;:&nbsp;OrderService"]
+    end
+
+    subgraph CallFlow ["Call&nbsp;Flow"]
+        Direct["orderService.CreateOrder(cmd,&nbsp;ct)"] --> Proxy["OrderServiceProxy.CreateOrder()"]
+        Proxy --> Check{"CommandContext<br/>exists&nbsp;and&nbsp;matches?"}
+        Check -->|No| Commander["Commander.Call(CreateOrderCommand)"]
+        Check -->|Yes| Original["OrderService.CreateOrder()&nbsp;executes"]
+        Commander --> Context["Creates&nbsp;CommandContext<br/>Runs&nbsp;handler&nbsp;pipeline"]
+        Context --> Proxy2["Pipeline&nbsp;invokes&nbsp;OrderServiceProxy"]
+        Proxy2 --> Original
+    end
 ```
-┌───────────────────────────────────────────────────────────────────────┐
-│                    Command Service Proxy                              │
-└───────────────────────────────────────────────────────────────────────┘
 
+| Call Style | Result |
+|------------|--------|
+| `commander.Call(new CreateOrderCommand(...), ct)` | Full pipeline |
+| `orderService.CreateOrder(new CreateOrderCommand(...), ct)` | Full pipeline (via proxy) |
 
-  Registration:
-  ───────────────────────────────────────────────────────────────────────
-
-  commander.AddService<OrderService>()
-         │
-         ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  Runtime generates: OrderServiceProxy : OrderService                │
-  │                                                                     │
-  │  Original:                      Proxy:                              │
-  │  ─────────                      ──────                              │
-  │  public class OrderService      public class OrderServiceProxy      │
-  │  {                              {                                   │
-  │    [CommandHandler]               public override Task<Order>       │
-  │    public virtual Task<Order>       CreateOrder(cmd, ct)            │
-  │      CreateOrder(cmd, ct)         {                                 │
-  │    { ... }                          // Intercepts call              │
-  │  }                                  // Routes through Commander     │
-  │                                   }                                 │
-  │                                 }                                   │
-  └─────────────────────────────────────────────────────────────────────┘
-
-
-  Call Flow:
-  ───────────────────────────────────────────────────────────────────────
-
-  // Direct call to service method
-  var order = await orderService.CreateOrder(cmd, ct);
-         │
-         ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  OrderServiceProxy.CreateOrder()                                    │
-  │  │                                                                  │
-  │  │  CommandServiceInterceptor checks:                               │
-  │  │  1. Is there a current CommandContext?                           │
-  │  │  2. Does context.Command match invocation command?               │
-  │  │                                                                  │
-  │  │  If checks pass → invoke original method                         │
-  │  │  If no context → throw DirectCommandHandlerCallsAreNotAllowed    │
-  └────────────────────────────────┬────────────────────────────────────┘
-                                   │
-                                   │  First call (no context):
-                                   │  Goes through Commander.Call()
-                                   │
-                                   ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │  Commander.Call(CreateOrderCommand)                                 │
-  │  │                                                                  │
-  │  │  Creates CommandContext                                          │
-  │  │  Runs handler pipeline                                           │
-  │  │  Pipeline invokes OrderServiceProxy.CreateOrder()                │
-  │  │  │                                                               │
-  │  │  │  Now CommandContext exists and matches                        │
-  │  │  │  → Interceptor allows call to original method                 │
-  │  │  │                                                               │
-  │  │  └──► OrderService.CreateOrder() executes                        │
-  └─────────────────────────────────────────────────────────────────────┘
-
-
-  Result: Both paths invoke full pipeline
-  ───────────────────────────────────────────────────────────────────────
-
-  // These are equivalent:
-  await commander.Call(new CreateOrderCommand(...), ct);
-  await orderService.CreateOrder(new CreateOrderCommand(...), ct);
-
-  // Both go through: PreparedCommandHandler → CommandTracer → ... → Handler
-```
+Both paths go through: `PreparedCommandHandler` → `CommandTracer` → ... → `Handler`

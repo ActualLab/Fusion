@@ -440,6 +440,48 @@ us to have the same UI components working in WASM and Server-Side Blazor mode:
   and that's what makes any `IState<T>` update in real time there, which
   in turn makes UI components re-render.
 
+## Advanced RPC Features
+
+ActualLab.Rpc provides additional features beyond standard request-response calls:
+
+| Feature | Description | Documentation |
+|---------|-------------|---------------|
+| **RpcNoWait** | Fire-and-forget calls that don't wait for responses | [RpcNoWait Guide](Part02-RpcNoWait.md) |
+| **RpcStream** | Bidirectional streaming of data over RPC | [RpcStream Guide](Part02-RpcStream.md) |
+
+### RpcNoWait (Fire-and-Forget)
+
+Use `Task<RpcNoWait>` for calls where you don't need to wait for a response:
+
+```cs
+public interface ISimpleService : IRpcService
+{
+    Task<RpcNoWait> Ping(string message);
+}
+```
+
+RpcNoWait also enables **reverse RPC** &ndash; the server calling methods on the client.
+See [RpcNoWait Guide](Part02-RpcNoWait.md) for details.
+
+### RpcStream (Streaming)
+
+Use `RpcStream<T>` for streaming data in either direction:
+
+```cs
+public interface ISimpleService : IRpcService
+{
+    // Server streams data to client
+    Task<RpcStream<Item>> GetItems(CancellationToken cancellationToken = default);
+
+    // Client streams data to server
+    Task<int> Sum(RpcStream<int> stream, CancellationToken cancellationToken = default);
+}
+```
+
+RpcStream supports nesting &ndash; streams can contain records with their own streams.
+See [RpcStream Guide](Part02-RpcStream.md) for details.
+
+
 ## Summary
 
 **That's pretty much it &ndash; now you've learned all the key features of Fusion.**

@@ -258,7 +258,6 @@ public record UpdateProfileCommand(long UserId, string Name)
 
 | Priority | Handler | Purpose |
 |----------|---------|---------|
-| 1,000,000,000 | `PreparedCommandHandler` | Validation |
 | 11,000 | `NestedOperationLogger` | Nested commands |
 | 10,000 | `InMemoryOperationScopeProvider` | Transient scope |
 | 1,000 | `DbOperationScopeProvider<T>` | DB scope |

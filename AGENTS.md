@@ -14,6 +14,7 @@ IMPORTANT: Read `README.md` to learn what Fusion is.
 - **Other technologies**: projects with `Blazor` in their name (e.g., )`ActualLab.Fusion.Blazor`) use Blazor.
 - **Testing**: all tests are based on xUnit.
 - **Documentation**: The documentation source is in the `docs/` folder and is published to https://fusion.actuallab.net/. Any external links to documentation (in README.md, etc.) should point to https://fusion.actuallab.net/ with appropriate paths (e.g., `/Part01` for `docs/Part01.md`).
+  - **IMPORTANT**: Every `.md` file in `/docs` (excluding nested folders like `node_modules/`, `outdated/`, etc.) MUST be added to the VitePress sidebar TOC in `/docs/.vitepress/config.mts`. If you create a new documentation file, add it to the appropriate section in the `sidebar` array.
 
 ## Project Structure
 

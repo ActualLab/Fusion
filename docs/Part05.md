@@ -331,7 +331,6 @@ Operations Framework adds several filtering handlers to the command pipeline:
 
 | Priority | Handler | Purpose |
 |----------|---------|---------|
-| 1,000,000,000 | `PreparedCommandHandler` | Validates commands implementing `IPreparedCommand` |
 | 11,000 | `NestedOperationLogger` | Logs nested commands and their items |
 | 10,000 | `InMemoryOperationScopeProvider` | Provides transient scope, runs completion |
 | 1,000 | `DbOperationScopeProvider<T>` | Provides database scope for each DbContext type |
@@ -355,7 +354,7 @@ This ensures:
 - [Events](./Part05-EV.md) &ndash; Producing and consuming events from operations
 - [Transient Operations and Reprocessing](./Part05-TR.md) &ndash; In-memory operations and retry logic
 - [Configuration Options](./Part05-CO.md) &ndash; All configuration options explained
-- [Providers](./Part05-PR.md) &ndash; Operation log watchers (PostgreSQL, Redis, FileSystem)
+- [Log Watchers](./Part05-PR.md) &ndash; PostgreSQL, Redis, FileSystem log watchers
 - [Diagrams](./Part05-D.md) &ndash; Visual representations of OF internals
 - [Cheat Sheet](./Part05-CS.md) &ndash; Quick reference
 

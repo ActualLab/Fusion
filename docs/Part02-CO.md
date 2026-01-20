@@ -9,7 +9,7 @@ ActualLab.Rpc provides several options classes for fine-tuning RPC behavior:
 | Options Class | Purpose |
 |---------------|---------|
 | `RpcPeerOptions` | Peer creation and connection lifecycle |
-| `RpcOutboundCallOptions` | Outbound call routing, timeouts, retries |
+| `RpcOutboundCallOptions` | Outbound call routing, timeouts, rerouting |
 | `RpcInboundCallOptions` | Inbound call processing |
 | `RpcDiagnosticsOptions` | Call tracing and logging |
 | `RpcRegistryOptions` | Service and method registration |
@@ -48,16 +48,16 @@ services.AddRpc().Configure<RpcPeerOptions>(options => {
 
 ## `RpcOutboundCallOptions`
 
-Configures outbound RPC call behavior including routing, timeouts, and retry logic.
+Configures outbound RPC call behavior including routing, timeouts, and rerouting.
 
 ### Properties
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `ReroutingDelays` | `RetryDelaySeq` | `Exp(0.1, 5)` | Exponential backoff for retries (0.1s to 5s) |
+| `ReroutingDelays` | `RetryDelaySeq` | `Exp(0.1, 5)` | Exponential backoff for rerouting delays (0.1s to 5s). See [Call Routing](./Part02-CallRouting.md). |
 | `TimeoutsProvider` | `Func<...>` | Based on method kind | Provides `RpcCallTimeouts` for specific methods |
-| `RouterFactory` | `Func<...>` | Routes to `RpcPeerRef.Default` | Creates routers to select target peer |
-| `ReroutingDelayer` | `Func<...>` | `Task.Delay()` | Async function to apply retry delays |
+| `RouterFactory` | `Func<...>` | Routes to `RpcPeerRef.Default` | Creates routers to select target peer. See [Call Routing](./Part02-CallRouting.md). |
+| `ReroutingDelayer` | `Func<...>` | `Task.Delay()` | Async function to apply rerouting delays |
 | `Hasher` | `Func<...>` | SHA256, 24-char Base64 | Hashes byte data for consistency checking |
 
 ### `RpcCallTimeouts`
@@ -84,7 +84,7 @@ Timeouts used by `TimeoutsProvider`:
 
 ```csharp
 services.AddRpc().Configure<RpcOutboundCallOptions>(options => {
-    // Custom retry delays
+    // Custom rerouting delays
     options.ReroutingDelays = RetryDelaySeq.Exp(0.5, 10); // 0.5s to 10s
 
     // Custom timeout provider
@@ -93,8 +93,9 @@ services.AddRpc().Configure<RpcOutboundCallOptions>(options => {
         RunTimeout = TimeSpan.FromSeconds(30),
     };
 
-    // Custom router (e.g., for load balancing)
-    options.RouterFactory = (hub, methodDef) => new MyCustomRouter(hub);
+    // Custom router (e.g., for sharding or load balancing)
+    // See Part02-CallRouting.md for detailed examples
+    options.RouterFactory = methodDef => args => RpcPeerRef.Default;
 });
 ```
 
@@ -297,6 +298,6 @@ services.AddRpc()
         options.HostUrlResolver = peer => configuration["ApiUrl"];
     })
     .Configure<RpcOutboundCallOptions>(options => {
-        options.ReroutingDelays = RetryDelaySeq.Exp(1, 30); // More aggressive retries
+        options.ReroutingDelays = RetryDelaySeq.Exp(1, 30); // Longer rerouting delays
     });
 ```

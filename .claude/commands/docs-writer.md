@@ -119,6 +119,46 @@ Edit `.vitepress/config.mts` - look for `sidebar` and `nav` sections.
 
 See the "Mermaid Diagrams" section in `/docs/AGENTS.md` for usage and rules.
 
+### Cheat Sheets (Part*-CS.md)
+
+Each Part has a corresponding Cheat Sheet (`Part*-CS.md`) that provides a quick reference. When creating or updating cheat sheets:
+
+**Structure order (configuration first, then usage):**
+1. **Configuration** - DI setup, options, global settings
+2. **Core definitions** - Interfaces, classes, base patterns
+3. **Usage patterns** - Common operations, code examples
+4. **Advanced topics** - Less common but useful features
+
+**Within each category, follow document order:**
+- Items should appear in the order they're documented in the main Part*.md and sub-documents
+- TOC order first, then in-document appearance order
+
+**Format guidelines:**
+- Use `## Section` headers for major categories
+- Use code blocks with `cs` or `razor` language hints
+- Keep explanations brief - cheat sheets are for quick reference
+- Include the most useful/common patterns, not everything
+- Add inline comments in code samples for clarity
+
+**Example structure:**
+```md
+# PartXX: Cheat Sheet
+
+Quick reference for [topic].
+
+## Configuration
+[DI setup, options]
+
+## Core Types
+[Interfaces, base classes]
+
+## Common Patterns
+[Most-used code examples]
+
+## Advanced
+[Less common but useful]
+```
+
 ## Your Task
 
 $ARGUMENTS

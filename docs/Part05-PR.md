@@ -1,4 +1,4 @@
-# Operations Framework: Providers (Log Watchers)
+# Operations Framework: Log Watchers
 
 Log watchers provide **instant notifications** when the operation log is updated,
 enabling near-real-time multi-host invalidation. Without a watcher, hosts must poll

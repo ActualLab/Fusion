@@ -14,7 +14,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 
 # Install dev tools, CLI utilities, Python 3, image tools
 RUN apt-get update && apt-get install -y \
-    git procps sudo fzf zsh man-db unzip gnupg2 \
+    git git-lfs procps sudo fzf zsh man-db unzip gnupg2 \
     gh jq wget curl less ca-certificates \
     python3 python3-pip python3-venv \
     imagemagick \
@@ -68,9 +68,11 @@ RUN mkdir -p /home/$USERNAME/.claude && \
     mkdir -p /proj && \
     chown -R $USERNAME:$USERNAME /home/$USERNAME/.claude /home/$USERNAME/.claude.json /proj
 
-# Configure git to trust all directories under /proj (mounted projects)
+# Configure git to trust all project directories under /proj (mounted projects)
 # This avoids "dubious ownership" errors when projects are mounted from Windows
-RUN git config --global --add safe.directory '*'
+RUN git config --global --add safe.directory /proj/ActualChat && \
+    git config --global --add safe.directory /proj/ActualLab.Fusion && \
+    git config --global --add safe.directory /proj/ActualLab.Fusion.Samples
 
 # NPM global setup for user
 RUN mkdir -p /usr/local/share/npm-global && \

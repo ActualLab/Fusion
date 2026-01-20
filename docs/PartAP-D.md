@@ -1,337 +1,238 @@
 # Interceptors and Proxies: Diagrams
 
-Text-based diagrams for the concepts introduced in [Interceptors and Proxies](PartAP.md).
+Diagrams for the concepts introduced in [Interceptors and Proxies](PartAP.md).
 
 ## Proxy Call Flow
 
 How a method call flows through the proxy system:
 
+```mermaid
+flowchart TD
+    Client["Client Code<br/>proxy.GreetAsync(#quot;World#quot;)"]
+    Client --> Proxy
+
+    subgraph Proxy ["IGreetingServiceProxy"]
+        P1["1. Create Invocation(proxy, method, arguments, intercepted)"]
+        P2["2. Call interceptor.Intercept&lt;TResult&gt;(invocation)"]
+        P1 --> P2
+    end
+
+    Proxy --> Interceptor
+
+    subgraph Interceptor ["Interceptor"]
+        I1["1. GetHandler(invocation) - lookup or create"]
+        I2["2. handler(invocation) - execute your logic"]
+        I1 --> I2
+    end
+
+    Interceptor -->|"if pass-through proxy"| Target
+
+    subgraph Target ["Target&nbsp;Service"]
+        T1["invocation.InvokeIntercepted() -> real implementation"]
+    end
+
+    Target --> Result["Client receives result"]
 ```
-    Client Code
-        │
-        │ proxy.GreetAsync("World")
-        ▼
-┌───────────────────────────────────────────────────────────────────┐
-│                        IGreetingServiceProxy                      │
-├───────────────────────────────────────────────────────────────────┤
-│  1. Create Invocation(proxy, method, arguments, intercepted)      │
-│  2. Call interceptor.Intercept<TResult>(invocation)               │
-└───────────────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌───────────────────────────────────────────────────────────────────┐
-│                          Interceptor                              │
-├───────────────────────────────────────────────────────────────────┤
-│  1. GetHandler(invocation) - lookup or create                     │
-│  2. handler(invocation) - execute your logic                      │
-└───────────────────────────────────────────────────────────────────┘
-        │
-        │ (if pass-through proxy)
-        ▼
-┌───────────────────────────────────────────────────────────────────┐
-│                         Target Service                            │
-├───────────────────────────────────────────────────────────────────┤
-│  invocation.InvokeIntercepted() -> real implementation            │
-└───────────────────────────────────────────────────────────────────┘
-        │
-        │ result bubbles back up
-        ▼
-    Client receives result
-```
+
 
 ## Proxy Generation at Compile Time
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Compile Time                                   │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    Interface["Your Interface<br/>IGreetingService<br/>: IRequiresAsyncProxy"]
+    Generator["Source Generator<br/>ActualLab.Generators<br/>ProxyGenerator"]
+    Proxy["Generated Proxy<br/>IGreetingServiceProxy<br/>: InterfaceProxy, IGreetingService"]
 
-    Your Interface                    Source Generator                Generated Proxy
-┌─────────────────────┐          ┌─────────────────────┐          ┌──────────────────────┐
-│ interface           │          │ ActualLab.Generators│          │ class                │
-│ IGreetingService    │ ───────► │                     │ ───────► │ IGreetingServiceProxy│
-│ : IRequiresAsyncProxy│  scans  │ ProxyGenerator      │ emits    │ : InterfaceProxy     │
-│                     │          │                     │          │ , IGreetingService   │
-│ Task<string>        │          │                     │          │ , IProxy             │
-│   GreetAsync(...)   │          │                     │          │                      │
-└─────────────────────┘          └─────────────────────┘          └──────────────────────┘
+    Interface -->|scans| Generator
+    Generator -->|emits| Proxy
 ```
+
+
+## Proxy Type Hierarchy
+
+```mermaid
+classDiagram
+    direction TB
+    IRequiresAsyncProxy <|-- IRequiresFullProxy
+    InterfaceProxy <|-- IGreetingServiceProxy
+
+    class IRequiresAsyncProxy {
+        <<interface>>
+    }
+    class IRequiresFullProxy {
+        <<interface>>
+        also intercepts sync methods
+    }
+    class InterfaceProxy {
+        ProxyTarget: object?
+    }
+    class IGreetingServiceProxy {
+        implements IGreetingService, IProxy
+        __interceptor: Interceptor
+        __cachedIntercepted0: Func
+        __cachedIntercept0: Func
+        GreetAsync(name, ct)
+    }
+```
+
+### Generated Proxy Fields
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `__interceptor` | `Interceptor` | The interceptor instance |
+| `__cachedIntercepted0` | `Func<ArgumentList, Task<string>>` | Cached delegate to target |
+| `__cachedIntercept0` | `Func<Invocation, Task<string>>` | Cached intercept delegate |
+| `ProxyTarget` | `object?` | Real service (from `InterfaceProxy`) |
+
 
 ## Invocation Structure
 
+| Field | Description |
+|-------|-------------|
+| `Proxy` | The proxy instance (e.g., `IGreetingServiceProxy`) |
+| `Method` | `MethodInfo` of the called method |
+| `Arguments` | `ArgumentList` containing method arguments |
+| `InterceptedDelegate` | Delegate to call the real implementation (for pass-through) |
+| `InterfaceProxyTarget` | The real service instance |
+
+
+## ArgumentList Variants
+
+```mermaid
+flowchart TD
+    New["ArgumentList.New&lt;T0, T1&gt;(arg0, arg1)"] --> Check{"UseGenerics?"}
+
+    Check -->|"Yes (1-4 args)"| Generic["ArgumentListG2&lt;T0,T1&gt;<br/>• Generic storage<br/>• No boxing for value types<br/>• Faster access"]
+    Check -->|"No (or 5+ args)"| Simple["ArgumentListS2<br/>• object? storage<br/>• Boxing for value types<br/>• All platforms"]
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Invocation                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
-│   │     Proxy       │    │     Method      │    │   Arguments     │         │
-│   │ (IGreeting-     │    │  (MethodInfo)   │    │ (ArgumentList)  │         │
-│   │  ServiceProxy)  │    │                 │    │                 │         │
-│   └─────────────────┘    └─────────────────┘    └─────────────────┘         │
-│                                                         │                   │
-│   ┌─────────────────┐                                   ▼                   │
-│   │ Intercepted-    │                        ┌─────────────────────┐        │
-│   │ Delegate        │                        │ .Get<T>(index)      │        │
-│   │ (for pass-thru) │                        │ .GetCancellationTo- │        │
-│   └─────────────────┘                        │   ken(index)        │        │
-│                                              │ .Set<T>(index, val) │        │
-│   ┌─────────────────┐                        │ .Length             │        │
-│   │ InterfaceProxy- │                        └─────────────────────┘        │
-│   │ Target          │                                                       │
-│   │ (real service)  │                                                       │
-│   └─────────────────┘                                                       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+
+| Count | Generic Type | Simple Type |
+|-------|--------------|-------------|
+| 0 | `ArgumentList0` | `ArgumentList0` |
+| 1 | `ArgumentListG1<>` | `ArgumentListS1` |
+| 2 | `ArgumentListG2<,>` | `ArgumentListS2` |
+| 3 | `ArgumentListG3<,,>` | `ArgumentListS3` |
+| 4 | `ArgumentListG4<,,,>` | `ArgumentListS4` |
+| 5-10 | (uses Simple) | `ArgumentListS5-S10` |
+
+### ArgumentList Methods
+
+| Method | Description |
+|--------|-------------|
+| `.Get<T>(index)` | Get argument at index |
+| `.GetCancellationToken(index)` | Get cancellation token |
+| `.Set<T>(index, val)` | Set argument value |
+| `.Length` | Number of arguments |
+
 
 ## Handler Caching
 
+```mermaid
+flowchart TD
+    Call["Method Call"] --> Check{"Handler in cache?"}
+
+    Check -->|No| Create["CreateTypedHandler&lt;TUnwrapped&gt;(...)"]
+    Create --> Store["Store in cache"]
+    Store --> Execute
+
+    Check -->|Yes| Cached["Use cached handler"]
+    Cached --> Execute["Execute handler<br/>handler(invocation)"]
 ```
-                         Method Call
-                              │
-                              ▼
-                    ┌─────────────────────┐
-                    │  Handler in cache?  │
-                    └──────────┬──────────┘
-                               │
-              ┌────────────────┴────────────────┐
-              │ No                              │ Yes
-              ▼                                 ▼
-    ┌─────────────────────┐           ┌─────────────────────┐
-    │ CreateTypedHandler  │           │    Use cached       │
-    │ <TUnwrapped>(...)   │           │    handler          │
-    └──────────┬──────────┘           └──────────┬──────────┘
-               │                                 │
-               ▼                                 │
-    ┌─────────────────────┐                      │
-    │   Store in cache    │                      │
-    └──────────┬──────────┘                      │
-               │                                 │
-               └────────────────┬────────────────┘
-                                │
-                                ▼
-                    ┌─────────────────────┐
-                    │  Execute handler    │
-                    │  handler(invocation)│
-                    └─────────────────────┘
-```
+
 
 ## Interceptor Chain
 
 Multiple interceptors can be chained together:
 
-```
-    Client
-      │
-      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Proxy                                          │
-└─────────────────────────────────────────────────────────────────────────────┘
-      │
-      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       SchedulingInterceptor                                 │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │  • TaskFactoryResolver -> schedule on specific TaskFactory            │  │
-│  │  • NextInterceptor -> chain to another interceptor                    │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
-      │
-      │ NextInterceptor
-      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        LoggingInterceptor                                   │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │  • Log method entry                                                   │  │
-│  │  • Invoke intercepted method                                          │  │
-│  │  • Log method exit or error                                           │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
-      │
-      │ InvokeIntercepted()
-      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          Target Service                                     │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │  Real implementation executes                                         │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Client --> Proxy
+    Proxy --> Scheduling
+
+    subgraph Scheduling ["SchedulingInterceptor"]
+        S1["TaskFactoryResolver -> schedule on specific TaskFactory"]
+        S2["NextInterceptor -> chain to another interceptor"]
+    end
+
+    Scheduling -->|NextInterceptor| Logging
+
+    subgraph Logging ["LoggingInterceptor"]
+        L1["Log method entry"]
+        L2["Invoke intercepted method"]
+        L3["Log method exit or error"]
+    end
+
+    Logging -->|"InvokeIntercepted()"| Target
+
+    subgraph Target ["Target&nbsp;Service"]
+        T1["Real implementation executes"]
+    end
 ```
 
-## Proxy Type Hierarchy
-
-```
-                           IRequiresAsyncProxy
-                                   │
-                                   │ extends
-                                   ▼
-                           IRequiresFullProxy
-                          (also intercepts sync)
-
-
-                              InterfaceProxy
-                                   │
-                                   │ extends
-                                   ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│                         IGreetingServiceProxy                             │
-├───────────────────────────────────────────────────────────────────────────┤
-│  implements: IGreetingService, IProxy                                     │
-│                                                                           │
-│  Fields:                                                                  │
-│  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │  __interceptor: Interceptor                                         │  │
-│  │  __cachedIntercepted0: Func<ArgumentList, Task<string>>             │  │
-│  │  __cachedIntercept0: Func<Invocation, Task<string>>                 │  │
-│  │  ProxyTarget: object? (from InterfaceProxy)                         │  │
-│  └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                           │
-│  Methods:                                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │  Task<string> GreetAsync(string name, CancellationToken ct)        ─│  │
-│  │  {                                                                  │  │
-│  │      var invocation = new Invocation(this, method, args, delegate); │  │
-│  │      return __cachedIntercept0(invocation);                         │  │
-│  │  }                                                                  │  │
-│  └─────────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────────┘
-```
-
-## ArgumentList Variants
-
-```
-                          ArgumentList.New<T0, T1>(arg0, arg1)
-                                         │
-                                         ▼
-                              ┌─────────────────────┐
-                              │   UseGenerics?      │
-                              └──────────┬──────────┘
-                                         │
-                    ┌────────────────────┴────────────────────┐
-                    │ Yes (1-4 args)                          │ No (or 5+ args)
-                    ▼                                         ▼
-        ┌─────────────────────────┐              ┌─────────────────────────┐
-        │  ArgumentListG2<T0,T1>  │              │    ArgumentListS2       │
-        ├─────────────────────────┤              ├─────────────────────────┤
-        │  • Generic storage      │              │  • object? storage      │
-        │  • No boxing for        │              │  • Boxing for value     │
-        │    value types          │              │    types                │
-        │  • Faster access        │              │  • All platforms        │
-        └─────────────────────────┘              └─────────────────────────┘
-
-
-    ArgumentList Types by Argument Count:
-    ┌──────────┬────────────────────────┬────────────────────────┐
-    │  Count   │    Generic Type        │    Simple Type         │
-    ├──────────┼────────────────────────┼────────────────────────┤
-    │    0     │    ArgumentList0       │    ArgumentList0       │
-    │    1     │    ArgumentListG1<>    │    ArgumentListS1      │
-    │    2     │    ArgumentListG2<,>   │    ArgumentListS2      │
-    │    3     │    ArgumentListG3<,,>  │    ArgumentListS3      │
-    │    4     │    ArgumentListG4<,,,> │    ArgumentListS4      │
-    │   5-10   │    (uses Simple)       │    ArgumentListS5-S10  │
-    └──────────┴────────────────────────┴────────────────────────┘
-```
 
 ## Pass-Through vs Virtual Proxy
 
+| Aspect | Pass-Through Proxy | Virtual Proxy |
+|--------|-------------------|---------------|
+| **Creation** | `Proxies.New(typeof(IService), interceptor, proxyTarget: realService)` | `Proxies.New(typeof(IService), interceptor)` |
+| **ProxyTarget** | `!= null` | `== null` |
+| **Flow** | Proxy → Interceptor → `InvokeIntercepted()` → Real Service | Proxy → Interceptor → Return default/mock |
+| **Use cases** | Logging, Metrics, Caching, Retry logic | Mocking/Stubs, Default values, RPC client proxies, Lazy initialization |
+
+```mermaid
+flowchart LR
+    subgraph PassThrough ["Pass-Through&nbsp;Proxy"]
+        direction TB
+        PT1["Proxy"] --> PT2["Interceptor"]
+        PT2 -->|"InvokeIntercepted()"| PT3["Real Service"]
+    end
+
+    subgraph Virtual ["Virtual&nbsp;Proxy"]
+        direction TB
+        V1["Proxy"] --> V2["Interceptor"]
+        V2 --> V3["Return default/mock<br/>(no target)"]
+    end
 ```
-┌────────────────────────────────────┬────────────────────────────────────┐
-│       Pass-Through Proxy           │         Virtual Proxy              │
-├────────────────────────────────────┼────────────────────────────────────┤
-│                                    │                                    │
-│   Proxies.New(                     │   Proxies.New(                     │
-│     typeof(IService),              │     typeof(IService),              │
-│     interceptor,                   │     interceptor                    │
-│     proxyTarget: realService)      │     /* no target */                │
-│                                    │   )                                │
-│   ProxyTarget != null              │   ProxyTarget == null              │
-│                                    │                                    │
-│   ┌──────────────────────────┐     │   ┌──────────────────────────┐     │
-│   │ Proxy                    │     │   │ Proxy                    │     │
-│   │   │                      │     │   │   │                      │     │
-│   │   ▼                      │     │   │   ▼                      │     │
-│   │ Interceptor              │     │   │ Interceptor              │     │
-│   │   │                      │     │   │   │                      │     │
-│   │   │ InvokeIntercepted()  │     │   │   │ (no target to call)  │     │
-│   │   ▼                      │     │   │   ▼                      │     │
-│   │ Real Service             │     │   │ Return default/mock      │     │
-│   └──────────────────────────┘     │   └──────────────────────────┘     │
-│                                    │                                    │
-│   Use cases:                       │   Use cases:                       │
-│   • Logging                        │   • Mocking/Stubs                  │
-│   • Metrics                        │   • Default values                 │
-│   • Caching                        │   • RPC client proxies             │
-│   • Retry logic                    │   • Lazy initialization            │
-│                                    │                                    │
-└────────────────────────────────────┴────────────────────────────────────┘
-```
+
 
 ## Typed vs Untyped Handlers
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            Typed Handlers (Default)                         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   CreateTypedHandler<TUnwrapped>(invocation, methodDef)                     │
-│                                                                             │
-│   • TUnwrapped = unwrapped return type (e.g., string for Task<string>)      │
-│   • Type-safe result handling                                               │
-│   • One handler instantiation per unique return type                        │
-│   • Best for most use cases                                                 │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+| Aspect | Typed Handlers (Default) | Untyped Handlers |
+|--------|--------------------------|------------------|
+| **Method** | `CreateTypedHandler<TUnwrapped>(invocation, methodDef)` | `CreateUntypedHandler(invocation, methodDef)` |
+| **Setup** | Default behavior | `UsesUntypedHandlers = true` in constructor |
+| **Return type** | `TUnwrapped` (e.g., `string` for `Task<string>`) | `object?` |
+| **Performance** | One handler instantiation per unique return type | No generic instantiation overhead |
+| **Use case** | Most use cases | `ComputeServiceInterceptor` for max performance |
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            Untyped Handlers                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   UsesUntypedHandlers = true;  // Set in constructor                        │
-│   CreateUntypedHandler(invocation, methodDef)                               │
-│                                                                             │
-│   • Returns object?                                                         │
-│   • No generic instantiation overhead                                       │
-│   • Used by ComputeServiceInterceptor for max performance                   │
-│   • Requires manual type handling                                           │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
 
 ## MethodDef Key Properties
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              MethodDef                                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   For: Task<string> GreetAsync(string name, CancellationToken ct)           │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │  MethodInfo          = GreetAsync                                   │   │
-│   │  FullName            = "MyNamespace.IGreetingService.GreetAsync"    │   │
-│   │  ReturnType          = typeof(Task<string>)                         │   │
-│   │  UnwrappedReturnType = typeof(string)                               │   │
-│   │  IsAsyncMethod       = true                                         │   │
-│   │  ReturnsTask         = true                                         │   │
-│   │  ReturnsValueTask    = false                                        │   │
-│   │  IsAsyncVoidMethod   = false                                        │   │
-│   │  CancellationTokenIndex = 1                                         │   │
-│   │  Parameters          = [name: string, ct: CancellationToken]        │   │
-│   └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│   Helper Methods:                                                           │
-│   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │  DefaultResult                  -> completed Task with default(T)   │   │
-│   │  WrapResult(value)              -> Task.FromResult(value)           │   │
-│   │  WrapAsyncInvokerResult(task)   -> proper Task<T> or ValueTask<T>   │   │
-│   │  InterceptedAsyncInvoker        -> Func<Invocation, Task<T>>        │   │
-│   │  TargetAsyncInvoker             -> Func<object, Args, Task<T>>      │   │
-│   └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+For `Task<string> GreetAsync(string name, CancellationToken ct)`:
+
+| Property | Value |
+|----------|-------|
+| `MethodInfo` | `GreetAsync` |
+| `FullName` | `"MyNamespace.IGreetingService.GreetAsync"` |
+| `ReturnType` | `typeof(Task<string>)` |
+| `UnwrappedReturnType` | `typeof(string)` |
+| `IsAsyncMethod` | `true` |
+| `ReturnsTask` | `true` |
+| `ReturnsValueTask` | `false` |
+| `IsAsyncVoidMethod` | `false` |
+| `CancellationTokenIndex` | `1` |
+| `Parameters` | `[name: string, ct: CancellationToken]` |
+
+### Helper Methods
+
+| Method | Description |
+|--------|-------------|
+| `DefaultResult` | Completed Task with `default(T)` |
+| `WrapResult(value)` | `Task.FromResult(value)` |
+| `WrapAsyncInvokerResult(task)` | Proper `Task<T>` or `ValueTask<T>` |
+| `InterceptedAsyncInvoker` | `Func<Invocation, Task<T>>` |
+| `TargetAsyncInvoker` | `Func<object, Args, Task<T>>` |
+
 
 ## See Also
 
