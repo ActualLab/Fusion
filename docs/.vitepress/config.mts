@@ -92,6 +92,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
               { text: "Cheat Sheet", link: "/Part05-CS" },
             ],
           },
+          { text: "Videos and Slides", link: "/Videos-and-Slides" },
         ],
       },
       {
