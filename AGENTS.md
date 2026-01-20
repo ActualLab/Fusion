@@ -13,7 +13,7 @@ IMPORTANT: Read `README.md` to learn what Fusion is.
 - **Databases**: some parts of Fusion use Entity Framework Core; the tests are using Sqlite, PostgreSQL, MariaDB, and Microsoft SQL Server containers to verify that.
 - **Other technologies**: projects with `Blazor` in their name (e.g., )`ActualLab.Fusion.Blazor`) use Blazor.
 - **Testing**: all tests are based on xUnit.
-- **Documentation**: see `docs/README.md`.
+- **Documentation**: The documentation source is in the `docs/` folder and is published to https://fusion.actuallab.net/. Any external links to documentation (in README.md, etc.) should point to https://fusion.actuallab.net/ with appropriate paths (e.g., `/Part01` for `docs/Part01.md`).
 
 ## Project Structure
 

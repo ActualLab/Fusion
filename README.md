@@ -14,7 +14,6 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [Usage](#usage)
 - [Documentation](#documentation)
 - [Samples](#samples)
 - [Is Fusion fast?](#is-fusion-fast)
@@ -51,83 +50,6 @@ You can think of Fusion as a *call middleware* or a *decorator*.
 That's why Fusion-based code looks as if there is no Fusion at all!
 So you can *focus on building your app and ship faster* — and save yourself from dealing with a 2–3× larger codebase
 and a plethora of "why is it stale?" bugs, which are among the hardest to debug.
-
-## Usage
-
-To use Fusion, you must:
-
-- Reference the `ActualLab.Fusion` NuGet package
-- "Implement" `IComputeService` (a tagging interface) on your Fusion service to ensure a call-intercepting proxy is generated for it
-- Mark methods requiring "Fusion behavior" with `[ComputeMethod]` and declare them as `virtual`
-- Register the service via `serviceCollection.AddFusion().AddComputeService<MyService>()`
-- Resolve and use them as usual, i.e. pass them as dependencies, call their methods, etc.
-
-The magic happens when `[ComputeMethod]`-s are invoked:
-
-1. When Fusion knows that a value for a given call (think `(serviceInstance, method, args...)` cache key) is still consistent, _Fusion returns it instantly, without letting the method run_.
-2. When the value isn't cached or is tagged as inconsistent, _Fusion lets the method run, but captures the new value's dependencies in the process._ A "dependency" is a `[ComputeMethod]` call triggered during the evaluation of another `[ComputeMethod]` call.
-
-The second step allows Fusion to track which values are expected to change when one of them changes. It's quite similar to [lot traceability](https://en.wikipedia.org/wiki/Traceability), but implemented for arbitrary functions rather than manufacturing processes.
-
-The last piece of the puzzle is the `Invalidation.Begin()` block, which allows you to tag cached results as "inconsistent with the ground truth". Here is how you use it:
-
-```cs
-var avatars = await GetUserAvatars(userId);
-using (Invalidation.Begin()) {
-    // Any [ComputeMethod] invoked inside this block doesn't run normally,
-    // but invalidates the result of the identical call instead.
-    // Such calls complete synchronously and return completed Task<TResult>,
-    // so you don't need to await them.
-
-    _ = userService.GetUser(userId);
-    foreach (var avatar in avatars)
-        _ = userAvatarService.GetAvatar(userId, avatar.Id);
-}
-```
-
-_The invalidation is always transitive (cascading):_ if `GetUserProfile(3)` calls `GetUserAvatar("3:ava1")`, and `GetUserAvatar("3:ava1")` gets invalidated, `GetUserProfile(3)` gets invalidated as well.
-
-To make it work, Fusion maintains a dictionary-like structure that tracks every call result, where:
-
-- Key is ~ `(serviceInstance, method, call arguments...)`
-- Value is [Computed<T>], which stores the result, consistency state (`Computing`, `Consistent`, `Invalidated`) and dependent-dependency links. `Computed<T>` instances are nearly immutable: once constructed, they can only transition to `Inconsistent` state.
-
-You can "pull" the `Computed<T>` instance "backing" a certain call like this:
-
-```cs
-var computed1 = await Computed.Capture(() => GetUserProfile(3));
-// You can await its invalidation:
-await computed1.WhenInvalidated();
-Assert.IsFalse(computed1.IsConsistent());
-// And recompute it:
-var computed2 = await computed1.Recompute();
-```
-
-So any `Computed<T>` is _observable_. Moreover, it can be a "replica" of a remote `Computed<T>` instance that mirrors its state in your local process, so _the dependency graph can be distributed_. To make it work, Fusion uses its own WebSocket-based RPC protocol, which is quite similar to any other RPC protocol:
-
-1. To "send" the call to a remote peer, the client sends a "call" message.
-2. The peer responds with a "call result" message. So far there is no difference from any other RPC protocol.
-3. **And here is the unique step:** the peer may later send a message telling that the call result it sent earlier was invalidated.
-
-_Step 3_ doesn't change much in terms of network traffic: it's either zero or one extra message per call (i.e. 3 messages instead of 2 in the worst case). But this small addition allows [Compute Service Clients] to know precisely when a given cached call result becomes inconsistent.
-
-The presence of _step 3_ makes a huge difference: any cached & still consistent result is as good as the data you'll get from the remote server, right? So it's totally fine to resolve a call that "hits" such a result locally, incurring no network round-trip!
-
-Finally, any [Compute Service Client] behaves as a similar local [Compute Service]. Look at this code:
-
-```cs
-string GetUserName(id)
-    => (await userService.GetUser(id)).Name;
-```
-
-You can't tell whether `userService` here is a local compute service or a compute service client, right?
-
-- Both options are of the same base type (e.g., `IUserService`). The implementations are different though: a Fusion service client is registered via `fusion.AddClient<TInterface>()` vs `fusion.AddServer<TInterface, TService>()` for the server.
-- And behave identically:
-  - Every call you make to `userService` terminates instantly if its previous result is still consistent
-  - And if `GetUserName` is a method of another compute service (a local one), the [Computed Value] backing the `GetUser(id)` call it makes would automatically extend Fusion's dependency graph for the `GetUserName(id)` call!
-
-So **Fusion abstracts away the "placement" of a service**, and does it much better than conventional RPC proxies: **Fusion proxies aren't "chatty" by default!**
 
 ## Documentation
 
@@ -216,6 +138,13 @@ And that's exactly what Fusion does:
 
 
 ## Enough talk. Show me the code!
+
+To use Fusion, you need to:
+
+1. Reference the `ActualLab.Fusion` NuGet package
+2. "Implement" `IComputeService` (a tagging interface) on your service
+3. Mark methods requiring caching/invalidation with `[ComputeMethod]` and declare them as `virtual`
+4. Register the service via `services.AddFusion().AddService<MyService>()`
 
 A typical Compute Service looks as follows:
 
@@ -400,18 +329,14 @@ eliminates the chattiness you'd expect from a regular client-side proxy.
 - Check out [Samples]
 - Join [Fusion Place] to ask questions and track project updates.
 
-[Compute Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
-[Compute Service]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part01.md
-[`Computed<T>`]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Computed Value]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Computed Values]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part02.md
-[Compute Service Clients]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
-[Compute Service Client]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
-[Replica Services]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
-[Replica Service]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part04.md
-[State]: https://github.com/ActualLab/Fusion.Samples/blob/master/docs/tutorial/Part03.md
-[Overview]: docs/Overview.md
-[Documentation Home]: docs/README.md
+[Compute Services]: https://fusion.actuallab.net/Part01#_1-compute-services-and-compute-methods
+[Compute Service]: https://fusion.actuallab.net/Part01#_1-compute-services-and-compute-methods
+[Compute Method]: https://fusion.actuallab.net/Part01#_1-compute-services-and-compute-methods
+[`Computed<T>`]: https://fusion.actuallab.net/Part01-C
+[Computed Value]: https://fusion.actuallab.net/Part01-C
+[Computed Values]: https://fusion.actuallab.net/Part01-C
+[Compute Service Clients]: https://fusion.actuallab.net/Part02#what-is-compute-service-client
+[Compute Service Client]: https://fusion.actuallab.net/Part02#what-is-compute-service-client
 [Fusion Samples]: https://github.com/ActualLab/Fusion.Samples
 [Samples]: https://github.com/ActualLab/Fusion.Samples
 [Board Games]: https://github.com/alexyakunin/BoardGames
