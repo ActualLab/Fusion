@@ -1,6 +1,6 @@
 # Claude Code sandbox environment for ActualLab projects
 # Supports: ActualLab.Fusion, ActualLab.Fusion.Samples, ActualChat
-# Includes: .NET 10 SDK, Node.js 20, Claude Code CLI
+# Includes: .NET 10 SDK, .NET 9 SDK, Node.js 20, Claude Code CLI
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0
 
@@ -37,6 +37,9 @@ RUN ARCH=$(dpkg --print-architecture) && \
     wget "https://github.com/dandavison/delta/releases/download/0.18.2/git-delta_0.18.2_${ARCH}.deb" && \
     dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
     rm "git-delta_0.18.2_${ARCH}.deb"
+
+# Install .NET 9 SDK (for ActualChat and other .NET 9 projects)
+RUN curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 9.0 --install-dir /usr/share/dotnet
 
 # Install .NET wasm-tools workload (needed for Blazor WebAssembly)
 RUN dotnet workload install wasm-tools
