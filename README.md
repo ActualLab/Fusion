@@ -1,4 +1,4 @@
-# 👾 Fusion: the "real-time on!" switch that actually exists
+# 👾 Fusion: The missing layer for real-time apps
 
 [![Build](https://github.com/ActualLab/Fusion/workflows/Build/badge.svg)](https://github.com/ActualLab/Fusion/actions?query=workflow%3A%22Build%22)
 [![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
