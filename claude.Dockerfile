@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     gh jq wget curl less ca-certificates \
     python3 python3-pip python3-venv \
     imagemagick \
+    ripgrep fd-find vim nano \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PowerShell
@@ -26,6 +27,13 @@ RUN wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-p
     rm packages-microsoft-prod.deb && \
     apt-get update && \
     apt-get install -y powershell && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Google Cloud CLI
+RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee /etc/apt/sources.list.d/google-cloud-sdk.list && \
+    apt-get update && \
+    apt-get install -y google-cloud-cli && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Python charting and data analysis libraries
@@ -44,6 +52,9 @@ RUN curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 9
 # Install .NET wasm-tools workload (needed for Blazor WebAssembly)
 RUN dotnet workload install wasm-tools
 
+# Install Playwright browser dependencies (for running Playwright tests)
+RUN npx playwright install-deps
+
 # Create non-root user
 ARG USERNAME=claude
 
@@ -56,6 +67,10 @@ RUN mkdir -p /home/$USERNAME/.claude && \
     touch /home/$USERNAME/.claude.json && \
     mkdir -p /proj && \
     chown -R $USERNAME:$USERNAME /home/$USERNAME/.claude /home/$USERNAME/.claude.json /proj
+
+# Configure git to trust all directories under /proj (mounted projects)
+# This avoids "dubious ownership" errors when projects are mounted from Windows
+RUN git config --global --add safe.directory '*'
 
 # NPM global setup for user
 RUN mkdir -p /usr/local/share/npm-global && \

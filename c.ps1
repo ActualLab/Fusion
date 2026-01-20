@@ -524,6 +524,19 @@ switch ($mode) {
             $containerPath = "/proj/$proj"
             $volumeMounts += "-v"
             $volumeMounts += "${hostPath}:${containerPath}"
+
+            # Create and mount artifacts/claude-docker folder for Docker builds
+            # This avoids permission conflicts with host artifacts folder
+            $artifactsHostPath = Join-Path $env:AC_ProjectRoot $proj "artifacts" "claude-docker"
+            if (-not (Test-Path $artifactsHostPath)) {
+                New-Item -ItemType Directory -Path $artifactsHostPath -Force | Out-Null
+            }
+            if ($currentOS -eq "Windows") {
+                $artifactsHostPath = ConvertTo-DockerPath $artifactsHostPath
+            }
+            $artifactsContainerPath = "/proj/$proj/artifacts"
+            $volumeMounts += "-v"
+            $volumeMounts += "${artifactsHostPath}:${artifactsContainerPath}"
         }
 
         # Add worktree mount if in a worktree
@@ -564,6 +577,28 @@ switch ($mode) {
             $volumeMounts += "$env:HOME/.claude.json:/home/claude/.claude.json"
         }
 
+        # Add gcloud config mount (maps user's gcloud config to container)
+        $gcloudConfigPath = if ($currentOS -eq "Windows") {
+            "$env:APPDATA/gcloud"
+        } else {
+            "$env:HOME/.config/gcloud"
+        }
+        if (Test-Path $gcloudConfigPath) {
+            $volumeMounts += "-v"
+            $volumeMounts += "${gcloudConfigPath}:/home/claude/.config/gcloud:ro"
+        }
+
+        # Add .gcp folder mount (for GOOGLE_APPLICATION_CREDENTIALS key file)
+        $gcpKeyPath = if ($currentOS -eq "Windows") {
+            "$env:USERPROFILE/.gcp"
+        } else {
+            "$env:HOME/.gcp"
+        }
+        if (Test-Path $gcpKeyPath) {
+            $volumeMounts += "-v"
+            $volumeMounts += "${gcpKeyPath}:/home/claude/.gcp:ro"
+        }
+
         # Calculate Docker working directory
         $dockerFolderName = if ($worktree) { "$projectName-$worktree" } else { $projectName }
         $dockerWorkDir = "/proj/$dockerFolderName$relativePath"
@@ -592,15 +627,80 @@ switch ($mode) {
             $projectEnvVars += "AC_Project${i}Path=/proj/$($Projects[$i])"
         }
 
+        # Collect environment variables to propagate:
+        # - Variables with __ in their names (e.g., ChatSettings__OpenAIApiKey)
+        # - GITHUB_TOKEN, NPM_READ_TOKEN, GOOGLE_CLOUD_PROJECT
+        # - ActualChat_* variables
+        $propagatedEnvVars = @()
+        Get-ChildItem env: | ForEach-Object {
+            $name = $_.Name
+            $value = $_.Value
+            if ($name -match '__' -or
+                $name -eq 'GITHUB_TOKEN' -or
+                $name -eq 'NPM_READ_TOKEN' -or
+                $name -eq 'GOOGLE_CLOUD_PROJECT' -or
+                $name -like 'ActualChat_*') {
+                $propagatedEnvVars += "-e"
+                $propagatedEnvVars += "$name=$value"
+            }
+        }
+
+        # Set GOOGLE_APPLICATION_CREDENTIALS to container path (host path won't work)
+        if ($env:GOOGLE_APPLICATION_CREDENTIALS) {
+            $propagatedEnvVars += "-e"
+            $propagatedEnvVars += "GOOGLE_APPLICATION_CREDENTIALS=/home/claude/.gcp/key.json"
+        }
+
+        # Check if port 7080 is available (for ActualChat server port mapping)
+        $port7080Available = $false
+        if ($projectName -eq "ActualChat") {
+            try {
+                $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 7080)
+                $listener.Start()
+                $listener.Stop()
+                $port7080Available = $true
+            } catch {
+                # Port is in use
+                $port7080Available = $false
+            }
+        }
+
         # Build docker run command - run this script with "os" argument inside container
         $dockerArgs = @(
             "run", "-it", "--rm"
-        ) + $volumeMounts + @(
+        )
+
+        # Add port mapping for ActualChat if port 7080 is available
+        if ($projectName -eq "ActualChat" -and $port7080Available) {
+            $dockerArgs += @("-p", "7080:7080")
+        }
+
+        $dockerArgs += $volumeMounts + @(
             "-e", "ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY"
             "-e", "Claude_GeminiAPIKey=$env:Claude_GeminiAPIKey"
             "-e", "AC_ProjectRoot=/proj"
-        ) + $projectEnvVars + @(
-            "--network", "host"
+        ) + $projectEnvVars + $propagatedEnvVars
+
+        # Use host network only when NOT using port publishing (they're mutually exclusive)
+        # When using port publishing, add host aliases so the container can access
+        # docker-compose services (postgres, redis, nats, etc.) running on the host.
+        # NOTE: --add-host localhost:host-gateway does NOT work because /etc/hosts
+        # already has "127.0.0.1 localhost" which takes precedence. Instead, we add
+        # service-specific hostnames that map to host-gateway.
+        if ($port7080Available) {
+            $dockerArgs += @(
+                "--add-host", "host.docker.internal:host-gateway"
+                "--add-host", "redis:host-gateway"
+                "--add-host", "postgres:host-gateway"
+                "--add-host", "nats:host-gateway"
+            )
+        } else {
+            $dockerArgs += @("--network", "host")
+        }
+
+        $dockerArgs += @(
+            # Bind to all interfaces so nginx (via host-gateway or port mapping) can reach the server
+            "-e", "ASPNETCORE_URLS=http://0.0.0.0:7080"
             "-w", $dockerWorkDir
             $containerName
             "pwsh", $dockerScriptPath

@@ -39,6 +39,50 @@ Check `AC_OS` to determine where you're running:
 - `Linux` - Running directly on Linux
 - `macOS` - Running directly on macOS
 
+## Docker Environment
+
+When running in Docker (`AC_OS` = `Linux in Docker`), the following tools are available:
+
+| Category | Tools |
+|----------|-------|
+| **.NET** | .NET 10 SDK, .NET 9 SDK, wasm-tools workload |
+| **Node.js** | Node.js 20, npm |
+| **Shell** | Zsh (default), Bash, PowerShell (`pwsh`) |
+| **Search** | ripgrep (`rg`), fd-find (`fdfind`), fzf |
+| **Git** | git, gh (GitHub CLI), git-delta (nicer diffs) |
+| **Editors** | vim, nano |
+| **Python** | Python 3, matplotlib, seaborn, plotly, pandas, numpy, pillow |
+| **Cloud** | gcloud CLI (Google Cloud), with host's gcloud config mounted read-only |
+| **Testing** | Playwright browser dependencies pre-installed |
+| **Other** | jq, curl, wget, imagemagick, sudo |
+
+Build artifacts are stored in `artifacts/claude-docker/` to avoid permission conflicts with the host.
+
+**Infrastructure services**: When running in Docker, assume that all services defined in `docker-compose.yml` (PostgreSQL, Redis, NATS, nginx, etc.) are already running on the host. Do not attempt to start them yourself - they are managed externally and accessible from the container.
+
+**Host service connectivity (ActualChat only)**: When running ActualChat in Docker with port mapping, the container has hostname aliases for accessing host services:
+- `redis` → host Redis (port 6379)
+- `postgres` → host PostgreSQL (port 5432)
+- `nats` → host NATS (port 4222)
+- `host.docker.internal` → host machine
+
+Note: `localhost` inside Docker refers to the container itself, NOT the host. Use the service hostnames above to connect to host services.
+
+Other projects (ActualLab.Fusion, ActualLab.Fusion.Samples) use `--network host` mode where `localhost` directly refers to the host, so no aliases are needed.
+
+**Running integration tests**: Integration tests require the `testsettings.docker.json` configuration which uses the service hostnames (`redis`, `postgres`) instead of `localhost`. The test framework should auto-detect this, but if tests fail to connect, verify the settings are being used.
+
+**Propagated environment variables**: The following environment variables are automatically propagated from the host to the Docker container:
+- Variables containing `__` in their names (e.g., `ChatSettings__OpenAIApiKey` for .NET configuration)
+- `GITHUB_TOKEN` - GitHub authentication token
+- `NPM_READ_TOKEN` - NPM registry read token
+- `GOOGLE_CLOUD_PROJECT` - Google Cloud project ID
+- `ActualChat_*` - Any variables prefixed with `ActualChat_`
+
+**Google Cloud credentials**: The `~/.gcp` folder is mounted read-only to `/home/claude/.gcp`. If `GOOGLE_APPLICATION_CREDENTIALS` is set on the host, it's automatically remapped to `/home/claude/.gcp/key.json` inside the container.
+
+**Server binding**: `ASPNETCORE_URLS` is set to `http://0.0.0.0:7080` so that the server binds to all interfaces, allowing nginx (via `host-gateway`) to reach it.
+
 ## Project Paths by Environment
 
 Use `AC_Project0Path`, `AC_Project1Path`, `AC_Project2Path` to get full paths to other projects you may need to access. These are automatically adjusted for the environment:
@@ -64,3 +108,16 @@ c wt feature1    # Creates ActualLab.Fusion-feature1 if it doesn't exist and run
 ```
 
 The worktree is created using `git worktree add` from the main project directory.
+
+# Building
+
+If a `*.CI.slnf` (solution filter) file exists in the project root, use it instead of the main `*.sln` file for building. The CI solution filter excludes projects that require additional workloads (like MAUI) that may not be installed in your environment.
+
+```bash
+# Preferred - uses CI solution filter (excludes MAUI projects)
+dotnet build ActualChat.CI.slnf
+
+# Only if you have all workloads installed (including maui-android, etc.)
+dotnet build ActualChat.sln
+```
+
