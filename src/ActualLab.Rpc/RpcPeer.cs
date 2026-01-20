@@ -131,7 +131,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                 throw new ChannelClosedException();
             }
-            catch (Exception e) when (!e.IsCancellationOf(peer.StopToken)) {
+            catch (Exception e) when (e is not OperationCanceledException) {
                 peer.Log.LogError(e, "Send failed");
                 var connectionState = peer.ConnectionState;
                 if (ReferenceEquals(connectionState.Value.Sender, sender))
