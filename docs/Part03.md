@@ -4,6 +4,7 @@ This part covers how to build real-time Blazor applications with Fusion. Fusion 
 
 **Related Documentation:**
 - [Services](Part03-Services.md) &ndash; CircuitHub, JSRuntimeInfo, RenderModeHelper
+- [UICommander](Part03-UICommander.md) &ndash; UICommander, UIActionTracker, UpdateDelayer
 - [Authentication](Part03-Auth.md) &ndash; AuthState, AuthStateProvider, PresenceReporter
 - [Parameter Comparison](Part03-Parameters.md) &ndash; Optimized parameter handling
 - [Diagrams](Part03-D.md) &ndash; Visual diagrams of component architecture
