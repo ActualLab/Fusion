@@ -21,8 +21,8 @@
 - [Is Fusion fast?](#is-fusion-fast)
 - [Does Fusion scale?](#does-fusion-scale)
 - [Show me the code!](#enough-talk-show-me-the-code)
-- [Why Fusion is a game changer for real-time apps?](#why-fusion-is-a-game-changer-for-real-time-apps)
-- [Why Fusion is a game changer for Blazor apps with complex UI?](#why-fusion-is-a-game-changer-for-blazor-apps-with-complex-ui)
+- [Why is Fusion a game changer for real-time apps?](#why-is-fusion-a-game-changer-for-real-time-apps)
+- [Why is Fusion a game changer for Blazor apps with complex UI?](#why-is-fusion-a-game-changer-for-blazor-apps-with-complex-ui)
 - [Next Steps](#next-steps)
 - [Posts And Other Content](#posts-and-other-content)
 
@@ -33,36 +33,26 @@
 You can think of Fusion as:
 
 - `make` or `msbuild`, but operating on functions and their outputs instead of source files and build artifacts. Like MSBuild, Fusion uses **lazy computation**: when something changes, dependents are immediately marked as inconsistent, but recomputation only happens when you actually request the result. Old values remain accessible in the meantime.
-- MobX, but managing an arbitrarily large state spread across multiple machines rather than a small UI state within a single process.
+- MobX, but managing an **arbitrarily large state spread across any number of machines** rather than a small UI state within a single process.
 
-Every call to Fusion service method can benefit from:
+Fusion solves a set of infamously hard problems with a single abstraction:
 
-**In-process capabilities:**
+| Problem                         | Fusion's Answer                                                                                                                                                                  | So you don't need...                                                                                           |
+|---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| 📇 Caching                      | In-memory memoization by call arguments                                                                                                                                          | Redis, memcached, ...                                                                                          |
+| 🤹 Cache&nbsp;invalidation      | Automatic dependency tracking + cascading invalidation                                                                                                                           | No good solutions &ndash; it's an [infamously hard problem](https://martinfowler.com/bliki/TwoHardThings.html) |
+| 🚀 Real-time updates            | Fusion client automatically propagates server-side cache invalidation back to the client making it aware of state changes on the server side                                      | SignalR, WebSockets, custom pub/sub, ...                                                                       |
+| 🔌 Offline operation            | Client-side persistent cache support (IndexedDB, SQLite) is integrated right into the Fusion RPC client, so you get offline mode for free!                                       | A fair amount of code                                                                                          |
+| 🤬 Network chattiness           | Persistent cache enables speculative execution on the client side, allowing `ActualLab.Rpc` to batch hundreds of RPC calls into a single transmission frame                      | A fair amount of code                                                                                          |
+| 📡 Network traffic              | `ActualLab.Rpc` is 2-5x faster than gRPC and SignalR even in its "raw" mode; Fusion integration, if enabled, turns it into an efficiency beast by adding "cache match" responses | A fair amount of code                                                                                          |
+| 📱 Client-side state management | Same abstractions everywhere: `Computed<T>`, `MutableState<T>`, and compute methods                                                                                              | MobX, Flux/Redux, Recoil, ...                                                                                  |
+| 💰 Single codebase              | Single codebase for Blazor Server, WebAssembly, and MAUI (iOS, Android, Windows, macOS, and more)                                                                                | No good alternatives                                                                                           |
 
-- **Memoization** &ndash; Fusion service call results are memoized by their arguments; repeated calls return instantly without re-executing the method body while the memoized result is still "consistent".
-- **Automatic dependency tracking** &ndash; when such methods call each other, Fusion records the dependencies between their cached results automatically.
-- **Cascading invalidation** &ndash; when a cached result gets invalidated (marked as "inconsistent"), all results that depend on it are invalidated too, propagating through the entire dependency graph.
-
-**Distributed capabilities:**
-
-- **RPC** &ndash; Fusion services can be exposed and invoked via `ActualLab.Rpc`, a WebSocket-based protocol similar to gRPC and SignalR, but 2-5x more efficient. It supports regular methods, Fusion service methods, and streaming.
-- **Distributed call routing** &ndash; calls can be dynamically routed to different backends based on arguments, load, or other criteria &ndash; enabling sharding and horizontal scaling.
-- **Distributed memoization** &ndash; RPC clients of Fusion services cache results locally; calls that "hit" a still-consistent cache entry resolve instantly. In other words, remote clients of Fusion services behave exactly like the services they "mirror".
-- **Distributed invalidation** &ndash; when a server-side result is invalidated, the server invalidates cached copies of that result on every client.
-
-**RPC-specific optimizations:**
-
-- **Automatic RPC message batching** &ndash; when possible, RPC messages are automatically grouped into a single transmission frame, reducing round-trips.
-- **Persistent client-side caching** &ndash; allows you to persist and reuse RPC call results in e.g. IndexedDB or SQLite database, enabling offline operation and much faster cold starts for client apps.
-- **ETag-like "cache match" responses** &ndash; paired with persistent client-side caching, this feature shrinks client app startup traffic by 10x or more: clients send the version of their cached result, and if it matches, the server responds with a lightweight "match" instead of the full payload.
-- **Speculative execution** &ndash; since nearly everything is cached in the client-side persistent cache, clients speculatively move forward during app startup without waiting for actual RPC calls to complete. This speeds up the startup itself, but importantly, it also allows batching startup RPC messages into just a few transmission frames.
-
-**What this means for you:**
-- **Real-time state synchronization** &ndash; without writing any pub/sub or event-handling code.
-- **Unified codebase** &ndash; the same service interfaces work in Blazor Server, WebAssembly, and MAUI; only the "wiring" changes.
-- **UI state management** &ndash; the UI is just another consumer of Fusion services, removing the need for specialized libraries like Recoil or Redux.
-
-And the best part is: **Fusion does all of that transparently for you,** so Fusion-based code is almost identical to code that does not involve it.
+**The best part: you get all of this without turning your code into a mess.**
+You can think of Fusion as a *call middleware* or a *decorator*.
+That's why Fusion-based code looks as if there is no Fusion at all!
+So you can *focus on building your app and ship faster* — and save yourself from dealing with a 2–3× larger codebase
+and a plethora of "why is it stale?" bugs, which are among the hardest to debug.
 
 ## Usage
 
@@ -104,7 +94,7 @@ To make it work, Fusion maintains a dictionary-like structure that tracks every 
 - Key is ~ `(serviceInstance, method, call arguments...)`
 - Value is [Computed<T>], which stores the result, consistency state (`Computing`, `Consistent`, `Invalidated`) and dependent-dependency links. `Computed<T>` instances are nearly immutable: once constructed, they can only transition to `Inconsistent` state.
 
-You can "pull" the `Computed<T>` instance "backing" certain call like this:
+You can "pull" the `Computed<T>` instance "backing" a certain call like this:
 
 ```cs
 var computed1 = await Computed.Capture(() => GetUserProfile(3));
@@ -143,23 +133,14 @@ So **Fusion abstracts away the "placement" of a service**, and does it much bett
 
 ## Documentation
 
-These two videos cover the most interesting parts of Fusion:
+[Documentation] is the best place to start from.
+
+If you prefer video, check out:
 
 | [ActualLab.Fusion Video](https://youtu.be/eMO7AmI6ui4)<br/>[<img src=".\docs\img\Fusion-Video.jpg" title="ActualLab.Fusion, the distributed state sync monster" width="300"/>](https://youtu.be/eMO7AmI6ui4) | [ActualLab.Rpc Video](https://youtu.be/vwm1l8eevak)<br/>[<img src="./docs/img/ActualLab-Rpc-Video.jpg" title="ActualLab.Rpc – the fastest RPC protocol on .NET" width="300"/>](https://youtu.be/vwm1l8eevak) |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 
-[<img align="right" width="150" src="./docs/img/FusionSlides.jpg"/>](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html)
-If you prefer slides, check out
-["Why real-time web apps need Blazor and Fusion?" talk](https://alexyakunin.github.io/ActualLab.Fusion.Materials/Slides/Fusion_v2/Slides.html) &ndash;
-it explains how many problems we tackle are connected, how Fusion addresses the root cause, and how to code a simplified version of Fusion's key abstraction in C#.
-
-> The slides are slightly outdated &ndash; e.g. now Fusion clients use `ActualLab.Rpc` rather than HTTP to communicate with the server, but all the concepts they cover are still intact.
-
-[Documentation] is the best place to start from.
-
-Check out [Samples]; some of them are covered further in this document.
-
-## "What is your evidence?"<sup><a href="https://www.youtube.com/watch?v=7O-aNYTtx44<">\*</a></sup>
+## "What is your evidence?"<sup><a href="https://www.youtube.com/watch?v=7O-aNYTtx44">\*</a></sup>
 
 **All of this sounds too good to be true, right?** That's why there are lots of visual proofs in the remaining part of this document. But if you find anything concerning in Fusion's source code or [Samples], please feel free to grill us with questions at [Fusion Place]!
 
@@ -240,7 +221,7 @@ So it's **~8x faster than gRPC** for RPC calls and **~2.5x faster** for streamin
 - Moreover, there is no cloning: what's cached is the .NET object or struct returned from a call, so any call result is "shared". This is much more CPU cache-friendly than, e.g., deserializing a new copy on every hit.
 - Fusion uses its own `ActualLab.Interception` library for method interception. Unlike [Castle.DynamicProxy](http://www.castleproject.org/projects/dynamicproxy/) and similar libraries that box arguments and allocate heavily, our interceptors require just 1 allocation per call with zero boxing &ndash; making them the fastest on .NET.
 - `ActualLab.Rpc` uses the fastest serializers available on .NET &ndash; [MemoryPack](https://github.com/Cysharp/MemoryPack) by default (it doesn't require runtime IL Emit), though you can also use [MessagePack](https://github.com/MessagePack-CSharp/MessagePack-CSharp) (it's slightly faster, but requires IL Emit) or anything else you prefer.
-- All critical execution paths in Fusion are heavily optimized. The [archived version of this page](https://web.archive.org/web/20201212144353/https://github.com/servicetitan/Stl.Fusion/) shows the performance of local compute services is currently 10x better than it was a few years ago.
+- All critical execution paths in Fusion are heavily optimized. The [archived version of this page](https://web.archive.org/web/20201212144353/https://github.com/servicetitan/Stl.Fusion/) shows that the performance of local compute services is currently 10x better than it was a few years ago.
 
 ## Does Fusion scale?
 
@@ -325,7 +306,7 @@ Now, I guess you're curious how the UI code looks with Fusion. You'll be surpris
     public DateTime Value { get; set; }
 
     protected override Task<string> ComputeState()
-        => _fusionTime.GetMomentsAgo(Value) ;
+        => _fusionTime.GetMomentsAgo(Value);
 }
 ```
 
@@ -376,7 +357,7 @@ check out:
 - [ChatMessageCountBadge.razor](https://github.com/alexyakunin/BoardGames/blob/main/src/UI/Chat/ChatMessageCountBadge.razor)
   and [AppUserBadge.razor](https://github.com/alexyakunin/BoardGames/blob/main/src/UI/Game/AppUserBadge.razor) from [Board Games].
 
-## Why Fusion is a game changer for real-time apps?
+## Why is Fusion a game changer for real-time apps?
 
 Real-time typically implies you use events to deliver change
 notifications to every client whose state might be impacted by
@@ -395,7 +376,7 @@ a change, so you have to:
    for every event is a source of potential problems in the future.
 3. _Make the UI properly update its event subscriptions on every
    client-side state change._ This is what client-side code has
-   to do to ensure p.1 properly works on server side. And again,
+   to do to ensure p.1 properly works on the server side. And again,
    this looks like a solvable problem on paper, but things get
    much more complex if you want to ensure your UI provides
    a truly eventually consistent view. Just think in which order
@@ -413,7 +394,7 @@ a change, so you have to:
 And Fusion solves all these problems using a single abstraction that allows it
 to identify and track data dependencies automatically.
 
-## Why Fusion is a game changer for Blazor apps with complex UI?
+## Why is Fusion a game changer for Blazor apps with complex UI?
 
 **Fusion allows you to create truly independent UI components.**
 You can embed them in any part of the UI without any need
