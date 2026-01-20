@@ -84,9 +84,11 @@ $currentOS = Get-CurrentOS
 if ($currentOS -eq "Windows" -and $hasWindowsTerminal -and -not $env:WT_SESSION) {
     $scriptPath = $MyInvocation.MyCommand.Path
     $workDir = (Get-Location).Path
-    # Check if --debug is in args (keep terminal open)
+    # Keep terminal open for build, dry-run, or debug (only auto-close when actually running Claude)
     $hasDebug = $args -contains "--debug"
-    if ($hasDebug) {
+    $hasBuild = $args -contains "build"
+    $hasDryRun = $args -contains "--dry-run"
+    if ($hasDebug -or $hasBuild -or $hasDryRun) {
         $wtArgs = @("-d", $workDir, "--", "pwsh", "-NoExit", "-File", $scriptPath) + $args
     } else {
         $wtArgs = @("-d", $workDir, "--", "pwsh", "-File", $scriptPath) + $args
