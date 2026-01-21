@@ -1,0 +1,41 @@
+@page "/stocks"
+@inherits ComputedStateComponent<string[]>
+@inject IStockApi StockApi
+
+@{
+    var symbols = State.ValueOrDefault ?? [];
+}
+
+<h1>Stock Ticker</h1>
+
+<TextConnectionStatus />
+<Note>
+    Each row updates independently via Fusion compute methods. Try opening multiple browser tabs!
+</Note>
+
+<Row>
+    <Column ColumnSize="ColumnSize.Is8.OnDesktop.Is12.OnTablet">
+        <Table Striped Hoverable Margin="Margin.Is3.OnY">
+            <TableHeader>
+                <TableRow>
+                    <TableHeaderCell Style="width: 10%">Symbol</TableHeaderCell>
+                    <TableHeaderCell Style="width: 25%">Name</TableHeaderCell>
+                    <TableHeaderCell Style="width: 15%" TextAlignment="TextAlignment.End">Price</TableHeaderCell>
+                    <TableHeaderCell Style="width: 15%" TextAlignment="TextAlignment.End">Change</TableHeaderCell>
+                    <TableHeaderCell Style="width: 15%" TextAlignment="TextAlignment.End">Change %</TableHeaderCell>
+                    <TableHeaderCell Style="width: 20%">Updated</TableHeaderCell>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                @foreach (var symbol in symbols) {
+                    <StockRowView @key="symbol" Symbol="@symbol" />
+                }
+            </TableBody>
+        </Table>
+    </Column>
+</Row>
+
+@code {
+    protected override Task<string[]> ComputeState(CancellationToken cancellationToken)
+        => StockApi.ListSymbols(cancellationToken);
+}

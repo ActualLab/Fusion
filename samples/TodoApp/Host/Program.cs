@@ -208,6 +208,10 @@ void ConfigureServices()
         fusion.AddServer<ITodoApi, TodoApi>();
         // fusion.AddServer<ITodoApi, InMemoryTodoApi>(); // Simpler in-memory alternative to TodoApi
         fusion.Rpc.AddServer<ISimpleService, SimpleService>();
+
+        // IStockApi - real-time stock ticker demo
+        fusion.AddServer<IStockApi, InMemoryStockApi>();
+        services.AddHostedService(c => (InMemoryStockApi)c.GetRequiredService<IStockApi>());
     }
 
     // Shared services

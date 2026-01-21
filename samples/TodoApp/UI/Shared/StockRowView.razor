@@ -1,0 +1,37 @@
+@inherits ComputedStateComponent<StockPrice?>
+@inject IStockApi StockApi
+
+@{
+    var stock = State.ValueOrDefault;
+    if (stock == null)
+        return;
+
+    var textColor = stock.Change >= 0 ? TextColor.Success : TextColor.Danger;
+    var changeSign = stock.Change >= 0 ? "+" : "";
+}
+
+<TableRow>
+    <TableRowCell>
+        <strong>@stock.Symbol</strong>
+    </TableRowCell>
+    <TableRowCell>@stock.Name</TableRowCell>
+    <TableRowCell TextAlignment="TextAlignment.End">
+        <strong>$@stock.Price.ToString("F2")</strong>
+    </TableRowCell>
+    <TableRowCell TextAlignment="TextAlignment.End" TextColor="@textColor">
+        @changeSign@stock.Change.ToString("F2")
+    </TableRowCell>
+    <TableRowCell TextAlignment="TextAlignment.End" TextColor="@textColor">
+        @changeSign@stock.ChangePercent.ToString("F2")%
+    </TableRowCell>
+    <TableRowCell>
+        <MomentsAgoBadge Value="@stock.UpdatedAt" />
+    </TableRowCell>
+</TableRow>
+
+@code {
+    [Parameter, EditorRequired] public string Symbol { get; set; } = "";
+
+    protected override Task<StockPrice?> ComputeState(CancellationToken cancellationToken)
+        => StockApi.Get(Symbol, cancellationToken);
+}

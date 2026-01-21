@@ -63,6 +63,7 @@ public static class ClientStartup
 
         // RPC clients
         fusion.AddClient<ITodoApi>();
+        fusion.AddClient<IStockApi>();
         fusion.Rpc.AddClient<ISimpleService>();
 
         // Client-side RPC services (client-side servers callable from the server side)
