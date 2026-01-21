@@ -20,13 +20,16 @@ related queries share.
 
 Consider a `ListIds` method with a `limit` parameter:
 
+<!-- snippet: PartFPatterns_Problem -->
 ```cs
 [ComputeMethod]
 public virtual async Task<Ulid[]> ListIds(string folder, int limit, CancellationToken ct = default)
 {
     // Returns up to `limit` IDs from the folder
+    return Array.Empty<Ulid>();
 }
 ```
+<!-- endSnippet -->
 
 When a new item is added, you need to invalidate `ListIds(folder, 10)`, `ListIds(folder, 50)`, etc.
 But you don't know which specific limits have been called.
@@ -35,6 +38,7 @@ But you don't know which specific limits have been called.
 
 Create a "pseudo" compute method that acts as a shared dependency:
 
+<!-- snippet: PartFPatterns_PseudoMethod -->
 ```cs
 // Pseudo-method: returns immediately, exists only to create a dependency
 [ComputeMethod]
@@ -51,9 +55,11 @@ public virtual async Task<Ulid[]> ListIds(string folder, int limit, Cancellation
     return await FetchIds(folder, limit, ct);
 }
 ```
+<!-- endSnippet -->
 
 Now, when invalidating:
 
+<!-- snippet: PartFPatterns_InvalidatePseudo -->
 ```cs
 [CommandHandler]
 public virtual async Task AddItem(AddItemCommand command, CancellationToken ct = default)
@@ -69,6 +75,7 @@ public virtual async Task AddItem(AddItemCommand command, CancellationToken ct =
     await AddItemToDb(command, ct);
 }
 ```
+<!-- endSnippet -->
 
 ### Naming Convention
 
@@ -83,6 +90,7 @@ Pseudo-methods can call themselves recursively to create tree-like dependency st
 when you have hierarchical data (spatial indices, organizational trees, etc.) and want to invalidate
 at different granularities.
 
+<!-- snippet: PartFPatterns_HierarchicalBinaryTree -->
 ```cs
 // Binary tree style: each level depends on its parent
 [ComputeMethod]
@@ -106,12 +114,14 @@ protected virtual async Task<Unit> PseudoOctant(int level, int x, int y, int z)
     return default;
 }
 ```
+<!-- endSnippet -->
 
 With this pattern:
 - Invalidating a leaf node only affects queries depending on that specific node
 - Invalidating a parent node cascades to all children (via Fusion's dependency tracking)
 - You can invalidate at any level of the hierarchy
 
+<!-- snippet: PartFPatterns_HierarchicalInvalidation -->
 ```cs
 // Invalidate just one leaf region
 using (Invalidation.Begin())
@@ -121,9 +131,11 @@ using (Invalidation.Begin())
 using (Invalidation.Begin())
     _ = PseudoRegion(1, 0);  // All regions under (1,0) get invalidated
 ```
+<!-- endSnippet -->
 
 ### Complete Example
 
+<!-- snippet: PartFPatterns_CompleteTodoService -->
 ```cs
 public class TodoService : IComputeService
 {
@@ -157,8 +169,23 @@ public class TodoService : IComputeService
         // Actual implementation
         return await SaveTodo(command, ct);
     }
+
+    [ComputeMethod]
+    public virtual Task<TodoItem?> Get(Session session, Ulid id, CancellationToken ct)
+        => Task.FromResult<TodoItem?>(null);
+
+    [ComputeMethod]
+    public virtual Task<string> GetSummary(Session session, CancellationToken ct)
+        => Task.FromResult("");
+
+    private Task<Ulid[]> QueryIds(Session session, int count, CancellationToken ct)
+        => Task.FromResult(Array.Empty<Ulid>());
+
+    private Task<TodoItem> SaveTodo(AddTodoCommand command, CancellationToken ct)
+        => Task.FromResult(command.Todo);
 }
 ```
+<!-- endSnippet -->
 
 
 ## Computed.GetCurrent()
@@ -172,6 +199,7 @@ This is useful for:
 
 ### Scheduled Invalidation
 
+<!-- snippet: PartFPatterns_ScheduledInvalidation -->
 ```cs
 [ComputeMethod]
 public virtual async Task<DateTime> GetServerTime(CancellationToken ct = default)
@@ -181,9 +209,11 @@ public virtual async Task<DateTime> GetServerTime(CancellationToken ct = default
     return DateTime.UtcNow;
 }
 ```
+<!-- endSnippet -->
 
 ### Invalidation Callbacks
 
+<!-- snippet: PartFPatterns_InvalidationCallbacks -->
 ```cs
 [ComputeMethod]
 public virtual async Task<Resource> GetResource(string key, CancellationToken ct = default)
@@ -192,19 +222,21 @@ public virtual async Task<Resource> GetResource(string key, CancellationToken ct
 
     // Register cleanup when this computed is invalidated
     computed.Invalidated += c => {
-        Log.Debug("Resource {Key} computed was invalidated", key);
+        Log.LogDebug("Resource {Key} computed was invalidated", key);
         // Release resources, cancel subscriptions, etc.
     };
 
     return await LoadResource(key, ct);
 }
 ```
+<!-- endSnippet -->
 
 ### Conditional Invalidation Delay
 
+<!-- snippet: PartFPatterns_ConditionalInvalidationDelay -->
 ```cs
 [ComputeMethod]
-public virtual async Task<PeerState> GetPeerState(RpcPeer peer, CancellationToken ct = default)
+public virtual async Task<PeerState> GetPeerState(RpcPeerStub peer, CancellationToken ct = default)
 {
     var computed = Computed.GetCurrent();
     var state = await peer.GetState(ct);
@@ -218,6 +250,7 @@ public virtual async Task<PeerState> GetPeerState(RpcPeer peer, CancellationToke
     return state;
 }
 ```
+<!-- endSnippet -->
 
 
 ## Computed.Changes() Observable
@@ -228,29 +261,34 @@ The `Changes()` extension method creates an `IAsyncEnumerable<Computed<T>>` that
 
 ### Basic Usage
 
+<!-- snippet: PartFPatterns_ChangesBasic -->
 ```cs
-var computed = await Computed.Capture(() => service.GetData());
+var computed = await Computed.Capture(() => example.GetData());
 
 await foreach (var c in computed.Changes(cancellationToken)) {
     Console.WriteLine($"Value: {c.Value}");
 }
 ```
+<!-- endSnippet -->
 
 ### With Update Delayer
 
 Control how quickly updates are processed:
 
+<!-- snippet: PartFPatterns_ChangesWithDelayer -->
 ```cs
 // Wait 1 second between updates
 await foreach (var c in computed.Changes(FixedDelayer.Get(1), ct)) {
     ProcessValue(c.Value);
 }
 ```
+<!-- endSnippet -->
 
 ### Deconstruction Pattern
 
 `Computed<T>` supports deconstruction to access `ValueOrDefault` and `Error` without throwing:
 
+<!-- snippet: PartFPatterns_ChangesDeconstruction -->
 ```cs
 await foreach (var (value, error) in computed.Changes(ct)) {
     if (error != null)
@@ -259,13 +297,15 @@ await foreach (var (value, error) in computed.Changes(ct)) {
         DisplayValue(value);
 }
 ```
+<!-- endSnippet -->
 
 ### Creating RpcStream from Changes
 
 Use `Changes()` to create real-time streams:
 
+<!-- snippet: PartFPatterns_ChangesToRpcStream -->
 ```cs
-public Task<RpcStream<StockPrice>> WatchPrice(string symbol, CancellationToken ct = default)
+public async Task<RpcStream<StockPrice>> WatchPrice(string symbol, CancellationToken ct = default)
 {
     var computed = await Computed.Capture(() => GetPrice(symbol));
 
@@ -275,12 +315,14 @@ public Task<RpcStream<StockPrice>> WatchPrice(string symbol, CancellationToken c
     return RpcStream.New(stream);
 }
 ```
+<!-- endSnippet -->
 
 
 ## Computed.When() Predicate
 
 Wait for a computed value to satisfy a condition:
 
+<!-- snippet: PartFPatterns_WhenBasic -->
 ```cs
 var computed = await Computed.Capture(() => counter.Get("a"));
 
@@ -288,9 +330,11 @@ var computed = await Computed.Capture(() => counter.Get("a"));
 computed = await computed.When(x => x >= 10, cancellationToken);
 Console.WriteLine($"Reached: {computed.Value}");
 ```
+<!-- endSnippet -->
 
 With update delayer:
 
+<!-- snippet: PartFPatterns_WhenWithDelayer -->
 ```cs
 // Check every second
 computed = await computed.When(
@@ -298,16 +342,19 @@ computed = await computed.When(
     FixedDelayer.Get(1),
     cancellationToken);
 ```
+<!-- endSnippet -->
 
 
 ## Combining Patterns
 
 ### Pseudo-Methods with Cleanup Callbacks
 
+<!-- snippet: PartFPatterns_CombinedPseudoAndCallbacks -->
 ```cs
 public class SubscriptionService : IComputeService
 {
     private readonly ConcurrentDictionary<string, IDisposable> _subscriptions = new();
+    private readonly MessageBroker _broker = new();
 
     [ComputeMethod]
     protected virtual Task<Unit> PseudoWatchTopic(string topic)
@@ -323,7 +370,7 @@ public class SubscriptionService : IComputeService
         // Setup external subscription on first computation
         _subscriptions.GetOrAdd(topic, t => {
             var sub = _broker.Subscribe(t, () => {
-                using var _ = Invalidation.Begin();
+                using var __ = Invalidation.Begin();
                 _ = PseudoWatchTopic(t); // Invalidate when broker notifies
             });
 
@@ -336,13 +383,18 @@ public class SubscriptionService : IComputeService
 
         return await QueryMessages(topic, count, ct);
     }
+
+    private Task<Message[]> QueryMessages(string topic, int count, CancellationToken ct)
+        => Task.FromResult(Array.Empty<Message>());
 }
 ```
+<!-- endSnippet -->
 
 ### Changes() with Error Handling
 
+<!-- snippet: PartFPatterns_ChangesErrorHandling -->
 ```cs
-async Task MonitorService(CancellationToken ct)
+static async Task MonitorService(IServiceWithStatus service, ILogger _logger, CancellationToken ct)
 {
     var computed = await Computed.Capture(() => service.GetStatus());
 
@@ -359,7 +411,10 @@ async Task MonitorService(CancellationToken ct)
             await NotifyOperators(status);
     }
 }
+
+static Task NotifyOperators(ServiceStatus status) => Task.CompletedTask;
 ```
+<!-- endSnippet -->
 
 
 ## Best Practices

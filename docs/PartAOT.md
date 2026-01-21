@@ -24,18 +24,20 @@ Fusion supports multiple code generation strategies:
 |------|-------------|
 | `DynamicMethods` | Runtime IL generation (default for JIT) |
 | `InterpretedExpressions` | Expression tree interpretation (AOT-compatible) |
-| `RuntimeCalls` | Reflection-based invocation (slowest, AOT-compatible) |
+| `CompiledExpressions` | Compiled expression trees |
 
 The mode is selected based on the runtime environment:
 
+<!-- snippet: PartAOT_CheckMode -->
 ```cs
 // Check the current mode
 Console.WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
 
 // In Native AOT:
-// - NativeMode will be InterpretedExpressions or RuntimeCalls
+// - NativeMode will be InterpretedExpressions
 // - DynamicMethods is not available
 ```
+<!-- endSnippet -->
 
 
 ## CodeKeeper Infrastructure
@@ -44,6 +46,7 @@ Console.WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
 
 `CodeKeeper` is the base class for preventing trimming of required code:
 
+<!-- snippet: PartAOT_CodeKeeperBase -->
 ```cs
 public abstract class CodeKeeper
 {
@@ -61,6 +64,7 @@ public abstract class CodeKeeper
     public static void RunActions();
 }
 ```
+<!-- endSnippet -->
 
 ### ProxyCodeKeeper Hierarchy
 
@@ -88,11 +92,8 @@ flowchart TD
 
 At the start of your program, before any Fusion code runs:
 
+<!-- snippet: PartAOT_BasicSetup -->
 ```cs
-using ActualLab.Trimming;
-using ActualLab.Interception.Trimming;
-using ActualLab.Fusion.Trimming;
-
 // Set the code keeper to use (FusionProxyCodeKeeper includes all subsystems)
 CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
 
@@ -100,40 +101,43 @@ CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
 if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
     CodeKeeper.RunActions();
 ```
+<!-- endSnippet -->
 
 ### Complete Example
 
 From the `NativeAot` sample:
 
+<!-- snippet: PartAOT_CompleteExample -->
 ```cs
-using ActualLab.Fusion.Trimming;
-using ActualLab.Interception;
-using ActualLab.Interception.Trimming;
-using ActualLab.Trimming;
-
 #pragma warning disable IL3050
 
-// Configure code keeper before anything else
-CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
-if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
-    CodeKeeper.RunActions();
+public static async Task Main()
+{
+    // Configure code keeper before anything else
+    CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
+    if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
+        CodeKeeper.RunActions();
 
-// Now configure services as usual
-var services = new ServiceCollection()
-    .AddLogging(l => l.AddSimpleConsole())
-    .AddFusion(fusion => {
-        fusion.Rpc.AddWebSocketClient();
-        fusion.AddServerAndClient<ITestService, TestService>();
-    })
-    .AddSingleton(_ => RpcOutboundCallOptions.Default with {
-        RouterFactory = methodDef => args => RpcPeerRef.Loopback,
-    })
-    .BuildServiceProvider();
+    // Now configure services as usual
+    var services = new ServiceCollection()
+        .AddLogging(l => l.AddSimpleConsole())
+        .AddFusion(fusion => {
+            fusion.Rpc.AddWebSocketClient();
+            fusion.AddServerAndClient<ITestService, TestService>();
+        })
+        .AddSingleton(_ => RpcOutboundCallOptions.Default with {
+            RouterFactory = methodDef => args => RpcPeerRef.Loopback,
+        })
+        .BuildServiceProvider();
 
-// Use services
-var client = services.RpcHub().GetClient<ITestService>();
-var now = await client.GetTime();
+    // Use services
+    var client = services.RpcHub().GetClient<ITestService>();
+    var now = await client.GetTime();
+}
+
+#pragma warning restore IL3050
 ```
+<!-- endSnippet -->
 
 
 ## Keeping Custom Types
@@ -142,6 +146,7 @@ var now = await client.GetTime();
 
 Register the types used in your service methods:
 
+<!-- snippet: PartAOT_CustomCodeKeeperMethods -->
 ```cs
 public class MyAppCodeKeeper : FusionProxyCodeKeeper
 {
@@ -163,15 +168,17 @@ public class MyAppCodeKeeper : FusionProxyCodeKeeper
     }
 }
 ```
+<!-- endSnippet -->
 
 ### For Proxy Types
 
 If you pre-generate proxy classes, keep them explicitly:
 
+<!-- snippet: PartAOT_CustomCodeKeeperProxy -->
 ```cs
-public class MyAppCodeKeeper : FusionProxyCodeKeeper
+public class MyAppProxyCodeKeeper : FusionProxyCodeKeeper
 {
-    public MyAppCodeKeeper()
+    public MyAppProxyCodeKeeper()
     {
         if (AlwaysTrue)
             return;
@@ -182,14 +189,16 @@ public class MyAppCodeKeeper : FusionProxyCodeKeeper
 }
 
 // Use your custom code keeper
-CodeKeeper.Set<ProxyCodeKeeper, MyAppCodeKeeper>();
+// CodeKeeper.Set<ProxyCodeKeeper, MyAppProxyCodeKeeper>();
 ```
+<!-- endSnippet -->
 
 
 ## How CodeKeeper Works
 
 CodeKeepers use a clever pattern to prevent trimming while avoiding runtime overhead:
 
+<!-- snippet: PartAOT_HowCodeKeeperWorks -->
 ```cs
 public class MyCodeKeeper : CodeKeeper
 {
@@ -205,13 +214,16 @@ public class MyCodeKeeper : CodeKeeper
     }
 }
 ```
+<!-- endSnippet -->
 
 The `AlwaysFalse`/`AlwaysTrue` constants use runtime values that the compiler cannot evaluate:
 
+<!-- snippet: PartAOT_AlwaysFalseImplementation -->
 ```cs
 public static readonly bool AlwaysFalse =
     CpuTimestamp.Now.Value == -1 && RandomShared.NextDouble() < 1e-300;
 ```
+<!-- endSnippet -->
 
 
 ## Project Configuration
@@ -230,36 +242,42 @@ In your `.csproj`:
 
 For code that uses reflection intentionally:
 
+<!-- snippet: PartAOT_SuppressWarnings -->
 ```cs
 [UnconditionalSuppressMessage("Trimming", "IL2026",
     Justification = "Types are preserved by CodeKeeper")]
 [UnconditionalSuppressMessage("Trimming", "IL3050",
     Justification = "Types are preserved by CodeKeeper")]
-public void MyMethod() { }
+public static void MyMethod() { }
 ```
+<!-- endSnippet -->
 
 ### DynamicallyAccessedMembers
 
 For generic parameters that need reflection:
 
+<!-- snippet: PartAOT_DynamicallyAccessedMembers -->
 ```cs
-public void ProcessType<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()
+public static void ProcessType<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()
 {
     // T's members are preserved by the trimmer
 }
 ```
+<!-- endSnippet -->
 
 
 ## ArgumentList Support
 
 `ArgumentList` requires special handling because it uses generic types based on argument count:
 
+<!-- snippet: PartAOT_ArgumentListSupport -->
 ```cs
 // These types are auto-generated and need preservation
 var l0 = ArgumentList.New();                    // ArgumentList0
 var l2 = ArgumentList.New(1, "s");              // ArgumentList2<int, string>
 var l10 = ArgumentList.New(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);  // ArgumentList10<...>
 ```
+<!-- endSnippet -->
 
 The `ArgumentListCodeKeeper` (invoked through `ProxyCodeKeeper`) preserves these types:
 

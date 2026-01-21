@@ -85,6 +85,7 @@ sequenceDiagram
 
 ### Accessing All Formats
 
+<!-- snippet: PartRSerialization_AccessingFormats -->
 ```cs
 // All registered formats
 ImmutableList<RpcSerializationFormat> all = RpcSerializationFormat.All;
@@ -92,23 +93,26 @@ ImmutableList<RpcSerializationFormat> all = RpcSerializationFormat.All;
 // Find by key
 var format = RpcSerializationFormat.All.First(f => f.Key == "mempack5c");
 ```
+<!-- endSnippet -->
 
 
 ## Format Structure
 
 Each `RpcSerializationFormat` consists of:
 
+<!-- snippet: PartRSerialization_FormatStructure -->
 ```cs
-public sealed class RpcSerializationFormat(
+public sealed class RpcSerializationFormatExample(
     string key,
     Func<RpcArgumentSerializer> argumentSerializerFactory,
     Func<RpcPeer, IByteSerializer<RpcMessage>> messageSerializerFactory)
 {
-    public string Key { get; }
-    public RpcArgumentSerializer ArgumentSerializer { get; }
-    public Func<RpcPeer, IByteSerializer<RpcMessage>> MessageSerializerFactory { get; }
+    public string Key { get; } = key;
+    public RpcArgumentSerializer ArgumentSerializer { get; } = argumentSerializerFactory();
+    public Func<RpcPeer, IByteSerializer<RpcMessage>> MessageSerializerFactory { get; } = messageSerializerFactory;
 }
 ```
+<!-- endSnippet -->
 
 | Property | Description |
 |----------|-------------|
@@ -146,6 +150,7 @@ Compact variants (`*C` suffix) use smaller message framing at a slight CPU cost.
 
 ### Registering Additional Formats
 
+<!-- snippet: PartRSerialization_RegisterFormat -->
 ```cs
 RpcSerializationFormat.All = RpcSerializationFormat.All.Add(
     new RpcSerializationFormat(
@@ -153,15 +158,19 @@ RpcSerializationFormat.All = RpcSerializationFormat.All.Add(
         () => new MyArgumentSerializer(),
         peer => new MyMessageSerializer(peer)));
 ```
+<!-- endSnippet -->
 
 ### Removing Formats
 
 To disable older formats for security:
 
+<!-- snippet: PartRSerialization_RemoveFormats -->
 ```cs
+// To disable older formats for security:
 RpcSerializationFormat.All = RpcSerializationFormat.All
     .RemoveAll(f => f.Key.StartsWith("mempack1") || f.Key.StartsWith("msgpack1"));
 ```
+<!-- endSnippet -->
 
 
 ## Format Selection Factors

@@ -26,6 +26,7 @@ The serialization infrastructure provides:
 
 Binary serializers implement `IByteSerializer`:
 
+<!-- snippet: PartS_IByteSerializer -->
 ```cs
 public interface IByteSerializer
 {
@@ -33,11 +34,13 @@ public interface IByteSerializer
     void Write(IBufferWriter<byte> bufferWriter, object? value, Type type);
 }
 ```
+<!-- endSnippet -->
 
 ### ITextSerializer
 
 Text (JSON) serializers implement `ITextSerializer`:
 
+<!-- snippet: PartS_ITextSerializer -->
 ```cs
 public interface ITextSerializer
 {
@@ -45,6 +48,7 @@ public interface ITextSerializer
     string Write(object? value, Type type);
 }
 ```
+<!-- endSnippet -->
 
 Both interfaces have generic typed versions (`IByteSerializer<T>`, `ITextSerializer<T>`) for improved performance.
 
@@ -55,6 +59,7 @@ Both interfaces have generic typed versions (`IByteSerializer<T>`, `ITextSeriali
 
 Global default serializers are accessible via static properties:
 
+<!-- snippet: PartS_DefaultSerializers -->
 ```cs
 // Binary serializer - MemoryPack on .NET 6+, MessagePack on .NET Standard
 IByteSerializer binary = ByteSerializer.Default;
@@ -62,13 +67,16 @@ IByteSerializer binary = ByteSerializer.Default;
 // Text serializer - System.Text.Json
 ITextSerializer text = TextSerializer.Default;
 ```
+<!-- endSnippet -->
 
 You can change defaults globally:
 
+<!-- snippet: PartS_ChangeDefaultSerializer -->
 ```cs
 // Use Newtonsoft.Json as default text serializer
 TextSerializer.Default = NewtonsoftJsonSerializer.Default;
 ```
+<!-- endSnippet -->
 
 ### Serializer Classes
 
@@ -81,6 +89,7 @@ TextSerializer.Default = NewtonsoftJsonSerializer.Default;
 
 Each has a static `Default` property and options for customization:
 
+<!-- snippet: PartS_SerializerInstances -->
 ```cs
 // Access default instances
 var memPack = MemoryPackByteSerializer.Default;
@@ -91,6 +100,7 @@ var newtonsoft = NewtonsoftJsonSerializer.Default;
 // Create with custom options
 var prettyJson = new SystemJsonSerializer(new JsonSerializerOptions { WriteIndented = true });
 ```
+<!-- endSnippet -->
 
 
 ## Type-Decorated Serialization
@@ -102,11 +112,11 @@ when the exact type isn't known at compile time.
 
 Embeds type info as a comment prefix in JSON:
 
+<!-- snippet: PartS_TypeDecoratingTextSerializer -->
 ```cs
 var serializer = TypeDecoratingTextSerializer.Default;
 
 // Serialize
-object value = new MyClass { Name = "test" };
 string json = serializer.Write(value, typeof(object));
 // Output: /* @type MyNamespace.MyClass, MyAssembly */ {"name":"test"}
 
@@ -114,6 +124,7 @@ string json = serializer.Write(value, typeof(object));
 object? result = serializer.Read(json, typeof(object));
 // result is MyClass
 ```
+<!-- endSnippet -->
 
 Format details:
 - Prefix: `/* @type TypeName */ `
@@ -124,24 +135,28 @@ Format details:
 
 Prepends `TypeRef` to binary data:
 
+<!-- snippet: PartS_TypeDecoratingByteSerializer -->
 ```cs
 var serializer = TypeDecoratingByteSerializer.Default;
 
 // Type info is binary-encoded before the payload
-byte[] data = serializer.Write(value, typeof(object));
-object? result = serializer.Read(data, typeof(object), out _);
+var buffer = serializer.Write(value, typeof(object));
+object? result = serializer.Read(buffer.WrittenMemory, typeof(object), out _);
 ```
+<!-- endSnippet -->
 
 ### Default Type-Decorated Instances
 
 Each serializer class provides a type-decorated variant:
 
+<!-- snippet: PartS_TypeDecoratedInstances -->
 ```cs
 var sysJsonTD = SystemJsonSerializer.DefaultTypeDecorating;
 var newtonsoftTD = NewtonsoftJsonSerializer.DefaultTypeDecorating;
 var memPackTD = MemoryPackByteSerializer.DefaultTypeDecorating;
 var msgPackTD = MessagePackByteSerializer.DefaultTypeDecorating;
 ```
+<!-- endSnippet -->
 
 
 ## Serialized\<T> Wrappers
@@ -155,31 +170,39 @@ Lazy serialization wrappers defer (de)serialization until accessed. This is usef
 
 Wraps a value that serializes to/from bytes:
 
+<!-- snippet: PartS_ByteSerializedMessage -->
 ```cs
 [DataContract, MemoryPackable, MessagePackObject]
-public record MyMessage(
-    [property: DataMember] ByteSerialized<MyPayload> Payload);
+public partial record MyMessage(
+    [property: DataMember, MemoryPackOrder(0), Key(0)] ByteSerialized<MyPayload> Payload);
+```
+<!-- endSnippet -->
 
+<!-- snippet: PartS_ByteSerializedUsage -->
+```cs
 // Create with a value - serialization is deferred
-var wrapper = ByteSerialized.New(myPayload);
+var wrapper1 = ByteSerialized.New(myPayload);
 
 // Or create from serialized data - deserialization is deferred
-var wrapper = ByteSerialized.New<MyPayload>(bytes);
+var wrapper2 = ByteSerialized.New<MyPayload>(bytes);
 
 // Access triggers (de)serialization
-MyPayload value = wrapper.Value;
-byte[] data = wrapper.Data;
+MyPayload value = wrapper1.Value;
+ReadOnlyMemory<byte> data = wrapper1.Data;
 ```
+<!-- endSnippet -->
 
 ### TextSerialized\<T>
 
 Same pattern for text/JSON:
 
+<!-- snippet: PartS_TextSerializedUsage -->
 ```cs
 var wrapper = TextSerialized.New(myObject);
 string json = wrapper.Data;    // Serialize on access
 MyObject value = wrapper.Value; // Deserialize on access
 ```
+<!-- endSnippet -->
 
 ### Specialized Variants
 
@@ -196,9 +219,10 @@ MyObject value = wrapper.Value; // Deserialize on access
 `UniSerialized<T>` works with all four serialization formats. The format is determined by which property
 the serializer accesses:
 
+<!-- snippet: PartS_UniSerializedStructure -->
 ```cs
 [DataContract, MemoryPackable, MessagePackObject]
-public readonly struct UniSerialized<T>
+public readonly partial struct UniSerialized<T>
 {
     [JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public T Value { get; init; }
@@ -219,6 +243,7 @@ public readonly struct UniSerialized<T>
     public MessagePackData MessagePack { get; init; }
 }
 ```
+<!-- endSnippet -->
 
 This design allows the same data structure to work correctly regardless of which serializer is used
 on each side of the communication.
@@ -227,10 +252,12 @@ on each side of the communication.
 
 Adds type decoration for polymorphism:
 
+<!-- snippet: PartS_TypeDecoratingUniSerialized -->
 ```cs
 // Used by PropertyBag for storing heterogeneous values
 var item = TypeDecoratingUniSerialized.New<object>(myValue);
 ```
+<!-- endSnippet -->
 
 
 ## PropertyBag Serialization
@@ -238,6 +265,7 @@ var item = TypeDecoratingUniSerialized.New<object>(myValue);
 `PropertyBag` stores key-value pairs where values can be any type. It uses `TypeDecoratingUniSerialized<object>`
 to preserve type information:
 
+<!-- snippet: PartS_PropertyBagItem -->
 ```cs
 // Internal structure of PropertyBagItem
 [DataContract, MemoryPackable, MessagePackObject]
@@ -245,6 +273,7 @@ public partial record struct PropertyBagItem(
     [property: DataMember] string Key,
     [property: DataMember] TypeDecoratingUniSerialized<object> Serialized);
 ```
+<!-- endSnippet -->
 
 This allows:
 - Heterogeneous value types in the same bag
@@ -260,16 +289,18 @@ For details on how PropertyBag is used in the Operations Framework, see [Operati
 
 For types to work with all serializers, apply multiple attributes:
 
+<!-- snippet: PartS_AnnotatedRecord -->
 ```cs
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public partial record MyRecord(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] string Name,
     [property: DataMember(Order = 1), MemoryPackOrder(1)] int Value)
 {
-    [JsonConstructor, MemoryPackConstructor, SerializationConstructor]
+    [System.Text.Json.Serialization.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public MyRecord() : this("", 0) { }
 }
 ```
+<!-- endSnippet -->
 
 | Attribute | Purpose |
 |-----------|---------|
@@ -287,28 +318,22 @@ public partial record MyRecord(
 
 For code that needs to select serializers dynamically:
 
+<!-- snippet: PartS_SerializerKindUsage -->
 ```cs
-public enum SerializerKind
-{
-    None = 0,
-    MemoryPack,
-    MessagePack,
-    SystemJson,
-    NewtonsoftJson,
-}
-
 // Get default serializer for a kind
 IByteSerializer serializer = SerializerKind.MemoryPack.GetDefaultSerializer();
 
 // Get type-decorated variant
 IByteSerializer tdSerializer = SerializerKind.MemoryPack.GetDefaultTypeDecoratingSerializer();
 ```
+<!-- endSnippet -->
 
 
 ## Configuration
 
 ### Global Default Changes
 
+<!-- snippet: PartS_GlobalConfiguration -->
 ```cs
 // Change default binary serializer
 ByteSerializer.Default = MessagePackByteSerializer.Default;
@@ -328,6 +353,7 @@ NewtonsoftJsonSerializer.DefaultSettings = new JsonSerializerSettings {
     NullValueHandling = NullValueHandling.Ignore,
 };
 ```
+<!-- endSnippet -->
 
 
 ## Best Practices
