@@ -146,6 +146,7 @@ The following slash commands (skills) are available for documentation work:
 | Skill | Description |
 |-------|-------------|
 | `/docs-writer` | Documentation writer for Fusion docs. Use for any docs/ folder tasks. Includes style guide, structure info, and cheat sheet guidelines. |
+| `/docs-snippets` | Complete guide to authoring, running, and embedding code snippets. Covers DocPart class, naming conventions, mdsnippets tool, and output parsing. |
 | `/docs-mermaid` | Mermaid diagram syntax guidelines. Use when creating or editing Mermaid diagrams in documentation. |
 
 These skills provide specialized prompts and guidelines for documentation tasks. Invoke them when working on documentation to get context-specific instructions.

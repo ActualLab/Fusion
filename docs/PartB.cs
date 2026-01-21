@@ -12,9 +12,11 @@ using ActualLab.Fusion.UI;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using static System.Console;
+// ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 // ReSharper disable once CheckNamespace
-namespace TutorialB;
+namespace Docs.PartB;
 
 // Fake types for snippet compilation
 public class _HostPage : ComponentBase { }
@@ -47,10 +49,10 @@ public class WeatherForecastService : IComputeService
         => Task.FromResult(Array.Empty<string>());
 }
 
-public static class PartB
+public class PartB : DocPart
 {
     #region PartB_ServerSideBlazor_Services
-    public static void ConfigureServerSideBlazorServices(IServiceCollection services)
+    public void ConfigureServerSideBlazorServices(IServiceCollection services)
     {
         // Configure services
         var fusion = services.AddFusion();
@@ -71,7 +73,7 @@ public static class PartB
     #endregion
 
     #region PartB_ServerSideBlazor_App
-    public static void ConfigureServerSideBlazorApp(WebApplication app)
+    public void ConfigureServerSideBlazorApp(WebApplication app)
     {
         app.UseFusionSession();
         app.UseRouting();
@@ -84,7 +86,7 @@ public static class PartB
     #endregion
 
     #region PartB_Hybrid_ServerServices
-    public static void ConfigureHybridServerServices(IServiceCollection services)
+    public void ConfigureHybridServerServices(IServiceCollection services)
     {
         // Fusion services with RPC server mode
         var fusion = services.AddFusion(RpcServiceMode.Server, true);
@@ -103,7 +105,7 @@ public static class PartB
     #endregion
 
     #region PartB_Hybrid_ServerApp
-    public static void ConfigureHybridServerApp(WebApplication app)
+    public void ConfigureHybridServerApp(WebApplication app)
     {
         app.UseWebSockets(new WebSocketOptions() {
             KeepAliveInterval = TimeSpan.FromSeconds(30),
@@ -126,7 +128,7 @@ public static class PartB
     #endregion
 
     #region PartB_Wasm_Main
-    public static async Task WasmMain(string[] args)
+    public async Task WasmMain(string[] args)
     {
         var builder = WebAssemblyHostBuilder.CreateDefault(args);
         ConfigureWasmServices(builder.Services, builder);
@@ -136,7 +138,7 @@ public static class PartB
     #endregion
 
     #region PartB_Wasm_Services
-    public static void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
+    public void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
     {
         // Fusion services
         var fusion = services.AddFusion();
@@ -154,12 +156,9 @@ public static class PartB
     }
     #endregion
 
-    public static async Task Run()
+    public override async Task Run()
     {
-        WriteLine("Part 4: Real-time UI in Blazor Apps");
-        WriteLine();
-
-        // === Reference verification section ===
+        StartSnippetOutput("Reference verification");
 
         // Component hierarchy
         _ = typeof(FusionComponentBase);

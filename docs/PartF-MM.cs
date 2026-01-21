@@ -1,7 +1,9 @@
 using static System.Console;
+// ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 // ReSharper disable once CheckNamespace
-namespace TutorialFMM;
+namespace Docs.PartFMM;
 
 #region PartFSS_Service1
 public partial class Service1 : IComputeService
@@ -53,9 +55,9 @@ public partial class Service3 : IComputeService
 }
 #endregion
 
-public static class PartFMM
+public class PartFMM : DocPart
 {
-    public static IServiceProvider CreateServices()
+    public IServiceProvider CreateServices()
     {
         var services = new ServiceCollection();
         services.AddFusion()
@@ -65,7 +67,7 @@ public static class PartFMM
         return services.BuildServiceProvider();
     }
 
-    public static async Task Caching1()
+    public async Task Caching1()
     {
         #region PartFSS_Caching1
         var service = CreateServices().GetRequiredService<Service1>();
@@ -79,7 +81,7 @@ public static class PartFMM
         #endregion
     }
 
-    public static async Task Caching2()
+    public async Task Caching2()
     {
         #region PartFSS_Caching2
         var service = CreateServices().GetRequiredService<Service1>();
@@ -93,7 +95,7 @@ public static class PartFMM
         #endregion
     }
 
-    public static async Task Caching3()
+    public async Task Caching3()
     {
         #region PartFSS_Caching3
         var service = CreateServices().GetRequiredService<Service2>();
@@ -111,7 +113,7 @@ public static class PartFMM
         #endregion
     }
 
-    public static async Task Caching4()
+    public async Task Caching4()
     {
         #region PartFSS_Caching4
         var service = CreateServices().GetRequiredService<Service2>();
@@ -124,7 +126,7 @@ public static class PartFMM
         #endregion
     }
 
-    public static async Task Caching5()
+    public async Task Caching5()
     {
         #region PartFSS_Caching5
         var service = CreateServices().GetRequiredService<Service3>();
@@ -145,21 +147,17 @@ public static class PartFMM
         #endregion
     }
 
-    public static async Task Run()
+    public override async Task Run()
     {
-        WriteLine("Caching1:");
+        StartSnippetOutput("Caching1");
         await Caching1();
-        WriteLine();
-        WriteLine("Caching2:");
+        StartSnippetOutput("Caching2");
         await Caching2();
-        WriteLine();
-        WriteLine("Caching3:");
+        StartSnippetOutput("Caching3");
         await Caching3();
-        WriteLine();
-        WriteLine("Caching4:");
+        StartSnippetOutput("Caching4");
         await Caching4();
-        WriteLine();
-        WriteLine("Caching5:");
+        StartSnippetOutput("Caching5");
         await Caching5();
     }
 }

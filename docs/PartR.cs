@@ -5,9 +5,11 @@ using ActualLab.Rpc.Server;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using static System.Console;
+// ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 // ReSharper disable once CheckNamespace
-namespace TutorialR;
+namespace Docs.PartR;
 
 #region PartR_SharedApi
 // The interface for our chat service
@@ -69,9 +71,9 @@ public class ChatService : IChatService
 }
 #endregion
 
-public static class PartR
+public class PartR : DocPart
 {
-    public static async Task Run()
+    public override async Task Run()
     {
         using var stopTokenSource = new CancellationTokenSource();
         var serverTask = RunServer(stopTokenSource.Token);
@@ -80,7 +82,7 @@ public static class PartR
         await serverTask;
     }
 
-    public static WebApplication CreateHost()
+    public WebApplication CreateHost()
     {
         #region PartR_ServerSetup
         var builder = WebApplication.CreateBuilder();
@@ -101,7 +103,7 @@ public static class PartR
         return app;
     }
 
-    public static ServiceProvider CreateClientServiceProvider()
+    public ServiceProvider CreateClientServiceProvider()
     {
         var services = new ServiceCollection();
         services.AddLogging(logging => {
@@ -119,7 +121,7 @@ public static class PartR
         return services.BuildServiceProvider();
     }
 
-    public static async Task RunServer(CancellationToken cancellationToken = default)
+    public async Task RunServer(CancellationToken cancellationToken = default)
     {
         var app = CreateHost();
         #region PartR_RunServer
@@ -135,7 +137,7 @@ public static class PartR
         #endregion
     }
 
-    public static async Task RunClient()
+    public async Task RunClient()
     {
         #region PartR_RunClient
         await using var services = CreateClientServiceProvider();

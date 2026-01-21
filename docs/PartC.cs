@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using ActualLab.Rpc;
 using static System.Console;
+// ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 // ReSharper disable once CheckNamespace
-namespace TutorialC;
+namespace Docs.PartC;
 
 #region PartC_PrintCommandSession
 public class PrintCommand : ICommand<Unit>
@@ -32,10 +34,9 @@ public class RecSumCommand : ICommand<long>
 }
 #endregion
 
-public static class PartC
+public class PartC : DocPart
 {
-
-    public static async Task PrintCommandSession()
+    public async Task PrintCommandSession()
     {
         #region PartC_PrintCommandSession2
         // Building IoC container
@@ -98,7 +99,7 @@ public static class PartC
         }
     }
 
-    public static async Task RecSumCommandSession()
+    public async Task RecSumCommandSession()
     {
         #region PartC_RecSumCommandSession2
         // Building IoC container
@@ -115,7 +116,7 @@ public static class PartC
     }
 
 
-    public static async Task RecSumCommandServiceSession()
+    public async Task RecSumCommandServiceSession()
     {
         #region PartC_RecSumCommandServiceSession2
         // Building IoC container
@@ -133,10 +134,13 @@ public static class PartC
         #endregion
     }
 
-    public static async Task Run()
+    public override async Task Run()
     {
+        StartSnippetOutput("PrintCommandSession");
         await PrintCommandSession();
+        StartSnippetOutput("RecSumCommandSession");
         await RecSumCommandSession();
+        StartSnippetOutput("RecSumCommandServiceSession");
         await RecSumCommandServiceSession();
     }
 

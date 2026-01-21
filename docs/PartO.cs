@@ -1,12 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ActualLab.CommandR.Internal;
 using ActualLab.CommandR.Operations;
-using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Operations;
-using ActualLab.Fusion.Operations;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 using ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -14,9 +11,11 @@ using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.Npgsql;
 using ActualLab.Fusion.EntityFramework.Redis;
 using static System.Console;
+// ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 // ReSharper disable once CheckNamespace
-namespace TutorialO;
+namespace Docs.PartO;
 
 // Sample DbContext for Part 6
 public class AppDbContext(DbContextOptions options) : DbContextBase(options)
@@ -90,15 +89,11 @@ public class ChatService(IServiceProvider services) : DbServiceBase<AppDbContext
         => Task.FromResult(new ChatMessage(0, command.Text));
 }
 
-public static class PartO
+public class PartO : DocPart
 {
-    public static async Task Run()
+    public override async Task Run()
     {
-        WriteLine("Part 6: Multi-Host Invalidation and CQRS with Operations Framework");
-        WriteLine();
-
-        // === Reference verification section ===
-        // This section references all identifiers from PartAP.md to verify they exist
+        StartSnippetOutput("Reference verification");
 
         // 1. DbOperation - entity for operation log
         _ = typeof(DbOperation); // "DbOperation" from docs
@@ -180,17 +175,14 @@ public static class PartO
         WriteLine("All identifier references verified successfully!");
         WriteLine();
 
-        // === Name changes summary ===
-        WriteLine("=== Name Changes from Documentation ===");
+        StartSnippetOutput("Name Changes from Documentation");
         WriteLine("- NestedCommandLogger -> NestedOperationLogger");
         WriteLine("- TransientOperationScopeProvider -> InMemoryOperationScopeProvider");
         WriteLine("- InvalidateOnCompletionCommandHandler -> InvalidatingCommandCompletionHandler");
         WriteLine("- DbServiceBase.CreateOperationDbContext() -> DbHub.CreateOperationDbContext()");
         WriteLine("- AgentInfo -> HostId (moved to ActualLab.Core)");
-        WriteLine();
 
-        // === Priority values ===
-        WriteLine("=== Command Handler Priorities ===");
+        StartSnippetOutput("Command Handler Priorities");
         WriteLine($"- PreparedCommandHandler: {CommanderCommandHandlerPriority.PreparedCommandHandler:N0}");
         WriteLine($"- NestedCommandLogger: {FusionOperationsCommandHandlerPriority.NestedCommandLogger:N0}");
         WriteLine($"- InMemoryOperationScopeProvider: {FusionOperationsCommandHandlerPriority.InMemoryOperationScopeProvider:N0}");

@@ -1,11 +1,31 @@
-﻿using System.Reflection;
-using static System.Console;
+﻿using static System.Console;
+// ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 namespace Docs;
 
 #region PartXX_SnippetId
 // This snippet is referenced from .instructions.md
 #endregion
+
+/// <summary>
+/// Base class for all documentation parts.
+/// Each part demonstrates a specific feature or concept.
+/// </summary>
+public abstract class DocPart
+{
+    /// <summary>
+    /// Runs all snippets for this documentation part.
+    /// </summary>
+    public abstract Task Run();
+
+    /// <summary>
+    /// Outputs a snippet start marker to identify snippet output in the console.
+    /// </summary>
+    /// <param name="snippetName">The name of the snippet being executed.</param>
+    protected static void StartSnippetOutput(string snippetName)
+        => WriteLine($"---- {snippetName} ----");
+}
 
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Docs")]
 [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Docs")]
@@ -18,24 +38,19 @@ public class Program
             var type = types[i];
             if (i != 0)
                 WriteLine();
-            WriteLine($"---- {type.Name} started ----");
+            WriteLine($"---- Part {type.Name} started ----");
 
-            var method = type.GetMethod("Run", BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
-            if (method is null)
-                throw new InvalidOperationException($"'{type.Name}' type doesn't have 'Run' method.");
+            var part = (DocPart)Activator.CreateInstance(type)!;
+            await part.Run().ConfigureAwait(false);
 
-            var result = method.Invoke(null, []);
-            if (result is Task task)
-                await task.ConfigureAwait(false);
-
-            WriteLine($"---- {type.Name} completed ----");
+            WriteLine($"---- Part {type.Name} completed ----");
         }
     }
 
     public static Type[] GetPartTypes(string[] args)
     {
         var types = typeof(Program).Assembly.GetTypes()
-            .Where(t => t.Name.StartsWith("Part", StringComparison.Ordinal))
+            .Where(t => t.IsSubclassOf(typeof(DocPart)) && !t.IsAbstract)
             .OrderBy(t => t.Name, StringComparer.Ordinal)
             .ToArray();
 

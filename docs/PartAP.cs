@@ -2,9 +2,11 @@ using System.Reflection;
 using ActualLab.Interception;
 using ActualLab.Interception.Interceptors;
 using static System.Console;
+// ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 // ReSharper disable once CheckNamespace
-namespace TutorialAP;
+namespace Docs.PartAP;
 
 #region PartAP_SimpleInterface
 // IRequiresAsyncProxy: generates proxy that intercepts async methods only
@@ -194,9 +196,9 @@ public sealed class ValidatingInterceptor : Interceptor
 public class MyRequiredAttribute : Attribute { }
 #endregion
 
-public static class PartAP
+public class PartAP : DocPart
 {
-    public static async Task SimpleProxySession()
+    public async Task SimpleProxySession()
     {
         #region PartAP_CreateProxy
         var services = new ServiceCollection()
@@ -220,7 +222,7 @@ public static class PartAP
         WriteLine($"Result: {greeting}");
     }
 
-    public static async Task PassThroughProxySession()
+    public async Task PassThroughProxySession()
     {
         var services = new ServiceCollection()
             .AddSingleton(LoggingInterceptor.Options.Default)
@@ -247,7 +249,7 @@ public static class PartAP
         WriteLine($"Result: {result}");
     }
 
-    public static void SchedulingInterceptorSession()
+    public void SchedulingInterceptorSession()
     {
         var services = new ServiceCollection().BuildServiceProvider();
         Interceptor? anotherInterceptor = null;
@@ -269,7 +271,7 @@ public static class PartAP
         WriteLine($"Created: {interceptor.GetType().Name}");
     }
 
-    public static void ScopedServiceInterceptorSession()
+    public void ScopedServiceInterceptorSession()
     {
         var services = new ServiceCollection()
             .AddScoped<IGreetingService, GreetingService>()
@@ -292,7 +294,7 @@ public static class PartAP
         WriteLine($"Created proxy: {proxy.GetType().Name}");
     }
 
-    public static async Task DefaultResultInterceptorSession()
+    public async Task DefaultResultInterceptorSession()
     {
         var services = new ServiceCollection()
             .AddSingleton(DefaultResultInterceptor.Options.Default)
@@ -307,21 +309,21 @@ public static class PartAP
         WriteLine($"Default result: {result ?? "(null)"}");
     }
 
-    public static async Task Run()
+    public override async Task Run()
     {
-        WriteLine("=== Simple Proxy Demo ===");
+        StartSnippetOutput("Simple Proxy Demo");
         await SimpleProxySession();
 
-        WriteLine("\n=== Pass-Through Proxy Demo ===");
+        StartSnippetOutput("Pass-Through Proxy Demo");
         await PassThroughProxySession();
 
-        WriteLine("\n=== Scheduling Interceptor Demo ===");
+        StartSnippetOutput("Scheduling Interceptor Demo");
         SchedulingInterceptorSession();
 
-        WriteLine("\n=== Scoped Service Interceptor Demo ===");
+        StartSnippetOutput("Scoped Service Interceptor Demo");
         ScopedServiceInterceptorSession();
 
-        WriteLine("\n=== Default Result Interceptor Demo ===");
+        StartSnippetOutput("Default Result Interceptor Demo");
         await DefaultResultInterceptorSession();
     }
 }

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Authentication;
@@ -7,7 +6,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
-using ActualLab.Fusion;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.Server;
@@ -16,14 +14,16 @@ using ActualLab.Fusion.Server.Middlewares;
 using ActualLab.Rpc.Server;
 using static System.Console;
 // ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 // Note: ActualLab.Fusion.Blazor.Authentication types (ClientAuthHelper, CascadingAuthState)
 // are in a separate assembly and verified below by name only.
 
 // ReSharper disable once CheckNamespace
-namespace TutorialAA;
+namespace Docs.PartAA;
 
 // Fake types for snippet compilation
+// ReSharper disable once InconsistentNaming
 public class _HostPage : ComponentBase { }
 public class App : ComponentBase { }
 public static class MicrosoftAccountDefaults
@@ -91,12 +91,11 @@ public class OrderService(IAuth auth) : IOrderService
     private Task<bool> CanReadOrders(User user, CancellationToken ct) => Task.FromResult(true);
 }
 
-public static class Part11
+public class PartAA : DocPart
 {
-    public static async Task Run()
+    public override async Task Run()
     {
-        WriteLine("Part 7: Authentication in Fusion");
-        WriteLine();
+        StartSnippetOutput("Reference verification");
 
         // === Reference verification section ===
         // This section references all identifiers from Part11.md to verify they exist
@@ -149,9 +148,7 @@ public static class Part11
         WriteLine("All identifier references verified successfully!");
         WriteLine();
 
-        // === Name/Pattern Changes Summary ===
-        WriteLine("=== Changes from Documentation ===");
-        WriteLine();
+        StartSnippetOutput("Name/Pattern Changes Summary");
 
         WriteLine("1. Session Management:");
         WriteLine("   - ISessionProvider -> ISessionResolver (interface renamed)");
@@ -187,7 +184,7 @@ public static class Part11
 
     // Example: Service configuration with authentication
     #region PartAA_ServiceConfiguration
-    public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
+    public void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
     {
         var fusion = services.AddFusion();
         var fusionServer = fusion.AddWebServer();
@@ -239,7 +236,7 @@ public static class Part11
 
     // Example: App configuration
     #region PartAA_AppConfiguration
-    public static void ConfigureApp(WebApplication app)
+    public void ConfigureApp(WebApplication app)
     {
         app.UseWebSockets(new WebSocketOptions() {
             KeepAliveInterval = TimeSpan.FromSeconds(30),

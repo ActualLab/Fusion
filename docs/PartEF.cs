@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using ActualLab.Fusion.EntityFramework;
 using static System.Console;
+// ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 // ReSharper disable once CheckNamespace
-namespace TutorialEF;
+namespace Docs.PartEF;
 
 // Sample DbContext for PartEF
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContextBase(options)
@@ -26,13 +27,13 @@ public class DbUser
     public string Name { get; set; } = "";
 }
 
-public static class PartEF
+public class PartEF : DocPart
 {
-    public static async Task Run()
+    public override async Task Run()
     {
-        WriteLine("Part EF: Entity Framework Extensions");
-        WriteLine();
+        StartSnippetOutput("Entity Framework Extensions");
         WriteLine("This part covers DbHub, sharding, and DbEntityResolver.");
         WriteLine("See PartEF.md for full documentation.");
+        await Task.CompletedTask;
     }
 }

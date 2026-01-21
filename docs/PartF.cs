@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using static System.Console;
+// ReSharper disable ArrangeTypeMemberModifiers
+// ReSharper disable InconsistentNaming
 
 // ReSharper disable once CheckNamespace
-namespace TutorialF;
+namespace Docs.PartF;
 
 #region PartF_Declare_Service
 public class CounterService : IComputeService // This is a tagging interface any compute service must "implement"
@@ -40,9 +42,9 @@ public class CounterService : IComputeService // This is a tagging interface any
 }
 #endregion
 
-public static class PartF
+public class PartF : DocPart
 {
-    public static async Task Run()
+    public override async Task Run()
     {
         #region PartF_Register_Services
         var services = new ServiceCollection();
@@ -55,7 +57,7 @@ public static class PartF
         #endregion
 
         {
-            WriteLine("Automatic Caching:");
+            StartSnippetOutput("Automatic Caching");
             #region PartF_Automatic_Caching
             await counters.Get("a"); // Prints: Get(a) = 0
             await counters.Get("a"); // Prints nothing -- it's a cache hit; the result is 0
@@ -63,7 +65,7 @@ public static class PartF
         }
 
         {
-            WriteLine($"{Environment.NewLine}Automatic Dependency Tracking:");
+            StartSnippetOutput("Automatic Dependency Tracking");
             #region PartF_Automatic_Dependency_Tracking
             await counters.Sum("a", "b"); // Prints: Get(b) = 0, Sum(a, b) = 0 -- Get(b) was called from Sum(a, b)
             await counters.Sum("a", "b"); // Prints nothing -- it's a cache hit; the result is 0
@@ -72,7 +74,7 @@ public static class PartF
         }
 
         {
-            WriteLine($"{Environment.NewLine}Invalidation:");
+            StartSnippetOutput("Invalidation");
             #region PartF_Invalidation
             counters.Increment("a"); // Prints: Increment(a) + invalidates Get(a) call result
             await counters.Get("a"); // Prints: Get(a) = 1
@@ -81,7 +83,7 @@ public static class PartF
         }
 
         {
-            WriteLine($"{Environment.NewLine}Cascading Invalidation:");
+            StartSnippetOutput("Cascading Invalidation");
             #region PartF_Cascading_Invalidation
             counters.Increment("a"); // Prints: Increment(a)
 
@@ -100,7 +102,7 @@ public static class PartF
             await counters.Sum("b", "a"); // Prints: Sum(b, a) = 2 -- Get(b) and Get(a) results are already cached
             #endregion
 
-            WriteLine($"{Environment.NewLine}Accessing Computed Values:");
+            StartSnippetOutput("Accessing Computed Values");
             #region PartF_Accessing_Computed_Values
             var computedForGetA = await Computed.Capture(() => counters.Get("a"));
             WriteLine(computedForGetA.IsConsistent()); // True
@@ -139,7 +141,7 @@ public static class PartF
         }
 
         {
-            WriteLine($"{Environment.NewLine}Reactive updates:");
+            StartSnippetOutput("Reactive updates");
             #region PartF_Reactive_Updates
             _ = Task.Run(async () => {
                 // This is going to be our update loop
@@ -161,7 +163,7 @@ public static class PartF
         }
 
         {
-            WriteLine($"{Environment.NewLine}Computed<T>.When() and .Changes() methods:");
+            StartSnippetOutput("Computed<T>.When() and .Changes() methods");
             #region PartF_When_And_Changes_Methods
             _ = Task.Run(async () => {
                 // This is going to be our update loop
@@ -189,7 +191,7 @@ public static class PartF
         }
 
         {
-            WriteLine($"{Environment.NewLine}MutableState:");
+            StartSnippetOutput("MutableState");
             #region PartF_MutableState
             var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
             var state = stateFactory.NewMutable(1);
@@ -222,7 +224,7 @@ public static class PartF
         }
 
         {
-            WriteLine($"{Environment.NewLine}ComputedState:");
+            StartSnippetOutput("ComputedState");
             #region PartF_ComputedState
             var stateFactory = sp.StateFactory();
             var clock = Stopwatch.StartNew();
