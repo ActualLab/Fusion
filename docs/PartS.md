@@ -1,4 +1,4 @@
-# Serialization
+# Unified Serialization
 
 ActualLab provides a unified serialization infrastructure used throughout Fusion, RPC, and the Operations Framework.
 This guide covers the core serialization APIs, type-decorated serialization for polymorphism, lazy serialization

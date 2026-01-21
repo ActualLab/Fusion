@@ -1,4 +1,4 @@
-# CommandR
+# CommandR: CQRS and Beyond
 
 [ActualLab.CommandR](https://www.nuget.org/packages/ActualLab.CommandR/)
 is a CQRS-style command handling library that powers Fusion's distributed command execution and multi-host invalidation.

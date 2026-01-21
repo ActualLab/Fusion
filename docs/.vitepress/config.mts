@@ -98,9 +98,9 @@ gtag('config', 'G-PX4G7HX4CM');`],
       {
         text: "Documentation",
         items: [
-          { text: "NuGet Packages", link: "/NuGet-Packages" },
+          { text: "Videos and Slides", link: "/Videos-and-Slides" },
           {
-            text: "Fusion: Compute Services, Computed<T>, and States",
+            text: "1. Compute Services, Computed<T>, and States",
             link: "/PartF",
             collapsed: true,
             items: [
@@ -115,7 +115,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
             ],
           },
           {
-            text: "Rpc: ActualLab.Rpc and Distributed Compute Services",
+            text: "2. ActualLab.Rpc and Distributed Compute Services",
             link: "/PartR",
             collapsed: true,
             items: [
@@ -132,7 +132,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
             ],
           },
           {
-            text: "Commander: CommandR",
+            text: "3. CommandR: CQRS and Beyond",
             link: "/PartC",
             collapsed: true,
             items: [
@@ -144,7 +144,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
             ],
           },
           {
-            text: "Blazor: Real-time UI in Blazor App",
+            text: "4. Real-time UI in Blazor App",
             link: "/PartB",
             collapsed: true,
             items: [
@@ -157,11 +157,11 @@ gtag('config', 'G-PX4G7HX4CM');`],
             ],
           },
           {
-            text: "Entity Framework Extensions",
+            text: "5. Entity Framework Extensions",
             link: "/PartEF",
           },
           {
-            text: "Operations Framework",
+            text: "6. Operations Framework",
             link: "/PartO",
             collapsed: true,
             items: [
@@ -175,8 +175,8 @@ gtag('config', 'G-PX4G7HX4CM');`],
               { text: "Cheat Sheet", link: "/PartO-CS" },
             ],
           },
-          { text: "Serialization", link: "/PartS" },
-          { text: "Videos and Slides", link: "/Videos-and-Slides" },
+          { text: "7. Unified Serialization", link: "/PartS" },
+          { text: "NuGet Packages", link: "/NuGet-Packages" },
         ],
       },
       {
