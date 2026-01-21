@@ -346,12 +346,55 @@ The `mdsnippets.json` file in `docs/` configures the tool:
    - Shell commands / PowerShell
    - Pseudo-code or conceptual examples marked as such
 
-2. **Keep snippets focused** - Each snippet should demonstrate one concept
-3. **Use descriptive names** - `PartF_Automatic_Caching` not `PartF_Snippet1`
-4. **Match documentation flow** - Snippets should appear in logical order in Run()
-5. **Test before committing** - Always run `dotnet build Docs.csproj` and test the part
-6. **Update both files** - When editing snippets, update `.cs` AND verify `.md` after mdsnippets
-7. **Use StartSnippetOutput** - Makes output parseable and easier to match with docs
+2. **Keep snippets COMPACT** - Snippets should contain only the essential code the reader needs to see. **Do NOT wrap code in unnecessary classes or methods just to satisfy C# syntax requirements.**
+
+   **BAD - unnecessary wrapper class:**
+   ```cs
+   #region PartAA_QuickStart_Register
+   public static class QuickStartExample  // <-- Reader doesn't need this
+   {
+       public static void RegisterAuthServices(IServiceCollection services)  // <-- Or this
+       {
+           var fusion = services.AddFusion();
+           var fusionServer = fusion.AddWebServer();
+           fusion.AddDbAuthService<AppDbContext, long>();
+       }
+   }
+   #endregion
+   ```
+
+   **GOOD - just the essential code:**
+   ```cs
+   #region PartAA_QuickStart_Register
+   var fusion = services.AddFusion();
+   var fusionServer = fusion.AddWebServer();
+   fusion.AddDbAuthService<AppDbContext, long>();
+   #endregion
+   ```
+
+   **When to include classes/methods in snippets:**
+   - The class itself is meaningful (e.g., showing a compute service with `[ComputeMethod]` attributes)
+   - Demonstrating interface implementation patterns
+   - Showing class structure, inheritance, or decorators
+   - The original documentation showed the full class
+
+   **When NOT to include wrapper classes:**
+   - The original inline code was just statements or method bodies
+   - The class exists solely because C# requires code to be in a class
+   - The wrapper adds no educational value for the reader
+
+3. **Process ALL Part files including subparts** - Documentation is split into:
+   - Main parts: `PartF.md`, `PartC.md`, `PartR.md`, etc.
+   - Subparts: `PartF-MM.md`, `PartC-CI.md`, `PartO-EV.md`, `PartAA-DB.md`, etc.
+
+   When extracting inline code to snippets, scan **both** main parts and subparts (all `Part*.md` and `Part*-*.md` files).
+
+4. **Keep snippets focused** - Each snippet should demonstrate one concept
+5. **Use descriptive names** - `PartF_Automatic_Caching` not `PartF_Snippet1`
+6. **Match documentation flow** - Snippets should appear in logical order in Run()
+7. **Test before committing** - Always run `dotnet build Docs.csproj` and test the part
+8. **Update both files** - When editing snippets, update `.cs` AND verify `.md` after mdsnippets
+9. **Use StartSnippetOutput** - Makes output parseable and easier to match with docs
 
 ## Troubleshooting
 
