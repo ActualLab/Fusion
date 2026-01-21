@@ -229,9 +229,34 @@ When a call executes locally with `RpcRouteState`:
 
 ### Default Modes
 
-- **Distributed services**: Default to `Constrained`
-- **Distributed compute services**: Default to `ConstrainedEntry` (computed values are cached, so late reroutes just discard the local result)
-- **Non-distributed services**: Default to `Unconstrained`
+The default mode depends on both the **service mode** and **method type**:
+
+| Service Mode | Method Type | Default Mode | Rationale |
+|--------------|-------------|--------------|-----------|
+| `Distributed` | Regular methods | `Constrained` | Commands may have side effects; must abort if route changes |
+| `Distributed` | Compute methods | `ConstrainedEntry` | Read-only; safe to complete locally even if route changes |
+| Non-distributed | Any | `Unconstrained` | No rerouting concerns |
+
+**Why compute methods use `ConstrainedEntry`:**
+
+Compute methods (methods returning `Task<T>` on `IComputeService`) are read-only operations that produce cached computed values. If a compute method starts executing locally and the route changes mid-execution:
+- The client (i.e., another server that requests the value) will notice the change in topology and terminate the peer responsible for the call, which triggers rerouting of all its open calls and invalidation of compute method calls awaiting invalidation.
+- So at worst, a redundant computation occurs on the "wrong" (old) server.
+
+Using `Constrained` would unnecessarily cancel the computation, which isn't much better than a subsequent rerouting.
+
+**Why regular distributed methods use `Constrained`:**
+
+Regular methods on distributed services often perform commands with side effects (database writes, state mutations). If a route changes mid-execution:
+- The operation might complete on a server no longer responsible for the data
+- This could cause inconsistencies in a sharded system
+- Aborting and rerouting ensures the correct server handles the operation
+
+**Resolution order:**
+
+1. Method-level `[RpcMethod(LocalExecutionMode = ...)]` attribute
+2. Service-level configuration via `HasLocalExecutionMode()`
+3. Auto-default based on service mode and method type
 
 ### Configuration
 
