@@ -1,7 +1,7 @@
 using static System.Console;
 
 // ReSharper disable once CheckNamespace
-namespace TutorialFSS;
+namespace TutorialFMM;
 
 #region PartFSS_Service1
 public partial class Service1 : IComputeService
@@ -53,7 +53,7 @@ public partial class Service3 : IComputeService
 }
 #endregion
 
-public static class PartFSS
+public static class PartFMM
 {
     public static IServiceProvider CreateServices()
     {
