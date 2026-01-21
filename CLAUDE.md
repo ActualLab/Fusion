@@ -60,17 +60,11 @@ Build artifacts are stored in `artifacts/claude-docker/` to avoid permission con
 
 **Infrastructure services**: When running in Docker, assume that all services defined in `docker-compose.yml` (PostgreSQL, Redis, NATS, nginx, etc.) are already running on the host. Do not attempt to start them yourself - they are managed externally and accessible from the container.
 
-**Host service connectivity (ActualChat only)**: When running ActualChat in Docker with port mapping, the container has hostname aliases for accessing host services:
-- `redis` → host Redis (port 6379)
-- `postgres` → host PostgreSQL (port 5432)
-- `nats` → host NATS (port 4222)
-- `host.docker.internal` → host machine
+**Host service connectivity**: The Docker container uses `--network host` mode, so `localhost` inside the container directly refers to the host. This means you can connect to host services (Redis, PostgreSQL, NATS, etc.) using `localhost:port` just like on the host.
 
-Note: `localhost` inside Docker refers to the container itself, NOT the host. Use the service hostnames above to connect to host services.
+**Running integration tests**: Tests detect Claude's Docker environment via `AC_OS="Linux in Docker"` and use regular localhost-based configuration (not `testsettings.docker.json`). This works because `--network host` makes localhost = host.
 
-Other projects (ActualLab.Fusion, ActualLab.Fusion.Samples) use `--network host` mode where `localhost` directly refers to the host, so no aliases are needed.
-
-**Running integration tests**: Integration tests require the `testsettings.docker.json` configuration which uses the service hostnames (`redis`, `postgres`) instead of `localhost`. The test framework should auto-detect this, but if tests fail to connect, verify the settings are being used.
+**Running the server**: Do not run the ActualChat server from Docker. Use `/server-start` on the host OS instead (`c os` mode). The Docker environment is intended for building, testing, and code exploration only.
 
 **Propagated environment variables**: The following environment variables are automatically propagated from the host to the Docker container:
 - Variables containing `__` in their names (e.g., `ChatSettings__OpenAIApiKey` for .NET configuration)
@@ -80,8 +74,6 @@ Other projects (ActualLab.Fusion, ActualLab.Fusion.Samples) use `--network host`
 - `ActualChat_*` - Any variables prefixed with `ActualChat_`
 
 **Google Cloud credentials**: The `~/.gcp` folder is mounted read-only to `/home/claude/.gcp`. If `GOOGLE_APPLICATION_CREDENTIALS` is set on the host, it's automatically remapped to `/home/claude/.gcp/key.json` inside the container.
-
-**Server binding**: `ASPNETCORE_URLS` is set to `http://0.0.0.0:7080` so that the server binds to all interfaces, allowing nginx (via `host-gateway`) to reach it.
 
 ## Project Paths by Environment
 

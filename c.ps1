@@ -651,29 +651,14 @@ switch ($mode) {
             $propagatedEnvVars += "GOOGLE_APPLICATION_CREDENTIALS=/home/claude/.gcp/key.json"
         }
 
-        # Check if port 7080 is available (for ActualChat server port mapping)
-        $port7080Available = $false
-        if ($projectName -eq "ActualChat") {
-            try {
-                $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 7080)
-                $listener.Start()
-                $listener.Stop()
-                $port7080Available = $true
-            } catch {
-                # Port is in use
-                $port7080Available = $false
-            }
-        }
-
         # Build docker run command - run this script with "os" argument inside container
+        # Uses --network host so localhost inside container = host's localhost
+        # This allows tests to connect to services (redis, postgres, nats) on host
+        # AC_InClaudeDocker tells tests not to use docker-specific config
         $dockerArgs = @(
             "run", "-it", "--rm"
+            "--network", "host"
         )
-
-        # Add port mapping for ActualChat if port 7080 is available
-        if ($projectName -eq "ActualChat" -and $port7080Available) {
-            $dockerArgs += @("-p", "7080:7080")
-        }
 
         $dockerArgs += $volumeMounts + @(
             "-e", "ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY"
@@ -681,26 +666,7 @@ switch ($mode) {
             "-e", "AC_ProjectRoot=/proj"
         ) + $projectEnvVars + $propagatedEnvVars
 
-        # Use host network only when NOT using port publishing (they're mutually exclusive)
-        # When using port publishing, add host aliases so the container can access
-        # docker-compose services (postgres, redis, nats, etc.) running on the host.
-        # NOTE: --add-host localhost:host-gateway does NOT work because /etc/hosts
-        # already has "127.0.0.1 localhost" which takes precedence. Instead, we add
-        # service-specific hostnames that map to host-gateway.
-        if ($port7080Available) {
-            $dockerArgs += @(
-                "--add-host", "host.docker.internal:host-gateway"
-                "--add-host", "redis:host-gateway"
-                "--add-host", "postgres:host-gateway"
-                "--add-host", "nats:host-gateway"
-            )
-        } else {
-            $dockerArgs += @("--network", "host")
-        }
-
         $dockerArgs += @(
-            # Bind to all interfaces so nginx (via host-gateway or port mapping) can reach the server
-            "-e", "ASPNETCORE_URLS=http://0.0.0.0:7080"
             "-w", $dockerWorkDir
             $containerName
             "pwsh", $dockerScriptPath
