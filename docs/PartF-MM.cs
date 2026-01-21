@@ -1,3 +1,5 @@
+using ActualLab.Fusion.Blazor;
+using Microsoft.AspNetCore.Components;
 using static System.Console;
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
@@ -161,3 +163,30 @@ public class PartFMM : DocPart
         await Caching5();
     }
 }
+
+// ============================================================================
+// PartF-MM.md snippets: Multi-Materialization examples
+// ============================================================================
+
+// Dummy types for Blazor example
+public record OrderMM;
+public interface IOrderServiceMM
+{
+    Task<OrderMM> Get(long orderId, CancellationToken ct);
+}
+
+#region PartFMM_BlazorComponentLifecycle
+public class OrderDetailsComponent : ComputedStateComponent<OrderMM>
+{
+    [Inject] public IOrderServiceMM OrderService { get; set; } = null!;
+    [Parameter] public long OrderId { get; set; }
+
+    protected override async Task<OrderMM> ComputeState(CancellationToken ct)
+    {
+        // This creates/uses Computed<Order> which depends on:
+        // - Computed<User> (for the order's customer)
+        // - Computed<List<OrderItem>> (for the order's items)
+        return await OrderService.Get(OrderId, ct);
+    }
+}
+#endregion

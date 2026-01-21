@@ -224,10 +224,7 @@ public class PartO : DocPart
 
 // Example: Command with operation items pattern
 #region PartO_SignOutCommand
-public record SignOutCommand(Session Session, bool Force = false) : ICommand<Unit>
-{
-    public SignOutCommand() : this(default!) { }
-}
+public record SignOutCommand(Session Session, bool Force = false) : ICommand<Unit>;
 #endregion
 
 // Example: Service demonstrating operation items usage

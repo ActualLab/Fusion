@@ -453,12 +453,14 @@ ActualLab.Rpc provides additional features beyond standard request-response call
 
 Use `Task<RpcNoWait>` for calls where you don't need to wait for a response:
 
+<!-- snippet: PartR_RpcNoWaitInterface -->
 ```cs
 public interface ISimpleService : IRpcService
 {
     Task<RpcNoWait> Ping(string message);
 }
 ```
+<!-- endSnippet -->
 
 RpcNoWait also enables **reverse RPC** &ndash; the server calling methods on the client.
 See [RpcNoWait Guide](PartR-RpcNoWait.md) for details.
@@ -467,8 +469,9 @@ See [RpcNoWait Guide](PartR-RpcNoWait.md) for details.
 
 Use `RpcStream<T>` for streaming data in either direction:
 
+<!-- snippet: PartR_RpcStreamInterface -->
 ```cs
-public interface ISimpleService : IRpcService
+public interface IStreamingService : IRpcService
 {
     // Server streams data to client
     Task<RpcStream<Item>> GetItems(CancellationToken cancellationToken = default);
@@ -476,7 +479,10 @@ public interface ISimpleService : IRpcService
     // Client streams data to server
     Task<int> Sum(RpcStream<int> stream, CancellationToken cancellationToken = default);
 }
+
+public record Item(int Id, string Name);
 ```
+<!-- endSnippet -->
 
 RpcStream supports nesting &ndash; streams can contain records with their own streams.
 See [RpcStream Guide](PartR-RpcStream.md) for details.

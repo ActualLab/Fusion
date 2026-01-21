@@ -383,7 +383,7 @@ Besides that, you need to add a couple extras to your ASP.NET Core app service c
 
 <!-- snippet: PartAA_ServiceConfiguration -->
 ```cs
-public static void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
+public void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
     var fusion = services.AddFusion();
     var fusionServer = fusion.AddWebServer();
@@ -442,7 +442,7 @@ And finally, you need a bit of extras in app configuration:
 
 <!-- snippet: PartAA_AppConfiguration -->
 ```cs
-public static void ConfigureApp(WebApplication app)
+public void ConfigureApp(WebApplication app)
 {
     app.UseWebSockets(new WebSocketOptions() {
         KeepAliveInterval = TimeSpan.FromSeconds(30),

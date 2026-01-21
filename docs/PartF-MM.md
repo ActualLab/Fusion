@@ -232,12 +232,14 @@ The process:
 
 ### Example: Blazor Component Lifecycle
 
-```csharp
-public class OrderDetailsComponent : ComputedStateComponent<Order>
+<!-- snippet: PartFMM_BlazorComponentLifecycle -->
+```cs
+public class OrderDetailsComponent : ComputedStateComponent<OrderMM>
 {
+    [Inject] public IOrderServiceMM OrderService { get; set; } = null!;
     [Parameter] public long OrderId { get; set; }
 
-    protected override async Task<Order> ComputeState(CancellationToken ct)
+    protected override async Task<OrderMM> ComputeState(CancellationToken ct)
     {
         // This creates/uses Computed<Order> which depends on:
         // - Computed<User> (for the order's customer)
@@ -246,6 +248,7 @@ public class OrderDetailsComponent : ComputedStateComponent<Order>
     }
 }
 ```
+<!-- endSnippet -->
 
 When the user navigates away:
 

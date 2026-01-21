@@ -276,3 +276,23 @@ public class PartR : DocPart
         #endregion
     }
 }
+
+#region PartR_RpcNoWaitInterface
+public interface ISimpleService : IRpcService
+{
+    Task<RpcNoWait> Ping(string message);
+}
+#endregion
+
+#region PartR_RpcStreamInterface
+public interface IStreamingService : IRpcService
+{
+    // Server streams data to client
+    Task<RpcStream<Item>> GetItems(CancellationToken cancellationToken = default);
+
+    // Client streams data to server
+    Task<int> Sum(RpcStream<int> stream, CancellationToken cancellationToken = default);
+}
+
+public record Item(int Id, string Name);
+#endregion

@@ -104,7 +104,8 @@ If you have a `Computed<T>` instance, you can do this directly.
 But if it's about invalidating a value that corresponds to a certain compute method call,
 you can also do this by making this call inside `using (Invalidation.Begin()) { ... }` block:
 
-```csharp
+<!-- snippet: PartF_Invalidation_Semantics -->
+```cs
 using (Invalidation.Begin())  {
     // Any call to a compute method here:
     // - Won't execute the body of the compute method
@@ -112,6 +113,7 @@ using (Invalidation.Begin())  {
     // - Will invalidate the cached Computed<T> instance (if it exists) corresponding to the call
 }
 ```
+<!-- endSnippet -->
 
 And if you look at the code of the `CounterService.Increment` method, that's exactly what happens
 there to invalidate the `Get(key)` call on every increment.
@@ -355,7 +357,7 @@ Let's play with `MutableState<int>`:
 
 <!-- snippet: PartF_MutableState -->
 ```cs
-var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
+var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<StateFactory>()
 var state = stateFactory.NewMutable(1);
 var oldComputed = state.Computed;
 

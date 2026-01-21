@@ -12,10 +12,12 @@ Every compute method uses `ComputedOptions` to control:
 
 You configure these options via the `[ComputeMethod]` attribute:
 
-```csharp
+<!-- snippet: PartFCO_BasicAttribute -->
+```cs
 [ComputeMethod(MinCacheDuration = 10, AutoInvalidationDelay = 60)]
-public virtual async Task<UserProfile> GetProfile(string userId) { ... }
+Task<UserProfile> GetProfile(string userId);
 ```
+<!-- endSnippet -->
 
 ## How Values Are Interpreted
 
@@ -30,14 +32,19 @@ All `[ComputeMethod]` properties are `double` values representing seconds. They 
 
 All attribute properties default to `double.NaN`, so omitting an option means "use the global default":
 
-```csharp
+<!-- snippet: PartFCO_DefaultAndInfinite -->
+```cs
 // These are equivalent:
 [ComputeMethod(MinCacheDuration = double.NaN)]
+Task<Data> GetData1();
 [ComputeMethod] // MinCacheDuration not specified = use default
+Task<Data> GetData2();
 
 // Explicitly disable auto-invalidation:
 [ComputeMethod(AutoInvalidationDelay = double.PositiveInfinity)]
+Task<Data> GetData3();
 ```
+<!-- endSnippet -->
 
 ## Option Reference
 
@@ -48,10 +55,12 @@ All attribute properties default to `double.NaN`, so omitting an option means "u
 
 Minimum time a `Computed<T>` instance stays in RAM via a strong reference.
 
-```csharp
+<!-- snippet: PartFCO_MinCacheDuration -->
+```cs
 [ComputeMethod(MinCacheDuration = 60)] // Keep in memory for at least 60 seconds
-public virtual async Task<User> Get(string id) { ... }
+Task<User> Get(string id);
 ```
+<!-- endSnippet -->
 
 **How it works:**
 - When a computed value is created, Fusion holds a strong reference to it for this duration
@@ -70,10 +79,12 @@ public virtual async Task<User> Get(string id) { ... }
 
 Auto-invalidation delay for computed values that store a transient error (e.g., network failures).
 
-```csharp
+<!-- snippet: PartFCO_TransientErrorDelay -->
+```cs
 [ComputeMethod(TransientErrorInvalidationDelay = 5)] // Retry after 5 seconds
-public virtual async Task<Data> FetchFromExternalApi() { ... }
+Task<Data> FetchFromExternalApi();
 ```
+<!-- endSnippet -->
 
 **How it works:**
 - If a compute method throws a transient exception, the error is cached
@@ -92,10 +103,12 @@ public virtual async Task<Data> FetchFromExternalApi() { ... }
 
 Time after which a computed value automatically invalidates itself.
 
-```csharp
+<!-- snippet: PartFCO_AutoInvalidationDelay -->
+```cs
 [ComputeMethod(AutoInvalidationDelay = 30)] // Auto-refresh every 30 seconds
-public virtual async Task<DateTime> GetServerTime() { ... }
+Task<DateTime> GetServerTime();
 ```
+<!-- endSnippet -->
 
 **How it works:**
 - The computed value schedules its own invalidation after this delay
@@ -115,10 +128,12 @@ public virtual async Task<DateTime> GetServerTime() { ... }
 
 Delay before invalidation actually takes effect.
 
-```csharp
+<!-- snippet: PartFCO_InvalidationDelay -->
+```cs
 [ComputeMethod(InvalidationDelay = 0.5)] // Debounce invalidations by 500ms
-public virtual async Task<Summary> GetSummary() { ... }
+Task<Summary> GetSummary();
 ```
+<!-- endSnippet -->
 
 **How it works:**
 - When `Invalidate()` is called, the actual invalidation is postponed
@@ -137,13 +152,15 @@ public virtual async Task<Summary> GetSummary() { ... }
 
 Eliminates "false" invalidations by only invalidating when the computed value actually changes.
 
-```csharp
+<!-- snippet: PartFCO_ConsolidationDelay -->
+```cs
 [ComputeMethod(ConsolidationDelay = 0)] // Invalidate only when value changes
-public virtual async Task<int> GetUnreadCount(string placeId) { ... }
+Task<int> GetUnreadCount(string placeId);
 
 [ComputeMethod(ConsolidationDelay = 0.5)] // Wait 500ms before checking for value changes
-public virtual async Task<Summary> GetSummary() { ... }
+Task<Summary> GetSummary();
 ```
+<!-- endSnippet -->
 
 **How it works:**
 When ConsolidationDelay is zero or positive, Fusion backs the method with two computed instances:
@@ -174,25 +191,27 @@ With ConsolidationDelay, the counter only invalidates when its value actually ch
 
 Options can be combined for sophisticated caching strategies:
 
-```csharp
+<!-- snippet: PartFCO_CombiningOptions -->
+```cs
 // Long-lived cache with automatic refresh
 [ComputeMethod(
     MinCacheDuration = 300,        // Keep in memory 5 minutes
     AutoInvalidationDelay = 60)]   // But refresh every minute
-public virtual async Task<Stats> GetDashboardStats() { ... }
+Task<Stats> GetDashboardStats();
 
 // Resilient external call with debouncing
 [ComputeMethod(
     TransientErrorInvalidationDelay = 10,  // Retry errors after 10s
     InvalidationDelay = 1)]                 // Debounce updates by 1s
-public virtual async Task<Price> GetExternalPrice(string symbol) { ... }
+Task<Price> GetExternalPrice(string symbol);
 
 // Aggregation that should only invalidate when value changes
 [ComputeMethod(
     MinCacheDuration = 60,
     ConsolidationDelay = 0)]      // Invalidate only on actual value change
-public virtual async Task<int> GetTotalUnreadCount() { ... }
+Task<int> GetTotalUnreadCount();
 ```
+<!-- endSnippet -->
 
 ## Default Values
 
@@ -208,23 +227,24 @@ Fusion provides different defaults for server-side and client-side (remote) comp
 
 You can change global defaults by modifying `ComputedOptions.Default` and `ComputedOptions.ClientDefault` at startup:
 
-```csharp
+<!-- snippet: PartFCO_ChangingDefaults -->
+```cs
 ComputedOptions.Default = ComputedOptions.Default with {
     MinCacheDuration = TimeSpan.FromSeconds(30),
 };
 ```
+<!-- endSnippet -->
 
 ## Remote Compute Methods
 
 For distributed scenarios, use `[RemoteComputeMethod]` which extends `[ComputeMethod]` with caching options:
 
-```csharp
-public interface IProductService : IComputeService
-{
-    [RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.Cache)]
-    Task<Product> Get(string id);
-}
+<!-- snippet: PartFCO_RemoteComputeMethod -->
+```cs
+[RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.Cache)]
+Task<Product> Get(string id);
 ```
+<!-- endSnippet -->
 
 **RemoteComputedCacheMode values:**
 - `Default` — inherit from `ComputedOptions.ClientDefault`

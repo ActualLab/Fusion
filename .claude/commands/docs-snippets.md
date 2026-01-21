@@ -334,7 +334,67 @@ The `mdsnippets.json` file in `docs/` configures the tool:
 
 ## Best Practices
 
-1. **ALL C# code must be in snippets** - Never write C# code directly in `.md` files. Every C# code block must come from a snippet in a `.cs` file. This ensures:
+1. **Snippets must match original code** - When converting inline code from `.md` files to snippets, keep the code as close to the original as possible. Don't comment out lines or dramatically change the code structure.
+
+   **If code references undefined methods/types:**
+   - **DO:** Add fake/stub methods or types to make the snippet compile
+   - **DON'T:** Comment out the code that references them
+
+   ```cs
+   // BAD - commented out code changes the example
+   #region PartF_Invalidation
+   using (Invalidation.Begin()) {
+       // _ = GetOrders(cartId, default);  // <-- Don't do this!
+   }
+   #endregion
+
+   // GOOD - add a stub method to make it compile
+   // Stub for snippet
+   Task<Order[]> GetOrders(long cartId, CancellationToken ct) => Task.FromResult(Array.Empty<Order>());
+
+   #region PartF_Invalidation
+   using (Invalidation.Begin()) {
+       _ = GetOrders(cartId, default);  // <-- Original code preserved
+   }
+   #endregion
+   ```
+
+2. **Handle duplicate variables with numbered names** - When the original code has multiple lines declaring the same variable name (which won't compile), use numbered suffixes consistently:
+
+   ```cs
+   // Original (won't compile - duplicate 'value'):
+   // var value = await computed.Use(ct);
+   // var value = await computed.Use(allowInconsistent: true, ct);
+
+   // GOOD - use numbered suffixes:
+   var value1 = await computed.Use(ct);
+   var value2 = await computed.Use(allowInconsistent: true, ct);
+   ```
+
+   For blocks of similar function calls or property accesses, use short numbered variables:
+
+   ```cs
+   // GOOD - consistent numbering for API showcase:
+   var d1 = FixedDelayer.Get(1);    // 1 second delay
+   var d2 = FixedDelayer.Get(0.5);  // 500ms delay
+   var d3 = FixedDelayer.NextTick;  // ~16ms delay
+   var d4 = FixedDelayer.MinDelay;  // Minimum safe delay (32ms)
+   ```
+
+3. **Short code (1-2 lines) doesn't need snippets** - For very short code examples (up to 2 lines), keep them as regular code blocks in the `.md` file. Snippets add overhead and are not worth it for trivial examples.
+
+   ```md
+   <!-- Keep as regular code block -->
+   ```cs
+   computed.Invalidate();
+   ```
+
+   <!-- Use snippet for longer code -->
+   <!-- snippet: PartF_ComplexExample -->
+   <!-- endSnippet -->
+   ```
+
+4. **ALL C# code (3+ lines) must be in snippets** - Never write C# code directly in `.md` files. Every C# code block must come from a snippet in a `.cs` file. This ensures:
    - Code is compiled and validated
    - Code stays in sync with actual implementations
    - No stale or broken examples in documentation
@@ -346,7 +406,7 @@ The `mdsnippets.json` file in `docs/` configures the tool:
    - Shell commands / PowerShell
    - Pseudo-code or conceptual examples marked as such
 
-2. **Keep snippets COMPACT** - Snippets should contain only the essential code the reader needs to see. **Do NOT wrap code in unnecessary classes or methods just to satisfy C# syntax requirements.**
+5. **Keep snippets COMPACT** - Snippets should contain only the essential code the reader needs to see. **Do NOT wrap code in unnecessary classes or methods just to satisfy C# syntax requirements.**
 
    **BAD - unnecessary wrapper class:**
    ```cs
@@ -383,18 +443,18 @@ The `mdsnippets.json` file in `docs/` configures the tool:
    - The class exists solely because C# requires code to be in a class
    - The wrapper adds no educational value for the reader
 
-3. **Process ALL Part files including subparts** - Documentation is split into:
+6. **Process ALL Part files including subparts** - Documentation is split into:
    - Main parts: `PartF.md`, `PartC.md`, `PartR.md`, etc.
    - Subparts: `PartF-MM.md`, `PartC-CI.md`, `PartO-EV.md`, `PartAA-DB.md`, etc.
 
    When extracting inline code to snippets, scan **both** main parts and subparts (all `Part*.md` and `Part*-*.md` files).
 
-4. **Keep snippets focused** - Each snippet should demonstrate one concept
-5. **Use descriptive names** - `PartF_Automatic_Caching` not `PartF_Snippet1`
-6. **Match documentation flow** - Snippets should appear in logical order in Run()
-7. **Test before committing** - Always run `dotnet build Docs.csproj` and test the part
-8. **Update both files** - When editing snippets, update `.cs` AND verify `.md` after mdsnippets
-9. **Use StartSnippetOutput** - Makes output parseable and easier to match with docs
+7. **Keep snippets focused** - Each snippet should demonstrate one concept
+8. **Use descriptive names** - `PartF_Automatic_Caching` not `PartF_Snippet1`
+9. **Match documentation flow** - Snippets should appear in logical order in Run()
+10. **Test before committing** - Always run `dotnet build Docs.csproj` and test the part
+11. **Update both files** - When editing snippets, update `.cs` AND verify `.md` after mdsnippets
+12. **Use StartSnippetOutput** - Makes output parseable and easier to match with docs
 
 ## Troubleshooting
 

@@ -42,6 +42,405 @@ public class CounterService : IComputeService // This is a tagging interface any
 }
 #endregion
 
+// Helper class to hold snippet that shows invalidation semantics
+public static class InvalidationSemanticsDemo
+{
+    public static void Example()
+    {
+        #region PartF_Invalidation_Semantics
+        using (Invalidation.Begin())  {
+            // Any call to a compute method here:
+            // - Won't execute the body of the compute method
+            // - Will complete synchronously by returning a completed (Value)Task<T> with Result = default(T)
+            // - Will invalidate the cached Computed<T> instance (if it exists) corresponding to the call
+        }
+        #endregion
+    }
+}
+
+// ============================================================================
+// PartF-CO.md snippets: ComputedOptions configuration examples
+// ============================================================================
+
+// Dummy types for snippet compilation
+public record UserProfile;
+public record User;
+public record Data;
+public record Stats;
+public record Price;
+public record Summary;
+public record Product;
+
+public interface IPartFCO_BasicAttribute : IComputeService
+{
+    #region PartFCO_BasicAttribute
+    [ComputeMethod(MinCacheDuration = 10, AutoInvalidationDelay = 60)]
+    Task<UserProfile> GetProfile(string userId);
+    #endregion
+}
+
+public interface IPartFCO_DefaultAndInfinite : IComputeService
+{
+    #region PartFCO_DefaultAndInfinite
+    // These are equivalent:
+    [ComputeMethod(MinCacheDuration = double.NaN)]
+    Task<Data> GetData1();
+    [ComputeMethod] // MinCacheDuration not specified = use default
+    Task<Data> GetData2();
+
+    // Explicitly disable auto-invalidation:
+    [ComputeMethod(AutoInvalidationDelay = double.PositiveInfinity)]
+    Task<Data> GetData3();
+    #endregion
+}
+
+public interface IPartFCO_MinCacheDuration : IComputeService
+{
+    #region PartFCO_MinCacheDuration
+    [ComputeMethod(MinCacheDuration = 60)] // Keep in memory for at least 60 seconds
+    Task<User> Get(string id);
+    #endregion
+}
+
+public interface IPartFCO_TransientErrorDelay : IComputeService
+{
+    #region PartFCO_TransientErrorDelay
+    [ComputeMethod(TransientErrorInvalidationDelay = 5)] // Retry after 5 seconds
+    Task<Data> FetchFromExternalApi();
+    #endregion
+}
+
+public interface IPartFCO_AutoInvalidationDelay : IComputeService
+{
+    #region PartFCO_AutoInvalidationDelay
+    [ComputeMethod(AutoInvalidationDelay = 30)] // Auto-refresh every 30 seconds
+    Task<DateTime> GetServerTime();
+    #endregion
+}
+
+public interface IPartFCO_InvalidationDelay : IComputeService
+{
+    #region PartFCO_InvalidationDelay
+    [ComputeMethod(InvalidationDelay = 0.5)] // Debounce invalidations by 500ms
+    Task<Summary> GetSummary();
+    #endregion
+}
+
+public interface IPartFCO_ConsolidationDelay : IComputeService
+{
+    #region PartFCO_ConsolidationDelay
+    [ComputeMethod(ConsolidationDelay = 0)] // Invalidate only when value changes
+    Task<int> GetUnreadCount(string placeId);
+
+    [ComputeMethod(ConsolidationDelay = 0.5)] // Wait 500ms before checking for value changes
+    Task<Summary> GetSummary();
+    #endregion
+}
+
+public interface IPartFCO_CombiningOptions : IComputeService
+{
+    #region PartFCO_CombiningOptions
+    // Long-lived cache with automatic refresh
+    [ComputeMethod(
+        MinCacheDuration = 300,        // Keep in memory 5 minutes
+        AutoInvalidationDelay = 60)]   // But refresh every minute
+    Task<Stats> GetDashboardStats();
+
+    // Resilient external call with debouncing
+    [ComputeMethod(
+        TransientErrorInvalidationDelay = 10,  // Retry errors after 10s
+        InvalidationDelay = 1)]                 // Debounce updates by 1s
+    Task<Price> GetExternalPrice(string symbol);
+
+    // Aggregation that should only invalidate when value changes
+    [ComputeMethod(
+        MinCacheDuration = 60,
+        ConsolidationDelay = 0)]      // Invalidate only on actual value change
+    Task<int> GetTotalUnreadCount();
+    #endregion
+}
+
+public static class PartFCO_ChangingDefaultsDemo
+{
+    public static void Example()
+    {
+        #region PartFCO_ChangingDefaults
+        ComputedOptions.Default = ComputedOptions.Default with {
+            MinCacheDuration = TimeSpan.FromSeconds(30),
+        };
+        #endregion
+    }
+}
+
+public interface IPartFCO_RemoteComputeMethod : IComputeService
+{
+    #region PartFCO_RemoteComputeMethod
+    [RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.Cache)]
+    Task<Product> Get(string id);
+    #endregion
+}
+
+// ============================================================================
+// PartF-CS.md snippets: Cheat Sheet examples
+// ============================================================================
+
+// Dummy types for cheat sheet snippets
+public record Order;
+
+#region PartFCS_Interface
+public interface ICartService : IComputeService
+{
+    [ComputeMethod]
+    Task<List<Order>> GetOrders(long cartId, CancellationToken cancellationToken = default);
+}
+#endregion
+
+#region PartFCS_Implementation
+public class CartService : ICartService
+{
+    // Must be virtual + return Task<T>
+    [ComputeMethod]
+    public virtual async Task<List<Order>> GetOrders(long cartId, CancellationToken cancellationToken)
+    {
+        // Implementation
+        return new List<Order>();
+    }
+}
+#endregion
+
+// Extended service interface with all methods needed by snippets
+public interface ICheatSheetService : IComputeService
+{
+    [ComputeMethod] Task<Data> GetData(long id, CancellationToken cancellationToken = default);
+    [ComputeMethod] Task<Data> GetData(CancellationToken cancellationToken = default);
+    [ComputeMethod] Task<string> GetValue(long id, CancellationToken cancellationToken = default);
+    [ComputeMethod] Task<int> GetCount(long id, CancellationToken cancellationToken = default);
+}
+
+public class AllOptionsExample : IComputeService
+{
+    #region PartFCS_AllOptions
+    [ComputeMethod(
+        MinCacheDuration = 60,              // Keep in memory for 60 seconds
+        AutoInvalidationDelay = 300,        // Auto-refresh every 5 minutes
+        TransientErrorInvalidationDelay = 5, // Retry errors after 5 seconds
+        InvalidationDelay = 0.5,            // Debounce invalidations by 500ms
+        ConsolidationDelay = 0)]            // Invalidate only when value changes
+    public virtual async Task<Data> GetData() { return default!; }
+    #endregion
+}
+
+public static class PartFCS_Snippets
+{
+    public static void ConfigurationSnippets(IServiceCollection services)
+    {
+        #region PartFCS_RegisterServices
+        var fusion = services.AddFusion();
+        fusion.AddService<ICartService, CartService>();
+        // or: fusion.AddComputeService<CartService>();
+        #endregion
+    }
+
+    public static void ChangeDefaults()
+    {
+        #region PartFCS_ChangeDefaults
+        ComputedOptions.Default = ComputedOptions.Default with {
+            MinCacheDuration = TimeSpan.FromSeconds(30),
+        };
+        #endregion
+    }
+
+    public static void ConfigureTracking()
+    {
+        #region PartFCS_ConfigureTracking
+        Invalidation.TrackingMode = InvalidationTrackingMode.WholeChain;
+        #endregion
+    }
+
+    public static void InvalidationSnippets(ICartService service, long cartId)
+    {
+        #region PartFCS_InvalidationBlock
+        using (Invalidation.Begin()) {
+            _ = service.GetOrders(cartId, default);
+        }
+        #endregion
+    }
+
+    public static void InvalidateComputed(Computed<Data> computed)
+    {
+        #region PartFCS_InvalidateComputed
+        computed.Invalidate();
+        computed.Invalidate(TimeSpan.FromSeconds(30));  // Delayed
+        computed.Invalidate(new InvalidationSource("reason"));  // With source
+        #endregion
+    }
+
+    public static async Task CaptureSnippets(ICheatSheetService service, long id, CancellationToken cancellationToken)
+    {
+        #region PartFCS_Capture
+        var computed1 = await Computed.Capture(() => service.GetData(id, cancellationToken));
+        var computed2 = await Computed.TryCapture(() => service.GetData(id, default));  // Returns null on failure
+        #endregion
+    }
+
+    public static void GetExistingSnippet(ICheatSheetService service, long id)
+    {
+        #region PartFCS_GetExisting
+        var existing = Computed.GetExisting(() => service.GetData(id, default));
+        #endregion
+    }
+
+    public static void GetCurrentSnippet()
+    {
+        #region PartFCS_GetCurrent
+        var computed = Computed.GetCurrent();
+        var computedTyped = Computed.GetCurrent<Data>();  // Typed, throws if null
+        #endregion
+    }
+
+    public static void CheckConsistency(Computed<Data> computed)
+    {
+        #region PartFCS_CheckConsistency
+        if (computed.IsConsistent()) { /* ... */ }
+        if (computed.IsInvalidated()) { /* ... */ }
+        #endregion
+    }
+
+    public static async Task UpdateSnippet(Computed<Data> computed, CancellationToken cancellationToken)
+    {
+        #region PartFCS_Update
+        var newComputed = await computed.Update(cancellationToken);
+        #endregion
+    }
+
+    public static async Task UseSnippet(Computed<Data> computed, CancellationToken cancellationToken)
+    {
+        #region PartFCS_Use
+        Data value1 = await computed.Use(cancellationToken);
+        Data value2 = await computed.Use(allowInconsistent: true, cancellationToken);  // Allow stale
+        #endregion
+    }
+
+    public static async Task WhenInvalidatedSnippet(Computed<Data> computed, CancellationToken cancellationToken)
+    {
+        #region PartFCS_WhenInvalidated
+        await computed.WhenInvalidated(cancellationToken);
+        computed.Invalidated += c => Console.WriteLine("Invalidated!");
+        #endregion
+    }
+
+    public static async Task WhenSnippet(ICheatSheetService service, long id, CancellationToken cancellationToken)
+    {
+        #region PartFCS_When
+        var computed = await Computed.Capture(() => service.GetCount(id, cancellationToken));
+        computed = await computed.When(count => count >= 10, cancellationToken);
+        #endregion
+    }
+
+    public static async Task ChangesSnippet(ICheatSheetService service, long id, CancellationToken cancellationToken)
+    {
+        #region PartFCS_Changes
+        var computed = await Computed.Capture(() => service.GetValue(id, cancellationToken));
+        await foreach (var c in computed.Changes(cancellationToken)) {
+            Console.WriteLine($"New value: {c.Value}");
+        }
+        #endregion
+    }
+
+    public static void DeconstructSnippet(Computed<Data> computed)
+    {
+        #region PartFCS_Deconstruct
+        var (value, error) = computed;
+        #endregion
+    }
+
+    public static void IsolationSnippet()
+    {
+        #region PartFCS_Isolation
+        using (Computed.BeginIsolation()) {
+            // Calls here won't register as dependencies
+        }
+        #endregion
+    }
+
+    public static async Task RegistrySnippets()
+    {
+        #region PartFCS_Registry
+        ComputedRegistry.InvalidateEverything();  // Useful for tests
+        await ComputedRegistry.Prune();           // Force prune dead entries
+        #endregion
+    }
+
+    public static void StateFactorySnippet(IServiceProvider services)
+    {
+        #region PartFCS_StateFactory
+        var stateFactory = services.StateFactory();
+        // or: StateFactory.Default (for tests)
+        #endregion
+    }
+
+    public static async Task MutableStateSnippet(StateFactory stateFactory, CancellationToken cancellationToken)
+    {
+        #region PartFCS_MutableState
+        var state = stateFactory.NewMutable<int>(initialValue: 0);
+
+        state.Set(42);           // Set value
+        state.Value = 42;        // Same as above
+        var value1 = state.Value; // Read value
+        var value2 = await state.Use(cancellationToken); // Use in compute methods
+        #endregion
+    }
+
+    public static async Task ComputedStateSnippet(StateFactory stateFactory, ICheatSheetService service)
+    {
+        #region PartFCS_ComputedState
+        using var computedState = stateFactory.NewComputed(
+            new ComputedState<string>.Options() {
+                InitialValue = "",
+                UpdateDelayer = FixedDelayer.Get(1), // 1 second delay
+                EventConfigurator = state => {
+                    state.Updated += (s, _) => Console.WriteLine($"Updated: {s.Value}");
+                },
+            },
+            async (state, cancellationToken) => {
+                var data = await service.GetData(cancellationToken);
+                return data.ToString()!;
+            });
+
+        await computedState.Update(); // Wait for first computation
+        var value = computedState.Value;
+        #endregion
+    }
+
+    public static void StatePropertiesSnippet(MutableState<Data> state)
+    {
+        #region PartFCS_StateProperties
+        var computed = state.Computed;           // Current Computed<T>
+        var snapshot = state.Snapshot;           // Immutable snapshot
+        var lastGood = state.LastNonErrorValue;  // Last value before error
+        #endregion
+    }
+
+    public static void DelayersSnippet()
+    {
+        #region PartFCS_Delayers
+        var d1 = FixedDelayer.Get(1);    // 1 second delay
+        var d2 = FixedDelayer.Get(0.5);  // 500ms delay
+        var d3 = FixedDelayer.NextTick;  // ~16ms delay
+        var d4 = FixedDelayer.MinDelay;  // Minimum safe delay (32ms)
+        #endregion
+    }
+
+    public static void StateEventsSnippet(MutableState<Data> state)
+    {
+        #region PartFCS_StateEvents
+        state.Invalidated += (s, kind) => { /* ... */ };
+        state.Updating += (s, kind) => { /* ... */ };
+        state.Updated += (s, kind) => { /* ... */ };
+        #endregion
+    }
+}
+
 public class PartF : DocPart
 {
     public override async Task Run()
@@ -193,7 +592,7 @@ public class PartF : DocPart
         {
             StartSnippetOutput("MutableState");
             #region PartF_MutableState
-            var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<IStateFactory>()
+            var stateFactory = sp.StateFactory(); // Same as sp.GetRequiredService<StateFactory>()
             var state = stateFactory.NewMutable(1);
             var oldComputed = state.Computed;
 

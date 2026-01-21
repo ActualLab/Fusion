@@ -265,7 +265,7 @@ See [HelloBlazorServer/Program.cs](https://github.com/ActualLab/Fusion.Samples/b
 
 <!-- snippet: PartB_ServerSideBlazor_Services -->
 ```cs
-public static void ConfigureServerSideBlazorServices(IServiceCollection services)
+public void ConfigureServerSideBlazorServices(IServiceCollection services)
 {
     // Configure services
     var fusion = services.AddFusion();
@@ -290,7 +290,7 @@ And for the app configuration:
 
 <!-- snippet: PartB_ServerSideBlazor_App -->
 ```cs
-public static void ConfigureServerSideBlazorApp(WebApplication app)
+public void ConfigureServerSideBlazorApp(WebApplication app)
 {
     app.UseFusionSession();
     app.UseRouting();
@@ -315,7 +315,7 @@ See [TodoApp/Host/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/m
 
 <!-- snippet: PartB_Hybrid_ServerServices -->
 ```cs
-public static void ConfigureHybridServerServices(IServiceCollection services)
+public void ConfigureHybridServerServices(IServiceCollection services)
 {
     // Fusion services with RPC server mode
     var fusion = services.AddFusion(RpcServiceMode.Server, true);
@@ -338,7 +338,7 @@ And for the app configuration:
 
 <!-- snippet: PartB_Hybrid_ServerApp -->
 ```cs
-public static void ConfigureHybridServerApp(WebApplication app)
+public void ConfigureHybridServerApp(WebApplication app)
 {
     app.UseWebSockets(new WebSocketOptions() {
         KeepAliveInterval = TimeSpan.FromSeconds(30),
@@ -367,7 +367,7 @@ See [TodoApp/UI/Program.cs](https://github.com/ActualLab/Fusion.Samples/blob/mas
 
 <!-- snippet: PartB_Wasm_Main -->
 ```cs
-public static async Task WasmMain(string[] args)
+public async Task WasmMain(string[] args)
 {
     var builder = WebAssemblyHostBuilder.CreateDefault(args);
     ConfigureWasmServices(builder.Services, builder);
@@ -379,7 +379,7 @@ public static async Task WasmMain(string[] args)
 
 <!-- snippet: PartB_Wasm_Services -->
 ```cs
-public static void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
+public void ConfigureWasmServices(IServiceCollection services, WebAssemblyHostBuilder builder)
 {
     // Fusion services
     var fusion = services.AddFusion();
