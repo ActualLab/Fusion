@@ -203,6 +203,70 @@ flowchart TD
 ```
 
 
+## Local Execution Mode
+
+When a call routes to the local server (via `RpcPeerRef.Local` or a custom peer ref pointing to the current host), `RpcLocalExecutionMode` controls how local execution coordinates with rerouting signals.
+
+This is only relevant for **distributed services** (`RpcServiceMode.Distributed`). Non-distributed services ignore this setting.
+
+### RpcLocalExecutionMode Values
+
+| Mode | LocalExecutionAwaiter | Rerouting Check | Cancellation Token | Use Case |
+|------|----------------------|-----------------|-------------------|----------|
+| `Unconstrained` | Not awaited | None | Original token | Non-distributed services, simple calls |
+| `ConstrainedEntry` | Awaited once | At entry point only | Original token | Compute services, where late reroutes are acceptable |
+| `Constrained` | Awaited | At entry + during execution | Linked to `ChangedToken` | Long-running calls that must abort on reroute |
+
+### How It Works
+
+When a call executes locally with `RpcRouteState`:
+
+1. **Unconstrained**: Executes immediately without coordination. Use for calls where rerouting mid-execution is acceptable.
+
+2. **ConstrainedEntry**: Waits for `LocalExecutionAwaiter` before starting. If the route changed while waiting, throws `RpcRerouteException`. Once execution starts, it won't be interrupted.
+
+3. **Constrained**: Same as `ConstrainedEntry`, plus the cancellation token is linked to `RpcRouteState.ChangedToken`. If the route changes during execution, the call is cancelled and rerouted. This is the most defensive mode.
+
+### Default Modes
+
+- **Distributed services**: Default to `Constrained`
+- **Distributed compute services**: Default to `ConstrainedEntry` (computed values are cached, so late reroutes just discard the local result)
+- **Non-distributed services**: Default to `Unconstrained`
+
+### Configuration
+
+Configure at the **service level**:
+
+```cs
+services.AddRpc()
+    .AddDistributed<IMyService, MyServiceImpl>()
+    .HasLocalExecutionMode(RpcLocalExecutionMode.ConstrainedEntry);
+```
+
+Override at the **method level** using `RpcMethodAttribute`:
+
+```cs
+public interface IMyService : IRpcService
+{
+    // Use Unconstrained for this specific fast method
+    [RpcMethod(LocalExecutionMode = RpcLocalExecutionMode.Unconstrained)]
+    Task<int> GetCount(string key, CancellationToken ct);
+
+    // Use full Constrained for this long-running method
+    [RpcMethod(LocalExecutionMode = RpcLocalExecutionMode.Constrained)]
+    Task<Report> GenerateReport(ReportRequest request, CancellationToken ct);
+}
+```
+
+### When to Use Each Mode
+
+- **Unconstrained**: For fast, idempotent operations where executing on the "wrong" server temporarily is acceptable. Also used internally for NoWait calls and system calls.
+
+- **ConstrainedEntry**: For compute methods or operations that are safe to complete locally even if the route changes mid-execution. The result may be discarded, but no side effects occur.
+
+- **Constrained**: For operations with side effects (database writes, external API calls) that must not complete on a server that's no longer responsible for the data. This ensures consistency during topology changes.
+
+
 ## Configuration
 
 ### Rerouting Delays
