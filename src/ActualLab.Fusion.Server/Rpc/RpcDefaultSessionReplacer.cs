@@ -1,4 +1,3 @@
-using ActualLab.Fusion.Authentication;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Middlewares;

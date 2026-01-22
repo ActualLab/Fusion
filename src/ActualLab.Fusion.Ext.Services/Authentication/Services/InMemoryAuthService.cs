@@ -186,4 +186,9 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         return sessions.Select(p => p.SessionInfo).ToImmutableArray();
 #endif
     }
+
+    // ISessionValidator
+
+    public async Task<bool> IsValidSession(Session session, CancellationToken cancellationToken = default)
+        => session.IsValid() && !await IsSignOutForced(session, cancellationToken).ConfigureAwait(false);
 }

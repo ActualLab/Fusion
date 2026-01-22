@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
-using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Server.Middlewares;
 
@@ -20,10 +19,10 @@ public class SessionMiddleware : IMiddleware, IHasServices
         };
         public bool AlwaysUpdateCookie { get; init; } = true; // This ensures cookie expiration time gets bumped up on each request
         public Func<HttpContext, bool> RequestFilter { get; init; } = _ => true;
-        public Func<SessionMiddleware, HttpContext, Task<bool>> ForcedSignOutHandler { get; init; } = DefaultForcedSignOutHandler;
+        public Func<SessionMiddleware, HttpContext, Task<bool>> InvalidSessionHandler { get; init; } = DefaultInvalidSessionHandler;
         public Func<Session, HttpContext, Session>? TagProvider { get; init; }
 
-        public static async Task<bool> DefaultForcedSignOutHandler(SessionMiddleware self, HttpContext httpContext)
+        public static async Task<bool> DefaultInvalidSessionHandler(SessionMiddleware self, HttpContext httpContext)
         {
             await httpContext.SignOutAsync().ConfigureAwait(false);
             var url = httpContext.Request.GetEncodedPathAndQuery();
@@ -38,8 +37,8 @@ public class SessionMiddleware : IMiddleware, IHasServices
     public IServiceProvider Services { get; }
     public ILogger Log { get; }
 
-    public IAuth? Auth { get; }
     public ISessionResolver SessionResolver { get; }
+    public ISessionValidator? SessionValidator { get; }
 
     public SessionMiddleware(Options settings, IServiceProvider services)
     {
@@ -47,8 +46,8 @@ public class SessionMiddleware : IMiddleware, IHasServices
         Services = services;
         Log = services.LogFor(GetType());
 
-        Auth = services.GetService<IAuth>();
         SessionResolver = services.GetRequiredService<ISessionResolver>();
+        SessionValidator = services.GetService<ISessionValidator>();
     }
 
     public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
@@ -71,11 +70,11 @@ public class SessionMiddleware : IMiddleware, IHasServices
         var cancellationToken = httpContext.RequestAborted;
         var originalSession = GetSession(httpContext);
         var session = originalSession;
-        if (session is not null && Auth is not null) {
+        if (session is not null && SessionValidator is not null) {
             try {
-                var isSignOutForced = await Auth.IsSignOutForced(session, cancellationToken).ConfigureAwait(false);
-                if (isSignOutForced) {
-                    await Settings.ForcedSignOutHandler(this, httpContext).ConfigureAwait(false);
+                var isValid = await SessionValidator.IsValidSession(session, cancellationToken).ConfigureAwait(false);
+                if (!isValid) {
+                    await Settings.InvalidSessionHandler(this, httpContext).ConfigureAwait(false);
                     session = null;
                 }
             }

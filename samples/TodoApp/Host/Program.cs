@@ -176,6 +176,8 @@ void ConfigureServices()
         if (hostKind == HostKind.BackendServer)
             fusion.Configure<IAuthBackend>().IsServer(typeof(IAuthBackend)); // Expose IAuthBackend via RPC
     }
+    if (hostKind != HostKind.BackendServer)
+        fusionServer.AddAuthEndpoints();
 
     if (hostSettings.UseTenants) {
         var tenantTagExtractor = hostSettings.TenantIndex is { } tenantIndex

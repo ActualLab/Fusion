@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
+    <ProjectReference Include="..\src\ActualLab.Fusion.Ext.Services\ActualLab.Fusion.Ext.Services.csproj" />
     <ProjectReference Include="..\src\ActualLab.Fusion.EntityFramework.Npgsql\ActualLab.Fusion.EntityFramework.Npgsql.csproj" />
     <ProjectReference Include="..\src\ActualLab.Fusion.EntityFramework.Redis\ActualLab.Fusion.EntityFramework.Redis.csproj" />
     <ProjectReference Include="..\src\ActualLab.Fusion.Blazor.Authentication\ActualLab.Fusion.Blazor.Authentication.csproj" />

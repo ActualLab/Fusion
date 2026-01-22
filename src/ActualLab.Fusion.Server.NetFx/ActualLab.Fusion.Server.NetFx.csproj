@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ActualLab.Fusion.Ext.Services\ActualLab.Fusion.Ext.Services.csproj" />
+    <ProjectReference Include="..\ActualLab.Fusion.Ext.Contracts\ActualLab.Fusion.Ext.Contracts.csproj" />
     <ProjectReference Include="..\ActualLab.Rpc.Server.NetFx\ActualLab.Rpc.Server.NetFx.csproj" />
   </ItemGroup>
 

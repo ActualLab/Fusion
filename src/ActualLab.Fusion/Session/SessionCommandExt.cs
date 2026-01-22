@@ -1,4 +1,4 @@
-namespace ActualLab.Fusion.Authentication;
+namespace ActualLab.Fusion;
 
 public static class SessionCommandExt
 {

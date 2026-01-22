@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using ActualLab.Fusion.Server.Endpoints;
+using ActualLab.Fusion.Authentication.Endpoints;
 
-namespace ActualLab.Fusion.Server.Controllers;
+namespace ActualLab.Fusion.Authentication.Controllers;
 
 public sealed class AuthController(AuthEndpoints handler) : Controller
 {

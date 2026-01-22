@@ -28,4 +28,8 @@ public abstract class DbAuthService<TDbContext>(IServiceProvider services)
     public abstract Task SetOptions(AuthBackend_SetSessionOptions command, CancellationToken cancellationToken = default);
     public abstract Task<SessionInfo?> GetSessionInfo(Session session, CancellationToken cancellationToken = default);
     public abstract Task<User?> GetUser(string shard, string userId, CancellationToken cancellationToken = default);
+
+    // ISessionValidator
+    public async Task<bool> IsValidSession(Session session, CancellationToken cancellationToken = default)
+        => session.IsValid() && !await IsSignOutForced(session, cancellationToken).ConfigureAwait(false);
 }

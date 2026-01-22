@@ -35,7 +35,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Fusion.Blazor\ActualLab.Fusion.Blazor.csproj" />
-    <ProjectReference Include="..\ActualLab.Fusion.Ext.Services\ActualLab.Fusion.Ext.Services.csproj" />
     <ProjectReference Include="..\ActualLab.Rpc.Server\ActualLab.Rpc.Server.csproj" />
   </ItemGroup>
 

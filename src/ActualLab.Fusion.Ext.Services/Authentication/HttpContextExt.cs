@@ -1,8 +1,8 @@
-﻿using System.Net;
+using System.Net;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 
-namespace ActualLab.Fusion.Server.Authentication;
+namespace ActualLab.Fusion.Authentication;
 
 public static class HttpContextExt
 {

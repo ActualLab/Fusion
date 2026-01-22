@@ -1,8 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using ActualLab.Fusion.Authentication;
 
-namespace ActualLab.Fusion.Server.Authentication;
+namespace ActualLab.Fusion.Authentication;
 
 public class ServerAuthHelper : IHasServices
 {

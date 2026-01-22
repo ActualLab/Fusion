@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Http;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
 using ActualLab.Fusion.Server;
-using ActualLab.Fusion.Server.Authentication;
 using ActualLab.Fusion.Server.Middlewares;
 using ActualLab.Rpc.Server;
 using static System.Console;
@@ -188,6 +187,7 @@ public class PartAA : DocPart
     {
         var fusion = services.AddFusion();
         var fusionServer = fusion.AddWebServer();
+        fusionServer.AddAuthEndpoints();
         fusion.AddDbAuthService<AppDbContext, string>();
         fusionServer.ConfigureAuthEndpoint(_ => new() {
             // Set to the desired one

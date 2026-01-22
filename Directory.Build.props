@@ -25,6 +25,7 @@
     <ProjectKind Condition="$(MSBuildProjectName.Contains('.EntityFramework'))">EntityFramework</ProjectKind>
     <ProjectKind Condition="$(MSBuildProjectName.Contains('.Redis'))">Redis</ProjectKind>
     <ProjectKind Condition="$(MSBuildProjectName.Contains('.Server'))">Server</ProjectKind>
+    <ProjectKind Condition="$(MSBuildProjectName.Contains('.Ext.Services'))">Server</ProjectKind>
     <ProjectKind Condition="$(MSBuildProjectName.Contains('.Tests'))">Tests</ProjectKind>
     <IsServerSideProject Condition="'$(ProjectKind)' == 'EntityFramework'">true</IsServerSideProject>
     <IsServerSideProject Condition="'$(ProjectKind)' == 'Redis'">true</IsServerSideProject>

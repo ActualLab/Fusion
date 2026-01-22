@@ -2,7 +2,7 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
-public interface IAuth : IComputeService
+public interface IAuth : ISessionValidator, IComputeService
 {
     // Commands
     [CommandHandler]

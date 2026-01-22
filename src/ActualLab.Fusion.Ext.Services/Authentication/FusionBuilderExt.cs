@@ -64,6 +64,7 @@ public static class FusionBuilderExt
 
         fusion.AddService(typeof(IAuth), implementationType, hasCommandHandlers: false);
         services.AddSingleton(c => (IAuthBackend)c.GetRequiredService<IAuth>());
+        services.AddSingleton(c => (ISessionValidator)c.GetRequiredService<IAuth>());
         fusion.Commander.AddHandlers(typeof(IAuth));
         fusion.Commander.AddHandlers(typeof(IAuthBackend));
         return fusion;

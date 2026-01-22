@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using ActualLab.Fusion.Server.Controllers;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using ActualLab.Fusion.Server.Internal;
 
 namespace ActualLab.Fusion.Server;
@@ -36,7 +36,6 @@ public readonly struct FusionMvcWebServerBuilder
                 new SimpleModelBinderProvider<Symbol, SymbolModelBinder>(),
                 new SimpleModelBinderProvider<Session, SessionModelBinder>(),
                 new SimpleModelBinderProvider<TypeRef, TypeRefModelBinder>(),
-                new PageRefModelBinderProvider(),
                 new RangeModelBinderProvider(),
             };
             options.ModelBinderProviders.Clear();
@@ -54,7 +53,7 @@ public readonly struct FusionMvcWebServerBuilder
             return this;
 
         services.Add(ControllersAddedTagDescriptor);
-        services.AddControllers().AddApplicationPart(typeof(AuthController).Assembly);
+        services.AddControllers().AddApplicationPart(typeof(RenderModeController).Assembly);
         return this;
     }
 
