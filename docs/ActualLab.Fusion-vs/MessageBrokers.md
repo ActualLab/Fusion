@@ -94,7 +94,7 @@ public class OrderService : IComputeService
 | Caching | Not applicable | Built-in |
 | Scaling | Horizontal (partitions) | Vertical + Operations Framework |
 
-Message brokers deliver durable events; Fusion propagates invalidations and then recomputes current state on demand, which keeps UI data fresh without storing every event.
+Message brokers deliver durable events; Fusion propagates invalidations and recomputes current state on demand, which keeps UI data fresh without storing every event.
 
 ## When to Use Each
 

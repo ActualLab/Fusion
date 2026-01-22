@@ -96,7 +96,7 @@ public class UserService : IComputeService
 | Real-time updates | Not supported | Built-in |
 | Distributed | Yes (interface design) | Optional (Operations Framework) |
 
-For multi-server invalidation and reliable command processing, Fusion relies on the [Operations Framework](PartO.md).
+See [Part 5: Operations Framework](PartO.md) for multi-server invalidation and reliable command processing.
 
 ## When to Use Each
 

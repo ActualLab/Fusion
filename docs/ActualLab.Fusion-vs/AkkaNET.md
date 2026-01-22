@@ -109,7 +109,7 @@ await foreach (var c in computed.Changes(ct))
 | Distribution | Akka.Remote / Akka.Cluster | Operations Framework |
 | Learning curve | Steep (actor thinking) | Gentle (familiar .NET patterns) |
 
-Fusion's multi-host story is powered by the [Operations Framework](PartO.md), which handles invalidation propagation and reliable command processing across servers.
+See [Part 5: Operations Framework](PartO.md) for how Fusion handles multi-host invalidation and reliable command processing.
 
 ## When to Use Each
 
