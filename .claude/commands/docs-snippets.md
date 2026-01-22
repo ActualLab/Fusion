@@ -332,6 +332,12 @@ The `mdsnippets.json` file in `docs/` configures the tool:
 - `OmitSnippetLinks` - Doesn't add source file links
 - `ExcludeMarkdownDirectories` - Skips `outdated/` folder
 
+## Folders Without Snippets
+
+The following folders should NOT have code snippets:
+
+- **`ActualLab.Fusion-vs/`** - Comparison documents ("Fusion vs X") contain illustrative code examples that are conceptual. These don't need compilation validation since they show patterns and approaches rather than actual Fusion API usage.
+
 ## Best Practices
 
 1. **Snippets must match original code** - When converting inline code from `.md` files to snippets, keep the code as close to the original as possible. Don't comment out lines or dramatically change the code structure.
