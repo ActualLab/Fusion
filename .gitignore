@@ -1,3 +1,6 @@
+# Claude Code
+.claude/settings.local.json
+
 # IDE folders & files
 .vs/
 .vscode/
