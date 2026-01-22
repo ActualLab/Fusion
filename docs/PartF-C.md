@@ -125,17 +125,31 @@ var computed = Computed.New(async ct => {
 
 ### Context Scopes
 
+Control how compute method calls interact with dependency tracking:
+
 ```csharp
-// Isolate from dependency tracking
+// Suppress dependency capture — calls won't register as dependencies
 using (Computed.BeginIsolation()) {
-    // Calls here won't register as dependencies
+    // This call happens, but won't make the current computed depend on it
+    var data = await service.GetData();
 }
 
-// Capture mode
+// Capture mode — explicitly capture the computed produced by a call
 using var scope = Computed.BeginCapture();
 await service.GetData();
 var captured = scope.Context.GetCaptured<Data>();
+
+// Capture existing only — get cached computed without triggering computation
+using var scope = Computed.BeginCaptureExisting();
+_ = service.GetData(); // Synchronous if cached
+var existing = scope.Context.TryGetCaptured<Data>(); // null if not cached
 ```
+
+**When to use `BeginIsolation()`:**
+- Fetching data for logging or metrics without creating dependencies
+- Calling compute methods from non-compute code where dependencies don't make sense
+- Breaking potential dependency cycles
+- Implementing "fire and forget" patterns where you don't want invalidation to propagate
 
 ## Extension Methods
 
@@ -356,6 +370,49 @@ InvalidationSource.Unknown        // When tracking is disabled
 InvalidationSource.Cancellation   // Cancellation-triggered
 InvalidationSource.InitialState   // Initial state invalidation
 // ... and others for specific internal operations
+```
+
+## ComputedImpl (Advanced)
+
+`ComputedImpl` is a static class in `ActualLab.Fusion.Internal` that exposes low-level operations on
+`Computed` instances. These methods are primarily for framework extensions and advanced scenarios.
+
+::: warning Internal API
+These methods bypass normal safety checks. Use only when you understand the implications.
+:::
+
+| Method | Description |
+|--------|-------------|
+| `TrySetValue(computed, value)` | Set the output value of a computing computed |
+| `TrySetError(computed, exception)` | Set an error on a computing computed |
+| `TrySetOutput(computed, result)` | Set output as a `Result` (value or error) |
+| `StartAutoInvalidation(computed)` | Start the auto-invalidation timer |
+| `RenewTimeouts(computed, isNew)` | Renew keep-alive timeouts |
+| `CancelTimeouts(computed)` | Cancel keep-alive timeouts |
+| `GetDependencies(computed)` | Get all dependencies of a computed |
+| `GetDependants(computed)` | Get all dependants (reverse dependencies) |
+| `AddDependency(computed, dependency)` | Manually add a dependency |
+| `RemoveDependant(computed, dependant)` | Remove a dependant |
+| `PruneDependants(computed)` | Remove invalidated dependants |
+| `CopyDependenciesTo(computed, buffer)` | Copy dependencies to a buffer |
+| `IsTransientError(computed, error)` | Check if error should trigger retry |
+
+Example — inspecting the dependency graph:
+
+```csharp
+using ActualLab.Fusion.Internal;
+
+var computed = await Computed.Capture(() => service.GetAggregatedData());
+
+// Get direct dependencies
+var dependencies = ComputedImpl.GetDependencies(computed);
+foreach (var dep in dependencies)
+    Console.WriteLine($"Depends on: {dep.Input}");
+
+// Get dependants (who depends on this computed)
+var dependants = ComputedImpl.GetDependants(computed);
+foreach (var (input, version) in dependants)
+    Console.WriteLine($"Depended on by: {input}");
 ```
 
 ## Tips

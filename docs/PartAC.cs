@@ -1,10 +1,13 @@
+using ActualLab.Fusion.Client.Caching;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Caching;
+using MemoryPack;
 using static System.Console;
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
 
 // ReSharper disable once CheckNamespace
-namespace Docs.PartFPatterns;
+namespace Docs.PartAC;
 
 // Fake types for snippet compilation
 public record AddItemCommand(string Folder);
@@ -97,17 +100,6 @@ public class HierarchicalDependenciesService : IComputeService
         if (level > 0) {
             // Create dependency on parent level
             await PseudoRegion(level - 1, index / 2);
-        }
-        return default;
-    }
-
-    // Octree style for 3D spatial data
-    [ComputeMethod]
-    protected virtual async Task<Unit> PseudoOctant(int level, int x, int y, int z)
-    {
-        if (level > 0) {
-            // Create dependency on parent octant
-            await PseudoOctant(level - 1, x / 2, y / 2, z / 2);
         }
         return default;
     }
@@ -349,56 +341,6 @@ public static class ComputedWhenExamples
 }
 
 // ============================================================================
-// Combining Patterns: Pseudo-Methods with Cleanup Callbacks
-// ============================================================================
-
-public class MessageBroker
-{
-    public IDisposable Subscribe(string topic, Action callback) => null!;
-}
-
-public record Message(string Topic, string Content);
-
-#region PartFPatterns_CombinedPseudoAndCallbacks
-public class SubscriptionService : IComputeService
-{
-    private readonly ConcurrentDictionary<string, IDisposable> _subscriptions = new();
-    private readonly MessageBroker _broker = new();
-
-    [ComputeMethod]
-    protected virtual Task<Unit> PseudoWatchTopic(string topic)
-        => TaskExt.UnitTask;
-
-    [ComputeMethod]
-    public virtual async Task<Message[]> GetMessages(string topic, int count, CancellationToken ct = default)
-    {
-        await PseudoWatchTopic(topic);
-
-        var computed = Computed.GetCurrent();
-
-        // Setup external subscription on first computation
-        _subscriptions.GetOrAdd(topic, t => {
-            var sub = _broker.Subscribe(t, () => {
-                using var __ = Invalidation.Begin();
-                _ = PseudoWatchTopic(t); // Invalidate when broker notifies
-            });
-
-            computed.Invalidated += _ => {
-                // Don't clean up immediately - another computed might need it
-            };
-
-            return sub;
-        });
-
-        return await QueryMessages(topic, count, ct);
-    }
-
-    private Task<Message[]> QueryMessages(string topic, int count, CancellationToken ct)
-        => Task.FromResult(Array.Empty<Message>());
-}
-#endregion
-
-// ============================================================================
 // Changes() with Error Handling
 // ============================================================================
 
@@ -436,10 +378,191 @@ public static class ChangesErrorHandling
 }
 
 // ============================================================================
+// Cache-Aware API Design Examples
+// ============================================================================
+
+// Fake types for API design examples
+public record Message(Ulid Id, string Text, Ulid AuthorId);
+public record User(Ulid Id, string Name);
+public record UserProfile(Ulid Id, string Name, string Bio);
+public record UserPresence(Ulid Id, bool IsOnline, DateTime LastSeen);
+public record Product(Ulid Id, string Name, decimal Price);
+
+public interface IChatService : IComputeService
+{
+    #region PartAC_FusionApiDesign
+    // Fusion: fetch IDs, then individual items
+    [ComputeMethod]
+    Task<Ulid[]> ListMessageIds(Ulid roomId, int limit, CancellationToken ct);
+
+    [ComputeMethod]
+    Task<Message?> GetMessage(Ulid messageId, CancellationToken ct);
+
+    [ComputeMethod]
+    Task<User?> GetUser(Ulid userId, CancellationToken ct);
+    #endregion
+}
+
+public interface ITodoServicePattern : IComputeService
+{
+    #region PartAC_FetchIdsPattern
+    // Prefer this:
+    [ComputeMethod]
+    Task<Ulid[]> ListTodoIds(Session session, int limit, CancellationToken ct);
+
+    [ComputeMethod]
+    Task<TodoItem?> GetTodo(Ulid id, CancellationToken ct);
+    #endregion
+}
+
+public interface ITodoServiceAntiPattern : IComputeService
+{
+    #region PartAC_FetchIdsAntiPattern
+    // Over this:
+    [ComputeMethod]
+    Task<TodoItem[]> ListTodos(Session session, int limit, CancellationToken ct);
+    #endregion
+}
+
+public interface IUserServiceStable : IComputeService
+{
+    #region PartAC_StableArguments
+    // Good: stable cache keys
+    [ComputeMethod]
+    Task<User?> GetUser(Ulid userId, CancellationToken ct);
+    #endregion
+}
+
+public interface IUserServiceUnstable : IComputeService
+{
+    #region PartAC_UnstableArguments
+    // Problematic: timestamp in arguments means no cache hits
+    [ComputeMethod]
+    Task<User?> GetUser(Ulid userId, DateTime asOf, CancellationToken ct);
+    #endregion
+}
+
+public interface IUserServiceSplit : IComputeService
+{
+    #region PartAC_SeparateData
+    [ComputeMethod]
+    Task<UserProfile> GetUserProfile(Ulid userId, CancellationToken ct);
+
+    [ComputeMethod]
+    Task<UserPresence> GetUserPresence(Ulid userId, CancellationToken ct);
+    #endregion
+}
+
+public interface IProductService : IComputeService
+{
+    #region PartAC_NotObservable
+    // Regular method - not cached, not observable
+    Task<Ulid[]> SearchProducts(string query, int skip, int take, CancellationToken ct);
+
+    // Compute method - each item is cached and observable
+    [ComputeMethod]
+    Task<Product?> GetProduct(Ulid id, CancellationToken ct);
+    #endregion
+}
+
+// ============================================================================
+// Persistent Cache Examples
+// ============================================================================
+
+public static class PersistentCacheExamples
+{
+    public static void RegisterCache(FusionBuilder fusion)
+    {
+        #region PartAC_CacheRegistrationHelper
+        fusion.AddRemoteComputedCache<LocalStorageRemoteComputedCache, LocalStorageRemoteComputedCache.Options>(
+            _ => LocalStorageRemoteComputedCache.Options.Default);
+        #endregion
+    }
+
+    public static void RegisterCacheManual(IServiceCollection services)
+    {
+        #region PartAC_CacheRegistrationManual
+        services.AddSingleton(_ => LocalStorageRemoteComputedCache.Options.Default);
+        services.AddSingleton<IRemoteComputedCache>(c => {
+            var options = c.GetRequiredService<LocalStorageRemoteComputedCache.Options>();
+            return new LocalStorageRemoteComputedCache(options, c);
+        });
+        #endregion
+    }
+
+    public static void RegisterInMemoryCache(FusionBuilder fusion)
+    {
+        #region PartAC_InMemoryCache
+        fusion.AddInMemoryRemoteComputedCache();
+        #endregion
+    }
+}
+
+// Stub for ISyncLocalStorageService (from Blazored.LocalStorage)
+public interface ISyncLocalStorageService
+{
+    string? GetItemAsString(string key);
+    void SetItemAsString(string key, string value);
+    void RemoveItem(string key);
+    void Clear();
+}
+
+#region PartAC_LocalStorageCache
+public sealed class LocalStorageRemoteComputedCache : RemoteComputedCache
+{
+    public new record Options : RemoteComputedCache.Options
+    {
+        public static new readonly Options Default = new() { Version = "1.0" };
+        public string KeyPrefix { get; init; } = "";
+    }
+
+    private readonly ISyncLocalStorageService _storage;
+    private readonly string _keyPrefix;
+
+    public LocalStorageRemoteComputedCache(Options settings, IServiceProvider services)
+        : base(settings, services)
+    {
+        _keyPrefix = settings.KeyPrefix;
+        _storage = services.GetRequiredService<ISyncLocalStorageService>();
+    }
+
+    public override ValueTask<RpcCacheValue?> Get(RpcCacheKey key, CancellationToken cancellationToken = default)
+    {
+        var sValue = _storage.GetItemAsString(GetStringKey(key));
+        if (sValue.IsNullOrEmpty())
+            return default;
+
+        var bytes = Convert.FromBase64String(sValue);
+        var value = MemoryPackSerializer.Deserialize<RpcCacheValue>(bytes);
+        return new ValueTask<RpcCacheValue?>(value);
+    }
+
+    public override void Set(RpcCacheKey key, RpcCacheValue value)
+    {
+        var bytes = MemoryPackSerializer.Serialize(value);
+        var sValue = Convert.ToBase64String(bytes);
+        _storage.SetItemAsString(GetStringKey(key), sValue);
+    }
+
+    public override void Remove(RpcCacheKey key)
+        => _storage.RemoveItem(GetStringKey(key));
+
+    public override Task Clear(CancellationToken cancellationToken = default)
+    {
+        _storage.Clear();
+        return Task.CompletedTask;
+    }
+
+    private string GetStringKey(RpcCacheKey key)
+        => string.Concat(_keyPrefix, key.Name, " ", Convert.ToBase64String(key.ArgumentData.Span));
+}
+#endregion
+
+// ============================================================================
 // DocPart class
 // ============================================================================
 
-public class PartFPatterns : DocPart
+public class PartAC : DocPart
 {
     public override async Task Run()
     {
@@ -470,7 +593,7 @@ public class PartFPatterns : DocPart
         // RpcStream
         _ = typeof(RpcStream<>);
 
-        WriteLine("All Advanced Compute Patterns references verified successfully!");
+        WriteLine("All Caching Techniques references verified successfully!");
         WriteLine();
 
         await Task.CompletedTask;

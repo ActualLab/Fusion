@@ -107,7 +107,6 @@ gtag('config', 'G-PX4G7HX4CM');`],
               { text: "Computed<T>", link: "/PartF-C" },
               { text: "ComputedOptions", link: "/PartF-CO" },
               { text: "States", link: "/PartF-ST" },
-              { text: "Advanced Patterns", link: "/PartF-Patterns" },
               { text: "Memory Management", link: "/PartF-MM" },
               { text: "Server-Side Performance", link: "/PartF-SS" },
               { text: "Diagrams", link: "/PartF-D" },
@@ -182,6 +181,16 @@ gtag('config', 'G-PX4G7HX4CM');`],
       {
         text: "Advanced Topics",
         items: [
+          {
+            text: "Cache-Aware API Design",
+            link: "/PartAC",
+            collapsed: true,
+            items: [
+              { text: "Pseudo-Dependencies", link: "/PartAC-PM" },
+              { text: "Observing Changes", link: "/PartAC-OC" },
+              { text: "Persistent Cache", link: "/PartAC-PC" },
+            ],
+          },
           {
             text: "Authentication in Fusion",
             link: "/PartAA",

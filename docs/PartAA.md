@@ -2,6 +2,25 @@
 
 Fusion provides a comprehensive authentication system that integrates with ASP.NET Core and provides real-time authentication state updates across all connected clients.
 
+::: warning A Starting Point, Not a Final Solution
+The authentication APIs in Fusion exist primarily to close a common gap — almost every application
+needs some form of authentication. The OAuth implementation was added mostly to **demonstrate**
+how authentication can work with Fusion's real-time model.
+
+However, the underlying code is fairly complicated, especially for production use. It relies heavily
+on generics and abstractions to cover many general cases, which adds significant complexity that
+you may not need.
+
+**Our recommendation**: Start with Fusion's authentication to get your app working quickly. As your
+app matures, consider migrating the authentication code from Fusion's source into your own project
+and simplifying it to match your specific needs. This is exactly what we do in
+[Voxt](https://voxt.ai) — the result is clearer code with far fewer abstractions.
+
+You can use AI tools like Claude to help with this migration: point it at Fusion's authentication
+source code and ask it to extract and simplify the parts you need into a cohesive set of types
+tailored to your app.
+:::
+
 ## Key Features
 
 - **Real-time auth state**: Authentication changes instantly propagate to all connected clients
