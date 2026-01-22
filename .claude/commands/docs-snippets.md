@@ -394,17 +394,24 @@ The `mdsnippets.json` file in `docs/` configures the tool:
    <!-- endSnippet -->
    ```
 
-4. **ALL C# code (3+ lines) must be in snippets** - Never write C# code directly in `.md` files. Every C# code block must come from a snippet in a `.cs` file. This ensures:
-   - Code is compiled and validated
-   - Code stays in sync with actual implementations
-   - No stale or broken examples in documentation
+4. **Use snippets for code that depends on Fusion APIs** - The primary purpose of putting code in `.cs` snippet files is to **trigger compilation errors when Fusion APIs change**. This ensures documentation stays in sync with the actual API.
 
-   **Exceptions** (code that cannot be in `.cs` snippets):
+   **Code that SHOULD be in snippets:**
+   - Any code using Fusion types (`Computed<T>`, `IComputeService`, `ComputeMethod`, etc.)
+   - Code using ActualLab.Rpc, ActualLab.CommandR, or other Fusion-related packages
+   - Code where you want to verify the output by running it
+
+   **Code that CAN stay directly in `.md` files:**
+   - Generic C# code that doesn't use any Fusion APIs
+   - Code patterns that are conceptual/illustrative
+   - Code where compilation validation isn't needed
    - `.razor` component code (Blazor markup)
    - `.csproj` / MSBuild XML
    - `appsettings.json` / configuration files
    - Shell commands / PowerShell
-   - Pseudo-code or conceptual examples marked as such
+   - Pseudo-code or conceptual examples
+
+   The key question: **"Will this code break if Fusion APIs change?"** If yes, put it in a snippet. If no, it's fine to keep it in the `.md` file.
 
 5. **Keep snippets COMPACT** - Snippets should contain only the essential code the reader needs to see. **Do NOT wrap code in unnecessary classes or methods just to satisfy C# syntax requirements.**
 
