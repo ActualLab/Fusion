@@ -1,3 +1,5 @@
+#if !NETSTANDARD
+
 using System.Net;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -46,3 +48,5 @@ public static class HttpContextExt
         return context.Connection.RemoteIpAddress;
     }
 }
+
+#endif

@@ -1,3 +1,5 @@
+#if !NETSTANDARD
+
 using ActualLab.Fusion.Authentication.Endpoints;
 using ActualLab.Fusion.Server;
 
@@ -32,3 +34,5 @@ public static class FusionWebServerBuilderExt
         return fusionWebServer;
     }
 }
+
+#endif

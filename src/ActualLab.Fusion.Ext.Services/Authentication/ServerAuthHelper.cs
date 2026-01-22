@@ -1,3 +1,5 @@
+#if !NETSTANDARD
+
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 
@@ -244,3 +246,5 @@ public class ServerAuthHelper : IHasServices
         return null;
     }
 }
+
+#endif

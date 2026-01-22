@@ -1,3 +1,5 @@
+#if !NETSTANDARD
+
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
@@ -45,3 +47,5 @@ public class AuthEndpoints(AuthEndpoints.Options settings)
         return httpContext.SignOutAsync(scheme, properties);
     }
 }
+
+#endif

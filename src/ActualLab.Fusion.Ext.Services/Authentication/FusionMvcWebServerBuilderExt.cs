@@ -1,3 +1,5 @@
+#if !NETSTANDARD
+
 using ActualLab.Fusion.Authentication.Controllers;
 using ActualLab.Fusion.Server;
 
@@ -15,3 +17,5 @@ public static class FusionMvcWebServerBuilderExt
         return fusionMvcWebServer;
     }
 }
+
+#endif

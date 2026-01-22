@@ -1,3 +1,5 @@
+#if !NETSTANDARD
+
 using Microsoft.AspNetCore.Mvc;
 using ActualLab.Fusion.Authentication.Endpoints;
 
@@ -14,3 +16,5 @@ public sealed class AuthController(AuthEndpoints handler) : Controller
     public Task SignOut(string? scheme = null, string? returnUrl = null)
         => handler.SignOut(HttpContext, scheme, returnUrl);
 }
+
+#endif
