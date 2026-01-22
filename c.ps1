@@ -309,18 +309,41 @@ if ($worktreeSuffix) {
             $baseBranch = if ($projectName -eq "ActualChat") { "dev" } else { "master" }
             $featureBranch = "feat/$worktreeSuffix"
 
-            # Make sure we have the latest base branch
-            git fetch origin $baseBranch 2>$null
+            # Make sure we have the latest
+            git fetch origin 2>$null
 
-            # Create worktree with feature branch based on the base branch
-            git worktree add -b $featureBranch $worktreePath "origin/$baseBranch"
+            # Check if the feature branch already exists (locally or remotely)
+            $localBranchExists = git rev-parse --verify "refs/heads/$featureBranch" 2>$null
+            $localExists = $LASTEXITCODE -eq 0
+            $remoteBranchExists = git rev-parse --verify "refs/remotes/origin/$featureBranch" 2>$null
+            $remoteExists = $LASTEXITCODE -eq 0
+
+            if (-not $localExists) {
+                if ($remoteExists) {
+                    # Branch exists on remote but not locally - create local tracking branch
+                    Write-Host "Creating local branch '$featureBranch' tracking 'origin/$featureBranch'"
+                    git branch $featureBranch "origin/$featureBranch"
+                } else {
+                    # Branch doesn't exist anywhere - create it from base branch
+                    Write-Host "Creating branch '$featureBranch' from 'origin/$baseBranch'"
+                    git branch $featureBranch "origin/$baseBranch"
+                }
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Failed to create branch '$featureBranch'"
+                    Set-Location $originalLocation
+                    exit 1
+                }
+            } else {
+                Write-Host "Using existing branch '$featureBranch'"
+            }
+
+            # Create worktree using the existing branch (without -b flag)
+            git worktree add $worktreePath $featureBranch
             if ($LASTEXITCODE -ne 0) {
                 Write-Error "Failed to create worktree"
                 Set-Location $originalLocation
                 exit 1
             }
-
-            Write-Host "Created branch '$featureBranch' from 'origin/$baseBranch'"
         } finally {
             Set-Location $originalLocation
         }
