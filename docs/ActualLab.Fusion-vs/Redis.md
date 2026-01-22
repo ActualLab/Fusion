@@ -111,6 +111,8 @@ Why is Fusion faster?
 
 For purely local cache access, Fusion is even faster since values are cached in-process.
 
+See [Performance Benchmarks](/Benchmarks) for full details and test environment.
+
 ## When to Use Each
 
 ### Choose Redis when:

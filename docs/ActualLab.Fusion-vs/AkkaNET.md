@@ -109,6 +109,8 @@ await foreach (var c in computed.Changes(ct))
 | Distribution | Akka.Remote / Akka.Cluster | Operations Framework |
 | Learning curve | Steep (actor thinking) | Gentle (familiar .NET patterns) |
 
+Fusion's multi-host story is powered by the [Operations Framework](PartO.md), which handles invalidation propagation and reliable command processing across servers.
+
 ## When to Use Each
 
 ### Choose Akka.NET when:

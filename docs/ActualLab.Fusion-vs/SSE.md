@@ -129,3 +129,9 @@ If you're using SSE and want Fusion's benefits:
 1. Keep SSE for truly simple, unrelated events
 2. Move data-dependent features to Fusion compute services
 3. Clients get automatic caching and consistency
+
+## The Key Insight
+
+SSE is a **simple, one-way push channel**. It's great for lightweight notifications, but it doesn't provide caching, dependency tracking, or bidirectional calls.
+
+Fusion is a **state synchronization layer**. It keeps cached data fresh, supports client-to-server calls, and automatically rehydrates state after reconnects.

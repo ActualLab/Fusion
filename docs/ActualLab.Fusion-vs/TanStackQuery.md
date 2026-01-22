@@ -92,6 +92,8 @@ public class UserService : IComputeService
 | Background refetch | Polling | On invalidation |
 | Optimistic updates | Built-in | Via UIActionTracker |
 
+For Fusion's optimistic UI workflow, see [UICommander and UIActionTracker](PartB-UICommander.md).
+
 ## When to Use Each
 
 ### Choose TanStack Query when:

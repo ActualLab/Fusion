@@ -140,6 +140,8 @@ public class UserService : IComputeService
         // Fusion caches the result and tracks who's observing
     }
 
+    // Tip: prefer AsNoTracking() for compute methods to avoid unnecessary tracking overhead on read paths.
+
     [CommandHandler]
     public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {

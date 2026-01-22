@@ -113,3 +113,7 @@ If you're using SignalR today and want Fusion's benefits:
 4. UI components automatically update without explicit handlers
 
 The result: less code, automatic consistency, and real-time updates that "just work."
+
+## The Key Insight
+
+SignalR gives you **message pipes**; Fusion gives you **data synchronization**. If your app’s main challenge is keeping UI data fresh across clients, Fusion removes the manual wiring. If you need simple, custom real-time events across diverse clients, SignalR remains a great fit.

@@ -111,6 +111,8 @@ await foreach (var c in computed.Changes(ct))
 | Client updates | Orleans Streams / Observers | Automatic via invalidation |
 | Scaling unit | Grain activation | Computed value cache |
 
+Fusion's multi-host invalidation and reliable command processing are handled by the [Operations Framework](PartO.md).
+
 ## When to Use Each
 
 ### Choose Orleans when:
