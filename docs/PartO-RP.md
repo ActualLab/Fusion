@@ -112,7 +112,8 @@ A command is eligible for reprocessing when **all** of these are true:
 
 ## Transient Error Detection
 
-The reprocessor uses `TransiencyResolver<IOperationReprocessor>` to classify errors:
+The reprocessor uses `TransiencyResolver<IOperationReprocessor>` to classify errors.
+See [Transiency documentation](./PartCore-Transiency.md) for details on how exception classification works.
 
 | Error Type | Transiency |
 |------------|------------|

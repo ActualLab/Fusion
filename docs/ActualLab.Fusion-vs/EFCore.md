@@ -34,7 +34,7 @@ public class UserService : IComputeService
     [ComputeMethod]
     public virtual async Task<User> GetUser(string userId, CancellationToken ct)
     {
-        await using var db = CreateDbContext();
+        await using var db = DbHub.CreateDbContext();
         return await db.Users.FindAsync(userId, ct);
     }
 
@@ -47,7 +47,7 @@ public class UserService : IComputeService
             return;
         }
 
-        await using var db = CreateDbContext();
+        await using var db = DbHub.CreateDbContext();
         var user = await db.Users.FindAsync(cmd.UserId, ct);
         user.Name = cmd.Name;
         await db.SaveChangesAsync(ct);
@@ -133,7 +133,7 @@ public class UserService : IComputeService
     public virtual async Task<User> GetUser(string userId, CancellationToken ct)
     {
         // EF Core loads the data
-        await using var db = CreateDbContext();
+        await using var db = DbHub.CreateDbContext();
         return await db.Users
             .AsNoTracking()  // No change tracking needed for reads
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
@@ -149,7 +149,7 @@ public class UserService : IComputeService
             return;
         }
 
-        await using var db = CreateDbContext();
+        await using var db = DbHub.CreateDbContext();
         var user = await db.Users.FindAsync(cmd.UserId, ct);
         user.Name = cmd.Name;
         // EF Core tracks the change and generates SQL
@@ -169,7 +169,7 @@ public class UserService : DbServiceBase<AppDbContext>, IComputeService
     [ComputeMethod]
     public virtual async Task<User> GetUser(string userId, CancellationToken ct)
     {
-        await using var db = await CreateDbContext(ct);
+        await using var db = await DbHub.CreateDbContext(ct);
         return await db.Users.FindAsync(userId, ct);
     }
 
@@ -182,7 +182,7 @@ public class UserService : DbServiceBase<AppDbContext>, IComputeService
             return;
         }
 
-        await using var db = await CreateDbContext(ct);
+        await using var db = await DbHub.CreateDbContext(ct);
         // ... update and save
     }
 }

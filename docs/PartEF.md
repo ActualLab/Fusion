@@ -81,6 +81,93 @@ public class TodoService(DbHub<AppDbContext> dbHub) : IComputeService
 | `CreateOperationDbContext()` | Command handlers with Operations Framework |
 | `CreateOperationDbContext(isolationLevel)` | Commands requiring specific isolation |
 
+### DbContext Extension Methods
+
+By default, `CreateDbContext()` returns a read-only context with change tracking disabled. Use these extension methods to modify behavior:
+
+```cs
+// Turn a read-only context into read-write
+await using var dbContext = await dbHub.CreateDbContext(cancellationToken);
+dbContext.ReadWrite();  // Enables change tracking and SaveChanges
+
+// Or pass readWrite parameter directly
+await using var dbContext = await dbHub.CreateDbContext(readWrite: true, cancellationToken);
+```
+
+| Extension Method | Description |
+|------------------|-------------|
+| `ReadWrite(bool allowWrites = true)` | Enables/disables both change tracking and SaveChanges |
+| `EnableChangeTracking(bool mustEnable)` | Controls `QueryTrackingBehavior` and `AutoDetectChangesEnabled` |
+| `EnableSaveChanges(bool mustEnable)` | When disabled, `SaveChanges()` throws an exception |
+
+The `ReadWrite()` method combines both `EnableChangeTracking()` and `EnableSaveChanges()` for convenience.
+
+### Query Hints (Row Locking)
+
+Fusion provides cross-database query hints for row-level locking. These translate to database-specific SQL (e.g., `FOR UPDATE` in PostgreSQL).
+
+**Setup** (PostgreSQL example):
+
+```cs
+db.AddDbContextFactory(dbContext => {
+    dbContext.UseNpgsql(connectionString);
+    dbContext.UseNpgsqlHintFormatter();  // Enable hint support
+});
+```
+
+**Usage:**
+
+```cs
+// Using convenience methods
+var user = await dbContext.Users
+    .ForUpdate()  // SELECT ... FOR UPDATE
+    .FirstOrDefaultAsync(u => u.Id == userId, ct);
+
+// Using WithHints for multiple hints
+var items = await dbContext.Items
+    .WithHints(DbLockingHint.Update, DbWaitHint.SkipLocked)  // FOR UPDATE SKIP LOCKED
+    .Where(i => i.Status == "pending")
+    .Take(10)
+    .ToListAsync(ct);
+
+// Using DbContext.Set overloads
+var order = await dbContext.Set<Order>(DbLockingHint.Update)
+    .FirstOrDefaultAsync(o => o.Id == orderId, ct);
+```
+
+**Available Hints:**
+
+| Locking Hint | PostgreSQL | Description |
+|--------------|------------|-------------|
+| `DbLockingHint.KeyShare` | `FOR KEY SHARE` | Weakest lock, blocks key changes |
+| `DbLockingHint.Share` | `FOR SHARE` | Shared lock, blocks writes |
+| `DbLockingHint.NoKeyUpdate` | `FOR NO KEY UPDATE` | Blocks most writes except key-preserving |
+| `DbLockingHint.Update` | `FOR UPDATE` | Exclusive lock, blocks all writes |
+
+| Wait Hint | PostgreSQL | Description |
+|-----------|------------|-------------|
+| `DbWaitHint.NoWait` | `NOWAIT` | Fail immediately if lock unavailable |
+| `DbWaitHint.SkipLocked` | `SKIP LOCKED` | Skip locked rows (useful for queues) |
+
+**Convenience Methods:**
+
+| Method | Equivalent |
+|--------|------------|
+| `ForKeyShare()` | `WithHints(DbLockingHint.KeyShare)` |
+| `ForShare()` | `WithHints(DbLockingHint.Share)` |
+| `ForNoKeyUpdate()` | `WithHints(DbLockingHint.NoKeyUpdate)` |
+| `ForUpdate()` | `WithHints(DbLockingHint.Update)` |
+| `ForUpdateSkipLocked()` | `WithHints(DbLockingHint.Update, DbWaitHint.SkipLocked)` |
+| `ForNoKeyUpdateSkipLocked()` | `WithHints(DbLockingHint.NoKeyUpdate, DbWaitHint.SkipLocked)` |
+
+**Predefined Hint Sets:**
+
+```cs
+DbHintSet.Empty           // No hints
+DbHintSet.Update          // [DbLockingHint.Update]
+DbHintSet.UpdateSkipLocked // [DbLockingHint.Update, DbWaitHint.SkipLocked]
+```
+
 
 ## Sharding
 

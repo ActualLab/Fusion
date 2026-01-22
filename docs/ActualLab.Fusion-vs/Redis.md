@@ -73,7 +73,7 @@ public class UserService : IComputeService
 - Computed values that automatically stay fresh
 - Real-time updates pushed to clients
 - Preventing stale data bugs that plague manual caching
-- **Faster than Redis** — even for remote cache access (see below)
+- **34x faster** for remote access, **1,150x faster** for local (see [Performance](#performance))
 
 ### Redis is better at
 
@@ -96,20 +96,31 @@ public class UserService : IComputeService
 
 ## Performance
 
-Fusion's RPC layer outperforms Redis even for remote cache access:
+Fusion dramatically outperforms Redis — both for remote and local cache access.
+
+### Remote Access
 
 | Benchmark | ActualLab.Rpc | Redis | Speedup |
 |-----------|---------------|-------|---------|
-| Remote calls (GetUser) | 7.81M calls/s | ~1.5M calls/s | ~5x |
-| Round-trip latency | ~7 µs | ~50-100 µs | ~10x |
+| GetUser / GET | 7.81M calls/s | 229K req/s | **~34x** |
 
-Why is Fusion faster?
-- **Connection pooling**: Efficient multiplexing over fewer connections
+Redis benchmark: `redis-benchmark` with optimal client count (12), best of 5 runs.
+See [Benchmarks](../Benchmarks.md) for details.
+
+### Local Access
+
+| Benchmark | Fusion | Redis | Speedup |
+|-----------|--------|-------|---------|
+| Cached lookup | 263.62M calls/s | 229K req/s | **~1,150x** |
+
+Fusion's in-process cache eliminates network round-trips entirely. Even comparing Fusion's remote RPC access against Redis's local access, Fusion wins by 34x.
+
+### Why is Fusion faster?
+
+- **In-process caching**: Cached values stay in memory — no network hop
 - **Binary serialization**: MemoryPack is faster than Redis protocol
-- **Batching**: Multiple calls in the same frame are batched automatically
-- **No serialization overhead**: Cached values stay deserialized in memory
-
-For purely local cache access, Fusion is even faster since values are cached in-process.
+- **Connection multiplexing**: Efficient batching over fewer connections
+- **No deserialization overhead**: Cached objects are already deserialized
 
 ## When to Use Each
 

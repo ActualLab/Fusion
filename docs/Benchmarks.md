@@ -1,6 +1,6 @@
 # Benchmark Results
 
-**Updated:** 2026-01-17<br/>
+**Updated:** 2026-01-22<br/>
 **ActualLab.Fusion Version:** 11.4.7
 
 This page summarizes benchmark results from ActualLab.Fusion.Samples repository.
@@ -17,6 +17,16 @@ We ran each benchmark 2 times and took the best result for each test.
 | **.NET Version** | 10.0.1 |
 
 Note that Ryzen 9 9950X3D has 32 logical cores due to SMT.
+
+## Reference Redis Benchmark
+
+Reference benchmark using `redis-benchmark` tool on the same machine (500K requests, best of 5 runs). Optimal client count (12) was determined via binary search over 1-1000 range.
+
+| Operation | Result |
+|-----------|--------|
+| PING_INLINE | 231.59K req/s |
+| GET | 229.25K req/s |
+| SET | 229.67K req/s |
 
 ## Run-Benchmark.cmd
 
