@@ -34,8 +34,8 @@ public sealed class TestClock : MomentClock, IDisposable
 
     public override Moment ToRealTime(Moment localTime) => Settings.ToRealTime(localTime);
     public override Moment ToLocalTime(Moment realTime) => Settings.ToLocalTime(realTime);
-    public override TimeSpan ToRealDuration(TimeSpan localDuration) => Settings.ToLocalDuration(localDuration);
-    public override TimeSpan ToLocalDuration(TimeSpan realDuration) => Settings.ToRealDuration(realDuration);
+    public override TimeSpan ToRealDuration(TimeSpan localDuration) => Settings.ToRealDuration(localDuration);
+    public override TimeSpan ToLocalDuration(TimeSpan realDuration) => Settings.ToLocalDuration(realDuration);
 
     public override async Task Delay(TimeSpan dueIn, CancellationToken cancellationToken = default)
     {

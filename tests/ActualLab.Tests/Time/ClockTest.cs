@@ -7,13 +7,12 @@ namespace ActualLab.Tests.Time;
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
 {
+    private static double ToleranceMultiplier => TestRunnerInfo.IsBuildAgent() ? 5 : 1;
+
     [Fact]
     public async Task BasicTest()
     {
-        if (TestRunnerInfo.IsBuildAgent())
-            return; // By some reason the measurements are off by a lot on GitHub actions
-
-        var epsilon = TimeSpan.FromSeconds(TestRunnerInfo.IsBuildAgent() ? 5 : 1);
+        var epsilon = TimeSpan.FromSeconds(1 * ToleranceMultiplier);
         var epsilon10 = epsilon.MultiplyBy(10);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
         var realStart = Moment.Now;
@@ -46,7 +45,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
 
         // ReSharper disable once AccessToDisposedClosure
         var firedAt = clock.Timer(3000).Select(_ => clock.Now).ToEnumerable().Single();
-        ShouldEqual(firedAt, clockStart + TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(1.5));
+        ShouldEqual(firedAt, clockStart + TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(1.5 * ToleranceMultiplier));
 
         await Task.Yield(); // Just to suppress warning.
     }
@@ -54,7 +53,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public async Task TimerTest2()
     {
-        var epsilon = TimeSpan.FromSeconds(0.9);
+        var epsilon = TimeSpan.FromSeconds(0.9 * ToleranceMultiplier);
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
         var realStart = Moment.Now;
         var clockStart = clock.Now;
@@ -77,7 +76,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public async Task IntervalTest()
     {
-        var epsilon = TimeSpan.FromSeconds(1);
+        var epsilon = TimeSpan.FromSeconds(1 * ToleranceMultiplier);
         using var clock = new TestClock();
         var realStart = Moment.Now;
 
@@ -107,40 +106,38 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public async Task SpecialValuesTest()
     {
-        if (TestRunnerInfo.IsBuildAgent())
-            return; // By some reason the measurements are off by a lot on GitHub actions
-
+        var m = ToleranceMultiplier;
         async Task Test(MomentClock clock1)
         {
             // Negative value (but not infinity)
             await ((Func<Task>) (async () => {
-                var cts = new CancellationTokenSource(100);
+                var cts = new CancellationTokenSource((int)(100 * m));
                 await clock1.Delay(-2, cts.Token);
             })).Should().ThrowAsync<ArgumentOutOfRangeException>();
             await ((Func<Task>) (async () => {
-                var cts = new CancellationTokenSource(100);
+                var cts = new CancellationTokenSource((int)(100 * m));
                 await clock1.Delay(TimeSpan.FromMilliseconds(-2), cts.Token);
             })).Should().ThrowAsync<ArgumentOutOfRangeException>();
 
             // Infinity
             await ((Func<Task>) (async () => {
-                var cts = new CancellationTokenSource(100);
+                var cts = new CancellationTokenSource((int)(100 * m));
                 await clock1.Delay(Timeout.Infinite, cts.Token).SuppressCancellationAwait();
-            })).Should().CompleteWithinAsync(TimeSpan.FromMilliseconds(1000));
+            })).Should().CompleteWithinAsync(TimeSpan.FromMilliseconds(1000 * m));
             await ((Func<Task>) (async () => {
-                var cts = new CancellationTokenSource(100);
+                var cts = new CancellationTokenSource((int)(100 * m));
                 await clock1.Delay(Timeout.InfiniteTimeSpan, cts.Token).SuppressCancellationAwait();
-            })).Should().CompleteWithinAsync(TimeSpan.FromMilliseconds(1000));
+            })).Should().CompleteWithinAsync(TimeSpan.FromMilliseconds(1000 * m));
 
             // Zero
             await ((Func<Task>) (async () => {
-                var cts = new CancellationTokenSource(1000);
+                var cts = new CancellationTokenSource((int)(1000 * m));
                 await clock1.Delay(0, cts.Token).SuppressCancellationAwait();
-            })).Should().CompleteWithinAsync(TimeSpan.FromMilliseconds(500));
+            })).Should().CompleteWithinAsync(TimeSpan.FromMilliseconds(500 * m));
             await ((Func<Task>) (async () => {
-                var cts = new CancellationTokenSource(1000);
+                var cts = new CancellationTokenSource((int)(1000 * m));
                 await clock1.Delay(TimeSpan.Zero, cts.Token).SuppressCancellationAwait();
-            })).Should().CompleteWithinAsync(TimeSpan.FromMilliseconds(500));
+            })).Should().CompleteWithinAsync(TimeSpan.FromMilliseconds(500 * m));
         }
 
         await Test(MomentClockSet.Default.SystemClock);

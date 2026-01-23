@@ -5,11 +5,13 @@ namespace ActualLab.Tests.Time;
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class TickSourceTest(ITestOutputHelper @out) : TestBase(@out)
 {
+    private static double ToleranceMultiplier => TestRunnerInfo.IsBuildAgent() ? 5 : 1;
+
     [Fact]
     public async Task BasicTest()
     {
         var delays = new[] { 1, 10, 15, 16, 30 }.Select(x => TimeSpan.FromMilliseconds(x)).ToArray();
-        var maxShrinkage = TimeSpan.FromMilliseconds(3);
+        var maxShrinkage = TimeSpan.FromMilliseconds(3 * ToleranceMultiplier);
         foreach (var delay in delays) {
             WriteLine("");
             WriteLine($"Delay: {delay.ToShortString()}");
