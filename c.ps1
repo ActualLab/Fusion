@@ -657,6 +657,19 @@ switch ($mode) {
             $volumeMounts += "${gcpKeyPath}:/home/claude/.gcp:ro"
         }
 
+        # Add .actual folder mount for ActualChat project (contains prompts and other config)
+        if ($projectName -eq "ActualChat") {
+            $actualPath = if ($currentOS -eq "Windows") {
+                "$env:USERPROFILE/.actual"
+            } else {
+                "$env:HOME/.actual"
+            }
+            if (Test-Path $actualPath) {
+                $volumeMounts += "-v"
+                $volumeMounts += "${actualPath}:/home/claude/.actual:ro"
+            }
+        }
+
         # Calculate Docker working directory
         $dockerFolderName = if ($worktree) { "$projectName-$worktree" } else { $projectName }
         $dockerWorkDir = "/proj/$dockerFolderName$relativePath"
