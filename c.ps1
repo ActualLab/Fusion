@@ -155,7 +155,8 @@ function Find-ProjectRoot {
 $currentOS = Get-CurrentOS
 $mode = "docker"  # default mode
 $fromMode = $null  # set when self-invoked (e.g., from-docker, from-wsl)
-$worktreeSuffix = $null  # set when -wt argument is used
+$worktreeSuffix = $null  # set when wt argument is used (regular worktree from current branch)
+$featureWorktreeSuffix = $null  # set when fwt argument is used (feature branch worktree)
 $dryRun = $false
 $debugMode = $false
 $claudeArgs = @()
@@ -170,7 +171,8 @@ function Show-Help {
     Write-Host "  (default)    Run Claude in Docker container"
     Write-Host "  os           Run Claude directly on host OS"
     Write-Host "  wsl          Run Claude in WSL (Windows only)"
-    Write-Host "  wt <suffix>  Create/use worktree with given suffix (e.g., wt feature1)"
+    Write-Host "  wt <suffix>  Create/use worktree from current branch (e.g., wt experiment)"
+    Write-Host "  fwt <suffix> Create/use feature worktree with feat/<suffix> branch (e.g., fwt feature1)"
     Write-Host "  build        Build Docker image for current project"
     Write-Host "  help         Show this help message"
     Write-Host ""
@@ -198,17 +200,19 @@ function Show-Help {
     Write-Host ""
     Write-Host "Worktree support:"
     Write-Host "  Worktrees are automatically detected when the folder name is {Project}-{Suffix}"
-    Write-Host "  Use wt to create a new worktree if it doesn't exist"
+    Write-Host "  Use wt to create a regular worktree from current branch (push/pull go to that branch)"
+    Write-Host "  Use fwt to create a feature worktree with a new feat/<suffix> branch from origin/dev or origin/master"
     Write-Host ""
     Write-Host "Examples:"
-    Write-Host "  c                 Run Claude in Docker"
-    Write-Host "  c --dry-run       Show what Docker would run"
-    Write-Host "  c os              Run Claude on host OS"
-    Write-Host "  c wsl             Run Claude in WSL"
-    Write-Host "  c wt feature1     Run in worktree ActualLab.Fusion-feature1"
-    Write-Host "  c os wt bugfix    Run on host OS in worktree"
-    Write-Host "  c build           Build Docker image"
-    Write-Host "  c --resume abc    Pass --resume abc to Claude"
+    Write-Host "  c                  Run Claude in Docker"
+    Write-Host "  c --dry-run        Show what Docker would run"
+    Write-Host "  c os               Run Claude on host OS"
+    Write-Host "  c wsl              Run Claude in WSL"
+    Write-Host "  c wt experiment    Run in worktree from current branch"
+    Write-Host "  c fwt feature1     Run in worktree with feat/feature1 branch"
+    Write-Host "  c os fwt bugfix    Run on host OS in feature worktree"
+    Write-Host "  c build            Build Docker image"
+    Write-Host "  c --resume abc     Pass --resume abc to Claude"
     Write-Host ""
 }
 
@@ -240,7 +244,7 @@ while ($argIndex -lt $args.Count) {
         continue
     }
 
-    # Check for wt command (worktree mode)
+    # Check for wt command (regular worktree from current branch)
     if ($currentArg -eq "wt") {
         $argIndex++
         if ($argIndex -lt $args.Count) {
@@ -248,6 +252,19 @@ while ($argIndex -lt $args.Count) {
             $argIndex++
         } else {
             Write-Error "The wt command requires a worktree suffix argument"
+            exit 1
+        }
+        continue
+    }
+
+    # Check for fwt command (feature worktree with feat/<suffix> branch)
+    if ($currentArg -eq "fwt") {
+        $argIndex++
+        if ($argIndex -lt $args.Count) {
+            $featureWorktreeSuffix = $args[$argIndex]
+            $argIndex++
+        } else {
+            Write-Error "The fwt command requires a worktree suffix argument"
             exit 1
         }
         continue
@@ -294,9 +311,9 @@ $worktree = $projectInfo.Worktree
 $originalProjectRoot = $projectRoot
 $originalWorktree = $worktree
 
-# Handle -wt argument: create worktree if needed and switch to it
+# Handle wt argument: create regular worktree from current branch and switch to it
 if ($worktreeSuffix) {
-    # Calculate the main project path (not worktree)
+    # Always use the main project path (not another worktree)
     $mainProjectPath = Join-Path $env:AC_ProjectRoot $projectName
     $worktreePath = Join-Path $env:AC_ProjectRoot "$projectName-$worktreeSuffix"
 
@@ -305,45 +322,24 @@ if ($worktreeSuffix) {
         $originalLocation = Get-Location
         Set-Location $mainProjectPath
         try {
-            # Determine base branch based on project
-            $baseBranch = if ($projectName -eq "ActualChat") { "dev" } else { "master" }
-            $featureBranch = "feat/$worktreeSuffix"
-
-            # Make sure we have the latest
-            git fetch origin 2>$null
-
-            # Check if the feature branch already exists (locally or remotely)
-            $localBranchExists = git rev-parse --verify "refs/heads/$featureBranch" 2>$null
-            $localExists = $LASTEXITCODE -eq 0
-            $remoteBranchExists = git rev-parse --verify "refs/remotes/origin/$featureBranch" 2>$null
-            $remoteExists = $LASTEXITCODE -eq 0
-
-            if (-not $localExists) {
-                if ($remoteExists) {
-                    # Branch exists on remote but not locally - create local tracking branch
-                    Write-Host "Creating local branch '$featureBranch' tracking 'origin/$featureBranch'"
-                    git branch $featureBranch "origin/$featureBranch"
-                } else {
-                    # Branch doesn't exist anywhere - create it from base branch
-                    Write-Host "Creating branch '$featureBranch' from 'origin/$baseBranch'"
-                    git branch $featureBranch "origin/$baseBranch"
-                }
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Error "Failed to create branch '$featureBranch'"
-                    Set-Location $originalLocation
-                    exit 1
-                }
-            } else {
-                Write-Host "Using existing branch '$featureBranch'"
+            # Get current branch name in the main project
+            $currentBranch = git rev-parse --abbrev-ref HEAD
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to get current branch"
+                Set-Location $originalLocation
+                exit 1
             }
 
-            # Create worktree using the existing branch (without -b flag)
-            git worktree add $worktreePath $featureBranch
+            # Create worktree from current branch (creates a new branch with same name as suffix, tracking current branch)
+            # This makes push/pull work with the branch in the main project
+            git worktree add -b $worktreeSuffix $worktreePath $currentBranch
             if ($LASTEXITCODE -ne 0) {
                 Write-Error "Failed to create worktree"
                 Set-Location $originalLocation
                 exit 1
             }
+
+            Write-Host "Created branch '$worktreeSuffix' from '$currentBranch'"
         } finally {
             Set-Location $originalLocation
         }
@@ -352,6 +348,45 @@ if ($worktreeSuffix) {
     # Update project info for the worktree
     $projectRoot = $worktreePath
     $worktree = $worktreeSuffix
+    $relativePath = ""
+    Set-Location $worktreePath
+}
+
+# Handle fwt argument: create feature worktree with feat/<suffix> branch and switch to it
+if ($featureWorktreeSuffix) {
+    # Always use the main project path (not another worktree)
+    $mainProjectPath = Join-Path $env:AC_ProjectRoot $projectName
+    $worktreePath = Join-Path $env:AC_ProjectRoot "$projectName-$featureWorktreeSuffix"
+
+    if (-not (Test-Path $worktreePath)) {
+        Write-Host "Creating feature worktree: $projectName-$featureWorktreeSuffix"
+        $originalLocation = Get-Location
+        Set-Location $mainProjectPath
+        try {
+            # Determine base branch based on project
+            $baseBranch = if ($projectName -eq "ActualChat") { "dev" } else { "master" }
+            $featureBranch = "feat/$featureWorktreeSuffix"
+
+            # Make sure we have the latest base branch
+            git fetch origin $baseBranch 2>$null
+
+            # Create worktree with feature branch based on the base branch
+            git worktree add -b $featureBranch $worktreePath "origin/$baseBranch"
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to create worktree"
+                Set-Location $originalLocation
+                exit 1
+            }
+
+            Write-Host "Created branch '$featureBranch' from 'origin/$baseBranch'"
+        } finally {
+            Set-Location $originalLocation
+        }
+    }
+
+    # Update project info for the worktree
+    $projectRoot = $worktreePath
+    $worktree = $featureWorktreeSuffix
     $relativePath = ""
     Set-Location $worktreePath
 }
