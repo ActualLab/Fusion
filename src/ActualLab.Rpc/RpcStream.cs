@@ -90,7 +90,9 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 if (!Id.IsNone) // Already registered
                     return Id;
 
-                Peer ??= RpcOutboundContext.Current?.Peer ?? RpcInboundContext.GetCurrent().Peer;
+                Peer ??= RpcOutboundContext.Current?.Peer
+                    ?? RpcInboundContext.GetCurrent().Peer
+                    ?? throw Errors.InternalError($"Cannot serialize {GetType().GetName()}: no RPC context available.");
                 var sharedObjects = Peer.SharedObjects;
                 Id = sharedObjects.NextId(); // NOTE: Id changes on serialization!
                 var sharedStream = new RpcSharedStream<T>(this);
@@ -126,8 +128,10 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 
     ~RpcStream()
     {
-        if (_localSource is null)
-            Close(Errors.AlreadyDisposed(GetType()));
+        if (_localSource is null) {
+            // Only complete local channel - don't send network messages from finalizer
+            _remoteChannel?.Writer.TryComplete(Errors.AlreadyDisposed(GetType()));
+        }
     }
 
     public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
@@ -145,9 +149,26 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             if (_nextIndex == long.MaxValue) // Marked as missing
                 _remoteChannel.Writer.TryComplete(Internal.Errors.RpcStreamNotFound());
             else {
-                _isRegistered = true;
-                Peer.RemoteObjects.Register(this);
-                _ = SendResetFromLock(0);
+                try {
+                    _isRegistered = true;
+                    Peer.RemoteObjects.Register(this);
+                    _ = SendResetFromLock(0).ContinueWith(t => {
+                        if (!t.IsFaulted)
+                            return;
+
+                        StaticLog.For<RpcStream<T>>().LogWarning(t.GetBaseException(),
+                            "Failed to send initial reset for stream {Id}", Id);
+                        lock (_lock) {
+                            if (!_isDisconnected)
+                                CloseFromLock(t.Exception?.InnerException);
+                        }
+                    }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+                }
+                catch (Exception e) {
+                    _isRegistered = false;
+                    _remoteChannel.Writer.TryComplete(e);
+                    throw;
+                }
             }
             return new RemoteChannelEnumerator(this, cancellationToken);
         }
@@ -211,8 +232,8 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 return SendResetFromLock(_nextIndex);
 
             // Debug.WriteLine($"{Id}: +#{index} (ack @ {ackIndex})");
-            _nextIndex++;
             _remoteChannel.Writer.TryWrite((T)item!); // Must always succeed for unbounded channel
+            _nextIndex++;
             return Task.CompletedTask;
         }
     }
@@ -230,8 +251,8 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             var typedItems = (T[])items!;
             foreach (var item in typedItems) {
                 // Debug.WriteLine($"{Id}: +#{index} (ack @ {ackIndex})");
-                _nextIndex++;
                 _remoteChannel.Writer.TryWrite(item); // Must always succeed for unbounded channel
+                _nextIndex++;
             }
             return Task.CompletedTask;
         }
