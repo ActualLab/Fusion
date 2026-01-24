@@ -78,17 +78,23 @@ function Test-WindowsTerminal {
 }
 $hasWindowsTerminal = Test-WindowsTerminal
 
+# Chrome remote debugging port (standard)
+$ChromeDebugPort = 9222
+
 # On Windows, if not already in Windows Terminal, relaunch in wt
 # WT_SESSION is set by Windows Terminal when running inside it
+# Exception: chrome command runs directly without terminal relaunch
 $currentOS = Get-CurrentOS
-if ($currentOS -eq "Windows" -and $hasWindowsTerminal -and -not $env:WT_SESSION) {
+$hasChrome = $args -contains "chrome"
+if ($currentOS -eq "Windows" -and $hasWindowsTerminal -and -not $env:WT_SESSION -and -not $hasChrome) {
     $scriptPath = $MyInvocation.MyCommand.Path
     $workDir = (Get-Location).Path
-    # Keep terminal open for build, dry-run, or debug (only auto-close when actually running Claude)
+    # Keep terminal open for build, dry-run, debug, or help (only auto-close when actually running Claude)
     $hasDebug = $args -contains "--debug"
     $hasBuild = $args -contains "build"
     $hasDryRun = $args -contains "--dry-run"
-    if ($hasDebug -or $hasBuild -or $hasDryRun) {
+    $hasHelp = $args -contains "help" -or $args -contains "-h" -or $args -contains "--help" -or $args -contains "-?"
+    if ($hasDebug -or $hasBuild -or $hasDryRun -or $hasHelp) {
         $wtArgs = @("-d", $workDir, "--", "pwsh", "-NoExit", "-File", $scriptPath) + $args
     } else {
         $wtArgs = @("-d", $workDir, "--", "pwsh", "-File", $scriptPath) + $args
@@ -173,6 +179,7 @@ function Show-Help {
     Write-Host "  wsl          Run Claude in WSL (Windows only)"
     Write-Host "  wt <suffix>  Create/use worktree from current branch (e.g., wt experiment)"
     Write-Host "  fwt <suffix> Create/use feature worktree with feat/<suffix> branch (e.g., fwt feature1)"
+    Write-Host "  chrome       Start Chrome with remote debugging enabled (for Playwright)"
     Write-Host "  build        Build Docker image for current project"
     Write-Host "  help         Show this help message"
     Write-Host ""
@@ -211,6 +218,7 @@ function Show-Help {
     Write-Host "  c wt experiment    Run in worktree from current branch"
     Write-Host "  c fwt feature1     Run in worktree with feat/feature1 branch"
     Write-Host "  c os fwt bugfix    Run on host OS in feature worktree"
+    Write-Host "  c chrome           Start Chrome with remote debugging"
     Write-Host "  c build            Build Docker image"
     Write-Host "  c --resume abc     Pass --resume abc to Claude"
     Write-Host ""
@@ -225,7 +233,7 @@ while ($argIndex -lt $args.Count) {
     $currentArg = $args[$argIndex]
 
     # Check for mode commands
-    if ($currentArg -in "wsl", "os", "build" -and $mode -eq "docker") {
+    if ($currentArg -in "wsl", "os", "build", "chrome" -and $mode -eq "docker") {
         $mode = $currentArg
         $argIndex++
         continue
@@ -367,18 +375,41 @@ if ($featureWorktreeSuffix) {
             $baseBranch = if ($projectName -eq "ActualChat") { "dev" } else { "master" }
             $featureBranch = "feat/$featureWorktreeSuffix"
 
-            # Make sure we have the latest base branch
-            git fetch origin $baseBranch 2>$null
+            # Make sure we have the latest
+            git fetch origin 2>$null
 
-            # Create worktree with feature branch based on the base branch
-            git worktree add -b $featureBranch $worktreePath "origin/$baseBranch"
+            # Check if the feature branch already exists (locally or remotely)
+            $localBranchExists = git rev-parse --verify "refs/heads/$featureBranch" 2>$null
+            $localExists = $LASTEXITCODE -eq 0
+            $remoteBranchExists = git rev-parse --verify "refs/remotes/origin/$featureBranch" 2>$null
+            $remoteExists = $LASTEXITCODE -eq 0
+
+            if (-not $localExists) {
+                if ($remoteExists) {
+                    # Branch exists on remote but not locally - create local tracking branch
+                    Write-Host "Creating local branch '$featureBranch' tracking 'origin/$featureBranch'"
+                    git branch $featureBranch "origin/$featureBranch"
+                } else {
+                    # Branch doesn't exist anywhere - create it from base branch
+                    Write-Host "Creating branch '$featureBranch' from 'origin/$baseBranch'"
+                    git branch $featureBranch "origin/$baseBranch"
+                }
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Failed to create branch '$featureBranch'"
+                    Set-Location $originalLocation
+                    exit 1
+                }
+            } else {
+                Write-Host "Using existing branch '$featureBranch'"
+            }
+
+            # Create worktree using the existing branch (without -b flag)
+            git worktree add $worktreePath $featureBranch
             if ($LASTEXITCODE -ne 0) {
                 Write-Error "Failed to create worktree"
                 Set-Location $originalLocation
                 exit 1
             }
-
-            Write-Host "Created branch '$featureBranch' from 'origin/$baseBranch'"
         } finally {
             Set-Location $originalLocation
         }
@@ -773,6 +804,99 @@ switch ($mode) {
         } else {
             # On Windows, we're already in wt (handled at script start)
             & docker @dockerArgs
+        }
+    }
+
+    "chrome" {
+        # Start Chrome with remote debugging enabled
+
+        # Helper to check if debug port is open
+        function Test-DebugPort {
+            if ($currentOS -eq "Windows") {
+                $listening = netstat -an | Select-String ":$ChromeDebugPort\s+.*LISTENING"
+                return $null -ne $listening
+            } else {
+                # Unix/macOS: use lsof or nc
+                $result = bash -c "lsof -i :$ChromeDebugPort -sTCP:LISTEN 2>/dev/null || nc -z localhost $ChromeDebugPort 2>/dev/null"
+                return $LASTEXITCODE -eq 0
+            }
+        }
+
+        # Check if Chrome is already running with debug port
+        if (Test-DebugPort) {
+            Write-Host "Chrome is already running with remote debugging on port $ChromeDebugPort" -ForegroundColor Yellow
+            exit 0
+        }
+
+        # Find Chrome executable and user data dir based on OS
+        if ($currentOS -eq "Windows") {
+            $chromePaths = @(
+                "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+                "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+                "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+            )
+            $debugUserDataDir = "$env:LOCALAPPDATA\Google\Chrome\Playwright"
+        } elseif ($currentOS -eq "macOS") {
+            $chromePaths = @(
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            )
+            $debugUserDataDir = "$env:HOME/Library/Application Support/Google/Chrome Playwright"
+        } else {
+            # Linux
+            $chromePaths = @(
+                "/usr/bin/google-chrome",
+                "/usr/bin/google-chrome-stable",
+                "/usr/bin/chromium-browser",
+                "/usr/bin/chromium"
+            )
+            $debugUserDataDir = "$env:HOME/.config/google-chrome-playwright"
+        }
+
+        $chromePath = $null
+        foreach ($path in $chromePaths) {
+            if (Test-Path $path) {
+                $chromePath = $path
+                break
+            }
+        }
+
+        if (-not $chromePath) {
+            Write-Error "Chrome not found. Please install Google Chrome."
+            exit 1
+        }
+
+        Write-Host "Starting Chrome with remote debugging on port $ChromeDebugPort..." -ForegroundColor Cyan
+        Write-Host "Chrome path: $chromePath"
+
+        # Use a separate user data dir to force a new Chrome instance (otherwise Chrome reuses existing process and ignores debug flag)
+        # Start Chrome with remote debugging in a new process
+        Start-Process -FilePath $chromePath -ArgumentList "--remote-debugging-port=$ChromeDebugPort", "--user-data-dir=`"$debugUserDataDir`"", "--remote-allow-origins=*"
+
+        # Wait for debug port to open (check once per second, max 30 seconds)
+        # First 2 checks are silent, then show waiting message
+        $maxWait = 30
+        $waited = 0
+        $printedWaiting = $false
+        while (-not (Test-DebugPort) -and $waited -lt $maxWait) {
+            Start-Sleep -Seconds 1
+            $waited++
+            if ($waited -gt 2 -and -not $printedWaiting) {
+                Write-Host "Waiting for the debug port to open: " -NoNewline
+                $printedWaiting = $true
+            }
+            if ($printedWaiting) {
+                Write-Host "." -NoNewline
+            }
+        }
+        if ($printedWaiting) {
+            Write-Host ""
+        }
+
+        if (Test-DebugPort) {
+            Write-Host "Chrome started with remote debugging on port $ChromeDebugPort" -ForegroundColor Green
+            Write-Host "Note: This uses a separate profile (Playwright)" -ForegroundColor DarkGray
+        } else {
+            Write-Host "Timed out waiting for Chrome debug port." -ForegroundColor Yellow
         }
     }
 }

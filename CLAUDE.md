@@ -53,7 +53,7 @@ When running in Docker (`AC_OS` = `Linux in Docker`), the following tools are av
 | **Editors** | vim, nano |
 | **Python** | Python 3, matplotlib, seaborn, plotly, pandas, numpy, pillow |
 | **Cloud** | gcloud CLI (Google Cloud), with host's gcloud config mounted read-only |
-| **Testing** | Playwright browser dependencies pre-installed |
+| **Testing** | Playwright with Chromium pre-installed |
 | **Other** | jq, curl, wget, imagemagick, sudo |
 
 Build artifacts are stored in `artifacts/claude-docker/` to avoid permission conflicts with the host.
@@ -74,6 +74,26 @@ Build artifacts are stored in `artifacts/claude-docker/` to avoid permission con
 - `ActualChat_*` - Any variables prefixed with `ActualChat_`
 
 **Google Cloud credentials**: The `~/.gcp` folder is mounted read-only to `/home/claude/.gcp`. If `GOOGLE_APPLICATION_CREDENTIALS` is set on the host, it's automatically remapped to `/home/claude/.gcp/key.json` inside the container.
+
+## Playwright and Browser Automation
+
+Playwright and Chromium are pre-installed in the Docker image for browser automation tasks.
+
+**Using host Chrome**: When the user asks you to "use host Chrome", connect Playwright to Chrome running on the Windows host instead of launching a headless browser. This allows the user to visually observe browser automation.
+
+The user starts Chrome with remote debugging via `c chrome` command (port 9222). Connect to it using:
+
+```typescript
+import { chromium } from 'playwright';
+
+// Connect to host Chrome on standard debug port
+const browser = await chromium.connectOverCDP('http://localhost:9222');
+const page = await browser.newPage();
+await page.goto('https://example.com');
+// ... user sees this in their Chrome window
+```
+
+Since Docker uses `--network host`, `localhost:9222` reaches the host's Chrome directly.
 
 ## Project Paths by Environment
 

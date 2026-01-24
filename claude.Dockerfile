@@ -55,6 +55,9 @@ RUN dotnet workload install wasm-tools
 # Install Playwright browser dependencies (for running Playwright tests)
 RUN npx playwright install-deps
 
+# Install Playwright npm package globally (speeds up first use)
+RUN npm install -g playwright
+
 # Create non-root user
 ARG USERNAME=claude
 
@@ -103,6 +106,9 @@ ENV PATH=$PATH:/usr/local/share/npm-global/bin
 # Install Claude Code CLI
 ENV CLAUDE_INSTALL_METHOD=npm
 RUN npm install -g @anthropic-ai/claude-code
+
+# Pre-download Playwright Chromium browser (~280MB, speeds up first use)
+RUN npx playwright install chromium
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj
