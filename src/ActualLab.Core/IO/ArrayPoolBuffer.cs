@@ -14,9 +14,9 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     private T[] _array = pool.Rent(RoundCapacity(initialCapacity));
     private int _position;
 
-    public bool MustClear { get; init; } = mustClear;
+    public readonly ArrayPool<T> Pool = pool;
     public T[] Array => _array;
-    public ArrayPool<T> Pool => pool;
+    public readonly bool MustClear = mustClear;
 
     /// <inheritdoc/>
     Memory<T> IMemoryOwner<T>.Memory => MemoryMarshal.AsMemory(WrittenMemory);
@@ -126,7 +126,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _array, null!) is { } array)
-            pool.Return(array, MustClear);
+            Pool.Return(array, MustClear);
     }
 
     /// <inheritdoc/>
@@ -166,6 +166,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public void Reset()
         => _position = 0;
 
+
     public void Renew(int minCapacity, int maxCapacity)
     {
         _position = 0;
@@ -185,19 +186,21 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ResizeBuffer(int capacity)
-    {
-        capacity = RoundCapacity(capacity);
-#pragma warning disable CS8601 // Possible null reference assignment.
-        pool.Resize(ref _array, capacity);
-#pragma warning restore CS8601 // Possible null reference assignment.
-    }
+        => Pool.Resize(ref _array, RoundCapacity(capacity));
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ReplaceBuffer(int capacity)
     {
-        capacity = RoundCapacity(capacity);
-        pool.Return(_array, MustClear);
-        _array = pool.Rent(capacity);
+        Pool.Return(_array, MustClear);
+        _array = Pool.Rent(RoundCapacity(capacity));
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public ArrayPoolArrayHandle<T> ReplaceAndReturnArrayHandle(int capacity)
+    {
+        var result = new ArrayPoolArrayHandle<T>(Pool, _array, _position, MustClear);
+        _array = Pool.Rent(RoundCapacity(capacity));
+        return result;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
