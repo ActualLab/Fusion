@@ -15,7 +15,7 @@ public sealed class RpcInboundContext
     }
 
     public readonly RpcPeer Peer;
-    public readonly RpcMessage Message;
+    public readonly RpcInboundMessage Message;
     public readonly CancellationToken PeerChangedToken;
     public readonly CpuTimestamp CreatedAt = CpuTimestamp.Now;
     public readonly RpcMethodDef? MethodDef;
@@ -25,7 +25,7 @@ public sealed class RpcInboundContext
     public static RpcInboundContext GetCurrent()
         => CurrentLocal.Value ?? throw Errors.NoCurrentRpcInboundContext();
 
-    public RpcInboundContext(RpcPeer peer, RpcMessage message, CancellationToken peerChangedToken)
+    public RpcInboundContext(RpcPeer peer, RpcInboundMessage message, CancellationToken peerChangedToken)
     {
         Peer = peer;
         Message = message;

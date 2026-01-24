@@ -15,7 +15,7 @@ public record RpcPeerOptions
     public Func<RpcHub, RpcPeerRef, RpcPeer> PeerFactory { get; init; }
     public Func<RpcPeerRef, RpcPeerConnectionKind> ConnectionKindDetector { get; init; }
     public Func<RpcPeer, Exception, bool> TerminalErrorDetector { get; init; }
-    public Func<RpcServerPeer, Channel<RpcMessage>, PropertyBag, CancellationToken, Task<RpcConnection>> ServerConnectionFactory { get; init; }
+    public Func<RpcServerPeer, RpcTransport, PropertyBag, CancellationToken, Task<RpcConnection>> ServerConnectionFactory { get; init; }
     public Func<RpcServerPeer, TimeSpan> ServerPeerShutdownTimeoutProvider { get; init; }
     public Func<RpcPeer, TimeSpan> PeerRemoveDelayProvider { get; init; }
 
@@ -44,9 +44,9 @@ public record RpcPeerOptions
         => error is RpcReconnectFailedException;
 
     protected static Task<RpcConnection> DefaultServerConnectionFactory(
-        RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties,
+        RpcServerPeer peer, RpcTransport transport, PropertyBag properties,
         CancellationToken cancellationToken)
-        => Task.FromResult(new RpcConnection(channel, properties));
+        => Task.FromResult(new RpcConnection(transport, properties));
 
     protected static TimeSpan DefaultServerPeerShutdownTimeoutProvider(RpcServerPeer peer)
     {

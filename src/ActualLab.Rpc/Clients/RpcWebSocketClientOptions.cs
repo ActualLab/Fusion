@@ -18,7 +18,7 @@ public record RpcWebSocketClientOptions
     // Delegate options
     public Func<RpcClientPeer, string> HostUrlResolver { get; init; }
     public Func<RpcClientPeer, Uri?> ConnectionUriResolver { get; init; }
-    public Func<RpcPeer, PropertyBag, WebSocketChannel<RpcMessage>.Options> WebSocketChannelOptionsFactory { get; init; }
+    public Func<RpcPeer, PropertyBag, WebSocketRpcTransport.Options> WebSocketTransportOptionsFactory { get; init; }
     public Func<RpcClientPeer, WebSocketOwner> WebSocketOwnerFactory { get; init; }
     public Func<FrameDelayer?>? FrameDelayerFactory { get; init; }
 
@@ -27,7 +27,7 @@ public record RpcWebSocketClientOptions
     {
         HostUrlResolver = DefaultHostUrlResolver;
         ConnectionUriResolver = DefaultConnectionUriResolver;
-        WebSocketChannelOptionsFactory = DefaultWebSocketChannelOptionsFactory;
+        WebSocketTransportOptionsFactory = DefaultWebSocketTransportOptionsFactory;
         WebSocketOwnerFactory = DefaultWebSocketOwnerFactory;
         FrameDelayerFactory = FrameDelayerFactories.None;
     }
@@ -67,17 +67,9 @@ public record RpcWebSocketClientOptions
         return new Uri(url, UriKind.Absolute);
     }
 
-    protected static WebSocketChannel<RpcMessage>.Options DefaultWebSocketChannelOptionsFactory(
+    protected static WebSocketRpcTransport.Options DefaultWebSocketTransportOptionsFactory(
         RpcPeer peer, PropertyBag properties)
-    {
-        var options = peer.Hub.Services.GetRequiredService<RpcWebSocketClientOptions>();
-        return WebSocketChannel<RpcMessage>.Options.Default with {
-            Serializer = peer.SerializationFormat.MessageSerializerFactory.Invoke(peer),
-            FrameDelayerFactory = options.UseAutoFrameDelayerFactory
-                ? FrameDelayerFactories.Auto(peer, properties)
-                : options.FrameDelayerFactory,
-        };
-    }
+        => WebSocketRpcTransport.Options.Default;
 
     private WebSocketOwner DefaultWebSocketOwnerFactory(RpcClientPeer peer)
     {

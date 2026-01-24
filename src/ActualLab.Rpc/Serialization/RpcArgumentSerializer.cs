@@ -1,31 +1,28 @@
 using System.Buffers;
 using ActualLab.Interception;
 using ActualLab.IO;
-using ActualLab.IO.Internal;
 
 namespace ActualLab.Rpc.Serialization;
 
-public abstract class RpcArgumentSerializer(bool forcePolymorphism)
+public abstract class RpcArgumentSerializer
 {
     [ThreadStatic] private static ArrayPoolBuffer<byte>? _writeBuffer;
-    protected static readonly ArrayPool<byte> NoPool = NoArrayPool<byte>.Instance;
 
     public static int WriteBufferReplaceCapacity { get; set; } = 65536;
     public static int WriteBufferCapacity { get; set; } = 4096;
     public static int CopyThreshold { get; set; } = 1024;
 
-    public bool ForcePolymorphism { get; } = forcePolymorphism;
-
-    public abstract ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism, int sizeHint);
+    // Serializes arguments directly to the provided buffer
+    public abstract void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer);
     public abstract void Deserialize(ref ArgumentList arguments, bool needsPolymorphism, ReadOnlyMemory<byte> data);
 
+    // Gets a thread-local write buffer for cases where caller needs to serialize arguments independently
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected static ArrayPoolBuffer<byte> GetWriteBuffer(int sizeHint)
-        => sizeHint > CopyThreshold
-            ? new ArrayPoolBuffer<byte>(NoPool, 240 + sizeHint, false)
-            : ArrayPoolBuffer<byte>.NewOrRenew(ref _writeBuffer, WriteBufferCapacity, WriteBufferReplaceCapacity, false);
+    public static ArrayPoolBuffer<byte> GetWriteBuffer()
+        => ArrayPoolBuffer<byte>.NewOrRenew(ref _writeBuffer, WriteBufferCapacity, WriteBufferReplaceCapacity, false);
 
-    protected static ReadOnlyMemory<byte> GetWriteBufferMemory(ArrayPoolBuffer<byte> buffer)
+    // Gets the written memory from the buffer, handling copy-on-small-size for pooled buffers
+    public static ReadOnlyMemory<byte> GetWriteBufferMemory(ArrayPoolBuffer<byte> buffer)
     {
         var memory = buffer.WrittenMemory;
         if (!ReferenceEquals(buffer, _writeBuffer))

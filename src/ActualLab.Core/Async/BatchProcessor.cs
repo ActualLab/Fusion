@@ -7,7 +7,7 @@ namespace ActualLab.Async;
 
 static file class BatchProcessor
 {
-    public static readonly UnboundedChannelOptions DefaultChannelOptions = new UnboundedChannelOptions() {
+    public static readonly UnboundedChannelOptions DefaultChannelOptions = new() {
         SingleReader = false,
         SingleWriter = false,
         AllowSynchronousContinuations = true,

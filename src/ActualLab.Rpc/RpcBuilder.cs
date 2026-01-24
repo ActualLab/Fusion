@@ -46,8 +46,7 @@ public readonly struct RpcBuilder
             CodeKeeper.Keep<RpcConfiguration>();
             CodeKeeper.Keep<RpcSerializationFormat>();
             CodeKeeper.Keep<RpcSerializationFormatResolver>();
-            CodeKeeper.Keep<RpcByteArgumentSerializerV2>();
-            CodeKeeper.Keep<RpcByteArgumentSerializerV1>();
+            CodeKeeper.Keep<RpcByteArgumentSerializerV4>();
             CodeKeeper.Keep<RpcByteMessageSerializerV4>();
             CodeKeeper.Keep<RpcDefaultCallTracer>();
 

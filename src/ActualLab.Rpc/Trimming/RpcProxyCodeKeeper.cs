@@ -32,7 +32,7 @@ public class RpcProxyCodeKeeper : ProxyCodeKeeper
 
         // RpcInbound/OutboundXxx
         var outboundContext = CallSilently(() => new RpcOutboundContext());
-        var inboundContext = CallSilently(() => new RpcInboundContext(null!, null!, default));
+        var inboundContext = CallSilently(() => new RpcInboundContext(null!, (RpcInboundMessage)null!, default));
         CallSilently(() => new RpcOutboundCall<TUnwrapped>(outboundContext));
         CallSilently(() => new RpcInboundCall<TUnwrapped>(inboundContext));
         CallSilently(() => new RpcInboundNotFoundCall<TUnwrapped>(inboundContext));

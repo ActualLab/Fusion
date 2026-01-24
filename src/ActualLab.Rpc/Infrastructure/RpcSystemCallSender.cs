@@ -47,12 +47,12 @@ public sealed class RpcSystemCallSender : RpcServiceBase
 
     public Task Handshake(
         RpcPeer peer,
-        ChannelWriter<RpcMessage> sender, // Handshake is sent before exposing the Sender, so we pass it directly
+        RpcTransport transport, // Handshake is sent before exposing the Transport, so we pass it directly
         RpcHandshake handshake)
     {
         var context = new RpcOutboundContext(peer);
         var call = context.PrepareCallForSendNoWait(HandshakeMethodDef, ArgumentList.New(handshake))!;
-        return call.SendNoWait(needsPolymorphism: false, sender);
+        return call.SendNoWait(needsPolymorphism: false, transport);
     }
 
     // Regular calls
@@ -81,7 +81,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
             if (inboundHash is null)
                 return call.SendNoWait(needsArgumentPolymorphism);
 
-            var (message, hash) = call.CreateMessageWithHashHeader(call.Context.RelatedId, needsArgumentPolymorphism);
+            var (message, hash) = call.CreateOutboundMessageWithHashHeader(call.Context.RelatedId, needsArgumentPolymorphism);
             return string.Equals(hash, inboundHash, StringComparison.Ordinal)
                 ? Match(peer, inboundCall.Id, headers)
                 : call.SendNoWait(message);

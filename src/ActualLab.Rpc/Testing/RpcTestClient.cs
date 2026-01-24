@@ -64,7 +64,7 @@ public class RpcTestClient(IServiceProvider services) : RpcClient(services)
 
     public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
     {
-        var channel = await this[clientPeer.Ref].PullClientChannel(cancellationToken).ConfigureAwait(false);
-        return new RpcConnection(channel);
+        var transport = await this[clientPeer.Ref].PullClientTransport(clientPeer, cancellationToken).ConfigureAwait(false);
+        return new RpcConnection(transport);
     }
 }

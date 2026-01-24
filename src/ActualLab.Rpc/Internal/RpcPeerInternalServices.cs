@@ -9,7 +9,7 @@ public readonly record struct RpcPeerInternalServices(RpcPeer Peer)
     public RpcPeerOptions Options => Peer.Options;
     public RpcOutboundCallOptions OutboundCallOptions => Peer.OutboundCallOptions;
     public RpcInboundCallOptions InboundCallOptions => Peer.InboundCallOptions;
-    public ChannelWriter<RpcMessage>? Sender => Peer.Sender;
+    public RpcTransport? Transport => Peer.Transport;
     public RpcCallLogger CallLogger => Peer.CallLogger;
     public ILogger Log => Peer.Log;
 }

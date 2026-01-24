@@ -10,7 +10,7 @@ public record RpcInboundCallOptions
     public static RpcInboundCallOptions Default { get; set; } = new();
 
     // Delegate options
-    public Func<RpcPeer, RpcMessage, CancellationToken, RpcInboundContext> ContextFactory { get; init; }
+    public Func<RpcPeer, RpcInboundMessage, CancellationToken, RpcInboundContext> ContextFactory { get; init; }
 
     public RpcInboundCallOptions()
         => ContextFactory = static (peer, message, peerChangedToken) => new(peer, message, peerChangedToken);

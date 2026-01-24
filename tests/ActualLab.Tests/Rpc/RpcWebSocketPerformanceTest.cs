@@ -10,7 +10,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
     {
         ExposeBackend = true;
         RpcFrameDelayerFactory = null;
-        SerializationFormat = "msgpack4c";
+        SerializationFormat = "msgpack5c";
     }
 
     protected override void ConfigureServices(IServiceCollection services, bool isClient)

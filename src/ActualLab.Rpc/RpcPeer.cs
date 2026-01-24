@@ -13,7 +13,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     private volatile AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected);
     private volatile RpcMethodResolver _serverMethodResolver;
-    private volatile ChannelWriter<RpcMessage>? _sender;
+    private volatile RpcTransport? _transport;
     private volatile RpcPeerStopMode _stopMode;
     private bool _resetTryIndex;
 
@@ -22,10 +22,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected internal readonly RpcInboundCallOptions InboundCallOptions;
     protected internal readonly RpcOutboundCallOptions OutboundCallOptions;
 
-    protected internal ChannelWriter<RpcMessage>? Sender
+    protected internal RpcTransport? Transport
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _sender ?? _connectionState.Value.Sender; // _sender is set after _connectionState, so can be out of sync
+        get => _transport ?? _connectionState.Value.Transport; // _transport is set after _connectionState, so can be out of sync
     }
 
     protected internal RpcCallLogger CallLogger
@@ -104,37 +104,30 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public override string ToString()
         => $"{GetType().Name}({Ref}, #{GetHashCode()})";
 
-    public Task Send(RpcMessage message, ChannelWriter<RpcMessage>? sender)
+    // Send uses transport's Write method. Returns Task.CompletedTask for sync path.
+    // Serialization happens inside transport (synchronized), so errors propagate correctly.
+    public Task Send(RpcOutboundMessage message, RpcTransport? transport = null)
     {
-        // !!! Send should never throw an exception.
-        // This method is optimized to run as quickly as possible,
-        // that's why it is a bit complicated.
-
-        sender ??= Sender;
-        try {
-            return sender is null || sender.TryWrite(message)
-                ? Task.CompletedTask
-                : CompleteAsync(this, message, sender);
-        }
-        catch (Exception e) {
-            Log.LogError(e, "Send failed");
+        transport ??= Transport;
+        if (transport is null)
             return Task.CompletedTask;
-        }
 
-        static async Task CompleteAsync(RpcPeer peer, RpcMessage message, ChannelWriter<RpcMessage> sender) {
-            // !!! This method should never fail
+        // Write returns Task.CompletedTask if write succeeded synchronously
+        var writeTask = transport.Write(message, StopToken);
+        if (writeTask.IsCompleted)
+            return writeTask; // Fast path: completed synchronously (success or error)
+
+        // Slow path: need to await and handle exceptions
+        return SendAsync(this, writeTask, transport);
+
+        static async Task SendAsync(RpcPeer peer, Task writeTask, RpcTransport transport) {
             try {
-                // If we're here, WaitToWriteAsync call is required to continue
-                while (await sender.WaitToWriteAsync(peer.StopToken).ConfigureAwait(false))
-                    if (sender.TryWrite(message))
-                        return;
-
-                throw new ChannelClosedException();
+                await writeTask.ConfigureAwait(false);
             }
             catch (Exception e) when (e is not OperationCanceledException) {
                 peer.Log.LogError(e, "Send failed");
                 var connectionState = peer.ConnectionState;
-                if (ReferenceEquals(connectionState.Value.Sender, sender))
+                if (ReferenceEquals(connectionState.Value.Transport, transport))
                     _ = peer.Disconnect(e, connectionState, CancellationToken.None);
             }
         }
@@ -145,15 +138,15 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     public bool IsConnected(
         [NotNullWhen(true)] out RpcHandshake? handshake,
-        [NotNullWhen(true)] out ChannelWriter<RpcMessage>? sender)
+        [NotNullWhen(true)] out RpcTransport? transport)
     {
         var connectionState = ConnectionState.Value;
         handshake = connectionState.Handshake;
-        sender = connectionState.Sender;
+        transport = connectionState.Transport;
         return handshake is not null;
     }
 
-    public async Task<(RpcHandshake Handshake, ChannelWriter<RpcMessage> Sender)> WhenConnected(
+    public async Task<(RpcHandshake Handshake, RpcTransport Transport)> WhenConnected(
         CancellationToken cancellationToken = default)
     {
         var connectionState = ConnectionState;
@@ -163,14 +156,14 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 var vConnectionState = connectionState.Value;
                 if (vConnectionState.Handshake is not { } handshake)
                     continue;
-                if (vConnectionState.Sender is not { } sender)
+                if (vConnectionState.Transport is not { } transport)
                     continue;
 
                 var spinWait = new SpinWait();
                 while (!connectionState.HasNext) {
-                    // Waiting for _sender assignment
-                    if (ReferenceEquals(sender, _sender))
-                        return (handshake, sender);
+                    // Waiting for _transport assignment
+                    if (ReferenceEquals(transport, _transport))
+                        return (handshake, transport);
 
                     spinWait.SpinOnce();
                 }
@@ -193,14 +186,14 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    public Task<(RpcHandshake Handshake, ChannelWriter<RpcMessage> Sender)> WhenConnected(
+    public Task<(RpcHandshake Handshake, RpcTransport Transport)> WhenConnected(
         TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         return timeout == TimeSpan.MaxValue
             ? WhenConnected(cancellationToken)
             : WhenConnectedWithTimeout(this, timeout, cancellationToken);
 
-        static async Task<(RpcHandshake Handshake, ChannelWriter<RpcMessage> Sender)> WhenConnectedWithTimeout(
+        static async Task<(RpcHandshake Handshake, RpcTransport Transport)> WhenConnectedWithTimeout(
             RpcPeer peer, TimeSpan timeout, CancellationToken cancellationToken)
         {
             using var timeoutCts = cancellationToken.CreateLinkedTokenSource(timeout);
@@ -229,7 +222,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             connectionState = _connectionState;
             if (expectedState is not null && !ReferenceEquals(expectedState, connectionState))
                 return Task.CompletedTask;
-            if (connectionState.Value.Sender is null || connectionState.IsFinal)
+            if (connectionState.Value.Transport is null || connectionState.IsFinal)
                 return Task.CompletedTask;
         }
         connectionState.Value.ReaderTokenSource.CancelAndDisposeSilently();
@@ -288,13 +281,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                     // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                     var connection = await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
-                    var channel = connection.Channel;
-                    var sender = channel.Writer;
+                    var transport = connection.Transport;
 
-                    // WebSocketChannel is IAsyncEnumerable<RpcMessage>, its GetAsyncEnumerator honors ReadMode
-                    var reader = channel is IAsyncEnumerable<RpcMessage> asyncEnumerable
-                        ? asyncEnumerable.GetAsyncEnumerator(readerToken)
-                        : channel.Reader.ReadAllAsync(readerToken).GetAsyncEnumerator(readerToken);
+                    // Get inbound message reader from the connection
+                    var reader = connection.InboundMessages.GetAsyncEnumerator(readerToken);
 
                     // Sending Handshake call
                     using var handshakeCts = cancellationToken.CreateLinkedTokenSource(Hub.Limits.HandshakeTimeout);
@@ -310,7 +300,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                                     RpcHandshake.CurrentProtocolVersion,
                                     ++handshakeIndex);
                                 await Hub.SystemCallSender
-                                    .Handshake(this, sender, ownHandshake1)
+                                    .Handshake(this, transport, ownHandshake1)
                                     .WaitAsync(handshakeToken)
                                     .ConfigureAwait(false);
                                 var hasMore = await reader.MoveNextAsync().ConfigureAwait(false);
@@ -454,7 +444,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     }
 
     protected RpcInboundContext? ProcessMessage(
-        RpcMessage message,
+        RpcInboundMessage message,
         CancellationToken peerChangedToken,
         CancellationToken cancellationToken)
     {
@@ -515,11 +505,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             if (newState.ReaderTokenSource != oldState.ReaderTokenSource) {
                 // Cancel the old ReaderTokenSource
                 oldState.ReaderTokenSource.CancelAndDisposeSilently();
-                _sender = newState.Sender;
+                _transport = newState.Transport;
             }
             if (newState.Connection != oldState.Connection) {
-                // Complete the old Channel
-                oldState.Sender?.TryComplete(newState.Error);
+                // Complete the old transport
+                oldState.Transport?.TryComplete(newState.Error);
             }
 #if NET9_0_OR_GREATER
             Lock.Exit();

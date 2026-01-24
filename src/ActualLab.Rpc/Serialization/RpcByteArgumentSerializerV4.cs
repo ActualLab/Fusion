@@ -4,13 +4,14 @@ using ActualLab.Rpc.Serialization.Internal;
 
 namespace ActualLab.Rpc.Serialization;
 
-public sealed class RpcByteArgumentSerializerV4(IByteSerializer baseSerializer) : RpcArgumentSerializer(false)
+public sealed class RpcByteArgumentSerializerV4(IByteSerializer baseSerializer) : RpcArgumentSerializer
 {
-    public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism, int sizeHint)
+    public override void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer)
     {
-        var buffer = GetWriteBuffer(sizeHint);
-        if (needsPolymorphism) // Rare case
-            return PolySerialize(arguments, buffer);
+        if (needsPolymorphism) { // Rare case
+            PolySerialize(arguments, buffer);
+            return;
+        }
 
         // Frequent case
         var itemTypes = arguments.Type.ItemTypes;
@@ -22,7 +23,6 @@ public sealed class RpcByteArgumentSerializerV4(IByteSerializer baseSerializer) 
             var item = arguments.GetUntyped(i);
             baseSerializer.Write(buffer, item, type);
         }
-        return GetWriteBufferMemory(buffer);
     }
 
     public override void Deserialize(ref ArgumentList arguments, bool needsPolymorphism, ReadOnlyMemory<byte> data)
@@ -48,7 +48,7 @@ public sealed class RpcByteArgumentSerializerV4(IByteSerializer baseSerializer) 
 
     // Private methods
 
-    private ReadOnlyMemory<byte> PolySerialize(ArgumentList arguments, ArrayPoolBuffer<byte> buffer)
+    private void PolySerialize(ArgumentList arguments, ArrayPoolBuffer<byte> buffer)
     {
         var itemTypes = arguments.Type.ItemTypes;
         for (var i = 0; i < itemTypes.Length; i++) {
@@ -69,7 +69,6 @@ public sealed class RpcByteArgumentSerializerV4(IByteSerializer baseSerializer) 
             else
                 baseSerializer.Write(buffer, item, type);
         }
-        return GetWriteBufferMemory(buffer);
     }
 
     private void PolyDeserialize(ArgumentList arguments, ReadOnlyMemory<byte> data)

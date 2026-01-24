@@ -1,11 +1,10 @@
-using System.Buffers;
 using System.Text;
 using ActualLab.IO;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Serialization;
 
-public abstract class RpcMessageSerializer(RpcPeer peer) : IByteSerializer<RpcMessage>
+public abstract class RpcMessageSerializer(RpcPeer peer)
 {
     [ThreadStatic] private static Encoder? _utf8Encoder;
     [ThreadStatic] private static Decoder? _utf8Decoder;
@@ -19,8 +18,8 @@ public abstract class RpcMessageSerializer(RpcPeer peer) : IByteSerializer<RpcMe
 
     public RpcPeer Peer { get; } = peer;
 
-    public abstract RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength);
-    public abstract void Write(IBufferWriter<byte> bufferWriter, RpcMessage value);
+    public abstract RpcInboundMessage Read(ArrayPoolArrayHandle<byte> buffer, int offset, out int readLength);
+    public abstract void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected static Encoder GetUtf8Encoder()

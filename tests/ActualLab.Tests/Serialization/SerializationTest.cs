@@ -171,44 +171,6 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void RpcMessageV1Serialization()
-    {
-        Test(new RpcMessageV1(0, 3, "s", "m",
-            new TextOrBytes([1, 2, 3]),
-            null));
-
-        Test(new RpcMessageV1(1, 3, "s", "m",
-            new TextOrBytes([1, 2, 3]),
-            []));
-
-        Test(new RpcMessageV1(2, 3, "s", "m",
-            new TextOrBytes([1, 2, 3]),
-            [
-                new("v", "@OVhtp0TRc")
-            ]));
-
-        Test(new RpcMessageV1(0, 3, "s", "m",
-            new TextOrBytes([1, 2, 3]),
-            [
-                new("a", "b"),
-                new("v", "@OVhtp0TRc")
-            ]));
-
-        void Test(RpcMessageV1 m) {
-            var ms = m.PassThroughAllSerializers();
-            ms.RelatedId.Should().Be(m.RelatedId);
-            ms.Service.Should().Be(m.Service);
-            ms.Method.Should().Be(m.Method);
-            ms.ArgumentData.Data.ToArray().Should().Equal(m.ArgumentData.Data.ToArray());
-            ms.Headers?.Length.Should().Be(m.Headers?.Length);
-            foreach (var (hs, h) in ms.Headers.OrEmpty().Zip(m.Headers.OrEmpty(), (hs, h) => (hs, h))) {
-                hs.Name.Should().Be(h.Name);
-                hs.Value.Should().Be(h.Value);
-            }
-        }
-    }
-
-    [Fact]
     public void FilePathSerialization()
     {
         default(FilePath).AssertPassesThroughAllSerializers(Out);
