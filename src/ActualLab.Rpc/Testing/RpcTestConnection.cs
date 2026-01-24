@@ -11,7 +11,7 @@ public class RpcTestConnection
 #else
     private readonly object _lock = new();
 #endif
-    private volatile AsyncState<ChannelPair<RpcMessage>?> _channels = new(null);
+    private volatile AsyncState<ChannelPair<RpcInboundMessage>?> _channels = new(null);
 
     public RpcTestClient TestClient { get; }
     public RpcHub Hub => TestClient.Hub;
@@ -20,7 +20,7 @@ public class RpcTestConnection
     public RpcClientPeer ClientPeer => field ??= Hub.GetClientPeer(ClientPeerRef);
     public RpcServerPeer ServerPeer => field ??= Hub.GetServerPeer(ServerPeerRef);
 
-    public ChannelPair<RpcMessage>? Channels {
+    public ChannelPair<RpcInboundMessage>? Channels {
         // ReSharper disable once InconsistentlySynchronizedField
         get => _channels.Last.Value;
         protected set {
@@ -29,6 +29,13 @@ public class RpcTestConnection
                     throw Errors.AlreadyDisposed();
                 if (ReferenceEquals(_channels.Value, value))
                     return;
+
+                // Complete old channels to stop any active transports
+                var oldChannels = _channels.Value;
+                if (oldChannels is not null) {
+                    oldChannels.Channel1.Writer.TryComplete();
+                    oldChannels.Channel2.Writer.TryComplete();
+                }
 
                 _channels = _channels.SetNext(value);
             }
@@ -50,7 +57,7 @@ public class RpcTestConnection
     public Task Connect(CancellationToken cancellationToken = default)
         => Connect(TestClient.Options.ConnectionFactory.Invoke(TestClient), cancellationToken);
 
-    public async Task Connect(ChannelPair<RpcMessage> channels, CancellationToken cancellationToken = default)
+    public async Task Connect(ChannelPair<RpcInboundMessage> channels, CancellationToken cancellationToken = default)
     {
         await Disconnect(cancellationToken).ConfigureAwait(false);
         var clientConnectionState = ClientPeer.ConnectionState;
@@ -93,18 +100,21 @@ public class RpcTestConnection
         return Task.WhenAll(disconnectTask1, disconnectTask2);
     }
 
-    public async Task<Channel<RpcMessage>> PullClientChannel(CancellationToken cancellationToken)
+    public async Task<ChannelRpcTransport> PullClientTransport(RpcPeer clientPeer, CancellationToken cancellationToken)
     {
         // ReSharper disable once InconsistentlySynchronizedField
         var channels = await WhenChannelsReady(cancellationToken).ConfigureAwait(false);
-        var serverConnection = new RpcConnection(channels.Channel2);
+
+        var serverTransport = new ChannelRpcTransport(channels.Channel2, ServerPeer, cancellationToken);
+        var serverConnection = new RpcConnection(serverTransport);
         await ServerPeer.SetNextConnection(serverConnection, cancellationToken).ConfigureAwait(false);
-        return channels.Channel1;
+
+        return new ChannelRpcTransport(channels.Channel1, clientPeer, cancellationToken);
     }
 
     // Protected methods
 
-    protected async ValueTask<ChannelPair<RpcMessage>> WhenChannelsReady(CancellationToken cancellationToken)
+    protected async ValueTask<ChannelPair<RpcInboundMessage>> WhenChannelsReady(CancellationToken cancellationToken)
     {
         // ReSharper disable once InconsistentlySynchronizedField
         await foreach (var channels in _channels.Last.Changes(cancellationToken).ConfigureAwait(false)) {

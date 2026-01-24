@@ -15,7 +15,7 @@ public class RpcCallLogger(RpcPeer peer, ILogger? log, LogLevel logLevel)
     public virtual void LogInbound(RpcInboundCall call)
         => Log?.Log(LogLevel, "'{PeerRef}': {Call}", Peer.Ref, call);
 
-    public virtual void LogOutbound(RpcOutboundCall call, RpcMessage message)
+    public virtual void LogOutbound(RpcOutboundCall call, RpcOutboundMessage message)
     {
         var connectionState = Peer.ConnectionState;
         if (connectionState.IsFinal)

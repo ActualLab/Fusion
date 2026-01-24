@@ -15,30 +15,30 @@ public static class RpcPeerOptionsExt
     // Private methods
 
     private static Task<RpcConnection> ServerConnectionFactory(
-        RpcServerPeer peer, Channel<RpcMessage> channel, PropertyBag properties,
+        RpcServerPeer peer, RpcTransport transport, PropertyBag properties,
         CancellationToken cancellationToken)
     {
         if (!properties.KeylessTryGet<HttpContext>(out var httpContext))
-            return CreateRpcConnectionAsync(channel, properties);
+            return CreateRpcConnectionAsync(transport, properties);
 
         var query = httpContext.Request.Query;
         var sessionId = query[SessionParameterName].SingleOrDefault() ?? "";
         if (!sessionId.IsNullOrEmpty() && new Session(sessionId) is var session1 && session1.IsValid())
-            return CreateSessionBoundRpcConnectionAsync(channel, properties, session1);
+            return CreateSessionBoundRpcConnectionAsync(transport, properties, session1);
 
         var sessionMiddleware = httpContext.RequestServices.GetService<SessionMiddleware>();
         if (sessionMiddleware?.GetSession(httpContext) is { } session2 && session2.IsValid())
-            return CreateSessionBoundRpcConnectionAsync(channel, properties, session2);
+            return CreateSessionBoundRpcConnectionAsync(transport, properties, session2);
 
-        return CreateRpcConnectionAsync(channel, properties);
+        return CreateRpcConnectionAsync(transport, properties);
     }
 
     private static Task<RpcConnection> CreateSessionBoundRpcConnectionAsync(
-        Channel<RpcMessage> channel, PropertyBag properties, Session session)
-        => Task.FromResult<RpcConnection>(new SessionBoundRpcConnection(channel, properties, session));
+        RpcTransport transport, PropertyBag properties, Session session)
+        => Task.FromResult<RpcConnection>(new SessionBoundRpcConnection(transport, properties, session));
 
     private static Task<RpcConnection> CreateRpcConnectionAsync(
-        Channel<RpcMessage> channel, PropertyBag properties)
-        => Task.FromResult(new RpcConnection(channel, properties));
+        RpcTransport transport, PropertyBag properties)
+        => Task.FromResult(new RpcConnection(transport, properties));
 
 }

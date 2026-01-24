@@ -55,7 +55,7 @@ public sealed class RpcCacheInfoCapture
                 $"{nameof(RequireKeyAndValue)} is called, but CaptureMode is {CaptureMode} and Key is {Key}.");
     }
 
-    public void CaptureKey(RpcOutboundContext context, RpcMessage message)
+    public void CaptureKey(RpcOutboundContext context, RpcOutboundMessage message)
     {
         var call = context.Call;
         lock (call!) {
@@ -66,7 +66,7 @@ public sealed class RpcCacheInfoCapture
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void CaptureValueFromLock(RpcMessage message)
+    public void CaptureValueFromLock(RpcInboundMessage message)
     {
         if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData)
             // ReSharper disable once InconsistentlySynchronizedField

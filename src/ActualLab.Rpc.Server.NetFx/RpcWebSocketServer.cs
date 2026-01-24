@@ -64,13 +64,13 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
                 .KeylessSet(context)
                 .KeylessSet(webSocket);
             var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
-            var webSocketChannelOptions = WebSocketClientOptions.WebSocketChannelOptionsFactory.Invoke(peer, properties);
-            var channel = new WebSocketChannel<RpcMessage>(
-                webSocketChannelOptions, webSocketOwner, cancellationToken) {
+            var transportOptions = WebSocketClientOptions.WebSocketTransportOptionsFactory.Invoke(peer, properties);
+            var transport = new WebSocketRpcTransport(
+                transportOptions, webSocketOwner, peer, cancellationToken) {
                 OwnsWebSocketOwner = false,
             };
             connection = await PeerOptions.ServerConnectionFactory
-                .Invoke(peer, channel, properties, cancellationToken)
+                .Invoke(peer, transport, properties, cancellationToken)
                 .ConfigureAwait(false);
 
             if (peer.IsConnected()) {
@@ -80,7 +80,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
                 await peer.Hub.Clock.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
             await peer.SetNextConnection(connection, cancellationToken).ConfigureAwait(false);
-            await channel.WhenClosed.ConfigureAwait(false);
+            await transport.WhenClosed.ConfigureAwait(false);
         }
         catch (Exception e) {
             if (connection is not null || e.IsCancellationOf(cancellationToken))

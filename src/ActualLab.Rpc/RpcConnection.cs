@@ -2,20 +2,24 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
-public class RpcConnection(Channel<RpcMessage> channel, PropertyBag properties) : IAsyncDisposable
+public class RpcConnection : IAsyncDisposable
 {
-    public Channel<RpcMessage> Channel { get; } = channel;
-    public PropertyBag Properties { get; init; } = properties;
+    public RpcTransport Transport { get; }
+    public PropertyBag Properties { get; init; }
     public bool IsLocal { get; init; }
 
-    public RpcConnection(Channel<RpcMessage> channel)
-        : this(channel, PropertyBag.Empty)
+    public IAsyncEnumerable<RpcInboundMessage> InboundMessages => Transport;
+
+    public RpcConnection(RpcTransport transport, PropertyBag properties)
+    {
+        Transport = transport;
+        Properties = properties;
+    }
+
+    public RpcConnection(RpcTransport transport)
+        : this(transport, PropertyBag.Empty)
     { }
 
     public ValueTask DisposeAsync()
-    {
-        if (Channel is IAsyncDisposable ad)
-            return ad.DisposeAsync();
-        return default;
-    }
+        => Transport.DisposeAsync();
 }

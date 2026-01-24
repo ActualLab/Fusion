@@ -1,5 +1,6 @@
 using System.Buffers;
 using ActualLab.Interception;
+using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
@@ -12,10 +13,8 @@ using static System.Console;
 namespace Docs.PartRSerialization;
 
 // Fake types for snippet compilation
-public class MyArgumentSerializer : RpcArgumentSerializer
+public class MyArgumentSerializer() : RpcArgumentSerializer
 {
-    public MyArgumentSerializer() : base(false) { }
-
     public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism, int sizeHint)
         => throw new NotImplementedException();
 
@@ -23,14 +22,12 @@ public class MyArgumentSerializer : RpcArgumentSerializer
         => throw new NotImplementedException();
 }
 
-public class MyMessageSerializer : IByteSerializer<RpcMessage>
+public class MyMessageSerializer(RpcPeer peer) : RpcMessageSerializer(peer)
 {
-    public MyMessageSerializer(RpcPeer peer) { }
-
-    public RpcMessage Read(ReadOnlyMemory<byte> data, out int readLength)
+    public override RpcInboundMessage Read(ArrayPoolArrayHandle<byte> buffer, int offset, out int readLength)
         => throw new NotImplementedException();
 
-    public void Write(IBufferWriter<byte> bufferWriter, RpcMessage value)
+    public override void Write(IBufferWriter<byte> bufferWriter, RpcOutboundMessage message)
         => throw new NotImplementedException();
 }
 
@@ -42,11 +39,11 @@ public class MyMessageSerializer : IByteSerializer<RpcMessage>
 public sealed class RpcSerializationFormatExample(
     string key,
     Func<RpcArgumentSerializer> argumentSerializerFactory,
-    Func<RpcPeer, IByteSerializer<RpcMessage>> messageSerializerFactory)
+    Func<RpcPeer, RpcMessageSerializer> messageSerializerFactory)
 {
     public string Key { get; } = key;
     public RpcArgumentSerializer ArgumentSerializer { get; } = argumentSerializerFactory();
-    public Func<RpcPeer, IByteSerializer<RpcMessage>> MessageSerializerFactory { get; } = messageSerializerFactory;
+    public Func<RpcPeer, RpcMessageSerializer> MessageSerializerFactory { get; } = messageSerializerFactory;
 }
 #endregion
 
@@ -108,7 +105,7 @@ public class PartRSerialization : DocPart
         // Core types
         _ = typeof(RpcSerializationFormat);
         _ = typeof(RpcArgumentSerializer);
-        _ = typeof(RpcMessage);
+        _ = typeof(RpcMessageSerializer);
         _ = typeof(RpcPeer);
 
         // Available formats

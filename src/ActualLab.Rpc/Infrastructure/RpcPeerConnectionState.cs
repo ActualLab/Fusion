@@ -10,8 +10,8 @@ public sealed record RpcPeerConnectionState(
 {
     public static readonly RpcPeerConnectionState Disconnected = new();
 
-    public Channel<RpcMessage>? Channel = Connection?.Channel;
-    public ChannelWriter<RpcMessage>? Sender = Connection?.Channel.Writer;
+    // Transport for writing messages (handles serialization)
+    public RpcTransport? Transport = Connection?.Transport;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsConnected()
