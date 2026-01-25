@@ -106,11 +106,11 @@ public class RpcTestConnection
         // ReSharper disable once InconsistentlySynchronizedField
         var channels = await WhenChannelsReady(cancellationToken).ConfigureAwait(false);
 
-        var serverTransport = new RpcSimpleChannelTransport(channels.Channel2, ServerPeer, cancellationToken);
+        var serverTransport = new RpcSimpleChannelTransport(channels.Channel2, ServerPeer);
         var serverConnection = new RpcConnection(serverTransport);
         await ServerPeer.SetNextConnection(serverConnection, cancellationToken).ConfigureAwait(false);
 
-        return new RpcSimpleChannelTransport(channels.Channel1, clientPeer, cancellationToken);
+        return new RpcSimpleChannelTransport(channels.Channel1, clientPeer);
     }
 
     // Protected methods
