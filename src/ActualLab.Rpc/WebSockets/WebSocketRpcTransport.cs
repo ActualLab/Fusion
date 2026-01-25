@@ -177,9 +177,12 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
             // Flushing write buffer
             var frame = writeBuffer.ToArrayOwnerAndReset(Settings.MinWriteBufferSize);
-            return _frameWriter.TryWrite(frame)
-                ? Task.CompletedTask // Fast path
-                : _whenWriteCompleted = _frameWriter.WriteAsync(frame).AsTask(); // Slow path
+            if (_frameWriter.TryWrite(frame))
+                return Task.CompletedTask;
+
+            var whenWriteCompleted = _frameWriter.WriteAsync(frame).AsTask();
+            _ = Interlocked.Exchange(ref _whenWriteCompleted, whenWriteCompleted);
+            return whenWriteCompleted;
         }
         catch (Exception e) {
             // Drain the queue and complete all messages with an error
