@@ -7,8 +7,6 @@ public abstract class RpcTransport : IAsyncDisposable, IAsyncEnumerable<RpcInbou
     private volatile CancellationTokenSource? _stopCts;
 
     public CancellationToken StopToken { get; }
-    public abstract Task WhenReadCompleted { get; }
-    public abstract Task WhenWriteCompleted { get; }
     public abstract Task WhenClosed { get; }
 
     protected RpcTransport(CancellationToken cancellationToken)

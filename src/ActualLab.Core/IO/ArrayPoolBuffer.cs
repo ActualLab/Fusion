@@ -18,9 +18,6 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public T[] Array => _array;
     public readonly bool MustClear = mustClear;
 
-    /// <inheritdoc/>
-    Memory<T> IMemoryOwner<T>.Memory => MemoryMarshal.AsMemory(WrittenMemory);
-
     public int Position {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _position;
@@ -67,6 +64,9 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _array.Length - _position;
     }
+
+    /// <inheritdoc/>
+    Memory<T> IMemoryOwner<T>.Memory => MemoryMarshal.AsMemory(WrittenMemory);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArrayPoolBuffer<T> NewOrRenew(

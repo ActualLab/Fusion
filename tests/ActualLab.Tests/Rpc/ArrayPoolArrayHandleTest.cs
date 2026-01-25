@@ -12,11 +12,11 @@ public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
         var holder = poolBuffer.ReplaceAndReturnArrayHandle(100);
 
         // Initial state - refcount is 0, IsDisposed is true but array is still available
-        holder.Length.Should().Be(50);
+        holder.WrittenCount.Should().Be(50);
         holder.Array.Should().NotBeNull();
 
         // Can access the array
-        holder.Array![0] = 42;
+        holder.Array[0] = 42;
         holder.Array[0].Should().Be(42);
 
         // Dispose unconditionally returns array to pool
@@ -106,7 +106,7 @@ public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
             threadRefs[i] = holder.NewRef();
 
         // Write some data
-        holder.Array![0] = 123;
+        holder.Array[0] = 123;
 
         var tasks = new Task[threadCount];
 
@@ -143,8 +143,8 @@ public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
         var holder = poolBuffer.ReplaceAndReturnArrayHandle(100);
 
         // Ref counting buffer should have the data
-        holder.Length.Should().Be(10);
-        holder.Array![0].Should().Be(0);
+        holder.WrittenCount.Should().Be(10);
+        holder.Array[0].Should().Be(0);
         holder.Array[9].Should().Be(9);
 
         // Clean up

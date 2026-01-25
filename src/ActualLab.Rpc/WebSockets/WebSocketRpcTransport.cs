@@ -1,6 +1,7 @@
-using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
+using System.Threading.Channels;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Diagnostics;
@@ -19,26 +20,22 @@ public sealed class WebSocketRpcTransport : RpcTransport
         public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU) minus some reserve
         public int MinWriteBufferSize { get; init; } = 24_000;
         public int MinReadBufferSize { get; init; } = 24_000;
-        public int RetainedBufferSize { get; init; } = 120_000;
-        public int BufferRenewPeriod { get; init; } = 100;
+        public int MaxPendingFrameCount { get; init; } = 8;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
     }
 
     private static readonly MeterSet StaticMeters = new();
 
-    private readonly SemaphoreSlim _writeLock = new(1, 1);
-    private readonly TaskCompletionSource _writeCompletedTcs = new();
+    private readonly Channel<ArrayPoolArrayHandle<byte>> _frameChannel;
+    private readonly ConcurrentQueue<RpcOutboundMessage> _writeQueue = new();
     private readonly int _writeFrameSize;
     private readonly int _minReadBufferSize;
-    private readonly int _retainedBufferSize;
-    private readonly int _bufferRenewPeriod;
     private readonly MeterSet _meters = StaticMeters;
-    private readonly ArrayPoolBuffer<byte> _writeBuffer;
-    private int _writeBufferResetCounter;
-    private int _pendingWriterCount;
-    private bool _isSending;
+    private int _writerCount;
+    private ArrayPoolBuffer<byte>? _writeBuffer;
+    private volatile int _frameSenderIsIdle; // 1 = sender needs flush, 0 = sender is busy
+    private volatile Task? _whenWriteCompleted;
     private int _getAsyncEnumeratorCounter;
-    private volatile bool _isCompleted;
 
     public bool OwnsWebSocketOwner { get; set; } = true;
     public Options Settings { get; }
@@ -49,8 +46,8 @@ public sealed class WebSocketRpcTransport : RpcTransport
     public ILogger? Log { get; }
     public ILogger? ErrorLog { get; }
 
-    public override Task WhenReadCompleted { get; }
-    public override Task WhenWriteCompleted => _writeCompletedTcs.Task;
+    public Task WhenReadCompleted { get; }
+    public Task WhenWriteCompleted { get; }
     public override Task WhenClosed { get; }
 
     public WebSocketRpcTransport(
@@ -72,13 +69,19 @@ public sealed class WebSocketRpcTransport : RpcTransport
         _writeFrameSize = settings.WriteFrameSize;
         if (_writeFrameSize <= 0)
             throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.WriteFrameSize)} must be positive.");
-        _minReadBufferSize = settings.MinReadBufferSize;
-        _retainedBufferSize = settings.RetainedBufferSize;
-        _bufferRenewPeriod = settings.BufferRenewPeriod;
-        _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, false);
 
-        using var _ = ExecutionContextExt.TrySuppressFlow();
-        WhenReadCompleted = Task.Run(() => TaskExt.NeverEnding(StopToken), default);
+        _minReadBufferSize = settings.MinReadBufferSize;
+        _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, mustClear: false);
+        _frameChannel = Channel.CreateBounded<ArrayPoolArrayHandle<byte>>(
+            new BoundedChannelOptions(settings.MaxPendingFrameCount) {
+                SingleReader = true,
+                SingleWriter = true,
+                FullMode = BoundedChannelFullMode.Wait,
+            });
+
+        using var __ = ExecutionContextExt.TrySuppressFlow();
+        WhenReadCompleted = TaskExt.NeverEnding(StopToken).SuppressCancellation();
+        WhenWriteCompleted = Task.Run(RunFrameSender, CancellationToken.None);
         WhenClosed = Task.Run(async () => {
             Interlocked.Increment(ref _meters.ChannelCount);
             try {
@@ -95,201 +98,44 @@ public sealed class WebSocketRpcTransport : RpcTransport
         }, default);
     }
 
-    // Writes a message. Returns Task.CompletedTask if write succeeded synchronously,
-    // otherwise returns a task to await. Uses batching: buffers while sending or while other writers are waiting.
+    // Lock-free write: uses atomic _writerCount to determine who serializes.
+    // Write primary (count==1) serializes messages and may flush buffer.
     public override Task Write(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
-        if (_isCompleted)
-            throw new ChannelClosedException();
-
-        Interlocked.Increment(ref _pendingWriterCount);
-
-        // Fast path: try to acquire lock synchronously
-        if (_writeLock.Wait(0)) {
-            try {
-                if (!SerializeFromWriteLock(message))
-                    throw new ChannelClosedException();
-
-                MaybeStartSendFromWriteLock();
-            }
-            finally {
-                _writeLock.Release();
-                // If we're the last writer, ensure a send is triggered if needed
-                if (Interlocked.Decrement(ref _pendingWriterCount) == 0)
-                    MaybeStartSendOnLastWriter();
-            }
-            return Task.CompletedTask;
+        var count = Interlocked.Increment(ref _writerCount);
+        if (count != 1) {
+            message.PrepareWhenSerialized();
+            _writeQueue.Enqueue(message);
+            Interlocked.Decrement(ref _writerCount);
+            return message.WhenSerialized;
         }
 
-        // Slow path: wait for lock asynchronously
-        return WriteSlowPath(message, cancellationToken);
-    }
-
-    private async Task WriteSlowPath(RpcOutboundMessage message, CancellationToken cancellationToken)
-    {
-        try {
-            await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try {
-                if (!SerializeFromWriteLock(message))
-                    throw new ChannelClosedException();
-
-                MaybeStartSendFromWriteLock();
-            }
-            finally {
-                _writeLock.Release();
-            }
-        }
-        finally {
-            // If we're the last writer, ensure a send is triggered if needed
-            if (Interlocked.Decrement(ref _pendingWriterCount) == 0)
-                MaybeStartSendOnLastWriter();
-        }
+        var whenWriteCompleted = _whenWriteCompleted;
+        return whenWriteCompleted is { IsCompleted: false }
+            ? WriteAsPrimary(message, whenWriteCompleted)
+            : WriteAsPrimary(message);
     }
 
     public override bool TryComplete(Exception? error = null)
     {
-        if (_isCompleted)
-            return false;
-        _isCompleted = true;
-
-        // Complete the write side
-        if (error is not null)
-            _writeCompletedTcs.TrySetException(error);
-        else
-            _writeCompletedTcs.TrySetResult();
-
-        return true;
-    }
-
-    private bool SerializeFromWriteLock(RpcOutboundMessage message)
-    {
-        if (_isCompleted)
+        if (!_frameChannel.Writer.TryComplete(error))
             return false;
 
-        _meters.OutgoingItemCounter.Add(1);
-        var startOffset = _writeBuffer.WrittenCount;
+
+        // Wait to become write primary
+        var spinWait = new SpinWait();
+        while (Interlocked.CompareExchange(ref _writerCount, 1, 0) != 0)
+            spinWait.SpinOnce();
+
         try {
-            // Size prefix placeholder
-            _writeBuffer.GetSpan(64);
-            _writeBuffer.Advance(4);
-
-            // Serialize message (serializer is embedded in message)
-            MessageSerializer.Write(_writeBuffer, message);
-
-            // Write size prefix
-            var size = _writeBuffer.WrittenCount - startOffset;
-            _writeBuffer.WrittenSpan.WriteUnchecked(size, startOffset);
-
+            var writeBuffer = _writeBuffer;
+            _writeBuffer = null;
+            writeBuffer?.Dispose();
             return true;
         }
-        catch (Exception e) {
-            _writeBuffer.Position = startOffset;
-            ErrorLog?.LogError(e, "Couldn't serialize the outbound message: {Message}", message);
-            throw; // Re-throw so caller gets the error
-        }
-    }
-
-    private void MaybeStartSendFromWriteLock()
-    {
-        if (_writeBuffer.WrittenCount == 0)
-            return;
-
-        // Send if: buffer large enough OR (last pending writer AND not currently sending)
-        var pendingWriters = Volatile.Read(ref _pendingWriterCount);
-        var bufferLargeEnough = _writeBuffer.WrittenCount >= _writeFrameSize;
-        var lastWriterAndIdle = pendingWriters <= 1 && !_isSending;
-
-        if (!bufferLargeEnough && !lastWriterAndIdle)
-            return; // Keep buffering - either sending or more writers coming
-
-        // Take the buffer data and start send
-        var data = _writeBuffer.WrittenMemory.ToArray();
-        ResetWriteBufferFromWriteLock();
-        _isSending = true;
-
-        // Fire and forget the send loop
-        _ = RunSendLoop(data);
-    }
-
-    // Called after decrementing pendingWriterCount to 0 - handles the race where
-    // send loop saw pending writers and didn't steal, but now all writers are done.
-    private void MaybeStartSendOnLastWriter()
-    {
-        // Quick check without lock - if already sending or nothing to send, skip
-        if (_isSending || _writeBuffer.WrittenCount == 0)
-            return;
-
-        // Try to acquire lock - if can't, someone else is handling it
-        if (!_writeLock.Wait(0))
-            return;
-
-        try {
-            // Double-check conditions under lock
-            if (_isSending || _writeBuffer.WrittenCount == 0)
-                return;
-
-            // Start send
-            var data = _writeBuffer.WrittenMemory.ToArray();
-            ResetWriteBufferFromWriteLock();
-            _isSending = true;
-            _ = RunSendLoop(data);
-        }
         finally {
-            _writeLock.Release();
+            Interlocked.Decrement(ref _writerCount);
         }
-    }
-
-    // Sends data, then tries to steal more from buffer if no writers are waiting
-    private async Task RunSendLoop(ReadOnlyMemory<byte> data)
-    {
-        try {
-            while (true) {
-                await WebSocket
-                    .SendAsync(data, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
-                    .ConfigureAwait(false);
-                _meters.OutgoingFrameSizeHistogram.Record(data.Length);
-
-                // Try to steal more data from buffer
-                await _writeLock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
-                try {
-                    // Steal if: no pending writers AND there's data in buffer
-                    if (Volatile.Read(ref _pendingWriterCount) == 0 && _writeBuffer.WrittenCount > 0) {
-                        data = _writeBuffer.WrittenMemory.ToArray();
-                        ResetWriteBufferFromWriteLock();
-                        // Continue loop to send stolen data
-                    }
-                    else {
-                        // Either writers are active (let them handle next send) or buffer is empty
-                        _isSending = false;
-                        return;
-                    }
-                }
-                finally {
-                    _writeLock.Release();
-                }
-            }
-        }
-        catch (Exception e) {
-            // Mark as not sending and complete with error
-            await _writeLock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
-            try {
-                _isSending = false;
-            }
-            finally {
-                _writeLock.Release();
-            }
-            TryComplete(e);
-            _writeBuffer.Dispose();
-            _ = DisposeAsync();
-        }
-    }
-
-    private void ResetWriteBufferFromWriteLock()
-    {
-        if (MustRenewBuffer(ref _writeBufferResetCounter))
-            _writeBuffer.Renew(Settings.MinWriteBufferSize, _retainedBufferSize);
-        else
-            _writeBuffer.Reset();
     }
 
     public override IAsyncEnumerator<RpcInboundMessage> GetAsyncEnumerator(CancellationToken cancellationToken = default)
@@ -301,6 +147,134 @@ public sealed class WebSocketRpcTransport : RpcTransport
     }
 
     // Private methods
+
+    private Task WriteAsPrimary(RpcOutboundMessage message, Task whenReadyToWrite)
+        => whenReadyToWrite.ContinueWith(
+            task => {
+                task.GetAwaiter().GetResult();
+                return WriteAsPrimary(message);
+            },
+            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+    private Task WriteAsPrimary(RpcOutboundMessage? message)
+    {
+        try {
+            var writeBuffer = _writeBuffer ?? throw new ChannelClosedException();
+            if (message is not null)
+                SerializeMessage(message, writeBuffer);
+            while (_writeQueue.TryDequeue(out message)) {
+                try {
+                    SerializeMessage(message, writeBuffer);
+                    message.CompleteWhenSerialized();
+                }
+                catch (Exception e) {
+                    message.CompleteWhenSerialized(e);
+                }
+            }
+
+            var bufferSize = writeBuffer.WrittenCount;
+            if ((bufferSize >= _writeFrameSize || _frameSenderIsIdle != 0) && bufferSize > 0) {
+                // Flushing write buffer
+                var frame = writeBuffer.ReplaceAndReturnArrayHandle(Settings.MinWriteBufferSize);
+                Interlocked.Decrement(ref _writerCount);
+                return _frameChannel.Writer.TryWrite(frame)
+                    ? Task.CompletedTask // Fast path
+                    : _whenWriteCompleted = _frameChannel.Writer.WriteAsync(frame).AsTask(); // Slow path
+            }
+            return Task.CompletedTask;
+        }
+        catch (Exception e) {
+            // Drain the queue and complete all messages with an error
+            while (_writeQueue.TryDequeue(out message))
+                message.CompleteWhenSerialized(e);
+            return Task.FromException(e);
+        }
+        finally {
+            Interlocked.Decrement(ref _writerCount);
+        }
+    }
+
+    private void SerializeMessage(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
+    {
+        _meters.OutgoingItemCounter.Add(1);
+        var startOffset = writeBuffer.WrittenCount;
+        try {
+            // Size prefix placeholder
+            writeBuffer.GetSpan(64);
+            writeBuffer.Advance(4);
+
+            // Serialize message (serializer is embedded in message)
+            MessageSerializer.Write(writeBuffer, message);
+
+            // Write size prefix
+            var size = writeBuffer.WrittenCount - startOffset;
+            writeBuffer.WrittenSpan.WriteUnchecked(size, startOffset);
+        }
+        catch (Exception e) {
+            writeBuffer.Position = startOffset;
+            ErrorLog?.LogError(e, "Couldn't serialize the outbound message: {Message}", message);
+            throw; // Re-throw so caller gets the error
+        }
+    }
+
+    private async Task RunFrameSender()
+    {
+        var frameReader = _frameChannel.Reader;
+        try {
+            while (true) {
+                Interlocked.Exchange(ref _frameSenderIsIdle, 1);
+
+                // Try to steal any pending buffer data
+                if (TryStealFrame(out var frame)) {
+                    Interlocked.Exchange(ref _frameSenderIsIdle, 0);
+                    await WebSocket
+                        .SendAsync(frame.WrittenMemory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
+                        .ConfigureAwait(false);
+                    _meters.OutgoingFrameSizeHistogram.Record(frame.WrittenCount);
+                    frame.Dispose();
+                    continue;
+                }
+
+                // Pull the frame from _frameChannel
+                if (!await frameReader.WaitToReadAsync(StopToken).ConfigureAwait(false))
+                    return; // frameReader completed
+
+                Interlocked.Exchange(ref _frameSenderIsIdle, 0);
+                while (frameReader.TryRead(out frame)) {
+                    await WebSocket
+                        .SendAsync(frame.WrittenMemory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
+                        .ConfigureAwait(false);
+                    _meters.OutgoingFrameSizeHistogram.Record(frame.WrittenCount);
+                    frame.Dispose();
+                }
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException) {
+            TryComplete(e);
+            _ = DisposeAsync();
+        }
+    }
+
+    private bool TryStealFrame(out ArrayPoolArrayHandle<byte> frame)
+    {
+        frame = default!;
+
+        // Try to become write primary
+        if (Interlocked.CompareExchange(ref _writerCount, 1, 0) != 0)
+            return false; // Writers are active, they'll flush
+
+        try {
+            if (_writeBuffer is not { } writeBuffer || writeBuffer.WrittenCount == 0)
+                return false;
+
+            frame = writeBuffer.ReplaceAndReturnArrayHandle(Settings.MinWriteBufferSize);
+            _writeBuffer.Reset();
+            return true;
+        }
+        finally {
+            Interlocked.Decrement(ref _writerCount);
+        }
+    }
 
     private async IAsyncEnumerable<RpcInboundMessage> ReadAllImpl([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
@@ -367,7 +341,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
         int size = 0;
         bool isSizeValid = false;
         try {
-            var array = buffer.Array!;
+            var array = buffer.Array;
             size = array.AsSpan(offset).ReadUnchecked<int>();
             isSizeValid = size > 0 && offset + size <= totalLength;
             if (!isSizeValid)
@@ -412,16 +386,6 @@ public sealed class WebSocketRpcTransport : RpcTransport
         catch {
             // Intended
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool MustRenewBuffer(ref int counter)
-    {
-        if (++counter < _bufferRenewPeriod)
-            return false;
-
-        counter = 0;
-        return true;
     }
 
     // Nested types
