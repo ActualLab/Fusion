@@ -318,6 +318,18 @@ public class RpcWebSocketTest : RpcTestBase
         await AssertNoCalls(peer, Out);
     }
 
+    [Fact]
+    public Task PerformanceTest1K()
+        => PerformanceTest(1000, "msgpack5");
+
+    [Fact]
+    public Task PerformanceTest10K()
+        => PerformanceTest(10_000, "msgpack5");
+
+    [Fact]
+    public Task PerformanceTest100K()
+        => PerformanceTest(100_000, "msgpack5");
+
     [Theory]
     [InlineData(50_000, "json5")]
     [InlineData(50_000, "njson5")]
