@@ -231,7 +231,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
                         .SendAsync(frame.WrittenMemory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
                         .ConfigureAwait(false);
                     _meters.OutgoingFrameSizeHistogram.Record(frame.WrittenCount);
-                    frame.Dispose();
+                    frame.Dispose(); // Dispose just returns it back to the pool, so fine to lose it on error
                     continue;
                 }
 
@@ -245,7 +245,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
                         .SendAsync(frame.WrittenMemory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
                         .ConfigureAwait(false);
                     _meters.OutgoingFrameSizeHistogram.Record(frame.WrittenCount);
-                    frame.Dispose();
+                    frame.Dispose(); // Dispose just returns it back to the pool, so fine to lose it on error
                 }
             }
         }
