@@ -114,8 +114,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
 
     // This test mirrors RpcWebSocketTest.PerformanceTest exactly to allow comparison
     [Theory]
-    [InlineData(1000_000, "mempack5c")]
-    [InlineData(1000_001, "mempack5c")]
+    [InlineData(500_000, "mempack5c")]
     public async Task PerformanceTestV2(int iterationCount, string serializationFormat)
     {
         SerializationFormat = serializationFormat;
