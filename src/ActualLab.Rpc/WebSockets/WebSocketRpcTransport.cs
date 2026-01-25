@@ -223,11 +223,8 @@ public sealed class WebSocketRpcTransport : RpcTransport
         var frameReader = _frameChannel.Reader;
         try {
             while (true) {
-                Interlocked.Exchange(ref _frameSenderIsIdle, 1);
-
                 // Try to steal any pending buffer data
                 if (TryStealFrame(out var frame)) {
-                    Interlocked.Exchange(ref _frameSenderIsIdle, 0);
                     await WebSocket
                         .SendAsync(frame.WrittenMemory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
                         .ConfigureAwait(false);
@@ -237,10 +234,18 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 }
 
                 // Pull the frame from _frameChannel
-                if (!await frameReader.WaitToReadAsync(StopToken).ConfigureAwait(false))
-                    return; // frameReader completed
+                var whenReadyToRead = frameReader.WaitToReadAsync(StopToken);
+                if (!whenReadyToRead.IsCompleted) {
+                    Interlocked.Exchange(ref _frameSenderIsIdle, 1);
+                    try {
+                        if (!await whenReadyToRead.ConfigureAwait(false))
+                            return;
+                    }
+                    finally {
+                        Interlocked.Exchange(ref _frameSenderIsIdle, 0);
+                    }
+                }
 
-                Interlocked.Exchange(ref _frameSenderIsIdle, 0);
                 while (frameReader.TryRead(out frame)) {
                     await WebSocket
                         .SendAsync(frame.WrittenMemory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
