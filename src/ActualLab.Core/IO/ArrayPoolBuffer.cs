@@ -204,6 +204,14 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         return result;
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public ArrayOwner<T> ToArrayOwnerAndDispose()
+    {
+        var result = ArrayOwner.New(Pool, _array, _position, MustClear);
+        Interlocked.Exchange(ref _array, null!);
+        return result;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RoundCapacity(int capacity)
         => Math.Max(MinCapacity, (int)Bits.GreaterOrEqualPowerOf2((ulong)capacity));

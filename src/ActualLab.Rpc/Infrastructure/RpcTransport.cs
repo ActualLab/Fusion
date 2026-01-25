@@ -21,7 +21,7 @@ public abstract class RpcTransport : IAsyncDisposable, IAsyncEnumerable<RpcInbou
 
     public abstract bool TryComplete(Exception? error = null);
 
-    public ValueTask DisposeAsync()
+    public virtual ValueTask DisposeAsync()
     {
         var stopCts = Interlocked.Exchange(ref _stopCts, null);
         stopCts.CancelAndDisposeSilently();
