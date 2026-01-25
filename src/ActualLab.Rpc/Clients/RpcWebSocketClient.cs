@@ -74,7 +74,7 @@ public class RpcWebSocketClient(IServiceProvider services)
             .KeylessSet(webSocketOwner)
             .KeylessSet(webSocketOwner.WebSocket);
         var transportOptions = Options.WebSocketTransportOptionsFactory(clientPeer, properties);
-        var transport = new WebSocketRpcTransport(transportOptions, webSocketOwner, clientPeer, cancellationToken);
+        var transport = new WebSocketRpcTransport(transportOptions, webSocketOwner, clientPeer);
         return new RpcConnection(transport, properties);
     }
 }

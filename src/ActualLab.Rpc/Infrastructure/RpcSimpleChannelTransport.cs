@@ -7,36 +7,41 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
 {
     private readonly ChannelReader<ArrayOwner<byte>> _reader;
     private readonly ChannelWriter<ArrayOwner<byte>> _writer;
-    private readonly TaskCompletionSource _writeCompletedSource = new();
+    private readonly AsyncTaskMethodBuilder _whenCompletedSource = AsyncTaskMethodBuilderExt.New();
+    private readonly Task _whenCompleted;
     private int _getAsyncEnumeratorCounter;
 
     public RpcPeer Peer { get; }
     public RpcByteMessageSerializerV4 MessageSerializer { get; }
     public int InitialBufferCapacity { get; init; } = 256;
+    public override Task WhenCompleted => _whenCompleted;
     public override Task WhenClosed { get; }
 
     public RpcSimpleChannelTransport(
         Channel<ArrayOwner<byte>> channel,
         RpcPeer peer,
-        CancellationToken cancellationToken = default)
-        : base(cancellationToken)
+        CancellationTokenSource? stopTokenSource = null)
+        : base(stopTokenSource)
     {
         _reader = channel.Reader;
         _writer = channel.Writer;
         Peer = peer;
         MessageSerializer = new RpcByteMessageSerializerV4(peer);
-        WhenClosed = _writeCompletedSource.Task.SuppressExceptions();
+        _whenCompleted = _whenCompletedSource.Task;
+        WhenClosed = _whenCompletedSource.Task.SuppressExceptions();
     }
 
-    public override ValueTask DisposeAsync()
+    protected override Task DisposeAsyncCore()
     {
-        var result = base.DisposeAsync();
         TryComplete();
-        return result;
+        return Task.CompletedTask;
     }
 
     public override Task Write(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
+        if (_whenCompleted.IsCompleted)
+            return Task.FromException(new ChannelClosedException());
+
         var buffer = new ArrayPoolBuffer<byte>(InitialBufferCapacity, mustClear: false);
         try {
             MessageSerializer.Write(buffer, message);
@@ -56,13 +61,10 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
 
     public override bool TryComplete(Exception? error = null)
     {
-        if (!_writer.TryComplete(error))
+        if (!_whenCompletedSource.TrySetFromResult(new Result<Unit>(default, error)))
             return false;
 
-        if (error is not null)
-            _writeCompletedSource.TrySetException(error);
-        else
-            _writeCompletedSource.TrySetResult();
+        _writer.TryComplete(error);
         return true;
     }
 

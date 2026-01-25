@@ -65,8 +65,8 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
                 .KeylessSet(webSocket);
             var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
             var transportOptions = WebSocketClientOptions.WebSocketTransportOptionsFactory.Invoke(peer, properties);
-            var transport = new WebSocketRpcTransport(
-                transportOptions, webSocketOwner, peer, cancellationToken) {
+            var stopTokenSource = cancellationToken.CreateLinkedTokenSource();
+            var transport = new WebSocketRpcTransport(transportOptions, webSocketOwner, peer, stopTokenSource) {
                 OwnsWebSocketOwner = false,
             };
             connection = await PeerOptions.ServerConnectionFactory

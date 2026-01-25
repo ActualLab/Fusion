@@ -1,9 +1,6 @@
-using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
-using System.Threading.Channels;
 using ActualLab.IO;
-using ActualLab.IO.Internal;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
@@ -26,16 +23,18 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
     private static readonly MeterSet StaticMeters = new();
 
-    private readonly Channel<ArrayOwner<byte>> _frameChannel;
-    private readonly ChannelWriter<ArrayOwner<byte>> _frameWriter;
-    private readonly ConcurrentQueue<RpcOutboundMessage> _writeQueue = new();
+    private readonly MeterSet _meters = StaticMeters;
     private readonly int _writeFrameSize;
     private readonly int _minReadBufferSize;
-    private readonly MeterSet _meters = StaticMeters;
+    private readonly AsyncTaskMethodBuilder _whenCompletedSource;
+    private readonly Task _whenCompleted;
+    private readonly Channel<ArrayOwner<byte>> _frameChannel;
+    private readonly ChannelWriter<ArrayOwner<byte>> _frameWriter;
+    private readonly ArrayPoolBuffer<byte> _writeBuffer;
+    private readonly ConcurrentQueue<RpcOutboundMessage> _writeQueue = new();
     private int _writerCount;
-    private ArrayPoolBuffer<byte>? _writeBuffer;
-    private volatile int _frameSenderIsIdle; // 1 = sender needs flush, 0 = sender is busy
-    private volatile Task _whenWriteCompleted = Task.CompletedTask;
+    private volatile int _frameSenderIsIdle;
+    private volatile Task _whenLastWriteCompleted = Task.CompletedTask;
     private int _getAsyncEnumeratorCounter;
 
     public bool OwnsWebSocketOwner { get; set; } = true;
@@ -47,16 +46,15 @@ public sealed class WebSocketRpcTransport : RpcTransport
     public ILogger? Log { get; }
     public ILogger? ErrorLog { get; }
 
-    public Task WhenReadCompleted { get; }
-    public Task WhenWriteCompleted { get; }
+    public override Task WhenCompleted => _whenCompleted;
     public override Task WhenClosed { get; }
 
     public WebSocketRpcTransport(
         Options settings,
         WebSocketOwner webSocketOwner,
         RpcPeer peer,
-        CancellationToken cancellationToken = default)
-        : base(cancellationToken)
+        CancellationTokenSource? stopTokenSource = null)
+        : base(stopTokenSource)
     {
         Settings = settings;
         WebSocketOwner = webSocketOwner;
@@ -66,6 +64,9 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
         Log = webSocketOwner.Services.LogFor(GetType());
         ErrorLog = Log.IfEnabled(LogLevel.Error);
+
+        _whenCompletedSource = AsyncTaskMethodBuilderExt.New();
+        _whenCompleted = _whenCompletedSource.Task;
 
         _writeFrameSize = settings.WriteFrameSize;
         if (_writeFrameSize <= 0)
@@ -82,17 +83,29 @@ public sealed class WebSocketRpcTransport : RpcTransport
         _frameWriter = _frameChannel.Writer;
 
         using var __ = ExecutionContextExt.TrySuppressFlow();
-        WhenReadCompleted = TaskExt.NeverEnding(StopToken).SuppressCancellation();
-        WhenWriteCompleted = Task.Run(RunFrameSender, CancellationToken.None);
         WhenClosed = Task.Run(async () => {
             Interlocked.Increment(ref _meters.ChannelCount);
             try {
-                await Task.WhenAny(WhenReadCompleted, WhenWriteCompleted).SilentAwait(false);
-                await CloseWebSocket(null).SilentAwait(false);
-                await WhenReadCompleted.SilentAwait(false);
-                await WhenWriteCompleted.SilentAwait(false);
-                if (OwnsWebSocketOwner)
-                    await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
+                var whenFrameSenderCompleted = Task.Run(RunFrameSender, CancellationToken.None);
+                await Task.WhenAny(_whenCompleted, whenFrameSenderCompleted).SilentAwait(false);
+                StopTokenSource.Cancel(); // Stops frame sender
+                TryComplete(); // Stops writes
+                await whenFrameSenderCompleted.ConfigureAwait(false); // RunFrameSender never throws
+                await _whenCompleted.SilentAwait(false); // Can fail, so we use SilentAwait here
+
+                // Waiting to become write primary
+                while (Interlocked.CompareExchange(ref _writerCount, 1, 0) != 0)
+                    await Task.Yield();
+                // We're the primary now, draining write queue
+                while (_writeQueue.TryDequeue(out var message))
+                    message.CompleteWhenSerialized(new ChannelClosedException());
+                _writeBuffer.Dispose();
+                Interlocked.Decrement(ref _writerCount);
+
+                await CloseWebSocket(null).ConfigureAwait(false); // CloseWebSocket never throws
+            }
+            catch (Exception e) {
+                Log.LogError(e, "Error in WebSocketRpcTransport.WhenClosed, this should never happen");
             }
             finally {
                 Interlocked.Decrement(ref _meters.ChannelCount);
@@ -100,10 +113,20 @@ public sealed class WebSocketRpcTransport : RpcTransport
         }, default);
     }
 
+    protected override async Task DisposeAsyncCore()
+    {
+        await WhenClosed.ConfigureAwait(false);
+        if (OwnsWebSocketOwner)
+            await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
+    }
+
     // Lock-free write: uses atomic _writerCount to determine who serializes.
     // Write primary (count==1) serializes messages and may flush buffer.
     public override Task Write(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
+        if (_whenCompleted.IsCompleted)
+            return Task.FromException(new ChannelClosedException());
+
         var count = Interlocked.Increment(ref _writerCount);
         if (count != 1) {
             message.PrepareWhenSerialized();
@@ -112,7 +135,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
             return message.WhenSerialized;
         }
 
-        var whenWriteCompleted = _whenWriteCompleted;
+        var whenWriteCompleted = _whenLastWriteCompleted;
         return whenWriteCompleted.IsCompleted
             ? WriteAsPrimary(message)
             : WriteAsPrimary(message, whenWriteCompleted);
@@ -120,24 +143,10 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
     public override bool TryComplete(Exception? error = null)
     {
-        if (!_frameWriter.TryComplete(error))
+        if (!_whenCompletedSource.TrySetFromResult(new Result<Unit>(default, error)))
             return false;
 
-        _ = Task.Run(async () => {
-            // Wait to become write primary
-            while (Interlocked.CompareExchange(ref _writerCount, 1, 0) != 0)
-                await Task.Yield();
-
-            // We're the primary writer now
-            try {
-                var writeBuffer = _writeBuffer;
-                _writeBuffer = null;
-                writeBuffer?.Dispose();
-            }
-            finally {
-                Interlocked.Decrement(ref _writerCount);
-            }
-        }, CancellationToken.None);
+        _frameWriter.TryComplete(error);
         return true;
     }
 
@@ -181,13 +190,11 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 return Task.CompletedTask;
 
             var whenWriteCompleted = _frameWriter.WriteAsync(frame).AsTask();
-            _ = Interlocked.Exchange(ref _whenWriteCompleted, whenWriteCompleted);
+            _ = Interlocked.Exchange(ref _whenLastWriteCompleted, whenWriteCompleted);
             return whenWriteCompleted;
         }
         catch (Exception e) {
-            // Drain the queue and complete all messages with an error
-            while (_writeQueue.TryDequeue(out message))
-                message.CompleteWhenSerialized(e);
+            TryComplete(e);
             return Task.FromException(e);
         }
         finally {
@@ -218,8 +225,10 @@ public sealed class WebSocketRpcTransport : RpcTransport
         }
     }
 
+    // This method should never throw
     private async Task RunFrameSender()
     {
+        Exception? error = null;
         var frameReader = _frameChannel.Reader;
         try {
             while (true) {
@@ -255,9 +264,14 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 }
             }
         }
-        catch (Exception e) when (e is not OperationCanceledException) {
-            TryComplete(e);
-            _ = DisposeAsync();
+        catch (Exception e) {
+            // This method should never throw
+            if (!e.IsCancellationOf(StopToken))
+                error = e;
+        }
+        finally {
+            Interlocked.Exchange(ref _frameSenderIsIdle, 0);
+            TryComplete(error);
         }
     }
 
@@ -360,6 +374,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
         }
     }
 
+    // This method should never throw
     private async Task CloseWebSocket(Exception? error)
     {
         if (error is OperationCanceledException)
