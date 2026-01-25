@@ -1,43 +1,46 @@
+using System.Buffers;
+using ActualLab.IO;
 using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Infrastructure;
 
 public sealed class ChannelRpcTransport : RpcTransport
 {
-    private readonly SemaphoreSlim _writeLock = new(1, 1);
-    private readonly ChannelReader<RpcInboundMessage> _reader;
-    private readonly ChannelWriter<RpcInboundMessage> _writer;
-    private readonly TaskCompletionSource _readCompletedTcs = new();
+    private readonly ChannelReader<ArrayOwner<byte>> _reader;
+    private readonly ChannelWriter<ArrayOwner<byte>> _writer;
+    private readonly TaskCompletionSource _readCompletedSource = new();
     private readonly TaskCompletionSource _writeCompletedTcs = new();
     private volatile bool _isCompleted;
     private int _getAsyncEnumeratorCounter;
 
-    public RpcPeer? Peer { get; }
-    public Task WhenReadCompleted => _readCompletedTcs.Task;
+    public RpcPeer Peer { get; }
+    public RpcByteMessageSerializerV4 MessageSerializer { get; }
+    public Task WhenReadCompleted => _readCompletedSource.Task;
     public Task WhenWriteCompleted => _writeCompletedTcs.Task;
     public override Task WhenClosed { get; }
 
     public ChannelRpcTransport(
-        Channel<RpcInboundMessage> channel,
-        RpcPeer? peer = null,
+        Channel<ArrayOwner<byte>> channel,
+        RpcPeer peer,
         CancellationToken cancellationToken = default)
         : base(cancellationToken)
     {
         _reader = channel.Reader;
         _writer = channel.Writer;
         Peer = peer;
+        MessageSerializer = new RpcByteMessageSerializerV4(peer);
 
         WhenClosed = Task.WhenAll(WhenReadCompleted, WhenWriteCompleted);
 
-        // Complete write when channel writer completes
+        // Complete read when channel reader completes
         _ = channel.Reader.Completion.ContinueWith(
             t => {
                 if (t.IsFaulted)
-                    _readCompletedTcs.TrySetException(t.Exception!.InnerExceptions);
+                    _readCompletedSource.TrySetException(t.Exception!.InnerExceptions);
                 else if (t.IsCanceled)
-                    _readCompletedTcs.TrySetCanceled();
+                    _readCompletedSource.TrySetCanceled();
                 else
-                    _readCompletedTcs.TrySetResult();
+                    _readCompletedSource.TrySetResult();
             },
             TaskScheduler.Default);
     }
@@ -47,31 +50,35 @@ public sealed class ChannelRpcTransport : RpcTransport
         if (_isCompleted)
             throw new ChannelClosedException();
 
-        // Fast path: try to acquire lock synchronously
-        if (_writeLock.Wait(0)) {
-            try {
-                if (!WriteCore(message))
-                    throw new ChannelClosedException();
-            }
-            finally {
-                _writeLock.Release();
-            }
-            return Task.CompletedTask;
+        var buffer = new ArrayPoolBuffer<byte>(256, mustClear: false);
+        try {
+            MessageSerializer.Write(buffer, message);
+        }
+        catch {
+            buffer.Dispose();
+            throw;
         }
 
-        // Slow path: wait for lock asynchronously
-        return WriteSlowPath(message, cancellationToken);
+        // ToArrayOwnerAndReset steals the array and gives buffer a new one
+        var frame = buffer.ToArrayOwnerAndReset(16);
+        buffer.Dispose(); // Dispose the new (empty) buffer array
+
+        // Write frame to channel (frame is disposed by the reader after deserialization)
+#pragma warning disable CA2025 // Frame ownership is transferred to reader
+        return _writer.TryWrite(frame)
+            ? Task.CompletedTask
+            : WriteSlowPath(frame, cancellationToken);
+#pragma warning restore CA2025
     }
 
-    private async Task WriteSlowPath(RpcOutboundMessage message, CancellationToken cancellationToken)
+    private async Task WriteSlowPath(ArrayOwner<byte> frame, CancellationToken cancellationToken)
     {
-        await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try {
-            if (!WriteCore(message))
-                throw new ChannelClosedException();
+            await _writer.WriteAsync(frame, cancellationToken).ConfigureAwait(false);
         }
-        finally {
-            _writeLock.Release();
+        catch {
+            frame.Dispose();
+            throw;
         }
     }
 
@@ -91,57 +98,25 @@ public sealed class ChannelRpcTransport : RpcTransport
     }
 
     public override IAsyncEnumerator<RpcInboundMessage> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-    {
-        if (Interlocked.Increment(ref _getAsyncEnumeratorCounter) != 1)
-            throw ActualLab.Internal.Errors.AlreadyInvoked($"{GetType().GetName()}.GetAsyncEnumerator");
-
-        return ReadAllImpl(cancellationToken).GetAsyncEnumerator(cancellationToken);
-    }
+        => Interlocked.Increment(ref _getAsyncEnumeratorCounter) == 1
+            ? ReadAllImpl(cancellationToken).GetAsyncEnumerator(cancellationToken)
+            : throw ActualLab.Internal.Errors.AlreadyInvoked($"{GetType().GetName()}.GetAsyncEnumerator");
 
     // Private methods
-
-    private bool WriteCore(RpcOutboundMessage message)
-    {
-        if (_isCompleted)
-            return false;
-
-        // Set context for types that need it during serialization (e.g., RpcStream)
-        var oldContext = RpcOutboundContext.Current;
-        RpcOutboundContext.Current = message.Context;
-        try {
-            // Serialize arguments if needed
-            var argumentData = message.ArgumentData;
-            if (argumentData.IsEmpty) {
-                var buffer = RpcArgumentSerializer.GetWriteBuffer();
-                message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
-                argumentData = RpcArgumentSerializer.GetWriteBufferMemory(buffer);
-            }
-
-            // Create RpcInboundMessage and write to channel
-            var inboundMessage = new RpcInboundMessage(
-                message.MethodDef.CallType.Id,
-                message.RelatedId,
-                message.MethodDef.Ref,
-                argumentData,
-                message.Headers);
-
-            return _writer.TryWrite(inboundMessage);
-        }
-        finally {
-            RpcOutboundContext.Current = oldContext;
-        }
-    }
 
     private async IAsyncEnumerable<RpcInboundMessage> ReadAllImpl([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         using var commonCts = cancellationToken.LinkWith(StopToken);
 
         try {
-            await foreach (var message in _reader.ReadAllAsync(commonCts.Token).ConfigureAwait(false))
+            await foreach (var frame in _reader.ReadAllAsync(commonCts.Token).ConfigureAwait(false)) {
+                var message = MessageSerializer.Read(frame, 0, out _);
                 yield return message;
+                frame.Dispose(); // It's safe to dispose frame only at this point
+            }
         }
         finally {
-            _readCompletedTcs.TrySetResult();
+            _readCompletedSource.TrySetResult();
             _ = DisposeAsync();
         }
     }

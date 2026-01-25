@@ -1,5 +1,5 @@
 using ActualLab.Channels;
-using ActualLab.Rpc.Infrastructure;
+using ActualLab.IO;
 
 namespace ActualLab.Rpc.Testing;
 
@@ -14,15 +14,15 @@ public record RpcTestClientOptions
         SingleWriter = false,
         AllowSynchronousContinuations = false,
     };
-    public Func<RpcTestClient, ChannelPair<RpcInboundMessage>> ConnectionFactory { get; init; } = DefaultConnectionFactory;
+    public Func<RpcTestClient, ChannelPair<ArrayOwner<byte>>> ConnectionFactory { get; init; } = DefaultConnectionFactory;
 
     // Protected methods
 
-    protected static ChannelPair<RpcInboundMessage> DefaultConnectionFactory(RpcTestClient testClient)
+    protected static ChannelPair<ArrayOwner<byte>> DefaultConnectionFactory(RpcTestClient testClient)
     {
         var settings = testClient.Options;
-        var channel1 = ChannelExt.Create<RpcInboundMessage>(settings.ChannelOptions);
-        var channel2 = ChannelExt.Create<RpcInboundMessage>(settings.ChannelOptions);
+        var channel1 = ChannelExt.Create<ArrayOwner<byte>>(settings.ChannelOptions);
+        var channel2 = ChannelExt.Create<ArrayOwner<byte>>(settings.ChannelOptions);
         var connection = ChannelPair.CreateTwisted(channel1, channel2);
         return connection;
     }

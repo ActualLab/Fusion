@@ -1,4 +1,5 @@
 using ActualLab.Channels;
+using ActualLab.IO;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
@@ -30,7 +31,7 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
             clientPeer.Ref.IsBackend,
             RpcPeerConnectionKind.Loopback);
         var serverPeer = Hub.GetServerPeer(serverPeerRef);
-        var channelPair = ChannelPair.CreateTwisted<RpcInboundMessage>(LocalChannelOptions);
+        var channelPair = ChannelPair.CreateTwisted<ArrayOwner<byte>>(LocalChannelOptions);
 
         var clientTransport = new ChannelRpcTransport(channelPair.Channel1, clientPeer, cancellationToken);
         var clientConnection = new RpcConnection(clientTransport, PropertyBag.Empty.KeylessSet((RpcPeer)clientPeer)) {

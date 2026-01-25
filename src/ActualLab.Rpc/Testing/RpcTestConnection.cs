@@ -1,5 +1,6 @@
 using ActualLab.Channels;
 using ActualLab.Internal;
+using ActualLab.IO;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Testing;
@@ -11,7 +12,7 @@ public class RpcTestConnection
 #else
     private readonly object _lock = new();
 #endif
-    private volatile AsyncState<ChannelPair<RpcInboundMessage>?> _channels = new(null);
+    private volatile AsyncState<ChannelPair<ArrayOwner<byte>>?> _channels = new(null);
 
     public RpcTestClient TestClient { get; }
     public RpcHub Hub => TestClient.Hub;
@@ -20,7 +21,7 @@ public class RpcTestConnection
     public RpcClientPeer ClientPeer => field ??= Hub.GetClientPeer(ClientPeerRef);
     public RpcServerPeer ServerPeer => field ??= Hub.GetServerPeer(ServerPeerRef);
 
-    public ChannelPair<RpcInboundMessage>? Channels {
+    public ChannelPair<ArrayOwner<byte>>? Channels {
         // ReSharper disable once InconsistentlySynchronizedField
         get => _channels.Last.Value;
         protected set {
@@ -57,7 +58,7 @@ public class RpcTestConnection
     public Task Connect(CancellationToken cancellationToken = default)
         => Connect(TestClient.Options.ConnectionFactory.Invoke(TestClient), cancellationToken);
 
-    public async Task Connect(ChannelPair<RpcInboundMessage> channels, CancellationToken cancellationToken = default)
+    public async Task Connect(ChannelPair<ArrayOwner<byte>> channels, CancellationToken cancellationToken = default)
     {
         await Disconnect(cancellationToken).ConfigureAwait(false);
         var clientConnectionState = ClientPeer.ConnectionState;
@@ -114,7 +115,7 @@ public class RpcTestConnection
 
     // Protected methods
 
-    protected async ValueTask<ChannelPair<RpcInboundMessage>> WhenChannelsReady(CancellationToken cancellationToken)
+    protected async ValueTask<ChannelPair<ArrayOwner<byte>>> WhenChannelsReady(CancellationToken cancellationToken)
     {
         // ReSharper disable once InconsistentlySynchronizedField
         await foreach (var channels in _channels.Last.Changes(cancellationToken).ConfigureAwait(false)) {
