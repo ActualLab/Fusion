@@ -12,10 +12,10 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
 {
     public int MaxArgumentDataSize { get; init; } = Defaults.MaxArgumentDataSize;
 
-    public override RpcInboundMessage Read(ArrayPoolArrayHandle<byte> buffer, int offset, out int readLength)
+    public override RpcInboundMessage Read(ArrayOwner<byte> buffer, int offset, out int readLength)
     {
         var array = buffer.Array;
-        var data = array.AsMemory(offset, buffer.WrittenCount - offset);
+        var data = array.AsMemory(offset, buffer.Length - offset);
         var reader = new MemoryReader(data);
 
         // CallTypeId and headerCount

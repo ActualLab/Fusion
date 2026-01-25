@@ -15,7 +15,7 @@ namespace Docs.PartRSerialization;
 // Fake types for snippet compilation
 public class MyArgumentSerializer() : RpcArgumentSerializer
 {
-    public override ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism, int sizeHint)
+    public override void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer)
         => throw new NotImplementedException();
 
     public override void Deserialize(ref ArgumentList arguments, bool needsPolymorphism, ReadOnlyMemory<byte> data)
@@ -24,10 +24,10 @@ public class MyArgumentSerializer() : RpcArgumentSerializer
 
 public class MyMessageSerializer(RpcPeer peer) : RpcMessageSerializer(peer)
 {
-    public override RpcInboundMessage Read(ArrayPoolArrayHandle<byte> buffer, int offset, out int readLength)
+    public override RpcInboundMessage Read(ArrayOwner<byte> buffer, int offset, out int readLength)
         => throw new NotImplementedException();
 
-    public override void Write(IBufferWriter<byte> bufferWriter, RpcOutboundMessage message)
+    public override void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
         => throw new NotImplementedException();
 }
 

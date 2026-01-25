@@ -196,9 +196,9 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public ArrayPoolArrayHandle<T> ResetAndReturnArrayHandle(int capacity)
+    public ArrayOwner<T> ToArrayOwnerAndReset(int capacity)
     {
-        var result = new ArrayPoolArrayHandle<T>(Pool, _array, _position, MustClear);
+        var result = ArrayOwner.New(Pool, _array, _position, MustClear);
         _array = Pool.Rent(RoundCapacity(capacity));
         _position = 0;
         return result;

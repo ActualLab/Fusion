@@ -26,8 +26,8 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
     private static readonly MeterSet StaticMeters = new();
 
-    private readonly Channel<ArrayPoolArrayHandle<byte>> _frameChannel;
-    private readonly ChannelWriter<ArrayPoolArrayHandle<byte>> _frameWriter;
+    private readonly Channel<ArrayOwner<byte>> _frameChannel;
+    private readonly ChannelWriter<ArrayOwner<byte>> _frameWriter;
     private readonly ConcurrentQueue<RpcOutboundMessage> _writeQueue = new();
     private readonly int _writeFrameSize;
     private readonly int _minReadBufferSize;
@@ -73,7 +73,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
         _minReadBufferSize = settings.MinReadBufferSize;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, mustClear: false);
-        _frameChannel = Channel.CreateBounded<ArrayPoolArrayHandle<byte>>(
+        _frameChannel = Channel.CreateBounded<ArrayOwner<byte>>(
             new BoundedChannelOptions(settings.MaxPendingFrameCount) {
                 SingleReader = true,
                 SingleWriter = true,
@@ -179,7 +179,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 return Task.CompletedTask;
 
             // Flushing write buffer
-            var frame = writeBuffer.ResetAndReturnArrayHandle(Settings.MinWriteBufferSize);
+            var frame = writeBuffer.ToArrayOwnerAndReset(Settings.MinWriteBufferSize);
             return _frameWriter.TryWrite(frame)
                 ? Task.CompletedTask // Fast path
                 : _whenWriteCompleted = _frameWriter.WriteAsync(frame).AsTask(); // Slow path
@@ -226,9 +226,9 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 // Try to steal any pending buffer data
                 if (TryStealFrame(out var frame)) {
                     await WebSocket
-                        .SendAsync(frame.WrittenMemory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
+                        .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
                         .ConfigureAwait(false);
-                    _meters.OutgoingFrameSizeHistogram.Record(frame.WrittenCount);
+                    _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
                     frame.Dispose(); // Dispose just returns it back to the pool, so fine to lose it on error
                     continue;
                 }
@@ -248,9 +248,9 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
                 while (frameReader.TryRead(out frame)) {
                     await WebSocket
-                        .SendAsync(frame.WrittenMemory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
+                        .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
                         .ConfigureAwait(false);
-                    _meters.OutgoingFrameSizeHistogram.Record(frame.WrittenCount);
+                    _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
                     frame.Dispose(); // Dispose just returns it back to the pool, so fine to lose it on error
                 }
             }
@@ -261,7 +261,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
         }
     }
 
-    private bool TryStealFrame(out ArrayPoolArrayHandle<byte> frame)
+    private bool TryStealFrame(out ArrayOwner<byte> frame)
     {
         frame = default!;
 
@@ -274,7 +274,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
             if (_writeBuffer is not { } writeBuffer || writeBuffer.WrittenCount == 0)
                 return false;
 
-            frame = writeBuffer.ResetAndReturnArrayHandle(Settings.MinWriteBufferSize);
+            frame = writeBuffer.ToArrayOwnerAndReset(Settings.MinWriteBufferSize);
             return true;
         }
         finally {
@@ -313,7 +313,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
                 var totalLength = readBuffer.WrittenCount;
 
-                var frame = readBuffer.ResetAndReturnArrayHandle(_minReadBufferSize);
+                var frame = readBuffer.ToArrayOwnerAndReset(_minReadBufferSize);
                 var offset = 0;
                 while (offset < totalLength) {
                     var message = TryDeserialize(frame, ref offset, totalLength);
@@ -332,7 +332,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private RpcInboundMessage? TryDeserialize(ArrayPoolArrayHandle<byte> frame, ref int offset, int totalLength)
+    private RpcInboundMessage? TryDeserialize(ArrayOwner<byte> frame, ref int offset, int totalLength)
     {
         _meters.IncomingItemCounter.Add(1);
         int size = 0;
