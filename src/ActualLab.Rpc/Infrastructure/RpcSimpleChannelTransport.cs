@@ -1,25 +1,21 @@
-using System.Buffers;
 using ActualLab.IO;
 using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public sealed class ChannelRpcTransport : RpcTransport
+public sealed class RpcSimpleChannelTransport : RpcTransport
 {
     private readonly ChannelReader<ArrayOwner<byte>> _reader;
     private readonly ChannelWriter<ArrayOwner<byte>> _writer;
-    private readonly TaskCompletionSource _readCompletedSource = new();
-    private readonly TaskCompletionSource _writeCompletedTcs = new();
-    private volatile bool _isCompleted;
+    private readonly TaskCompletionSource _writeCompletedSource = new();
     private int _getAsyncEnumeratorCounter;
 
     public RpcPeer Peer { get; }
     public RpcByteMessageSerializerV4 MessageSerializer { get; }
-    public Task WhenReadCompleted => _readCompletedSource.Task;
-    public Task WhenWriteCompleted => _writeCompletedTcs.Task;
+    public int InitialBufferCapacity { get; init; } = 256;
     public override Task WhenClosed { get; }
 
-    public ChannelRpcTransport(
+    public RpcSimpleChannelTransport(
         Channel<ArrayOwner<byte>> channel,
         RpcPeer peer,
         CancellationToken cancellationToken = default)
@@ -29,28 +25,19 @@ public sealed class ChannelRpcTransport : RpcTransport
         _writer = channel.Writer;
         Peer = peer;
         MessageSerializer = new RpcByteMessageSerializerV4(peer);
+        WhenClosed = _writeCompletedSource.Task.SuppressExceptions();
+    }
 
-        WhenClosed = Task.WhenAll(WhenReadCompleted, WhenWriteCompleted);
-
-        // Complete read when channel reader completes
-        _ = channel.Reader.Completion.ContinueWith(
-            t => {
-                if (t.IsFaulted)
-                    _readCompletedSource.TrySetException(t.Exception!.InnerExceptions);
-                else if (t.IsCanceled)
-                    _readCompletedSource.TrySetCanceled();
-                else
-                    _readCompletedSource.TrySetResult();
-            },
-            TaskScheduler.Default);
+    public override ValueTask DisposeAsync()
+    {
+        var result = base.DisposeAsync();
+        TryComplete();
+        return result;
     }
 
     public override Task Write(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
-        if (_isCompleted)
-            throw new ChannelClosedException();
-
-        var buffer = new ArrayPoolBuffer<byte>(256, mustClear: false);
+        var buffer = new ArrayPoolBuffer<byte>(InitialBufferCapacity, mustClear: false);
         try {
             MessageSerializer.Write(buffer, message);
         }
@@ -59,42 +46,24 @@ public sealed class ChannelRpcTransport : RpcTransport
             throw;
         }
 
-        // ToArrayOwnerAndReset steals the array and gives buffer a new one
-        var frame = buffer.ToArrayOwnerAndReset(16);
-        buffer.Dispose(); // Dispose the new (empty) buffer array
-
-        // Write frame to channel (frame is disposed by the reader after deserialization)
-#pragma warning disable CA2025 // Frame ownership is transferred to reader
+        var frame = buffer.ToArrayOwnerAndDispose();
+#pragma warning disable CA2025
         return _writer.TryWrite(frame)
             ? Task.CompletedTask
-            : WriteSlowPath(frame, cancellationToken);
+            : _writer.WriteAsync(frame, cancellationToken).AsTask();
 #pragma warning restore CA2025
-    }
-
-    private async Task WriteSlowPath(ArrayOwner<byte> frame, CancellationToken cancellationToken)
-    {
-        try {
-            await _writer.WriteAsync(frame, cancellationToken).ConfigureAwait(false);
-        }
-        catch {
-            frame.Dispose();
-            throw;
-        }
     }
 
     public override bool TryComplete(Exception? error = null)
     {
-        if (_isCompleted)
+        if (!_writer.TryComplete(error))
             return false;
-        _isCompleted = true;
 
-        var result = _writer.TryComplete(error);
         if (error is not null)
-            _writeCompletedTcs.TrySetException(error);
+            _writeCompletedSource.TrySetException(error);
         else
-            _writeCompletedTcs.TrySetResult();
-
-        return result;
+            _writeCompletedSource.TrySetResult();
+        return true;
     }
 
     public override IAsyncEnumerator<RpcInboundMessage> GetAsyncEnumerator(CancellationToken cancellationToken = default)
@@ -116,7 +85,6 @@ public sealed class ChannelRpcTransport : RpcTransport
             }
         }
         finally {
-            _readCompletedSource.TrySetResult();
             _ = DisposeAsync();
         }
     }

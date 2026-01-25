@@ -101,16 +101,16 @@ public class RpcTestConnection
         return Task.WhenAll(disconnectTask1, disconnectTask2);
     }
 
-    public async Task<ChannelRpcTransport> PullClientTransport(RpcPeer clientPeer, CancellationToken cancellationToken)
+    public async Task<RpcSimpleChannelTransport> PullClientTransport(RpcPeer clientPeer, CancellationToken cancellationToken)
     {
         // ReSharper disable once InconsistentlySynchronizedField
         var channels = await WhenChannelsReady(cancellationToken).ConfigureAwait(false);
 
-        var serverTransport = new ChannelRpcTransport(channels.Channel2, ServerPeer, cancellationToken);
+        var serverTransport = new RpcSimpleChannelTransport(channels.Channel2, ServerPeer, cancellationToken);
         var serverConnection = new RpcConnection(serverTransport);
         await ServerPeer.SetNextConnection(serverConnection, cancellationToken).ConfigureAwait(false);
 
-        return new ChannelRpcTransport(channels.Channel1, clientPeer, cancellationToken);
+        return new RpcSimpleChannelTransport(channels.Channel1, clientPeer, cancellationToken);
     }
 
     // Protected methods
