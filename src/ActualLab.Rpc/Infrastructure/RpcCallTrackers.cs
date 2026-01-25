@@ -37,6 +37,8 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
 
 public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 {
+    public RpcInboundCall this[long id] => Calls[id];
+
     public RpcInboundCall GetOrRegister(RpcInboundCall call)
     {
         if (call.NoWait || Calls.TryAdd(call.Id, call))
@@ -62,6 +64,8 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
     public int InProgressCallCount => _inProgressCalls.Count;
     public IEnumerable<RpcOutboundCall> InProgressCalls => _inProgressCalls.Values;
+
+    public RpcOutboundCall this[long id] => Calls[id];
 
     public void Register(RpcOutboundCall call)
     {

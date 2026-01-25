@@ -104,9 +104,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public override string ToString()
         => $"{GetType().Name}({Ref}, #{GetHashCode()})";
 
-    // Send uses transport's Write method. Returns Task.CompletedTask for sync path.
-    // Serialization happens inside transport (synchronized), so errors propagate correctly.
-    public Task Send(RpcOutboundMessage message, RpcTransport? transport = null)
+    // SendXxx
+
+    public Task SendSilently(RpcOutboundMessage message, RpcTransport? transport = null)
+        => Send(message, RpcSendErrorHandlers.LogAndSilence, transport);
+
+    public Task Send(RpcOutboundMessage message, RpcSendErrorHandler errorHandler, RpcTransport? transport = null)
     {
         transport ??= Transport;
         if (transport is null)
@@ -114,24 +117,30 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
         // Write returns Task.CompletedTask if write succeeded synchronously
         var writeTask = transport.Write(message, StopToken);
-        if (writeTask.IsCompleted)
-            return writeTask; // Fast path: completed synchronously (success or error)
+        if (writeTask.IsCompletedSuccessfully)
+            return writeTask; // Fast path: completed synchronously
 
         // Slow path: need to await and handle exceptions
-        return SendAsync(this, writeTask, transport);
+        return SendAsync(writeTask, this, message, errorHandler, transport);
 
-        static async Task SendAsync(RpcPeer peer, Task writeTask, RpcTransport transport) {
+        static async Task SendAsync(
+            Task writeTask,
+            RpcPeer peer,
+            RpcOutboundMessage message,
+            RpcSendErrorHandler errorHandler,
+            RpcTransport transport)
+        {
             try {
                 await writeTask.ConfigureAwait(false);
             }
-            catch (Exception e) when (e is not OperationCanceledException) {
-                peer.Log.LogError(e, "Send failed");
-                var connectionState = peer.ConnectionState;
-                if (ReferenceEquals(connectionState.Value.Transport, transport))
-                    _ = peer.Disconnect(e, connectionState, CancellationToken.None);
+            catch (Exception e) {
+                if (!errorHandler.Invoke(e, peer, message, transport))
+                    throw;
             }
         }
     }
+
+    // Is/WhenConnected
 
     public bool IsConnected()
         => ConnectionState.Value.Handshake is not null;
@@ -206,6 +215,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
         }
     }
+
+    // Disconnect
 
     public Task Disconnect(CancellationToken cancellationToken = default)
         => Disconnect(null, null, cancellationToken);
