@@ -142,12 +142,9 @@ public sealed class WebSocketRpcTransport : RpcTransport
     }
 
     public override IAsyncEnumerator<RpcInboundMessage> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-    {
-        if (Interlocked.Increment(ref _getAsyncEnumeratorCounter) != 1)
-            throw ActualLab.Internal.Errors.AlreadyInvoked($"{GetType().GetName()}.GetAsyncEnumerator");
-
-        return ReadAllImpl(cancellationToken).GetAsyncEnumerator(cancellationToken);
-    }
+        => Interlocked.Increment(ref _getAsyncEnumeratorCounter) == 1
+            ? ReadAllImpl(cancellationToken).GetAsyncEnumerator(cancellationToken)
+            : throw ActualLab.Internal.Errors.AlreadyInvoked($"{GetType().GetName()}.GetAsyncEnumerator");
 
     // Private methods
 
