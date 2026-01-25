@@ -172,16 +172,16 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 }
             }
 
+            // Checking whether we need to flush the write buffer
             var bufferSize = writeBuffer.WrittenCount;
-            if ((bufferSize >= _writeFrameSize || _frameSenderIsIdle != 0) && bufferSize > 0) {
-                // Flushing write buffer
-                var frame = writeBuffer.ReplaceAndReturnArrayHandle(Settings.MinWriteBufferSize);
-                Interlocked.Decrement(ref _writerCount);
-                return _frameChannel.Writer.TryWrite(frame)
-                    ? Task.CompletedTask // Fast path
-                    : _whenWriteCompleted = _frameChannel.Writer.WriteAsync(frame).AsTask(); // Slow path
-            }
-            return Task.CompletedTask;
+            if ((bufferSize < _writeFrameSize && _frameSenderIsIdle == 0) || bufferSize <= 0)
+                return Task.CompletedTask;
+
+            // Flushing write buffer
+            var frame = writeBuffer.ReplaceAndReturnArrayHandle(Settings.MinWriteBufferSize);
+            return _frameChannel.Writer.TryWrite(frame)
+                ? Task.CompletedTask // Fast path
+                : _whenWriteCompleted = _frameChannel.Writer.WriteAsync(frame).AsTask(); // Slow path
         }
         catch (Exception e) {
             // Drain the queue and complete all messages with an error
