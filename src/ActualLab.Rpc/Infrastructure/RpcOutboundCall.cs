@@ -90,19 +90,19 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
 
         Register();
-        if (!Peer.IsConnected(out _, out var sender))
+        if (!Peer.IsConnected())
             return CompleteAsync(); // Slow path
 
-        _ = SendRegistered(isFirstAttempt: true, sender); // Fast path
+        _ = SendRegistered(isFirstAttempt: true); // Fast path
         return ResultTask;
 
         async Task<object?> CompleteAsync() {
             try {
                 // WhenConnected may throw RpcRerouteException!
-                var (_, sender1) = await Peer
+                await Peer
                     .WhenConnected(MethodDef.OutboundCallTimeouts.ConnectTimeout, Context.CancellationToken)
                     .ConfigureAwait(false);
-                _ = SendRegistered(true, sender1);
+                _ = SendRegistered(isFirstAttempt: true);
             }
             catch (Exception error) {
                 SetError(error, null);
@@ -128,7 +128,21 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         Context.CacheInfoCapture?.CaptureKey(Context, message);
     }
 
-    public Task SendNoWait(bool needsPolymorphism, RpcTransport? transport = null)
+    // SendXxx
+
+    public Task SendNoWaitSilently(bool needsPolymorphism, RpcTransport? transport = null)
+    {
+        // Silent versions never throw - use when serialization is guaranteed to succeed (well-known types)
+        var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism);
+        if (Peer.CallLogger.IsLogged(this))
+            Peer.CallLogger.LogOutbound(this, message);
+        return Peer.SendSilently(message, transport);
+    }
+
+    public Task SendNoWait(bool needsPolymorphism)
+        => SendNoWait(needsPolymorphism, RpcSendErrorHandlers.PropagateToCall);
+
+    public Task SendNoWait(bool needsPolymorphism, RpcSendErrorHandler errorHandler)
     {
         // NoWait calls don't require RpcOutboundContext.Current to serialize their arguments,
         // so no Context.Activate() call here.
@@ -136,17 +150,20 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism);
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Send(message, transport);
+        return Peer.Send(message, errorHandler);
     }
 
-    public Task SendNoWait(RpcOutboundMessage message, RpcTransport? transport = null)
+    public Task SendNoWait(RpcOutboundMessage message)
+        => SendNoWait(message, RpcSendErrorHandlers.PropagateToCall);
+
+    public Task SendNoWait(RpcOutboundMessage message, RpcSendErrorHandler errorHandler)
     {
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Send(message, transport);
+        return Peer.Send(message, errorHandler);
     }
 
-    public Task SendRegistered(bool isFirstAttempt, RpcTransport? transport = null)
+    public Task SendRegistered(bool isFirstAttempt)
     {
         // Use lazy CreateOutboundMessage - serialization happens in transport.
         // Serialization errors propagate from Peer.Send, which is what we want.
@@ -165,7 +182,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Send(message, transport);
+        return Peer.Send(message, RpcSendErrorHandlers.PropagateToCall);
     }
 
     public RpcOutboundMessage CreateOutboundMessage(long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
