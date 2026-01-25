@@ -238,7 +238,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
                         .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
                         .ConfigureAwait(false);
                     _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
-                    frame.Dispose(); // Dispose just returns it back to the pool, so fine to lose it on error
+                    frame.Dispose();
                     continue;
                 }
 
@@ -246,6 +246,16 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 var whenReadyToRead = frameReader.WaitToReadAsync(StopToken);
                 if (!whenReadyToRead.IsCompleted) {
                     Interlocked.Exchange(ref _frameSenderIsIdle, 1);
+                    // After setting idle, try to steal one more time to close the race window
+                    if (TryStealFrame(out frame)) {
+                        Interlocked.Exchange(ref _frameSenderIsIdle, 0);
+                        await WebSocket
+                            .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
+                            .ConfigureAwait(false);
+                        _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
+                        frame.Dispose();
+                        continue;
+                    }
                     try {
                         if (!await whenReadyToRead.ConfigureAwait(false))
                             return;
@@ -260,7 +270,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
                         .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
                         .ConfigureAwait(false);
                     _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
-                    frame.Dispose(); // Dispose just returns it back to the pool, so fine to lose it on error
+                    frame.Dispose();
                 }
             }
         }
