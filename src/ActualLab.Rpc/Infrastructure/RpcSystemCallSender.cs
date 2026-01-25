@@ -52,7 +52,10 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     {
         var context = new RpcOutboundContext(peer);
         var call = context.PrepareCallForSendNoWait(HandshakeMethodDef, ArgumentList.New(handshake))!;
-        return call.SendNoWaitSilently(needsPolymorphism: false, transport);
+        var message = call.CreateOutboundMessage(call.Context.RelatedId, false);
+        if (call.Peer.CallLogger.IsLogged(call))
+            call.Peer.CallLogger.LogOutbound(call, message);
+        return call.Peer.Send(message, RpcSendErrorHandlers.Silence, transport);
     }
 
     // Regular calls
@@ -110,21 +113,21 @@ public sealed class RpcSystemCallSender : RpcServiceBase
 
         var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
         var call = context.PrepareCallForSendNoWait(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
-        return call.SendNoWaitSilently(needsPolymorphism: false);
+        return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 
     public Task Cancel(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCallForSendNoWait(CancelMethodDef, ArgumentList.Empty)!;
-        return call.SendNoWaitSilently(needsPolymorphism: false);
+        return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 
     public Task Match(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCallForSendNoWait(MatchMethodDef, ArgumentList.Empty)!;
-        return call.SendNoWaitSilently(needsPolymorphism: false);
+        return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 
     // Objects
@@ -133,14 +136,14 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     {
         var context = new RpcOutboundContext(peer, headers);
         var call = context.PrepareCallForSendNoWait(KeepAliveMethodDef, ArgumentList.New(localIds))!;
-        return call.SendNoWaitSilently(needsPolymorphism: false);
+        return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 
     public Task Disconnect(RpcPeer peer, long[] localIds, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, headers);
         var call = context.PrepareCallForSendNoWait(DisconnectMethodDef, ArgumentList.New(localIds))!;
-        return call.SendNoWaitSilently(needsPolymorphism: false);
+        return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 
     // Streams
@@ -149,14 +152,14 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     {
         var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCallForSendNoWait(AckMethodDef, ArgumentList.New(nextIndex, hostId))!;
-        return call.SendNoWaitSilently(needsPolymorphism: false);
+        return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 
     public Task AckEnd(RpcPeer peer, long localId, Guid hostId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCallForSendNoWait(AckEndMethodDef, ArgumentList.New(hostId))!;
-        return call.SendNoWaitSilently(needsPolymorphism: false);
+        return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 
     public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, int sizeHint, RpcHeader[]? headers = null)
@@ -164,7 +167,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
 #pragma warning disable MA0100
         var call = context.PrepareCallForSendNoWait(ItemMethodDef, ArgumentList.New(index, item))!;
-        return call.SendNoWaitSilently(needsPolymorphism: true);
+        return call.SendNoWait(true, RpcSendErrorHandlers.Silence);
 #pragma warning restore MA0100
     }
 
@@ -177,7 +180,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
             ? ArgumentList.New(index, (object)items) // This ensures the serialization of this type will be polymorphic
             : ArgumentList.New(index, items);
         var call = context.PrepareCallForSendNoWait(BatchMethodDef, arguments)!;
-        return call.SendNoWaitSilently(needsPolymorphism: true);
+        return call.SendNoWait(true, RpcSendErrorHandlers.Silence);
 #pragma warning restore MA0100
     }
 
@@ -185,6 +188,6 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     {
         var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCallForSendNoWait(EndMethodDef, ArgumentList.New(index, error.ToExceptionInfo()))!;
-        return call.SendNoWaitSilently(needsPolymorphism: false);
+        return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 }

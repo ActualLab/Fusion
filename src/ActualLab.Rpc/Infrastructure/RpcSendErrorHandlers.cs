@@ -28,9 +28,6 @@ public static class RpcSendErrorHandlers
         };
 
     public static readonly RpcSendErrorHandler Silence
-        = (error, peer, message, transport) => true;
-
-    public static readonly RpcSendErrorHandler LogAndSilence
         = (error, peer, message, transport) => {
             if (IsAutoHandledError(error))
                 return true;

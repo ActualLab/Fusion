@@ -106,22 +106,30 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     // SendXxx
 
-    public Task SendSilently(RpcOutboundMessage message, RpcTransport? transport = null)
-        => Send(message, RpcSendErrorHandlers.LogAndSilence, transport);
-
-    public Task Send(RpcOutboundMessage message, RpcSendErrorHandler errorHandler, RpcTransport? transport = null)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task Send(RpcOutboundMessage message, RpcSendErrorHandler errorHandler)
     {
-        transport ??= Transport;
-        if (transport is null)
-            return Task.CompletedTask;
+        var transport = Transport;
+        return transport is null
+            ? Task.CompletedTask
+            : Send(message, errorHandler, transport);
+    }
 
-        // Write returns Task.CompletedTask if write succeeded synchronously
-        var writeTask = transport.Write(message, StopToken);
-        if (writeTask.IsCompletedSuccessfully)
-            return writeTask; // Fast path: completed synchronously
+    public Task Send(RpcOutboundMessage message, RpcSendErrorHandler errorHandler, RpcTransport transport)
+    {
+        try {
+            var writeTask = transport.Write(message, StopToken);
+            if (writeTask.IsCompletedSuccessfully)
+                return writeTask; // Fast path: completed synchronously
 
-        // Slow path: need to await and handle exceptions
-        return SendAsync(writeTask, this, message, errorHandler, transport);
+            // Slow path: need to await and handle exceptions
+            return SendAsync(writeTask, this, message, errorHandler, transport);
+        }
+        catch (Exception e) {
+            return errorHandler.Invoke(e, this, message, transport)
+                ? Task.CompletedTask
+                : Task.FromException(e);
+        }
 
         static async Task SendAsync(
             Task writeTask,
