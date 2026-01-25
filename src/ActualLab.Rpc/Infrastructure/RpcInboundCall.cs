@@ -91,12 +91,10 @@ public abstract class RpcInboundCall : RpcCall
             try {
                 Arguments ??= DeserializeArguments();
                 // Release the message buffer after deserialization
-                Context.Message.MarkProcessed();
                 if (Arguments is null)
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
             }
             catch (Exception error) {
-                Context.Message.MarkProcessed();
                 throw ProcessArgumentDeserializationError(error);
             }
 
@@ -109,7 +107,6 @@ public abstract class RpcInboundCall : RpcCall
         var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
         if (existingCall != this) {
             // Dispose message since this call instance won't process it
-            Context.Message.MarkProcessed();
             return existingCall.TryReprocess(0, cancellationToken)
                 ?? existingCall.WhenProcessed
                 ?? Task.CompletedTask;
@@ -122,7 +119,6 @@ public abstract class RpcInboundCall : RpcCall
 
                 Arguments ??= DeserializeArguments();
                 // Release the message buffer after deserialization
-                Context.Message.MarkProcessed();
                 if (Arguments is null)
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
 
@@ -132,7 +128,6 @@ public abstract class RpcInboundCall : RpcCall
                 ResultTask = MethodDef.InboundCallInvoker.Invoke(this);
             }
             catch (Exception error) {
-                Context.Message.MarkProcessed();
                 ResultTask = TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
             }
             return WhenProcessed = ProcessStage1Plus(cancellationToken);
@@ -235,7 +230,7 @@ public abstract class RpcInboundCall : RpcCall
         if (ctIndex >= 0)
             arguments.SetCancellationToken(ctIndex, CallCancelToken);
 
-        return arguments;
+        return message.Arguments = arguments;
     }
 
     public void Cancel()

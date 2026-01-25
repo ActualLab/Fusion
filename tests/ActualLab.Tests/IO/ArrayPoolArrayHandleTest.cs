@@ -1,6 +1,6 @@
 using ActualLab.IO;
 
-namespace ActualLab.Tests.Rpc;
+namespace ActualLab.Tests.IO;
 
 public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
 {
@@ -9,7 +9,7 @@ public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var poolBuffer = new ArrayPoolBuffer<byte>(100, false);
         poolBuffer.Advance(50); // Simulate writing 50 bytes
-        var holder = poolBuffer.ReplaceAndReturnArrayHandle(100);
+        var holder = poolBuffer.ResetAndReturnArrayHandle(100);
 
         // Initial state - refcount is 0, IsDisposed is true but array is still available
         holder.WrittenCount.Should().Be(50);
@@ -29,7 +29,7 @@ public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var poolBuffer = new ArrayPoolBuffer<byte>(100, false);
         poolBuffer.Advance(100);
-        var holder = poolBuffer.ReplaceAndReturnArrayHandle(poolBuffer.Capacity);
+        var holder = poolBuffer.ResetAndReturnArrayHandle(poolBuffer.Capacity);
 
         // Add references via AddRef
         var ref1 = holder.NewRef();
@@ -53,7 +53,7 @@ public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var poolBuffer = new ArrayPoolBuffer<byte>(100, false);
         poolBuffer.Advance(100);
-        var holder = poolBuffer.ReplaceAndReturnArrayHandle(poolBuffer.Capacity);
+        var holder = poolBuffer.ResetAndReturnArrayHandle(poolBuffer.Capacity);
 
         // Create a ref via AddRef
         var ref1 = holder.NewRef();
@@ -70,7 +70,7 @@ public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var poolBuffer = new ArrayPoolBuffer<byte>(100, false);
         poolBuffer.Advance(100);
-        var holder = poolBuffer.ReplaceAndReturnArrayHandle(poolBuffer.Capacity);
+        var holder = poolBuffer.ResetAndReturnArrayHandle(poolBuffer.Capacity);
 
         // Create multiple refs
         var ref1 = holder.NewRef();
@@ -95,7 +95,7 @@ public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var poolBuffer = new ArrayPoolBuffer<byte>(100, false);
         poolBuffer.Advance(100);
-        var holder = poolBuffer.ReplaceAndReturnArrayHandle(poolBuffer.Capacity);
+        var holder = poolBuffer.ResetAndReturnArrayHandle(poolBuffer.Capacity);
 
         const int threadCount = 10;
         const int iterationsPerThread = 1000;
@@ -140,7 +140,7 @@ public class ArrayPoolArrayHandleTest(ITestOutputHelper @out) : TestBase(@out)
         poolBuffer.Advance(10);
 
         // Replace and get ref counting buffer
-        var holder = poolBuffer.ReplaceAndReturnArrayHandle(100);
+        var holder = poolBuffer.ResetAndReturnArrayHandle(100);
 
         // Ref counting buffer should have the data
         holder.WrittenCount.Should().Be(10);

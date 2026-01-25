@@ -111,9 +111,9 @@ public sealed class ChannelRpcTransport : RpcTransport
         try {
             // Serialize arguments if needed
             var argumentData = message.ArgumentData;
-            if (argumentData.IsEmpty && message.Arguments is not null && message.ArgumentSerializer is not null) {
+            if (argumentData.IsEmpty) {
                 var buffer = RpcArgumentSerializer.GetWriteBuffer();
-                message.ArgumentSerializer.Serialize(message.Arguments, message.NeedsPolymorphism, buffer);
+                message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
                 argumentData = RpcArgumentSerializer.GetWriteBufferMemory(buffer);
             }
 
@@ -123,8 +123,7 @@ public sealed class ChannelRpcTransport : RpcTransport
                 message.RelatedId,
                 message.MethodDef.Ref,
                 argumentData,
-                message.Headers,
-                default);
+                message.Headers);
 
             return _writer.TryWrite(inboundMessage);
         }
