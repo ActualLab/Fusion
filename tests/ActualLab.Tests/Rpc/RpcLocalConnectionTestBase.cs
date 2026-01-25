@@ -112,6 +112,45 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         }
     }
 
+    // This test mirrors RpcWebSocketTest.PerformanceTest exactly to allow comparison
+    [Theory]
+    [InlineData(1000_000, "mempack5c")]
+    [InlineData(1000_001, "mempack5c")]
+    public async Task PerformanceTestV2(int iterationCount, string serializationFormat)
+    {
+        SerializationFormat = serializationFormat;
+        if (TestRunnerInfo.IsBuildAgent())
+            iterationCount = 100;
+
+        await using var _ = await WebHost.Serve();
+        var client = GetClient();
+
+        var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 2);
+        var tasks = new Task[threadCount];
+        await Run(100); // Warmup
+
+        WriteLine($"{iterationCount} iterations x {threadCount} threads:");
+        var elapsed = await Run(iterationCount);
+        var totalIterationCount = threadCount * iterationCount;
+        WriteLine($"{totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
+        return;
+
+        async Task<TimeSpan> Run(int count) {
+            var startedAt = CpuTimestamp.Now;
+            for (var threadIndex = 0; threadIndex < threadCount; threadIndex++) {
+                tasks[threadIndex] = Task.Run(async () => {
+                    for (var i = 0; i < count; i++) {
+                        if (i != await client.Div(i, 1).ConfigureAwait(false))
+                            Assert.Fail("Wrong result.");
+                    }
+                }, CancellationToken.None);
+            }
+
+            await Task.WhenAll(tasks);
+            return elapsed = startedAt.Elapsed;
+        }
+    }
+
     [Theory]
     [InlineData(100)]
     [InlineData(1000)]
