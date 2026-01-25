@@ -27,6 +27,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
     private static readonly MeterSet StaticMeters = new();
 
     private readonly Channel<ArrayPoolArrayHandle<byte>> _frameChannel;
+    private readonly ChannelWriter<ArrayPoolArrayHandle<byte>> _frameWriter;
     private readonly ConcurrentQueue<RpcOutboundMessage> _writeQueue = new();
     private readonly int _writeFrameSize;
     private readonly int _minReadBufferSize;
@@ -34,7 +35,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
     private int _writerCount;
     private ArrayPoolBuffer<byte>? _writeBuffer;
     private volatile int _frameSenderIsIdle; // 1 = sender needs flush, 0 = sender is busy
-    private volatile Task? _whenWriteCompleted;
+    private volatile Task _whenWriteCompleted = Task.CompletedTask;
     private int _getAsyncEnumeratorCounter;
 
     public bool OwnsWebSocketOwner { get; set; } = true;
@@ -78,6 +79,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 SingleWriter = true,
                 FullMode = BoundedChannelFullMode.Wait,
             });
+        _frameWriter = _frameChannel.Writer;
 
         using var __ = ExecutionContextExt.TrySuppressFlow();
         WhenReadCompleted = TaskExt.NeverEnding(StopToken).SuppressCancellation();
@@ -111,31 +113,32 @@ public sealed class WebSocketRpcTransport : RpcTransport
         }
 
         var whenWriteCompleted = _whenWriteCompleted;
-        return whenWriteCompleted is { IsCompleted: false }
-            ? WriteAsPrimary(message, whenWriteCompleted)
-            : WriteAsPrimary(message);
+        return whenWriteCompleted.IsCompleted
+            ? WriteAsPrimary(message)
+            : WriteAsPrimary(message, whenWriteCompleted);
     }
 
     public override bool TryComplete(Exception? error = null)
     {
-        if (!_frameChannel.Writer.TryComplete(error))
+        if (!_frameWriter.TryComplete(error))
             return false;
 
+        _ = Task.Run(async () => {
+            // Wait to become write primary
+            while (Interlocked.CompareExchange(ref _writerCount, 1, 0) != 0)
+                await Task.Yield();
 
-        // Wait to become write primary
-        var spinWait = new SpinWait();
-        while (Interlocked.CompareExchange(ref _writerCount, 1, 0) != 0)
-            spinWait.SpinOnce();
-
-        try {
-            var writeBuffer = _writeBuffer;
-            _writeBuffer = null;
-            writeBuffer?.Dispose();
-            return true;
-        }
-        finally {
-            Interlocked.Decrement(ref _writerCount);
-        }
+            // We're the primary writer now
+            try {
+                var writeBuffer = _writeBuffer;
+                _writeBuffer = null;
+                writeBuffer?.Dispose();
+            }
+            finally {
+                Interlocked.Decrement(ref _writerCount);
+            }
+        }, CancellationToken.None);
+        return true;
     }
 
     public override IAsyncEnumerator<RpcInboundMessage> GetAsyncEnumerator(CancellationToken cancellationToken = default)
@@ -148,13 +151,11 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
     // Private methods
 
-    private Task WriteAsPrimary(RpcOutboundMessage message, Task whenReadyToWrite)
-        => whenReadyToWrite.ContinueWith(
-            task => {
-                task.GetAwaiter().GetResult();
-                return WriteAsPrimary(message);
-            },
-            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    private async Task WriteAsPrimary(RpcOutboundMessage message, Task whenReadyToWrite)
+    {
+        await whenReadyToWrite.ConfigureAwait(false);
+        await WriteAsPrimary(message).ConfigureAwait(false);
+    }
 
     private Task WriteAsPrimary(RpcOutboundMessage? message)
     {
@@ -178,10 +179,10 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 return Task.CompletedTask;
 
             // Flushing write buffer
-            var frame = writeBuffer.ReplaceAndReturnArrayHandle(Settings.MinWriteBufferSize);
-            return _frameChannel.Writer.TryWrite(frame)
+            var frame = writeBuffer.ResetAndReturnArrayHandle(Settings.MinWriteBufferSize);
+            return _frameWriter.TryWrite(frame)
                 ? Task.CompletedTask // Fast path
-                : _whenWriteCompleted = _frameChannel.Writer.WriteAsync(frame).AsTask(); // Slow path
+                : _whenWriteCompleted = _frameWriter.WriteAsync(frame).AsTask(); // Slow path
         }
         catch (Exception e) {
             // Drain the queue and complete all messages with an error
@@ -263,12 +264,12 @@ public sealed class WebSocketRpcTransport : RpcTransport
         if (Interlocked.CompareExchange(ref _writerCount, 1, 0) != 0)
             return false; // Writers are active, they'll flush
 
+        // We're the primary writer now
         try {
             if (_writeBuffer is not { } writeBuffer || writeBuffer.WrittenCount == 0)
                 return false;
 
-            frame = writeBuffer.ReplaceAndReturnArrayHandle(Settings.MinWriteBufferSize);
-            _writeBuffer.Reset();
+            frame = writeBuffer.ResetAndReturnArrayHandle(Settings.MinWriteBufferSize);
             return true;
         }
         finally {
@@ -307,25 +308,16 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
                 var totalLength = readBuffer.WrittenCount;
 
-                // Create ref-counted buffer, takes ownership of readBuffer's array
-                var holder = readBuffer.ReplaceAndReturnArrayHandle(_minReadBufferSize);
-
-                // Transport holds a ref while parsing
-                var transportRef = holder.NewRef();
-
-                // Parse all messages from this buffer
+                var frame = readBuffer.ResetAndReturnArrayHandle(_minReadBufferSize);
                 var offset = 0;
                 while (offset < totalLength) {
-                    var message = TryDeserialize(holder, ref offset, totalLength);
+                    var message = TryDeserialize(frame, ref offset, totalLength);
                     if (message is not null)
                         yield return message;
                 }
-
-                // Release transport's reference; buffer returns to pool when all messages are disposed
-                transportRef.Dispose();
-
-                // Get a new buffer for the next read
-                readBuffer = new ArrayPoolBuffer<byte>(_minReadBufferSize, false);
+                // The code that uses frame's data (RpcInboundMessage.ArgumentData) is running synchronously,
+                // so if we're here, the frame's array can return to the pool.
+                frame.Dispose();
             }
         }
         finally {
@@ -335,20 +327,20 @@ public sealed class WebSocketRpcTransport : RpcTransport
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private RpcInboundMessage? TryDeserialize(ArrayPoolArrayHandle<byte> buffer, ref int offset, int totalLength)
+    private RpcInboundMessage? TryDeserialize(ArrayPoolArrayHandle<byte> frame, ref int offset, int totalLength)
     {
         _meters.IncomingItemCounter.Add(1);
         int size = 0;
         bool isSizeValid = false;
         try {
-            var array = buffer.Array;
+            var array = frame.Array;
             size = array.AsSpan(offset).ReadUnchecked<int>();
             isSizeValid = size > 0 && offset + size <= totalLength;
             if (!isSizeValid)
                 throw Errors.InvalidItemSize();
 
             // Read message - ArgumentData is a projection into our buffer (zero-copy)
-            var inboundMessage = MessageSerializer.Read(buffer, offset + sizeof(int), out int readSize);
+            var inboundMessage = MessageSerializer.Read(frame, offset + sizeof(int), out int readSize);
             if (readSize != size - sizeof(int))
                 throw Errors.InvalidItemSize();
 
@@ -356,7 +348,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
             return inboundMessage;
         }
         catch (Exception e) {
-            var remaining = buffer.Array.AsMemory(offset, totalLength - offset);
+            var remaining = frame.Array.AsMemory(offset, totalLength - offset);
             ErrorLog?.LogError(e, "Couldn't deserialize: {Data}", new TextOrBytes(DataFormat.Bytes, remaining));
             offset = isSizeValid ? offset + size : totalLength;
             return null;

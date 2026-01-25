@@ -36,21 +36,20 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
             m.RelatedId,
             methodRef,
             argumentData,
-            m.ParseHeaders(),
-            default);
+            m.ParseHeaders());
     }
 
     public override void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
     {
         // Serialize arguments if needed
         var argumentData = message.ArgumentData;
-        if (argumentData.IsEmpty && message.Arguments is not null && message.ArgumentSerializer is not null) {
+        if (argumentData.IsEmpty) {
             // Set context for types that need it during serialization (e.g., RpcStream)
             var oldContext = RpcOutboundContext.Current;
             RpcOutboundContext.Current = message.Context;
             try {
                 var argBuffer = RpcArgumentSerializer.GetWriteBuffer();
-                message.ArgumentSerializer.Serialize(message.Arguments, message.NeedsPolymorphism, argBuffer);
+                message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, argBuffer);
                 argumentData = RpcArgumentSerializer.GetWriteBufferMemory(argBuffer);
             }
             finally {
