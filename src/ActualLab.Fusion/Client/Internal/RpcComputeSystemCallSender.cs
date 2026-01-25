@@ -23,6 +23,6 @@ public sealed class RpcComputeSystemCallSender : RpcServiceBase
     {
         var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCallForSendNoWait(InvalidateMethodDef, ArgumentList.Empty)!;
-        return call.SendNoWaitSilently(needsPolymorphism: false);
+        return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 }

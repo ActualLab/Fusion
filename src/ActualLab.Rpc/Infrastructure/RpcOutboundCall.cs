@@ -85,7 +85,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         if (NoWait) {
             // NoWait always means "send immediately, even if disconnected"
-            _ = SendNoWait(MethodDef.HasPolymorphicArguments);
+            _ = SendNoWait(MethodDef.HasPolymorphicArguments, RpcSendErrorHandlers.PropagateToCall);
             return ResultTask;
         }
 
@@ -130,18 +130,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     // SendXxx
 
-    public Task SendNoWaitSilently(bool needsPolymorphism, RpcTransport? transport = null)
-    {
-        // Silent versions never throw - use when serialization is guaranteed to succeed (well-known types)
-        var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism);
-        if (Peer.CallLogger.IsLogged(this))
-            Peer.CallLogger.LogOutbound(this, message);
-        return Peer.SendSilently(message, transport);
-    }
-
-    public Task SendNoWait(bool needsPolymorphism)
-        => SendNoWait(needsPolymorphism, RpcSendErrorHandlers.PropagateToCall);
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Task SendNoWait(bool needsPolymorphism, RpcSendErrorHandler errorHandler)
     {
         // NoWait calls don't require RpcOutboundContext.Current to serialize their arguments,
@@ -153,9 +142,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return Peer.Send(message, errorHandler);
     }
 
-    public Task SendNoWait(RpcOutboundMessage message)
-        => SendNoWait(message, RpcSendErrorHandlers.PropagateToCall);
-
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Task SendNoWait(RpcOutboundMessage message, RpcSendErrorHandler errorHandler)
     {
         if (Peer.CallLogger.IsLogged(this))
@@ -163,6 +150,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return Peer.Send(message, errorHandler);
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public Task SendRegistered(bool isFirstAttempt)
     {
         // Use lazy CreateOutboundMessage - serialization happens in transport.
