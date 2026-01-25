@@ -321,6 +321,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [InlineData(10_000)]
     [InlineData(50_000)]
     [InlineData(200_000)]
+    [InlineData(1000_000)]
     public async Task PerformanceTest(int iterationCount)
     {
         if (TestRunnerInfo.IsBuildAgent())

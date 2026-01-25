@@ -72,6 +72,8 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
     [InlineData(100)]
     [InlineData(1000)]
     [InlineData(50_000)]
+    [InlineData(200_000)]
+    [InlineData(1000_000)]
     public async Task PerformanceTest(int iterationCount)
     {
         // ByteSerializer.Default = MessagePackByteSerializer.Default;
