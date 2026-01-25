@@ -13,9 +13,8 @@ public sealed class ChannelRpcTransport : RpcTransport
     private int _getAsyncEnumeratorCounter;
 
     public RpcPeer? Peer { get; }
-
-    public override Task WhenReadCompleted => _readCompletedTcs.Task;
-    public override Task WhenWriteCompleted => _writeCompletedTcs.Task;
+    public Task WhenReadCompleted => _readCompletedTcs.Task;
+    public Task WhenWriteCompleted => _writeCompletedTcs.Task;
     public override Task WhenClosed { get; }
 
     public ChannelRpcTransport(

@@ -17,7 +17,7 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
     {
         // Text serializer always copies data, doesn't use zero-copy
         var array = buffer.Array;
-        var data = array.AsMemory(offset, buffer.Length - offset);
+        var data = array.AsMemory(offset, buffer.WrittenCount - offset);
 
         var reader = new Utf8JsonReader(data.Span);
         var m = (JsonRpcMessage)JsonSerializer.Deserialize(ref reader, typeof(JsonRpcMessage), JsonRpcMessageContext.Default)!;

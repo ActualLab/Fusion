@@ -11,6 +11,8 @@ public sealed class RpcOutboundMessage(
     RpcHeader[]? headers,
     ReadOnlyMemory<byte> argumentData = default)
 {
+    private AsyncTaskMethodBuilder _whenSerializedBuilder;
+
     public readonly RpcOutboundContext Context = context;
     public readonly RpcMethodDef MethodDef = methodDef;
     public readonly long RelatedId = relatedId;
@@ -20,13 +22,33 @@ public sealed class RpcOutboundMessage(
     public readonly ReadOnlyMemory<byte> ArgumentData = argumentData;
     public readonly RpcArgumentSerializer ArgumentSerializer = context.Peer!.ArgumentSerializer;
 
+    public bool HasArguments => !ReferenceEquals(Arguments, null);
     public bool HasArgumentData => !ArgumentData.IsEmpty;
+
+    // Used by lock-free transport to track serialization completion
+    public Task WhenSerialized {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _whenSerializedBuilder.Task;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void PrepareWhenSerialized()
+        => _whenSerializedBuilder = AsyncTaskMethodBuilderExt.New();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void CompleteWhenSerialized(Exception? error = null)
+    {
+        if (error is null)
+            _whenSerializedBuilder.SetResult();
+        else
+            _whenSerializedBuilder.SetException(error);
+    }
 
     public override string ToString()
     {
         var headers = Headers.OrEmpty();
         return $"{nameof(RpcOutboundMessage)} #{RelatedId}/{MethodDef.CallType.Id}: {MethodDef.Ref.FullName}, "
-            + (Arguments is not null ? $"Arguments: {Arguments}, " : "")
+            + (HasArguments ? $"Arguments: {Arguments}, " : "")
             + (HasArgumentData ? $"ArgumentData: {new ByteString(ArgumentData).ToString(16)}, " : "")
             + (headers.Length > 0 ? $"Headers: {headers.ToDelimitedString()}" : "");
     }

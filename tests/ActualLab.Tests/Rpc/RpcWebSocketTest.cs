@@ -326,6 +326,8 @@ public class RpcWebSocketTest : RpcTestBase
     // Fastest options (compact)
     [InlineData(200_000, "mempack5c")]
     [InlineData(200_000, "msgpack5c")]
+    [InlineData(200_001, "mempack5c")]
+    [InlineData(200_001, "msgpack5c")]
     public async Task PerformanceTest(int iterationCount, string serializationFormat)
     {
         SerializationFormat = serializationFormat;

@@ -15,7 +15,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
     public override RpcInboundMessage Read(ArrayPoolArrayHandle<byte> buffer, int offset, out int readLength)
     {
         var array = buffer.Array;
-        var data = array.AsMemory(offset, buffer.Length - offset);
+        var data = array.AsMemory(offset, buffer.WrittenCount - offset);
         var reader = new MemoryReader(data);
 
         // CallTypeId and headerCount
