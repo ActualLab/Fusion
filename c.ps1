@@ -666,6 +666,17 @@ switch ($mode) {
             $volumeMounts += "$env:HOME/.claude.json:/home/claude/.claude.json"
         }
 
+        # Add git config mount
+        $gitConfigPath = if ($currentOS -eq "Windows") {
+            "$env:USERPROFILE/.gitconfig"
+        } else {
+            "$env:HOME/.gitconfig"
+        }
+        if (Test-Path $gitConfigPath) {
+            $volumeMounts += "-v"
+            $volumeMounts += "${gitConfigPath}:/home/claude/.gitconfig:ro"
+        }
+
         # Add gcloud config mount (maps user's gcloud config to container)
         $gcloudConfigPath = if ($currentOS -eq "Windows") {
             "$env:APPDATA/gcloud"
