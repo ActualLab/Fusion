@@ -19,7 +19,7 @@ public class SpanExtTest(ITestOutputHelper @out) : TestBase(@out)
         {
             foreach (var startOffset in new[] { 0, 1, 2, 7 }) {
                 buffer.Clear();
-                var endOffset = buffer[startOffset..].WriteVarUInt32(value);
+                var endOffset = buffer.WriteVarUInt32(value, startOffset);
                 endOffset.Should().BeGreaterThan(startOffset);
                 endOffset.Should().BeLessThanOrEqualTo(buffer.Length);
                 var size = endOffset - startOffset;
@@ -64,7 +64,7 @@ public class SpanExtTest(ITestOutputHelper @out) : TestBase(@out)
         {
             foreach (var startOffset in new[] { 0, 1, 2, 11 }) {
                 buffer.Clear();
-                var endOffset = buffer[startOffset..].WriteVarUInt64(value);
+                var endOffset = buffer.WriteVarUInt64(value, startOffset);
                 endOffset.Should().BeGreaterThan(startOffset);
                 endOffset.Should().BeLessThanOrEqualTo(buffer.Length);
                 var size = endOffset - startOffset;
