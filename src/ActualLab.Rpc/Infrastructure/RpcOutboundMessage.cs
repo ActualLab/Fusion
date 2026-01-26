@@ -8,10 +8,13 @@ public sealed class RpcOutboundMessage(
     RpcMethodDef methodDef,
     long relatedId,
     bool needsPolymorphism,
+    bool tracksSerialization,
     RpcHeader[]? headers,
     ReadOnlyMemory<byte> argumentData = default)
 {
-    private AsyncTaskMethodBuilder _whenSerializedBuilder;
+    private AsyncTaskMethodBuilder _whenSerializedBuilder = tracksSerialization
+        ? AsyncTaskMethodBuilderExt.New()
+        : default;
 
     public readonly RpcOutboundContext Context = context;
     public readonly RpcMethodDef MethodDef = methodDef;
@@ -26,18 +29,17 @@ public sealed class RpcOutboundMessage(
     public bool HasArgumentData => !ArgumentData.IsEmpty;
 
     // Used by lock-free transport to track serialization completion
-    public Task WhenSerialized {
+    public Task? WhenSerialized {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _whenSerializedBuilder.Task;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void PrepareWhenSerialized()
-        => _whenSerializedBuilder = AsyncTaskMethodBuilderExt.New();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void CompleteWhenSerialized(Exception? error = null)
     {
+        if (ReferenceEquals(_whenSerializedBuilder.Task, null))
+            return;
+
         if (error is null)
             _whenSerializedBuilder.SetResult();
         else
