@@ -173,7 +173,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return Peer.Send(message, RpcSendErrorHandlers.PropagateToCall);
     }
 
-    public RpcOutboundMessage CreateOutboundMessage(long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
+    public RpcOutboundMessage CreateOutboundMessage(
+        long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
     {
         var headers = Context.Headers;
         if (hash is not null)
@@ -184,7 +185,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return new RpcOutboundMessage(Context, MethodDef, relatedId, needsPolymorphism, headers);
     }
 
-    public RpcOutboundMessage CreateOutboundMessageWithArgumentData(long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
+    public RpcOutboundMessage CreateOutboundMessageWithArgumentData(
+        long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
     {
         var oldOutboundContext = RpcOutboundContext.Current;
         RpcOutboundContext.Current = Context;
@@ -205,7 +207,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
     }
 
-    public (RpcOutboundMessage Message, string Hash) CreateOutboundMessageWithHashHeader(long relatedId, bool needsPolymorphism)
+    public (RpcOutboundMessage Message, string Hash) CreateOutboundMessageWithHashHeader(
+        long relatedId, bool needsPolymorphism)
     {
         var oldOutboundContext = RpcOutboundContext.Current;
         RpcOutboundContext.Current = Context;
