@@ -49,7 +49,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
     public RpcPeer Peer { get; }
-    public RpcByteMessageSerializerV4 MessageSerializer { get; }
+    public RpcByteMessageSerializer MessageSerializer { get; }
     public ILogger? Log { get; }
     public ILogger? ErrorLog { get; }
 
@@ -67,7 +67,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
         WebSocketOwner = webSocketOwner;
         WebSocket = webSocketOwner.WebSocket;
         Peer = peer;
-        MessageSerializer = new RpcByteMessageSerializerV4(peer);
+        MessageSerializer = (RpcByteMessageSerializer)peer.MessageSerializer;
 
         Log = webSocketOwner.Services.LogFor(GetType());
         ErrorLog = Log.IfEnabled(LogLevel.Error);
