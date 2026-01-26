@@ -184,15 +184,13 @@ public sealed class RpcWebSocketTransport : RpcTransport
                     }
 
                     if (_writeBuffer.WrittenCount >= _writeFrameSize) {
-                        if (!lastFlushTask.IsCompletedSuccessfully())
-                            await lastFlushTask.ConfigureAwait(false);
+                        await lastFlushTask.ConfigureAwait(false);
                         lastFlushTask = FlushFrame();
                     }
                 }
                 // Final flush before await
                 if (_writeBuffer.WrittenCount != 0) {
-                    if (!lastFlushTask.IsCompletedSuccessfully())
-                        await lastFlushTask.ConfigureAwait(false);
+                    await lastFlushTask.ConfigureAwait(false);
                     lastFlushTask = FlushFrame();
                 }
             }
@@ -221,8 +219,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 if (whenMustFlush.IsCompleted) {
                     // Flush is required right now.
                     if (_writeBuffer.WrittenCount != 0) {
-                        if (!lastFlushTask.IsCompletedSuccessfully())
-                            await lastFlushTask.ConfigureAwait(false);
+                        await lastFlushTask.ConfigureAwait(false);
                         lastFlushTask = FlushFrame();
                     }
                     whenMustFlush = null;
@@ -257,8 +254,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 }
 
                 if (_writeBuffer.WrittenCount >= _writeFrameSize) {
-                    if (!lastFlushTask.IsCompletedSuccessfully())
-                        await lastFlushTask.ConfigureAwait(false);
+                    await lastFlushTask.ConfigureAwait(false);
                     lastFlushTask = FlushFrame();
                     whenMustFlush = null;
                 }
@@ -269,8 +265,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
         // Final flush
         if (_writeBuffer.WrittenCount != 0) {
-            if (!lastFlushTask.IsCompletedSuccessfully())
-                await lastFlushTask.ConfigureAwait(false);
+            await lastFlushTask.ConfigureAwait(false);
             lastFlushTask = FlushFrame();
         }
         // Await the last flush
