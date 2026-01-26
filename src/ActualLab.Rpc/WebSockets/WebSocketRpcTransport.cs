@@ -128,17 +128,26 @@ public sealed class WebSocketRpcTransport : RpcTransport
             return Task.FromException(new ChannelClosedException());
 
         var count = Interlocked.Increment(ref _writerCount);
-        if (count != 1) {
-            message.PrepareWhenSerialized();
-            _writeQueue.Enqueue(message);
-            Interlocked.Decrement(ref _writerCount);
-            return message.WhenSerialized;
+        if (count == 1) {
+            var whenWriteCompleted = _whenLastWriteCompleted;
+            return whenWriteCompleted.IsCompleted
+                ? WriteAsPrimary(message)
+                : WriteAsPrimary(message, whenWriteCompleted);
         }
 
-        var whenWriteCompleted = _whenLastWriteCompleted;
-        return whenWriteCompleted.IsCompleted
-            ? WriteAsPrimary(message)
-            : WriteAsPrimary(message, whenWriteCompleted);
+        message.PrepareWhenSerialized();
+        _writeQueue.Enqueue(message);
+        // We might have enqueued right after the current primary drained the queue
+        // and is about to release. If we drop the counter to 0, there may be no
+        // subsequent writer to drain the queue, so we need a handoff.
+        if (Interlocked.Decrement(ref _writerCount) == 0 && Interlocked.CompareExchange(ref _writerCount, 1, 0) == 0) {
+            // We are the primary now, draining write queue
+            var whenLastWriteCompleted = _whenLastWriteCompleted;
+            _ = whenLastWriteCompleted.IsCompleted
+                ? WriteAsPrimary(null)
+                : WriteAsPrimary(null, whenLastWriteCompleted);
+        }
+        return message.WhenSerialized;
     }
 
     public override bool TryComplete(Exception? error = null)
@@ -157,7 +166,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
     // Private methods
 
-    private async Task WriteAsPrimary(RpcOutboundMessage message, Task whenReadyToWrite)
+    private async Task WriteAsPrimary(RpcOutboundMessage? message, Task whenReadyToWrite)
     {
         await whenReadyToWrite.ConfigureAwait(false);
         await WriteAsPrimary(message).ConfigureAwait(false);
@@ -232,23 +241,21 @@ public sealed class WebSocketRpcTransport : RpcTransport
         var frameReader = _frameChannel.Reader;
         try {
             while (true) {
-                // Try to steal any pending buffer data
-                if (TryStealFrame(out var frame)) {
+                // 1) Drain all ready frames from the channel first.
+                while (frameReader.TryRead(out var frame)) {
                     await WebSocket
                         .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
                         .ConfigureAwait(false);
                     _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
                     frame.Dispose();
-                    continue;
                 }
 
-                // Pull the frame from _frameChannel
-                var whenReadyToRead = frameReader.WaitToReadAsync(StopToken);
-                if (!whenReadyToRead.IsCompleted) {
-                    Interlocked.Exchange(ref _frameSenderIsIdle, 1);
-                    // After setting idle, try to steal one more time to close the race window
-                    if (TryStealFrame(out frame)) {
-                        Interlocked.Exchange(ref _frameSenderIsIdle, 0);
+                // 2) Channel is empty: mark sender as idle *before* trying to steal.
+                // This closes the race where writers decide not to flush small buffers
+                // because the sender isn't marked idle yet, while the sender is about to wait.
+                Interlocked.Exchange(ref _frameSenderIsIdle, 1);
+                try {
+                    if (TryStealFrame(out var frame)) {
                         await WebSocket
                             .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
                             .ConfigureAwait(false);
@@ -256,21 +263,13 @@ public sealed class WebSocketRpcTransport : RpcTransport
                         frame.Dispose();
                         continue;
                     }
-                    try {
-                        if (!await whenReadyToRead.ConfigureAwait(false))
-                            return;
-                    }
-                    finally {
-                        Interlocked.Exchange(ref _frameSenderIsIdle, 0);
-                    }
-                }
 
-                while (frameReader.TryRead(out frame)) {
-                    await WebSocket
-                        .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
-                        .ConfigureAwait(false);
-                    _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
-                    frame.Dispose();
+                    // 3) Nothing to send: wait for a channel frame.
+                    if (!await frameReader.WaitToReadAsync(StopToken).ConfigureAwait(false))
+                        return;
+                }
+                finally {
+                    Interlocked.Exchange(ref _frameSenderIsIdle, 0);
                 }
             }
         }
