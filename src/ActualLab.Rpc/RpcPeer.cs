@@ -266,7 +266,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
-        Log.LogInformation("'{PeerRef}': Started", Ref);
+        Log.LogInformation("'{PeerRef}': Started ({ConnectionKind})", Ref, ConnectionKind);
 
         // ReSharper disable once UseAwaitUsing
         // ReSharper disable once RedundantAssignment
