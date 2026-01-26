@@ -14,16 +14,7 @@ public sealed class RpcInboundMessage(
     public readonly RpcMethodRef MethodRef = methodRef;
     public readonly RpcHeader[]? Headers = headers;
     public ReadOnlyMemory<byte> ArgumentData = argumentData;
-
-    public ArgumentList? Arguments {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set {
-            field = value;
-            ArgumentData = default;
-        }
-    }
+    public ArgumentList? Arguments;
 
     public override string ToString()
     {
