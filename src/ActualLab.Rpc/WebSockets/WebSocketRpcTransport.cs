@@ -20,8 +20,14 @@ public sealed class WebSocketRpcTransport : RpcTransport
         public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU) minus some reserve
         public int MinWriteBufferSize { get; init; } = 24_000;
         public int MinReadBufferSize { get; init; } = 24_000;
-        public int? MaxWriteQueueSize { get; init; } = null; // Unbounded by default
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
+
+        public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(500) {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = false,
+            AllowSynchronousContinuations = false,
+        };
     }
 
     private static readonly MeterSet StaticMeters = new();
@@ -29,8 +35,8 @@ public sealed class WebSocketRpcTransport : RpcTransport
     private readonly MeterSet _meters = StaticMeters;
     private readonly int _writeFrameSize;
     private readonly int _minReadBufferSize;
-    private readonly Channel<RpcOutboundMessage> _writeQueue;
-    private readonly ChannelWriter<RpcOutboundMessage> _writeQueueWriter;
+    private readonly Channel<RpcOutboundMessage> _writeChannel;
+    private readonly ChannelWriter<RpcOutboundMessage> _writeChannelWriter;
     private readonly AsyncTaskMethodBuilder _whenCompletedSource;
     private readonly Task _whenCompleted;
     private readonly ArrayPoolBuffer<byte> _writeBuffer;
@@ -76,24 +82,14 @@ public sealed class WebSocketRpcTransport : RpcTransport
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, mustClear: false);
         _frameDelayer = settings.FrameDelayerFactory?.Invoke();
 
-        _writeQueue = ChannelExt.Create<RpcOutboundMessage>(
-            settings.MaxWriteQueueSize is { } maxWriteQueueSize
-                ? new BoundedChannelOptions(maxWriteQueueSize) {
-                    SingleReader = true,
-                    SingleWriter = false,
-                    FullMode = BoundedChannelFullMode.Wait,
-                }
-                : new UnboundedChannelOptions() {
-                    SingleReader = true,
-                    SingleWriter = false,
-                });
-        _writeQueueWriter = _writeQueue.Writer;
+        _writeChannel = ChannelExt.Create<RpcOutboundMessage>(settings.WriteChannelOptions);
+        _writeChannelWriter = _writeChannel.Writer;
 
         using var __ = ExecutionContextExt.TrySuppressFlow();
         WhenClosed = Task.Run(async () => {
             Interlocked.Increment(ref _meters.ChannelCount);
             try {
-                var whenWriterCompleted = Task.Run(() => RunWriter(), CancellationToken.None);
+                var whenWriterCompleted = Task.Run(RunWriter, CancellationToken.None);
                 await Task.WhenAny(_whenCompleted, whenWriterCompleted).SilentAwait(false);
                 StopTokenSource.Cancel(); // Stops writer loop (and reader loop)
                 TryComplete(); // Stops writes
@@ -101,7 +97,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 await _whenCompleted.SilentAwait(false); // Can fail, so we use SilentAwait here
 
                 // Drain remaining pending messages (if any)
-                while (_writeQueue.Reader.TryRead(out var message))
+                while (_writeChannel.Reader.TryRead(out var message))
                     message.CompleteWhenSerialized(new ChannelClosedException());
                 _writeBuffer.Dispose();
 
@@ -126,7 +122,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
     public override Task Write(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
         var whenSerialized = message.WhenSerialized;
-        var writeTask = _writeQueueWriter.WriteAsync(message, cancellationToken);
+        var writeTask = _writeChannelWriter.WriteAsync(message, cancellationToken);
         if (writeTask.IsCompletedSuccessfully)
             return whenSerialized ?? Task.CompletedTask;
 
@@ -149,7 +145,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
     public override bool TryComplete(Exception? error = null)
     {
-        if (!_writeQueueWriter.TryComplete(error))
+        if (!_writeChannelWriter.TryComplete(error))
             return false;
 
         _whenCompletedSource.TrySetFromResult(new Result<Unit>(default, error));
@@ -173,7 +169,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 return;
             }
 
-            var reader = _writeQueue.Reader;
+            var reader = _writeChannel.Reader;
             while (await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false)) {
                 while (reader.TryRead(out var message)) {
                     try {
@@ -205,7 +201,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
     {
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;
-        var reader = _writeQueue.Reader;
+        var reader = _writeChannel.Reader;
 
         while (true) {
             // When we are here, the sync read part is completed, so WaitToReadAsync will likely await.
