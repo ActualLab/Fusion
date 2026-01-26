@@ -165,6 +165,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
     private async Task RunWriter()
     {
         Exception? error = null;
+        Task lastFlushTask = Task.CompletedTask;
         try {
             if (_frameDelayer is { } frameDelayer) {
                 await RunWriterWithFrameDelayer(frameDelayer).ConfigureAwait(false);
@@ -182,13 +183,21 @@ public sealed class RpcWebSocketTransport : RpcTransport
                         message.CompleteWhenSerialized(e);
                     }
 
-                    if (_writeBuffer.WrittenCount >= _writeFrameSize)
-                        await FlushFrame().ConfigureAwait(false);
+                    if (_writeBuffer.WrittenCount >= _writeFrameSize) {
+                        if (!lastFlushTask.IsCompletedSuccessfully())
+                            await lastFlushTask.ConfigureAwait(false);
+                        lastFlushTask = FlushFrame();
+                    }
                 }
                 // Final flush before await
-                if (_writeBuffer.WrittenCount != 0)
-                    await FlushFrame().ConfigureAwait(false);
+                if (_writeBuffer.WrittenCount != 0) {
+                    if (!lastFlushTask.IsCompletedSuccessfully())
+                        await lastFlushTask.ConfigureAwait(false);
+                    lastFlushTask = FlushFrame();
+                }
             }
+            // Await the last flush
+            await lastFlushTask.ConfigureAwait(false);
         }
         catch (Exception e) {
             if (!e.IsCancellationOf(StopToken))
@@ -202,6 +211,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
     private async Task RunWriterWithFrameDelayer(RpcFrameDelayer frameDelayer)
     {
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
+        Task lastFlushTask = Task.CompletedTask;
         Task<bool>? waitToReadTask = null;
         var reader = _writeChannel.Reader;
 
@@ -210,8 +220,11 @@ public sealed class RpcWebSocketTransport : RpcTransport
             if (whenMustFlush is not null) {
                 if (whenMustFlush.IsCompleted) {
                     // Flush is required right now.
-                    if (_writeBuffer.WrittenCount != 0)
-                        await FlushFrame().ConfigureAwait(false);
+                    if (_writeBuffer.WrittenCount != 0) {
+                        if (!lastFlushTask.IsCompletedSuccessfully())
+                            await lastFlushTask.ConfigureAwait(false);
+                        lastFlushTask = FlushFrame();
+                    }
                     whenMustFlush = null;
                 }
                 else {
@@ -244,7 +257,9 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 }
 
                 if (_writeBuffer.WrittenCount >= _writeFrameSize) {
-                    await FlushFrame().ConfigureAwait(false);
+                    if (!lastFlushTask.IsCompletedSuccessfully())
+                        await lastFlushTask.ConfigureAwait(false);
+                    lastFlushTask = FlushFrame();
                     whenMustFlush = null;
                 }
             }
@@ -253,26 +268,42 @@ public sealed class RpcWebSocketTransport : RpcTransport
         }
 
         // Final flush
-        if (_writeBuffer.WrittenCount != 0)
-            await FlushFrame().ConfigureAwait(false);
+        if (_writeBuffer.WrittenCount != 0) {
+            if (!lastFlushTask.IsCompletedSuccessfully())
+                await lastFlushTask.ConfigureAwait(false);
+            lastFlushTask = FlushFrame();
+        }
+        // Await the last flush
+        await lastFlushTask.ConfigureAwait(false);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private async ValueTask FlushFrame()
+    private Task FlushFrame()
     {
         if (_writeBuffer.Position == 0)
-            return;
+            return Task.CompletedTask;
 
         var frame = _writeBuffer.ToArrayOwnerAndReset(_minWriteBufferSize);
         try {
-            var memory = frame.Memory;
-            await WebSocket
-                .SendAsync(memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
-                .ConfigureAwait(false);
-            _meters.OutgoingFrameSizeHistogram.Record(memory.Length);
+            var sendTask = WebSocket
+                .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
+            if (!sendTask.IsCompletedSuccessfully)
+                return CompleteAsync(sendTask, frame);
+            _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
+            return Task.CompletedTask;
         }
         finally {
             frame.Dispose();
+        }
+
+        async Task CompleteAsync(ValueTask sendTask1, ArrayOwner<byte> frame1) {
+            try {
+                await sendTask1.ConfigureAwait(false);
+                _meters.OutgoingFrameSizeHistogram.Record(frame1.Length);
+            }
+            finally {
+                frame1.Dispose();
+            }
         }
     }
 
