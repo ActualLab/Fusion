@@ -91,8 +91,9 @@ public sealed class RpcWebSocketTransport : RpcTransport
         WhenClosed = Task.Run(async () => {
             Interlocked.Increment(ref _meters.ChannelCount);
             try {
+                var whenStopped = TaskExt.NeverEnding(StopToken);
                 var whenWriterCompleted = Task.Run(RunWriter, CancellationToken.None);
-                await Task.WhenAny(_whenCompleted, whenWriterCompleted).SilentAwait(false);
+                await Task.WhenAny(whenStopped, _whenCompleted, whenWriterCompleted).SilentAwait(false);
                 StopTokenSource.Cancel(); // Stops writer loop (and reader loop)
                 TryComplete(); // Stops writes
                 await whenWriterCompleted.ConfigureAwait(false); // RunWriter never throws
