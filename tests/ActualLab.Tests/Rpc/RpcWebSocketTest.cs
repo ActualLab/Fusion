@@ -38,6 +38,10 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("mempack5c")]
     [InlineData("msgpack5")]
     [InlineData("msgpack5c")]
+    [InlineData("mempack6")]
+    [InlineData("mempack6c")]
+    [InlineData("msgpack6")]
+    [InlineData("msgpack6c")]
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -153,6 +157,10 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("mempack5c")]
     [InlineData("msgpack5")]
     [InlineData("msgpack5c")]
+    [InlineData("mempack6")]
+    [InlineData("mempack6c")]
+    [InlineData("msgpack6")]
+    [InlineData("msgpack6c")]
     public async Task PolymorphTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -203,6 +211,10 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("mempack5c")]
     [InlineData("msgpack5")]
     [InlineData("msgpack5c")]
+    [InlineData("mempack6")]
+    [InlineData("mempack6c")]
+    [InlineData("msgpack6")]
+    [InlineData("msgpack6c")]
     public async Task StreamTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -246,6 +258,10 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("mempack5c")]
     [InlineData("msgpack5")]
     [InlineData("msgpack5c")]
+    [InlineData("mempack6")]
+    [InlineData("mempack6c")]
+    [InlineData("msgpack6")]
+    [InlineData("msgpack6c")]
     public async Task StreamInputTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -322,26 +338,27 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Fact]
     public Task PerformanceTest1K()
-        => PerformanceTest(1000, "msgpack5");
+        => PerformanceTest(1000, "msgpack6");
 
     [Fact]
     public Task PerformanceTest10K()
-        => PerformanceTest(10_000, "msgpack5");
+        => PerformanceTest(10_000, "msgpack6");
 
     [Fact]
     public Task PerformanceTest100K()
-        => PerformanceTest(100_000, "msgpack5");
+        => PerformanceTest(100_000, "msgpack6");
 
     [Theory]
+    // Fastest options (compact)
+    [InlineData(200_000, "mempack6c")]
+    [InlineData(200_000, "msgpack6c")]
+    [InlineData(200_000, "mempack5c")]
+    [InlineData(200_000, "msgpack5c")]
+    // v5 formats
     [InlineData(50_000, "json5")]
     [InlineData(50_000, "njson5")]
     [InlineData(50_000, "mempack5")]
     [InlineData(50_000, "msgpack5")]
-    // Fastest options (compact)
-    [InlineData(200_000, "mempack5c")]
-    [InlineData(200_000, "msgpack5c")]
-    [InlineData(200_001, "mempack5c")]
-    [InlineData(200_001, "msgpack5c")]
     public async Task PerformanceTest(int iterationCount, string serializationFormat)
     {
         SerializationFormat = serializationFormat;
