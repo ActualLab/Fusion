@@ -52,7 +52,8 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     {
         var context = new RpcOutboundContext(peer);
         var call = context.PrepareCallForSendNoWait(HandshakeMethodDef, ArgumentList.New(handshake))!;
-        var message = call.CreateOutboundMessage(call.Context.RelatedId, false);
+        var message = call.CreateOutboundMessage(
+            call.Context.RelatedId, needsPolymorphism: false, tracksSerialization: false);
         if (call.Peer.CallLogger.IsLogged(call))
             call.Peer.CallLogger.LogOutbound(call, message);
         return call.Peer.Send(message, RpcSendErrorHandlers.Silence, transport);

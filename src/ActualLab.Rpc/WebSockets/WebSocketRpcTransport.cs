@@ -1,5 +1,6 @@
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
+using ActualLab.Channels;
 using ActualLab.IO;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -19,7 +20,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
         public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU) minus some reserve
         public int MinWriteBufferSize { get; init; } = 24_000;
         public int MinReadBufferSize { get; init; } = 24_000;
-        public int MaxPendingFrameCount { get; init; } = 8;
+        public int? MaxWriteQueueSize { get; init; } = 120;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
     }
 
@@ -28,17 +29,12 @@ public sealed class WebSocketRpcTransport : RpcTransport
     private readonly MeterSet _meters = StaticMeters;
     private readonly int _writeFrameSize;
     private readonly int _minReadBufferSize;
+    private readonly Channel<RpcOutboundMessage> _writeQueue;
+    private readonly ChannelWriter<RpcOutboundMessage> _writeQueueWriter;
     private readonly AsyncTaskMethodBuilder _whenCompletedSource;
     private readonly Task _whenCompleted;
-    private readonly Channel<ArrayOwner<byte>> _frameChannel;
-    private readonly ChannelWriter<ArrayOwner<byte>> _frameWriter;
     private readonly ArrayPoolBuffer<byte> _writeBuffer;
-    private readonly ConcurrentQueue<RpcOutboundMessage> _writeQueue = new();
-    private int _writerCount;
     private readonly FrameDelayer? _frameDelayer;
-    private int _scheduledFlushId;
-    private int _flushIdGenerator;
-    private volatile Task _whenLastWriteCompleted = Task.CompletedTask;
     private int _getAsyncEnumeratorCounter;
 
     public bool OwnsWebSocketOwner { get; set; } = true;
@@ -79,33 +75,35 @@ public sealed class WebSocketRpcTransport : RpcTransport
         _minReadBufferSize = settings.MinReadBufferSize;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, mustClear: false);
         _frameDelayer = settings.FrameDelayerFactory?.Invoke();
-        _frameChannel = Channel.CreateBounded<ArrayOwner<byte>>(
-            new BoundedChannelOptions(settings.MaxPendingFrameCount) {
-                SingleReader = true,
-                SingleWriter = true,
-                FullMode = BoundedChannelFullMode.Wait,
-            });
-        _frameWriter = _frameChannel.Writer;
+
+        _writeQueue = ChannelExt.Create<RpcOutboundMessage>(
+            settings.MaxWriteQueueSize is { } maxWriteQueueSize
+                ? new BoundedChannelOptions(maxWriteQueueSize) {
+                    SingleReader = true,
+                    SingleWriter = false,
+                    FullMode = BoundedChannelFullMode.Wait,
+                }
+                : new UnboundedChannelOptions() {
+                    SingleReader = true,
+                    SingleWriter = false,
+                });
+        _writeQueueWriter = _writeQueue.Writer;
 
         using var __ = ExecutionContextExt.TrySuppressFlow();
         WhenClosed = Task.Run(async () => {
             Interlocked.Increment(ref _meters.ChannelCount);
             try {
-                var whenFrameSenderCompleted = Task.Run(RunFrameSender, CancellationToken.None);
-                await Task.WhenAny(_whenCompleted, whenFrameSenderCompleted).SilentAwait(false);
-                StopTokenSource.Cancel(); // Stops frame sender
+                var whenWriterCompleted = Task.Run(() => RunWriter(), CancellationToken.None);
+                await Task.WhenAny(_whenCompleted, whenWriterCompleted).SilentAwait(false);
+                StopTokenSource.Cancel(); // Stops writer loop (and reader loop)
                 TryComplete(); // Stops writes
-                await whenFrameSenderCompleted.ConfigureAwait(false); // RunFrameSender never throws
+                await whenWriterCompleted.ConfigureAwait(false); // RunWriter never throws
                 await _whenCompleted.SilentAwait(false); // Can fail, so we use SilentAwait here
 
-                // Waiting to become write primary
-                while (Interlocked.CompareExchange(ref _writerCount, 1, 0) != 0)
-                    await Task.Yield();
-                // We're the primary now, draining write queue
-                while (_writeQueue.TryDequeue(out var message))
+                // Drain remaining pending messages (if any)
+                while (_writeQueue.Reader.TryRead(out var message))
                     message.CompleteWhenSerialized(new ChannelClosedException());
                 _writeBuffer.Dispose();
-                Interlocked.Decrement(ref _writerCount);
 
                 await CloseWebSocket(null).ConfigureAwait(false); // CloseWebSocket never throws
             }
@@ -125,42 +123,36 @@ public sealed class WebSocketRpcTransport : RpcTransport
             await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
     }
 
-    // Lock-free write: uses atomic _writerCount to determine who serializes.
-    // Write primary (count==1) serializes messages and may flush buffer.
     public override Task Write(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
-        if (_whenCompleted.IsCompleted)
-            return Task.FromException(new ChannelClosedException());
+        var whenSerialized = message.WhenSerialized;
+        var writeTask = _writeQueueWriter.WriteAsync(message, cancellationToken);
+        if (writeTask.IsCompletedSuccessfully)
+            return whenSerialized ?? Task.CompletedTask;
 
-        var count = Interlocked.Increment(ref _writerCount);
-        if (count == 1) {
-            var whenWriteCompleted = _whenLastWriteCompleted;
-            return whenWriteCompleted.IsCompleted
-                ? WriteAsPrimary(message)
-                : WriteAsPrimary(message, whenWriteCompleted);
-        }
+        if (whenSerialized is null)
+            return writeTask.AsTask(); // writeTask may throw ChannelClosedException or OperationCanceledException
 
-        message.PrepareWhenSerialized();
-        _writeQueue.Enqueue(message);
-        // We might have enqueued right after the current primary drained the queue
-        // and is about to release. If we drop the counter to 0, there may be no
-        // subsequent writer to drain the queue, so we need a handoff.
-        if (Interlocked.Decrement(ref _writerCount) == 0 && Interlocked.CompareExchange(ref _writerCount, 1, 0) == 0) {
-            // We are the primary now, draining write queue
-            var whenLastWriteCompleted = _whenLastWriteCompleted;
-            _ = whenLastWriteCompleted.IsCompleted
-                ? WriteAsPrimary(null)
-                : WriteAsPrimary(null, whenLastWriteCompleted);
+        _ = CompleteAsync(message, writeTask);
+        return whenSerialized;
+
+        static async Task CompleteAsync(RpcOutboundMessage message, ValueTask writeTask) {
+            try {
+                await writeTask.ConfigureAwait(false);
+                message.CompleteWhenSerialized();
+            }
+            catch (Exception e) { // writeTask may throw ChannelClosedException or OperationCanceledException
+                message.CompleteWhenSerialized(e);
+            }
         }
-        return message.WhenSerialized;
     }
 
     public override bool TryComplete(Exception? error = null)
     {
-        if (!_whenCompletedSource.TrySetFromResult(new Result<Unit>(default, error)))
+        if (!_writeQueueWriter.TryComplete(error))
             return false;
 
-        _frameWriter.TryComplete(error);
+        _whenCompletedSource.TrySetFromResult(new Result<Unit>(default, error));
         return true;
     }
 
@@ -171,93 +163,114 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
     // Private methods
 
-    private async Task WriteAsPrimary(RpcOutboundMessage? message, Task whenReadyToWrite)
+    // This method should never throw
+    private async Task RunWriter()
     {
-        await whenReadyToWrite.ConfigureAwait(false);
-        await WriteAsPrimary(message).ConfigureAwait(false);
+        Exception? error = null;
+        try {
+            if (_frameDelayer is { } frameDelayer) {
+                await RunWriterWithFrameDelayer(frameDelayer).ConfigureAwait(false);
+                return;
+            }
+
+            var reader = _writeQueue.Reader;
+            while (await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false)) {
+                while (reader.TryRead(out var message)) {
+                    try {
+                        SerializeMessage(message, _writeBuffer);
+                        message.CompleteWhenSerialized();
+                    }
+                    catch (Exception e) {
+                        message.CompleteWhenSerialized(e);
+                    }
+
+                    if (_writeBuffer.WrittenCount >= _writeFrameSize)
+                        await FlushFrame().ConfigureAwait(false);
+                }
+                // Final flush before await
+                if (_writeBuffer.WrittenCount != 0)
+                    await FlushFrame().ConfigureAwait(false);
+            }
+        }
+        catch (Exception e) {
+            if (!e.IsCancellationOf(StopToken))
+                error = e;
+        }
+        finally {
+            TryComplete(error);
+        }
     }
 
-    private Task WriteAsPrimary(RpcOutboundMessage? message)
-        => WriteAsPrimaryCore(message, mustFlush: false);
-
-    private Task WriteAsPrimaryCore(RpcOutboundMessage? message, bool mustFlush)
+    private async Task RunWriterWithFrameDelayer(FrameDelayer frameDelayer)
     {
-        try {
-            var writeBuffer = _writeBuffer ?? throw new ChannelClosedException();
-            if (message is not null)
-                SerializeMessage(message, writeBuffer);
-            while (_writeQueue.TryDequeue(out message)) {
+        Task? whenMustFlush = null; // null = no flush required / nothing to flush
+        Task<bool>? waitToReadTask = null;
+        var reader = _writeQueue.Reader;
+
+        while (true) {
+            // When we are here, the sync read part is completed, so WaitToReadAsync will likely await.
+            if (whenMustFlush is not null) {
+                if (whenMustFlush.IsCompleted) {
+                    // Flush is required right now.
+                    if (_writeBuffer.WrittenCount != 0)
+                        await FlushFrame().ConfigureAwait(false);
+                    whenMustFlush = null;
+                }
+                else {
+                    // Flush is pending.
+                    waitToReadTask ??= reader.WaitToReadAsync(CancellationToken.None).AsTask();
+                    await Task.WhenAny(whenMustFlush, waitToReadTask).ConfigureAwait(false);
+                    if (!waitToReadTask.IsCompleted)
+                        continue; // whenMustFlush is completed, waitToReadTask is not
+                }
+            }
+
+            bool canRead;
+            if (waitToReadTask is not null) {
+                canRead = await waitToReadTask.ConfigureAwait(false);
+                waitToReadTask = null;
+            }
+            else
+                canRead = await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false);
+            if (!canRead)
+                break; // Reading is done
+
+            while (reader.TryRead(out var message)) {
                 try {
-                    SerializeMessage(message, writeBuffer);
+                    SerializeMessage(message, _writeBuffer);
                     message.CompleteWhenSerialized();
                 }
                 catch (Exception e) {
                     message.CompleteWhenSerialized(e);
+                    continue;
+                }
+
+                if (_writeBuffer.WrittenCount >= _writeFrameSize) {
+                    await FlushFrame().ConfigureAwait(false);
+                    whenMustFlush = null;
                 }
             }
-
-            // Checking whether we need to flush the write buffer
-            var bufferSize = writeBuffer.WrittenCount;
-            if (bufferSize <= 0) {
-                Volatile.Write(ref _scheduledFlushId, 0);
-                return Task.CompletedTask;
-            }
-            if (!mustFlush && bufferSize < _writeFrameSize) {
-                // Below the max frame size: schedule a flush if it's not scheduled yet.
-                // If there is no frame delayer, we schedule it as a yield-like continuation.
-                if (Volatile.Read(ref _scheduledFlushId) == 0)
-                    ScheduleFlush(bufferSize);
-                return Task.CompletedTask;
-            }
-
-            Volatile.Write(ref _scheduledFlushId, 0);
-            // Flushing write buffer
-            var frame = writeBuffer.ToArrayOwnerAndReset(Settings.MinWriteBufferSize);
-            if (_frameWriter.TryWrite(frame))
-                return Task.CompletedTask;
-
-            var whenWriteCompleted = _frameWriter.WriteAsync(frame).AsTask();
-            _ = Interlocked.Exchange(ref _whenLastWriteCompleted, whenWriteCompleted);
-            return whenWriteCompleted;
+            if (whenMustFlush is null && _writeBuffer.WrittenCount > 0)
+                whenMustFlush = frameDelayer.Invoke(_writeBuffer.WrittenCount);
         }
-        catch (Exception e) {
-            TryComplete(e);
-            return Task.FromException(e);
-        }
-        finally {
-            Interlocked.Decrement(ref _writerCount);
-        }
+
+        // Final flush
+        if (_writeBuffer.WrittenCount != 0)
+            await FlushFrame().ConfigureAwait(false);
     }
 
-    private void ScheduleFlush(int frameSize)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private async ValueTask FlushFrame()
     {
-        var flushId = Interlocked.Increment(ref _flushIdGenerator);
-        if (Interlocked.CompareExchange(ref _scheduledFlushId, flushId, 0) != 0)
+        var memory = _writeBuffer.WrittenMemory;
+        if (memory.Length == 0)
             return;
 
-        var whenDelayCompleted = _frameDelayer?.Invoke(frameSize) ?? TaskExt.YieldDelay();
-        _ = whenDelayCompleted.IsCompleted
-            ? FlushScheduled(flushId)
-            : whenDelayCompleted.ContinueWith(
-                    _ => FlushScheduled(flushId),
-                    CancellationToken.None,
-                    TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Default)
-                .Unwrap();
-    }
-
-    private async Task FlushScheduled(int flushId)
-    {
-        while (Volatile.Read(ref _scheduledFlushId) == flushId) {
-            if (Interlocked.CompareExchange(ref _writerCount, 1, 0) == 0)
-                break;
-            await Task.Yield();
-        }
-        if (Volatile.Read(ref _scheduledFlushId) != flushId)
-            return;
-
-        // We're the primary writer now: force a flush (and drain any queued messages first)
-        await WriteAsPrimaryCore(null, mustFlush: true).ConfigureAwait(false);
+        await WebSocket
+            .SendAsync(memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
+            .ConfigureAwait(false);
+        _meters.OutgoingFrameSizeHistogram.Record(memory.Length);
+        _writeBuffer.Reset();
     }
 
     private void SerializeMessage(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
@@ -280,37 +293,6 @@ public sealed class WebSocketRpcTransport : RpcTransport
             writeBuffer.Position = startOffset;
             ErrorLog?.LogError(e, "Couldn't serialize the outbound message: {Message}", message);
             throw; // Re-throw so caller gets the error
-        }
-    }
-
-    // This method should never throw
-    private async Task RunFrameSender()
-    {
-        Exception? error = null;
-        var frameReader = _frameChannel.Reader;
-        try {
-            while (true) {
-                // Drain all ready frames from the channel first.
-                while (frameReader.TryRead(out var frame)) {
-                    await WebSocket
-                        .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
-                        .ConfigureAwait(false);
-                    _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
-                    frame.Dispose();
-                }
-
-                // Nothing to send: wait for a channel frame.
-                if (!await frameReader.WaitToReadAsync(StopToken).ConfigureAwait(false))
-                    return;
-            }
-        }
-        catch (Exception e) {
-            // This method should never throw
-            if (!e.IsCancellationOf(StopToken))
-                error = e;
-        }
-        finally {
-            TryComplete(error);
         }
     }
 
