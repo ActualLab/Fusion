@@ -284,17 +284,14 @@ public sealed class RpcWebSocketTransport : RpcTransport
             return Task.CompletedTask;
 
         var frame = _writeBuffer.ToArrayOwnerAndReset(_minWriteBufferSize);
-        try {
-            var sendTask = WebSocket
-                .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
-            if (!sendTask.IsCompletedSuccessfully)
-                return CompleteAsync(sendTask, frame);
-            _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
-            return Task.CompletedTask;
-        }
-        finally {
-            frame.Dispose();
-        }
+        var sendTask = WebSocket
+            .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
+        if (!sendTask.IsCompletedSuccessfully)
+            return CompleteAsync(sendTask, frame);
+
+        frame.Dispose();
+        _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
+        return Task.CompletedTask;
 
         async Task CompleteAsync(ValueTask sendTask1, ArrayOwner<byte> frame1) {
             try {
