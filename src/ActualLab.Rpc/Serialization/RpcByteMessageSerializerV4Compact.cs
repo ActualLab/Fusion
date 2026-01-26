@@ -68,22 +68,47 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
 
     public override void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
     {
-        // Serialize arguments if needed
         var argumentData = message.ArgumentData;
-        if (argumentData.IsEmpty) {
-            // Set context for types that need it during serialization (e.g., RpcStream)
-            var oldContext = RpcOutboundContext.Current;
-            RpcOutboundContext.Current = message.Context;
-            try {
-                var argBuffer = RpcArgumentSerializer.GetWriteBuffer();
-                message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, argBuffer);
-                argumentData = RpcArgumentSerializer.GetWriteBufferMemory(argBuffer);
-            }
-            finally {
-                RpcOutboundContext.Current = oldContext;
-            }
+        if (!argumentData.IsEmpty)
+            WriteWithArgumentData(buffer, message, argumentData);
+
+        var startOffset = buffer.WrittenCount;
+
+        // CallTypeId and headerCount
+        var headers = message.Headers ?? RpcHeadersExt.Empty;
+        if (headers.Length > 31)
+            throw Errors.Format("Header count must not exceed 31.");
+
+        var writer = new SpanWriter(buffer.GetSpan(32 + SpanExt.FixedLVarInt32Size));
+        writer.Remaining[0] = (byte)(headers.Length | (message.MethodDef.CallType.Id << 5));
+        writer.WriteVarUInt64((ulong)message.RelatedId, 1);
+        writer.WriteUInt32((uint)message.MethodDef.Ref.HashCode);
+
+        var argumentDataLengthOffset = writer.Position;
+        writer.Advance(SpanExt.FixedLVarInt32Size);
+        buffer.Advance(writer.Position);
+
+        var argumentDataOffset = buffer.WrittenCount;
+        var oldContext = RpcOutboundContext.Current;
+        RpcOutboundContext.Current = message.Context;
+        try {
+            message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
+        }
+        finally {
+            RpcOutboundContext.Current = oldContext;
+        }
+        var argumentDataLength = buffer.WrittenCount - argumentDataOffset;
+        if (argumentDataLength > MaxArgumentDataSize) {
+            buffer.Position = startOffset;
+            throw Errors.SizeLimitExceeded();
         }
 
+        buffer.Array.AsSpan(startOffset + argumentDataLengthOffset).WriteFixedLVarInt32(argumentDataLength);
+        WriteHeaders(buffer, message);
+    }
+
+    private new void WriteWithArgumentData(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message, ReadOnlyMemory<byte> argumentData)
+    {
         if (argumentData.Length > MaxArgumentDataSize)
             throw Errors.SizeLimitExceeded();
 
@@ -108,28 +133,6 @@ public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSer
         // Commit to buffer
         buffer.Advance(writer.Position);
 
-        // Headers
-        if (headers.Length == 0)
-            return;
-
-        var encoder = GetUtf8Encoder();
-        var encodeBuffer = GetUtf8EncodeBuffer();
-        try {
-            foreach (var h in headers) {
-                var key = h.Key.Utf8Name;
-                encoder.Convert(h.Value.AsSpan(), encodeBuffer);
-                var valueSpan = encodeBuffer.WrittenSpan;
-
-                writer = new SpanWriter(buffer.GetSpan(8 + key.Length + valueSpan.Length));
-                writer.WriteL1Span(key.Span);
-                writer.WriteLVarSpan(valueSpan);
-                buffer.Advance(writer.Position);
-                encodeBuffer.Reset();
-            }
-        }
-        catch {
-            encoder.Reset();
-            throw;
-        }
+        WriteHeaders(buffer, message);
     }
 }

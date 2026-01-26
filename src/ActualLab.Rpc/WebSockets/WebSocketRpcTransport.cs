@@ -20,7 +20,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
         public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU) minus some reserve
         public int MinWriteBufferSize { get; init; } = 24_000;
         public int MinReadBufferSize { get; init; } = 24_000;
-        public int? MaxWriteQueueSize { get; init; } = 120;
+        public int? MaxWriteQueueSize { get; init; } = null; // Unbounded by default
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
     }
 

@@ -69,24 +69,52 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
 
     public override void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
     {
-        // Serialize arguments if needed
         var argumentData = message.ArgumentData;
-        if (argumentData.IsEmpty) {
-            // Set context for types that need it during serialization (e.g., RpcStream)
-            var oldContext = RpcOutboundContext.Current;
-            RpcOutboundContext.Current = message.Context;
-            try {
-                // Serialize arguments directly to the buffer after the message header
-                // We need to know the length to write the LVar prefix, so we serialize first
-                var argBuffer = RpcArgumentSerializer.GetWriteBuffer();
-                message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, argBuffer);
-                argumentData = RpcArgumentSerializer.GetWriteBufferMemory(argBuffer);
-            }
-            finally {
-                RpcOutboundContext.Current = oldContext;
-            }
+        if (!argumentData.IsEmpty)
+            WriteWithArgumentData(buffer, message, argumentData);
+
+        var startOffset = buffer.WrittenCount;
+        var utf8Name = message.MethodDef.Ref.Utf8Name;
+
+        // CallTypeId and headerCount
+        var headers = message.Headers ?? RpcHeadersExt.Empty;
+        if (headers.Length > 31)
+            throw Errors.Format("Header count must not exceed 31.");
+
+        // Header, RelatedId, MethodRef, fixed-width ArgumentData length prefix
+        var writer = new SpanWriter(buffer.GetSpan(32 + utf8Name.Length + SpanExt.FixedLVarInt32Size));
+        writer.Remaining[0] = (byte)(headers.Length | (message.MethodDef.CallType.Id << 5));
+        writer.WriteVarUInt64((ulong)message.RelatedId, 1);
+        writer.WriteLVarSpan(utf8Name.Span);
+
+        var argumentDataLengthOffset = writer.Position;
+        writer.Advance(SpanExt.FixedLVarInt32Size);
+        buffer.Advance(writer.Position);
+
+        // Serialize args directly into the provided buffer (no extra buffer)
+        var argumentDataOffset = buffer.WrittenCount;
+        var oldContext = RpcOutboundContext.Current;
+        RpcOutboundContext.Current = message.Context;
+        try {
+            message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
+        }
+        finally {
+            RpcOutboundContext.Current = oldContext;
+        }
+        var argumentDataLength = buffer.WrittenCount - argumentDataOffset;
+        if (argumentDataLength > MaxArgumentDataSize) {
+            buffer.Position = startOffset;
+            throw Errors.SizeLimitExceeded();
         }
 
+        // Backfill fixed-width LVar length prefix
+        buffer.Array.AsSpan(startOffset + argumentDataLengthOffset).WriteFixedLVarInt32(argumentDataLength);
+
+        WriteHeaders(buffer, message);
+    }
+
+    protected void WriteWithArgumentData(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message, ReadOnlyMemory<byte> argumentData)
+    {
         var utf8Name = message.MethodDef.Ref.Utf8Name;
         if (argumentData.Length > MaxArgumentDataSize)
             throw Errors.SizeLimitExceeded();
@@ -112,7 +140,12 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
         // Commit to buffer
         buffer.Advance(writer.Position);
 
-        // Headers
+        WriteHeaders(buffer, message);
+    }
+
+    protected static void WriteHeaders(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
+    {
+        var headers = message.Headers ?? RpcHeadersExt.Empty;
         if (headers.Length == 0)
             return;
 
@@ -124,7 +157,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
                 encoder.Convert(h.Value.AsSpan(), encodeBuffer);
                 var valueSpan = encodeBuffer.WrittenSpan;
 
-                writer = new SpanWriter(buffer.GetSpan(8 + key.Length + valueSpan.Length));
+                var writer = new SpanWriter(buffer.GetSpan(8 + key.Length + valueSpan.Length));
                 writer.WriteL1Span(key.Span);
                 writer.WriteLVarSpan(valueSpan);
                 buffer.Advance(writer.Position);

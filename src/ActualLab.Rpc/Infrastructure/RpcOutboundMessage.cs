@@ -3,35 +3,44 @@ using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Infrastructure;
 
-public sealed class RpcOutboundMessage(
-    RpcOutboundContext context,
-    RpcMethodDef methodDef,
-    long relatedId,
-    bool needsPolymorphism,
-    bool tracksSerialization,
-    RpcHeader[]? headers,
-    ReadOnlyMemory<byte> argumentData = default)
+public sealed class RpcOutboundMessage
 {
-    private AsyncTaskMethodBuilder _whenSerializedBuilder = tracksSerialization
-        ? AsyncTaskMethodBuilderExt.New()
-        : default;
+    private AsyncTaskMethodBuilder _whenSerializedBuilder;
 
-    public readonly RpcOutboundContext Context = context;
-    public readonly RpcMethodDef MethodDef = methodDef;
-    public readonly long RelatedId = relatedId;
-    public readonly bool NeedsPolymorphism = needsPolymorphism;
-    public readonly ArgumentList? Arguments = context.Arguments;
-    public readonly RpcHeader[]? Headers = headers;
-    public readonly ReadOnlyMemory<byte> ArgumentData = argumentData;
-    public readonly RpcArgumentSerializer ArgumentSerializer = context.Peer!.ArgumentSerializer;
+    public readonly RpcOutboundContext Context;
+    public readonly RpcMethodDef MethodDef;
+    public readonly long RelatedId;
+    public readonly bool NeedsPolymorphism;
+    public readonly ArgumentList? Arguments;
+    public readonly RpcHeader[]? Headers;
+    public readonly ReadOnlyMemory<byte> ArgumentData;
+    public readonly RpcArgumentSerializer ArgumentSerializer;
+    public readonly Task? WhenSerialized;
 
     public bool HasArguments => !ReferenceEquals(Arguments, null);
     public bool HasArgumentData => !ArgumentData.IsEmpty;
 
-    // Used by lock-free transport to track serialization completion
-    public Task? WhenSerialized {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _whenSerializedBuilder.Task;
+    public RpcOutboundMessage(
+        RpcOutboundContext context,
+        RpcMethodDef methodDef,
+        long relatedId,
+        bool needsPolymorphism,
+        bool tracksSerialization,
+        RpcHeader[]? headers,
+        ReadOnlyMemory<byte> argumentData = default)
+    {
+        Context = context;
+        MethodDef = methodDef;
+        RelatedId = relatedId;
+        NeedsPolymorphism = needsPolymorphism;
+        Arguments = context.Arguments;
+        Headers = headers;
+        ArgumentData = argumentData;
+        ArgumentSerializer = context.Peer!.ArgumentSerializer;
+        if (tracksSerialization) {
+            _whenSerializedBuilder = AsyncTaskMethodBuilderExt.New();
+            WhenSerialized = _whenSerializedBuilder.Task;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
