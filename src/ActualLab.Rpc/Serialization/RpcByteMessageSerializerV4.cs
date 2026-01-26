@@ -70,8 +70,10 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
     public override void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
     {
         var argumentData = message.ArgumentData;
-        if (!argumentData.IsEmpty)
+        if (!argumentData.IsEmpty) {
             WriteWithArgumentData(buffer, message, argumentData);
+            return;
+        }
 
         var startOffset = buffer.WrittenCount;
         var utf8Name = message.MethodDef.Ref.Utf8Name;
