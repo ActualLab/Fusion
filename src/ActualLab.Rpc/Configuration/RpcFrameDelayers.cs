@@ -1,15 +1,15 @@
-namespace ActualLab.Rpc.WebSockets;
+namespace ActualLab.Rpc;
 
-public delegate Task FrameDelayer(int frameSize);
+public delegate Task RpcFrameDelayer(int frameSize);
 
-public static class FrameDelayers
+public static class RpcFrameDelayers
 {
     public const int NoDelayFrameCount = 2; // Handshake + Reconnect frames are never delayed
     public static int DelayedFrameSize { get; set; } = 1024; // Only frames smaller than this are delayed
 
     // Frame delayers (can used by providers)
 
-    public static FrameDelayer? Yield(int yieldCount = 1, long handshakeFrameCount = 1)
+    public static RpcFrameDelayer? Yield(int yieldCount = 1, long handshakeFrameCount = 1)
     {
         if (yieldCount < 1)
             return null;
@@ -20,7 +20,7 @@ public static class FrameDelayers
             : frameSize => MustDelay(frameIndex++, frameSize) ? TaskExt.YieldDelay(yieldCount) : Task.CompletedTask;
     }
 
-    public static FrameDelayer NextTick(TickSource? tickSource = null)
+    public static RpcFrameDelayer NextTick(TickSource? tickSource = null)
     {
         tickSource ??= TickSource.Default;
         long frameIndex = 0;
@@ -29,12 +29,12 @@ public static class FrameDelayers
             : Task.CompletedTask;
     }
 
-    public static FrameDelayer? NoDelay()
+    public static RpcFrameDelayer? NoDelay()
         => null;
 
-    public static FrameDelayer? Delay(double delayMs)
+    public static RpcFrameDelayer? Delay(double delayMs)
         => Delay(TimeSpan.FromMilliseconds(delayMs));
-    public static FrameDelayer? Delay(TimeSpan delay)
+    public static RpcFrameDelayer? Delay(TimeSpan delay)
     {
         if (delay <= TimeSpan.Zero)
             return null;

@@ -470,7 +470,7 @@ public class RpcWebSocketTransportFlushTest : RpcTestBase
         services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
             HostUrlResolver = _ => WebHost.ServerUri.ToString(),
             FrameDelayerFactory = null,
-            WebSocketTransportOptionsFactory = (_, _) => WebSocketRpcTransport.Options.Default with {
+            WebSocketTransportOptionsFactory = (_, _) => RpcWebSocketTransport.Options.Default with {
                 // Make frames effectively “never auto-flush by size”, so the sender must
                 // reliably pick up and send small buffered data when it goes idle.
                 WriteFrameSize = 1_000_000,
@@ -539,7 +539,7 @@ public class RpcWebSocketTransportFrameDelayTest : RpcTestBase
         services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
             HostUrlResolver = _ => WebHost.ServerUri.ToString(),
             FrameDelayerFactory = null,
-            WebSocketTransportOptionsFactory = (_, _) => WebSocketRpcTransport.Options.Default with {
+            WebSocketTransportOptionsFactory = (_, _) => RpcWebSocketTransport.Options.Default with {
                 // Make frames effectively “never auto-flush by size”, so flushing is triggered
                 // solely by the scheduled (delayed) flush.
                 WriteFrameSize = 1_000_000,
