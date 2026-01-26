@@ -10,7 +10,7 @@ public sealed record RpcSerializationFormatResolver
     }
 
     public static RpcSerializationFormatResolver Default {
-        get => field ??= new(RpcSerializationFormat.MemoryPackV5.Key); // Default format
+        get => field ??= new(RpcSerializationFormat.MemoryPackV6.Key); // Default format
         set;
     }
 

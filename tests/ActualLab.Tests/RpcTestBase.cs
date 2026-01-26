@@ -14,7 +14,7 @@ namespace ActualLab.Tests;
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
-    public static string DefaultSerializationFormat => "mempack5c";
+    public static string DefaultSerializationFormat => "mempack6c";
 
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
     protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.Default;
