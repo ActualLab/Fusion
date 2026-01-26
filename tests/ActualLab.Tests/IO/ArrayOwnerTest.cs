@@ -21,7 +21,7 @@ public class ArrayOwnerTest(ITestOutputHelper @out) : TestBase(@out)
 
         // Dispose unconditionally returns array to pool
         holder.Dispose();
-        holder.Array.Should().BeNull();
+        Assert.Throws<ObjectDisposedException>(() => holder.Array);
     }
 
     [Fact]
