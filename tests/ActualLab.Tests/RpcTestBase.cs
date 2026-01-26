@@ -24,7 +24,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     private IServiceProvider? _clientServices;
 
     protected RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
-    protected Func<FrameDelayer?>? RpcFrameDelayerFactory { get; set; } = () => FrameDelayers.Delay(1); // Just for testing
+    protected Func<RpcFrameDelayer?>? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
     protected string SerializationFormat { get; set; } = DefaultSerializationFormat;
     protected bool ExposeBackend { get; init; } = false;
     protected bool UseTestClock { get; init; }

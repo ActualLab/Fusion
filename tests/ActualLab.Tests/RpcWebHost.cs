@@ -24,7 +24,7 @@ public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAss
 {
     public IServiceCollection BaseServices { get; } = baseServices;
     public Assembly? ControllerAssembly { get; set; } = controllerAssembly;
-    public Func<FrameDelayer?>? RpcFrameDelayerFactory { get; set; }
+    public Func<RpcFrameDelayer?>? RpcFrameDelayerFactory { get; set; }
     public bool ExposeBackend { get; set; } = false;
 
     protected override void ConfigureHost(IHostBuilder builder)

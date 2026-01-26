@@ -18,9 +18,9 @@ public record RpcWebSocketClientOptions
     // Delegate options
     public Func<RpcClientPeer, string> HostUrlResolver { get; init; }
     public Func<RpcClientPeer, Uri?> ConnectionUriResolver { get; init; }
-    public Func<RpcPeer, PropertyBag, WebSocketRpcTransport.Options> WebSocketTransportOptionsFactory { get; init; }
+    public Func<RpcPeer, PropertyBag, RpcWebSocketTransport.Options> WebSocketTransportOptionsFactory { get; init; }
     public Func<RpcClientPeer, WebSocketOwner> WebSocketOwnerFactory { get; init; }
-    public Func<FrameDelayer?>? FrameDelayerFactory { get; init; }
+    public Func<RpcFrameDelayer?>? FrameDelayerFactory { get; init; }
 
     // ReSharper disable once ConvertConstructorToMemberInitializers
     public RpcWebSocketClientOptions()
@@ -29,7 +29,7 @@ public record RpcWebSocketClientOptions
         ConnectionUriResolver = DefaultConnectionUriResolver;
         WebSocketTransportOptionsFactory = DefaultWebSocketTransportOptionsFactory;
         WebSocketOwnerFactory = DefaultWebSocketOwnerFactory;
-        FrameDelayerFactory = FrameDelayerFactories.None;
+        FrameDelayerFactory = RpcFrameDelayerFactories.None;
     }
 
     // Protected methods
@@ -67,14 +67,14 @@ public record RpcWebSocketClientOptions
         return new Uri(url, UriKind.Absolute);
     }
 
-    protected static WebSocketRpcTransport.Options DefaultWebSocketTransportOptionsFactory(
+    protected static RpcWebSocketTransport.Options DefaultWebSocketTransportOptionsFactory(
         RpcPeer peer, PropertyBag properties)
     {
         var options = peer.Hub.Services.GetRequiredService<RpcWebSocketClientOptions>();
         var frameDelayerFactory = options.UseAutoFrameDelayerFactory
-            ? FrameDelayerFactories.Auto(peer, properties)
+            ? RpcFrameDelayerFactories.Auto(peer, properties)
             : options.FrameDelayerFactory;
-        return WebSocketRpcTransport.Options.Default with {
+        return RpcWebSocketTransport.Options.Default with {
             FrameDelayerFactory = frameDelayerFactory,
         };
     }

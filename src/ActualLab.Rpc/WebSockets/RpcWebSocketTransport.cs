@@ -9,13 +9,13 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.WebSockets;
 
-public sealed class WebSocketRpcTransport : RpcTransport
+public sealed class RpcWebSocketTransport : RpcTransport
 {
     public record Options
     {
         public static readonly Options Default = new();
 
-        public Func<FrameDelayer?>? FrameDelayerFactory { get; init; } = FrameDelayerFactories.None;
+        public Func<RpcFrameDelayer?>? FrameDelayerFactory { get; init; } = RpcFrameDelayerFactories.None;
 
         public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU) minus some reserve
         public int MinWriteBufferSize { get; init; } = 24_000;
@@ -35,12 +35,13 @@ public sealed class WebSocketRpcTransport : RpcTransport
     private readonly MeterSet _meters = StaticMeters;
     private readonly int _writeFrameSize;
     private readonly int _minReadBufferSize;
+    private readonly int _minWriteBufferSize;
     private readonly Channel<RpcOutboundMessage> _writeChannel;
     private readonly ChannelWriter<RpcOutboundMessage> _writeChannelWriter;
     private readonly AsyncTaskMethodBuilder _whenCompletedSource;
     private readonly Task _whenCompleted;
     private readonly ArrayPoolBuffer<byte> _writeBuffer;
-    private readonly FrameDelayer? _frameDelayer;
+    private readonly RpcFrameDelayer? _frameDelayer;
     private int _getAsyncEnumeratorCounter;
 
     public bool OwnsWebSocketOwner { get; set; } = true;
@@ -55,7 +56,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
     public override Task WhenCompleted => _whenCompleted;
     public override Task WhenClosed { get; }
 
-    public WebSocketRpcTransport(
+    public RpcWebSocketTransport(
         Options settings,
         WebSocketOwner webSocketOwner,
         RpcPeer peer,
@@ -74,12 +75,13 @@ public sealed class WebSocketRpcTransport : RpcTransport
         _whenCompletedSource = AsyncTaskMethodBuilderExt.New();
         _whenCompleted = _whenCompletedSource.Task;
 
+        _minReadBufferSize = settings.MinReadBufferSize;
+        _minWriteBufferSize = settings.MinWriteBufferSize;
         _writeFrameSize = settings.WriteFrameSize;
         if (_writeFrameSize <= 0)
             throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.WriteFrameSize)} must be positive.");
 
-        _minReadBufferSize = settings.MinReadBufferSize;
-        _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, mustClear: false);
+        _writeBuffer = new ArrayPoolBuffer<byte>(_minWriteBufferSize, mustClear: false);
         _frameDelayer = settings.FrameDelayerFactory?.Invoke();
 
         _writeChannel = ChannelExt.Create<RpcOutboundMessage>(settings.WriteChannelOptions);
@@ -197,7 +199,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
         }
     }
 
-    private async Task RunWriterWithFrameDelayer(FrameDelayer frameDelayer)
+    private async Task RunWriterWithFrameDelayer(RpcFrameDelayer frameDelayer)
     {
         Task? whenMustFlush = null; // null = no flush required / nothing to flush
         Task<bool>? waitToReadTask = null;
@@ -258,15 +260,20 @@ public sealed class WebSocketRpcTransport : RpcTransport
     [MethodImpl(MethodImplOptions.NoInlining)]
     private async ValueTask FlushFrame()
     {
-        var memory = _writeBuffer.WrittenMemory;
-        if (memory.Length == 0)
+        if (_writeBuffer.Position == 0)
             return;
 
-        await WebSocket
-            .SendAsync(memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
-            .ConfigureAwait(false);
-        _meters.OutgoingFrameSizeHistogram.Record(memory.Length);
-        _writeBuffer.Reset();
+        var frame = _writeBuffer.ToArrayOwnerAndReset(_minWriteBufferSize);
+        try {
+            var memory = frame.Memory;
+            await WebSocket
+                .SendAsync(memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
+                .ConfigureAwait(false);
+            _meters.OutgoingFrameSizeHistogram.Record(memory.Length);
+        }
+        finally {
+            frame.Dispose();
+        }
     }
 
     private void SerializeMessage(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
