@@ -4,6 +4,8 @@ namespace ActualLab.Collections;
 
 public static partial class SpanExt
 {
+    public const int FixedLVarInt32Size = 5; // Fixed-width (non-minimal) LEB128 length prefix
+
     private const byte LowBits = 0x7F;
     private const byte HighBit = 0x80;
 
@@ -25,6 +27,19 @@ public static partial class SpanExt
         }
         span[offset++] = (byte)source;
         return offset;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void WriteFixedLVarInt32(this Span<byte> span, int value)
+    {
+        // Fixed-width (non-minimal) unsigned LEB128 encoding
+        var v = (uint)value;
+        var offset = FixedLVarInt32Size - 1;
+        span[offset--] = (byte)((v >> 28) & 0x7Fu);
+        span[offset--] = (byte)(((v >> 21) & 0x7Fu) | 0x80u);
+        span[offset--] = (byte)(((v >> 14) & 0x7Fu) | 0x80u);
+        span[offset--] = (byte)(((v >> 7) & 0x7Fu) | 0x80u);
+        span[offset] = (byte)((v & 0x7Fu) | 0x80u);
     }
 
     public static (uint Value, int Offset) ReadVarUInt32(this ReadOnlySpan<byte> span, int offset = 0)

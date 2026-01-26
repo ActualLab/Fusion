@@ -41,34 +41,39 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
 
     public override void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
     {
-        // Serialize arguments if needed
-        var argumentData = message.ArgumentData;
-        if (argumentData.IsEmpty) {
-            // Set context for types that need it during serialization (e.g., RpcStream)
-            var oldContext = RpcOutboundContext.Current;
-            RpcOutboundContext.Current = message.Context;
-            try {
-                var argBuffer = RpcArgumentSerializer.GetWriteBuffer();
-                message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, argBuffer);
-                argumentData = RpcArgumentSerializer.GetWriteBufferMemory(argBuffer);
-            }
-            finally {
-                RpcOutboundContext.Current = oldContext;
-            }
-        }
-
-        if (argumentData.Length > MaxArgumentDataSize)
-            throw Errors.SizeLimitExceeded();
-
         // ArrayPoolBuffer<byte> implements IBufferWriter<byte>
         var writer = new Utf8JsonWriter(buffer);
         JsonSerializer.Serialize(writer, new JsonRpcMessage(message), typeof(JsonRpcMessage), JsonRpcMessageContext.Default);
         writer.Flush();
 
-        // Write delimiter + argumentData
-        var span = buffer.GetSpan(1 + argumentData.Length);
-        span[0] = Delimiter;
-        argumentData.Span.CopyTo(span[1..]);
-        buffer.Advance(1 + argumentData.Length);
+        // Write delimiter + arguments (zero-copy into the provided buffer)
+        var startOffset = buffer.WrittenCount;
+        buffer.GetSpan(1)[0] = Delimiter;
+        buffer.Advance(1);
+        var argsStartOffset = buffer.WrittenCount;
+
+        var argumentData = message.ArgumentData;
+        if (!argumentData.IsEmpty) {
+            if (argumentData.Length > MaxArgumentDataSize)
+                throw Errors.SizeLimitExceeded();
+            var span = buffer.GetSpan(argumentData.Length);
+            argumentData.Span.CopyTo(span);
+            buffer.Advance(argumentData.Length);
+        }
+        else {
+            // Set context for types that need it during serialization (e.g., RpcStream)
+            var oldContext = RpcOutboundContext.Current;
+            RpcOutboundContext.Current = message.Context;
+            try {
+                message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
+            }
+            finally {
+                RpcOutboundContext.Current = oldContext;
+            }
+            if (buffer.WrittenCount - argsStartOffset > MaxArgumentDataSize) {
+                buffer.Position = startOffset;
+                throw Errors.SizeLimitExceeded();
+            }
+        }
     }
 }
