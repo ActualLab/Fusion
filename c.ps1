@@ -810,6 +810,53 @@ switch ($mode) {
     "chrome" {
         # Start Chrome with remote debugging enabled
 
+        # On Windows, ensure firewall rule exists for remote debugging port
+        if ($currentOS -eq "Windows") {
+            $firewallRuleName = "Chrome Remote Debugging (Claude)"
+
+            # Check if firewall rule exists
+            $ruleExists = $false
+            try {
+                $existingRule = netsh advfirewall firewall show rule name="$firewallRuleName" 2>$null
+                $ruleExists = $LASTEXITCODE -eq 0 -and $existingRule
+            } catch {
+                $ruleExists = $false
+            }
+
+            if (-not $ruleExists) {
+                Write-Host "Creating firewall rule for Chrome remote debugging (port $ChromeDebugPort)..." -ForegroundColor Cyan
+
+                # Try to add the firewall rule
+                $result = netsh advfirewall firewall add rule `
+                    name="$firewallRuleName" `
+                    dir=in `
+                    action=allow `
+                    protocol=tcp `
+                    localport=$ChromeDebugPort `
+                    profile=private `
+                    description="Allow Chrome remote debugging connections from WSL/Docker" 2>&1
+
+                if ($LASTEXITCODE -ne 0) {
+                    # Check if it's a permission error
+                    if ($result -match "requires elevation|Access is denied|administrator") {
+                        Write-Host ""
+                        Write-Host "Failed to create firewall rule - administrator privileges required." -ForegroundColor Yellow
+                        Write-Host "Please run this command in an elevated PowerShell:" -ForegroundColor Yellow
+                        Write-Host ""
+                        Write-Host "  netsh advfirewall firewall add rule name=`"$firewallRuleName`" dir=in action=allow protocol=tcp localport=$ChromeDebugPort profile=private" -ForegroundColor White
+                        Write-Host ""
+                        Write-Host "Or re-run 'c chrome' as Administrator." -ForegroundColor Yellow
+                        exit 1
+                    } else {
+                        Write-Host "Warning: Failed to create firewall rule: $result" -ForegroundColor Yellow
+                        Write-Host "Connections from WSL/Docker may not work." -ForegroundColor Yellow
+                    }
+                } else {
+                    Write-Host "Firewall rule created successfully." -ForegroundColor Green
+                }
+            }
+        }
+
         # Helper to check if debug port is open
         function Test-DebugPort {
             if ($currentOS -eq "Windows") {
@@ -870,7 +917,8 @@ switch ($mode) {
 
         # Use a separate user data dir to force a new Chrome instance (otherwise Chrome reuses existing process and ignores debug flag)
         # Start Chrome with remote debugging in a new process
-        Start-Process -FilePath $chromePath -ArgumentList "--remote-debugging-port=$ChromeDebugPort", "--user-data-dir=`"$debugUserDataDir`"", "--remote-allow-origins=*"
+        # --remote-debugging-address=0.0.0.0 allows connections from WSL/Docker (not just localhost)
+        Start-Process -FilePath $chromePath -ArgumentList "--remote-debugging-port=$ChromeDebugPort", "--remote-debugging-address=0.0.0.0", "--user-data-dir=`"$debugUserDataDir`"", "--remote-allow-origins=*"
 
         # Wait for debug port to open (check once per second, max 30 seconds)
         # First 2 checks are silent, then show waiting message

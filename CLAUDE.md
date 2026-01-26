@@ -2,6 +2,10 @@ Before starting any task, read AGENTS.md files in every directory starting from 
 
 `pwsh` (cross-platform PowerShell) command is available on any OS you run, so use it.
 
+# Temporary Files
+
+**Important:** Do not create temporary files in the project root. Use the `<projectRoot>/tmp` folder instead for any temporary files, test scripts, debug outputs, screenshots, etc. This keeps the project root clean and makes it easier to gitignore temporary artifacts.
+
 If AC_OS environment variable is defined, you're started with Claude Launcher (c.ps1), 
 so your actual OS is specified in this environment variable and you can use other environment variables 
 described below to access other projects related to the current one. 
@@ -81,7 +85,7 @@ Playwright and Chromium are pre-installed in the Docker image for browser automa
 
 **Using host Chrome**: When the user asks you to "use host Chrome", connect Playwright to Chrome running on the Windows host instead of launching a headless browser. This allows the user to visually observe browser automation.
 
-The user starts Chrome with remote debugging via `c chrome` command (port 9222). Connect to it using:
+The user starts Chrome with remote debugging via `c chrome` command (port 9222). On Windows, this also creates a firewall rule to allow connections from WSL/Docker. Connect to it using:
 
 ```typescript
 import { chromium } from 'playwright';
