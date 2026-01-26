@@ -85,8 +85,9 @@ public abstract class RpcInboundCall : RpcCall
 
     public virtual Task Process(CancellationToken cancellationToken)
     {
-        RpcInboundContext.Current = Context;
-        var peer = Context.Peer;
+        var context = Context;
+        var peer = context.Peer;
+        RpcInboundContext.Current = context;
         if (NoWait) {
             try {
                 Arguments ??= DeserializeArguments();
@@ -95,16 +96,19 @@ public abstract class RpcInboundCall : RpcCall
                     return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
             }
             catch (Exception error) {
+                context.Message.ArgumentData = default; // ArgumentData is available while we're in a synchronous part
                 throw ProcessArgumentDeserializationError(error);
             }
 
             if (peer.CallLogger.IsLogged(this))
                 peer.CallLogger.LogInbound(this);
 
-            return MethodDef.InboundCallInvoker.Invoke(this);
+            var result = MethodDef.InboundCallInvoker.Invoke(this);
+            context.Message.ArgumentData = default; // ArgumentData is available while we're in a synchronous part
+            return result;
         }
 
-        var existingCall = Context.Peer.InboundCalls.GetOrRegister(this);
+        var existingCall = context.Peer.InboundCalls.GetOrRegister(this);
         if (existingCall != this) {
             // Dispose message since this call instance won't process it
             return existingCall.TryReprocess(0, cancellationToken)
@@ -120,7 +124,8 @@ public abstract class RpcInboundCall : RpcCall
                 Arguments ??= DeserializeArguments();
                 // Release the message buffer after deserialization
                 if (Arguments is null)
-                    return Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
+                    return
+                        Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
 
                 if (peer.CallLogger.IsLogged(this))
                     peer.CallLogger.LogInbound(this);
@@ -130,6 +135,7 @@ public abstract class RpcInboundCall : RpcCall
             catch (Exception error) {
                 ResultTask = TaskExt.FromException(error, MethodDef.UnwrappedReturnType);
             }
+            context.Message.ArgumentData = default; // ArgumentData is available while we're in a synchronous part
             return WhenProcessed = ProcessStage1Plus(cancellationToken);
         }
     }
