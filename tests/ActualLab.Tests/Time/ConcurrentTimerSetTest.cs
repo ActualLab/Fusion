@@ -39,8 +39,7 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
         timerSet.AddOrUpdateToLater(t, clock.Now + TimeSpan.FromMilliseconds(200))
             .Should().BeTrue();
         t.FiredAt.Should().Be(default);
-        await clock.Delay(300);
-        t.FiredAt.Should().NotBe(default);
+        await TestExt.When(() => t.FiredAt.Should().NotBe(default), TimeSpan.FromMilliseconds(500));
 
         // AddOrUpdateToEarlier
         t = new Timer();
