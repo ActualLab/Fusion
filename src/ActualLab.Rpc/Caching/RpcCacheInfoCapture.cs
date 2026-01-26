@@ -69,9 +69,9 @@ public sealed class RpcCacheInfoCapture
     public void CaptureValueFromLock(RpcInboundMessage message)
     {
         if (CaptureMode == RpcCacheInfoCaptureMode.KeyAndData)
-            // ReSharper disable once InconsistentlySynchronizedField
+            // Must copy ArgumentData because the buffer may be reused after this call
             ValueOrError = new RpcCacheValue(
-                message.ArgumentData,
+                message.ArgumentData.ToArray(),
                 message.Headers.TryGet(WellKnownRpcHeaders.Hash) ?? "");
     }
 
