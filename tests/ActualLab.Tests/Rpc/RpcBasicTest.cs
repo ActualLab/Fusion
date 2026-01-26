@@ -258,14 +258,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var client = services.RpcHub().GetClient<ITestRpcService>();
         var backendClient = services.RpcHub().GetClient<ITestRpcBackend>();
 
-        var canHandleNulls =
-            serializationFormat.Contains("json", StringComparison.Ordinal)
-            || serializationFormat.EndsWith('5')
-            || serializationFormat.EndsWith("5c", StringComparison.Ordinal);
-        if (canHandleNulls)
-            await backendClient.Polymorph(null!);
-        else
-            await Assert.ThrowsAnyAsync<Exception>(() => backendClient.Polymorph(null!));
+        await backendClient.Polymorph(null!);
 
         var t = new Tuple<int>(1);
         (await backendClient.Polymorph(t)).Should().Be(t);
