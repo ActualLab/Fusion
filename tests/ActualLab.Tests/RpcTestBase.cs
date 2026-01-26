@@ -3,7 +3,6 @@ using ActualLab.Locking;
 using ActualLab.RestEase;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
-using ActualLab.Rpc.WebSockets;
 using ActualLab.Testing.Collections;
 using ActualLab.Time.Testing;
 using Xunit.DependencyInjection;
