@@ -69,7 +69,15 @@ public record RpcWebSocketClientOptions
 
     protected static WebSocketRpcTransport.Options DefaultWebSocketTransportOptionsFactory(
         RpcPeer peer, PropertyBag properties)
-        => WebSocketRpcTransport.Options.Default;
+    {
+        var options = peer.Hub.Services.GetRequiredService<RpcWebSocketClientOptions>();
+        var frameDelayerFactory = options.UseAutoFrameDelayerFactory
+            ? FrameDelayerFactories.Auto(peer, properties)
+            : options.FrameDelayerFactory;
+        return WebSocketRpcTransport.Options.Default with {
+            FrameDelayerFactory = frameDelayerFactory,
+        };
+    }
 
     private WebSocketOwner DefaultWebSocketOwnerFactory(RpcClientPeer peer)
     {

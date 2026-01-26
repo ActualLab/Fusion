@@ -14,6 +14,8 @@ public sealed class WebSocketRpcTransport : RpcTransport
     {
         public static readonly Options Default = new();
 
+        public Func<FrameDelayer?>? FrameDelayerFactory { get; init; } = FrameDelayerFactories.None;
+
         public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU) minus some reserve
         public int MinWriteBufferSize { get; init; } = 24_000;
         public int MinReadBufferSize { get; init; } = 24_000;
@@ -33,7 +35,9 @@ public sealed class WebSocketRpcTransport : RpcTransport
     private readonly ArrayPoolBuffer<byte> _writeBuffer;
     private readonly ConcurrentQueue<RpcOutboundMessage> _writeQueue = new();
     private int _writerCount;
-    private volatile int _frameSenderIsIdle;
+    private readonly FrameDelayer? _frameDelayer;
+    private int _scheduledFlushId;
+    private int _flushIdGenerator;
     private volatile Task _whenLastWriteCompleted = Task.CompletedTask;
     private int _getAsyncEnumeratorCounter;
 
@@ -74,6 +78,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
         _minReadBufferSize = settings.MinReadBufferSize;
         _writeBuffer = new ArrayPoolBuffer<byte>(settings.MinWriteBufferSize, mustClear: false);
+        _frameDelayer = settings.FrameDelayerFactory?.Invoke();
         _frameChannel = Channel.CreateBounded<ArrayOwner<byte>>(
             new BoundedChannelOptions(settings.MaxPendingFrameCount) {
                 SingleReader = true,
@@ -173,6 +178,9 @@ public sealed class WebSocketRpcTransport : RpcTransport
     }
 
     private Task WriteAsPrimary(RpcOutboundMessage? message)
+        => WriteAsPrimaryCore(message, mustFlush: false);
+
+    private Task WriteAsPrimaryCore(RpcOutboundMessage? message, bool mustFlush)
     {
         try {
             var writeBuffer = _writeBuffer ?? throw new ChannelClosedException();
@@ -190,9 +198,19 @@ public sealed class WebSocketRpcTransport : RpcTransport
 
             // Checking whether we need to flush the write buffer
             var bufferSize = writeBuffer.WrittenCount;
-            if ((bufferSize < _writeFrameSize && _frameSenderIsIdle == 0) || bufferSize <= 0)
+            if (bufferSize <= 0) {
+                Volatile.Write(ref _scheduledFlushId, 0);
                 return Task.CompletedTask;
+            }
+            if (!mustFlush && bufferSize < _writeFrameSize) {
+                // Below the max frame size: schedule a flush if it's not scheduled yet.
+                // If there is no frame delayer, we schedule it as a yield-like continuation.
+                if (Volatile.Read(ref _scheduledFlushId) == 0)
+                    ScheduleFlush(bufferSize);
+                return Task.CompletedTask;
+            }
 
+            Volatile.Write(ref _scheduledFlushId, 0);
             // Flushing write buffer
             var frame = writeBuffer.ToArrayOwnerAndReset(Settings.MinWriteBufferSize);
             if (_frameWriter.TryWrite(frame))
@@ -209,6 +227,37 @@ public sealed class WebSocketRpcTransport : RpcTransport
         finally {
             Interlocked.Decrement(ref _writerCount);
         }
+    }
+
+    private void ScheduleFlush(int frameSize)
+    {
+        var flushId = Interlocked.Increment(ref _flushIdGenerator);
+        if (Interlocked.CompareExchange(ref _scheduledFlushId, flushId, 0) != 0)
+            return;
+
+        var whenDelayCompleted = _frameDelayer?.Invoke(frameSize) ?? TaskExt.YieldDelay();
+        _ = whenDelayCompleted.IsCompleted
+            ? FlushScheduled(flushId)
+            : whenDelayCompleted.ContinueWith(
+                    _ => FlushScheduled(flushId),
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default)
+                .Unwrap();
+    }
+
+    private async Task FlushScheduled(int flushId)
+    {
+        while (Volatile.Read(ref _scheduledFlushId) == flushId) {
+            if (Interlocked.CompareExchange(ref _writerCount, 1, 0) == 0)
+                break;
+            await Task.Yield();
+        }
+        if (Volatile.Read(ref _scheduledFlushId) != flushId)
+            return;
+
+        // We're the primary writer now: force a flush (and drain any queued messages first)
+        await WriteAsPrimaryCore(null, mustFlush: true).ConfigureAwait(false);
     }
 
     private void SerializeMessage(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
@@ -241,7 +290,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
         var frameReader = _frameChannel.Reader;
         try {
             while (true) {
-                // 1) Drain all ready frames from the channel first.
+                // Drain all ready frames from the channel first.
                 while (frameReader.TryRead(out var frame)) {
                     await WebSocket
                         .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
@@ -250,27 +299,9 @@ public sealed class WebSocketRpcTransport : RpcTransport
                     frame.Dispose();
                 }
 
-                // 2) Channel is empty: mark sender as idle *before* trying to steal.
-                // This closes the race where writers decide not to flush small buffers
-                // because the sender isn't marked idle yet, while the sender is about to wait.
-                Interlocked.Exchange(ref _frameSenderIsIdle, 1);
-                try {
-                    if (TryStealFrame(out var frame)) {
-                        await WebSocket
-                            .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None)
-                            .ConfigureAwait(false);
-                        _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
-                        frame.Dispose();
-                        continue;
-                    }
-
-                    // 3) Nothing to send: wait for a channel frame.
-                    if (!await frameReader.WaitToReadAsync(StopToken).ConfigureAwait(false))
-                        return;
-                }
-                finally {
-                    Interlocked.Exchange(ref _frameSenderIsIdle, 0);
-                }
+                // Nothing to send: wait for a channel frame.
+                if (!await frameReader.WaitToReadAsync(StopToken).ConfigureAwait(false))
+                    return;
             }
         }
         catch (Exception e) {
@@ -279,29 +310,7 @@ public sealed class WebSocketRpcTransport : RpcTransport
                 error = e;
         }
         finally {
-            Interlocked.Exchange(ref _frameSenderIsIdle, 0);
             TryComplete(error);
-        }
-    }
-
-    private bool TryStealFrame(out ArrayOwner<byte> frame)
-    {
-        frame = default!;
-
-        // Try to become write primary
-        if (Interlocked.CompareExchange(ref _writerCount, 1, 0) != 0)
-            return false; // Writers are active, they'll flush
-
-        // We're the primary writer now
-        try {
-            if (_writeBuffer is not { } writeBuffer || writeBuffer.WrittenCount == 0)
-                return false;
-
-            frame = writeBuffer.ToArrayOwnerAndReset(Settings.MinWriteBufferSize);
-            return true;
-        }
-        finally {
-            Interlocked.Decrement(ref _writerCount);
         }
     }
 
