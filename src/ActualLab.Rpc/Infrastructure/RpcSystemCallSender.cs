@@ -163,18 +163,18 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         return call.SendNoWait(false, RpcSendErrorHandlers.Silence);
     }
 
-    public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, int sizeHint, RpcHeader[]? headers = null)
+    public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, RpcHeader[]? headers = null)
     {
-        var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
+        var context = new RpcOutboundContext(peer, localId, headers);
 #pragma warning disable MA0100
         var call = context.PrepareCallForSendNoWait(ItemMethodDef, ArgumentList.New(index, item))!;
         return call.SendNoWait(true, RpcSendErrorHandlers.Silence);
 #pragma warning restore MA0100
     }
 
-    public Task Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, int sizeHint, RpcHeader[]? headers = null)
+    public Task Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, RpcHeader[]? headers = null)
     {
-        var context = new RpcOutboundContext(peer, localId, headers) { SizeHint = sizeHint };
+        var context = new RpcOutboundContext(peer, localId, headers);
 #pragma warning disable MA0100
         var itemType = typeof(TItem);
         var arguments = itemType.IsAbstract || itemType == typeof(object)
