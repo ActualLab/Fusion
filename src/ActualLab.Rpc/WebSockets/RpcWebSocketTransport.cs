@@ -20,6 +20,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
         public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU) minus some reserve
         public int MinWriteBufferSize { get; init; } = 24_000;
         public int MinReadBufferSize { get; init; } = 24_000;
+        public bool UseTaskYieldInFrameComposer { get; init; } = true;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
 
         public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(500) {
@@ -43,6 +44,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
     private readonly int _writeFrameSize;
     private readonly int _minReadBufferSize;
     private readonly int _minWriteBufferSize;
+    private readonly bool _useTaskYieldInFrameComposer;
     private readonly Channel<RpcOutboundMessage> _writeChannel;
     private readonly ChannelWriter<RpcOutboundMessage> _writeChannelWriter;
     private readonly AsyncTaskMethodBuilder _whenCompletedSource;
@@ -91,6 +93,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
         _minReadBufferSize = settings.MinReadBufferSize;
         _minWriteBufferSize = settings.MinWriteBufferSize;
         _writeFrameSize = settings.WriteFrameSize;
+        _useTaskYieldInFrameComposer = settings.UseTaskYieldInFrameComposer;
         if (_writeFrameSize <= 0)
             throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.WriteFrameSize)} must be positive.");
 
@@ -191,7 +194,10 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 ? (SerializeMessageFunc)SerializeText
                 : SerializeBinary;
             while (await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false)) {
+                retryRead:
+                var mustRetryRead = false;
                 while (reader.TryRead(out var message)) {
+                    mustRetryRead = _useTaskYieldInFrameComposer;
                     try {
                         serializeMessage(message, _writeBuffer);
                         message.CompleteWhenSerialized();
@@ -205,6 +211,11 @@ public sealed class RpcWebSocketTransport : RpcTransport
                         lastFlushTask = FlushFrame();
                     }
                 }
+                if (mustRetryRead) {
+                    await Task.Yield();
+                    goto retryRead;
+                }
+
                 // Final flush before await
                 if (_writeBuffer.WrittenCount != 0) {
                     await lastFlushTask.ConfigureAwait(false);
@@ -295,9 +306,6 @@ public sealed class RpcWebSocketTransport : RpcTransport
     [MethodImpl(MethodImplOptions.NoInlining)]
     private Task FlushFrame()
     {
-        if (_writeBuffer.Position == 0)
-            return Task.CompletedTask;
-
         var frame = _writeBuffer.ToArrayOwnerAndReset(_minWriteBufferSize);
         var sendTask = WebSocket
             .SendAsync(frame.Memory, MessageType, endOfMessage: true, CancellationToken.None);
@@ -398,7 +406,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 var totalLength = readBuffer.WrittenCount;
                 var frame = readBuffer.ToArrayOwnerAndReset(_minReadBufferSize);
                 var offset = 0;
-                while (offset < totalLength) {
+                while (offset < totalLength) { // Zero-length frames are skipped here
                     var message = tryDeserialize(frame, ref offset, totalLength);
                     if (message is not null)
                         yield return message;
