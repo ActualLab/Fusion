@@ -18,10 +18,8 @@ public sealed class RpcWebSocketTransport : RpcTransport
         public Func<RpcFrameDelayer?>? FrameDelayerFactory { get; init; } = RpcFrameDelayerFactories.None;
 
         public int FrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
-        public int MinReadBufferSize { get; init; } = 16_000;
-        public int MaxReadBufferSize { get; init; } = 256_000;
-        public int MinWriteBufferSize { get; init; } = 16_000;
-        public int MaxWriteBufferSize { get; init; } = 256_000;
+        public int BufferSize { get; init; } = 16_000;
+        public int MaxBufferSize { get; init; } = 256_000;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
 
         // Use of UnboundedChannelOptions is totally fine here: if the message is enqueued
@@ -43,7 +41,8 @@ public sealed class RpcWebSocketTransport : RpcTransport
     private static readonly MeterSet StaticMeters = new();
 
     private readonly MeterSet _meters = StaticMeters;
-    private readonly int _writeFrameSize;
+    private readonly int _frameSize;
+    private readonly int _maxBufferSize;
     private readonly Channel<RpcOutboundMessage> _writeChannel;
     private readonly ChannelWriter<RpcOutboundMessage> _writeChannelWriter;
     private readonly AsyncTaskMethodBuilder _whenCompletedSource;
@@ -90,13 +89,14 @@ public sealed class RpcWebSocketTransport : RpcTransport
         _whenCompletedSource = AsyncTaskMethodBuilderExt.New();
         _whenCompleted = _whenCompletedSource.Task;
 
-        _writeFrameSize = settings.FrameSize;
-        if (_writeFrameSize <= 0)
+        _frameSize = settings.FrameSize;
+        if (_frameSize <= 0)
             throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.FrameSize)} must be positive.");
+        _maxBufferSize = settings.MaxBufferSize;
 
         _frameDelayer = settings.FrameDelayerFactory?.Invoke();
-        _writeBuffer = new ArrayPoolBuffer<byte>(Settings.MinWriteBufferSize, mustClear: false);
-        _flushingBuffer = new ArrayPoolBuffer<byte>(Settings.MinWriteBufferSize, mustClear: false);
+        _writeBuffer = new ArrayPoolBuffer<byte>(Settings.BufferSize, mustClear: false);
+        _flushingBuffer = new ArrayPoolBuffer<byte>(Settings.BufferSize, mustClear: false);
 
         _writeChannel = ChannelExt.Create<RpcOutboundMessage>(settings.WriteChannelOptions);
         _writeChannelWriter = _writeChannel.Writer;
@@ -211,7 +211,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                     catch (Exception e) {
                         message.CompleteWhenSerialized(e);
                     }
-                    if (_writeBuffer.WrittenCount >= _writeFrameSize) {
+                    if (_writeBuffer.WrittenCount >= _frameSize) {
                         await lastFlushTask.ConfigureAwait(false);
                         lastFlushTask = FlushFrame();
                     }
@@ -285,7 +285,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                     continue;
                 }
 
-                if (_writeBuffer.WrittenCount >= _writeFrameSize) {
+                if (_writeBuffer.WrittenCount >= _frameSize) {
                     await lastFlushTask.ConfigureAwait(false);
                     lastFlushTask = FlushFrame();
                     whenMustFlush = null;
@@ -310,7 +310,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
         // Swap _flushingBuffer and _writeBuffer
         (_flushingBuffer, _writeBuffer) = (_writeBuffer, _flushingBuffer);
         var frame = _flushingBuffer.WrittenMemory;
-        _writeBuffer.Renew(Settings.MaxWriteBufferSize);
+        _writeBuffer.Renew(_maxBufferSize);
 
         _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
         return WebSocket.SendAsync(frame, MessageType, endOfMessage: true, CancellationToken.None).AsTask();
@@ -360,20 +360,20 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
     private async IAsyncEnumerable<RpcInboundMessage> ReadAllImpl([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var minReadBufferSize = Settings.MinReadBufferSize;
-        var maxReadBufferSize = Settings.MaxReadBufferSize;
+        var bufferSize = Settings.BufferSize;
         using var commonCts = cancellationToken.LinkWith(StopToken);
         using var commonTokenRegistration = commonCts.Token.Register(() => _ = DisposeAsync());
 
         // Start with a non-pooled buffer for initial reads
-        var buffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);
+        var buffer = new ArrayPoolBuffer<byte>(bufferSize, false);
         var tryDeserialize = IsTextSerializer
             ? (TryDeserializeMessageFunc)TryDeserializeText
             : TryDeserializeBinary;
 
         try {
             while (true) {
-                var readMemory = buffer.GetMemory(minReadBufferSize);
+                var requestedCapacity = Math.Max(bufferSize, buffer.FreeCapacity);
+                var readMemory = buffer.GetMemory(requestedCapacity);
                 var arraySegment = new ArraySegment<byte>(buffer.Array, buffer.WrittenCount, readMemory.Length);
                 WebSocketReceiveResult r;
                 try {
@@ -402,7 +402,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 }
                 // The code that uses frame's data (RpcInboundMessage.ArgumentData) is running synchronously,
                 // so if we're here, the buffer can be reused.
-                buffer.Renew(maxReadBufferSize);
+                buffer.Renew(_maxBufferSize);
             }
         }
         finally {
