@@ -48,6 +48,7 @@ features:
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 [![Samples](https://img.shields.io/badge/Samples-88B04B)](https://github.com/ActualLab/Fusion.Samples)
 [![Chat @ Voxt](https://img.shields.io/badge/Chat%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
+[![Changelog](https://img.shields.io/badge/Changelog-4A4A4A)](./CHANGELOG)
 
 </div>
 

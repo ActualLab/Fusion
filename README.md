@@ -8,6 +8,7 @@
 [![Documentation](https://img.shields.io/badge/Documentation-6B5B95)](https://fusion.actuallab.net/)
 [![Samples](https://img.shields.io/badge/Samples-88B04B)](https://github.com/ActualLab/Fusion.Samples)
 [![Chat @ Voxt](https://img.shields.io/badge/Chat%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
+[![Changelog](https://img.shields.io/badge/Changelog-4A4A4A)](https://fusion.actuallab.net/CHANGELOG)
 
 ## Overview
 

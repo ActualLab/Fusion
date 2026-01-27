@@ -96,7 +96,6 @@ gtag('config', 'G-PX4G7HX4CM');`],
     },
     sidebar: [
       {
-        text: "Documentation",
         items: [
           { text: "Videos and Slides", link: "/Videos-and-Slides" },
           {
@@ -191,6 +190,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
           },
           { text: "Performance Benchmarks", link: "/Benchmarks" },
           { text: "NuGet Packages", link: "/NuGet-Packages" },
+          { text: "Changelog", link: "/CHANGELOG" },
         ],
       },
       {

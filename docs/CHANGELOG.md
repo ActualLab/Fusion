@@ -8,6 +8,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.0.9+3e71b6ef
+
+Release date: 2026-01-27
+
+### Breaking Changes
+- New `v6` serialization format: `mempack6`, `msgpack6` and their variants with `c` suffix
+- All serialization formats below `v5` are gone, use `v11.5.1` if you still need them
+- `WebSocketChannel` is replaced by `RpcWebSocketTransport`
+- All authentication-related types from `ActualLab.Fusion.Server` are moved to `ActualLab.Fusion.Ext.*` 
+  assemblies and changed namespace from `ActualLab.Fusion.Server.Authentication` to `ActualLab.Fusion.Authentication`,
+  so referencing `ActualLab.Fusion.Server` assembly now doesn't "drag" the authentication-related types into your project
+  (and that was the reason for this change).
+
+### Added
+- `mempack6` and `msgpack6` serialization format versions; they offer a tiny improvement (2 bytes per call) 
+  over v5, and that's only because the zero-copy serialization in RPC transport layer made v5 a bit less efficient
+  (it has to reserve 5 bytes for the message length, because it uses WriteVarUInt32 for length, so v6 changes
+  length encoding to regular UInt32).
+- `RpcStream.BatchSize` property for controlling stream batching behavior (default: 64, range: 1..1024)
+- Real-time stock ticker demo added to `TodoApp` sample.
+
+### Changed
+- Consolidated buffer size properties in `RpcWebSocketTransport` (renamed `WriteFrameSize` to `FrameSize`)
+- Very significant changes in `ActualLab.Rpc` internals. In particular, old `RpcMessage` is now represented
+  by `RpcOutboundMessage` and `RpcInboundMessage` types, all serialization-related methods now accept 
+  different arguments, etc.
+
+### Performance
+- Zero-copy serialization in RPC transport layer. Earlier an intermediate buffer (`ArgumentData`) was used 
+  to serialize RPC call arguments and results. Later `RpcMessage` (envelope) serializer was combining 
+  that data with other required pieces (method reference, call ID, etc.) in the final buffer.
+  Now the intermediate buffer is eliminated, which significantly boosts RPC performance on large messages.
+  `Stream10K` test shows almost 3x speed improvement on 10KB items.
+- Switched `WriteChannelOptions` to `UnboundedChannelOptions`
+- Buffer renewal and reuse logic was significantly improved as well.
+
+### Documentation
+- New documentation website: https://fusion.actuallab.net/
+
+
 ## 11.4.7+3045fd2c
 
 Release date: 2025-01-05
