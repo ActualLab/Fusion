@@ -512,7 +512,7 @@ public class RpcWebSocketTransportFlushTest : RpcTestBase
 [Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcWebSocketTransportFrameDelayTest : RpcTestBase
 {
-    private readonly TaskCompletionSource _delayCts = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<Unit> _delayCts = TaskCompletionSourceExt.New<Unit>();
 
     public RpcWebSocketTransportFrameDelayTest(ITestOutputHelper @out) : base(@out)
         => ExposeBackend = true;
@@ -566,7 +566,7 @@ public class RpcWebSocketTransportFrameDelayTest : RpcTestBase
         await Task.Delay(100);
         callTask.IsCompleted.Should().BeFalse();
 
-        _delayCts.TrySetResult();
+        _delayCts.TrySetResult(default);
 
         (await callTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false)).Should().Be(1);
         await AssertNoCalls(peer, Out);

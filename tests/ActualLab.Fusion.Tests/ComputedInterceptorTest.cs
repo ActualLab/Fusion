@@ -56,7 +56,7 @@ public class ComputedInterceptorTest(ITestOutputHelper @out) : FusionTestBase(@o
 
             task = time.GetTimeWithDelay(default);
             await TestExt.When(
-                () => task.IsCompletedSuccessfully().Should().BeTrue(),
+                () => task.IsCompletedSuccessfully.Should().BeTrue(),
                 TimeSpan.FromSeconds(1));
         }
     }

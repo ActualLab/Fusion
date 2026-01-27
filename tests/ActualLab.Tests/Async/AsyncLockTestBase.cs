@@ -97,7 +97,7 @@ public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)
         };
         await Task.WhenAll(tasks);
 
-        tasks.All(t => t.IsCompletedSuccessfully()).Should().BeTrue();
+        tasks.All(t => t.IsCompletedSuccessfully).Should().BeTrue();
         AssertResourcesReleased();
     }
 
@@ -148,7 +148,7 @@ public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)
         var runtime = startedAt.Elapsed;
         WriteLine($"Actual runtime:   {runtime.Seconds:f1}s");
 
-        tasks.All(t => t.IsCompletedSuccessfully()).Should().BeTrue();
+        tasks.All(t => t.IsCompletedSuccessfully).Should().BeTrue();
         AssertResourcesReleased();
     }
 }

@@ -50,7 +50,7 @@ public sealed class RedisComponent<T>(RedisConnector connector, Func<IConnection
         if (resultTask is null)
             return false;
 
-        if (!resultTask.IsCompletedSuccessfully())
+        if (!resultTask.IsCompletedSuccessfully)
             return true;
 
         var (_, goneToken) = resultTask.GetAwaiter().GetResult();

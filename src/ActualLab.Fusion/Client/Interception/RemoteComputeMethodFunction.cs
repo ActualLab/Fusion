@@ -160,7 +160,7 @@ public abstract class RemoteComputeMethodFunction(
         // SendRpcCall uses an interceptor with AssumeConnected == false,
         // so we await for the connection here.
         var whenConnected = WhenConnectedChecked(input, peer, cancellationToken);
-        if (!whenConnected.IsCompletedSuccessfully()) // Slow path
+        if (!whenConnected.IsCompletedSuccessfully) // Slow path
             await whenConnected.ConfigureAwait(false); // May throw RpcRerouteException!
 
         var existingRemoteComputed = existing as IRemoteComputed;
@@ -252,7 +252,7 @@ public abstract class RemoteComputeMethodFunction(
         // 1. Await for the connection
         // SendRpcCall uses an interceptor with AssumeConnected == false, so we have to do it here.
         var whenConnected = WhenConnectedChecked(input, peer);
-        if (!whenConnected.IsCompletedSuccessfully()) { // Slow path
+        if (!whenConnected.IsCompletedSuccessfully) { // Slow path
             try {
                 await whenConnected.ConfigureAwait(false); // May throw RpcRerouteException!
             }
@@ -377,7 +377,7 @@ public abstract class RemoteComputeMethodFunction(
             }
 
             var resultTask = call.ResultTask;
-            if (resultTask.IsCompletedSuccessfully())
+            if (resultTask.IsCompletedSuccessfully)
                 return (Result.NewUntyped(resultTask.GetAwaiter().GetResult()), call);
 
             var result = await resultTask.ConfigureAwait(false);

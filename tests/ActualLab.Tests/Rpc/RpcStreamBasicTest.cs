@@ -77,12 +77,12 @@ public class RpcStreamBasicTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void LocalStream_Enumeration_ShouldWork()
+    public async Task LocalStream_Enumeration_ShouldWork()
     {
         var expected = Enumerable.Range(0, 5).ToList();
         var stream = RpcStream.New(expected);
 
-        var result = stream.ToBlockingEnumerable().ToList();
+        var result = await stream.ToListAsync();
 
         result.Should().Equal(expected);
     }
@@ -124,13 +124,13 @@ public class RpcStreamBasicTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void NewFromEnumerable_ShouldCreateLocalStream()
+    public async Task NewFromEnumerable_ShouldCreateLocalStream()
     {
         var source = new[] { 1, 2, 3, 4, 5 };
         var stream = RpcStream.New(source);
 
         stream.Kind.Should().Be(RpcObjectKind.Local);
-        stream.ToBlockingEnumerable().Should().Equal(source);
+        (await stream.ToArrayAsync()).Should().Equal(source);
     }
 
     [Fact]

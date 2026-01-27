@@ -186,8 +186,8 @@ public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
             var collect = await collectTask.ResultAwait();
             var whenAll = await whenAllTask.ResultAwait();
 
-            collectTask.IsCompletedSuccessfully().Should().Be(whenAllTask.IsCompletedSuccessfully());
-            if (whenAllTask.IsCompletedSuccessfully()) {
+            collectTask.IsCompletedSuccessfully.Should().Be(whenAllTask.IsCompletedSuccessfully);
+            if (whenAllTask.IsCompletedSuccessfully) {
                 var s1 = collect.Value.ToDelimitedString();
                 var s2 = whenAll.Value.ToDelimitedString();
                 WriteLine($"CL={cl}, Size={size} -> {s1}");
@@ -211,7 +211,7 @@ public class TaskExtTest(ITestOutputHelper @out) : TestBase(@out)
             await collectTask.SilentAwait();
             await whenAllTask.SilentAwait();
 
-            collectTask.IsCompletedSuccessfully().Should().Be(whenAllTask.IsCompletedSuccessfully());
+            collectTask.IsCompletedSuccessfully.Should().Be(whenAllTask.IsCompletedSuccessfully);
         }
     }
 

@@ -38,7 +38,7 @@ public sealed class Connector<TConnection> : WorkerBase
         // ReSharper disable once InconsistentlySynchronizedField
         var state = _state;
         var stateValue = state.Value;
-        return stateValue.ConnectionTask.IsCompletedSuccessfully()
+        return stateValue.ConnectionTask.IsCompletedSuccessfully
             ? stateValue.ConnectionTask
             : AwaitConnection();
 
@@ -213,7 +213,7 @@ public sealed class Connector<TConnection> : WorkerBase
         public void Dispose()
         {
             var connectionTask = ConnectionTask;
-            if (!ConnectionTask.IsCompletedSuccessfully())
+            if (!ConnectionTask.IsCompletedSuccessfully)
                 return;
 
             // Dispose the connection

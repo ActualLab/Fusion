@@ -65,7 +65,7 @@ public static partial class TaskExt
 
     public static Task<Unit> ToUnitTask(this Task source)
     {
-        return source.IsCompletedSuccessfully() ? UnitTask : ConvertAsync(source);
+        return source.IsCompletedSuccessfully ? UnitTask : ConvertAsync(source);
 
         static async Task<Unit> ConvertAsync(Task source)
         {

@@ -44,7 +44,7 @@ public class AsyncLockSet<TKey>(
                     : new ValueTask<Releaser>(new Releaser(entry, isLocked: false));
 
             var task = entry.Semaphore.WaitAsync(cancellationToken);
-            return task.IsCompletedSuccessfully()
+            return task.IsCompletedSuccessfully
                 ? new ValueTask<Releaser>(new Releaser(entry))
                 : CompleteAsync(task, entry);
         }
