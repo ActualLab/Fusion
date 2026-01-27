@@ -24,11 +24,12 @@ public sealed class RpcWebSocketTransport : RpcTransport
         public int MaxReadBufferSize { get; init; } = 256_000;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
 
-        public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(500) {
-            FullMode = BoundedChannelFullMode.Wait,
-            SingleReader = true,
-            SingleWriter = false,
-            AllowSynchronousContinuations = false,
+        // Use of UnboundedChannelOptions is totally fine here: if the message is enqueued
+        public ChannelOptions WriteChannelOptions { get; init; } = new UnboundedChannelOptions() {
+            // FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true, // Must be true
+            SingleWriter = false, // Must be false
+            AllowSynchronousContinuations = false, // Must be false, setting it to true will kill the throughput!
         };
     }
 
@@ -145,10 +146,14 @@ public sealed class RpcWebSocketTransport : RpcTransport
     public override Task Write(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
         var whenSerialized = message.WhenSerialized;
-        var writeTask = _writeChannelWriter.WriteAsync(message, cancellationToken);
-        if (writeTask.IsCompletedSuccessfully)
+
+        // Fast path: since _writeChannel is typically an UnboundedChannel,
+        // TryWrite always completes successfully while the channel is operational.
+        if (_writeChannelWriter.TryWrite(message))
             return whenSerialized ?? Task.CompletedTask;
 
+        // Slow path
+        var writeTask = _writeChannelWriter.WriteAsync(message, cancellationToken);
         if (whenSerialized is null)
             return writeTask.AsTask(); // writeTask may throw ChannelClosedException or OperationCanceledException
 
