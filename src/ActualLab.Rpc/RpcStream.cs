@@ -30,8 +30,7 @@ public abstract partial class RpcStream : IRpcObject
     public int AckPeriod { get; init; } = 30;
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public int AckAdvance { get; init; } = 61;
-    [DataMember(Order = 3), MemoryPackOrder(3)]
-    public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 64;
+    // See BatchSize below as well
 
     // Non-serialized members
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -42,6 +41,9 @@ public abstract partial class RpcStream : IRpcObject
     public abstract Type ItemType { get; }
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public abstract RpcObjectKind Kind { get; }
+
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 64;
 
     public static RpcStream<T> New<T>(IAsyncEnumerable<T> outgoingSource)
         => new(outgoingSource);
