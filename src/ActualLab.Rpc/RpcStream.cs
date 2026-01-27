@@ -31,7 +31,7 @@ public abstract partial class RpcStream : IRpcObject
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public int AckAdvance { get; init; } = 61;
     [DataMember(Order = 3), MemoryPackOrder(3)]
-    public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 256;
+    public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 64;
 
     // Non-serialized members
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
