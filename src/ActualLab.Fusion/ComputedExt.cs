@@ -113,15 +113,15 @@ public static partial class ComputedExt
         if (computed.ConsistencyState == ConsistencyState.Invalidated)
             return Task.CompletedTask;
 
-        var tcs = AsyncTaskMethodBuilderExt.New();
+        var taskSource = AsyncTaskMethodBuilderExt.New();
         if (cancellationToken.CanBeCanceled) {
             cancellationToken.ThrowIfCancellationRequested();
-            return new WhenInvalidatedClosure(tcs, computed, cancellationToken).Task;
+            return new WhenInvalidatedClosure(taskSource, computed, cancellationToken).Task;
         }
 
         // No way to cancel / unregister the handler here
-        computed.Invalidated += _ => tcs.TrySetResult();
-        return tcs.Task;
+        computed.Invalidated += _ => taskSource.TrySetResultNoCheck();
+        return taskSource.Task;
     }
 
     // When

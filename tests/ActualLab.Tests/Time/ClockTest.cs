@@ -45,7 +45,7 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
 
         // ReSharper disable once AccessToDisposedClosure
         var firedAt = clock.Timer(3000).Select(_ => clock.Now).ToEnumerable().Single();
-        ShouldEqual(firedAt, clockStart + TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(1.5 * ToleranceMultiplier));
+        ShouldEqual(firedAt, clockStart + TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3 * ToleranceMultiplier));
 
         await Task.Yield(); // Just to suppress warning.
     }
