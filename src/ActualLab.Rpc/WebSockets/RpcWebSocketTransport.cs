@@ -17,11 +17,11 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
         public Func<RpcFrameDelayer?>? FrameDelayerFactory { get; init; } = RpcFrameDelayerFactories.None;
 
-        public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
-        public int MinWriteBufferSize { get; init; } = 16_000;
-        public int MaxWriteBufferSize { get; init; } = 256_000;
+        public int FrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
         public int MinReadBufferSize { get; init; } = 16_000;
         public int MaxReadBufferSize { get; init; } = 256_000;
+        public int MinWriteBufferSize { get; init; } = 16_000;
+        public int MaxWriteBufferSize { get; init; } = 256_000;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
 
         // Use of UnboundedChannelOptions is totally fine here: if the message is enqueued
@@ -90,9 +90,9 @@ public sealed class RpcWebSocketTransport : RpcTransport
         _whenCompletedSource = AsyncTaskMethodBuilderExt.New();
         _whenCompleted = _whenCompletedSource.Task;
 
-        _writeFrameSize = settings.WriteFrameSize;
+        _writeFrameSize = settings.FrameSize;
         if (_writeFrameSize <= 0)
-            throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.WriteFrameSize)} must be positive.");
+            throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.FrameSize)} must be positive.");
 
         _frameDelayer = settings.FrameDelayerFactory?.Invoke();
         _writeBuffer = new ArrayPoolBuffer<byte>(Settings.MinWriteBufferSize, mustClear: false);
