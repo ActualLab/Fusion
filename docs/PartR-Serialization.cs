@@ -60,7 +60,7 @@ public static class AccessingFormats
         ImmutableList<RpcSerializationFormat> all = RpcSerializationFormat.All;
 
         // Find by key
-        var format = RpcSerializationFormat.All.First(f => f.Key == "mempack5c");
+        var format = RpcSerializationFormat.All.First(f => f.Key == "mempack6c");
         #endregion
     }
 }
@@ -87,7 +87,7 @@ public static class ConfiguringFormats
         #region PartRSerialization_RemoveFormats
         // To disable older formats for security:
         RpcSerializationFormat.All = RpcSerializationFormat.All
-            .RemoveAll(f => f.Key.StartsWith("mempack1") || f.Key.StartsWith("msgpack1"));
+            .RemoveAll(f => f.Key.StartsWith("mempack5") || f.Key.StartsWith("msgpack5"));
         #endregion
     }
 }
@@ -115,22 +115,20 @@ public class PartRSerialization : DocPart
         var formats = RpcSerializationFormat.All;
 
         // Text formats (JSON)
-        var json3 = formats.FirstOrDefault(f => f.Key == "json3");
         var json5 = formats.FirstOrDefault(f => f.Key == "json5");
-        var njson3 = formats.FirstOrDefault(f => f.Key == "njson3");
         var njson5 = formats.FirstOrDefault(f => f.Key == "njson5");
 
         // Binary formats (MemoryPack)
+        var mempack6c = formats.FirstOrDefault(f => f.Key == "mempack6c");
+        var mempack6 = formats.FirstOrDefault(f => f.Key == "mempack6");
         var mempack5c = formats.FirstOrDefault(f => f.Key == "mempack5c");
         var mempack5 = formats.FirstOrDefault(f => f.Key == "mempack5");
-        var mempack4c = formats.FirstOrDefault(f => f.Key == "mempack4c");
-        var mempack4 = formats.FirstOrDefault(f => f.Key == "mempack4");
 
         // Binary formats (MessagePack)
+        var msgpack6c = formats.FirstOrDefault(f => f.Key == "msgpack6c");
+        var msgpack6 = formats.FirstOrDefault(f => f.Key == "msgpack6");
         var msgpack5c = formats.FirstOrDefault(f => f.Key == "msgpack5c");
         var msgpack5 = formats.FirstOrDefault(f => f.Key == "msgpack5");
-        var msgpack4c = formats.FirstOrDefault(f => f.Key == "msgpack4c");
-        var msgpack4 = formats.FirstOrDefault(f => f.Key == "msgpack4");
 
         WriteLine($"Total registered formats: {formats.Count}");
         WriteLine("Format keys: " + string.Join(", ", formats.Select(f => f.Key)));

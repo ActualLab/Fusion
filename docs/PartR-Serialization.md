@@ -19,50 +19,26 @@ Each combination of these is packaged as an `RpcSerializationFormat`.
 
 | Format | Key | Description |
 |--------|-----|-------------|
-| `SystemJsonV3` | `json3` | System.Text.Json with V3 argument/message serialization |
 | `SystemJsonV5` | `json5` | System.Text.Json with V4 arguments, V3 messages |
-| `NewtonsoftJsonV3` | `njson3` | Newtonsoft.Json with V3 argument/message serialization |
 | `NewtonsoftJsonV5` | `njson5` | Newtonsoft.Json with V4 arguments, V3 messages |
 
 ### Binary Formats (MemoryPack)
 
-| Format | Key | Description |
-|--------|-----|-------------|
-| `MemoryPackV1` | `mempack1` | Legacy V1 format |
-| `MemoryPackV2` | `mempack2` | V2 args with forced polymorphism |
-| `MemoryPackV2C` | `mempack2c` | Compact variant of V2 |
-| `MemoryPackV3` | `mempack3` | V3 arguments |
-| `MemoryPackV3C` | `mempack3c` | Compact variant of V3 |
-| `MemoryPackV4` | `mempack4` | V3 args, V4 messages |
-| `MemoryPackV4C` | `mempack4c` | Compact variant of V4 |
-| `MemoryPackV5` | `mempack5` | V4 args, V4 messages |
+| Format          | Key | Description           |
+|-----------------|-----|-----------------------|
+| `MemoryPackV5`  | `mempack5` | V4 args, V4 messages  |
 | `MemoryPackV5C` | `mempack5c` | Compact variant of V5 |
+| `MemoryPackV6`  | `mempack5` | V4 args, V5 messages  |
+| `MemoryPackV6C` | `mempack5c` | Compact variant of V5 |
 
 ### Binary Formats (MessagePack)
 
-| Format | Key | Description |
-|--------|-----|-------------|
-| `MessagePackV1` | `msgpack1` | Legacy V1 format |
-| `MessagePackV2` | `msgpack2` | V2 args with forced polymorphism |
-| `MessagePackV2C` | `msgpack2c` | Compact variant of V2 |
-| `MessagePackV3` | `msgpack3` | V3 arguments |
-| `MessagePackV3C` | `msgpack3c` | Compact variant of V3 |
-| `MessagePackV4` | `msgpack4` | V3 args, V4 messages |
-| `MessagePackV4C` | `msgpack4c` | Compact variant of V4 |
-| `MessagePackV5` | `msgpack5` | V4 args, V4 messages |
+| Format           | Key | Description           |
+|------------------|-----|-----------------------|
+| `MessagePackV5`  | `msgpack5` | V4 args, V4 messages  |
 | `MessagePackV5C` | `msgpack5c` | Compact variant of V5 |
-
-### Non-Polymorphic Variants
-
-Some formats have `-np` (non-polymorphic) variants that skip type decoration:
-
-| Format | Key |
-|--------|-----|
-| `MemoryPackV2NP` | `mempack2-np` |
-| `MemoryPackV2CNP` | `mempack2c-np` |
-| `MessagePackV2NP` | `msgpack2-np` |
-| `MessagePackV2CNP` | `msgpack2c-np` |
-
+| `MessagePackV6`  | `msgpack5` | V4 args, V5 messages  |
+| `MessagePackV6C` | `msgpack5c` | Compact variant of V5 |
 
 ## Format Selection
 
@@ -127,17 +103,14 @@ public sealed class RpcSerializationFormatExample(
 
 | Version | Description |
 |---------|-------------|
-| V1 | Original format, forced polymorphism |
-| V2 | Improved with optional polymorphism |
-| V3 | Optimized encoding |
-| V4 | Latest, best performance |
+| V4      | Latest, best performance |
 
 ### Message Serializer Versions
 
-| Version | Variants | Description |
-|---------|----------|-------------|
-| V3 | Normal, Compact | Standard message framing |
-| V4 | Normal, Compact | Improved framing |
+| Version | Variants | Description                      |
+|---------|----------|----------------------------------|
+| V4      | Normal, Compact | Was optimal up to Fusion v11.5.X |
+| V5      | Normal, Compact | Saves 1 byte per message over V4 |
 
 ### Compact vs Normal
 
@@ -168,7 +141,7 @@ To disable older formats for security:
 ```cs
 // To disable older formats for security:
 RpcSerializationFormat.All = RpcSerializationFormat.All
-    .RemoveAll(f => f.Key.StartsWith("mempack1") || f.Key.StartsWith("msgpack1"));
+    .RemoveAll(f => f.Key.StartsWith("mempack5") || f.Key.StartsWith("msgpack5"));
 ```
 <!-- endSnippet -->
 
