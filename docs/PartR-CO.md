@@ -184,7 +184,7 @@ Configures WebSocket-based RPC client connections.
 | `UseAutoFrameDelayerFactory` | `bool` | `false` | Enable automatic frame delaying |
 | `HostUrlResolver` | `Func<...>` | Uses `peer.Ref.HostInfo` | Resolves host URL from peer reference |
 | `ConnectionUriResolver` | `Func<...>` | HTTP→WS conversion | Creates WebSocket connection URI |
-| `WebSocketChannelOptionsFactory` | `Func<...>` | Auto | Creates WebSocketChannel options |
+| `WebSocketTransportOptionsFactory` | `Func<...>` | Auto | Creates RpcWebSocketTransport options |
 | `WebSocketOwnerFactory` | `Func<...>` | `ClientWebSocket` | Creates WebSocket instances |
 | `FrameDelayerFactory` | `Func<...>` | `None` | Frame delaying mechanism |
 
@@ -252,7 +252,7 @@ Configures test client for RPC testing with in-memory channels.
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `SerializationFormatKey` | `string` | `""` | Serialization format identifier |
-| `ChannelOptions` | `ChannelOptions` | WebSocketChannel defaults | Configuration for test message channels |
+| `ChannelOptions` | `ChannelOptions` | BoundedChannelOptions(500) | Configuration for test message channels |
 | `ConnectionFactory` | `Func<...>` | Twisted channel pair | Factory to create test channel pairs |
 
 ### Example
