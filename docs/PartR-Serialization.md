@@ -67,7 +67,7 @@ sequenceDiagram
 ImmutableList<RpcSerializationFormat> all = RpcSerializationFormat.All;
 
 // Find by key
-var format = RpcSerializationFormat.All.First(f => f.Key == "mempack5c");
+var format = RpcSerializationFormat.All.First(f => f.Key == "mempack6c");
 ```
 <!-- endSnippet -->
 
@@ -81,11 +81,11 @@ Each `RpcSerializationFormat` consists of:
 public sealed class RpcSerializationFormatExample(
     string key,
     Func<RpcArgumentSerializer> argumentSerializerFactory,
-    Func<RpcPeer, IByteSerializer<RpcMessage>> messageSerializerFactory)
+    Func<RpcPeer, RpcMessageSerializer> messageSerializerFactory)
 {
     public string Key { get; } = key;
     public RpcArgumentSerializer ArgumentSerializer { get; } = argumentSerializerFactory();
-    public Func<RpcPeer, IByteSerializer<RpcMessage>> MessageSerializerFactory { get; } = messageSerializerFactory;
+    public Func<RpcPeer, RpcMessageSerializer> MessageSerializerFactory { get; } = messageSerializerFactory;
 }
 ```
 <!-- endSnippet -->
