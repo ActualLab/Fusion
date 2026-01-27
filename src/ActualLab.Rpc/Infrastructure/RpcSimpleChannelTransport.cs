@@ -12,7 +12,7 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
     private int _getAsyncEnumeratorCounter;
 
     public RpcPeer Peer { get; }
-    public RpcByteMessageSerializer MessageSerializer { get; }
+    public RpcMessageSerializer MessageSerializer { get; }
     public int InitialBufferCapacity { get; init; } = 256;
     public override Task WhenCompleted => _whenCompleted;
     public override Task WhenClosed { get; }
@@ -26,7 +26,7 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
         _reader = channel.Reader;
         _writer = channel.Writer;
         Peer = peer;
-        MessageSerializer = (RpcByteMessageSerializer)peer.MessageSerializer;
+        MessageSerializer = peer.MessageSerializer;
         _whenCompleted = _whenCompletedSource.Task;
         WhenClosed = _whenCompletedSource.Task.SuppressExceptions();
     }
