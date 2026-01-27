@@ -46,7 +46,7 @@ public sealed class RpcOutboundMessage
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void CompleteWhenSerialized(Exception? error = null)
     {
-        if (ReferenceEquals(_whenSerializedBuilder.Task, null))
+        if (ReferenceEquals(WhenSerialized, null))
             return;
 
         if (error is null)
