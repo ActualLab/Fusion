@@ -81,7 +81,7 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
 
         try {
             await foreach (var frame in _reader.ReadAllAsync(commonCts.Token).ConfigureAwait(false)) {
-                var message = MessageSerializer.Read(frame, 0, out _);
+                var message = MessageSerializer.Read(frame.Memory, out _);
                 yield return message;
                 frame.Dispose(); // It's safe to dispose frame only at this point
             }
