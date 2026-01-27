@@ -31,6 +31,10 @@ public class RpcWebSocketTest : RpcTestBase
         }
     }
 
+    [Fact]
+    public Task BasicTest_Json5()
+        => BasicTest("json5");
+
     [Theory]
     [InlineData("json5")]
     [InlineData("njson5")]
@@ -204,6 +208,10 @@ public class RpcWebSocketTest : RpcTestBase
         await AssertNoCalls(peer, Out);
     }
 
+    [Fact]
+    public Task StreamTest_Json5()
+        => StreamTest("json5");
+
     [Theory]
     [InlineData("json5")]
     [InlineData("njson5")]
@@ -227,8 +235,6 @@ public class RpcWebSocketTest : RpcTestBase
         var stream1 = await client.StreamInt32(expected1.Count);
         (await stream1.ToListAsync()).Should().Equal(expected1);
         await AssertNoCalls(peer, Out);
-        if (SerializationFormat.EndsWith("-np"))
-            return;
 
         var expected2 = Enumerable.Range(0, 500)
             .Select(x => (x & 2) == 0 ? (ITuple)new Tuple<int>(x) : new Tuple<long>(x))
@@ -338,15 +344,15 @@ public class RpcWebSocketTest : RpcTestBase
 
     [Fact]
     public Task PerformanceTest1K()
-        => PerformanceTest(1000, "msgpack6");
+        => PerformanceTest(1000, "msgpack6c");
 
     [Fact]
     public Task PerformanceTest10K()
-        => PerformanceTest(10_000, "msgpack6");
+        => PerformanceTest(10_000, "msgpack6c");
 
     [Fact]
     public Task PerformanceTest100K()
-        => PerformanceTest(100_000, "msgpack6");
+        => PerformanceTest(100_000, "msgpack6c");
 
     [Theory]
     // Fastest options (compact)

@@ -7,10 +7,8 @@ namespace ActualLab.Rpc.Serialization;
 
 public class RpcByteMessageSerializerV4Compact(RpcPeer peer) : RpcByteMessageSerializerV4(peer)
 {
-    public override RpcInboundMessage Read(ArrayOwner<byte> buffer, int offset, out int readLength)
+    public override RpcInboundMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
-        var array = buffer.Array;
-        var data = array.AsMemory(offset, buffer.Length - offset);
         var reader = new MemoryReader(data);
 
         // CallTypeId and headerCount

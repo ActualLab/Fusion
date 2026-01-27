@@ -18,7 +18,7 @@ public abstract class RpcMessageSerializer(RpcPeer peer)
 
     public RpcPeer Peer { get; } = peer;
 
-    public abstract RpcInboundMessage Read(ArrayOwner<byte> buffer, int offset, out int readLength);
+    public abstract RpcInboundMessage Read(ReadOnlyMemory<byte> data, out int readLength);
     public abstract void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
