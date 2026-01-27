@@ -27,7 +27,7 @@ public readonly partial struct RpcNoWait : IEquatable<RpcNoWait>
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<RpcNoWait> From(Task task)
-            => task.IsCompletedSuccessfully() ? Completed : FromAsync(task);
+            => task.IsCompletedSuccessfully ? Completed : FromAsync(task);
 
         private static async Task<RpcNoWait> FromAsync(Task task)
         {

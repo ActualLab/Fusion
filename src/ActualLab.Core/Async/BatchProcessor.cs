@@ -289,7 +289,7 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
         catch (Exception e) {
             return CompleteProcessBatch(batch, e);
         }
-        return resultTask.IsCompletedSuccessfully()
+        return resultTask.IsCompletedSuccessfully
             ? CompleteProcessBatch(batch)
             : CompleteProcessBatchAsync(batch, resultTask);
     }

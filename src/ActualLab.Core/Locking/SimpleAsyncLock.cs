@@ -23,7 +23,7 @@ public sealed class SimpleAsyncLock : IAsyncLock<SimpleAsyncLock.Releaser>
     {
         internal static ValueTask<Releaser> NewWhenCompleted(Task task, SimpleAsyncLock asyncLock)
         {
-            return task.IsCompletedSuccessfully()
+            return task.IsCompletedSuccessfully
                 ? ValueTaskExt.FromResult(new Releaser(asyncLock))
                 : CompleteAsync(task, asyncLock);
 

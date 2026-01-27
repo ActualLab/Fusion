@@ -15,7 +15,7 @@ public static class ComputeFunctionExt
         CancellationToken cancellationToken = default)
     {
         var task = function.ProduceComputed(input, context, cancellationToken);
-        if (task.IsCompletedSuccessfully()) {
+        if (task.IsCompletedSuccessfully) {
             var computed = task.GetAwaiter().GetResult();
             return computed.GetValuePromise(); // Happy path
         }
@@ -34,7 +34,7 @@ public static class ComputeFunctionExt
         CancellationToken cancellationToken = default)
     {
         var task = function.ProduceComputed(input, context, cancellationToken);
-        if (task.IsCompletedSuccessfully()) {
+        if (task.IsCompletedSuccessfully) {
             var computed = task.GetAwaiter().GetResult();
             if (computedSynchronizer.IsSynchronized(computed))
                 return computed.GetValuePromise(); // Happy path

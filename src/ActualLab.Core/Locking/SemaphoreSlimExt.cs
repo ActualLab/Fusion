@@ -7,7 +7,7 @@ public static class SemaphoreSlimExt
         CancellationToken cancellationToken = default)
     {
         var task = semaphore.WaitAsync(cancellationToken);
-        return task.IsCompletedSuccessfully()
+        return task.IsCompletedSuccessfully
             ? ValueTaskExt.FromResult(new ClosedDisposable<SemaphoreSlim>(semaphore, static x => x.Release()))
             : CompleteAsync(task, semaphore);
 

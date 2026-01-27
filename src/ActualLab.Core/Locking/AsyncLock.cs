@@ -29,7 +29,7 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
                 : default;
 
         var task = _semaphore.WaitAsync(cancellationToken);
-        return task.IsCompletedSuccessfully()
+        return task.IsCompletedSuccessfully
             ? new ValueTask<Releaser>(new Releaser(this))
             : CompleteAsync(task, this);
 

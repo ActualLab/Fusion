@@ -113,7 +113,7 @@ public abstract class ComputedSynchronizer
             var whenSynchronized = WhenSynchronized(computed, cancellationToken);
             if (!whenSynchronized.IsCompleted)
                 await whenSynchronized.SilentAwait(false);
-            if (!whenSynchronized.IsCompletedSuccessfully())
+            if (!whenSynchronized.IsCompletedSuccessfully)
                 return computed; // Timed out
             if (computed.IsConsistent() || updateCount >= MaxUpdateCountOnSynchronize)
                 return computed;
@@ -129,7 +129,7 @@ public abstract class ComputedSynchronizer
             var whenSynchronized = WhenSynchronized(computed, cancellationToken);
             if (!whenSynchronized.IsCompleted)
                 await whenSynchronized.SilentAwait(false);
-            if (!whenSynchronized.IsCompletedSuccessfully())
+            if (!whenSynchronized.IsCompletedSuccessfully)
                 return computed; // Timed out
             if (computed.IsConsistent() || updateCount >= MaxUpdateCountOnSynchronize)
                 return computed;

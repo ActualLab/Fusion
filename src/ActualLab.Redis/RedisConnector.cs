@@ -52,7 +52,7 @@ public class RedisConnector
         lock (Lock) {
             var multiplexerTask = State.Value;
             if (multiplexerTask is not null) {
-                if (!multiplexerTask.IsCompletedSuccessfully())
+                if (!multiplexerTask.IsCompletedSuccessfully)
                     return;
 
                 var (multiplexer, _) = multiplexerTask.GetAwaiter().GetResult();

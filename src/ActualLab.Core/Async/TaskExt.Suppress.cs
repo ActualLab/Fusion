@@ -5,7 +5,7 @@ public static partial class TaskExt
     // SuppressExceptions
 
     public static Task SuppressExceptions(this Task task)
-        => task.IsCompletedSuccessfully()
+        => task.IsCompletedSuccessfully
             ? task
             : task.ContinueWith(
                 static _ => { },
@@ -24,10 +24,10 @@ public static partial class TaskExt
     }
 
     public static Task<T> SuppressExceptions<T>(this Task<T> task)
-        => task.IsCompletedSuccessfully()
+        => task.IsCompletedSuccessfully
             ? task
             : task.ContinueWith(
-                static t => t.IsCompletedSuccessfully()
+                static t => t.IsCompletedSuccessfully
                     ? t.GetAwaiter().GetResult()
                     : default!,
                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
@@ -49,7 +49,7 @@ public static partial class TaskExt
     public static Task SuppressCancellation(this Task task)
         => task.ContinueWith(
             static t => {
-                if (t.IsCompletedSuccessfully() || t.IsCanceledOrFaultedWithOce())
+                if (t.IsCompletedSuccessfully || t.IsCanceledOrFaultedWithOce())
                     return;
 
                 t.GetAwaiter().GetResult();

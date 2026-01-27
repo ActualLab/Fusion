@@ -5,12 +5,12 @@ public static partial class TaskExt
     // ToResultSynchronously
 
     public static Result<Unit> ToResultSynchronously(this Task task)
-        => task.AssertCompleted().IsCompletedSuccessfully()
+        => task.AssertCompleted().IsCompletedSuccessfully
             ? default
             : new Result<Unit>(default, task.GetBaseException());
 
     public static Result<T> ToResultSynchronously<T>(this Task<T> task)
-        => task.AssertCompleted().IsCompletedSuccessfully()
+        => task.AssertCompleted().IsCompletedSuccessfully
             ? task.GetAwaiter().GetResult()
             : new Result<T>(default!, task.GetBaseException());
 

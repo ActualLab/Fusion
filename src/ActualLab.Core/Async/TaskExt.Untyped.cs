@@ -123,7 +123,7 @@ public static partial class TaskExt
         public override object Generate()
             => typeof(T) == typeof(VoidSurrogate)
                 ? static (Task source) => {
-                    if (source.IsCompletedSuccessfully())
+                    if (source.IsCompletedSuccessfully)
                         return new ValueTask<object?>(null!);
 
                     var task = source.ContinueWith(
@@ -135,7 +135,7 @@ public static partial class TaskExt
                     return new ValueTask<object?>(task);
                 }
                 : static (Task source) => {
-                    if (source.IsCompletedSuccessfully())
+                    if (source.IsCompletedSuccessfully)
                         return new ValueTask<object?>(((Task<T>)source).GetAwaiter().GetResult());
 
                     var task = source.ContinueWith(
@@ -149,13 +149,13 @@ public static partial class TaskExt
     {
         private static IResult ConvertVoid(Task task)
             // ReSharper disable once HeapView.BoxingAllocation
-            => task.IsCompletedSuccessfully()
+            => task.IsCompletedSuccessfully
                 ? new Result<Unit>()
                 : new Result<Unit>(default, task.AssertCompleted().GetBaseException());
 
         private static IResult Convert(Task task)
             // ReSharper disable once HeapView.BoxingAllocation
-            => task.IsCompletedSuccessfully()
+            => task.IsCompletedSuccessfully
                 ? new Result<T>(((Task<T>)task).GetAwaiter().GetResult())
                 : new Result<T>(default!, task.AssertCompleted().GetBaseException());
 
