@@ -310,7 +310,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
         // Swap _flushingBuffer and _writeBuffer
         (_flushingBuffer, _writeBuffer) = (_writeBuffer, _flushingBuffer);
         var frame = _flushingBuffer.WrittenMemory;
-        _writeBuffer.Renew(Settings.MinWriteBufferSize, Settings.MaxWriteBufferSize);
+        _writeBuffer.Renew(Settings.MaxWriteBufferSize);
 
         _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
         return WebSocket.SendAsync(frame, MessageType, endOfMessage: true, CancellationToken.None).AsTask();
@@ -402,7 +402,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 }
                 // The code that uses frame's data (RpcInboundMessage.ArgumentData) is running synchronously,
                 // so if we're here, the buffer can be reused.
-                buffer.Renew(minReadBufferSize, maxReadBufferSize);
+                buffer.Renew(maxReadBufferSize);
             }
         }
         finally {
