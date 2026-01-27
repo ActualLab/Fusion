@@ -406,6 +406,7 @@ public void ConfigureServices(IServiceCollection services, IHostEnvironment Env)
 {
     var fusion = services.AddFusion();
     var fusionServer = fusion.AddWebServer();
+    fusionServer.AddAuthEndpoints();
     fusion.AddDbAuthService<AppDbContext, string>();
     fusionServer.ConfigureAuthEndpoint(_ => new() {
         // Set to the desired one

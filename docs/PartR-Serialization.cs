@@ -24,7 +24,7 @@ public class MyArgumentSerializer() : RpcArgumentSerializer
 
 public class MyMessageSerializer(RpcPeer peer) : RpcMessageSerializer(peer)
 {
-    public override RpcInboundMessage Read(ArrayOwner<byte> buffer, int offset, out int readLength)
+    public override RpcInboundMessage Read(ReadOnlyMemory<byte> data, out int readLength)
         => throw new NotImplementedException();
 
     public override void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
