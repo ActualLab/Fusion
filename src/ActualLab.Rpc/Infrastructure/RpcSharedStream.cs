@@ -40,7 +40,6 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
 
 public sealed class RpcSharedStream<T> : RpcSharedStream
 {
-    private readonly Func<T, int>? _sizeHintProvider = SizeHintProviders.Get<T>();
     private readonly RpcSystemCallSender _systemCallSender;
     private readonly Channel<(long NextIndex, bool MustReset)> _acks = Channel.CreateUnbounded<(long, bool)>(
         new() {
@@ -218,7 +217,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         // Debug.WriteLine($"{Id}: <- #{index} (ack @ {ackIndex})");
         var (value, error) = item;
         if (error is null)
-            return _systemCallSender.Item(Peer, Id.LocalId, index, value, _sizeHintProvider?.Invoke(value) ?? 0);
+            return _systemCallSender.Item(Peer, Id.LocalId, index, value);
 
         if (ReferenceEquals(item.Error, NoMoreItemsTag))
             error = null;
@@ -238,21 +237,28 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     // Nested types
 
-    private sealed class Batcher(RpcSharedStream<T> stream)
+    private sealed class Batcher
     {
-        private const int BatchSize = 256;
+        public readonly int BatchSize;
 
-        private readonly Func<T, int>? _sizeHintProvider = stream._sizeHintProvider;
         private readonly bool _isPolymorphic = !(typeof(T).IsValueType || typeof(T).IsSealed);
-        private readonly List<T> _items = new(BatchSize / 4); // Our chance to fully fill the batch is low
+        private readonly List<T> _items;
         private Type? _itemType;
+        private readonly RpcSharedStream<T> _stream;
+
+        public Batcher(RpcSharedStream<T> stream)
+        {
+            BatchSize = stream.Stream.BatchSize.Clamp(1, RpcStream.MaxBatchSize);
+            _stream = stream;
+            _items = new List<T>(capacity: Math.Max(1, BatchSize / 4));
+        }
 
         public async ValueTask Add(long index, Result<T> item)
         {
             var (value, error) = item;
             if (error is not null) {
                 await Flush(index).ConfigureAwait(false);
-                await stream.Send(index, item).ConfigureAwait(false);
+                await _stream.Send(index, item).ConfigureAwait(false);
                 return;
             }
 
@@ -275,7 +281,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 return Task.CompletedTask;
 
             if (count == 1) {
-                var result = stream.Send(nextIndex - count, _items[0]);
+                var result = _stream.Send(nextIndex - count, _items[0]);
                 _items.Clear();
                 _itemType = null;
                 return result;
@@ -286,12 +292,8 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     ? (T[])Array.CreateInstance(_itemType ?? typeof(T), count)
                     : new T[count];
                 _items.CopyTo(items);
-                var sizeHint = 0;
-                if (_sizeHintProvider is not null)
-                    foreach (var item in items)
-                        sizeHint += _sizeHintProvider.Invoke(item);
-                var result = stream._systemCallSender.Batch(
-                    stream.Peer, stream.Id.LocalId, nextIndex - count, items, sizeHint);
+                var result = _stream._systemCallSender.Batch(
+                    _stream.Peer, _stream.Id.LocalId, nextIndex - count, items);
                 _items.Clear();
                 _itemType = null;
                 return result;

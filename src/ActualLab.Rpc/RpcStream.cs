@@ -13,6 +13,8 @@ namespace ActualLab.Rpc;
 [DataContract]
 public abstract partial class RpcStream : IRpcObject
 {
+    public const int MaxBatchSize = 1024;
+
 #pragma warning disable CA2201
     // We never throw this error, so it's fine to share its single instance here
     protected static readonly Exception NoMoreItemsTag = new();
@@ -28,6 +30,8 @@ public abstract partial class RpcStream : IRpcObject
     public int AckPeriod { get; init; } = 30;
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public int AckAdvance { get; init; } = 61;
+    [DataMember(Order = 3), MemoryPackOrder(3)]
+    public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 256;
 
     // Non-serialized members
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]

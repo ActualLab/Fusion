@@ -17,10 +17,11 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
         public Func<RpcFrameDelayer?>? FrameDelayerFactory { get; init; } = RpcFrameDelayerFactories.None;
 
-        public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU) minus some reserve
-        public int MinWriteBufferSize { get; init; } = 24_000;
-        public int MinReadBufferSize { get; init; } = 24_000;
-        public bool UseTaskYieldInFrameComposer { get; init; } = true;
+        public int WriteFrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
+        public int MinWriteBufferSize { get; init; } = 16_000;
+        public int MaxWriteBufferSize { get; init; } = 256_000;
+        public int MinReadBufferSize { get; init; } = 16_000;
+        public int MaxReadBufferSize { get; init; } = 256_000;
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
 
         public ChannelOptions WriteChannelOptions { get; init; } = new BoundedChannelOptions(500) {
@@ -31,8 +32,8 @@ public sealed class RpcWebSocketTransport : RpcTransport
         };
     }
 
-    private delegate RpcInboundMessage? TryDeserializeMessageFunc(ArrayOwner<byte> frame, ref int offset, int totalLength);
-    private delegate void SerializeMessageFunc(RpcOutboundMessage message, ArrayPoolBuffer<byte> frame);
+    private delegate RpcInboundMessage? TryDeserializeMessageFunc(byte[] array, ref int offset, int totalLength);
+    private delegate void SerializeMessageFunc(RpcOutboundMessage message, ArrayPoolBuffer<byte> buffer);
 
     // Text message delimiters (matches master branch WebSocketChannelImpl)
     private const byte LineFeed = 0x0A; // LF
@@ -42,15 +43,13 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
     private readonly MeterSet _meters = StaticMeters;
     private readonly int _writeFrameSize;
-    private readonly int _minReadBufferSize;
-    private readonly int _minWriteBufferSize;
-    private readonly bool _useTaskYieldInFrameComposer;
     private readonly Channel<RpcOutboundMessage> _writeChannel;
     private readonly ChannelWriter<RpcOutboundMessage> _writeChannelWriter;
     private readonly AsyncTaskMethodBuilder _whenCompletedSource;
     private readonly Task _whenCompleted;
-    private readonly ArrayPoolBuffer<byte> _writeBuffer;
     private readonly RpcFrameDelayer? _frameDelayer;
+    private ArrayPoolBuffer<byte> _writeBuffer;
+    private ArrayPoolBuffer<byte> _flushingBuffer;
     private int _getAsyncEnumeratorCounter;
 
     public bool OwnsWebSocketOwner { get; set; } = true;
@@ -90,15 +89,13 @@ public sealed class RpcWebSocketTransport : RpcTransport
         _whenCompletedSource = AsyncTaskMethodBuilderExt.New();
         _whenCompleted = _whenCompletedSource.Task;
 
-        _minReadBufferSize = settings.MinReadBufferSize;
-        _minWriteBufferSize = settings.MinWriteBufferSize;
         _writeFrameSize = settings.WriteFrameSize;
-        _useTaskYieldInFrameComposer = settings.UseTaskYieldInFrameComposer;
         if (_writeFrameSize <= 0)
             throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.WriteFrameSize)} must be positive.");
 
-        _writeBuffer = new ArrayPoolBuffer<byte>(_minWriteBufferSize, mustClear: false);
         _frameDelayer = settings.FrameDelayerFactory?.Invoke();
+        _writeBuffer = new ArrayPoolBuffer<byte>(Settings.MinWriteBufferSize, mustClear: false);
+        _flushingBuffer = new ArrayPoolBuffer<byte>(Settings.MinWriteBufferSize, mustClear: false);
 
         _writeChannel = ChannelExt.Create<RpcOutboundMessage>(settings.WriteChannelOptions);
         _writeChannelWriter = _writeChannel.Writer;
@@ -110,6 +107,8 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 var whenStopped = TaskExt.NeverEnding(StopToken);
                 var whenWriterCompleted = Task.Run(RunWriter, CancellationToken.None);
                 await Task.WhenAny(whenStopped, _whenCompleted, whenWriterCompleted).SilentAwait(false);
+
+                // Stop everything
                 StopTokenSource.Cancel(); // Stops writer loop (and reader loop)
                 TryComplete(); // Stops writes
                 await whenWriterCompleted.ConfigureAwait(false); // RunWriter never throws
@@ -118,9 +117,14 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 // Drain remaining pending messages (if any)
                 while (_writeChannel.Reader.TryRead(out var message))
                     message.CompleteWhenSerialized(new ChannelClosedException());
-                _writeBuffer.Dispose();
 
                 await CloseWebSocket(null).ConfigureAwait(false); // CloseWebSocket never throws
+
+                // It's safer to dispose the buffers here rather than in 'finally',
+                // coz if something fails and they're somehow still used,
+                // we simply won't return them back to the pool, so GC will take care of them.
+                _flushingBuffer.Dispose();
+                _writeBuffer.Dispose();
             }
             catch (Exception e) {
                 Log.LogError(e, "Error in WebSocketRpcTransport.WhenClosed, this should never happen");
@@ -194,10 +198,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 ? (SerializeMessageFunc)SerializeText
                 : SerializeBinary;
             while (await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false)) {
-                retryRead:
-                var mustRetryRead = false;
                 while (reader.TryRead(out var message)) {
-                    mustRetryRead = _useTaskYieldInFrameComposer;
                     try {
                         serializeMessage(message, _writeBuffer);
                         message.CompleteWhenSerialized();
@@ -205,15 +206,10 @@ public sealed class RpcWebSocketTransport : RpcTransport
                     catch (Exception e) {
                         message.CompleteWhenSerialized(e);
                     }
-
                     if (_writeBuffer.WrittenCount >= _writeFrameSize) {
                         await lastFlushTask.ConfigureAwait(false);
                         lastFlushTask = FlushFrame();
                     }
-                }
-                if (mustRetryRead) {
-                    await Task.Yield();
-                    goto retryRead;
                 }
 
                 // Final flush before await
@@ -306,66 +302,52 @@ public sealed class RpcWebSocketTransport : RpcTransport
     [MethodImpl(MethodImplOptions.NoInlining)]
     private Task FlushFrame()
     {
-        var frame = _writeBuffer.ToArrayOwnerAndReset(_minWriteBufferSize);
-        var sendTask = WebSocket
-            .SendAsync(frame.Memory, MessageType, endOfMessage: true, CancellationToken.None);
-        if (!sendTask.IsCompletedSuccessfully)
-#pragma warning disable CA2025
-            return CompleteAsync(sendTask, frame);
-#pragma warning restore CA2025
+        // Swap _flushingBuffer and _writeBuffer
+        (_flushingBuffer, _writeBuffer) = (_writeBuffer, _flushingBuffer);
+        var frame = _flushingBuffer.WrittenMemory;
+        _writeBuffer.Renew(Settings.MinWriteBufferSize, Settings.MaxWriteBufferSize);
 
         _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
-        frame.Dispose();
-        return Task.CompletedTask;
-
-        async Task CompleteAsync(ValueTask sendTask1, ArrayOwner<byte> frame1) {
-            try {
-                await sendTask1.ConfigureAwait(false);
-                _meters.OutgoingFrameSizeHistogram.Record(frame1.Length);
-            }
-            finally {
-                frame1.Dispose();
-            }
-        }
+        return WebSocket.SendAsync(frame, MessageType, endOfMessage: true, CancellationToken.None).AsTask();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void SerializeBinary(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
+    private void SerializeBinary(RpcOutboundMessage message, ArrayPoolBuffer<byte> buffer)
     {
         _meters.OutgoingItemCounter.Add(1);
-        var startOffset = writeBuffer.WrittenCount;
+        var startOffset = buffer.WrittenCount;
         try {
             // Binary format: use 4-byte size prefix
-            writeBuffer.GetSpan(64);
-            writeBuffer.Advance(4);
-            MessageSerializer.Write(writeBuffer, message);
-            var size = writeBuffer.WrittenCount - startOffset;
-            writeBuffer.WrittenSpan.WriteUnchecked(size, startOffset);
+            buffer.GetSpan(64);
+            buffer.Advance(4);
+            MessageSerializer.Write(buffer, message);
+            var size = buffer.WrittenCount - startOffset;
+            buffer.WrittenSpan.WriteUnchecked(size, startOffset);
         }
         catch (Exception e) {
-            writeBuffer.Position = startOffset;
+            buffer.Position = startOffset;
             ErrorLog?.LogError(e, "Couldn't serialize the outbound message: {Message}", message);
             throw;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void SerializeText(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
+    private void SerializeText(RpcOutboundMessage message, ArrayPoolBuffer<byte> buffer)
     {
         _meters.OutgoingItemCounter.Add(1);
-        var startOffset = writeBuffer.WrittenCount;
+        var startOffset = buffer.WrittenCount;
         try {
             // Text format: use LF+RS delimiter between messages (no size prefix)
             if (startOffset != 0) {
-                var delimiterSpan = writeBuffer.GetSpan(2);
+                var delimiterSpan = buffer.GetSpan(2);
                 delimiterSpan[0] = LineFeed;
                 delimiterSpan[1] = RecordSeparator;
-                writeBuffer.Advance(2);
+                buffer.Advance(2);
             }
-            MessageSerializer.Write(writeBuffer, message);
+            MessageSerializer.Write(buffer, message);
         }
         catch (Exception e) {
-            writeBuffer.Position = startOffset;
+            buffer.Position = startOffset;
             ErrorLog?.LogError(e, "Couldn't serialize the outbound message: {Message}", message);
             throw;
         }
@@ -373,19 +355,21 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
     private async IAsyncEnumerable<RpcInboundMessage> ReadAllImpl([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        var minReadBufferSize = Settings.MinReadBufferSize;
+        var maxReadBufferSize = Settings.MaxReadBufferSize;
         using var commonCts = cancellationToken.LinkWith(StopToken);
         using var commonTokenRegistration = commonCts.Token.Register(() => _ = DisposeAsync());
 
         // Start with a non-pooled buffer for initial reads
-        var readBuffer = new ArrayPoolBuffer<byte>(_minReadBufferSize, false);
+        var buffer = new ArrayPoolBuffer<byte>(minReadBufferSize, false);
         var tryDeserialize = IsTextSerializer
             ? (TryDeserializeMessageFunc)TryDeserializeText
             : TryDeserializeBinary;
 
         try {
             while (true) {
-                var readMemory = readBuffer.GetMemory(_minReadBufferSize);
-                var arraySegment = new ArraySegment<byte>(readBuffer.Array, readBuffer.WrittenCount, readMemory.Length);
+                var readMemory = buffer.GetMemory(minReadBufferSize);
+                var arraySegment = new ArraySegment<byte>(buffer.Array, buffer.WrittenCount, readMemory.Length);
                 WebSocketReceiveResult r;
                 try {
                     r = await WebSocket.ReceiveAsync(arraySegment, CancellationToken.None).ConfigureAwait(false);
@@ -398,38 +382,37 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 if (r.MessageType != MessageType)
                     throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
 
-                readBuffer.Advance(r.Count);
+                buffer.Advance(r.Count);
                 _meters.IncomingFrameSizeHistogram.Record(r.Count);
                 if (!r.EndOfMessage)
                     continue; // Continue reading into the same buffer
 
-                var totalLength = readBuffer.WrittenCount;
-                var frame = readBuffer.ToArrayOwnerAndReset(_minReadBufferSize);
+                var array = buffer.Array;
+                var totalLength = buffer.WrittenCount;
                 var offset = 0;
                 while (offset < totalLength) { // Zero-length frames are skipped here
-                    var message = tryDeserialize(frame, ref offset, totalLength);
+                    var message = tryDeserialize(array, ref offset, totalLength);
                     if (message is not null)
                         yield return message;
                 }
                 // The code that uses frame's data (RpcInboundMessage.ArgumentData) is running synchronously,
-                // so if we're here, the frame's array can return to the pool.
-                frame.Dispose();
+                // so if we're here, the buffer can be reused.
+                buffer.Renew(minReadBufferSize, maxReadBufferSize);
             }
         }
         finally {
-            readBuffer.Dispose();
+            buffer.Dispose();
             _ = DisposeAsync();
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private RpcInboundMessage? TryDeserializeBinary(ArrayOwner<byte> frame, ref int offset, int totalLength)
+    private RpcInboundMessage? TryDeserializeBinary(byte[] array, ref int offset, int totalLength)
     {
         _meters.IncomingItemCounter.Add(1);
         int size = 0;
         bool isSizeValid = false;
         try {
-            var array = frame.Array;
             size = array.AsSpan(offset).ReadUnchecked<int>();
             isSizeValid = size > 0 && offset + size <= totalLength;
             if (!isSizeValid)
@@ -445,7 +428,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
             return inboundMessage;
         }
         catch (Exception e) {
-            var remaining = frame.Array.AsMemory(offset, totalLength - offset);
+            var remaining = array.AsMemory(offset, totalLength - offset);
             ErrorLog?.LogError(e, "Couldn't deserialize: {Data}", new TextOrBytes(DataFormat.Bytes, remaining));
             offset = isSizeValid ? offset + size : totalLength;
             return null;
@@ -453,10 +436,9 @@ public sealed class RpcWebSocketTransport : RpcTransport
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private RpcInboundMessage? TryDeserializeText(ArrayOwner<byte> frame, ref int offset, int totalLength)
+    private RpcInboundMessage? TryDeserializeText(byte[] array, ref int offset, int totalLength)
     {
         _meters.IncomingItemCounter.Add(1);
-        var array = frame.Array;
         var remaining = array.AsSpan(offset, totalLength - offset);
 
         // Find Record Separator (RS) - messages are delimited by LF+RS
