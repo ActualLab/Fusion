@@ -87,6 +87,43 @@ public static partial class AsyncTaskMethodBuilderExt
         }
     }
 
+    // TrySetXxxNoCheck
+
+    public static bool TrySetResulNoCheck<T>(this AsyncTaskMethodBuilder<T> target, T result)
+    {
+        try {
+            target.SetResult(result);
+            return true;
+        }
+        catch (InvalidOperationException) {
+            return false;
+        }
+    }
+
+    public static bool TrySetExceptionNoCheck<T>(this AsyncTaskMethodBuilder<T> target, Exception exception)
+    {
+        try {
+            target.SetException(exception);
+            return true;
+        }
+        catch (InvalidOperationException) {
+            return false;
+        }
+    }
+
+    public static bool TrySetCanceledNoCheck<T>(this AsyncTaskMethodBuilder<T> target)
+        => target.TrySetCanceledNoCheck(CancellationTokenExt.Canceled);
+    public static bool TrySetCanceledNoCheck<T>(this AsyncTaskMethodBuilder<T> target, CancellationToken cancellationToken)
+    {
+        try {
+            target.SetException(new OperationCanceledException(cancellationToken));
+            return true;
+        }
+        catch (InvalidOperationException) {
+            return false;
+        }
+    }
+
     // WithXxx
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

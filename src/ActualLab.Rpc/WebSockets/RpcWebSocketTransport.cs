@@ -188,8 +188,8 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
             var reader = _writeChannel.Reader;
             var serializeMessage = IsTextSerializer
-                ? (SerializeMessageFunc)SerializeMessageText
-                : SerializeMessageBinary;
+                ? (SerializeMessageFunc)SerializeText
+                : SerializeBinary;
             while (await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false)) {
                 while (reader.TryRead(out var message)) {
                     try {
@@ -230,8 +230,8 @@ public sealed class RpcWebSocketTransport : RpcTransport
         Task<bool>? waitToReadTask = null;
         var reader = _writeChannel.Reader;
         var serialize = IsTextSerializer
-            ? (SerializeMessageFunc)SerializeMessageText
-            : SerializeMessageBinary;
+            ? (SerializeMessageFunc)SerializeText
+            : SerializeBinary;
 
         while (true) {
             // When we are here, the sync read part is completed, so WaitToReadAsync will likely await.
@@ -322,7 +322,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void SerializeMessageBinary(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
+    private void SerializeBinary(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
     {
         _meters.OutgoingItemCounter.Add(1);
         var startOffset = writeBuffer.WrittenCount;
@@ -342,7 +342,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void SerializeMessageText(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
+    private void SerializeText(RpcOutboundMessage message, ArrayPoolBuffer<byte> writeBuffer)
     {
         _meters.OutgoingItemCounter.Add(1);
         var startOffset = writeBuffer.WrittenCount;
