@@ -137,3 +137,43 @@ dotnet build ActualChat.CI.slnf
 dotnet build ActualChat.sln
 ```
 
+# Testing
+
+## Debugging Test Failures
+
+**Start with the simplest test**: If tests take too long, hang, or multiple tests fail, find the simplest failing test in the group and debug that one first. Once fixed, move on to larger/more complex tests.
+
+**Isolate issues with small tests**: If a larger test fails and you have a reasonable guess why, write a small dedicated test that isolates the specific issue. This gives you faster iteration cycles. Keep these isolation tests in the codebase—they have value as regression tests.
+
+## Running Single Test Cases from Theories
+
+xUnit `[Theory]` tests with `[InlineData]` don't allow running a single test case in isolation. To debug a specific case:
+
+1. Create a temporary `[Fact]` helper that calls the theory method with the specific arguments
+2. Debug using this helper fact
+3. **Remove the helper fact** after you've finished debugging—these are temporary scaffolding only
+
+```csharp
+// Temporary helper - DELETE after debugging
+[Fact]
+public void MyTheory_SpecificCase() => MyTheory("specificArg", 42);
+
+[Theory]
+[InlineData("case1", 1)]
+[InlineData("specificArg", 42)]  // The case you're debugging
+public void MyTheory(string arg1, int arg2) { /* ... */ }
+```
+
+## Timeouts
+
+Choose reasonable timeouts based on expected execution time. If a test should complete in seconds, don't set a 5-minute timeout—use 30 seconds or less. This helps you iterate faster.
+
+**Rule of thumb**: When working on a single test, you shouldn't wait more than 1 minute if you know it should run faster. Pick a timeout that matches your expectations.
+
+## Logging
+
+If you're missing information in test logs:
+
+1. Use `Warning` level logging—it's more likely to appear in output
+2. Worst case: use `Console.Error.WriteLine()` to ensure messages appear in test output
+
