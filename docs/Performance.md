@@ -73,17 +73,17 @@ The benchmark measures throughput of a simple repository-style user lookup servi
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| Regular Service | 136.91K calls/s | |
-| Fusion Service | 263.62M calls/s | **~1,926x** |
+| Regular Service | 136.40K calls/s | |
+| Fusion Service | 264.71M calls/s | **~1,941x** |
 
 ### Remote Services
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| HTTP Client → Regular Service | 99.66K calls/s | |
-| HTTP Client → Fusion Service | 420.67K calls/s | **~4.2x** |
-| ActualLab.Rpc Client → Fusion Service | 6.10M calls/s | **~61x** |
-| Fusion Client → Fusion Service | 223.15M calls/s | **~2,239x** |
+| HTTP Client → Regular Service | 100.33K calls/s | |
+| HTTP Client → Fusion Service | 423.41K calls/s | **~4.2x** |
+| ActualLab.Rpc Client → Fusion Service | 5.85M calls/s | **~58x** |
+| Fusion Client → Fusion Service | 222.06M calls/s | **~2,214x** |
 
 ## RpcBenchmark.cmd from ActualLab.Fusion.Samples
 
@@ -95,14 +95,16 @@ Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so
 
 | Test | ActualLab.Rpc | gRPC | SignalR |
 |------|---------------|------|---------|
-| Sum | 8.87M calls/s | 1.11M calls/s | 5.34M calls/s |
-| GetUser | 7.81M calls/s | 1.09M calls/s | 4.43M calls/s |
-| SayHello | 5.58M calls/s | 1.03M calls/s | 2.23M calls/s |
+| Sum | 7.34M calls/s | 1.11M calls/s | 5.35M calls/s |
+| GetUser | 6.65M calls/s | 1.10M calls/s | 4.41M calls/s |
+| SayHello | 4.98M calls/s | 1.02M calls/s | 2.24M calls/s |
 
 ### Streams
 
+Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte items, Stream10K = 10KB items.
+
 | Test | ActualLab.Rpc | gRPC | SignalR |
 |------|---------------|------|---------|
-| Stream1 | 95.10M items/s | 38.75M items/s | 17.11M items/s |
-| Stream100 | 38.90M items/s | 20.63M items/s | 13.61M items/s |
-| Stream10K | 320.04K items/s | 636.84K items/s | 387.00K items/s |
+| Stream1 | 95.39M items/s | 38.25M items/s | 17.15M items/s |
+| Stream100 | 46.46M items/s | 20.77M items/s | 13.78M items/s |
+| Stream10K | 941.40K items/s | 691.20K items/s | 460.80K items/s |

@@ -10,17 +10,17 @@ Below are results from [Run-Benchmark.cmd from Fusion Samples](https://github.co
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| Regular Service | 136.91K calls/s | |
-| Fusion Service | 263.62M calls/s | **~1,926x** |
+| Regular Service | 136.40K calls/s | |
+| Fusion Service | 264.71M calls/s | **~1,941x** |
 
 **Remote Services:**
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| HTTP Client → Regular Service | 99.66K calls/s | |
-| HTTP Client → Fusion Service | 420.67K calls/s | **~4.2x** |
-| ActualLab.Rpc Client → Fusion Service | 6.10M calls/s | **~61x** |
-| Fusion Client → Fusion Service | 223.15M calls/s | **~2,239x** |
+| HTTP Client → Regular Service | 100.33K calls/s | |
+| HTTP Client → Fusion Service | 423.41K calls/s | **~4.2x** |
+| ActualLab.Rpc Client → Fusion Service | 5.85M calls/s | **~58x** |
+| Fusion Client → Fusion Service | 222.06M calls/s | **~2,214x** |
 
 ## Key Takeaways
 

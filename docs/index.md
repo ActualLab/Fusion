@@ -31,7 +31,7 @@ features:
     details: Like MSBuild or Make, but for every method on your API and backend. Mark one call result as changed, and every result depending on it gets invalidated—even on remote machines.
   - icon: 📡
     title: Fastest RPC on .NET
-    details: ActualLab.Rpc is 8x faster than gRPC for calls, 2-3x faster for streaming.
+    details: ActualLab.Rpc is 6x faster than gRPC for calls, 2-3x faster for streaming.
   - icon: ✈️
     title: Offline Mode Ready
     details: Use persistent client-side caching to let your clients work offline and sync when connected. Reduce startup traffic to kilobytes even for very large working sets.
@@ -119,8 +119,8 @@ Fusion doesn't just add real-time—it makes your app **thousands of times faste
 | Scenario | Without Fusion | With Fusion | Speedup |
 |----------|----------------|-------------|---------|
 | Local service, minimal writes | 38.6K calls/s | **313.8M calls/s** | **8,127x** |
-| Local service, continuous writes | 136.9K calls/s | **263.6M calls/s** | **1,926x** |
-| Remote service, continuous writes | 99.7K calls/s (REST) | **223.2M calls/s** | **2,239x** |
+| Local service, continuous writes | 136.4K calls/s | **264.7M calls/s** | **1,941x** |
+| Remote service, continuous writes | 100.3K calls/s (REST) | **222.1M calls/s** | **2,214x** |
 
 <p style="font-size: 0.85em; color: #666; margin-top: 0.5rem;">
 Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark details</a>.
@@ -130,12 +130,12 @@ Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark det
 
 | Framework | RPC Calls/sec | Streaming Items/sec |
 |-----------|---------------|---------------------|
-| **ActualLab.Rpc** | **8.87M** | **95.10M** |
-| SignalR | 5.34M | 17.11M |
-| gRPC | 1.11M | 38.75M |
+| **ActualLab.Rpc** | **7.34M** | **95.39M** |
+| SignalR | 5.35M | 17.15M |
+| gRPC | 1.11M | 38.25M |
 
 <p style="font-size: 0.85em; color: #666;">
-8x faster than gRPC for calls. 5.6x faster than SignalR for streaming.
+6.6x faster than gRPC for calls. 5.6x faster than SignalR for streaming.
 </p>
 
 ## How It Works: The MSBuild/Make Analogy
