@@ -49,7 +49,8 @@ public sealed class RpcWebSocketTransport : RpcTransport
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
     public RpcPeer Peer { get; }
-    public RpcByteMessageSerializer MessageSerializer { get; }
+    public RpcMessageSerializer MessageSerializer { get; }
+    public WebSocketMessageType MessageType { get; }
     public ILogger? Log { get; }
     public ILogger? ErrorLog { get; }
 
@@ -67,7 +68,10 @@ public sealed class RpcWebSocketTransport : RpcTransport
         WebSocketOwner = webSocketOwner;
         WebSocket = webSocketOwner.WebSocket;
         Peer = peer;
-        MessageSerializer = (RpcByteMessageSerializer)peer.MessageSerializer;
+        MessageSerializer = peer.MessageSerializer;
+        MessageType = MessageSerializer is RpcTextMessageSerializer
+            ? WebSocketMessageType.Text
+            : WebSocketMessageType.Binary;
 
         Log = webSocketOwner.Services.LogFor(GetType());
         ErrorLog = Log.IfEnabled(LogLevel.Error);
@@ -281,12 +285,14 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
         var frame = _writeBuffer.ToArrayOwnerAndReset(_minWriteBufferSize);
         var sendTask = WebSocket
-            .SendAsync(frame.Memory, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
+            .SendAsync(frame.Memory, MessageType, endOfMessage: true, CancellationToken.None);
         if (!sendTask.IsCompletedSuccessfully)
+#pragma warning disable CA2025
             return CompleteAsync(sendTask, frame);
+#pragma warning restore CA2025
 
-        frame.Dispose();
         _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
+        frame.Dispose();
         return Task.CompletedTask;
 
         async Task CompleteAsync(ValueTask sendTask1, ArrayOwner<byte> frame1) {
@@ -344,8 +350,8 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 }
                 if (r.MessageType == WebSocketMessageType.Close)
                     yield break;
-                if (r.MessageType != WebSocketMessageType.Binary)
-                    throw Errors.InvalidWebSocketMessageType(r.MessageType, WebSocketMessageType.Binary);
+                if (r.MessageType != MessageType)
+                    throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
 
                 readBuffer.Advance(r.Count);
                 _meters.IncomingFrameSizeHistogram.Record(r.Count);
