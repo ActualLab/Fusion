@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
 using ActualLab.Channels;
@@ -327,7 +328,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
             buffer.Advance(4);
             MessageSerializer.Write(buffer, message);
             var size = buffer.WrittenCount - startOffset;
-            buffer.WrittenSpan.WriteUnchecked(size, startOffset);
+            BinaryPrimitives.WriteInt32LittleEndian(buffer.Array.AsSpan(startOffset), size);
         }
         catch (Exception e) {
             buffer.Position = startOffset;
@@ -418,7 +419,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
         int size = 0;
         bool isSizeValid = false;
         try {
-            size = array.AsSpan(offset).ReadUnchecked<int>();
+            size = BinaryPrimitives.ReadInt32LittleEndian(array.AsSpan(offset));
             isSizeValid = size > 0 && offset + size <= totalLength;
             if (!isSizeValid)
                 throw Errors.InvalidItemSize();

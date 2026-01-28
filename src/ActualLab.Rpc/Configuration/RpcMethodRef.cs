@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using MessagePack;
 
 namespace ActualLab.Rpc;
@@ -85,7 +86,7 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 
         var span = (Span<byte>)stackalloc byte[utf8Name.Length + 4];
         var prefix = unchecked((uint)(67211L * utf8Name.Length));
-        span.WriteUnchecked(prefix);
+        BinaryPrimitives.WriteUInt32LittleEndian(span, prefix);
         utf8Name.Span.CopyTo(span[4..]);
         return span.GetXxHash3();
     }

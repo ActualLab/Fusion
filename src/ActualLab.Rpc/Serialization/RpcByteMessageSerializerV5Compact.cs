@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using ActualLab.Internal;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
@@ -103,7 +104,7 @@ public class RpcByteMessageSerializerV5Compact(RpcPeer peer) : RpcByteMessageSer
             throw Errors.SizeLimitExceeded();
         }
 
-        buffer.Array.AsSpan(startOffset + argumentDataLengthOffset).WriteUnchecked(argumentDataLength);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Array.AsSpan(startOffset + argumentDataLengthOffset), argumentDataLength);
         WriteHeaders(buffer, message);
     }
 

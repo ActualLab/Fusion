@@ -1,4 +1,4 @@
-using ActualLab.Internal;
+using System.Buffers.Binary;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.Rpc.Infrastructure;
@@ -108,7 +108,7 @@ public class RpcByteMessageSerializerV5(RpcPeer peer) : RpcByteMessageSerializer
         }
 
         // Backfill fixed 4-byte length prefix
-        buffer.Array.AsSpan(startOffset + argumentDataLengthOffset).WriteUnchecked(argumentDataLength);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Array.AsSpan(startOffset + argumentDataLengthOffset), argumentDataLength);
 
         WriteHeaders(buffer, message);
     }

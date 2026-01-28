@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Buffers.Binary;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.OS;
@@ -30,8 +31,8 @@ public static class ByteTypeSerializer
             if (nameSpan.Length > 0xFFFF)
                 throw new ArgumentOutOfRangeException(nameof(type), "Serialized type length exceeds 65535 bytes.");
 
-            writer.Remaining.WriteUnchecked((ushort)nameSpan.Length); // Length
-            writer.Remaining.WriteUnchecked(unchecked((ushort)nameSpan.GetXxHash3L()), 2); // 2-byte hash for faster lookups
+            BinaryPrimitives.WriteUInt16LittleEndian(writer.Remaining, (ushort)nameSpan.Length); // Length
+            BinaryPrimitives.WriteUInt16LittleEndian(writer.Remaining.Slice(2), unchecked((ushort)nameSpan.GetXxHash3L())); // 2-byte hash for faster lookups
             nameSpan.CopyTo(writer.Remaining[4..]);
             buffer.Advance(fullLength);
             return buffer.WrittenSpan.ToArray().AsByteString();
@@ -41,7 +42,7 @@ public static class ByteTypeSerializer
     public static Type? FromBytes(ByteString bytes)
         => FromBytesCache.GetOrAdd(bytes, static b => {
             var memory = b.Bytes;
-            var length = memory.Span.ReadUnchecked<ushort>();
+            var length = BinaryPrimitives.ReadUInt16LittleEndian(memory.Span);
             switch (length) {
             case 0:
                 return null;
@@ -87,7 +88,7 @@ public static class ByteTypeSerializer
 
     public static Type? ReadItemType(ref ReadOnlyMemory<byte> data)
     {
-        var length = data.Span.ReadUnchecked<ushort>();
+        var length = BinaryPrimitives.ReadUInt16LittleEndian(data.Span);
         switch (length) {
         case 0:
             data = data[2..];

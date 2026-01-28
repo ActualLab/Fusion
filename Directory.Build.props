@@ -12,7 +12,7 @@
   <!-- Multitargeting -->
   <PropertyGroup Condition="'$(UseMultitargeting)' == ''">
     <UseMultitargeting>false</UseMultitargeting>
-    <!-- <UseMultitargeting>true</UseMultitargeting> -->
+<!--    <UseMultitargeting>true</UseMultitargeting>-->
     <TargetFramework Condition="!$(UseMultitargeting)">net10.0</TargetFramework>
   </PropertyGroup>
 

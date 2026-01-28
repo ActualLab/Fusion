@@ -102,18 +102,70 @@ public class SpanWriterAndMemoryWriterTest(ITestOutputHelper @out) : TestBase(@o
     }
 
     [Fact]
-    public void AltVarUInt64Test()
+    public void L1SpanTest()
     {
-        var memory = new Memory<byte>(new byte[64]);
-        foreach (var value in UInt64Values()) {
+        var memory = new Memory<byte>(new byte[512]);
+        foreach (var bytes in ByteSequences(256)) {
             var writer = new SpanWriter(memory.Span);
-            writer.WriteAltVarUInt64(value);
-            writer.Position.Should().BeGreaterThanOrEqualTo(1);
-            writer.Position.Should().BeLessThanOrEqualTo(10);
+            writer.WriteL1Span(bytes);
+            writer.Position.Should().Be(1 + bytes.Length);
 
             var reader = new MemoryReader(memory);
-            var readValue = reader.ReadAltVarUInt64();
-            readValue.Should().Be(value);
+            var readSpan = reader.ReadL1Span();
+            readSpan.Length.Should().Be(bytes.Length);
+            readSpan.ToArray().Should().Equal(bytes);
+            reader.Offset.Should().Be(writer.Position);
+
+            reader = new MemoryReader(memory);
+            var readMemory = reader.ReadL1Memory();
+            readMemory.Length.Should().Be(bytes.Length);
+            readMemory.ToArray().Should().Equal(bytes);
+            reader.Offset.Should().Be(writer.Position);
+        }
+    }
+
+    [Fact]
+    public void L2SpanTest()
+    {
+        var memory = new Memory<byte>(new byte[70000]);
+        foreach (var bytes in ByteSequences(260)) {
+            var writer = new SpanWriter(memory.Span);
+            writer.WriteL2Span(bytes);
+            writer.Position.Should().Be(2 + bytes.Length);
+
+            var reader = new MemoryReader(memory);
+            var readSpan = reader.ReadL2Span();
+            readSpan.Length.Should().Be(bytes.Length);
+            readSpan.ToArray().Should().Equal(bytes);
+            reader.Offset.Should().Be(writer.Position);
+
+            reader = new MemoryReader(memory);
+            var readMemory = reader.ReadL2Memory();
+            readMemory.Length.Should().Be(bytes.Length);
+            readMemory.ToArray().Should().Equal(bytes);
+            reader.Offset.Should().Be(writer.Position);
+        }
+    }
+
+    [Fact]
+    public void L4SpanTest()
+    {
+        var memory = new Memory<byte>(new byte[1024]);
+        foreach (var bytes in ByteSequences(260)) {
+            var writer = new SpanWriter(memory.Span);
+            writer.WriteL4Span(bytes);
+            writer.Position.Should().Be(4 + bytes.Length);
+
+            var reader = new MemoryReader(memory);
+            var readSpan = reader.ReadL4Span(1024);
+            readSpan.Length.Should().Be(bytes.Length);
+            readSpan.ToArray().Should().Equal(bytes);
+            reader.Offset.Should().Be(writer.Position);
+
+            reader = new MemoryReader(memory);
+            var readMemory = reader.ReadL4Memory(1024);
+            readMemory.Length.Should().Be(bytes.Length);
+            readMemory.ToArray().Should().Equal(bytes);
             reader.Offset.Should().Be(writer.Position);
         }
     }
@@ -129,9 +181,15 @@ public class SpanWriterAndMemoryWriterTest(ITestOutputHelper @out) : TestBase(@o
             writer.Position.Should().BeLessThanOrEqualTo(bytes.Length + 5);
 
             var reader = new MemoryReader(memory);
-            var readValue = reader.ReadLVarSpan(1024);
-            readValue.Length.Should().Be(bytes.Length);
-            readValue.ToArray().Should().Equal(bytes);
+            var readSpan = reader.ReadLVarSpan(1024);
+            readSpan.Length.Should().Be(bytes.Length);
+            readSpan.ToArray().Should().Equal(bytes);
+            reader.Offset.Should().Be(writer.Position);
+
+            reader = new MemoryReader(memory);
+            var readMemory = reader.ReadLVarMemory(1024);
+            readMemory.Length.Should().Be(bytes.Length);
+            readMemory.ToArray().Should().Equal(bytes);
             reader.Offset.Should().Be(writer.Position);
         }
     }

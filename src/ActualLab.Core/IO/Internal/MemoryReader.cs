@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using ActualLab.Internal;
 
 namespace ActualLab.IO.Internal;
@@ -22,30 +23,14 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
 
     public uint ReadUInt32()
     {
-        var span = Remaining;
-        var result = BitConverter.IsLittleEndian
-            ? span.ReadUnchecked<uint>(0)
-            : span[0]
-                | ((uint)span[1] << 8)
-                | ((uint)span[2] << 16)
-                | ((uint)span[3] << 24);
+        var result = BinaryPrimitives.ReadUInt32LittleEndian(Remaining);
         Advance(4);
         return result;
     }
 
     public ulong ReadUInt64()
     {
-        var span = Remaining;
-        var result = BitConverter.IsLittleEndian
-            ? span.ReadUnchecked<ulong>(0)
-            : span[0]
-                | ((ulong)span[1] << 8)
-                | ((ulong)span[2] << 16)
-                | ((ulong)span[3] << 24)
-                | ((ulong)span[4] << 32)
-                | ((ulong)span[5] << 40)
-                | ((ulong)span[6] << 48)
-                | ((ulong)span[7] << 56);
+        var result = BinaryPrimitives.ReadUInt64LittleEndian(Remaining);
         Advance(8);
         return result;
     }
@@ -66,24 +51,10 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return value;
     }
 
-    public ulong ReadAltVarUInt64()
-    {
-        var span = Remaining;
-        var size = span[0];
-        var result = size switch {
-            2 => span.ReadUnchecked<ushort>(1),
-            4 => span.ReadUnchecked<uint>(1),
-            8 => span.ReadUnchecked<ulong>(1),
-            _ => throw Errors.Format("Invalid message format."),
-        };
-        Advance(size + 1);
-        return result;
-    }
-
     public ReadOnlySpan<byte> ReadL1Span()
     {
         var span = Remaining;
-        var end = 1 + span.ReadUnchecked<byte>();
+        var end = 1 + span[0];
         var result = span[1..end];
         Advance(end);
         return result;
@@ -92,7 +63,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
     public ReadOnlyMemory<byte> ReadL1Memory()
     {
         var start = Offset + 1;
-        var end = start + Remaining.ReadUnchecked<byte>();
+        var end = start + Remaining[0];
         var result = Memory[start..end];
         Advance(end - start + 1);
         return result;
@@ -101,7 +72,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
     public ReadOnlySpan<byte> ReadL2Span()
     {
         var span = Remaining;
-        var end = 2 + span.ReadUnchecked<ushort>();
+        var end = 2 + BinaryPrimitives.ReadUInt16LittleEndian(span);
         var result = span[2..end];
         Advance(end);
         return result;
@@ -110,7 +81,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
     public ReadOnlyMemory<byte> ReadL2Memory()
     {
         var start = Offset + 2;
-        var end = start + Remaining.ReadUnchecked<ushort>();
+        var end = start + BinaryPrimitives.ReadUInt16LittleEndian(Remaining);
         var result = Memory[start..end];
         Advance(end - start + 2);
         return result;
@@ -119,7 +90,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
     public ReadOnlySpan<byte> ReadL4Span(int maxSize)
     {
         var span = Remaining;
-        var size = span.ReadUnchecked<int>();
+        var size = BinaryPrimitives.ReadInt32LittleEndian(span);
         if (size < 0 || size > maxSize)
             throw Errors.SizeLimitExceeded();
 
@@ -131,7 +102,7 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
 
     public ReadOnlyMemory<byte> ReadL4Memory(int maxSize)
     {
-        var size = Remaining.ReadUnchecked<int>();
+        var size = BinaryPrimitives.ReadInt32LittleEndian(Remaining);
         if (size < 0 || size > maxSize)
             throw Errors.SizeLimitExceeded();
 
