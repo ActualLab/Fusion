@@ -42,10 +42,13 @@ const mermaidConfig = {
       stroke: #5794F2 !important;
     }
     .edgeLabel {
-      background-color: #1e1b4b !important;
+      background: transparent !important;
       color: #D8D9DA !important;
       font-family: "Inter", sans-serif;
       font-size: 13px;
+    }
+    .labelBkg {
+      fill: #3D434B !important;
     }
     .cluster rect {
       fill: rgba(87, 148, 242, 0.05) !important;

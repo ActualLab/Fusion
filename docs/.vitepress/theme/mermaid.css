@@ -26,7 +26,6 @@
 .mermaid text {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
   font-size: 14px !important;
-  line-height: 1.2 !important;
 }
 
 /* Reset foreignObject which contains node labels */
@@ -37,7 +36,7 @@
 .mermaid foreignObject > div {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
   font-size: 14px !important;
-  line-height: 1.2 !important;
+  line-height: 1.5 !important;
   padding: 0 !important;
   margin: 0 !important;
   display: flex;
@@ -47,19 +46,38 @@
 
 /* Reset span inside nodes */
 .mermaid .nodeLabel,
-.mermaid .label,
-.mermaid .edgeLabel {
+.mermaid .label {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
   font-size: 14px !important;
-  line-height: 1.2 !important;
+  line-height: 1.5 !important;
   padding: 0 !important;
   margin: 0 !important;
   color: #D8D9DA !important;
 }
 
+/* Edge labels - key fix for Mermaid 11.x */
 .mermaid .edgeLabel {
-  background-color: #1e1b4b !important;
-  padding: 2px 4px !important;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 13px !important;
+  color: #D8D9DA !important;
+  background: transparent !important;
+  padding: 0 2px !important;
+}
+
+/* Critical: Fix p tag inside edge labels - VitePress styles break this */
+.mermaid .edgeLabel p,
+.vp-doc .mermaid .edgeLabel p {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.4 !important;
+  color: #D8D9DA !important;
+  background: transparent !important;
+  display: inline !important;
+}
+
+/* Style the actual label background element */
+.mermaid .labelBkg {
+  fill: #3D434B !important;
 }
 
 /* Fix node label containers */
@@ -80,8 +98,6 @@
 }
 
 /* Override VitePress .vp-doc p line-height leaking into mermaid */
-.mermaid p,
-div.mermaid p,
-[class*="mermaid"] p {
-  line-height: normal !important;
+.vp-doc .mermaid p {
+  line-height: 1.5 !important;
 }

@@ -216,11 +216,13 @@ flowchart TD
 ```mermaid
 flowchart TD
     subgraph Registration
+        direction TB
         Reg["commander.AddService&lt;OrderService&gt;()"]
         Reg --> Gen["Runtime&nbsp;generates:<br/>OrderServiceProxy&nbsp;:&nbsp;OrderService"]
     end
 
     subgraph CallFlow ["Call&nbsp;Flow"]
+        direction TB
         Direct["orderService.CreateOrder(cmd,&nbsp;ct)"] --> Proxy["OrderServiceProxy.CreateOrder()"]
         Proxy --> Check{"CommandContext<br/>exists&nbsp;and&nbsp;matches?"}
         Check -->|No| Commander["Commander.Call(CreateOrderCommand)"]
