@@ -123,9 +123,9 @@ Fusion doesn't just add real-time—it makes your app **thousands of times faste
 
 | Scenario | Without Fusion | With Fusion | Speedup |
 |----------|----------------|-------------|---------|
-| Local service, minimal writes | 38.6K calls/s | **313.8M calls/s** | **8,127x** |
-| Local service, continuous writes | 136.4K calls/s | **264.7M calls/s** | **1,941x** |
-| Remote service, continuous writes | 100.3K calls/s (REST) | **222.1M calls/s** | **2,214x** |
+| Local service, minimal writes | 38.6K calls/s | **313.8M calls/s** | <span style="color: #22c55e; font-weight: bold;">8,127x</span> |
+| Local service, continuous writes | 136.4K calls/s | **264.7M calls/s** | <span style="color: #22c55e; font-weight: bold;">1,941x</span> |
+| Remote service, continuous writes | 100.3K calls/s (REST) | **222.1M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,214x</span> |
 
 <p style="font-size: 0.85em; color: #666; margin-top: 0.5rem;">
 Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark details</a>.
@@ -138,6 +138,7 @@ Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark det
 | **ActualLab.Rpc** | **7.34M** | **95.39M** |
 | SignalR | 5.35M | 17.15M |
 | gRPC | 1.11M | 38.25M |
+| **Speedup** | <span style="color: #22c55e; font-weight: bold;">1.4..6.6x</span> | <span style="color: #22c55e; font-weight: bold;">2.5..5.6x</span> |
 
 <p style="font-size: 0.85em; color: #666;">
 6.6x faster than gRPC for calls. 5.6x faster than SignalR for streaming.
@@ -359,7 +360,7 @@ Questions? Want to see how others use Fusion? Join the discussion:
 <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin: 1.5rem 0;">
 
 <a href="https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: #BE145B; color: white; border-radius: 6px; font-weight: 500; text-decoration: none;">
-💬 Fusion Place @ Voxt
+💬 Fusion @ Voxt
 </a>
 
 <a href="https://github.com/ActualLab/Fusion" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: #24292e; color: white; border-radius: 6px; font-weight: 500; text-decoration: none;">
