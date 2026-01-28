@@ -93,6 +93,7 @@ public abstract class TestWebHostBase : ITestWebHost
             options.ValidateOnBuild = true;
         });
         builder.ConfigureServices(services => {
+            services.AddSingleton<TestServiceProviderTag>();
             services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(3));
         });
 
