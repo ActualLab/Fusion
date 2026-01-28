@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
-## 12.0.27+103636f2
+## 12.0.30+bb8f7bd1
 
 Release date: 2026-01-28
 
@@ -20,6 +20,8 @@ Release date: 2026-01-28
 
 ### Performance
 - Improved RPC performance dedicated path for little endian serialization and delegate caching
+- Eliminated `RpcPeer.Send` indirection layer - `RpcTransport.Send` now handles error handling directly,
+  reducing call stack depth and improving RPC throughput
 
 ### Fixed
 - Big endian system support: serialization, RPC, and all dependent code now correctly use
