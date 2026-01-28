@@ -20,6 +20,8 @@ features:
   - icon: ⚡
     title: Blazing Fast
     details: 20 million cache-resolving calls per core per second. 1,000x–8,000x faster APIs than traditional approaches.
+    link: /Performance#results
+    linkText: See benchmarks
   - icon: 🪄
     title: Real-Time, Zero Effort
     details: Automatic state synchronization across your server cluster and every client connected to it. No SignalR hubs. No event handlers. No manual pub/sub.
@@ -32,6 +34,8 @@ features:
   - icon: 📡
     title: Fastest RPC on .NET
     details: ActualLab.Rpc is 6x faster than gRPC for calls, 2-3x faster for streaming.
+    link: /Performance#rpcbenchmark-cmd-from-actuallab-fusion-samples
+    linkText: See benchmarks
   - icon: ✈️
     title: Offline Mode Ready
     details: Use persistent client-side caching to let your clients work offline and sync when connected. Reduce startup traffic to kilobytes even for very large working sets.

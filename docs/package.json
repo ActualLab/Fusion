@@ -16,5 +16,9 @@
     "mermaid": "^11.12.2",
     "vitepress": "^1.6.4",
     "vitepress-plugin-mermaid": "^2.0.17"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "vue-chartjs": "^5.3.3"
   }
 }

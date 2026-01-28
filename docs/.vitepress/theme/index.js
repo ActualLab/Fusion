@@ -1,4 +1,11 @@
 import DefaultTheme from "vitepress/theme";
+import BarChart from "./BarChart.vue";
 import "./custom.css";
+import "./mermaid.css";
 
-export default DefaultTheme;
+export default {
+  extends: DefaultTheme,
+  enhanceApp({ app }) {
+    app.component("BarChart", BarChart);
+  },
+};
