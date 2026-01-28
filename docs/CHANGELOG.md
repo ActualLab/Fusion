@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.0.10+362a51fd
+
+Release date: 2026-01-28
+
+### Fixed
+- Big endian system support: serialization, RPC, and all dependent code now correctly use
+  `BinaryPrimitives.WriteInt32LittleEndian` and similar methods to ensure consistent byte ordering
+  across different CPU architectures
+
+### Documentation
+- Added interactive BarChart component for performance benchmarks visualization
+- Improved Mermaid flowchart styles and edge label rendering
+- Updated Performance page with new benchmark visualizations
+- Integrated CHANGELOG into the documentation website
+
+
 ## 12.0.9+3e71b6ef
 
 Release date: 2026-01-27
