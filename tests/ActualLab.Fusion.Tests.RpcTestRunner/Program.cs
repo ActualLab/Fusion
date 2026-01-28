@@ -10,7 +10,9 @@ await test.PerformanceTest(50_000, "mempack6c");
 await test.ResetClientServices();
 await test.PerformanceTest(200_000, "mempack6c");
 await test.ResetClientServices();
-await test.GetBytesTest(10, 5, 20_000);
+await test.PerformanceTest(200_000, "mempack6c");
+await test.ResetClientServices();
+await test.GetBytesTest(3, 5, 20_000);
 WriteLine("Press any key to exit...");
 ReadKey();
 
