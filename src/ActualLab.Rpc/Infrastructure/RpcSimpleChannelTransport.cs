@@ -9,6 +9,8 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
     private readonly ChannelWriter<ArrayOwner<byte>> _writer;
     private readonly AsyncTaskMethodBuilder _whenCompletedSource = AsyncTaskMethodBuilderExt.New();
     private readonly Task _whenCompleted;
+    private readonly RpcMessageSerializerReadFunc _readFunc;
+    private readonly RpcMessageSerializerWriteFunc _writeFunc;
     private int _getAsyncEnumeratorCounter;
 
     public RpcPeer Peer { get; }
@@ -27,6 +29,8 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
         _writer = channel.Writer;
         Peer = peer;
         MessageSerializer = peer.MessageSerializer;
+        _readFunc = MessageSerializer.ReadFunc;
+        _writeFunc = MessageSerializer.WriteFunc;
         _whenCompleted = _whenCompletedSource.Task;
         WhenClosed = _whenCompletedSource.Task.SuppressExceptions();
     }
@@ -44,7 +48,7 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
 
         var buffer = new ArrayPoolBuffer<byte>(InitialBufferCapacity, mustClear: false);
         try {
-            MessageSerializer.Write(buffer, message);
+            _writeFunc(buffer, message);
         }
         catch {
             buffer.Dispose();
@@ -79,9 +83,10 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
     {
         using var commonCts = cancellationToken.LinkWith(StopToken);
 
+        var readFunc = _readFunc;
         try {
             await foreach (var frame in _reader.ReadAllAsync(commonCts.Token).ConfigureAwait(false)) {
-                var message = MessageSerializer.Read(frame.Memory, out _);
+                var message = readFunc(frame.Memory, out _);
                 yield return message;
                 frame.Dispose(); // It's safe to dispose frame only at this point
             }

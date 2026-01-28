@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using ActualLab.Collections;
 using ActualLab.Internal;
 
 namespace ActualLab.IO.Internal;
@@ -28,9 +29,23 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
+    public uint ReadNativeUInt32()
+    {
+        var result = Remaining.ReadUnchecked<uint>();
+        Advance(4);
+        return result;
+    }
+
     public ulong ReadUInt64()
     {
         var result = BinaryPrimitives.ReadUInt64LittleEndian(Remaining);
+        Advance(8);
+        return result;
+    }
+
+    public ulong ReadNativeUInt64()
+    {
+        var result = Remaining.ReadUnchecked<ulong>();
         Advance(8);
         return result;
     }
@@ -87,6 +102,24 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         return result;
     }
 
+    public ReadOnlySpan<byte> ReadNativeL2Span()
+    {
+        var span = Remaining;
+        var end = 2 + Remaining.ReadUnchecked<ushort>();
+        var result = span[2..end];
+        Advance(end);
+        return result;
+    }
+
+    public ReadOnlyMemory<byte> ReadNativeL2Memory()
+    {
+        var start = Offset + 2;
+        var end = start + Remaining.ReadUnchecked<ushort>();
+        var result = Memory[start..end];
+        Advance(end - start + 2);
+        return result;
+    }
+
     public ReadOnlySpan<byte> ReadL4Span(int maxSize)
     {
         var span = Remaining;
@@ -110,6 +143,32 @@ public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
         var end = start + size;
         var result = Memory[start..end];
         Advance(size + 4);
+        return result;
+    }
+
+    public ReadOnlySpan<byte> ReadNativeL4Span(uint maxSize)
+    {
+        var span = Remaining;
+        var size = Remaining.ReadUnchecked<uint>();
+        if (size > maxSize)
+            throw Errors.SizeLimitExceeded();
+
+        var end = (int)size + 4;
+        var result = span[4..end];
+        Advance(end);
+        return result;
+    }
+
+    public ReadOnlyMemory<byte> ReadNativeL4Memory(uint maxSize)
+    {
+        var size = Remaining.ReadUnchecked<uint>();
+        if (size > maxSize)
+            throw Errors.SizeLimitExceeded();
+
+        var start = Offset + 4;
+        var end = start + (int)size;
+        var result = Memory[start..end];
+        Advance((int)size + 4);
         return result;
     }
 

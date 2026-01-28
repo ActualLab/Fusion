@@ -11,6 +11,7 @@ namespace ActualLab.Rpc.Serialization;
 public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer(peer)
 {
     public int MaxArgumentDataSize { get; init; } = Defaults.MaxArgumentDataSize;
+    public override bool SupportsNativeLittleEndian => BitConverter.IsLittleEndian;
 
     public override RpcInboundMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
@@ -142,6 +143,14 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
 
         WriteHeaders(buffer, message);
     }
+
+    // V4 uses LVar encoding which doesn't involve BinaryPrimitives for argument data,
+    // so native methods are identical to regular ones
+    public override RpcInboundMessage ReadNativeLittleEndian(ReadOnlyMemory<byte> data, out int readLength)
+        => Read(data, out readLength);
+
+    public override void WriteNativeLittleEndian(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
+        => Write(buffer, message);
 
     protected static void WriteHeaders(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
     {

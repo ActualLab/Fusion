@@ -69,8 +69,7 @@ public abstract class TestWebHostBase : ITestWebHost
         return AsyncDisposable.New(async self => {
             var host1 = self.Host;
             // 100ms for graceful shutdown
-            using var cts = new CancellationTokenSource(100);
-            await host1.StopAsync(cts.Token).SilentAwait(false);
+            await host1.StopAsync().SilentAwait(false);
             if (disposeOnStop)
                 _ = Task.Run(() => host1.Dispose());
             self.HostLazy = new Lazy<IHost>(CreateHost);
@@ -92,6 +91,9 @@ public abstract class TestWebHostBase : ITestWebHost
         builder.UseDefaultServiceProvider((ctx, options) => {
             options.ValidateScopes = true;
             options.ValidateOnBuild = true;
+        });
+        builder.ConfigureServices(services => {
+            services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(3));
         });
 
 #if NETCOREAPP

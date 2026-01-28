@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using ActualLab.Collections;
 
 namespace ActualLab.IO.Internal;
 
@@ -26,9 +27,21 @@ public ref struct SpanWriter(Span<byte> buffer)
         Advance(4);
     }
 
+    public void WriteNativeUInt32(uint value)
+    {
+        Remaining.WriteUnchecked(value);
+        Advance(4);
+    }
+
     public void WriteUInt64(ulong value)
     {
         BinaryPrimitives.WriteUInt64LittleEndian(Remaining, value);
+        Advance(8);
+    }
+
+    public void WriteNativeUInt64(ulong value)
+    {
+        Remaining.WriteUnchecked(value);
         Advance(8);
     }
 
@@ -60,9 +73,27 @@ public ref struct SpanWriter(Span<byte> buffer)
         Advance(2 + span.Length);
     }
 
+    public void WriteNativeL2Span(ReadOnlySpan<byte> span)
+    {
+        if (span.Length > 0xFFFF)
+            throw new ArgumentOutOfRangeException(nameof(span), "Source length exceeds 65535 bytes.");
+
+        Remaining.WriteUnchecked((ushort)span.Length);
+        span.CopyTo(Remaining[2..]);
+        Advance(2 + span.Length);
+    }
+
     public void WriteL4Span(ReadOnlySpan<byte> span)
     {
         BinaryPrimitives.WriteInt32LittleEndian(Remaining, span.Length);
+        Advance(4);
+        span.CopyTo(Remaining);
+        Advance(span.Length);
+    }
+
+    public void WriteNativeL4Span(ReadOnlySpan<byte> span)
+    {
+        Remaining.WriteUnchecked(span.Length);
         Advance(4);
         span.CopyTo(Remaining);
         Advance(span.Length);

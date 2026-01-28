@@ -25,7 +25,17 @@ public static class CancellationTokenSourceExt
     public static bool IsDisposed(this CancellationTokenSource cancellationTokenSource)
         => IsDisposedGetter(cancellationTokenSource);
 
+    [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CancelAndDisposeSilently(this CancellationTokenSource? cancellationTokenSource)
+    {
+        if (cancellationTokenSource is null)
+            return;
+
+        cancellationTokenSource.CancelSilently();
+        cancellationTokenSource.DisposeSilently();
+    }
+
+    public static void CancelSilently(this CancellationTokenSource? cancellationTokenSource)
     {
         if (cancellationTokenSource is null)
             return;
@@ -38,9 +48,6 @@ public static class CancellationTokenSourceExt
         }
         catch {
             // Intended
-        }
-        finally {
-            cancellationTokenSource.Dispose();
         }
     }
 
