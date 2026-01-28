@@ -140,7 +140,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism, tracksSerialization);
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Send(message, errorHandler);
+        return Peer.Transport?.Send(message, errorHandler, Peer.StopToken) ?? Task.CompletedTask;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -148,7 +148,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     {
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Send(message, errorHandler);
+        return Peer.Transport?.Send(message, errorHandler, Peer.StopToken) ?? Task.CompletedTask;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -171,7 +171,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Send(message, RpcSendErrorHandlers.PropagateToCall);
+        return Peer.Transport?.Send(message, RpcSendErrorHandlers.PropagateToCall, Peer.StopToken) ?? Task.CompletedTask;
     }
 
     public RpcOutboundMessage CreateOutboundMessage(

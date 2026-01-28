@@ -66,18 +66,18 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
 
     [Theory]
     // Fastest options (compact)
-    [InlineData(100_000, "mempack6c")]
-    [InlineData(100_000, "msgpack6c")]
-    [InlineData(100_000, "mempack5c")]
-    [InlineData(100_000, "msgpack5c")]
+    [InlineData(200_000, "mempack6c")]
+    [InlineData(200_000, "msgpack6c")]
+    [InlineData(200_000, "mempack5c")]
+    [InlineData(200_000, "msgpack5c")]
     // v5 formats
     [InlineData(30_000, "json5")]
     [InlineData(30_000, "njson5")]
     [InlineData(30_000, "mempack5")]
     [InlineData(30_000, "msgpack5")]
-    public async Task PerformanceTest(int iterationCount, string serializationFormat)
+    public async Task PerformanceTest(int iterationCount, string? serializationFormat = null)
     {
-        SerializationFormat = serializationFormat;
+        SerializationFormat = serializationFormat ?? SerializationFormat;
         if (TestRunnerInfo.IsBuildAgent())
             iterationCount = 100;
 
@@ -89,7 +89,9 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
 
         var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 2);
         var tasks = new Task[threadCount];
+        await client.Div(1, 1).ConfigureAwait(false);
         await Run(100); // Warmup
+        GC.Collect();
 
         WriteLine($"{iterationCount} iterations x {threadCount} threads:");
         var elapsed = await Run(iterationCount);

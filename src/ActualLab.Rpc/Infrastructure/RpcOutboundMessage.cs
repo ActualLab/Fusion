@@ -43,7 +43,6 @@ public sealed class RpcOutboundMessage
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void CompleteWhenSerialized(Exception? error = null)
     {
         if (ReferenceEquals(WhenSerialized, null))

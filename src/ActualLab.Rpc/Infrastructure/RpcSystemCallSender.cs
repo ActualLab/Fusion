@@ -56,7 +56,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
             call.Context.RelatedId, needsPolymorphism: false, tracksSerialization: false);
         if (call.Peer.CallLogger.IsLogged(call))
             call.Peer.CallLogger.LogOutbound(call, message);
-        return call.Peer.Send(message, RpcSendErrorHandlers.Silence, transport);
+        return transport.Send(message, RpcSendErrorHandlers.Silence, peer.StopToken);
     }
 
     // Regular calls

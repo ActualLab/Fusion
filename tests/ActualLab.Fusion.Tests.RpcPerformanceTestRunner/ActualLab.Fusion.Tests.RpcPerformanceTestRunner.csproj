@@ -17,7 +17,6 @@
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
     <GarbageCollectionAdaptationMode>0</GarbageCollectionAdaptationMode>
-    <CETCompat>false</CETCompat>
   </PropertyGroup>
 
   <ItemGroup>

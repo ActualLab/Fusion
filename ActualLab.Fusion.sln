@@ -117,7 +117,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NativeAot", "samples\Native
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspireHost", "samples\TodoApp\AspireHost\AspireHost.csproj", "{5E8954E0-F43F-4515-B8CC-1DFDADDE2D35}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Fusion.Tests.RpcTestRunner", "tests\ActualLab.Fusion.Tests.RpcTestRunner\ActualLab.Fusion.Tests.RpcTestRunner.csproj", "{9DF21080-E55A-4686-9EA7-9FC95958E737}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Fusion.Tests.RpcPerformanceTestRunner", "tests\ActualLab.Fusion.Tests.RpcPerformanceTestRunner\ActualLab.Fusion.Tests.RpcPerformanceTestRunner.csproj", "{9DF21080-E55A-4686-9EA7-9FC95958E737}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Docs", "docs\Docs.csproj", "{EAB11325-7FA3-4D34-9B87-39A4BCADE18A}"
 EndProject

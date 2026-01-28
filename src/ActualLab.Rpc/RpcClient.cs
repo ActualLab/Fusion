@@ -33,12 +33,12 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
         var serverPeer = Hub.GetServerPeer(serverPeerRef);
         var channelPair = ChannelPair.CreateTwisted<ArrayOwner<byte>>(LocalChannelOptions);
 
-        var clientTransport = new RpcSimpleChannelTransport(channelPair.Channel1, clientPeer);
+        var clientTransport = new RpcSimpleChannelTransport(clientPeer, channelPair.Channel1);
         var clientConnection = new RpcConnection(clientTransport, PropertyBag.Empty.KeylessSet((RpcPeer)clientPeer)) {
             IsLocal = true,
         };
 
-        var serverTransport = new RpcSimpleChannelTransport(channelPair.Channel2, serverPeer);
+        var serverTransport = new RpcSimpleChannelTransport(serverPeer, channelPair.Channel2);
         var serverConnection = new RpcConnection(serverTransport, PropertyBag.Empty.KeylessSet((RpcPeer)serverPeer)) {
             IsLocal = true,
         };

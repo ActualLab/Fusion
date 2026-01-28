@@ -106,50 +106,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public override string ToString()
         => $"{GetType().Name}({Ref}, #{GetHashCode()})";
 
-    // SendXxx
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Task Send(RpcOutboundMessage message, RpcSendErrorHandler errorHandler)
-    {
-        var transport = Transport;
-        return transport is null
-            ? Task.CompletedTask
-            : Send(message, errorHandler, transport);
-    }
-
-    public Task Send(RpcOutboundMessage message, RpcSendErrorHandler errorHandler, RpcTransport transport)
-    {
-        try {
-            var writeTask = transport.Write(message, StopToken);
-            if (writeTask.IsCompletedSuccessfully)
-                return writeTask; // Fast path: completed synchronously
-
-            // Slow path: need to await and handle exceptions
-            return SendAsync(writeTask, this, message, errorHandler, transport);
-        }
-        catch (Exception e) {
-            return errorHandler.Invoke(e, this, message, transport)
-                ? Task.CompletedTask
-                : Task.FromException(e);
-        }
-
-        static async Task SendAsync(
-            Task writeTask,
-            RpcPeer peer,
-            RpcOutboundMessage message,
-            RpcSendErrorHandler errorHandler,
-            RpcTransport transport)
-        {
-            try {
-                await writeTask.ConfigureAwait(false);
-            }
-            catch (Exception e) {
-                if (!errorHandler.Invoke(e, peer, message, transport))
-                    throw;
-            }
-        }
-    }
-
     // Is/WhenConnected
 
     public bool IsConnected()

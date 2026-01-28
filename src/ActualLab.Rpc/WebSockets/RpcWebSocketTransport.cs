@@ -1,7 +1,6 @@
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
 using ActualLab.Channels;
-using ActualLab.Collections;
 using ActualLab.IO;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -61,7 +60,6 @@ public sealed class RpcWebSocketTransport : RpcTransport
     public Options Settings { get; }
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
-    public RpcPeer Peer { get; }
     public RpcMessageSerializer MessageSerializer { get; }
     public bool IsTextSerializer { get; }
     public WebSocketMessageType MessageType { get; }
@@ -73,15 +71,14 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
     public RpcWebSocketTransport(
         Options settings,
-        WebSocketOwner webSocketOwner,
         RpcPeer peer,
+        WebSocketOwner webSocketOwner,
         CancellationTokenSource? stopTokenSource = null)
-        : base(stopTokenSource)
+        : base(peer, stopTokenSource)
     {
         Settings = settings;
         WebSocketOwner = webSocketOwner;
         WebSocket = webSocketOwner.WebSocket;
-        Peer = peer;
         MessageSerializer = peer.MessageSerializer;
         IsTextSerializer = MessageSerializer is RpcTextMessageSerializer;
         MessageType = IsTextSerializer
@@ -152,30 +149,37 @@ public sealed class RpcWebSocketTransport : RpcTransport
             await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
     }
 
-    public override Task Write(RpcOutboundMessage message, CancellationToken cancellationToken = default)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override Task Send(
+        RpcOutboundMessage message,
+        RpcSendErrorHandler errorHandler,
+        CancellationToken cancellationToken = default)
     {
         var whenSerialized = message.WhenSerialized;
 
         // Fast path: since _writeChannel is typically an UnboundedChannel,
         // TryWrite always completes successfully while the channel is operational.
         if (_writeChannelWriter.TryWrite(message))
-            return whenSerialized ?? Task.CompletedTask;
+            return whenSerialized is null
+                ? Task.CompletedTask
+                : CompleteAsync(whenSerialized, this, message, errorHandler);
 
         // Slow path
         var writeTask = _writeChannelWriter.WriteAsync(message, cancellationToken);
-        if (whenSerialized is null)
-            return writeTask.AsTask(); // writeTask may throw ChannelClosedException or OperationCanceledException
+        return CompleteAsync(whenSerialized ?? writeTask.AsTask(), this, message, errorHandler);
 
-        _ = CompleteAsync(message, writeTask);
-        return whenSerialized;
-
-        static async Task CompleteAsync(RpcOutboundMessage message, ValueTask writeTask) {
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        static async Task CompleteAsync(
+            Task dependency,
+            RpcWebSocketTransport transport,
+            RpcOutboundMessage message,
+            RpcSendErrorHandler errorHandler)
+        {
             try {
-                await writeTask.ConfigureAwait(false);
-                message.CompleteWhenSerialized();
+                await dependency.ConfigureAwait(false);
             }
-            catch (Exception e) { // writeTask may throw ChannelClosedException or OperationCanceledException
-                message.CompleteWhenSerialized(e);
+            catch (Exception e) when (errorHandler.Invoke(e, transport.Peer, message, transport)) {
+                // Intended, errorHandler handled it
             }
         }
     }
@@ -321,7 +325,6 @@ public sealed class RpcWebSocketTransport : RpcTransport
         return WebSocket.SendAsync(frame, MessageType, endOfMessage: true, CancellationToken.None).AsTask();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SerializeBinary(RpcOutboundMessage message, ArrayPoolBuffer<byte> buffer)
     {
         _meters.OutgoingItemCounter.Add(1);
@@ -341,7 +344,6 @@ public sealed class RpcWebSocketTransport : RpcTransport
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SerializeText(RpcOutboundMessage message, ArrayPoolBuffer<byte> buffer)
     {
         _meters.OutgoingItemCounter.Add(1);
