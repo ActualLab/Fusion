@@ -221,8 +221,8 @@ public abstract class RpcInboundCall : RpcCall
                 argumentSerializer.Deserialize(ref arguments, false, message.ArgumentData);
             else {
                 var expectedArguments = arguments;
-                if (ServiceDef.Server is IRpcPolymorphicArgumentHandler handler
-                    && !handler.IsValidCall(Context, ref expectedArguments, ref needsArgumentPolymorphism))
+                if (ServiceDef.PolymorphicArgumentHandlerIsValidCallFunc is { } handler
+                    && !handler.Invoke(Context, ref expectedArguments, ref needsArgumentPolymorphism))
                     return null; // Means "related call is gone, so just ignore the incoming one"
 
                 argumentSerializer.Deserialize(ref expectedArguments, needsArgumentPolymorphism, message.ArgumentData);

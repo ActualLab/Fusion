@@ -12,6 +12,7 @@ public class RpcServiceDef
     private Dictionary<string, RpcMethodDef> _methodByName = null!;
     private readonly Lazy<object?> _serverLazy;
     private readonly Lazy<object?> _clientLazy;
+    private readonly LazySlim<RpcPolymorphicArgumentHandlerIsValidCallFunc?> _polymorphicArgumentHandlerIsValidCallFuncLazy;
     private string? _toStringCached;
 
     public RpcHub Hub { get; }
@@ -32,6 +33,10 @@ public class RpcServiceDef
     public string Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }
     public PropertyBag Properties { get; protected set; }
+
+    // Purely to speed up a frequent cast operation in RpcInboundCall.DeserializeArguments for Ok method
+    public RpcPolymorphicArgumentHandlerIsValidCallFunc? PolymorphicArgumentHandlerIsValidCallFunc
+        => _polymorphicArgumentHandlerIsValidCallFuncLazy.Value;
 
     public RpcMethodDef this[MethodInfo method] => GetMethod(method) ?? throw Errors.NoMethod(Type, method);
     public RpcMethodDef this[string methodName] => GetMethod(methodName) ?? throw Errors.NoMethod(Type, methodName);
@@ -54,6 +59,10 @@ public class RpcServiceDef
 
         _serverLazy = new Lazy<object?>(() => ServerResolver?.Resolve(Hub.Services));
         _clientLazy = new Lazy<object?>(() => ClientType is null ? null : Hub.Services.GetRequiredService(ClientType));
+        _polymorphicArgumentHandlerIsValidCallFuncLazy = new LazySlim<RpcPolymorphicArgumentHandlerIsValidCallFunc?>(
+            () => Server is IRpcPolymorphicArgumentHandler h
+                ? h.IsValidCall
+                : null);
     }
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]

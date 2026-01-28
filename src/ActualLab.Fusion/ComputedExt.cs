@@ -120,7 +120,7 @@ public static partial class ComputedExt
         }
 
         // No way to cancel / unregister the handler here
-        computed.Invalidated += _ => taskSource.TrySetResultNoCheck();
+        computed.Invalidated += _ => taskSource.TrySetResult();
         return taskSource.Task;
     }
 

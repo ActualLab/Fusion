@@ -4,8 +4,13 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Serialization;
 
+public delegate RpcInboundMessage RpcMessageSerializerReadFunc(ReadOnlyMemory<byte> data, out int readLength);
+public delegate void RpcMessageSerializerWriteFunc(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message);
+
 public abstract class RpcMessageSerializer(RpcPeer peer)
 {
+    // Delegates for ReadXxx and WriteXxx
+
     [ThreadStatic] private static Encoder? _utf8Encoder;
     [ThreadStatic] private static Decoder? _utf8Decoder;
     [ThreadStatic] private static ArrayPoolBuffer<byte>? _utf8EncodeBuffer;
@@ -17,9 +22,19 @@ public abstract class RpcMessageSerializer(RpcPeer peer)
     protected RpcMethodResolver ServerMethodResolver => Peer.ServerMethodResolver;
 
     public RpcPeer Peer { get; } = peer;
+    public virtual bool SupportsNativeLittleEndian => false;
+    public RpcMessageSerializerReadFunc ReadFunc
+        => field ??= SupportsNativeLittleEndian ? ReadNativeLittleEndian : Read;
+    public RpcMessageSerializerWriteFunc WriteFunc
+        => field ??= SupportsNativeLittleEndian ? WriteNativeLittleEndian : Write;
 
     public abstract RpcInboundMessage Read(ReadOnlyMemory<byte> data, out int readLength);
     public abstract void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message);
+
+    public virtual RpcInboundMessage ReadNativeLittleEndian(ReadOnlyMemory<byte> data, out int readLength)
+        => throw new NotSupportedException();
+    public virtual void WriteNativeLittleEndian(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
+        => throw new NotSupportedException();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected static Encoder GetUtf8Encoder()

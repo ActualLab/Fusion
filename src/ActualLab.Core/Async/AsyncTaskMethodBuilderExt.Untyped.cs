@@ -42,10 +42,6 @@ public static partial class AsyncTaskMethodBuilderExt
 
     public static bool TrySetResult(this AsyncTaskMethodBuilder target)
     {
-        var task = target.Task;
-        if (task.IsCompleted)
-            return false;
-
         try {
             target.SetResult();
             return true;
@@ -57,10 +53,6 @@ public static partial class AsyncTaskMethodBuilderExt
 
     public static bool TrySetException(this AsyncTaskMethodBuilder target, Exception exception)
     {
-        var task = target.Task;
-        if (task.IsCompleted)
-            return false;
-
         try {
             target.SetException(exception);
             return true;
@@ -73,47 +65,6 @@ public static partial class AsyncTaskMethodBuilderExt
     public static bool TrySetCanceled(this AsyncTaskMethodBuilder target)
         => target.TrySetCanceled(CancellationTokenExt.Canceled);
     public static bool TrySetCanceled(this AsyncTaskMethodBuilder target, CancellationToken cancellationToken)
-    {
-        var task = target.Task;
-        if (task.IsCompleted)
-            return false;
-
-        try {
-            target.SetException(new OperationCanceledException(cancellationToken));
-            return true;
-        }
-        catch (InvalidOperationException) {
-            return false;
-        }
-    }
-
-    // TrySetXxxNoCheck
-
-    public static bool TrySetResultNoCheck(this AsyncTaskMethodBuilder target)
-    {
-        try {
-            target.SetResult();
-            return true;
-        }
-        catch (InvalidOperationException) {
-            return false;
-        }
-    }
-
-    public static bool TrySetExceptionNoCheck(this AsyncTaskMethodBuilder target, Exception exception)
-    {
-        try {
-            target.SetException(exception);
-            return true;
-        }
-        catch (InvalidOperationException) {
-            return false;
-        }
-    }
-
-    public static bool TrySetCanceledNoCheck(this AsyncTaskMethodBuilder target)
-        => target.TrySetCanceledNoCheck(CancellationTokenExt.Canceled);
-    public static bool TrySetCanceledNoCheck(this AsyncTaskMethodBuilder target, CancellationToken cancellationToken)
     {
         try {
             target.SetException(new OperationCanceledException(cancellationToken));

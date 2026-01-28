@@ -22,7 +22,7 @@ internal sealed class WhenInvalidatedClosure
 
     private void OnInvalidated(Computed _)
     {
-        _taskSource.TrySetResultNoCheck();
+        _taskSource.TrySetResult();
         _cancellationTokenRegistration.Dispose();
     }
 
