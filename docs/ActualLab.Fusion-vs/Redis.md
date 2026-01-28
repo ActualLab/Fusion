@@ -105,7 +105,7 @@ Fusion dramatically outperforms Redis — both for remote and local cache access
 | GetUser / GET | 6.65M calls/s | 229K req/s | **~29x** |
 
 Redis benchmark: `redis-benchmark` with optimal client count (12), best of 5 runs.
-See [Benchmarks](../Benchmarks.md) for details.
+See [Performance Benchmarks](/Performance) for details.
 
 ### Local Access
 

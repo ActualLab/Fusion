@@ -6,8 +6,7 @@ description: Update @docs/Performance.md with the latest data from D:\Projects\A
 Update benchmark data in all documentation files from @D:\Projects\ActualLab.Fusion.Samples\Benchmarks.md
 
 Files to update:
-- docs/Performance.md - Main performance documentation
-- docs/Benchmarks.md - Detailed benchmark results (update version, date, all tables)
+- docs/Performance.md - Main performance documentation (version, date, all tables, charts)
 - docs/index.md - Landing page performance highlights
 - docs/PartF-SS.md - Server-side performance section
 - docs/ActualLab.Fusion-vs/SignalR.md - SignalR comparison benchmarks
@@ -17,9 +16,11 @@ Files to update:
 
 Instructions:
 - Update the numerical values in all existing benchmark tables to match the source file
-- Update version number and date in docs/Benchmarks.md header
+- Update version number and date in docs/Performance.md header
+- Update BarChart component data values in docs/Performance.md to match updated tables
 - If benchmark descriptions are updated in the source, copy the changes
 - Do not copy instructions on how to run benchmarks
 - If the source file contains new sections not present in target files, ignore them
 - Preserve the existing structure and explanatory text in each file
 - Recalculate speedup ratios where values have changed
+- Recalculate throughput values in GB/s and MB/s for streaming benchmarks
