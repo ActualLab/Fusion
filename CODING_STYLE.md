@@ -68,6 +68,10 @@ Search for `<Using>` to get the full list. Avoid adding explicit usings for glob
 
 - **Private static readonly fields and constants**: use PascalCase (`ReadonlyField`)
 - **All other private fields, including static ones**: use underscore prefix with camelCase (`_fieldName`)
+- **Async method suffix**: Do NOT use `Async` suffix for async methods.
+  The only exception is slow-path async methods inside other async methods
+  (e.g., `CompleteAsync` inside `Write` method that handles the case
+  when the operation cannot complete synchronously).
 
 ### Braces and Formatting
 
