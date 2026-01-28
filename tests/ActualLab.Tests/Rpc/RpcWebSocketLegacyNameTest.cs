@@ -35,6 +35,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
     public async Task Test_v0_1()
     {
         ClientPeerVersions = new(RpcDefaults.ApiScope, "v0.1");
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
 
         var services = ClientServices;
@@ -55,6 +56,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
     public async Task Test_v0_5()
     {
         ClientPeerVersions = new(RpcDefaults.ApiScope, "0.5");
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.GetRequiredService<ITestRpcService>();
@@ -73,6 +75,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
     [Fact]
     public async Task Test_v1_0()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.GetRequiredService<ITestRpcService>();

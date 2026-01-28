@@ -169,6 +169,7 @@ public class UserProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
     public async Task MultiHostInvalidationTest()
     {
         var users = Services.GetRequiredService<IUserService>();
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var webUsers = WebServices.GetRequiredService<IUserService>();
         var syncTimeout = TimeSpan.FromSeconds(3);

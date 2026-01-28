@@ -30,6 +30,7 @@ public class RpcOutboundMessageWhenSerializedTest(ITestOutputHelper @out) : RpcT
     [Fact]
     public async Task WhenSerialized_IsNullableBasedOnCtorFlag()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);

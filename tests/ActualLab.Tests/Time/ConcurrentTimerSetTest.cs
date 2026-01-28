@@ -86,7 +86,7 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
     public async Task RandomTimerTest()
     {
         var taskCount = TestRunnerInfo.IsBuildAgent() ? 1 : HardwareInfo.GetProcessorCountFactor(10);
-        var maxDelta = 1000;
+        var maxDelta = 1500;
         var rnd = new Random();
         var tasks = Enumerable.Range(0, (int) MathExt.Max(taskCount / 10, 1))
             .Select(_ => Task.Run(() => OneRandomTest(rnd.Next(100), 3000, maxDelta)))

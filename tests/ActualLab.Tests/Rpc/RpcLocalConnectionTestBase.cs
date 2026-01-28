@@ -43,6 +43,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
     [Fact]
     public async Task BasicTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var client = GetClient();
         (await client.Div(6, 2)).Should().Be(3);
@@ -56,6 +57,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
     [Fact]
     public async Task PolymorphTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var client = GetClient();
         var backendClient = GetBackendClient();
@@ -80,6 +82,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         if (TestRunnerInfo.IsBuildAgent())
             iterationCount = 100;
 
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var client = GetClient();
 
@@ -121,6 +124,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         if (TestRunnerInfo.IsBuildAgent())
             iterationCount = 100;
 
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var client = GetClient();
 
@@ -159,6 +163,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         if (TestRunnerInfo.IsBuildAgent())
             itemCount = 100;
 
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var client = GetClient();
 

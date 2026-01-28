@@ -26,6 +26,7 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
     [Fact(Timeout = 30_000)]
     public async Task TestClient()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var client = ClientServices.GetRequiredService<IEdgeCaseService>();
         // await client.SetSuffix("");
@@ -35,6 +36,7 @@ public class EdgeCaseServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
     [Fact(Timeout = 30_000)]
     public async Task TestNullable()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var client = ClientServices.GetRequiredService<IEdgeCaseService>();
         var actualService = WebServices.GetRequiredService<IEdgeCaseService>();

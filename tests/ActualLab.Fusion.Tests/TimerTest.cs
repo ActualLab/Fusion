@@ -17,6 +17,7 @@ public class TimerTest(ITestOutputHelper @out) : FusionTestBase(@out)
     [Fact]
     public async Task BasicTest()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var tp = WebServices.GetRequiredService<ITimeService>();
         var ctp = ClientServices.GetRequiredService<ITimeService>();

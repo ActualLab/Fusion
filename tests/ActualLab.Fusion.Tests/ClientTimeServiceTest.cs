@@ -25,6 +25,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
     {
         var epsilon = GetEpsilon();
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var client = ClientServices.GetRequiredService<ITimeService>();
         var cTime = await Computed.Capture(() => client.GetTime());
@@ -50,6 +51,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
         if (TestRunnerInfo.IsBuildAgent())
             epsilon = epsilon.MultiplyBy(2);
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<ITimeService>();
 
@@ -65,6 +67,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
     [Fact]
     public async Task TestInvalidation()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<ITimeService>();
 
@@ -79,6 +82,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
     [Fact]
     public async Task TestFormattedTime()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<ITimeService>();
 
@@ -102,6 +106,7 @@ public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out
     [Fact]
     public async Task TestNoMethod()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<ITimeService>();
 

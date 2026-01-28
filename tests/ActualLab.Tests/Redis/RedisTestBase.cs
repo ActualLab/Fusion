@@ -1,3 +1,4 @@
+using ActualLab.DependencyInjection;
 using ActualLab.IO;
 using ActualLab.OS;
 using ActualLab.Redis;
@@ -16,6 +17,7 @@ public class RedisTestBase(ITestOutputHelper @out) : TestBase(@out)
     public virtual RedisDb GetRedisDb()
     {
         var services = (IServiceCollection)new ServiceCollection();
+        services.AddSingleton<TestServiceProviderTag>();
         if (UseLogging)
             services.AddLogging(logging => {
                 var debugCategories = new List<string> {

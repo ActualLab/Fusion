@@ -22,6 +22,7 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
     [Fact]
     public async Task BasicTest()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -75,6 +76,7 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         ComputedSynchronizer.DefaultCurrent.Should().Be(ComputedSynchronizer.None.Instance);
         ComputedSynchronizer.Current.Should().Be(ComputedSynchronizer.None.Instance);
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -116,6 +118,7 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
     [Fact]
     public async Task StateTest()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();

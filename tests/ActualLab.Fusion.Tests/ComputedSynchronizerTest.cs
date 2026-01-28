@@ -26,6 +26,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task None_IsSynchronized_AlwaysTrue()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -45,6 +46,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task None_WhenSynchronized_CompletesImmediately()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -69,6 +71,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task Precise_IsSynchronized_WhenCompleted()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -103,6 +106,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task Precise_WhenSynchronized_WaitsForCompletion()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -139,6 +143,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task Safe_WhenSynchronized_RespectsMaxDuration()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -182,6 +187,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task Safe_IsSynchronized_WhenAlreadySynced()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -202,6 +208,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task Safe_IsSynchronized_WhenAssumeSynchronized()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -295,6 +302,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task State_ComputedState_InitialState_NotSynchronized()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -343,6 +351,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task State_ComputedState_WithDependencies_ChecksDependencies()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -386,6 +395,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task Synchronize_UpdatesComputedIfInvalidated()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -413,6 +423,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task Synchronize_GenericVersion_Works()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -439,6 +450,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task WhenSynchronized_RespectsCancellation_PreCancelled()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -473,6 +485,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task WhenSynchronized_CompletesNormally_WhenAlreadySynchronized()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -501,6 +514,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task ExtensionMethods_UseCurrentSynchronizer()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -525,6 +539,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task IsSynchronized_MatchesWhenSynchronized_Behavior()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -557,6 +572,7 @@ public class ComputedSynchronizerTest : FusionTestBase
     [Fact]
     public async Task Dependencies_AllMustBeSynchronized()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();

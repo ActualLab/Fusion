@@ -17,6 +17,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task GetFromQueryImplicit()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -26,6 +27,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task GetFromQuery()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -35,6 +37,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task GetJsonString()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -44,6 +47,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task GetFromPath()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -53,6 +57,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task PostFromQueryImplicit()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -63,6 +68,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task PostFromQuery()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -74,6 +80,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task GetFromQueryComplex()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -87,6 +94,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task PostFromPath()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -97,6 +105,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task PostWithBody()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -107,6 +116,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task ConcatQueryAndPath()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 
@@ -117,6 +127,7 @@ public class RestEaseTest(ITestOutputHelper @out) : RpcTestBase(@out)
     [Fact]
     public async Task ConcatPathAndBody()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var service = ClientServices.GetRequiredService<IRestEaseClient>();
 

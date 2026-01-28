@@ -1,3 +1,4 @@
+using ActualLab.DependencyInjection;
 using ActualLab.Diagnostics;
 using ActualLab.Locking;
 using ActualLab.RestEase;
@@ -47,10 +48,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 
     public override async Task DisposeAsync()
     {
-        if (_clientServices is IAsyncDisposable adcs)
-            await adcs.DisposeAsync();
-        if (_clientServices is IDisposable dcs)
-            dcs.Dispose();
+        await ResetClientServices().ConfigureAwait(false);
 
         try {
             var hostedServices = _services?.HostedServices();
@@ -67,9 +65,46 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
             ds.Dispose();
     }
 
+    // Reset helpers - useful for running multiple tests with fresh client state
+
+    public async Task Reset()
+    {
+        await ResetClientServices().ConfigureAwait(false);
+
+        try {
+            var hostedServices = _services?.HostedServices();
+            if (hostedServices is not null)
+                await hostedServices.Stop();
+        }
+        catch {
+            // Intended
+        }
+
+        var services = Interlocked.Exchange(ref _services, null);
+        if (services is IAsyncDisposable ads)
+            await ads.DisposeAsync().ConfigureAwait(false);
+        if (services is IDisposable ds)
+            ds.Dispose();
+
+        // Reinitialize
+        await InitializeAsync().ConfigureAwait(false);
+    }
+
+    public async Task ResetClientServices()
+    {
+        var clientServices = Interlocked.Exchange(ref _clientServices, null);
+        if (clientServices is IAsyncDisposable adcs)
+            await adcs.DisposeAsync().ConfigureAwait(false);
+        if (clientServices is IDisposable dcs)
+            dcs.Dispose();
+    }
+
+    // Protected methods
+
     protected IServiceProvider CreateServices(bool isClient = false)
     {
         var services = (IServiceCollection)new ServiceCollection();
+        services.AddSingleton<TestServiceProviderTag>();
         ConfigureServices(services, isClient);
         ConfigureTestServices(services, isClient);
         return services.BuildServiceProvider();

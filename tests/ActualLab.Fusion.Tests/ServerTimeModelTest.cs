@@ -33,6 +33,7 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
     [Fact]
     public async Task ServerTimeModelTest1()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         using var stm = ClientServices.GetRequiredService<ComputedState<ServerTimeModel1>>();
 
@@ -69,6 +70,7 @@ public class ServerTimeModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
     [Fact]
     public async Task ServerTimeModelTest2()
     {
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         using var stm = ClientServices.GetRequiredService<ComputedState<ServerTimeModel2>>();
 

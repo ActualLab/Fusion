@@ -1,3 +1,4 @@
+using ActualLab.DependencyInjection;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Testing;
 using Xunit.DependencyInjection;
@@ -15,6 +16,7 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
         Action<IServiceCollection>? configureServices = null)
     {
         var services = new ServiceCollection();
+        services.AddSingleton<TestServiceProviderTag>();
         ConfigureServices(services);
         configureServices?.Invoke(services);
 

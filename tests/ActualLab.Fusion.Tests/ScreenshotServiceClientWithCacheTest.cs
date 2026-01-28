@@ -27,6 +27,7 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
             // Screenshots don't work on Unix
             return;
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
@@ -71,6 +72,7 @@ public class ScreenshotServiceClientWithCacheTest : FusionTestBase
             // Screenshots don't work on Unix
             return;
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();

@@ -82,6 +82,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
     {
         if (MustSkip()) return;
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var hostId1 = WebServices.GetRequiredService<HostId>();
         var hostId2 = Services.GetRequiredService<HostId>();
@@ -104,6 +105,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
     {
         if (MustSkip()) return;
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var auth = Services.GetRequiredService<IAuth>();
         var authBackend = Services.GetRequiredService<IAuthBackend>();
@@ -143,6 +145,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
     {
         if (MustSkip()) return;
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var commander = Services.Commander();
         var auth = Services.GetRequiredService<IAuth>();
@@ -214,6 +217,7 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
     {
         if (MustSkip()) return;
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         var commander = Services.Commander();
         var auth = Services.GetRequiredService<IAuth>();

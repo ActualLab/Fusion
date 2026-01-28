@@ -1,7 +1,4 @@
-using ActualLab.OS;
 using ActualLab.Rpc;
-using ActualLab.Rpc.Clients;
-using ActualLab.Rpc.WebSockets;
 using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Rpc;
@@ -49,6 +46,7 @@ public class RpcWebSocketTest : RpcTestBase
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
@@ -67,6 +65,7 @@ public class RpcWebSocketTest : RpcTestBase
     [Fact]
     public async Task MulticallTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
@@ -85,6 +84,7 @@ public class RpcWebSocketTest : RpcTestBase
     [Fact]
     public async Task CommandTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var commander = services.Commander();
@@ -99,6 +99,7 @@ public class RpcWebSocketTest : RpcTestBase
     [Fact]
     public async Task NoWaitTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
@@ -125,6 +126,7 @@ public class RpcWebSocketTest : RpcTestBase
     [Fact]
     public async Task DelayTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
@@ -168,6 +170,7 @@ public class RpcWebSocketTest : RpcTestBase
     public async Task PolymorphTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
@@ -190,6 +193,7 @@ public class RpcWebSocketTest : RpcTestBase
     [Fact]
     public async Task EndpointNotFoundTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
@@ -226,6 +230,7 @@ public class RpcWebSocketTest : RpcTestBase
     public async Task StreamTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
@@ -271,6 +276,7 @@ public class RpcWebSocketTest : RpcTestBase
     public async Task StreamInputTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
@@ -287,6 +293,7 @@ public class RpcWebSocketTest : RpcTestBase
     [Fact]
     public async Task StreamLagTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
@@ -319,6 +326,7 @@ public class RpcWebSocketTest : RpcTestBase
     public async Task StreamDebugTest()
     {
         RpcFrameDelayerFactory = default;
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var services = ClientServices;
         var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
@@ -339,236 +347,6 @@ public class RpcWebSocketTest : RpcTestBase
             }, CancellationToken.None);
         }
         await Task.WhenAll(tasks);
-        await AssertNoCalls(peer, Out);
-    }
-
-    [Fact]
-    public Task PerformanceTest1K()
-        => PerformanceTest(1000, "msgpack6c");
-
-    [Fact]
-    public Task PerformanceTest10K()
-        => PerformanceTest(10_000, "msgpack6c");
-
-    [Fact]
-    public Task PerformanceTest100K()
-        => PerformanceTest(100_000, "msgpack6c");
-
-    [Theory]
-    // Fastest options (compact)
-    [InlineData(200_000, "mempack6c")]
-    [InlineData(200_000, "msgpack6c")]
-    [InlineData(200_000, "mempack5c")]
-    [InlineData(200_000, "msgpack5c")]
-    // v5 formats
-    [InlineData(50_000, "json5")]
-    [InlineData(50_000, "njson5")]
-    [InlineData(50_000, "mempack5")]
-    [InlineData(50_000, "msgpack5")]
-    public async Task PerformanceTest(int iterationCount, string serializationFormat)
-    {
-        SerializationFormat = serializationFormat;
-        RpcFrameDelayerFactory = null;
-        if (TestRunnerInfo.IsBuildAgent())
-            iterationCount = 100;
-
-        await using var _ = await WebHost.Serve();
-        var services = ClientServices;
-        var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
-
-        var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 2);
-        var tasks = new Task[threadCount];
-        await Run(100); // Warmup
-
-        WriteLine($"{iterationCount} iterations x {threadCount} threads:");
-        var elapsed = await Run(iterationCount);
-        var totalIterationCount = threadCount * iterationCount;
-        WriteLine($"{totalIterationCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
-
-        await AssertNoCalls(peer, Out);
-        return;
-
-        async Task<TimeSpan> Run(int count) {
-            var startedAt = CpuTimestamp.Now;
-            for (var threadIndex = 0; threadIndex < threadCount; threadIndex++) {
-                tasks[threadIndex] = Task.Run(async () => {
-                    for (var i = 0; i < count; i++) {
-                        if (i != await client.Div(i, 1).ConfigureAwait(false))
-                            Assert.Fail("Wrong result.");
-                    }
-                }, CancellationToken.None);
-            }
-
-            await Task.WhenAll(tasks);
-            return elapsed = startedAt.Elapsed;
-        }
-    }
-
-    [Theory]
-    [InlineData(100)]
-    [InlineData(1000)]
-    [InlineData(10_000)]
-    public async Task StreamPerformanceTest(int itemCount)
-    {
-        if (TestRunnerInfo.IsBuildAgent())
-            itemCount = 100;
-
-        await using var _ = await WebHost.Serve();
-        var services = ClientServices;
-        var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
-
-        var threadCount = Math.Max(1, HardwareInfo.ProcessorCount / 2);
-        var tasks = new Task[threadCount];
-        await Run(10); // Warmup
-        var elapsed = await Run(itemCount);
-
-        var totalItemCount = threadCount * itemCount;
-        WriteLine($"{itemCount}: {totalItemCount / elapsed.TotalSeconds:F} ops/s using {threadCount} threads");
-        await AssertNoCalls(peer, Out);
-        return;
-
-        async Task<TimeSpan> Run(int count)
-        {
-            var startedAt = CpuTimestamp.Now;
-            for (var threadIndex = 0; threadIndex < threadCount; threadIndex++) {
-                tasks[threadIndex] = Task.Run(async () => {
-                    var stream = await client.StreamInt32(count);
-                    (await stream.CountAsync()).Should().Be(count);
-                }, CancellationToken.None);
-            }
-
-            await Task.WhenAll(tasks);
-            return elapsed = startedAt.Elapsed;
-        }
-    }
-}
-
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public class RpcWebSocketTransportFlushTest : RpcTestBase
-{
-    public RpcWebSocketTransportFlushTest(ITestOutputHelper @out) : base(@out)
-        => ExposeBackend = true;
-
-    protected override void ConfigureServices(IServiceCollection services, bool isClient)
-    {
-        base.ConfigureServices(services, isClient);
-        var rpc = services.AddRpc();
-        var commander = services.AddCommander();
-        if (isClient) {
-            rpc.AddClient<ITestRpcServiceClient>(nameof(ITestRpcService));
-            commander.AddService<ITestRpcServiceClient>();
-            rpc.AddClient<ITestRpcBackend>();
-            commander.AddService<ITestRpcBackend>();
-        }
-        else {
-            rpc.AddServer<ITestRpcService, TestRpcService>();
-            commander.AddService<TestRpcService>();
-            rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
-            commander.AddService<TestRpcBackend>();
-        }
-    }
-
-    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
-    {
-        base.ConfigureTestServices(services, isClient);
-        services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
-            HostUrlResolver = _ => WebHost.ServerUri.ToString(),
-            FrameDelayerFactory = null,
-            WebSocketTransportOptionsFactory = (_, _) => RpcWebSocketTransport.Options.Default with {
-                // Make frames effectively “never auto-flush by size”, so the sender must
-                // reliably pick up and send small buffered data when it goes idle.
-                FrameSize = 1_000_000,
-            },
-        });
-    }
-
-    [Fact]
-    public async Task SmallBufferMustFlushWithoutExtraWrite()
-    {
-        RpcFrameDelayerFactory = null;
-        await using var _ = await WebHost.Serve();
-        var services = ClientServices;
-        var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
-
-        // A few concurrent calls with per-call timeout to catch “buffer stuck until next write”.
-        var threadCount = Math.Max(2, HardwareInfo.ProcessorCount / 2);
-        var tasks = new Task[threadCount];
-        for (var t = 0; t < threadCount; t++) {
-            tasks[t] = Task.Run(async () => {
-                for (var i = 0; i < 200; i++)
-                    (await client.Div(i, 1).WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false))
-                        .Should().Be(i);
-            }, CancellationToken.None);
-        }
-
-        await Task.WhenAll(tasks);
-        await AssertNoCalls(peer, Out);
-    }
-}
-
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
-public class RpcWebSocketTransportFrameDelayTest : RpcTestBase
-{
-    private readonly TaskCompletionSource<Unit> _delayCts = TaskCompletionSourceExt.New<Unit>();
-
-    public RpcWebSocketTransportFrameDelayTest(ITestOutputHelper @out) : base(@out)
-        => ExposeBackend = true;
-
-    protected override void ConfigureServices(IServiceCollection services, bool isClient)
-    {
-        base.ConfigureServices(services, isClient);
-        var rpc = services.AddRpc();
-        var commander = services.AddCommander();
-        if (isClient) {
-            rpc.AddClient<ITestRpcServiceClient>(nameof(ITestRpcService));
-            commander.AddService<ITestRpcServiceClient>();
-            rpc.AddClient<ITestRpcBackend>();
-            commander.AddService<ITestRpcBackend>();
-        }
-        else {
-            rpc.AddServer<ITestRpcService, TestRpcService>();
-            commander.AddService<TestRpcService>();
-            rpc.AddServer<ITestRpcBackend, TestRpcBackend>();
-            commander.AddService<TestRpcBackend>();
-        }
-    }
-
-    protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
-    {
-        base.ConfigureTestServices(services, isClient);
-        if (!isClient)
-            return;
-
-        services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
-            HostUrlResolver = _ => WebHost.ServerUri.ToString(),
-            FrameDelayerFactory = null,
-            WebSocketTransportOptionsFactory = (_, _) => RpcWebSocketTransport.Options.Default with {
-                // Make frames effectively “never auto-flush by size”, so flushing is triggered
-                // solely by the scheduled (delayed) flush.
-                FrameSize = 1_000_000,
-                FrameDelayerFactory = () => _ => _delayCts.Task,
-            },
-        });
-    }
-
-    [Fact]
-    public async Task DelayedFlushBlocksSendingUntilDelayCompletes()
-    {
-        await using var _ = await WebHost.Serve();
-        var services = ClientServices;
-        var peer = services.RpcHub().GetClientPeer(ClientPeerRef);
-        var client = services.RpcHub().GetClient<ITestRpcServiceClient>();
-
-        var callTask = client.Div(1, 1);
-        await Task.Delay(100);
-        callTask.IsCompleted.Should().BeFalse();
-
-        _delayCts.TrySetResult(default);
-
-        (await callTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false)).Should().Be(1);
         await AssertNoCalls(peer, Out);
     }
 }

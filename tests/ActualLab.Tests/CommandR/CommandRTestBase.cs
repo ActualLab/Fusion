@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ActualLab.DependencyInjection;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Tests.CommandR.Services;
 using Xunit.DependencyInjection;
@@ -16,6 +17,7 @@ public class CommandRTestBase(ITestOutputHelper @out) : TestBase(@out)
     protected virtual IServiceProvider CreateServices()
     {
         var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<TestServiceProviderTag>();
         ConfigureServices(serviceCollection);
         var services = serviceCollection.BuildServiceProvider();
 

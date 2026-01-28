@@ -24,6 +24,7 @@ public class ScreenshotServiceClientTest(ITestOutputHelper @out) : FusionTestBas
 
         var epsilon = TimeSpan.FromSeconds(1);
 
+        await ResetClientServices();
         await using var serving = await WebHost.Serve();
         await Delay(0.25);
         var service = (ScreenshotService)Services.GetRequiredService<IScreenshotService>();

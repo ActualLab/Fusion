@@ -20,6 +20,7 @@ public class KeyValueModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
     [Fact]
     public async Task BasicTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
 
         var kv = WebServices.GetRequiredService<IKeyValueService<string>>();
@@ -65,6 +66,7 @@ public class KeyValueModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
     [Fact]
     public async Task CommandTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
 
         // Server commands
@@ -99,6 +101,7 @@ public class KeyValueModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
     [Fact]
     public async Task ExceptionTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var kv = WebServices.GetRequiredService<IKeyValueService<string>>();
 
@@ -121,6 +124,7 @@ public class KeyValueModelTest(ITestOutputHelper @out) : FusionTestBase(@out)
     [Fact]
     public async Task ClientExceptionTest()
     {
+        await ResetClientServices();
         await using var _ = await WebHost.Serve();
         var kv = ClientServices.GetRequiredService<IKeyValueService<string>>();
 
