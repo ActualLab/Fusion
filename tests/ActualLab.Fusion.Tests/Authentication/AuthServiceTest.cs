@@ -12,7 +12,10 @@ namespace ActualLab.Fusion.Tests.Authentication;
 public class SqliteAuthServiceTest : AuthServiceTestBase
 {
     public SqliteAuthServiceTest(ITestOutputHelper @out) : base(@out)
-        => DbType = FusionTestDbType.Sqlite;
+    {
+        DbType = FusionTestDbType.Sqlite;
+        UseRedisOperationLogChangeTracking = true;
+    }
 }
 
 public class PostgreSqlAuthServiceTest : AuthServiceTestBase
@@ -27,19 +30,28 @@ public class PostgreSqlAuthServiceTest : AuthServiceTestBase
 public class MariaDbAuthServiceTest : AuthServiceTestBase
 {
     public MariaDbAuthServiceTest(ITestOutputHelper @out) : base(@out)
-        => DbType = FusionTestDbType.MariaDb;
+    {
+        DbType = FusionTestDbType.MariaDb;
+        UseRedisOperationLogChangeTracking = true;
+    }
 }
 
 public class SqlServerAuthServiceTest : AuthServiceTestBase
 {
     public SqlServerAuthServiceTest(ITestOutputHelper @out) : base(@out)
-        => DbType = FusionTestDbType.SqlServer;
+    {
+        DbType = FusionTestDbType.SqlServer;
+        UseRedisOperationLogChangeTracking = true;
+    }
 }
 
 public class InMemoryAuthServiceTest : AuthServiceTestBase
 {
     public InMemoryAuthServiceTest(ITestOutputHelper @out) : base(@out)
-        => DbType = FusionTestDbType.InMemory;
+    {
+        DbType = FusionTestDbType.InMemory;
+        UseRedisOperationLogChangeTracking = true;
+    }
 }
 
 public class InMemoryInMemoryAuthServiceTest : AuthServiceTestBase
