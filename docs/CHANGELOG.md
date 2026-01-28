@@ -8,20 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
-## 12.0.10+362a51fd
+## 12.0.27+103636f2
 
 Release date: 2026-01-28
+
+### Added
+- Native little-endian serialization support in RPC serializers with optimized memory handling
+- `TestServiceProviderTag` to tag test `ServiceProvider`s and allow services to detect whether
+  they're running in test containers
+- New `MemoryReader` and `SpanWriter` helpers in `ActualLab.Core.IO.Internal`
+
+### Performance
+- Improved RPC performance dedicated path for little endian serialization and delegate caching
 
 ### Fixed
 - Big endian system support: serialization, RPC, and all dependent code now correctly use
   `BinaryPrimitives.WriteInt32LittleEndian` and similar methods to ensure consistent byte ordering
   across different CPU architectures
 
+### Tests
+- Added `ResetClientServices()` calls to all relevant Fusion and RPC tests
+- Refactored RPC test organization for better separation of concerns.
+
 ### Documentation
 - Added interactive BarChart component for performance benchmarks visualization
 - Improved Mermaid flowchart styles and edge label rendering
 - Updated Performance page with new benchmark visualizations
 - Integrated CHANGELOG into the documentation website
+- Updated coding style guide to clarify async method naming conventions
 
 
 ## 12.0.9+3e71b6ef
