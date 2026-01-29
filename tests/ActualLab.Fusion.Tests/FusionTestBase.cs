@@ -53,15 +53,12 @@ public abstract class FusionTestBase : RpcTestBase
 
     protected FusionTestBase(ITestOutputHelper @out) : base(@out)
     {
-        RedisKeyPrefix = GetTestRedisKeyPrefix(suffix: DotNetVersionHash);
-        SqliteDbPath = GetTestSqliteFilePath(suffix: DotNetVersionHash);
-        PostgreSqlConnectionString = FixConnectionString(PostgreSqlConnectionString);
-        MariaDbConnectionString = FixConnectionString(MariaDbConnectionString);
-        SqlServerConnectionString = FixConnectionString(SqlServerConnectionString);
-        return;
-
-        string FixConnectionString(string connectionString)
-            => GetTestDbConnectionString(connectionString, "fusion_tests", DotNetVersionHash);
+        // Use LongTestNameHash (default) to ensure each test class has its own DB
+        RedisKeyPrefix = GetTestRedisKeyPrefix();
+        SqliteDbPath = GetTestSqliteFilePath();
+        PostgreSqlConnectionString = GetTestDbConnectionString(PostgreSqlConnectionString, "fusion_tests");
+        MariaDbConnectionString = GetTestDbConnectionString(MariaDbConnectionString, "fusion_tests");
+        SqlServerConnectionString = GetTestDbConnectionString(SqlServerConnectionString, "fusion_tests");
     }
 
     public override async Task InitializeAsync()
