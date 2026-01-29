@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.0.46+0ee956d2
+
+Release date: 2026-01-29
+
+### Performance
+- Simplified `RpcOutboundMessage` by replacing `WhenSerialized` Task with synchronous `SendHandler` callback;
+  dependencies like `RpcOutboundCall.SendXxx`, `RpcStream.OnItem`, `OnBatch`, and `OnEnd` transitioned from `Task` 
+  to `void` return type reducing task allocations in the RPC send path, bringing ~20% performance improvement.
+
+### Tests
+- Added comprehensive unit tests for `TaskCompletionHandler` covering various task states
+  (completed, faulted, cancelled) and all handler variants (1, 2, 3 state objects)
+
+### Infrastructure
+- Removed obsolete `docs.sln` file
+- Removed JetBrains.Annotations package reference
+- Updated package versions: Blazorise 1.8.9, Bullseye 6.1.0, CliWrap 3.10.0
+- Updated analyzer packages: Moq.Analyzers, xunit.analyzers, Roslynator.Analyzers, Meziantou.Analyzer.
+
+
 ## 12.0.34+842f172c
 
 Release date: 2026-01-28
