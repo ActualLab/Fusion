@@ -213,11 +213,11 @@
     <PackageVersion Include="Nerdbank.GitVersioning" Version="3.9.50" />
     <PackageVersion Include="PolySharp" Version="1.15.0" />
     <!-- Analyzers -->
-    <PackageVersion Include="Moq.Analyzers" Version="0.3.0" />
-    <PackageVersion Include="xunit.analyzers" Version="1.25.0" />
+    <PackageVersion Include="Moq.Analyzers" Version="0.4.0" />
+    <PackageVersion Include="xunit.analyzers" Version="1.27.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.14.1" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.252" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.286" />
     <!-- Generators -->
     <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(CSharpVersion)" />
