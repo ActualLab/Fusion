@@ -165,7 +165,11 @@ public abstract class TaskCompletionHandler
                 return null;
 
             var items = _items ??= new TaskCompletionHandler[Capacity];
+#if NET6_0_OR_GREATER
             ref var itemRef = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(items), --_position);
+#else
+            ref var itemRef = ref items[--_position];
+#endif
             var item = itemRef;
             itemRef = null!;
             return item;
@@ -178,7 +182,11 @@ public abstract class TaskCompletionHandler
                 return;
 
             var items = _items ??= new TaskCompletionHandler[Capacity];
+#if NET6_0_OR_GREATER
             ref var itemRef = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(items), _position++);
+#else
+            ref var itemRef = ref items[_position++];
+#endif
             itemRef = item;
         }
     }
