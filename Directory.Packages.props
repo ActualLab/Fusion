@@ -82,8 +82,8 @@
     <PackageVersion Include="Blazorise.DataGrid" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Icons.FontAwesome" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Sidebar" Version="$(BlazoriseVersion)" />
-    <PackageVersion Include="Bullseye" Version="6.0.0" />
-    <PackageVersion Include="CliWrap" Version="3.9.0" />
+    <PackageVersion Include="Bullseye" Version="6.1.0" />
+    <PackageVersion Include="CliWrap" Version="3.10.0" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="DataAnnotationsValidatorNetStandard" Version="1.0.3" />
     <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
