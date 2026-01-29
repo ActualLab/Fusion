@@ -86,7 +86,6 @@
     <PackageVersion Include="CliWrap" Version="3.9.0" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="DataAnnotationsValidatorNetStandard" Version="1.0.3" />
-    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.2" />
     <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MemoryPack.Core" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MessagePack" Version="$(MessagePackVersion)" />

@@ -22,8 +22,5 @@
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="JetBrains.Annotations" />
-  </ItemGroup>
 
 </Project>
