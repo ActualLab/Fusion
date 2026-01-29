@@ -16,12 +16,12 @@ await test.GetBytesTest(3, 5, 20_000);
 WriteLine("Press any key to exit...");
 ReadKey();
 
-public static class LogSettings
+internal static class LogSettings
 {
     public const LogLevel MinLogLevel = LogLevel.Error;
 }
 
-public class RpcWebSocketTestWrapper(ITestOutputHelper @out) : RpcWebSocketPerformanceTest(@out)
+internal class RpcWebSocketTestWrapper(ITestOutputHelper @out) : RpcWebSocketPerformanceTest(@out)
 {
     protected override void ConfigureServices(IServiceCollection services, bool isClient)
     {
