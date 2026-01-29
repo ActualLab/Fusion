@@ -14,6 +14,7 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
     {
         UseTestClock = true;
         UseInMemoryKeyValueStore = useInMemoryKeyValueStore;
+        UseRedisOperationLogChangeTracking = useInMemoryKeyValueStore;
     }
 
     [Fact]
