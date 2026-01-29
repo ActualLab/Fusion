@@ -39,6 +39,32 @@ public sealed class RpcWebSocketTransport : RpcTransport
     private const byte RecordSeparator = 0x1E; // RS
 
     private static readonly MeterSet StaticMeters = new();
+    private static readonly Action<Task, object?> DefaultSendTaskCompletionHandler = static (task, state) => {
+        if (task.IsCompletedSuccessfully)
+            return;
+
+        try {
+            task.GetAwaiter().GetResult();
+        }
+        catch (Exception e) {
+            var transport = Unsafe.As<RpcWebSocketTransport>(state)!;
+            transport.DefaultSendErrorHandler(e);
+        }
+    };
+    private static readonly Action<Task, object?, object?, object?> SendTaskCompletionHandler = static (task, s1, s2, s3) => {
+        if (task.IsCompletedSuccessfully)
+            return;
+
+        try {
+            task.GetAwaiter().GetResult();
+        }
+        catch (Exception e) {
+            var errorHandler = Unsafe.As<RpcSendErrorHandler>(s1)!;
+            var message = Unsafe.As<RpcOutboundMessage>(s2)!;
+            var transport = Unsafe.As<RpcWebSocketTransport>(s3)!;
+            errorHandler.Invoke(e, message, transport);
+        }
+    };
 
     private readonly MeterSet _meters = StaticMeters;
     private readonly int _frameSize;
@@ -149,39 +175,54 @@ public sealed class RpcWebSocketTransport : RpcTransport
             await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override Task Send(
-        RpcOutboundMessage message,
-        RpcSendErrorHandler errorHandler,
-        CancellationToken cancellationToken = default)
+    public override Task Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
         var whenSerialized = message.WhenSerialized;
 
         // Fast path: since _writeChannel is typically an UnboundedChannel,
         // TryWrite always completes successfully while the channel is operational.
-        if (_writeChannelWriter.TryWrite(message))
-            return whenSerialized is null
-                ? Task.CompletedTask
-                : CompleteAsync(whenSerialized, this, message, errorHandler);
+        if (_writeChannelWriter.TryWrite(message)) {
+            if (whenSerialized is null)
+                return Task.CompletedTask;
+
+            goto attachErrorHandler;
+        }
 
         // Slow path
         var writeTask = _writeChannelWriter.WriteAsync(message, cancellationToken);
-        return CompleteAsync(whenSerialized ?? writeTask.AsTask(), this, message, errorHandler);
+        whenSerialized ??= writeTask.AsTask();
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        static async Task CompleteAsync(
-            Task dependency,
-            RpcWebSocketTransport transport,
-            RpcOutboundMessage message,
-            RpcSendErrorHandler errorHandler)
-        {
-            try {
-                await dependency.ConfigureAwait(false);
-            }
-            catch (Exception e) when (errorHandler.Invoke(e, transport.Peer, message, transport)) {
-                // Intended, errorHandler handled it
-            }
+        attachErrorHandler:
+        TaskCompletionHandler.Get(whenSerialized, this, DefaultSendTaskCompletionHandler).Attach();
+        return whenSerialized;
+    }
+
+    public override Task Send(
+        RpcOutboundMessage message,
+        RpcSendErrorHandler? errorHandler,
+        CancellationToken cancellationToken = default)
+    {
+        if (errorHandler is null)
+            return Send(message, cancellationToken);
+
+        var whenSerialized = message.WhenSerialized;
+
+        // Fast path: since _writeChannel is typically an UnboundedChannel,
+        // TryWrite always completes successfully while the channel is operational.
+        if (_writeChannelWriter.TryWrite(message)) {
+            if (whenSerialized is null)
+                return Task.CompletedTask;
+
+            goto attachErrorHandler;
         }
+
+        // Slow path
+        var writeTask = _writeChannelWriter.WriteAsync(message, cancellationToken);
+        whenSerialized ??= writeTask.AsTask();
+
+        attachErrorHandler:
+        TaskCompletionHandler.Get(whenSerialized, errorHandler, message, this, SendTaskCompletionHandler).Attach();
+        return whenSerialized;
     }
 
     public override bool TryComplete(Exception? error = null)

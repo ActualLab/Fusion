@@ -1,3 +1,4 @@
+using ActualLab.Async.Internal;
 using ActualLab.Internal;
 
 namespace ActualLab.Async;
@@ -6,13 +7,6 @@ namespace ActualLab.Async;
 
 public static partial class TaskExt
 {
-#if USE_UNSAFE_ACCESSORS
-    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_stateFlags")]
-    private static extern ref int StateFlagsGetter(Task task);
-#else
-    private static readonly Action<Task, int> StateFlagsSetter;
-#endif
-
     public static readonly Task<Unit> UnitTask;
     public static readonly Task<bool> TrueTask;
     public static readonly Task<bool> FalseTask;
@@ -26,11 +20,6 @@ public static partial class TaskExt
         UnitTask = Task.FromResult(Unit.Default);
         TrueTask = Task.FromResult(true);
         FalseTask = Task.FromResult(false);
-#if !USE_UNSAFE_ACCESSORS
-        StateFlagsSetter = typeof(Task)
-            .GetField("m_stateFlags", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetSetter<Task, int>();
-#endif
     }
 
     // NeverEnding - a shortcut for Task.Delay(Timeout.Infinite)
@@ -138,9 +127,9 @@ public static partial class TaskExt
         // 0x2000400 = (int)TaskStateFlags.WaitingForActivation | (int)InternalTaskOptions.PromiseTask;
         const int stateFlags = 0x2000400 | (int)TaskContinuationOptions.RunContinuationsAsynchronously;
 #if USE_UNSAFE_ACCESSORS
-        StateFlagsGetter(task) = stateFlags;
+        TaskImpl.StateFlagsGetter(task) = stateFlags;
 #else
-        StateFlagsSetter.Invoke(task, stateFlags);
+        TaskImpl.StateFlagsSetter.Invoke(task, stateFlags);
 #endif
     }
 }

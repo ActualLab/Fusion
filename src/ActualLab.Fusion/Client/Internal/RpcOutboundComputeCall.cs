@@ -4,7 +4,7 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Fusion.Client.Internal;
 
-public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOutboundCall(context)
+public abstract class RpcOutboundComputeCall : RpcOutboundCall
 {
     protected readonly AsyncTaskMethodBuilder<string> WhenInvalidatedSource
         = AsyncTaskMethodBuilderExt.New<string>(); // Must not allow synchronous continuations!
@@ -19,6 +19,9 @@ public abstract class RpcOutboundComputeCall(RpcOutboundContext context) : RpcOu
 
     // ReSharper disable once InconsistentlySynchronizedField
     public Task<string> WhenInvalidated => WhenInvalidatedSource.Task;
+
+    protected RpcOutboundComputeCall(RpcOutboundContext context) : base(context)
+        => IsLongLiving = true;
 
     public override int? GetReconnectStage(bool isPeerChanged)
     {

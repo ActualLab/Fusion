@@ -35,11 +35,15 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
         return Task.CompletedTask;
     }
 
+    public override Task Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
+        => Send(message, errorHandler: null, cancellationToken);
+
     public override async Task Send(
         RpcOutboundMessage message,
-        RpcSendErrorHandler errorHandler,
+        RpcSendErrorHandler? errorHandler,
         CancellationToken cancellationToken = default)
     {
+        errorHandler ??= DefaultSendErrorHandlerFunc;
         try {
             if (_whenCompleted.IsCompleted)
                 throw new ChannelClosedException();
@@ -50,8 +54,8 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
             var frame = new ArrayOwner<byte>(buffer.Pool, buffer.Array, buffer.WrittenCount);
             await _writer.WriteAsync(frame, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception e) when (errorHandler.Invoke(e, Peer, message, this)) {
-            // Intended, errorHandler handled it
+        catch (Exception e) {
+            errorHandler.Invoke(e, message, this);
         }
     }
 

@@ -59,11 +59,8 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 
 public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 {
-    private readonly ConcurrentDictionary<long, RpcOutboundCall> _inProgressCalls = new(HardwareInfo.ProcessorCountPo2, 131);
+    private readonly ConcurrentDictionary<long, RpcOutboundCall> _longLivingCalls = new(HardwareInfo.ProcessorCountPo2, 131);
     private long _lastId;
-
-    public int InProgressCallCount => _inProgressCalls.Count;
-    public IEnumerable<RpcOutboundCall> InProgressCalls => _inProgressCalls.Values;
 
     public RpcOutboundCall this[long id] => Calls[id];
 
@@ -77,12 +74,13 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         call.Id = Interlocked.Increment(ref _lastId);
         call.StartedAt = CpuTimestamp.Now;
         Calls.TryAdd(call.Id, call); // Must succeed for unique call.Id
-            _inProgressCalls.TryAdd(call.Id, call);  // Must succeed for unique call.Id
+        if (call.IsLongLiving)
+            _longLivingCalls.TryAdd(call.Id, call);  // Must succeed for unique call.Id
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool CompleteKeepRegistered(RpcOutboundCall call)
-        => _inProgressCalls.TryRemove(call.Id, call);
+    public bool UnregisterLongLiving(RpcOutboundCall call)
+        => _longLivingCalls.TryRemove(call.Id, call);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Unregister(RpcOutboundCall call)

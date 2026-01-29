@@ -21,6 +21,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public readonly RpcOutboundContext Context = context;
     public readonly RpcPeer Peer = context.Peer!;
     public readonly RpcCacheInfoCaptureMode CacheInfoCaptureMode = context.CacheInfoCapture?.CaptureMode ?? default;
+    public bool IsLongLiving { get; init; }
 
     public Task<object?> ResultTask {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -131,12 +132,24 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     // SendXxx
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Task SendNoWait(bool needsPolymorphism, RpcSendErrorHandler errorHandler)
+    public Task SendNoWait(bool needsPolymorphism)
     {
         // NoWait calls don't require RpcOutboundContext.Current to serialize their arguments,
         // so no Context.Activate() call here.
         // Use lazy CreateOutboundMessage - serialization happens in transport.
-        var tracksSerialization = !ReferenceEquals(errorHandler, RpcSendErrorHandlers.Silence);
+        var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism, tracksSerialization: false);
+        if (Peer.CallLogger.IsLogged(this))
+            Peer.CallLogger.LogOutbound(this, message);
+        return Peer.Transport?.Send(message, Peer.StopToken) ?? Task.CompletedTask;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task SendNoWait(bool needsPolymorphism, RpcSendErrorHandler? errorHandler)
+    {
+        // NoWait calls don't require RpcOutboundContext.Current to serialize their arguments,
+        // so no Context.Activate() call here.
+        // Use lazy CreateOutboundMessage - serialization happens in transport.
+        var tracksSerialization = !ReferenceEquals(errorHandler, null);
         var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism, tracksSerialization);
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
@@ -144,7 +157,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Task SendNoWait(RpcOutboundMessage message, RpcSendErrorHandler errorHandler)
+    public Task SendNoWait(RpcOutboundMessage message, RpcSendErrorHandler? errorHandler)
     {
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
@@ -326,25 +339,31 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
     }
 
-    public void CompleteKeepRegistered()
-    {
-        if (!Peer.OutboundCalls.CompleteKeepRegistered(this))
-            return;
-
-        CancellationHandler.Dispose();
-        Context.Trace?.Complete(this);
-    }
-
     public void CompleteAndUnregister(bool notifyCancelled)
     {
         if (NoWait)
             throw Errors.InternalError("This method should never be called for NoWait calls.");
+        if (!Peer.OutboundCalls.Unregister(this))
+            return;
 
-        if (Peer.OutboundCalls.Unregister(this)) {
-            CompleteKeepRegistered();
-            if (notifyCancelled)
-                NotifyCancelled();
+        if (!IsLongLiving || Peer.OutboundCalls.UnregisterLongLiving(this)) {
+            CancellationHandler.Dispose();
+            Context.Trace?.Complete(this);
         }
+
+        if (notifyCancelled)
+            NotifyCancelled();
+    }
+
+    public void CompleteKeepRegistered()
+    {
+        if (!IsLongLiving)
+            throw Errors.InternalError("This method should never be called for non-long-lived calls.");
+        if (!Peer.OutboundCalls.UnregisterLongLiving(this))
+            return;
+
+        CancellationHandler.Dispose();
+        Context.Trace?.Complete(this);
     }
 
     // Helpers
