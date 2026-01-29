@@ -99,6 +99,10 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
             while (CpuTimestamp.Now < endAt) {
                 try {
                     var maxWaitTime = TimeSpanExt.Min(endAt - CpuTimestamp.Now, TimeSpan.FromSeconds(5));
+                    // Ensure maxWaitTime is positive to avoid ArgumentOutOfRangeException
+                    if (maxWaitTime <= TimeSpan.Zero)
+                        break;
+
                     var delay = TimeSpan.FromMilliseconds(rnd.Next(5, 120));
                     var delayTask = client.Delay(delay).WaitAsync(maxWaitTime);
                     (await delayTask).Should().Be(delay);

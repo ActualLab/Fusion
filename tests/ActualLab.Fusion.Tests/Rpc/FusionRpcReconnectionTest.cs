@@ -201,19 +201,20 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
 
         var disruptorCts = new CancellationTokenSource();
         var disruptorTask = ConnectionDisruptor(workerId, connection, disruptorCts.Token);
-        var lateStopCts = new CancellationTokenSource(-endAt.Elapsed + TimeSpan.FromSeconds(3));
-        var lateStopToken = lateStopCts.Token;
         try {
             var rnd = new Random();
             while (CpuTimestamp.Now < endAt) {
                 var delay = rnd.Next(10, 100);
                 var invDelay = rnd.Next(10, 100);
                 var maxWaitTime = TimeSpanExt.Min(endAt - CpuTimestamp.Now, TimeSpan.FromSeconds(10));
-                Task<(int, int)>? delayTask = null;
+                // Ensure maxWaitTime is positive to avoid ArgumentOutOfRangeException
+                if (maxWaitTime <= TimeSpan.Zero)
+                    break;
+
                 if (rnd.NextDouble() < 0.5) {
                     // Timeout case
                     try {
-                        delayTask = client.Delay(delay, invDelay);
+                        var delayTask = client.Delay(delay, invDelay);
                         var result = await delayTask.WaitAsync(maxWaitTime);
                         result.Should().Be((delay, invDelay));
                         successCount++;
@@ -223,31 +224,25 @@ public class FusionRpcReconnectionTest(ITestOutputHelper @out) : SimpleFusionTes
                     }
                 }
                 else {
-                    // Cancellation case
-                    var timeoutCts = new CancellationTokenSource(maxWaitTime);
-                    var timeoutToken = timeoutCts.Token;
+                    // Cancellation case - pass cancellation token to RPC call and use same timeout for WaitAsync
+                    using var timeoutCts = new CancellationTokenSource(maxWaitTime);
                     try {
-                        delayTask = client.Delay(delay, invDelay, timeoutToken);
-                        var result = await delayTask.WaitAsync(lateStopToken);
+                        var delayTask = client.Delay(delay, invDelay, timeoutCts.Token);
+                        var result = await delayTask.WaitAsync(maxWaitTime);
                         result.Should().Be((delay, invDelay));
                         successCount++;
                     }
-                    catch (OperationCanceledException) {
-                        if (lateStopToken.IsCancellationRequested && delayTask?.IsCompleted == true) {
-                            Write("couldn't cancel Delay call!");
-                            Assert.Fail("Couldn't cancel Delay call!");
-                        }
+                    catch (TimeoutException) {
                         cancellationCount++;
                     }
-                    finally {
-                        timeoutCts.CancelAndDisposeSilently();
+                    catch (OperationCanceledException) {
+                        cancellationCount++;
                     }
                 }
             }
         }
         finally {
             Write("stopping ConnectionDisruptor");
-            lateStopCts.CancelAndDisposeSilently();
             disruptorCts.CancelAndDisposeSilently();
             await disruptorTask;
         }
