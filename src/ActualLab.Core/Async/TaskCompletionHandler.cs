@@ -154,7 +154,7 @@ public abstract class TaskCompletionHandler
 
     protected struct Pool
     {
-        private const int Capacity = 256;
+        private const int Capacity = 64;
 
         private TaskCompletionHandler[]? _items;
         private int _position;
