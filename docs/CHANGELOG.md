@@ -24,7 +24,7 @@ Release date: 2026-01-29
 ### Infrastructure
 - Removed obsolete `docs.sln` file
 - Removed JetBrains.Annotations package reference
-- Updated package versions: Blazorise 1.8.9, Bullseye 6.1.0, CliWrap 3.10.0
+- Updated package versions: Blazorise 1.8.9 (used only in samples), Bullseye 6.1.0, and CliWrap 3.10.0 (used in Build.csproj)
 - Updated analyzer packages: Moq.Analyzers, xunit.analyzers, Roslynator.Analyzers, Meziantou.Analyzer.
 
 
