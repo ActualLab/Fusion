@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
-## 12.0.30+bb8f7bd1
+## 12.0.34+842f172c
 
 Release date: 2026-01-28
 
@@ -22,6 +22,11 @@ Release date: 2026-01-28
 - Improved RPC performance dedicated path for little endian serialization and delegate caching
 - Eliminated `RpcPeer.Send` indirection layer - `RpcTransport.Send` now handles error handling directly,
   reducing call stack depth and improving RPC throughput
+- Introduced `TaskCompletionHandler` - a pooled helper for attaching completion callbacks to tasks.
+  Each instance caches its delegate, and instances are pooled using thread-static pools to minimize allocations
+  in hot paths like RPC transport error handling
+- Enabled `UseUnsafeAccessors` build configuration for .NET 8+ targets, improving internal reflection-based
+  operations performance
 
 ### Fixed
 - Big endian system support: serialization, RPC, and all dependent code now correctly use
