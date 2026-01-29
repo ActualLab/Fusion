@@ -2,6 +2,7 @@ using ActualLab.Interception;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+[method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public sealed class RpcInboundMessage(
     byte callTypeId,
     long relatedId,

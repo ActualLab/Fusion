@@ -14,7 +14,7 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
     public RpcMessageSerializer MessageSerializer { get; }
     public int InitialBufferCapacity { get; init; } = 256;
     public override Task WhenCompleted => _whenCompleted;
-    public override Task WhenClosed { get; }
+    public Task WhenClosed { get; }
 
     public RpcSimpleChannelTransport(
         RpcPeer peer,
@@ -35,27 +35,21 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
         return Task.CompletedTask;
     }
 
-    public override Task Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
-        => Send(message, errorHandler: null, cancellationToken);
-
-    public override async Task Send(
-        RpcOutboundMessage message,
-        RpcSendErrorHandler? errorHandler,
-        CancellationToken cancellationToken = default)
+    public override void Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
-        errorHandler ??= DefaultSendErrorHandlerFunc;
         try {
             if (_whenCompleted.IsCompleted)
                 throw new ChannelClosedException();
 
-            // No need to dispose the buffer, it's array is disposed by the receiving side via frame.Dispose there
+            // No need to dispose the buffer, its array is disposed by the receiving side via frame.Dispose there
             var buffer = new ArrayPoolBuffer<byte>(InitialBufferCapacity, mustClear: false);
             MessageSerializer.WriteFunc(buffer, message);
+            CompleteSend(message);
             var frame = new ArrayOwner<byte>(buffer.Pool, buffer.Array, buffer.WrittenCount);
-            await _writer.WriteAsync(frame, cancellationToken).ConfigureAwait(false);
+            _ = _writer.WriteAsync(frame, cancellationToken);
         }
         catch (Exception e) {
-            errorHandler.Invoke(e, message, this);
+            CompleteSend(message, e);
         }
     }
 

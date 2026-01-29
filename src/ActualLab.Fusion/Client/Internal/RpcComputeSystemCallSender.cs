@@ -19,10 +19,10 @@ public sealed class RpcComputeSystemCallSender : RpcServiceBase
         Client = Hub.GetClient<IRpcComputeSystemCalls>();
     }
 
-    public Task Invalidate(RpcPeer peer, long callId, RpcHeader[]? headers = null)
+    public void Invalidate(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCallForSendNoWait(InvalidateMethodDef, ArgumentList.Empty)!;
-        return call.SendNoWait(needsPolymorphism: false);
+        call.SendNoWait(needsPolymorphism: false);
     }
 }

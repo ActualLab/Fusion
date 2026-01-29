@@ -35,7 +35,7 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
     public void KeepAlive()
         => LastKeepAliveAt = CpuTimestamp.Now;
 
-    public abstract Task OnAck(long nextIndex, Guid hostId);
+    public abstract void OnAck(long nextIndex, Guid hostId);
 }
 
 public sealed class RpcSharedStream<T> : RpcSharedStream
@@ -57,11 +57,13 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     public new RpcStream<T> Stream { get; }
 
-    public override Task OnAck(long nextIndex, Guid hostId)
+    public override void OnAck(long nextIndex, Guid hostId)
     {
         var mustReset = hostId != default;
-        if (mustReset && !Equals(Stream.Id.HostId, hostId))
-            return SendMissing();
+        if (mustReset && !Equals(Stream.Id.HostId, hostId)) {
+            SendMissing();
+            return;
+        }
 
         LastKeepAliveAt = CpuTimestamp.Now;
         lock (Lock) {
@@ -69,14 +71,17 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             if (whenRunning is null) {
                 if (mustReset && nextIndex == 0)
                     this.Start();
-                else
-                    return SendMissing();
+                else {
+                    SendMissing();
+                    return;
+                }
             }
-            else if (whenRunning.IsCompleted)
-                return SendMissing();
+            else if (whenRunning.IsCompleted) {
+                SendMissing();
+                return;
+            }
 
             _acks.Writer.TryWrite((nextIndex, mustReset)); // Must always succeed for unbounded channel
-            return Task.CompletedTask;
         }
     }
 
@@ -98,7 +103,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         while (true) {
             nextAck:
             // 1. Await for an acknowledgement & process accumulated acknowledgements
-            await _batcher.Flush(index).ConfigureAwait(false);
+            _batcher.Flush(index);
             (long NextIndex, bool MustReset) ack = (-1L, false);
             if (!whenAckReady.IsCompleted) {
                 // Debug.WriteLine($"{Id}: ?ACK");
@@ -131,7 +136,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             // 3. Recalculate the next range to send
             if (index < bufferStart) {
                 // The requested item is somewhere before the buffer start position
-                await SendInvalidPosition(index).ConfigureAwait(false);
+                SendInvalidPosition(index);
                 goto nextAck;
             }
             var bufferIndex = (int)(index - bufferStart);
@@ -172,7 +177,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 // 3.2. Add all buffered items to the batcher
                 while (index < maxIndex && bufferIndex < buffer.Count) {
                     item = buffer[bufferIndex++];
-                    await _batcher.Add(index++, item).ConfigureAwait(false);
+                    _batcher.Add(index++, item);
                     if (item.HasError) {
                         // It's the last item -> all we can do now is to wait for Ack;
                         // Note that Batcher.Add automatically flushes on error.
@@ -185,7 +190,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     continue;
 
                 // 3.3. Flush & await whenMovedNextAsTask or whenAckReady
-                await _batcher.Flush(index).ConfigureAwait(false);
+                _batcher.Flush(index);
                 var completedTask = await Task
                     .WhenAny(whenAckReady, whenMovedNextAsTask)
                     .ConfigureAwait(false);
@@ -206,22 +211,24 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         return Task.CompletedTask;
     }
 
-    private Task SendMissing()
+    private void SendMissing()
         => _systemCallSender.Disconnect(Peer, [Id.LocalId]);
 
-    private Task SendInvalidPosition(long index)
+    private void SendInvalidPosition(long index)
         => Send(index, Result.NewError<T>(Errors.RpcStreamInvalidPosition()));
 
-    private Task Send(long index, Result<T> item)
+    private void Send(long index, Result<T> item)
     {
         // Debug.WriteLine($"{Id}: <- #{index} (ack @ {ackIndex})");
         var (value, error) = item;
-        if (error is null)
-            return _systemCallSender.Item(Peer, Id.LocalId, index, value);
+        if (error is null) {
+            _systemCallSender.Item(Peer, Id.LocalId, index, value);
+            return;
+        }
 
         if (ReferenceEquals(item.Error, NoMoreItemsTag))
             error = null;
-        return _systemCallSender.End(Peer, Id.LocalId, index, error);
+        _systemCallSender.End(Peer, Id.LocalId, index, error);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -239,8 +246,8 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     private sealed class Batcher
     {
-        public readonly int BatchSize;
 
+        private readonly int _batchSize;
         private readonly bool _isPolymorphic = !(typeof(T).IsValueType || typeof(T).IsSealed);
         private readonly List<T> _items;
         private Type? _itemType;
@@ -248,43 +255,43 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
         public Batcher(RpcSharedStream<T> stream)
         {
-            BatchSize = stream.Stream.BatchSize.Clamp(1, RpcStream.MaxBatchSize);
+            _batchSize = stream.Stream.BatchSize.Clamp(1, RpcStream.MaxBatchSize);
             _stream = stream;
-            _items = new List<T>(capacity: Math.Max(1, BatchSize / 4));
+            _items = new List<T>(capacity: Math.Max(1, _batchSize / 4));
         }
 
-        public async ValueTask Add(long index, Result<T> item)
+        public void Add(long index, Result<T> item)
         {
             var (value, error) = item;
             if (error is not null) {
-                await Flush(index).ConfigureAwait(false);
-                await _stream.Send(index, item).ConfigureAwait(false);
+                Flush(index);
+                _stream.Send(index, item);
                 return;
             }
 
             if (_isPolymorphic) {
                 var itemType = value?.GetType();
-                if (_items.Count >= BatchSize || (itemType is not null && itemType != _itemType))
-                    await Flush(index).ConfigureAwait(false);
+                if (_items.Count >= _batchSize || (itemType is not null && itemType != _itemType))
+                    Flush(index);
                 _itemType ??= itemType;
             }
-            else if (_items.Count >= BatchSize)
-                await Flush(index).ConfigureAwait(false);
+            else if (_items.Count >= _batchSize)
+                Flush(index);
 
             _items.Add(item);
         }
 
-        public Task Flush(long nextIndex)
+        public void Flush(long nextIndex)
         {
             var count = _items.Count;
             if (count == 0)
-                return Task.CompletedTask;
+                return;
 
             if (count == 1) {
-                var result = _stream.Send(nextIndex - count, _items[0]);
+                _stream.Send(nextIndex - count, _items[0]);
                 _items.Clear();
                 _itemType = null;
-                return result;
+                return;
             }
 
             {
@@ -292,11 +299,10 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     ? (T[])Array.CreateInstance(_itemType ?? typeof(T), count)
                     : new T[count];
                 _items.CopyTo(items);
-                var result = _stream._systemCallSender.Batch(
+                _stream._systemCallSender.Batch(
                     _stream.Peer, _stream.Id.LocalId, nextIndex - count, items);
                 _items.Clear();
                 _itemType = null;
-                return result;
             }
         }
     }

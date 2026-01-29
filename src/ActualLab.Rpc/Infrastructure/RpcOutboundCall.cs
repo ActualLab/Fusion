@@ -86,7 +86,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         if (NoWait) {
             // NoWait always means "send immediately, even if disconnected"
-            _ = SendNoWait(MethodDef.HasPolymorphicArguments, RpcSendErrorHandlers.PropagateToCall);
+            SendNoWait(MethodDef.HasPolymorphicArguments, RpcSendHandlers.PropagateToCall);
             return ResultTask;
         }
 
@@ -94,7 +94,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (!Peer.IsConnected())
             return CompleteAsync(); // Slow path
 
-        _ = SendRegistered(isFirstAttempt: true); // Fast path
+        SendRegistered(isFirstAttempt: true); // Fast path
         return ResultTask;
 
         async Task<object?> CompleteAsync() {
@@ -103,7 +103,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
                 await Peer
                     .WhenConnected(MethodDef.OutboundCallTimeouts.ConnectTimeout, Context.CancellationToken)
                     .ConfigureAwait(false);
-                _ = SendRegistered(isFirstAttempt: true);
+                SendRegistered(isFirstAttempt: true);
             }
             catch (Exception error) {
                 SetError(error, null);
@@ -132,48 +132,47 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     // SendXxx
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Task SendNoWait(bool needsPolymorphism)
+    public void SendNoWait(bool needsPolymorphism)
     {
         // NoWait calls don't require RpcOutboundContext.Current to serialize their arguments,
         // so no Context.Activate() call here.
         // Use lazy CreateOutboundMessage - serialization happens in transport.
-        var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism, tracksSerialization: false);
+        var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism, sendHandler: null);
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Transport?.Send(message, Peer.StopToken) ?? Task.CompletedTask;
+        Peer.Transport?.Send(message, Peer.StopToken);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Task SendNoWait(bool needsPolymorphism, RpcSendErrorHandler? errorHandler)
+    public void SendNoWait(bool needsPolymorphism, RpcTransportSendHandler? sendHandler)
     {
         // NoWait calls don't require RpcOutboundContext.Current to serialize their arguments,
         // so no Context.Activate() call here.
         // Use lazy CreateOutboundMessage - serialization happens in transport.
-        var tracksSerialization = !ReferenceEquals(errorHandler, null);
-        var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism, tracksSerialization);
+        var message = CreateOutboundMessage(Context.RelatedId, needsPolymorphism, sendHandler);
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Transport?.Send(message, errorHandler, Peer.StopToken) ?? Task.CompletedTask;
+        Peer.Transport?.Send(message, Peer.StopToken);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Task SendNoWait(RpcOutboundMessage message, RpcSendErrorHandler? errorHandler)
+    public void SendNoWait(RpcOutboundMessage message)
     {
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Transport?.Send(message, errorHandler, Peer.StopToken) ?? Task.CompletedTask;
+        Peer.Transport?.Send(message, Peer.StopToken);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public Task SendRegistered(bool isFirstAttempt)
+    public void SendRegistered(bool isFirstAttempt)
     {
         // Use lazy CreateOutboundMessage - serialization happens in transport.
-        // Serialization errors propagate from Peer.Send, which is what we want.
+        // Serialization errors propagate via message.SendHandler.
         var context = Context;
         var cacheInfoCapture = context.CacheInfoCapture;
         var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
         var activity = context.Trace?.Activity;
-        var message = CreateOutboundMessage(Id, MethodDef.HasPolymorphicArguments, tracksSerialization: true, hash, activity);
+        var message = CreateOutboundMessage(Id, MethodDef.HasPolymorphicArguments, RpcSendHandlers.PropagateToCall, hash, activity);
 
         // For cache key capture, we need serialized data
         if (cacheInfoCapture is not null) {
@@ -184,11 +183,11 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         if (Peer.CallLogger.IsLogged(this))
             Peer.CallLogger.LogOutbound(this, message);
-        return Peer.Transport?.Send(message, RpcSendErrorHandlers.PropagateToCall, Peer.StopToken) ?? Task.CompletedTask;
+        Peer.Transport?.Send(message, Peer.StopToken);
     }
 
     public RpcOutboundMessage CreateOutboundMessage(
-        long relatedId, bool needsPolymorphism, bool tracksSerialization, string? hash = null, Activity? activity = null)
+        long relatedId, bool needsPolymorphism, RpcTransportSendHandler? sendHandler, string? hash = null, Activity? activity = null)
     {
         var headers = Context.Headers;
         if (hash is not null)
@@ -196,8 +195,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (activity is not null)
             headers = RpcActivityInjector.Inject(headers, activity.Context);
 
-        return new RpcOutboundMessage(
-            Context, MethodDef, relatedId, needsPolymorphism, tracksSerialization, headers);
+        return new RpcOutboundMessage(Context, MethodDef, relatedId, needsPolymorphism, headers, sendHandler);
     }
 
     public RpcOutboundMessage CreateOutboundMessageWithArgumentData(
@@ -215,8 +213,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
                 headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
             if (activity is not null)
                 headers = RpcActivityInjector.Inject(headers, activity.Context);
-            return new RpcOutboundMessage(
-                Context, MethodDef, relatedId, needsPolymorphism, tracksSerialization: false, headers, argumentData);
+            return new RpcOutboundMessage(Context, MethodDef, relatedId, needsPolymorphism, headers, argumentData);
         }
         finally {
             RpcOutboundContext.Current = oldOutboundContext;
@@ -224,7 +221,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     public (RpcOutboundMessage Message, string Hash) CreateOutboundMessageWithHashHeader(
-        long relatedId, bool needsPolymorphism)
+        long relatedId, bool needsPolymorphism, RpcTransportSendHandler? sendHandler)
     {
         var oldOutboundContext = RpcOutboundContext.Current;
         RpcOutboundContext.Current = Context;
@@ -236,7 +233,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             var hash = Peer.Hasher.Invoke(argumentData);
             var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
             var message = new RpcOutboundMessage(
-                Context, MethodDef, relatedId, needsPolymorphism, tracksSerialization: false, headers, argumentData);
+                Context, MethodDef, relatedId, needsPolymorphism, headers, argumentData, sendHandler);
             return (message, hash);
         }
         finally {
@@ -398,7 +395,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         try {
             var systemCallSender = Peer.Hub.InternalServices.SystemCallSender;
-            _ = systemCallSender.Cancel(Peer, Id);
+            systemCallSender.Cancel(Peer, Id);
         }
         catch {
             // It's totally fine to ignore any error here:

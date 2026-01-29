@@ -156,7 +156,7 @@ public abstract class RpcInboundCall : RpcCall
 
     // Protected methods
 
-    protected abstract Task SendResult();
+    protected abstract void SendResult();
 
     protected Exception ProcessArgumentDeserializationError(Exception error)
     {
@@ -184,16 +184,18 @@ public abstract class RpcInboundCall : RpcCall
 
     protected virtual Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
-        return ResultTask!.IsCompleted
-            ? Complete()
-            : CompleteAsync();
+        if (ResultTask!.IsCompleted) {
+            Complete();
+            return Task.CompletedTask;
+        }
+        return CompleteAsync();
 
         async Task CompleteAsync() {
             await ResultTask.SilentAwait(false);
-            await Complete().ConfigureAwait(false);
+            Complete();
         }
 
-        Task Complete() {
+        void Complete() {
             lock (Lock) {
                 if (Trace is { } trace) {
                     trace.Complete(this);
@@ -201,9 +203,8 @@ public abstract class RpcInboundCall : RpcCall
                 }
                 UnregisterFromLock();
             }
-            return CallCancelToken.IsCancellationRequested
-                ? Task.CompletedTask
-                : SendResult();
+            if (!CallCancelToken.IsCancellationRequested)
+                SendResult();
         }
     }
 
@@ -259,7 +260,7 @@ public abstract class RpcInboundCall : RpcCall
 
     // Default implementations for SendResult; InvokeServer doesn't need one, coz it's 1-liner
 
-    protected Task DefaultSendResult<TResult>(Task<TResult>? resultTask)
+    protected void DefaultSendResult<TResult>(Task<TResult>? resultTask)
     {
         var peer = Context.Peer;
         Result<TResult> result;
@@ -275,7 +276,7 @@ public abstract class RpcInboundCall : RpcCall
             Log.IfEnabled(LogLevel.Error)?.LogError(e, "Remote call completed with an error: {Call}", this);
 
         var systemCallSender = Hub.SystemCallSender;
-        return systemCallSender.Complete(peer, this, result, MethodDef.HasPolymorphicResult, ResultHeaders);
+        systemCallSender.Complete(peer, this, result, MethodDef.HasPolymorphicResult, ResultHeaders);
 
         static Result<TResult> InvocationIsStillInProgressErrorResult()
             => new(default!, ActualLab.Internal.Errors.InternalError(
@@ -285,6 +286,6 @@ public abstract class RpcInboundCall : RpcCall
 
 public class RpcInboundCall<TResult>(RpcInboundContext context) : RpcInboundCall(context)
 {
-    protected override Task SendResult()
+    protected override void SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);
 }

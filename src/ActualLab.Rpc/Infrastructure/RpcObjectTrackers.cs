@@ -153,7 +153,7 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
             while (true) {
                 await clock.Delay(Limits.KeepAlivePeriod, cancellationToken).ConfigureAwait(false);
                 var localIds = GetAliveLocalIdsAndReleaseDeadHandles();
-                await systemCallSender.KeepAlive(Peer, localIds).ConfigureAwait(false);
+                systemCallSender.KeepAlive(Peer, localIds);
             }
         }
         catch {
@@ -279,7 +279,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
         // ReSharper disable once FunctionNeverReturns
     }
 
-    public Task KeepAlive(long[] localIds)
+    public void KeepAlive(long[] localIds)
     {
         InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);
         var buffer = MemoryBuffer<long>.Lease(false);
@@ -290,9 +290,8 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
                 else
                     buffer.Add(id);
             }
-            return buffer.Count > 0
-                ? Peer.Hub.SystemCallSender.Disconnect(Peer, buffer.ToArray())
-                : Task.CompletedTask;
+            if (buffer.Count > 0)
+                Peer.Hub.SystemCallSender.Disconnect(Peer, buffer.ToArray());
         }
         finally {
             buffer.Release();

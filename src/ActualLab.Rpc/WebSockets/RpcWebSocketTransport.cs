@@ -39,32 +39,6 @@ public sealed class RpcWebSocketTransport : RpcTransport
     private const byte RecordSeparator = 0x1E; // RS
 
     private static readonly MeterSet StaticMeters = new();
-    private static readonly Action<Task, object?> DefaultSendTaskCompletionHandler = static (task, state) => {
-        if (task.IsCompletedSuccessfully)
-            return;
-
-        try {
-            task.GetAwaiter().GetResult();
-        }
-        catch (Exception e) {
-            var transport = Unsafe.As<RpcWebSocketTransport>(state)!;
-            transport.DefaultSendErrorHandler(e);
-        }
-    };
-    private static readonly Action<Task, object?, object?, object?> SendTaskCompletionHandler = static (task, s1, s2, s3) => {
-        if (task.IsCompletedSuccessfully)
-            return;
-
-        try {
-            task.GetAwaiter().GetResult();
-        }
-        catch (Exception e) {
-            var errorHandler = Unsafe.As<RpcSendErrorHandler>(s1)!;
-            var message = Unsafe.As<RpcOutboundMessage>(s2)!;
-            var transport = Unsafe.As<RpcWebSocketTransport>(s3)!;
-            errorHandler.Invoke(e, message, transport);
-        }
-    };
 
     private readonly MeterSet _meters = StaticMeters;
     private readonly int _frameSize;
@@ -93,7 +67,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
     public ILogger? ErrorLog { get; }
 
     public override Task WhenCompleted => _whenCompleted;
-    public override Task WhenClosed { get; }
+    public Task WhenClosed { get; }
 
     public RpcWebSocketTransport(
         Options settings,
@@ -147,9 +121,9 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 await whenWriterCompleted.ConfigureAwait(false); // RunWriter never throws
                 await _whenCompleted.SilentAwait(false); // Can fail, so we use SilentAwait here
 
-                // Drain remaining pending messages (if any)
+                // Drain remaining pending messages (if any) - RunWriter is stopped at that point
                 while (_writeChannel.Reader.TryRead(out var message))
-                    message.CompleteWhenSerialized(new ChannelClosedException());
+                    CompleteSend(message, new ChannelClosedException());
 
                 await CloseWebSocket(null).ConfigureAwait(false); // CloseWebSocket never throws
 
@@ -175,54 +149,15 @@ public sealed class RpcWebSocketTransport : RpcTransport
             await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
     }
 
-    public override Task Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
+    public override void Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
-        var whenSerialized = message.WhenSerialized;
-
         // Fast path: since _writeChannel is typically an UnboundedChannel,
         // TryWrite always completes successfully while the channel is operational.
-        if (_writeChannelWriter.TryWrite(message)) {
-            if (whenSerialized is null)
-                return Task.CompletedTask;
-
-            goto attachErrorHandler;
-        }
+        if (_writeChannelWriter.TryWrite(message))
+            return;
 
         // Slow path
-        var writeTask = _writeChannelWriter.WriteAsync(message, cancellationToken);
-        whenSerialized ??= writeTask.AsTask();
-
-        attachErrorHandler:
-        TaskCompletionHandler.Get(whenSerialized, this, DefaultSendTaskCompletionHandler).Attach();
-        return whenSerialized;
-    }
-
-    public override Task Send(
-        RpcOutboundMessage message,
-        RpcSendErrorHandler? errorHandler,
-        CancellationToken cancellationToken = default)
-    {
-        if (errorHandler is null)
-            return Send(message, cancellationToken);
-
-        var whenSerialized = message.WhenSerialized;
-
-        // Fast path: since _writeChannel is typically an UnboundedChannel,
-        // TryWrite always completes successfully while the channel is operational.
-        if (_writeChannelWriter.TryWrite(message)) {
-            if (whenSerialized is null)
-                return Task.CompletedTask;
-
-            goto attachErrorHandler;
-        }
-
-        // Slow path
-        var writeTask = _writeChannelWriter.WriteAsync(message, cancellationToken);
-        whenSerialized ??= writeTask.AsTask();
-
-        attachErrorHandler:
-        TaskCompletionHandler.Get(whenSerialized, errorHandler, message, this, SendTaskCompletionHandler).Attach();
-        return whenSerialized;
+        _ = _writeChannelWriter.WriteAsync(message, cancellationToken);
     }
 
     public override bool TryComplete(Exception? error = null)
@@ -258,10 +193,10 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 while (reader.TryRead(out var message)) {
                     try {
                         serializeMessage(message, _writeBuffer);
-                        message.CompleteWhenSerialized();
+                        CompleteSend(message);
                     }
                     catch (Exception e) {
-                        message.CompleteWhenSerialized(e);
+                        CompleteSend(message, e);
                     }
                     if (_writeBuffer.WrittenCount >= _frameSize) {
                         await lastFlushTask.ConfigureAwait(false);
@@ -328,10 +263,10 @@ public sealed class RpcWebSocketTransport : RpcTransport
             while (reader.TryRead(out var message)) {
                 try {
                     serialize(message, _writeBuffer);
-                    message.CompleteWhenSerialized();
+                    CompleteSend(message);
                 }
                 catch (Exception e) {
-                    message.CompleteWhenSerialized(e);
+                    CompleteSend(message, e);
                     continue;
                 }
 

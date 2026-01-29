@@ -180,23 +180,23 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         try {
             var calls = Calls.Values.ToList();
             if (isPeerChanged) {
-                await Resend(calls).ConfigureAwait(false);
+                Resend(calls);
                 return;
             }
 
             var failedCalls = await TryReconnect(calls).ConfigureAwait(false);
-            await Resend(failedCalls).ConfigureAwait(false);
+            Resend(failedCalls);
         }
         catch {
             // Intended
         }
         return;
 
-        async Task Resend(List<RpcOutboundCall> calls) {
+        void Resend(List<RpcOutboundCall> calls) {
             foreach (var call in calls) {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (call.GetReconnectStage(isPeerChanged: true) is not null)
-                    await call.SendRegistered(isFirstAttempt: false).ConfigureAwait(false);
+                    call.SendRegistered(isFirstAttempt: false);
             }
         }
 

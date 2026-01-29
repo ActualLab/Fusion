@@ -276,10 +276,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                                     Id, Versions, Hub.Id,
                                     RpcHandshake.CurrentProtocolVersion,
                                     ++handshakeIndex);
-                                await Hub.SystemCallSender
-                                    .Handshake(this, transport, ownHandshake1)
-                                    .WaitAsync(handshakeToken)
-                                    .ConfigureAwait(false);
+                                Hub.SystemCallSender.Handshake(this, transport, ownHandshake1);
                                 var hasMore = await reader.MoveNextAsync().ConfigureAwait(false);
                                 if (!hasMore)
                                     throw new ChannelClosedException(); // Mimicking channel behavior here

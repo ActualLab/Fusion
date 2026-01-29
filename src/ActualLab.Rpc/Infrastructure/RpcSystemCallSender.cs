@@ -45,7 +45,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
 
     // Handshake
 
-    public Task Handshake(
+    public void Handshake(
         RpcPeer peer,
         RpcTransport transport, // Handshake is sent before exposing the Transport, so we pass it directly
         RpcHandshake handshake)
@@ -53,26 +53,27 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         var context = new RpcOutboundContext(peer);
         var call = context.PrepareCallForSendNoWait(HandshakeMethodDef, ArgumentList.New(handshake))!;
         var message = call.CreateOutboundMessage(
-            call.Context.RelatedId, needsPolymorphism: false, tracksSerialization: false);
+            call.Context.RelatedId, needsPolymorphism: false, sendHandler: null);
         if (call.Peer.CallLogger.IsLogged(call))
             call.Peer.CallLogger.LogOutbound(call, message);
-        return transport.Send(message, peer.StopToken);
+        transport.Send(message, peer.StopToken);
     }
 
     // Regular calls
 
-    public Task Complete<TResult>(
+    public void Complete<TResult>(
         RpcPeer peer, RpcInboundCall inboundCall, Result<TResult> result,
         bool needsArgumentPolymorphism,
         RpcHeader[]? headers = null)
     {
         var (value, error) = result;
-        return error is null
-            ? Ok(peer, inboundCall, value, needsArgumentPolymorphism, headers)
-            : Error(peer, inboundCall, result.Error!, headers);
+        if (error is null)
+            Ok(peer, inboundCall, value, needsArgumentPolymorphism, headers);
+        else
+            Error(peer, inboundCall, result.Error!, headers);
     }
 
-    public Task Ok<TResult>(
+    public void Ok<TResult>(
         RpcPeer peer, RpcInboundCall inboundCall, TResult result,
         bool needsArgumentPolymorphism,
         RpcHeader[]? headers = null)
@@ -82,22 +83,26 @@ public sealed class RpcSystemCallSender : RpcServiceBase
             var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
             var call = context.PrepareCallForSendNoWait(OkMethodDef, ArgumentList.New(result))!;
             var inboundHash = inboundCall.Context.Message.Headers.TryGet(WellKnownRpcHeaders.Hash);
-            if (inboundHash is null)
-                return call.SendNoWait(needsArgumentPolymorphism, RpcSendErrorHandlers.PropagateToInboundCall);
+            if (inboundHash is null) {
+                call.SendNoWait(needsArgumentPolymorphism, RpcSendHandlers.PropagateToInboundCall);
+                return;
+            }
 
-            var (message, hash) = call.CreateOutboundMessageWithHashHeader(call.Context.RelatedId, needsArgumentPolymorphism);
-            return string.Equals(hash, inboundHash, StringComparison.Ordinal)
-                ? Match(peer, inboundCall.Id, headers)
-                : call.SendNoWait(message, RpcSendErrorHandlers.PropagateToInboundCall);
+            var (message, hash) = call.CreateOutboundMessageWithHashHeader(
+                call.Context.RelatedId, needsArgumentPolymorphism, RpcSendHandlers.PropagateToInboundCall);
+            if (string.Equals(hash, inboundHash, StringComparison.Ordinal))
+                Match(peer, inboundCall.Id, headers);
+            else
+                call.SendNoWait(message);
 #pragma warning restore MA0100
         }
-        catch (Exception error) when (!RpcSendErrorHandlers.IsAutoHandledError(error)) {
+        catch (Exception error) when (!RpcSendHandlers.IsAutoHandledError(error)) {
             Log.LogError(error, "Failed to send Ok response for call #{CallId}", inboundCall.Id);
-            return Error(peer, inboundCall, error);
+            Error(peer, inboundCall, error);
         }
     }
 
-    public Task Error(
+    public void Error(
         RpcPeer peer, RpcInboundCall inboundCall, Exception error,
         RpcHeader[]? headers = null)
     {
@@ -108,71 +113,71 @@ public sealed class RpcSystemCallSender : RpcServiceBase
                 // We must keep all inbound calls incomplete - assuming they're getting aborted with
                 // either OperationCanceledException or ObjectDisposedException.
                 if (error is OperationCanceledException || error.IsServiceProviderDisposedException())
-                    return Task.CompletedTask;
+                    return;
             }
         }
 
         var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
         var call = context.PrepareCallForSendNoWait(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
-        return call.SendNoWait(needsPolymorphism: false);
+        call.SendNoWait(needsPolymorphism: false);
     }
 
-    public Task Cancel(RpcPeer peer, long callId, RpcHeader[]? headers = null)
+    public void Cancel(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCallForSendNoWait(CancelMethodDef, ArgumentList.Empty)!;
-        return call.SendNoWait(needsPolymorphism: false);
+        call.SendNoWait(needsPolymorphism: false);
     }
 
-    public Task Match(RpcPeer peer, long callId, RpcHeader[]? headers = null)
+    public void Match(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCallForSendNoWait(MatchMethodDef, ArgumentList.Empty)!;
-        return call.SendNoWait(needsPolymorphism: false);
+        call.SendNoWait(needsPolymorphism: false);
     }
 
     // Objects
 
-    public Task KeepAlive(RpcPeer peer, long[] localIds, RpcHeader[]? headers = null)
+    public void KeepAlive(RpcPeer peer, long[] localIds, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, headers);
         var call = context.PrepareCallForSendNoWait(KeepAliveMethodDef, ArgumentList.New(localIds))!;
-        return call.SendNoWait(needsPolymorphism: false);
+        call.SendNoWait(needsPolymorphism: false);
     }
 
-    public Task Disconnect(RpcPeer peer, long[] localIds, RpcHeader[]? headers = null)
+    public void Disconnect(RpcPeer peer, long[] localIds, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, headers);
         var call = context.PrepareCallForSendNoWait(DisconnectMethodDef, ArgumentList.New(localIds))!;
-        return call.SendNoWait(needsPolymorphism: false);
+        call.SendNoWait(needsPolymorphism: false);
     }
 
     // Streams
 
-    public Task Ack(RpcPeer peer, long localId, long nextIndex, Guid hostId, RpcHeader[]? headers = null)
+    public void Ack(RpcPeer peer, long localId, long nextIndex, Guid hostId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCallForSendNoWait(AckMethodDef, ArgumentList.New(nextIndex, hostId))!;
-        return call.SendNoWait(needsPolymorphism: false);
+        call.SendNoWait(needsPolymorphism: false);
     }
 
-    public Task AckEnd(RpcPeer peer, long localId, Guid hostId, RpcHeader[]? headers = null)
+    public void AckEnd(RpcPeer peer, long localId, Guid hostId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCallForSendNoWait(AckEndMethodDef, ArgumentList.New(hostId))!;
-        return call.SendNoWait(needsPolymorphism: false);
+        call.SendNoWait(needsPolymorphism: false);
     }
 
-    public Task Item<TItem>(RpcPeer peer, long localId, long index, TItem item, RpcHeader[]? headers = null)
+    public void Item<TItem>(RpcPeer peer, long localId, long index, TItem item, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
 #pragma warning disable MA0100
         var call = context.PrepareCallForSendNoWait(ItemMethodDef, ArgumentList.New(index, item))!;
-        return call.SendNoWait(needsPolymorphism: true);
+        call.SendNoWait(needsPolymorphism: true);
 #pragma warning restore MA0100
     }
 
-    public Task Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, RpcHeader[]? headers = null)
+    public void Batch<TItem>(RpcPeer peer, long localId, long index, TItem[] items, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
 #pragma warning disable MA0100
@@ -181,14 +186,14 @@ public sealed class RpcSystemCallSender : RpcServiceBase
             ? ArgumentList.New(index, (object)items) // This ensures the serialization of this type will be polymorphic
             : ArgumentList.New(index, items);
         var call = context.PrepareCallForSendNoWait(BatchMethodDef, arguments)!;
-        return call.SendNoWait(needsPolymorphism: true);
+        call.SendNoWait(needsPolymorphism: true);
 #pragma warning restore MA0100
     }
 
-    public Task End(RpcPeer peer, long localId, long index, Exception? error, RpcHeader[]? headers = null)
+    public void End(RpcPeer peer, long localId, long index, Exception? error, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, localId, headers);
         var call = context.PrepareCallForSendNoWait(EndMethodDef, ArgumentList.New(index, error.ToExceptionInfo()))!;
-        return call.SendNoWait(needsPolymorphism: false);
+        call.SendNoWait(needsPolymorphism: false);
     }
 }

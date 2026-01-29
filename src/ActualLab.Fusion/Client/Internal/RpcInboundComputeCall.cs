@@ -53,7 +53,7 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
                 return;
             }
         }
-        await SendResult().ConfigureAwait(false);
+        SendResult();
         await ProcessStage2(cancellationToken).ConfigureAwait(false);
     }
 
@@ -77,7 +77,7 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
         Unregister();
         if (mustSendInvalidation) {
             var computeSystemCallSender = Hub.Services.GetRequiredService<RpcComputeSystemCallSender>();
-            await computeSystemCallSender.Invalidate(Context.Peer, Id, ResultHeaders).ConfigureAwait(false);
+            computeSystemCallSender.Invalidate(Context.Peer, Id, ResultHeaders);
         }
     }
 }
@@ -88,6 +88,6 @@ public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context)
     public Computed<TResult>? Computed;
     public override Computed? UntypedComputed => Computed;
 
-    protected override Task SendResult()
+    protected override void SendResult()
         => DefaultSendResult((Task<TResult>?)ResultTask);
 }

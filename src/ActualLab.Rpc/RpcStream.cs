@@ -63,9 +63,9 @@ public abstract partial class RpcStream : IRpcObject
 
     protected internal abstract ArgumentList CreateStreamItemArguments();
     protected internal abstract ArgumentList CreateStreamBatchArguments();
-    protected internal abstract Task OnItem(long index, object? item);
-    protected internal abstract Task OnBatch(long index, object? items);
-    protected internal abstract Task OnEnd(long index, Exception? error);
+    protected internal abstract void OnItem(long index, object? item);
+    protected internal abstract void OnBatch(long index, object? items);
+    protected internal abstract void OnEnd(long index, Exception? error);
     protected abstract Task Reconnect(CancellationToken cancellationToken);
     protected abstract void Disconnect();
 }
@@ -158,17 +158,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 try {
                     _isRegistered = true;
                     Peer.RemoteObjects.Register(this);
-                    _ = SendResetFromLock(0).ContinueWith(t => {
-                        if (!t.IsFaulted)
-                            return;
-
-                        StaticLog.For<RpcStream<T>>().LogWarning(t.GetBaseException(),
-                            "Failed to send initial reset for stream {Id}", Id);
-                        lock (_lock) {
-                            if (!_isDisconnected)
-                                CloseFromLock(t.Exception?.InnerException);
-                        }
-                    }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+                    SendResetFromLock(0);
                 }
                 catch (Exception e) {
                     _isRegistered = false;
@@ -227,32 +217,39 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     protected internal override ArgumentList CreateStreamBatchArguments()
         => ArgumentList.New<long, T[]>(0L, default!);
 
-    protected internal override Task OnItem(long index, object? item)
+    protected internal override void OnItem(long index, object? item)
     {
         lock (_lock) {
             if (_remoteChannel is null)
-                return Task.CompletedTask;
-            if (index < _nextIndex)
-                return MaybeSendAckFromLock(index);
-            if (index > _nextIndex)
-                return SendResetFromLock(_nextIndex);
+                return;
+            if (index < _nextIndex) {
+                MaybeSendAckFromLock(index);
+                return;
+            }
+            if (index > _nextIndex) {
+                SendResetFromLock(_nextIndex);
+                return;
+            }
 
             // Debug.WriteLine($"{Id}: +#{index} (ack @ {ackIndex})");
             _remoteChannel.Writer.TryWrite((T)item!); // Must always succeed for unbounded channel
             _nextIndex++;
-            return Task.CompletedTask;
         }
     }
 
-    protected internal override Task OnBatch(long index, object? items)
+    protected internal override void OnBatch(long index, object? items)
     {
         lock (_lock) {
             if (_remoteChannel is null)
-                return Task.CompletedTask;
-            if (index < _nextIndex)
-                return MaybeSendAckFromLock(index);
-            if (index > _nextIndex)
-                return SendResetFromLock(_nextIndex);
+                return;
+            if (index < _nextIndex) {
+                MaybeSendAckFromLock(index);
+                return;
+            }
+            if (index > _nextIndex) {
+                SendResetFromLock(_nextIndex);
+                return;
+            }
 
             var typedItems = (T[])items!;
             foreach (var item in typedItems) {
@@ -260,32 +257,35 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 _remoteChannel.Writer.TryWrite(item); // Must always succeed for unbounded channel
                 _nextIndex++;
             }
-            return Task.CompletedTask;
         }
     }
 
-    protected internal override Task OnEnd(long index, Exception? error)
+    protected internal override void OnEnd(long index, Exception? error)
     {
         lock (_lock) {
             if (_remoteChannel is null)
-                return Task.CompletedTask;
-            if (index < _nextIndex)
-                return MaybeSendAckFromLock(index);
-            if (index > _nextIndex)
-                return SendResetFromLock(_nextIndex);
+                return;
+            if (index < _nextIndex) {
+                MaybeSendAckFromLock(index);
+                return;
+            }
+            if (index > _nextIndex) {
+                SendResetFromLock(_nextIndex);
+                return;
+            }
 
             // Debug.WriteLine($"{Id}: +{index} (ended!)");
             CloseFromLock(error);
-            return Task.CompletedTask;
         }
     }
 
     protected override Task Reconnect(CancellationToken cancellationToken)
     {
-        lock (_lock)
-            return _remoteChannel is not null && !_isDisconnected
-                ? SendResetFromLock(_nextIndex)
-                : Task.CompletedTask;
+        lock (_lock) {
+            if (_remoteChannel is not null && !_isDisconnected)
+                SendResetFromLock(_nextIndex);
+        }
+        return Task.CompletedTask;
     }
 
     protected override void Disconnect()
@@ -311,7 +311,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     {
         if (_remoteChannel is not null) {
             if (_nextIndex != long.MaxValue)
-                _ = SendCloseFromLock();
+                SendCloseFromLock();
             _remoteChannel.Writer.TryComplete(error);
         }
         if (_isRegistered) {
@@ -320,29 +320,31 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         }
     }
 
-    private Task SendCloseFromLock()
+    private void SendCloseFromLock()
     {
         _nextIndex = long.MaxValue;
-        return SendAckFromLock(_nextIndex, true);
+        SendAckFromLock(_nextIndex, true);
     }
 
-    private Task SendResetFromLock(long index)
+    private void SendResetFromLock(long index)
         => SendAckFromLock(index, true);
 
-    private Task MaybeSendAckFromLock(long index)
-        => index % AckPeriod == 0 && index > 0
-            ? SendAckFromLock(index)
-            : Task.CompletedTask;
+    private void MaybeSendAckFromLock(long index)
+    {
+        if (index % AckPeriod == 0 && index > 0)
+            SendAckFromLock(index);
+    }
 
-    private Task SendAckFromLock(long index, bool mustReset = false)
+    private void SendAckFromLock(long index, bool mustReset = false)
     {
         // Debug.WriteLine($"{Id}: <- ACK: ({index}, {mustReset})");
         if (_isDisconnected)
-            return Task.CompletedTask;
+            return;
 
-        return index != long.MaxValue
-            ? Peer!.Hub.SystemCallSender.Ack(Peer, Id.LocalId, index, mustReset ? Id.HostId : default)
-            : Peer!.Hub.SystemCallSender.AckEnd(Peer, Id.LocalId, mustReset ? Id.HostId : default);
+        if (index != long.MaxValue)
+            Peer!.Hub.SystemCallSender.Ack(Peer, Id.LocalId, index, mustReset ? Id.HostId : default);
+        else
+            Peer!.Hub.SystemCallSender.AckEnd(Peer, Id.LocalId, mustReset ? Id.HostId : default);
     }
 
     // Nested types
@@ -402,10 +404,8 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 _current = Result.NewError<T>(e);
             }
 
-            var ackTask = _stream.MaybeSendAckFromLock(_nextIndex++);
-            return ackTask.IsCompleted
-                ? GetMoveNextValueTask(_current.Error)
-                : AwaitAndGetMoveNextValueTask(ackTask, _current.Error);
+            _stream.MaybeSendAckFromLock(_nextIndex++);
+            return GetMoveNextValueTask(_current.Error);
         }
 
         // Private methods
@@ -417,23 +417,10 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                     ? default
                     : ValueTaskExt.FromException<bool>(error);
 
-        private static async ValueTask<bool> AwaitAndGetMoveNextValueTask(Task taskToAwait, Exception? error)
-        {
-            await taskToAwait.SilentAwait(false);
-            if (error is null)
-                return true;
-
-            if (!ReferenceEquals(error, NoMoreItemsTag))
-                ExceptionDispatchInfo.Capture(error).Throw(); // Always throws
-            return false;
-        }
-
         private async ValueTask<bool> CompleteMoveNextAsync()
         {
             try {
-                var ackTask = _stream.MaybeSendAckFromLock(_nextIndex);
-                if (!ackTask.IsCompleted)
-                    await ackTask.SilentAwait(false);
+                _stream.MaybeSendAckFromLock(_nextIndex);
 
                 if (!await _reader.WaitToReadAsync(_cancellationToken).ConfigureAwait(false)) {
                     _current = Result.NewError<T>(NoMoreItemsTag);
