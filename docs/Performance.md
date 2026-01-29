@@ -73,17 +73,17 @@ The benchmark measures throughput of a simple repository-style user lookup servi
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| Regular Service | 136.40K calls/s | |
-| Fusion Service | 264.71M calls/s | <span style="color: #22c55e; font-weight: bold;">~1,941x</span> |
+| Regular Service | 135.44K calls/s | |
+| Fusion Service | 266.58M calls/s | <span style="color: #22c55e; font-weight: bold;">~1,968x</span> |
 
 ### Remote Services
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| HTTP Client → Regular Service | 100.33K calls/s | |
-| HTTP Client → Fusion Service | 423.41K calls/s | <span style="color: #22c55e; font-weight: bold;">~4.2x</span> |
-| ActualLab.Rpc Client → Fusion Service | 5.85M calls/s | <span style="color: #22c55e; font-weight: bold;">~58x</span> |
-| Fusion Client → Fusion Service | 222.06M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,214x</span> |
+| HTTP Client → Regular Service | 100.72K calls/s | |
+| HTTP Client → Fusion Service | 431.35K calls/s | <span style="color: #22c55e; font-weight: bold;">~4.3x</span> |
+| ActualLab.Rpc Client → Fusion Service | 6.92M calls/s | <span style="color: #22c55e; font-weight: bold;">~69x</span> |
+| Fusion Client → Fusion Service | 226.73M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,251x</span> |
 
 ## RpcBenchmark.cmd from ActualLab.Fusion.Samples
 
@@ -95,20 +95,20 @@ Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so
 
 | Test | ActualLab.Rpc | gRPC | SignalR | Speedup |
 |------|---------------|------|---------|---------|
-| Sum | 7.34M calls/s | 1.11M calls/s | 5.35M calls/s | <span style="color: #22c55e; font-weight: bold;">1.4..6.6x</span> |
-| GetUser | 6.65M calls/s | 1.10M calls/s | 4.41M calls/s | <span style="color: #22c55e; font-weight: bold;">1.5..6.0x</span> |
-| SayHello | 4.98M calls/s | 1.02M calls/s | 2.24M calls/s | <span style="color: #22c55e; font-weight: bold;">2.2..4.9x</span> |
+| Sum | 9.33M calls/s | 1.11M calls/s | 5.30M calls/s | <span style="color: #22c55e; font-weight: bold;">1.8..8.4x</span> |
+| GetUser | 8.37M calls/s | 1.10M calls/s | 4.43M calls/s | <span style="color: #22c55e; font-weight: bold;">1.9..7.6x</span> |
+| SayHello | 5.99M calls/s | 1.04M calls/s | 2.25M calls/s | <span style="color: #22c55e; font-weight: bold;">2.7..5.8x</span> |
 
 <ClientOnly>
   <BarChart
     title="RPC Calls (Million/s)"
     :labels="['Sum', 'GetUser', 'SayHello']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [7.34, 6.65, 4.98], backgroundColor: '#22c55e' },
-      { label: 'SignalR', data: [5.35, 4.41, 2.24], backgroundColor: '#3b82f6' },
-      { label: 'gRPC', data: [1.11, 1.10, 1.02], backgroundColor: '#f59e0b' }
+      { label: 'ActualLab.Rpc', data: [9.33, 8.37, 5.99], backgroundColor: '#22c55e' },
+      { label: 'SignalR', data: [5.30, 4.43, 2.25], backgroundColor: '#3b82f6' },
+      { label: 'gRPC', data: [1.11, 1.10, 1.04], backgroundColor: '#f59e0b' }
     ]"
-    :yMax="8"
+    :yMax="10"
     yLabel="M calls/s"
   />
 </ClientOnly>
@@ -117,9 +117,9 @@ Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so
 
 | Test | ActualLab.Rpc | gRPC | SignalR | Speedup |
 |------|---------------|------|---------|---------|
-| Stream1 | 95.39M items/s | 38.25M items/s | 17.15M items/s | <span style="color: #22c55e; font-weight: bold;">2.5..5.6x</span> |
-| Stream100 | 46.46M items/s | 20.77M items/s | 13.78M items/s | <span style="color: #22c55e; font-weight: bold;">2.2..3.4x</span> |
-| Stream10K | 941.40K items/s | 691.20K items/s | 460.80K items/s | <span style="color: #22c55e; font-weight: bold;">1.4..2.0x</span> |
+| Stream1 | 101.17M items/s | 39.59M items/s | 17.17M items/s | <span style="color: #22c55e; font-weight: bold;">2.6..5.9x</span> |
+| Stream100 | 47.53M items/s | 21.19M items/s | 14.00M items/s | <span style="color: #22c55e; font-weight: bold;">2.2..3.4x</span> |
+| Stream10K | 955.44K items/s | 691.20K items/s | 460.80K items/s | <span style="color: #22c55e; font-weight: bold;">1.4..2.1x</span> |
 
 Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte items, Stream10K = 10KB items.
 
@@ -127,18 +127,18 @@ Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte item
 
 | Test | ActualLab.Rpc | gRPC | SignalR |
 |------|---------------|------|---------|
-| Stream1 | 95.39 MB/s | 38.25 MB/s | 17.15 MB/s |
-| Stream100 | 4.65 GB/s | 2.08 GB/s | 1.38 GB/s |
-| Stream10K | 9.64 GB/s | 7.08 GB/s | 4.72 GB/s |
+| Stream1 | 101.17 MB/s | 39.59 MB/s | 17.17 MB/s |
+| Stream100 | 4.75 GB/s | 2.12 GB/s | 1.40 GB/s |
+| Stream10K | 9.78 GB/s | 7.08 GB/s | 4.72 GB/s |
 
 <ClientOnly>
   <BarChart
     title="RPC Streams Throughput (GB/s)"
     :labels="['Stream100', 'Stream10K']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [4.65, 9.64], backgroundColor: '#22c55e' },
-      { label: 'gRPC', data: [2.08, 7.08], backgroundColor: '#f59e0b' },
-      { label: 'SignalR', data: [1.38, 4.72], backgroundColor: '#3b82f6' }
+      { label: 'ActualLab.Rpc', data: [4.75, 9.78], backgroundColor: '#22c55e' },
+      { label: 'gRPC', data: [2.12, 7.08], backgroundColor: '#f59e0b' },
+      { label: 'SignalR', data: [1.40, 4.72], backgroundColor: '#3b82f6' }
     ]"
     :yMax="10"
     yLabel="GB/s"

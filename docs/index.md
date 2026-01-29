@@ -124,8 +124,8 @@ Fusion doesn't just add real-time—it makes your app **thousands of times faste
 | Scenario | Without Fusion | With Fusion | Speedup |
 |----------|----------------|-------------|---------|
 | Local service, minimal writes | 38.6K calls/s | **313.8M calls/s** | <span style="color: #22c55e; font-weight: bold;">8,127x</span> |
-| Local service, continuous writes | 136.4K calls/s | **264.7M calls/s** | <span style="color: #22c55e; font-weight: bold;">1,941x</span> |
-| Remote service, continuous writes | 100.3K calls/s (REST) | **222.1M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,214x</span> |
+| Local service, continuous writes | 135.4K calls/s | **266.6M calls/s** | <span style="color: #22c55e; font-weight: bold;">1,968x</span> |
+| Remote service, continuous writes | 100.7K calls/s (REST) | **226.7M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,251x</span> |
 
 <p style="font-size: 0.85em; color: #666; margin-top: 0.5rem;">
 Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark details</a>.
@@ -135,13 +135,13 @@ Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark det
 
 | Framework | RPC Calls/sec | Streaming Items/sec |
 |-----------|---------------|---------------------|
-| **ActualLab.Rpc** | **7.34M** | **95.39M** |
-| SignalR | 5.35M | 17.15M |
-| gRPC | 1.11M | 38.25M |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">1.4..6.6x</span> | <span style="color: #22c55e; font-weight: bold;">2.5..5.6x</span> |
+| **ActualLab.Rpc** | **9.33M** | **101.17M** |
+| SignalR | 5.30M | 17.17M |
+| gRPC | 1.11M | 39.59M |
+| **Speedup** | <span style="color: #22c55e; font-weight: bold;">1.8..8.4x</span> | <span style="color: #22c55e; font-weight: bold;">2.6..5.9x</span> |
 
 <p style="font-size: 0.85em; color: #666;">
-6.6x faster than gRPC for calls. 5.6x faster than SignalR for streaming.
+8.4x faster than gRPC for calls. 5.9x faster than SignalR for streaming.
 </p>
 
 ## How It Works: The MSBuild/Make Analogy

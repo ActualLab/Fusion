@@ -102,7 +102,7 @@ Fusion dramatically outperforms Redis — both for remote and local cache access
 
 | Benchmark | ActualLab.Rpc | Redis | Speedup |
 |-----------|---------------|-------|---------|
-| GetUser / GET | 6.65M calls/s | 229K req/s | **~29x** |
+| GetUser / GET | 8.37M calls/s | 229K req/s | **~37x** |
 
 Redis benchmark: `redis-benchmark` with optimal client count (12), best of 5 runs.
 See [Performance Benchmarks](/Performance) for details.
@@ -111,9 +111,9 @@ See [Performance Benchmarks](/Performance) for details.
 
 | Benchmark | Fusion | Redis | Speedup |
 |-----------|--------|-------|---------|
-| Cached lookup | 264.71M calls/s | 229K req/s | **~1,156x** |
+| Cached lookup | 266.58M calls/s | 229K req/s | **~1,164x** |
 
-Fusion's in-process cache eliminates network round-trips entirely. Even comparing Fusion's remote RPC access against Redis's local access, Fusion wins by 34x.
+Fusion's in-process cache eliminates network round-trips entirely. Even comparing Fusion's remote RPC access against Redis's local access, Fusion wins by 37x.
 
 ### Why is Fusion faster?
 

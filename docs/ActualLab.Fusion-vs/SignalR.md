@@ -97,11 +97,11 @@ ActualLab.Rpc (Fusion's RPC layer) outperforms SignalR in benchmarks:
 
 | Benchmark | ActualLab.Rpc | SignalR | Speedup |
 |-----------|---------------|---------|---------|
-| RPC calls (GetUser) | 6.65M calls/s | 4.41M calls/s | ~1.5x |
-| RPC calls (SayHello) | 4.98M calls/s | 2.24M calls/s | ~2.2x |
-| Streaming (1-byte items) | 95.39M items/s | 17.15M items/s | ~5.6x |
-| Streaming (100-byte items) | 46.46M items/s | 13.78M items/s | ~3.4x |
-| Streaming (10KB items) | 941.40K items/s | 460.80K items/s | ~2x |
+| RPC calls (GetUser) | 8.37M calls/s | 4.43M calls/s | ~1.9x |
+| RPC calls (SayHello) | 5.99M calls/s | 2.25M calls/s | ~2.7x |
+| Streaming (1-byte items) | 101.17M items/s | 17.17M items/s | ~5.9x |
+| Streaming (100-byte items) | 47.53M items/s | 14.00M items/s | ~3.4x |
+| Streaming (10KB items) | 955.44K items/s | 460.80K items/s | ~2.1x |
 
 See [Performance Benchmarks](/Performance) for full details and test environment.
 
