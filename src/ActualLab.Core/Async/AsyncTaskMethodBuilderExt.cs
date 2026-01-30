@@ -42,6 +42,9 @@ public static partial class AsyncTaskMethodBuilderExt
 
     public static bool TrySetResult<T>(this AsyncTaskMethodBuilder<T> target, T result)
     {
+        if (target.Task.IsCompleted)
+            return false;
+
         try {
             target.SetResult(result);
             return true;
@@ -53,6 +56,9 @@ public static partial class AsyncTaskMethodBuilderExt
 
     public static bool TrySetException<T>(this AsyncTaskMethodBuilder<T> target, Exception exception)
     {
+        if (target.Task.IsCompleted)
+            return false;
+
         try {
             target.SetException(exception);
             return true;
@@ -66,6 +72,9 @@ public static partial class AsyncTaskMethodBuilderExt
         => target.TrySetCanceled(CancellationTokenExt.Canceled);
     public static bool TrySetCanceled<T>(this AsyncTaskMethodBuilder<T> target, CancellationToken cancellationToken)
     {
+        if (target.Task.IsCompleted)
+            return false;
+
         try {
             target.SetException(new OperationCanceledException(cancellationToken));
             return true;
