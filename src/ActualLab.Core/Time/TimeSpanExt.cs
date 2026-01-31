@@ -21,6 +21,9 @@ public static class TimeSpanExt
     public static RetryDelaySeq ToRetryDelaySeq(this TimeSpan min, TimeSpan max)
         => new(min, max);
 
+    public static string ToShortString(this TimeSpan? timeSpan, string nullValue = "null")
+        => timeSpan?.ToShortString() ?? nullValue;
+
     public static string ToShortString(this TimeSpan value)
     {
         var absValue = TimeSpan.FromTicks(Math.Abs(value.Ticks));
