@@ -77,7 +77,7 @@ public class Operation : IHasUuid, IHasId<string>
         if (scope.IsTransient)
             throw Errors.TransientScopeOperationCannotHaveEvents();
 
-        var @event = operationEventSource.ToOperationEvent(scope);
+        var @event = operationEventSource.ToOperationEvent(scope.CommandContext.Services);
         @event.LoggedAt = scope.CommandContext.Commander.Hub.Clocks.SystemClock.Now;
         lock (_lock)
             Events = Events.Add(@event);
