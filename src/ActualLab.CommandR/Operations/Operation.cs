@@ -70,8 +70,20 @@ public class Operation : IHasUuid, IHasId<string>
         => AddEvent(new OperationEvent(value));
     public OperationEvent AddEvent(string uuid, object? value)
         => AddEvent(new OperationEvent(uuid, value));
+
     public OperationEvent AddEvent(IOperationEventSource operationEventSource)
-        => AddEvent(operationEventSource.ToOperationEvent());
+    {
+        var scope = Scope.RequireActive();
+        if (scope.IsTransient)
+            throw Errors.TransientScopeOperationCannotHaveEvents();
+
+        var @event = operationEventSource.ToOperationEvent(scope);
+        @event.LoggedAt = scope.CommandContext.Commander.Hub.Clocks.SystemClock.Now;
+        lock (_lock)
+            Events = Events.Add(@event);
+        return @event;
+    }
+
     public OperationEvent AddEvent(OperationEvent @event)
     {
         var scope = Scope.RequireActive();
