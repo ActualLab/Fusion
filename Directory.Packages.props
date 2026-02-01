@@ -179,10 +179,11 @@
     <PackageVersion Include="Owin" Version="1.0.0" />
     <PackageVersion Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
     <!-- Test time only -->
-    <PackageVersion Include="Castle.Core" Version="5.2.1" />
-    <PackageVersion Include="AutoFixture.AutoMoq" Version="4.18.1" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="AwesomeAssertions" Version="9.3.0" />
+    <PackageVersion Include="AutoFixture.AutoMoq" Version="4.18.1" />
+    <PackageVersion Include="Castle.Core" Version="5.2.1" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="FlakyTest.XUnit" Version="2.4.10" />
     <PackageVersion Include="ILogger.Moq" Version="2.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />

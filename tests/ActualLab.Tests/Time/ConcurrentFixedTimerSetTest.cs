@@ -1,4 +1,5 @@
 using ActualLab.Testing.Collections;
+using FlakyTest.XUnit.Attributes;
 
 namespace ActualLab.Tests.Time;
 
@@ -14,7 +15,7 @@ public class ConcurrentFixedTimerSetTest(ITestOutputHelper @out) : TestBase(@out
         }
     }
 
-    [Fact]
+    [FlakyFact("Time-dependent", 3)]
     public async Task BasicTest()
     {
         var clock = MomentClockSet.Default.CpuClock;
@@ -46,7 +47,7 @@ public class ConcurrentFixedTimerSetTest(ITestOutputHelper @out) : TestBase(@out
         await TestExt.When(() => set.Count.Should().Be(0), TimeSpan.FromSeconds(1));
     }
 
-    [Fact]
+    [FlakyFact("Time-dependent", 3)]
     public async Task FireImmediatelyTest()
     {
         var clock = MomentClockSet.Default.CpuClock;

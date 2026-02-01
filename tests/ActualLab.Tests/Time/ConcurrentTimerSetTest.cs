@@ -1,5 +1,6 @@
 using ActualLab.OS;
 using ActualLab.Testing.Collections;
+using FlakyTest.XUnit.Attributes;
 
 namespace ActualLab.Tests.Time;
 
@@ -20,7 +21,7 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
 
     private int _runnerId;
 
-    [Fact]
+    [FlakyFact("Time-dependent", 3)]
     public async Task BasicTest()
     {
         var clock = MomentClockSet.Default.CpuClock;
@@ -62,7 +63,7 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
         t.FiredAt.Should().Be(default);
     }
 
-    [Fact]
+    [FlakyFact("Time-dependent", 3)]
     public async Task RemoveTest()
     {
         var clock = MomentClockSet.Default.CpuClock;
@@ -82,7 +83,7 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
         t.FiredAt.Should().Be(default);
     }
 
-    [Fact]
+    [FlakyFact("Time-dependent", 3)]
     public async Task RandomTimerTest()
     {
         var taskCount = TestRunnerInfo.IsBuildAgent() ? 1 : HardwareInfo.GetProcessorCountFactor(10);

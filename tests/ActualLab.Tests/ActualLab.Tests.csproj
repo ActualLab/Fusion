@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Castle.Core" />
+    <PackageReference Include="FlakyTest.XUnit" />
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
