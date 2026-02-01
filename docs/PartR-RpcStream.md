@@ -35,6 +35,7 @@ You might wonder why ActualLab.Rpc uses a dedicated `RpcStream<T>` type instead 
 | `GetAsyncEnumerator()` | Implements `IAsyncEnumerable<T>` for consumption |
 | `AckPeriod` | How often the consumer sends acknowledgments (default: 30 items) |
 | `AckAdvance` | How many items the producer can send ahead (default: 61 items) |
+| `BatchSize` | How many items are batched together for transmission (default: 64, max: 1024) |
 
 ::: warning Single Enumeration
 Remote streams can only be enumerated once. Attempting to enumerate a remote `RpcStream<T>` multiple times will throw an exception.
@@ -184,14 +185,19 @@ This is useful for hierarchical data like tables with rows, where each row has i
 
 ## Configuration Options
 
-`RpcStream<T>` has two configurable properties for flow control:
+`RpcStream<T>` has three configurable properties for flow control:
 
 | Property | Default | Description |
 |----------|---------|-------------|
 | `AckPeriod` | 30 | How often the client sends acknowledgments (every N items) |
 | `AckAdvance` | 61 | How many items the server can send ahead before waiting for acks |
+| `BatchSize` | 64 | How many items are batched together for transmission (max: 1024) |
 
 These defaults work well for most scenarios. Adjust them if you need different throughput/latency tradeoffs.
+
+::: tip BatchSize
+`BatchSize` controls how many items are grouped together in a single network message. Larger batches reduce network overhead but increase latency for the first items. Unlike `AckPeriod` and `AckAdvance`, `BatchSize` is not serialized &ndash; it's a local configuration that only affects the sending side.
+:::
 
 
 ## Complete Example
