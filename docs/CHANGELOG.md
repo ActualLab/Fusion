@@ -8,6 +8,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.0.60+9bb19676
+
+Release date: 2026-02-01
+
+### Breaking Changes
+- `IOperationEventSource.ToOperationEvent()` signature changed: now accepts `IServiceProvider` parameter
+  instead of no parameters (intermediate version accepted `IOperationScope`)
+- `MemoryBuffer<T>` replaced with `RefArrayPoolBuffer<T>` &ndash; migrate by updating type references
+  and using `ArrayPool<T>` constructor parameter
+- `ArrayPoolBuffer<T>`, `ArrayOwner<T>`, and `BufferWriterExt` moved from `ActualLab.IO` to
+  `ActualLab.Collections` namespace
+
+### Added
+- `RefArrayPoolBuffer<T>` &ndash; a ref struct buffer backed by `ArrayPool<T>` with configurable pool
+  and clearing behavior
+- `TimeSpan?.ToShortString()` extension method with customizable null fallback value
+- `ArrayPools` static class providing common array pool instances
+
+### Changed
+- `ArrayPoolBuffer<T>` enhanced with additional constructor overloads and `ToArrayOwner()` method
+
+### Fixed
+- `AsyncTaskMethodBuilder` extension methods now check task completion state before accessing
+  `Task.Exception`, preventing potential inner exceptions
+
+### Tests
+- Improved ActualLab.Rpc test stability with positive `maxWaitTime` validation
+- Better test database isolation in `FusionTestBase`
+
+### Documentation
+- Added `BatchSize` property documentation to RpcStream flow control section
+- Added Docker benchmark results to performance documentation
+
+### Infrastructure
+- Added `Clean.cmd` script for cleaning build artifacts on Windows and Unix platforms
+
+
 ## 12.0.45+0ee956d2
 
 Release date: 2026-01-29
