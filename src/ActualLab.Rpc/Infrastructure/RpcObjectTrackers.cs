@@ -1,5 +1,6 @@
 using ActualLab.Concurrency;
 using ActualLab.Internal;
+using ActualLab.IO;
 using ActualLab.OS;
 #if USE_WEAK_REFERENCE_SLIM
 using WeakRefAlias = ActualLab.Internal.WeakReferenceSlim<ActualLab.Rpc.Infrastructure.IRpcObject>;
@@ -282,7 +283,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
     public void KeepAlive(long[] localIds)
     {
         InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);
-        var buffer = MemoryBuffer<long>.Lease(false);
+        var buffer = new RefArrayPoolBuffer<long>(ArrayPools.SharedInt64Pool, localIds.Length, mustClear: false);
         try {
             foreach (var id in localIds) {
                 if (Get(id) is { } obj)

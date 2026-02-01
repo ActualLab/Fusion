@@ -17,7 +17,7 @@ public class ListFormatTest(ITestOutputHelper @out) : TestBase(@out)
         expectedFormat ??= format;
 
         using var p = ListFormat.Default.CreateParser(format);
-        var list = p.ParseAll().ToList();
+        var list = p.ParseAll();
         list.Count.Should().Be(length);
 
         using var f = ListFormat.Default.CreateFormatter();

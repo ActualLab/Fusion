@@ -44,7 +44,7 @@ public static class ByteSerializerExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArrayPoolBuffer<byte> Write(this IByteSerializer serializer, object? value, Type type)
     {
-        var bufferWriter = new ArrayPoolBuffer<byte>(false);
+        var bufferWriter = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, mustClear: false);
         serializer.Write(bufferWriter, value, type);
         return bufferWriter;
     }
@@ -52,7 +52,7 @@ public static class ByteSerializerExt
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArrayPoolBuffer<byte> Write<T>(this IByteSerializer<T> serializer, T value)
     {
-        var bufferWriter = new ArrayPoolBuffer<byte>(false);
+        var bufferWriter = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, mustClear: false);
         serializer.Write(bufferWriter, value);
         return bufferWriter;
     }

@@ -3,7 +3,7 @@ using System.Diagnostics.Contracts;
 using CommunityToolkit.HighPerformance;
 using CommunityToolkit.HighPerformance.Buffers;
 
-namespace ActualLab.IO;
+namespace ActualLab.Collections;
 
 public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, bool mustClear)
     : IBuffer<T>, IMemoryOwner<T>
@@ -166,7 +166,6 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public void Reset()
         => _position = 0;
 
-
     public void Renew(int maxCapacity)
     {
         _position = 0;
@@ -184,6 +183,92 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         var capacity = _position + Math.Max(1, sizeHint);
         if (capacity > _array.Length)
             ResizeBuffer(capacity);
+    }
+
+    // List-like members
+
+    public int Count {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _position;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set => Position = value;
+    }
+
+    public T this[int index] {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#pragma warning disable MA0012, CA2201
+        get => index < _position ? _array[index] : throw new IndexOutOfRangeException();
+#pragma warning restore MA0012, CA2201
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set {
+#pragma warning disable MA0012, CA2201
+            if (index >= _position)
+                throw new IndexOutOfRangeException();
+#pragma warning restore MA0012, CA2201
+            _array[index] = value;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ReadOnlySpan<T>.Enumerator GetEnumerator() => WrittenSpan.GetEnumerator();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public T[] ToArray() => WrittenSpan.ToArray();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Add(T item)
+    {
+        EnsureCapacity(1);
+        _array[_position++] = item;
+    }
+
+    public void AddRange(IEnumerable<T> items)
+    {
+        foreach (var item in items)
+            Add(item);
+    }
+
+    public void AddRange(IReadOnlyCollection<T> items)
+    {
+        EnsureCapacity(items.Count);
+        foreach (var item in items)
+            _array[_position++] = item;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void AddSpan(ReadOnlySpan<T> span)
+    {
+        EnsureCapacity(span.Length);
+        span.CopyTo(_array.AsSpan(_position));
+        _position += span.Length;
+    }
+
+    public void Insert(int index, T item)
+    {
+        EnsureCapacity(1);
+        var copyLength = _position - index;
+#pragma warning disable MA0012, CA2201
+        if (copyLength < 0)
+            throw new IndexOutOfRangeException();
+#pragma warning restore MA0012, CA2201
+        var span = _array.AsSpan(0, ++_position);
+        var source = span.Slice(index, copyLength);
+        var target = span[(index + 1)..];
+        source.CopyTo(target);
+        span[index] = item;
+    }
+
+    public void RemoveAt(int index)
+    {
+        var copyLength = _position - index - 1;
+#pragma warning disable MA0012, CA2201
+        if (copyLength < 0)
+            throw new IndexOutOfRangeException();
+#pragma warning restore MA0012, CA2201
+        var span = _array.AsSpan(0, _position--);
+        var source = span.Slice(index + 1, copyLength);
+        var target = span[index..];
+        source.CopyTo(target);
     }
 
     // Private methods

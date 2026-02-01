@@ -1,5 +1,5 @@
-using System.Buffers;
 using System.Security.Cryptography;
+using ActualLab.IO;
 
 namespace ActualLab.Generators;
 
@@ -59,25 +59,22 @@ public class RandomStringGenerator : Generator<string>, IDisposable
         else if (alphabet.Length < 1)
             throw new ArgumentOutOfRangeException(nameof(alphabet));
 #if !NETSTANDARD2_0
-        var buffer = MemoryBuffer<byte>.LeaseAndSetCount(false, length);
+        var buffer = new RefArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, length, mustClear: false);
         try {
-            lock (Lock) {
-                Rng.GetBytes(buffer.Span);
-            }
-            return string.Create(length, (buffer.BufferMemory, alphabet), (charSpan, arg) => {
-                var (bufferMemory, alphabet1) = arg;
-                var bufferSpan = bufferMemory.Span;
-                FillInCharSpan(charSpan, alphabet1!, bufferSpan);
+            var span = buffer.GetSpan(length);
+            lock (Lock)
+                Rng.GetBytes(span);
+            return string.Create(length, (buffer.Array, length, alphabet), static (charSpan, arg) => {
+                var (array, len, alphabet1) = arg;
+                FillInCharSpan(charSpan, alphabet1!, array.AsSpan(0, len));
             });
         }
         finally {
             buffer.Release();
         }
 #else
-        var byteArrayPool = ArrayPool<byte>.Shared;
-        var charArrayPool = ArrayPool<char>.Shared;
-        var byteBuffer = byteArrayPool.Rent(length);
-        var charBuffer = charArrayPool.Rent(length);
+        var byteBuffer = ArrayPools.SharedBytePool.Rent(length);
+        var charBuffer = ArrayPools.SharedCharPool.Rent(length);
         try {
             lock (Lock) {
                 Rng.GetBytes(byteBuffer, 0, length);
@@ -87,8 +84,8 @@ public class RandomStringGenerator : Generator<string>, IDisposable
             return new string(charBuffer, 0, length);
         }
         finally {
-            charArrayPool.Return(charBuffer);
-            byteArrayPool.Return(byteBuffer);
+            ArrayPools.SharedCharPool.Return(charBuffer);
+            ArrayPools.SharedBytePool.Return(byteBuffer);
         }
 #endif
     }

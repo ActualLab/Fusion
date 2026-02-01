@@ -1,7 +1,7 @@
 using System.Buffers;
 using ActualLab.IO.Internal;
 
-namespace ActualLab.IO;
+namespace ActualLab.Collections;
 
 public static class ArrayOwner
 {

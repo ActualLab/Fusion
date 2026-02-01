@@ -1,6 +1,6 @@
 using System.Text;
-using Cysharp.Text;
 using ActualLab.Internal;
+using ActualLab.IO;
 
 namespace ActualLab.Text;
 
@@ -75,7 +75,7 @@ public ref struct ListParser
         return result;
     }
 
-    public void ParseAll(MemoryBuffer<string> buffer)
+    public void ParseAll(ref RefArrayPoolBuffer<string> buffer)
     {
         while (TryParseNext())
             buffer.Add(Item);

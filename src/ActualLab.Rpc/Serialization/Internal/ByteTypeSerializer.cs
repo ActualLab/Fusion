@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Buffers.Binary;
-using ActualLab.IO;
 using ActualLab.IO.Internal;
 using ActualLab.OS;
 using Errors = ActualLab.Rpc.Internal.Errors;
@@ -26,16 +25,21 @@ public static class ByteTypeSerializer
             var nameSpan = ByteString.FromStringAsUtf8(name).Span;
             var fullLength = nameSpan.Length + 4;
 
-            using var buffer = new ArrayPoolBuffer<byte>(fullLength, false);
-            var writer = new SpanWriter(buffer.GetSpan(fullLength));
-            if (nameSpan.Length > 0xFFFF)
-                throw new ArgumentOutOfRangeException(nameof(type), "Serialized type length exceeds 65535 bytes.");
+            var buffer = new RefArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, fullLength, mustClear: false);
+            try {
+                var writer = new SpanWriter(buffer.GetSpan(fullLength));
+                if (nameSpan.Length > 0xFFFF)
+                    throw new ArgumentOutOfRangeException(nameof(type), "Serialized type length exceeds 65535 bytes.");
 
-            BinaryPrimitives.WriteUInt16LittleEndian(writer.Remaining, (ushort)nameSpan.Length); // Length
-            BinaryPrimitives.WriteUInt16LittleEndian(writer.Remaining.Slice(2), unchecked((ushort)nameSpan.GetXxHash3L())); // 2-byte hash for faster lookups
-            nameSpan.CopyTo(writer.Remaining[4..]);
-            buffer.Advance(fullLength);
-            return buffer.WrittenSpan.ToArray().AsByteString();
+                BinaryPrimitives.WriteUInt16LittleEndian(writer.Remaining, (ushort)nameSpan.Length); // Length
+                BinaryPrimitives.WriteUInt16LittleEndian(writer.Remaining.Slice(2), unchecked((ushort)nameSpan.GetXxHash3L())); // 2-byte hash for faster lookups
+                nameSpan.CopyTo(writer.Remaining[4..]);
+                buffer.Advance(fullLength);
+                return buffer.WrittenSpan.ToArray().AsByteString();
+            }
+            finally {
+                buffer.Release();
+            }
         });
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]

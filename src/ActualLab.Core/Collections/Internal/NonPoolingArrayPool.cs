@@ -1,11 +1,11 @@
 using System.Buffers;
 
-namespace ActualLab.IO.Internal;
+namespace ActualLab.Collections.Internal;
 
-public sealed class NoArrayPool<T> : ArrayPool<T>
+public sealed class NonPoolingArrayPool<T> : ArrayPool<T>
     where T : unmanaged
 {
-    public static NoArrayPool<T> Instance { get; } = new();
+    public static NonPoolingArrayPool<T> Instance { get; } = new();
 
     public override T[] Rent(int minimumLength)
 #if NET5_0_OR_GREATER

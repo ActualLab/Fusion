@@ -40,7 +40,7 @@ public class TypeEvolutionTester<TOld, TNew>
         var v0 = s.Read<TNew>(json);
         AssertEqual(value, v0);
 
-        using var buffer = new ArrayPoolBuffer<byte>(false);
+        using var buffer = new ArrayPoolBuffer<byte>(mustClear: false);
         s.Write(buffer, value, typeof(TOld));
         var bytes = buffer.WrittenMemory;
         var json2 = Encoding.UTF8.GetDecoder().Convert(bytes.Span);
@@ -59,7 +59,7 @@ public class TypeEvolutionTester<TOld, TNew>
         var v0 = s.Read<TNew>(json);
         AssertEqual(value, v0);
 
-        using var buffer = new ArrayPoolBuffer<byte>(false);
+        using var buffer = new ArrayPoolBuffer<byte>(mustClear: false);
         s.Write(buffer, value, typeof(TOld));
         var bytes = buffer.WrittenMemory;
         var json2 = Encoding.UTF8.GetDecoder().Convert(bytes.Span);

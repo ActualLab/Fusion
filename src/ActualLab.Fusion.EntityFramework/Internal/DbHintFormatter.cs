@@ -1,4 +1,5 @@
 using System.Text;
+using ActualLab.IO;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
@@ -6,7 +7,7 @@ namespace ActualLab.Fusion.EntityFramework.Internal;
 public interface IDbHintFormatter
 {
     public void Configure(IServiceCollection services);
-    public IQueryable<T> Apply<T>(DbSet<T> dbSet, ref MemoryBuffer<DbHint> hints)
+    public IQueryable<T> Apply<T>(DbSet<T> dbSet, ref RefArrayPoolBuffer<DbHint> hints)
         where T : class;
 }
 
@@ -17,7 +18,7 @@ public abstract class DbHintFormatter : IDbHintFormatter
     public virtual void Configure(IServiceCollection services)
     { }
 
-    public abstract IQueryable<T> Apply<T>(DbSet<T> dbSet, ref MemoryBuffer<DbHint> hints)
+    public abstract IQueryable<T> Apply<T>(DbSet<T> dbSet, ref RefArrayPoolBuffer<DbHint> hints)
         where T : class;
 
     protected virtual string FormatHint(DbHint hint)

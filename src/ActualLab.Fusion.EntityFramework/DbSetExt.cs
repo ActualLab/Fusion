@@ -1,3 +1,5 @@
+using System.Buffers;
+using ActualLab.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using ActualLab.Fusion.EntityFramework.Internal;
@@ -6,6 +8,8 @@ namespace ActualLab.Fusion.EntityFramework;
 
 public static class DbSetExt
 {
+    private static readonly ArrayPool<DbHint> SharedDbHintPool = ArrayPool<DbHint>.Shared;
+
     public static DbContext GetDbContext<TEntity>(this DbSet<TEntity> dbSet)
         where TEntity: class
         => dbSet.GetInfrastructure().GetRequiredService<ICurrentDbContext>().Context;
@@ -29,13 +33,13 @@ public static class DbSetExt
         if (hintFormatter is null)
             return dbSet;
 
-        var mHints = MemoryBuffer<DbHint>.Lease(false);
+        var hints = new RefArrayPoolBuffer<DbHint>(SharedDbHintPool, 8, mustClear: false);
         try {
-            mHints.Add(hint);
-            return hintFormatter.Apply(dbSet, ref mHints);
+            hints.Add(hint);
+            return hintFormatter.Apply(dbSet, ref hints);
         }
         finally {
-            mHints.Release();
+            hints.Release();
         }
     }
 
@@ -46,14 +50,14 @@ public static class DbSetExt
         if (hintFormatter is null)
             return dbSet;
 
-        var mHints = MemoryBuffer<DbHint>.Lease(false);
+        var hints = new RefArrayPoolBuffer<DbHint>(SharedDbHintPool, 8, mustClear: false);
         try {
-            mHints.Add(hint1);
-            mHints.Add(hint2);
-            return hintFormatter.Apply(dbSet, ref mHints);
+            hints.Add(hint1);
+            hints.Add(hint2);
+            return hintFormatter.Apply(dbSet, ref hints);
         }
         finally {
-            mHints.Release();
+            hints.Release();
         }
     }
 
@@ -65,15 +69,15 @@ public static class DbSetExt
         if (hintFormatter is null)
             return dbSet;
 
-        var mHints = MemoryBuffer<DbHint>.Lease(false);
+        var hints = new RefArrayPoolBuffer<DbHint>(SharedDbHintPool, 8, mustClear: false);
         try {
-            mHints.Add(hint1);
-            mHints.Add(hint2);
-            mHints.Add(hint3);
-            return hintFormatter.Apply(dbSet, ref mHints);
+            hints.Add(hint1);
+            hints.Add(hint2);
+            hints.Add(hint3);
+            return hintFormatter.Apply(dbSet, ref hints);
         }
         finally {
-            mHints.Release();
+            hints.Release();
         }
     }
 
@@ -87,13 +91,13 @@ public static class DbSetExt
         if (hintFormatter is null)
             return dbSet;
 
-        var mHints = MemoryBuffer<DbHint>.Lease(false);
+        var buffer = new RefArrayPoolBuffer<DbHint>(SharedDbHintPool, hints.Length, mustClear: false);
         try {
-            mHints.AddRange(hints);
-            return hintFormatter.Apply(dbSet, ref mHints);
+            buffer.AddRange(hints);
+            return hintFormatter.Apply(dbSet, ref buffer);
         }
         finally {
-            mHints.Release();
+            buffer.Release();
         }
     }
 

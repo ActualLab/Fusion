@@ -1,4 +1,3 @@
-using ActualLab.IO;
 using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -42,7 +41,7 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
                 throw new ChannelClosedException();
 
             // No need to dispose the buffer, its array is disposed by the receiving side via frame.Dispose there
-            var buffer = new ArrayPoolBuffer<byte>(InitialBufferCapacity, mustClear: false);
+            var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, InitialBufferCapacity, mustClear: false);
             MessageSerializer.WriteFunc(buffer, message);
             CompleteSend(message);
             var frame = new ArrayOwner<byte>(buffer.Pool, buffer.Array, buffer.WrittenCount);

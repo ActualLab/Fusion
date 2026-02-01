@@ -101,8 +101,8 @@ public sealed class RpcWebSocketTransport : RpcTransport
         _tryDeserializeMessage = IsTextSerializer ? TryDeserializeText : TryDeserializeBinary;
         _messageSerializerReadFunc = MessageSerializer.ReadFunc;
         _messageSerializerWriteFunc = MessageSerializer.WriteFunc;
-        _writeBuffer = new ArrayPoolBuffer<byte>(Settings.BufferSize, mustClear: false);
-        _flushingBuffer = new ArrayPoolBuffer<byte>(Settings.BufferSize, mustClear: false);
+        _writeBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Settings.BufferSize, mustClear: false);
+        _flushingBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Settings.BufferSize, mustClear: false);
 
         _writeChannel = ChannelExt.Create<RpcOutboundMessage>(settings.WriteChannelOptions);
         _writeChannelWriter = _writeChannel.Writer;
@@ -348,7 +348,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
         using var commonTokenRegistration = commonCts.Token.Register(() => _ = DisposeAsync());
 
         // Start with a non-pooled buffer for initial reads
-        var buffer = new ArrayPoolBuffer<byte>(bufferSize, false);
+        var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, bufferSize, mustClear: false);
         var tryDeserialize = _tryDeserializeMessage;
 
         try {

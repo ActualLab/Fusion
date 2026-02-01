@@ -7,7 +7,7 @@ public class ArrayOwnerTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void BasicTest1()
     {
-        var poolBuffer = new ArrayPoolBuffer<byte>(100, false);
+        var poolBuffer = new ArrayPoolBuffer<byte>(100, mustClear: false);
         poolBuffer.Advance(50); // Simulate writing 50 bytes
         var holder = poolBuffer.ToArrayOwnerAndReset(100);
 
@@ -27,7 +27,7 @@ public class ArrayOwnerTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void BasicTest2()
     {
-        var poolBuffer = new ArrayPoolBuffer<byte>(100, false);
+        var poolBuffer = new ArrayPoolBuffer<byte>(100, mustClear: false);
 
         // Write some data
         var span = poolBuffer.GetSpan(10);

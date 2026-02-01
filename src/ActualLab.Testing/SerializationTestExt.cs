@@ -190,7 +190,7 @@ public static class SerializationTestExt
         output?.WriteLine($"SystemJsonSerializer: {json}");
         value = s.Read(json);
 
-        using var buffer = new ArrayPoolBuffer<byte>(false);
+        using var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, mustClear: false);
         s.Write(buffer, value);
         var bytes = buffer.WrittenMemory;
         var json2 = Encoding.UTF8.GetDecoder().Convert(bytes.Span);
@@ -220,7 +220,7 @@ public static class SerializationTestExt
         output?.WriteLine($"NewtonsoftJsonSerializer: {json}");
         value = s.Read(json);
 
-        using var buffer = new ArrayPoolBuffer<byte>(false);
+        using var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, mustClear: false);
         s.Write(buffer, value);
         var bytes = buffer.WrittenMemory;
         var json2 = Encoding.UTF8.GetDecoder().Convert(bytes.Span);

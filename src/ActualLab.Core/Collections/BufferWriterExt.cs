@@ -1,6 +1,6 @@
 using System.Buffers;
 
-namespace ActualLab.IO;
+namespace ActualLab.Collections;
 
 public static class BufferWriterExt
 {

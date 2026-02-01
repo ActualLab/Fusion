@@ -1,4 +1,5 @@
 using ActualLab.Fusion.EntityFramework.Internal;
+using ActualLab.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 
@@ -22,7 +23,7 @@ public class NpgsqlDbHintFormatter : DbHintFormatter
         services.AddScoped<IQuerySqlGeneratorFactory, NpgsqlHintQuerySqlGeneratorFactory>();
     }
 
-    public override IQueryable<T> Apply<T>(DbSet<T> dbSet, ref MemoryBuffer<DbHint> hints)
+    public override IQueryable<T> Apply<T>(DbSet<T> dbSet, ref RefArrayPoolBuffer<DbHint> hints)
         where T : class
     {
         var sb = StringBuilderExt.Acquire();

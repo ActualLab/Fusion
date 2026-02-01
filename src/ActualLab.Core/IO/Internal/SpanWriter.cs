@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using ActualLab.Collections;
 
 namespace ActualLab.IO.Internal;
 
