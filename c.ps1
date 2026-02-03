@@ -500,7 +500,7 @@ switch ($mode) {
             $wslProjPath = ConvertTo-WSLPath $winProjPath
             $wslProjectEnvVars += "AC_Project${i}Path='$wslProjPath'"
         }
-        $wslEnvString = (@("AC_ProjectRoot='$wslProjectRoot'") + $wslProjectEnvVars) -join ' '
+        $wslEnvString = (@("AC_ProjectRoot='$wslProjectRoot'", "DISABLE_AUTOUPDATER=1") + $wslProjectEnvVars) -join ' '
 
         # Run this script in WSL with "os" argument
         # On Windows, we're already in wt (handled at script start)
@@ -545,6 +545,7 @@ switch ($mode) {
         $env:AC_Project = $projectName
         $env:AC_ProjectPath = $projectRoot
         $env:AC_Worktree = $worktree
+        $env:DISABLE_AUTOUPDATER = "1"
 
         # Set AC_OS based on detected environment
         $env:AC_OS = switch ($currentOS) {
@@ -776,6 +777,7 @@ switch ($mode) {
         $dockerArgs += $volumeMounts + @(
             "-e", "ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY"
             "-e", "Claude_GeminiAPIKey=$env:Claude_GeminiAPIKey"
+            "-e", "DISABLE_AUTOUPDATER=1"
             "-e", "AC_ProjectRoot=/proj"
         ) + $projectEnvVars + $propagatedEnvVars
 

@@ -21,13 +21,18 @@ RUN apt-get update && apt-get install -y \
     ripgrep fd-find vim nano \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PowerShell
-RUN wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb && \
-    dpkg -i packages-microsoft-prod.deb && \
-    rm packages-microsoft-prod.deb && \
-    apt-get update && \
-    apt-get install -y powershell && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install PowerShell (the Microsoft Debian repo is amd64-only for `powershell`)
+# TODO: do we need explicit powershell installation? it's already preinstalled
+RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+        wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb && \
+        dpkg -i packages-microsoft-prod.deb && \
+        rm packages-microsoft-prod.deb && \
+        apt-get update && \
+        apt-get install -y powershell && \
+        apt-get clean && rm -rf /var/lib/apt/lists/*; \
+    else \
+        echo "Skipping PowerShell install on $ARCH"; \
+    fi
 
 # Install Google Cloud CLI
 RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
@@ -105,7 +110,7 @@ ENV PATH=$PATH:/usr/local/share/npm-global/bin
 
 # Install Claude Code CLI
 ENV CLAUDE_INSTALL_METHOD=npm
-RUN npm install -g @anthropic-ai/claude-code
+RUN npm install -g @anthropic-ai/claude-code@2.1.25
 
 # Pre-download Playwright Chromium browser (~280MB, speeds up first use)
 RUN npx playwright install chromium
