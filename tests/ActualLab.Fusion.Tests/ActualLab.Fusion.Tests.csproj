@@ -6,10 +6,6 @@
     <NoWarn>$(NoWarn);EF1001;</NoWarn>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FlakyTest.XUnit" />
-  </ItemGroup>
-
   <!-- Framework-specific test excludes -->
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <Compile Remove="Authentication\**" />
@@ -22,6 +18,7 @@
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
+    <PackageReference Include="FlakyTest.XUnit" />
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">

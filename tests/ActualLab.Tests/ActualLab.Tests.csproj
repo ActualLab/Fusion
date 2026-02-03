@@ -8,11 +8,11 @@
 
   <ItemGroup>
     <PackageReference Include="Castle.Core" />
-    <PackageReference Include="FlakyTest.XUnit" />
   </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
+    <PackageReference Include="FlakyTest.XUnit" />
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">

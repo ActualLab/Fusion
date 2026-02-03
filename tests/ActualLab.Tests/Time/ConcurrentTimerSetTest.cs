@@ -1,6 +1,8 @@
 using ActualLab.OS;
 using ActualLab.Testing.Collections;
+#if !NETFRAMEWORK
 using FlakyTest.XUnit.Attributes;
+#endif
 
 namespace ActualLab.Tests.Time;
 
@@ -21,7 +23,11 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
 
     private int _runnerId;
 
+#if !NETFRAMEWORK
     [FlakyFact("Time-dependent", 3)]
+#else
+    [Fact]
+#endif
     public async Task BasicTest()
     {
         var clock = MomentClockSet.Default.CpuClock;
@@ -63,7 +69,11 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
         t.FiredAt.Should().Be(default);
     }
 
+#if !NETFRAMEWORK
     [FlakyFact("Time-dependent", 3)]
+#else
+    [Fact]
+#endif
     public async Task RemoveTest()
     {
         var clock = MomentClockSet.Default.CpuClock;
@@ -83,7 +93,11 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
         t.FiredAt.Should().Be(default);
     }
 
+#if !NETFRAMEWORK
     [FlakyFact("Time-dependent", 3)]
+#else
+    [Fact]
+#endif
     public async Task RandomTimerTest()
     {
         var taskCount = TestRunnerInfo.IsBuildAgent() ? 1 : HardwareInfo.GetProcessorCountFactor(10);

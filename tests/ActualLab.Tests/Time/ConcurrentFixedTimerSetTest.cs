@@ -1,5 +1,7 @@
 using ActualLab.Testing.Collections;
+#if !NETFRAMEWORK
 using FlakyTest.XUnit.Attributes;
+#endif
 
 namespace ActualLab.Tests.Time;
 
@@ -15,7 +17,11 @@ public class ConcurrentFixedTimerSetTest(ITestOutputHelper @out) : TestBase(@out
         }
     }
 
+#if !NETFRAMEWORK
     [FlakyFact("Time-dependent", 3)]
+#else
+    [Fact]
+#endif
     public async Task BasicTest()
     {
         var clock = MomentClockSet.Default.CpuClock;
@@ -47,7 +53,11 @@ public class ConcurrentFixedTimerSetTest(ITestOutputHelper @out) : TestBase(@out
         await TestExt.When(() => set.Count.Should().Be(0), TimeSpan.FromSeconds(1));
     }
 
+#if !NETFRAMEWORK
     [FlakyFact("Time-dependent", 3)]
+#else
+    [Fact]
+#endif
     public async Task FireImmediatelyTest()
     {
         var clock = MomentClockSet.Default.CpuClock;
