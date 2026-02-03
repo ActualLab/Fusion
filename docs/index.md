@@ -4,11 +4,17 @@ layout: home
 hero:
   name: ActualLab.Fusion
   text: The "real-time on!" switch for .NET
-  tagline: Add real-time updates and caching to any .NET app with almost no code changes. 10,000x faster APIs. Production-proven.
+  tagline: Add real-time updates and caching to any .NET app with almost no code changes. 10,000x faster APIs. Production-proven. <span style="color:#22c55e;">MIT license.</span>
   actions:
     - theme: brand
       text: Documentation
       link: /PartF
+    - theme: alt
+      text: Changelog
+      link: /CHANGELOG
+    - theme: alt
+      text: Chat
+      link: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
     - theme: alt
       text: Samples
       link: https://github.com/ActualLab/Fusion.Samples
@@ -50,9 +56,7 @@ features:
 [![NuGet Version](https://img.shields.io/nuget/v/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
 ![Commit Activity](https://img.shields.io/github/commit-activity/m/actuallab/Fusion)
 [![Downloads](https://img.shields.io/nuget/dt/ActualLab.Core)](https://www.nuget.org/packages?q=tags%3A%22actual_lab_fusion%22+Owner%3A%22Actual.chat%22)
-[![Samples](https://img.shields.io/badge/Samples-88B04B)](https://github.com/ActualLab/Fusion.Samples)
 [![Chat @ Voxt](https://img.shields.io/badge/Chat%20%40%20Voxt-BE145B)](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo)
-[![Changelog](https://img.shields.io/badge/Changelog-4A4A4A)](./CHANGELOG)
 
 </div>
 

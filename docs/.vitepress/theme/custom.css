@@ -19,6 +19,23 @@
   font-size: 16px;
 }
 
+/* GitHub icon on hero button */
+.VPButton.VPButton[href*="github.com/ActualLab/Fusion"]::before {
+  content: "";
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.4em;
+  vertical-align: -0.15em;
+  background-color: currentColor;
+  -webkit-mask-image: url("/img/github-mark.svg");
+  mask-image: url("/img/github-mark.svg");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
 .VPSidebarItem.level-1 > .item .link {
   padding-block: 4px;
 }
