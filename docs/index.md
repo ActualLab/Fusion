@@ -23,28 +23,30 @@ hero:
       link: https://github.com/ActualLab/Fusion
 
 features:
+  - icon: 🪄
+    title: Real-Time Magic
+    details: Automatic state synchronization across your server cluster and every client connected to it. No SignalR hubs. No event handlers. No manual pub/sub.
   - icon: ⚡
-    title: Blazing Fast
-    details: 20 million cache-resolving calls per core per second. 1,000x–8,000x faster APIs than traditional approaches.
+    title: Unbeatable Speed
+    details: "100x faster than Redis: 20M cache-resolving calls/s per core. The fastest RPC available: 3–5x faster than gRPC and SignalR."
     link: /Performance#results
     linkText: See benchmarks
-  - icon: 🪄
-    title: Real-Time, Zero Effort
-    details: Automatic state synchronization across your server cluster and every client connected to it. No SignalR hubs. No event handlers. No manual pub/sub.
-  - icon: 💰
-    title: One Codebase, Every Platform
-    details: Same code runs on Blazor Server, WebAssembly, and MAUI. Fusion works everywhere.
-  - icon: 🔄
-    title: Cache Dependency Tracking
-    details: Like MSBuild or Make, but for every method on your API and backend. Mark one call result as changed, and every result depending on it gets invalidated—even on remote machines.
-  - icon: 📡
-    title: Fastest RPC on .NET
-    details: ActualLab.Rpc is 6x faster than gRPC for calls, 2-3x faster for streaming.
-    link: /Performance#rpcbenchmark-cmd-from-actuallab-fusion-samples
-    linkText: See benchmarks
   - icon: ✈️
-    title: Offline Mode Ready
-    details: Use persistent client-side caching to let your clients work offline and sync when connected. Reduce startup traffic to kilobytes even for very large working sets.
+    title: Zero-Effort Offline
+    details: "Flip a switch to make your Blazor or MAUI client start and work offline. Bonus: 10x faster startup, and your app works even on GPRS."
+  - icon: 💎
+    title: No Boilerplate
+    details: Same code you'd write anyway, plus a few attributes and invalidation blocks. That's all it takes.
+    link: /PartF#_1-compute-services-and-compute-methods
+    linkText: See example
+  - icon: 💰
+    title: Write Once, Run Anywhere
+    details: Same code runs on Blazor Server, WebAssembly, and MAUI. Fusion works everywhere.
+  - icon: 🛡️
+    title: Battle-Tested
+    details: Powers Voxt.ai—a real-time voice chat with live transcription, translation, and AI summaries across all platforms.
+    link: https://voxt.ai
+    linkText: Check it out
 ---
 
 <div class="vp-doc" style="padding: 0 24px; max-width: 1152px; margin: 0 auto;">
@@ -264,6 +266,63 @@ When `State` gets recomputed, `StateHasChanged()` is called and the component re
 }
 ```
 
+## Why Developers Choose Fusion
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+
+<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+
+### 🚀 Ship Faster
+
+Skip building real-time and caching infrastructure.
+Add `[ComputeMethod]` to your existing services and get both for free.
+
+</div>
+
+<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+
+### 🌱 Start Small, Go Big
+
+Same service code works for a single Blazor app or a distributed cluster. Going from prototype to planet-scale is almost a flip of a switch.
+
+</div>
+
+<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+
+### 🏔️ 10⁶ Scale Headroom
+
+With 10,000x faster services, just 100 sharded servers give you a million-fold scale headroom.
+
+</div>
+
+<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+
+### 🐛 Fewer Bugs
+
+No more "it's stale — find out why" debugging sessions.
+Automatic dependency tracking ensures dependents update when something changes.
+
+</div>
+
+<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+
+### 💻 No (Micro)Service Zoo
+
+Your services run locally or distributed with zero changes. No complex dependencies. AI agents can debug your code by running E2E tests right on your laptop. Or in Docker.
+
+</div>
+
+<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+
+### 💎 Clean Code
+
+Your code stays focused on business logic, Fusion handles the rest.
+Forget about the boilerplate for real-time updates or cache invalidation.
+
+</div>
+
+</div>
+
 ## Production-Proven
 
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 2rem; margin: 2rem 0; color: white;">
@@ -277,52 +336,11 @@ When `State` gets recomputed, `StateHasChanged()` is called and the component re
 - 💰 **~100% code sharing** across all platforms
 - ✈️ **Offline mode** powered by Fusion's persistent caching.
 
-Check out how it works at [Voxt.ai](https://voxt.ai/mchat/s-1KCdcYy9z2-uJVPKZsbEo), 
-or reach out to [Alex Y. @ Voxt.ai](https://voxt.ai/u/@alex-yakunin) if you want to chat in real time. 
-Fusion handles everything related to real-time there.  
+Check out how it works at [Voxt.ai](https://voxt.ai/mchat/s-1KCdcYy9z2-uJVPKZsbEo),
+or reach out to [Alex Y. @ Voxt.ai](https://voxt.ai/u/@alex-yakunin) if you want to chat in real time.
+Fusion handles everything related to real-time there.
 
 <a href="https://voxt.ai" style="display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: white; color: #667eea; border-radius: 6px; font-weight: 600; text-decoration: none;">Try Voxt →</a>
-
-</div>
-
-## Why Developers Choose Fusion
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
-
-<div style="padding: 1.5rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-
-### 🚀 Ship Faster
-
-Skip building real-time and caching infrastructure. 
-Add `[ComputeMethod]` to your existing services and get both for free.
-
-</div>
-
-<div style="padding: 1.5rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-
-### 🐛 Fewer Bugs
-
-No more "it's stale — find out why" debugging sessions. 
-Automatic dependency tracking ensures dependents update when something changes.
-
-</div>
-
-<div style="padding: 1.5rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-
-### 💎 Clean Code
-
-Your code stays focused on business logic, Fusion handles the rest. 
-Forget about the boilerplate for real-time updates or cache invalidation.
-
-</div>
-
-<div style="padding: 1.5rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-
-### 📈 Scale Effortlessly
-
-Handle 1000× more traffic with almost no changes to your code. 
-
-</div>
 
 </div>
 
@@ -379,7 +397,7 @@ Indirect contributors & everyone else who made Fusion possible:
 
 - [ServiceTitan](https://www.servicetitan.com) &ndash; Fusion was originally created there.
 - [Quora](https://www.quora.com) &ndash; a huge part of the inspiration for Fusion was Quora's LiveNode framework
-- [Microsoft](https://microsoft.com) &ndash; for .NET Core and Blazor.
+- GitHub contributors: [alexyakunin](https://github.com/alexyakunin), [crui3er](https://github.com/crui3er), [alexis-kochetov](https://github.com/alexis-kochetov), [frolyo](https://github.com/frolyo), [iqmulator](https://github.com/iqmulator), [hypercodeplace](https://github.com/hypercodeplace), [AlexUstinov](https://github.com/AlexUstinov), [wdichler](https://github.com/wdichler), [AliveDevil](https://github.com/AliveDevil), [timeshift92](https://github.com/timeshift92), [maheshwariST](https://github.com/maheshwariST), [adampaquette](https://github.com/adampaquette), [Tyrrrz](https://github.com/Tyrrrz), [riesvriend](https://github.com/riesvriend), and others.
 
 **ActualLab.Fusion** is developed by the creators of [Voxt](https://voxt.ai)
 and is the successor of [Stl.Fusion](https://github.com/servicetitan/Stl.Fusion), originally created at [ServiceTitan](https://www.servicetitan.com).
