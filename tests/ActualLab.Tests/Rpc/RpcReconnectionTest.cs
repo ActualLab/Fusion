@@ -59,6 +59,61 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
         }
     }
 
+    [Fact]
+    public async Task NonReconnectableStreamTest()
+    {
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        // Non-reconnectable stream should fail when connection is disrupted
+        var stream = await client.StreamInt32NonReconnectable(100, -1, new RandomTimeSpan(0.05, 1));
+        var countTask = stream.CountAsync().AsTask();
+
+        // Give stream time to start, then disconnect
+        await Delay(0.1);
+        await connection.Disconnect();
+        await Delay(0.05);
+        await connection.Connect();
+
+        // The stream should fail because it's not reconnectable
+        await Assert.ThrowsAsync<RpcStreamNotFoundException>(() => countTask);
+    }
+
+    [Fact]
+    public async Task StreamNotFoundTest()
+    {
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        // Start a slow stream
+        var stream = await client.StreamInt32(100, -1, new RandomTimeSpan(0.05, 1));
+        var enumerator = stream.GetAsyncEnumerator();
+
+        // Read a few items to ensure stream is started on server
+        for (var i = 0; i < 5; i++)
+            (await enumerator.MoveNextAsync()).Should().BeTrue();
+
+        // Unregister the stream from server's SharedObjects to simulate "not found"
+        var serverPeer = connection.ServerPeer;
+        foreach (var sharedObject in serverPeer.SharedObjects)
+            serverPeer.SharedObjects.Unregister(sharedObject);
+
+        // Force a reconnect so client tries to resume the stream
+        await connection.Disconnect();
+        await Delay(0.05);
+        await connection.Connect();
+
+        // The stream should fail because it's not found on the server
+        await Assert.ThrowsAsync<RpcStreamNotFoundException>(async () => {
+            while (await enumerator.MoveNextAsync())
+                _ = enumerator.Current;
+        });
+
+        await enumerator.DisposeAsync();
+    }
+
     [Fact(Timeout = 30_000)]
     public async Task ConcurrentTest()
     {

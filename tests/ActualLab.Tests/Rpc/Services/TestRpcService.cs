@@ -34,6 +34,7 @@ public interface ITestRpcService : ICommandService
     public ValueTask<string?> Get(string key);
 
     public Task<RpcStream<int>> StreamInt32(int count, int failAt = -1, RandomTimeSpan delay = default);
+    public Task<RpcStream<int>> StreamInt32NonReconnectable(int count, int failAt = -1, RandomTimeSpan delay = default);
     public Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default);
     public Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default);
     public Task CheckLag(RpcStream<Moment> items, int expectedCount, CancellationToken cancellationToken = default);
@@ -124,6 +125,12 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
     {
         var seq = Enumerate(count, failAt, delay);
         return Task.FromResult(RpcStream.New(seq));
+    }
+
+    public virtual Task<RpcStream<int>> StreamInt32NonReconnectable(int count, int failAt = -1, RandomTimeSpan delay = default)
+    {
+        var seq = Enumerate(count, failAt, delay);
+        return Task.FromResult(new RpcStream<int>(seq) { IsReconnectable = false });
     }
 
     public virtual Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default)

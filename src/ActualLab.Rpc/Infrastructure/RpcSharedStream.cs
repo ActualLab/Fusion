@@ -17,6 +17,7 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
 
     public RpcObjectId Id { get; } = stream.Id;
     public RpcObjectKind Kind { get; } = stream.Kind;
+    public bool IsReconnectable { get; } = stream.IsReconnectable;
     public RpcStream Stream { get; } = stream;
     public RpcPeer Peer { get; } = stream.Peer!;
     public CpuTimestamp LastKeepAliveAt {
@@ -48,20 +49,20 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         });
     private readonly Batcher _batcher;
 
+    public new RpcStream<T> Stream { get; }
+
     public RpcSharedStream(RpcStream stream) : base(stream)
     {
-        _systemCallSender = stream.Peer!.Hub.SystemCallSender;
         Stream = (RpcStream<T>)stream;
+        _systemCallSender = stream.Peer!.Hub.SystemCallSender;
         _batcher = new(this);
     }
-
-    public new RpcStream<T> Stream { get; }
 
     public override void OnAck(long nextIndex, Guid hostId)
     {
         var mustReset = hostId != default;
-        if (mustReset && !Equals(Stream.Id.HostId, hostId)) {
-            SendMissing();
+        if (mustReset && !(IsReconnectable && Equals(Stream.Id.HostId, hostId))) {
+            SendDisconnect();
             return;
         }
 
@@ -72,12 +73,12 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 if (mustReset && nextIndex == 0)
                     this.Start();
                 else {
-                    SendMissing();
+                    SendDisconnect();
                     return;
                 }
             }
             else if (whenRunning.IsCompleted) {
-                SendMissing();
+                SendDisconnect();
                 return;
             }
 
@@ -167,7 +168,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     }
                     catch (Exception e) {
                         item = Result.NewError<T>(e.IsCancellationOf(cancellationToken)
-                            ? Errors.RpcStreamNotFound()
+                            ? Errors.RpcStreamNotFoundOrDisconnected()
                             : e);
                         isFullyBuffered = true;
                     }
@@ -202,17 +203,15 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     protected override Task OnStop()
     {
-        try {
-            _acks.Writer.TryWrite((long.MaxValue, false)); // Just in case
-        }
-        finally {
-            Peer.SharedObjects.Unregister(this);
-        }
+        Peer.SharedObjects.Unregister(this);
         return Task.CompletedTask;
     }
 
-    private void SendMissing()
-        => _systemCallSender.Disconnect(Peer, [Id.LocalId]);
+    private void SendDisconnect()
+    {
+        _systemCallSender.Disconnect(Peer, [Id.LocalId]);
+        Dispose(); // Triggers OnStop -> Unregister
+    }
 
     private void SendInvalidPosition(long index)
         => Send(index, Result.NewError<T>(Errors.RpcStreamInvalidPosition()));

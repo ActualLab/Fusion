@@ -44,6 +44,8 @@ public abstract partial class RpcStream : IRpcObject
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 64;
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    public bool IsReconnectable { get; init; } = true;
 
     public static RpcStream<T> New<T>(IAsyncEnumerable<T> outgoingSource)
         => new(outgoingSource);
@@ -153,7 +155,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 
             _remoteChannel = Channel.CreateUnbounded<T>(RemoteChannelOptions);
             if (_nextIndex == long.MaxValue) // Marked as missing
-                _remoteChannel.Writer.TryComplete(Internal.Errors.RpcStreamNotFound());
+                _remoteChannel.Writer.TryComplete(Internal.Errors.RpcStreamNotFoundOrDisconnected());
             else {
                 try {
                     _isRegistered = true;
@@ -295,7 +297,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 return;
 
             _isDisconnected = true;
-            CloseFromLock(Internal.Errors.RpcStreamNotFound());
+            CloseFromLock(Internal.Errors.RpcStreamNotFoundOrDisconnected());
         }
     }
 
@@ -323,11 +325,11 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     private void SendCloseFromLock()
     {
         _nextIndex = long.MaxValue;
-        SendAckFromLock(_nextIndex, true);
+        SendAckFromLock(_nextIndex, mustReset: true);
     }
 
     private void SendResetFromLock(long index)
-        => SendAckFromLock(index, true);
+        => SendAckFromLock(index, mustReset: true);
 
     private void MaybeSendAckFromLock(long index)
     {
