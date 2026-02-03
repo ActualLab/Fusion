@@ -47,10 +47,10 @@ public abstract partial class RpcStream : IRpcObject
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public bool IsReconnectable { get; init; } = true;
 
-    public static RpcStream<T> New<T>(IAsyncEnumerable<T> outgoingSource)
-        => new(outgoingSource);
-    public static RpcStream<T> New<T>(IEnumerable<T> outgoingSource)
-        => new(outgoingSource.ToAsyncEnumerable());
+    public static RpcStream<T> New<T>(IAsyncEnumerable<T> outgoingSource, bool isReconnectable = true)
+        => new(outgoingSource) { IsReconnectable = isReconnectable };
+    public static RpcStream<T> New<T>(IEnumerable<T> outgoingSource, bool isReconnectable = true)
+        => new(outgoingSource.ToAsyncEnumerable()) { IsReconnectable = isReconnectable };
 
     public override string ToString()
         => $"{GetType().GetName()}({Id} @ {Peer?.Ref}, {Kind})";

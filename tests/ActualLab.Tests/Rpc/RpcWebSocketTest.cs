@@ -224,10 +224,12 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("msgpack5")]
     [InlineData("msgpack5c")]
     [InlineData("mempack6")]
-    [InlineData("mempack6c")]
+    [InlineData("mempack6c", false)]
+    [InlineData("mempack6c", true)]
     [InlineData("msgpack6")]
-    [InlineData("msgpack6c")]
-    public async Task StreamTest(string serializationFormat)
+    [InlineData("msgpack6c", false)]
+    [InlineData("msgpack6c", true)]
+    public async Task StreamTest(string serializationFormat, bool isReconnectable = true)
     {
         SerializationFormat = serializationFormat;
         await ResetClientServices();
@@ -244,14 +246,14 @@ public class RpcWebSocketTest : RpcTestBase
         var expected2 = Enumerable.Range(0, 500)
             .Select(x => (x & 2) == 0 ? (ITuple)new Tuple<int>(x) : new Tuple<long>(x))
             .ToList();
-        var stream2 = await client.StreamTuples(expected2.Count);
+        var stream2 = await client.StreamTuples(expected2.Count, isReconnectable: isReconnectable);
         (await stream2.ToListAsync()).Should().Equal(expected2);
         await AssertNoCalls(peer, Out);
 
-        var stream3 = await client.StreamTuples(10, 5);
+        var stream3 = await client.StreamTuples(10, 5, isReconnectable: isReconnectable);
         (await stream3.Take(5).CountAsync()).Should().Be(5);
 
-        var stream3f = await client.StreamTuples(10, 5);
+        var stream3f = await client.StreamTuples(10, 5, isReconnectable: isReconnectable);
         try {
             await stream3f.CountAsync();
             Assert.Fail("No exception!");

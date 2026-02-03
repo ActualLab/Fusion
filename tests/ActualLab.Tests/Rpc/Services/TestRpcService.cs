@@ -35,7 +35,7 @@ public interface ITestRpcService : ICommandService
 
     public Task<RpcStream<int>> StreamInt32(int count, int failAt = -1, RandomTimeSpan delay = default);
     public Task<RpcStream<int>> StreamInt32NonReconnectable(int count, int failAt = -1, RandomTimeSpan delay = default);
-    public Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default);
+    public Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default, bool isReconnectable = true);
     public Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default);
     public Task CheckLag(RpcStream<Moment> items, int expectedCount, CancellationToken cancellationToken = default);
 
@@ -127,17 +127,19 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
         return Task.FromResult(RpcStream.New(seq));
     }
 
-    public virtual Task<RpcStream<int>> StreamInt32NonReconnectable(int count, int failAt = -1, RandomTimeSpan delay = default)
+    public virtual Task<RpcStream<int>> StreamInt32NonReconnectable(
+        int count, int failAt = -1, RandomTimeSpan delay = default)
     {
         var seq = Enumerate(count, failAt, delay);
         return Task.FromResult(new RpcStream<int>(seq) { IsReconnectable = false });
     }
 
-    public virtual Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default)
+    public virtual Task<RpcStream<ITuple>> StreamTuples(
+        int count, int failAt = -1, RandomTimeSpan delay = default, bool isReconnectable = true)
     {
         var seq = Enumerate(count, failAt, delay)
             .Select(x => (x & 2) == 0 ? (ITuple)new Tuple<int>(x) : new Tuple<long>(x));
-        return Task.FromResult(RpcStream.New(seq));
+        return Task.FromResult(RpcStream.New(seq, isReconnectable));
     }
 
     public virtual Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default)
