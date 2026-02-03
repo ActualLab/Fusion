@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.0.70+1775d374
+
+Release date: 2026-02-03
+
+### Fixed
+- `RpcStream` with `IsReconnectable == false` fails right on the first enumeration 
+  rather than after the reconnection attempt
+
+
 ## 12.0.65+68251969
 
 Release date: 2026-02-03

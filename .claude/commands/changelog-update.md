@@ -32,6 +32,8 @@ If `$ARGUMENTS` is provided, use it as the version number. Otherwise:
 
 4. Use the **greater** of artifacts/nupkg version vs NuGet version, or ask the user.
 
+**Important**: Use the exact version number detected from artifacts or NuGet—do **not** invent a new version number by incrementing the detected one (e.g., if the highest detected version is `12.0.65`, don't create an entry for `12.0.66` unless you actually see `12.0.66` in artifacts or NuGet). If the detected version is newer than the last CHANGELOG entry, add a new entry for it. The entry always points to HEAD with format `<version>+<HEAD-hash>`.
+
 ### Step 2: Read Current CHANGELOG
 
 Read `docs/CHANGELOG.md` to understand the format and find the last version's commit hash from the header - e.g., `## 11.4.7+3045fd2c`.
