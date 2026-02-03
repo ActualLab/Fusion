@@ -66,18 +66,28 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<ITestRpcService>();
 
-        // Non-reconnectable stream should fail when connection is disrupted
+        // Non-reconnectable stream should work initially but fail on reconnect
         var stream = await client.StreamInt32NonReconnectable(100, -1, new RandomTimeSpan(0.05, 1));
-        var countTask = stream.CountAsync().AsTask();
+        var enumerator = stream.GetAsyncEnumerator();
 
-        // Give stream time to start, then disconnect
-        await Delay(0.1);
+        // Verify initial connect works - read a few items
+        for (var i = 0; i < 5; i++) {
+            (await enumerator.MoveNextAsync()).Should().BeTrue();
+            enumerator.Current.Should().Be(i);
+        }
+
+        // Disconnect and reconnect
         await connection.Disconnect();
         await Delay(0.05);
         await connection.Connect();
 
-        // The stream should fail because it's not reconnectable
-        await Assert.ThrowsAsync<RpcStreamNotFoundException>(() => countTask);
+        // The stream should fail on reconnect because IsReconnectable = false
+        await Assert.ThrowsAsync<RpcStreamNotFoundException>(async () => {
+            while (await enumerator.MoveNextAsync())
+                _ = enumerator.Current;
+        });
+
+        await enumerator.DisposeAsync();
     }
 
     [Fact]

@@ -61,7 +61,9 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
     public override void OnAck(long nextIndex, Guid hostId)
     {
         var mustReset = hostId != default;
-        if (mustReset && !(IsReconnectable && Equals(Stream.Id.HostId, hostId))) {
+
+        // Host mismatch - client reconnected to a different server instance
+        if (mustReset && !Equals(Stream.Id.HostId, hostId)) {
             SendDisconnect();
             return;
         }
@@ -71,13 +73,18 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             var whenRunning = WhenRunning;
             if (whenRunning is null) {
                 if (mustReset && nextIndex == 0)
-                    this.Start();
+                    this.Start(); // Initial connect - always allowed
                 else {
                     SendDisconnect();
                     return;
                 }
             }
             else if (whenRunning.IsCompleted) {
+                SendDisconnect();
+                return;
+            }
+            else if (mustReset && !IsReconnectable) {
+                // Reconnect attempt on non-reconnectable stream - reject
                 SendDisconnect();
                 return;
             }
