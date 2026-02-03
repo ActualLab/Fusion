@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.0.65+68251969
+
+Release date: 2026-02-03
+
+### Added
+- `RpcStream.IsReconnectable` property &ndash; controls whether a stream can be reconnected after disconnection;
+  `true` by default, set to `false` to make reconnection attempts fail with `RpcStreamNotFoundException`
+- `RpcStreamNotFoundException` &ndash; new exception thrown when attempting to reconnect a non-reconnectable
+  or expired stream
+
+### Tests
+- Added `FlakyTest.XUnit` dependency for marking time-dependent tests as flaky
+- Marked timing-sensitive tests (`ConcurrentTimerSetTest`, `ConcurrentFixedTimerSetTest`) with `[FlakyFact]`
+  attribute for improved test reliability
+
+
 ## 12.0.60+9bb19676
 
 Release date: 2026-02-01
