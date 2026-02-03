@@ -19,6 +19,11 @@
   font-size: 16px;
 }
 
+/* Move theme switch to far right */
+.VPNavBarAppearance {
+  order: 100;
+}
+
 /* GitHub icon on hero button */
 .VPButton.VPButton[href*="github.com/ActualLab/Fusion"]::before {
   content: "";
@@ -30,6 +35,23 @@
   background-color: currentColor;
   -webkit-mask-image: url("/img/github-mark.svg");
   mask-image: url("/img/github-mark.svg");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* Voxt icon on Chat button */
+.VPButton.VPButton[href*="voxt.ai"]::before {
+  content: "";
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.4em;
+  vertical-align: -0.15em;
+  background-color: currentColor;
+  -webkit-mask-image: url("/img/voxt-icon.svg");
+  mask-image: url("/img/voxt-icon.svg");
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;

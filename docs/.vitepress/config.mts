@@ -97,6 +97,11 @@ gtag('config', 'G-PX4G7HX4CM');`],
     search: {
       provider: "local",
     },
+    nav: [
+      { text: "Samples", link: "https://github.com/ActualLab/Fusion.Samples" },
+      { text: "GitHub", link: "https://github.com/ActualLab/Fusion" },
+      { text: "Chat", link: "https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo" },
+    ],
     sidebar: [
       {
         items: [
@@ -281,9 +286,6 @@ gtag('config', 'G-PX4G7HX4CM');`],
           { text: "Story Behind Fusion", link: "/Story" },
         ],
       },
-    ],
-    socialLinks: [
-      { icon: "github", link: "https://github.com/ActualLab/Fusion" },
     ],
     outline: [2, 3],
   },

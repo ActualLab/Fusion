@@ -13,14 +13,14 @@ hero:
       text: Changelog
       link: /CHANGELOG
     - theme: alt
-      text: Chat
-      link: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
-    - theme: alt
       text: Samples
       link: https://github.com/ActualLab/Fusion.Samples
     - theme: alt
       text: GitHub
       link: https://github.com/ActualLab/Fusion
+    - theme: alt
+      text: Chat
+      link: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
 
 features:
   - icon: 🪄
@@ -270,7 +270,7 @@ When `State` gets recomputed, `StateHasChanged()` is called and the component re
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
 
-<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+<div style="padding: 0 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
 
 ### 🚀 Ship Faster
 
@@ -279,7 +279,7 @@ Add `[ComputeMethod]` to your existing services and get both for free.
 
 </div>
 
-<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+<div style="padding: 0 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
 
 ### 🌱 Start Small, Go Big
 
@@ -287,7 +287,7 @@ Same service code works for a single Blazor app or a distributed cluster. Going 
 
 </div>
 
-<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+<div style="padding: 0 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
 
 ### 🏔️ 10⁶ Scale Headroom
 
@@ -295,7 +295,7 @@ With 10,000x faster services, just 100 sharded servers give you a million-fold s
 
 </div>
 
-<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+<div style="padding: 0 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
 
 ### 🐛 Fewer Bugs
 
@@ -304,7 +304,7 @@ Automatic dependency tracking ensures dependents update when something changes.
 
 </div>
 
-<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+<div style="padding: 0 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
 
 ### 💻 No (Micro)Service Zoo
 
@@ -312,7 +312,7 @@ Your services run locally or distributed with zero changes. No complex dependenc
 
 </div>
 
-<div style="padding: 0 1.5rem 0.5rem; background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 8px;">
+<div style="padding: 0 1.5rem 0.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
 
 ### 💎 Clean Code
 
@@ -323,11 +323,9 @@ Forget about the boilerplate for real-time updates or cache invalidation.
 
 </div>
 
-## Production-Proven
+<div style="background: var(--vp-c-bg-alt); border: 1px solid var(--vp-c-border); border-radius: 12px; padding: 0 2rem 0.5rem; margin: 2rem 0;">
 
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 2rem; margin: 2rem 0; color: white;">
-
-### Built & Battle-Tested at Voxt.ai
+### <img src="/img/voxt-icon.svg" style="display: inline; height: 1.1em; vertical-align: -0.1em; margin-right: 0.3em; filter: invert(42%) sepia(93%) saturate(1352%) hue-rotate(213deg) brightness(99%) contrast(108%);" /><span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Built & Battle-Tested at Voxt.ai</span>
 
 [**Voxt**](https://voxt.ai) is a real-time chat app built by the creators of Fusion. It features:
 
@@ -339,8 +337,6 @@ Forget about the boilerplate for real-time updates or cache invalidation.
 Check out how it works at [Voxt.ai](https://voxt.ai/mchat/s-1KCdcYy9z2-uJVPKZsbEo),
 or reach out to [Alex Y. @ Voxt.ai](https://voxt.ai/u/@alex-yakunin) if you want to chat in real time.
 Fusion handles everything related to real-time there.
-
-<a href="https://voxt.ai" style="display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: white; color: #667eea; border-radius: 6px; font-weight: 600; text-decoration: none;">Try Voxt →</a>
 
 </div>
 
