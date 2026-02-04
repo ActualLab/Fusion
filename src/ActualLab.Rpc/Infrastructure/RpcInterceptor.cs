@@ -140,6 +140,7 @@ public sealed class RpcInterceptor : Interceptor
                 }
             }
             catch (RpcRerouteException e) {
+                Services.ThrowIfDisposedOrDisposing();
                 ++rerouteCount;
                 if (methodDef.CancellationTokenIndex >= 0)
                     invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);

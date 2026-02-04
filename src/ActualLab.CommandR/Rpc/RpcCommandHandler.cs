@@ -74,6 +74,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                     }
                 }
                 catch (RpcRerouteException e) {
+                    Services.ThrowIfDisposedOrDisposing();
                     ++rerouteCount;
                     context.ResetResult();
                     Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}",

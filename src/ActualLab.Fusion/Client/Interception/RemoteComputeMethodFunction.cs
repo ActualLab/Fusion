@@ -141,6 +141,7 @@ public abstract class RemoteComputeMethodFunction(
                 }
             }
             catch (RpcRerouteException) {
+                Services.ThrowIfDisposedOrDisposing();
                 ++rerouteCount;
                 Log.LogWarning("Rerouting #{RerouteCount}: {Input}", rerouteCount, typedInput);
                 await RpcHub.InternalServices.OutboundCallOptions

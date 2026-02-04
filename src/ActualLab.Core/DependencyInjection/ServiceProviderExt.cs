@@ -15,6 +15,9 @@ public static class ServiceProviderExt
         }
     }
 
+    public static void ThrowIfDisposedOrDisposing(this IServiceProvider services)
+        => services.GetService<IServiceProvider>();
+
     // Logging extensions
 
     public static ILoggerFactory LoggerFactory(this IServiceProvider services)
