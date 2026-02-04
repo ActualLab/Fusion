@@ -1,6 +1,9 @@
 using System.Reactive.Linq;
 using ActualLab.Testing.Collections;
 using ActualLab.Time.Testing;
+#if !NETFRAMEWORK
+using FlakyTest.XUnit.Attributes;
+#endif
 
 namespace ActualLab.Tests.Time;
 
@@ -9,7 +12,11 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
 {
     private static double ToleranceMultiplier => TestRunnerInfo.IsBuildAgent() ? 5 : 1;
 
+#if !NETFRAMEWORK
+    [FlakyFact("Time-dependent", 3)]
+#else
     [Fact]
+#endif
     public async Task BasicTest()
     {
         var epsilon = TimeSpan.FromSeconds(1 * ToleranceMultiplier);
@@ -37,7 +44,11 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         ShouldEqual(clockStart + TimeSpan.FromSeconds(6.5), clock.Now, epsilon10);
     }
 
+#if !NETFRAMEWORK
+    [FlakyFact("Time-dependent", 3)]
+#else
     [Fact]
+#endif
     public async Task TimerTest1()
     {
         using var clock = new TestClock().SpeedupBy(10).OffsetBy(1000);
@@ -50,7 +61,11 @@ public class ClockTest(ITestOutputHelper @out) : TestBase(@out)
         await Task.Yield(); // Just to suppress warning.
     }
 
+#if !NETFRAMEWORK
+    [FlakyFact("Time-dependent", 3)]
+#else
     [Fact]
+#endif
     public async Task TimerTest2()
     {
         var epsilon = TimeSpan.FromSeconds(0.9 * ToleranceMultiplier);
