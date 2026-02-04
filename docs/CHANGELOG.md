@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.0.76+7e668fb2
+
+Release date: 2026-02-04
+
+### Fixed
+- `RpcRerouteException` handling code no longer attempts to reroute during disposal of `IServiceProvider`,
+  preventing potential rerouting cycles during shutdown
+
+
 ## 12.0.70+1775d374
 
 Release date: 2026-02-03
