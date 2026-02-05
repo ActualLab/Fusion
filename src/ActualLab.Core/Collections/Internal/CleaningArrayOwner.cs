@@ -1,6 +1,6 @@
 using System.Buffers;
 
-namespace ActualLab.IO.Internal;
+namespace ActualLab.Collections.Internal;
 
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 internal sealed class CleaningArrayOwner<T>(ArrayPool<T> pool, T[] array, int length)

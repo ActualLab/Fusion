@@ -1,5 +1,5 @@
 using System.Buffers;
-using ActualLab.IO.Internal;
+using ActualLab.Collections.Internal;
 
 namespace ActualLab.Collections;
 
