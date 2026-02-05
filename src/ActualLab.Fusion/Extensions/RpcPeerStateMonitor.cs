@@ -8,7 +8,7 @@ public class RpcPeerStateMonitor : WorkerBase
 
     protected IServiceProvider Services => RpcHub.Services;
     protected ILogger Log => field ??= Services.LogFor(GetType());
-    protected Moment Now => RpcHub.Clock.Now;
+    protected Moment Now => RpcHub.SystemClock.Now;
 
     public RpcHub RpcHub { get; }
     public RpcPeerRef? PeerRef { get; protected set; }

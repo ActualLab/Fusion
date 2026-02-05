@@ -400,7 +400,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 Hub.RemovePeer(this);
             else
                 _ = Task.Run(async () => {
-                    await Hub.Clock.Delay(removeDelay, CancellationToken.None).ConfigureAwait(false);
+                    await Task.Delay(removeDelay, CancellationToken.None).ConfigureAwait(false);
                     Hub.RemovePeer(this);
                 }, CancellationToken.None);
         }

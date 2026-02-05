@@ -33,7 +33,7 @@ public class RpcWebSocketClient(IServiceProvider services)
         var hub = clientPeer.Hub;
         var connectCts = new CancellationTokenSource();
         var connectToken = connectCts.Token;
-        _ = hub.Clock
+        _ = hub.SystemClock
             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
             .Delay(hub.Limits.ConnectTimeout, cancellationToken)
             .ContinueWith(_ => connectCts.CancelAndDisposeSilently(), TaskScheduler.Default);

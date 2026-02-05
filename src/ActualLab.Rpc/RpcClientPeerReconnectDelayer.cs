@@ -1,4 +1,3 @@
-using ActualLab.DependencyInjection;
 using ActualLab.Net;
 using ActualLab.OS;
 
@@ -14,7 +13,7 @@ public class RpcClientPeerReconnectDelayer : RetryDelayer, IHasServices
     public RpcClientPeerReconnectDelayer(IServiceProvider services)
     {
         Services = services;
-        ClockProvider = () => Hub.Clock; // Hub resolves this service in .ctor, so we can't resolve Hub here
+        ClockProvider = () => Hub.SystemClock; // Hub resolves this service in .ctor, so we can't resolve Hub here
         var isTestServices = services.GetService<TestServiceProviderTag>() is not null;
         Delays = isTestServices
             ? RetryDelaySeq.Fixed(1)

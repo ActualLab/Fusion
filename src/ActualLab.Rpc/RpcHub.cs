@@ -27,7 +27,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public RpcSerializationFormatResolver SerializationFormats { get; }
     public RpcInternalServices InternalServices { get; }
     public RpcLimits Limits { get; }
-    public MomentClock Clock { get; }
+    public MomentClock SystemClock { get; }
 
     // The most useful peers are cached
     public RpcClientPeer DefaultPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Default);
@@ -53,7 +53,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
         Middlewares = services.GetServices<IRpcMiddleware>().OrderByDescending(x => x.Priority).ToArray();
         ClientPeerReconnectDelayer = services.GetRequiredService<RpcClientPeerReconnectDelayer>();
         Limits = services.GetRequiredService<RpcLimits>();
-        Clock = services.Clocks().CpuClock;
+        SystemClock = services.Clocks().SystemClock;
         InternalServices = new(this); // Must go at last
     }
 

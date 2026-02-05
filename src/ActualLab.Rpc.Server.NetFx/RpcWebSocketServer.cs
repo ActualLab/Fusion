@@ -77,7 +77,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
                 var delay = Settings.ChangeConnectionDelay;
                 Log.LogWarning("{Peer} is already connected, will change its connection in {Delay}...",
                     peer, delay.ToShortString());
-                await peer.Hub.Clock.Delay(delay, cancellationToken).ConfigureAwait(false);
+                await peer.Hub.SystemClock.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
             await peer.SetNextConnection(connection, cancellationToken).ConfigureAwait(false);
             await transport.WhenClosed.ConfigureAwait(false);

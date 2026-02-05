@@ -149,10 +149,9 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
             await Task.WhenAll(reconnectTasks).ConfigureAwait(false);
 
             var hub = Peer.Hub;
-            var clock = hub.Clock;
             var systemCallSender = hub.SystemCallSender;
             while (true) {
-                await clock.Delay(Limits.KeepAlivePeriod, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(Limits.KeepAlivePeriod, cancellationToken).ConfigureAwait(false);
                 var localIds = GetAliveLocalIdsAndReleaseDeadHandles();
                 systemCallSender.KeepAlive(Peer, localIds);
             }
@@ -263,10 +262,8 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
     {
         LastKeepAliveAt = Moment.Now;
         try {
-            var hub = Peer.Hub;
-            var clock = hub.Clock;
             while (true) {
-                await clock.Delay(Limits.ObjectReleasePeriod, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(Limits.ObjectReleasePeriod, cancellationToken).ConfigureAwait(false);
                 var keepAliveDelay = Moment.Now - LastKeepAliveAt;
                 if (keepAliveDelay > Limits.KeepAliveTimeout) {
                     await Peer
