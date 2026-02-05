@@ -50,7 +50,7 @@ public record RpcPeerOptions
 
     protected static TimeSpan DefaultServerPeerShutdownTimeoutProvider(RpcServerPeer peer)
     {
-        var peerLifetime = peer.CreatedAt.Elapsed;
+        var peerLifetime = Moment.Now - peer.CreatedAt;
         return peerLifetime.MultiplyBy(0.33).Clamp(TimeSpan.FromMinutes(3), TimeSpan.FromMinutes(15));
     }
 

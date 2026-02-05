@@ -37,7 +37,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcHub Hub { get; }
     public RpcPeerRef Ref { get; }
     public Guid Id { get; } = Guid.NewGuid();
-    public CpuTimestamp CreatedAt { get; } = CpuTimestamp.Now;
+    public Moment CreatedAt { get; } = Moment.Now;
+    public Moment LastKeepAliveAt => SharedObjects.LastKeepAliveAt;
     public RpcPeerConnectionKind ConnectionKind { get; }
     public VersionSet Versions { get; init; }
     public RpcSerializationFormat SerializationFormat { get; init; }

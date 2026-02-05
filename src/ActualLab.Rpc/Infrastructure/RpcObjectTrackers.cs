@@ -225,6 +225,12 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     public override int Count => _objects.Count;
 
+    public Moment LastKeepAliveAt {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(Interlocked.Read(ref _lastKeepAliveAt));
+        set => InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, value.EpochOffsetTicks);
+    }
+
     public RpcObjectId NextId()
         => new(Peer.Id, Interlocked.Increment(ref _lastId));
 
@@ -255,13 +261,13 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     public async Task Maintain(RpcPeerConnectionState connectionState, CancellationToken cancellationToken)
     {
-        InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, Moment.Now.EpochOffsetTicks);
+        LastKeepAliveAt = Moment.Now;
         try {
             var hub = Peer.Hub;
             var clock = hub.Clock;
             while (true) {
                 await clock.Delay(Limits.ObjectReleasePeriod, cancellationToken).ConfigureAwait(false);
-                var keepAliveDelay = Moment.Now - new Moment(Interlocked.Read(ref _lastKeepAliveAt));
+                var keepAliveDelay = Moment.Now - LastKeepAliveAt;
                 if (keepAliveDelay > Limits.KeepAliveTimeout) {
                     await Peer
                         .Disconnect(Internal.Errors.KeepAliveTimeout(), cancellationToken)
@@ -282,7 +288,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     public void KeepAlive(long[] localIds)
     {
-        InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, Moment.Now.EpochOffsetTicks);
+        LastKeepAliveAt = Moment.Now;
         var buffer = new RefArrayPoolBuffer<long>(ArrayPools.SharedInt64Pool, localIds.Length, mustClear: false);
         try {
             foreach (var id in localIds) {
