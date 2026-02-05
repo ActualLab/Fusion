@@ -111,7 +111,7 @@ RUN playwright install chromium
 
 # Install Claude Code CLI (pinned version, auto-update disabled)
 ENV DISABLE_AUTOUPDATER=1
-RUN npm install -g @anthropic-ai/claude-code@2.1.25
+RUN npm install -g @anthropic-ai/claude-code@2.1.32
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj
