@@ -6,6 +6,9 @@ public partial class MethodDef
 {
     // Nested types
 
+    /// <summary>
+    /// Factory producing async invokers that call the target object's method directly.
+    /// </summary>
     public sealed class TargetAsyncInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
@@ -38,6 +41,9 @@ public partial class MethodDef
             };
     }
 
+    /// <summary>
+    /// Factory producing async invokers that call the method via an <see cref="Interceptor"/>.
+    /// </summary>
     public sealed class InterceptorAsyncInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
@@ -70,6 +76,9 @@ public partial class MethodDef
             };
     }
 
+    /// <summary>
+    /// Factory producing async invokers that call the original intercepted method.
+    /// </summary>
     public sealed class InterceptedAsyncInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
@@ -99,6 +108,10 @@ public partial class MethodDef
             };
     }
 
+    /// <summary>
+    /// Factory producing async invokers that call the target object and return
+    /// <see cref="ValueTask{TResult}"/> with boxed results.
+    /// </summary>
     public sealed class TargetObjectAsyncInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
@@ -162,6 +175,10 @@ public partial class MethodDef
             };
     }
 
+    /// <summary>
+    /// Factory producing async invokers that call via an <see cref="Interceptor"/>
+    /// and return <see cref="ValueTask{TResult}"/> with boxed results.
+    /// </summary>
     public sealed class InterceptorObjectAsyncInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
@@ -226,6 +243,10 @@ public partial class MethodDef
             };
     }
 
+    /// <summary>
+    /// Factory producing async invokers that call the original intercepted method
+    /// and return <see cref="ValueTask{TResult}"/> with boxed results.
+    /// </summary>
     public sealed class InterceptedObjectAsyncInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
@@ -290,6 +311,10 @@ public partial class MethodDef
             };
     }
 
+    /// <summary>
+    /// Factory producing converters that transform a <see cref="Task"/> into the
+    /// proper async return type (Task, Task{T}, ValueTask, or ValueTask{T}).
+    /// </summary>
     public sealed class UniversalAsyncResultConverterFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()

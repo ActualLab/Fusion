@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Describes the source (origin) of a <see cref="Computed"/> invalidation,
+/// which can be a code location, a string label, or a reference to another <see cref="Computed"/>.
+/// </summary>
 public readonly struct InvalidationSource :
     ICanBeNone<InvalidationSource>,
     IEnumerable<InvalidationSource>,

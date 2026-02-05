@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// A closure that completes a <see cref="Task"/> when a <see cref="Computed"/> is invalidated
+/// or a <see cref="CancellationToken"/> is triggered.
+/// </summary>
 internal sealed class WhenInvalidatedClosure
 {
     private readonly Action<Computed> _onInvalidatedHandler;

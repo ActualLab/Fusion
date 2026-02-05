@@ -1,5 +1,8 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Extension methods for <see cref="PropertyBag"/> and <see cref="MutablePropertyBag"/>.
+/// </summary>
 public static class PropertyBagExt
 {
     // ToMutable

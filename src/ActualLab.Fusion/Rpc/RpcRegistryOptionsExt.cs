@@ -2,6 +2,9 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Rpc;
 
+/// <summary>
+/// Extension methods for <see cref="RpcRegistryOptions"/> that apply Fusion-specific overrides.
+/// </summary>
 public static class RpcRegistryOptionsExt
 {
     public static RpcRegistryOptions WithFusionOverrides(this RpcRegistryOptions options)

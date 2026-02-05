@@ -3,8 +3,14 @@ using ActualLab.Plugins.Metadata;
 
 namespace ActualLab.Plugins.Internal;
 
+/// <summary>
+/// Base class for <see cref="IPluginFinder"/> implementations that cache discovered plugin metadata.
+/// </summary>
 public abstract class CachingPluginFinderBase : IPluginFinder
 {
+    /// <summary>
+    /// Configuration options for <see cref="CachingPluginFinderBase"/>.
+    /// </summary>
     public record Options
     {
         public Func<IAsyncCache<string, string>>? CacheFactory { get; init; } = null;

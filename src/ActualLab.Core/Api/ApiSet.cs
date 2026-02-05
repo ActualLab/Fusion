@@ -3,6 +3,9 @@ using MessagePack;
 
 namespace ActualLab.Api;
 
+/// <summary>
+/// Factory methods for creating <see cref="ApiSet{T}"/> instances.
+/// </summary>
 public static class ApiSet
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -10,6 +13,9 @@ public static class ApiSet
         => new(items);
 }
 
+/// <summary>
+/// A serializable hash set with sorted enumeration, intended for use in API contracts.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.Collection), MessagePackObject]
 public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
 
@@ -140,6 +146,9 @@ public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
 
     // Nested types
 
+    /// <summary>
+    /// Enumerates the set items in their original (unordered) hash set order.
+    /// </summary>
     public readonly struct UnorderedItemEnumerable(ApiSet<T> source) : IEnumerable<T>
     {
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -147,6 +156,9 @@ public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
         public Enumerator GetEnumerator() => source.GetBaseEnumerator();
     }
 
+    /// <summary>
+    /// Caches a sorted snapshot of the set items for deterministic enumeration.
+    /// </summary>
     private sealed class SortedItemCache(IEnumerator<T> enumerator, int count)
     {
         public readonly IEnumerable<T> Items = NewItems(enumerator, count);

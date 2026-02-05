@@ -2,6 +2,9 @@ using ActualLab.Fusion.Extensions.Internal;
 
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// Extension methods for <see cref="FusionBuilder"/>.
+/// </summary>
 public static class FusionBuilderExt
 {
     public static FusionBuilder AddFusionTime(this FusionBuilder fusion,

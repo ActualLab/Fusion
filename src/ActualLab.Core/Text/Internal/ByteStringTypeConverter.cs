@@ -4,6 +4,10 @@ using System.Globalization;
 namespace ActualLab.Text.Internal;
 
 // Used by JSON.NET to serialize dictionary keys of this type
+
+/// <summary>
+/// TypeConverter for <see cref="ByteString"/>, enabling string-based conversion via Base64.
+/// </summary>
 public class ByteStringTypeConverter : TypeConverter
 {
     public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)

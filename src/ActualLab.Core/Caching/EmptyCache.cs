@@ -1,5 +1,8 @@
 namespace ActualLab.Caching;
 
+/// <summary>
+/// A no-op cache implementation that never stores or returns values.
+/// </summary>
 public class EmptyCache<TKey, TValue> : AsyncCacheBase<TKey, TValue>
     where TKey : notnull
 {

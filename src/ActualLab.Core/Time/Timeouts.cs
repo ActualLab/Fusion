@@ -3,8 +3,15 @@ using ActualLab.Time.Internal;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// Provides shared, application-wide <see cref="ConcurrentTimerSet{TTimer}"/> instances
+/// for keep-alive and generic timeout management.
+/// </summary>
 public static class Timeouts
 {
+    /// <summary>
+    /// Configuration settings for the global <see cref="Timeouts"/> infrastructure.
+    /// </summary>
     public static class Settings
     {
         public static int ConcurrencyLevel { get; set; }

@@ -3,6 +3,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Holds the set of registered RPC service builders and default service mode.
+/// Frozen after <see cref="RpcHub"/> construction to prevent further modification.
+/// </summary>
 public class RpcConfiguration
 {
 #if NET9_0_OR_GREATER

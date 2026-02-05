@@ -2,6 +2,10 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
+/// <summary>
+/// An <see cref="IDbContextOptionsExtension"/> that registers a specific
+/// <see cref="IDbHintFormatter"/> implementation into the EF Core service provider.
+/// </summary>
 public class DbHintFormatterOptionsExtension(Type dbHintFormatterType) : IDbContextOptionsExtension
 {
     public Type DbHintFormatterType { get; } = dbHintFormatterType;

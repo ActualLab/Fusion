@@ -1,5 +1,8 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Extension methods for arrays.
+/// </summary>
 public static class ArrayExt
 {
     // Duplicate
@@ -44,6 +47,9 @@ public static class ArrayExt
 
     // Nested types
 
+    /// <summary>
+    /// Compares items by a projected sort key using a specified comparer.
+    /// </summary>
     private sealed class SortKeyComparer<T, TSortKey>(
         Func<T, TSortKey> sortKeySelector,
         IComparer<TSortKey> comparer

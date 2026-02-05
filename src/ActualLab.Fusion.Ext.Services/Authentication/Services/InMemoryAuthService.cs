@@ -4,6 +4,10 @@ using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// In-memory implementation of <see cref="IAuth"/> and <see cref="IAuthBackend"/>
+/// for testing and client-side scenarios.
+/// </summary>
 public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAuthBackend
 {
     private long _nextUserId;

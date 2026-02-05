@@ -1,5 +1,8 @@
 namespace ActualLab.Mathematics.Internal;
 
+/// <summary>
+/// <see cref="Arithmetics{T}"/> implementation for <see cref="long"/>.
+/// </summary>
 public sealed class LongArithmetics : Arithmetics<long>
 {
     public LongArithmetics() => One = 1;

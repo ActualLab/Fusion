@@ -3,11 +3,18 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Internal;
 
+/// <summary>
+/// Defines the RPC system service contract for Fusion compute invalidation notifications.
+/// </summary>
 public interface IRpcComputeSystemCalls : IRpcSystemService
 {
     public Task<RpcNoWait> Invalidate();
 }
 
+/// <summary>
+/// Implements <see cref="IRpcComputeSystemCalls"/> to handle incoming invalidation messages
+/// from remote peers.
+/// </summary>
 public class RpcComputeSystemCalls(IServiceProvider services)
     : RpcServiceBase(services), IRpcComputeSystemCalls
 {

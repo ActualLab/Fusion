@@ -5,6 +5,9 @@ using ActualLab.Fusion.Extensions.Services;
 
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// Extension methods for <see cref="FusionBuilder"/> to register key-value store services.
+/// </summary>
 public static class FusionBuilderExt
 {
     // SandboxedKeyValueStore

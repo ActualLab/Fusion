@@ -3,6 +3,10 @@ using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Abstract base for shard-aware database workers that automatically spawn per-shard
+/// tasks when new shards become available.
+/// </summary>
 public abstract class DbShardWorkerBase<TDbContext>(
     IServiceProvider services,
     CancellationTokenSource? stopTokenSource = null

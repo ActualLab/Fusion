@@ -11,8 +11,15 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Marker interface for database entity resolvers.
+/// </summary>
 public interface IDbEntityResolver;
 
+/// <summary>
+/// Defines the contract for resolving database entities by key, with support for
+/// shard-aware lookups and key extraction.
+/// </summary>
 public interface IDbEntityResolver<TKey, TDbEntity> : IDbEntityResolver
     where TKey : notnull
     where TDbEntity : class
@@ -38,6 +45,9 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
     where TKey : notnull
     where TDbEntity : class
 {
+    /// <summary>
+    /// Configuration options for <see cref="DbEntityResolver{TDbContext, TKey, TDbEntity}"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

@@ -2,6 +2,9 @@ using System.Numerics;
 
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// Provides combinatorial utilities including subset enumeration and combinations.
+/// </summary>
 public static class Combinatorics
 {
     public static BigInteger Cnk(int n, int k)

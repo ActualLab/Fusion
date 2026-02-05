@@ -1,5 +1,9 @@
 namespace ActualLab.Pooling;
 
+/// <summary>
+/// A struct-based <see cref="IResourceLease{T}"/> that releases the resource
+/// back to the releaser on disposal.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct ResourceLease<T>(T resource, IResourceReleaser<T> releaser)
     : IResourceLease<T>, IEquatable<ResourceLease<T>>

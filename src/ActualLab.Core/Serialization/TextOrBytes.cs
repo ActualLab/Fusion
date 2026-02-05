@@ -3,12 +3,18 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Defines whether data is stored as raw bytes or as text.
+/// </summary>
 public enum DataFormat
 {
     Bytes = 0,
     Text = 1,
 }
 
+/// <summary>
+/// A discriminated union of text or binary data, backed by a single byte buffer.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]

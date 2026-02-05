@@ -2,6 +2,10 @@ using System.Buffers.Binary;
 
 namespace ActualLab.IO.Internal;
 
+/// <summary>
+/// A ref struct that sequentially writes binary primitives and length-prefixed spans
+/// into a <see cref="Span{T}"/> of bytes.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public ref struct SpanWriter(Span<byte> buffer)
 {

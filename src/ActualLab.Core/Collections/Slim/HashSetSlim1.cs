@@ -1,5 +1,9 @@
 namespace ActualLab.Collections.Slim;
 
+/// <summary>
+/// A compact <see cref="IHashSetSlim{T}"/> that stores up to 1 item inline
+/// before falling back to a <see cref="HashSet{T}"/>.
+/// </summary>
 public struct HashSetSlim1<T> : IHashSetSlim<T>
     where T : notnull
 {

@@ -1,5 +1,9 @@
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// Extension methods for <see cref="Range{T}"/> providing size, containment,
+/// intersection, and other range operations.
+/// </summary>
 public static partial class RangeExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

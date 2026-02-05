@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// A name-value pair representing a single RPC message header.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>

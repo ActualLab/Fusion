@@ -2,6 +2,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Middlewares;
 
+/// <summary>
+/// An <see cref="IRpcMiddleware"/> that introduces a configurable random delay before processing inbound RPC calls.
+/// </summary>
 public sealed record RpcInboundCallDelayer : IRpcMiddleware
 {
     public static Func<RpcMethodDef, bool> DefaultFilter { get; set; } = _ => true;

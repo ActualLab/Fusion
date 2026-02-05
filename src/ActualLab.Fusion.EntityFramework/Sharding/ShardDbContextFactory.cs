@@ -2,12 +2,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Defines the contract for creating <see cref="DbContext"/> instances for a specific shard.
+/// </summary>
 public interface IShardDbContextFactory
 {
     public DbContext CreateDbContext(string shard);
     public ValueTask<DbContext> CreateDbContextAsync(string shard, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// A typed <see cref="IShardDbContextFactory"/> that creates strongly-typed
+/// <typeparamref name="TDbContext"/> instances for a specific shard.
+/// </summary>
 public interface IShardDbContextFactory<TDbContext> : IShardDbContextFactory
     where TDbContext : DbContext
 {
@@ -15,12 +22,20 @@ public interface IShardDbContextFactory<TDbContext> : IShardDbContextFactory
     public new ValueTask<TDbContext> CreateDbContextAsync(string shard, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// A delegate that builds an <see cref="IDbContextFactory{TDbContext}"/> for a given shard.
+/// </summary>
 // ReSharper disable once TypeParameterCanBeVariant
 public delegate IDbContextFactory<TDbContext> ShardDbContextFactoryBuilder<TDbContext>(
     IServiceProvider services,
     string shard)
     where TDbContext : DbContext;
 
+/// <summary>
+/// Default <see cref="IShardDbContextFactory{TDbContext}"/> implementation that caches
+/// per-shard <see cref="IDbContextFactory{TDbContext}"/> instances built by a
+/// <see cref="ShardDbContextFactoryBuilder{TDbContext}"/>.
+/// </summary>
 public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbContext>
     where TDbContext : DbContext
 {

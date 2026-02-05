@@ -2,6 +2,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Redis;
 
+/// <summary>
+/// Extension methods for <see cref="DbOperationsBuilder{TDbContext}"/> to register the
+/// Redis pub/sub-based operation log watcher.
+/// </summary>
 public static class DbOperationsBuilderExt
 {
     public static DbOperationsBuilder<TDbContext> AddRedisOperationLogWatcher<TDbContext>(

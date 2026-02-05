@@ -1,5 +1,9 @@
 namespace ActualLab.Collections.Slim;
 
+/// <summary>
+/// A compact hash set interface optimized for small item counts,
+/// storing items inline before falling back to a full <see cref="HashSet{T}"/>.
+/// </summary>
 public interface IHashSetSlim<T>
     where T : notnull
 {

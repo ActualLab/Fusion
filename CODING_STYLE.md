@@ -45,9 +45,11 @@ This document describes the coding conventions used in ActualLab.Fusion project 
 - Place accessor holder attributes on separate lines (unless the owner is single-line).
 
 #### Comments and XML Documentation:
-- Prefer regular comments over XML documentation
-- **DON'T write XML documentation comments for public APIs UNLESS they are already there**
-- When XML documentation exists, maintain its style and completeness.
+- **DO write `/// <summary>` XML documentation comments for every type** (class, struct, record, interface, enum, delegate), including nested types
+- Keep XML summaries short: 1-2 lines describing the type's purpose
+- Use `<see cref="..."/>` to reference related types
+- Prefer regular comments over XML documentation for members (methods, properties, fields)
+- When XML documentation exists on members, maintain its style and completeness.
 
 #### Multi-targeting
 - Follow the project's multi-targeting patterns with conditional compilation.

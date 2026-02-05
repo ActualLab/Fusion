@@ -1,5 +1,8 @@
 namespace ActualLab.Caching;
 
+/// <summary>
+/// Base class for async key resolvers implementing <see cref="IAsyncKeyResolver{TKey, TValue}"/>.
+/// </summary>
 public abstract class AsyncKeyResolverBase<TKey, TValue> : IAsyncKeyResolver<TKey, TValue>
     where TKey : notnull
 {

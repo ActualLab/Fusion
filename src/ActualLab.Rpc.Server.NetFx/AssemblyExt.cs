@@ -2,6 +2,9 @@ using System.Web.Http.Controllers;
 
 namespace ActualLab.Rpc.Server;
 
+/// <summary>
+/// Extension methods for <see cref="Assembly"/> to discover Web API controller types.
+/// </summary>
 public static class AssemblyExt
 {
     public static IEnumerable<Type> GetControllerTypes(this Assembly assembly, string? fullNamePrefixFilter = null)

@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Extension methods for <see cref="ISessionCommand"/>.
+/// </summary>
 public static class SessionCommandExt
 {
     private static readonly PropertyInfo SessionProperty = typeof(ISessionCommand).GetProperty(nameof(Session))!;

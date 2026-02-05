@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// A MessagePack formatter for <see cref="Option{T}"/>.
+/// </summary>
 public sealed class OptionMessagePackFormatter<T> : IMessagePackFormatter<Option<T>>
 {
     public void Serialize(ref MessagePackWriter writer, Option<T> value, MessagePackSerializerOptions options)

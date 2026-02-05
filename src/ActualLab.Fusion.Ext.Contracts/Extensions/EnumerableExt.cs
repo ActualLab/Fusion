@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// Extension methods for <see cref="IEnumerable{T}"/> supporting ordering and pagination.
+/// </summary>
 public static class EnumerableExt
 {
     public static IEnumerable<T> OrderBy<T, TKey>(

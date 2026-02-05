@@ -2,6 +2,10 @@ using ActualLab.Rpc.Clients;
 
 namespace ActualLab.Rpc.Server;
 
+/// <summary>
+/// Configuration options for the OWIN-based <see cref="RpcWebSocketServer"/>, including
+/// request paths, backend exposure, and connection parameters.
+/// </summary>
 public record RpcWebSocketServerOptions
 {
     public static RpcWebSocketServerOptions Default { get; set; } = new();

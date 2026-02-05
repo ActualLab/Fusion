@@ -1,5 +1,8 @@
 namespace ActualLab.Async;
 
+/// <summary>
+/// Wraps a value together with a <see cref="CancellationToken"/> indicating when the value is gone.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public record struct Temporary<T>(T Value, CancellationToken GoneToken)
 {

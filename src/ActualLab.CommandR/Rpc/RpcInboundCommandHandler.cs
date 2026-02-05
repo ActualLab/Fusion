@@ -5,6 +5,10 @@ using ActualLab.Rpc.Middlewares;
 
 namespace ActualLab.CommandR.Rpc;
 
+/// <summary>
+/// An RPC middleware that routes inbound RPC calls for commands through the
+/// <see cref="ICommander"/> pipeline instead of direct method invocation.
+/// </summary>
 public sealed record RpcInboundCommandHandler : IRpcMiddleware
 {
     public static Func<RpcMethodDef, bool> DefaultFilter { get; set; } = _ => true;

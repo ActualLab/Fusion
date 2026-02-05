@@ -2,6 +2,9 @@ namespace ActualLab.Fusion;
 
 #pragma warning disable SYSLIB0051
 
+/// <summary>
+/// Exception thrown when an RPC call is attempted inside an invalidation block.
+/// </summary>
 [Serializable]
 public class RpcDisabledException : InvalidOperationException
 {

@@ -3,6 +3,9 @@
 // ReSharper disable once CheckNamespace
 namespace System.Threading.Channels;
 
+/// <summary>
+/// Compatibility extension methods for <see cref="ChannelReader{T}"/> on .NET Standard 2.0.
+/// </summary>
 public static class ChannelCompatExt
 {
     public static async IAsyncEnumerable<T> ReadAllAsync<T>(

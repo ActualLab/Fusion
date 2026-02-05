@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceCollection"/> to register RPC services.
+/// </summary>
 public static class ServiceCollectionExt
 {
     public static RpcBuilder AddRpc(

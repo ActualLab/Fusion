@@ -2,6 +2,10 @@ using System.Web.Http.Dependencies;
 
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// An <see cref="IDependencyResolver"/> implementation that delegates to
+/// an <see cref="IServiceProvider"/> for Web API dependency injection.
+/// </summary>
 public class DefaultDependencyResolver(IServiceProvider services) : IDependencyResolver
 {
     private readonly IServiceScope? _scope;

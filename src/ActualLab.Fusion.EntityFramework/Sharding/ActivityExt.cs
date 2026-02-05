@@ -2,6 +2,9 @@ using System.Diagnostics;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Extension methods for <see cref="Activity"/> to add shard-related tags.
+/// </summary>
 public static class ActivityExt
 {
 #if !NETSTANDARD2_0

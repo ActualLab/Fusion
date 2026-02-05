@@ -3,6 +3,9 @@ using ActualLab.IO;
 
 namespace ActualLab.Rpc.Testing;
 
+/// <summary>
+/// Configuration options for <see cref="RpcTestClient"/>, including serialization format and channel settings.
+/// </summary>
 public record RpcTestClientOptions
 {
     public static RpcTestClientOptions Default { get; set; } = new();

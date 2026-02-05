@@ -1,5 +1,8 @@
 namespace ActualLab.Requirements;
 
+/// <summary>
+/// A requirement that uses a delegate function for its satisfaction check.
+/// </summary>
 public record FuncRequirement<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
     (Func<T?, bool> Validator) : CustomizableRequirementBase<T>

@@ -2,6 +2,9 @@ namespace ActualLab.Rpc;
 
 #pragma warning disable CA1027 // Mark enums with FlagsAttribute
 
+/// <summary>
+/// Defines the kind of a system RPC method (Ok, Error, Cancel, streaming, etc.).
+/// </summary>
 public enum RpcSystemMethodKind
 {
     None = 0,
@@ -16,6 +19,9 @@ public enum RpcSystemMethodKind
     OtherStreaming = 0x0800,
 }
 
+/// <summary>
+/// Extension methods for <see cref="RpcSystemMethodKind"/>.
+/// </summary>
 public static class RpcSystemMethodKindExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -3,6 +3,10 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// A Fusion-specific <see cref="RpcServiceBuilder"/> that adds compute service proxy creation
+/// and command handler registration support.
+/// </summary>
 public class FusionRpcServiceBuilder : RpcServiceBuilder
 {
     public FusionBuilder Fusion { get; }

@@ -2,6 +2,10 @@ using System.Text;
 
 namespace ActualLab.Testing.Logging;
 
+/// <summary>
+/// An <see cref="ILoggerProvider"/> that captures all log output into a
+/// <see cref="StringBuilder"/> for later inspection in tests.
+/// </summary>
 public sealed class CapturingLoggerProvider(Func<CapturingLoggerProvider, string, ILogger> loggerFactory)
     : ILoggerProvider
 {

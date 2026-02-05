@@ -3,6 +3,9 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
+/// <summary>
+/// Database-backed implementation of <see cref="IKeyValueStore"/> using Entity Framework Core.
+/// </summary>
 public class DbKeyValueStore<TDbContext,
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbKeyValue>(
     IServiceProvider services)

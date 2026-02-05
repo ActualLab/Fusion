@@ -2,6 +2,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Middlewares;
 
+/// <summary>
+/// Carries the <see cref="IRpcMiddleware"/> pipeline state for a specific <see cref="RpcMethodDef"/>.
+/// </summary>
 public sealed class RpcMiddlewareContext<T>
 {
     public readonly RpcMethodDef MethodDef;

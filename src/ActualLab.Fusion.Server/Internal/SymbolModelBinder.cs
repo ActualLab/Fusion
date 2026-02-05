@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace ActualLab.Fusion.Server.Internal;
 
+/// <summary>
+/// An <see cref="IModelBinder"/> that binds <see cref="Symbol"/> values from request data.
+/// </summary>
 public class SymbolModelBinder : IModelBinder
 {
     public Task BindModelAsync(ModelBindingContext bindingContext)

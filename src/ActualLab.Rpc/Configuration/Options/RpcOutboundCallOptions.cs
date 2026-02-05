@@ -5,6 +5,9 @@ namespace ActualLab.Rpc;
 
 #pragma warning disable CA1822
 
+/// <summary>
+/// Configuration options for outbound RPC calls, including timeouts, routing, and hashing.
+/// </summary>
 public record RpcOutboundCallOptions
 {
     public static RpcOutboundCallOptions Default { get; set; } = new();

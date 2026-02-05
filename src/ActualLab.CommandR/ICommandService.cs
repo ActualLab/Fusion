@@ -2,5 +2,7 @@ using ActualLab.Rpc;
 
 namespace ActualLab.CommandR;
 
-// A tagging interface for proxy types
+/// <summary>
+/// A tagging interface for command service proxy types.
+/// </summary>
 public interface ICommandService : IRpcService;

@@ -2,6 +2,10 @@ using ActualLab.CommandR.Internal;
 
 namespace ActualLab.CommandR.Operations;
 
+/// <summary>
+/// Defines the contract for an operation scope that manages the lifecycle of
+/// an <see cref="Operation"/> within a command pipeline.
+/// </summary>
 public interface IOperationScope : IAsyncDisposable
 {
     public CommandContext CommandContext { get; }
@@ -17,6 +21,9 @@ public interface IOperationScope : IAsyncDisposable
     public Task Commit(CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Extension methods for <see cref="IOperationScope"/>.
+/// </summary>
 public static class OperationScopeExt
 {
     public static IOperationScope RequireActive(this IOperationScope? operationScope)

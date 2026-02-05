@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Defines the kind of connection used by an RPC peer (remote, loopback, local, or none).
+/// </summary>
 public enum RpcPeerConnectionKind
 {
     None = 0, // Used only as RpcPeerRef.ConnectionKind, RpcPeer.ConnectionKind maps this value to Remote
@@ -8,6 +11,9 @@ public enum RpcPeerConnectionKind
     Local = 100,
 }
 
+/// <summary>
+/// Extension methods for <see cref="RpcPeerConnectionKind"/>.
+/// </summary>
 public static class RpcPeerConnectionKindExt
 {
     public static string Format(this RpcPeerConnectionKind source)

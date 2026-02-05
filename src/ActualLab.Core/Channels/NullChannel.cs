@@ -1,5 +1,8 @@
 namespace ActualLab.Channels;
 
+/// <summary>
+/// A channel that discards all writes and never produces items on reads.
+/// </summary>
 public class NullChannel<T> : Channel<T>
 {
     public static readonly NullChannel<T> Instance = new();

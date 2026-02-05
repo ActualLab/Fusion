@@ -6,6 +6,9 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 
+/// <summary>
+/// Serializes and deserializes .NET type references as compact binary representations for polymorphic RPC arguments.
+/// </summary>
 public static class ByteTypeSerializer
 {
     private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache

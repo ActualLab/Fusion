@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// Abstract base for <see cref="IDbLogWatcher{TDbContext, TDbEntry}"/> implementations
+/// that manage per-shard watchers to detect log changes.
+/// </summary>
 public abstract class DbLogWatcher<TDbContext, TDbEntry>(IServiceProvider services)
     : DbWorkerBase<TDbContext>(services), IDbLogWatcher<TDbContext, TDbEntry>
     where TDbContext : DbContext

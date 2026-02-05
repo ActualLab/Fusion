@@ -7,6 +7,10 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Trimming;
 
+/// <summary>
+/// A code keeper that prevents the .NET trimmer from removing Fusion-specific proxy types,
+/// computed functions, and RPC call types.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]

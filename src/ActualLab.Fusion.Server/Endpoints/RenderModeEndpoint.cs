@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Fusion.Server.Endpoints;
 
+/// <summary>
+/// Endpoint handler that manages Blazor render mode persistence via cookies
+/// and returns redirect results.
+/// </summary>
 public class RenderModeEndpoint
 {
     public static CookieBuilder Cookie { get; set; } = new() {
@@ -35,6 +39,9 @@ public class RenderModeEndpoint
 
     // Nested types
 
+    /// <summary>
+    /// Represents a redirect result returned by the render mode endpoint.
+    /// </summary>
     public class RedirectResult(string url)
 #if NET7_0_OR_GREATER
         : Microsoft.AspNetCore.Http.IResult

@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Routing;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Extension methods for <see cref="IEndpointRouteBuilder"/> to map Fusion authentication endpoints.
+/// </summary>
 public static class EndpointRouteBuilderAuthExt
 {
     public static IEndpointRouteBuilder MapFusionAuthEndpoints(this IEndpointRouteBuilder endpoints)

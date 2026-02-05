@@ -2,6 +2,9 @@ using Newtonsoft.Json;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// A Newtonsoft.Json converter for <see cref="JsonString"/>.
+/// </summary>
 public class JsonStringNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<JsonString>
 {
     public override void WriteJson(

@@ -2,6 +2,9 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Provides default delegate instances used by Fusion infrastructure.
+/// </summary>
 public static class FusionDefaultDelegates
 {
     /// <summary>

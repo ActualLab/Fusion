@@ -2,6 +2,9 @@ using System.Diagnostics;
 
 namespace ActualLab.Diagnostics;
 
+/// <summary>
+/// Extension methods for <see cref="ActivitySource"/>.
+/// </summary>
 public static class ActivitySourceExt
 {
     public static ActivitySource? IfEnabled(this ActivitySource activitySource, bool isEnabled)

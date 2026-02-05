@@ -4,6 +4,9 @@ using ActualLab.Plugins.Internal;
 
 namespace ActualLab.Plugins;
 
+/// <summary>
+/// Extension methods for <see cref="PluginHostBuilder"/> to configure plugins, filters, and services.
+/// </summary>
 public static class PluginHostBuilderExt
 {
     public static TBuilder ConfigureServices<TBuilder>(this TBuilder builder,

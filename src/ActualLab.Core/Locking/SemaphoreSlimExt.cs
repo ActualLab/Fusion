@@ -1,5 +1,8 @@
 namespace ActualLab.Locking;
 
+/// <summary>
+/// Extension methods for <see cref="SemaphoreSlim"/>.
+/// </summary>
 public static class SemaphoreSlimExt
 {
     public static ValueTask<ClosedDisposable<SemaphoreSlim>> Lock(

@@ -1,5 +1,9 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A Fenwick tree (binary indexed tree) for efficient prefix sum queries
+/// and point updates over an array of elements.
+/// </summary>
 public class FenwickTree<T>
 {
     private readonly T[] _nodes;

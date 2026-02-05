@@ -3,6 +3,9 @@ using MessagePack;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Identifies an RPC header by name, with efficient UTF-8 representation and well-known key caching.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable, MessagePackObject]
 public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNone<RpcHeaderKey>

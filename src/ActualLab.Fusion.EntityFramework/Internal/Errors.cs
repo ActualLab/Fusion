@@ -2,6 +2,9 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
+/// <summary>
+/// Factory methods for exceptions used throughout the Fusion EntityFramework integration.
+/// </summary>
 public static class Errors
 {
     public static Exception DbContextIsReadOnly()

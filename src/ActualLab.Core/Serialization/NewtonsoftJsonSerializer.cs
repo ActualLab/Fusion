@@ -10,6 +10,9 @@ namespace ActualLab.Serialization;
 #pragma warning disable CA2326, CA2327, CA2328
 #pragma warning disable IL2026, IL2116
 
+/// <summary>
+/// An <see cref="ITextSerializer"/> implementation backed by Newtonsoft.Json (JSON.NET).
+/// </summary>
 public class NewtonsoftJsonSerializer : TextSerializerBase
 {
 #if NET9_0_OR_GREATER

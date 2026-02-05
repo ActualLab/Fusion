@@ -1,5 +1,9 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// A set of related <see cref="MomentClock"/> instances (system, CPU, server, coarse)
+/// used as a single dependency for services that need multiple clock types.
+/// </summary>
 public class MomentClockSet(
     MomentClock systemClock,
     MomentClock cpuClock,

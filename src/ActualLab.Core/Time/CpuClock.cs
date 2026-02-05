@@ -2,6 +2,10 @@ using System.Diagnostics;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// A <see cref="MomentClock"/> based on a high-resolution <see cref="System.Diagnostics.Stopwatch"/>,
+/// providing monotonically increasing timestamps that do not drift with system clock adjustments.
+/// </summary>
 public sealed class CpuClock : MomentClock
 {
     internal static readonly long ZeroEpochOffsetTicks = Moment.Now.EpochOffsetTicks;

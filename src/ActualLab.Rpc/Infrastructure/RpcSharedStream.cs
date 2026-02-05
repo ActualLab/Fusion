@@ -4,6 +4,9 @@ namespace ActualLab.Rpc.Infrastructure;
 
 #pragma warning disable MA0042
 
+/// <summary>
+/// Server-side representation of a shared RPC stream that delivers items to a remote consumer.
+/// </summary>
 public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcSharedObject
 {
 #pragma warning disable CA2201
@@ -39,6 +42,9 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
     public abstract void OnAck(long nextIndex, Guid hostId);
 }
 
+/// <summary>
+/// Typed server-side shared stream that reads from a local source and delivers items to the remote consumer.
+/// </summary>
 public sealed class RpcSharedStream<T> : RpcSharedStream
 {
     private readonly RpcSystemCallSender _systemCallSender;
@@ -250,6 +256,9 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     // Nested types
 
+    /// <summary>
+    /// Accumulates stream items and flushes them as batches to reduce per-item overhead.
+    /// </summary>
     private sealed class Batcher
     {
 

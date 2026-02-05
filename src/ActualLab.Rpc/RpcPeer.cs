@@ -7,6 +7,10 @@ using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Abstract base class representing one side of an RPC communication channel,
+/// managing connection state, message serialization, and call tracking.
+/// </summary>
 public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 {
     public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;

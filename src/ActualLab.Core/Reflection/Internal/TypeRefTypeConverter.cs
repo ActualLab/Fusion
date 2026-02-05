@@ -3,6 +3,10 @@ using System.Globalization;
 
 namespace ActualLab.Reflection.Internal;
 
+/// <summary>
+/// <see cref="TypeConverter"/> for <see cref="TypeRef"/>, used for dictionary key
+/// serialization.
+/// </summary>
 // Used by JSON.NET to serialize dictionary keys of this type
 public class TypeRefTypeConverter : TypeConverter
 {

@@ -1,5 +1,9 @@
 namespace ActualLab.CommandR.Internal;
 
+/// <summary>
+/// A <see cref="LocalCommand"/> that wraps a delegate returning a value of type
+/// <typeparamref name="T"/>.
+/// </summary>
 public sealed record LocalFuncCommand<T>(Delegate? Handler) : LocalCommand, ILocalCommand<T>
 {
     public override async Task Run(CommandContext context, CancellationToken cancellationToken)

@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Base class for all RPC call instances, holding the method definition and call identifier.
+/// </summary>
 public abstract class RpcCall(RpcMethodDef? methodDef)
 {
     public object Lock {

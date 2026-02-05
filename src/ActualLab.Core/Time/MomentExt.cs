@@ -1,5 +1,9 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// Extension methods for <see cref="Moment"/> providing null/default conversions
+/// and clock-based time conversion.
+/// </summary>
 public static class MomentExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -3,6 +3,9 @@ using MessagePack;
 
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// Represents a single tile (aligned range) within a <see cref="TileLayer{T}"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

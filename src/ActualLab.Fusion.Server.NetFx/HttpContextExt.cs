@@ -3,6 +3,10 @@ using System.Web.Http.Dependencies;
 
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// Extension methods for <see cref="IDependencyScope"/> and
+/// <see cref="HttpActionContext"/> to simplify service resolution in Web API.
+/// </summary>
 public static class HttpContextExt
 {
     public static T GetRequiredService<T>(this IDependencyScope dependencyScope)

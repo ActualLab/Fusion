@@ -2,6 +2,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.Locking;
 
+/// <summary>
+/// A semaphore-based async lock with optional reentry detection.
+/// </summary>
 public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unchecked)
     : IAsyncLock<AsyncLock.Releaser>
 {
@@ -41,6 +44,9 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
 
     // Nested types
 
+    /// <summary>
+    /// Sentinel object stored in <see cref="AsyncLocal{T}"/> to indicate a lock is held.
+    /// </summary>
     public sealed class LockedLocallyTag
     {
         public static readonly LockedLocallyTag Instance = new();
@@ -49,6 +55,9 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
         private LockedLocallyTag() { }
     }
 
+    /// <summary>
+    /// Releases the <see cref="AsyncLock"/> when disposed.
+    /// </summary>
     public struct Releaser : IAsyncLockReleaser
     {
         private readonly AsyncLock? _asyncLock;

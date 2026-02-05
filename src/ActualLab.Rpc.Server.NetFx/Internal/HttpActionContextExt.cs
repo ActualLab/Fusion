@@ -3,6 +3,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Rpc.Server.Internal;
 
+/// <summary>
+/// Extension methods for <see cref="HttpActionContext"/> to access per-request
+/// item storage in .NET Framework Web API.
+/// </summary>
 public static class HttpActionContextExt
 {
     public const string ItemsKey = "@@items";

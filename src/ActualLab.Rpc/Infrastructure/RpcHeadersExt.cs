@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Extension methods for working with arrays of <see cref="RpcHeader"/>.
+/// </summary>
 public static class RpcHeadersExt
 {
     public static readonly RpcHeader[] Empty = [];

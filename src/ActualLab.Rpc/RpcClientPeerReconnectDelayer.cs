@@ -3,6 +3,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Controls reconnection delay strategy for <see cref="RpcClientPeer"/> instances.
+/// </summary>
 public class RpcClientPeerReconnectDelayer : RetryDelayer, IHasServices
 {
     protected ILogger Log => field ??= Services.LogFor(GetType());

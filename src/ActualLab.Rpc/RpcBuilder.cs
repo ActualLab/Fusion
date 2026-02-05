@@ -12,6 +12,9 @@ using ActualLab.Trimming;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Fluent builder for registering and configuring RPC services in a DI container.
+/// </summary>
 public readonly struct RpcBuilder
 {
     public IServiceCollection Services { get; }

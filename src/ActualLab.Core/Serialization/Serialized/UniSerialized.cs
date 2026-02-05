@@ -4,6 +4,9 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Factory methods for <see cref="UniSerialized{T}"/>.
+/// </summary>
 public static class UniSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -11,6 +14,10 @@ public static class UniSerialized
         => new() { Value = value };
 }
 
+/// <summary>
+/// A universal serialized wrapper that supports all serializer formats (System.Text.Json, Newtonsoft.Json,
+/// MemoryPack, and MessagePack) simultaneously.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

@@ -7,6 +7,10 @@ namespace ActualLab.Interception;
 
 #pragma warning disable CA1721
 
+/// <summary>
+/// An immutable list of arguments for an intercepted method call, supporting
+/// typed access, serialization, and dynamic invoker generation.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume ArgumentList code is preserved")]
 public abstract partial record ArgumentList
 {
@@ -69,6 +73,9 @@ public abstract partial record ArgumentList
     public abstract int GetHashCode(int skipIndex);
 }
 
+/// <summary>
+/// An <see cref="ArgumentList"/> with zero arguments.
+/// </summary>
 public sealed record ArgumentList0 : ArgumentList
 {
     private static ArgumentListType? _cachedType;

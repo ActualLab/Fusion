@@ -3,6 +3,10 @@ namespace ActualLab;
 #pragma warning disable CS0169 // Field is never used
 
 // This type is used as an extra parameter of constructors to indicate newly generated Id required
+
+/// <summary>
+/// A unit-type constructor parameter indicating that a new identifier should be generated.
+/// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 public readonly struct Generate : IEquatable<Generate>
 {

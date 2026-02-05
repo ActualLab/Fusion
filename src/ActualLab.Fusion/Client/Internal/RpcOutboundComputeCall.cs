@@ -4,6 +4,10 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Fusion.Client.Internal;
 
+/// <summary>
+/// An outbound RPC call for Fusion compute methods that tracks invalidation state
+/// from the remote server.
+/// </summary>
 public abstract class RpcOutboundComputeCall : RpcOutboundCall
 {
     protected readonly AsyncTaskMethodBuilder<string> WhenInvalidatedSource
@@ -172,6 +176,9 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
     }
 }
 
+/// <summary>
+/// A strongly-typed <see cref="RpcOutboundComputeCall"/> for a specific result type.
+/// </summary>
 public sealed class RpcOutboundComputeCall<TResult> : RpcOutboundComputeCall
 {
     public RpcOutboundComputeCall(RpcOutboundContext context) : base(context)

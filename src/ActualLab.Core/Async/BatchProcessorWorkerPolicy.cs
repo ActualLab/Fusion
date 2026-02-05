@@ -2,6 +2,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Async;
 
+/// <summary>
+/// Defines the worker scaling policy for a <see cref="BatchProcessor{T, TResult}"/>.
+/// </summary>
 public interface IBatchProcessorWorkerPolicy
 {
     public int MinWorkerCount { get; }
@@ -13,6 +16,9 @@ public interface IBatchProcessorWorkerPolicy
     public int GetWorkerCountDelta(TimeSpan minQueueTime);
 }
 
+/// <summary>
+/// Default implementation of <see cref="IBatchProcessorWorkerPolicy"/> with configurable scaling thresholds.
+/// </summary>
 public record BatchProcessorWorkerPolicy : IBatchProcessorWorkerPolicy
 {
     public static IBatchProcessorWorkerPolicy Default { get; set; } = new BatchProcessorWorkerPolicy();

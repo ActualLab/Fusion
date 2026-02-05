@@ -1,5 +1,9 @@
 namespace ActualLab.Collections.Slim;
 
+/// <summary>
+/// A compact hash set interface for reference types, optimized for small item counts
+/// using reference equality before falling back to a full <see cref="HashSet{T}"/>.
+/// </summary>
 public interface IRefHashSetSlim<T>
     where T : class
 {

@@ -1,5 +1,8 @@
 namespace ActualLab.Interception.Internal;
 
+/// <summary>
+/// Provides feature switches controlling interception behavior at runtime.
+/// </summary>
 public static class InterceptionFeatures
 {
 #if NET9_0_OR_GREATER

@@ -5,6 +5,9 @@ namespace ActualLab.Locking;
 
 #pragma warning disable CA2002
 
+/// <summary>
+/// A keyed async lock set that allows locking on individual keys with optional reentry detection.
+/// </summary>
 public class AsyncLockSet<TKey>(
     LockReentryMode reentryMode,
     int concurrencyLevel,
@@ -67,6 +70,9 @@ public class AsyncLockSet<TKey>(
 
     // Nested types
 
+    /// <summary>
+    /// Releases the keyed lock in an <see cref="AsyncLockSet{TKey}"/> when disposed.
+    /// </summary>
     public struct Releaser : IAsyncLockReleaser
     {
         private readonly Entry _entry;
@@ -111,6 +117,9 @@ public class AsyncLockSet<TKey>(
         }
     }
 
+    /// <summary>
+    /// Internal entry that holds the semaphore and reentry state for a single key.
+    /// </summary>
     // Mimics IAsyncLock interface
     internal sealed class Entry(AsyncLockSet<TKey> owner, TKey key)
     {

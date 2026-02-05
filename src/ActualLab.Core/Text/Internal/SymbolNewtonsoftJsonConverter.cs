@@ -2,6 +2,9 @@ using Newtonsoft.Json;
 
 namespace ActualLab.Text.Internal;
 
+/// <summary>
+/// Newtonsoft.Json converter for <see cref="Symbol"/>.
+/// </summary>
 public class SymbolNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<Symbol>
 {
     public override void WriteJson(

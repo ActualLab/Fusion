@@ -3,10 +3,17 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Abstract base class for database-backed authentication services,
+/// defining the <see cref="IAuth"/> and <see cref="IAuthBackend"/> contract methods.
+/// </summary>
 public abstract class DbAuthService<TDbContext>(IServiceProvider services)
     : DbServiceBase<TDbContext>(services), IAuth, IAuthBackend
     where TDbContext : DbContext
 {
+    /// <summary>
+    /// Configuration options for <see cref="DbAuthService{TDbContext}"/>.
+    /// </summary>
     public record Options
     {
         // The default should be less than 3 min - see PresenceService.Options

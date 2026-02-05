@@ -2,6 +2,10 @@ using ActualLab.Conversion.Internal;
 
 namespace ActualLab.Conversion;
 
+/// <summary>
+/// Defines a contract for converting from <typeparamref name="TSource"/>
+/// to <typeparamref name="TTarget"/>.
+/// </summary>
 public interface IConverter<in TSource, TTarget>
 {
     public Option<TTarget> TryConvert(TSource source);

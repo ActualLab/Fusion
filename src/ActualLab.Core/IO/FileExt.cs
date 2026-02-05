@@ -2,6 +2,9 @@ using System.Text;
 
 namespace ActualLab.IO;
 
+/// <summary>
+/// Helper methods for reading and writing text files with configurable encoding.
+/// </summary>
 public static class FileExt
 {
     public static readonly Encoding DefaultReadEncoding = Encoding.UTF8;

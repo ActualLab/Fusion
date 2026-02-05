@@ -2,6 +2,10 @@ using ActualLab.Generators;
 
 namespace ActualLab.Trimming;
 
+/// <summary>
+/// Base class for code keepers that prevent .NET trimming from removing
+/// types and code that are only used via reflection or dynamic dispatch.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
@@ -95,6 +99,9 @@ public abstract class CodeKeeper
 
     // Nested types
 
+    /// <summary>
+    /// Caches singleton instances of <see cref="CodeKeeper"/> subtypes.
+    /// </summary>
     private static class Cache<TKeeper>
         where TKeeper : CodeKeeper, new()
     {

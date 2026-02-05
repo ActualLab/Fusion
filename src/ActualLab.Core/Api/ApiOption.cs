@@ -8,6 +8,9 @@ namespace ActualLab.Api;
 
 #pragma warning disable CA1036
 
+/// <summary>
+/// Factory methods for creating <see cref="ApiOption{T}"/> instances.
+/// </summary>
 public static class ApiOption
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -31,6 +34,9 @@ public static class ApiOption
             : default;
 }
 
+/// <summary>
+/// A serializable optional value type intended for use in API contracts.
+/// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Defines a Blazor render mode (e.g., Server, WASM, Auto) with its key and display title.
+/// </summary>
 public sealed record RenderModeDef(
     string Key,
     string Title)

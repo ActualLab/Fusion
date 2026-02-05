@@ -99,6 +99,10 @@ YOU MUST ABSOLUTELY FOLLOW THESE CONVENTIONS.
 - After making changes, run at least `dotnet build ActualLab.Fusion.sln` to verify they at least don't break the build.
 - Ensure all builds pass before submitting changes.
 
+## Type Catalog
+
+If `docs/Api-Index.md` exists, use it to discover existing abstractions before writing new code. It lists all useful public types across all non-test projects, organized by namespace.
+
 ## Additional Notes
 
 AGENTS.md in other folders may extend and override instructions provided here.

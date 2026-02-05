@@ -4,6 +4,9 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// An <see cref="IByteSerializer"/> decorator that prefixes serialized data with type information.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume you know serialization may involve reflection and dynamic invocations")]
 public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type, bool>? typeFilter = null)
     : ByteSerializerBase

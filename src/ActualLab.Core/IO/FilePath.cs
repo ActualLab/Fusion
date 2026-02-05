@@ -5,6 +5,10 @@ using MessagePack;
 
 namespace ActualLab.IO;
 
+/// <summary>
+/// A serializable, comparable value type representing a file system path
+/// with operators for joining and combining paths.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(FilePathMessagePackFormatter))]
 [JsonConverter(typeof(FilePathJsonConverter))]

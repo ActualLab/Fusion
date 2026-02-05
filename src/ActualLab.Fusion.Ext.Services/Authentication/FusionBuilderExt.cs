@@ -6,6 +6,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Extension methods for <see cref="FusionBuilder"/> to register authentication services.
+/// </summary>
 public static class FusionBuilderExt
 {
     // InMemoryAuthService

@@ -13,6 +13,10 @@ using System.Web.Http;
 
 namespace ActualLab.Testing.Web;
 
+/// <summary>
+/// Defines the contract for a test web host that manages
+/// an <see cref="IHost"/>, server, and HTTP client creation.
+/// </summary>
 public interface ITestWebHost : IDisposable
 {
     public IHost Host { get; }
@@ -25,6 +29,10 @@ public interface ITestWebHost : IDisposable
     public HttpClient CreateClient();
 }
 
+/// <summary>
+/// Abstract base class for test web hosts providing Kestrel (or OWIN) server setup,
+/// host lifecycle management, and HTTP client creation.
+/// </summary>
 public abstract class TestWebHostBase : ITestWebHost
 {
     protected Lazy<IHost> HostLazy { get; set; }

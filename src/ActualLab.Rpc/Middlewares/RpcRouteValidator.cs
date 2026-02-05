@@ -3,6 +3,9 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Middlewares;
 
+/// <summary>
+/// An <see cref="IRpcMiddleware"/> that validates inbound call routing for distributed and client-only services.
+/// </summary>
 public sealed record RpcRouteValidator : IRpcMiddleware
 {
     public static Func<RpcMethodDef, bool> DefaultFilter { get; set; } = _ => true;

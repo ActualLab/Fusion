@@ -4,6 +4,9 @@ using Cysharp.Text;
 
 namespace ActualLab.Text;
 
+/// <summary>
+/// Extension methods for <see cref="System.Text.Decoder"/>.
+/// </summary>
 #if NETSTANDARD2_0
 public static unsafe class DecoderExt
 #else

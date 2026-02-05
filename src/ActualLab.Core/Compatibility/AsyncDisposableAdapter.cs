@@ -1,5 +1,9 @@
 namespace ActualLab.Compatibility;
 
+/// <summary>
+/// Adapts a disposable or async-disposable object into <see cref="IAsyncDisposable"/>
+/// across target frameworks.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct AsyncDisposableAdapter<T>(T target) : IAsyncDisposable
 #if !NETSTANDARD2_0

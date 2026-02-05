@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Extension methods for <see cref="HttpContext"/> to retrieve authentication
+/// schemes and remote IP addresses.
+/// </summary>
 public static class HttpContextExt
 {
     public static async Task<AuthenticationScheme[]> GetAuthenticationSchemas(this HttpContext httpContext)

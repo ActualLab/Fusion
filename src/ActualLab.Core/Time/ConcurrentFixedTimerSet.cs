@@ -2,6 +2,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// Options for <see cref="ConcurrentFixedTimerSet{TItem}"/>,
+/// extending <see cref="FixedTimerSetOptions"/> with a concurrency level.
+/// </summary>
 public record ConcurrentFixedTimerSetOptions : FixedTimerSetOptions
 {
     public static new readonly ConcurrentFixedTimerSetOptions Default = new();
@@ -9,6 +13,10 @@ public record ConcurrentFixedTimerSetOptions : FixedTimerSetOptions
     public int ConcurrencyLevel { get; init; } = HardwareInfo.GetProcessorCountPo2Factor();
 }
 
+/// <summary>
+/// A concurrent, sharded version of <see cref="FixedTimerSet{TItem}"/> that reduces
+/// lock contention by distributing items across multiple internal timer sets.
+/// </summary>
 public sealed class ConcurrentFixedTimerSet<TItem> : SafeAsyncDisposableBase
     where TItem : notnull
 {

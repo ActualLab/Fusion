@@ -1,5 +1,8 @@
 namespace ActualLab.Async;
 
+/// <summary>
+/// Extension methods for <see cref="IWorker"/>.
+/// </summary>
 public static class WorkerExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

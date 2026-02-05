@@ -2,6 +2,9 @@ using ActualLab.Mathematics.Internal;
 
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// A single layer of uniformly-sized tiles within a <see cref="TileStack{T}"/>.
+/// </summary>
 public class TileLayer<T>
     where T : notnull
 {

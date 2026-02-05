@@ -6,6 +6,10 @@ using StackExchange.Redis;
 
 namespace ActualLab.Fusion.EntityFramework.Redis;
 
+/// <summary>
+/// An <see cref="IDbLogWatcher{TDbContext, TDbEntry}"/> that uses Redis pub/sub
+/// to detect database log changes across hosts.
+/// </summary>
 public class RedisDbLogWatcher<TDbContext, TDbEntry>(
     RedisDbLogWatcherOptions<TDbContext> settings,
     IServiceProvider services
@@ -22,6 +26,10 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
 
     // Nested types
 
+    /// <summary>
+    /// A <see cref="DbShardWatcher"/> that subscribes to a Redis channel and publishes
+    /// messages to signal log changes.
+    /// </summary>
     protected class ShardWatcher : DbShardWatcher
     {
         public RedisDbLogWatcher<TDbContext, TDbEntry> Owner { get; }

@@ -3,6 +3,10 @@ using MessagePack;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A thread-safe mutable set of named options.
+/// Consider using <see cref="MutablePropertyBag"/> instead.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

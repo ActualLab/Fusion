@@ -5,6 +5,10 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.CommandR.Rpc;
 
+/// <summary>
+/// A command filter that routes commands to remote RPC peers or executes them
+/// locally, with automatic rerouting on topology changes.
+/// </summary>
 public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandler<ICommand>
 {
     private IServiceProvider Services { get; } = services;

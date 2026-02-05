@@ -8,6 +8,9 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// An <see cref="IByteSerializer"/> implementation backed by MemoryPack.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2091", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IByteSerializer
@@ -92,6 +95,9 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
             this);
 }
 
+/// <summary>
+/// A typed <see cref="MemoryPackByteSerializer"/> that serializes values of type <typeparamref name="T"/>.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2091", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class MemoryPackByteSerializer<T>(

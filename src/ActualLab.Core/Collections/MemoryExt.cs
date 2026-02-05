@@ -1,5 +1,8 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Extension methods for <see cref="ReadOnlyMemory{T}"/> and <see cref="Memory{T}"/>.
+/// </summary>
 public static class MemoryExt
 {
     // TryGetUnderlyingArray

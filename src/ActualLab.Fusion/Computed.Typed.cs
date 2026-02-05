@@ -3,6 +3,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// A strongly-typed <see cref="Computed"/> that holds a <see cref="Result{T}"/> output value.
+/// </summary>
+/// <typeparam name="T">The type of the computed value.</typeparam>
 public abstract class Computed<T> : Computed, IResult<T>
 {
     public static readonly Result DefaultResult = new(default(T));

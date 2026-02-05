@@ -6,6 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
+/// <summary>
+/// Entity Framework entity representing a persisted operation in the "_Operations" table,
+/// used for cross-host operation log replication and invalidation.
+/// </summary>
 [Table("_Operations")]
 [Index(nameof(Uuid), IsUnique = true)] // "Uuid -> Index" queries
 [Index(nameof(LoggedAt))] // "LoggedAt > minLoggedAt -> min(Index)" queries + min(LoggedAt)

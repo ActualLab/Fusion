@@ -3,6 +3,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Diagnostics;
 
+/// <summary>
+/// A probabilistic sampler that decides whether to include or skip events
+/// based on configurable strategies (random, every-Nth, etc.).
+/// </summary>
 public sealed record Sampler(
     string Id,
     double Probability,

@@ -2,6 +2,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceCollection"/> to register
+/// <see cref="TransiencyResolver{TContext}"/> instances.
+/// </summary>
 public static class ServiceCollectionExt
 {
     public static IServiceCollection AddTransiencyResolver<TContext>(

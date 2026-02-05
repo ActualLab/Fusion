@@ -1,5 +1,9 @@
 namespace ActualLab.Resilience.Internal;
 
+/// <summary>
+/// A <see cref="ChaosMaker"/> that throws an exception of type
+/// <typeparamref name="TException"/>.
+/// </summary>
 public record ErrorChaosMaker<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TException>(
     string? Message = null, Func<TException>? Factory = null) : ChaosMaker

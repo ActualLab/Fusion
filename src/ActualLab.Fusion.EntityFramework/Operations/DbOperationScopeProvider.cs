@@ -5,6 +5,10 @@ using RetryLimitExceededException = Microsoft.EntityFrameworkCore.Storage.RetryL
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
+/// <summary>
+/// A command handler that manages the lifecycle of <see cref="DbOperationScope"/> for
+/// outermost commands, handling commit, transient failure detection, and disposal.
+/// </summary>
 public class DbOperationScopeProvider(IServiceProvider services)
 {
     protected IServiceProvider Services { get; } = services;

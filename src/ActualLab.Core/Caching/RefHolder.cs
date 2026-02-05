@@ -2,6 +2,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Caching;
 
+/// <summary>
+/// Holds strong references to objects to prevent garbage collection, with concurrent access support.
+/// </summary>
 public class RefHolder
 {
     private readonly LinkedList<object>[] _lists;

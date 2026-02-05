@@ -7,6 +7,9 @@ namespace ActualLab.Resilience;
 /// </summary>
 public interface ITerminalException;
 
+/// <summary>
+/// Base exception class for terminal errors that indicate unrecoverable failure.
+/// </summary>
 [Serializable]
 public class TerminalException : Exception, ITerminalException
 {

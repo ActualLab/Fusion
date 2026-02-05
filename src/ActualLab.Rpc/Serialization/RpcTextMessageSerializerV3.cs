@@ -7,6 +7,9 @@ namespace ActualLab.Rpc.Serialization;
 
 #pragma warning disable MA0069
 
+/// <summary>
+/// V3 JSON-based text message serializer that uses <see cref="Internal.JsonRpcMessage"/> for the message envelope.
+/// </summary>
 public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSerializer(peer)
 {
     private static readonly byte Delimiter = (byte)'\n';

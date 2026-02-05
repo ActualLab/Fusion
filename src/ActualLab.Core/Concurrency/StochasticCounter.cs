@@ -3,6 +3,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Concurrency;
 
+/// <summary>
+/// A probabilistic counter that increments or decrements atomically
+/// with a configurable sampling precision, reducing contention on hot paths.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public struct StochasticCounter
 {

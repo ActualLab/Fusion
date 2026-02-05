@@ -8,6 +8,10 @@ namespace ActualLab.Fusion.EntityFramework.Npgsql;
 
 #pragma warning disable EF1002
 
+/// <summary>
+/// An <see cref="IDbLogWatcher{TDbContext, TDbEntry}"/> that uses PostgreSQL
+/// LISTEN/NOTIFY to detect database log changes across hosts.
+/// </summary>
 public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
     NpgsqlDbLogWatcherOptions<TDbContext> settings,
     IServiceProvider services
@@ -23,6 +27,10 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
 
     // Nested types
 
+    /// <summary>
+    /// A <see cref="DbShardWatcher"/> that listens for PostgreSQL notifications
+    /// and sends NOTIFY commands to signal log changes.
+    /// </summary>
     protected class ShardWatcher : DbShardWatcher
     {
         public NpgsqlDbLogWatcher<TDbContext, TDbEntry> Owner { get; }

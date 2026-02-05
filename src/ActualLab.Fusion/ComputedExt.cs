@@ -2,6 +2,9 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Extension methods for <see cref="Computed"/> and <see cref="Computed{T}"/>.
+/// </summary>
 public static partial class ComputedExt
 {
     // Update & Use

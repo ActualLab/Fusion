@@ -1,5 +1,9 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// A <see cref="MomentClock"/> that applies a configurable offset to a base clock,
+/// typically used to approximate server time from the client.
+/// </summary>
 public class ServerClock(MomentClock? baseClock = null) : MomentClock
 {
     private volatile TaskCompletionSource<TimeSpan> _offsetSource = TaskCompletionSourceExt.New<TimeSpan>();

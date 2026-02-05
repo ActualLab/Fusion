@@ -2,6 +2,9 @@ using System.Buffers;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// An <see cref="ITextSerializer"/> that uses different serializers for reading and writing.
+/// </summary>
 public sealed class AsymmetricTextSerializer : ITextSerializer
 {
     public ITextSerializer Reader { get; }
@@ -38,6 +41,9 @@ public sealed class AsymmetricTextSerializer : ITextSerializer
         => Writer.Write(textWriter, value, type);
 }
 
+/// <summary>
+/// A typed <see cref="ITextSerializer{T}"/> that uses different serializers for reading and writing.
+/// </summary>
 public class AsymmetricTextSerializer<T> : ITextSerializer<T>
 {
     public ITextSerializer<T> Reader { get; }

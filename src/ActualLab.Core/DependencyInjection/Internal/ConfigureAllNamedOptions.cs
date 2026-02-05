@@ -2,6 +2,10 @@ using Microsoft.Extensions.Options;
 
 namespace ActualLab.DependencyInjection.Internal;
 
+/// <summary>
+/// An <see cref="IConfigureNamedOptions{TOptions}"/> implementation that applies
+/// a configuration action to all named option instances.
+/// </summary>
 public class ConfigureAllNamedOptions<TOptions>: IConfigureNamedOptions<TOptions>
     where TOptions : class
 {

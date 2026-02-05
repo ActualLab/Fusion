@@ -2,6 +2,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Npgsql;
 
+/// <summary>
+/// Configuration options for <see cref="NpgsqlDbLogWatcher{TDbContext, TDbEntry}"/>,
+/// including the PostgreSQL channel name formatter and retry delays.
+/// </summary>
 public record NpgsqlDbLogWatcherOptions<TDbContext>
     where TDbContext : DbContext
 {

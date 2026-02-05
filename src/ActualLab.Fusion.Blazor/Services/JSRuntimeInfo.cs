@@ -2,6 +2,10 @@ using Microsoft.JSInterop;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Provides information about the current JS runtime, including whether
+/// it is remote (Blazor Server) and whether prerendering is in progress.
+/// </summary>
 // ReSharper disable once InconsistentNaming
 public class JSRuntimeInfo
 {

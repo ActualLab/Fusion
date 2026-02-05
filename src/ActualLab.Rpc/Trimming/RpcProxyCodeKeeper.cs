@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Trimming;
 
+/// <summary>
+/// Retains RPC proxy and serialization code that would otherwise be trimmed by the .NET IL linker.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]

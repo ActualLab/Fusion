@@ -2,6 +2,10 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// A background worker that monitors RPC peer connection state changes
+/// and exposes the current state via computed properties.
+/// </summary>
 public class RpcPeerStateMonitor : WorkerBase
 {
     private MutableState<RpcPeerRawState> _rawState = null!;

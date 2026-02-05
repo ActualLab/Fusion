@@ -1,5 +1,9 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Extension methods for <see cref="ConcurrentDictionary{TKey, TValue}"/>,
+/// including lazy value initialization and atomic increment/decrement operations.
+/// </summary>
 public static class ConcurrentDictionaryExt
 {
     // GetOrAdd with LazySlim

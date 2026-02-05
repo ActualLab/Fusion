@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.Blazor.Internal;
 
+/// <summary>
+/// Abstract base class for computed state instances used by
+/// <see cref="ComputedStateComponent{T}"/>, supporting different dispatch modes.
+/// </summary>
 public abstract class ComputedStateComponentState<T>(
     ComputedState<T>.Options options,
     ComputedStateComponent<T> component,

@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.UI;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceProvider"/> to resolve UI-related Fusion services.
+/// </summary>
 public static class ServiceProviderExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -3,6 +3,9 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Sends system-level RPC calls (handshake, ok, error, stream control) to a peer's transport.
+/// </summary>
 public sealed class RpcSystemCallSender : RpcServiceBase
 {
     public readonly RpcServiceDef ServiceDef;

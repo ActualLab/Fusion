@@ -6,6 +6,9 @@ using MessagePack;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Represents an authenticated user session identified by a unique string <see cref="Id"/>.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(SessionMessagePackFormatter))]
 [JsonConverter(typeof(SessionJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(SessionNewtonsoftJsonConverter))]

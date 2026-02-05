@@ -2,6 +2,10 @@ using ActualLab.Time.Internal;
 
 namespace ActualLab.Time.Testing;
 
+/// <summary>
+/// A <see cref="MomentClock"/> that throws on every operation,
+/// used as a placeholder when no real clock should be used.
+/// </summary>
 public sealed class UnusableClock : MomentClock
 {
     public static readonly UnusableClock Instance = new();

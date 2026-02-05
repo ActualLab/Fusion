@@ -1,5 +1,9 @@
 namespace ActualLab.Versioning;
 
+/// <summary>
+/// Extension methods for formatting <see cref="long"/> and <see cref="ulong"/> values
+/// as compact base-32 version strings.
+/// </summary>
 public static class LongExt
 {
     private static readonly string FormatVersionDigits = MathExt.Digits32;

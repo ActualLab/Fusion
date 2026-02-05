@@ -7,6 +7,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Resolves <see cref="RpcMethodDef"/> by method reference, full name, or hash code,
+/// with support for legacy name versioning.
+/// </summary>
 public sealed class RpcMethodResolver
 {
     public readonly RpcServiceRegistry ServiceRegistry;
@@ -198,6 +202,9 @@ public sealed class RpcMethodResolver
 
     // Nested type
 
+    /// <summary>
+    /// Associates an <see cref="RpcMethodDef"/> with a version for legacy name resolution.
+    /// </summary>
     public readonly record struct MethodEntry(RpcMethodDef MethodDef, Version Version) : ICanBeNone<MethodEntry>
     {
         public static MethodEntry None => default;

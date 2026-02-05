@@ -6,6 +6,11 @@ namespace ActualLab.Fusion.Server;
 
 // Taken from https://stackoverflow.com/questions/25631970/how-to-post-plain-text-to-asp-net-web-api-endpoint
 // Without it, RestEase client quotes every result of type Task<string>.
+
+/// <summary>
+/// A <see cref="MediaTypeFormatter"/> that handles plain text (text/plain) content
+/// for Web API endpoints.
+/// </summary>
 public class TextMediaTypeFormatter : MediaTypeFormatter
 {
     public TextMediaTypeFormatter()

@@ -5,6 +5,9 @@ using MessagePack;
 
 namespace ActualLab;
 
+/// <summary>
+/// Represents a unique identifier for a host, auto-generated with a machine-prefixed value.
+/// </summary>
 [DataContract, MemoryPackable, MessagePackFormatter(typeof(HostIdMessagePackFormatter))]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]

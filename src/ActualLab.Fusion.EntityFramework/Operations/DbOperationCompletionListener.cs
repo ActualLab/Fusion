@@ -5,10 +5,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
+/// <summary>
+/// Listens for locally completed operations and notifies log watchers to trigger
+/// remote invalidation and event processing.
+/// </summary>
 public class DbOperationCompletionListener<TDbContext>
     : DbProcessorBase<TDbContext>, IOperationCompletionListener
     where TDbContext : DbContext
 {
+    /// <summary>
+    /// Configuration options for <see cref="DbOperationCompletionListener{TDbContext}"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

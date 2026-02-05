@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// A MessagePack formatter that serializes <see cref="Session"/> as its string identifier.
+/// </summary>
 public sealed class SessionMessagePackFormatter : IMessagePackFormatter<Session?>
 {
     public void Serialize(ref MessagePackWriter writer, Session? value, MessagePackSerializerOptions options)

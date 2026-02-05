@@ -3,6 +3,10 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Database-backed implementation of <see cref="IAuth"/> and <see cref="IAuthBackend"/>
+/// using Entity Framework Core.
+/// </summary>
 public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>(
     DbAuthService<TDbContext>.Options settings,
     IServiceProvider services

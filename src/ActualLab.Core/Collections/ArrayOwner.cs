@@ -3,6 +3,9 @@ using ActualLab.Collections.Internal;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Factory for creating <see cref="ArrayOwner{T}"/> instances with optional array clearing.
+/// </summary>
 public static class ArrayOwner
 {
     public static ArrayOwner<T> New<T>(ArrayPool<T> pool, T[] array, int length, bool mustClear)
@@ -11,6 +14,10 @@ public static class ArrayOwner
             : new ArrayOwner<T>(pool, array, length);
 }
 
+/// <summary>
+/// Wraps a pooled array as an <see cref="IMemoryOwner{T}"/>,
+/// returning the array to the pool on disposal.
+/// </summary>
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public class ArrayOwner<T>(ArrayPool<T> pool, T[] array, int length)
     : IMemoryOwner<T>, IHasDisposeStatus

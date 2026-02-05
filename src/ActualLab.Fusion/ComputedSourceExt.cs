@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Extension methods for <see cref="ComputedSource"/> and <see cref="IComputedSource"/>.
+/// </summary>
 public static class ComputedSourceExt
 {
     // Computed-like methods

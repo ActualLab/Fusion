@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// Configuration options for <see cref="FileSystemDbLogWatcher{TDbContext, TDbEntry}"/>,
+/// including the tracker file path formatter.
+/// </summary>
 public record FileSystemDbLogWatcherOptions<TDbContext>
     where TDbContext : DbContext
 {

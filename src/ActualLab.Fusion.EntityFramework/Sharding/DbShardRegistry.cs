@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Defines the contract for managing a set of database shards, tracking which
+/// shards are available, used, and eligible for event processing.
+/// </summary>
 public interface IDbShardRegistry
 {
     public bool HasSingleShard { get; }
@@ -16,8 +20,15 @@ public interface IDbShardRegistry
     public bool TryUse(string shard);
 }
 
+/// <summary>
+/// A typed <see cref="IDbShardRegistry"/> scoped to a specific <see cref="DbContext"/> type.
+/// </summary>
 public interface IDbShardRegistry<TContext> : IDbShardRegistry;
 
+/// <summary>
+/// Default <see cref="IDbShardRegistry{TContext}"/> implementation that maintains
+/// shard sets, tracks used shards, and computes event processor shards.
+/// </summary>
 public class DbShardRegistry<TContext> : IDbShardRegistry<TContext>, IDisposable
 {
     protected readonly object Lock = new();

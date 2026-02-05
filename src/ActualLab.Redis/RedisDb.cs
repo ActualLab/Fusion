@@ -3,6 +3,10 @@ using StackExchange.Redis.KeyspaceIsolation;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// Represents a Redis database connection with key prefix support,
+/// providing access to <see cref="IDatabase"/> and <see cref="ISubscriber"/> components.
+/// </summary>
 public class RedisDb
 {
     public static string DefaultKeyDelimiter { get; set; } = ".";
@@ -46,6 +50,10 @@ public class RedisDb
     }
 }
 
+/// <summary>
+/// A typed <see cref="RedisDb"/> scoped by <typeparamref name="TContext"/>
+/// for multi-context dependency injection.
+/// </summary>
 public class RedisDb<TContext>(
     RedisConnector connector,
     string keyPrefix = "",

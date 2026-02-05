@@ -3,6 +3,9 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// An <see cref="ITextSerializer"/> decorator that prefixes serialized data with type information.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume you know serialization may involve reflection and dynamic invocations")]
 [UnconditionalSuppressMessage("Trimming", "IL2116", Justification = "We assume you know serialization may involve reflection and dynamic invocations")]
 public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
@@ -134,6 +137,9 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
     }
 }
 
+/// <summary>
+/// A legacy variant of <see cref="TypeDecoratingTextSerializer"/> that uses list-format type decoration.
+/// </summary>
 public class LegacyTypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type, bool>? typeFilter = null)
     : TypeDecoratingTextSerializer(serializer, typeFilter)
 {

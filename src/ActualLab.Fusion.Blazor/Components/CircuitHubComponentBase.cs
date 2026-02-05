@@ -4,6 +4,10 @@ using Microsoft.JSInterop;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Base class for Blazor components that access <see cref="CircuitHub"/> and its
+/// commonly used services (session, state factory, UICommander, etc.).
+/// </summary>
 public abstract class CircuitHubComponentBase : FusionComponentBase, IHasCircuitHub
 {
     [Inject] protected CircuitHub CircuitHub { get; init; } = null!;

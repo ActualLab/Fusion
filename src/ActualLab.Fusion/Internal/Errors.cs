@@ -3,6 +3,9 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// Factory methods for Fusion-specific exceptions.
+/// </summary>
 public static class Errors
 {
     public static Exception WrongComputedState(

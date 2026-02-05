@@ -1,7 +1,13 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Delegate that introduces a delay between RPC frames to allow batching of small messages.
+/// </summary>
 public delegate Task RpcFrameDelayer(int frameSize);
 
+/// <summary>
+/// Provides static methods for creating <see cref="RpcFrameDelayer"/> implementations (yield, tick, delay).
+/// </summary>
 public static class RpcFrameDelayers
 {
     public const int NoDelayFrameCount = 2; // Handshake + Reconnect frames are never delayed

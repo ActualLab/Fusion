@@ -2,6 +2,10 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// Manages a resilient connection to Redis with automatic reconnection,
+/// configurable retry delays, and a watchdog that detects disconnections.
+/// </summary>
 public class RedisConnector
 {
 #if NET9_0_OR_GREATER

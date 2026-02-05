@@ -4,6 +4,11 @@ namespace ActualLab.Text;
 
 // StringBuilder caching implementation.
 // Acquire/Release here is ~ 2x faster than ZString.CreateStringBuilder/Dispose.
+
+/// <summary>
+/// Provides thread-local pooling for <see cref="System.Text.StringBuilder"/> instances
+/// via Acquire/Release pattern.
+/// </summary>
 public static class StringBuilderExt
 {
     private const int MaxCountPerThread = 16;

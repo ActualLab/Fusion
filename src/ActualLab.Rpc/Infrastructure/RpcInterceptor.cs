@@ -3,8 +3,14 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Interceptor that routes method invocations to remote RPC peers or local targets based on routing mode.
+/// </summary>
 public sealed class RpcInterceptor : Interceptor
 {
+    /// <summary>
+    /// Configuration options for <see cref="RpcInterceptor"/>.
+    /// </summary>
     public new sealed record Options : Interceptor.Options
     {
         public static Options Default { get; set; } = new();

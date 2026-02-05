@@ -12,6 +12,10 @@ using WebSocketAccept = System.Action<
 
 namespace ActualLab.Rpc.Server;
 
+/// <summary>
+/// Server-side handler that accepts incoming WebSocket connections and establishes
+/// RPC peer connections for OWIN-based .NET Framework hosts.
+/// </summary>
 public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProvider services)
     : RpcServiceBase(services)
 {

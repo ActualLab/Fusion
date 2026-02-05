@@ -5,6 +5,10 @@ using ActualLab.Fusion.Server;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Extension methods for <see cref="FusionWebServerBuilder"/> to register
+/// authentication endpoints and server auth helpers.
+/// </summary>
 public static class FusionWebServerBuilderExt
 {
     public static FusionWebServerBuilder AddAuthEndpoints(this FusionWebServerBuilder fusionWebServer)

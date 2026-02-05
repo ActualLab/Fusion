@@ -2,6 +2,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// A no-op <see cref="IDbLogWatcher{TDbContext, TDbEntry}"/> placeholder that logs a warning
+/// about missing watcher configuration. Change notifications rely on periodic polling.
+/// </summary>
 public class FakeDbLogWatcher<TDbContext, TDbEntry>
     : DbServiceBase<TDbContext>, IDbLogWatcher<TDbContext, TDbEntry>
     where TDbContext : DbContext

@@ -1,5 +1,8 @@
 namespace ActualLab.Internal;
 
+/// <summary>
+/// String constants for trimming-related suppression messages.
+/// </summary>
 public static class UnreferencedCode
 {
     public const string Reflection = "Reflection may require unreferenced code.";

@@ -3,6 +3,10 @@ using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Abstract base for database services that have access to an <see cref="IDbHub"/>
+/// and common infrastructure such as clocks, commander, and logging.
+/// </summary>
 public abstract class DbServiceBase(IDbHub dbHub)
 {
     protected IServiceProvider Services { get; init; } = dbHub.Services;
@@ -13,6 +17,10 @@ public abstract class DbServiceBase(IDbHub dbHub)
     protected ILogger Log => field ??= Services.LogFor(GetType());
 }
 
+/// <summary>
+/// Abstract base for database services scoped to a specific <typeparamref name="TDbContext"/>,
+/// with lazy access to <see cref="DbHub{TDbContext}"/> and common infrastructure.
+/// </summary>
 public abstract class DbServiceBase<TDbContext>(IServiceProvider services)
     where TDbContext : DbContext
 {

@@ -5,6 +5,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Extension methods for <see cref="MemberInfo"/> providing cached getter/setter
+/// delegate creation for properties and fields.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all used fields, getters, and setters are preserved")]
 public static class MemberInfoExt
 {

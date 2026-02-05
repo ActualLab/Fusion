@@ -2,6 +2,10 @@ using ActualLab.Fusion.Blazor.Internal;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// A Blazor component whose state is automatically computed and updated
+/// via Fusion's <see cref="ComputedState{T}"/>.
+/// </summary>
 public abstract class ComputedStateComponent<T> : ComputedStateComponent, IStatefulComponent<T>
 {
     protected State UntypedState => base.State;

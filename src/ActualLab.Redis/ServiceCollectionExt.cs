@@ -2,6 +2,10 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceCollection"/> to register
+/// <see cref="RedisDb"/> and <see cref="RedisConnector"/> services.
+/// </summary>
 public static class ServiceCollectionExt
 {
     // Single RedisDb (resolved via RedisDb w/o TContext parameter)

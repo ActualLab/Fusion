@@ -1,5 +1,8 @@
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Logs retry-related events such as failed attempts and retry delays.
+/// </summary>
 public sealed record RetryLogger(
     ILogger? Log,
     [CallerMemberName] string Action = "(unknown)")

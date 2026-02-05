@@ -2,6 +2,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.DependencyInjection;
 
+/// <summary>
+/// Encapsulates a service type and an optional custom resolver function
+/// for resolving services from an <see cref="IServiceProvider"/>.
+/// </summary>
 public sealed class ServiceResolver
 {
     public Type Type { get; }

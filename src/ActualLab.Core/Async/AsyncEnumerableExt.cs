@@ -2,6 +2,9 @@ using System.Runtime.ExceptionServices;
 
 namespace ActualLab.Async;
 
+/// <summary>
+/// Extension methods for <see cref="IAsyncEnumerable{T}"/>.
+/// </summary>
 public static partial class AsyncEnumerableExt
 {
     // SkipNullItems

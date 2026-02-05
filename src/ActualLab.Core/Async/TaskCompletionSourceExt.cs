@@ -4,6 +4,9 @@ namespace ActualLab.Async;
 
 #pragma warning disable CA2016
 
+/// <summary>
+/// Extension methods for <see cref="TaskCompletionSource{TResult}"/>.
+/// </summary>
 public static partial class TaskCompletionSourceExt
 {
     // NewXxx

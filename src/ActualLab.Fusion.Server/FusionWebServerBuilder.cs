@@ -5,6 +5,10 @@ using ActualLab.Rpc.Server;
 
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// Builder for configuring Fusion web server services including RPC,
+/// session middleware, and render mode endpoints.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct FusionWebServerBuilder
 {

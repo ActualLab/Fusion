@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Factory methods for <see cref="TypeDecoratingMessagePackSerialized{T}"/>.
+/// </summary>
 public static class TypeDecoratingMessagePackSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -13,6 +16,9 @@ public static class TypeDecoratingMessagePackSerialized
         => new() { Data = data };
 }
 
+/// <summary>
+/// A <see cref="ByteSerialized{T}"/> variant that uses type-decorating MessagePack serialization.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

@@ -1,5 +1,9 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A capacity- and time-bounded map that evicts the oldest entries
+/// when the capacity is exceeded or entries have expired.
+/// </summary>
 public sealed class RecentlySeenMap<TKey, TValue>(
     int capacity,
     TimeSpan duration,

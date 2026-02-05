@@ -7,6 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
+/// <summary>
+/// Entity Framework entity representing a persisted operation event in the "_Events" table,
+/// supporting delayed processing and state tracking.
+/// </summary>
 [Table("_Events")]
 [Index(nameof(State), nameof(DelayUntil))] // "State == New & DelayUntil < now" queries
 [Index(nameof(DelayUntil), nameof(State))] // "DelayUntil < trimAt && State != New" queries

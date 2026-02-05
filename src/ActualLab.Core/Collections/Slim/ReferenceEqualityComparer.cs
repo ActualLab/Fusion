@@ -1,5 +1,9 @@
 namespace ActualLab.Collections.Slim;
 
+/// <summary>
+/// An <see cref="IEqualityComparer{T}"/> that compares reference type instances
+/// by reference identity rather than value equality.
+/// </summary>
 public sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T>
     where T : class
 {

@@ -3,6 +3,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Extension methods for <see cref="Invocation"/>.
+/// </summary>
 public static class InvocationExt
 {
     private delegate object? InterceptedUntypedFunc(in Invocation invocation);

@@ -5,6 +5,10 @@ namespace ActualLab.Collections;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 
+/// <summary>
+/// An immutable, serializable property bag that stores key-value pairs
+/// where keys are strings and values are serialized objects.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

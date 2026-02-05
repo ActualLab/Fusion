@@ -1,5 +1,8 @@
 namespace ActualLab.Api;
 
+/// <summary>
+/// Extension methods for converting collections to Api collection types.
+/// </summary>
 public static class ApiCollectionExt
 {
     internal const int MaxToStringItems = 5;

@@ -1,5 +1,8 @@
 namespace ActualLab.OS;
 
+/// <summary>
+/// Defines operating system kind values.
+/// </summary>
 public enum OSKind
 {
     OtherUnix = 0,
@@ -10,6 +13,9 @@ public enum OSKind
     WebAssembly,
 }
 
+/// <summary>
+/// Provides static information about the current operating system.
+/// </summary>
 public static class OSInfo
 {
     public static readonly OSKind Kind;

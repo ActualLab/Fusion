@@ -5,6 +5,10 @@ using ActualLab.Trimming;
 
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Provides methods for creating proxy instances and resolving
+/// generated proxy types for <see cref="IRequiresAsyncProxy"/> base types.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume proxy-related code is preserved")]

@@ -2,6 +2,10 @@ using System.Diagnostics;
 
 namespace ActualLab.CommandR.Internal;
 
+/// <summary>
+/// Default <see cref="ICommander"/> implementation that executes commands through
+/// their handler chains and manages event dispatch.
+/// </summary>
 public class Commander : ICommander
 {
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]

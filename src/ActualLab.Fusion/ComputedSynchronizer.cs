@@ -4,6 +4,10 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Provides synchronization logic for <see cref="Computed"/> instances,
+/// ensuring remote computed values are synchronized before use.
+/// </summary>
 public abstract class ComputedSynchronizer
 {
     internal static readonly AsyncLocal<ComputedSynchronizer?> CurrentLocal = new();
@@ -143,6 +147,9 @@ public abstract class ComputedSynchronizer
 
     // Nested types
 
+    /// <summary>
+    /// A no-op synchronizer that considers all computed values as synchronized.
+    /// </summary>
     public sealed class None : ComputedSynchronizer
     {
         public static None Instance { get; } = new();
@@ -158,6 +165,9 @@ public abstract class ComputedSynchronizer
             => Task.CompletedTask;
     }
 
+    /// <summary>
+    /// A synchronizer that waits for remote computed values to be fully synchronized.
+    /// </summary>
     public sealed class Precise : ComputedSynchronizer
     {
         public static Precise Instance { get; set; } = new();
@@ -172,6 +182,10 @@ public abstract class ComputedSynchronizer
             => computed.WhenSynchronized.WaitAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// A synchronizer that considers remote computed values as synchronized in certain
+    /// conditions (e.g., when disconnected or when cache has a hit-to-call delayer).
+    /// </summary>
     public class Safe : ComputedSynchronizer
     {
         public static Safe Instance { get; set; } = new();

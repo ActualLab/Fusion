@@ -2,6 +2,10 @@ using System.Reactive.Linq;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// Extension methods for <see cref="MomentClock"/> providing delay, timer,
+/// and interval operations.
+/// </summary>
 public static class ClockExt
 {
     // Delay

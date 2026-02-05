@@ -2,14 +2,6 @@ Before starting any task, read AGENTS.md files in every directory starting from 
 
 `pwsh` (cross-platform PowerShell) command is available on any OS you run, so use it.
 
-# Temporary Files
-
-**Important:** Do not create temporary files in the project root. Use the `<projectRoot>/tmp` folder instead for any temporary files, test scripts, debug outputs, screenshots, etc. This keeps the project root clean and makes it easier to gitignore temporary artifacts.
-
-If AC_OS environment variable is defined, you're started with Claude Launcher (c.ps1), 
-so your actual OS is specified in this environment variable and you can use other environment variables 
-described below to access other projects related to the current one. 
-
 # Claude Launcher (c.ps1)
 
 You may be started via `c.ps1` launcher script. This script can run Claude in different environments:
@@ -125,6 +117,10 @@ c wt feature1    # Creates ActualLab.Fusion-feature1 if it doesn't exist and run
 
 The worktree is created using `git worktree add` from the main project directory.
 
+# Type Catalog
+
+If `docs/Api-Index.md` exists, use it to discover existing abstractions before writing new code. It lists all useful public types across all non-test projects, organized by namespace.
+
 # Building
 
 If a `*.CI.slnf` (solution filter) file exists in the project root, use it instead of the main `*.sln` file for building. The CI solution filter excludes projects that require additional workloads (like MAUI) that may not be installed in your environment.
@@ -177,3 +173,10 @@ If you're missing information in test logs:
 1. Use `Warning` level logging—it's more likely to appear in output
 2. Worst case: use `Console.Error.WriteLine()` to ensure messages appear in test output
 
+# Temporary Files
+
+**Important:** Do not create temporary files in the project root. Use the `<projectRoot>/tmp` folder instead for any temporary files, test scripts, debug outputs, screenshots, etc. This keeps the project root clean and makes it easier to gitignore temporary artifacts.
+
+If AC_OS environment variable is defined, you're started with Claude Launcher (c.ps1),
+so your actual OS is specified in this environment variable and you can use other environment variables
+described below to access other projects related to the current one. 

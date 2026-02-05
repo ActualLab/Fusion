@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Defines how much detail is retained when tracking invalidation sources.
+/// </summary>
 public enum InvalidationTrackingMode
 {
     /// <summary>

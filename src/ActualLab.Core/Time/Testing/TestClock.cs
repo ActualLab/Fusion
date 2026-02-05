@@ -2,6 +2,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Time.Testing;
 
+/// <summary>
+/// A <see cref="MomentClock"/> for testing that supports time offsetting, scaling,
+/// and on-the-fly settings changes with proper delay recalculation.
+/// </summary>
 public sealed class TestClock : MomentClock, IDisposable
 {
     private volatile TestClockSettings _settings;

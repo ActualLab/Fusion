@@ -2,6 +2,10 @@ using MessagePack;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// An immutable bidirectional map (bimap) that maintains both forward and backward
+/// lookup dictionaries between two key types.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial record ImmutableBimap<TFrom, TTo>

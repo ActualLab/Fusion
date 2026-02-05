@@ -8,6 +8,10 @@ namespace ActualLab.Fusion.Blazor;
 
 #pragma warning disable BL0006
 
+/// <summary>
+/// Low-level extension methods for <see cref="ComponentBase"/> providing access to
+/// internal Blazor fields (render handle, initialization state) and dispatcher operations.
+/// </summary>
 public static class ComponentExt
 {
 #if USE_UNSAFE_ACCESSORS

@@ -2,6 +2,9 @@ using ActualLab.Conversion;
 
 namespace ActualLab.Fusion.UI;
 
+/// <summary>
+/// The result of a completed <see cref="UIAction"/>, including timing information.
+/// </summary>
 public interface IUIActionResult : IResult
 {
     public long ActionId { get; }
@@ -13,6 +16,9 @@ public interface IUIActionResult : IResult
     public CancellationToken CancellationToken { get; }
 }
 
+/// <summary>
+/// A strongly-typed <see cref="IUIActionResult"/> carrying the result of a <see cref="UIAction{TResult}"/>.
+/// </summary>
 public class UIActionResult<T>(UIAction<T> action, Result<T> result, Moment completedAt)
     : IResult<T>, IUIActionResult
 {

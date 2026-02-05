@@ -2,6 +2,10 @@ using Owin;
 
 namespace ActualLab.Rpc.Server;
 
+/// <summary>
+/// Extension methods for <see cref="IAppBuilder"/> to map RPC WebSocket server
+/// endpoints in an OWIN pipeline.
+/// </summary>
 public static class EndpointRouteBuilderExt
 {
     public static IAppBuilder MapRpcWebSocketServer(this IAppBuilder appBuilder, IServiceProvider services)

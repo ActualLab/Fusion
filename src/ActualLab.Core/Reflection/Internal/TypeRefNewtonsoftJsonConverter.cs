@@ -2,6 +2,9 @@ using Newtonsoft.Json;
 
 namespace ActualLab.Reflection.Internal;
 
+/// <summary>
+/// Newtonsoft.Json converter for <see cref="TypeRef"/>.
+/// </summary>
 public class TypeRefNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<TypeRef>
 {
     public override void WriteJson(

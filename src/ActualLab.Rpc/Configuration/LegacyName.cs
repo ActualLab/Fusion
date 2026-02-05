@@ -3,6 +3,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Represents a legacy name mapping with a maximum version, used for backward-compatible RPC resolution.
+/// </summary>
 public sealed record LegacyName(string Name, Version MaxVersion)
 {
     public static readonly IComparer<LegacyName> MaxVersionComparer = new MaxVersionRelationalComparer();
@@ -37,6 +40,9 @@ public sealed record LegacyName(string Name, Version MaxVersion)
 
     // Nested types
 
+    /// <summary>
+    /// Compares <see cref="LegacyName"/> instances by their <see cref="MaxVersion"/>.
+    /// </summary>
     private sealed class MaxVersionRelationalComparer : IComparer<LegacyName>
     {
         public int Compare(LegacyName? x, LegacyName? y)

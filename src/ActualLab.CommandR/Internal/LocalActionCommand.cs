@@ -1,5 +1,8 @@
 namespace ActualLab.CommandR.Internal;
 
+/// <summary>
+/// A <see cref="LocalCommand"/> that wraps an action or void-returning delegate.
+/// </summary>
 public sealed record LocalActionCommand(Delegate? Handler) : LocalCommand, ILocalCommand<Unit>
 {
     public override Task Run(CommandContext context, CancellationToken cancellationToken)

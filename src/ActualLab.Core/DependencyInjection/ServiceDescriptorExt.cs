@@ -1,5 +1,8 @@
 namespace ActualLab.DependencyInjection;
 
+/// <summary>
+/// Extension methods for <see cref="ServiceDescriptor"/>.
+/// </summary>
 public static class ServiceDescriptorExt
 {
 #if USE_UNSAFE_ACCESSORS

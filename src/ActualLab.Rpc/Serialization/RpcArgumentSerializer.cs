@@ -3,6 +3,9 @@ using ActualLab.IO;
 
 namespace ActualLab.Rpc.Serialization;
 
+/// <summary>
+/// Base class for serializers that encode and decode RPC method argument lists.
+/// </summary>
 public abstract class RpcArgumentSerializer
 {
     [ThreadStatic] private static ArrayPoolBuffer<byte>? _writeBuffer;

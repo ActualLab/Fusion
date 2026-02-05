@@ -2,6 +2,9 @@ using System.IO.Hashing;
 
 namespace ActualLab.Text;
 
+/// <summary>
+/// Extension methods for byte spans providing hex string conversion and XxHash3 hashing.
+/// </summary>
 public static class ByteSpanExt
 {
     // ToHexString

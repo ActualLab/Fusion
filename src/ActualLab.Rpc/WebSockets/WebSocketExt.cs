@@ -2,6 +2,9 @@ using System.Net.WebSockets;
 
 namespace ActualLab.Rpc.WebSockets;
 
+/// <summary>
+/// Extension methods for <see cref="WebSocket"/> providing cross-platform send and receive overloads.
+/// </summary>
 public static class WebSocketExt
 {
 #if NETSTANDARD2_0

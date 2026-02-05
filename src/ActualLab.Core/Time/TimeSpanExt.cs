@@ -1,5 +1,9 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// Extension methods for <see cref="TimeSpan"/> providing clamping, random jitter,
+/// and human-readable short string formatting.
+/// </summary>
 public static class TimeSpanExt
 {
     public static readonly TimeSpan Infinite = TimeSpan.MaxValue;

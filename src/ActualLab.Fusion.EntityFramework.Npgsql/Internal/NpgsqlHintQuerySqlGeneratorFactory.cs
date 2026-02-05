@@ -7,6 +7,10 @@ namespace ActualLab.Fusion.EntityFramework.Npgsql.Internal;
 
 #pragma warning disable EF1001
 
+/// <summary>
+/// Factory that creates <see cref="NpgsqlHintQuerySqlGenerator"/> instances for
+/// PostgreSQL query SQL generation with hint support.
+/// </summary>
 public class NpgsqlHintQuerySqlGeneratorFactory : IQuerySqlGeneratorFactory
 {
     private readonly QuerySqlGeneratorDependencies _dependencies;

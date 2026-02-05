@@ -4,6 +4,9 @@ namespace ActualLab.Rpc;
 
 #pragma warning disable CS0169 // Field is never used
 
+/// <summary>
+/// A zero-size struct used as a return type for fire-and-forget RPC calls that require no response.
+/// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 [DataContract, MemoryPackable, MessagePackObject]
 public readonly partial struct RpcNoWait : IEquatable<RpcNoWait>
@@ -21,6 +24,9 @@ public readonly partial struct RpcNoWait : IEquatable<RpcNoWait>
 
     // Nested types
 
+    /// <summary>
+    /// Provides cached <see cref="Task{RpcNoWait}"/> helpers for <see cref="RpcNoWait"/>.
+    /// </summary>
     public static class Tasks
     {
         public static readonly Task<RpcNoWait> Completed = Task.FromResult(default(RpcNoWait));
@@ -36,6 +42,9 @@ public readonly partial struct RpcNoWait : IEquatable<RpcNoWait>
         }
     }
 
+    /// <summary>
+    /// Provides cached <see cref="ValueTask{RpcNoWait}"/> helpers for <see cref="RpcNoWait"/>.
+    /// </summary>
     public static class ValueTasks
     {
         public static readonly ValueTask<RpcNoWait> Completed = ValueTaskExt.FromResult(default(RpcNoWait));
@@ -51,6 +60,9 @@ public readonly partial struct RpcNoWait : IEquatable<RpcNoWait>
         }
     }
 
+    /// <summary>
+    /// Provides a pre-completed <see cref="TaskCompletionSource{RpcNoWait}"/> for <see cref="RpcNoWait"/>.
+    /// </summary>
     public static class TaskSources
     {
         public static readonly TaskCompletionSource<RpcNoWait> Completed =

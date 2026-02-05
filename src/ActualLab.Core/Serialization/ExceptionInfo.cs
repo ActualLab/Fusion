@@ -3,6 +3,10 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// A serializable representation of an exception's type and message,
+/// used for cross-process exception propagation.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>

@@ -4,6 +4,9 @@ using Microsoft.Extensions.Configuration;
 
 namespace ActualLab.DependencyInjection;
 
+/// <summary>
+/// Extension methods for <see cref="IConfiguration"/> to bind and validate settings.
+/// </summary>
 public static class ConfigurationExt
 {
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]

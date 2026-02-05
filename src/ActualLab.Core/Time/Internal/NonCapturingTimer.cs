@@ -1,5 +1,9 @@
 namespace ActualLab.Time.Internal;
 
+/// <summary>
+/// Creates <see cref="Timer"/> instances without capturing the current
+/// <see cref="ExecutionContext"/>, avoiding unintended context flow.
+/// </summary>
 public static class NonCapturingTimer
 {
     public static Timer Create(

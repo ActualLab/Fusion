@@ -1,5 +1,8 @@
 namespace ActualLab.Mathematics.Internal;
 
+/// <summary>
+/// <see cref="Arithmetics{T}"/> implementation for <see cref="TimeSpan"/>.
+/// </summary>
 public sealed class TimeSpanArithmetics : Arithmetics<TimeSpan>
 {
     public TimeSpanArithmetics() => One = TimeSpan.FromSeconds(1);

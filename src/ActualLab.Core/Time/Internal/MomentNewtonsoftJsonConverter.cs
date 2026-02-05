@@ -2,6 +2,9 @@ using Newtonsoft.Json;
 
 namespace ActualLab.Time.Internal;
 
+/// <summary>
+/// Newtonsoft.Json converter for <see cref="Moment"/>.
+/// </summary>
 public class MomentNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<Moment>
 {
     public override void WriteJson(

@@ -6,8 +6,15 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Interception;
 
+/// <summary>
+/// An interceptor for remote compute services that delegates calls to either
+/// the local compute method handler or the RPC interceptor.
+/// </summary>
 public class RemoteComputeServiceInterceptor : ComputeServiceInterceptor
 {
+    /// <summary>
+    /// Configuration options for <see cref="RemoteComputeServiceInterceptor"/>.
+    /// </summary>
     public new record Options : ComputeServiceInterceptor.Options
     {
         public static new Options Default { get; set; } = new();

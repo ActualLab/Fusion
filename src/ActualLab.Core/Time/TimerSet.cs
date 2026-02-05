@@ -1,5 +1,8 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// Options for <see cref="TimerSet{TTimer}"/>.
+/// </summary>
 public record TimerSetOptions
 {
     public static readonly TickSource DefaultTickSource = new(TimeSpan.FromSeconds(1));
@@ -11,6 +14,10 @@ public record TimerSetOptions
     public TimeSpan Quanta => TickSource.Period;
 }
 
+/// <summary>
+/// A priority-based timer set backed by a radix heap, supporting add, update,
+/// and remove operations with quantized time resolution.
+/// </summary>
 public sealed class TimerSet<TTimer> : WorkerBase
     where TTimer : notnull
 {

@@ -2,6 +2,9 @@ using Newtonsoft.Json;
 
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// A Newtonsoft.Json converter that serializes <see cref="Session"/> as its string identifier.
+/// </summary>
 public class SessionNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<Session>
 {
     public override void WriteJson(

@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// Exposes internal <see cref="Computed"/> operations as public static methods
+/// for use by framework internals.
+/// </summary>
 public static partial class ComputedImpl
 {
     // TrySetOutput

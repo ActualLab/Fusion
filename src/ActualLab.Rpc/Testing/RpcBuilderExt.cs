@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Testing;
 
+/// <summary>
+/// Extension methods for <see cref="RpcBuilder"/> that register <see cref="RpcTestClient"/> for in-memory testing.
+/// </summary>
 public static class RpcBuilderExt
 {
     public static RpcBuilder AddTestClient(

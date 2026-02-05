@@ -1,5 +1,8 @@
 namespace ActualLab.Versioning;
 
+/// <summary>
+/// Exception thrown when a version does not match the expected version.
+/// </summary>
 #pragma warning disable SYSLIB0051
 
 [Serializable]

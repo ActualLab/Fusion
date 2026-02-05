@@ -4,6 +4,11 @@ using ActualLab.IO;
 namespace ActualLab.Generators;
 
 // Thread-safe!
+
+/// <summary>
+/// A thread-safe generator that produces random strings
+/// from a configurable alphabet using cryptographic randomness.
+/// </summary>
 public class RandomStringGenerator : Generator<string>, IDisposable
 {
     public static readonly string DefaultAlphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";

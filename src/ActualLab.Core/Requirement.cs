@@ -3,6 +3,9 @@ using ActualLab.Requirements;
 
 namespace ActualLab;
 
+/// <summary>
+/// Base class for requirements that validate values and produce errors on failure.
+/// </summary>
 public abstract record Requirement
 {
     public abstract bool IsSatisfiedUntyped([NotNullWhen(true)] object? value);
@@ -19,6 +22,9 @@ public abstract record Requirement
         => new(validator);
 }
 
+/// <summary>
+/// Strongly typed requirement that validates values of type <typeparamref name="T"/>.
+/// </summary>
 public abstract record Requirement<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
     : Requirement

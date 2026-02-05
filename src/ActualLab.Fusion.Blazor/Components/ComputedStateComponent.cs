@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Base class for Blazor components whose state is automatically computed
+/// via Fusion, with optimized parameter-change and render-point handling.
+/// </summary>
 public abstract partial class ComputedStateComponent : StatefulComponentBase
 {
     protected ComputedStateComponentOptions Options { get; set; } = DefaultOptions;

@@ -1,5 +1,8 @@
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Thrown when the maximum number of retry attempts has been exceeded.
+/// </summary>
 [Serializable]
 public class RetryLimitExceededException : Exception
 {

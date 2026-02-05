@@ -4,6 +4,10 @@ using MessagePack;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// A high-resolution timestamp based on the CPU performance counter,
+/// suitable for measuring elapsed time with minimal overhead.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable, MessagePackFormatter(typeof(CpuTimestampMessagePackFormatter))]
 public readonly partial record struct CpuTimestamp(
@@ -63,6 +67,9 @@ public readonly partial record struct CpuTimestamp(
 
     // Nested types
 
+    /// <summary>
+    /// Holds performance counter frequency and tick duration constants.
+    /// </summary>
     private static class Constants
     {
         // ReSharper disable once MemberHidesStaticFromOuterClass

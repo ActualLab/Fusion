@@ -2,6 +2,10 @@ using System.Buffers;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A list-like struct backed by <see cref="ArrayPool{T}.Shared"/> that typically requires
+/// zero allocations. Designed for use as a temporary buffer in enumeration scenarios.
+/// </summary>
 // List-like struct that typically requires zero allocations
 // (it relies on ArrayPool<T>.Shared & disposes its buffer);
 // it is supposed to be used as a temp. buffer in various

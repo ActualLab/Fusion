@@ -2,12 +2,20 @@ namespace ActualLab.Collections;
 
 #pragma warning disable CA1710
 
+/// <summary>
+/// A read-only view of a thread-safe mutable list backed by an
+/// <see cref="ImmutableList{T}"/>.
+/// </summary>
 public interface IReadOnlyMutableList<T> : IReadOnlyCollection<T>
 {
     public ImmutableList<T> Items { get; }
     public event Action? Changed;
 }
 
+/// <summary>
+/// A thread-safe mutable list backed by an <see cref="ImmutableList{T}"/>
+/// with atomic update operations and change notifications.
+/// </summary>
 // ReSharper disable once PossibleInterfaceMemberAmbiguity
 public interface IMutableList<T> : IReadOnlyMutableList<T>, IList<T>
 {
@@ -19,6 +27,10 @@ public interface IMutableList<T> : IReadOnlyMutableList<T>, IList<T>
     public bool Update<TState>(TState state, Func<TState, ImmutableList<T>, ImmutableList<T>> updater);
 }
 
+/// <summary>
+/// Default implementation of <see cref="IMutableList{T}"/> that wraps an
+/// <see cref="ImmutableList{T}"/> with lock-based thread safety.
+/// </summary>
 public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
 {
 #if NET9_0_OR_GREATER

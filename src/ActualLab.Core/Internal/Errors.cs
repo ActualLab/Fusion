@@ -1,5 +1,8 @@
 namespace ActualLab.Internal;
 
+/// <summary>
+/// Factory methods for creating common framework exceptions.
+/// </summary>
 public static class Errors
 {
     public static Exception MustBeClass(Type type, string? argumentName = null)

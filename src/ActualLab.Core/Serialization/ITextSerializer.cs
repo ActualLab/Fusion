@@ -1,5 +1,9 @@
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Defines a contract for text-based serialization, extending <see cref="IByteSerializer"/>
+/// with string and char-memory read/write support.
+/// </summary>
 public interface ITextSerializer : IByteSerializer
 {
     public bool PreferStringApi { get; }
@@ -12,6 +16,9 @@ public interface ITextSerializer : IByteSerializer
     public new ITextSerializer<T> ToTyped<T>(Type? serializedType = null);
 }
 
+/// <summary>
+/// Defines a contract for text-based serialization of <typeparamref name="T"/>.
+/// </summary>
 public interface ITextSerializer<T> : IByteSerializer<T>
 {
     public bool PreferStringApi { get; }

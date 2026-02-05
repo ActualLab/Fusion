@@ -5,6 +5,10 @@ using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Entity Framework entity representing a session record in the database,
+/// including authentication state and metadata.
+/// </summary>
 [Table("_Sessions")]
 [Index(nameof(CreatedAt), nameof(IsSignOutForced))]
 [Index(nameof(LastSeenAt), nameof(IsSignOutForced))]

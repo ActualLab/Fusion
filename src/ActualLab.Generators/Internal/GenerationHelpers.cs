@@ -3,6 +3,10 @@ using System.Reflection;
 namespace ActualLab.Generators.Internal;
 using static SyntaxFactory;
 
+/// <summary>
+/// Provides Roslyn syntax factory helpers, type name constants, and utility methods
+/// for generating proxy class source code.
+/// </summary>
 public static class GenerationHelpers
 {
     public const string SystemReactiveNs = "System.Reactive";

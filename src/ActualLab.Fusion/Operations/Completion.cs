@@ -3,17 +3,29 @@ using ActualLab.Fusion.Operations.Internal;
 
 namespace ActualLab.Fusion.Operations;
 
+/// <summary>
+/// A system command representing the completion phase of an operation.
+/// </summary>
 public interface ICompletion : ISystemCommand, IBackendCommand
 {
     public Operation Operation { get; }
 }
 
+/// <summary>
+/// A strongly-typed <see cref="ICompletion"/> associated with a specific command type.
+/// </summary>
 public interface ICompletion<TCommand> : ICompletion
     where TCommand : class, ICommand;
 
+/// <summary>
+/// Default implementation of <see cref="ICompletion{TCommand}"/> carrying the completed operation.
+/// </summary>
 public record Completion<TCommand>(Operation Operation) : ICompletion<TCommand>
     where TCommand : class, ICommand;
 
+/// <summary>
+/// Factory for creating <see cref="ICompletion"/> instances from an <see cref="Operation"/>.
+/// </summary>
 public static class Completion
 {
     // This is just to ensure the constructor accepting ICommand is "used",

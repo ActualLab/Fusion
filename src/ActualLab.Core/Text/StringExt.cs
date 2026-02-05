@@ -2,6 +2,9 @@ namespace ActualLab.Text;
 
 #pragma warning disable MA0021
 
+/// <summary>
+/// Extension methods for <see cref="string"/> providing hashing and suffix trimming.
+/// </summary>
 public static class StringExt
 {
     // GetXxxHashCode

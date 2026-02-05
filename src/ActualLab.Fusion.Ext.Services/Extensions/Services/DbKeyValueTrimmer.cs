@@ -4,11 +4,17 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
+/// <summary>
+/// A background worker that periodically removes expired key-value entries from the database.
+/// </summary>
 public class DbKeyValueTrimmer<TDbContext,
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbKeyValue> : DbShardWorkerBase<TDbContext>
     where TDbContext : DbContext
     where TDbKeyValue : DbKeyValue, new()
 {
+    /// <summary>
+    /// Configuration options for <see cref="DbKeyValueTrimmer{TDbContext, TDbKeyValue}"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Rpc.Caching;
 
+/// <summary>
+/// Represents a cached RPC response value containing serialized data and an optional content hash.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]

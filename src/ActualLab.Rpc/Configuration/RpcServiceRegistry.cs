@@ -5,6 +5,9 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Registry of all RPC service definitions, supporting lookup by type, name, and method resolution.
+/// </summary>
 public class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcServiceDef>
 {
     private readonly Dictionary<Type, RpcServiceDef> _services = new();

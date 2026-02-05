@@ -1,5 +1,8 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Extension methods for <see cref="ICollection{T}"/>.
+/// </summary>
 public static class CollectionExt
 {
     // AddRange

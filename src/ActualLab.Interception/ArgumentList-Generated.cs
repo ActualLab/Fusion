@@ -139,6 +139,9 @@ public abstract partial record ArgumentList
     public virtual object? Get9Untyped() => throw new IndexOutOfRangeException();
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 1 argument.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -152,6 +155,9 @@ public abstract record ArgumentList1 : ArgumentList
         => new Type?[1];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 1 strongly-typed argument.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -439,6 +445,9 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 1 argument stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -728,6 +737,9 @@ public sealed record ArgumentListS1 : ArgumentList1
     }
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 2 arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -741,6 +753,9 @@ public abstract record ArgumentList2 : ArgumentList
         => new Type?[2];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 2 strongly-typed arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -1097,6 +1112,9 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 2 arguments stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -1452,6 +1470,9 @@ public sealed record ArgumentListS2 : ArgumentList2
     }
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 3 arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -1465,6 +1486,9 @@ public abstract record ArgumentList3 : ArgumentList
         => new Type?[3];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 3 strongly-typed arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -1889,6 +1913,9 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 3 arguments stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -2309,6 +2336,9 @@ public sealed record ArgumentListS3 : ArgumentList3
     }
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 4 arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -2322,6 +2352,9 @@ public abstract record ArgumentList4 : ArgumentList
         => new Type?[4];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 4 strongly-typed arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -2814,6 +2847,9 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 4 arguments stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -3299,6 +3335,9 @@ public sealed record ArgumentListS4 : ArgumentList4
     }
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 5 arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -3312,6 +3351,9 @@ public abstract record ArgumentList5 : ArgumentList
         => new Type?[5];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 5 arguments (4 generic + 1 simple).
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -3874,6 +3916,9 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 5 arguments stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -4424,6 +4469,9 @@ public sealed record ArgumentListS5 : ArgumentList5
     }
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 6 arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -4437,6 +4485,9 @@ public abstract record ArgumentList6 : ArgumentList
         => new Type?[6];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 6 arguments (4 generic + 2 simple).
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -5064,6 +5115,9 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 6 arguments stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -5679,6 +5733,9 @@ public sealed record ArgumentListS6 : ArgumentList6
     }
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 7 arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -5692,6 +5749,9 @@ public abstract record ArgumentList7 : ArgumentList
         => new Type?[7];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 7 arguments (4 generic + 3 simple).
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -6384,6 +6444,9 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 7 arguments stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -7064,6 +7127,9 @@ public sealed record ArgumentListS7 : ArgumentList7
     }
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 8 arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -7077,6 +7143,9 @@ public abstract record ArgumentList8 : ArgumentList
         => new Type?[8];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 8 arguments (4 generic + 4 simple).
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -7834,6 +7903,9 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 8 arguments stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -8579,6 +8651,9 @@ public sealed record ArgumentListS8 : ArgumentList8
     }
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 9 arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -8592,6 +8667,9 @@ public abstract record ArgumentList9 : ArgumentList
         => new Type?[9];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 9 arguments (4 generic + 5 simple).
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -9414,6 +9492,9 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 9 arguments stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -10224,6 +10305,9 @@ public sealed record ArgumentListS9 : ArgumentList9
     }
 }
 
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with 10 arguments.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -10237,6 +10321,9 @@ public abstract record ArgumentList10 : ArgumentList
         => new Type?[10];
 }
 
+/// <summary>
+/// A generic <see cref="ArgumentList"/> with 10 arguments (4 generic + 6 simple).
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -11124,6 +11211,9 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
     }
 }
 
+/// <summary>
+/// A non-generic (simple) <see cref="ArgumentList"/> with 10 arguments stored as objects.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]

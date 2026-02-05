@@ -1,7 +1,13 @@
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// A background worker that periodically reports user presence via <see cref="IAuth.UpdatePresence"/>.
+/// </summary>
 public class PresenceReporter : WorkerBase
 {
+    /// <summary>
+    /// Configuration options for <see cref="PresenceReporter"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

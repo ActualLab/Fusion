@@ -3,6 +3,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Extension methods for <see cref="Expression"/> providing conversion and
+/// member access helpers.
+/// </summary>
 public static class ExpressionExt
 {
     public static Expression PropertyOrField(Expression source, MemberInfo propertyOrField)

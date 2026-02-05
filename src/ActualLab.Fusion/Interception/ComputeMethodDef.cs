@@ -5,6 +5,10 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Interception;
 
+/// <summary>
+/// Describes a compute method, including its <see cref="ComputedOptions"/>
+/// and optional consolidation configuration.
+/// </summary>
 public sealed class ComputeMethodDef : MethodDef
 {
     public ComputedOptions ComputedOptions { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = ComputedOptions.Default;

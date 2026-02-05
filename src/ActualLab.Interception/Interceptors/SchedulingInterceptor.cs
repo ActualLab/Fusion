@@ -2,8 +2,15 @@ using ActualLab.Concurrency;
 
 namespace ActualLab.Interception.Interceptors;
 
+/// <summary>
+/// An interceptor that schedules async method invocations via a
+/// <see cref="TaskFactory"/> resolved from the proxy instance.
+/// </summary>
 public sealed class SchedulingInterceptor : Interceptor
 {
+    /// <summary>
+    /// Configuration options for <see cref="SchedulingInterceptor"/>.
+    /// </summary>
     public new record Options : Interceptor.Options
     {
         public static Options Default { get; set; } = new();

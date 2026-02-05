@@ -3,6 +3,9 @@ using CommunityToolkit.HighPerformance;
 
 namespace ActualLab.Text;
 
+/// <summary>
+/// Extension methods for computing XxHash3 hashes over character spans.
+/// </summary>
 public static class CharSpanExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

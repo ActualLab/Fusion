@@ -1,5 +1,8 @@
 namespace ActualLab.CommandR.Internal;
 
+/// <summary>
+/// Factory methods for commander-related exceptions.
+/// </summary>
 public static class Errors
 {
     public static Exception CommandResultTypeMismatch(Type expectedType, Type actualType)

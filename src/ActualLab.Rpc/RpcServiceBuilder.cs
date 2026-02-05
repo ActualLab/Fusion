@@ -3,6 +3,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Configures an individual RPC service's mode, name, and DI registration within <see cref="RpcBuilder"/>.
+/// </summary>
 public class RpcServiceBuilder
 {
     public RpcBuilder Rpc { get; }

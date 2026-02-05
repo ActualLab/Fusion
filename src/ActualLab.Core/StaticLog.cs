@@ -2,6 +2,9 @@ using ActualLab.OS;
 
 namespace ActualLab;
 
+/// <summary>
+/// Provides globally accessible <see cref="ILogger"/> instances via a shared <see cref="ILoggerFactory"/>.
+/// </summary>
 public static class StaticLog
 {
 #if NET9_0_OR_GREATER

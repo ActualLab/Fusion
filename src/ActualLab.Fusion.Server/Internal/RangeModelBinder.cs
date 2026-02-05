@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace ActualLab.Fusion.Server.Internal;
 
+/// <summary>
+/// An <see cref="IModelBinder"/> that binds <see cref="Range{T}"/> values from request data.
+/// </summary>
 public class RangeModelBinder : IModelBinder
 {
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume server-side code is fully preserved")]

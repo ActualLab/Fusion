@@ -5,6 +5,9 @@ using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc.Clients;
 
+/// <summary>
+/// An <see cref="RpcClient"/> implementation that establishes connections via WebSockets.
+/// </summary>
 public class RpcWebSocketClient(IServiceProvider services)
     : RpcClient(services)
 {

@@ -2,6 +2,10 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// Abstract base class for Redis pub/sub subscribers, managing subscription
+/// lifecycle, timeout handling, and message dispatch.
+/// </summary>
 public abstract class RedisSubBase : ProcessorBase
 {
     public static TimeSpan DefaultSubscribeTimeout { get; set; } = TimeSpan.FromSeconds(10);

@@ -2,6 +2,10 @@ using System.Buffers;
 
 namespace ActualLab.Trimming;
 
+/// <summary>
+/// A <see cref="CodeKeeper"/> that retains serializable types and their serialization infrastructure
+/// to prevent trimming.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]

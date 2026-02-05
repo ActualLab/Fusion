@@ -1,5 +1,9 @@
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceProvider"/> to resolve
+/// <see cref="TransiencyResolver"/> instances.
+/// </summary>
 public static class ServiceProviderExt
 {
     public static TransiencyResolver TransiencyResolver(this IServiceProvider services)

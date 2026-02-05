@@ -2,6 +2,10 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
+/// <summary>
+/// Provides metadata about the <see cref="DbHintFormatterOptionsExtension"/>
+/// for the EF Core options infrastructure.
+/// </summary>
 public sealed class DbHintFormatterExtensionInfo(IDbContextOptionsExtension extension)
     : DbContextOptionsExtensionInfo(extension)
 {

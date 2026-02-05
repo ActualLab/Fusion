@@ -6,6 +6,10 @@ namespace ActualLab.Fusion.Client.Internal;
 
 #pragma warning disable RCS1210, MA0022
 
+/// <summary>
+/// An inbound RPC call that tracks the associated <see cref="Computed"/> and sends
+/// invalidation notifications back to the caller.
+/// </summary>
 public abstract class RpcInboundComputeCall : RpcInboundCall
 {
     public override string DebugTypeName => "<=";
@@ -82,6 +86,9 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
     }
 }
 
+/// <summary>
+/// A strongly-typed <see cref="RpcInboundComputeCall"/> for a specific result type.
+/// </summary>
 public sealed class RpcInboundComputeCall<TResult>(RpcInboundContext context)
     : RpcInboundComputeCall(context)
 {

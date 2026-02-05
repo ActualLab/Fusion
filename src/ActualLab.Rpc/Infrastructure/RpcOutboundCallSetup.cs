@@ -4,6 +4,9 @@ using ActualLab.Rpc.Internal;
 namespace ActualLab.Rpc.Infrastructure;
 
 
+/// <summary>
+/// Thread-local setup for the next outbound RPC call, controlling peer, routing, and cache capture.
+/// </summary>
 public sealed class RpcOutboundCallSetup
 {
     [field: ThreadStatic]
@@ -67,6 +70,9 @@ public sealed class RpcOutboundCallSetup
 
     // Nested types
 
+    /// <summary>
+    /// RAII scope that saves and restores the ambient <see cref="RpcOutboundCallSetup"/> on disposal.
+    /// </summary>
     public readonly struct Scope : IDisposable
     {
         private readonly RpcOutboundCallSetup? _oldValue;

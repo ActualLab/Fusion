@@ -5,6 +5,9 @@ using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc.Clients;
 
+/// <summary>
+/// Configuration options for <see cref="RpcWebSocketClient"/>, including URL resolution and transport setup.
+/// </summary>
 public record RpcWebSocketClientOptions
 {
     public static RpcWebSocketClientOptions Default { get; set; } = new();

@@ -2,12 +2,18 @@ namespace ActualLab;
 
 #pragma warning disable CA2002, RCS1059
 
+/// <summary>
+/// Defines the contract for a lightweight lazy value holder.
+/// </summary>
 public interface ILazySlim<out TValue>
 {
     public bool HasValue { get; }
     public TValue Value { get; }
 }
 
+/// <summary>
+/// Factory methods for creating <see cref="LazySlim{TValue}"/> instances.
+/// </summary>
 public static class LazySlim
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -39,6 +45,9 @@ public static class LazySlim
         => new(arg0, arg1, factory);
 }
 
+/// <summary>
+/// A lightweight alternative to <see cref="Lazy{T}"/> with double-check locking.
+/// </summary>
 public sealed class LazySlim<TValue> : ILazySlim<TValue>
 {
     private Delegate? _factory;
@@ -90,6 +99,9 @@ public sealed class LazySlim<TValue> : ILazySlim<TValue>
         => $"{GetType().GetName()}({(_factory is null ? Value?.ToString() : "...")})";
 }
 
+/// <summary>
+/// A lightweight lazy value holder that captures one factory argument.
+/// </summary>
 public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
 {
     private Delegate? _factory;
@@ -146,6 +158,9 @@ public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
         => $"{GetType().GetName()}({(_factory is null ? Value?.ToString() : "...")})";
 }
 
+/// <summary>
+/// A lightweight lazy value holder that captures two factory arguments.
+/// </summary>
 public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
 {
     private Delegate? _factory;

@@ -1,6 +1,9 @@
 // ReSharper disable once CheckNamespace
 namespace System.Linq;
 
+/// <summary>
+/// Compatibility extension methods for <see cref="IEnumerable{T}"/> on older target frameworks.
+/// </summary>
 public static class EnumerableCompatExt
 {
 #if NETSTANDARD2_0

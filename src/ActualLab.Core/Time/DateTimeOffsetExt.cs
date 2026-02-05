@@ -1,5 +1,8 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// Extension methods for <see cref="DateTimeOffset"/> providing <see cref="Moment"/> conversion.
+/// </summary>
 public static class DateTimeOffsetExt
 {
 #if !NETSTANDARD2_0

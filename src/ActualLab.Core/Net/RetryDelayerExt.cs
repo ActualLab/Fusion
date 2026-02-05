@@ -1,5 +1,8 @@
 namespace ActualLab.Net;
 
+/// <summary>
+/// Extension methods for <see cref="IRetryDelayer"/>.
+/// </summary>
 public static class RetryDelayerExt
 {
     public static RetryDelay GetDelay(this IRetryDelayer retryDelayer,

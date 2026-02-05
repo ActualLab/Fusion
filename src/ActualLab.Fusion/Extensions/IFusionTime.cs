@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// A compute service that provides auto-invalidating time-related computed values.
+/// </summary>
 public interface IFusionTime : IComputeService
 {
     [ComputeMethod]

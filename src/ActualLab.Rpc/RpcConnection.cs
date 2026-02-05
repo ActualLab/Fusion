@@ -2,6 +2,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Wraps an <see cref="RpcTransport"/> and associated properties for a single RPC connection.
+/// </summary>
 public class RpcConnection(RpcTransport transport, PropertyBag properties) : IAsyncDisposable
 {
     public RpcTransport Transport { get; } = transport;

@@ -4,6 +4,9 @@ namespace ActualLab.Fusion.Extensions;
 
 // Any Moment below is derived with RpcHub.Clock, which is CpuClock
 
+/// <summary>
+/// Represents the raw connection state of an RPC peer.
+/// </summary>
 public abstract record RpcPeerRawState
 {
     public abstract bool IsConnected { get; }
@@ -26,6 +29,9 @@ public abstract record RpcPeerRawState
     }
 }
 
+/// <summary>
+/// Represents the connected state of an RPC peer.
+/// </summary>
 public sealed record RpcPeerRawConnectedState(
     Moment ConnectedAt
 ) : RpcPeerRawState
@@ -34,6 +40,9 @@ public sealed record RpcPeerRawConnectedState(
     public override Moment EnteredAt => ConnectedAt;
 }
 
+/// <summary>
+/// Represents the disconnected state of an RPC peer, including reconnection timing.
+/// </summary>
 public sealed record RpcPeerRawDisconnectedState(
     Moment DisconnectedAt,
     Moment ReconnectsAt, // < Now = tries to reconnect now

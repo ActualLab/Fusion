@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor.Internal;
 
+/// <summary>
+/// Detects whether the Blazor dispatcher supports ExecutionContext flow,
+/// which is needed for propagating <see cref="Computed.Current"/> into dispatched callbacks.
+/// </summary>
 public static class DispatcherInfo
 {
     // MAUI's Blazor doesn't flow ExecutionContext into InvokeAsync,

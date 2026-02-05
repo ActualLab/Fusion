@@ -1,5 +1,8 @@
 namespace ActualLab.Net;
 
+/// <summary>
+/// Represents a computed retry delay including the delay task and when it ends.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct RetryDelay(
     Task Task,

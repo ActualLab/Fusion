@@ -2,6 +2,10 @@ using System.Buffers;
 
 namespace ActualLab.Collections.Internal;
 
+/// <summary>
+/// An <see cref="ArrayOwner{T}"/> variant that clears the array
+/// when returning it to the pool on disposal.
+/// </summary>
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 internal sealed class CleaningArrayOwner<T>(ArrayPool<T> pool, T[] array, int length)
     : ArrayOwner<T>(pool, array, length)

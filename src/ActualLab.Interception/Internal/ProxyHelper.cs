@@ -1,5 +1,8 @@
 namespace ActualLab.Interception.Internal;
 
+/// <summary>
+/// Helper methods for resolving method information on proxy types via reflection.
+/// </summary>
 public static class ProxyHelper
 {
     private static readonly BindingFlags GetMethodInfoBindingFlags =

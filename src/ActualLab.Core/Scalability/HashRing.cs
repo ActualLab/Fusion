@@ -1,5 +1,8 @@
 namespace ActualLab.Scalability;
 
+/// <summary>
+/// A consistent hash ring that maps hash values to a sorted ring of nodes.
+/// </summary>
 public class HashRing<T>
     where T : notnull
 {
@@ -62,6 +65,9 @@ public class HashRing<T>
 
     // Nested types
 
+    /// <summary>
+    /// Compares hash ring items by their hash values for binary search.
+    /// </summary>
     private sealed class ItemComparer : IComparer<(T Value, int Hash)>
     {
         public int Compare((T Value, int Hash) x, (T Value, int Hash) y)

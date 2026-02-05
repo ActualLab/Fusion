@@ -1,5 +1,8 @@
 namespace ActualLab.Conversion.Internal;
 
+/// <summary>
+/// Factory methods for conversion-related exceptions.
+/// </summary>
 public static class Errors
 {
     public static Exception NoConverter(Type sourceType, Type targetType)

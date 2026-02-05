@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Reflection.Internal;
 
+/// <summary>
+/// MessagePack formatter for <see cref="TypeRef"/>.
+/// </summary>
 public sealed class TypeRefMessagePackFormatter : IMessagePackFormatter<TypeRef>
 {
     public void Serialize(ref MessagePackWriter writer, TypeRef value, MessagePackSerializerOptions options)

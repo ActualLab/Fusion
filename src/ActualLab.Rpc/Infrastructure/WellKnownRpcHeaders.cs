@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Defines well-known <see cref="RpcHeaderKey"/> constants for hash, version, and tracing headers.
+/// </summary>
 public static class WellKnownRpcHeaders
 {
     public static readonly RpcHeaderKey Hash = new("#");

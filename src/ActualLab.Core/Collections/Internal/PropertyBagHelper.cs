@@ -1,5 +1,8 @@
 namespace ActualLab.Collections.Internal;
 
+/// <summary>
+/// Helper methods for <see cref="PropertyBag"/> string formatting.
+/// </summary>
 internal static class PropertyBagHelper
 {
     public static string GetToStringArgs(PropertyBagItem[]? items)

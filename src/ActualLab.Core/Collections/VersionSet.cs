@@ -6,6 +6,10 @@ namespace ActualLab.Collections;
 
 #pragma warning disable CA1721
 
+/// <summary>
+/// An immutable, serializable set of scoped <see cref="Version"/> values,
+/// stored as a comma-separated string of scope=version pairs.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record VersionSet(

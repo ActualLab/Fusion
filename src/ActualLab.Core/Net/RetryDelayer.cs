@@ -1,5 +1,9 @@
 namespace ActualLab.Net;
 
+/// <summary>
+/// Default <see cref="IRetryDelayer"/> implementation with configurable delay
+/// sequences and retry limits.
+/// </summary>
 public class RetryDelayer : IRetryDelayer
 {
     private CancellationTokenSource _cancelDelaysCts = new();

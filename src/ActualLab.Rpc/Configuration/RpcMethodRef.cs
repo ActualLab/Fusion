@@ -3,6 +3,9 @@ using MessagePack;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// A serializable reference to an RPC method, identified by its UTF-8 encoded full name and hash code.
+/// </summary>
 [DataContract, MemoryPackable, MessagePackObject]
 public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 {

@@ -14,6 +14,10 @@ using ActualLab.Versioning.Providers;
 
 namespace ActualLab.CommandR;
 
+/// <summary>
+/// A builder for configuring the <see cref="ICommander"/> and registering
+/// command handlers, services, and filters.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2062", Justification = "We assume all command handling code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]

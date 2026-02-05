@@ -7,6 +7,9 @@ namespace ActualLab.Rpc.Infrastructure;
 
 #pragma warning disable RCS1210, MA0022, VSTHRD103
 
+/// <summary>
+/// Represents an inbound RPC call being processed on the server side.
+/// </summary>
 public abstract class RpcInboundCall : RpcCall
 {
     private static readonly ConcurrentDictionary<
@@ -284,6 +287,9 @@ public abstract class RpcInboundCall : RpcCall
     }
 }
 
+/// <summary>
+/// Typed <see cref="RpcInboundCall"/> that sends the result as <typeparamref name="TResult"/>.
+/// </summary>
 public class RpcInboundCall<TResult>(RpcInboundContext context) : RpcInboundCall(context)
 {
     protected override void SendResult()

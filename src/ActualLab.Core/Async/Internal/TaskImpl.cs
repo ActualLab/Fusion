@@ -1,5 +1,8 @@
 namespace ActualLab.Async.Internal;
 
+/// <summary>
+/// Provides low-level access to internal <see cref="Task"/> fields and methods.
+/// </summary>
 public static class TaskImpl
 {
 #if USE_UNSAFE_ACCESSORS

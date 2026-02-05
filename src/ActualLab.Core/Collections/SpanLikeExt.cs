@@ -1,5 +1,9 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Extension methods for span-like types (arrays, spans, immutable arrays,
+/// and read-only lists) providing safe element access.
+/// </summary>
 public static class SpanLikeExt
 {
     // GetValueOrDefault

@@ -6,10 +6,17 @@ using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Fusion.Client.Caching;
 
+/// <summary>
+/// Abstract base class for remote computed caches that handle serialization
+/// and version-based cache invalidation.
+/// </summary>
 public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteComputedCache
 {
     public static RpcCacheKey VersionKey { get; set; } = new("Version", default);
 
+    /// <summary>
+    /// Configuration options for <see cref="RemoteComputedCache"/>.
+    /// </summary>
     public record Options(string Version = "")
     {
         public static Options Default { get; set; } = new();

@@ -7,6 +7,9 @@ namespace ActualLab.Rpc.Infrastructure;
 
 #pragma warning disable CA1721
 
+/// <summary>
+/// Encapsulates the context for sending an outbound RPC call, including headers, routing, and caching.
+/// </summary>
 public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
 {
     [ThreadStatic] private static RpcOutboundContext? _current;
@@ -125,6 +128,9 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
 
     // Nested types
 
+    /// <summary>
+    /// RAII scope that saves and restores the ambient <see cref="RpcOutboundContext"/> on disposal.
+    /// </summary>
     public readonly struct Scope : IDisposable
     {
         private readonly RpcOutboundContext? _oldContext;

@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// A <see cref="ParameterComparer"/> that compares parameters by their <see cref="IHasUuid.Uuid"/>.
+/// </summary>
 public sealed class ByUuidParameterComparer : ParameterComparer
 {
     public static ByUuidParameterComparer Instance { get; } = new();

@@ -1,5 +1,8 @@
 namespace ActualLab.Mathematics.Internal;
 
+/// <summary>
+/// <see cref="Arithmetics{T}"/> implementation for <see cref="int"/>.
+/// </summary>
 public sealed class IntArithmetics : Arithmetics<int>
 {
     public IntArithmetics() => One = 1;

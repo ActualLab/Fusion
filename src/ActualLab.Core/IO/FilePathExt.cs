@@ -2,6 +2,9 @@ using System.Text;
 
 namespace ActualLab.IO;
 
+/// <summary>
+/// Extension methods for <see cref="FilePath"/> providing file/directory enumeration and text I/O.
+/// </summary>
 public static class FilePathExt
 {
     // GetXxxInfo

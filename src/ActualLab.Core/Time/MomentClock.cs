@@ -2,6 +2,10 @@ using System.Reactive.PlatformServices;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// Abstract base class for clocks that produce <see cref="Moment"/> timestamps
+/// and support time conversion and delay operations.
+/// </summary>
 public abstract class MomentClock : ISystemClock
 {
     public abstract Moment Now { get; }

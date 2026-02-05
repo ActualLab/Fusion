@@ -3,6 +3,10 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Stores authentication-related information for a session, including the
+/// authenticated identity, user ID, and forced sign-out status.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public partial record SessionAuthInfo : IRequirementTarget
 {

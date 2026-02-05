@@ -9,8 +9,14 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.WebSockets;
 
+/// <summary>
+/// An <see cref="RpcTransport"/> implementation that sends and receives RPC messages over a WebSocket connection.
+/// </summary>
 public sealed class RpcWebSocketTransport : RpcTransport
 {
+    /// <summary>
+    /// Configuration options for <see cref="RpcWebSocketTransport"/>.
+    /// </summary>
     public record Options
     {
         public static readonly Options Default = new();
@@ -31,7 +37,14 @@ public sealed class RpcWebSocketTransport : RpcTransport
         };
     }
 
+    /// <summary>
+    /// Delegate that attempts to deserialize a single inbound RPC message from a byte array frame.
+    /// </summary>
     private delegate RpcInboundMessage? TryDeserializeMessageFunc(byte[] array, ref int offset, int totalLength);
+
+    /// <summary>
+    /// Delegate that serializes an outbound RPC message into a byte buffer.
+    /// </summary>
     private delegate void SerializeMessageFunc(RpcOutboundMessage message, ArrayPoolBuffer<byte> buffer);
 
     // Text message delimiters (matches master branch WebSocketChannelImpl)
@@ -480,6 +493,9 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
     // Nested types
 
+    /// <summary>
+    /// OpenTelemetry metrics for <see cref="RpcWebSocketTransport"/> operations.
+    /// </summary>
     public class MeterSet
     {
         public readonly ObservableCounter<long> ChannelCounter;

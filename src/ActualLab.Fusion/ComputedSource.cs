@@ -7,6 +7,10 @@ namespace ActualLab.Fusion;
 #pragma warning disable CA1721
 #pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
 
+/// <summary>
+/// Defines the contract for a self-contained computed value source that acts as both
+/// its own <see cref="IComputeFunction"/> and <see cref="ComputedInput"/>.
+/// </summary>
 public interface IComputedSource : IComputeFunction
 {
     public ComputedOptions ComputedOptions { get; }
@@ -17,11 +21,19 @@ public interface IComputedSource : IComputeFunction
     public event Action<Computed>? Updated;
 }
 
+/// <summary>
+/// A strongly-typed <see cref="IComputedSource"/> that produces <see cref="ComputedSourceComputed{T}"/> instances.
+/// </summary>
+/// <typeparam name="T">The type of the computed value.</typeparam>
 public interface IComputedSource<T> : IComputedSource
 {
     public new ComputedSourceComputed<T> Computed { get; }
 }
 
+/// <summary>
+/// Base class for computed value sources that combine <see cref="ComputedInput"/>
+/// and <see cref="IComputeFunction"/> into a single self-contained unit.
+/// </summary>
 public abstract class ComputedSource : ComputedInput, IComputedSource
 {
     private volatile Func<ComputedSource, CancellationToken, Task> _computer;
@@ -186,6 +198,10 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
     }
 }
 
+/// <summary>
+/// A strongly-typed <see cref="ComputedSource"/> that produces <see cref="Computed{T}"/> values.
+/// </summary>
+/// <typeparam name="T">The type of the computed value.</typeparam>
 public sealed class ComputedSource<T> : ComputedSource, IComputedSource<T>
 {
     public override Type OutputType => typeof(T);

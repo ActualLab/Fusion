@@ -1,7 +1,15 @@
 namespace ActualLab.Interception.Interceptors;
 
+/// <summary>
+/// An interceptor that resolves service instances via dependency injection,
+/// enabling typed factory interfaces to create objects through
+/// <see cref="ActivatorUtilities"/>.
+/// </summary>
 public class TypedFactoryInterceptor : Interceptor
 {
+    /// <summary>
+    /// Configuration options for <see cref="TypedFactoryInterceptor"/>.
+    /// </summary>
     public new record Options : Interceptor.Options
     {
         public static Options Default { get; set; } = new();

@@ -1,5 +1,8 @@
 namespace ActualLab.Concurrency;
 
+/// <summary>
+/// Extension methods for <see cref="Interlocked"/> providing atomic compare-and-swap patterns.
+/// </summary>
 public static class InterlockedExt
 {
     public static long ExchangeIfGreater(ref int location, int value)

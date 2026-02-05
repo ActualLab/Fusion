@@ -1,5 +1,8 @@
 namespace ActualLab.Text;
 
+/// <summary>
+/// Extension methods for converting byte arrays and memory to <see cref="ByteString"/>.
+/// </summary>
 public static class ByteStringExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

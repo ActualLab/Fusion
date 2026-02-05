@@ -2,6 +2,10 @@
 
 namespace ActualLab.Testing;
 
+/// <summary>
+/// An <see cref="ITestOutputHelper"/> implementation that writes to the console,
+/// useful when running tests outside of xUnit's captured output context.
+/// </summary>
 public class ConsoleTestOutputHelper : ITestOutputHelper
 {
     public void WriteLine(string message)

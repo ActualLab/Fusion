@@ -4,8 +4,15 @@ using ActualLab.Fusion.UI;
 
 namespace ActualLab.Fusion.Blazor.Authentication;
 
+/// <summary>
+/// Blazor <see cref="AuthenticationStateProvider"/> backed by Fusion's <see cref="IAuth"/>
+/// that automatically updates when the user's authentication state changes.
+/// </summary>
 public sealed class AuthStateProvider : AuthenticationStateProvider, IDisposable
 {
+    /// <summary>
+    /// Configuration options for <see cref="AuthStateProvider"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

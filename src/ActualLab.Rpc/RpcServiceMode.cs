@@ -2,6 +2,9 @@ namespace ActualLab.Rpc;
 
 #pragma warning disable RCS1130
 
+/// <summary>
+/// Defines how an RPC service is registered and accessed (local, server, client, or distributed).
+/// </summary>
 public enum RpcServiceMode
 {
     /// <summary>
@@ -44,6 +47,9 @@ public enum RpcServiceMode
     ServerAndClient = Server | Client,
 }
 
+/// <summary>
+/// Extension methods for <see cref="RpcServiceMode"/>.
+/// </summary>
 public static class RpcServiceModeExt
 {
     public static RpcServiceMode Or(this RpcServiceMode mode, RpcServiceMode defaultMode)

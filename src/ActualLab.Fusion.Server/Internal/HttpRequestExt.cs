@@ -4,6 +4,9 @@ using Microsoft.Net.Http.Headers;
 
 namespace ActualLab.Fusion.Server.Internal;
 
+/// <summary>
+/// Extension methods for <see cref="HttpRequest"/> to check JSON content types.
+/// </summary>
 public static class HttpRequestExt
 {
     public const string JsonContentType = "application/json";

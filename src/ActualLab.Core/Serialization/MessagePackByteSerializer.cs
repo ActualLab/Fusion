@@ -6,6 +6,9 @@ using Errors = ActualLab.Serialization.Internal.Errors;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// An <see cref="IByteSerializer"/> implementation backed by MessagePack.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class MessagePackByteSerializer(MessagePackSerializerOptions options) : IByteSerializer
 {
@@ -104,6 +107,9 @@ public class MessagePackByteSerializer(MessagePackSerializerOptions options) : I
             this);
 }
 
+/// <summary>
+/// A typed <see cref="MessagePackByteSerializer"/> that serializes values of type <typeparamref name="T"/>.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class MessagePackByteSerializer<T>(MessagePackSerializerOptions options, Type serializedType)
     : MessagePackByteSerializer(options), IByteSerializer<T>

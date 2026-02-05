@@ -5,6 +5,9 @@ namespace ActualLab.Fusion.Server.Internal;
 
 #pragma warning disable CA2255
 
+/// <summary>
+/// Module initializer that applies Fusion server RPC option overrides on startup.
+/// </summary>
 internal static class FusionServerModuleInitializer
 {
     static FusionServerModuleInitializer()

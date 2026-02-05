@@ -6,6 +6,9 @@ using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc.Serialization;
 
+/// <summary>
+/// Compact variant of <see cref="RpcByteMessageSerializerV5"/> that transmits method references as hash codes only.
+/// </summary>
 public class RpcByteMessageSerializerV5Compact(RpcPeer peer) : RpcByteMessageSerializerV5(peer)
 {
     public override RpcInboundMessage Read(ReadOnlyMemory<byte> data, out int readLength)

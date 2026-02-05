@@ -5,6 +5,10 @@ using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// A Web API action filter that replaces default sessions in
+/// <see cref="ISessionCommand"/> arguments with the resolved session.
+/// </summary>
 public sealed class UseDefaultSessionAttribute : ActionFilterAttribute
 {
     public override void OnActionExecuting(HttpActionContext actionContext)

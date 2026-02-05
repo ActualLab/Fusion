@@ -4,6 +4,9 @@ using Cysharp.Text;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 
+/// <summary>
+/// Serializes and deserializes .NET type references as UTF-8 comment-delimited strings for polymorphic RPC arguments.
+/// </summary>
 public static class TextTypeSerializer
 {
     private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache = new();

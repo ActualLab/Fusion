@@ -2,6 +2,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Represents the server side of an RPC peer connection, waiting for incoming connections.
+/// </summary>
 public class RpcServerPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions = null)
     : RpcPeer(hub, peerRef, versions)
 {

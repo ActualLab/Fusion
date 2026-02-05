@@ -10,6 +10,9 @@ namespace ActualLab.Rpc;
 
 #pragma warning disable CA2214 // Do not call overridable methods in constructors
 
+/// <summary>
+/// Describes a single RPC method, including its name, kind, serialization, timeouts, and call pipeline.
+/// </summary>
 public partial class RpcMethodDef : MethodDef
 {
     public static string CommandInterfaceFullName { get; set; } = "ActualLab.CommandR.ICommand";

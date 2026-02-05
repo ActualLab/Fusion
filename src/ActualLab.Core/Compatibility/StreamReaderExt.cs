@@ -3,6 +3,9 @@
 // ReSharper disable once CheckNamespace
 namespace System.IO;
 
+/// <summary>
+/// Compatibility extension methods for <see cref="StreamReader"/> on older target frameworks.
+/// </summary>
 public static class StreamReaderExt
 {
     public static Task<string?> ReadLineAsync(this StreamReader streamReader, CancellationToken cancellationToken)

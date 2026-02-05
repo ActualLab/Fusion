@@ -1,5 +1,9 @@
 namespace ActualLab.Collections.Slim;
 
+/// <summary>
+/// A compact <see cref="IRefHashSetSlim{T}"/> that stores up to 2 reference items inline
+/// before falling back to a <see cref="HashSet{T}"/>.
+/// </summary>
 public struct RefHashSetSlim2<T> : IRefHashSetSlim<T>
     where T : class
 {

@@ -2,6 +2,9 @@ using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Defines a named RPC serialization format with its argument and message serializer factories.
+/// </summary>
 public sealed class RpcSerializationFormat(
     string key,
     Func<RpcArgumentSerializer> argumentSerializerFactory,

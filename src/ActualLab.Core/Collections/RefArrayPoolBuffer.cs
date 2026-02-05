@@ -4,6 +4,10 @@ using CommunityToolkit.HighPerformance;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A ref struct version of <see cref="ArrayPoolBuffer{T}"/> that avoids heap allocations.
+/// Use <c>Release()</c> instead of <c>Dispose()</c>.
+/// </summary>
 // Ref struct version of ArrayPoolBuffer<T> - no allocations for its use.
 // Use Release() instead of Dispose().
 [StructLayout(LayoutKind.Auto)]

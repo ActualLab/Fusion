@@ -4,6 +4,10 @@ namespace ActualLab.Plugins;
 
 // Must be used as the only argument for plugin constructor invoked when
 // PluginInfo/PluginSetInfo queries for plugin capabilities and dependencies.
+
+/// <summary>
+/// Extracts dependency and capability metadata from plugin types via reflection.
+/// </summary>
 public interface IPluginInfoProvider
 {
     /// <summary>
@@ -23,6 +27,9 @@ public interface IPluginInfoProvider
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type pluginType);
 }
 
+/// <summary>
+/// Default <see cref="IPluginInfoProvider"/> that instantiates plugins to query their metadata.
+/// </summary>
 public class PluginInfoProvider : IPluginInfoProvider
 {
     private readonly ConcurrentDictionary<Type, LazySlim<Type, object?>> _pluginCache

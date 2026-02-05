@@ -13,4 +13,7 @@ using Rpc;
 /// </remarks>
 public interface IBackendCommand : ICommand;
 
+/// <summary>
+/// A generic variant of <see cref="IBackendCommand"/> that produces a typed result.
+/// </summary>
 public interface IBackendCommand<TResult> : ICommand<TResult>, IBackendCommand;

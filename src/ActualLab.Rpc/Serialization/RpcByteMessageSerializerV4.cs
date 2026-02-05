@@ -8,6 +8,9 @@ namespace ActualLab.Rpc.Serialization;
 
 #pragma warning disable MA0069
 
+/// <summary>
+/// V4 binary message serializer using LVar-encoded argument data length prefix.
+/// </summary>
 public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer(peer)
 {
     public int MaxArgumentDataSize { get; init; } = Defaults.MaxArgumentDataSize;

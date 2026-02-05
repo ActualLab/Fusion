@@ -2,6 +2,9 @@ using System.Reactive.Linq;
 
 namespace ActualLab.IO;
 
+/// <summary>
+/// Extension methods for <see cref="FileSystemWatcher"/> providing reactive and async event access.
+/// </summary>
 public static class FileSystemWatcherExt
 {
     public static IObservable<FileSystemEventArgs> ToObservable(this FileSystemWatcher watcher)

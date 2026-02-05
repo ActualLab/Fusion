@@ -4,6 +4,10 @@ namespace ActualLab.Collections.Internal;
 
 #pragma warning disable CA1036 // Implement <, <=, etc.
 
+/// <summary>
+/// A serializable key-value pair used as a storage element in <see cref="PropertyBag"/>.
+/// Equality and comparison are based on the key only.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
@@ -81,6 +85,9 @@ public partial record struct PropertyBagItem(
 
     // Nested types
 
+    /// <summary>
+    /// Compares <see cref="PropertyBagItem"/> instances by key using ordinal comparison.
+    /// </summary>
     private sealed class ComparerImpl : IComparer<PropertyBagItem>
     {
         public int Compare(PropertyBagItem x, PropertyBagItem y)

@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Rpc.Server;
 
+/// <summary>
+/// Extension methods for <see cref="IEndpointRouteBuilder"/> to map
+/// RPC WebSocket server endpoints.
+/// </summary>
 public static class EndpointRouteBuilderExt
 {
     public static IEndpointRouteBuilder MapRpcWebSocketServer(this IEndpointRouteBuilder endpoints)

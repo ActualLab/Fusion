@@ -37,6 +37,9 @@ public enum RpcLocalExecutionMode
     Constrained = ConstrainedEntry | 0x20,
 }
 
+/// <summary>
+/// Extension methods for <see cref="RpcLocalExecutionMode"/>.
+/// </summary>
 public static class RpcLocalExecutionModeExt
 {
     public static RpcLocalExecutionMode Or(this RpcLocalExecutionMode mode, RpcLocalExecutionMode modeIfDefault)

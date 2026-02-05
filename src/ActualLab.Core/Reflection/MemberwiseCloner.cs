@@ -1,5 +1,8 @@
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Provides a fast delegate-based invocation of <see cref="object.MemberwiseClone"/>.
+/// </summary>
 public static class MemberwiseCloner
 {
     private static readonly Func<object, object> MemberwiseCloneFunc;

@@ -10,6 +10,9 @@ using WeakRefAlias = System.WeakReference<ActualLab.Rpc.Infrastructure.IRpcObjec
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Base class for tracking RPC objects (shared or remote) associated with a peer.
+/// </summary>
 public abstract class RpcObjectTracker
 {
     protected RpcLimits Limits { get; private set; } = null!;
@@ -32,6 +35,9 @@ public abstract class RpcObjectTracker
         => Peer = peer;
 }
 
+/// <summary>
+/// Tracks remote <see cref="IRpcObject"/> instances using weak references, with periodic keep-alive signaling.
+/// </summary>
 public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 {
     private readonly ConcurrentDictionary<long, WeakRefAlias> _storage
@@ -216,6 +222,9 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
     }
 }
 
+/// <summary>
+/// Tracks locally shared <see cref="IRpcSharedObject"/> instances with keep-alive timeout and automatic disposal.
+/// </summary>
 public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcSharedObject>
 {
     private long _lastId;

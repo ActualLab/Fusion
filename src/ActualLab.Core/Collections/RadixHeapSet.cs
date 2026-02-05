@@ -2,6 +2,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A radix heap with set semantics, providing efficient monotone priority queue operations
+/// using integer priorities. Each value can appear at most once.
+/// </summary>
 public class RadixHeapSet<T> : IEnumerable<(long Priority, T Value)>
     where T : notnull
 {

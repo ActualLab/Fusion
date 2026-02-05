@@ -7,6 +7,10 @@ using MessagePack;
 
 namespace ActualLab.Text;
 
+/// <summary>
+/// An immutable wrapper over a byte sequence with equality, comparison,
+/// and Base64/hex string conversion support.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable, MessagePackFormatter(typeof(ByteStringMessagePackFormatter))]
 [JsonConverter(typeof(ByteStringJsonConverter))]

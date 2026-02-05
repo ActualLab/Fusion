@@ -4,6 +4,10 @@ namespace ActualLab.Fusion;
 
 #pragma warning disable CA1721
 
+/// <summary>
+/// Represents the input (arguments) of a compute function, serving as the key
+/// for looking up <see cref="Computed"/> instances in the <see cref="ComputedRegistry"/>.
+/// </summary>
 public abstract class ComputedInput : IEquatable<ComputedInput>, IHasDisposeStatus
 {
     public static IEqualityComparer<ComputedInput> EqualityComparer { get; } = new EqualityComparerImpl();

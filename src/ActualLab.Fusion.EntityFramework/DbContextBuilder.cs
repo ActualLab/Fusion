@@ -5,6 +5,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// A builder for configuring services related to a specific <see cref="DbContext"/> type,
+/// including sharding, entity resolvers, entity converters, log watchers, and operations.
+/// </summary>
 public readonly struct DbContextBuilder<TDbContext>
     where TDbContext : DbContext
 {

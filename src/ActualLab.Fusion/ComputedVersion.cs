@@ -2,6 +2,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Generates globally unique, monotonically increasing version numbers
+/// for <see cref="Computed"/> instances using thread-local counters.
+/// </summary>
 public static class ComputedVersion
 {
     private static readonly int LocalVersionCount;

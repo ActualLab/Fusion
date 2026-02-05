@@ -3,6 +3,9 @@ using System.Diagnostics.Metrics;
 
 namespace ActualLab.Rpc.Diagnostics;
 
+/// <summary>
+/// Provides shared OpenTelemetry activity sources, meters, and counters for the RPC framework.
+/// </summary>
 public static class RpcInstruments
 {
     public static readonly ActivitySource ActivitySource = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);

@@ -2,6 +2,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.DependencyInjection;
 
+/// <summary>
+/// Extension methods for <see cref="ServiceResolver"/>.
+/// </summary>
 public static class ServiceResolverExt
 {
     public static object? TryResolve(this ServiceResolver? resolver, IServiceProvider services)

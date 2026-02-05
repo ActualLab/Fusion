@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Server;
 
+/// <summary>
+/// Builder for configuring the <see cref="RpcWebSocketServer"/> and its options.
+/// </summary>
 public readonly struct RpcWebSocketServerBuilder
 {
     public RpcBuilder Rpc { get; }

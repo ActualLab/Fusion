@@ -2,6 +2,9 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// A factory for creating <see cref="MutableState{T}"/> and <see cref="ComputedState{T}"/> instances.
+/// </summary>
 public class StateFactory(IServiceProvider services, bool isScoped) : IHasServices
 {
 #if NET9_0_OR_GREATER

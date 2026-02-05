@@ -3,6 +3,9 @@ using ActualLab.Rpc.Caching;
 
 namespace ActualLab.Fusion.Client.Caching;
 
+/// <summary>
+/// Defines the contract for a cache that stores remote computed values.
+/// </summary>
 public interface IRemoteComputedCache
 {
     public Task WhenInitialized { get; }

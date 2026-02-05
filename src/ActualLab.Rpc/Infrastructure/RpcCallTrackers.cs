@@ -4,6 +4,9 @@ using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Base class for tracking active RPC calls (inbound or outbound) on a peer.
+/// </summary>
 public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
     where TRpcCall : RpcCall
 {
@@ -35,6 +38,9 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
         => Calls.GetValueOrDefault(callId);
 }
 
+/// <summary>
+/// Tracks active inbound RPC calls on a peer.
+/// </summary>
 public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 {
     public RpcInboundCall this[long id] => Calls[id];
@@ -57,6 +63,9 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
         => Calls.Clear();
 }
 
+/// <summary>
+/// Tracks active outbound RPC calls on a peer, handling timeouts, reconnection, and abort.
+/// </summary>
 public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 {
     private readonly ConcurrentDictionary<long, RpcOutboundCall> _longLivingCalls = new(HardwareInfo.ProcessorCountPo2, 131);

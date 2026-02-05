@@ -3,8 +3,15 @@ using Errors = ActualLab.Redis.Internal.Errors;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// Provides streaming read/write operations over a Redis Stream for typed
+/// <typeparamref name="T"/> items, with pub/sub-based change notifications.
+/// </summary>
 public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<T>.Options? settings = null)
 {
+    /// <summary>
+    /// Configuration options for <see cref="RedisStreamer{T}"/>.
+    /// </summary>
     public record Options
     {
         public int MaxStreamLength { get; init; } = 2048;

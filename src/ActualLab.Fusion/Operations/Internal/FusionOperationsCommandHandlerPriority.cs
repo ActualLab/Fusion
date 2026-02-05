@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Operations.Internal;
 
+/// <summary>
+/// Defines command handler priority constants for Fusion operations pipeline handlers.
+/// </summary>
 public static class FusionOperationsCommandHandlerPriority
 {
     public const double OperationReprocessor = 100_000;

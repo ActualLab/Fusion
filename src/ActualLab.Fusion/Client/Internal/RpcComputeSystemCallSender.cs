@@ -4,6 +4,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Client.Internal;
 
+/// <summary>
+/// Sends Fusion compute system calls (such as invalidation notifications) to remote RPC peers.
+/// </summary>
 public sealed class RpcComputeSystemCallSender : RpcServiceBase
 {
     public readonly RpcServiceDef ServiceDef;

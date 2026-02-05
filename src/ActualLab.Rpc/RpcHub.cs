@@ -5,6 +5,9 @@ using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Central hub that manages RPC peers, services, and configuration for the RPC infrastructure.
+/// </summary>
 public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 {
     internal readonly RpcRegistryOptions RegistryOptions;

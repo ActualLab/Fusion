@@ -4,6 +4,9 @@ namespace ActualLab.Rpc;
 
 #pragma warning disable SYSLIB0051
 
+/// <summary>
+/// Thrown when an RPC peer permanently fails to reconnect to the remote host.
+/// </summary>
 [Serializable]
 public class RpcReconnectFailedException : Exception, ITransientException
 {

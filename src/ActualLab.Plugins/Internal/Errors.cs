@@ -1,5 +1,8 @@
 namespace ActualLab.Plugins.Internal;
 
+/// <summary>
+/// Factory methods for exceptions used in the plugin system.
+/// </summary>
 public static class Errors
 {
     public static Exception UnknownPluginImplementationType(Type pluginType)

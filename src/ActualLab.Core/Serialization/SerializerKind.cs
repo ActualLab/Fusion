@@ -1,5 +1,8 @@
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Defines the available serializer implementations.
+/// </summary>
 public enum SerializerKind
 {
     None = 0,
@@ -9,6 +12,9 @@ public enum SerializerKind
     NewtonsoftJson,
 }
 
+/// <summary>
+/// Extension methods for <see cref="SerializerKind"/> to resolve default serializer instances.
+/// </summary>
 public static class SerializerKindExt
 {
     public static IByteSerializer GetDefaultSerializer(this SerializerKind serializerKind)

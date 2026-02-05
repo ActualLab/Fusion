@@ -3,6 +3,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Extension methods for <see cref="ILGenerator"/> providing casting helpers.
+/// </summary>
 // ReSharper disable once InconsistentNaming
 public static class ILGeneratorExt
 {

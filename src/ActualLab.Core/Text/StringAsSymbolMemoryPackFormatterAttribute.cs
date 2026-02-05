@@ -4,6 +4,10 @@ namespace ActualLab.Text;
 
 #if !NETSTANDARD2_0
 
+/// <summary>
+/// Attribute that applies <see cref="StringAsSymbolMemoryPackFormatter"/> to a string field
+/// or property for MemoryPack serialization.
+/// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
 public sealed class StringAsSymbolMemoryPackFormatterAttribute
     : MemoryPackCustomFormatterAttribute<IMemoryPackFormatter<string>, string>
@@ -35,6 +39,9 @@ public sealed class StringAsSymbolMemoryPackFormatterAttribute
 
 #else
 
+/// <summary>
+/// Stub attribute for .NET Standard 2.0 where MemoryPack is not available.
+/// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
 public sealed class StringAsSymbolMemoryPackFormatterAttribute : Attribute
 {

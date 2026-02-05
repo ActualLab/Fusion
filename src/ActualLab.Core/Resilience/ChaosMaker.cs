@@ -2,6 +2,10 @@ using ActualLab.Resilience.Internal;
 
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Abstract base for chaos engineering makers that inject faults (delays, errors)
+/// into operations for resilience testing.
+/// </summary>
 public abstract record ChaosMaker
 {
     public static readonly NoneChaosMaker None = new();

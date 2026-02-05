@@ -5,6 +5,9 @@ namespace ActualLab.Async;
 
 #pragma warning disable MA0004
 
+/// <summary>
+/// Extension methods and helpers for <see cref="Task"/> and <see cref="Task{TResult}"/>.
+/// </summary>
 public static partial class TaskExt
 {
     public static readonly Task<Unit> UnitTask;

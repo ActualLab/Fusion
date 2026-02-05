@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Collections.Internal;
 
+/// <summary>
+/// A serializable key-data pair used as a storage element in option sets.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]

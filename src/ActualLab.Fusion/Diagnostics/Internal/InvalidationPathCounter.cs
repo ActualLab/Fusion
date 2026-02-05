@@ -3,6 +3,9 @@ using System.Text;
 
 namespace ActualLab.Fusion.Diagnostics.Internal;
 
+/// <summary>
+/// Tracks and aggregates invalidation path statistics as a tree of source-to-target invalidation chains.
+/// </summary>
 public sealed class InvalidationPathCounter
 {
     private readonly Node _root = new("");

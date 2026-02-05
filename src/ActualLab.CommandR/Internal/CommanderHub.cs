@@ -5,6 +5,10 @@ using ActualLab.Versioning;
 
 namespace ActualLab.CommandR.Internal;
 
+/// <summary>
+/// A hub that lazily resolves and caches shared services used by the
+/// <see cref="Commander"/> and its infrastructure.
+/// </summary>
 public sealed class CommanderHub(ICommander commander, IServiceProvider services) : IHasServices
 {
     public ICommander Commander { get; } = commander;

@@ -1,5 +1,9 @@
 namespace ActualLab.Collections.Fixed;
 
+/// <summary>
+/// A fixed-size inline array of zero elements, providing API consistency
+/// with other <c>FixedArrayN</c> types.
+/// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 public readonly struct FixedArray0<T> : IEquatable<FixedArray0<T>>
 {

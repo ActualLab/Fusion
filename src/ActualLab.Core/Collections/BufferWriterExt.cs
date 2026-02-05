@@ -2,6 +2,9 @@ using System.Buffers;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Extension methods for <see cref="IBufferWriter{T}"/>.
+/// </summary>
 public static class BufferWriterExt
 {
     public static void Write<T>(this IBufferWriter<T> writer, ReadOnlySequence<T> sequence)

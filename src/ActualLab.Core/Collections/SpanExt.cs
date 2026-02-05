@@ -2,6 +2,10 @@ namespace ActualLab.Collections;
 
 #pragma warning disable CA1708 // Identifiers should differ by more than case (false positive for .extension members)
 
+/// <summary>
+/// Extension methods for <see cref="Span{T}"/> and <see cref="ReadOnlySpan{T}"/>,
+/// providing unchecked read/write and variable-length integer encoding operations.
+/// </summary>
 public static partial class SpanExt
 {
     // AsSpanUnsafe

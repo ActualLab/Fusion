@@ -3,6 +3,9 @@ using ActualLab.Api.Internal;
 
 namespace ActualLab.Api;
 
+/// <summary>
+/// Factory methods for creating <see cref="ApiArray{T}"/> instances.
+/// </summary>
 public static class ApiArray
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -20,6 +23,9 @@ public static class ApiArray
 
 #pragma warning disable MA0084
 
+/// <summary>
+/// An immutable array wrapper with collection expression support, intended for use in API contracts.
+/// </summary>
 [CollectionBuilder(typeof(ApiArray), "New")]
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]

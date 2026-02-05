@@ -2,6 +2,9 @@ using System.Buffers;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Provides static references to commonly used <see cref="ArrayPool{T}.Shared"/> instances.
+/// </summary>
 public static class ArrayPools
 {
     public static readonly ArrayPool<byte> SharedBytePool = ArrayPool<byte>.Shared;

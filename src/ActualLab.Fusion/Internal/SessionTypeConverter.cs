@@ -4,6 +4,11 @@ using System.Globalization;
 namespace ActualLab.Fusion.Internal;
 
 // Used by JSON.NET to serialize dictionary keys of this type
+
+/// <summary>
+/// A <see cref="TypeConverter"/> for <see cref="Session"/> that enables string-based conversion,
+/// used by JSON.NET for dictionary key serialization.
+/// </summary>
 public class SessionTypeConverter : TypeConverter
 {
     public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)

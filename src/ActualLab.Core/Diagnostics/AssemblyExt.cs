@@ -3,6 +3,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Diagnostics;
 
+/// <summary>
+/// Extension methods for <see cref="Assembly"/> to retrieve informational version.
+/// </summary>
 public static class AssemblyExt
 {
     private static readonly ConcurrentDictionary<Assembly, string?> InformationalVersions

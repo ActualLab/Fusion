@@ -55,6 +55,10 @@ public abstract partial class ComputedStateComponent
 
     // Nested types
 
+    /// <summary>
+    /// Factory that creates default <see cref="ComputedState{T}.Options"/>
+    /// for a given component type.
+    /// </summary>
     public sealed class CreateDefaultStateOptionsFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()

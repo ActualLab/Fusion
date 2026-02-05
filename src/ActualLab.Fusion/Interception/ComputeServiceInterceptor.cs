@@ -6,8 +6,15 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Interception;
 
+/// <summary>
+/// An interceptor that routes compute method calls through <see cref="ComputeMethodFunction"/>
+/// to produce cached <see cref="Computed"/> values.
+/// </summary>
 public class ComputeServiceInterceptor : Interceptor
 {
+    /// <summary>
+    /// Configuration options for <see cref="ComputeServiceInterceptor"/>.
+    /// </summary>
     public new record Options : Interceptor.Options
     {
         public static Options Default { get; set; } = new() {

@@ -1,5 +1,8 @@
 namespace ActualLab.CommandR.Internal;
 
+/// <summary>
+/// Built-in command handler that executes <see cref="ILocalCommand"/> instances.
+/// </summary>
 public sealed class LocalCommandRunner : ICommandHandler<ILocalCommand>
 {
     [CommandHandler(Priority = CommanderCommandHandlerPriority.LocalCommandRunner)]

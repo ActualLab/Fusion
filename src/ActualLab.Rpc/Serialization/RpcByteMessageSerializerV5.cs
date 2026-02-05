@@ -9,6 +9,9 @@ namespace ActualLab.Rpc.Serialization;
 
 #pragma warning disable MA0069
 
+/// <summary>
+/// V5 binary message serializer using fixed 4-byte little-endian argument data length prefix.
+/// </summary>
 public class RpcByteMessageSerializerV5(RpcPeer peer) : RpcByteMessageSerializer(peer)
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

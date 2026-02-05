@@ -2,17 +2,26 @@ using ActualLab.Plugins.Metadata;
 
 namespace ActualLab.Plugins.Internal;
 
+/// <summary>
+/// Provides access to a lazily-created plugin instance by its implementation type.
+/// </summary>
 public interface IPluginInstanceHandle : IDisposable
 {
     public object Instance { get; }
 }
 
+/// <summary>
+/// Typed version of <see cref="IPluginInstanceHandle"/> for a specific plugin implementation type.
+/// </summary>
 public interface IPluginInstanceHandle<out TPluginImpl> : IPluginInstanceHandle
     where TPluginImpl : notnull
 {
     public new TPluginImpl Instance { get; }
 }
 
+/// <summary>
+/// Default <see cref="IPluginInstanceHandle{TPluginImpl}"/> that lazily creates and manages the plugin instance.
+/// </summary>
 public class PluginInstanceHandle<TPluginImpl> : IPluginInstanceHandle<TPluginImpl>
     where TPluginImpl : notnull
 {

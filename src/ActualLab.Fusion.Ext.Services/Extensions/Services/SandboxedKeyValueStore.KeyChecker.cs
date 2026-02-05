@@ -4,6 +4,10 @@ namespace ActualLab.Fusion.Extensions.Services;
 
 public partial class SandboxedKeyValueStore<TContext>
 {
+    /// <summary>
+    /// Validates that key prefixes conform to the sandboxed store's
+    /// session and user constraints, and enforces expiration limits.
+    /// </summary>
     public record KeyChecker
     {
         public MomentClock Clock { get; init; } = null!;

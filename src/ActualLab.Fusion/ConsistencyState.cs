@@ -2,6 +2,9 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Defines the consistency state of a <see cref="Computed"/> instance.
+/// </summary>
 public enum ConsistencyState
 {
     Computing = 0,
@@ -9,6 +12,9 @@ public enum ConsistencyState
     Invalidated,
 }
 
+/// <summary>
+/// Extension methods for <see cref="ConsistencyState"/>.
+/// </summary>
 public static class ConsistencyStateExt
 {
     // IsXxx

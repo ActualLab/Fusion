@@ -5,6 +5,10 @@ using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Entity Framework entity representing a user record in the database,
+/// with claims and identity associations.
+/// </summary>
 [Table("Users")]
 [Index(nameof(Name))]
 public class DbUser<TDbUserId> : IHasId<TDbUserId>, IHasVersion<long>

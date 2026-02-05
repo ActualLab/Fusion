@@ -2,6 +2,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Configuration options controlling RPC peer creation, connection management, and shutdown behavior.
+/// </summary>
 public record RpcPeerOptions
 {
     public static RpcPeerOptions Default { get; set; } = new();

@@ -2,6 +2,9 @@ using Newtonsoft.Json;
 
 namespace ActualLab.IO.Internal;
 
+/// <summary>
+/// Newtonsoft.Json converter for <see cref="FilePath"/>.
+/// </summary>
 public class FilePathNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<FilePath>
 {
     public override void WriteJson(

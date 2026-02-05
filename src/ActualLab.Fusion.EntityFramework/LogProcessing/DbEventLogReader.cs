@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// Abstract base for reading and processing event log entries from the database,
+/// using exclusive row locking to ensure each event is processed exactly once.
+/// </summary>
 public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
     TOptions settings,
     IServiceProvider services

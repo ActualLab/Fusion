@@ -1,5 +1,9 @@
 namespace ActualLab.Text;
 
+/// <summary>
+/// Defines a list format with a delimiter and escape character for serializing
+/// and parsing lists of strings.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct ListFormat(char delimiter, char escape = '\\')
 {

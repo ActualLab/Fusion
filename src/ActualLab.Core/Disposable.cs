@@ -35,6 +35,9 @@ public static class Disposable
         });
 }
 
+/// <summary>
+/// A lightweight disposable struct wrapping a resource and its dispose action.
+/// </summary>
 public readonly struct Disposable<T> : IDisposable
 {
     private readonly Action<T>? _disposer;
@@ -53,6 +56,9 @@ public readonly struct Disposable<T> : IDisposable
     public void Dispose() => _disposer?.Invoke(Resource);
 }
 
+/// <summary>
+/// A lightweight disposable struct wrapping a resource, extra state, and its dispose action.
+/// </summary>
 public readonly struct Disposable<T, TState> : IDisposable
 {
     private readonly Action<T, TState>? _disposer;
@@ -73,6 +79,9 @@ public readonly struct Disposable<T, TState> : IDisposable
     public void Dispose() => _disposer?.Invoke(Resource, _state);
 }
 
+/// <summary>
+/// A lightweight disposable struct that captures state and invokes a dispose action over it.
+/// </summary>
 public readonly struct ClosedDisposable<TState> : IDisposable
 {
     private readonly TState _state;

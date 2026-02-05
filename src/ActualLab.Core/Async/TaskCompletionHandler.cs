@@ -152,6 +152,9 @@ public abstract class TaskCompletionHandler
 
     // Pool<T>
 
+    /// <summary>
+    /// A thread-local pool for reusing <see cref="TaskCompletionHandler"/> instances.
+    /// </summary>
     protected struct Pool
     {
         private const int Capacity = 64;

@@ -2,6 +2,10 @@ using System.Buffers;
 
 namespace ActualLab.Collections.Internal;
 
+/// <summary>
+/// An <see cref="ArrayPool{T}"/> implementation that allocates new arrays
+/// without pooling, useful when pooling overhead is undesirable.
+/// </summary>
 public sealed class NonPoolingArrayPool<T> : ArrayPool<T>
     where T : unmanaged
 {

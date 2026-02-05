@@ -3,10 +3,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
+/// <summary>
+/// Trims processed and discarded <see cref="DbEvent"/> entries that exceed the
+/// configured maximum age.
+/// </summary>
 public class DbEventLogTrimmer<TDbContext>
     : DbEventLogTrimmer<TDbContext, DbEvent, DbEventLogTrimmer<TDbContext>.Options>
     where TDbContext : DbContext
 {
+    /// <summary>
+    /// Configuration options for <see cref="DbEventLogTrimmer{TDbContext}"/>.
+    /// </summary>
     public record Options : DbLogTrimmerOptions
     {
         public static Options Default { get; set; } = new();

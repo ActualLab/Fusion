@@ -3,6 +3,10 @@ using System.Text.RegularExpressions;
 
 namespace ActualLab.Diagnostics;
 
+/// <summary>
+/// Provides methods for formatting source code locations (file, member, line)
+/// into human-readable strings for diagnostics.
+/// </summary>
 public static partial class CodeLocation
 {
     // We use a regex to extract the file name, coz e.g. on WASM Path.FileName() doesn't properly parse Windows paths

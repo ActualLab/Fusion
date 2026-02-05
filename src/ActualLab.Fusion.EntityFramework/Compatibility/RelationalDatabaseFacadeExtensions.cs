@@ -7,6 +7,10 @@ using Microsoft.EntityFrameworkCore.Storage;
 // ReSharper disable once CheckNamespace
 namespace Microsoft.EntityFrameworkCore;
 
+/// <summary>
+/// Provides methods to set the underlying <see cref="System.Data.Common.DbConnection"/>
+/// on a <see cref="DatabaseFacade"/> via reflection (NETSTANDARD2_0 compatibility shim).
+/// </summary>
 internal static class RelationalDatabaseFacadeExtensions
 {
     private static readonly FieldInfo ConnectionField = typeof(RelationalConnection)

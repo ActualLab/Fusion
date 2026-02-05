@@ -1,6 +1,10 @@
 namespace ActualLab.Comparison;
 
 // Shouldn't be serializable!
+
+/// <summary>
+/// A wrapper that uses reference equality for comparisons instead of value equality.
+/// </summary>
 public readonly struct ByRef<T>(T target) : IEquatable<ByRef<T>>
     where T : class?
 {
@@ -22,6 +26,9 @@ public readonly struct ByRef<T>(T target) : IEquatable<ByRef<T>>
         => !left.Equals(right);
 }
 
+/// <summary>
+/// Factory methods for creating <see cref="ByRef{T}"/> instances.
+/// </summary>
 public static class ByRef
 {
     public static ByRef<T> New<T>(T value)

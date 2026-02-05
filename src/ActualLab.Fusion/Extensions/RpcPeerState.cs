@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// Defines the high-level connection state kinds for an RPC peer.
+/// </summary>
 public enum RpcPeerStateKind
 {
     Connected = 0,
@@ -8,6 +11,9 @@ public enum RpcPeerStateKind
     JustConnected,
 }
 
+/// <summary>
+/// A user-friendly representation of an RPC peer's connection state.
+/// </summary>
 public sealed record RpcPeerState(
     RpcPeerStateKind Kind,
     Exception? LastError = null,

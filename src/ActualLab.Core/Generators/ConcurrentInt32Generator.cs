@@ -3,6 +3,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Generators;
 
+/// <summary>
+/// Factory for creating striped concurrent <see cref="int"/> generators
+/// that reduce contention via multiple independent sequences.
+/// </summary>
 public static class ConcurrentInt32Generator
 {
     internal static int DefaultConcurrencyLevel => HardwareInfo.GetProcessorCountPo2Factor(2);

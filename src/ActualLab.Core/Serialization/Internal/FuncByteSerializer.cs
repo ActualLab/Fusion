@@ -2,6 +2,9 @@ using System.Buffers;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// An <see cref="IByteSerializer{T}"/> implementation that delegates to read/write functions.
+/// </summary>
 public class FuncByteSerializer<T>(
     Func<ReadOnlyMemory<byte>, (T Value, int ReadLength)> reader,
     Action<IBufferWriter<byte>, T> writer

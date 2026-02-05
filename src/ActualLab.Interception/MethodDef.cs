@@ -3,6 +3,10 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Describes an intercepted method, including its return type, parameters,
+/// async method detection, and invoker delegates.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]

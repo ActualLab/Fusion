@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore.Query;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
+/// <summary>
+/// Extension methods for <see cref="Expression"/> providing node replacement helpers.
+/// </summary>
 public static class ExpressionExt
 {
     public static Expression Replace(this Expression source,

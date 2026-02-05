@@ -1,5 +1,8 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Extension methods for <see cref="IReadOnlyList{T}"/>.
+/// </summary>
 public static class ReadOnlyListExt
 {
     // IndexOf

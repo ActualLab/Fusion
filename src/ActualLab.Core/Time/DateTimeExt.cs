@@ -1,5 +1,9 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// Extension methods for <see cref="DateTime"/> providing <see cref="Moment"/> conversion
+/// and default kind assignment.
+/// </summary>
 public static class DateTimeExt
 {
 #if !NETSTANDARD2_0

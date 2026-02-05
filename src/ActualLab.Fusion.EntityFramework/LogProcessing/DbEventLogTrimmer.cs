@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// Abstract base for periodically trimming old event log entries from the database
+/// based on <see cref="DbLogTrimmerOptions.MaxEntryAge"/>.
+/// </summary>
 public abstract class DbEventLogTrimmer<TDbContext, TDbEntry, TOptions>(
     TOptions settings, IServiceProvider services)
     : DbShardWorkerBase<TDbContext>(services), IDbLogTrimmer

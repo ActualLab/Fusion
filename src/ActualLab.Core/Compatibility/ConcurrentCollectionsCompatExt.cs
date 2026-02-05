@@ -3,6 +3,9 @@
 // ReSharper disable once CheckNamespace
 namespace System.Collections.Concurrent;
 
+/// <summary>
+/// Compatibility extension methods for concurrent collections on .NET Standard 2.0.
+/// </summary>
 public static class ConcurrentCollectionsCompatExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

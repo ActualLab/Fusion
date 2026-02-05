@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Rpc.Caching;
 
+/// <summary>
+/// A composite key for RPC cache lookups, consisting of a method name and serialized argument data.
+/// </summary>
 [DataContract, MemoryPackable, MessagePackObject]
 public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
 {

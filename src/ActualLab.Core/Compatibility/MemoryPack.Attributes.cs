@@ -8,6 +8,9 @@ using System.IO.Compression;
 // ReSharper disable once CheckNamespace
 namespace MemoryPack;
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackableAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackableAttribute : Attribute
 {
@@ -45,6 +48,9 @@ public sealed class MemoryPackableAttribute : Attribute
     }
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>GenerateType</c> enum on .NET Standard 2.0.
+/// </summary>
 public enum GenerateType
 {
     Object,
@@ -54,12 +60,18 @@ public enum GenerateType
     NoGenerate
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>SerializeLayout</c> enum on .NET Standard 2.0.
+/// </summary>
 public enum SerializeLayout
 {
     Sequential, // default
     Explicit
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackUnionAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, AllowMultiple = true, Inherited = false)]
 public sealed class MemoryPackUnionAttribute : Attribute
 {
@@ -73,6 +85,9 @@ public sealed class MemoryPackUnionAttribute : Attribute
     }
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackUnionFormatterAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackUnionFormatterAttribute : Attribute
 {
@@ -84,11 +99,17 @@ public sealed class MemoryPackUnionFormatterAttribute : Attribute
     }
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackAllowSerializeAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackAllowSerializeAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackOrderAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackOrderAttribute : Attribute
 {
@@ -100,11 +121,18 @@ public sealed class MemoryPackOrderAttribute : Attribute
     }
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackCustomFormatterAttribute{T}</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public abstract class MemoryPackCustomFormatterAttribute<T> : Attribute
 {
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackCustomFormatterAttribute{TFormatter, T}</c>
+/// on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public abstract class MemoryPackCustomFormatterAttribute<TFormatter, T> : Attribute
     where TFormatter : class
@@ -114,36 +142,57 @@ public abstract class MemoryPackCustomFormatterAttribute<TFormatter, T> : Attrib
 // similar naming as System.Text.Json attribtues
 // https://docs.microsoft.com/en-us/dotnet/api/system.text.json.serialization.jsonattribute
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackIgnoreAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackIgnoreAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackIncludeAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackIncludeAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackConstructorAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Constructor, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackConstructorAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackOnSerializingAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackOnSerializingAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackOnSerializedAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackOnSerializedAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackOnDeserializingAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackOnDeserializingAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>MemoryPackOnDeserializedAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
 public sealed class MemoryPackOnDeserializedAttribute : Attribute
 {
@@ -151,11 +200,17 @@ public sealed class MemoryPackOnDeserializedAttribute : Attribute
 
 // Others
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>GenerateTypeScriptAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
 public sealed class GenerateTypeScriptAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Compatibility shim for the MemoryPack <c>BrotliFormatterAttribute</c> on .NET Standard 2.0.
+/// </summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public sealed class BrotliFormatterAttribute : Attribute
 {

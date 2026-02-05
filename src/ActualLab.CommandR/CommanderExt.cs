@@ -1,5 +1,9 @@
 namespace ActualLab.CommandR;
 
+/// <summary>
+/// Extension methods for <see cref="ICommander"/> providing convenience overloads
+/// for starting, running, and calling commands.
+/// </summary>
 public static class CommanderExt
 {
     // Start

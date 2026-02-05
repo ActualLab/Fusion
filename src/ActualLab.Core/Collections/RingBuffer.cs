@@ -2,6 +2,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A fixed-capacity circular buffer that supports efficient push/pull operations
+/// at both head and tail. Capacity must be a power of two minus one.
+/// </summary>
 public struct RingBuffer<T> : IReadOnlyList<T>
 {
     private readonly T[] _buffer;

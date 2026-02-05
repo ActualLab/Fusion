@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Factory methods for <see cref="TypeDecoratingSystemJsonSerialized{T}"/>.
+/// </summary>
 public static class TypeDecoratingSystemJsonSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -13,6 +16,9 @@ public static class TypeDecoratingSystemJsonSerialized
         => new() { Data = data };
 }
 
+/// <summary>
+/// A <see cref="TextSerialized{T}"/> variant that uses type-decorating System.Text.Json serialization.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

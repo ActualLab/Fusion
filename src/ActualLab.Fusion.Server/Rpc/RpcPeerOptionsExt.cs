@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Fusion.Server.Rpc;
 
+/// <summary>
+/// Extension methods for <see cref="RpcPeerOptions"/> to apply Fusion server overrides,
+/// including session-bound connection factory support.
+/// </summary>
 public static class RpcPeerOptionsExt
 {
     public const string SessionParameterName = "session";

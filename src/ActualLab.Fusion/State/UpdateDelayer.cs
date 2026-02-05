@@ -2,11 +2,18 @@ using ActualLab.Fusion.UI;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Controls the delay between invalidation and the next update attempt for a <see cref="ComputedState"/>.
+/// </summary>
 public interface IUpdateDelayer
 {
     public Task Delay(int retryCount, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// An <see cref="IUpdateDelayer"/> that integrates with <see cref="UIActionTracker"/>
+/// to provide instant updates during user interactions.
+/// </summary>
 public sealed record UpdateDelayer(
     UIActionTracker? UIActionTracker,
     RandomTimeSpan UpdateDelay,
@@ -62,6 +69,9 @@ public sealed record UpdateDelayer(
 
     // Nested types
 
+    /// <summary>
+    /// Global default values for <see cref="UpdateDelayer"/> configuration.
+    /// </summary>
     public static class Defaults
     {
         public static RandomTimeSpan UpdateDelay { get; set; } = TimeSpan.FromSeconds(1);

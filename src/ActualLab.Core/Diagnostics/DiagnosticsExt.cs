@@ -2,6 +2,9 @@ using System.Text.RegularExpressions;
 
 namespace ActualLab.Diagnostics;
 
+/// <summary>
+/// Utility methods for sanitizing metric and diagnostics names.
+/// </summary>
 public static partial class DiagnosticsExt
 {
 #if NET7_0_OR_GREATER

@@ -5,6 +5,10 @@ namespace ActualLab.Fusion.EntityFramework.Internal;
 
 #pragma warning disable EF1001
 
+/// <summary>
+/// An <see cref="IDbContextPool"/> implementation that suppresses disposal of the pooled
+/// <see cref="DbContext"/>, allowing it to be reused after being returned to the pool.
+/// </summary>
 internal sealed class SuppressDisposeDbContextPool(IDbContextPoolable dbContextPoolable) : IDbContextPool
 {
 #if !NETSTANDARD2_0

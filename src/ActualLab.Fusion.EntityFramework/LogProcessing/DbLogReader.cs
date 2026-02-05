@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// Abstract base for shard-aware database log readers that process entries in batches,
+/// handle reprocessing on failures, and coordinate with <see cref="IDbLogWatcher{TDbContext, TDbEntry}"/>.
+/// </summary>
 public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
     TOptions settings,
     IServiceProvider services

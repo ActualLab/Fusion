@@ -1,5 +1,8 @@
 namespace ActualLab.Mathematics.Internal;
 
+/// <summary>
+/// <see cref="Arithmetics{T}"/> implementation for <see cref="double"/>.
+/// </summary>
 public sealed class DoubleArithmetics : Arithmetics<double>
 {
     public DoubleArithmetics() => One = 1d;

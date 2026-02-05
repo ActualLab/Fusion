@@ -1,5 +1,8 @@
 namespace ActualLab.Diagnostics;
 
+/// <summary>
+/// Extension methods for <see cref="ILogger"/> to check enabled log levels.
+/// </summary>
 public static class LoggerExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

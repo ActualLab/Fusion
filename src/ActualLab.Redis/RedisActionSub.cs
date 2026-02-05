@@ -2,6 +2,9 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// A Redis subscriber that invokes a callback action for each received raw message.
+/// </summary>
 public sealed class RedisActionSub(
     RedisDb redisDb,
     RedisSubKey key,
@@ -15,6 +18,10 @@ public sealed class RedisActionSub(
         => MessageHandler(redisChannel, redisValue);
 }
 
+/// <summary>
+/// A Redis subscriber that deserializes messages to <typeparamref name="T"/>
+/// and invokes a callback action for each received message.
+/// </summary>
 public sealed class RedisActionSub<T>(RedisDb redisDb,
         RedisSubKey key,
         Action<RedisChannel, T> messageHandler,

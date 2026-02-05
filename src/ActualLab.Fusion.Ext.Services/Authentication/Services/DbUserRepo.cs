@@ -3,6 +3,9 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Defines repository operations for <see cref="DbUser{TDbUserId}"/> entities.
+/// </summary>
 // ReSharper disable once TypeParameterCanBeVariant
 public interface IDbUserRepo<in TDbContext, TDbUser, TDbUserId>
     where TDbContext : DbContext
@@ -27,6 +30,10 @@ public interface IDbUserRepo<in TDbContext, TDbUser, TDbUserId>
         TDbContext dbContext, UserIdentity userIdentity, bool forUpdate, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Default database repository for user entities, supporting CRUD and
+/// lookup by identity.
+/// </summary>
 public class DbUserRepo<TDbContext,
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUser,
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>(

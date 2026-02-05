@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Defines the kinds of lifecycle events raised by a <see cref="State"/>.
+/// </summary>
 [Flags]
 public enum StateEventKind
 {

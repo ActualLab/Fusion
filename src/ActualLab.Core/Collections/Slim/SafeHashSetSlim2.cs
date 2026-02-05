@@ -1,5 +1,9 @@
 namespace ActualLab.Collections.Slim;
 
+/// <summary>
+/// A thread-safe compact <see cref="IHashSetSlim{T}"/> that stores up to 2 items inline
+/// before falling back to an <see cref="ImmutableHashSet{T}"/>.
+/// </summary>
 public struct SafeHashSetSlim2<T> : IHashSetSlim<T>
     where T : notnull
 {

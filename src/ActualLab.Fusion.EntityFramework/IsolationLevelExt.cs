@@ -2,6 +2,10 @@ using System.Data;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Extension methods for <see cref="IsolationLevel"/> providing combinators
+/// such as <see cref="Or"/> and <see cref="Max"/>.
+/// </summary>
 public static class IsolationLevelExt
 {
     public static IsolationLevel Or(this IsolationLevel first, IsolationLevel second)

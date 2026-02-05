@@ -12,8 +12,15 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
+/// <summary>
+/// Abstract base for database-backed operation scopes that manage transactions,
+/// store operations and events, and handle commit verification.
+/// </summary>
 public abstract class DbOperationScope : IOperationScope
 {
+    /// <summary>
+    /// Base configuration options for <see cref="DbOperationScope"/>.
+    /// </summary>
     public record Options
     {
         public static IsolationLevel DefaultIsolationLevel { get; set; } = IsolationLevel.Unspecified;
@@ -52,9 +59,16 @@ public abstract class DbOperationScope : IOperationScope
     public abstract ValueTask DisposeAsync();
 }
 
+/// <summary>
+/// A typed <see cref="DbOperationScope"/> bound to a specific <see cref="DbContext"/>,
+/// managing the transaction lifecycle, operation/event persistence, and commit verification.
+/// </summary>
 public class DbOperationScope<TDbContext> : DbOperationScope
     where TDbContext : DbContext
 {
+    /// <summary>
+    /// Configuration options for <see cref="DbOperationScope{TDbContext}"/>.
+    /// </summary>
     public new record Options : DbOperationScope.Options;
 
     protected DbHub<TDbContext> DbHub { get; }

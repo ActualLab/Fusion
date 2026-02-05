@@ -1,5 +1,9 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// Provides a shared, coalesced timer tick that multiple consumers can await,
+/// reducing the number of individual timers.
+/// </summary>
 public sealed class TickSource(TimeSpan period)
 {
     // 15.6ms is Windows timer tick period, this value should be slightly smaller than that.

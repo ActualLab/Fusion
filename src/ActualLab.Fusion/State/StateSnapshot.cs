@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// An immutable snapshot of a <see cref="State"/>'s lifecycle, capturing the current
+/// <see cref="Computed"/>, update count, error count, and retry count.
+/// </summary>
 public sealed class StateSnapshot
 {
     private AsyncTaskMethodBuilder _whenUpdatingSource = AsyncTaskMethodBuilderExt.New();

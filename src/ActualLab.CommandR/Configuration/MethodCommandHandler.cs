@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.CommandR.Configuration;
 
+/// <summary>
+/// Defines a command handler that invokes a specific method via reflection.
+/// </summary>
 public interface IMethodCommandHandler : ICommandHandler
 {
     public Type ServiceType { get; }
@@ -11,6 +14,10 @@ public interface IMethodCommandHandler : ICommandHandler
     public Type[] ParameterTypes { get; }
 }
 
+/// <summary>
+/// A <see cref="CommandHandler"/> that invokes a command by calling a specific
+/// method on a resolved service instance.
+/// </summary>
 public sealed record MethodCommandHandler<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TCommand>
     ([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type ServiceType,
@@ -79,6 +86,10 @@ public sealed record MethodCommandHandler<
     }
 }
 
+/// <summary>
+/// Factory methods for creating <see cref="MethodCommandHandler{TCommand}"/> instances
+/// from methods annotated with <see cref="CommandHandlerAttribute"/>.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume all command handling code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume all command handling code is preserved")]

@@ -5,6 +5,9 @@
 // ReSharper disable once CheckNamespace
 namespace System.IO;
 
+/// <summary>
+/// Compatibility shims for <see cref="Path"/> methods on .NET Standard 2.0.
+/// </summary>
 public static class PathCompatExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

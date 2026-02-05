@@ -2,6 +2,10 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// A Redis subscriber that writes received raw messages to a
+/// <see cref="Channel{RedisValue}"/> for asynchronous consumption.
+/// </summary>
 public sealed class RedisChannelSub(
     RedisDb redisDb,
     RedisSubKey key,
@@ -28,6 +32,10 @@ public sealed class RedisChannelSub(
         => _channel.Writer.TryWrite(redisValue);
 }
 
+/// <summary>
+/// A Redis subscriber that deserializes messages to <typeparamref name="T"/>
+/// and writes them to a <see cref="Channel{T}"/> for asynchronous consumption.
+/// </summary>
 public sealed class RedisChannelSub<T>(
     RedisDb redisDb,
     RedisSubKey key,

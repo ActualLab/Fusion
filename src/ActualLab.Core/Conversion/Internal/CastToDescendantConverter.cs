@@ -1,5 +1,8 @@
 namespace ActualLab.Conversion.Internal;
 
+/// <summary>
+/// A converter that performs a downcast from a base type to a derived type.
+/// </summary>
 public class CastToDescendantConverter<TSource, TTarget> : Converter<TSource, TTarget>
     where TTarget : TSource
 {

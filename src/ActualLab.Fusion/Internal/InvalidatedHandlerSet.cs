@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// A compact collection of <see cref="Computed"/> invalidation handlers that progressively
+/// upgrades its internal storage from a single delegate to an array to a hash set.
+/// </summary>
 public struct InvalidatedHandlerSet
 {
     private const int ListSize = 5;

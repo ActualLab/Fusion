@@ -1,6 +1,9 @@
 // ReSharper disable once CheckNamespace
 namespace System.Reflection;
 
+/// <summary>
+/// Compatibility extension methods for <see cref="MethodInfo"/> across target frameworks.
+/// </summary>
 public static class MethodInfoCompatExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

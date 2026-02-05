@@ -2,6 +2,10 @@ using System.Web.Http.Dependencies;
 
 namespace ActualLab.Rpc.Server.Internal;
 
+/// <summary>
+/// An <see cref="IDependencyResolver"/> implementation that delegates to
+/// an <see cref="IServiceProvider"/> for Web API dependency injection.
+/// </summary>
 public class DependencyResolver(IServiceProvider services) : IDependencyResolver
 {
     private readonly IServiceScope? _scope;

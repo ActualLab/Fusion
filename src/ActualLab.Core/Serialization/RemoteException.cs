@@ -2,6 +2,10 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Represents an exception that was serialized from a remote service
+/// and reconstructed from <see cref="ExceptionInfo"/>.
+/// </summary>
 #pragma warning disable SYSLIB0051
 
 [Serializable]

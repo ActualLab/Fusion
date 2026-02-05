@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Entity Framework entity representing a user identity record in the database.
+/// </summary>
 [Table("UserIdentities")]
 [Index(nameof(Id))]
 public class DbUserIdentity<TDbUserId> : IHasId<string>

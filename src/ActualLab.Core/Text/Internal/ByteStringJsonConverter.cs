@@ -1,5 +1,8 @@
 namespace ActualLab.Text.Internal;
 
+/// <summary>
+/// System.Text.Json converter for <see cref="ByteString"/>, using Base64 encoding.
+/// </summary>
 public class ByteStringJsonConverter : JsonConverter<ByteString>
 {
     public override ByteString Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

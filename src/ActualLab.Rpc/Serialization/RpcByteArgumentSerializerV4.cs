@@ -4,6 +4,9 @@ using ActualLab.Rpc.Serialization.Internal;
 
 namespace ActualLab.Rpc.Serialization;
 
+/// <summary>
+/// V4 binary <see cref="RpcArgumentSerializer"/> that supports polymorphic argument serialization.
+/// </summary>
 public sealed class RpcByteArgumentSerializerV4(IByteSerializer baseSerializer) : RpcArgumentSerializer
 {
     public override void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer)

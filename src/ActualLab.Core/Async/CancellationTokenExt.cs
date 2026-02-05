@@ -2,6 +2,9 @@ namespace ActualLab.Async;
 
 #pragma warning disable CA1068
 
+/// <summary>
+/// Extension methods for <see cref="CancellationToken"/>.
+/// </summary>
 public static class CancellationTokenExt
 {
     public static readonly CancellationToken Canceled;
@@ -136,6 +139,9 @@ public static class CancellationTokenExt
 
     // Nested types
 
+    /// <summary>
+    /// A <see cref="CancellationTokenSource"/> that delays propagation of cancellation.
+    /// </summary>
     private sealed class DelayedCancellationTokenSource : CancellationTokenSource
     {
         private readonly TimeSpan _cancellationDelay;

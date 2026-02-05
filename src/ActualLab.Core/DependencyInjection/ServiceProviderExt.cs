@@ -1,5 +1,8 @@
 namespace ActualLab.DependencyInjection;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceProvider"/>.
+/// </summary>
 public static class ServiceProviderExt
 {
     public static readonly IServiceProvider Empty = new EmptyServiceProvider();
@@ -74,6 +77,9 @@ public static class ServiceProviderExt
 
     // Nested types
 
+    /// <summary>
+    /// A minimal <see cref="IServiceProvider"/> that only resolves itself.
+    /// </summary>
     private sealed class EmptyServiceProvider : IServiceProvider
     {
         public object? GetService(Type serviceType)

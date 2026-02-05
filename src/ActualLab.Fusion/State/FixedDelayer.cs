@@ -2,6 +2,9 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// An <see cref="IUpdateDelayer"/> with a fixed update delay and configurable retry delays.
+/// </summary>
 public abstract record FixedDelayer(RetryDelaySeq RetryDelays) : IUpdateDelayer
 {
     private static readonly ConcurrentDictionary<long, FixedDelayer> Cache = new();
@@ -33,6 +36,9 @@ public abstract record FixedDelayer(RetryDelaySeq RetryDelays) : IUpdateDelayer
 
     // Nested types
 
+    /// <summary>
+    /// Global default values for <see cref="FixedDelayer"/> configuration.
+    /// </summary>
     public static class Defaults
     {
         // ReSharper disable once MemberHidesStaticFromOuterClass

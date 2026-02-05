@@ -2,6 +2,10 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Describes a single intercepted method invocation, including the proxy,
+/// method, arguments, and the delegate to the original implementation.
+/// </summary>
 public readonly struct Invocation(
     object proxy,
     MethodInfo method,

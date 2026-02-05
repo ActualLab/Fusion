@@ -1,5 +1,9 @@
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Provides common <see cref="ExceptionFilter"/> instances for transient,
+/// non-transient, terminal, and unconditional matching.
+/// </summary>
 public static class ExceptionFilters
 {
     public static readonly ExceptionFilter Any = (_, _) => true;

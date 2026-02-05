@@ -6,6 +6,9 @@ using MessagePack.Resolvers;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// A composite MessagePack formatter resolver that combines standard resolvers with custom formatters.
+/// </summary>
 public class DefaultMessagePackResolver : IFormatterResolver
 {
     public static readonly IFormatterResolver Instance = new DefaultMessagePackResolver();
@@ -47,6 +50,9 @@ public class DefaultMessagePackResolver : IFormatterResolver
             : null;
     }
 
+    /// <summary>
+    /// Caches the resolved MessagePack formatter for type <typeparamref name="T"/>.
+    /// </summary>
     private static class FormatterCache<T>
     {
         public static readonly IMessagePackFormatter<T>? Formatter;

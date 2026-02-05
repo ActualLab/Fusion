@@ -2,6 +2,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Redis;
 
+/// <summary>
+/// Configuration options for <see cref="RedisDbLogWatcher{TDbContext, TDbEntry}"/>,
+/// including the Redis pub/sub key formatter and retry delays.
+/// </summary>
 public record RedisDbLogWatcherOptions<TDbContext>
     where TDbContext : DbContext
 {

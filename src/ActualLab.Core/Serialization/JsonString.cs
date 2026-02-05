@@ -5,6 +5,9 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// A string wrapper representing a raw JSON value with proper serialization support.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(JsonStringMessagePackFormatter))]
 [JsonConverter(typeof(JsonStringJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(JsonStringNewtonsoftJsonConverter))]

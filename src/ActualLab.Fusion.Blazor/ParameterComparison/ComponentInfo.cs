@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Cached metadata about a Blazor component type, including its parameters
+/// and their associated comparers for custom change detection.
+/// </summary>
 public sealed class ComponentInfo
 {
     private static readonly ConcurrentDictionary<Type, LazySlim<Type, ComponentInfo>> ComponentInfoCache

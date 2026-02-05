@@ -3,6 +3,9 @@
 // ReSharper disable once CheckNamespace
 namespace System;
 
+/// <summary>
+/// Compatibility extension methods for <see cref="ArraySegment{T}"/> on .NET Standard 2.0.
+/// </summary>
 public static class ArraySegmentCompatExt
 {
     public static ArraySegment<T> Empty<T>()
@@ -38,6 +41,9 @@ public static class ArraySegmentCompatExt
 
     // Nested types
 
+    /// <summary>
+    /// Holds the cached empty <see cref="ArraySegment{T}"/> instance.
+    /// </summary>
     private static class Static<T>
     {
         public static readonly ArraySegment<T> Empty = new([]);

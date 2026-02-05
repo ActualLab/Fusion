@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// Abstract base for reading and processing indexed operation log entries from the database,
+/// tracking the next expected index per shard.
+/// </summary>
 public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     TOptions settings,
     IServiceProvider services

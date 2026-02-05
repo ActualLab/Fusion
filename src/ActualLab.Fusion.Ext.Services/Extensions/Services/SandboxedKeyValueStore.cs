@@ -5,11 +5,18 @@ using ActualLab.Fusion.Extensions.Internal;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
+/// <summary>
+/// Implementation of <see cref="ISandboxedKeyValueStore"/> that delegates to
+/// <see cref="IKeyValueStore"/> with session- and user-scoped key constraints.
+/// </summary>
 public partial class SandboxedKeyValueStore<TContext>(
     SandboxedKeyValueStore<TContext>.Options settings,
     IServiceProvider services
     ) : ISandboxedKeyValueStore
 {
+    /// <summary>
+    /// Configuration options for <see cref="SandboxedKeyValueStore{TContext}"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

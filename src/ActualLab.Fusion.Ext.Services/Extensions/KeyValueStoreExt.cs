@@ -2,6 +2,9 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// Extension methods for <see cref="IKeyValueStore"/>.
+/// </summary>
 public static class KeyValueStoreExt
 {
     public static ListFormat ListFormat { get; set; } = ListFormat.SlashSeparated;

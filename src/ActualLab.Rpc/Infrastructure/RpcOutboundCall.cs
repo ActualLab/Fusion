@@ -7,6 +7,9 @@ using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Represents an outbound RPC call sent to a remote peer, tracking its result and completion.
+/// </summary>
 public abstract class RpcOutboundCall(RpcOutboundContext context)
     : RpcCall(context.MethodDef!)
 {
@@ -414,6 +417,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
     // Nested types
 
+    /// <summary>
+    /// Caches shared <see cref="AsyncTaskMethodBuilder{T}"/> instances for NoWait call results.
+    /// </summary>
     protected static class Cache<TResult>
     {
         public static readonly AsyncTaskMethodBuilder<object?> NoWaitResultSource
@@ -421,6 +427,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 }
 
+/// <summary>
+/// Typed <see cref="RpcOutboundCall"/> that creates a result source for <typeparamref name="TResult"/>.
+/// </summary>
 public class RpcOutboundCall<TResult> : RpcOutboundCall
 {
     public RpcOutboundCall(RpcOutboundContext context) : base(context)

@@ -4,9 +4,16 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
+/// <summary>
+/// An <see cref="IOperationCompletionListener"/> that produces <see cref="ICompletion"/> commands
+/// for completed operations to trigger their invalidation pass.
+/// </summary>
 public class CompletionProducer(CompletionProducer.Options settings, IServiceProvider services)
     : IOperationCompletionListener
 {
+    /// <summary>
+    /// Configuration options for <see cref="CompletionProducer"/>.
+    /// </summary>
     public record Options
     {
         public bool IgnoreNotLogged { get; init; } = false;

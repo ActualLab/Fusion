@@ -4,6 +4,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Extension methods for creating instances via cached constructor delegates,
+/// supporting both dynamic methods and expression tree codegen.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume all used constructors are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume all used constructors are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume all used constructors are preserved")]

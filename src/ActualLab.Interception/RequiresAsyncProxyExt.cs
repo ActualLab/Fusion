@@ -2,6 +2,9 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Extension methods for <see cref="IRequiresAsyncProxy"/>.
+/// </summary>
 public static class RequiresAsyncProxyExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

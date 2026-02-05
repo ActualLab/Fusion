@@ -5,14 +5,24 @@ namespace ActualLab.Interception;
 
 #pragma warning disable CS0420 // A reference to a volatile field will not be treated as volatile
 
+/// <summary>
+/// Base class for method interceptors that handle proxy method calls
+/// and dispatch them to typed or untyped handlers.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume proxy-related code is preserved")]
 public abstract class Interceptor : IHasServices
 {
+    /// <summary>
+    /// Configuration options for an <see cref="Interceptor"/>.
+    /// </summary>
     public abstract record Options
     {
+        /// <summary>
+        /// Default values for <see cref="Options"/> properties.
+        /// </summary>
         public static class Defaults
         {
             public static int HandlerCacheConcurrencyLevel { get; set; } = HardwareInfo.ProcessorCountPo2.Clamp(1, 8);

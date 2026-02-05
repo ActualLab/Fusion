@@ -4,6 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations;
 
+/// <summary>
+/// Processes <see cref="OperationEvent"/> instances stored as <see cref="DbEvent"/> entries,
+/// dispatching command events via the <see cref="ICommander"/>.
+/// </summary>
 public class DbEventProcessor<TDbContext>(IServiceProvider services)
     : DbServiceBase<TDbContext>(services)
     where TDbContext : DbContext

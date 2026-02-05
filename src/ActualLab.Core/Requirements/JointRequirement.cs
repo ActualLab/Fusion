@@ -1,5 +1,9 @@
 namespace ActualLab.Requirements;
 
+/// <summary>
+/// A composite requirement that is satisfied only when both its primary and
+/// secondary requirements are satisfied.
+/// </summary>
 public record JointRequirement<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
     (Requirement<T> Primary, Requirement<T> Secondary) : Requirement<T>

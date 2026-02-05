@@ -4,6 +4,10 @@ using ActualLab.Fusion.EntityFramework.Internal;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceCollection"/> to register
+/// <see cref="DbContextBuilder{TDbContext}"/> services and transient DbContext factories.
+/// </summary>
 public static class ServiceCollectionExt
 {
     public static DbContextBuilder<TDbContext> AddDbContextServices<TDbContext>(this IServiceCollection services)

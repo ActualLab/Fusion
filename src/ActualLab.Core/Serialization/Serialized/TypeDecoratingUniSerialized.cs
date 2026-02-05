@@ -4,6 +4,9 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Factory methods for <see cref="TypeDecoratingUniSerialized{T}"/>.
+/// </summary>
 public static class TypeDecoratingUniSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -11,6 +14,10 @@ public static class TypeDecoratingUniSerialized
         => new() { Value = value };
 }
 
+/// <summary>
+/// A type-decorating variant of <see cref="UniSerialized{T}"/> that prefixes serialized data
+/// with type information across all supported serializer formats.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

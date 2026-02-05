@@ -7,6 +7,10 @@ using ActualLab.Rpc.Middlewares;
 
 namespace ActualLab.Fusion.Rpc;
 
+/// <summary>
+/// An RPC middleware that wraps inbound compute method calls in a <see cref="ComputeContext"/>
+/// to capture the resulting <see cref="Computed"/> instance.
+/// </summary>
 public class RpcInboundComputeCallHandler : IRpcMiddleware
 {
     public static Func<RpcMethodDef, bool> DefaultFilter { get; set; } = _ => true;

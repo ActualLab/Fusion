@@ -2,6 +2,9 @@ using AwesomeAssertions;
 
 namespace ActualLab.Testing.Channels;
 
+/// <summary>
+/// Extension methods for channel read/write assertions with timeout support in tests.
+/// </summary>
 public static class ChannelTestExt
 {
     public static async Task AssertWrite<T>(

@@ -1,5 +1,8 @@
 namespace ActualLab.Reflection.Internal;
 
+/// <summary>
+/// Factory methods for exceptions used internally in the Reflection namespace.
+/// </summary>
 public static class Errors
 {
     public static Exception PropertyOrFieldInfoExpected(string paramName)

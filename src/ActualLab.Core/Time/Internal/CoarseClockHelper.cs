@@ -3,6 +3,10 @@ using ActualLab.Generators;
 
 namespace ActualLab.Time.Internal;
 
+/// <summary>
+/// Provides a periodically updated coarse timestamp and random values,
+/// reducing the overhead of frequent time and random number queries.
+/// </summary>
 public static class CoarseClockHelper
 {
     public static readonly int Frequency = 20;
@@ -44,6 +48,9 @@ public static class CoarseClockHelper
 
     // Nested types
 
+    /// <summary>
+    /// Captures the current time and a random value in a single snapshot.
+    /// </summary>
     private sealed class State
     {
         // ReSharper disable once MemberHidesStaticFromOuterClass

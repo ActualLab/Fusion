@@ -2,6 +2,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.Comparison;
 
+/// <summary>
+/// Extension methods and helpers for <see cref="Version"/>.
+/// </summary>
 public static class VersionExt
 {
     public static readonly Version MaxValue = new(int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue);

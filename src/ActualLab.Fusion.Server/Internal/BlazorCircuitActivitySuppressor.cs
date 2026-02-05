@@ -10,6 +10,11 @@ namespace ActualLab.Fusion.Server.Internal;
 // - https://github.com/dotnet/aspnetcore/issues/29846
 //
 // This circuit handler resets it for any inbound activity.
+
+/// <summary>
+/// A Blazor <see cref="CircuitHandler"/> that resets <see cref="Activity.Current"/>
+/// to prevent long-lived circuit activities from parenting unrelated spans.
+/// </summary>
 public class BlazorCircuitActivitySuppressor : CircuitHandler
 {
     public override Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)

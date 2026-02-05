@@ -4,6 +4,10 @@ using ActualLab.IO;
 
 namespace ActualLab.Text;
 
+/// <summary>
+/// A ref struct that parses a delimited string into individual items
+/// using <see cref="ListFormat"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public ref struct ListParser
 {

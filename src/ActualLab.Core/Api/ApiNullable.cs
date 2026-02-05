@@ -8,6 +8,9 @@ namespace ActualLab.Api;
 #pragma warning disable CA1036
 #pragma warning disable CS0618 // Type or member is obsolete
 
+/// <summary>
+/// Factory methods for creating <see cref="ApiNullable{T}"/> instances.
+/// </summary>
 public static class ApiNullable
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

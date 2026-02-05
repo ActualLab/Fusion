@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.UI;
 
+/// <summary>
+/// Represents a UI-initiated command execution, tracking its start time and completion.
+/// </summary>
 public abstract class UIAction(ICommand command, Moment startedAt, CancellationToken cancellationToken)
 {
     private static long _nextActionId;
@@ -16,6 +19,10 @@ public abstract class UIAction(ICommand command, Moment startedAt, CancellationT
         => $"{GetType().GetName()}(#{ActionId}: {Command}, {UntypedResult?.ToString() ?? "still running"})";
 }
 
+/// <summary>
+/// A strongly-typed <see cref="UIAction"/> that produces a <see cref="UIActionResult{T}"/>
+/// upon completion.
+/// </summary>
 public class UIAction<TResult> : UIAction
 {
     public Task<UIActionResult<TResult>> ResultTask { get; }

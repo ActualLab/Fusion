@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Serializable handshake data exchanged between RPC peers during connection establishment.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record RpcHandshake(

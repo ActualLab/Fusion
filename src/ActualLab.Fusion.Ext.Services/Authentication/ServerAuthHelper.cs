@@ -5,8 +5,15 @@ using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Server-side helper that synchronizes ASP.NET Core authentication state
+/// with Fusion's <see cref="IAuth"/> service on each HTTP request.
+/// </summary>
 public class ServerAuthHelper : IHasServices
 {
+    /// <summary>
+    /// Configuration options for <see cref="ServerAuthHelper"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

@@ -4,6 +4,9 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Describes a registered RPC service, including its type, mode, methods, and server/client instances.
+/// </summary>
 public class RpcServiceDef
 {
     private readonly ConcurrentDictionary<MethodInfo, RpcMethodDef?> _findMethodCache

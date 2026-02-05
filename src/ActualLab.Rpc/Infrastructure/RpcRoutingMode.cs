@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Defines how an RPC call is routed to a peer (outbound, inbound, or pre-routed).
+/// </summary>
 public enum RpcRoutingMode
 {
     /// <summary>

@@ -3,6 +3,9 @@ using Errors = ActualLab.Plugins.Internal.Errors;
 
 namespace ActualLab.Plugins;
 
+/// <summary>
+/// Configures and builds an <see cref="IPluginHost"/> with plugin discovery, filtering, and DI services.
+/// </summary>
 public class PluginHostBuilder
 {
     public IServiceCollection Services { get; set; }

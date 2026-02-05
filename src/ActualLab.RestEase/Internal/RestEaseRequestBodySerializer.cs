@@ -3,6 +3,10 @@ using RestEase;
 
 namespace ActualLab.RestEase.Internal;
 
+/// <summary>
+/// A RestEase <see cref="RequestBodySerializer"/> that uses <see cref="ITextSerializer"/>
+/// to serialize request bodies as JSON content.
+/// </summary>
 public class RestEaseRequestBodySerializer : RequestBodySerializer
 {
     public ITextSerializer Serializer { get; init; } = SystemJsonSerializer.Default;

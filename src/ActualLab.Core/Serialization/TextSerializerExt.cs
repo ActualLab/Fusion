@@ -3,6 +3,9 @@ using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Extension methods for <see cref="ITextSerializer"/>.
+/// </summary>
 public static class TextSerializerExt
 {
     public static object? ReadDelimited(

@@ -13,6 +13,9 @@ public delegate Transiency TransiencyResolver(Exception error);
 public delegate Transiency TransiencyResolver<TContext>(Exception error)
     where TContext : class;
 
+/// <summary>
+/// Extension methods for <see cref="TransiencyResolver"/>.
+/// </summary>
 public static class TransiencyResolverExt
 {
     public static TransiencyResolver<TContext> ForContext<TContext>(this TransiencyResolver resolver)

@@ -2,6 +2,9 @@ namespace ActualLab.Async.Internal;
 
 // Based on https://github.com/dotnet/runtime/issues/22144#issuecomment-1328319861
 
+/// <summary>
+/// An awaiter that silently ignores the result and errors of a <see cref="ValueTask"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct SilentValueTaskAwaiter(ValueTask task, bool captureContext = true)
     : ICriticalNotifyCompletion
@@ -17,6 +20,9 @@ public readonly struct SilentValueTaskAwaiter(ValueTask task, bool captureContex
         => task.ConfigureAwait(captureContext).GetAwaiter().UnsafeOnCompleted(action);
 }
 
+/// <summary>
+/// An awaiter that silently ignores the result and errors of a <see cref="ValueTask{TResult}"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct VoidValueTaskAwaiter<T>(ValueTask<T> task, bool captureContext = true)
     : ICriticalNotifyCompletion

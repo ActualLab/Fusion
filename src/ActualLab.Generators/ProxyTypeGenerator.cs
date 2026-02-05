@@ -3,6 +3,10 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 namespace ActualLab.Generators;
 using static GenerationHelpers;
 
+/// <summary>
+/// Generates a proxy class for a single type declaration, producing interceptor-based
+/// method overrides and module initializer registration code.
+/// </summary>
 public class ProxyTypeGenerator
 {
     private static readonly SyntaxTrivia[] PragmaDisableTrivia = new [] {

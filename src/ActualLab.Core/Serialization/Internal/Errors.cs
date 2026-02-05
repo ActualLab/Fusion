@@ -1,5 +1,8 @@
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// Internal error factory methods for the Serialization namespace.
+/// </summary>
 public static class Errors
 {
     public static Exception NoSerializer()

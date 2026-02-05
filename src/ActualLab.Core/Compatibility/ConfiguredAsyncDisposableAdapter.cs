@@ -1,5 +1,9 @@
 namespace ActualLab.Compatibility;
 
+/// <summary>
+/// Wraps an <see cref="AsyncDisposableAdapter{T}"/> with a configured-await flag
+/// for cross-framework async disposal.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct ConfiguredAsyncDisposableAdapter<T>
 #if !NETSTANDARD2_0

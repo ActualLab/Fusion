@@ -14,6 +14,9 @@ static file class BatchProcessor
     };
 }
 
+/// <summary>
+/// Processes items in batches using a dynamically-scaled pool of worker tasks.
+/// </summary>
 public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item> queue) : ProcessorBase
 {
     private volatile IBatchProcessorWorkerPolicy _workerPolicy = BatchProcessorWorkerPolicy.Default;
@@ -325,6 +328,9 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
 
     // Nested types
 
+    /// <summary>
+    /// Represents a single input item queued for batch processing, along with its result promise.
+    /// </summary>
     public class Item(T input, AsyncTaskMethodBuilder<TResult> resultSource, CancellationToken cancellationToken)
     {
         private static readonly AsyncTaskMethodBuilder<TResult> WorkerKillSource

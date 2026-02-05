@@ -3,6 +3,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Defines timeout and periodic limits for RPC connections, keep-alive, and object lifecycle.
+/// </summary>
 public record RpcLimits
 {
     public static RpcLimits Default { get; set; } = new(Debugger.IsAttached);

@@ -3,6 +3,10 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Diagnostics;
 
+/// <summary>
+/// Extension methods for <see cref="Activity"/> to finalize activities
+/// with error status and handle disposal safely.
+/// </summary>
 public static class ActivityExt
 {
     // ReSharper disable once SuspiciousTypeConversion.Global

@@ -2,6 +2,9 @@ namespace ActualLab.Rpc;
 
 #pragma warning disable SYSLIB0051
 
+/// <summary>
+/// Base exception type for RPC-related errors.
+/// </summary>
 [Serializable]
 public class RpcException : Exception
 {

@@ -2,6 +2,10 @@ using ActualLab.Rpc.Server;
 
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// Builder for configuring Fusion web server services in the .NET Framework
+/// (OWIN) hosting model, including RPC WebSocket server registration.
+/// </summary>
 public readonly struct FusionWebServerBuilder
 {
     private sealed class AddedTag;

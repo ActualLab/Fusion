@@ -2,6 +2,9 @@ using ActualLab.Plugins.Metadata;
 
 namespace ActualLab.Plugins;
 
+/// <summary>
+/// Represents the plugin host that provides access to discovered plugins and their services.
+/// </summary>
 public interface IPluginHost : IServiceProvider, IAsyncDisposable, IDisposable
 {
     public PluginSetInfo FoundPlugins { get; }
@@ -9,6 +12,10 @@ public interface IPluginHost : IServiceProvider, IAsyncDisposable, IDisposable
     public IServiceProvider Services { get; }
 }
 
+/// <summary>
+/// Default implementation of <see cref="IPluginHost"/> that wraps an
+/// <see cref="IServiceProvider"/> and exposes discovered plugin metadata.
+/// </summary>
 public class PluginHost(IServiceProvider services) : IPluginHost
 {
     public IServiceProvider Services { get; } = services;

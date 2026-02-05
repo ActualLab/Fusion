@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// The exception thrown when a requested log entry is not found in the database.
+/// </summary>
 public class LogEntryNotFoundException : KeyNotFoundException
 {
     public LogEntryNotFoundException()

@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Extension methods for <see cref="FusionBuilder"/> to add Blazor integration.
+/// </summary>
 public static class FusionBuilderExt
 {
     public static FusionBlazorBuilder AddBlazor(this FusionBuilder fusion)

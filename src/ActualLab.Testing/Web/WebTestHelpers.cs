@@ -3,6 +3,10 @@ using System.Net.Sockets;
 
 namespace ActualLab.Testing.Web;
 
+/// <summary>
+/// Utility methods for web-related test setup, including finding unused TCP ports
+/// and creating local URIs.
+/// </summary>
 public static class WebTestHelpers
 {
     public static Uri GetLocalUri(int port, string protocol = "http")

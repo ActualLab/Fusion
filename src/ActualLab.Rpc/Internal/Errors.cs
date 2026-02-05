@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Internal;
 
+/// <summary>
+/// Factory methods for RPC-related exceptions used internally throughout the library.
+/// </summary>
 public static class Errors
 {
     public static Exception UnknownCallType(byte callTypeId)

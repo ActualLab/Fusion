@@ -2,6 +2,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Defines the contract for a retry policy that determines when and how to
+/// retry failed operations.
+/// </summary>
 public interface IRetryPolicy
 {
     public int? TryCount { get; init; }
@@ -18,6 +22,10 @@ public interface IRetryPolicy
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Default <see cref="IRetryPolicy"/> implementation with configurable try count,
+/// per-try timeout, delay sequence, and transiency-based filtering.
+/// </summary>
 public record RetryPolicy(
     int? TryCount,
     TimeSpan? TryTimeout,

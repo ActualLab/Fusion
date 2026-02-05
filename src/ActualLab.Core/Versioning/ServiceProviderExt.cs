@@ -1,5 +1,8 @@
 namespace ActualLab.Versioning;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceProvider"/> to resolve versioning services.
+/// </summary>
 public static class ServiceProviderExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Abstract base class for handlers associated with a specific <see cref="RpcMethodDef"/>.
+/// </summary>
 public abstract class RpcCallHandler(RpcMethodDef methodDef) : IHasServices
 {
     protected ILogger Log => field ??= Services.LogFor(GetType());

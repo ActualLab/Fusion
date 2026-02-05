@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Extension methods for <see cref="StateFactory"/>.
+/// </summary>
 public static class StateFactoryExt
 {
     // NewMutable

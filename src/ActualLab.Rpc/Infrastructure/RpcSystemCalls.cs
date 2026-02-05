@@ -5,6 +5,9 @@ using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Defines the contract for system-level RPC calls (handshake, result delivery, streaming, etc.).
+/// </summary>
 public interface IRpcSystemCalls : IRpcSystemService
 {
     // Handshake & Reconnected
@@ -31,6 +34,9 @@ public interface IRpcSystemCalls : IRpcSystemService
     public Task<RpcNoWait> End(long index, ExceptionInfo error);
 }
 
+/// <summary>
+/// Implements <see cref="IRpcSystemCalls"/> to handle system-level RPC messages on the receiving side.
+/// </summary>
 public sealed class RpcSystemCalls(IServiceProvider services)
     : RpcServiceBase(services), IRpcSystemCalls, IRpcPolymorphicArgumentHandler
 {

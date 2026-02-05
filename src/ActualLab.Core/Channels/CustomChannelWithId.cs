@@ -1,5 +1,8 @@
 namespace ActualLab.Channels;
 
+/// <summary>
+/// A <see cref="CustomChannel{TWrite, TRead}"/> with an associated identifier.
+/// </summary>
 public class CustomChannelWithId<TId, TWrite, TRead> : Channel<TWrite, TRead>, IHasId<TId>
 {
     public TId Id { get; }
@@ -12,6 +15,9 @@ public class CustomChannelWithId<TId, TWrite, TRead> : Channel<TWrite, TRead>, I
     }
 }
 
+/// <summary>
+/// A <see cref="CustomChannel{T}"/> with an associated identifier.
+/// </summary>
 public class CustomChannelWithId<TId, T> : Channel<T>, IHasId<TId>
 {
     public TId Id { get; }

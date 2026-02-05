@@ -2,6 +2,9 @@ using System.Buffers;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// A typed <see cref="IByteSerializer{T}"/> adapter that delegates to an untyped <see cref="IByteSerializer"/>.
+/// </summary>
 public sealed class CastingByteSerializer<T>(
     IByteSerializer untypedSerializer,
     Type serializedType

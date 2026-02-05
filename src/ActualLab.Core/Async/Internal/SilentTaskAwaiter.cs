@@ -2,6 +2,9 @@ namespace ActualLab.Async.Internal;
 
 // Based on https://github.com/dotnet/runtime/issues/22144#issuecomment-1328319861
 
+/// <summary>
+/// An awaiter that silently ignores the result and errors of a <see cref="Task"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct SilentTaskAwaiter<TTask>(TTask task, bool captureContext = true)
     : ICriticalNotifyCompletion

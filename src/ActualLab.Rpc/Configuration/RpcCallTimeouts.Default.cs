@@ -4,6 +4,9 @@ namespace ActualLab.Rpc;
 
 public sealed partial record RpcCallTimeouts
 {
+    /// <summary>
+    /// Provides default <see cref="RpcCallTimeouts"/> for different method kinds (query, command, backend).
+    /// </summary>
     public static class Default
     {
         public static bool UseDebug { get; set; } = Debugger.IsAttached;

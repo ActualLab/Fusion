@@ -1,5 +1,8 @@
 namespace ActualLab.CommandR.Configuration;
 
+/// <summary>
+/// Extension methods for <see cref="CommandHandlerResolver"/>.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume all command handling code is preserved")]
 public static class CommandHandlerResolverExt
 {

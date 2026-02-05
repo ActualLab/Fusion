@@ -4,6 +4,10 @@ using ActualLab.Interception.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Configuration options controlling the behavior of a <see cref="Computed"/> instance,
+/// including caching, invalidation delays, and consolidation.
+/// </summary>
 public sealed record ComputedOptions
 {
     private static readonly ConcurrentDictionary<(Type, MethodInfo), ComputedOptions?> Cache = new();

@@ -1,5 +1,8 @@
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// Extension methods for <see cref="Guid"/> providing formatting and conversion utilities.
+/// </summary>
 public static class GuidExt
 {
     public static (ulong, ulong) ToUInt64Pair(this Guid guid)

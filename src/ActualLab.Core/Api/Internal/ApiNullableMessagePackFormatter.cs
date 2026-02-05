@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Api.Internal;
 
+/// <summary>
+/// MessagePack formatter for <see cref="ApiNullable{T}"/>.
+/// </summary>
 public sealed class ApiNullableMessagePackFormatter<T> : IMessagePackFormatter<ApiNullable<T>>
     where T : struct
 {

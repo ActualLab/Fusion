@@ -2,6 +2,9 @@ using ActualLab.CommandR.Internal;
 
 namespace ActualLab.CommandR;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceProvider"/> to resolve commander services.
+/// </summary>
 public static class ServiceProviderExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

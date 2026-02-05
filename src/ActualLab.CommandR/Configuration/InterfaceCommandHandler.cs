@@ -1,10 +1,18 @@
 namespace ActualLab.CommandR.Configuration;
 
+/// <summary>
+/// Defines a command handler that dispatches commands via an
+/// <see cref="ICommandHandler{TCommand}"/> interface implementation.
+/// </summary>
 public interface IInterfaceCommandHandler : ICommandHandler
 {
     public Type ServiceType { get; }
 }
 
+/// <summary>
+/// A <see cref="CommandHandler"/> that invokes a command via the
+/// <see cref="ICommandHandler{TCommand}"/> interface on a resolved service.
+/// </summary>
 public sealed record InterfaceCommandHandler<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TCommand>(
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type ServiceType,
@@ -34,6 +42,9 @@ public sealed record InterfaceCommandHandler<
     public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 }
 
+/// <summary>
+/// Factory methods for creating <see cref="InterfaceCommandHandler{TCommand}"/> instances.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume all command handling code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume all command handling code is preserved")]

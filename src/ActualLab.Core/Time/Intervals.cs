@@ -1,5 +1,8 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// Factory methods for creating fixed and exponential delay sequences.
+/// </summary>
 public static class Intervals
 {
     public static IEnumerable<TimeSpan> Fixed(TimeSpan delay)

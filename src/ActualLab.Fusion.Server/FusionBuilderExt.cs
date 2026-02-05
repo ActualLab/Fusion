@@ -3,6 +3,9 @@ using ActualLab.Rpc.Server;
 
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// Extension methods for <see cref="FusionBuilder"/> to add Fusion web server services.
+/// </summary>
 public static class FusionBuilderExt
 {
     static FusionBuilderExt()

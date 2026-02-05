@@ -4,6 +4,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Configuration options for RPC diagnostics, including call tracing and logging factories.
+/// </summary>
 public record RpcDiagnosticsOptions
 {
     public static RpcDiagnosticsOptions Default { get; set; } = new();

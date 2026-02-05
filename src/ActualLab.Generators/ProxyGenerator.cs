@@ -4,6 +4,10 @@ namespace ActualLab.Generators;
 using static DiagnosticsHelpers;
 using static GenerationHelpers;
 
+/// <summary>
+/// An incremental source generator that creates proxy classes for types implementing
+/// <c>IRequiresAsyncProxy</c> or <c>IRequiresFullProxy</c> interfaces.
+/// </summary>
 [Generator]
 public class ProxyGenerator : IIncrementalGenerator
 {

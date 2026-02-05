@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Fusion.Server.Middlewares;
 
+/// <summary>
+/// Provides factory methods for creating <see cref="HttpContext"/>-based value extractors
+/// used to derive session tags or identifiers from incoming requests.
+/// </summary>
 public static class HttpContextExtractors
 {
     public static Func<HttpContext, int> PortExtractor { get; set; }

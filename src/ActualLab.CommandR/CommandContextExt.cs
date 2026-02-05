@@ -2,6 +2,9 @@ using ActualLab.Caching;
 
 namespace ActualLab.CommandR;
 
+/// <summary>
+/// Extension methods for <see cref="CommandContext"/>.
+/// </summary>
 public static class CommandContextExt
 {
     public static Task<CommandContext> Run(this CommandContext context, CancellationToken cancellationToken = default)
@@ -26,6 +29,9 @@ public static class CommandContextExt
 
     // Nested types
 
+    /// <summary>
+    /// Generic factory that produces a typed Call delegate for a given result type.
+    /// </summary>
     public sealed class TypedCallFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         // ReSharper disable once MemberHidesStaticFromOuterClass

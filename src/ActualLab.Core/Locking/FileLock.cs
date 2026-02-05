@@ -3,6 +3,9 @@ using ActualLab.IO;
 
 namespace ActualLab.Locking;
 
+/// <summary>
+/// An <see cref="IAsyncLock{TReleaser}"/> implementation that uses a file system lock.
+/// </summary>
 public class FileLock(FilePath path, IEnumerable<TimeSpan>? retryIntervals = null)
     : IAsyncLock<FileLock.Releaser>
 {
@@ -69,6 +72,9 @@ public class FileLock(FilePath path, IEnumerable<TimeSpan>? retryIntervals = nul
 
     // Nested types
 
+    /// <summary>
+    /// Releases the <see cref="FileLock"/> when disposed.
+    /// </summary>
     public readonly struct Releaser(FileLock fileLock) : IAsyncLockReleaser
     {
         public void MarkLockedLocally(bool unmarkOnRelease = true)

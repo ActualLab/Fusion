@@ -2,6 +2,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ActualLab.Rpc.Server;
 
+/// <summary>
+/// Builder for configuring the OWIN-based <see cref="RpcWebSocketServer"/> and its options.
+/// </summary>
 public readonly struct RpcWebSocketServerBuilder
 {
     public RpcBuilder Rpc { get; }

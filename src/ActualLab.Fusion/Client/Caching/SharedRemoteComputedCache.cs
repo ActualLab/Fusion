@@ -3,6 +3,10 @@ using ActualLab.Rpc.Caching;
 
 namespace ActualLab.Fusion.Client.Caching;
 
+/// <summary>
+/// An <see cref="IRemoteComputedCache"/> wrapper that delegates to a shared
+/// singleton <see cref="RemoteComputedCache"/> instance.
+/// </summary>
 public class SharedRemoteComputedCache : IRemoteComputedCache
 {
     public static RemoteComputedCache Instance { get; set; } = null!;

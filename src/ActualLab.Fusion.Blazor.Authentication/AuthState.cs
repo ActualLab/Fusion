@@ -3,6 +3,10 @@ using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Blazor.Authentication;
 
+/// <summary>
+/// Extends <see cref="AuthenticationState"/> with Fusion's <see cref="User"/> model
+/// and forced sign-out status.
+/// </summary>
 public class AuthState(User? user, bool isSignOutForced = false)
     : AuthenticationState(user.OrGuest().ToClaimsPrincipal())
 {

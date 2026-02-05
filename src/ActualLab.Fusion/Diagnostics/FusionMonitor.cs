@@ -4,6 +4,10 @@ using ActualLab.Fusion.Diagnostics.Internal;
 
 namespace ActualLab.Fusion.Diagnostics;
 
+/// <summary>
+/// A background worker that monitors <see cref="ComputedRegistry"/> access and registration
+/// statistics, periodically logging them for diagnostics.
+/// </summary>
 public sealed class FusionMonitor : WorkerBase
 {
 #if NET9_0_OR_GREATER

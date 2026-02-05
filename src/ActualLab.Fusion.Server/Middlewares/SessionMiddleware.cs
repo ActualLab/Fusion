@@ -4,8 +4,15 @@ using Microsoft.AspNetCore.Http.Extensions;
 
 namespace ActualLab.Fusion.Server.Middlewares;
 
+/// <summary>
+/// ASP.NET Core middleware that resolves or creates a <see cref="Session"/>
+/// from cookies and makes it available via <see cref="ISessionResolver"/>.
+/// </summary>
 public class SessionMiddleware : IMiddleware, IHasServices
 {
+    /// <summary>
+    /// Configuration options for <see cref="SessionMiddleware"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

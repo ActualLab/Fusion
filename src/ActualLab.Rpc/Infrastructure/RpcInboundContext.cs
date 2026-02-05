@@ -5,6 +5,9 @@ namespace ActualLab.Rpc.Infrastructure;
 
 #pragma warning disable CA1721
 
+/// <summary>
+/// Encapsulates the context for processing an inbound RPC message on a peer.
+/// </summary>
 public sealed class RpcInboundContext
 {
     private static readonly AsyncLocal<RpcInboundContext?> CurrentLocal = new();

@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Tracks the routing state of an RPC peer, signaling when a route change (reroute) occurs.
+/// </summary>
 public sealed class RpcRouteState
 {
     private static readonly Func<CancellationToken, ValueTask> FinalLocalExecutionAwaiter

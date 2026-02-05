@@ -4,6 +4,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Abstract base class responsible for establishing RPC connections to remote peers.
+/// </summary>
 public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(services)
 {
     public BoundedChannelOptions LocalChannelOptions { get; init; } = new(256) {

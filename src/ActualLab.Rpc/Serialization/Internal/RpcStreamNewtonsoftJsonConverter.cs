@@ -4,6 +4,9 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 
+/// <summary>
+/// Newtonsoft.Json converter that serializes <see cref="RpcStream{T}"/> instances as strings.
+/// </summary>
 public class RpcStreamNewtonsoftJsonConverter : JsonConverter
 {
     // TODO: Replace w/ GenericInstanceCache
@@ -32,6 +35,9 @@ public class RpcStreamNewtonsoftJsonConverter : JsonConverter
 
     // Nested types
 
+    /// <summary>
+    /// Typed Newtonsoft.Json converter for <see cref="RpcStream{T}"/>.
+    /// </summary>
     public class Converter<T> : Newtonsoft.Json.JsonConverter<RpcStream<T>>
     {
         public override void WriteJson(

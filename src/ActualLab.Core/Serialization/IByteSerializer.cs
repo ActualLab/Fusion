@@ -2,6 +2,9 @@ using System.Buffers;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Defines a contract for binary serialization and deserialization of objects.
+/// </summary>
 public interface IByteSerializer
 {
     public object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength);
@@ -10,6 +13,9 @@ public interface IByteSerializer
     public IByteSerializer<T> ToTyped<T>(Type? serializedType = null);
 }
 
+/// <summary>
+/// Defines a contract for binary serialization and deserialization of <typeparamref name="T"/>.
+/// </summary>
 public interface IByteSerializer<T>
 {
     public T Read(ReadOnlyMemory<byte> data, out int readLength);

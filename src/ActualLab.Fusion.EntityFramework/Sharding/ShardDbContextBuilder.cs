@@ -3,6 +3,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// A builder for configuring database sharding services including shard registries,
+/// shard resolvers, and shard-specific <see cref="DbContext"/> factories.
+/// </summary>
 public readonly struct ShardDbContextBuilder<TDbContext>
     where TDbContext : DbContext
 {

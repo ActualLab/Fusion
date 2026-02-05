@@ -1,5 +1,9 @@
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Provides helpers for constructing generic <see cref="Action"/> and
+/// <see cref="Func{TResult}"/> delegate types at runtime.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume all used Action/Func constructors are preserved")]
 public static class FuncExt
 {

@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Defines connect, run, and log timeouts for outbound RPC calls.
+/// </summary>
 public sealed partial record RpcCallTimeouts
 {
     public static TimeSpan DefaultLogTimeout { get; set; } = TimeSpan.FromSeconds(30);

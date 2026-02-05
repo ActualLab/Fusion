@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Operations.Internal;
 
+/// <summary>
+/// Defines flags controlling when and how a <see cref="Computed"/> is invalidated.
+/// </summary>
 [Flags]
 public enum InvalidationFlags
 {

@@ -1,5 +1,9 @@
 namespace ActualLab.Conversion.Internal;
 
+/// <summary>
+/// A <see cref="Converter{TSource, TTarget}"/> that delegates to an
+/// <see cref="IConverter{TSource, TTarget}"/> implementation.
+/// </summary>
 public class InterfaceConverter<TSource, TTarget> : Converter<TSource, TTarget>
 {
     public IConverter<TSource, TTarget> Converter { get; init; }
@@ -18,6 +22,9 @@ public class InterfaceConverter<TSource, TTarget> : Converter<TSource, TTarget>
         => Converter = converter;
 }
 
+/// <summary>
+/// Factory methods for creating <see cref="InterfaceConverter{TSource, TTarget}"/> instances.
+/// </summary>
 public static class InterfaceConverter
 {
     public static InterfaceConverter<TSource, TTarget> New<TSource, TTarget>(IConverter<TSource, TTarget> converter)

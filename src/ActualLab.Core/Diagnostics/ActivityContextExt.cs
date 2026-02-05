@@ -2,6 +2,9 @@ using System.Diagnostics;
 
 namespace ActualLab.Diagnostics;
 
+/// <summary>
+/// Extension methods for <see cref="ActivityContext"/> to format W3C trace context headers.
+/// </summary>
 public static class ActivityContextExt
 {
     public static (string TraceParent, string TraceState) Format(this ActivityContext activityContext)

@@ -5,6 +5,10 @@ using ActualLab.OS;
 
 namespace ActualLab.CommandR;
 
+/// <summary>
+/// Provides the execution context for a command, including the service scope,
+/// handler pipeline state, operation tracking, and result management.
+/// </summary>
 public abstract class CommandContext(ICommander commander) : IHasServices, IAsyncDisposable
 {
     private static readonly ConcurrentDictionary<Type, Type> CommandContextTypeCache = new(HardwareInfo.ProcessorCountPo2, 131);
@@ -122,6 +126,10 @@ public abstract class CommandContext(ICommander commander) : IHasServices, IAsyn
     public abstract bool TryComplete(CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// A strongly-typed <see cref="CommandContext"/> for commands producing
+/// <typeparamref name="TResult"/>.
+/// </summary>
 public sealed class CommandContext<TResult> : CommandContext
 {
     public override Type ResultType => typeof(TResult);

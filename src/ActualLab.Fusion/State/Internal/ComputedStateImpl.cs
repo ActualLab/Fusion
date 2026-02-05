@@ -2,6 +2,9 @@ using ActualLab.Caching;
 
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// Internal helpers for <see cref="ComputedState"/>, including dispose-aware compute task creation.
+/// </summary>
 public static class ComputedStateImpl
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -19,6 +22,10 @@ public static class ComputedStateImpl
 
     // Nested types
 
+    /// <summary>
+    /// A generic factory that creates a cancellation-aware compute task
+    /// for a disposed <see cref="ComputedState"/>.
+    /// </summary>
     public sealed class GetComputeTaskIfDisposedFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()

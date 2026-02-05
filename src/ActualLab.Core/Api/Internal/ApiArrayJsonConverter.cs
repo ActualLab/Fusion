@@ -1,5 +1,8 @@
 namespace ActualLab.Api.Internal;
 
+/// <summary>
+/// System.Text.Json converter factory for <see cref="ApiArray{T}"/>.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Used constructors should be there for sure.")]
 public class ApiArrayJsonConverter : JsonConverterFactory
 {
@@ -23,6 +26,9 @@ public class ApiArrayJsonConverter : JsonConverterFactory
 
     // Nested types
 
+    /// <summary>
+    /// Typed System.Text.Json converter for <see cref="ApiArray{T}"/>.
+    /// </summary>
     public sealed class Converter<T> : JsonConverter<ApiArray<T>>
     {
         [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume JSON converter code is preserved")]

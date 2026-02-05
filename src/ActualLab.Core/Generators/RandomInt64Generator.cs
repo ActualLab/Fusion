@@ -2,6 +2,9 @@ using System.Security.Cryptography;
 
 namespace ActualLab.Generators;
 
+/// <summary>
+/// A thread-safe generator that produces cryptographically random <see cref="long"/> values.
+/// </summary>
 // Thread-safe!
 public sealed class RandomInt64Generator(RandomNumberGenerator? rng = null) : Generator<long>
 {

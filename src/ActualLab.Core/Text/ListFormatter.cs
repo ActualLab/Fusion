@@ -3,6 +3,10 @@ using Cysharp.Text;
 
 namespace ActualLab.Text;
 
+/// <summary>
+/// A ref struct that formats a sequence of strings into a delimited list
+/// using <see cref="ListFormat"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public ref struct ListFormatter
 {

@@ -1,5 +1,8 @@
 namespace ActualLab.Pooling;
 
+/// <summary>
+/// Pairs an item with its disposable owner, disposing the owner on release.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct Owned<TItem, TOwner>(
     TItem subject,

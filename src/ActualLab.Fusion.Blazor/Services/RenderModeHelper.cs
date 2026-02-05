@@ -3,6 +3,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Provides helpers for querying and switching the current Blazor render mode.
+/// </summary>
 public class RenderModeHelper(CircuitHub circuitHub)
 {
     protected CircuitHub CircuitHub { get; } = circuitHub;

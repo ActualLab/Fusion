@@ -3,6 +3,9 @@ using MessagePack;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// Represents a time span with a random jitter component defined by an origin and max delta.
+/// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 [DataContract, MemoryPackable, MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]

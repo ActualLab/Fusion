@@ -5,6 +5,10 @@ namespace ActualLab.Collections;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 
+/// <summary>
+/// A thread-safe mutable property bag backed by an immutable <see cref="PropertyBag"/>
+/// with atomic update operations and change notifications.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

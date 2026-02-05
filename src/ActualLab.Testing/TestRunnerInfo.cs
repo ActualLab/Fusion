@@ -1,13 +1,23 @@
 namespace ActualLab.Testing;
 
+/// <summary>
+/// Detects the current test runner environment (Docker, TeamCity, GitHub Actions)
+/// by inspecting environment variables.
+/// </summary>
 public static class TestRunnerInfo
 {
+    /// <summary>
+    /// Detects whether tests are running inside a Docker container.
+    /// </summary>
     public static class Docker
     {
         public static readonly bool IsDotnetRunningInContainer =
             !(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") ?? "").IsNullOrEmpty();
     }
 
+    /// <summary>
+    /// Detects TeamCity build agent environment from environment variables.
+    /// </summary>
     public static class TeamCity
     {
         public static readonly Version? Version;
@@ -24,6 +34,9 @@ public static class TestRunnerInfo
         }
     }
 
+    /// <summary>
+    /// Detects GitHub Actions environment from environment variables.
+    /// </summary>
     public static class GitHub
     {
         public static readonly string Workflow;

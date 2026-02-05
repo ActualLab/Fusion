@@ -3,6 +3,10 @@ using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Blazor.Authentication;
 
+/// <summary>
+/// Client-side helper for performing sign-in, sign-out, and session management
+/// operations via JavaScript interop and the <see cref="IAuth"/> service.
+/// </summary>
 public class ClientAuthHelper(IServiceProvider services) : IHasServices
 {
     public static string SchemasJavaScriptExpression { get; set; } = "window.FusionAuth.schemas";

@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Factory methods for <see cref="MessagePackSerialized{T}"/>.
+/// </summary>
 public static class MessagePackSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -13,6 +16,9 @@ public static class MessagePackSerialized
         => new() { Data = data };
 }
 
+/// <summary>
+/// A <see cref="ByteSerialized{T}"/> variant that uses <see cref="MessagePackByteSerializer"/> for serialization.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class MessagePackSerialized<T> : ByteSerialized<T>

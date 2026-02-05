@@ -2,6 +2,9 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Extension methods for <see cref="RpcPeerRef"/>.
+/// </summary>
 public static class RpcPeerRefExt
 {
     public static string GetRemotePartyName(this RpcPeerRef peerRef)

@@ -4,6 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
+/// <summary>
+/// Defines the contract for formatting <see cref="DbHint"/> instances into
+/// provider-specific SQL and applying them to queries.
+/// </summary>
 public interface IDbHintFormatter
 {
     public void Configure(IServiceCollection services);
@@ -11,6 +15,10 @@ public interface IDbHintFormatter
         where T : class;
 }
 
+/// <summary>
+/// Abstract base for <see cref="IDbHintFormatter"/> implementations that maps
+/// <see cref="DbHint"/> values to SQL strings via a configurable dictionary.
+/// </summary>
 public abstract class DbHintFormatter : IDbHintFormatter
 {
     protected Dictionary<DbHint, string> DbHintToSql { get; init; } = new();

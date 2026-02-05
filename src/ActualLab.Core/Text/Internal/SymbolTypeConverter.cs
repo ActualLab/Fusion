@@ -4,6 +4,10 @@ using System.Globalization;
 namespace ActualLab.Text.Internal;
 
 // Used by JSON.NET to serialize dictionary keys of this type
+
+/// <summary>
+/// TypeConverter for <see cref="Symbol"/>, enabling string-based conversion.
+/// </summary>
 public class SymbolTypeConverter : TypeConverter
 {
     public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)

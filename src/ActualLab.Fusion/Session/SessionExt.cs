@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Extension methods for <see cref="Session"/>.
+/// </summary>
 public static class SessionExt
 {
     public static bool IsDefault([NotNullWhen(true)] this Session? session)

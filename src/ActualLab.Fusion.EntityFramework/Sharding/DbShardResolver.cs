@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Defines the contract for resolving the target database shard from a source object
+/// such as a command or session.
+/// </summary>
 public interface IDbShardResolver : IHasServices
 {
     public IDbShardRegistry ShardRegistry { get; }
@@ -7,11 +11,18 @@ public interface IDbShardResolver : IHasServices
     public string Resolve(object source);
 }
 
+/// <summary>
+/// A typed <see cref="IDbShardResolver"/> scoped to a specific <see cref="DbContext"/> type.
+/// </summary>
 public interface IDbShardResolver<TDbContext> : IDbShardResolver
 {
     public new IDbShardRegistry<TDbContext> ShardRegistry { get; }
 }
 
+/// <summary>
+/// Abstract base for <see cref="IDbShardResolver"/> implementations, providing
+/// a session shard tag and common resolution infrastructure.
+/// </summary>
 public abstract class DbShardResolver(IServiceProvider services) : IDbShardResolver
 {
     public static string DefaultSessionShardTag { get; set; } = "s";
@@ -25,6 +36,10 @@ public abstract class DbShardResolver(IServiceProvider services) : IDbShardResol
     public abstract string Resolve(object source);
 }
 
+/// <summary>
+/// Default <see cref="IDbShardResolver{TDbContext}"/> that resolves shards from
+/// <see cref="Session"/>, <see cref="IHasShard"/>, and <see cref="ISessionCommand"/> objects.
+/// </summary>
 public class DbShardResolver<TDbContext>(IServiceProvider services)
     : DbShardResolver(services), IDbShardResolver<TDbContext>
 {

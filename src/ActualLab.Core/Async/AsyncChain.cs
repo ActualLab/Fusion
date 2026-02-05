@@ -2,6 +2,9 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Async;
 
+/// <summary>
+/// A named async operation that can be composed, retried, logged, and run with cancellation.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct AsyncChain
 {

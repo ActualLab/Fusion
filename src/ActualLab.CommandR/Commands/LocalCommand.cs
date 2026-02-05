@@ -10,8 +10,14 @@ public interface ILocalCommand : ICommand
     public Task Run(CommandContext context, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// A generic variant of <see cref="ILocalCommand"/> that produces a typed result.
+/// </summary>
 public interface ILocalCommand<T> : ICommand<T>, ILocalCommand;
 
+/// <summary>
+/// Base record for local commands that execute inline via a delegate.
+/// </summary>
 public abstract record LocalCommand : ILocalCommand
 {
     public string Title { get; init; } = "";

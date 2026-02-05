@@ -2,6 +2,9 @@ using ActualLab.Mathematics.Internal;
 
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// A hierarchical stack of <see cref="TileLayer{T}"/> instances with increasing tile sizes.
+/// </summary>
 public sealed class TileStack<T>
     where T : notnull
 {

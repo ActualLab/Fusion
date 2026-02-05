@@ -1,5 +1,8 @@
 namespace ActualLab.Resilience.Internal;
 
+/// <summary>
+/// A <see cref="ChaosMaker"/> that introduces a random delay.
+/// </summary>
 public sealed record DelayChaosMaker(RandomTimeSpan Duration, ChaosMaker? Next = null) : ChaosMaker
 {
     public override string ToString()

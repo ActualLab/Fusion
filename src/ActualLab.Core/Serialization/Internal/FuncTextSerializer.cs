@@ -3,6 +3,9 @@ using Cysharp.Text;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// An <see cref="ITextSerializer{T}"/> implementation that delegates to read/write functions.
+/// </summary>
 public class FuncTextSerializer<T>(
     Func<string, T> reader,
     Func<T, string> writer

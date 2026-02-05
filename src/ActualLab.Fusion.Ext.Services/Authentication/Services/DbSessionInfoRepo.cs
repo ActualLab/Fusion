@@ -3,6 +3,9 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Defines repository operations for <see cref="DbSessionInfo{TDbUserId}"/> entities.
+/// </summary>
 public interface IDbSessionInfoRepo<in TDbContext, TDbSessionInfo, in TDbUserId>
     where TDbContext : DbContext
     where TDbSessionInfo : DbSessionInfo<TDbUserId>, new()
@@ -27,6 +30,10 @@ public interface IDbSessionInfoRepo<in TDbContext, TDbSessionInfo, in TDbUserId>
         TDbContext dbContext, TDbUserId userId, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Default database repository for session info entities, supporting
+/// CRUD operations and trimming of expired sessions.
+/// </summary>
 public class DbSessionInfoRepo<TDbContext,
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbUserId>(

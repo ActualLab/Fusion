@@ -2,6 +2,9 @@ namespace ActualLab.Fusion.Internal;
 
 #pragma warning disable CS0169 // Field is never used
 
+/// <summary>
+/// A marker struct used as a generic argument to skip <see cref="ComputedRegistry"/> registration.
+/// </summary>
 public readonly struct SkipComputedRegistration : IEquatable<SkipComputedRegistration>
 {
     public static readonly SkipComputedRegistration Option = default!;

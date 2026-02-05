@@ -3,6 +3,10 @@ namespace ActualLab.Generators.Internal;
 // [RS2008] Enable analyzer release tracking for the analyzer project containing rule 'ALG0001'
 #pragma warning disable RS2008
 
+/// <summary>
+/// Provides diagnostic reporting helpers and debug output utilities
+/// for the <see cref="ProxyGenerator"/> source generator.
+/// </summary>
 public static class DiagnosticsHelpers
 {
 #if DEBUG_OUTPUT

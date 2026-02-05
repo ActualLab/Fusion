@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// Extension methods for <see cref="FusionBuilder"/> to add Fusion web server services
+/// for the .NET Framework (OWIN) hosting model.
+/// </summary>
 public static class FusionBuilderExt
 {
     public static FusionWebServerBuilder AddWebServer(this FusionBuilder fusion)

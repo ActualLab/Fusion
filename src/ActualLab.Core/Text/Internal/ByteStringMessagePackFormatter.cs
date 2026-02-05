@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Text.Internal;
 
+/// <summary>
+/// MessagePack formatter for <see cref="ByteString"/>.
+/// </summary>
 public sealed class ByteStringMessagePackFormatter : IMessagePackFormatter<ByteString>
 {
     public void Serialize(ref MessagePackWriter writer, ByteString value, MessagePackSerializerOptions options)

@@ -2,6 +2,9 @@ using ActualLab.Internal;
 
 namespace ActualLab;
 
+/// <summary>
+/// Extension methods for <see cref="string"/>.
+/// </summary>
 public static class StringExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,7 +1,14 @@
 namespace ActualLab.Interception.Interceptors;
 
+/// <summary>
+/// An interceptor that resolves a scoped service for each method call
+/// and invokes the method on that scoped instance.
+/// </summary>
 public sealed class ScopedServiceInterceptor : Interceptor
 {
+    /// <summary>
+    /// Configuration options for <see cref="ScopedServiceInterceptor"/>.
+    /// </summary>
     public new record Options : Interceptor.Options
     {
         public static Options Default { get; set; } = new();

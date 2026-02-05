@@ -3,6 +3,9 @@ using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Provides static access to the default <see cref="IByteSerializer"/> and factory methods.
+/// </summary>
 public static class ByteSerializer
 {
     public static IByteSerializer Default { get; set; } =
@@ -18,6 +21,9 @@ public static class ByteSerializer
         => new AsymmetricByteSerializer(reader, writer);
 }
 
+/// <summary>
+/// Provides static access to the default typed <see cref="IByteSerializer{T}"/> and factory methods.
+/// </summary>
 public static class ByteSerializer<T>
 {
     public static readonly IByteSerializer<T> Default = ByteSerializer.Default.ToTyped<T>();

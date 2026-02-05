@@ -1,5 +1,9 @@
 namespace ActualLab.CommandR;
 
+/// <summary>
+/// Tracks the current position within a <see cref="CommandHandlerChain"/> during
+/// command execution.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct CommandExecutionState(
     CommandHandlerChain Handlers,

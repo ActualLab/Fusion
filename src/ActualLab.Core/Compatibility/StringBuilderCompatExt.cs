@@ -3,6 +3,9 @@
 // ReSharper disable once CheckNamespace
 namespace System.Text;
 
+/// <summary>
+/// Compatibility extension methods for <see cref="StringBuilder"/> on .NET Standard 2.0.
+/// </summary>
 public static class StringBuilderCompatExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

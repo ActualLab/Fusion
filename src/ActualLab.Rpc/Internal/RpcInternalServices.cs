@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Internal;
 
+/// <summary>
+/// Aggregates commonly used internal services and options from <see cref="RpcHub"/> for convenient access.
+/// </summary>
 public sealed class RpcInternalServices(RpcHub hub) : IHasServices
 {
     public RpcHub Hub = hub;

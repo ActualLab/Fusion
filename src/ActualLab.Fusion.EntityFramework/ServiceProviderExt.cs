@@ -2,6 +2,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceProvider"/> to resolve common Fusion
+/// EntityFramework services such as <see cref="DbHub{TDbContext}"/> and entity resolvers.
+/// </summary>
 public static class ServiceProviderExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,10 +1,17 @@
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// Defines the contract for a service that trims old database log entries.
+/// </summary>
 public interface IDbLogTrimmer
 {
     public DbLogKind LogKind { get; }
 }
 
+/// <summary>
+/// Configuration options for database log trimmers, including batch size,
+/// check period, and maximum entry age.
+/// </summary>
 public record DbLogTrimmerOptions
 {
     // Should be greater than zero; higher values ensure entries are stored longer after processing

@@ -3,6 +3,9 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Converts between <see cref="DbUser{TDbUserId}"/> entities and <see cref="User"/> models.
+/// </summary>
 public class DbUserConverter<TDbContext, TDbUser, TDbUserId>(IServiceProvider services)
     : DbEntityConverter<TDbContext, TDbUser, User>(services)
     where TDbContext : DbContext

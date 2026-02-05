@@ -2,6 +2,9 @@ using ActualLab.CommandR.Operations;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
+/// <summary>
+/// Factory methods for Fusion operations-related exceptions.
+/// </summary>
 public static class Errors
 {
     public static Exception OperationHasNoCommand()

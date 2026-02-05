@@ -1,5 +1,8 @@
 namespace ActualLab.Interception.Internal;
 
+/// <summary>
+/// Factory methods for interception-related exceptions.
+/// </summary>
 public static class Errors
 {
     public static Exception NoProxyType(Type type)

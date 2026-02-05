@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Extension methods for <see cref="IDbEntityResolver{TKey, TDbEntity}"/> providing
+/// single-shard shortcuts and batch entity retrieval helpers.
+/// </summary>
 public static class DbEntityResolverExt
 {
     public static Task<TDbEntity?> Get<TKey, TDbEntity>(

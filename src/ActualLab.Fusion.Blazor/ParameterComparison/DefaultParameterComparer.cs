@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Default parameter comparer that uses known immutable type detection
+/// and value equality, mirroring Blazor's built-in change detection logic.
+/// </summary>
 public class DefaultParameterComparer : ParameterComparer
 {
     private static readonly Type EventCallbackInterfaceType = typeof(EventCallback)

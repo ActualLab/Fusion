@@ -3,8 +3,16 @@ using ActualLab.Fusion.Internal;
 namespace ActualLab.Fusion.Interception;
 
 // Just a tagging interface
+
+/// <summary>
+/// A tagging interface for <see cref="Computed"/> instances produced by compute methods.
+/// </summary>
 public interface IComputedMethodComputed : IComputed;
 
+/// <summary>
+/// A <see cref="Computed{T}"/> produced by a compute method interception,
+/// which auto-registers and unregisters itself in <see cref="ComputedRegistry"/>.
+/// </summary>
 public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
 {
     public ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input)

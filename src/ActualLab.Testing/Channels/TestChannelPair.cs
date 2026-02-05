@@ -3,6 +3,10 @@ using Xunit.Abstractions;
 
 namespace ActualLab.Testing.Channels;
 
+/// <summary>
+/// A <see cref="ChannelPair{T}"/> designed for testing, with optional
+/// message logging via <see cref="ITestOutputHelper"/>.
+/// </summary>
 public class TestChannelPair<T> : ChannelPair<T>
 {
     public string Name { get; }

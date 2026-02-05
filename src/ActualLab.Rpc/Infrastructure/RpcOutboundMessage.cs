@@ -3,6 +3,9 @@ using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// An outbound RPC message ready for serialization, containing method, arguments, and headers.
+/// </summary>
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public sealed class RpcOutboundMessage(
     RpcOutboundContext context,

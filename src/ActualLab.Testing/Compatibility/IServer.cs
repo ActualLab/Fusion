@@ -28,6 +28,9 @@ public interface IServer : IDisposable
     public Task StopAsync(CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Defines a collection of HTTP features, similar to ASP.NET Core's IFeatureCollection.
+/// </summary>
 public interface IFeatureCollection : IEnumerable<KeyValuePair<Type, object>>, IEnumerable
 {
     public bool IsReadOnly { get; }
@@ -153,6 +156,9 @@ public class FeatureCollection : IFeatureCollection
     }
 }
 
+/// <summary>
+/// Defines the addresses used by a server.
+/// </summary>
 public interface IServerAddressesFeature
 {
     public ICollection<string> Addresses { get; }
@@ -192,8 +198,15 @@ public interface IHttpApplication<TContext>
     public Task ProcessRequestAsync(TContext context);
 }
 
+/// <summary>
+/// A minimal <see cref="IHttpApplication{TContext}"/> implementation used
+/// for hosting compatibility in .NET Framework test environments.
+/// </summary>
 internal sealed class HostingApplication : IHttpApplication<HostingApplication.Context>
 {
+    /// <summary>
+    /// Empty context type for the minimal hosting application.
+    /// </summary>
     internal sealed class Context
     { }
 

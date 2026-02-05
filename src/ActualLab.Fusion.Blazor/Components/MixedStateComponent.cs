@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// A computed state component that also manages a <see cref="MutableState{T}"/>,
+/// automatically recomputing when the mutable state changes.
+/// </summary>
 public abstract class MixedStateComponent<T, TMutableState> : ComputedStateComponent<T>
 {
     protected MutableState<TMutableState> MutableState { get; private set; } = null!;

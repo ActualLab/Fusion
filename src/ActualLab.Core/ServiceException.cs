@@ -2,6 +2,9 @@ namespace ActualLab;
 
 #pragma warning disable SYSLIB0051
 
+/// <summary>
+/// A base exception type for service-level errors.
+/// </summary>
 public class ServiceException : Exception
 {
     public ServiceException() { }

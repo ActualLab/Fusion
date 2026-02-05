@@ -3,6 +3,10 @@ using ActualLab.Generators;
 
 namespace ActualLab.CommandR.Operations;
 
+/// <summary>
+/// Represents a recorded operation (a completed command execution) with its
+/// nested operations, events, and metadata.
+/// </summary>
 public class Operation : IHasUuid, IHasId<string>
 {
     public static UuidGenerator UuidGenerator { get; set; } = UlidUuidGenerator.Instance;

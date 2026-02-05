@@ -15,8 +15,15 @@ using ActualLab.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// A global registry that stores and manages all <see cref="Computed"/> instances
+/// using weak references, with automatic pruning of collected entries.
+/// </summary>
 public sealed class ComputedRegistry
 {
+    /// <summary>
+    /// Configuration settings for <see cref="ComputedRegistry"/> initialization.
+    /// </summary>
     public static class Settings
     {
         public static int InitialCapacity { get; set; }
@@ -293,6 +300,9 @@ public sealed class ComputedRegistry
 
     // Nested types
 
+    /// <summary>
+    /// Diagnostic meters and counters for monitoring <see cref="ComputedRegistry"/> performance.
+    /// </summary>
     public class MeterSet
     {
         public readonly ObservableCounter<long> CapacityCounter;

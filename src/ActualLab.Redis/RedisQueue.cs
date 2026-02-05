@@ -2,8 +2,15 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// A Redis-backed FIFO queue for raw <see cref="RedisValue"/> items
+/// with pub/sub-based enqueue notifications.
+/// </summary>
 public sealed class RedisQueue : IAsyncDisposable
 {
+    /// <summary>
+    /// Configuration options for <see cref="RedisQueue"/>.
+    /// </summary>
     public record Options
     {
         public string EnqueuePubKeySuffix { get; init; } = "-updates";
@@ -68,8 +75,15 @@ public sealed class RedisQueue : IAsyncDisposable
     }
 }
 
+/// <summary>
+/// A Redis-backed FIFO queue for typed <typeparamref name="T"/> items
+/// with pub/sub-based enqueue notifications and serialization support.
+/// </summary>
 public sealed class RedisQueue<T> : IAsyncDisposable
 {
+    /// <summary>
+    /// Configuration options for <see cref="RedisQueue{T}"/>.
+    /// </summary>
     public record Options
     {
         public string EnqueuePubKeySuffix { get; init; } = "-updates";

@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// Extension methods for <see cref="ISandboxedKeyValueStore"/>.
+/// </summary>
 public static class SandboxedKeyValueStoreExt
 {
     // Set

@@ -3,6 +3,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Describes the type structure of an <see cref="ArgumentList"/>, including
+/// item types, generic/simple partitioning, and a factory for creating instances.
+/// </summary>
 public sealed class ArgumentListType
 {
     private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> GDefCache3

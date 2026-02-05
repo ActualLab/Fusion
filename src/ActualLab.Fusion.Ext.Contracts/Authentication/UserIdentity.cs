@@ -4,6 +4,9 @@ namespace ActualLab.Fusion.Authentication;
 
 #pragma warning disable CA1036
 
+/// <summary>
+/// Represents a user identity composed of an authentication schema and a schema-bound ID.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]

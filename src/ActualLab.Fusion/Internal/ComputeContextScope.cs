@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// A disposable scope that temporarily replaces the ambient <see cref="ComputeContext.Current"/>.
+/// </summary>
 public readonly struct ComputeContextScope : IDisposable
 {
     private readonly ComputeContext _oldContext;

@@ -3,6 +3,9 @@ using ActualLab.Plugins.Internal;
 
 namespace ActualLab.Plugins;
 
+/// <summary>
+/// Extension methods for <see cref="IPluginHost"/> to retrieve plugin instances.
+/// </summary>
 public static class PluginHostExt
 {
     internal static object GetPluginInstance(

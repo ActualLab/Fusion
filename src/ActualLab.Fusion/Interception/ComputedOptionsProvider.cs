@@ -3,6 +3,10 @@ using ActualLab.Fusion.Client.Caching;
 namespace ActualLab.Fusion.Interception;
 
 // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
+/// <summary>
+/// Resolves <see cref="ComputedOptions"/> for compute methods, adjusting cache settings
+/// based on the availability of <see cref="IRemoteComputedCache"/>.
+/// </summary>
 public class ComputedOptionsProvider(IServiceProvider services)
 {
     private readonly LazySlim<IRemoteComputedCache?> _remoteComputedCacheLazy

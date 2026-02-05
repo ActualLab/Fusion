@@ -3,6 +3,9 @@
 // ReSharper disable once CheckNamespace
 namespace System.Collections.Generic;
 
+/// <summary>
+/// Compatibility extension methods for collection types on .NET Standard 2.0.
+/// </summary>
 public static class CollectionCompatExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

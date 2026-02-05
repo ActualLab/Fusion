@@ -1,6 +1,9 @@
 // ReSharper disable once CheckNamespace
 namespace System;
 
+/// <summary>
+/// Compatibility extension methods for <see cref="TimeSpan"/> arithmetic across target frameworks.
+/// </summary>
 public static class TimeSpanCompatExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

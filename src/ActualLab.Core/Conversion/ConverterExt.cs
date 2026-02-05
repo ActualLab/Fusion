@@ -2,6 +2,9 @@ using ActualLab.Conversion.Internal;
 
 namespace ActualLab.Conversion;
 
+/// <summary>
+/// Extension methods for <see cref="Converter"/> types.
+/// </summary>
 public static class ConverterExt
 {
     public static Converter ThrowIfUnavailable(this Converter converter)

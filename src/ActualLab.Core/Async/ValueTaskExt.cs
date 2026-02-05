@@ -4,6 +4,9 @@ namespace ActualLab.Async;
 
 #pragma warning disable CA2012
 
+/// <summary>
+/// Extension methods and helpers for <see cref="ValueTask"/> and <see cref="ValueTask{TResult}"/>.
+/// </summary>
 public static partial class ValueTaskExt
 {
     public static readonly ValueTask CompletedTask = Task.CompletedTask.ToValueTask();

@@ -4,6 +4,10 @@ namespace ActualLab.Plugins.Metadata;
 
 #pragma warning disable IL2026, IL2067, IL2070
 
+/// <summary>
+/// Contains metadata about a single plugin, including its type hierarchy,
+/// capabilities, and dependency information.
+/// </summary>
 public class PluginInfo
 {
     public TypeRef Type { get; protected set; }

@@ -8,6 +8,10 @@ using Errors = ActualLab.Fusion.Internal.Errors;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Defines the contract for a computed value with consistency state tracking,
+/// invalidation support, and dependency management.
+/// </summary>
 public interface IComputed : IResult, IHasVersion<ulong>
 {
     public ComputedOptions Options { get; }
@@ -32,6 +36,10 @@ public interface IComputed : IResult, IHasVersion<ulong>
     public void Invalidate(bool immediately, InvalidationSource source);
 }
 
+/// <summary>
+/// The core abstraction of Fusion: a cached computation result with consistency state,
+/// dependency tracking, and automatic invalidation propagation.
+/// </summary>
 public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 {
     protected const int ConsistencyStateMask = 0xFF;

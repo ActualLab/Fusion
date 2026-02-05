@@ -6,6 +6,9 @@ using System.Runtime.InteropServices;
 
 namespace ActualLab.Compatibility;
 
+/// <summary>
+/// Provides native interop helpers for cryptographic random number generation on .NET Standard 2.0.
+/// </summary>
 internal static class Interop
 {
     internal static unsafe void GetRandomBytes(byte* buffer, int length)
@@ -23,6 +26,9 @@ internal static class Interop
         }
     }
 
+    /// <summary>
+    /// P/Invoke declarations for the Windows BCrypt API.
+    /// </summary>
     internal static partial class BCrypt
     {
         internal const int BCRYPT_USE_SYSTEM_PREFERRED_RNG = 0x00000002;
@@ -35,6 +41,9 @@ internal static class Interop
 
     internal static partial class BCrypt
     {
+        /// <summary>
+        /// Defines NTSTATUS codes returned by BCrypt functions.
+        /// </summary>
         internal enum NTSTATUS : uint
         {
             STATUS_SUCCESS = 0x0,
@@ -45,6 +54,9 @@ internal static class Interop
         }
     }
 
+    /// <summary>
+    /// Constants for native library names used in P/Invoke declarations.
+    /// </summary>
     internal static partial class Libraries
     {
         internal const string Advapi32 = "advapi32.dll";

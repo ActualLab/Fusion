@@ -2,6 +2,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Diagnostics;
 
+/// <summary>
+/// Logs inbound and outbound RPC calls at a configurable log level with optional filtering.
+/// </summary>
 public class RpcCallLogger(RpcPeer peer, ILogger? log, LogLevel logLevel)
 {
     public RpcPeer Peer { get; } = peer;

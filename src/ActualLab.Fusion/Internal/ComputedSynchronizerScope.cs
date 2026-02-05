@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// A disposable scope that temporarily replaces the ambient <see cref="ComputedSynchronizer"/>.
+/// </summary>
 public readonly struct ComputedSynchronizerScope : IDisposable
 {
     private readonly ComputedSynchronizer? _oldSynchronizer;

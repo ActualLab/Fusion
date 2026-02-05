@@ -3,6 +3,9 @@ using ActualLab.Rpc.Trimming;
 
 namespace ActualLab.CommandR.Trimming;
 
+/// <summary>
+/// Retains commander proxy-related code needed for .NET trimming scenarios.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]

@@ -2,6 +2,10 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// Extension methods for <see cref="RedisDb"/> to create Redis data structures
+/// such as publishers, subscribers, queues, hashes, sequence sets, and streamers.
+/// </summary>
 public static class RedisDbExt
 {
     public static RedisPub GetPub(this RedisDb redisDb, string key)

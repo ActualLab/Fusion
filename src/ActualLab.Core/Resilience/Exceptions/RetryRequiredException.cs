@@ -1,5 +1,8 @@
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// A super-transient exception indicating that a retry is required unconditionally.
+/// </summary>
 [Serializable]
 public class RetryRequiredException : TransientException, ISuperTransientException
 {

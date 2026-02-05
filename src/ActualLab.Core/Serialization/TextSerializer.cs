@@ -2,6 +2,9 @@ using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Provides static access to the default <see cref="ITextSerializer"/> and factory methods.
+/// </summary>
 public static class TextSerializer
 {
     public static ITextSerializer Default { get; set; } = SystemJsonSerializer.Default;
@@ -12,6 +15,9 @@ public static class TextSerializer
         => new AsymmetricTextSerializer(reader, writer, preferStringApi);
 }
 
+/// <summary>
+/// Provides static access to the default typed <see cref="ITextSerializer{T}"/> and factory methods.
+/// </summary>
 public static class TextSerializer<T>
 {
     public static readonly ITextSerializer<T> Default = TextSerializer.Default.ToTyped<T>();

@@ -1,5 +1,9 @@
 namespace ActualLab.Collections.Internal;
 
+/// <summary>
+/// Helper methods for <see cref="OptionSet"/> and <see cref="ImmutableOptionSet"/>
+/// string formatting and serialization.
+/// </summary>
 internal static class OptionSetHelper
 {
     public static string GetToStringArgs(IReadOnlyDictionary<string, object> items)

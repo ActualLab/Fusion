@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Diagnostics;
 
+/// <summary>
+/// Injects and extracts W3C trace context into/from RPC message headers for distributed tracing.
+/// </summary>
 public static class RpcActivityInjector
 {
     // private static readonly ILogger Log = StaticLog.For(typeof(RpcActivityInjector));

@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Abstract base for database processors that have access to an <see cref="IDbHub"/>
+/// and common infrastructure.
+/// </summary>
 public abstract class DbProcessorBase(IDbHub dbHub) : ProcessorBase
 {
     protected IServiceProvider Services { get; init; } = dbHub.Services;
@@ -13,6 +17,10 @@ public abstract class DbProcessorBase(IDbHub dbHub) : ProcessorBase
     protected ILogger Log => field ??= Services.LogFor(GetType());
 }
 
+/// <summary>
+/// Abstract base for database processors scoped to a specific <typeparamref name="TDbContext"/>,
+/// with lazy access to <see cref="DbHub{TDbContext}"/>.
+/// </summary>
 public abstract class DbProcessorBase<TDbContext>(IServiceProvider services) : ProcessorBase
     where TDbContext : DbContext
 {

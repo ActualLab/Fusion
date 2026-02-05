@@ -4,6 +4,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Diagnostics;
 
+/// <summary>
+/// Default <see cref="RpcCallTracer"/> that produces OpenTelemetry activities and records call metrics.
+/// </summary>
 public class RpcDefaultCallTracer : RpcCallTracer
 {
     public readonly bool MustTraceInbound;

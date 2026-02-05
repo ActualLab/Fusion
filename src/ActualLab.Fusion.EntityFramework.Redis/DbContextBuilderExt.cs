@@ -4,6 +4,10 @@ using ActualLab.Redis;
 
 namespace ActualLab.Fusion.EntityFramework.Redis;
 
+/// <summary>
+/// Extension methods for <see cref="DbContextBuilder{TDbContext}"/> to register
+/// Redis database connections for use with Fusion EntityFramework services.
+/// </summary>
 public static class DbContextBuilderExt
 {
     // AddRedisDb

@@ -6,8 +6,14 @@ using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Fusion.Authentication.Endpoints;
 
+/// <summary>
+/// Handles sign-in and sign-out HTTP requests using ASP.NET Core authentication.
+/// </summary>
 public class AuthEndpoints(AuthEndpoints.Options settings)
 {
+    /// <summary>
+    /// Configuration options for <see cref="AuthEndpoints"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

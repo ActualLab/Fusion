@@ -2,6 +2,9 @@ namespace ActualLab.Text.Internal;
 
 #if !NETSTANDARD2_0
 
+/// <summary>
+/// A MemoryPack formatter for strings that uses the <see cref="Symbol"/> versioned format.
+/// </summary>
 public sealed class StringAsSymbolMemoryPackFormatter : MemoryPackFormatter<string>
 {
     public static readonly StringAsSymbolMemoryPackFormatter Default = new();

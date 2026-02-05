@@ -3,10 +3,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
+/// <summary>
+/// Reads and processes <see cref="DbEvent"/> log entries, dispatching them through
+/// <see cref="DbEventProcessor{TDbContext}"/>.
+/// </summary>
 public class DbEventLogReader<TDbContext>
     : DbEventLogReader<TDbContext, DbEvent, DbEventLogReader<TDbContext>.Options>
     where TDbContext : DbContext
 {
+    /// <summary>
+    /// Configuration options for <see cref="DbEventLogReader{TDbContext}"/>.
+    /// </summary>
     public record Options : DbEventLogReaderOptions
     {
         public static Options Default { get; set; } = new();

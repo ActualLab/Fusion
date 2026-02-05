@@ -4,6 +4,10 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Converts between <see cref="DbSessionInfo{TDbUserId}"/> entities and
+/// <see cref="SessionInfo"/> models.
+/// </summary>
 public class DbSessionInfoConverter<TDbContext, TDbSessionInfo, TDbUserId>(IServiceProvider services)
     : DbEntityConverter<TDbContext, TDbSessionInfo, SessionInfo>(services)
     where TDbContext : DbContext

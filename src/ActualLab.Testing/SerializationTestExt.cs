@@ -7,6 +7,11 @@ using Xunit.Abstractions;
 
 namespace ActualLab.Testing;
 
+/// <summary>
+/// Extension methods for testing serialization round-trips through multiple
+/// serializer implementations (System.Text.Json, Newtonsoft.Json, MessagePack,
+/// MemoryPack, and type-decorating variants).
+/// </summary>
 public static class SerializationTestExt
 {
     public static JsonSerializerOptions SystemJsonOptions { get; set; }

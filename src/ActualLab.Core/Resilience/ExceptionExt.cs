@@ -1,5 +1,9 @@
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Extension methods for <see cref="Exception"/> related to resilience
+/// and service provider disposal detection.
+/// </summary>
 public static class ExceptionExt
 {
     public static bool IsServiceProviderDisposedException(this Exception? error)

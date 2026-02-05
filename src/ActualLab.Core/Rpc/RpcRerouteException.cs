@@ -2,6 +2,9 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Exception indicating that an RPC call must be re-routed to a different peer.
+/// </summary>
 #pragma warning disable SYSLIB0051
 
 [Serializable]

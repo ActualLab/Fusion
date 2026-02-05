@@ -6,11 +6,18 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Fusion.Operations.Internal;
 
+/// <summary>
+/// A command handler that replays commands during <see cref="ICompletion"/> processing
+/// inside an <see cref="Invalidation"/> scope to trigger dependency invalidation.
+/// </summary>
 public class InvalidatingCommandCompletionHandler(
     InvalidatingCommandCompletionHandler.Options settings,
     IServiceProvider services
     ) : ICommandHandler<ICompletion>
 {
+    /// <summary>
+    /// Configuration options for <see cref="InvalidatingCommandCompletionHandler"/>.
+    /// </summary>
     public record Options
     {
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;

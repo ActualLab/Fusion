@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Provides constants and utility methods for working with database shard identifiers.
+/// </summary>
 public static class DbShard
 {
     public const string Single = "";

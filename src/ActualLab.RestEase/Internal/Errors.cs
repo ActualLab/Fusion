@@ -1,5 +1,8 @@
 namespace ActualLab.RestEase.Internal;
 
+/// <summary>
+/// Factory methods for RestEase-specific exceptions.
+/// </summary>
 public static class Errors
 {
     public static Exception InterfaceTypeExpected(Type type, bool mustBePublic, string? argumentName = null)

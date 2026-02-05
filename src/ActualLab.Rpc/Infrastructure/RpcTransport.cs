@@ -1,8 +1,8 @@
 namespace ActualLab.Rpc.Infrastructure;
 
-// Base class for RPC transports. Serialization happens synchronously,
-// while actual sending is async.
-// Message.SendHandler is called after serialization with error = null on success.
+/// <summary>
+/// Base class for RPC transports that handle message serialization and sending.
+/// </summary>
 public abstract class RpcTransport(RpcPeer peer, CancellationTokenSource? stopTokenSource)
     : ProcessorBase(stopTokenSource), IAsyncEnumerable<RpcInboundMessage>
 {

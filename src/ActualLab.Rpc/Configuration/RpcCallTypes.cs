@@ -3,6 +3,9 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Registry of <see cref="RpcCallType"/> instances, mapping call type IDs to their definitions.
+/// </summary>
 public static class RpcCallTypes
 {
 #if NET9_0_OR_GREATER

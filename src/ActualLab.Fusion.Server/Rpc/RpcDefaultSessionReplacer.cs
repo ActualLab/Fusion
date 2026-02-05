@@ -4,6 +4,10 @@ using ActualLab.Rpc.Middlewares;
 
 namespace ActualLab.Fusion.Server.Rpc;
 
+/// <summary>
+/// RPC middleware that replaces default sessions in inbound calls with the
+/// session bound to the current <see cref="SessionBoundRpcConnection"/>.
+/// </summary>
 public sealed record RpcDefaultSessionReplacer : IRpcMiddleware
 {
     public double Priority { get; init; } = RpcInboundMiddlewarePriority.ArgumentValidation - 1;

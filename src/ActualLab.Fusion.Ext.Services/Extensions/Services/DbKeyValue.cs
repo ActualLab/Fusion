@@ -4,6 +4,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
+/// <summary>
+/// Entity Framework entity representing a key-value pair with optional expiration.
+/// </summary>
 [Table("_KeyValues")]
 [Index(nameof(ExpiresAt))]
 public class DbKeyValue

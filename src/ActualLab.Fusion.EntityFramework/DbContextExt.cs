@@ -6,6 +6,10 @@ namespace ActualLab.Fusion.EntityFramework;
 
 #pragma warning disable EF1001
 
+/// <summary>
+/// Extension methods for <see cref="DbContext"/> providing read/write mode configuration,
+/// change tracking control, save-changes protection, and query hint support.
+/// </summary>
 public static class DbContextExt
 {
 #if !NETSTANDARD2_0

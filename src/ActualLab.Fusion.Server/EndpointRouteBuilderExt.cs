@@ -6,6 +6,9 @@ namespace ActualLab.Fusion.Server;
 
 #if NET7_0_OR_GREATER
 
+/// <summary>
+/// Extension methods for <see cref="IEndpointRouteBuilder"/> to map Fusion render mode endpoints.
+/// </summary>
 public static class EndpointRouteBuilderExt
 {
     public static IEndpointRouteBuilder MapFusionRenderModeEndpoints(this IEndpointRouteBuilder endpoints)

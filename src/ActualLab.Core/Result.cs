@@ -253,6 +253,9 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
 
     // Nested types
 
+    /// <summary>
+    /// Factory that creates error <see cref="Result{T}"/> instances for a given exception.
+    /// </summary>
     public sealed class NewErrorFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         // ReSharper disable once HeapView.BoxingAllocation

@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.Blazor.Internal;
 
+/// <summary>
+/// A dispatching computed state that manually captures and flows ExecutionContext
+/// into the dispatcher callback, used when the dispatcher does not natively flow it.
+/// </summary>
 public sealed class DispatchingComputedStateComponentStateWithExecutionContextFlow<T>(
     ComputedState<T>.Options options,
     ComputedStateComponent<T> component,

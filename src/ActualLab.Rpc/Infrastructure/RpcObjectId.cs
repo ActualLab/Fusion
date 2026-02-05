@@ -3,6 +3,9 @@ using MessagePack;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Uniquely identifies a shared or remote RPC object by host ID and local ID.
+/// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
 [DataContract, MemoryPackable, MessagePackObject]
 public readonly partial record struct RpcObjectId(

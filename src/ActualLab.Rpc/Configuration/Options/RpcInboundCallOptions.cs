@@ -5,6 +5,9 @@ namespace ActualLab.Rpc;
 
 #pragma warning disable CA1822
 
+/// <summary>
+/// Configuration options for processing inbound RPC calls on a peer.
+/// </summary>
 public record RpcInboundCallOptions
 {
     public static RpcInboundCallOptions Default { get; set; } = new();

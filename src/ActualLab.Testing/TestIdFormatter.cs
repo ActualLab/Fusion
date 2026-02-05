@@ -2,6 +2,10 @@ using ActualLab.IO;
 
 namespace ActualLab.Testing;
 
+/// <summary>
+/// Formats unique test identifiers from machine name, test name, and run ID,
+/// with configurable hashing and length limits.
+/// </summary>
 public class TestIdFormatter(string testId)
 {
     public static readonly string RunId = Guid.NewGuid().ToString("N");
@@ -47,6 +51,10 @@ public class TestIdFormatter(string testId)
     protected virtual string PostProcess(string id) => id;
 }
 
+/// <summary>
+/// A <see cref="TestIdFormatter"/> variant that replaces underscores with hyphens
+/// for Azure-compatible resource naming.
+/// </summary>
 public class AzureTestIdFormatter : TestIdFormatter
 {
     public AzureTestIdFormatter(Type testType) : base(testType) { }

@@ -8,6 +8,10 @@ namespace ActualLab.Fusion.EntityFramework.Npgsql.Internal;
 
 #pragma warning disable EF1001
 
+/// <summary>
+/// A PostgreSQL SQL generator that appends row-level locking hints (e.g., FOR UPDATE)
+/// extracted from query tags to the generated SQL.
+/// </summary>
 public class NpgsqlHintQuerySqlGenerator : NpgsqlQuerySqlGenerator
 {
     // ReSharper disable once ConvertToPrimaryConstructor

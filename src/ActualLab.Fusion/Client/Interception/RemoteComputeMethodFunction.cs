@@ -13,6 +13,10 @@ namespace ActualLab.Fusion.Client.Interception;
 
 #pragma warning disable VSTHRD103
 
+/// <summary>
+/// A strongly-typed <see cref="RemoteComputeMethodFunction"/> that creates
+/// <see cref="RemoteComputed{T}"/> instances for remote compute method calls.
+/// </summary>
 public sealed class RemoteComputeMethodFunction<T>(
     FusionHub hub,
     ComputeMethodDef methodDef,
@@ -26,6 +30,10 @@ public sealed class RemoteComputeMethodFunction<T>(
         => new RemoteComputed<T>(ComputedOptions, input, output, cacheEntry, call);
 }
 
+/// <summary>
+/// A <see cref="ComputeMethodFunction"/> that handles remote (RPC) compute method calls,
+/// with support for caching, synchronization, and rerouting.
+/// </summary>
 public abstract class RemoteComputeMethodFunction(
     FusionHub hub,
     ComputeMethodDef methodDef,

@@ -5,6 +5,9 @@ using ActualLab.Rpc.Serialization.Internal;
 
 namespace ActualLab.Rpc.Serialization;
 
+/// <summary>
+/// V4 text-based <see cref="RpcArgumentSerializer"/> that uses a unit-separator delimiter between arguments.
+/// </summary>
 public sealed class RpcTextArgumentSerializerV4(ITextSerializer baseSerializer) : RpcArgumentSerializer
 {
     // We use US (Unit separator, 0x1F) character here.

@@ -1,5 +1,8 @@
 namespace ActualLab.Mathematics.Internal;
 
+/// <summary>
+/// Factory methods for exceptions used internally in the Mathematics namespace.
+/// </summary>
 public static class Errors
 {
     public static Exception CantFindArithmetics(Type type)

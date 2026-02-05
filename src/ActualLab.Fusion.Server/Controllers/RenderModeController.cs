@@ -3,6 +3,9 @@ using ActualLab.Fusion.Server.Endpoints;
 
 namespace ActualLab.Fusion.Server.Controllers;
 
+/// <summary>
+/// MVC controller that handles Blazor render mode selection via cookie.
+/// </summary>
 [Route("~/fusion/renderMode")]
 public sealed class RenderModeController(RenderModeEndpoint handler) : ControllerBase
 {

@@ -1,5 +1,9 @@
 namespace ActualLab.Generators.Internal;
 
+/// <summary>
+/// A <see cref="ConcurrentGenerator{T}"/> backed by an array of delegate functions,
+/// each accessed via striped locking to reduce contention.
+/// </summary>
 public sealed class ConcurrentFuncBasedGenerator<T> : ConcurrentGenerator<T>
 {
     private readonly Func<T>[] _generators;

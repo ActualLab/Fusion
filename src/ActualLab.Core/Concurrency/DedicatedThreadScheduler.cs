@@ -1,5 +1,8 @@
 namespace ActualLab.Concurrency;
 
+/// <summary>
+/// A <see cref="TaskScheduler"/> that executes tasks sequentially on a single dedicated thread.
+/// </summary>
 public class DedicatedThreadScheduler : TaskScheduler
 {
     private readonly BlockingCollection<Task> _taskQueue = new();

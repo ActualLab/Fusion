@@ -5,6 +5,10 @@ using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Blazor.Authentication;
 
+/// <summary>
+/// Extension methods for <see cref="FusionBlazorBuilder"/> to add Blazor authentication
+/// and presence reporting services.
+/// </summary>
 public static class FusionBlazorBuilderExt
 {
     public static FusionBlazorBuilder AddAuthentication(

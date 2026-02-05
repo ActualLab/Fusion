@@ -2,6 +2,10 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Provides static helpers to check whether invalidation is active
+/// and to begin invalidation scopes.
+/// </summary>
 public static class Invalidation
 {
     public static InvalidationTrackingMode TrackingMode { get; set; } = InvalidationTrackingMode.OriginOnly;

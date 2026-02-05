@@ -3,6 +3,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// Extension methods for <see cref="IEnumerable{T}"/>.
+/// </summary>
 public static class EnumerableExt
 {
     // One and Concat

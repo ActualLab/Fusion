@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Internal;
 
+/// <summary>
+/// Provides convenient access to commonly used services and options associated with an <see cref="RpcPeer"/>.
+/// </summary>
 public readonly record struct RpcPeerInternalServices(RpcPeer Peer)
 {
     public IServiceProvider Services => Peer.Services;

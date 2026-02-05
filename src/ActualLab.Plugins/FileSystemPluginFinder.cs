@@ -11,8 +11,14 @@ namespace ActualLab.Plugins;
 
 #pragma warning disable IL2026
 
+/// <summary>
+/// Discovers plugins by scanning assemblies in a file system directory for types marked with <see cref="PluginAttribute"/>.
+/// </summary>
 public class FileSystemPluginFinder : CachingPluginFinderBase
 {
+    /// <summary>
+    /// Configuration options for <see cref="FileSystemPluginFinder"/>.
+    /// </summary>
     public new record Options : CachingPluginFinderBase.Options
     {
         public FilePath PluginDir { get; init; } =

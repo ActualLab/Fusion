@@ -2,6 +2,10 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// A session-scoped key-value store that enforces key prefix constraints
+/// based on the current session and user.
+/// </summary>
 public interface ISandboxedKeyValueStore : IComputeService
 {
     [CommandHandler]
@@ -22,6 +26,9 @@ public interface ISandboxedKeyValueStore : IComputeService
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Command to set one or more key-value entries in the <see cref="ISandboxedKeyValueStore"/>.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record SandboxedKeyValueStore_Set(
@@ -29,6 +36,9 @@ public partial record SandboxedKeyValueStore_Set(
     [property: DataMember, MemoryPackOrder(1)] (string Key, string Value, Moment? ExpiresAt)[] Items
 ) : ISessionCommand<Unit>;
 
+/// <summary>
+/// Command to remove one or more keys from the <see cref="ISandboxedKeyValueStore"/>.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record SandboxedKeyValueStore_Remove(

@@ -3,6 +3,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Text;
 
+/// <summary>
+/// An <see cref="IFormatProvider"/> that resolves format placeholders by reflecting
+/// on the argument's properties.
+/// </summary>
 public sealed class ReflectionFormatProvider : IFormatProvider, ICustomFormatter
 {
     private static readonly char[] Separator = { ':' };

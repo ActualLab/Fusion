@@ -4,6 +4,10 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Backend authentication service contract for sign-in, session setup,
+/// and session options management.
+/// </summary>
 public interface IAuthBackend : IComputeService, IBackendService
 {
     // Commands
@@ -19,6 +23,9 @@ public interface IAuthBackend : IComputeService, IBackendService
     public Task<User?> GetUser(string shard, string userId, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Backend command to set up or update session metadata (IP address, user agent, options).
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 // ReSharper disable once InconsistentNaming
@@ -33,6 +40,9 @@ public partial record AuthBackend_SetupSession(
         : this(session, ipAddress, userAgent, default) { }
 }
 
+/// <summary>
+/// Backend command to sign in a user with the specified identity.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 // ReSharper disable once InconsistentNaming

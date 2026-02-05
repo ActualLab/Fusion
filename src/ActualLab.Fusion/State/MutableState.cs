@@ -6,8 +6,15 @@ namespace ActualLab.Fusion;
 
 // Interfaces
 
+/// <summary>
+/// Configuration options for <see cref="IMutableState"/>.
+/// </summary>
 public interface IMutableStateOptions : IStateOptions;
 
+/// <summary>
+/// A <see cref="IState"/> that supports explicit value mutation, synchronously updating
+/// and invalidating its <see cref="Computed"/> on each change.
+/// </summary>
 public interface IMutableState : IState
 {
     public new object? Value { get; set; }
@@ -31,6 +38,9 @@ public interface IMutableState : IState
     public void SetError(Exception error, InvalidationSource source);
 }
 
+/// <summary>
+/// A strongly-typed <see cref="IMutableState"/> producing values of type <typeparamref name="T"/>.
+/// </summary>
 public interface IMutableState<T> : IState<T>, IMutableState
 {
     public new T Value { get; set; }
@@ -61,6 +71,10 @@ public interface IMutableState<T> : IState<T>, IMutableState
 
 // Classes
 
+/// <summary>
+/// Base class for mutable state that synchronously produces new <see cref="Computed"/> instances
+/// when its value is changed via <see cref="IMutableState.Set(Result, InvalidationSource)"/>.
+/// </summary>
 public abstract class MutableState : State, IMutableState, IMutableResult
 {
     protected Result NextOutput;
@@ -160,8 +174,14 @@ public abstract class MutableState : State, IMutableState, IMutableResult
         => throw Errors.InternalError("This method should never be called.");
 }
 
+/// <summary>
+/// A strongly-typed <see cref="MutableState"/> producing values of type <typeparamref name="T"/>.
+/// </summary>
 public class MutableState<T> : MutableState, IMutableState<T>, IMutableResult<T>
 {
+    /// <summary>
+    /// Configuration options for <see cref="MutableState{T}"/>.
+    /// </summary>
     public record Options : StateOptions<T>, IMutableStateOptions
     {
         public Options()

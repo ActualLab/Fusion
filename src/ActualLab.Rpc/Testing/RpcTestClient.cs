@@ -2,6 +2,9 @@ using System.Globalization;
 
 namespace ActualLab.Rpc.Testing;
 
+/// <summary>
+/// An <see cref="RpcClient"/> implementation that creates in-memory channel-based connections for testing.
+/// </summary>
 public class RpcTestClient(IServiceProvider services) : RpcClient(services)
 {
     private readonly ConcurrentDictionary<RpcPeerRef, RpcTestConnection> _connections = new();

@@ -6,6 +6,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.DependencyInjection;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceCollection"/>.
+/// </summary>
 public static class ServiceCollectionExt
 {
     // HasService

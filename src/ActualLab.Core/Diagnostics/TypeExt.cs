@@ -2,6 +2,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Diagnostics;
 
+/// <summary>
+/// Extension methods for <see cref="Type"/> to construct diagnostics operation names.
+/// </summary>
 public static class TypeExt
 {
     private static readonly ConcurrentDictionary<(object, object), string> OperationNameCache

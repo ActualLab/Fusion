@@ -1,5 +1,9 @@
 namespace ActualLab.Time.Testing;
 
+/// <summary>
+/// Immutable settings for <see cref="TestClock"/>, defining local offset,
+/// real offset, and time multiplier for test time simulation.
+/// </summary>
 public sealed class TestClockSettings : IDisposable
 {
     private CancellationTokenSource? _changedTokenSource;

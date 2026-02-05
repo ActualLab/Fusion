@@ -3,6 +3,9 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Async;
 
+/// <summary>
+/// Extension methods for <see cref="AsyncChain"/>.
+/// </summary>
 public static class AsyncChainExt
 {
     // RunXxx

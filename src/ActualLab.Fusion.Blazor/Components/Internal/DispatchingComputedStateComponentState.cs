@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor.Internal;
 
+/// <summary>
+/// Abstract base for computed state implementations that dispatch computation
+/// through the Blazor <see cref="Dispatcher"/>.
+/// </summary>
 public abstract class DispatchingComputedStateComponentState<T>: ComputedStateComponentState<T>
 {
     protected readonly Dispatcher Dispatcher;

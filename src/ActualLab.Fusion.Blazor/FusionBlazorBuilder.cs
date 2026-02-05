@@ -3,6 +3,10 @@ using Microsoft.JSInterop;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Builder for configuring Fusion Blazor integration services such as
+/// <see cref="CircuitHub"/>, UICommander, and JS runtime info.
+/// </summary>
 public readonly struct FusionBlazorBuilder
 {
     private sealed class AddedTag;

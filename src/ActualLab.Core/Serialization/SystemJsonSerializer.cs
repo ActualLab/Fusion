@@ -3,6 +3,9 @@ using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// An <see cref="ITextSerializer"/> implementation backed by System.Text.Json.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume serializable types are fully preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume serializable types are fully preserved")]
 public class SystemJsonSerializer : TextSerializerBase

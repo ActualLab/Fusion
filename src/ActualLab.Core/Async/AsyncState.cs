@@ -2,6 +2,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.Async;
 
+/// <summary>
+/// Defines the contract for an async state that transitions through a linked list of values.
+/// </summary>
 public interface IAsyncState
 {
     public bool IsFinal { get; }
@@ -13,6 +16,9 @@ public interface IAsyncState
     public Task WhenNext(CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Strongly typed version of <see cref="IAsyncState"/> that exposes a value of type <typeparamref name="T"/>.
+/// </summary>
 public interface IAsyncState<out T> : IAsyncState, IAsyncEnumerable<IAsyncState<T>>
 {
     public T Value { get; }
@@ -24,6 +30,9 @@ public interface IAsyncState<out T> : IAsyncState, IAsyncEnumerable<IAsyncState<
     public IAsyncEnumerable<T> Changes(CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// A linked list node representing an async state that transitions to the next value.
+/// </summary>
 public sealed class AsyncState<T>(T value)
     : IAsyncState<T>, IAsyncEnumerable<AsyncState<T>>
 {

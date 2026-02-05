@@ -2,6 +2,9 @@ using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// An <see cref="RpcTransport"/> backed by simple in-memory channels, used for loopback connections.
+/// </summary>
 public sealed class RpcSimpleChannelTransport : RpcTransport
 {
     private readonly ChannelReader<ArrayOwner<byte>> _reader;

@@ -3,6 +3,9 @@
 // ReSharper disable once CheckNamespace
 namespace System;
 
+/// <summary>
+/// Compatibility extension methods for <see cref="string"/> on .NET Standard 2.0.
+/// </summary>
 public static class StringCompatExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

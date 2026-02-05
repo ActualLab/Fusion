@@ -3,6 +3,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.Conversion.Internal;
 
+/// <summary>
+/// The default <see cref="SourceConverterProvider{TSource}"/> that discovers converters
+/// via DI services, interface implementations, and reflection-based strategies.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume SourceConverterProvider's methods are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume SourceConverterProvider's methods are preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume SourceConverterProvider's methods are preserved")]

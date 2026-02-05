@@ -7,9 +7,16 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// A builder for configuring database operation services such as operation scopes,
+/// log readers, log trimmers, and completion listeners for a specific <see cref="DbContext"/>.
+/// </summary>
 public readonly struct DbOperationsBuilder<TDbContext>
     where TDbContext : DbContext
 {
+    /// <summary>
+    /// A marker type used to track whether services for this builder have already been registered.
+    /// </summary>
     private sealed class AddedTag;
     private static readonly ServiceDescriptor AddedTagDescriptor = new(typeof(AddedTag), new AddedTag());
 

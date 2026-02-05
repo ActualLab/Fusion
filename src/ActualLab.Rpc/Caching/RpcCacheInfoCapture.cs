@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Caching;
 
+/// <summary>
+/// Defines what cache-related information to capture during an RPC call.
+/// </summary>
 public enum RpcCacheInfoCaptureMode
 {
     None = 0,
@@ -12,6 +15,9 @@ public enum RpcCacheInfoCaptureMode
 
 #pragma warning disable RCS1059
 
+/// <summary>
+/// Captures cache key and value information during outbound RPC calls for cache invalidation and reuse.
+/// </summary>
 public sealed class RpcCacheInfoCapture
 {
     public readonly RpcCacheInfoCaptureMode CaptureMode;

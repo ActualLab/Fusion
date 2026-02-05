@@ -2,14 +2,26 @@ using ActualLab.OS;
 
 namespace ActualLab.Caching;
 
+/// <summary>
+/// Base class for factories that produce instances cached by <see cref="GenericInstanceCache"/>.
+/// </summary>
 public abstract class GenericInstanceFactory
 {
     public abstract object? Generate();
 }
 
+/// <summary>
+/// Marker interface for generic instance factories parameterized by one type argument.
+/// </summary>
 public interface IGenericInstanceFactory<T>;
+/// <summary>
+/// Marker interface for generic instance factories parameterized by two type arguments.
+/// </summary>
 public interface IGenericInstanceFactory<T1, T2>;
 
+/// <summary>
+/// Thread-safe cache for instances produced by <see cref="GenericInstanceFactory"/> subclasses.
+/// </summary>
 public static class GenericInstanceCache
 {
     private static readonly ConcurrentDictionary<(Type, Type?), object?> Cache1;

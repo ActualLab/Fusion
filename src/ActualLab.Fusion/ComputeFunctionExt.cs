@@ -2,6 +2,9 @@ using ActualLab.Caching;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Extension methods for <see cref="IComputeFunction"/>.
+/// </summary>
 public static class ComputeFunctionExt
 {
     private static readonly Type FactoryType1 = typeof(CompleteProduceValuePromiseFactory<>);
@@ -47,6 +50,9 @@ public static class ComputeFunctionExt
 
     // Nested types
 
+    /// <summary>
+    /// Factory that creates a delegate to extract a typed value from a <see cref="Computed"/> task.
+    /// </summary>
     public sealed class CompleteProduceValuePromiseFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]
@@ -62,6 +68,10 @@ public static class ComputeFunctionExt
             };
     }
 
+    /// <summary>
+    /// Factory that creates a delegate to extract a typed value from a <see cref="Computed"/> task
+    /// with <see cref="ComputedSynchronizer"/> support.
+    /// </summary>
     public sealed class CompleteProduceValuePromiseWithSynchronizerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume Task<T> methods are preserved")]

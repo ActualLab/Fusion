@@ -1,7 +1,14 @@
 namespace ActualLab.Fusion.UI;
 
+/// <summary>
+/// Tracks failed <see cref="UIAction"/> results, deduplicating recent errors
+/// of the same type and message.
+/// </summary>
 public class UIActionFailureTracker : MutableList<IUIActionResult>
 {
+    /// <summary>
+    /// Configuration options for <see cref="UIActionFailureTracker"/>.
+    /// </summary>
     public record Options
     {
         public TimeSpan MaxDuplicateRecency { get; init; } = TimeSpan.FromSeconds(1);

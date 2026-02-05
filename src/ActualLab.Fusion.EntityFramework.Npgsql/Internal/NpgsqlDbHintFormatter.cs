@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore.Query;
 
 namespace ActualLab.Fusion.EntityFramework.Npgsql.Internal;
 
+/// <summary>
+/// PostgreSQL-specific <see cref="DbHintFormatter"/> that translates <see cref="DbHint"/>
+/// values into FOR ... clauses via query tags.
+/// </summary>
 public class NpgsqlDbHintFormatter : DbHintFormatter
 {
     public NpgsqlDbHintFormatter()

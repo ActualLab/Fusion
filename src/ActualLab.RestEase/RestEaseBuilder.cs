@@ -6,6 +6,10 @@ using ActualLab.RestEase.Internal;
 
 namespace ActualLab.RestEase;
 
+/// <summary>
+/// Builder for configuring RestEase HTTP client services, including
+/// serializers, message handlers, and typed API client registration.
+/// </summary>
 public readonly struct RestEaseBuilder
 {
     private sealed class AddedTag;

@@ -1,5 +1,8 @@
 namespace ActualLab.Resilience.Internal;
 
+/// <summary>
+/// A <see cref="ChaosMaker"/> that sequentially applies two chaos makers.
+/// </summary>
 public sealed record JoinChaosMaker(ChaosMaker First, ChaosMaker Second) : ChaosMaker
 {
     public override string ToString()

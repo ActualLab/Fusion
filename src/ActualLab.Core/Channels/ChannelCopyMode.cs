@@ -1,5 +1,8 @@
 namespace ActualLab.Channels;
 
+/// <summary>
+/// Defines which channel state transitions to propagate when copying between channels.
+/// </summary>
 [Flags]
 public enum ChannelCopyMode
 {

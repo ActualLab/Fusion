@@ -5,6 +5,9 @@ namespace ActualLab.Fusion.Interception;
 
 #pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
 
+/// <summary>
+/// A <see cref="ComputedInput"/> representing the arguments of an intercepted compute method call.
+/// </summary>
 public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethodInput>
 {
     public readonly ComputeMethodDef MethodDef;

@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// A <see cref="ParameterComparer"/> that compares parameters by their <see cref="IHasId{TId}.Id"/>.
+/// </summary>
 public sealed class ByIdParameterComparer<TId> : ParameterComparer
 {
     public static ByIdParameterComparer<TId> Instance { get; } = new();

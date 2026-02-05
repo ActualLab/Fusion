@@ -3,6 +3,9 @@ using CommunityToolkit.HighPerformance.Buffers;
 
 namespace ActualLab.Rpc.Internal;
 
+/// <summary>
+/// Compresses and decompresses monotonically increasing sequences of <see cref="long"/> values using variable-length encoding.
+/// </summary>
 public static class IncreasingSeqCompressor
 {
     public static byte[] Serialize(IEnumerable<long> values)

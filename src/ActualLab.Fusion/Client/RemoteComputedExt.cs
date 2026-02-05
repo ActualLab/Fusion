@@ -2,6 +2,9 @@ using ActualLab.Fusion.Client.Internal;
 
 namespace ActualLab.Fusion.Client;
 
+/// <summary>
+/// Extension methods for <see cref="IRemoteComputed"/>.
+/// </summary>
 public static class RemoteComputedExt
 {
     // We don't want the methods below to be declared in generic RemoteComputed<T> class (AOT perf issue),

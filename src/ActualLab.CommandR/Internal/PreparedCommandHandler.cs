@@ -1,5 +1,9 @@
 namespace ActualLab.CommandR.Internal;
 
+/// <summary>
+/// Built-in command handler that invokes <see cref="IPreparedCommand.Prepare"/>
+/// before continuing the handler pipeline.
+/// </summary>
 public sealed class PreparedCommandHandler : ICommandHandler<IPreparedCommand>
 {
     [CommandFilter(Priority = CommanderCommandHandlerPriority.PreparedCommandHandler)]

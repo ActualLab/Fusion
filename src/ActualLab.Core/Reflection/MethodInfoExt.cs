@@ -3,6 +3,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Extension methods for <see cref="MethodInfo"/> providing attribute lookup
+/// with interface and base type inheritance.
+/// </summary>
 public static class MethodInfoExt
 {
     private static readonly ConcurrentDictionary<MethodInfo, MethodInfo?> BaseOrDeclaringMethodCache

@@ -3,6 +3,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Extension methods for <see cref="Type"/> providing name formatting, base type
+/// enumeration, proxy resolution, and task type detection.
+/// </summary>
 public static partial class TypeExt
 {
 #if NET7_0_OR_GREATER

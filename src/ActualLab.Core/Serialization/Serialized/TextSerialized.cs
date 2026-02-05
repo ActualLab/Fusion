@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Factory methods for <see cref="TextSerialized{T}"/>.
+/// </summary>
 public static class TextSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -13,6 +16,9 @@ public static class TextSerialized
         => new() { Data = data };
 }
 
+/// <summary>
+/// A wrapper that auto-serializes its <see cref="Value"/> to a string on access via <see cref="ITextSerializer"/>.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

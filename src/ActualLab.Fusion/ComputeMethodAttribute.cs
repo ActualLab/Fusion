@@ -4,6 +4,10 @@ namespace ActualLab.Fusion;
 
 #pragma warning disable CA1813 // Consider making sealed
 
+/// <summary>
+/// Marks a method as a Fusion compute method, enabling automatic caching and invalidation
+/// of its <see cref="Computed"/> output.
+/// </summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
 public class ComputeMethodAttribute : Attribute
 {

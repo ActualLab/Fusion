@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Serialization.Internal;
 
+/// <summary>
+/// JSON-serializable envelope for RPC messages used by the text-based message serializer.
+/// </summary>
 [method: JsonConstructor]
 public sealed record JsonRpcMessage(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault), DefaultValue((byte)0)]
@@ -54,6 +57,9 @@ public sealed record JsonRpcMessage(
     }
 }
 
+/// <summary>
+/// Source-generated JSON serializer context for <see cref="JsonRpcMessage"/>.
+/// </summary>
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(JsonRpcMessage))]
 internal sealed partial class JsonRpcMessageContext : JsonSerializerContext;

@@ -3,6 +3,9 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// Publishes raw <see cref="RedisValue"/> messages to a Redis pub/sub channel.
+/// </summary>
 public class RedisPub
 {
     public RedisDb RedisDb { get; }
@@ -26,6 +29,10 @@ public class RedisPub
     }
 }
 
+/// <summary>
+/// Publishes typed <typeparamref name="T"/> messages to a Redis pub/sub channel
+/// using an <see cref="IByteSerializer{T}"/>.
+/// </summary>
 public sealed class RedisPub<T>(RedisDb redisDb, string key, IByteSerializer<T>? serializer = null)
     : RedisPub(redisDb, key)
 {

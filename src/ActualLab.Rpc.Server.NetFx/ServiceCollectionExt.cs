@@ -1,5 +1,9 @@
 namespace ActualLab.Rpc.Server;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceCollection"/> to register
+/// Web API controllers as transient services.
+/// </summary>
 public static class ServiceCollectionExt
 {
     public static IServiceCollection AddControllersAsServices(this IServiceCollection services, IEnumerable<Type> controllerTypes)

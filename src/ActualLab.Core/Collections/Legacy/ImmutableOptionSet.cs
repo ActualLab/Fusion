@@ -3,6 +3,10 @@ using MessagePack;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// An immutable, serializable set of named options.
+/// Consider using <see cref="PropertyBag"/> instead.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

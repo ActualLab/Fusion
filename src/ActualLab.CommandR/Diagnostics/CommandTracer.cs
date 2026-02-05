@@ -3,6 +3,10 @@ using ActualLab.CommandR.Internal;
 
 namespace ActualLab.CommandR.Diagnostics;
 
+/// <summary>
+/// A command filter that creates OpenTelemetry activities for command execution
+/// and logs errors.
+/// </summary>
 public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand>
 {
     protected IServiceProvider Services { get; } = services;

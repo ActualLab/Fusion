@@ -5,6 +5,10 @@ using ActualLab.Fusion.Authentication.Endpoints;
 
 namespace ActualLab.Fusion.Authentication.Controllers;
 
+/// <summary>
+/// MVC controller that handles sign-in and sign-out HTTP requests
+/// by delegating to <see cref="AuthEndpoints"/>.
+/// </summary>
 public sealed class AuthController(AuthEndpoints handler) : Controller
 {
     [HttpGet("~/signIn")]

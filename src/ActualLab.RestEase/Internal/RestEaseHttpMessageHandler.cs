@@ -3,6 +3,11 @@ using Newtonsoft.Json.Linq;
 
 namespace ActualLab.RestEase.Internal;
 
+/// <summary>
+/// A <see cref="DelegatingHandler"/> that intercepts HTTP 500 responses from
+/// <see cref="JsonifyErrorsAttribute"/>-protected endpoints and deserializes
+/// the error into a throwable exception.
+/// </summary>
 public class RestEaseHttpMessageHandler(IServiceProvider services) : DelegatingHandler, IHasServices
 {
     public IServiceProvider Services { get; } = services;

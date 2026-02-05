@@ -2,6 +2,11 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// Lazily resolves and caches a Redis component of type <typeparamref name="T"/>
+/// (such as <see cref="IDatabase"/> or <see cref="ISubscriber"/>) from a
+/// <see cref="RedisConnector"/>, automatically reconnecting when needed.
+/// </summary>
 public sealed class RedisComponent<T>(RedisConnector connector, Func<IConnectionMultiplexer, T> factory)
 {
 #if NET9_0_OR_GREATER

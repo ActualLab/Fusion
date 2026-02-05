@@ -7,6 +7,10 @@ using ActualLab.Fusion.EntityFramework.Internal;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Builder for configuring database-backed authentication services, including
+/// repositories, entity converters, and session trimmer.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct DbAuthServiceBuilder<TDbContext,
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbSessionInfo,

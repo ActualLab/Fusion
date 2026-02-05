@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Diagnostics;
 
+/// <summary>
+/// Default inbound call trace that finalizes the activity and records call metrics on completion.
+/// </summary>
 public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Activity? activity)
     : RpcInboundCallTrace(activity)
 {

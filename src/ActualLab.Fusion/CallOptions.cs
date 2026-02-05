@@ -2,6 +2,9 @@ namespace ActualLab.Fusion;
 
 #pragma warning disable MA0062, CA2217
 
+/// <summary>
+/// Defines flags controlling how a compute method call is performed.
+/// </summary>
 [Flags]
 public enum CallOptions
 {

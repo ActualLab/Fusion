@@ -2,6 +2,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// Options for <see cref="ConcurrentTimerSet{TTimer}"/>,
+/// extending <see cref="TimerSetOptions"/> with a concurrency level.
+/// </summary>
 public record ConcurrentTimerSetOptions : TimerSetOptions
 {
     public static new readonly ConcurrentTimerSetOptions Default = new();
@@ -9,6 +13,10 @@ public record ConcurrentTimerSetOptions : TimerSetOptions
     public int ConcurrencyLevel { get; init; } = HardwareInfo.GetProcessorCountPo2Factor();
 }
 
+/// <summary>
+/// A concurrent, sharded version of <see cref="TimerSet{TTimer}"/> that reduces lock
+/// contention by distributing timers across multiple internal timer sets.
+/// </summary>
 public sealed class ConcurrentTimerSet<TTimer> : SafeAsyncDisposableBase
     where TTimer : notnull
 {

@@ -3,6 +3,9 @@ using ActualLab.Internal;
 
 namespace ActualLab.Rpc.WebSockets;
 
+/// <summary>
+/// Owns a <see cref="WebSocket"/> and its associated <see cref="HttpMessageHandler"/>, disposing both on cleanup.
+/// </summary>
 public class WebSocketOwner(
     string name,
     WebSocket webSocket,

@@ -2,6 +2,9 @@ namespace ActualLab.Resilience;
 
 #pragma warning disable MA0100
 
+/// <summary>
+/// Extension methods for <see cref="IRetryPolicy"/>.
+/// </summary>
 public static class RetryPolicyExt
 {
     // MustRetry overloads

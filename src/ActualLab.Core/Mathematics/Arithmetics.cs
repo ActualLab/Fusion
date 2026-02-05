@@ -1,8 +1,14 @@
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// Tagging interface for arithmetics implementations.
+/// </summary>
 // Just a tagging interface
 public interface IArithmetics;
 
+/// <summary>
+/// Provides basic arithmetic operations for type <typeparamref name="T"/>.
+/// </summary>
 public abstract class Arithmetics<T> : IArithmetics
     where T : notnull
 {

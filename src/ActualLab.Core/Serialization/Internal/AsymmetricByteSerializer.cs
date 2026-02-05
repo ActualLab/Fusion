@@ -2,6 +2,9 @@ using System.Buffers;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// An <see cref="IByteSerializer"/> that uses different serializers for reading and writing.
+/// </summary>
 public sealed class AsymmetricByteSerializer(IByteSerializer reader, IByteSerializer writer) : IByteSerializer
 {
     public IByteSerializer Reader { get; } = reader;
@@ -21,6 +24,9 @@ public sealed class AsymmetricByteSerializer(IByteSerializer reader, IByteSerial
         => Writer.Write(bufferWriter, value, type);
 }
 
+/// <summary>
+/// A typed <see cref="IByteSerializer{T}"/> that uses different serializers for reading and writing.
+/// </summary>
 public sealed class AsymmetricByteSerializer<T>(
     IByteSerializer<T> reader,
     IByteSerializer<T> writer

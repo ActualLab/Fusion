@@ -5,6 +5,10 @@ using MessagePack;
 
 namespace ActualLab.Text;
 
+/// <summary>
+/// An interned string wrapper that caches its hash code for fast equality checks,
+/// commonly used as a lightweight identifier.
+/// </summary>
 #pragma warning disable MA0001, MA0021, CA1307, CA1721
 
 [StructLayout(LayoutKind.Auto)]

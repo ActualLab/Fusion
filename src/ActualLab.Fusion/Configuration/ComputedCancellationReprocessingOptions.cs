@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Configuration for reprocessing compute method calls that fail due to cancellation.
+/// </summary>
 public sealed record ComputedCancellationReprocessingOptions
 {
     public static ComputedCancellationReprocessingOptions Default { get; set; } = new();

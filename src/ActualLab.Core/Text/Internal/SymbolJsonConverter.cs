@@ -1,5 +1,8 @@
 namespace ActualLab.Text.Internal;
 
+/// <summary>
+/// System.Text.Json converter for <see cref="Symbol"/>.
+/// </summary>
 public class SymbolJsonConverter : JsonConverter<Symbol>
 {
     public override Symbol Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

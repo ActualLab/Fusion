@@ -3,6 +3,10 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Rpc;
 
+/// <summary>
+/// An <see cref="RpcMethodDef"/> for compute methods, carrying <see cref="ComputedOptions"/>
+/// and using the Fusion-specific RPC call type.
+/// </summary>
 public class RpcComputeMethodDef : RpcMethodDef
 {
     public readonly ComputedOptions ComputedOptions;

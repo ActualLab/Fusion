@@ -1,5 +1,9 @@
 namespace ActualLab.OS;
 
+/// <summary>
+/// Provides runtime environment information such as server/client mode
+/// and process identity.
+/// </summary>
 public static class RuntimeInfo
 {
 #if NET9_0_OR_GREATER
@@ -21,6 +25,9 @@ public static class RuntimeInfo
         }
     } = !OSInfo.IsAnyClient;
 
+    /// <summary>
+    /// Provides unique identifiers for the current process instance.
+    /// </summary>
     public static class Process
     {
         public static readonly Guid Guid = Guid.NewGuid();
@@ -28,6 +35,9 @@ public static class RuntimeInfo
         public static readonly string MachinePrefixedId = $"{Environment.MachineName}-{Id}";
     }
 
+    /// <summary>
+    /// Provides .NET runtime version information.
+    /// </summary>
     public static class DotNet
     {
         public static readonly string? VersionString;

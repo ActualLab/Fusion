@@ -4,6 +4,9 @@ using ActualLab.IO;
 
 namespace ActualLab.Caching;
 
+/// <summary>
+/// Base class for file system-backed caches with atomic read/write operations.
+/// </summary>
 public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, TValue>
     where TKey : notnull
 {
@@ -118,6 +121,9 @@ public abstract class FileSystemCacheBase<TKey, TValue> : AsyncCacheBase<TKey, T
 #pragma warning restore IL2026
 }
 
+/// <summary>
+/// A file system-backed cache that stores key-value pairs as JSON files in a directory.
+/// </summary>
 public class FileSystemCache<TKey, TValue>(
     FilePath cacheDirectory,
     string? extension = null,

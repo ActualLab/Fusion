@@ -4,9 +4,16 @@ using ActualLab.OS;
 
 namespace ActualLab.CommandR.Interception;
 
+/// <summary>
+/// An <see cref="Interceptor"/> that guards command service proxy calls, ensuring
+/// they are invoked only within an active <see cref="CommandContext"/>.
+/// </summary>
 public sealed class CommandServiceInterceptor(CommandServiceInterceptor.Options settings, IServiceProvider services)
     : Interceptor(settings, services)
 {
+    /// <summary>
+    /// Configuration options for <see cref="CommandServiceInterceptor"/>.
+    /// </summary>
     public new record Options : Interceptor.Options
     {
         public static Options Default { get; set; } = new() {

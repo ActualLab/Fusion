@@ -2,6 +2,9 @@ using ActualLab.Concurrency;
 
 namespace ActualLab.IO;
 
+/// <summary>
+/// Extension methods for <see cref="Console"/> providing asynchronous console I/O.
+/// </summary>
 public static class ConsoleExt
 {
 #if NET9_0_OR_GREATER

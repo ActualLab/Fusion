@@ -2,6 +2,10 @@ using System.Globalization;
 
 namespace ActualLab.Requirements;
 
+/// <summary>
+/// Builds exceptions for requirement validation failures using configurable
+/// message templates and exception factories.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct ExceptionBuilder
 {

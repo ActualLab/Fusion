@@ -3,6 +3,9 @@ using StringBuilderExt = ActualLab.Text.StringBuilderExt;
 
 namespace ActualLab.Scalability;
 
+/// <summary>
+/// Maps a fixed number of shards to a set of nodes using consistent hashing.
+/// </summary>
 public class ShardMap<TNode>
     where TNode : class
 {

@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Text.Internal;
 
+/// <summary>
+/// MessagePack formatter for <see cref="Symbol"/>.
+/// </summary>
 public sealed class SymbolMessagePackFormatter : IMessagePackFormatter<Symbol>
 {
     public void Serialize(ref MessagePackWriter writer, Symbol value, MessagePackSerializerOptions options)

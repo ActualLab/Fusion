@@ -3,8 +3,14 @@ using ActualLab.OS;
 
 namespace ActualLab.CommandR.Configuration;
 
+/// <summary>
+/// Resolves and caches <see cref="CommandHandlerSet"/> instances for each command type.
+/// </summary>
 public class CommandHandlerResolver
 {
+    /// <summary>
+    /// Configuration options for <see cref="CommandHandlerResolver"/>.
+    /// </summary>
     public record Options
     {
         public LogLevel HandlerLogLevel { get; init; } = LogLevel.Debug;

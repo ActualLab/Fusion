@@ -2,8 +2,15 @@ using ActualLab.Rpc.Caching;
 
 namespace ActualLab.Fusion.Client.Caching;
 
+/// <summary>
+/// A <see cref="RemoteComputedCache"/> that batches write operations
+/// and flushes them periodically for better performance.
+/// </summary>
 public abstract class FlushingRemoteComputedCache : RemoteComputedCache
 {
+    /// <summary>
+    /// Configuration options for <see cref="FlushingRemoteComputedCache"/>.
+    /// </summary>
     public new record Options(string Version = "") : RemoteComputedCache.Options(Version)
     {
         public static new Options Default { get; set; } = new();

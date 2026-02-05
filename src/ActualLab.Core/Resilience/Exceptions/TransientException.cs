@@ -12,6 +12,9 @@ public interface ITransientException;
 /// </summary>
 public interface ISuperTransientException : ITransientException;
 
+/// <summary>
+/// Base exception class for transient errors that may succeed on retry.
+/// </summary>
 [Serializable]
 public class TransientException : Exception, ITransientException
 {

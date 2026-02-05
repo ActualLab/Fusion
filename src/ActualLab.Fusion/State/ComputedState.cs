@@ -6,6 +6,9 @@ namespace ActualLab.Fusion;
 
 // Interfaces
 
+/// <summary>
+/// Configuration options for <see cref="IComputedState"/>.
+/// </summary>
 public interface IComputedStateOptions : IStateOptions
 {
     public IUpdateDelayer? UpdateDelayer { get; init; }
@@ -14,6 +17,10 @@ public interface IComputedStateOptions : IStateOptions
     public TimeSpan GracefulDisposeDelay { get; init; }
 }
 
+/// <summary>
+/// A <see cref="IState"/> that automatically recomputes its value on invalidation
+/// using a configurable update delay.
+/// </summary>
 public interface IComputedState : IState, IDisposable, IHasWhenDisposed
 {
     public IUpdateDelayer UpdateDelayer { get; set; }
@@ -22,12 +29,22 @@ public interface IComputedState : IState, IDisposable, IHasWhenDisposed
     public CancellationToken GracefulDisposeToken { get; }
 }
 
+/// <summary>
+/// A strongly-typed <see cref="IComputedState"/> producing values of type <typeparamref name="T"/>.
+/// </summary>
 public interface IComputedState<T> : IState<T>, IComputedState;
 
 // Classes
 
+/// <summary>
+/// Base class for states that automatically recompute on invalidation,
+/// running a continuous update cycle with configurable delays and retry logic.
+/// </summary>
 public abstract class ComputedState : State, IComputedState, IGenericTimeoutHandler
 {
+    /// <summary>
+    /// Global default values for <see cref="IComputedStateOptions"/>.
+    /// </summary>
     public static class DefaultOptions
     {
         public static bool TryComputeSynchronously { get; set; } = true;
@@ -163,8 +180,14 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
     }
 }
 
+/// <summary>
+/// A strongly-typed <see cref="ComputedState"/> producing values of type <typeparamref name="T"/>.
+/// </summary>
 public abstract class ComputedState<T> : ComputedState, IState<T>
 {
+    /// <summary>
+    /// Configuration options for <see cref="ComputedState{T}"/>.
+    /// </summary>
     public record Options : StateOptions<T>, IComputedStateOptions
     {
         public IUpdateDelayer? UpdateDelayer { get; init; }

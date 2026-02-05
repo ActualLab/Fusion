@@ -3,6 +3,9 @@ using System.Diagnostics.Metrics;
 
 namespace ActualLab.Interception.Internal;
 
+/// <summary>
+/// Provides OpenTelemetry instrumentation primitives for the interception layer.
+/// </summary>
 public static class InterceptionInstruments
 {
     public static readonly ActivitySource ActivitySource = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);

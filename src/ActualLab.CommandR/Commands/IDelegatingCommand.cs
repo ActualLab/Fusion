@@ -18,4 +18,7 @@ namespace ActualLab.CommandR.Commands;
 /// </remarks>
 public interface IDelegatingCommand : IOutermostCommand;
 
+/// <summary>
+/// A generic variant of <see cref="IDelegatingCommand"/> that produces a typed result.
+/// </summary>
 public interface IDelegatingCommand<TResult> : ICommand<TResult>, IDelegatingCommand;

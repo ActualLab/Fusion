@@ -2,6 +2,10 @@ using System.Numerics;
 
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// Extended math utilities including clamping, GCD/LCM, factorial,
+/// and arbitrary-radix number formatting/parsing.
+/// </summary>
 public static class MathExt
 {
     private static readonly Dictionary<int, BigInteger> Factorials = new();

@@ -1,5 +1,8 @@
 namespace ActualLab.Async;
 
+/// <summary>
+/// Base class for async processors with built-in disposal and stop token support.
+/// </summary>
 public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDisposed
 {
     private volatile Task? _disposeTask;

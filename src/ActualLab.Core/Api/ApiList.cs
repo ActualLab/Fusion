@@ -3,6 +3,9 @@ using MessagePack;
 
 namespace ActualLab.Api;
 
+/// <summary>
+/// A serializable list intended for use in API contracts.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.Collection), MessagePackObject]
 public sealed partial class ApiList<T> : List<T>
 {

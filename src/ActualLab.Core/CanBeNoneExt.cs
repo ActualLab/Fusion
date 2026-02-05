@@ -2,6 +2,9 @@ using ActualLab.Internal;
 
 namespace ActualLab;
 
+/// <summary>
+/// Extension methods for <see cref="ICanBeNone"/>.
+/// </summary>
 public static class CanBeNoneExt
 {
     public static T RequireNone<T>(this T source)

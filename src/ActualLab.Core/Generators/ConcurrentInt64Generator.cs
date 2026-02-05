@@ -2,6 +2,10 @@ using ActualLab.Generators.Internal;
 
 namespace ActualLab.Generators;
 
+/// <summary>
+/// Factory for creating striped concurrent <see cref="long"/> generators
+/// that reduce contention via multiple independent sequences.
+/// </summary>
 public static class ConcurrentInt64Generator
 {
     public static readonly ConcurrentGenerator<long> Default = New(RandomShared.Next());

@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Configures RPC method properties such as name, timeouts, and local execution mode.
+/// </summary>
 [AttributeUsage(AttributeTargets.Interface | AttributeTargets.Method, Inherited = false)]
 public sealed class RpcMethodAttribute : Attribute
 {

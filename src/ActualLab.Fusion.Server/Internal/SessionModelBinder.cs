@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace ActualLab.Fusion.Server.Internal;
 
+/// <summary>
+/// An <see cref="IModelBinder"/> that binds <see cref="Session"/> values from request data,
+/// falling back to the default session from <see cref="ISessionResolver"/> when needed.
+/// </summary>
 public class SessionModelBinder : IModelBinder
 {
     public Task BindModelAsync(ModelBindingContext bindingContext)

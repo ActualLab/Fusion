@@ -15,6 +15,9 @@ namespace ActualLab.Testing;
 
 #pragma warning disable CA1812 // C is an internal class that is apparently never instantiated
 
+/// <summary>
+/// Configuration options for the OWIN-based Web API test server.
+/// </summary>
 public class OwinWebApiServerOptions
 {
     public string Urls { get; set; } = null!;
@@ -22,6 +25,10 @@ public class OwinWebApiServerOptions
     public Action<IServiceProvider,HttpConfiguration> ConfigureHttp { get; set; } = null!;
 }
 
+/// <summary>
+/// An OWIN-based <see cref="IServer"/> implementation for hosting
+/// Web API endpoints in .NET Framework test environments.
+/// </summary>
 internal sealed class OwinWebApiServer : IServer
 {
     private readonly IServiceProvider _serviceProvider;
@@ -77,6 +84,10 @@ internal sealed class OwinWebApiServer : IServer
     }
 }
 
+/// <summary>
+/// OWIN startup configuration class that sets up Web API routing
+/// and dependency injection for the test server.
+/// </summary>
 internal sealed class WebApiStartup
 {
     private readonly IServiceProvider _serviceProvider;
@@ -128,6 +139,10 @@ internal sealed class WebApiStartup
     }
 }
 
+/// <summary>
+/// An <see cref="IDependencyResolver"/> that wraps an <see cref="IServiceProvider"/>
+/// for Web API dependency injection in OWIN test hosts.
+/// </summary>
 public class DefaultDependencyResolver : IDependencyResolver
 {
     private IServiceProvider serviceProvider;
@@ -159,6 +174,10 @@ public class DefaultDependencyResolver : IDependencyResolver
     }
 }
 
+/// <summary>
+/// An <see cref="IHostedService"/> that starts and stops an <see cref="IServer"/>
+/// as part of the generic host lifecycle in test environments.
+/// </summary>
 internal sealed class GenericWebHostService : IHostedService
 {
     private readonly IServer _server;

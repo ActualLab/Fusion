@@ -3,16 +3,26 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Defines a Blazor component that owns a <see cref="State"/> instance.
+/// </summary>
 public interface IStatefulComponent : IHasCircuitHub, IAsyncDisposable
 {
     public State State { get; }
 }
 
+/// <summary>
+/// Defines a Blazor component that owns a typed <see cref="IState{T}"/> instance.
+/// </summary>
 public interface IStatefulComponent<T> : IStatefulComponent
 {
     public new IState<T> State { get; }
 }
 
+/// <summary>
+/// Abstract base class for Blazor components that manage a Fusion <see cref="State"/>
+/// and re-render when the state changes.
+/// </summary>
 public abstract class StatefulComponentBase : CircuitHubComponentBase, IStatefulComponent
 {
     protected State State { get; private set; } = null!;
@@ -104,6 +114,9 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
 #pragma warning restore MA0025
 }
 
+/// <summary>
+/// Generic stateful component base class that exposes a typed <see cref="IState{T}"/>.
+/// </summary>
 public abstract class StatefulComponentBase<T> : StatefulComponentBase, IStatefulComponent<T>
 {
     protected State UntypedState => base.State;

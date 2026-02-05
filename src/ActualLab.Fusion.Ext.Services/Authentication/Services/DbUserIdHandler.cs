@@ -4,6 +4,9 @@ using ActualLab.Generators;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Defines operations for generating, parsing, and formatting database user IDs.
+/// </summary>
 public interface IDbUserIdHandler<TDbUserId>
 {
     public TDbUserId New();
@@ -17,6 +20,10 @@ public interface IDbUserIdHandler<TDbUserId>
     public bool TryParse(string userId, bool allowNone, out TDbUserId result);
 }
 
+/// <summary>
+/// Default implementation of <see cref="IDbUserIdHandler{TDbUserId}"/> using converters
+/// for parsing and formatting user IDs.
+/// </summary>
 public class DbUserIdHandler<TDbUserId> : IDbUserIdHandler<TDbUserId>
 {
     protected IConverter<string, TDbUserId?> Parser { get; init; }

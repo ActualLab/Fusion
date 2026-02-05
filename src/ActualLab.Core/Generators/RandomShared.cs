@@ -1,5 +1,9 @@
 namespace ActualLab.Generators;
 
+/// <summary>
+/// Provides thread-safe access to shared random number generation,
+/// wrapping <c>Random.Shared</c> on .NET 6+ or a thread-local fallback.
+/// </summary>
 public static class RandomShared
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

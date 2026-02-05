@@ -2,6 +2,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Caching;
 
+/// <summary>
+/// An in-memory cache backed by a <see cref="ConcurrentDictionary{TKey, TValue}"/>.
+/// </summary>
 public class MemoizingCache<TKey, TValue> : AsyncCacheBase<TKey, TValue>
     where TKey : notnull
 {

@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// A <see cref="FixedDelayer"/> that waits until the next system tick before updating.
+/// </summary>
 public sealed record NextTickFixedDelayer(RetryDelaySeq RetryDelays)
     : FixedDelayer(RetryDelays)
 {

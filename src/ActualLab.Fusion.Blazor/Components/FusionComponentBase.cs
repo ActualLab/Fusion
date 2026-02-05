@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Base Blazor component with custom parameter comparison and event handling
+/// to reduce unnecessary re-renders.
+/// </summary>
 public abstract class FusionComponentBase : ComponentBase, IHandleEvent
 {
     public static ParameterComparisonMode DefaultParameterComparisonMode { get; set; } = ParameterComparisonMode.Custom;

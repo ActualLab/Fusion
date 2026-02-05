@@ -1,5 +1,9 @@
 namespace ActualLab.Async;
 
+/// <summary>
+/// Extension methods for <see cref="AsyncTaskMethodBuilder{TResult}"/>
+/// and <see cref="AsyncTaskMethodBuilder"/>.
+/// </summary>
 public static partial class AsyncTaskMethodBuilderExt
 {
 #if USE_UNSAFE_ACCESSORS

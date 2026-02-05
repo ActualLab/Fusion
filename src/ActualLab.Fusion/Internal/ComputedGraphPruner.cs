@@ -2,8 +2,15 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// A background worker that periodically prunes stale edges and disposed instances
+/// from the <see cref="ComputedRegistry"/> dependency graph.
+/// </summary>
 public sealed class ComputedGraphPruner : WorkerBase
 {
+    /// <summary>
+    /// Global configuration settings for <see cref="ComputedGraphPruner"/>.
+    /// </summary>
     public static class Settings
     {
         public static bool AutoActivate { get; set; } = true;

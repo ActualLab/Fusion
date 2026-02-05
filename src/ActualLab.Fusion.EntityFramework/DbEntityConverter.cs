@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Defines the contract for converting between database entities and domain models.
+/// </summary>
 public interface IDbEntityConverter<TDbEntity, TModel>
     where TDbEntity : class
     where TModel : notnull
@@ -23,6 +26,10 @@ public interface IDbEntityConverter<TDbEntity, TModel>
     TModel? ToModel(TDbEntity? source);
 }
 
+/// <summary>
+/// Abstract base for <see cref="IDbEntityConverter{TDbEntity, TModel}"/> implementations
+/// that provides default <c>ToEntity</c> and <c>ToModel</c> conversion logic.
+/// </summary>
 public abstract class DbEntityConverter<TDbContext, TDbEntity, TModel>(IServiceProvider services)
     : DbServiceBase<TDbContext>(services), IDbEntityConverter<TDbEntity, TModel>
     where TDbContext : DbContext

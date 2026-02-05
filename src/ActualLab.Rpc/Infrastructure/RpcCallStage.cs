@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Defines well-known RPC call completion stage constants and a registry for custom stages.
+/// </summary>
 public static class RpcCallStage
 {
 #if NET9_0_OR_GREATER

@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// An MVC exception filter that serializes exceptions as JSON error responses.
+/// </summary>
 public sealed class JsonifyErrorsAttribute : ExceptionFilterAttribute
 {
     public override Task OnExceptionAsync(ExceptionContext context)

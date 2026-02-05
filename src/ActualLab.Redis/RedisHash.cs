@@ -2,6 +2,10 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// Provides operations on a Redis hash data structure, including get, set,
+/// remove, increment, and clear.
+/// </summary>
 public sealed class RedisHash(RedisDb redisDb, string hashKey)
 {
     public RedisDb RedisDb { get; } = redisDb;

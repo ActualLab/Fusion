@@ -4,12 +4,18 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
 
+/// <summary>
+/// Abstract base class for a background worker that trims expired session records.
+/// </summary>
 public abstract class DbSessionInfoTrimmer<TDbContext>(
     DbSessionInfoTrimmer<TDbContext>.Options settings,
     IServiceProvider services)
     : DbShardWorkerBase<TDbContext>(services)
     where TDbContext : DbContext
 {
+    /// <summary>
+    /// Configuration options for <see cref="DbSessionInfoTrimmer{TDbContext}"/>.
+    /// </summary>
     public record Options
     {
 #if NET7_0_OR_GREATER
@@ -28,6 +34,10 @@ public abstract class DbSessionInfoTrimmer<TDbContext>(
     protected ILogger? DefaultLog => Log.IfEnabled(Settings.LogLevel);
 }
 
+/// <summary>
+/// Concrete implementation of <see cref="DbSessionInfoTrimmer{TDbContext}"/> that
+/// periodically removes sessions older than a configured threshold.
+/// </summary>
 public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
     DbSessionInfoTrimmer<TDbContext>.Options settings,
     IServiceProvider services

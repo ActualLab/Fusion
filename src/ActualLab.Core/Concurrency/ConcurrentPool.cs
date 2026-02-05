@@ -3,6 +3,10 @@ using ActualLab.Pooling;
 
 namespace ActualLab.Concurrency;
 
+/// <summary>
+/// A thread-safe object pool backed by a <see cref="ConcurrentQueue{T}"/>
+/// and a <see cref="StochasticCounter"/> for approximate size tracking.
+/// </summary>
 public class ConcurrentPool<T>(Func<T> itemFactory, int capacity, int counterPrecision) : IPool<T>
 {
     public static int DefaultCapacity => Math.Min(64, HardwareInfo.GetProcessorCountPo2Factor(32));

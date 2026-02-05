@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Immutable snapshot of an RPC peer's connection state, including handshake, transport, and error info.
+/// </summary>
 public sealed record RpcPeerConnectionState(
     RpcConnection? Connection = null,
     RpcHandshake? Handshake = null,

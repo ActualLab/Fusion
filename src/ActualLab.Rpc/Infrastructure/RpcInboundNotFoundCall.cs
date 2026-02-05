@@ -2,6 +2,9 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Represents an inbound RPC call whose target service or method could not be found.
+/// </summary>
 public sealed class RpcInboundNotFoundCall<TResult>(RpcInboundContext context)
     : RpcInboundCall<TResult>(context), IRpcInboundNotFoundCall
 {

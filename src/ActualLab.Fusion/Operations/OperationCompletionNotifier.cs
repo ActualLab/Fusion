@@ -1,13 +1,23 @@
 using ActualLab.CommandR.Operations;
 namespace ActualLab.Fusion.Operations;
 
+/// <summary>
+/// Notifies registered <see cref="IOperationCompletionListener"/> instances when an operation completes.
+/// </summary>
 public interface IOperationCompletionNotifier
 {
     public Task<bool> NotifyCompleted(Operation operation, CommandContext? commandContext);
 }
 
+/// <summary>
+/// Default <see cref="IOperationCompletionNotifier"/> that deduplicates operations by UUID
+/// and dispatches to all <see cref="IOperationCompletionListener"/> instances.
+/// </summary>
 public class OperationCompletionNotifier : IOperationCompletionNotifier
 {
+    /// <summary>
+    /// Configuration options for <see cref="OperationCompletionNotifier"/>.
+    /// </summary>
     public record Options
     {
         // Should be >= BatchSize @ DbOperationLogReader.Options

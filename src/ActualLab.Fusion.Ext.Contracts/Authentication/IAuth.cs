@@ -2,6 +2,10 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// The primary authentication service contract, providing sign-out, user editing,
+/// presence updates, and session/user query methods.
+/// </summary>
 public interface IAuth : ISessionValidator, IComputeService
 {
     // Commands
@@ -24,6 +28,9 @@ public interface IAuth : ISessionValidator, IComputeService
     public Task<ImmutableArray<SessionInfo>> GetUserSessions(Session session, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Backend command to set session options for the specified session.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record AuthBackend_SetSessionOptions(
@@ -32,6 +39,9 @@ public partial record AuthBackend_SetSessionOptions(
     [property: DataMember, MemoryPackOrder(2)] long? ExpectedVersion = null
 ) : ISessionCommand<Unit>;
 
+/// <summary>
+/// Command to edit the current user's profile (e.g., name) within a session.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record Auth_EditUser(
@@ -39,6 +49,9 @@ public partial record Auth_EditUser(
     [property: DataMember, MemoryPackOrder(1)] string? Name
 ) : ISessionCommand<Unit>;
 
+/// <summary>
+/// Command to sign out a session, optionally kicking other user sessions.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
 public partial record Auth_SignOut: ISessionCommand<Unit>

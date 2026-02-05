@@ -3,6 +3,10 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Net;
 
+/// <summary>
+/// Manages a persistent connection of type <typeparamref name="TConnection"/>
+/// with automatic reconnection and retry delay support.
+/// </summary>
 public sealed class Connector<TConnection> : WorkerBase
     where TConnection : class
 {
@@ -197,6 +201,9 @@ public sealed class Connector<TConnection> : WorkerBase
 
     // Nested types
 
+    /// <summary>
+    /// Internal connection state tracking the current connection task and retry index.
+    /// </summary>
     [StructLayout(LayoutKind.Auto)]
     private sealed record State(
         AsyncTaskMethodBuilder<TConnection> ConnectionSource,

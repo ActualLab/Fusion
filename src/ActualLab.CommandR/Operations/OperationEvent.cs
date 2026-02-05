@@ -3,6 +3,10 @@ using ActualLab.Versioning;
 
 namespace ActualLab.CommandR.Operations;
 
+/// <summary>
+/// Represents an event recorded during an <see cref="Operation"/>,
+/// typically used for eventual consistency and event replay.
+/// </summary>
 public sealed class OperationEvent(string uuid, object? value) : IHasUuid, IHasId<string>
 {
     public static UuidGenerator UuidGenerator { get; set; } = UlidUuidGenerator.Instance;

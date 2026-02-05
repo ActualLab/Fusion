@@ -1,5 +1,9 @@
 namespace ActualLab.Mathematics.Internal;
 
+/// <summary>
+/// Default <see cref="ArithmeticsProvider"/> that supports built-in numeric types
+/// and <see cref="Moment"/>.
+/// </summary>
 public class DefaultArithmeticsProvider : ArithmeticsProvider
 {
     private readonly ConcurrentDictionary<Type, IArithmetics> _cache = new();

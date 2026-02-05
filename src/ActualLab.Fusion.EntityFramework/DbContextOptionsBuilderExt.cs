@@ -4,6 +4,10 @@ using ActualLab.Fusion.EntityFramework.Internal;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Extension methods for <see cref="DbContextOptionsBuilder"/> to register an
+/// <see cref="IDbHintFormatter"/> implementation.
+/// </summary>
 public static class DbContextOptionsBuilderExt
 {
     public static DbContextOptionsBuilder UseHintFormatter<TDbHintFormatter>(

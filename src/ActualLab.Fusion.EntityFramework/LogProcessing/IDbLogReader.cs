@@ -3,11 +3,18 @@ using ActualLab.Resilience;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// Defines the contract for a service that reads and processes database log entries.
+/// </summary>
 public interface IDbLogReader
 {
     public DbLogKind LogKind { get; }
 }
 
+/// <summary>
+/// Base configuration options for database log readers, including batch processing,
+/// retry, and concurrency settings.
+/// </summary>
 public abstract record DbLogReaderOptions
 {
     // Gap / separate item processing settings
@@ -22,6 +29,10 @@ public abstract record DbLogReaderOptions
     public bool IsTracingEnabled { get; init; }
 }
 
+/// <summary>
+/// Configuration options for operation log readers, extending <see cref="DbLogReaderOptions"/>
+/// with a start offset for determining the initial read position.
+/// </summary>
 public abstract record DbOperationLogReaderOptions : DbLogReaderOptions
 {
     public TimeSpan StartOffset { get; init; } = TimeSpan.FromSeconds(3);
@@ -35,6 +46,10 @@ public abstract record DbOperationLogReaderOptions : DbLogReaderOptions
     }
 }
 
+/// <summary>
+/// Configuration options for event log readers, extending <see cref="DbLogReaderOptions"/>
+/// with event-specific reprocess policies.
+/// </summary>
 public abstract record DbEventLogReaderOptions : DbLogReaderOptions
 {
     protected DbEventLogReaderOptions()

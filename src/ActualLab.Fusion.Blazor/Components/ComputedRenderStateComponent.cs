@@ -1,11 +1,18 @@
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Static configuration holder for <see cref="ComputedRenderStateComponent{TState}"/>.
+/// </summary>
 public static class ComputedRenderStateComponent
 {
     public static ComputedStateComponentOptions DefaultOptions { get; set; }
         = ComputedStateComponentOptions.RecomputeStateOnParameterChange; // Doesn't need any standard render points
 }
 
+/// <summary>
+/// A computed state component that tracks render state snapshots to avoid
+/// redundant re-renders when the state has not changed.
+/// </summary>
 public abstract class ComputedRenderStateComponent<TState> : ComputedStateComponent<TState>
 {
     private StateSnapshot? _renderState;

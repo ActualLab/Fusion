@@ -1,5 +1,8 @@
 namespace ActualLab.Time;
 
+/// <summary>
+/// Options for <see cref="FixedTimerSet{TItem}"/>.
+/// </summary>
 public record FixedTimerSetOptions
 {
     public static readonly FixedTimerSetOptions Default = new();

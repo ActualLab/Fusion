@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Configuration options for the <see cref="RpcServiceRegistry"/>, including service and method factories.
+/// </summary>
 public record RpcRegistryOptions
 {
     public static RpcRegistryOptions Default { get; set; } = new();

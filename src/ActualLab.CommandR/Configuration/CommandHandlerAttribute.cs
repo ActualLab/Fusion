@@ -2,6 +2,9 @@ namespace ActualLab.CommandR.Configuration;
 
 #pragma warning disable CA1813 // Consider making sealed
 
+/// <summary>
+/// Marks a method as a command handler, optionally specifying priority and filter mode.
+/// </summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
 public class CommandHandlerAttribute : Attribute
 {

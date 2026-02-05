@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// An ordered collection of <see cref="LegacyName"/> entries, indexed by version for backward compatibility.
+/// </summary>
 public sealed class LegacyNames
 {
     public static readonly LegacyNames Empty = new([]);

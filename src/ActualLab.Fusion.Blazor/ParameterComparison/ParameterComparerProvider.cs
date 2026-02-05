@@ -3,6 +3,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Resolves <see cref="ParameterComparer"/> instances for Blazor component parameters
+/// based on attributes and known immutable types.
+/// </summary>
 public class ParameterComparerProvider
 {
     private static readonly ConcurrentDictionary<Type, LazySlim<Type, ParameterComparer>> Cache

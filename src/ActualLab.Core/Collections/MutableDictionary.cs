@@ -1,5 +1,9 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A read-only view of a thread-safe mutable dictionary backed by an
+/// <see cref="ImmutableDictionary{TKey, TValue}"/>.
+/// </summary>
 public interface IReadOnlyMutableDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>
     where TKey : notnull
 {
@@ -7,6 +11,10 @@ public interface IReadOnlyMutableDictionary<TKey, TValue> : IReadOnlyDictionary<
     public event Action? Changed;
 }
 
+/// <summary>
+/// A thread-safe mutable dictionary backed by an <see cref="ImmutableDictionary{TKey, TValue}"/>
+/// with atomic update operations and change notifications.
+/// </summary>
 // ReSharper disable once PossibleInterfaceMemberAmbiguity
 public interface IMutableDictionary<TKey, TValue> : IReadOnlyMutableDictionary<TKey, TValue>, IDictionary<TKey, TValue>
     where TKey : notnull
@@ -18,6 +26,10 @@ public interface IMutableDictionary<TKey, TValue> : IReadOnlyMutableDictionary<T
     public bool Update<TState>(TState state, Func<TState, ImmutableDictionary<TKey, TValue>, ImmutableDictionary<TKey, TValue>> updater);
 }
 
+/// <summary>
+/// Default implementation of <see cref="IMutableDictionary{TKey, TValue}"/> that wraps an
+/// <see cref="ImmutableDictionary{TKey, TValue}"/> with lock-based thread safety.
+/// </summary>
 public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> items)
     : IMutableDictionary<TKey, TValue>
     where TKey : notnull

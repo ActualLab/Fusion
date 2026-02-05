@@ -2,6 +2,9 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Client.Internal;
 
+/// <summary>
+/// Registers the Fusion-specific RPC call type for compute calls.
+/// </summary>
 public static class RpcComputeCallType
 {
     public const byte Id = 1;

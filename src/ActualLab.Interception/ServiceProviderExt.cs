@@ -1,5 +1,8 @@
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceProvider"/> related to proxy activation.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume proxy-related code is preserved")]
 public static class ServiceProviderExt
 {

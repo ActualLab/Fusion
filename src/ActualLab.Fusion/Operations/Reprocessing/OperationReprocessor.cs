@@ -22,6 +22,9 @@ public interface IOperationReprocessor : ICommandHandler<ICommand>
 /// </summary>
 public class OperationReprocessor : IOperationReprocessor
 {
+    /// <summary>
+    /// Configuration options for <see cref="OperationReprocessor"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

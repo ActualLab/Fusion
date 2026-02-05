@@ -1,5 +1,8 @@
 namespace ActualLab.Comparison;
 
+/// <summary>
+/// An equality comparer for <see cref="IHasId{TId}"/> that compares by <see cref="IHasId{TId}.Id"/>.
+/// </summary>
 public class HasIdEqualityComparer<T> : IEqualityComparer<IHasId<T>>
 {
     public static readonly IEqualityComparer<IHasId<T>> Instance = new HasIdEqualityComparer<T>();

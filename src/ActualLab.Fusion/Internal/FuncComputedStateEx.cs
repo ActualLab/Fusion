@@ -1,5 +1,9 @@
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// A <see cref="ComputedState{T}"/> that computes its value using a delegate
+/// that also receives the state instance itself.
+/// </summary>
 public sealed class FuncComputedStateEx<T> : ComputedState<T>
 {
     public Func<ComputedState<T>, CancellationToken, Task<T>> Computer { get; }

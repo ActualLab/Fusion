@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// A MessagePack formatter for <see cref="MessagePackData"/>.
+/// </summary>
 public sealed class MessagePackDataMessagePackFormatter : IMessagePackFormatter<MessagePackData>
 {
     public void Serialize(ref MessagePackWriter writer, MessagePackData value, MessagePackSerializerOptions options)

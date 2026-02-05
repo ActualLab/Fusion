@@ -7,6 +7,9 @@ namespace ActualLab.Fusion.Client;
 
 #pragma warning disable VSTHRD104, MA0055
 
+/// <summary>
+/// Defines the contract for a computed value that is produced via a remote (RPC) call.
+/// </summary>
 public interface IRemoteComputed : IHasInvalidationTarget, IHasSynchronizationTarget, IDisposable
 {
     public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }
@@ -16,6 +19,10 @@ public interface IRemoteComputed : IHasInvalidationTarget, IHasSynchronizationTa
     public RpcCacheEntry? CacheEntry { get; }
 }
 
+/// <summary>
+/// A <see cref="Computed{T}"/> that is populated from a remote RPC compute call
+/// and tracks synchronization state with the server.
+/// </summary>
 public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
 {
     public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }

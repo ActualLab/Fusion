@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Provides default API and backend scope names, versions, and peer version sets used by the RPC framework.
+/// </summary>
 public static class RpcDefaults
 {
 #if NET9_0_OR_GREATER

@@ -3,6 +3,9 @@ using System.Globalization;
 
 namespace ActualLab.Time.Internal;
 
+/// <summary>
+/// TypeConverter for <see cref="Moment"/>, enabling string-based conversion.
+/// </summary>
 public class MomentTypeConverter : TypeConverter
 {
     public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)

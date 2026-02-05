@@ -5,6 +5,10 @@ using ActualLab.Fusion.Server;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Extension methods for <see cref="FusionMvcWebServerBuilder"/> to register
+/// MVC-based authentication controllers.
+/// </summary>
 public static class FusionMvcWebServerBuilderExt
 {
     public static FusionMvcWebServerBuilder AddAuthControllers(this FusionMvcWebServerBuilder fusionMvcWebServer)

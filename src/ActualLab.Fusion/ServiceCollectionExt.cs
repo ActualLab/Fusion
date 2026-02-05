@@ -2,6 +2,9 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceCollection"/> to register Fusion services.
+/// </summary>
 public static class ServiceCollectionExt
 {
     public static FusionBuilder AddFusion(

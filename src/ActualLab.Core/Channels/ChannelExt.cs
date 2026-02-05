@@ -1,5 +1,8 @@
 namespace ActualLab.Channels;
 
+/// <summary>
+/// Extension methods for <see cref="Channel{T}"/> and related types.
+/// </summary>
 public static partial class ChannelExt
 {
     public static Channel<T> Create<T>(ChannelOptions options)

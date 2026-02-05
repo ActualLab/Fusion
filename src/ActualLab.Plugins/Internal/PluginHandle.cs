@@ -4,18 +4,27 @@ namespace ActualLab.Plugins.Internal;
 
 #pragma warning disable CA1721, IL2026
 
+/// <summary>
+/// Provides access to all plugin instances that implement a given base type.
+/// </summary>
 public interface IPluginHandle
 {
     public IEnumerable<object> Instances { get; }
     public IEnumerable<object> GetInstances(Func<PluginInfo, bool> predicate);
 }
 
+/// <summary>
+/// Typed version of <see cref="IPluginHandle"/> for retrieving plugin instances of type <typeparamref name="TPlugin"/>.
+/// </summary>
 public interface IPluginHandle<out TPlugin> : IPluginHandle
 {
     public new IEnumerable<TPlugin> Instances { get; }
     public new IEnumerable<TPlugin> GetInstances(Func<PluginInfo, bool> predicate);
 }
 
+/// <summary>
+/// Default <see cref="IPluginHandle{TPlugin}"/> that resolves instances via <see cref="IPluginCache"/>.
+/// </summary>
 public class PluginHandle<TPlugin> : IPluginHandle<TPlugin>
 {
     private readonly Lazy<TPlugin[]> _lazyInstances;

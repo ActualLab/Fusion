@@ -1,5 +1,8 @@
 namespace ActualLab.Channels;
 
+/// <summary>
+/// Holds a pair of related channels, optionally with twisted (cross-wired) reader/writer connections.
+/// </summary>
 public class ChannelPair<T>(Channel<T> channel1, Channel<T> channel2)
 {
     public static readonly ChannelPair<T> Null = new(NullChannel<T>.Instance, NullChannel<T>.Instance);
@@ -10,6 +13,9 @@ public class ChannelPair<T>(Channel<T> channel1, Channel<T> channel2)
     protected ChannelPair() : this(null!, null!) { }
 }
 
+/// <summary>
+/// Factory methods for creating <see cref="ChannelPair{T}"/> instances.
+/// </summary>
 public static class ChannelPair
 {
     // Create

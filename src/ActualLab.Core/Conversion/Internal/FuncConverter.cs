@@ -1,5 +1,9 @@
 namespace ActualLab.Conversion.Internal;
 
+/// <summary>
+/// A <see cref="Converter{TSource, TTarget}"/> backed by delegate functions
+/// for conversion and try-conversion.
+/// </summary>
 public class FuncConverter<TSource, TTarget>(
     Func<TSource, TTarget> converter,
     Func<TSource, Option<TTarget>> tryConverter
@@ -19,6 +23,9 @@ public class FuncConverter<TSource, TTarget>(
         => source is TSource t ? TryConverter(t).Cast<object?>() : Option<object?>.None;
 }
 
+/// <summary>
+/// Factory methods for creating <see cref="FuncConverter{TSource, TTarget}"/> instances.
+/// </summary>
 public static class FuncConverter<TSource>
 {
     public static FuncConverter<TSource, TTarget> New<TTarget>(Func<TSource, TTarget> converter)

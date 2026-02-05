@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Factory methods for <see cref="ByteSerialized{T}"/>.
+/// </summary>
 public static class ByteSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -13,6 +16,9 @@ public static class ByteSerialized
         => new() { Data = data };
 }
 
+/// <summary>
+/// A wrapper that auto-serializes its <see cref="Value"/> to a byte array on access via <see cref="IByteSerializer"/>.
+/// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif

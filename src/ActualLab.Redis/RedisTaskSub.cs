@@ -2,6 +2,10 @@ using StackExchange.Redis;
 
 namespace ActualLab.Redis;
 
+/// <summary>
+/// A Redis subscriber that exposes the next received raw message
+/// as an awaitable <see cref="Task{RedisValue}"/>.
+/// </summary>
 public sealed class RedisTaskSub : RedisSubBase
 {
     private TaskCompletionSource<RedisValue> _nextMessageSource = null!;
@@ -55,6 +59,10 @@ public sealed class RedisTaskSub : RedisSubBase
     }
 }
 
+/// <summary>
+/// A Redis subscriber that deserializes messages to <typeparamref name="T"/>
+/// and exposes the next received message as an awaitable <see cref="Task{T}"/>.
+/// </summary>
 public sealed class RedisTaskSub<T> : RedisSubBase
 {
     private TaskCompletionSource<T> _nextMessageSource = null!;

@@ -3,6 +3,10 @@ using ActualLab.Internal;
 
 namespace ActualLab.IO.Internal;
 
+/// <summary>
+/// A ref struct that sequentially reads binary primitives and length-prefixed spans
+/// from a <see cref="ReadOnlyMemory{T}"/> of bytes.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public ref struct MemoryReader(ReadOnlyMemory<byte> memory)
 {

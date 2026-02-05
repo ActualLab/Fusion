@@ -1,5 +1,8 @@
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Defines error transiency classification values.
+/// </summary>
 public enum Transiency
 {
     Unknown = 0, // Treated as NonTransient
@@ -9,6 +12,9 @@ public enum Transiency
     Terminal,
 }
 
+/// <summary>
+/// Extension methods for <see cref="Transiency"/>.
+/// </summary>
 public static class TransiencyExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

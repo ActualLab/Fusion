@@ -5,6 +5,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Testing;
 
+/// <summary>
+/// Manages a paired client-server in-memory connection for RPC testing with connect/disconnect/reconnect support.
+/// </summary>
 public class RpcTestConnection
 {
 #if NET9_0_OR_GREATER

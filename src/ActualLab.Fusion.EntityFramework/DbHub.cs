@@ -7,6 +7,10 @@ using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Central hub providing access to database-related services such as shard registries,
+/// context factories, version generators, and DbContext creation methods.
+/// </summary>
 public interface IDbHub : IHasServices, IDisposable, IAsyncDisposable
 {
     public HostId HostId { get; }
@@ -28,6 +32,11 @@ public interface IDbHub : IHasServices, IDisposable, IAsyncDisposable
     public ValueTask<DbContext> CreateOperationDbContext(string shard, IsolationLevel isolationLevel, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Typed <see cref="IDbHub"/> implementation for a specific <typeparamref name="TDbContext"/>,
+/// providing <see cref="DbContext"/> creation with execution strategy suspension
+/// and operation scope integration.
+/// </summary>
 public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
     where TDbContext : DbContext
 {

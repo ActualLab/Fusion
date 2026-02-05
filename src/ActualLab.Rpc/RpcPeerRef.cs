@@ -4,6 +4,9 @@ using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Reference to an RPC peer, encapsulating its address, connection kind, and versioning info.
+/// </summary>
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public partial class RpcPeerRef : IEquatable<RpcPeerRef>
 {

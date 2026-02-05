@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Api.Internal;
 
+/// <summary>
+/// MessagePack formatter for <see cref="ApiOption{T}"/>.
+/// </summary>
 public sealed class ApiOptionMessagePackFormatter<T> : IMessagePackFormatter<ApiOption<T>>
 {
     public void Serialize(ref MessagePackWriter writer, ApiOption<T> value, MessagePackSerializerOptions options)

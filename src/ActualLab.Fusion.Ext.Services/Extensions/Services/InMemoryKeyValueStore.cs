@@ -3,11 +3,18 @@ using ActualLab.Fusion.Operations.Internal;
 
 namespace ActualLab.Fusion.Extensions.Services;
 
+/// <summary>
+/// An in-memory implementation of <see cref="IKeyValueStore"/> suitable for
+/// client-side use cases and testing.
+/// </summary>
 public class InMemoryKeyValueStore(
     InMemoryKeyValueStore.Options settings,
     IServiceProvider services
     ) : WorkerBase, IKeyValueStore
 {
+    /// <summary>
+    /// Configuration options for <see cref="InMemoryKeyValueStore"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

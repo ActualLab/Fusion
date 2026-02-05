@@ -1,5 +1,8 @@
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Abstract visitor for writing items into an <see cref="ArgumentList"/>.
+/// </summary>
 public abstract class ArgumentListWriter
 {
     public abstract T OnStruct<T>(int index);

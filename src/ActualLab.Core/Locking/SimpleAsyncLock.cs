@@ -1,5 +1,8 @@
 namespace ActualLab.Locking;
 
+/// <summary>
+/// A lightweight async lock without reentry detection support.
+/// </summary>
 public sealed class SimpleAsyncLock : IAsyncLock<SimpleAsyncLock.Releaser>
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -19,6 +22,9 @@ public sealed class SimpleAsyncLock : IAsyncLock<SimpleAsyncLock.Releaser>
 
     // Nested types
 
+    /// <summary>
+    /// Releases the <see cref="SimpleAsyncLock"/> when disposed.
+    /// </summary>
     public readonly struct Releaser(SimpleAsyncLock asyncLock) : IAsyncLockReleaser
     {
         internal static ValueTask<Releaser> NewWhenCompleted(Task task, SimpleAsyncLock asyncLock)

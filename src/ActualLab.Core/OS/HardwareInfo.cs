@@ -1,5 +1,8 @@
 namespace ActualLab.OS;
 
+/// <summary>
+/// Provides cached information about the hardware, such as processor count.
+/// </summary>
 public static class HardwareInfo
 {
     private const int RefreshIntervalTicks = 30_000; // Tick = millisecond

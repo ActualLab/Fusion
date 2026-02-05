@@ -9,6 +9,10 @@ namespace ActualLab.Fusion;
 
 // Interfaces
 
+/// <summary>
+/// A reactive state object backed by a <see cref="Computed"/> that raises events
+/// on invalidation and update.
+/// </summary>
 public interface IState : IResult, IComputeFunction
 {
     public StateSnapshot Snapshot { get; }
@@ -21,6 +25,9 @@ public interface IState : IResult, IComputeFunction
     public event Action<State, StateEventKind>? Updated;
 }
 
+/// <summary>
+/// A strongly-typed <see cref="IState"/> producing values of type <typeparamref name="T"/>.
+/// </summary>
 public interface IState<T> : IState, IResult<T>
 {
     public new Computed<T> Computed { get; }
@@ -32,6 +39,10 @@ public interface IState<T> : IState, IResult<T>
 
 // Classes
 
+/// <summary>
+/// Base class for all Fusion state objects, combining a <see cref="ComputedInput"/> identity
+/// with snapshot-based lifecycle events and an async lock for update serialization.
+/// </summary>
 public abstract class State : ComputedInput, IState
 {
     private volatile StateSnapshot? _snapshot;

@@ -2,8 +2,14 @@ using ActualLab.Internal;
 
 namespace ActualLab.Requirements;
 
+/// <summary>
+/// Marker interface for must-exist requirements.
+/// </summary>
 public interface IMustExistRequirement;
 
+/// <summary>
+/// A requirement that checks a value is not null or default.
+/// </summary>
 public sealed record MustExistRequirement<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
     : CustomizableRequirementBase<T>, IMustExistRequirement
@@ -20,6 +26,9 @@ public sealed record MustExistRequirement<
         => MustExistRequirement.IsSatisfied(value);
 }
 
+/// <summary>
+/// Non-generic helper methods for <see cref="MustExistRequirement{T}"/>.
+/// </summary>
 public static class MustExistRequirement
 {
     public static bool IsSatisfied<T>([NotNullWhen(true)] T? value)

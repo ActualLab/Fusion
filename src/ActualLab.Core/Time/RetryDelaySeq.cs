@@ -2,6 +2,10 @@ using MessagePack;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// Defines a retry delay sequence with support for fixed and exponential backoff
+/// strategies, including configurable jitter spread.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
 #if NET8_0_OR_GREATER
 [MessagePackObject(true, SuppressSourceGeneration = true)]

@@ -1,5 +1,9 @@
 namespace ActualLab.CommandR.Configuration;
 
+/// <summary>
+/// Holds all resolved <see cref="CommandHandlerChain"/> instances for a specific command type,
+/// supporting both regular commands and event commands with multiple chains.
+/// </summary>
 public sealed class CommandHandlerSet
 {
     public Type CommandType { get; }

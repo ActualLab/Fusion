@@ -2,6 +2,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Extension methods for <see cref="Interceptor"/>.
+/// </summary>
 public static class InterceptorExt
 {
     private delegate object? InterceptUntypedFunc(Interceptor interceptor, in Invocation invocation);

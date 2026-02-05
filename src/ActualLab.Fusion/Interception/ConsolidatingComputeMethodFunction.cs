@@ -3,6 +3,10 @@ using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion.Interception;
 
+/// <summary>
+/// A strongly-typed <see cref="ConsolidatingComputeMethodFunction"/> that creates
+/// <see cref="ConsolidatingComputed{T}"/> instances.
+/// </summary>
 public sealed class ConsolidatingComputeMethodFunction<T>(FusionHub hub, ComputeMethodDef methodDef)
     : ConsolidatingComputeMethodFunction(
         hub, methodDef,
@@ -16,6 +20,10 @@ public sealed class ConsolidatingComputeMethodFunction<T>(FusionHub hub, Compute
         => new ConsolidatingComputed<T>(ComputedOptions, input, (Computed<T>)source);
 }
 
+/// <summary>
+/// A <see cref="ComputeMethodFunction"/> that produces <see cref="ConsolidatingComputed{T}"/> instances,
+/// which suppress invalidation when the recomputed output matches the previous one.
+/// </summary>
 public abstract class ConsolidatingComputeMethodFunction(
     FusionHub hub,
     ComputeMethodDef methodDef,

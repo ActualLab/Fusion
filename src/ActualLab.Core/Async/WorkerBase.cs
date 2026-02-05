@@ -2,6 +2,9 @@ using Microsoft.Extensions.Hosting;
 
 namespace ActualLab.Async;
 
+/// <summary>
+/// Base class for background workers with start/stop lifecycle management.
+/// </summary>
 public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null)
     : ProcessorBase(stopTokenSource), IWorker
 {

@@ -1,5 +1,8 @@
 namespace ActualLab.Mathematics.Internal;
 
+/// <summary>
+/// <see cref="Arithmetics{T}"/> implementation for <see cref="Moment"/>.
+/// </summary>
 public sealed class MomentArithmetics : Arithmetics<Moment>
 {
     public MomentArithmetics() => One = new(TimeSpan.FromSeconds(1));

@@ -3,10 +3,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 
+/// <summary>
+/// Reads and processes <see cref="DbOperation"/> log entries, notifying remote hosts
+/// about completed operations for cache invalidation.
+/// </summary>
 public class DbOperationLogReader<TDbContext>
     : DbOperationLogReader<TDbContext, DbOperation, DbOperationLogReader<TDbContext>.Options>
     where TDbContext : DbContext
 {
+    /// <summary>
+    /// Configuration options for <see cref="DbOperationLogReader{TDbContext}"/>.
+    /// </summary>
     public record Options : DbOperationLogReaderOptions
     {
         public static Options Default { get; set; } = new();

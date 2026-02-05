@@ -2,6 +2,9 @@ using System.Text;
 
 namespace ActualLab.Rpc.Internal;
 
+/// <summary>
+/// Formats and parses <see cref="RpcPeerRef"/> address strings containing connection kind, tags, and host info.
+/// </summary>
 public static class RpcPeerRefAddress
 {
     public const char TagDelimiter = '.';

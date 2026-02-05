@@ -4,6 +4,10 @@ using Cysharp.Text;
 
 namespace ActualLab.IO.Internal;
 
+/// <summary>
+/// A <see cref="TextWriter"/> that writes UTF-8 encoded text
+/// into a <see cref="Utf8ValueStringBuilder"/> buffer.
+/// </summary>
 public sealed class Utf8TextWriter(IFormatProvider formatProvider) : TextWriter(formatProvider)
 {
     private Utf8ValueStringBuilder _buffer = ZString.CreateUtf8StringBuilder();

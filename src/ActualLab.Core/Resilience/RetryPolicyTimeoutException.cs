@@ -1,5 +1,8 @@
 namespace ActualLab.Resilience;
 
+/// <summary>
+/// Thrown when a single retry attempt exceeds its configured timeout.
+/// </summary>
 [Serializable]
 public class RetryPolicyTimeoutException : TimeoutException
 {

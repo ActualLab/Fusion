@@ -2,6 +2,9 @@ namespace ActualLab.Async.Internal;
 
 // Based on https://github.com/dotnet/runtime/issues/22144#issuecomment-1328319861
 
+/// <summary>
+/// An awaiter that suppresses <see cref="OperationCanceledException"/> from a <see cref="ValueTask"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct SuppressCancellationValueTaskAwaiter(ValueTask task, bool captureContext = true)
     : ICriticalNotifyCompletion
@@ -24,6 +27,9 @@ public readonly struct SuppressCancellationValueTaskAwaiter(ValueTask task, bool
         => task.ConfigureAwait(captureContext).GetAwaiter().UnsafeOnCompleted(action);
 }
 
+/// <summary>
+/// An awaiter that suppresses <see cref="OperationCanceledException"/> from a <see cref="ValueTask{TResult}"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct SuppressCancellationValueTaskAwaiter<T>(ValueTask<T> task, bool captureContext = true)
     : ICriticalNotifyCompletion

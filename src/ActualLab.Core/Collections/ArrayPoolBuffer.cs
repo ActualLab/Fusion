@@ -5,6 +5,10 @@ using CommunityToolkit.HighPerformance.Buffers;
 
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A resizable buffer backed by <see cref="ArrayPool{T}"/> that implements
+/// <see cref="IBufferWriter{T}"/> and provides list-like operations.
+/// </summary>
 public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, bool mustClear)
     : IBuffer<T>, IMemoryOwner<T>
 {

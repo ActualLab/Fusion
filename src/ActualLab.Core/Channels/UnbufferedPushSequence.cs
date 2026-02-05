@@ -3,6 +3,9 @@ using ActualLab.Async;
 
 namespace ActualLab.Channels;
 
+/// <summary>
+/// An unbuffered push-based async sequence that allows a single enumerator and synchronous push.
+/// </summary>
 public class UnbufferedPushSequence<T> : IAsyncEnumerable<T>, IAsyncDisposable
 {
     // Push is disallowed until the enumeration started

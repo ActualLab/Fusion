@@ -4,6 +4,10 @@ using System.Runtime.Intrinsics.X86;
 
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// Provides bit manipulation utilities such as population count, leading/trailing
+/// zero count, and power-of-2 operations.
+/// </summary>
 public static partial class Bits
 {
 #if !NET7_0_OR_GREATER

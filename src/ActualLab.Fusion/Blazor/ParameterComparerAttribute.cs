@@ -2,6 +2,10 @@ namespace ActualLab.Fusion.Blazor;
 
 #pragma warning disable CA1813 // Consider making sealed
 
+/// <summary>
+/// Specifies a custom <see cref="ParameterComparer"/> type for a Blazor component parameter
+/// or a type used as a parameter.
+/// </summary>
 [AttributeUsage(
     AttributeTargets.Interface |
     AttributeTargets.Class |

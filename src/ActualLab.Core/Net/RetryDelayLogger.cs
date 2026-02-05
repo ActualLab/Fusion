@@ -1,5 +1,8 @@
 namespace ActualLab.Net;
 
+/// <summary>
+/// Logs retry delay events such as errors, delays, and limit exceeded conditions.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly record struct RetryDelayLogger(
     string Action,

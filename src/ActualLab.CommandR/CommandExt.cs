@@ -3,6 +3,9 @@ using ActualLab.OS;
 
 namespace ActualLab.CommandR;
 
+/// <summary>
+/// Extension methods for <see cref="ICommand"/>.
+/// </summary>
 public static class CommandExt
 {
     private static readonly ConcurrentDictionary<Type, Type> ResultTypeCache = new(HardwareInfo.ProcessorCountPo2, 131);

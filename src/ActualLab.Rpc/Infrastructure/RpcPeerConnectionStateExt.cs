@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Extension methods for <see cref="AsyncState{RpcPeerConnectionState}"/> to await connection changes.
+/// </summary>
 public static class RpcPeerConnectionStateExt
 {
     public static Task<AsyncState<RpcPeerConnectionState>> WhenConnected(

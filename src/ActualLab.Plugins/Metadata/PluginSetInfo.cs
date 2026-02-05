@@ -2,6 +2,9 @@ namespace ActualLab.Plugins.Metadata;
 
 #pragma warning disable IL2026
 
+/// <summary>
+/// Immutable snapshot of all discovered plugins, indexed by type and ordered by dependency.
+/// </summary>
 public class PluginSetInfo
 {
     public static readonly PluginSetInfo Empty = new(

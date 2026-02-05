@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.IO.Internal;
 
+/// <summary>
+/// MessagePack formatter for <see cref="FilePath"/>.
+/// </summary>
 public sealed class FilePathMessagePackFormatter : IMessagePackFormatter<FilePath>
 {
     public void Serialize(ref MessagePackWriter writer, FilePath value, MessagePackSerializerOptions options)

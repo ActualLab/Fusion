@@ -2,6 +2,9 @@ namespace ActualLab.Async.Internal;
 
 // Based on https://github.com/dotnet/runtime/issues/22144#issuecomment-1328319861
 
+/// <summary>
+/// An awaiter that returns a <see cref="Result{T}"/> of <see cref="Unit"/> from a <see cref="Task"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct ResultTaskAwaiter(Task task, bool captureContext = true)
     : ICriticalNotifyCompletion
@@ -17,6 +20,9 @@ public readonly struct ResultTaskAwaiter(Task task, bool captureContext = true)
         => task.ConfigureAwait(captureContext).GetAwaiter().UnsafeOnCompleted(action);
 }
 
+/// <summary>
+/// An awaiter that returns a <see cref="Result{T}"/> from a <see cref="Task{TResult}"/>.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct ResultTaskAwaiter<T>(Task<T> task, bool captureContext = true)
     : ICriticalNotifyCompletion

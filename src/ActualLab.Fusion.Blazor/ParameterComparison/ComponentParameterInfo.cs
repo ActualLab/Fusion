@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Stores metadata about a single Blazor component parameter, including its
+/// property info, comparer, and cascading parameter details.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume Blazor components' code is fully preserved")]
 public sealed class ComponentParameterInfo
 {

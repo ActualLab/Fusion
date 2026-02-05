@@ -7,6 +7,9 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Represents an authenticated or guest user with claims, identities, and version tracking.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarget

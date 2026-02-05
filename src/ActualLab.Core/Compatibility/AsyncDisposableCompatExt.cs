@@ -3,6 +3,9 @@ using ActualLab.Compatibility;
 // ReSharper disable once CheckNamespace
 namespace System;
 
+/// <summary>
+/// Compatibility extension methods for async disposal across target frameworks.
+/// </summary>
 public static class AsyncDisposableCompatExt
 {
     /// <summary>

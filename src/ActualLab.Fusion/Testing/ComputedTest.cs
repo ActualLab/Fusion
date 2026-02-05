@@ -2,6 +2,10 @@ using System.Runtime.ExceptionServices;
 
 namespace ActualLab.Fusion.Testing;
 
+/// <summary>
+/// Test helpers that repeatedly evaluate an assertion inside a <see cref="ComputedSource{T}"/>
+/// until it passes or a timeout is reached.
+/// </summary>
 public static class ComputedTest
 {
     public static TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(5);

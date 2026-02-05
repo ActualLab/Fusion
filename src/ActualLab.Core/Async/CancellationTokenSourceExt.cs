@@ -1,5 +1,8 @@
 namespace ActualLab.Async;
 
+/// <summary>
+/// Extension methods for <see cref="CancellationTokenSource"/>.
+/// </summary>
 public static class CancellationTokenSourceExt
 {
 #if USE_UNSAFE_ACCESSORS

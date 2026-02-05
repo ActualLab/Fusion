@@ -1,5 +1,8 @@
 namespace ActualLab.Generators.Internal;
 
+/// <summary>
+/// String extension methods for ordinal string operations used by the source generator.
+/// </summary>
 public static class StringExt
 {
     public static int OrdinalIndexOf(this string source, char value)

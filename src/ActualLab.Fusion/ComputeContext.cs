@@ -2,6 +2,9 @@ using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Tracks the current compute call context, including call options and captured computed instances.
+/// </summary>
 public sealed class ComputeContext
 {
     public static readonly ComputeContext None = new(default(CallOptions));

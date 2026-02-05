@@ -1,5 +1,8 @@
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Extension methods for <see cref="IState"/>.
+/// </summary>
 public static class StateExt
 {
     // Computed-like methods

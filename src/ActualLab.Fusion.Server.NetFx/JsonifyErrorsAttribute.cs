@@ -4,6 +4,10 @@ using System.Web.Http.Filters;
 
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// A Web API exception filter that serializes unhandled exceptions
+/// as JSON error responses with HTTP 500 status.
+/// </summary>
 public sealed class JsonifyErrorsAttribute : ExceptionFilterAttribute
 {
     public override void OnException(HttpActionExecutedContext actionExecutedContext)

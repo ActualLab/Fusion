@@ -6,6 +6,9 @@ namespace ActualLab.Api.Internal;
 
 #pragma warning disable CA1812
 
+/// <summary>
+/// Newtonsoft.Json converter for <see cref="ApiArray{T}"/>.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Used constructors should be there for sure.")]
 public class ApiArrayNewtonsoftJsonConverter : JsonConverter
 {
@@ -43,6 +46,9 @@ public class ApiArrayNewtonsoftJsonConverter : JsonConverter
 
     // Nested types
 
+    /// <summary>
+    /// Typed Newtonsoft.Json converter for <see cref="ApiArray{T}"/>.
+    /// </summary>
     private sealed class Converter<T> : Newtonsoft.Json.JsonConverter<ApiArray<T>>
     {
         public override ApiArray<T> ReadJson(
@@ -60,6 +66,9 @@ public class ApiArrayNewtonsoftJsonConverter : JsonConverter
             => serializer.Serialize(writer, value.Items);
     }
 
+    /// <summary>
+    /// Newtonsoft.Json converter for nullable <see cref="ApiArray{T}"/>.
+    /// </summary>
     private sealed class NullableConverter<T> : Newtonsoft.Json.JsonConverter<ApiArray<T>?>
     {
         public override ApiArray<T>? ReadJson(

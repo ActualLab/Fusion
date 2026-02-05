@@ -1,5 +1,9 @@
 namespace ActualLab.Versioning.Providers;
 
+/// <summary>
+/// A <see cref="VersionGenerator{TVersion}"/> that generates monotonically increasing
+/// <see cref="long"/> versions based on <see cref="MomentClock"/> ticks.
+/// </summary>
 public sealed class ClockBasedVersionGenerator(MomentClock clock) : VersionGenerator<long>
 {
     public static VersionGenerator<long> Default { get; set; } = new ClockBasedVersionGenerator(MomentClockSet.Default.SystemClock);

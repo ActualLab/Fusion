@@ -4,6 +4,9 @@ using ActualLab.Serialization.Internal;
 
 namespace ActualLab.Serialization;
 
+/// <summary>
+/// Extension methods for <see cref="IByteSerializer"/>.
+/// </summary>
 public static class ByteSerializerExt
 {
     // Read (and advance) - with ref data argument

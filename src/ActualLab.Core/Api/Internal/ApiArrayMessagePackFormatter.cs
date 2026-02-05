@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Api.Internal;
 
+/// <summary>
+/// MessagePack formatter for <see cref="ApiArray{T}"/>.
+/// </summary>
 public class ApiArrayMessagePackFormatter<T> : IMessagePackFormatter<ApiArray<T>>
 {
     public void Serialize(ref MessagePackWriter writer, ApiArray<T> value, MessagePackSerializerOptions options)

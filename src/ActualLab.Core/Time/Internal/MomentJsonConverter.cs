@@ -1,5 +1,8 @@
 namespace ActualLab.Time.Internal;
 
+/// <summary>
+/// System.Text.Json converter for <see cref="Moment"/>.
+/// </summary>
 public class MomentJsonConverter : JsonConverter<Moment>
 {
     public override Moment Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

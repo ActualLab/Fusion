@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc.Serialization.Internal;
 
+/// <summary>
+/// System.Text.Json converter factory that serializes <see cref="RpcStream{T}"/> instances as strings.
+/// </summary>
 public class RpcStreamJsonConverter : JsonConverterFactory
 {
     // TODO: Replace w/ GenericInstanceCache
@@ -22,6 +25,9 @@ public class RpcStreamJsonConverter : JsonConverterFactory
 
     // Nested type
 
+    /// <summary>
+    /// Typed System.Text.Json converter for <see cref="RpcStream{T}"/>.
+    /// </summary>
     public class Converter<T> : JsonConverter<RpcStream<T>>
     {
         public override RpcStream<T>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

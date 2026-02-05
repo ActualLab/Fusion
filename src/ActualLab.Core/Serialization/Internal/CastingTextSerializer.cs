@@ -2,6 +2,9 @@ using System.Buffers;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// A typed <see cref="ITextSerializer{T}"/> adapter that delegates to an untyped <see cref="ITextSerializer"/>.
+/// </summary>
 public sealed class CastingTextSerializer<T>(
     ITextSerializer untypedSerializer,
     Type serializedType

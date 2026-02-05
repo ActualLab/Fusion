@@ -1,7 +1,13 @@
 namespace ActualLab.Fusion.Extensions.Internal;
 
+/// <summary>
+/// Default implementation of <see cref="IFusionTime"/> that produces auto-invalidating time values.
+/// </summary>
 public class FusionTime : IFusionTime
 {
+    /// <summary>
+    /// Configuration options for <see cref="FusionTime"/>.
+    /// </summary>
     public record Options
     {
         public static Options Default { get; set; } = new();

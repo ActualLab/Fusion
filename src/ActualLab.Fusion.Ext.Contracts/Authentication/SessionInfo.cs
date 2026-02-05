@@ -4,6 +4,10 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
 
+/// <summary>
+/// Stores detailed information about a user session, including version, timestamps,
+/// IP address, user agent, and additional options.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public partial record SessionInfo : SessionAuthInfo, IHasVersion<long>
 {

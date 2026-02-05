@@ -2,6 +2,9 @@ using ActualLab.Interception.Interceptors;
 
 namespace ActualLab.Interception;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceCollection"/> to register typed factories.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume proxy-related code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "We assume proxy-related code is preserved")]
 public static class ServiceCollectionExt

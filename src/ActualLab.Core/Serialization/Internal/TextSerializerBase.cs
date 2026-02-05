@@ -3,6 +3,9 @@ using Cysharp.Text;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// Abstract base class for <see cref="ITextSerializer"/> implementations providing default byte/char conversions.
+/// </summary>
 public abstract class TextSerializerBase : ITextSerializer
 {
     public bool PreferStringApi { get; protected init; } = true;

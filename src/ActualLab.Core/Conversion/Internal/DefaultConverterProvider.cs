@@ -1,5 +1,9 @@
 namespace ActualLab.Conversion.Internal;
 
+/// <summary>
+/// The default <see cref="ConverterProvider"/> that resolves
+/// <see cref="ISourceConverterProvider"/> instances from the DI container.
+/// </summary>
 public class DefaultConverterProvider(IServiceProvider services) : ConverterProvider
 {
     private readonly ConcurrentDictionary<Type, ISourceConverterProvider> _cache = new();

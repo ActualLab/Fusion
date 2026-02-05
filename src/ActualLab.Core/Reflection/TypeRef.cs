@@ -8,6 +8,9 @@ using Errors = ActualLab.Reflection.Internal.Errors;
 
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// A serializable reference to a <see cref="Type"/> by its assembly-qualified name.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackFormatter(typeof(TypeRefMessagePackFormatter))]
 [JsonConverter(typeof(TypeRefJsonConverter))]

@@ -4,9 +4,19 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Serialization;
 
+/// <summary>
+/// Delegate that reads an <see cref="RpcInboundMessage"/> from serialized byte data.
+/// </summary>
 public delegate RpcInboundMessage RpcMessageSerializerReadFunc(ReadOnlyMemory<byte> data, out int readLength);
+
+/// <summary>
+/// Delegate that writes an <see cref="RpcOutboundMessage"/> into a byte buffer.
+/// </summary>
 public delegate void RpcMessageSerializerWriteFunc(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message);
 
+/// <summary>
+/// Base class for serializers that read and write complete RPC messages including headers and arguments.
+/// </summary>
 public abstract class RpcMessageSerializer(RpcPeer peer)
 {
     // Delegates for ReadXxx and WriteXxx

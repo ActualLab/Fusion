@@ -17,6 +17,10 @@ using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// A builder for registering Fusion services, compute services, and related infrastructure
+/// in an <see cref="IServiceCollection"/>.
+/// </summary>
 public readonly struct FusionBuilder
 {
     public IServiceCollection Services { get; }
@@ -473,6 +477,10 @@ public readonly struct FusionBuilder
 
     // Nested types
 
+    /// <summary>
+    /// A marker service instance stored in <see cref="IServiceCollection"/>
+    /// to track the default <see cref="RpcServiceMode"/> for Fusion.
+    /// </summary>
     public class FusionTag
     {
         public RpcServiceMode DefaultServiceMode {

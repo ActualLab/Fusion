@@ -1,5 +1,8 @@
 namespace ActualLab.Async;
 
+/// <summary>
+/// Extension methods and helpers for <see cref="ExecutionContext"/>.
+/// </summary>
 public static class ExecutionContextExt
 {
     private const string DefaultFieldName

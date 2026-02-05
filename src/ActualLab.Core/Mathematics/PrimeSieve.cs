@@ -1,5 +1,8 @@
 namespace ActualLab.Mathematics;
 
+/// <summary>
+/// A sieve of Eratosthenes implementation for computing and querying prime numbers.
+/// </summary>
 public sealed class PrimeSieve
 {
     public static ReadOnlySpan<int> PrecomputedPrimes => [

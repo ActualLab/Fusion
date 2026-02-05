@@ -5,6 +5,10 @@ using MessagePack;
 
 namespace ActualLab.Time;
 
+/// <summary>
+/// A UTC point in time represented as ticks since the Unix epoch.
+/// Provides high-precision time arithmetic and conversion to/from .NET date types.
+/// </summary>
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
 // [StructLayout(LayoutKind.Auto)]
 [DataContract, MessagePackFormatter(typeof(MomentMessagePackFormatter))]

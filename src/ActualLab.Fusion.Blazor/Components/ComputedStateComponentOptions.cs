@@ -2,6 +2,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// Defines option flags for <see cref="ComputedStateComponent"/> controlling
+/// recomputation, rendering, and dispatch behavior.
+/// </summary>
 [Flags]
 public enum ComputedStateComponentOptions
 {
@@ -16,6 +20,9 @@ public enum ComputedStateComponentOptions
     ComputeStateOnThreadPool = 0x1000,
 }
 
+/// <summary>
+/// Extension methods for <see cref="ComputedStateComponentOptions"/>.
+/// </summary>
 public static class ComputedStateComponentOptionsExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

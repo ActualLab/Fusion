@@ -2,6 +2,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Represents the client side of an RPC peer connection, handling reconnection logic.
+/// </summary>
 public class RpcClientPeer : RpcPeer
 {
     private volatile AsyncState<Moment> _reconnectAt = new(default);

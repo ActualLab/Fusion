@@ -2,6 +2,10 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion.UI;
 
+/// <summary>
+/// A command executor for UI layers that wraps each command in a tracked <see cref="UIAction"/>
+/// and registers it with the <see cref="UIActionTracker"/>.
+/// </summary>
 public class UICommander(IServiceProvider services) : IHasServices
 {
     private static readonly ConcurrentDictionary<Type, Func<UICommander, ICommand, CancellationToken, UIAction>>

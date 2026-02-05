@@ -2,6 +2,9 @@ using Newtonsoft.Json;
 
 namespace ActualLab.Text.Internal;
 
+/// <summary>
+/// Newtonsoft.Json converter for <see cref="ByteString"/>, using Base64 encoding.
+/// </summary>
 public class ByteStringNewtonsoftJsonConverter : Newtonsoft.Json.JsonConverter<ByteString>
 {
     public override void WriteJson(

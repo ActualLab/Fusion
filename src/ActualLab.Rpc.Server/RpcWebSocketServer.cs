@@ -7,6 +7,10 @@ using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc.Server;
 
+/// <summary>
+/// Server-side handler that accepts incoming WebSocket connections and establishes
+/// RPC peer connections for ASP.NET Core hosts.
+/// </summary>
 public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvider services)
     : RpcServiceBase(services)
 {

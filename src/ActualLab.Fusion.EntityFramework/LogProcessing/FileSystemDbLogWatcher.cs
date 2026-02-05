@@ -5,6 +5,10 @@ using FileSystemWatcher = System.IO.FileSystemWatcher;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
 
+/// <summary>
+/// An <see cref="IDbLogWatcher{TDbContext, TDbEntry}"/> that uses file system watchers
+/// to detect log changes via tracker files on disk.
+/// </summary>
 public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
     FileSystemDbLogWatcherOptions<TDbContext> settings,
     IServiceProvider services
@@ -18,6 +22,10 @@ public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
 
     // Nested types
 
+    /// <summary>
+    /// A <see cref="DbShardWatcher"/> that monitors a tracker file using
+    /// <see cref="FileSystemWatcher"/> and signals changes on file modification.
+    /// </summary>
     protected class ShardWatcher : DbShardWatcher
     {
         public FileSystemDbLogWatcher<TDbContext, TDbEntry> Owner { get; }

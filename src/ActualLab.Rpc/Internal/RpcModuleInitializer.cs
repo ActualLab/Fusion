@@ -5,6 +5,9 @@ namespace ActualLab.Rpc.Internal;
 
 #pragma warning disable CA2255
 
+/// <summary>
+/// Module initializer that pre-warms JIT compilation for frequently used RPC types.
+/// </summary>
 internal static class RpcModuleInitializer
 {
     static RpcModuleInitializer()

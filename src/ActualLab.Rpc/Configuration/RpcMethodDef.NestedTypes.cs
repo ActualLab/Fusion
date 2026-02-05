@@ -6,6 +6,9 @@ namespace ActualLab.Rpc;
 
 public partial class RpcMethodDef
 {
+    /// <summary>
+    /// Factory that creates server-side invoker delegates for inbound RPC calls.
+    /// </summary>
     public sealed class InboundCallServerInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()
@@ -68,6 +71,9 @@ public partial class RpcMethodDef
             };
     }
 
+    /// <summary>
+    /// Factory that wraps the server invoker with the middleware pipeline for inbound RPC calls.
+    /// </summary>
     public sealed class InboundCallMiddlewareInvokerFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
     {
         public override object Generate()

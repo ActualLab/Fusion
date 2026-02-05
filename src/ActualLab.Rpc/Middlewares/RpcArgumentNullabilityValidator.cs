@@ -3,6 +3,9 @@ using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Middlewares;
 
+/// <summary>
+/// An <see cref="IRpcMiddleware"/> that validates non-nullable reference-type arguments on inbound RPC calls.
+/// </summary>
 public sealed record RpcArgumentNullabilityValidator : IRpcMiddleware
 {
     public static Func<RpcMethodDef, bool> DefaultFilter { get; set; } = _ => RuntimeInfo.IsServer;

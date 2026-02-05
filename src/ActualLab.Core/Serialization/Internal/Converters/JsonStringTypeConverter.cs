@@ -4,6 +4,10 @@ using System.Globalization;
 namespace ActualLab.Serialization.Internal;
 
 // Used by JSON.NET to serialize dictionary keys of this type
+
+/// <summary>
+/// A <see cref="TypeConverter"/> for <see cref="JsonString"/>, used for dictionary key serialization.
+/// </summary>
 public class JsonStringTypeConverter : TypeConverter
 {
     public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)

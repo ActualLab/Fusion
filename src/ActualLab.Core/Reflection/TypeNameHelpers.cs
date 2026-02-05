@@ -2,6 +2,9 @@ using Newtonsoft.Json.Serialization;
 
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Helpers for parsing and formatting assembly-qualified type names.
+/// </summary>
 public static class TypeNameHelpers
 {
     public static string GetAssemblyQualifiedName(this Type type, bool fullName = true, ISerializationBinder? binder = null)

@@ -9,6 +9,10 @@ namespace ActualLab.Fusion.Internal;
 
 #pragma warning disable CS9124
 
+/// <summary>
+/// A central hub providing access to core Fusion services such as interceptors,
+/// computed options, and proxy factories.
+/// </summary>
 public sealed class FusionHub(IServiceProvider services) : IHasServices
 {
     private readonly LazySlim<IServiceProvider, IRemoteComputedCache?> _remoteComputedCacheLazy

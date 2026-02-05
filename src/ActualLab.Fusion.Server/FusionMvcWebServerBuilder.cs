@@ -4,6 +4,10 @@ using ActualLab.Fusion.Server.Internal;
 
 namespace ActualLab.Fusion.Server;
 
+/// <summary>
+/// Builder for configuring Fusion MVC web server services including
+/// custom model binder providers and controller registration.
+/// </summary>
 [StructLayout(LayoutKind.Auto)]
 public readonly struct FusionMvcWebServerBuilder
 {

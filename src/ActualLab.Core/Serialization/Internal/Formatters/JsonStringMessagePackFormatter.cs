@@ -3,6 +3,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// A MessagePack formatter for <see cref="JsonString"/>.
+/// </summary>
 public sealed class JsonStringMessagePackFormatter : IMessagePackFormatter<JsonString?>
 {
     public void Serialize(ref MessagePackWriter writer, JsonString? value, MessagePackSerializerOptions options)

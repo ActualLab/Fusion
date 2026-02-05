@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Provides factory functions that create <see cref="RpcFrameDelayer"/> instances for various delay strategies.
+/// </summary>
 public static class RpcFrameDelayerFactories
 {
     public static readonly Func<RpcFrameDelayer?>? None = null;

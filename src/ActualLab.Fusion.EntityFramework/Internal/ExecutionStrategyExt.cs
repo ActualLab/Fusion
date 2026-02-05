@@ -4,6 +4,10 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
+/// <summary>
+/// Extension methods for <see cref="IExecutionStrategy"/> and <see cref="ExecutionStrategy"/>
+/// providing reflection-based access to internal retry and suspension logic.
+/// </summary>
 public static class ExecutionStrategyExt
 {
     private static readonly Func<ExecutionStrategy, Exception, bool>? ShouldRetryOnCached;

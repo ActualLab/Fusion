@@ -6,6 +6,10 @@ namespace ActualLab.Fusion.Internal;
 
 #pragma warning disable CA2255
 
+/// <summary>
+/// Module initializer that registers Fusion-specific RPC defaults and triggers
+/// early JIT compilation of frequently used types.
+/// </summary>
 internal static class FusionModuleInitializer
 {
     static FusionModuleInitializer()

@@ -1,5 +1,8 @@
 namespace ActualLab.Reflection;
 
+/// <summary>
+/// Copies property and field values from one instance to another using reflection.
+/// </summary>
 public record MemberwiseCopier<[
     DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
 {
@@ -40,6 +43,9 @@ public record MemberwiseCopier<[
     }
 }
 
+/// <summary>
+/// Non-generic helper for invoking <see cref="MemberwiseCopier{T}"/>.
+/// </summary>
 public static class MemberwiseCopier
 {
     public static T Invoke<

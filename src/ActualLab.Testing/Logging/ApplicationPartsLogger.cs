@@ -6,6 +6,10 @@ using Microsoft.Extensions.Hosting;
 
 namespace ActualLab.Testing.Logging;
 
+/// <summary>
+/// An <see cref="IHostedService"/> that logs discovered application parts
+/// and controllers on startup for diagnostic purposes.
+/// </summary>
 public class ApplicationPartsLogger(
     ApplicationPartManager partManager,
     ILogger<ApplicationPartsLogger>? log = null

@@ -3,6 +3,9 @@ using ActualLab.Conversion.Internal;
 
 namespace ActualLab.Conversion;
 
+/// <summary>
+/// Extension methods for <see cref="IServiceCollection"/> to register converters.
+/// </summary>
 public static class ServiceCollectionExt
 {
     public static IServiceCollection AddConverters(

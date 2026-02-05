@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Resolves <see cref="RpcSerializationFormat"/> instances by key, with a configurable default.
+/// </summary>
 public sealed record RpcSerializationFormatResolver
 {
     // Static members

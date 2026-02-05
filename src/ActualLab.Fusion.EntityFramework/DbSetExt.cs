@@ -6,6 +6,10 @@ using ActualLab.Fusion.EntityFramework.Internal;
 
 namespace ActualLab.Fusion.EntityFramework;
 
+/// <summary>
+/// Extension methods for <see cref="DbSet{TEntity}"/> providing query hint application
+/// and row-level locking shortcuts.
+/// </summary>
 public static class DbSetExt
 {
     private static readonly ArrayPool<DbHint> SharedDbHintPool = ArrayPool<DbHint>.Shared;

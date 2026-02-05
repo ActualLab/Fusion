@@ -2,6 +2,10 @@ using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Blazor;
 
+/// <summary>
+/// A <see cref="ParameterComparer"/> that compares parameters
+/// by both <see cref="IHasUuid.Uuid"/> and <see cref="IHasVersion{TVersion}.Version"/>.
+/// </summary>
 public sealed class ByUuidAndVersionParameterComparer<TVersion> : ParameterComparer
     where TVersion : notnull
 {

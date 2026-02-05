@@ -1,5 +1,9 @@
 namespace ActualLab.Generators;
 
+/// <summary>
+/// A <see cref="Generator{T}"/> that transforms the output of another generator
+/// using a provided function.
+/// </summary>
 public sealed class TransformingGenerator<TIn, TOut>(Generator<TIn> source, Func<TIn, TOut> transformer)
     : Generator<TOut>
 {

@@ -2,6 +2,9 @@ using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// Represents an inbound RPC call that failed because its call type ID does not match the expected type.
+/// </summary>
 public sealed class RpcInboundInvalidCallTypeCall<TResult>(RpcInboundContext context, byte expectedCallTypeId, byte actualCallTypeId)
     : RpcInboundCall<TResult>(context), IRpcInboundNotFoundCall
 {

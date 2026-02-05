@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Thrown when an RPC stream cannot be found or has been disconnected.
+/// </summary>
 [Serializable]
 public class RpcStreamNotFoundException : Exception
 {

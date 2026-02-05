@@ -2,6 +2,9 @@ using ActualLab.Interception;
 
 namespace ActualLab.Rpc.Infrastructure;
 
+/// <summary>
+/// A deserialized inbound RPC message containing call type, method reference, arguments, and headers.
+/// </summary>
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public sealed class RpcInboundMessage(
     byte callTypeId,

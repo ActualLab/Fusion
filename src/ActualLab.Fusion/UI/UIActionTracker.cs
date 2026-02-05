@@ -1,10 +1,17 @@
 namespace ActualLab.Fusion.UI;
 
+/// <summary>
+/// Tracks running and completed <see cref="UIAction"/> instances, enabling
+/// <see cref="UpdateDelayer"/> to provide instant updates during user interactions.
+/// </summary>
 public sealed class UIActionTracker(
     UIActionTracker.Options settings,
     IServiceProvider services
     ) : ProcessorBase, IHasServices
 {
+    /// <summary>
+    /// Configuration options for <see cref="UIActionTracker"/>.
+    /// </summary>
     public sealed record Options {
         public TimeSpan InstantUpdatePeriod { get; init; } = TimeSpan.FromMilliseconds(300);
         public MomentClock? Clock { get; init; }

@@ -2,6 +2,9 @@ using System.Linq.Expressions;
 
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// Extension methods for <see cref="IQueryable{T}"/> supporting ordering and pagination.
+/// </summary>
 public static class QueryableExt
 {
     public static IQueryable<T> OrderBy<T, TKey>(

@@ -3,6 +3,10 @@ using ActualLab.Interception;
 
 namespace ActualLab.CommandR.Interception;
 
+/// <summary>
+/// A <see cref="MethodDef"/> specialized for intercepted command handler methods,
+/// validating that the method signature conforms to expected patterns.
+/// </summary>
 public sealed class CommandHandlerMethodDef : MethodDef
 {
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume all command handling code is preserved")]

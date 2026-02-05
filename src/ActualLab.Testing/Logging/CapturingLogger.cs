@@ -1,5 +1,9 @@
 namespace ActualLab.Testing.Logging;
 
+/// <summary>
+/// An <see cref="ILogger"/> implementation that writes log entries to
+/// a <see cref="CapturingLoggerProvider"/>'s shared buffer for test inspection.
+/// </summary>
 public sealed class CapturingLogger(CapturingLoggerProvider provider, string category) : ILogger
 {
     public IDisposable BeginScope<TState>(TState state)

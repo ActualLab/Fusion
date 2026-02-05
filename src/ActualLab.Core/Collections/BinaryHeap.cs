@@ -1,5 +1,9 @@
 namespace ActualLab.Collections;
 
+/// <summary>
+/// A min-heap data structure that stores priority-value pairs
+/// and supports efficient extraction of the minimum element.
+/// </summary>
 public class BinaryHeap<TPriority, TValue> : IEnumerable<(TPriority Priority, TValue Value)>
 {
     private readonly Option<(TPriority Priority, TValue Value)> _none = default;

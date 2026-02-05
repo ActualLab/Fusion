@@ -3,6 +3,9 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Extensions;
 
+/// <summary>
+/// Base class for cursor-based pagination references.
+/// </summary>
 public abstract record PageRef : IHasToStringProducingJson
 {
     public static PageRef<TKey> New<TKey>(int count)
@@ -18,6 +21,9 @@ public abstract record PageRef : IHasToStringProducingJson
             : SystemJsonSerializer.Default.Read<PageRef<TKey>>(value);
 }
 
+/// <summary>
+/// A typed cursor-based pagination reference with a count and an optional "after" key.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public partial record PageRef<TKey>(
     [property: DataMember(Order = 0), MemoryPackOrder(0)] int Count,

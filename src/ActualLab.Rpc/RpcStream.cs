@@ -10,6 +10,9 @@ namespace ActualLab.Rpc;
 
 #pragma warning disable MA0055
 
+/// <summary>
+/// Abstract base class for RPC-aware streams that can be serialized across peer boundaries.
+/// </summary>
 [DataContract]
 public abstract partial class RpcStream : IRpcObject
 {
@@ -72,6 +75,9 @@ public abstract partial class RpcStream : IRpcObject
     protected abstract void Disconnect();
 }
 
+/// <summary>
+/// Typed RPC stream that supports serialization, remote enumeration, and batched delivery of items.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [JsonConverter(typeof(RpcStreamJsonConverter))]
@@ -351,6 +357,9 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
 
     // Nested types
 
+    /// <summary>
+    /// Enumerates items from a remote <see cref="RpcStream{T}"/>, sending acknowledgements as items are consumed.
+    /// </summary>
     private sealed class RemoteChannelEnumerator : IAsyncEnumerator<T>
     {
         private readonly ChannelReader<T> _reader;

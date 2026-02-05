@@ -1,5 +1,9 @@
 namespace ActualLab.CommandR.Configuration;
 
+/// <summary>
+/// An ordered chain of <see cref="CommandHandler"/> instances (filters and a final handler)
+/// that form the execution pipeline for a command.
+/// </summary>
 public sealed class CommandHandlerChain
 {
     public static readonly CommandHandlerChain Empty = new([]);

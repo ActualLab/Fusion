@@ -1,5 +1,8 @@
 namespace ActualLab.CommandR.Internal;
 
+/// <summary>
+/// Defines well-known priority constants for built-in command handlers.
+/// </summary>
 public static class CommanderCommandHandlerPriority
 {
     public const double PreparedCommandHandler = 1_000_000_000;

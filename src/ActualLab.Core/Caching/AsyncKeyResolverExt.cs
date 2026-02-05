@@ -1,5 +1,8 @@
 namespace ActualLab.Caching;
 
+/// <summary>
+/// Extension methods for <see cref="IAsyncKeyResolver{TKey, TValue}"/>.
+/// </summary>
 public static class AsyncKeyResolverExt
 {
     public static async ValueTask<TValue?> GetOrDefault<TKey, TValue>(

@@ -2,6 +2,9 @@ using System.Buffers;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// Abstract base class for <see cref="IByteSerializer"/> implementations providing a default typed adapter.
+/// </summary>
 public abstract class ByteSerializerBase : IByteSerializer
 {
     public abstract object? Read(ReadOnlyMemory<byte> data, Type type, out int readLength);

@@ -1,5 +1,8 @@
 namespace ActualLab.Rpc;
 
+/// <summary>
+/// Extension methods for <see cref="RpcRouteState"/>.
+/// </summary>
 public static class RpcRouteStateExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -3,6 +3,9 @@ using ActualLab.Locking;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// Defines the contract for a function that produces <see cref="Computed"/> instances.
+/// </summary>
 public interface IComputeFunction : IHasServices
 {
     public FusionHub Hub { get; }
@@ -14,6 +17,9 @@ public interface IComputeFunction : IHasServices
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Base class for functions that produce <see cref="Computed"/> instances with lock-based concurrency control.
+/// </summary>
 public abstract class ComputeFunction(FusionHub hub, Type outputType) : IComputeFunction
 {
     protected static AsyncLockSet<ComputedInput> InputLocks {

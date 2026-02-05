@@ -3,6 +3,10 @@ using AwesomeAssertions.Execution;
 
 namespace ActualLab.Testing;
 
+/// <summary>
+/// Extension methods for test assertions, providing polling-based
+/// "wait until condition is met" helpers.
+/// </summary>
 public static class TestExt
 {
     public static readonly IEnumerable<TimeSpan> DefaultCheckIntervals = Intervals.Fixed(TimeSpan.FromMilliseconds(50));

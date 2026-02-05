@@ -1,6 +1,10 @@
 namespace ActualLab;
 
 // It's fine to disable it, coz the matching set of Requirement<T> fields/props must be declared @ T
+
+/// <summary>
+/// Extension methods for applying <see cref="Requirement{T}"/> checks to values and tasks.
+/// </summary>
 public static class RequireExt
 {
     // Require w/ implicit MustExistRequirement for classes

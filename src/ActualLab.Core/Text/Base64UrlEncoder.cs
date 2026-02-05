@@ -3,6 +3,9 @@ using System.Buffers.Text;
 
 namespace ActualLab.Text;
 
+/// <summary>
+/// Encodes and decodes byte data using the URL-safe Base64 variant (RFC 4648).
+/// </summary>
 public static class Base64UrlEncoder
 {
     private const int MaxOnStackLength = 2048;

@@ -3,6 +3,10 @@ using ActualLab.Conversion;
 
 namespace ActualLab.Serialization.Internal;
 
+/// <summary>
+/// An <see cref="IByteSerializer{T}"/> that converts between <typeparamref name="T"/>
+/// and <typeparamref name="TInner"/> using a <see cref="BiConverter{TFrom, TTo}"/>.
+/// </summary>
 public sealed class ConvertingByteSerializer<T, TInner>(
     IByteSerializer<TInner> serializer,
     BiConverter<T, TInner> converter

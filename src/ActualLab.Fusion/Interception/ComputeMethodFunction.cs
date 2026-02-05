@@ -3,6 +3,10 @@ using ActualLab.Interception;
 
 namespace ActualLab.Fusion.Interception;
 
+/// <summary>
+/// A strongly-typed <see cref="ComputeMethodFunction"/> that creates
+/// <see cref="ComputeMethodComputed{T}"/> instances.
+/// </summary>
 public sealed class ComputeMethodFunction<T> : ComputeMethodFunction
 {
     public ComputeMethodFunction(FusionHub hub, ComputeMethodDef methodDef) : base(hub, methodDef)
@@ -15,6 +19,10 @@ public sealed class ComputeMethodFunction<T> : ComputeMethodFunction
         => new ComputeMethodComputed<T>(ComputedOptions, input);
 }
 
+/// <summary>
+/// A <see cref="ComputeFunction"/> that handles compute method interception,
+/// producing <see cref="Computed"/> instances for intercepted method calls.
+/// </summary>
 public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef methodDef)
     : ComputeFunction(hub, methodDef.UnwrappedReturnType)
 {

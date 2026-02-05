@@ -2,6 +2,9 @@ using ActualLab.OS;
 
 namespace ActualLab.Fusion;
 
+/// <summary>
+/// A cache-backed helper for building state category strings from type names and suffixes.
+/// </summary>
 public static class StateCategories
 {
     private static readonly ConcurrentDictionary<(object, object), string> Cache1

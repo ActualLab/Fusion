@@ -1,5 +1,9 @@
 namespace ActualLab.Redis;
 
+/// <summary>
+/// A set of named sequences backed by a <see cref="RedisHash"/>,
+/// supporting atomic increment with optional reset logic.
+/// </summary>
 public class RedisSequenceSet(RedisHash hash)
 {
     public RedisHash Hash { get; } = hash;
@@ -24,4 +28,8 @@ public class RedisSequenceSet(RedisHash hash)
         => Hash.Clear();
 }
 
+/// <summary>
+/// A typed <see cref="RedisSequenceSet"/> scoped by <typeparamref name="TScope"/>
+/// for multi-context dependency injection.
+/// </summary>
 public sealed class RedisSequenceSet<TScope>(RedisHash hash) : RedisSequenceSet(hash);

@@ -2,6 +2,10 @@ using ActualLab.Conversion;
 
 namespace ActualLab.Fusion.Internal;
 
+/// <summary>
+/// An abstract template providing the strongly-typed <see cref="IResult{T}"/> implementation
+/// for <see cref="State"/> subclasses.
+/// </summary>
 internal abstract class TypedStateTemplate<T> : State, IResult<T>
 {
     public override Type OutputType => typeof(T);

@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ActualLab.Fusion.EntityFramework.Internal;
 
+/// <summary>
+/// Extension methods for <see cref="DatabaseFacade"/> providing helpers to detect
+/// in-memory providers and disable auto-transactions and savepoints.
+/// </summary>
 public static class DatabaseFacadeExt
 {
     public static bool IsInMemory(this DatabaseFacade database)

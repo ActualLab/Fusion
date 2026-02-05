@@ -2,6 +2,10 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace ActualLab.Generators.Internal;
 
+/// <summary>
+/// Extension methods for Roslyn symbol and syntax types used during
+/// proxy code generation.
+/// </summary>
 public static class GenerationExt
 {
     public static List<ITypeSymbol> GetAllBaseTypes(this ITypeSymbol typeSymbol, bool includingSelf = false)

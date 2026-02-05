@@ -1,5 +1,8 @@
 namespace ActualLab.Internal;
 
+/// <summary>
+/// An exception indicating an internal/unexpected error in the framework.
+/// </summary>
 [Serializable]
 public class InternalError : Exception
 {

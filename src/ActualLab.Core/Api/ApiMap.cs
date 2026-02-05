@@ -3,6 +3,9 @@ using MessagePack;
 
 namespace ActualLab.Api;
 
+/// <summary>
+/// A serializable dictionary with sorted enumeration, intended for use in API contracts.
+/// </summary>
 [DataContract, MemoryPackable(GenerateType.Collection), MessagePackObject]
 public sealed partial class ApiMap<TKey, TValue>
     : Dictionary<TKey, TValue>, IEnumerable<KeyValuePair<TKey, TValue>>
@@ -149,6 +152,9 @@ public sealed partial class ApiMap<TKey, TValue>
 
     // Nested types
 
+    /// <summary>
+    /// Enumerates the map items in their original (unordered) dictionary order.
+    /// </summary>
     public readonly struct UnorderedItemEnumerable(ApiMap<TKey, TValue> source) : IEnumerable<KeyValuePair<TKey, TValue>>
     {
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -157,6 +163,9 @@ public sealed partial class ApiMap<TKey, TValue>
         public Enumerator GetEnumerator() => source.GetBaseEnumerator();
     }
 
+    /// <summary>
+    /// Caches a sorted snapshot of the map items for deterministic enumeration.
+    /// </summary>
     private sealed class SortedItemCache(IEnumerator<KeyValuePair<TKey, TValue>> enumerator, int count)
     {
         public readonly IEnumerable<KeyValuePair<TKey, TValue>> Items = NewItems(enumerator, count);
