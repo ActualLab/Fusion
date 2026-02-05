@@ -10,8 +10,8 @@ public readonly partial record struct CpuTimestamp(
     [property: DataMember(Order = 0), Key(0)] long Value
     ) : IComparable<CpuTimestamp>
 {
-    public static readonly CpuTimestamp PositiveInfinity = new(long.MaxValue);
-    public static readonly CpuTimestamp NegativeInfinity = new(long.MinValue);
+    public static readonly CpuTimestamp MinValue = new(long.MinValue);
+    public static readonly CpuTimestamp MaxValue = new(long.MaxValue);
 
     public static long TickFrequency {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
