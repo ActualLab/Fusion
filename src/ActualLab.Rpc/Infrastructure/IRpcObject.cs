@@ -18,7 +18,7 @@ public interface IRpcObject : IHasId<RpcObjectId>
 public interface IRpcSharedObject : IRpcObject
 {
     public bool IsReconnectable { get; }
-    public CpuTimestamp LastKeepAliveAt { get; }
+    public Moment LastKeepAliveAt { get; }
     public void KeepAlive();
 }
 

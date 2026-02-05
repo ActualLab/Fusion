@@ -11,7 +11,7 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
     protected static readonly Exception NoMoreItemsTag = new();
 #pragma warning restore CA2201
 
-    private long _lastKeepAliveAt = CpuTimestamp.Now.Value;
+    private long _lastKeepAliveAt = Moment.Now.EpochOffsetTicks;
 
     protected ILogger Log => field ??= Peer.Hub.Services.LogFor(GetType());
 
@@ -20,9 +20,9 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
     public bool IsReconnectable { get; } = stream.IsReconnectable;
     public RpcStream Stream { get; } = stream;
     public RpcPeer Peer { get; } = stream.Peer!;
-    public CpuTimestamp LastKeepAliveAt {
+    public Moment LastKeepAliveAt {
         get => new(Interlocked.Read(ref _lastKeepAliveAt));
-        set => Interlocked.Exchange(ref _lastKeepAliveAt, value.Value);
+        set => Interlocked.Exchange(ref _lastKeepAliveAt, value.EpochOffsetTicks);
     }
 
     Task IRpcObject.Reconnect(CancellationToken cancellationToken)
@@ -34,7 +34,7 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
             $"This method should never be called on {nameof(RpcSharedStream)}.");
 
     public void KeepAlive()
-        => LastKeepAliveAt = CpuTimestamp.Now;
+        => LastKeepAliveAt = Moment.Now;
 
     public abstract void OnAck(long nextIndex, Guid hostId);
 }
@@ -68,7 +68,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             return;
         }
 
-        LastKeepAliveAt = CpuTimestamp.Now;
+        LastKeepAliveAt = Moment.Now;
         lock (Lock) {
             var whenRunning = WhenRunning;
             if (whenRunning is null) {

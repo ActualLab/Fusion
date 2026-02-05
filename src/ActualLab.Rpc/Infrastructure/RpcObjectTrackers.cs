@@ -220,7 +220,7 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
 public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcSharedObject>
 {
     private long _lastId;
-    private long _lastKeepAliveAt; // CpuTimestamp
+    private long _lastKeepAliveAt; // Moment
     private readonly ConcurrentDictionary<long, IRpcSharedObject> _objects = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public override int Count => _objects.Count;
@@ -255,20 +255,20 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     public async Task Maintain(RpcPeerConnectionState connectionState, CancellationToken cancellationToken)
     {
-        InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);
+        InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, Moment.Now.EpochOffsetTicks);
         try {
             var hub = Peer.Hub;
             var clock = hub.Clock;
             while (true) {
                 await clock.Delay(Limits.ObjectReleasePeriod, cancellationToken).ConfigureAwait(false);
-                var keepAliveDelay = CpuTimestamp.Now - new CpuTimestamp(Interlocked.Read(ref _lastKeepAliveAt));
+                var keepAliveDelay = Moment.Now - new Moment(Interlocked.Read(ref _lastKeepAliveAt));
                 if (keepAliveDelay > Limits.KeepAliveTimeout) {
                     await Peer
                         .Disconnect(Internal.Errors.KeepAliveTimeout(), cancellationToken)
                         .ConfigureAwait(false);
                     return;
                 }
-                var minLastKeepAliveAt = CpuTimestamp.Now - Limits.ObjectReleaseTimeout;
+                var minLastKeepAliveAt = Moment.Now - Limits.ObjectReleaseTimeout;
                 foreach (var (_, obj) in _objects)
                     if (obj.LastKeepAliveAt < minLastKeepAliveAt && Unregister(obj))
                         TryDispose(obj);
@@ -282,7 +282,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     public void KeepAlive(long[] localIds)
     {
-        InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, CpuTimestamp.Now.Value);
+        InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, Moment.Now.EpochOffsetTicks);
         var buffer = new RefArrayPoolBuffer<long>(ArrayPools.SharedInt64Pool, localIds.Length, mustClear: false);
         try {
             foreach (var id in localIds) {
