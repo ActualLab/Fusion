@@ -7,32 +7,15 @@ public static class CoarseClockHelper
 {
     public static readonly int Frequency = 20;
     public static readonly Moment Start;
-    public static readonly long StartEpochOffsetTicks;
 
     // ReSharper disable once NotAccessedField.Local
     private static readonly Timer Timer;
-    private static readonly Stopwatch Stopwatch;
     private static readonly RandomInt64Generator Rng = new();
     private static volatile State _state;
 
-    public static long ElapsedTicks {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _state.ElapsedTicks;
-    }
-
-    public static long NowEpochOffsetTicks {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => StartEpochOffsetTicks + _state.ElapsedTicks;
-    }
-
     public static Moment Now {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => new(NowEpochOffsetTicks);
-    }
-
-    public static Moment SystemNow {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _state.SystemNow;
+        get => _state.Now;
     }
 
     public static long RandomInt64 {
@@ -48,8 +31,6 @@ public static class CoarseClockHelper
     static CoarseClockHelper()
     {
         Start = Moment.Now;
-        StartEpochOffsetTicks = Start.EpochOffset.Ticks;
-        Stopwatch = Stopwatch.StartNew();
         var state = new State();
         _state = state; // Just to suppress .NET Standard warning
         Interlocked.Exchange(ref _state, state);
@@ -66,7 +47,7 @@ public static class CoarseClockHelper
     private sealed class State
     {
         // ReSharper disable once MemberHidesStaticFromOuterClass
-        public readonly Moment SystemNow;
+        public readonly Moment Now;
         // ReSharper disable once MemberHidesStaticFromOuterClass
         public readonly long ElapsedTicks;
         // ReSharper disable once MemberHidesStaticFromOuterClass
@@ -77,8 +58,8 @@ public static class CoarseClockHelper
         [DebuggerStepThrough, MethodImpl(MethodImplOptions.AggressiveInlining)]
         public State()
         {
-            SystemNow = Moment.Now;
-            ElapsedTicks = Stopwatch.Elapsed.Ticks;
+            Now = Moment.Now;
+            ElapsedTicks = (Now - Start).Ticks;
             RandomInt64 = Rng.Next();
             RandomInt32 = unchecked((int)RandomInt64);
         }

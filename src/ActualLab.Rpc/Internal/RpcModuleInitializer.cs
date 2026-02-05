@@ -14,7 +14,7 @@ internal static class RpcModuleInitializer
         _ = CpuTimestamp.Now;
         _ = SystemClock.Instance.Now;
         _ = CpuClock.Instance.Now;
-        _ = CoarseCpuClock.Instance.Now;
+        _ = CoarseSystemClock.Instance.Now;
         _ = Timeouts.TickSource;
         _ = RpcInstruments.Meter;
         _ = new RpcOutboundCallSetup();

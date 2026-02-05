@@ -4,11 +4,11 @@ namespace ActualLab.Time;
 
 public sealed class CoarseSystemClock : MomentClock
 {
-    public static readonly CoarseSystemClock Instance = new CoarseSystemClock();
+    public static readonly CoarseSystemClock Instance = new();
 
     public override Moment Now {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => CoarseClockHelper.SystemNow;
+        get => CoarseClockHelper.Now;
     }
 
     private CoarseSystemClock() { }

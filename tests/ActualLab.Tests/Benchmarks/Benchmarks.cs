@@ -1,5 +1,4 @@
 using ActualLab.Testing.Collections;
-using ActualLab.Time.Internal;
 
 namespace ActualLab.Tests.Benchmarks;
 
@@ -25,23 +24,9 @@ public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
             }
             return sum;
         });
-        RunOne("Read CoarseClockHelper.ElapsedTicks", baseOpCount, opCount => {
+        RunOne("Read CoarseSystemClock.Now.EpochOffsetTicks", baseOpCount, opCount => {
             var sum = 0L;
-            for (; opCount > 0; opCount--) {
-                sum += CoarseClockHelper.ElapsedTicks;
-            }
-            return sum;
-        });
-        RunOne("Read CoarseClockHelper.NowEpochOffsetTicks", baseOpCount, opCount => {
-            var sum = 0L;
-            for (; opCount > 0; opCount--) {
-                sum += CoarseClockHelper.NowEpochOffsetTicks;
-            }
-            return sum;
-        });
-        RunOne("Read CoarseCpuClock.Now.EpochOffsetTicks", baseOpCount, opCount => {
-            var sum = 0L;
-            var clock = CoarseCpuClock.Instance;
+            var clock = CoarseSystemClock.Instance;
             for (; opCount > 0; opCount--) {
                 sum += clock.Now.EpochOffsetTicks;
             }
