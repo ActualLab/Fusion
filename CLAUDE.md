@@ -119,7 +119,7 @@ The worktree is created using `git worktree add` from the main project directory
 
 # Type Catalog
 
-If `docs/Api-Index.md` exists, use it to discover existing abstractions before writing new code. It lists all useful public types across all non-test projects, organized by namespace.
+If `docs/api-index.md` exists, use it first to quickly check whether an existing abstraction covers your need — it's a condensed reference (~300 lines) of the most important types, structured by area. For the complete list of all public types (~1000 lines), see `docs/api-index-full.md`.
 
 # Building
 

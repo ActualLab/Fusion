@@ -1,7 +1,8 @@
-# ActualLab.Fusion Type Catalog
+# API Index (Full)
 
-This document lists all public types in ActualLab.Fusion NuGet packages,
+This document lists all public types (~1000 lines) in ActualLab.Fusion NuGet packages,
 organized by assembly and namespace.
+See also: [Condensed API Index](api-index.md) (~300 lines).
 
 ## ActualLab.Core
 
