@@ -4,7 +4,7 @@ layout: home
 hero:
   name: ActualLab.Fusion
   text: The "real-time on!" switch for .NET
-  tagline: Add real-time updates and caching to any .NET app with almost no code changes. 10,000x faster APIs. Production-proven. <span style="color:#22c55e;">MIT license.</span>
+  tagline: Add <span style="color:var(--hl-rt);">real-time updates</span> and <span style="color:var(--hl-cache);">caching</span> to any .NET app with <span style="color:var(--hl-nocode);">almost no</span> code <span style="color:var(--hl-nocode);">changes</span>. Get <span style="color:var(--hl-scale);">10⁶ scale</span> headroom. Production-proven. <span style="color:var(--hl-mit);">MIT license.</span>
   actions:
     - theme: brand
       text: Documentation
@@ -25,29 +25,47 @@ hero:
 features:
   - icon: 🪄
     title: Real-Time Magic
-    details: Automatic state synchronization across your server cluster and every client connected to it. No SignalR hubs. No event handlers. No manual pub/sub.
+    details: "Automatic <span style='color:var(--hl-feat);'>state sync</span> across your <span style='color:var(--hl-feat);'>server cluster and every client</span> connected to it. No SignalR hubs. No event handlers. No manual pub/sub."
   - icon: ⚡
     title: Unbeatable Speed
-    details: "100x faster than Redis: 20M cache-resolving calls/s per core. The fastest RPC available: 3–5x faster than gRPC and SignalR."
+    details: "<span style='color:var(--hl-feat);'>100x faster than Redis:</span> 20M cache-resolving calls/s per core. The fastest RPC available: <span style='color:var(--hl-feat);'>3–5x faster than gRPC and SignalR.</span>"
     link: /Performance#results
     linkText: See benchmarks
   - icon: ✈️
     title: Zero-Effort Offline
-    details: "Flip a switch to make your Blazor or MAUI client start and work offline. Bonus: 10x faster startup, and your app works even on GPRS."
+    details: "<span style='color:var(--hl-feat);'>Flip a switch</span> to make your Blazor or MAUI client <span style='color:var(--hl-feat);'>start and operate offline</span>. Bonus: <span style='color:var(--hl-feat);'>10x faster</span> startup, and your app works even on GPRS."
   - icon: 💎
     title: No Boilerplate
-    details: Same code you'd write anyway, plus a few attributes and invalidation blocks. That's all it takes.
+    details: "<span style='color:var(--hl-feat);'>Same code</span> you'd write anyway, <span style='color:var(--hl-feat);'>plus a few attributes and invalidation blocks</span>. That's all it takes."
     link: /PartF#_1-compute-services-and-compute-methods
     linkText: See example
   - icon: 💰
     title: Write Once, Run Anywhere
-    details: Same code runs on Blazor Server, WebAssembly, and MAUI. Fusion works everywhere.
+    details: "Same code runs on Blazor Server, WebAssembly, and MAUI. <span style='color:var(--hl-feat);'>Fusion works everywhere.</span>"
   - icon: 🛡️
     title: Battle-Tested
-    details: Powers Voxt.ai—a real-time voice chat with live transcription, translation, and AI summaries across all platforms.
+    details: "Powers <a href='https://voxt.ai' style='color:var(--hl-feat); text-decoration: underline;'>Voxt.ai</a>—a real-time voice chat with live transcription, translation, and AI summaries across all platforms."
     link: https://voxt.ai
     linkText: Check it out
 ---
+
+<style>
+:root {
+  --hl-rt: #c2410c;
+  --hl-cache: #a16207;
+  --hl-nocode: #0e7490;
+  --hl-scale: #7c3aed;
+  --hl-feat: var(--vp-c-text-1);
+  --hl-mit: #15803d;
+}
+.dark {
+  --hl-rt: #fb923c;
+  --hl-cache: #fbbf24;
+  --hl-nocode: #22d3ee;
+  --hl-scale: #a78bfa;
+  --hl-mit: #22c55e;
+}
+</style>
 
 <div class="vp-doc" style="padding: 0 24px; max-width: 1152px; margin: 0 auto;">
 
