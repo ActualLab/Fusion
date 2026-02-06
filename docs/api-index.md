@@ -4,7 +4,6 @@ A condensed reference (~300 lines) of the most important types in ActualLab.Fusi
 Use this to find existing abstractions before writing new code.
 See also: [Full API Index](api-index-full.md) (~1000 lines).
 
----
 
 ## Core (`ActualLab.Core`) — [PartCore.md](PartCore.md)
 
@@ -87,7 +86,6 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ### Reflection & Codegen
 - `MemberwiseCopier` — reflection-based property/field copier
 
----
 
 ## RPC (`ActualLab.Rpc`) — [PartR.md](PartR.md)
 
@@ -116,7 +114,6 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ### Server — [ActualLab.Rpc.Server]
 - `RpcWebSocketServer` — accepts WebSocket connections for ASP.NET Core
 
----
 
 ## CommandR (`ActualLab.CommandR`) — [PartC.md](PartC.md)
 
@@ -144,7 +141,6 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `ICommandService` — tagging interface for command service proxies
 - `IEventCommand` — event dispatched to multiple handler chains
 
----
 
 ## Fusion (`ActualLab.Fusion`) — [PartF.md](PartF.md)
 
@@ -183,7 +179,6 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ### Builder
 - `FusionBuilder` (struct) — registers Fusion services in DI
 
----
 
 ## Blazor (`ActualLab.Fusion.Blazor`) — [PartB.md](PartB.md)
 
@@ -205,7 +200,6 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `FusionWebServerBuilder` (struct) — configures RPC, session middleware, render mode
 - `ServerAuthHelper` — syncs ASP.NET Core auth state with Fusion `IAuth`
 
----
 
 ## Entity Framework (`ActualLab.Fusion.EntityFramework`) — [PartEF.md](PartEF.md)
 
@@ -240,7 +234,6 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `FileSystemDbLogWatcher` — file system watchers
 - `LocalDbLogWatcher` — in-process notifications
 
----
 
 ## Authentication — [PartAA.md](PartAA.md)
 
@@ -260,7 +253,6 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `AuthStateProvider` — Fusion-aware `AuthenticationStateProvider`
 - `ClientAuthHelper` — client-side sign-in/out via JS interop
 
----
 
 ## Interceptors & Proxies (`ActualLab.Interception`) — [PartAP.md](PartAP.md)
 
@@ -274,7 +266,6 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `ScopedServiceInterceptor` — resolves scoped service per call
 - `SchedulingInterceptor` — schedules async invocations via `TaskFactory`
 
----
 
 ## Redis Helpers (`ActualLab.Redis`)
 
