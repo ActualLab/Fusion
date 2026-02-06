@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.0.85+53469221
+
+Release date: 2026-02-06
+
+### Breaking Changes
+- `CpuTimestamp.PositiveInfinity` and `CpuTimestamp.NegativeInfinity` renamed to `MaxValue` and `MinValue`
+- `CoarseCpuClock` removed as mostly useless, use `CpuClock` instead; 
+- `MomentClockSet` no longer has a `CoarseCpuClock` property and its constructor no longer accepts a `coarseCpuClock` parameter
+
+### Changed
+- RPC keep-alive tracking now uses `Moment` (wall-clock time) instead of `CpuTimestamp`,
+  fixing reliability issues on Unix systems where CPU sleep could stall timestamps
+
+### Fixed
+- `IRpcSharedObject.LastKeepAliveAt` changed from `CpuTimestamp` to `Moment` &ndash;
+  `CpuTimestamp` could freeze during CPU sleep on Unix, causing incorrect keep-alive tracking
+- `RpcHub.Clock` renamed to `RpcHub.SystemClock` (now uses `SystemClock` instead of `CpuClock`)
+  by the same reason
+
+### Documentation
+- XML summary descriptions added (auto-generated with Claude Code) to all public types and members
+- Added `Api-Index.md` &ndash; a comprehensive type catalog listing all public types
+  across `ActualLab.Fusion` NuGet packages
+
+
 ## 12.0.76+7e668fb2
 
 Release date: 2026-02-04
