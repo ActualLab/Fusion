@@ -7,11 +7,10 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 
 ## Core (`ActualLab.Core`) — [PartCore.md](PartCore.md)
 
-### Result & Option
+### Result, Option, Requirement
 - `Result<T>` (struct) — computation result holding value or error
 - `Option<T>` (struct) — optional value (Some/None)
 - `Requirement<T>` (record) — validates values and produces errors on failure
-- `ExceptionInfo` — serializable exception snapshot
 
 ### Time — [PartCore-Time.md](PartCore-Time.md)
 - `Moment` (struct) — UTC timestamp (wraps `DateTime`)
@@ -48,21 +47,24 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `AsyncState<T>` — linked-list async state transitions
 
 ### Networking & Resilience — [PartCore-Transiency.md](PartCore-Transiency.md)
+- `Transiency` (enum) — error transiency classification
+- `TransiencyResolver` — classifies exceptions as transient/terminal/non-transient
 - `Connector<T>` — persistent connection with auto-reconnect
 - `RetryDelayer` — configurable retry delay with limits
 - `RetryPolicy` (record) — retry with try count, per-try timeout, delay sequence
-- `TransiencyResolver` — classifies exceptions as transient/terminal/non-transient
 - `ChaosMaker` (record) — chaos engineering fault injection
-- `Transiency` (enum) — error transiency classification
 
 ### Serialization
 - `IByteSerializer<T>` / `ITextSerializer<T>` — core serialization interfaces
+- `ByteSerialized<T>`, `TextSerialized<T>` — auto-serializing wrappers
+- `TypeDecoratingSerializer` (byte & text) — prefixes data with type info for polymorphism
+- `ExceptionInfo` — serializable exception snapshot
+
+### Specific serializers
+- `MessagePackByteSerializer` — MessagePack binary serializer
+- `MemoryPackByteSerializer` — MemoryPack binary serializer
 - `SystemJsonSerializer` — `System.Text.Json` implementation
 - `NewtonsoftJsonSerializer` — JSON.NET implementation
-- `MemoryPackByteSerializer` — MemoryPack binary serializer
-- `MessagePackByteSerializer` — MessagePack binary serializer
-- `TypeDecoratingSerializer` (byte & text) — prefixes data with type info for polymorphism
-- `ByteSerialized<T>`, `TextSerialized<T>` — auto-serializing wrappers
 
 ### DI Helpers
 - `ServiceResolver` — encapsulates service type + optional custom resolver
@@ -80,17 +82,19 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `HostId` (record) — unique host identifier
 - `VersionGenerator<T>` — abstract version generator
 - `ClockBasedVersionGenerator` — monotonic `long` versions from clock ticks
-- `ShardMap<TNode>` — maps shards to nodes via consistent hashing
-- `HashRing<T>` — consistent hash ring
 
 ### Reflection & Codegen
 - `MemberwiseCopier` — reflection-based property/field copier
 
+### Hashing & Sharding Helpers
+- `ShardMap<TNode>` — maps shards to nodes via consistent hashing
+- `HashRing<T>` — consistent hash ring
+
 
 ## RPC (`ActualLab.Rpc`) — [PartR.md](PartR.md)
 
-### Core
 - `IRpcService` — marker for RPC-invocable services
+- `RpcStream<T>` — typed RPC stream with batched delivery
 - `RpcHub` — central hub managing peers, services, configuration
 - `RpcPeer` — one side of an RPC channel (connection, serialization, call tracking)
 - `RpcClientPeer` / `RpcServerPeer` — client/server peer specializations
@@ -98,11 +102,14 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RpcClient` — establishes RPC connections to remote peers
 - `RpcWebSocketClient` — client establishing connections via WebSocket
 
-### Methods & Services
-- `RpcMethodDef` — describes an RPC method (name, kind, serialization, timeouts)
-- `RpcServiceDef` — describes a registered RPC service (type, mode, methods)
+### Service & Method Descriptors
 - `RpcServiceRegistry` — registry of all RPC service definitions
-- `RpcStream<T>` — typed RPC stream with batched delivery
+- `RpcServiceDef` — describes a registered RPC service (type, mode, methods)
+- `RpcMethodDef` — describes an RPC method (name, kind, serialization, timeouts)
+
+### Attributes
+- `RpcMethodAttribute` — configures RPC method properties (name, timeouts, local execution mode)
+- `LegacyNameAttribute` — backward-compatible RPC name mapping with max version
 
 ### Configuration
 - `RpcBuilder` (struct) — fluent builder for registering RPC services in DI
@@ -111,24 +118,25 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RpcCallTimeouts` (record) — connect/run/log timeouts for outbound calls
 - `RpcServiceMode` (enum) — local, server, client, or distributed
 
-### Server — [ActualLab.Rpc.Server]
+## RPC Server — [`ActualLab.Rpc.Server`]
 - `RpcWebSocketServer` — accepts WebSocket connections for ASP.NET Core
 
 
 ## CommandR (`ActualLab.CommandR`) — [PartC.md](PartC.md)
 
-### Core
 - `ICommand<T>` — command producing result `T`
 - `ICommander` — main entry point for executing commands through handler pipeline
 - `CommandContext` / `CommandContext<T>` — tracks execution state within pipeline
 - `CommandHandler` (record) — handler descriptor in execution pipeline
 
+### Attributes
+- `CommandHandlerAttribute` — marks method as command handler
+- `CommandFilterAttribute` — marks method as command filter
+
 ### Pipeline
 - `CommandHandlerChain` — ordered chain of filters + final handler
 - `CommandHandlerFilter` — filters which handlers are used
 - `CommandHandlerRegistry` — registry of all handlers, resolved from DI
-- `CommandHandlerAttribute` — marks method as command handler
-- `CommandFilterAttribute` — marks method as command filter
 
 ### Operations (used in Operations Framework)
 - `Operation` — recorded operation (completed command execution)
@@ -144,13 +152,15 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 
 ## Fusion (`ActualLab.Fusion`) — [PartF.md](PartF.md)
 
-### Compute Services
 - `IComputeService` — tagging interface for compute service proxies
-- `ComputeMethodAttribute` — marks method as compute method (auto-cache + invalidation)
 - `Computed<T>` — cached computation result with invalidation support
 - `ComputedOptions` (record) — configuration for compute method behavior
 - `ComputedRegistry` — global registry of all `Computed` instances (weak refs, auto-prune)
 - `ComputeContext` — tracks current compute call context
+
+### Attributes
+- `ComputeMethodAttribute` — marks method as compute method (auto-cache + invalidation)
+- `RemoteComputeMethodAttribute` — extends `ComputeMethodAttribute` with remote computed caching config
 
 ### States — [PartF-ST.md](PartF-ST.md)
 - `IState<T>` / `State` — reactive state with computed value
@@ -172,7 +182,6 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `ISessionCommand<T>` — command scoped to a session
 
 ### Remote/Client
-- `RemoteComputeMethodAttribute` — marks method as remote compute method
 - `RemoteComputed<T>` — `Computed` populated from remote RPC call
 - `RemoteComputedCache` — abstract base for remote computed caches
 
@@ -189,13 +198,17 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `StatefulComponentBase<T>` — component owning a typed `IState<T>`
 - `CircuitHubComponentBase` — base component accessing `CircuitHub` services
 
-### UI — [PartB-UICommander.md](PartB-UICommander.md)
+### Attributes
+- `FusionComponentAttribute` — enables custom parameter comparison and event handling on a component
+- `ParameterComparerAttribute` — assigns a custom `ParameterComparer` to a component parameter
+
+### UI Services — [PartB-UICommander.md](PartB-UICommander.md)
 - `UICommander` — executes commands wrapped in tracked `UIAction`
 - `UIActionTracker` — tracks running/completed `UIAction` instances
 - `UIAction<T>` — strongly-typed tracked UI action
 - `CircuitHub` — scoped service caching Blazor & Fusion services (dispatcher, session, etc.)
 
-### Server
+### Server-Side Services & Helpers
 - `SessionMiddleware` — resolves/creates `Session` from cookies
 - `FusionWebServerBuilder` (struct) — configures RPC, session middleware, render mode
 - `ServerAuthHelper` — syncs ASP.NET Core auth state with Fusion `IAuth`
@@ -203,23 +216,22 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 
 ## Entity Framework (`ActualLab.Fusion.EntityFramework`) — [PartEF.md](PartEF.md)
 
-### Core
 - `DbHub<TDbContext>` — creates `DbContext` with execution strategy and operation scope
 - `DbServiceBase<TDbContext>` — base for DB services with `DbHub` access
 - `DbContextBase` — `DbContext` base solving EF Core pooled disposal issues
 - `DbEntityResolver<TDbContext, TKey, TDbEntity>` — batched entity resolution via `BatchProcessor`
 - `DbEntityConverter<TDbContext, TDbEntity, TModel>` — entity-to-model conversion
 
+### Operations — [PartO.md](PartO.md)
+- `DbOperationScope<TDbContext>` — manages transaction, operation/event persistence, commit
+- `DbOperation` — persisted operation entity for cross-host replication
+- `DbEvent` — persisted operation event entity with delayed processing
+
 ### Sharding
 - `DbShard` — identifies a database shard
 - `DbShardResolver<TDbContext>` — resolves shards from `Session`, `IHasShard`, `ISessionCommand`
 - `DbShardRegistry<TContext>` — maintains shard sets, tracks used shards
 - `ShardDbContextFactory<TDbContext>` — per-shard `DbContext` factory
-
-### Operations — [PartO.md](PartO.md)
-- `DbOperationScope<TDbContext>` — manages transaction, operation/event persistence, commit
-- `DbOperation` — persisted operation entity for cross-host replication
-- `DbEvent` — persisted operation event entity with delayed processing
 
 ### Log Processing
 - `DbLogReader<TDbContext, TKey, TDbEntry, TOptions>` — shard-aware batched log reader
