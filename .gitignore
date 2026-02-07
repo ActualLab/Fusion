@@ -30,7 +30,12 @@ StyleCopReport.xml
 
 # Package folders
 [Pp]ackages/
+!ts/packages/
 node_modules/
+
+# TypeScript build output
+ts/**/dist/
+*.tsbuildinfo
 
 # Log files & folders
 *.log
