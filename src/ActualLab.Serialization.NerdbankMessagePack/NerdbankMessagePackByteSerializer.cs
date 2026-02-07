@@ -176,7 +176,7 @@ public class NerdbankMessagePackByteSerializer<T>(
         var reader = new MessagePackReader(sequence);
         var result = Serializer.Deserialize<T>(ref reader, _shape);
         readLength = (int)reader.Consumed;
-        return result;
+        return result!;
     }
 
     public void Write(IBufferWriter<byte> bufferWriter, T value)

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using ActualLab.Conversion;
-using ActualLab.Serialization.Internal; // Used in #if block
+using ActualLab.Serialization.Internal;
 using MessagePack;
 using Errors = ActualLab.Internal.Errors;
 
@@ -52,11 +52,7 @@ public interface IOption
 [StructLayout(LayoutKind.Sequential)] // Important! Pack = 0 -> Pack = Max(sizeof(bool), sizeof(Value))
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-#if NET8_0_OR_GREATER
-[MessagePackObject(true, SuppressSourceGeneration = true)]
-#else
 [MessagePackFormatter(typeof(OptionMessagePackFormatter<>))]
-#endif
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]

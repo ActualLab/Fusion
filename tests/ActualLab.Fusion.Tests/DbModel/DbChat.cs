@@ -5,11 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ActualLab.Fusion.Tests.DbModel;
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-#if NET8_0_OR_GREATER
-[MessagePackObject(true, SuppressSourceGeneration = true)]
-#else
 [MessagePackObject(true)]
-#endif
 [Index(nameof(Title))]
 public partial record DbChat : DbEntityWithInt64Key
 {

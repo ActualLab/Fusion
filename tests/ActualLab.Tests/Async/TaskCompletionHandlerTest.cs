@@ -176,7 +176,9 @@ public class TaskCompletionHandlerTest(ITestOutputHelper @out) : TestBase(@out)
             });
         handler.Attach();
 
+#pragma warning disable MA0015
         tcs.SetException(new ArgumentException());
+#pragma warning restore MA0015
         await Task.Delay(10);
 
         capturedTask.Should().BeSameAs(tcs.Task);

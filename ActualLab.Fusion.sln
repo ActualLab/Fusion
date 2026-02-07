@@ -17,7 +17,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{35F39E26-0FDB-44
 		docker-compose.yml = docker-compose.yml
 		AGENTS.md = AGENTS.md
 		CODING_STYLE.md = CODING_STYLE.md
-		CHANGELOG.md = CHANGELOG.md
 		CLAUDE.md = CLAUDE.md
 	EndProjectSection
 EndProject

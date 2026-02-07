@@ -45,7 +45,9 @@ public sealed class RpcStreamNerdbankConverter<T> : MessagePackConverter<RpcStre
         };
     }
 
+#pragma warning disable NBMsgPack031
     public override void Write(ref MessagePackWriter writer, in RpcStream<T>? value, SerializationContext context)
+#pragma warning restore NBMsgPack031
     {
         if (value is null) {
             writer.WriteNil();

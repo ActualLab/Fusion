@@ -7,11 +7,7 @@ namespace ActualLab.Time;
 /// strategies, including configurable jitter spread.
 /// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-#if NET8_0_OR_GREATER
-[MessagePackObject(true, SuppressSourceGeneration = true)]
-#else
 [MessagePackObject(true)]
-#endif
 public partial record RetryDelaySeq(
     [property: DataMember, MemoryPackOrder(0)] TimeSpan Min,
     [property: DataMember, MemoryPackOrder(1)] TimeSpan Max,
@@ -34,6 +30,7 @@ public partial record RetryDelaySeq(
     [DataMember, MemoryPackOrder(3)]
     public double Multiplier { get; init; } = DefaultMultiplier;
 
+    [IgnoreMember]
     public virtual TimeSpan this[int failureCount] {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => GetDelay(failureCount);

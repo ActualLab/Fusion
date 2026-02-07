@@ -104,6 +104,12 @@
     <!-- NU5105: The package version uses SemVer 2.0.0 or components of SemVer 1.0.0 that are not supported on legacy clients -->
     <!-- NETSDK1138: The target framework 'net5.0' is out of support. -->
     <NoWarn>$(NoWarn);NU1603;NU1901;NU1902;NU1903;NU1904;NU5048;NU5105;NETSDK1138</NoWarn>
+    <!-- Roslyn analyzers' suppressions (some of these are errors, not just warnings) -->
+    <!-- MsgPack006: False positive error on open generic [MessagePackFormatter] types.
+         The source generator can't validate IMessagePackFormatter on unbound generic types
+         (Roslyn returns empty AllInterfaces for unbound generics).
+         See: https://github.com/dotnet/roslyn/issues/66512 -->
+    <NoWarn>$(NoWarn);MsgPack006</NoWarn>
     <!-- C# -->
     <!-- CA1062: Validate arguments of public methods -->
     <!-- CS1591: Missing XML comment for publicly visible type or member -->
@@ -175,6 +181,7 @@
     <!-- CA2227: Change P to be read-only by removing the property setter -->
     <NoWarn>$(NoWarn);CA1000;CA1512;CA1513;CA1710;CA1716;CA1849;CA2012;CA2207;CA2227</NoWarn>
   </PropertyGroup>
+
   <PropertyGroup Condition="$(IsServerSideProject)">
     <!-- IL2026: Members attributed with RequiresUnreferencedCode may break when trimming -->
     <!-- IL2046: All interface implementations and method overrides must have annotations matching the interface or overridden virtual method 'RequiresUnreferencedCodeAttribute' annotations -->

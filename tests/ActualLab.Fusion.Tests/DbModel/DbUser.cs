@@ -6,11 +6,7 @@ namespace ActualLab.Fusion.Tests.DbModel;
 
 [Index(nameof(Name))]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-#if NET8_0_OR_GREATER
-[MessagePackObject(true, SuppressSourceGeneration = true)]
-#else
 [MessagePackObject(true)]
-#endif
 public partial record DbUser : DbEntityWithInt64Key
 {
     [Required, MaxLength(120)]

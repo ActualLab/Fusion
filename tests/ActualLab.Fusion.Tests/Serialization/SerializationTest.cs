@@ -100,6 +100,53 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
+    public void DbUserSerialization()
+    {
+        var u = new DbUser { Id = 1, Name = "Alice", Email = "alice@test.com" };
+        var t = u.PassThroughAllSerializers(Out);
+        t.Id.Should().Be(u.Id);
+        t.Name.Should().Be(u.Name);
+        t.Email.Should().Be(u.Email);
+    }
+
+    [Fact]
+    public void DbChatSerialization()
+    {
+        var c = new DbChat {
+            Id = 42,
+            Title = "Test Chat",
+            Author = new DbUser { Id = 1, Name = "Alice", Email = "alice@test.com" },
+        };
+        var t = c.PassThroughAllSerializers(Out);
+        t.Id.Should().Be(c.Id);
+        t.Title.Should().Be(c.Title);
+        t.Author.Id.Should().Be(c.Author.Id);
+        t.Author.Name.Should().Be(c.Author.Name);
+    }
+
+    [Fact]
+    public void DbMessageSerialization()
+    {
+        var m = new DbMessage {
+            Id = 100,
+            Date = new DateTime(2025, 1, 15, 12, 0, 0, DateTimeKind.Utc),
+            Text = "Hello, world!",
+            Author = new DbUser { Id = 1, Name = "Alice", Email = "alice@test.com" },
+            Chat = new DbChat {
+                Id = 42,
+                Title = "Test Chat",
+                Author = new DbUser { Id = 1, Name = "Alice", Email = "alice@test.com" },
+            },
+        };
+        var t = m.PassThroughAllSerializers(Out);
+        t.Id.Should().Be(m.Id);
+        t.Date.Should().Be(m.Date);
+        t.Text.Should().Be(m.Text);
+        t.Author.Name.Should().Be(m.Author.Name);
+        t.Chat.Title.Should().Be(m.Chat.Title);
+    }
+
+    [Fact]
     public void ByteStringSerialization()
     {
         var s = new ByteString([1, 2, 3]);
