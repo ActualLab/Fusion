@@ -1,0 +1,36 @@
+{
+  "name": "@actuallab/fusion",
+  "version": "0.0.1",
+  "description": "TypeScript implementation of Fusion - real-time state synchronization framework",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup --config ../../tsup.config.ts src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@actuallab/core": "0.0.1",
+    "@actuallab/rpc": "0.0.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}
