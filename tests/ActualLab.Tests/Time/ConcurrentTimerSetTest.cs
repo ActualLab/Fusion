@@ -107,7 +107,7 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
             .Select(_ => Task.Run(() => OneRandomTest(rnd.Next(100), 3000, maxDelta)))
             .ToArray();
         await Task.WhenAll(tasks).SilentAwait();
-        _ = Enumerable.Range(0, taskCount)
+        tasks = Enumerable.Range(0, taskCount)
             .Select(_ => Task.Run(() => OneRandomTest(rnd.Next(100), 3000, maxDelta)))
             .ToArray();
         await Task.WhenAll(tasks);
