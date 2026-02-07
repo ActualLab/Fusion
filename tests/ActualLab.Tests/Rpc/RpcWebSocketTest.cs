@@ -43,6 +43,10 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("mempack6c")]
     [InlineData("msgpack6")]
     [InlineData("msgpack6c")]
+#if NET8_0_OR_GREATER
+    [InlineData("nmsgpack6")]
+    [InlineData("nmsgpack6c")]
+#endif
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -167,6 +171,10 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("mempack6c")]
     [InlineData("msgpack6")]
     [InlineData("msgpack6c")]
+#if NET8_0_OR_GREATER
+    [InlineData("nmsgpack6")]
+    [InlineData("nmsgpack6c")]
+#endif
     public async Task PolymorphTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -229,6 +237,10 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("msgpack6")]
     [InlineData("msgpack6c", false)]
     [InlineData("msgpack6c", true)]
+#if NET8_0_OR_GREATER
+    [InlineData("nmsgpack6")]
+    [InlineData("nmsgpack6c")]
+#endif
     public async Task StreamTest(string serializationFormat, bool isReconnectable = true)
     {
         SerializationFormat = serializationFormat;
@@ -275,6 +287,10 @@ public class RpcWebSocketTest : RpcTestBase
     [InlineData("mempack6c")]
     [InlineData("msgpack6")]
     [InlineData("msgpack6c")]
+#if NET8_0_OR_GREATER
+    [InlineData("nmsgpack6")]
+    [InlineData("nmsgpack6c")]
+#endif
     public async Task StreamInputTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;

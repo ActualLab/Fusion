@@ -118,6 +118,10 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [InlineData("mempack6c")]
     [InlineData("msgpack6")]
     [InlineData("msgpack6c")]
+#if NET8_0_OR_GREATER
+    [InlineData("nmsgpack6")]
+    [InlineData("nmsgpack6c")]
+#endif
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -239,6 +243,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         }
     }
 
+    [Theory]
     [InlineData("json5")]
     [InlineData("njson5")]
     [InlineData("mempack5")]
@@ -249,7 +254,10 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [InlineData("mempack6c")]
     [InlineData("msgpack6")]
     [InlineData("msgpack6c")]
-    [Theory]
+#if NET8_0_OR_GREATER
+    [InlineData("nmsgpack6")]
+    [InlineData("nmsgpack6c")]
+#endif
     public async Task PolymorphTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -300,6 +308,10 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [InlineData("mempack6c")]
     [InlineData("msgpack6")]
     [InlineData("msgpack6c")]
+#if NET8_0_OR_GREATER
+    [InlineData("nmsgpack6")]
+    [InlineData("nmsgpack6c")]
+#endif
     public async Task StreamTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
