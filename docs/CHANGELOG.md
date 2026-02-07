@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.1.4+7b59e831
+
+Release date: 2026-02-07
+
+### Added
+- New `ActualLab.Serialization.NerdbankMessagePack` package &ndash; optional Nerdbank.MessagePack
+  serialization support. You can also register new `nmsgpack6`/`nmsgpack6c`
+  RPC formats by calling `RpcNerdbankSerializationFormat.Register()` at startup
+
+### Fixed
+- `ApiNullable<T>`, `ApiNullable8<T>`, `ApiOption<T>` now always use explicit
+  `MessagePackFormatter` instead of conditionally using `MessagePackObject(true)` on .NET 8+
+
+### Documentation
+- Added [api-index.md](api-index.md) &ndash; condensed type reference (~300 lines) alongside [api-index-full.md](api-index-full.md) (full API index)
+
+
 ## 12.0.85+53469221
 
 Release date: 2026-02-06
