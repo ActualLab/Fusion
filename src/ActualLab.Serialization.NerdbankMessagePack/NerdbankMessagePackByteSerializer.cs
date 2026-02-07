@@ -20,7 +20,11 @@ namespace ActualLab.Serialization;
 public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, ITypeShapeProvider typeShapeProvider)
     : IByteSerializer
 {
+#if NET9_0_OR_GREATER
     private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
     private static volatile NerdbankSerializer? _defaultSerializer;
     private static volatile NerdbankMessagePackByteSerializer? _default;
     private static volatile TypeDecoratingByteSerializer? _defaultTypeDecorating;
