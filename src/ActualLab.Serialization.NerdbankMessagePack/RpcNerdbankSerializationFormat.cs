@@ -19,7 +19,10 @@ public static class RpcNerdbankSerializationFormat
             formats = formats.Add(NerdbankMessagePackV6);
         if (!formats.Any(x => string.Equals(x.Key, NerdbankMessagePackV6C.Key, StringComparison.Ordinal)))
             formats = formats.Add(NerdbankMessagePackV6C);
-        if (!ReferenceEquals(formats, RpcSerializationFormat.All))
+        if (!ReferenceEquals(formats, RpcSerializationFormat.All)) {
             RpcSerializationFormat.All = formats;
+            // Reset the resolver so it picks up the newly registered formats
+            RpcSerializationFormatResolver.DefaultFormats = null!;
+        }
     }
 }
