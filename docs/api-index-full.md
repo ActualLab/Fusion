@@ -1016,6 +1016,15 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `InMemoryKeyValueStore` - An in-memory implementation of `IKeyValueStore` suitable for client-side use cases and testing.
 - `SandboxedKeyValueStore<TContext>` - Implementation of `ISandboxedKeyValueStore` that delegates to `IKeyValueStore` with session- and user-scoped key constraints.
 
+## ActualLab.Serialization.NerdbankMessagePack
+
+### ActualLab.Serialization
+
+- `NerdbankMessagePackByteSerializer`, `NerdbankMessagePackByteSerializer<T>` - An `IByteSerializer` implementation backed by Nerdbank.MessagePack with custom converters for Fusion types.
+- `NerdbankMessagePackSerialized<T>` - A `ByteSerialized<T>` variant that uses `NerdbankMessagePackByteSerializer` for serialization.
+- `TypeDecoratingNerdbankMessagePackSerialized<T>` - A `ByteSerialized<T>` variant that uses type-decorating Nerdbank.MessagePack serialization.
+- `RpcNerdbankSerializationFormat` - Registers `nmsgpack6`/`nmsgpack6c` RPC serialization formats backed by Nerdbank.MessagePack. Call `Register()` at startup to enable.
+
 ## ActualLab.Redis
 
 ### ActualLab.Redis

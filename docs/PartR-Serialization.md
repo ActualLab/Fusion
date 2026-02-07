@@ -40,6 +40,16 @@ Each combination of these is packaged as an `RpcSerializationFormat`.
 | `MessagePackV6`  | `msgpack5` | V4 args, V5 messages  |
 | `MessagePackV6C` | `msgpack5c` | Compact variant of V5 |
 
+### Binary Formats (Nerdbank.MessagePack)
+
+These formats require the `ActualLab.Serialization.NerdbankMessagePack` package.
+They are not registered by default &mdash; call `RpcNerdbankSerializationFormat.Register()` at startup to enable them.
+
+| Format                  | Key          | Description                       |
+|-------------------------|--------------|-----------------------------------|
+| `NerdbankMessagePackV6` | `nmsgpack6`  | Nerdbank.MessagePack, V4 args, V5 messages |
+| `NerdbankMessagePackV6C`| `nmsgpack6c` | Compact variant of V6             |
+
 ## Format Selection
 
 ### Default Format
@@ -120,6 +130,15 @@ Compact variants (`*C` suffix) use smaller message framing at a slight CPU cost.
 
 
 ## Configuring Formats
+
+### Enabling Nerdbank.MessagePack Formats
+
+Add the `ActualLab.Serialization.NerdbankMessagePack` package and call `Register()` at startup:
+
+```cs
+// Register nmsgpack6 / nmsgpack6c formats
+RpcNerdbankSerializationFormat.Register();
+```
 
 ### Registering Additional Formats
 

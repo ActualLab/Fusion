@@ -63,6 +63,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ### Specific serializers
 - `MessagePackByteSerializer` — MessagePack binary serializer
 - `MemoryPackByteSerializer` — MemoryPack binary serializer
+- `NerdbankMessagePackByteSerializer` — Nerdbank.MessagePack binary serializer (in `ActualLab.Serialization.NerdbankMessagePack`)
 - `SystemJsonSerializer` — `System.Text.Json` implementation
 - `NewtonsoftJsonSerializer` — JSON.NET implementation
 

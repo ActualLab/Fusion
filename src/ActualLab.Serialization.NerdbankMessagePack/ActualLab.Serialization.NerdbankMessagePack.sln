@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Serialization.NerdbankMessagePack", "ActualLab.Serialization.NerdbankMessagePack.csproj", "{5E9EEC18-3243-8D0C-D98B-1CA6B24EFCCC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5E9EEC18-3243-8D0C-D98B-1CA6B24EFCCC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E9EEC18-3243-8D0C-D98B-1CA6B24EFCCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E9EEC18-3243-8D0C-D98B-1CA6B24EFCCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E9EEC18-3243-8D0C-D98B-1CA6B24EFCCC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D62B1192-2568-446C-9CC3-309A6A20549A}
+	EndGlobalSection
+EndGlobal

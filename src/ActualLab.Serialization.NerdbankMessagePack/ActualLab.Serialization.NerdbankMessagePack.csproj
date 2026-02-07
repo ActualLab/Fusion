@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks Condition="$(UseMultitargeting)">net10.0;net9.0;net8.0</TargetFrameworks>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion nerdbank messagepack</PackageTags>
+    <Description>ActualLab.Serialization.NerdbankMessagePack - an implementation of IByteSerializer from ActualLab.Core for Nerdbank.MessagePack.</Description>
     <RootNamespace>ActualLab.Serialization</RootNamespace>
   </PropertyGroup>
   <ItemGroup>

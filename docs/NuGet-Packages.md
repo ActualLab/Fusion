@@ -51,6 +51,10 @@ You should reference these packages based on your project type:
 - [ActualLab.Fusion.Ext.Contracts](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Contracts/) &ndash; Contracts (client-side package)
 - [ActualLab.Fusion.Ext.Services](https://www.nuget.org/packages/ActualLab.Fusion.Ext.Services/) &ndash; Implementations (server-side package)
 
+### Nerdbank.MessagePack Serialization Support
+
+- [ActualLab.Serialization.NerdbankMessagePack](https://www.nuget.org/packages/ActualLab.Serialization.NerdbankMessagePack/) &ndash; Optional Nerdbank.MessagePack serialization support for RPC (registers `nmsgpack6`/`nmsgpack6c` formats)
+
 <br />
 
 ::: tip
