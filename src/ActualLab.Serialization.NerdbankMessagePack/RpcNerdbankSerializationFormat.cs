@@ -14,8 +14,12 @@ public static class RpcNerdbankSerializationFormat
 
     public static void Register()
     {
-        RpcSerializationFormat.All = RpcSerializationFormat.All
-            .Add(NerdbankMessagePackV6)
-            .Add(NerdbankMessagePackV6C);
+        var formats = RpcSerializationFormat.All;
+        if (!formats.Any(x => string.Equals(x.Key, NerdbankMessagePackV6.Key, StringComparison.Ordinal)))
+            formats = formats.Add(NerdbankMessagePackV6);
+        if (!formats.Any(x => string.Equals(x.Key, NerdbankMessagePackV6C.Key, StringComparison.Ordinal)))
+            formats = formats.Add(NerdbankMessagePackV6C);
+        if (!ReferenceEquals(formats, RpcSerializationFormat.All))
+            RpcSerializationFormat.All = formats;
     }
 }
