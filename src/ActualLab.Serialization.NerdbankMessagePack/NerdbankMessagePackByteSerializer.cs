@@ -127,6 +127,7 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 typeof(ApiNullableNerdbankConverter<>),
                 typeof(ApiNullable8NerdbankConverter<>),
                 typeof(ApiArrayNerdbankConverter<>),
+                typeof(RpcStreamNerdbankConverter<>),
             ],
         };
 }
