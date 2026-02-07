@@ -32,11 +32,7 @@ public static class ApiNullable
 [StructLayout(LayoutKind.Sequential, Pack = 1)] // Important!
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
-#if NET8_0_OR_GREATER
-[MessagePackObject(true, SuppressSourceGeneration = true)]
-#else
 [MessagePackFormatter(typeof(ApiNullableMessagePackFormatter<>))]
-#endif
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public readonly partial struct ApiNullable<T>
     : IEquatable<ApiNullable<T>>, IComparable<ApiNullable<T>>,
