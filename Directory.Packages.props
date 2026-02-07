@@ -65,6 +65,7 @@
     <MemoryPackVersion>[1.21.4,)</MemoryPackVersion>
     <MessagePackVersion>[3.1.4,)</MessagePackVersion>
     <MessagePackVersion2>[2.5.192,)</MessagePackVersion2>
+    <NerdbankMessagePackVersion>[1.0.43,)</NerdbankMessagePackVersion>
     <!-- Other -->
     <RedisVersion>[2.9.32,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
@@ -89,6 +90,7 @@
     <PackageVersion Include="MemoryPack" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MemoryPack.Core" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="MessagePack" Version="$(MessagePackVersion)" />
+    <PackageVersion Include="Nerdbank.MessagePack" Version="$(NerdbankMessagePackVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="$(AspNetCoreVersion)" />

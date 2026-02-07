@@ -38,6 +38,10 @@
     <ProjectReference Include="..\ActualLab.Core\ActualLab.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8'))">
+    <ProjectReference Include="..\ActualLab.Serialization.NerdbankMessagePack\ActualLab.Serialization.NerdbankMessagePack.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <Folder Include="Attributes\" />
   </ItemGroup>

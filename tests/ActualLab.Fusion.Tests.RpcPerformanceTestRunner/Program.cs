@@ -5,12 +5,15 @@ using ActualLab.Tests.Rpc;
 
 WriteLine($".NET: {RuntimeInfo.DotNet.VersionString ?? RuntimeInformation.FrameworkDescription}");
 await using var test = new RpcWebSocketTestWrapper(new ConsoleTestOutputHelper());
+var serializationFormat = "nmsgpack6c";
 await test.InitializeAsync();
-await test.PerformanceTest(50_000);
+await test.PerformanceTest(50_000, serializationFormat);
 await test.ResetClientServices();
-await test.PerformanceTest(200_000);
+await test.PerformanceTest(200_000, serializationFormat);
 await test.ResetClientServices();
-await test.PerformanceTest(200_000);
+await test.PerformanceTest(200_000, serializationFormat);
+await test.ResetClientServices();
+await test.PerformanceTest(200_000, serializationFormat);
 await test.ResetClientServices();
 await test.GetBytesTest(3, 5, 20_000);
 WriteLine("Press any key to exit...");

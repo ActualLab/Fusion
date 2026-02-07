@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks Condition="$(UseMultitargeting)">net10.0;net9.0;net8.0</TargetFrameworks>
+    <RootNamespace>ActualLab.Serialization</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Nerdbank.MessagePack" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ActualLab.Fusion\ActualLab.Fusion.csproj" />
+    <ProjectReference Include="..\ActualLab.Rpc\ActualLab.Rpc.csproj" />
+  </ItemGroup>
+</Project>

@@ -16,6 +16,9 @@ public static class SerializationTestExt
 {
     public static JsonSerializerOptions SystemJsonOptions { get; set; }
     public static JsonSerializerSettings NewtonsoftJsonSettings { get; set; }
+#if NET8_0_OR_GREATER
+    public static bool UseNerdbankMessagePackSerializer { get; set; }
+#endif
 
     static SerializationTestExt()
     {
@@ -35,6 +38,12 @@ public static class SerializationTestExt
         v.Should().Be(value);
         v = v.PassThroughMemoryPackByteSerializer(output);
         v.Should().Be(value);
+#if NET8_0_OR_GREATER
+        if (UseNerdbankMessagePackSerializer) {
+            v = v.PassThroughNerdbankMessagePackByteSerializer(output);
+            v.Should().Be(value);
+        }
+#endif
         v = v.PassThroughTypeDecoratingTextSerializer(output);
         v.Should().Be(value);
         v = v.PassThroughTypeDecoratingByteSerializer(output);
@@ -53,6 +62,12 @@ public static class SerializationTestExt
         assertion.Invoke(v);
         v = v.PassThroughMemoryPackByteSerializer(output);
         assertion.Invoke(v);
+#if NET8_0_OR_GREATER
+        if (UseNerdbankMessagePackSerializer) {
+            v = v.PassThroughNerdbankMessagePackByteSerializer(output);
+            assertion.Invoke(v);
+        }
+#endif
         v = v.PassThroughTypeDecoratingTextSerializer(output);
         assertion.Invoke(v);
         v = v.PassThroughTypeDecoratingByteSerializer(output);
@@ -75,6 +90,12 @@ public static class SerializationTestExt
         assertion.Invoke(v, value);
         v = v.PassThroughMemoryPackByteSerializer(output);
         assertion.Invoke(v, value);
+#if NET8_0_OR_GREATER
+        if (UseNerdbankMessagePackSerializer) {
+            v = v.PassThroughNerdbankMessagePackByteSerializer(output);
+            assertion.Invoke(v, value);
+        }
+#endif
         v = v.PassThroughTypeDecoratingTextSerializer(output);
         assertion.Invoke(v, value);
         v = v.PassThroughTypeDecoratingByteSerializer(output);
@@ -128,6 +149,10 @@ public static class SerializationTestExt
         v = v.PassThroughNewtonsoftJsonSerializer(output);
         v = v.PassThroughMessagePackByteSerializer(output);
         v = v.PassThroughMemoryPackByteSerializer(output);
+#if NET8_0_OR_GREATER
+        if (UseNerdbankMessagePackSerializer)
+            v = v.PassThroughNerdbankMessagePackByteSerializer(output);
+#endif
         v = v.PassThroughTypeDecoratingTextSerializer(output);
         v = v.PassThroughTypeDecoratingByteSerializer(output);
         v = v.PassThroughUniSerialized(output);
@@ -287,4 +312,28 @@ public static class SerializationTestExt
         output?.WriteLine($"PassThroughMemoryPackByteSerializer -> {value}");
         return value;
     }
+
+#if NET8_0_OR_GREATER
+
+    public static T PassThroughNerdbankMessagePackByteSerializer<T>(this T value, ITestOutputHelper? output = null)
+    {
+        var s = new NerdbankMessagePackByteSerializer().ToTyped<T>();
+        using var buffer = s.Write(value);
+        var v0 = buffer.WrittenMemory.ToArray();
+        output?.WriteLine($"NerdbankMessagePackByteSerializer: {v0.AsByteString()}");
+        value = s.Read(v0, out _);
+
+        var v1 = NerdbankMessagePackSerialized.New(value);
+        output?.WriteLine($"NerdbankMessagePackSerialized: {v1.Data.AsByteString()}");
+        value = NerdbankMessagePackSerialized.New<T>(v1.Data).Value;
+
+        var v2 = TypeDecoratingNerdbankMessagePackSerialized.New(value);
+        output?.WriteLine($"TypeDecoratingNerdbankMessagePackSerialized: {v2.Data.AsByteString()}");
+        value = TypeDecoratingNerdbankMessagePackSerialized.New<T>(v2.Data).Value;
+
+        output?.WriteLine($"PassThroughNerdbankMessagePackByteSerializer -> {value}");
+        return value;
+    }
+
+#endif
 }
