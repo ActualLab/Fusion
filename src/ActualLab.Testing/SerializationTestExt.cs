@@ -297,6 +297,9 @@ public static class SerializationTestExt
 
     public static T PassThroughNerdbankMessagePackByteSerializer<T>(this T value, ITestOutputHelper? output = null)
     {
+        if (!UseNerdbankMessagePackSerializer)
+            return value;
+
 #if NET8_0_OR_GREATER
         var s = new NerdbankMessagePackByteSerializer().ToTyped<T>();
         using var buffer = s.Write(value);
