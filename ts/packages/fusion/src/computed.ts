@@ -1,6 +1,8 @@
-import { nextVersion, type Result, ok, error } from "@actuallab/core";
+import { type Result, ok, error } from "@actuallab/core";
 import type { ComputedInput } from "./computed-input.js";
 import { computedRegistry } from "./computed-registry.js";
+
+let _nextVersion = 0;
 
 export const enum ConsistencyState {
   Computing = 0,
@@ -28,7 +30,7 @@ export class Computed<T> {
 
   constructor(input: ComputedInput) {
     this.input = input;
-    this._version = nextVersion();
+    this._version = ++_nextVersion;
     this._state = ConsistencyState.Computing;
   }
 
