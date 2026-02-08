@@ -52,6 +52,15 @@ export abstract class State<T> implements IResult<T> {
     return this._computed.useInconsistent(asyncContext);
   }
 
+  update(): Computed<T> | Promise<Computed<T>> {
+    return this._computed.update();
+  }
+
+  recompute(): Computed<T> | Promise<Computed<T>> {
+    this._computed.invalidate();
+    return this.update();
+  }
+
   whenInvalidated(): Promise<void> {
     return this._computed.whenInvalidated();
   }
