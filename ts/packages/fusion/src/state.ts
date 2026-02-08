@@ -64,8 +64,8 @@ export abstract class State<T> implements IResult<T> {
     return this._updateIndex > 0 ? resolvedVoidPromise : this.whenUpdated();
   }
 
-  protected _initialize(output: Result<T> | T): void {
-    this._computed = new StateBoundComputed<T>(this);
+  protected _initialize(output: Result<T> | T, renewer?: () => Computed<T> | Promise<Computed<T>>): void {
+    this._computed = new StateBoundComputed<T>(this, renewer);
     this._computed.setOutput(output);
     this._lastNonErrorValue = this._computed.valueOrUndefined;
   }
