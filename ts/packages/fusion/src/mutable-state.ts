@@ -10,7 +10,7 @@ export class MutableState<T> extends StateBase implements State<T> {
   readonly changed = new EventHandlerSet<T>();
 
   constructor(initialValue: T) {
-    super("MutableState");
+    super();
     this._computed = new Computed<T>(this);
     this._computed.setOutput(initialValue);
   }

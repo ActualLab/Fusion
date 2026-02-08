@@ -1,5 +1,5 @@
 import { AsyncContext, type Result, ok, error } from "@actuallab/core";
-import { type ComputedInput, inputKey } from "./computed-input.js";
+import type { ComputedInput } from "./computed-input.js";
 import { computedRegistry } from "./computed-registry.js";
 import { computeContextKey } from "./compute-context.js";
 
@@ -18,7 +18,7 @@ export class Computed<T> {
   private _state: ConsistencyState;
   private _output: Result<T> | undefined;
   private _dependencies = new Set<Computed<unknown>>();
-  private _dependants = new Map<string, { input: ComputedInput; version: number }>();
+  private _dependants = new Map<string, { key: string; version: number }>();
   private _onInvalidated: (() => void) | undefined;
 
   constructor(input: ComputedInput) {
@@ -90,7 +90,7 @@ export class Computed<T> {
 
     // Notify dependants via weak-like backward references
     for (const [, entry] of this._dependants) {
-      const dependant = computedRegistry.get(entry.input);
+      const dependant = computedRegistry.get(entry.key);
       if (dependant != null && dependant.version === entry.version)
         dependant.invalidate();
     }
@@ -101,8 +101,9 @@ export class Computed<T> {
 
   addDependency(dependency: Computed<unknown>): void {
     this._dependencies.add(dependency);
-    dependency._dependants.set(inputKey(this.input), {
-      input: this.input,
+    const key = this.input as string;
+    dependency._dependants.set(key, {
+      key,
       version: this._version,
     });
   }

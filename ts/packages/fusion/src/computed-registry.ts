@@ -1,5 +1,5 @@
 import type { Computed } from "./computed.js";
-import { type ComputedInput, inputKey } from "./computed-input.js";
+import type { ComputedInput } from "./computed-input.js";
 
 /** WeakRef-based global cache of Computed instances — allows GC of unused computed values. */
 export class ComputedRegistry {
@@ -16,8 +16,7 @@ export class ComputedRegistry {
     return this._entries.size;
   }
 
-  get(input: ComputedInput): Computed<unknown> | undefined {
-    const key = inputKey(input);
+  get(key: string): Computed<unknown> | undefined {
     const ref = this._entries.get(key);
     if (ref === undefined) return undefined;
     const computed = ref.deref();
@@ -29,13 +28,13 @@ export class ComputedRegistry {
   }
 
   register(computed: Computed<unknown>): void {
-    const key = inputKey(computed.input);
+    const key = computed.input as string;
     this._entries.set(key, new WeakRef(computed));
     this._finalization.register(computed, key);
   }
 
-  remove(input: ComputedInput): void {
-    this._entries.delete(inputKey(input));
+  remove(key: string): void {
+    this._entries.delete(key);
   }
 
   clear(): void {

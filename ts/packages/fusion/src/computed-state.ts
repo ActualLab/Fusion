@@ -20,7 +20,7 @@ export class ComputedState<T> extends StateBase implements State<T> {
   readonly updated = new EventHandlerSet<Result<T>>();
 
   constructor(computer: StateComputer<T>, options?: StateOptions<T>) {
-    super("ComputedState");
+    super();
     this._computer = computer;
     this._delayer = options?.delayer ?? new NoDelayer();
 
