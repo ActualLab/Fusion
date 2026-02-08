@@ -1,4 +1,3 @@
-using ActualLab.Fusion.EntityFramework;
 using ActualLab.Rpc;
 using MessagePack;
 
