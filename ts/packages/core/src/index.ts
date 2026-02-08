@@ -12,4 +12,3 @@ export { EventHandlerSet } from "./events.js";
 export { PromiseSource } from "./promise-source.js";
 export type { Result, ResultOk, ResultError } from "./result.js";
 export { ok, error, resultFrom, resultFromAsync, resultValue } from "./result.js";
-export { nextVersion } from "./version.js";
