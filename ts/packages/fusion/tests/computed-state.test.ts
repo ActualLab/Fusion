@@ -118,4 +118,40 @@ describe("ComputedState", () => {
     expect(state.updateIndex).toBe(1);
     expect(state.value).toBe(42);
   });
+
+  it("update() should return current computed when consistent", async () => {
+    const state = new ComputedState<number>(() => 42);
+    await state.whenFirstTimeUpdated();
+
+    const result = state.update();
+    expect(result).toBe(state.computed);
+    expect(state.computed.isConsistent).toBe(true);
+  });
+
+  it("update() should trigger renewer and wait for recomputation", async () => {
+    let counter = 0;
+    const state = new ComputedState<number>(() => ++counter, { updateDelayer: FixedDelayer.zero });
+    await state.whenFirstTimeUpdated();
+    expect(state.value).toBe(1);
+
+    state.computed.invalidate();
+    const updated = state.update();
+    // ComputedState renewer is async — returns a Promise
+    expect(updated).toBeInstanceOf(Promise);
+    const renewed = await updated;
+    expect(renewed.isConsistent).toBe(true);
+    expect(state.value).toBe(2);
+  });
+
+  it("recompute() should invalidate and wait for new value", async () => {
+    let counter = 0;
+    const state = new ComputedState<number>(() => ++counter, { updateDelayer: FixedDelayer.zero });
+    await state.whenFirstTimeUpdated();
+    expect(state.value).toBe(1);
+
+    const renewed = await state.recompute();
+    expect(renewed.isConsistent).toBe(true);
+    expect(state.value).toBe(2);
+    expect(state.updateIndex).toBe(2);
+  });
 });
