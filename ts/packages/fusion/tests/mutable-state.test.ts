@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { MutableState, ComputeContext, computedRegistry } from "../src/index.js";
+import { AsyncContext } from "@actuallab/core";
+import { MutableState, ComputedInput, computedRegistry } from "../src/index.js";
 
 describe("MutableState", () => {
   beforeEach(() => {
     computedRegistry.clear();
-    ComputeContext.current = undefined;
+    AsyncContext.current = undefined;
   });
 
   it("should hold an initial value", () => {
@@ -32,5 +33,20 @@ describe("MutableState", () => {
     const oldComputed = state.computed;
     state.set(2);
     expect(oldComputed.isConsistent).toBe(false);
+  });
+
+  it("should extend ComputedInput", () => {
+    const state = new MutableState(42);
+    expect(state).toBeInstanceOf(ComputedInput);
+    expect(state.key).toContain("MutableState");
+  });
+
+  it("should expose output and error", () => {
+    const state = new MutableState(42);
+    expect(state.output?.ok).toBe(true);
+    if (state.output?.ok) {
+      expect(state.output.value).toBe(42);
+    }
+    expect(state.error).toBeUndefined();
   });
 });

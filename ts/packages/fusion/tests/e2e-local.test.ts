@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { AsyncContext } from "@actuallab/core";
 import {
-  defineComputeService,
-  createLocalService,
+  computeMethod,
   ComputeFunction,
   ComputedState,
   MutableState,
-  ComputeContext,
-  ComputedInput,
   computedRegistry,
   NoDelayer,
 } from "../src/index.js";
@@ -18,25 +16,25 @@ function delay(ms: number): Promise<void> {
 describe("End-to-end local Fusion", () => {
   beforeEach(() => {
     computedRegistry.clear();
-    ComputeContext.current = undefined;
+    AsyncContext.current = undefined;
   });
 
   it("should cascade invalidation through MutableState → ComputeFunction → ComputedState", async () => {
     const source = new MutableState(10);
 
     // A compute function that reads from the mutable state
-    const doubled = new ComputeFunction("Calc", "doubled", () => {
+    const doubled = new ComputeFunction("doubled", function() {
       return source.value * 2;
     });
+    const instance = {};
 
     // Wrap in ComputedState for auto-update
-    const state = new ComputedState<number>(() => doubled.invoke([]), new NoDelayer());
+    const state = new ComputedState<number>(() => doubled.invoke(instance, []), { delayer: new NoDelayer() });
 
     await state.initialize();
     expect(state.value).toBe(20);
 
-    // Mutate the source — invalidates MutableState's computed,
-    // which should cascade to `doubled`'s computed
+    // Mutate the source
     source.set(50);
 
     await delay(50);
@@ -45,14 +43,15 @@ describe("End-to-end local Fusion", () => {
 
   it("should cascade invalidation through nested compute functions", async () => {
     const source = new MutableState(5);
+    const instance = {};
 
-    const baseFn = new ComputeFunction("Svc", "base", () => source.value);
-    const derivedFn = new ComputeFunction("Svc", "derived", async () => {
-      const baseComputed = await baseFn.invoke([]);
+    const baseFn = new ComputeFunction("base", function() { return source.value; });
+    const derivedFn = new ComputeFunction("derived", async function() {
+      const baseComputed = await baseFn.invoke(instance, []);
       return baseComputed.use() + 100;
     });
 
-    const state = new ComputedState<number>(() => derivedFn.invoke([]), new NoDelayer());
+    const state = new ComputedState<number>(() => derivedFn.invoke(instance, []), { delayer: new NoDelayer() });
 
     await state.initialize();
     expect(state.value).toBe(105); // 5 + 100
@@ -65,12 +64,13 @@ describe("End-to-end local Fusion", () => {
   it("should cascade through multiple MutableState dependencies", async () => {
     const price = new MutableState(100);
     const quantity = new MutableState(3);
+    const instance = {};
 
-    const totalFn = new ComputeFunction("Order", "total", () => {
+    const totalFn = new ComputeFunction("total", function() {
       return price.value * quantity.value;
     });
 
-    const state = new ComputedState<number>(() => totalFn.invoke([]), new NoDelayer());
+    const state = new ComputedState<number>(() => totalFn.invoke(instance, []), { delayer: new NoDelayer() });
 
     await state.initialize();
     expect(state.value).toBe(300);
@@ -84,38 +84,34 @@ describe("End-to-end local Fusion", () => {
     expect(state.value).toBe(1000); // 200 * 5
   });
 
-  it("should work with local compute service proxy", async () => {
-    const store: Record<string, number> = { x: 10 };
+  it("should work with @computeMethod decorator", async () => {
+    class CounterService {
+      private store = new Map<string, number>();
 
-    const svcDef = defineComputeService("DataService", {
-      getValue: { args: [""] },
-    });
+      @computeMethod
+      async getValue(id: string): Promise<number> {
+        return this.store.get(id) ?? 0;
+      }
 
-    const svc = createLocalService(svcDef, {
-      getValue(key: unknown) {
-        return store[key as string] ?? 0;
-      },
-    });
+      async increment(id: string): Promise<void> {
+        this.store.set(id, (this.store.get(id) ?? 0) + 1);
+        this.getValue.invalidate(id);
+      }
+    }
 
-    // First call computes and caches
-    const r1 = await svc.getValue("x");
-    expect(r1).toBe(10);
+    const svc = new CounterService();
 
-    // Second call returns cached
-    const r2 = await svc.getValue("x");
-    expect(r2).toBe(10);
+    // Initial value
+    expect(await svc.getValue("x")).toBe(0);
 
-    // Invalidate via registry
-    const input = new ComputedInput("DataService", "getValue", ["x"]);
-    const cached = computedRegistry.get(input);
-    expect(cached).toBeDefined();
-    cached?.invalidate();
+    // Cached
+    expect(await svc.getValue("x")).toBe(0);
 
-    // Mutate
-    store["x"] = 99;
+    // Mutate and invalidate
+    await svc.increment("x");
+    expect(await svc.getValue("x")).toBe(1);
 
-    // Re-compute
-    const r3 = await svc.getValue("x");
-    expect(r3).toBe(99);
+    await svc.increment("x");
+    expect(await svc.getValue("x")).toBe(2);
   });
 });

@@ -66,6 +66,29 @@ describe("CancellationTokenSource", () => {
   });
 });
 
+describe("CancellationToken.from", () => {
+  it("should resolve token from explicit context", () => {
+    const cts = new CancellationTokenSource();
+    const ctx = new AsyncContext().with(cancellationTokenKey, cts.token);
+    expect(CancellationToken.from(ctx)).toBe(cts.token);
+  });
+
+  it("should fall back to AsyncContext.current", () => {
+    const cts = new CancellationTokenSource();
+    const ctx = new AsyncContext().with(cancellationTokenKey, cts.token);
+    AsyncContext.current = ctx;
+    try {
+      expect(CancellationToken.from(undefined)).toBe(cts.token);
+    } finally {
+      AsyncContext.current = undefined;
+    }
+  });
+
+  it("should return CancellationToken.none when no context", () => {
+    expect(CancellationToken.from(undefined)).toBe(CancellationToken.none);
+  });
+});
+
 describe("cancellationTokenKey", () => {
   it("should default to CancellationToken.none", () => {
     const ctx = new AsyncContext();

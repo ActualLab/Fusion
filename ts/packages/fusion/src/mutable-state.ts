@@ -1,27 +1,33 @@
-import { EventHandlerSet } from "@actuallab/core";
+import { EventHandlerSet, type Result, ok } from "@actuallab/core";
 import { Computed } from "./computed.js";
 import { ComputedInput } from "./computed-input.js";
-import { computedRegistry } from "./computed-registry.js";
+import type { State } from "./state.js";
 
 let _mutableStateCounter = 0;
 
 /** Manually-settable reactive state that can participate in the Fusion dependency graph. */
-export class MutableState<T> {
+export class MutableState<T> extends ComputedInput implements State<T> {
   private _computed: Computed<T>;
-  private _stateId: string;
 
   readonly changed = new EventHandlerSet<T>();
 
   constructor(initialValue: T) {
-    this._stateId = `MutableState#${++_mutableStateCounter}`;
-    const input = new ComputedInput(this._stateId, "value", []);
-    this._computed = new Computed<T>(input);
+    super(`MutableState#${++_mutableStateCounter}:value`);
+    this._computed = new Computed<T>(this);
     this._computed.setOutput(initialValue);
-    computedRegistry.register(this._computed);
   }
 
   get value(): T {
     return this._computed.use();
+  }
+
+  get error(): unknown {
+    const output = this._computed.output;
+    return output !== undefined && !output.ok ? output.error : undefined;
+  }
+
+  get output(): Result<T> | undefined {
+    return this._computed.output;
   }
 
   get computed(): Computed<T> {
@@ -32,11 +38,9 @@ export class MutableState<T> {
     // Invalidate the old computed
     this._computed.invalidate();
 
-    // Create a new computed with the new value
-    const input = new ComputedInput(this._stateId, "value", []);
-    this._computed = new Computed<T>(input);
+    // Create a new computed with the new value (reuse this as input)
+    this._computed = new Computed<T>(this);
     this._computed.setOutput(value);
-    computedRegistry.register(this._computed);
 
     this.changed.trigger(value);
   }

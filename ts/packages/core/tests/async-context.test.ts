@@ -73,9 +73,78 @@ describe("AsyncContext", () => {
     expect(AsyncContext.getOrCreate()).toBe(ctx);
   });
 
-  it("getOrCreate should return new context if not set", () => {
+  it("getOrCreate should return empty singleton if not set", () => {
     const ctx = AsyncContext.getOrCreate();
-    expect(ctx).toBeInstanceOf(AsyncContext);
-    expect(ctx.get(testKey)).toBe("default");
+    expect(ctx).toBe(AsyncContext.empty);
+  });
+
+  it("empty should be an immutable singleton", () => {
+    expect(AsyncContext.empty).toBeInstanceOf(AsyncContext);
+    expect(AsyncContext.empty).toBe(AsyncContext.empty);
+    expect(AsyncContext.empty.get(testKey)).toBe("default");
+  });
+
+  describe("from", () => {
+    it("should return provided context if defined", () => {
+      const ctx = new AsyncContext().with(testKey, "provided");
+      expect(AsyncContext.from(ctx)).toBe(ctx);
+    });
+
+    it("should fall back to current if ctx is undefined", () => {
+      const ctx = new AsyncContext().with(testKey, "current");
+      AsyncContext.current = ctx;
+      expect(AsyncContext.from(undefined)).toBe(ctx);
+    });
+
+    it("should return undefined if both ctx and current are undefined", () => {
+      expect(AsyncContext.from(undefined)).toBeUndefined();
+    });
+  });
+
+  describe("fromArgs", () => {
+    it("should extract AsyncContext from last arg", () => {
+      const ctx = new AsyncContext().with(testKey, "arg");
+      expect(AsyncContext.fromArgs(["a", 1, ctx])).toBe(ctx);
+    });
+
+    it("should fall back to current if last arg is not AsyncContext", () => {
+      const ctx = new AsyncContext().with(testKey, "current");
+      AsyncContext.current = ctx;
+      expect(AsyncContext.fromArgs(["a", 1])).toBe(ctx);
+    });
+
+    it("should return undefined if no context anywhere", () => {
+      expect(AsyncContext.fromArgs(["a", 1])).toBeUndefined();
+    });
+
+    it("should return undefined for empty args and no current", () => {
+      expect(AsyncContext.fromArgs([])).toBeUndefined();
+    });
+  });
+
+  describe("stripFromArgs", () => {
+    it("should strip this exact instance from last arg", () => {
+      const ctx = new AsyncContext().with(testKey, "strip");
+      const args = ["a", 1, ctx];
+      expect(ctx.stripFromArgs(args)).toEqual(["a", 1]);
+    });
+
+    it("should not strip a different AsyncContext instance", () => {
+      const ctx1 = new AsyncContext().with(testKey, "one");
+      const ctx2 = new AsyncContext().with(testKey, "two");
+      const args = ["a", 1, ctx2];
+      expect(ctx1.stripFromArgs(args)).toEqual(["a", 1, ctx2]);
+    });
+
+    it("should return args unchanged if last arg is not this", () => {
+      const ctx = new AsyncContext();
+      const args = ["a", 1, "b"];
+      expect(ctx.stripFromArgs(args)).toBe(args);
+    });
+
+    it("should handle empty args", () => {
+      const ctx = new AsyncContext();
+      expect(ctx.stripFromArgs([])).toEqual([]);
+    });
   });
 });

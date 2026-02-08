@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { Computed, ComputedInput, computedRegistry } from "../src/index.js";
 
 function makeInput(method: string, ...args: unknown[]): ComputedInput {
-  return new ComputedInput("Test", method, args);
+  return new ComputedInput(`Test.${method}:${args.map(a => JSON.stringify(a)).join(",")}`);
 }
 
 describe("ComputedRegistry", () => {

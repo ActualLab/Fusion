@@ -1,37 +1,41 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { AsyncContext } from "@actuallab/core";
 import {
-  FusionHub,
   MutableState,
-  ComputeContext,
   computedRegistry,
-} from "../src/index.js";
+  computeMethod,
+} from "@actuallab/fusion";
 import {
   RpcHub,
   RpcClientPeer,
   RpcOutboundComputeCall,
-  defineComputeService,
+  rpcService,
+  rpcMethod,
   defineRpcService,
+  defineComputeService,
   createRpcClient,
 } from "@actuallab/rpc";
+import { FusionHub } from "../src/index.js";
 import { createMockWsPair } from "../../rpc/tests/mock-ws.js";
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-const CounterServiceDef = defineComputeService("CounterService", {
-  getCount: { args: [""] },
-  getDoubled: { args: [""] },
-});
+// Decorator-based contract class
+@rpcService("CounterService")
+class ICounterService {
+  @computeMethod @rpcMethod()
+  async getCount(key: string): Promise<number> { return undefined!; }
 
+  @computeMethod @rpcMethod()
+  async getDoubled(key: string): Promise<number> { return undefined!; }
+}
+
+// Legacy service def for mutation (non-compute)
 const MutationServiceDef = defineRpcService("MutationService", {
   setCount: { args: ["", 0] },
 });
-
-interface ICounterService {
-  getCount(key: string): Promise<number>;
-  getDoubled(key: string): Promise<number>;
-}
 
 interface IMutationService {
   setCount(key: string, value: number): Promise<void>;
@@ -53,19 +57,19 @@ describe("End-to-end Fusion over RPC", () => {
 
   beforeEach(() => {
     computedRegistry.clear();
-    ComputeContext.current = undefined;
+    AsyncContext.current = undefined;
     store.clear();
 
     serverHub = new FusionHub("server");
     clientHub = new RpcHub("client");
 
-    // Register compute service on server
-    serverHub.registerComputeService(CounterServiceDef, {
-      getCount(key: unknown) {
-        return getState(key as string).value;
+    // Register compute service on server using decorator-based contract
+    serverHub.registerComputeService(ICounterService, {
+      async getCount(key: string): Promise<number> {
+        return getState(key).value;
       },
-      getDoubled(key: unknown) {
-        return getState(key as string).value * 2;
+      async getDoubled(key: string): Promise<number> {
+        return getState(key).value * 2;
       },
     });
 
@@ -82,7 +86,7 @@ describe("End-to-end Fusion over RPC", () => {
     clientHub.close();
   });
 
-  it("should call a compute method and get cached result", async () => {
+  it("should call a compute method and get result", async () => {
     const [clientWs, serverWs] = createMockWsPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
@@ -93,7 +97,13 @@ describe("End-to-end Fusion over RPC", () => {
 
     await delay(10);
 
-    const counter = createRpcClient<ICounterService>(clientPeer, CounterServiceDef);
+    // Use legacy service def for client (decorator-based client coming in future)
+    const counterDef = defineComputeService("CounterService", {
+      getCount: { args: [""] },
+      getDoubled: { args: [""] },
+    });
+
+    const counter = createRpcClient<{ getCount(key: string): Promise<number>; getDoubled(key: string): Promise<number> }>(clientPeer, counterDef);
     getState("x").set(42);
 
     const result = await counter.getCount("x");
@@ -141,7 +151,12 @@ describe("End-to-end Fusion over RPC", () => {
 
     await delay(10);
 
-    const counter = createRpcClient<ICounterService>(clientPeer, CounterServiceDef);
+    const counterDef = defineComputeService("CounterService", {
+      getCount: { args: [""] },
+      getDoubled: { args: [""] },
+    });
+
+    const counter = createRpcClient<{ getCount(key: string): Promise<number>; getDoubled(key: string): Promise<number> }>(clientPeer, counterDef);
     getState("a").set(10);
 
     const count = await counter.getCount("a");

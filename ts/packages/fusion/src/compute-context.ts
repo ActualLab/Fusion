@@ -1,11 +1,11 @@
-import { AsyncContextKey } from "@actuallab/core";
+import { AsyncContext, AsyncContextKey } from "@actuallab/core";
 import type { Computed } from "./computed.js";
-import { _setContextAccessor } from "./computed.js";
+
+export const computeContextKey =
+  new AsyncContextKey<ComputeContext | undefined>("ComputeContext", undefined);
 
 /** Tracks the currently executing computation and captures dependencies. */
 export class ComputeContext {
-  static current: ComputeContext | undefined = undefined;
-
   readonly computed: Computed<unknown>;
   private _isCapturing = true;
 
@@ -26,20 +26,8 @@ export class ComputeContext {
     this.computed.addDependency(dependency);
   }
 
-  static run<T>(context: ComputeContext | undefined, fn: () => T): T {
-    const prev = ComputeContext.current;
-    ComputeContext.current = context;
-    try {
-      return fn();
-    } finally {
-      ComputeContext.current = prev;
-    }
+  /** Resolve ComputeContext from an AsyncContext (or current). */
+  static from(ctx: AsyncContext | undefined): ComputeContext | undefined {
+    return AsyncContext.from(ctx)?.get(computeContextKey);
   }
 }
-
-// Register the context accessor so Computed.use() can capture dependencies
-// without a direct circular import.
-_setContextAccessor(() => ComputeContext.current);
-
-export const computeContextKey =
-  new AsyncContextKey<ComputeContext | undefined>("ComputeContext", undefined);

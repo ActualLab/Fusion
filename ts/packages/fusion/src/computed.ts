@@ -1,6 +1,7 @@
-import { type Result, ok, error } from "@actuallab/core";
+import { AsyncContext, type Result, ok, error } from "@actuallab/core";
 import type { ComputedInput } from "./computed-input.js";
 import { computedRegistry } from "./computed-registry.js";
+import { computeContextKey } from "./compute-context.js";
 
 let _nextVersion = 0;
 
@@ -8,14 +9,6 @@ export const enum ConsistencyState {
   Computing = 0,
   Consistent = 1,
   Invalidated = 2,
-}
-
-// Resolved lazily to break the Computed ↔ ComputeContext circular import.
-// Set by compute-context.ts on module load.
-let _getCurrentContext: (() => { captureDependency(dep: Computed<unknown>): void } | undefined) | undefined;
-
-export function _setContextAccessor(fn: typeof _getCurrentContext): void {
-  _getCurrentContext = fn;
 }
 
 /** Core Fusion abstraction — a cached computation with dependency tracking and invalidation. */
@@ -65,8 +58,8 @@ export class Computed<T> {
   }
 
   use(): T {
-    // Register as dependency of the currently executing computation
-    const ctx = _getCurrentContext?.();
+    // Register as dependency of the currently executing computation via AsyncContext
+    const ctx = AsyncContext.current?.get(computeContextKey);
     if (ctx !== undefined) ctx.captureDependency(this as Computed<unknown>);
 
     if (this._output === undefined) throw new Error("Computed has no value yet.");
