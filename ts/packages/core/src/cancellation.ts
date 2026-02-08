@@ -1,10 +1,15 @@
 import type { Disposable } from "./disposable.js";
-import { AsyncContextKey } from "./async-context.js";
+import { AsyncContext, AsyncContextKey } from "./async-context.js";
 
 /** Lightweight cancellation token — similar to .NET's CancellationToken, not AbortController. */
 export class CancellationToken {
   static readonly none = new CancellationToken(false);
   static readonly cancelled = new CancellationToken(true);
+
+  /** Resolve CancellationToken from an AsyncContext (or current). */
+  static from(ctx: AsyncContext | undefined): CancellationToken {
+    return AsyncContext.from(ctx)?.get(cancellationTokenKey) ?? CancellationToken.none;
+  }
 
   private _isCancelled: boolean;
   private _callbacks: (() => void)[] | null;

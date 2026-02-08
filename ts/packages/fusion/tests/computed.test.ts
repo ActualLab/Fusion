@@ -1,14 +1,15 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { Computed, ConsistencyState, ComputedInput, ComputeContext, computedRegistry } from "../src/index.js";
+import { AsyncContext } from "@actuallab/core";
+import { Computed, ConsistencyState, ComputedInput, ComputeContext, computeContextKey, computedRegistry } from "../src/index.js";
 
 function makeInput(method: string, ...args: unknown[]): ComputedInput {
-  return new ComputedInput("Test", method, args);
+  return new ComputedInput(`Test.${method}:${args.map(a => JSON.stringify(a)).join(",")}`);
 }
 
 describe("Computed", () => {
   beforeEach(() => {
     computedRegistry.clear();
-    ComputeContext.current = undefined;
+    AsyncContext.current = undefined;
   });
 
   it("should start in Computing state", () => {
@@ -69,7 +70,7 @@ describe("Computed", () => {
 describe("Computed dependency tracking", () => {
   beforeEach(() => {
     computedRegistry.clear();
-    ComputeContext.current = undefined;
+    AsyncContext.current = undefined;
   });
 
   it("should track forward dependencies", () => {
@@ -152,25 +153,25 @@ describe("Computed dependency tracking", () => {
 describe("Computed.use() dependency capture", () => {
   beforeEach(() => {
     computedRegistry.clear();
-    ComputeContext.current = undefined;
+    AsyncContext.current = undefined;
   });
 
-  it("should capture dependency when used inside ComputeContext", () => {
+  it("should capture dependency when used inside ComputeContext via AsyncContext", () => {
     const parent = new Computed<number>(makeInput("parent", 1));
     const child = new Computed<number>(makeInput("child", 1));
     child.setOutput(42);
 
     const ctx = new ComputeContext(parent as Computed<unknown>);
-    ComputeContext.current = ctx;
+    AsyncContext.current = new AsyncContext().with(computeContextKey, ctx);
 
     const val = child.use();
     expect(val).toBe(42);
     expect(parent.dependencies.has(child)).toBe(true);
 
-    ComputeContext.current = undefined;
+    AsyncContext.current = undefined;
   });
 
-  it("should not capture when no ComputeContext is active", () => {
+  it("should not capture when no AsyncContext is active", () => {
     const child = new Computed<number>(makeInput("child", 1));
     child.setOutput(42);
 

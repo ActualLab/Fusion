@@ -1,3 +1,4 @@
+import "./polyfills.js";
 export { AsyncContext, AsyncContextKey } from "./async-context.js";
 export { AsyncLock } from "./async-lock.js";
 export {

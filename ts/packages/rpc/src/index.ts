@@ -36,3 +36,6 @@ export { RpcServiceHost } from "./rpc-service-host.js";
 export type { RpcServiceImpl, RpcDispatchContext } from "./rpc-service-host.js";
 export { createRpcClient } from "./rpc-client.js";
 export type { WebSocketServer } from "./rpc-server.js";
+
+export { rpcService, rpcMethod, getServiceMeta, getMethodsMeta } from "./rpc-decorators.js";
+export type { MethodMeta, ServiceMeta } from "./rpc-decorators.js";

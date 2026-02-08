@@ -1,12 +1,16 @@
 import { EventHandlerSet, type Result, error } from "@actuallab/core";
 import type { Computed } from "./computed.js";
+import { ComputedInput } from "./computed-input.js";
 import type { UpdateDelayer } from "./update-delayer.js";
 import { NoDelayer } from "./update-delayer.js";
+import type { State, StateOptions } from "./state.js";
 
 export type StateComputer<T> = () => Promise<Computed<T>>;
 
+let _computedStateCounter = 0;
+
 /** Auto-updating reactive state wrapper — re-computes on invalidation with configurable delay. */
-export class ComputedState<T> {
+export class ComputedState<T> extends ComputedInput implements State<T> {
   private _computer: StateComputer<T>;
   private _delayer: UpdateDelayer;
   private _computed: Computed<T> | undefined;
@@ -17,13 +21,30 @@ export class ComputedState<T> {
   readonly invalidated = new EventHandlerSet<void>();
   readonly updated = new EventHandlerSet<Result<T>>();
 
-  constructor(computer: StateComputer<T>, delayer?: UpdateDelayer) {
+  constructor(computer: StateComputer<T>, options?: StateOptions<T>) {
+    super(`ComputedState#${++_computedStateCounter}:value`);
     this._computer = computer;
-    this._delayer = delayer ?? new NoDelayer();
+    this._delayer = options?.delayer ?? new NoDelayer();
+
+    // Apply initial output/value if provided
+    if (options?.initialOutput !== undefined) {
+      if (options.initialOutput.ok) {
+        this._lastNonErrorValue = options.initialOutput.value;
+      }
+    } else if (options?.initialValue !== undefined) {
+      this._lastNonErrorValue = options.initialValue;
+    }
   }
 
-  get value(): T | undefined {
-    return this._computed?.output?.ok === true ? this._computed.output.value : undefined;
+  get value(): T {
+    if (this._computed?.output?.ok === true) return this._computed.output.value;
+    if (this._lastNonErrorValue !== undefined) return this._lastNonErrorValue;
+    throw new Error("ComputedState has no value yet.");
+  }
+
+  get error(): unknown {
+    const output = this._computed?.output;
+    return output !== undefined && !output.ok ? output.error : undefined;
   }
 
   get lastNonErrorValue(): T | undefined {

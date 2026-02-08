@@ -1,7 +1,7 @@
 {
-  "name": "@actuallab/fusion",
+  "name": "@actuallab/fusion-rpc",
   "version": "0.0.1",
-  "description": "TypeScript implementation of Fusion - real-time state synchronization framework",
+  "description": "Bridge between Fusion and RPC - FusionHub, compute service registration",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -26,7 +26,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@actuallab/core": "0.0.1"
+    "@actuallab/core": "0.0.1",
+    "@actuallab/fusion": "0.0.1",
+    "@actuallab/rpc": "0.0.1"
   },
   "publishConfig": {
     "access": "public"

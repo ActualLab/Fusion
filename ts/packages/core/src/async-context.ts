@@ -14,6 +14,10 @@ export class AsyncContextKey<T> {
 /** General-purpose typed context container — named for forward-compatibility with TC39 AsyncContext proposal. */
 export class AsyncContext {
   static current: AsyncContext | undefined = undefined;
+
+  /** Immutable empty singleton — avoids allocating new AsyncContext(). */
+  static readonly empty: AsyncContext = new AsyncContext();
+
   private static _defaults = new Map<symbol, unknown>();
 
   private _values: Map<symbol, unknown>;
@@ -50,11 +54,27 @@ export class AsyncContext {
     }
   }
 
+  /** Strip THIS exact instance from args if it's the last element (reference equality). */
+  stripFromArgs(args: unknown[]): unknown[] {
+    return args[args.length - 1] === this ? args.slice(0, -1) : args;
+  }
+
+  /** Resolve: return ctx if provided, otherwise AsyncContext.current. */
+  static from(ctx: AsyncContext | undefined): AsyncContext | undefined {
+    return ctx ?? AsyncContext.current;
+  }
+
+  /** Extract AsyncContext from last arg if instanceof AsyncContext, else fall back to .current. */
+  static fromArgs(args: unknown[]): AsyncContext | undefined {
+    const last = args[args.length - 1];
+    return last instanceof AsyncContext ? last : AsyncContext.current;
+  }
+
   static setDefault<T>(key: AsyncContextKey<T>, value: T): void {
     AsyncContext._defaults.set(key.id, value);
   }
 
   static getOrCreate(): AsyncContext {
-    return AsyncContext.current ?? new AsyncContext();
+    return AsyncContext.current ?? AsyncContext.empty;
   }
 }
