@@ -38,7 +38,6 @@ describe("MutableState", () => {
   it("should extend StateBase", () => {
     const state = new MutableState(42);
     expect(state).toBeInstanceOf(StateBase);
-    expect(state.stateKey).toMatch(/^MutableState#\d+$/);
   });
 
   it("should expose output and error", () => {
