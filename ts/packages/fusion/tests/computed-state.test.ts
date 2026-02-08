@@ -2,13 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { AsyncContext } from "@actuallab/core";
 import {
   ComputedState,
-  ComputeFunction,
-  computedRegistry,
   FixedDelayer,
-  NoDelayer,
 } from "../src/index.js";
-
-const testInstance = {};
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -16,40 +11,35 @@ function delay(ms: number): Promise<void> {
 
 describe("ComputedState", () => {
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
   });
 
   it("should compute initial value", async () => {
-    const fn = new ComputeFunction("get", function() { return 42; });
-    const state = new ComputedState<number>(() => fn.invoke(testInstance, [1]));
+    const state = new ComputedState<number>(() => 42);
 
-    await state.initialize();
+    await state.whenFirstTimeUpdated();
+    expect(state.updateIndex).toBe(1);
     expect(state.value).toBe(42);
   });
 
-  it("should auto-update on invalidation with NoDelayer", async () => {
+  it("should auto-update on invalidation with zero delayer", async () => {
     let counter = 0;
-    const fn = new ComputeFunction("get", function() { return ++counter; });
-    const state = new ComputedState<number>(() => fn.invoke(testInstance, [1]), { delayer: new NoDelayer() });
+    const state = new ComputedState<number>(() => ++counter, { updateDelayer: FixedDelayer.zero });
 
-    await state.initialize();
+    await state.whenFirstTimeUpdated();
     expect(state.value).toBe(1);
 
-    // Invalidate the underlying computed
     state.computed?.invalidate();
-
-    // Wait for auto-update
     await delay(20);
+    expect(state.updateIndex).toBe(2);
     expect(state.value).toBe(2);
   });
 
   it("should auto-update on invalidation with FixedDelayer", async () => {
     let counter = 0;
-    const fn = new ComputeFunction("get", function() { return ++counter; });
-    const state = new ComputedState<number>(() => fn.invoke(testInstance, [1]), { delayer: new FixedDelayer(30) });
+    const state = new ComputedState<number>(() => ++counter, { updateDelayer: new FixedDelayer(30).delay });
 
-    await state.initialize();
+    await state.whenFirstTimeUpdated();
     expect(state.value).toBe(1);
 
     state.computed?.invalidate();
@@ -63,54 +53,45 @@ describe("ComputedState", () => {
     expect(state.value).toBe(2);
   });
 
-  it("should fire invalidated and updated events", async () => {
+  it("should recompute after invalidation and resolve whenUpdated", async () => {
     let counter = 0;
-    const fn = new ComputeFunction("get", function() { return ++counter; });
-    const state = new ComputedState<number>(() => fn.invoke(testInstance, [1]), { delayer: new NoDelayer() });
+    const state = new ComputedState<number>(() => ++counter, { updateDelayer: FixedDelayer.zero });
 
-    let invalidatedCount = 0;
-    let updatedCount = 0;
-    state.invalidated.add(() => invalidatedCount++);
-    state.updated.add(() => updatedCount++);
+    await state.whenFirstTimeUpdated();
+    expect(state.updateIndex).toBe(1);
 
-    await state.initialize();
-    expect(updatedCount).toBe(1); // initial
+    const updated = state.whenUpdated();
+    state.computed.invalidate();
+    await updated;
 
-    state.computed?.invalidate();
-    await delay(20);
-
-    expect(invalidatedCount).toBe(1);
-    expect(updatedCount).toBe(2); // initial + re-compute
+    expect(state.updateIndex).toBe(2);
+    expect(state.value).toBe(2);
   });
 
   it("should track lastNonErrorValue", async () => {
     let counter = 0;
-    const fn = new ComputeFunction("get", function() {
+    const state = new ComputedState<number>(() => {
       counter++;
       if (counter === 2) throw new Error("transient");
       return counter;
-    });
-    const state = new ComputedState<number>(() => fn.invoke(testInstance, [1]), { delayer: new NoDelayer() });
+    }, { updateDelayer: FixedDelayer.zero });
 
-    await state.initialize();
+    await state.whenFirstTimeUpdated();
     expect(state.value).toBe(1);
     expect(state.lastNonErrorValue).toBe(1);
 
-    // Second call will throw
     state.computed?.invalidate();
     await delay(20);
 
-    // Value falls back to lastNonErrorValue, error is set
     expect(state.error).toBeDefined();
     expect(state.lastNonErrorValue).toBe(1);
   });
 
   it("should not update after dispose", async () => {
     let counter = 0;
-    const fn = new ComputeFunction("get", function() { return ++counter; });
-    const state = new ComputedState<number>(() => fn.invoke(testInstance, [1]), { delayer: new NoDelayer() });
+    const state = new ComputedState<number>(() => ++counter, { updateDelayer: FixedDelayer.zero });
 
-    await state.initialize();
+    await state.whenFirstTimeUpdated();
     const computed = state.computed;
 
     state.dispose();
@@ -119,14 +100,22 @@ describe("ComputedState", () => {
     computed?.invalidate();
     await delay(20);
 
-    expect(counter).toBe(1); // no recompute
+    expect(counter).toBe(1);
   });
 
-  it("should accept initialValue option", () => {
-    const fn = new ComputeFunction("get", function() { return 42; });
-    const state = new ComputedState<number>(() => fn.invoke(testInstance, [1]), { initialValue: 99 });
+  it("should accept initialValue option for async computers", async () => {
+    let resolveComputer!: (v: number) => void;
+    const state = new ComputedState<number>(
+      () => new Promise<number>((r) => { resolveComputer = r; }),
+      { initialValue: 99 },
+    );
 
-    // Before initialize, value should return initialValue
+    expect(state.updateIndex).toBe(0);
     expect(state.value).toBe(99);
+
+    resolveComputer(42);
+    await state.whenFirstTimeUpdated();
+    expect(state.updateIndex).toBe(1);
+    expect(state.value).toBe(42);
   });
 });

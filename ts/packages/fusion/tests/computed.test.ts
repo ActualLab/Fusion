@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { AsyncContext } from "@actuallab/core";
-import { Computed, ConsistencyState, ComputeContext, computeContextKey, computedRegistry } from "../src/index.js";
+import { AsyncContext, errorResult } from "@actuallab/core";
+import { Computed, ConsistencyState, ComputeContext, computeContextKey } from "../src/index.js";
 
 let _testKeyCounter = 0;
 function makeKey(method: string, ...args: unknown[]): string {
@@ -9,36 +9,35 @@ function makeKey(method: string, ...args: unknown[]): string {
 
 describe("Computed", () => {
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
   });
 
   it("should start in Computing state", () => {
     const c = new Computed<number>(makeKey("get", 1));
     expect(c.state).toBe(ConsistencyState.Computing);
-    expect(c.output).toBeUndefined();
+    expect(() => c.output).toThrow("no output");
   });
 
-  it("should transition to Consistent after setOutput", () => {
+  it("should transition to Consistent after setOutput with value", () => {
     const c = new Computed<number>(makeKey("get", 1));
     c.setOutput(42);
     expect(c.state).toBe(ConsistencyState.Consistent);
     expect(c.isConsistent).toBe(true);
     expect(c.value).toBe(42);
-    expect(c.output?.ok).toBe(true);
+    expect(c.hasValue).toBe(true);
   });
 
-  it("should transition to Consistent after setError", () => {
+  it("should transition to Consistent after setOutput with error", () => {
     const c = new Computed<number>(makeKey("get", 1));
-    c.setError(new Error("boom"));
+    c.setOutput(errorResult(new Error("boom")));
     expect(c.state).toBe(ConsistencyState.Consistent);
-    expect(c.output?.ok).toBe(false);
+    expect(c.hasError).toBe(true);
     expect(() => c.value).toThrow("boom");
   });
 
   it("should throw when accessing value before output set", () => {
     const c = new Computed<number>(makeKey("get", 1));
-    expect(() => c.value).toThrow("no value");
+    expect(() => c.value).toThrow("no output");
   });
 
   it("should invalidate from Consistent state", () => {
@@ -52,7 +51,7 @@ describe("Computed", () => {
     const c = new Computed<number>(makeKey("get", 1));
     c.setOutput(42);
     let count = 0;
-    c.onInvalidated = () => count++;
+    c.onInvalidated.add(() => count++);
     c.invalidate();
     c.invalidate();
     expect(count).toBe(1);
@@ -62,7 +61,7 @@ describe("Computed", () => {
     const c = new Computed<number>(makeKey("get", 1));
     c.setOutput(42);
     let fired = false;
-    c.onInvalidated = () => { fired = true; };
+    c.onInvalidated.add(() => { fired = true; });
     c.invalidate();
     expect(fired).toBe(true);
   });
@@ -70,7 +69,6 @@ describe("Computed", () => {
 
 describe("Computed dependency tracking", () => {
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
   });
 
@@ -78,21 +76,17 @@ describe("Computed dependency tracking", () => {
     const parent = new Computed<number>(makeKey("parent", 1));
     const child = new Computed<number>(makeKey("child", 1));
     child.setOutput(10);
-    computedRegistry.register(child);
 
     parent.addDependency(child);
     expect(parent.dependencies.has(child)).toBe(true);
   });
 
   it("should cascade invalidation from child to parent", () => {
-    const parentKey = makeKey("parent", 1);
-    const parent = new Computed<number>(parentKey);
+    const parent = new Computed<number>(makeKey("parent", 1));
     parent.setOutput(100);
-    computedRegistry.register(parent);
 
     const child = new Computed<number>(makeKey("child", 1));
     child.setOutput(10);
-    computedRegistry.register(child);
 
     parent.addDependency(child);
 
@@ -102,21 +96,14 @@ describe("Computed dependency tracking", () => {
   });
 
   it("should cascade invalidation through multiple levels", () => {
-    const keyA = makeKey("a", 1);
-    const keyB = makeKey("b", 1);
-    const keyC = makeKey("c", 1);
-
-    const a = new Computed<number>(keyA);
+    const a = new Computed<number>(makeKey("a", 1));
     a.setOutput(1);
-    computedRegistry.register(a);
 
-    const b = new Computed<number>(keyB);
+    const b = new Computed<number>(makeKey("b", 1));
     b.setOutput(2);
-    computedRegistry.register(b);
 
-    const c = new Computed<number>(keyC);
+    const c = new Computed<number>(makeKey("c", 1));
     c.setOutput(3);
-    computedRegistry.register(c);
 
     // a depends on b, b depends on c
     a.addDependency(b);
@@ -128,32 +115,30 @@ describe("Computed dependency tracking", () => {
     expect(a.state).toBe(ConsistencyState.Invalidated);
   });
 
-  it("should not cascade to wrong version", () => {
+  it("should not cascade to replaced dependant (different version)", () => {
     const parentKey = makeKey("parent", 1);
     const parent1 = new Computed<number>(parentKey);
     parent1.setOutput(100);
-    computedRegistry.register(parent1);
 
     const child = new Computed<number>(makeKey("child", 1));
     child.setOutput(10);
-    computedRegistry.register(child);
 
     parent1.addDependency(child);
 
-    // Replace parent with a new version
+    // Replace parent with a new version (different Computed, same key)
     const parent2 = new Computed<number>(parentKey);
     parent2.setOutput(200);
-    computedRegistry.register(parent2);
 
-    // Invalidate child — should NOT invalidate parent2 (version mismatch)
+    // Invalidate child — parent1 gets invalidated (it added the dependency),
+    // but parent2 is unrelated and stays consistent
     child.invalidate();
+    expect(parent1.state).toBe(ConsistencyState.Invalidated);
     expect(parent2.state).toBe(ConsistencyState.Consistent);
   });
 });
 
 describe("Computed.use() dependency capture", () => {
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
   });
 
@@ -179,5 +164,55 @@ describe("Computed.use() dependency capture", () => {
     // No active context — just returns value, no side effects
     const val = child.use();
     expect(val).toBe(42);
+  });
+
+  it("should return stale value with useInconsistent() on invalidated computed", () => {
+    const c = new Computed<number>(makeKey("get", 1));
+    c.setOutput(42);
+    c.invalidate();
+
+    const val = c.useInconsistent();
+    expect(val).toBe(42);
+  });
+
+  it("should throw with useInconsistent() on computed with no output", () => {
+    const c = new Computed<number>(makeKey("get", 1));
+    expect(() => c.useInconsistent()).toThrow("no output");
+  });
+
+  it("should async recompute via _renew when invalidated", async () => {
+    const c = new Computed<number>(makeKey("get", 1));
+    c.setOutput(42);
+
+    const renewed = new Computed<number>(makeKey("get", 2));
+    renewed.setOutput(99);
+
+    c._renew = () => renewed;
+    c.invalidate();
+
+    const val = c.use();
+    expect(val).toBe(99);
+  });
+
+  it("should async recompute via _renew returning Promise", async () => {
+    const c = new Computed<number>(makeKey("get", 1));
+    c.setOutput(42);
+
+    const renewed = new Computed<number>(makeKey("get", 2));
+    renewed.setOutput(77);
+
+    c._renew = () => Promise.resolve(renewed);
+    c.invalidate();
+
+    const val = await c.use();
+    expect(val).toBe(77);
+  });
+
+  it("should throw when invalidated with no _renew", () => {
+    const c = new Computed<number>(makeKey("get", 1));
+    c.setOutput(42);
+    c.invalidate();
+
+    expect(() => c.use()).toThrow("Cannot recompute");
   });
 });

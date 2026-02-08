@@ -4,12 +4,10 @@ import {
   computeMethod,
   wrapComputeMethod,
   getMethodsMeta,
-  computedRegistry,
 } from "../src/index.js";
 
 describe("@computeMethod decorator", () => {
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
   });
 
@@ -60,7 +58,7 @@ describe("@computeMethod decorator", () => {
     expect(await svc.getCount("x")).toBe(1);
     expect(await svc.getCount("x")).toBe(1); // cached
 
-    svc.getCount.invalidate("x");
+    (svc.getCount as any).invalidate("x");
 
     expect(await svc.getCount("x")).toBe(2); // recomputed
   });
@@ -131,7 +129,6 @@ describe("@computeMethod decorator", () => {
 
 describe("wrapComputeMethod", () => {
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
   });
 

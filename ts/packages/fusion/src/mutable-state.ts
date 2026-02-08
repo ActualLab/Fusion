@@ -1,45 +1,20 @@
-import { EventHandlerSet, type Result, ok } from "@actuallab/core";
-import { Computed } from "./computed.js";
-import { StateBase } from "./computed-input.js";
-import type { State } from "./state.js";
+import { type AsyncContext, Result } from "@actuallab/core";
+import { StateBoundComputed } from "./computed.js";
+import { State } from "./state.js";
 
 /** Manually-settable reactive state that can participate in the Fusion dependency graph. */
-export class MutableState<T> extends StateBase implements State<T> {
-  private _computed: Computed<T>;
-
-  readonly changed = new EventHandlerSet<T>();
-
-  constructor(initialValue: T) {
+export class MutableState<T> extends State<T> {
+  constructor(initialOutput: Result<T> | T) {
     super();
-    this._computed = new Computed<T>(this);
-    this._computed.setOutput(initialValue);
+    this._initialize(initialOutput);
   }
 
-  get value(): T {
-    return this._computed.use();
+  override use(asyncContext?: AsyncContext): T {
+    return this._computed.use(asyncContext) as T;
   }
 
-  get error(): unknown {
-    const output = this._computed.output;
-    return output !== undefined && !output.ok ? output.error : undefined;
-  }
-
-  get output(): Result<T> | undefined {
-    return this._computed.output;
-  }
-
-  get computed(): Computed<T> {
-    return this._computed;
-  }
-
-  set(value: T): void {
-    // Invalidate the old computed
+  set(output: Result<T> | T): void {
     this._computed.invalidate();
-
-    // Create a new computed with the new value (reuse this as input)
-    this._computed = new Computed<T>(this);
-    this._computed.setOutput(value);
-
-    this.changed.trigger(value);
+    this._update(new StateBoundComputed<T>(this), output);
   }
 }

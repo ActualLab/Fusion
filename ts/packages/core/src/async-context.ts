@@ -12,6 +12,9 @@ export class AsyncContextKey<T> {
 }
 
 /** General-purpose typed context container — named for forward-compatibility with TC39 AsyncContext proposal. */
+export const abortSignalKey =
+  new AsyncContextKey<AbortSignal | undefined>("AbortSignal", undefined);
+
 export class AsyncContext {
   static current: AsyncContext | undefined = undefined;
 

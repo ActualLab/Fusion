@@ -1,18 +1,82 @@
-import type { Result } from "@actuallab/core";
-import type { Computed } from "./computed.js";
-import type { UpdateDelayer } from "./update-delayer.js";
+import { type AsyncContext, type IResult, PromiseSource, resolvedVoidPromise, type Result } from "@actuallab/core";
+import { type Computed, StateBoundComputed } from "./computed.js";
 
-/** Common interface for all reactive state types. */
-export interface State<T> {
-  readonly value: T;
-  readonly error: unknown;
-  readonly output: Result<T> | undefined;
-  readonly computed: Computed<T> | undefined;
-}
+/** Base class for all reactive state types. */
+export abstract class State<T> implements IResult<T> {
+  protected _computed!: Computed<T>;
+  protected _updateIndex = 0;
+  protected _lastNonErrorValue: T | undefined;
+  private _whenUpdatedSource: PromiseSource<void> | null = null;
 
-/** Constructor options for state types. */
-export interface StateOptions<T> {
-  initialValue?: T;
-  initialOutput?: Result<T>;
-  delayer?: UpdateDelayer;
+  get updateIndex(): number {
+    return this._updateIndex;
+  }
+
+  get lastNonErrorValue(): T | undefined {
+    return this._lastNonErrorValue;
+  }
+
+  get hasValue(): boolean {
+    return this._computed.hasValue;
+  }
+
+  get hasError(): boolean {
+    return this._computed.hasError;
+  }
+
+  get value(): T {
+    return this._computed.value;
+  }
+
+  get error(): unknown {
+    return this._computed.error;
+  }
+
+  get valueOrUndefined(): T | undefined {
+    return this._computed.valueOrUndefined;
+  }
+
+  get output(): Result<T> {
+    return this._computed.output;
+  }
+
+  get computed(): Computed<T> {
+    return this._computed;
+  }
+
+  use(asyncContext?: AsyncContext): T | Promise<T> {
+    return this._computed.use(asyncContext);
+  }
+
+  useInconsistent(asyncContext?: AsyncContext): T {
+    return this._computed.useInconsistent(asyncContext);
+  }
+
+  whenInvalidated(): Promise<void> {
+    return this._computed.whenInvalidated();
+  }
+
+  whenUpdated(): Promise<void> {
+    return (this._whenUpdatedSource ??= new PromiseSource<void>()).promise;
+  }
+
+  whenFirstTimeUpdated(): Promise<void> {
+    return this._updateIndex > 0 ? resolvedVoidPromise : this.whenUpdated();
+  }
+
+  protected _initialize(output: Result<T> | T): void {
+    this._computed = new StateBoundComputed<T>(this);
+    this._computed.setOutput(output);
+    this._lastNonErrorValue = this._computed.valueOrUndefined;
+  }
+
+  protected _update(computed: Computed<T>, output: Result<T> | T): void {
+    computed.setOutput(output);
+    this._computed = computed;
+    if (computed.hasValue)
+      this._lastNonErrorValue = computed.value;
+    this._updateIndex++;
+    this._whenUpdatedSource?.resolve(undefined);
+    this._whenUpdatedSource = null;
+  }
 }

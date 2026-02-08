@@ -12,8 +12,7 @@ import {
 } from "@actuallab/rpc";
 import {
   ComputeFunction,
-  computedRegistry,
-  type ComputeFn,
+  type ComputeFunctionImpl,
   type MethodMeta,
 } from "@actuallab/fusion";
 
@@ -86,7 +85,7 @@ export class FusionHub extends RpcHub {
 
       if (isCompute) {
         // Create a ComputeFunction for this method
-        const originalFn = (impl as any)[methodName] as ComputeFn;
+        const originalFn = (impl as any)[methodName] as ComputeFunctionImpl;
         if (typeof originalFn !== "function") {
           throw new Error(`Method ${wireMethod} not found on implementation`);
         }
@@ -103,13 +102,13 @@ export class FusionHub extends RpcHub {
 
           // Wire invalidation → send $sys-c.Invalidate to the client
           if (context !== undefined) {
-            computed.onInvalidated = () => {
+            computed.onInvalidated.add(() => {
               const msg = serializeMessage({
                 Method: RpcSystemCalls.invalidate,
                 RelatedId: context.callId,
               });
               try { context.connection.send(msg); } catch { /* peer may be disconnected */ }
-            };
+            });
           }
 
           return computed.value;

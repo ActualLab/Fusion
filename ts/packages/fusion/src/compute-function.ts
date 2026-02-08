@@ -1,10 +1,10 @@
-import { AsyncContext, AsyncLock, type Result, ok, error } from "@actuallab/core";
+import { AsyncContext, AsyncLock, type Result, result, errorResult } from "@actuallab/core";
 import { Computed } from "./computed.js";
 import { getInstanceId } from "./computed-input.js";
 import { ComputeContext, computeContextKey } from "./compute-context.js";
-import { computedRegistry } from "./computed-registry.js";
+import { ComputedRegistry } from "./computed-registry.js";
 
-export type ComputeFn = (this: any, ...args: unknown[]) => unknown;
+export type ComputeFunctionImpl = (this: any, ...args: unknown[]) => unknown;
 
 /** Record Separator — delimiter between key components. */
 const RS = "\x1E";
@@ -20,22 +20,22 @@ export class ComputeFunction {
   readonly methodName: string;
   readonly id: string;
   argToString: (arg: unknown) => string = defaultArgToString;
-  private _fn: ComputeFn;
+  private _impl: ComputeFunctionImpl;
   private _locks = new Map<string, AsyncLock>();
 
-  constructor(methodName: string, fn: ComputeFn) {
+  constructor(methodName: string, impl: ComputeFunctionImpl) {
     this.methodName = methodName;
     this.id = `${methodName}[${++_nextFunctionId}]`;
-    this._fn = fn;
+    this._impl = impl;
   }
 
   /** Build a string key for the given instance and arguments. */
   buildKey(instance: object, args: unknown[]): string {
-    const parts: string[] = [String(getInstanceId(instance)), this.id];
+    let key = String(getInstanceId(instance)) + RS + this.id;
     for (const arg of args) {
-      parts.push(this.argToString(arg));
+      key += RS + this.argToString(arg);
     }
-    return parts.join(RS);
+    return key;
   }
 
   async invoke(instance: object, allArgs: unknown[]): Promise<Computed<unknown>> {
@@ -50,7 +50,7 @@ export class ComputeFunction {
 
     // 4. Build string key and check cache
     const key = this.buildKey(instance, args);
-    const existing = computedRegistry.get(key);
+    const existing = ComputedRegistry.get(key);
     if (existing?.isConsistent) {
       callerComputeCtx?.captureDependency(existing);
       return existing;
@@ -65,29 +65,28 @@ export class ComputeFunction {
 
     const computed = await lock.run(async () => {
       // Double-check after acquiring lock
-      const cached = computedRegistry.get(key);
+      const cached = ComputedRegistry.get(key);
       if (cached?.isConsistent) return cached;
 
       // 6. Create new Computed + ComputeContext
       const newComputed = new Computed<unknown>(key);
-      computedRegistry.register(newComputed);
+      newComputed._renew = () => this.invoke(instance, args);
 
       const childComputeCtx = new ComputeContext(newComputed);
       const childAsyncCtx = (asyncCtx ?? AsyncContext.empty)
         .with(computeContextKey, childComputeCtx);
 
       // 7. Run with clean args — no stale AsyncContext to override .run()
-      let result: Result<unknown>;
+      let fnResult: Result<unknown>;
       try {
-        const value = childAsyncCtx.run(() => this._fn.call(instance, ...args));
+        const value = childAsyncCtx.run(() => this._impl.call(instance, ...args));
         const resolved = value instanceof Promise ? await value : value;
-        result = ok(resolved);
+        fnResult = result(resolved);
       } catch (e) {
-        result = error(e);
+        fnResult = errorResult(e);
       }
 
-      if (result.ok) newComputed.setOutput(result.value);
-      else newComputed.setError(result.error);
+      newComputed.setOutput(fnResult);
 
       return newComputed;
     });
