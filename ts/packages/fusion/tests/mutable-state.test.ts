@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { AsyncContext } from "@actuallab/core";
-import { MutableState, StateBase, computedRegistry } from "../src/index.js";
+import { MutableState } from "../src/index.js";
 
 describe("MutableState", () => {
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
   });
 
@@ -19,13 +18,13 @@ describe("MutableState", () => {
     expect(state.value).toBe(2);
   });
 
-  it("should fire changed event on set", () => {
+  it("should resolve whenUpdated on set", async () => {
     const state = new MutableState(1);
-    const values: number[] = [];
-    state.changed.add((v) => values.push(v));
+    const updated = state.whenUpdated();
     state.set(10);
-    state.set(20);
-    expect(values).toEqual([10, 20]);
+    await updated;
+    expect(state.value).toBe(10);
+    expect(state.updateIndex).toBe(1);
   });
 
   it("should invalidate old computed on set", () => {
@@ -35,17 +34,18 @@ describe("MutableState", () => {
     expect(oldComputed.isConsistent).toBe(false);
   });
 
-  it("should extend StateBase", () => {
+  it("should implement State interface", () => {
     const state = new MutableState(42);
-    expect(state).toBeInstanceOf(StateBase);
+    expect(state.value).toBe(42);
+    expect(state.computed).toBeDefined();
   });
 
-  it("should expose output and error", () => {
+  it("should expose IResult properties", () => {
     const state = new MutableState(42);
-    expect(state.output?.ok).toBe(true);
-    if (state.output?.ok) {
-      expect(state.output.value).toBe(42);
-    }
+    expect(state.hasValue).toBe(true);
+    expect(state.hasError).toBe(false);
+    expect(state.value).toBe(42);
+    expect(state.valueOrUndefined).toBe(42);
     expect(state.error).toBeUndefined();
   });
 });

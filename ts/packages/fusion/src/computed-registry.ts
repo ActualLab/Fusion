@@ -1,46 +1,36 @@
 import type { Computed } from "./computed.js";
-import type { ComputedInput } from "./computed-input.js";
 
 /** WeakRef-based global cache of Computed instances — allows GC of unused computed values. */
 export class ComputedRegistry {
-  private _entries = new Map<string, WeakRef<Computed<unknown>>>();
-  private _finalization: FinalizationRegistry<string>;
+  private static _entries = new Map<string, WeakRef<Computed<unknown>>>();
+  private static _finalization = new FinalizationRegistry<string>((key) => {
+    ComputedRegistry._entries.delete(key);
+  });
 
-  constructor() {
-    this._finalization = new FinalizationRegistry<string>((key) => {
-      this._entries.delete(key);
-    });
+  static get size(): number {
+    return ComputedRegistry._entries.size;
   }
 
-  get size(): number {
-    return this._entries.size;
-  }
-
-  get(key: string): Computed<unknown> | undefined {
-    const ref = this._entries.get(key);
+  static get(key: string): Computed<unknown> | undefined {
+    const ref = ComputedRegistry._entries.get(key);
     if (ref === undefined) return undefined;
     const computed = ref.deref();
     if (computed === undefined) {
-      this._entries.delete(key);
+      ComputedRegistry._entries.delete(key);
       return undefined;
     }
     return computed;
   }
 
-  register(computed: Computed<unknown>): void {
+  static register(computed: Computed<unknown>): void {
     const key = computed.input as string;
-    this._entries.set(key, new WeakRef(computed));
-    this._finalization.register(computed, key);
+    ComputedRegistry._entries.set(key, new WeakRef(computed));
+    ComputedRegistry._finalization.register(computed, key, computed);
   }
 
-  remove(key: string): void {
-    this._entries.delete(key);
-  }
-
-  clear(): void {
-    this._entries.clear();
+  static unregister(computed: Computed<unknown>): void {
+    const key = computed.input as string;
+    ComputedRegistry._entries.delete(key);
+    ComputedRegistry._finalization.unregister(computed);
   }
 }
-
-// Global singleton registry
-export const computedRegistry = new ComputedRegistry();

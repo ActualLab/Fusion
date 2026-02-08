@@ -3,14 +3,12 @@ import { AsyncContext } from "@actuallab/core";
 import {
   ComputeFunction,
   ConsistencyState,
-  computedRegistry,
 } from "../src/index.js";
 
 const testInstance = { name: "testService" };
 
 describe("ComputeFunction", () => {
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
   });
 
@@ -90,7 +88,7 @@ describe("ComputeFunction", () => {
 
     const computed = await fn.invoke(testInstance, [1]);
     expect(computed.state).toBe(ConsistencyState.Consistent);
-    expect(computed.output?.ok).toBe(false);
+    expect(computed.hasError).toBe(true);
     expect(() => computed.value).toThrow("compute error");
   });
 
@@ -108,7 +106,7 @@ describe("ComputeFunction", () => {
     const innerFn = new ComputeFunction("inner", function(this: any, x: unknown) { return (x as number) * 2; });
     const outerFn = new ComputeFunction("outer", async function(this: any, x: unknown) {
       const innerComputed = await innerFn.invoke(testInstance, [x]);
-      return innerComputed.use() + 1;
+      return (innerComputed.value as number) + 1;
     });
 
     const outer = await outerFn.invoke(testInstance, [5]);

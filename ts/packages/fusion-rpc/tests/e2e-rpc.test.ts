@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { AsyncContext } from "@actuallab/core";
 import {
   MutableState,
-  computedRegistry,
   computeMethod,
 } from "@actuallab/fusion";
 import {
@@ -56,7 +55,6 @@ describe("End-to-end Fusion over RPC", () => {
   }
 
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
     store.clear();
 
@@ -66,10 +64,10 @@ describe("End-to-end Fusion over RPC", () => {
     // Register compute service on server using decorator-based contract
     serverHub.registerComputeService(ICounterService, {
       async getCount(key: string): Promise<number> {
-        return getState(key).value;
+        return getState(key).use();
       },
       async getDoubled(key: string): Promise<number> {
-        return getState(key).value * 2;
+        return getState(key).use() * 2;
       },
     });
 

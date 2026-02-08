@@ -1,5 +1,5 @@
 import { ComputeFunction } from "./compute-function.js";
-import { computedRegistry } from "./computed-registry.js";
+import { ComputedRegistry } from "./computed-registry.js";
 
 const METHODS_META = Symbol.for("actuallab.methods");
 
@@ -41,7 +41,7 @@ export function computeMethod<This, Args extends unknown[], Return>(
     };
     (boundMethod as any).invalidate = (...args: unknown[]) => {
       const key = cf.buildKey(instance as object, args);
-      computedRegistry.get(key)?.invalidate();
+      ComputedRegistry.get(key)?.invalidate();
     };
     (this as any)[methodName] = boundMethod;
   });
@@ -63,7 +63,7 @@ export function wrapComputeMethod<Args extends unknown[], Return>(
 
   (wrapped as any).invalidate = (...args: unknown[]) => {
     const key = cf.buildKey(syntheticInstance, args);
-    computedRegistry.get(key)?.invalidate();
+    ComputedRegistry.get(key)?.invalidate();
   };
 
   return wrapped as any;

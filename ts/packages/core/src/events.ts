@@ -20,6 +20,10 @@ export class EventHandlerSet<T> {
     for (const handler of this._handlers) handler(arg);
   }
 
+  clear(): void {
+    this._handlers.clear();
+  }
+
   whenNext(): Promise<T> {
     const ps = new PromiseSource<T>();
     const handler = (arg: T) => {

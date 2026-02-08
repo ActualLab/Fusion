@@ -30,3 +30,5 @@ export class PromiseSource<T> {
     return true;
   }
 }
+
+export const resolvedVoidPromise: Promise<void> = Promise.resolve();

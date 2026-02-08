@@ -5,8 +5,7 @@ import {
   ComputeFunction,
   ComputedState,
   MutableState,
-  computedRegistry,
-  NoDelayer,
+  FixedDelayer,
 } from "../src/index.js";
 
 function delay(ms: number): Promise<void> {
@@ -15,28 +14,18 @@ function delay(ms: number): Promise<void> {
 
 describe("End-to-end local Fusion", () => {
   beforeEach(() => {
-    computedRegistry.clear();
     AsyncContext.current = undefined;
   });
 
   it("should cascade invalidation through MutableState → ComputeFunction → ComputedState", async () => {
     const source = new MutableState(10);
 
-    // A compute function that reads from the mutable state
-    const doubled = new ComputeFunction("doubled", function() {
-      return source.value * 2;
-    });
-    const instance = {};
+    const state = new ComputedState<number>(() => source.use() * 2, { updateDelayer: FixedDelayer.zero });
 
-    // Wrap in ComputedState for auto-update
-    const state = new ComputedState<number>(() => doubled.invoke(instance, []), { delayer: new NoDelayer() });
-
-    await state.initialize();
+    await state.whenFirstTimeUpdated();
     expect(state.value).toBe(20);
 
-    // Mutate the source
     source.set(50);
-
     await delay(50);
     expect(state.value).toBe(100);
   });
@@ -45,43 +34,44 @@ describe("End-to-end local Fusion", () => {
     const source = new MutableState(5);
     const instance = {};
 
-    const baseFn = new ComputeFunction("base", function() { return source.value; });
+    const baseFn = new ComputeFunction("base", function() { return source.use(); });
     const derivedFn = new ComputeFunction("derived", async function() {
       const baseComputed = await baseFn.invoke(instance, []);
-      return baseComputed.use() + 100;
+      return (baseComputed.value as number) + 100;
     });
 
-    const state = new ComputedState<number>(() => derivedFn.invoke(instance, []), { delayer: new NoDelayer() });
+    const state = new ComputedState<number>(
+      async () => {
+        const computed = await derivedFn.invoke(instance, []);
+        return computed.value as number;
+      },
+      { updateDelayer: FixedDelayer.zero },
+    );
 
-    await state.initialize();
-    expect(state.value).toBe(105); // 5 + 100
+    await state.whenFirstTimeUpdated();
+    expect(state.value).toBe(105);
 
     source.set(20);
     await delay(50);
-    expect(state.value).toBe(120); // 20 + 100
+    expect(state.value).toBe(120);
   });
 
   it("should cascade through multiple MutableState dependencies", async () => {
     const price = new MutableState(100);
     const quantity = new MutableState(3);
-    const instance = {};
 
-    const totalFn = new ComputeFunction("total", function() {
-      return price.value * quantity.value;
-    });
+    const state = new ComputedState<number>(() => price.use() * quantity.use(), { updateDelayer: FixedDelayer.zero });
 
-    const state = new ComputedState<number>(() => totalFn.invoke(instance, []), { delayer: new NoDelayer() });
-
-    await state.initialize();
+    await state.whenFirstTimeUpdated();
     expect(state.value).toBe(300);
 
     price.set(200);
     await delay(50);
-    expect(state.value).toBe(600); // 200 * 3
+    expect(state.value).toBe(600);
 
     quantity.set(5);
     await delay(50);
-    expect(state.value).toBe(1000); // 200 * 5
+    expect(state.value).toBe(1000);
   });
 
   it("should work with @computeMethod decorator", async () => {
@@ -95,19 +85,15 @@ describe("End-to-end local Fusion", () => {
 
       async increment(id: string): Promise<void> {
         this.store.set(id, (this.store.get(id) ?? 0) + 1);
-        this.getValue.invalidate(id);
+        (this.getValue as any).invalidate(id);
       }
     }
 
     const svc = new CounterService();
 
-    // Initial value
+    expect(await svc.getValue("x")).toBe(0);
     expect(await svc.getValue("x")).toBe(0);
 
-    // Cached
-    expect(await svc.getValue("x")).toBe(0);
-
-    // Mutate and invalidate
     await svc.increment("x");
     expect(await svc.getValue("x")).toBe(1);
 

@@ -1,112 +1,90 @@
-import { EventHandlerSet, type Result, error } from "@actuallab/core";
-import type { Computed } from "./computed.js";
-import { StateBase } from "./computed-input.js";
-import type { UpdateDelayer } from "./update-delayer.js";
-import { NoDelayer } from "./update-delayer.js";
-import type { State, StateOptions } from "./state.js";
+import { AsyncContext, type Result, result, errorResult } from "@actuallab/core";
+import { StateBoundComputed } from "./computed.js";
+import { ComputeContext, computeContextKey } from "./compute-context.js";
+import { defaultUpdateDelayer, type UpdateDelayer } from "./update-delayer.js";
+import { State } from "./state.js";
 
-export type StateComputer<T> = () => Promise<Computed<T>>;
+export type StateComputer<T> = () => T | Promise<T>;
+
+/** Constructor options for ComputedState. */
+export interface ComputedStateOptions<T> {
+  initialValue?: T;
+  initialOutput?: Result<T>;
+  updateDelayer?: UpdateDelayer;
+}
 
 /** Auto-updating reactive state wrapper — re-computes on invalidation with configurable delay. */
-export class ComputedState<T> extends StateBase implements State<T> {
+export class ComputedState<T> extends State<T> {
   private _computer: StateComputer<T>;
-  private _delayer: UpdateDelayer;
-  private _computed: Computed<T> | undefined;
-  private _lastNonErrorValue: T | undefined;
-  private _disposed = false;
-  private _updateScheduled = false;
+  private _updateDelayer: UpdateDelayer;
+  private _disposeController: AbortController;
 
-  readonly invalidated = new EventHandlerSet<void>();
-  readonly updated = new EventHandlerSet<Result<T>>();
-
-  constructor(computer: StateComputer<T>, options?: StateOptions<T>) {
+  constructor(computer: StateComputer<T>, options?: ComputedStateOptions<T>) {
     super();
     this._computer = computer;
-    this._delayer = options?.delayer ?? new NoDelayer();
+    this._updateDelayer = options?.updateDelayer ?? defaultUpdateDelayer;
+    this._disposeController = new AbortController();
 
-    // Apply initial output/value if provided
-    if (options?.initialOutput !== undefined) {
-      if (options.initialOutput.ok) {
-        this._lastNonErrorValue = options.initialOutput.value;
-      }
-    } else if (options?.initialValue !== undefined) {
-      this._lastNonErrorValue = options.initialValue;
-    }
+    // Create initial computed
+    if (options?.initialOutput !== undefined || options?.initialValue !== undefined)
+      this._initialize(options.initialOutput ?? options.initialValue as T);
+    else
+      this._computed = new StateBoundComputed<T>(this);
+
+    void this._updateCycle();
   }
 
-  get value(): T {
-    if (this._computed?.output?.ok === true) return this._computed.output.value;
+  override get value(): T {
+    if (this._computed.hasValue) return this._computed.value;
     if (this._lastNonErrorValue !== undefined) return this._lastNonErrorValue;
     throw new Error("ComputedState has no value yet.");
   }
 
-  get error(): unknown {
-    const output = this._computed?.output;
-    return output !== undefined && !output.ok ? output.error : undefined;
-  }
-
-  get lastNonErrorValue(): T | undefined {
-    return this._lastNonErrorValue;
-  }
-
-  get output(): Result<T> | undefined {
-    return this._computed?.output;
-  }
-
-  get computed(): Computed<T> | undefined {
-    return this._computed;
+  override get valueOrUndefined(): T | undefined {
+    return this._computed.valueOrUndefined ?? this._lastNonErrorValue;
   }
 
   get isDisposed(): boolean {
-    return this._disposed;
-  }
-
-  async initialize(): Promise<void> {
-    await this._update();
+    return this._disposeController.signal.aborted;
   }
 
   dispose(): void {
-    this._disposed = true;
-    this._computed = undefined;
+    if (!this.isDisposed)
+      this._disposeController.abort();
   }
 
-  private async _update(): Promise<void> {
-    if (this._disposed) return;
-
+  private async _updateCycle(): Promise<void> {
+    const disposeSignal = this._disposeController.signal;
     try {
-      const computed = await this._computer();
-      this._computed = computed;
+      while (!disposeSignal.aborted) {
+        // Compute
+        const computed = new StateBoundComputed<T>(this);
+        const computeCtx = new ComputeContext(computed as StateBoundComputed<unknown>);
+        const asyncCtx = (AsyncContext.current ?? AsyncContext.empty)
+          .with(computeContextKey, computeCtx);
 
-      if (computed.output?.ok === true) {
-        this._lastNonErrorValue = computed.output.value;
+        let output: Result<T>;
+        try {
+          const value = asyncCtx.run(() => this._computer());
+          const resolved = value instanceof Promise ? await value : value;
+          output = result(resolved);
+        } catch (e) {
+          output = errorResult(e);
+        }
+        this._update(computed, output);
+
+        // Wait for invalidation (or cancellation via dispose)
+        try {
+          await computed.whenInvalidated(disposeSignal);
+        } catch {
+          return; // Cancelled via dispose
+        }
+
+        await this._updateDelayer(disposeSignal);
       }
 
-      this.updated.trigger(computed.output ?? error(new Error("No output")));
-
-      // Subscribe to invalidation
-      computed.onInvalidated = () => {
-        if (this._disposed) return;
-        this.invalidated.trigger();
-        this._scheduleUpdate();
-      };
     } catch (e) {
-      const result: Result<T> = error(e);
-      this.updated.trigger(result);
-    }
-  }
-
-  private _scheduleUpdate(): void {
-    if (this._updateScheduled || this._disposed) return;
-    this._updateScheduled = true;
-
-    void (async () => {
-      try {
-        await this._delayer.delay();
-        this._updateScheduled = false;
-        await this._update();
-      } catch {
-        this._updateScheduled = false;
-      }
-    })();
+      // Intended, do nothing
+    } 
   }
 }
