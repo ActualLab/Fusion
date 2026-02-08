@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { AsyncContext } from "@actuallab/core";
-import { Computed, ConsistencyState, ComputedInput, ComputeContext, computeContextKey, computedRegistry } from "../src/index.js";
+import { Computed, ConsistencyState, ComputeContext, computeContextKey, computedRegistry } from "../src/index.js";
 
-function makeInput(method: string, ...args: unknown[]): ComputedInput {
-  return new ComputedInput(`Test.${method}:${args.map(a => JSON.stringify(a)).join(",")}`);
+let _testKeyCounter = 0;
+function makeKey(method: string, ...args: unknown[]): string {
+  return `Test.${method}[${++_testKeyCounter}]:${args.map(a => JSON.stringify(a)).join(",")}`;
 }
 
 describe("Computed", () => {
@@ -13,13 +14,13 @@ describe("Computed", () => {
   });
 
   it("should start in Computing state", () => {
-    const c = new Computed<number>(makeInput("get", 1));
+    const c = new Computed<number>(makeKey("get", 1));
     expect(c.state).toBe(ConsistencyState.Computing);
     expect(c.output).toBeUndefined();
   });
 
   it("should transition to Consistent after setOutput", () => {
-    const c = new Computed<number>(makeInput("get", 1));
+    const c = new Computed<number>(makeKey("get", 1));
     c.setOutput(42);
     expect(c.state).toBe(ConsistencyState.Consistent);
     expect(c.isConsistent).toBe(true);
@@ -28,7 +29,7 @@ describe("Computed", () => {
   });
 
   it("should transition to Consistent after setError", () => {
-    const c = new Computed<number>(makeInput("get", 1));
+    const c = new Computed<number>(makeKey("get", 1));
     c.setError(new Error("boom"));
     expect(c.state).toBe(ConsistencyState.Consistent);
     expect(c.output?.ok).toBe(false);
@@ -36,19 +37,19 @@ describe("Computed", () => {
   });
 
   it("should throw when accessing value before output set", () => {
-    const c = new Computed<number>(makeInput("get", 1));
+    const c = new Computed<number>(makeKey("get", 1));
     expect(() => c.value).toThrow("no value");
   });
 
   it("should invalidate from Consistent state", () => {
-    const c = new Computed<number>(makeInput("get", 1));
+    const c = new Computed<number>(makeKey("get", 1));
     c.setOutput(42);
     c.invalidate();
     expect(c.state).toBe(ConsistencyState.Invalidated);
   });
 
   it("should be idempotent on invalidation", () => {
-    const c = new Computed<number>(makeInput("get", 1));
+    const c = new Computed<number>(makeKey("get", 1));
     c.setOutput(42);
     let count = 0;
     c.onInvalidated = () => count++;
@@ -58,7 +59,7 @@ describe("Computed", () => {
   });
 
   it("should fire onInvalidated callback", () => {
-    const c = new Computed<number>(makeInput("get", 1));
+    const c = new Computed<number>(makeKey("get", 1));
     c.setOutput(42);
     let fired = false;
     c.onInvalidated = () => { fired = true; };
@@ -74,8 +75,8 @@ describe("Computed dependency tracking", () => {
   });
 
   it("should track forward dependencies", () => {
-    const parent = new Computed<number>(makeInput("parent", 1));
-    const child = new Computed<number>(makeInput("child", 1));
+    const parent = new Computed<number>(makeKey("parent", 1));
+    const child = new Computed<number>(makeKey("child", 1));
     child.setOutput(10);
     computedRegistry.register(child);
 
@@ -84,12 +85,12 @@ describe("Computed dependency tracking", () => {
   });
 
   it("should cascade invalidation from child to parent", () => {
-    const parentInput = makeInput("parent", 1);
-    const parent = new Computed<number>(parentInput);
+    const parentKey = makeKey("parent", 1);
+    const parent = new Computed<number>(parentKey);
     parent.setOutput(100);
     computedRegistry.register(parent);
 
-    const child = new Computed<number>(makeInput("child", 1));
+    const child = new Computed<number>(makeKey("child", 1));
     child.setOutput(10);
     computedRegistry.register(child);
 
@@ -101,19 +102,19 @@ describe("Computed dependency tracking", () => {
   });
 
   it("should cascade invalidation through multiple levels", () => {
-    const inputA = makeInput("a", 1);
-    const inputB = makeInput("b", 1);
-    const inputC = makeInput("c", 1);
+    const keyA = makeKey("a", 1);
+    const keyB = makeKey("b", 1);
+    const keyC = makeKey("c", 1);
 
-    const a = new Computed<number>(inputA);
+    const a = new Computed<number>(keyA);
     a.setOutput(1);
     computedRegistry.register(a);
 
-    const b = new Computed<number>(inputB);
+    const b = new Computed<number>(keyB);
     b.setOutput(2);
     computedRegistry.register(b);
 
-    const c = new Computed<number>(inputC);
+    const c = new Computed<number>(keyC);
     c.setOutput(3);
     computedRegistry.register(c);
 
@@ -128,19 +129,19 @@ describe("Computed dependency tracking", () => {
   });
 
   it("should not cascade to wrong version", () => {
-    const parentInput = makeInput("parent", 1);
-    const parent1 = new Computed<number>(parentInput);
+    const parentKey = makeKey("parent", 1);
+    const parent1 = new Computed<number>(parentKey);
     parent1.setOutput(100);
     computedRegistry.register(parent1);
 
-    const child = new Computed<number>(makeInput("child", 1));
+    const child = new Computed<number>(makeKey("child", 1));
     child.setOutput(10);
     computedRegistry.register(child);
 
     parent1.addDependency(child);
 
     // Replace parent with a new version
-    const parent2 = new Computed<number>(parentInput);
+    const parent2 = new Computed<number>(parentKey);
     parent2.setOutput(200);
     computedRegistry.register(parent2);
 
@@ -157,8 +158,8 @@ describe("Computed.use() dependency capture", () => {
   });
 
   it("should capture dependency when used inside ComputeContext via AsyncContext", () => {
-    const parent = new Computed<number>(makeInput("parent", 1));
-    const child = new Computed<number>(makeInput("child", 1));
+    const parent = new Computed<number>(makeKey("parent", 1));
+    const child = new Computed<number>(makeKey("child", 1));
     child.setOutput(42);
 
     const ctx = new ComputeContext(parent as Computed<unknown>);
@@ -172,7 +173,7 @@ describe("Computed.use() dependency capture", () => {
   });
 
   it("should not capture when no AsyncContext is active", () => {
-    const child = new Computed<number>(makeInput("child", 1));
+    const child = new Computed<number>(makeKey("child", 1));
     child.setOutput(42);
 
     // No active context — just returns value, no side effects

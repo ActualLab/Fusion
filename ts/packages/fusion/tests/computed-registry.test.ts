@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { Computed, ComputedInput, computedRegistry } from "../src/index.js";
+import { Computed, computedRegistry } from "../src/index.js";
 
-function makeInput(method: string, ...args: unknown[]): ComputedInput {
-  return new ComputedInput(`Test.${method}:${args.map(a => JSON.stringify(a)).join(",")}`);
+let _testKeyCounter = 0;
+function makeKey(method: string, ...args: unknown[]): string {
+  return `Test.${method}[${++_testKeyCounter}]:${args.map(a => JSON.stringify(a)).join(",")}`;
 }
 
 describe("ComputedRegistry", () => {
@@ -11,46 +12,46 @@ describe("ComputedRegistry", () => {
   });
 
   it("should register and retrieve computed", () => {
-    const input = makeInput("get", 1);
-    const computed = new Computed<number>(input);
+    const key = makeKey("get", 1);
+    const computed = new Computed<number>(key);
     computed.setOutput(42);
     computedRegistry.register(computed);
 
-    const retrieved = computedRegistry.get(input);
+    const retrieved = computedRegistry.get(key);
     expect(retrieved).toBe(computed);
   });
 
   it("should return undefined for missing input", () => {
-    const input = makeInput("get", 999);
-    expect(computedRegistry.get(input)).toBeUndefined();
+    const key = makeKey("get", 999);
+    expect(computedRegistry.get(key)).toBeUndefined();
   });
 
   it("should overwrite on re-register", () => {
-    const input = makeInput("get", 1);
-    const c1 = new Computed<number>(input);
+    const key = makeKey("get", 1);
+    const c1 = new Computed<number>(key);
     c1.setOutput(1);
     computedRegistry.register(c1);
 
-    const c2 = new Computed<number>(input);
+    const c2 = new Computed<number>(key);
     c2.setOutput(2);
     computedRegistry.register(c2);
 
-    const retrieved = computedRegistry.get(input);
+    const retrieved = computedRegistry.get(key);
     expect(retrieved).toBe(c2);
   });
 
   it("should remove entries", () => {
-    const input = makeInput("get", 1);
-    const computed = new Computed<number>(input);
+    const key = makeKey("get", 1);
+    const computed = new Computed<number>(key);
     computedRegistry.register(computed);
-    computedRegistry.remove(input);
-    expect(computedRegistry.get(input)).toBeUndefined();
+    computedRegistry.remove(key);
+    expect(computedRegistry.get(key)).toBeUndefined();
   });
 
   it("should track size", () => {
     expect(computedRegistry.size).toBe(0);
-    const input = makeInput("get", 1);
-    computedRegistry.register(new Computed<number>(input));
+    const key = makeKey("get", 1);
+    computedRegistry.register(new Computed<number>(key));
     expect(computedRegistry.size).toBe(1);
     computedRegistry.clear();
     expect(computedRegistry.size).toBe(0);

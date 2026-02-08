@@ -5,12 +5,7 @@ import {
   wrapComputeMethod,
   getMethodsMeta,
   computedRegistry,
-  ComputedInput,
 } from "../src/index.js";
-
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
 
 describe("@computeMethod decorator", () => {
   beforeEach(() => {
