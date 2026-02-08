@@ -2,6 +2,7 @@ import { AsyncContext, EventHandlerSet, type IResult, PromiseSource, Result, res
 import type { ComputedInput } from "./computed-input.js";
 import { ComputedRegistry } from "./computed-registry.js";
 import { ComputeContext, computeContextKey } from "./compute-context.js";
+import type { State } from "./state.js";
 
 let _nextVersion = 0;
 
@@ -20,10 +21,14 @@ export class Computed<T> implements IResult<T> {
   private _dependencies = new Set<Computed<unknown>>();
   private _dependants = new Map<number, WeakRef<Computed<unknown>>>();
   readonly onInvalidated = new EventHandlerSet<void>();
-  _renew: (() => Computed<T> | Promise<Computed<T>>) | undefined;
+  readonly _renewer: (() => Computed<T> | Promise<Computed<T>>) | undefined;
 
-  constructor(input: ComputedInput) {
+  constructor(
+    input: ComputedInput,
+    renewer?: () => Computed<T> | Promise<Computed<T>>,
+  ) {
     this.input = input;
+    this._renewer = renewer;
     this._version = ++_nextVersion;
     this._state = ConsistencyState.Computing;
   }
@@ -69,27 +74,29 @@ export class Computed<T> implements IResult<T> {
     return this._dependencies;
   }
 
+  update(): Computed<T> | Promise<Computed<T>> {
+    if (this._state === ConsistencyState.Consistent) return this;
+    const latest = this._latest();
+    if (latest?.isConsistent) return latest;
+    if (this._renewer !== undefined) return this._renewer();
+    throw new Error("Cannot recompute: Computed is invalidated and has no renewer.");
+  }
+
+  protected _latest(): Computed<T> | undefined {
+    return ComputedRegistry.get(this.input as string) as Computed<T> | undefined;
+  }
+
   use(asyncContext?: AsyncContext): T | Promise<T> {
     const ctx = ComputeContext.from(asyncContext);
-
-    if (this._state === ConsistencyState.Consistent) {
-      ctx?.captureDependency(this as Computed<unknown>);
-      return this.value;
+    const updated = this.update();
+    if (updated instanceof Promise) {
+      return updated.then((c) => {
+        ctx?.captureDependency(c as Computed<unknown>);
+        return c.value;
+      });
     }
-
-    if (this._renew !== undefined) {
-      const renewed = this._renew();
-      if (renewed instanceof Promise) {
-        return renewed.then((c) => {
-          ctx?.captureDependency(c as Computed<unknown>);
-          return c.value;
-        });
-      }
-      ctx?.captureDependency(renewed as Computed<unknown>);
-      return renewed.value;
-    }
-
-    throw new Error("Cannot recompute: Computed is invalidated and has no _renew function.");
+    ctx?.captureDependency(updated as Computed<unknown>);
+    return updated.value;
   }
 
   useInconsistent(asyncContext?: AsyncContext): T {
@@ -159,6 +166,14 @@ export class Computed<T> implements IResult<T> {
 
 /** Computed variant for State types — skips registry registration since the State holds a direct reference. */
 export class StateBoundComputed<T> extends Computed<T> {
+  constructor(state: State<T>) {
+    super(state);
+  }
+
+  protected override _latest(): Computed<T> | undefined {
+    return (this.input as State<T>).computed;
+  }
+
   protected override _register(): void {
     // No registration — state holds direct reference
   }

@@ -38,18 +38,18 @@ export class ComputeFunction {
     return key;
   }
 
-  async invoke(instance: object, allArgs: unknown[]): Promise<Computed<unknown>> {
+  async invoke(instance: object, args: unknown[], prevComputed?: Computed<unknown>): Promise<Computed<unknown>> {
     // 1. Resolve AsyncContext ONCE via DRY helper
-    const asyncCtx = AsyncContext.fromArgs(allArgs);
+    const asyncCtx = AsyncContext.fromArgs(args);
 
     // 2. Pull caller's ComputeContext directly
     const callerComputeCtx = asyncCtx?.get(computeContextKey);
 
     // 3. Strip THIS context from args (reference equality — safe)
-    const args = asyncCtx?.stripFromArgs(allArgs) ?? allArgs;
+    const argsWithoutCtx = asyncCtx?.stripFromArgs(args) ?? args;
 
     // 4. Build string key and check cache
-    const key = this.buildKey(instance, args);
+    const key = this.buildKey(instance, argsWithoutCtx);
     const existing = ComputedRegistry.get(key);
     if (existing?.isConsistent) {
       callerComputeCtx?.captureDependency(existing);
@@ -69,8 +69,9 @@ export class ComputeFunction {
       if (cached?.isConsistent) return cached;
 
       // 6. Create new Computed + ComputeContext
-      const newComputed = new Computed<unknown>(key);
-      newComputed._renew = () => this.invoke(instance, args);
+      let newComputed: Computed<unknown>;
+      const renewer = prevComputed?._renewer ?? (() => this.invoke(instance, argsWithoutCtx, newComputed));
+      newComputed = new Computed<unknown>(key, renewer);
 
       const childComputeCtx = new ComputeContext(newComputed);
       const childAsyncCtx = (asyncCtx ?? AsyncContext.empty)
@@ -79,7 +80,7 @@ export class ComputeFunction {
       // 7. Run with clean args — no stale AsyncContext to override .run()
       let fnResult: Result<unknown>;
       try {
-        const value = childAsyncCtx.run(() => this._impl.call(instance, ...args));
+        const value = childAsyncCtx.run(() => this._impl.call(instance, ...argsWithoutCtx));
         const resolved = value instanceof Promise ? await value : value;
         fnResult = result(resolved);
       } catch (e) {

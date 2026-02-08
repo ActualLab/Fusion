@@ -180,35 +180,31 @@ describe("Computed.use() dependency capture", () => {
     expect(() => c.useInconsistent()).toThrow("no output");
   });
 
-  it("should async recompute via _renew when invalidated", async () => {
-    const c = new Computed<number>(makeKey("get", 1));
-    c.setOutput(42);
-
+  it("should recompute via renewer when invalidated", async () => {
     const renewed = new Computed<number>(makeKey("get", 2));
     renewed.setOutput(99);
 
-    c._renew = () => renewed;
+    const c = new Computed<number>(makeKey("get", 1), () => renewed);
+    c.setOutput(42);
     c.invalidate();
 
     const val = c.use();
     expect(val).toBe(99);
   });
 
-  it("should async recompute via _renew returning Promise", async () => {
-    const c = new Computed<number>(makeKey("get", 1));
-    c.setOutput(42);
-
+  it("should recompute via renewer returning Promise", async () => {
     const renewed = new Computed<number>(makeKey("get", 2));
     renewed.setOutput(77);
 
-    c._renew = () => Promise.resolve(renewed);
+    const c = new Computed<number>(makeKey("get", 1), () => Promise.resolve(renewed));
+    c.setOutput(42);
     c.invalidate();
 
     const val = await c.use();
     expect(val).toBe(77);
   });
 
-  it("should throw when invalidated with no _renew", () => {
+  it("should throw when invalidated with no renewer", () => {
     const c = new Computed<number>(makeKey("get", 1));
     c.setOutput(42);
     c.invalidate();
