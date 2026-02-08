@@ -11,34 +11,25 @@ export function getInstanceId(instance: object): number {
   return id;
 }
 
-/** Base — identity key for any computed value. States inherit from this directly. */
-export class ComputedInput {
-  readonly key: string;
+let _nextStateId = 0;
 
-  constructor(key: string) {
-    this.key = key;
-  }
+/** Base class for all state types — serves as ComputedInput identity by reference. */
+export abstract class StateBase {
+  readonly stateKey: string;
 
-  equals(other: ComputedInput): boolean {
-    return this.key === other.key;
-  }
-
-  toString(): string {
-    return this.key;
+  constructor(prefix: string) {
+    this.stateKey = `${prefix}#${++_nextStateId}`;
   }
 }
 
-/** Extended input for compute methods — adds instance ref, method name, args. */
-export class ComputeMethodInput extends ComputedInput {
-  readonly instance: object;
-  readonly methodName: string;
-  readonly args: unknown[];
+/**
+ * Identity key for any computed value.
+ * - String for compute method results (built from instance + function + args)
+ * - StateBase for state types (identity by reference)
+ */
+export type ComputedInput = string | StateBase;
 
-  constructor(instance: object, methodName: string, args: unknown[]) {
-    const instanceId = getInstanceId(instance);
-    super(`${instanceId}.${methodName}:${args.map(a => JSON.stringify(a)).join(",")}`);
-    this.instance = instance;
-    this.methodName = methodName;
-    this.args = args;
-  }
+/** Extract a string key from a ComputedInput. */
+export function inputKey(input: ComputedInput): string {
+  return typeof input === "string" ? input : input.stateKey;
 }

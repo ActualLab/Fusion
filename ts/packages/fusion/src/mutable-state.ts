@@ -1,18 +1,16 @@
 import { EventHandlerSet, type Result, ok } from "@actuallab/core";
 import { Computed } from "./computed.js";
-import { ComputedInput } from "./computed-input.js";
+import { StateBase } from "./computed-input.js";
 import type { State } from "./state.js";
 
-let _mutableStateCounter = 0;
-
 /** Manually-settable reactive state that can participate in the Fusion dependency graph. */
-export class MutableState<T> extends ComputedInput implements State<T> {
+export class MutableState<T> extends StateBase implements State<T> {
   private _computed: Computed<T>;
 
   readonly changed = new EventHandlerSet<T>();
 
   constructor(initialValue: T) {
-    super(`MutableState#${++_mutableStateCounter}:value`);
+    super("MutableState");
     this._computed = new Computed<T>(this);
     this._computed.setOutput(initialValue);
   }

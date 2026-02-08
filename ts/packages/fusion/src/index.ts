@@ -1,4 +1,5 @@
-export { ComputedInput, ComputeMethodInput, getInstanceId } from "./computed-input.js";
+export { getInstanceId, StateBase, inputKey } from "./computed-input.js";
+export type { ComputedInput } from "./computed-input.js";
 export { Computed, ConsistencyState } from "./computed.js";
 export { ComputeContext, computeContextKey } from "./compute-context.js";
 export { ComputedRegistry, computedRegistry } from "./computed-registry.js";

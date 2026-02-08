@@ -14,6 +14,31 @@ describe("ComputeFunction", () => {
     AsyncContext.current = undefined;
   });
 
+  it("should have a unique sequential id", () => {
+    const fn1 = new ComputeFunction("alpha", function() { return 1; });
+    const fn2 = new ComputeFunction("beta", function() { return 2; });
+    expect(fn1.id).toMatch(/^alpha\[\d+\]$/);
+    expect(fn2.id).toMatch(/^beta\[\d+\]$/);
+    expect(fn1.id).not.toBe(fn2.id);
+  });
+
+  it("should build keys with Record Separator delimiter", () => {
+    const fn = new ComputeFunction("getValue", function() { return 1; });
+    const key = fn.buildKey(testInstance, ["hello", 42]);
+    const parts = key.split("\x1E");
+    expect(parts.length).toBe(4); // instanceId, functionId, arg0, arg1
+    expect(parts[1]).toBe(fn.id);
+    expect(parts[2]).toBe('"hello"');
+    expect(parts[3]).toBe("42");
+  });
+
+  it("should support overridable argToString", () => {
+    const fn = new ComputeFunction("custom", function() { return 1; });
+    fn.argToString = (arg) => String(arg).toUpperCase();
+    const key = fn.buildKey(testInstance, ["hello"]);
+    expect(key).toContain("HELLO");
+  });
+
   it("should produce a Consistent computed with the function result", async () => {
     const fn = new ComputeFunction("double", function(this: any, x: unknown) { return (x as number) * 2; });
     const computed = await fn.invoke(testInstance, [5]);

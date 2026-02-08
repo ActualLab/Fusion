@@ -1,5 +1,5 @@
 import { AsyncContext, type Result, ok, error } from "@actuallab/core";
-import type { ComputedInput } from "./computed-input.js";
+import { type ComputedInput, inputKey } from "./computed-input.js";
 import { computedRegistry } from "./computed-registry.js";
 import { computeContextKey } from "./compute-context.js";
 
@@ -101,7 +101,7 @@ export class Computed<T> {
 
   addDependency(dependency: Computed<unknown>): void {
     this._dependencies.add(dependency);
-    dependency._dependants.set(this.input.key, {
+    dependency._dependants.set(inputKey(this.input), {
       input: this.input,
       version: this._version,
     });

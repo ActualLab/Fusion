@@ -1,16 +1,14 @@
 import { EventHandlerSet, type Result, error } from "@actuallab/core";
 import type { Computed } from "./computed.js";
-import { ComputedInput } from "./computed-input.js";
+import { StateBase } from "./computed-input.js";
 import type { UpdateDelayer } from "./update-delayer.js";
 import { NoDelayer } from "./update-delayer.js";
 import type { State, StateOptions } from "./state.js";
 
 export type StateComputer<T> = () => Promise<Computed<T>>;
 
-let _computedStateCounter = 0;
-
 /** Auto-updating reactive state wrapper — re-computes on invalidation with configurable delay. */
-export class ComputedState<T> extends ComputedInput implements State<T> {
+export class ComputedState<T> extends StateBase implements State<T> {
   private _computer: StateComputer<T>;
   private _delayer: UpdateDelayer;
   private _computed: Computed<T> | undefined;
@@ -22,7 +20,7 @@ export class ComputedState<T> extends ComputedInput implements State<T> {
   readonly updated = new EventHandlerSet<Result<T>>();
 
   constructor(computer: StateComputer<T>, options?: StateOptions<T>) {
-    super(`ComputedState#${++_computedStateCounter}:value`);
+    super("ComputedState");
     this._computer = computer;
     this._delayer = options?.delayer ?? new NoDelayer();
 
