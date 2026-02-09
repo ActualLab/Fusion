@@ -48,6 +48,16 @@ export class RpcOutboundCallTracker {
     return [...this._calls.keys()];
   }
 
+  /** Reject all pending calls with the given error and resolve compute invalidations. */
+  rejectAll(error: Error): void {
+    for (const call of this._calls.values()) {
+      call.result.reject(error);
+      if (call instanceof RpcOutboundComputeCall)
+        call.whenInvalidated.resolve();
+    }
+    this._calls.clear();
+  }
+
   clear(): void {
     this._calls.clear();
   }

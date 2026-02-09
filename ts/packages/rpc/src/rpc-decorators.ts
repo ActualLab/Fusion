@@ -5,6 +5,7 @@ export interface MethodMeta {
   argCount: number;
   compute?: boolean;
   stream?: boolean;
+  noWait?: boolean;
 }
 
 export interface ServiceMeta {
@@ -32,8 +33,8 @@ export function rpcService(serviceName: string) {
   };
 }
 
-/** Method decorator — stores RPC method metadata (argCount, stream). Does NOT wrap the method. */
-export function rpcMethod(options?: { stream?: boolean }) {
+/** Method decorator — stores RPC method metadata (argCount, stream, noWait). Does NOT wrap the method. */
+export function rpcMethod(options?: { stream?: boolean; noWait?: boolean }) {
   return function<This, Args extends unknown[], Return>(
     target: (this: This, ...args: Args) => Return,
     context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Return>,
@@ -44,6 +45,7 @@ export function rpcMethod(options?: { stream?: boolean }) {
       ...methods[methodName],
       argCount: target.length,
       stream: options?.stream ?? false,
+      noWait: options?.noWait ?? false,
     };
     return target; // no wrapping — RPC proxy handles invocation
   };

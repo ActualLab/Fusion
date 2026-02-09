@@ -1,130 +1,118 @@
 import {
   RpcHub,
   RpcServerPeer,
-  RpcSystemCalls,
+  RpcWebSocketConnection,
+  RpcOutboundComputeCall,
   getServiceMeta,
   getMethodsMeta,
-  serializeMessage,
+  type RpcConnection,
   type WebSocketLike,
   type RpcServiceDef,
+  type RpcMethodDef,
   type RpcServiceImpl,
   type RpcDispatchContext,
+  type RpcPeer,
 } from "@actuallab/rpc";
 import {
   ComputeFunction,
+  ComputeContext,
   type ComputeFunctionImpl,
-  type MethodMeta,
 } from "@actuallab/fusion";
+import { AsyncContext } from "@actuallab/core";
 
-interface RegisteredComputeMethod {
-  cf: ComputeFunction;
-  instance: object;
+/** Builds an RpcServiceDef from decorator metadata on a contract class. */
+function buildServiceDefFromContract(
+  contractClass: abstract new (...args: any[]) => any,
+): RpcServiceDef {
+  const svcMeta = getServiceMeta(contractClass);
+  if (svcMeta === undefined) throw new Error("Contract class missing @rpcService metadata");
+
+  const methodsMeta = getMethodsMeta(contractClass) ?? {};
+  const methods = new Map<string, RpcMethodDef>();
+
+  for (const [name, meta] of Object.entries(methodsMeta)) {
+    methods.set(name, {
+      name,
+      serviceName: svcMeta.name,
+      argCount: meta.argCount,
+      compute: meta.compute ?? false,
+      stream: meta.stream ?? false,
+      noWait: meta.noWait ?? false,
+    });
+  }
+
+  return { name: svcMeta.name, methods, compute: true };
 }
 
 /** Central coordinator for Fusion + RPC — manages compute services, invalidation wiring. */
 export class FusionHub extends RpcHub {
-  private _computeMethods = new Map<string, RegisteredComputeMethod>();
-
-  /** Register a compute service using decorator metadata from its contract class. */
-  registerComputeService<T extends object>(
+  /** Convenience: register a compute service from decorator metadata on its contract class. */
+  addServiceFromContract<T extends object>(
     contractClass: abstract new (...args: any[]) => any,
     impl: T,
   ): void {
-    const svcMeta = getServiceMeta(contractClass);
-    if (svcMeta === undefined) throw new Error("Contract class missing @rpcService metadata");
-
-    const methodsMeta = getMethodsMeta(contractClass) ?? {};
-    this._registerServiceImpl(svcMeta.name, methodsMeta, impl);
-  }
-
-  /** Register a compute service using an RpcServiceDef (legacy API). */
-  registerComputeServiceDef(def: RpcServiceDef, impl: RpcServiceImpl): void {
-    const methodsMeta: Record<string, MethodMeta> = {};
-    for (const [name, methodDef] of def.methods) {
-      methodsMeta[name] = {
-        argCount: methodDef.argCount,
-        compute: methodDef.compute,
-        stream: methodDef.stream,
-      };
-    }
-    this._registerServiceImpl(def.name, methodsMeta, impl as object);
-  }
-
-  /** Register a plain (non-compute) RPC service. */
-  registerPlainService(def: RpcServiceDef, impl: RpcServiceImpl): void {
-    this.serviceHost.register(def, impl);
+    const def = buildServiceDefFromContract(contractClass);
+    this.addService(def, impl as unknown as RpcServiceImpl);
   }
 
   /** Accept an incoming WebSocket and create a server peer. */
   acceptConnection(ws: WebSocketLike): RpcServerPeer {
     const peerId = crypto.randomUUID();
-    const peer = new RpcServerPeer(peerId, this, ws);
+    const conn = new RpcWebSocketConnection(ws);
+    const peer = new RpcServerPeer(peerId, this, conn);
     this.addPeer(peer);
     return peer;
   }
 
-  private _registerServiceImpl(
-    serviceName: string,
-    methodsMeta: Record<string, MethodMeta>,
-    impl: object,
-  ): void {
-    const rpcImpl: RpcServiceImpl = {};
-    const methods = new Map<string, { name: string; serviceName: string; argCount: number; compute: boolean; stream: boolean }>();
+  /** Accept an RpcConnection and create a server peer. */
+  acceptRpcConnection(conn: RpcConnection): RpcServerPeer {
+    const peerId = crypto.randomUUID();
+    const peer = new RpcServerPeer(peerId, this, conn);
+    this.addPeer(peer);
+    return peer;
+  }
 
-    for (const [methodName, meta] of Object.entries(methodsMeta)) {
-      const isCompute = meta.compute ?? false;
-      const wireMethod = `${serviceName}.${methodName}`;
+  protected override _wrapComputeServerMethod(
+    _def: RpcServiceDef, methodName: string, _methodDef: RpcMethodDef,
+    fn: (...args: unknown[]) => unknown, impl: object,
+  ): (...args: unknown[]) => unknown {
+    // Route through ComputeFunction + wire invalidation → $sys-c.Invalidate
+    const cf = new ComputeFunction(methodName, fn as ComputeFunctionImpl);
+    return async (...args: unknown[]) => {
+      const context = extractDispatchContext(args);
+      const cleanArgs = context !== undefined ? args.slice(0, -1) : args;
 
-      methods.set(methodName, {
-        name: methodName,
-        serviceName,
-        argCount: meta.argCount,
-        compute: isCompute,
-        stream: meta.stream ?? false,
-      });
+      const computed = await cf.invoke(impl, cleanArgs);
 
-      if (isCompute) {
-        // Create a ComputeFunction for this method
-        const originalFn = (impl as any)[methodName] as ComputeFunctionImpl;
-        if (typeof originalFn !== "function") {
-          throw new Error(`Method ${wireMethod} not found on implementation`);
-        }
-
-        const cf = new ComputeFunction(methodName, originalFn);
-        this._computeMethods.set(wireMethod, { cf, instance: impl });
-
-        // Wrap for RPC dispatch: route through ComputeFunction, wire invalidation
-        rpcImpl[methodName] = async (...args: unknown[]) => {
-          const context = extractDispatchContext(args);
-          const cleanArgs = context !== undefined ? args.slice(0, -1) : args;
-
-          const computed = await cf.invoke(impl, cleanArgs);
-
-          // Wire invalidation → send $sys-c.Invalidate to the client
-          if (context !== undefined) {
-            computed.onInvalidated.add(() => {
-              const msg = serializeMessage({
-                Method: RpcSystemCalls.invalidate,
-                RelatedId: context.callId,
-              });
-              try { context.connection.send(msg); } catch { /* peer may be disconnected */ }
-            });
-          }
-
-          return computed.value;
-        };
-      } else {
-        // Plain method — pass through directly
-        const fn = (impl as any)[methodName];
-        if (typeof fn === "function") {
-          rpcImpl[methodName] = fn.bind(impl);
-        }
+      // Wire invalidation → send $sys-c.Invalidate to the client
+      if (context !== undefined) {
+        computed.onInvalidated.add(() => {
+          this.systemCallSender.invalidate(context.connection, context.callId);
+        });
       }
-    }
 
-    // Register with the service host using a synthetic RpcServiceDef
-    const serviceDef: RpcServiceDef = { name: serviceName, methods, compute: true };
-    this.serviceHost.register(serviceDef, rpcImpl);
+      return computed.value;
+    };
+  }
+
+  protected override _createComputeClientMethod(
+    peer: RpcPeer, def: RpcServiceDef, methodName: string, methodDef: RpcMethodDef,
+  ): (...args: unknown[]) => unknown {
+    const wireMethod = `${def.name}.${methodName}`;
+    // Local ComputeFunction whose impl makes an RPC call
+    const rpcImpl: ComputeFunctionImpl = async function(...args: unknown[]) {
+      const outboundCall = peer.call(wireMethod, args, true) as unknown as RpcOutboundComputeCall;
+      const value = await outboundCall.result.promise;
+      // Wire server invalidation → local computed invalidation
+      const computeCtx = ComputeContext.from(AsyncContext.current);
+      if (computeCtx) {
+        outboundCall.whenInvalidated.promise.then(() => computeCtx.computed.invalidate());
+      }
+      return value;
+    };
+    const cf = new ComputeFunction(methodName, rpcImpl);
+    const syntheticInstance = {};
+    return (...args: unknown[]) => cf.invoke(syntheticInstance, args.slice(0, methodDef.argCount)).then(c => c.value);
   }
 }
 
