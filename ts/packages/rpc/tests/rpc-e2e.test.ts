@@ -5,8 +5,8 @@ import {
   RpcServerPeer,
   defineRpcService,
   createRpcClient,
+  createMessageChannelPair,
 } from "../src/index.js";
-import { createMockWsPair } from "./mock-ws.js";
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -33,7 +33,7 @@ describe("RPC End-to-End", () => {
     clientHub = new RpcHub("client-hub");
 
     // Register service on server
-    serverHub.registerService(CalcServiceDef, {
+    serverHub.addService(CalcServiceDef, {
       add: (a: unknown, b: unknown) => (a as number) + (b as number),
       greet: (name: unknown) => `Hello, ${name}!`,
       fail: () => { throw new Error("intentional failure"); },
@@ -46,13 +46,13 @@ describe("RPC End-to-End", () => {
   });
 
   it("should call a remote method and get a result", async () => {
-    const [clientWs, serverWs] = createMockWsPair();
+    const [clientConn, serverConn] = createMessageChannelPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
-    clientPeer.connectWith(clientWs);
+    clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
-    const serverPeer = new RpcServerPeer("server", serverHub, serverWs);
+    const serverPeer = new RpcServerPeer("server", serverHub, serverConn);
     serverHub.addPeer(serverPeer);
 
     await delay(10); // Wait for connection
@@ -64,13 +64,13 @@ describe("RPC End-to-End", () => {
   });
 
   it("should call multiple methods", async () => {
-    const [clientWs, serverWs] = createMockWsPair();
+    const [clientConn, serverConn] = createMessageChannelPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
-    clientPeer.connectWith(clientWs);
+    clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
-    const serverPeer = new RpcServerPeer("server", serverHub, serverWs);
+    const serverPeer = new RpcServerPeer("server", serverHub, serverConn);
     serverHub.addPeer(serverPeer);
 
     await delay(10);
@@ -85,13 +85,13 @@ describe("RPC End-to-End", () => {
   });
 
   it("should propagate server errors", async () => {
-    const [clientWs, serverWs] = createMockWsPair();
+    const [clientConn, serverConn] = createMessageChannelPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
-    clientPeer.connectWith(clientWs);
+    clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
-    const serverPeer = new RpcServerPeer("server", serverHub, serverWs);
+    const serverPeer = new RpcServerPeer("server", serverHub, serverConn);
     serverHub.addPeer(serverPeer);
 
     await delay(10);
@@ -102,13 +102,13 @@ describe("RPC End-to-End", () => {
   });
 
   it("should handle concurrent calls", async () => {
-    const [clientWs, serverWs] = createMockWsPair();
+    const [clientConn, serverConn] = createMessageChannelPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
-    clientPeer.connectWith(clientWs);
+    clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
-    const serverPeer = new RpcServerPeer("server", serverHub, serverWs);
+    const serverPeer = new RpcServerPeer("server", serverHub, serverConn);
     serverHub.addPeer(serverPeer);
 
     await delay(10);
@@ -127,13 +127,13 @@ describe("RPC End-to-End", () => {
   });
 
   it("should detect disconnection", async () => {
-    const [clientWs, serverWs] = createMockWsPair();
+    const [clientConn, serverConn] = createMessageChannelPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
-    clientPeer.connectWith(clientWs);
+    clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
-    const serverPeer = new RpcServerPeer("server", serverHub, serverWs);
+    const serverPeer = new RpcServerPeer("server", serverHub, serverConn);
     serverHub.addPeer(serverPeer);
 
     await delay(10);
@@ -145,5 +145,81 @@ describe("RPC End-to-End", () => {
     clientPeer.close();
     await delay(10);
     expect(clientDisconnected).toBe(true);
+  });
+
+  it("should never throw from RpcConnection.send() on closed connection", async () => {
+    const [clientConn, serverConn] = createMessageChannelPair();
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn);
+    clientHub.addPeer(clientPeer);
+
+    const serverPeer = new RpcServerPeer("server", serverHub, serverConn);
+    serverHub.addPeer(serverPeer);
+
+    await delay(10);
+
+    clientConn.close();
+    await delay(10);
+
+    // Should not throw
+    expect(() => clientConn.send("test")).not.toThrow();
+  });
+
+  it("should handle noWait calls without registering in tracker", async () => {
+    const [clientConn, serverConn] = createMessageChannelPair();
+
+    const noWaitDef = defineRpcService("NoWaitService", {
+      fire: { args: [""], noWait: true },
+    });
+
+    let received: string | undefined;
+    serverHub.addService(noWaitDef, {
+      fire: (msg: unknown) => { received = msg as string; },
+    });
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn);
+    clientHub.addPeer(clientPeer);
+
+    const serverPeer = new RpcServerPeer("server", serverHub, serverConn);
+    serverHub.addPeer(serverPeer);
+
+    await delay(10);
+
+    // callNoWait should not throw and not register
+    const trackerSizeBefore = clientPeer.outbound.size;
+    clientPeer.callNoWait("NoWaitService.fire", ["hello"]);
+    expect(clientPeer.outbound.size).toBe(trackerSizeBefore);
+
+    await delay(50);
+    expect(received).toBe("hello");
+  });
+
+  it("should work with addService/addClient unified API", async () => {
+    const [clientConn, serverConn] = createMessageChannelPair();
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn);
+    clientHub.addPeer(clientPeer);
+
+    const serverPeer = new RpcServerPeer("server", serverHub, serverConn);
+    serverHub.addPeer(serverPeer);
+
+    await delay(10);
+
+    const calc = clientHub.addClient<ICalcService>(clientPeer, CalcServiceDef);
+
+    const result = await calc.add(5, 7);
+    expect(result).toBe(12);
+
+    const greeting = await calc.greet("addClient");
+    expect(greeting).toBe("Hello, addClient!");
+  });
+
+  it("should handle noWait call on disconnected peer silently", async () => {
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    // Not connected — should not throw
+    expect(() => clientPeer.callNoWait("CalcService.add", [1, 2])).not.toThrow();
   });
 });

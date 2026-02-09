@@ -1,7 +1,5 @@
 import { RpcSystemCalls, type RpcMessage } from "./rpc-message.js";
 import type { RpcOutboundCallTracker, RpcOutboundComputeCall } from "./rpc-call-tracker.js";
-import { serializeMessage } from "./rpc-serialization.js";
-import type { RpcConnection } from "./rpc-connection.js";
 
 /** Handles an incoming system call message and dispatches to the appropriate tracker. */
 export function handleSystemCall(
@@ -53,43 +51,4 @@ export function handleSystemCall(
       break;
     }
   }
-}
-
-/** Sends a $sys.Ok response. */
-export function sendOk(conn: RpcConnection, relatedId: number, result: unknown): void {
-  const msg = serializeMessage({ Method: RpcSystemCalls.ok, RelatedId: relatedId }, [result]);
-  conn.send(msg);
-}
-
-/** Sends a $sys.Error response. */
-export function sendError(conn: RpcConnection, relatedId: number, error: unknown): void {
-  const message = error instanceof Error ? error.message : String(error);
-  const msg = serializeMessage(
-    { Method: RpcSystemCalls.error, RelatedId: relatedId },
-    [{ Message: message }],
-  );
-  conn.send(msg);
-}
-
-/** Sends a $sys.KeepAlive message with active call IDs. */
-export function sendKeepAlive(conn: RpcConnection, activeCallIds: number[]): void {
-  const msg = serializeMessage({ Method: RpcSystemCalls.keepAlive }, [activeCallIds]);
-  conn.send(msg);
-}
-
-/** Sends a $sys.Handshake message. */
-export function sendHandshake(
-  conn: RpcConnection,
-  peerId: string,
-  hubId: string,
-  index: number,
-): void {
-  const msg = serializeMessage({ Method: RpcSystemCalls.handshake }, [{
-    RemotePeerId: peerId,
-    RemoteApiVersionSet: null,
-    RemoteHubId: hubId,
-    ProtocolVersion: 2,
-    Index: index,
-  }]);
-  conn.send(msg);
 }

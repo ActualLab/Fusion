@@ -19,8 +19,18 @@ export const WebSocketState = {
   CLOSED: 3,
 } as const;
 
-/** Wraps a WebSocket — handles frame splitting and message queueing. */
-export class RpcConnection {
+/** Abstract RPC connection — transport-agnostic interface for sending/receiving messages. */
+export interface RpcConnection {
+  readonly isOpen: boolean;
+  readonly whenConnected: Promise<void>;
+  readonly messageReceived: EventHandlerSet<string>;
+  readonly closed: EventHandlerSet<{ code: number; reason: string }>;
+  send(serializedMessage: string): void;
+  close(code?: number, reason?: string): void;
+}
+
+/** WebSocket-based RpcConnection — handles frame splitting and message queueing. */
+export class RpcWebSocketConnection implements RpcConnection {
   private _ws: WebSocketLike;
   private _sendBuffer: string[] = [];
   private _connected = new PromiseSource<void>();
@@ -68,10 +78,14 @@ export class RpcConnection {
   }
 
   send(serializedMessage: string): void {
-    if (this._ws.readyState === WebSocketState.OPEN) {
-      this._ws.send(serializedMessage);
-    } else {
-      this._sendBuffer.push(serializedMessage);
+    try {
+      if (this._ws.readyState === WebSocketState.OPEN)
+        this._ws.send(serializedMessage);
+      else if (this._ws.readyState === WebSocketState.CONNECTING)
+        this._sendBuffer.push(serializedMessage);
+      // CLOSING/CLOSED: silently drop
+    } catch {
+      // Swallow — disconnect event handles cleanup
     }
   }
 
@@ -88,6 +102,10 @@ export class RpcConnection {
     if (this._sendBuffer.length === 0) return;
     const frame = serializeFrame(this._sendBuffer);
     this._sendBuffer = [];
-    this._ws.send(frame);
+    try {
+      this._ws.send(frame);
+    } catch {
+      // Swallow — disconnect event handles cleanup
+    }
   }
 }

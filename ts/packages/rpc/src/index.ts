@@ -14,8 +14,10 @@ export {
   deserializeMessage,
 } from "./rpc-serialization.js";
 
-export type { WebSocketLike } from "./rpc-connection.js";
-export { WebSocketState, RpcConnection } from "./rpc-connection.js";
+export type { WebSocketLike, RpcConnection } from "./rpc-connection.js";
+export { WebSocketState, RpcWebSocketConnection } from "./rpc-connection.js";
+
+export { RpcMessageChannelConnection, createMessageChannelPair } from "./rpc-message-channel-connection.js";
 
 export type { RpcMethodDef, RpcServiceDef, RpcMethodDefInput } from "./rpc-service-def.js";
 export { RpcType, defineRpcService, defineComputeService } from "./rpc-service-def.js";
@@ -28,9 +30,10 @@ export {
   RpcInboundCallTracker,
 } from "./rpc-call-tracker.js";
 
-export { handleSystemCall, sendOk, sendError, sendKeepAlive, sendHandshake } from "./rpc-system-calls.js";
+export { handleSystemCall } from "./rpc-system-call-handler.js";
+export { RpcSystemCallSender } from "./rpc-system-call-sender.js";
 
-export { RpcPeer, RpcClientPeer, RpcServerPeer } from "./rpc-peer.js";
+export { RpcPeer, RpcPeerConnectionKind, RpcClientPeer, RpcServerPeer } from "./rpc-peer.js";
 export { RpcHub } from "./rpc-hub.js";
 export { RpcServiceHost } from "./rpc-service-host.js";
 export type { RpcServiceImpl, RpcDispatchContext } from "./rpc-service-host.js";

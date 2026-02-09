@@ -5,6 +5,7 @@ export interface RpcMethodDef {
   readonly argCount: number;
   readonly compute: boolean;
   readonly stream: boolean;
+  readonly noWait: boolean;
 }
 
 /** Describes an RPC service — its name and method definitions. */
@@ -19,6 +20,7 @@ export interface RpcMethodDefInput {
   returns?: symbol;
   compute?: boolean;
   stream?: boolean;
+  noWait?: boolean;
 }
 
 export const RpcType = {
@@ -54,6 +56,7 @@ function buildServiceDef(
       argCount: input.args.length,
       compute: input.compute ?? defaultCompute,
       stream: input.stream ?? (input.returns === RpcType.stream),
+      noWait: input.noWait ?? false,
     });
   }
   return { name, methods: map, compute: defaultCompute };

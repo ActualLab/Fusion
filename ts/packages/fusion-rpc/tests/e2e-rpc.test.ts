@@ -7,15 +7,16 @@ import {
 import {
   RpcHub,
   RpcClientPeer,
+  RpcServerPeer,
   RpcOutboundComputeCall,
   rpcService,
   rpcMethod,
   defineRpcService,
   defineComputeService,
   createRpcClient,
+  createMessageChannelPair,
 } from "@actuallab/rpc";
 import { FusionHub } from "../src/index.js";
-import { createMockWsPair } from "../../rpc/tests/mock-ws.js";
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -33,11 +34,11 @@ class ICounterService {
 
 // Legacy service def for mutation (non-compute)
 const MutationServiceDef = defineRpcService("MutationService", {
-  setCount: { args: ["", 0] },
+  setCount: { args: ["", 0], noWait: true },
 });
 
 interface IMutationService {
-  setCount(key: string, value: number): Promise<void>;
+  setCount(key: string, value: number): void;
 }
 
 describe("End-to-end Fusion over RPC", () => {
@@ -61,8 +62,8 @@ describe("End-to-end Fusion over RPC", () => {
     serverHub = new FusionHub("server");
     clientHub = new RpcHub("client");
 
-    // Register compute service on server using decorator-based contract
-    serverHub.registerComputeService(ICounterService, {
+    // Register compute service on server using addServiceFromContract
+    serverHub.addServiceFromContract(ICounterService, {
       async getCount(key: string): Promise<number> {
         return getState(key).use();
       },
@@ -71,8 +72,8 @@ describe("End-to-end Fusion over RPC", () => {
       },
     });
 
-    // Register mutation service (non-compute)
-    serverHub.registerPlainService(MutationServiceDef, {
+    // Register mutation service (non-compute, noWait)
+    serverHub.addService(MutationServiceDef, {
       setCount(key: unknown, value: unknown) {
         getState(key as string).set(value as number);
       },
@@ -85,13 +86,13 @@ describe("End-to-end Fusion over RPC", () => {
   });
 
   it("should call a compute method and get result", async () => {
-    const [clientWs, serverWs] = createMockWsPair();
+    const [clientConn, serverConn] = createMessageChannelPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
-    clientPeer.connectWith(clientWs);
+    clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
-    serverHub.acceptConnection(serverWs);
+    serverHub.acceptRpcConnection(serverConn);
 
     await delay(10);
 
@@ -109,13 +110,13 @@ describe("End-to-end Fusion over RPC", () => {
   });
 
   it("should receive $sys-c.Invalidate when server-side computed is invalidated", async () => {
-    const [clientWs, serverWs] = createMockWsPair();
+    const [clientConn, serverConn] = createMessageChannelPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
-    clientPeer.connectWith(clientWs);
+    clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
-    serverHub.acceptConnection(serverWs);
+    serverHub.acceptRpcConnection(serverConn);
 
     await delay(10);
 
@@ -129,9 +130,8 @@ describe("End-to-end Fusion over RPC", () => {
     const result = await outboundCall.result.promise;
     expect(result).toBe(0); // default value
 
-    // Trigger server-side invalidation via mutation
-    const mutator = createRpcClient<IMutationService>(clientPeer, MutationServiceDef);
-    await mutator.setCount("x", 100);
+    // Trigger server-side invalidation via mutation (noWait)
+    clientPeer.callNoWait("MutationService.setCount", ["x", 100]);
 
     // Wait for invalidation notification
     await delay(50);
@@ -139,13 +139,13 @@ describe("End-to-end Fusion over RPC", () => {
   });
 
   it("should call multiple compute methods", async () => {
-    const [clientWs, serverWs] = createMockWsPair();
+    const [clientConn, serverConn] = createMessageChannelPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
-    clientPeer.connectWith(clientWs);
+    clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
-    serverHub.acceptConnection(serverWs);
+    serverHub.acceptRpcConnection(serverConn);
 
     await delay(10);
 

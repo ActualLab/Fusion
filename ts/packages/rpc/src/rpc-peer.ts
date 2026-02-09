@@ -1,5 +1,5 @@
 import { EventHandlerSet } from "@actuallab/core";
-import { RpcConnection, type WebSocketLike } from "./rpc-connection.js";
+import { RpcWebSocketConnection, type RpcConnection, type WebSocketLike } from "./rpc-connection.js";
 import {
   RpcOutboundCall,
   RpcOutboundCallTracker,
@@ -12,7 +12,7 @@ import {
   serializeMessage,
   deserializeMessage,
 } from "./rpc-serialization.js";
-import { handleSystemCall, sendOk, sendError, sendKeepAlive, sendHandshake } from "./rpc-system-calls.js";
+import { handleSystemCall } from "./rpc-system-call-handler.js";
 import type { RpcHub } from "./rpc-hub.js";
 
 /** Base class for RPC peers — handles bidirectional message dispatch. */
@@ -41,16 +41,17 @@ export abstract class RpcPeer {
     return this._connection?.isOpen ?? false;
   }
 
-  protected setupConnection(ws: WebSocketLike): void {
-    this._connection = new RpcConnection(ws);
+  protected setupConnection(conn: RpcConnection): void {
+    this._connection = conn;
 
-    this._connection.messageReceived.add((raw) => this._handleMessage(raw));
-    this._connection.closed.add((ev) => {
+    conn.messageReceived.add((raw) => this._handleMessage(raw));
+    conn.closed.add((ev) => {
       this._stopKeepAlive();
+      this.outbound.rejectAll(new Error(`Connection closed: ${ev.reason}`));
       this.disconnected.trigger(ev);
     });
 
-    void this._connection.whenConnected.then(() => {
+    void conn.whenConnected.then(() => {
       this.connected.trigger();
       this._startKeepAlive();
     });
@@ -75,9 +76,10 @@ export abstract class RpcPeer {
     return outboundCall;
   }
 
-  sendHandshake(peerId: string, hubId: string, index: number): void {
-    if (this._connection === undefined) return;
-    sendHandshake(this._connection, peerId, hubId, index);
+  callNoWait(method: string, args?: unknown[]): void {
+    if (this._connection === undefined) return; // silently drop
+    const msg = serializeMessage({ Method: method, RelatedId: 0 }, args);
+    this._connection.send(msg); // never throws
   }
 
   close(): void {
@@ -92,8 +94,6 @@ export abstract class RpcPeer {
     // System calls
     if (method.startsWith("$sys")) {
       handleSystemCall(message, args, this.outbound);
-      // Also dispatch to inbound handler for server-side system call processing
-      this._handleInbound(message, args);
       return;
     }
 
@@ -105,11 +105,14 @@ export abstract class RpcPeer {
     const method = message.Method ?? "";
     const relatedId = message.RelatedId ?? 0;
 
-    // Skip system calls that were already handled by handleSystemCall
-    if (method.startsWith("$sys")) return;
-
     const call = new RpcInboundCall(relatedId, method, args);
-    this.inbound.register(call);
+    const methodDef = this._hub.serviceHost.getMethodDef(method);
+
+    // For noWait calls: don't register in tracker, don't send response
+    const isNoWait = methodDef?.noWait === true;
+    if (!isNoWait) {
+      this.inbound.register(call);
+    }
 
     // Dispatch to the hub's service host
     const serviceHost = this._hub.serviceHost;
@@ -120,15 +123,17 @@ export abstract class RpcPeer {
             ? { __rpcDispatch: true as const, callId: relatedId, connection: this._connection }
             : undefined;
           const result = await serviceHost.dispatch(method, args, context);
-          if (this._connection !== undefined) {
-            sendOk(this._connection, relatedId, result);
+          if (!isNoWait && this._connection !== undefined) {
+            this._hub.systemCallSender.ok(this._connection, relatedId, result);
           }
         } catch (e) {
-          if (this._connection !== undefined) {
-            sendError(this._connection, relatedId, e);
+          if (!isNoWait && this._connection !== undefined) {
+            this._hub.systemCallSender.error(this._connection, relatedId, e);
           }
         } finally {
-          this.inbound.remove(relatedId);
+          if (!isNoWait) {
+            this.inbound.remove(relatedId);
+          }
         }
       })();
     }
@@ -137,7 +142,7 @@ export abstract class RpcPeer {
   private _startKeepAlive(): void {
     this._keepAliveTimer = setInterval(() => {
       if (this._connection !== undefined) {
-        sendKeepAlive(this._connection, this.outbound.activeCallIds());
+        this._hub.systemCallSender.keepAlive(this._connection, this.outbound.activeCallIds());
       }
     }, 15_000);
   }
@@ -150,31 +155,79 @@ export abstract class RpcPeer {
   }
 }
 
+/** Connection state for RpcClientPeer. */
+export const enum RpcPeerConnectionKind {
+  Disconnected = 0,
+  Connecting = 1,
+  Connected = 2,
+}
+
 /** Client-side RPC peer — initiates WebSocket connection. */
 export class RpcClientPeer extends RpcPeer {
   private _url: string;
+  private _disposed = false;
+  private _connectionKind = RpcPeerConnectionKind.Disconnected;
+  private _tryIndex = 0;
+  private _handshakeIndex = 0;
+  private _lastRemoteHubId: string | undefined;
+
+  readonly peerChanged = new EventHandlerSet<void>();
 
   constructor(id: string, hub: RpcHub, url: string) {
     super(id, hub);
     this._url = url;
   }
 
-  connect(wsFactory?: (url: string) => WebSocketLike): void {
-    const ws = wsFactory !== undefined
-      ? wsFactory(this._url)
-      : new WebSocket(this._url) as unknown as WebSocketLike;
-    this.setupConnection(ws);
+  get connectionKind(): RpcPeerConnectionKind {
+    return this._connectionKind;
   }
 
-  connectWith(ws: WebSocketLike): void {
-    this.setupConnection(ws);
+  /** One-shot connection for tests — no reconnection loop. */
+  connectWith(conn: RpcConnection): void {
+    this.setupConnection(conn);
+  }
+
+  /** Start the reconnection loop — runs until disposed. */
+  async run(wsFactory?: (url: string) => WebSocketLike): Promise<void> {
+    while (!this._disposed) {
+      try {
+        const ws = wsFactory?.(this._url) ?? new WebSocket(this._url) as unknown as WebSocketLike;
+        const conn = new RpcWebSocketConnection(ws);
+        this._connectionKind = RpcPeerConnectionKind.Connecting;
+        this.setupConnection(conn);
+        await conn.whenConnected;
+
+        // Exchange handshakes
+        this._hub.systemCallSender.handshake(conn, this.id, this._hub.hubId, ++this._handshakeIndex);
+
+        this._connectionKind = RpcPeerConnectionKind.Connected;
+        this._tryIndex = 0;
+
+        // Wait until disconnected
+        await new Promise<void>(r => conn.closed.add(() => r()));
+      } catch {
+        // connection failed
+      }
+
+      this._connectionKind = RpcPeerConnectionKind.Disconnected;
+      if (this._disposed) break;
+
+      // Backoff delay: 1s, 1.5s, 2.25s, ... up to 10s
+      this._tryIndex++;
+      await new Promise(r => setTimeout(r, Math.min(1000 * Math.pow(1.5, this._tryIndex - 1), 10_000)));
+    }
+  }
+
+  override close(): void {
+    this._disposed = true;
+    super.close();
   }
 }
 
-/** Server-side RPC peer — wraps an accepted WebSocket connection. */
+/** Server-side RPC peer — wraps an accepted connection. */
 export class RpcServerPeer extends RpcPeer {
-  constructor(id: string, hub: RpcHub, ws: WebSocketLike) {
+  constructor(id: string, hub: RpcHub, conn: RpcConnection) {
     super(id, hub);
-    this.setupConnection(ws);
+    this.setupConnection(conn);
   }
 }
