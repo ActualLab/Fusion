@@ -21,6 +21,7 @@ _ReSharper*/
 [Bb]in/
 [oO]bj/
 [tT]mp/
+*.tsbuildinfo
 BenchmarkDotNet.Artifacts/
 StyleCopReport.xml
 *.dotCover
