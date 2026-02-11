@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.1.14+28a7e73e
+
+Release date: 2026-02-11
+
+### Fixed
+- RPC WebSocket disconnect detection was delayed by ~50 seconds instead of being instant.
+  When the server shut down, `RpcPeer.OnRun` awaited `maintainTasks` in a `finally` block
+  before cancelling `readerTokenSource`, so `SharedObjects.Maintain()` kept running its
+  keep-alive check loop for up to 55s (`KeepAliveTimeout`) before detecting the timeout.
+  The fix moves the `readerTokenSource` cancellation before the `maintainTasks` await.
+
+
 ## 12.1.12+0475b1ca
 
 Release date: 2026-02-11
