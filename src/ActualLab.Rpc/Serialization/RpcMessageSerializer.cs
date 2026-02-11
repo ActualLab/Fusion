@@ -32,6 +32,7 @@ public abstract class RpcMessageSerializer(RpcPeer peer)
     protected RpcMethodResolver ServerMethodResolver => Peer.ServerMethodResolver;
 
     public RpcPeer Peer { get; } = peer;
+    public virtual bool PersistsMessageSize => false;
     public virtual bool SupportsNativeLittleEndian => false;
     public RpcMessageSerializerReadFunc ReadFunc
         => field ??= SupportsNativeLittleEndian ? ReadNativeLittleEndian : Read;

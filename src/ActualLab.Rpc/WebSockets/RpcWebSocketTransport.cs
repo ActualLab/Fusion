@@ -110,8 +110,12 @@ public sealed class RpcWebSocketTransport : RpcTransport
         _maxBufferSize = settings.MaxBufferSize;
 
         _frameDelayer = settings.FrameDelayerFactory?.Invoke();
-        _serializeMessage = IsTextSerializer ? SerializeText : SerializeBinary;
-        _tryDeserializeMessage = IsTextSerializer ? TryDeserializeText : TryDeserializeBinary;
+        _serializeMessage = IsTextSerializer
+            ? SerializeText
+            : MessageSerializer.PersistsMessageSize ? SerializeBinaryWithSize : SerializeBinary;
+        _tryDeserializeMessage = IsTextSerializer
+            ? TryDeserializeText
+            : MessageSerializer.PersistsMessageSize ? TryDeserializeBinaryWithSize : TryDeserializeBinary;
         _messageSerializerReadFunc = MessageSerializer.ReadFunc;
         _messageSerializerWriteFunc = MessageSerializer.WriteFunc;
         _writeBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Settings.BufferSize, mustClear: false);
@@ -319,6 +323,20 @@ public sealed class RpcWebSocketTransport : RpcTransport
         _meters.OutgoingItemCounter.Add(1);
         var startOffset = buffer.WrittenCount;
         try {
+            _messageSerializerWriteFunc(buffer, message);
+        }
+        catch (Exception e) {
+            buffer.Position = startOffset;
+            ErrorLog?.LogError(e, "Couldn't serialize the outbound message: {Message}", message);
+            throw;
+        }
+    }
+
+    private void SerializeBinaryWithSize(RpcOutboundMessage message, ArrayPoolBuffer<byte> buffer)
+    {
+        _meters.OutgoingItemCounter.Add(1);
+        var startOffset = buffer.WrittenCount;
+        try {
             // Binary format: use 4-byte size prefix
             buffer.GetSpan(64);
             buffer.Advance(4);
@@ -407,6 +425,25 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private RpcInboundMessage? TryDeserializeBinary(byte[] array, ref int offset, int totalLength)
+    {
+        _meters.IncomingItemCounter.Add(1);
+        try {
+            // Read message - ArgumentData is a projection into our buffer (zero-copy)
+            var messageData = array.AsMemory(offset, totalLength - offset);
+            var inboundMessage = _messageSerializerReadFunc(messageData, out var readSize);
+            offset += readSize;
+            return inboundMessage;
+        }
+        catch (Exception e) {
+            var remaining = array.AsMemory(offset, totalLength - offset);
+            ErrorLog?.LogError(e, "Couldn't deserialize: {Data}", new TextOrBytes(DataFormat.Bytes, remaining));
+            offset = totalLength;
+            return null;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private RpcInboundMessage? TryDeserializeBinaryWithSize(byte[] array, ref int offset, int totalLength)
     {
         _meters.IncomingItemCounter.Add(1);
         var size = 0;
