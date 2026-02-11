@@ -391,8 +391,12 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 try {
                     r = await WebSocket.ReceiveAsync(arraySegment, CancellationToken.None).ConfigureAwait(false);
                 }
-                catch (WebSocketException e) when (e.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely) {
-                    r = new WebSocketReceiveResult(0, WebSocketMessageType.Close, true);
+                catch (Exception e) {
+                    Log?.LogWarning(e, "WebSocket.ReceiveAsync failed");
+                    if (e is WebSocketException { WebSocketErrorCode: WebSocketError.ConnectionClosedPrematurely })
+                        r = new WebSocketReceiveResult(0, WebSocketMessageType.Close, endOfMessage: true);
+                    else
+                        throw;
                 }
                 if (r.MessageType == WebSocketMessageType.Close)
                     yield break;
