@@ -1,7 +1,46 @@
-import type { RpcPeer } from "./rpc-peer.js";
+// .NET counterpart:
+//   RpcHub (141 lines) — a sealed ProcessorBase (IAsyncDisposable) that owns:
+//     DI-resolved configuration (RpcRegistryOptions, PeerOptions, InboundCallOptions,
+//     OutboundCallOptions, DiagnosticsOptions), SerializationFormats, Middlewares,
+//     ClientPeerReconnectDelayer, Limits, SystemClock.
+//     Manages peers via ConcurrentDictionary<RpcPeerRef, RpcPeer> with GetPeer()
+//     that lazily creates + starts peers.  Also has GetClient<T>() / GetServer<T>()
+//     that look up services in ServiceRegistry.
+//
+// Omitted from .NET:
+//   - DI / IServiceProvider integration — .NET resolves all options, serializers,
+//     middleware, delayers, etc. from DI.  TS constructs everything directly.
+//   - RpcServiceRegistry — .NET builds a full registry of all RPC services at
+//     startup via reflection + DI, mapping Type → RpcServiceDef.  TS uses explicit
+//     addService() / addClient() calls.
+//   - GetClient<T>() / GetServer<T>() — .NET resolves typed client/server proxies
+//     via the ServiceRegistry + DI.  TS uses addClient<T>(peer, def).
+//   - RpcPeerRef-keyed peer dictionary — .NET peers are keyed by RpcPeerRef (rich
+//     value object encoding route, version, serialization format).  TS uses simple
+//     string IDs.
+//   - Lazy peer creation + Start() — .NET's GetPeer auto-creates and starts a
+//     peer's reconnection loop.  TS requires explicit addPeer() + run().
+//   - DisposeAsync — .NET disposes all peers on hub shutdown.  TS has close().
+//   - Route change detection (RouteState.WhenChanged → Dispose peer) — .NET
+//     watches for load-balancer route changes and auto-disposes stale peers.
+//     TS has no routing layer.
+//   - Middlewares (IRpcMiddleware[]) — ordered middleware pipeline for inbound
+//     calls.  TS dispatches directly to service implementations.
+//   - Limits (RpcLimits) — configurable limits for call timeout, handshake
+//     timeout, max message size, etc.  TS uses hardcoded values.
+//   - RpcConfiguration / Configuration.Freeze() — frozen config snapshot.
+//   - HostId / SystemClock — infrastructure services.
+//   - DefaultPeer / LoopbackPeer / LocalPeer / NonePeer — cached well-known peers.
+
+import type { RpcPeer, RpcCallOptions } from "./rpc-peer.js";
 import { RpcServiceHost, type RpcServiceImpl } from "./rpc-service-host.js";
 import type { RpcServiceDef, RpcMethodDef } from "./rpc-service-def.js";
+import { wireMethodName } from "./rpc-service-def.js";
+import { getServiceMeta, getMethodsMeta } from "./rpc-decorators.js";
 import { RpcSystemCallSender } from "./rpc-system-call-sender.js";
+import { handleSystemCall as handleSystemCallStandalone } from "./rpc-system-call-handler.js";
+import type { RpcOutboundCallTracker, RpcInboundCallTracker } from "./rpc-call-tracker.js";
+import type { RpcMessage } from "./rpc-message.js";
 
 /** Central RPC coordinator — manages peers, services, and configuration. */
 export class RpcHub {
@@ -31,56 +70,49 @@ export class RpcHub {
     return this.peers.get(id);
   }
 
-  /** Register a service with optional compute method wrapping. */
-  addService(def: RpcServiceDef, impl: RpcServiceImpl): void {
+  /** Register a service with optional server method wrapping for custom call types. */
+  addService(defOrContract: RpcServiceDef | (abstract new (...args: any[]) => any), impl: RpcServiceImpl): void {
+    const def = this._resolveServiceDef(defOrContract);
     const wrappedImpl: RpcServiceImpl = {};
-    for (const [name, methodDef] of def.methods) {
-      const fn = impl[name];
+    for (const methodDef of def.methods.values()) {
+      const fn = impl[methodDef.name];
       if (!fn) continue;
-      wrappedImpl[name] = methodDef.compute
-        ? this._wrapComputeServerMethod(def, name, methodDef, fn, impl as object)
+      wrappedImpl[methodDef.name] = methodDef.callTypeId !== 0
+        ? this._wrapServerMethod(methodDef, fn, impl as object)
         : fn;
     }
     this.serviceHost.register(def, wrappedImpl);
   }
 
   /** Create a typed client proxy for a service on a remote peer. */
-  addClient<T extends object>(peer: RpcPeer, def: RpcServiceDef): T {
+  addClient<T extends object>(peer: RpcPeer, defOrContract: RpcServiceDef | (abstract new (...args: any[]) => any)): T {
+    const def = this._resolveServiceDef(defOrContract);
+
+    // Group methods by clean name, indexed by argCount for overload resolution
+    const overloads = new Map<string, Map<number, Function>>();
+    for (const methodDef of def.methods.values()) {
+      let byArgCount = overloads.get(methodDef.name);
+      if (!byArgCount) { byArgCount = new Map(); overloads.set(methodDef.name, byArgCount); }
+      byArgCount.set(methodDef.argCount, this._createClientMethod(peer, methodDef));
+    }
+
+    // Build final proxy methods — single overload: use directly; multiple: resolve by args.length
+    const methods = new Map<string, Function>();
+    for (const [name, byArgCount] of overloads) {
+      if (byArgCount.size === 1) {
+        methods.set(name, byArgCount.values().next().value!);
+      } else {
+        methods.set(name, (...args: unknown[]) => {
+          const fn = byArgCount.get(args.length);
+          if (!fn) throw new Error(`No overload of ${name} accepts ${args.length} arguments`);
+          return fn(...args);
+        });
+      }
+    }
+
     return new Proxy({} as T, {
-      get: (_target, prop) => {
-        if (typeof prop !== "string") return undefined;
-
-        const methodDef = def.methods.get(prop);
-        if (methodDef === undefined) return undefined;
-
-        // NoWait methods
-        if (methodDef.noWait) {
-          return (...args: unknown[]) => {
-            const callArgs = args.slice(0, methodDef.argCount);
-            const wireMethod = `${def.name}.${prop}`;
-            peer.callNoWait(wireMethod, callArgs);
-          };
-        }
-
-        // Compute methods — allow subclass override
-        if (methodDef.compute) {
-          return this._createComputeClientMethod(peer, def, prop, methodDef);
-        }
-
-        // Regular methods
-        return async (...args: unknown[]) => {
-          const callArgs = args.slice(0, methodDef.argCount);
-          const wireMethod = `${def.name}.${prop}`;
-          const outboundCall = peer.call(wireMethod, callArgs, false);
-          return outboundCall.result.promise;
-        };
-      },
+      get: (_target, prop) => typeof prop === "string" ? methods.get(prop) : undefined,
     });
-  }
-
-  /** @deprecated Use addService instead. */
-  registerService(def: RpcServiceDef, impl: RpcServiceImpl): void {
-    this.serviceHost.register(def, impl);
   }
 
   close(): void {
@@ -88,22 +120,79 @@ export class RpcHub {
     this.peers.clear();
   }
 
-  /** Override in FusionHub — default is pass-through. */
-  protected _wrapComputeServerMethod(
-    _def: RpcServiceDef, _methodName: string, _methodDef: RpcMethodDef,
+  /** Dispatch an inbound system call. Override in FusionHub to handle compute-specific system calls. */
+  handleSystemCall(
+    message: RpcMessage,
+    args: unknown[],
+    outbound: RpcOutboundCallTracker,
+    inbound: RpcInboundCallTracker,
+  ): void {
+    handleSystemCallStandalone(message, args, outbound, inbound);
+  }
+
+  /** Build an RpcServiceDef from decorator metadata on a contract class. Override in FusionHub for compute support. */
+  protected _buildServiceDef(cls: abstract new (...args: any[]) => any): RpcServiceDef {
+    const svcMeta = getServiceMeta(cls);
+    if (svcMeta === undefined) throw new Error("Contract class missing @rpcService metadata");
+
+    const methodsMeta = getMethodsMeta(cls) ?? {};
+    const ctOffset = svcMeta.ctOffset ?? 0;
+    const methods = new Map<string, RpcMethodDef>();
+
+    for (const [name, meta] of Object.entries(methodsMeta)) {
+      const wireArgCount = meta.argCount + ctOffset;
+      const mapKey = `${name}:${wireArgCount}`;
+      methods.set(mapKey, {
+        name,
+        serviceName: svcMeta.name,
+        argCount: meta.argCount,
+        wireArgCount,
+        callTypeId: 0,
+        stream: meta.stream ?? false,
+        noWait: meta.noWait ?? false,
+      });
+    }
+
+    return { name: svcMeta.name, methods };
+  }
+
+  /** Resolve a service def from either a plain RpcServiceDef or a contract class. */
+  protected _resolveServiceDef(defOrContract: RpcServiceDef | (abstract new (...args: any[]) => any)): RpcServiceDef {
+    if (typeof defOrContract === "function")
+      return this._buildServiceDef(defOrContract);
+    return defOrContract;
+  }
+
+  /** Override in FusionHub — default is pass-through (for methods with callTypeId !== 0). */
+  protected _wrapServerMethod(
+    _methodDef: RpcMethodDef,
     fn: (...args: unknown[]) => unknown, _impl: object,
   ): (...args: unknown[]) => unknown {
     return fn;
   }
 
-  /** Override in FusionHub — default is regular compute RPC call. */
-  protected _createComputeClientMethod(
-    peer: RpcPeer, def: RpcServiceDef, methodName: string, methodDef: RpcMethodDef,
+  /** Create a client method for the given methodDef. Override in FusionHub for custom call types. */
+  protected _createClientMethod(
+    peer: RpcPeer, methodDef: RpcMethodDef,
   ): (...args: unknown[]) => unknown {
-    const wireMethod = `${def.name}.${methodName}`;
+    const wireName = wireMethodName(methodDef);
+
+    // NoWait methods
+    if (methodDef.noWait) {
+      return (...args: unknown[]) => {
+        const callArgs = args.slice(0, methodDef.argCount);
+        peer.callNoWait(wireName, callArgs);
+      };
+    }
+
+    // Regular methods (including non-zero callTypeId — subclass can override for custom behavior)
+    const callOptions: RpcCallOptions | undefined = methodDef.callTypeId !== 0
+      ? { callTypeId: methodDef.callTypeId }
+      : undefined;
+
     return async (...args: unknown[]) => {
       const callArgs = args.slice(0, methodDef.argCount);
-      const outboundCall = peer.call(wireMethod, callArgs, true);
+      const outboundCall = peer.call(wireName, callArgs, callOptions);
       return outboundCall.result.promise;
     };
   }

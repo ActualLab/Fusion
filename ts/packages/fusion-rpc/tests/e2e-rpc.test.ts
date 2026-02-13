@@ -1,22 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { AsyncContext } from "@actuallab/core";
 import {
+  Computed,
   MutableState,
   computeMethod,
 } from "@actuallab/fusion";
 import {
-  RpcHub,
   RpcClientPeer,
-  RpcServerPeer,
-  RpcOutboundComputeCall,
   rpcService,
   rpcMethod,
   defineRpcService,
-  defineComputeService,
   createRpcClient,
   createMessageChannelPair,
 } from "@actuallab/rpc";
-import { FusionHub } from "../src/index.js";
+import { FusionHub, RpcOutboundComputeCall, defineComputeService } from "../src/index.js";
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -43,7 +40,7 @@ interface IMutationService {
 
 describe("End-to-end Fusion over RPC", () => {
   let serverHub: FusionHub;
-  let clientHub: RpcHub;
+  let clientHub: FusionHub;
   const store = new Map<string, MutableState<number>>();
 
   function getState(key: string): MutableState<number> {
@@ -60,15 +57,15 @@ describe("End-to-end Fusion over RPC", () => {
     store.clear();
 
     serverHub = new FusionHub("server");
-    clientHub = new RpcHub("client");
+    clientHub = new FusionHub("client");
 
-    // Register compute service on server using addServiceFromContract
-    serverHub.addServiceFromContract(ICounterService, {
-      async getCount(key: string): Promise<number> {
-        return getState(key).use();
+    // Register compute service on server using contract class
+    serverHub.addService(ICounterService, {
+      async getCount(key: unknown): Promise<number> {
+        return getState(key as string).use();
       },
-      async getDoubled(key: string): Promise<number> {
-        return getState(key).use() * 2;
+      async getDoubled(key: unknown): Promise<number> {
+        return getState(key as string).use() * 2;
       },
     });
 
@@ -122,16 +119,16 @@ describe("End-to-end Fusion over RPC", () => {
 
     // Make a compute call
     const outboundCall = clientPeer.call(
-      "CounterService.getCount",
+      "CounterService.getCount:2",
       ["x"],
-      true, // compute = true
+      { callTypeId: 1, outboundCallFactory: (id, m) => new RpcOutboundComputeCall(id, m) },
     ) as RpcOutboundComputeCall;
 
     const result = await outboundCall.result.promise;
     expect(result).toBe(0); // default value
 
     // Trigger server-side invalidation via mutation (noWait)
-    clientPeer.callNoWait("MutationService.setCount", ["x", 100]);
+    clientPeer.callNoWait("MutationService.setCount:2", ["x", 100]);
 
     // Wait for invalidation notification
     await delay(50);
@@ -162,5 +159,54 @@ describe("End-to-end Fusion over RPC", () => {
 
     const doubled = await counter.getDoubled("a");
     expect(doubled).toBe(20);
+  });
+
+  it("should capture RPC compute call via Computed.capture()", async () => {
+    const [clientConn, serverConn] = createMessageChannelPair();
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn);
+    clientHub.addPeer(clientPeer);
+
+    serverHub.acceptRpcConnection(serverConn);
+
+    await delay(10);
+
+    const counterDef = defineComputeService("CounterService", {
+      getCount: { args: [""] },
+    });
+    const counter = clientHub.addClient<{ getCount(key: string): Promise<number> }>(clientPeer, counterDef);
+    getState("x").set(42);
+
+    const captured = await Computed.capture(() => counter.getCount("x"));
+    expect(captured.value).toBe(42);
+    expect(captured.isConsistent).toBe(true);
+  });
+
+  it("should observe server-side invalidation via Computed.capture()", async () => {
+    const [clientConn, serverConn] = createMessageChannelPair();
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn);
+    clientHub.addPeer(clientPeer);
+
+    serverHub.acceptRpcConnection(serverConn);
+
+    await delay(10);
+
+    const counterDef = defineComputeService("CounterService", {
+      getCount: { args: [""] },
+    });
+    const counter = clientHub.addClient<{ getCount(key: string): Promise<number> }>(clientPeer, counterDef);
+
+    const captured = await Computed.capture(() => counter.getCount("x"));
+    expect(captured.value).toBe(0);
+
+    // Trigger server-side invalidation via mutation
+    clientPeer.callNoWait("MutationService.setCount:2", ["x", 100]);
+
+    // Wait for invalidation notification
+    await captured.whenInvalidated();
+    expect(captured.isConsistent).toBe(false);
   });
 });

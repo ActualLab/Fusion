@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { AsyncContext, errorResult } from "@actuallab/core";
-import { Computed, ConsistencyState, ComputeContext, computeContextKey } from "../src/index.js";
+import { Computed, ConsistencyState, ComputeContext, computeContextKey, computeMethod, wrapComputeMethod, MutableState } from "../src/index.js";
 
 let _testKeyCounter = 0;
 function makeKey(method: string, ...args: unknown[]): string {
@@ -210,5 +210,57 @@ describe("Computed.use() dependency capture", () => {
     c.invalidate();
 
     expect(() => c.use()).toThrow("Cannot recompute");
+  });
+});
+
+describe("Computed.capture()", () => {
+  beforeEach(() => {
+    AsyncContext.current = undefined;
+  });
+
+  it("should capture a @computeMethod result", async () => {
+    class Svc {
+      @computeMethod
+      async getValue(key: string): Promise<number> {
+        return key === "x" ? 42 : 0;
+      }
+    }
+    const svc = new Svc();
+
+    const captured = await Computed.capture(() => svc.getValue("x"));
+    expect(captured.value).toBe(42);
+    expect(captured.isConsistent).toBe(true);
+  });
+
+  it("should observe invalidation on captured computed", async () => {
+    const source = new MutableState(10);
+
+    class Svc {
+      @computeMethod
+      async getValue(key: string): Promise<number> {
+        return source.use();
+      }
+    }
+    const svc = new Svc();
+
+    const captured = await Computed.capture(() => svc.getValue("a"));
+    expect(captured.value).toBe(10);
+    expect(captured.isConsistent).toBe(true);
+
+    source.set(20);
+    await captured.whenInvalidated();
+    expect(captured.isConsistent).toBe(false);
+  });
+
+  it("should capture a wrapComputeMethod function", async () => {
+    const getDouble = wrapComputeMethod(async (n: number) => n * 2);
+
+    const captured = await Computed.capture(() => getDouble(5));
+    expect(captured.value).toBe(10);
+    expect(captured.isConsistent).toBe(true);
+  });
+
+  it("should throw when fn does not call a compute function", async () => {
+    await expect(Computed.capture(() => 42)).rejects.toThrow("No Computed was captured");
   });
 });

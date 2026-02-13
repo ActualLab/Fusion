@@ -1,0 +1,53 @@
+using ActualLab.Rpc;
+using ActualLab.Tests;
+
+namespace ActualLab.Fusion.Tests.TypeScriptRpc;
+
+public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
+{
+    private const string Script = "e2e/ts-dotnet-e2e.ts";
+
+    protected override void ConfigureServices(IServiceCollection services, bool isClient)
+    {
+        SerializationFormat = "json5";
+        base.ConfigureServices(services, isClient);
+
+        if (isClient)
+            return;
+
+        var rpc = services.AddRpc();
+        rpc.AddServer<ITypeScriptTestService, TypeScriptTestService>();
+
+        var fusion = services.AddFusion();
+        fusion.AddService<ITypeScriptTestComputeService, TypeScriptTestComputeService>(RpcServiceMode.Server);
+    }
+
+    [Fact]
+    public async Task BasicTypes()
+    {
+        await using var _ = await WebHost.Serve();
+        await RunScenario("basic-types");
+    }
+
+    [Fact]
+    public async Task OverloadResolution()
+    {
+        await using var _ = await WebHost.Serve();
+        await RunScenario("overload-resolution");
+    }
+
+    [Fact]
+    public async Task ComputeInvalidation()
+    {
+        await using var _ = await WebHost.Serve();
+        await RunScenario("compute-invalidation");
+    }
+
+    private Task RunScenario(string scenario)
+    {
+        var serverUrl = $"ws://localhost:{WebHost.ServerUri.Port}/rpc/ws";
+        var ts = new TypeScriptRunner(Out);
+        return ts.RunScenario(Script, scenario,
+            new Dictionary<string, string> { ["RPC_SERVER_URL"] = serverUrl });
+    }
+}

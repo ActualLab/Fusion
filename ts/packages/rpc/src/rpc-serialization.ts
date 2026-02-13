@@ -1,3 +1,29 @@
+// .NET counterparts:
+//   RpcMessageSerializer (abstract) — serialises a complete outbound message (method
+//     ref + headers + argument data) into a frame.  Has binary (V4/V5 compact) and
+//     text (V3) implementations.
+//   RpcArgumentSerializer (abstract) — serialises/deserialises individual argument
+//     lists using MessagePack, MemoryPack, or System.Text.Json.
+//   RpcTextMessageSerializerV3 — the text-based wire format: JSON envelope line,
+//     delimiter, JSON-encoded argument segments.
+//
+// Omitted from .NET:
+//   - Polymorphic argument handling — .NET inspects each argument's runtime type
+//     and may wrap it in a polymorphic container for System.Text.Json.  TS uses
+//     plain JSON.stringify which is inherently polymorphic (no static type info).
+//   - Binary serialization (RpcByteMessageSerializer, MessagePack, MemoryPack) —
+//     not available in browsers; JSON is the only format TS supports.
+//   - ArgumentData / ReadOnlyMemory<byte> lazy deserialization — .NET defers
+//     deserializing argument bytes until the call handler runs (important for
+//     zero-copy binary paths).  TS deserializes eagerly since JSON.parse is cheap
+//     and there's no memory-ownership concern in JS.
+//   - RpcSerializationFormat / RpcSerializationFormatResolver — the protocol
+//     negotiation that picks byte-vs-text, V3-vs-V4-vs-V5.  TS speaks text-V3
+//     only; no negotiation needed.
+//   - Size limits (MaxArgumentDataSize) — .NET enforces 130 MB caps.  TS relies
+//     on the WebSocket library's built-in frame limits; adding an explicit cap
+//     would be straightforward but isn't necessary for the current client use case.
+
 import type { RpcMessage } from "./rpc-message.js";
 import {
   ENVELOPE_DELIMITER,

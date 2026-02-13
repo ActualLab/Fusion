@@ -660,4 +660,9 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B50610D6-2B28-4258-98A2-A0B486FD5907}
 	EndGlobalSection
+	GlobalSection(RiderSharedRunConfigurations) = postSolution
+		File = ..\ActualChat\.run\App.Maui.run.xml
+		File = ..\ActualChat\.run\App.Server (AY).run.xml
+		File = ..\ActualChat\.run\App.Server.run.xml
+	EndGlobalSection
 EndGlobal

@@ -33,8 +33,25 @@ StyleCopReport.xml
 node_modules/
 
 # TypeScript build output
+ts/.ts-built
 ts/**/dist/
 *.tsbuildinfo
+ts/packages/*/src/**/*.js
+ts/packages/*/src/**/*.js.map
+ts/packages/*/src/**/*.d.ts
+ts/packages/*/src/**/*.d.ts.map
+ts/packages/*/tests/**/*.js
+ts/packages/*/tests/**/*.js.map
+ts/packages/*/tests/**/*.d.ts
+ts/packages/*/tests/**/*.d.ts.map
+ts/*.js
+ts/*.js.map
+ts/*.d.ts
+ts/*.d.ts.map
+ts/e2e/*.js
+ts/e2e/*.js.map
+ts/e2e/*.d.ts
+ts/e2e/*.d.ts.map
 
 # Log files & folders
 *.log

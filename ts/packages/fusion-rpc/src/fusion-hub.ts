@@ -1,17 +1,62 @@
+// .NET counterparts:
+//   RpcComputeServiceDef — extends RpcServiceDef with ComputedOptionsProvider.
+//   RpcComputeMethodDef — extends RpcMethodDef with ComputedOptions and sets
+//     CallType = RpcComputeCallType (custom call type with its own
+//     RpcOutboundComputeCall / RpcInboundComputeCall factories).
+//   RpcInboundComputeCallHandler — an IRpcMiddleware that wraps inbound compute
+//     calls in a ComputeContext, captures the Computed<T> instance, and stores
+//     it on RpcInboundComputeCall.Computed for invalidation tracking.
+//   RemoteComputeServiceInterceptor — the client-side interceptor that creates
+//     compute-aware outbound calls, tracking server invalidation signals.
+//
+//   In .NET this is split across ~10 files using DI, middleware, interceptors,
+//   and the RpcComputeCallType custom call type.  TS consolidates it into a
+//   single FusionHub subclass with two method overrides.
+//
+// Omitted from .NET:
+//   - RpcComputeCallType / typed RpcInboundComputeCall<T> / RpcOutboundComputeCall<T> —
+//     .NET uses a separate call type with custom factories, result handling, and
+//     stage tracking.  TS extends the base RpcOutboundComputeCall with a
+//     whenInvalidated promise (sufficient for the TS use case).
+//   - ComputedOptionsProvider / ComputedOptions per method — .NET resolves
+//     per-method caching/invalidation options via DI.  TS uses default
+//     ComputeFunction behavior for all methods.
+//   - RpcInboundComputeCallHandler middleware — .NET wraps the inbound call in
+//     ComputeContext using the middleware pipeline.  TS wraps it directly in
+//     _wrapServerMethod by calling cf.invoke() (which sets up
+//     ComputeContext internally).
+//   - LocalExecutionMode / ConstrainedEntry — .NET controls whether compute calls
+//     can execute locally or must go remote (for Fusion's consistency guarantees).
+//     TS always executes locally (server-side) or remotely (client-side).
+//   - Invalidation via RpcInboundComputeCall.Computed.Invalidated event — .NET
+//     attaches an invalidation callback to the captured Computed<T> that calls
+//     SystemCallSender.Complete(peer, call, invalidatedResult).  TS uses
+//     $sys-c.Invalidate system call instead (equivalent wire effect).
+//   - RpcOutboundComputeCall.SetError → SetInvalidatedUnsafe — .NET invalidates
+//     the local computed when an error or reroute occurs.  TS resolves
+//     whenInvalidated on disconnect via rejectAll().
+
 import {
   RpcHub,
   RpcServerPeer,
   RpcWebSocketConnection,
-  RpcOutboundComputeCall,
-  getServiceMeta,
-  getMethodsMeta,
+  serializeMessage,
+  defineRpcService,
+  wireMethodName,
   type RpcConnection,
   type WebSocketLike,
   type RpcServiceDef,
   type RpcMethodDef,
+  type RpcMethodDefInput,
   type RpcServiceImpl,
   type RpcDispatchContext,
   type RpcPeer,
+  type RpcMessage,
+  type RpcCallOptions,
+  RpcOutboundCallTracker,
+  RpcInboundCallTracker,
+  getServiceMeta,
+  getMethodsMeta,
 } from "@actuallab/rpc";
 import {
   ComputeFunction,
@@ -19,42 +64,28 @@ import {
   type ComputeFunctionImpl,
 } from "@actuallab/fusion";
 import { AsyncContext } from "@actuallab/core";
+import { RpcOutboundComputeCall } from "./rpc-outbound-compute-call.js";
 
-/** Builds an RpcServiceDef from decorator metadata on a contract class. */
-function buildServiceDefFromContract(
-  contractClass: abstract new (...args: any[]) => any,
+/** Call type ID for Fusion compute calls — matches .NET's RpcComputeCallType.Id. */
+export const FUSION_CALL_TYPE_ID = 1;
+
+/** Wire method name for invalidation system call. */
+const FUSION_INVALIDATE_METHOD = "$sys-c.Invalidate:0";
+
+/** Creates a compute service definition — all methods default to FUSION_CALL_TYPE_ID. */
+export function defineComputeService(
+  name: string,
+  methods: Record<string, RpcMethodDefInput>,
 ): RpcServiceDef {
-  const svcMeta = getServiceMeta(contractClass);
-  if (svcMeta === undefined) throw new Error("Contract class missing @rpcService metadata");
-
-  const methodsMeta = getMethodsMeta(contractClass) ?? {};
-  const methods = new Map<string, RpcMethodDef>();
-
-  for (const [name, meta] of Object.entries(methodsMeta)) {
-    methods.set(name, {
-      name,
-      serviceName: svcMeta.name,
-      argCount: meta.argCount,
-      compute: meta.compute ?? false,
-      stream: meta.stream ?? false,
-      noWait: meta.noWait ?? false,
-    });
+  const withCallType: Record<string, RpcMethodDefInput> = {};
+  for (const [methodName, input] of Object.entries(methods)) {
+    withCallType[methodName] = { ...input, callTypeId: input.callTypeId ?? FUSION_CALL_TYPE_ID };
   }
-
-  return { name: svcMeta.name, methods, compute: true };
+  return defineRpcService(name, withCallType, { ctOffset: 1 });
 }
 
 /** Central coordinator for Fusion + RPC — manages compute services, invalidation wiring. */
 export class FusionHub extends RpcHub {
-  /** Convenience: register a compute service from decorator metadata on its contract class. */
-  addServiceFromContract<T extends object>(
-    contractClass: abstract new (...args: any[]) => any,
-    impl: T,
-  ): void {
-    const def = buildServiceDefFromContract(contractClass);
-    this.addService(def, impl as unknown as RpcServiceImpl);
-  }
-
   /** Accept an incoming WebSocket and create a server peer. */
   acceptConnection(ws: WebSocketLike): RpcServerPeer {
     const peerId = crypto.randomUUID();
@@ -72,12 +103,64 @@ export class FusionHub extends RpcHub {
     return peer;
   }
 
-  protected override _wrapComputeServerMethod(
-    _def: RpcServiceDef, methodName: string, _methodDef: RpcMethodDef,
+  /** Handle compute-specific system calls ($sys-c.Invalidate), then delegate to base. */
+  override handleSystemCall(
+    message: RpcMessage,
+    args: unknown[],
+    outbound: RpcOutboundCallTracker,
+    inbound: RpcInboundCallTracker,
+  ): void {
+    const method = message.Method;
+    const relatedId = message.RelatedId ?? 0;
+
+    if (method === FUSION_INVALIDATE_METHOD) {
+      // Server invalidated a compute call — remove from tracker and resolve
+      const call = outbound.remove(relatedId);
+      if (call instanceof RpcOutboundComputeCall) {
+        call.whenInvalidated.resolve();
+      }
+      return;
+    }
+
+    super.handleSystemCall(message, args, outbound, inbound);
+  }
+
+  /** Override to apply ctOffset=1 default and FUSION_CALL_TYPE_ID for compute methods. */
+  protected override _buildServiceDef(cls: abstract new (...args: any[]) => any): RpcServiceDef {
+    const svcMeta = getServiceMeta(cls);
+    if (svcMeta === undefined) throw new Error("Contract class missing @rpcService metadata");
+
+    const methodsMeta = getMethodsMeta(cls) ?? {};
+    // FusionHub defaults ctOffset to 1 (CancellationToken convention)
+    const ctOffset = svcMeta.ctOffset ?? 1;
+    const methods = new Map<string, RpcMethodDef>();
+
+    for (const [name, meta] of Object.entries(methodsMeta)) {
+      const wireArgCount = meta.argCount + ctOffset;
+      const mapKey = `${name}:${wireArgCount}`;
+      methods.set(mapKey, {
+        name,
+        serviceName: svcMeta.name,
+        argCount: meta.argCount,
+        wireArgCount,
+        callTypeId: (meta as any).compute === true ? FUSION_CALL_TYPE_ID : 0,
+        stream: meta.stream ?? false,
+        noWait: meta.noWait ?? false,
+      });
+    }
+
+    return { name: svcMeta.name, methods };
+  }
+
+  protected override _wrapServerMethod(
+    methodDef: RpcMethodDef,
     fn: (...args: unknown[]) => unknown, impl: object,
   ): (...args: unknown[]) => unknown {
+    if (methodDef.callTypeId !== FUSION_CALL_TYPE_ID)
+      return fn;
+
     // Route through ComputeFunction + wire invalidation → $sys-c.Invalidate
-    const cf = new ComputeFunction(methodName, fn as ComputeFunctionImpl);
+    const cf = new ComputeFunction(methodDef.name, fn as ComputeFunctionImpl);
     return async (...args: unknown[]) => {
       const context = extractDispatchContext(args);
       const cleanArgs = context !== undefined ? args.slice(0, -1) : args;
@@ -87,7 +170,11 @@ export class FusionHub extends RpcHub {
       // Wire invalidation → send $sys-c.Invalidate to the client
       if (context !== undefined) {
         computed.onInvalidated.add(() => {
-          this.systemCallSender.invalidate(context.connection, context.callId);
+          const msg = serializeMessage({
+            Method: FUSION_INVALIDATE_METHOD,
+            RelatedId: context.callId,
+          });
+          context.connection.send(msg);
         });
       }
 
@@ -95,22 +182,31 @@ export class FusionHub extends RpcHub {
     };
   }
 
-  protected override _createComputeClientMethod(
-    peer: RpcPeer, def: RpcServiceDef, methodName: string, methodDef: RpcMethodDef,
+  protected override _createClientMethod(
+    peer: RpcPeer, methodDef: RpcMethodDef,
   ): (...args: unknown[]) => unknown {
-    const wireMethod = `${def.name}.${methodName}`;
+    if (methodDef.callTypeId !== FUSION_CALL_TYPE_ID)
+      return super._createClientMethod(peer, methodDef);
+
+    const wireName = wireMethodName(methodDef);
     // Local ComputeFunction whose impl makes an RPC call
     const rpcImpl: ComputeFunctionImpl = async function(...args: unknown[]) {
-      const outboundCall = peer.call(wireMethod, args, true) as unknown as RpcOutboundComputeCall;
+      // Capture ComputeContext synchronously — AsyncContext.current is the child
+      // context set by ComputeFunction.invoke() and won't survive the await below.
+      const computeCtx = ComputeContext.from(AsyncContext.current);
+      const callOptions: RpcCallOptions = {
+        callTypeId: FUSION_CALL_TYPE_ID,
+        outboundCallFactory: (id, m) => new RpcOutboundComputeCall(id, m),
+      };
+      const outboundCall = peer.call(wireName, args, callOptions) as RpcOutboundComputeCall;
       const value = await outboundCall.result.promise;
       // Wire server invalidation → local computed invalidation
-      const computeCtx = ComputeContext.from(AsyncContext.current);
       if (computeCtx) {
         outboundCall.whenInvalidated.promise.then(() => computeCtx.computed.invalidate());
       }
       return value;
     };
-    const cf = new ComputeFunction(methodName, rpcImpl);
+    const cf = new ComputeFunction(methodDef.name, rpcImpl);
     const syntheticInstance = {};
     return (...args: unknown[]) => cf.invoke(syntheticInstance, args.slice(0, methodDef.argCount)).then(c => c.value);
   }
