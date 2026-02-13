@@ -19,7 +19,7 @@ export function TodoItemView({ item, api }: Props) {
   }, [item.title]);
 
   const toggleDone = () => {
-    void commander.run(async () => {
+    commander.run(async () => {
       await api.AddOrUpdate({
         session: DEFAULT_SESSION,
         item: { ...item, isDone: !item.isDone },
@@ -35,7 +35,7 @@ export function TodoItemView({ item, api }: Props) {
     debounceTimer.current = setTimeout(() => {
       const trimmed = newTitle.trim();
       if (trimmed && trimmed !== item.title) {
-        void commander.run(async () => {
+        commander.run(async () => {
           await api.AddOrUpdate({
             session: DEFAULT_SESSION,
             item: { ...item, title: trimmed },
@@ -46,7 +46,7 @@ export function TodoItemView({ item, api }: Props) {
   };
 
   const remove = () => {
-    void commander.run(async () => {
+    commander.run(async () => {
       await api.Remove({
         session: DEFAULT_SESSION,
         id: item.id,

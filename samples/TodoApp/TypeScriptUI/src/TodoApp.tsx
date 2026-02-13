@@ -17,6 +17,13 @@ export function TodoApp({ todos, api, tracker }: Props) {
   const [loadedCount, setLoadedCount] = React.useState(5);
   const [newTitle, setNewTitle] = React.useState("");
   const commander = useUICommander();
+  const [, forceRender] = React.useReducer(c => c + 1, 0);
+
+  React.useEffect(() => {
+    const handler = () => forceRender();
+    tracker.changed.add(handler);
+    return () => tracker.changed.remove(handler);
+  }, [tracker]);
 
   const { value, isInitial } = useComputedState(
     () => {
@@ -33,7 +40,7 @@ export function TodoApp({ todos, api, tracker }: Props) {
     e.preventDefault();
     const title = newTitle.trim();
     setNewTitle("");
-    void commander.run(async () => {
+    commander.run(async () => {
       await api.AddOrUpdate({
         session: DEFAULT_SESSION,
         item: { id: ULID_EMPTY, title: title, isDone: false },
@@ -49,6 +56,13 @@ export function TodoApp({ todos, api, tracker }: Props) {
         <p>
           <TodoSummaryBadge todos={todos} tracker={tracker} />
         </p>
+
+        {tracker.errors.map((err, i) => (
+          <div key={i} className="alert alert-danger d-flex justify-content-between align-items-center">
+            <span>{err instanceof Error ? err.message : String(err)}</span>
+            <button type="button" className="btn-close" onClick={() => tracker.dismissError(i)} />
+          </div>
+        ))}
 
         {isInitial && <p className="text-muted">Loading...</p>}
 

@@ -8,7 +8,13 @@ const defaultTracker = new UIActionTracker();
 export const UIActionTrackerContext = createContext<UIActionTracker>(defaultTracker);
 
 /** Returns a commander that wraps async commands with UIActionTracker. */
-export function useUICommander(): { run: <T>(fn: () => Promise<T>) => Promise<T> } {
+export function useUICommander(): {
+  run: (fn: () => Promise<unknown>) => Promise<void>;
+  call: <T>(fn: () => Promise<T>) => Promise<T>;
+} {
   const tracker = useContext(UIActionTrackerContext);
-  return { run: <T>(fn: () => Promise<T>) => tracker.run(fn) };
+  return {
+    run: (fn: () => Promise<unknown>) => tracker.run(fn),
+    call: <T>(fn: () => Promise<T>) => tracker.call(fn),
+  };
 }
