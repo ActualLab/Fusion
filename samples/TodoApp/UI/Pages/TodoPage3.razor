@@ -1,0 +1,30 @@
+@page "/todo3"
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div id="todo-react-root"></div>
+
+@code {
+    private bool _isMounted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) {
+            await JS.InvokeVoidAsync("TodoReactApp.mount", "todo-react-root");
+            _isMounted = true;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_isMounted) {
+            try {
+                await JS.InvokeVoidAsync("TodoReactApp.unmount");
+            }
+            catch (JSDisconnectedException) {
+                // Circuit is already gone
+            }
+            _isMounted = false;
+        }
+    }
+}

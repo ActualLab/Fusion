@@ -1,0 +1,23 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@actuallab/core": "file:../../../ts/packages/core",
+    "@actuallab/rpc": "file:../../../ts/packages/rpc",
+    "@actuallab/fusion": "file:../../../ts/packages/fusion",
+    "@actuallab/fusion-rpc": "file:../../../ts/packages/fusion-rpc",
+    "@actuallab/fusion-react": "file:../../../ts/packages/fusion-react"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
+  }
+}

@@ -69,4 +69,32 @@
     <None Include="$(ProjectDir)\Resources\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" LinkBase="Resources\" />
   </ItemGroup>
 
+  <!-- TypeScriptUI build: produces wwwroot/js/todo-react.js -->
+  <PropertyGroup>
+    <TypeScriptUIDir>$([MSBuild]::NormalizePath($(MSBuildProjectDirectory), '..', 'TypeScriptUI'))</TypeScriptUIDir>
+    <TypeScriptLibSourceDir>$([MSBuild]::NormalizePath($(MSBuildProjectDirectory), '..', '..', '..', 'ts'))</TypeScriptLibSourceDir>
+    <TodoReactJsOutput>$([MSBuild]::NormalizePath($(MSBuildProjectDirectory), 'wwwroot', 'js', 'todo-react.js'))</TodoReactJsOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <TypeScriptUISource Include="$(TypeScriptUIDir)/src/**/*" />
+    <TypeScriptUISource Include="$(TypeScriptUIDir)/package.json" />
+    <TypeScriptUISource Include="$(TypeScriptUIDir)/tsconfig.json" />
+    <TypeScriptUISource Include="$(TypeScriptUIDir)/build.mjs" />
+    <TypeScriptLibSource Include="$(TypeScriptLibSourceDir)/packages/*/src/**/*" />
+    <TypeScriptLibSource Include="$(TypeScriptLibSourceDir)/package.json" />
+  </ItemGroup>
+
+  <Target Name="BuildTypeScriptLibSource" BeforeTargets="BeforeBuild"
+          Inputs="@(TypeScriptLibSource)" Outputs="$(TypeScriptLibSourceDir)/packages/fusion-react/dist/index.js">
+    <Exec Command="npm install --ignore-scripts" WorkingDirectory="$(TypeScriptLibSourceDir)" />
+    <Exec Command="npm run build" WorkingDirectory="$(TypeScriptLibSourceDir)" />
+  </Target>
+
+  <Target Name="BuildTypeScriptUI" BeforeTargets="BeforeBuild" DependsOnTargets="BuildTypeScriptLibSource"
+          Inputs="@(TypeScriptUISource)" Outputs="$(TodoReactJsOutput)">
+    <Exec Command="npm install" WorkingDirectory="$(TypeScriptUIDir)" />
+    <Exec Command="npm run build" WorkingDirectory="$(TypeScriptUIDir)" />
+  </Target>
+
 </Project>

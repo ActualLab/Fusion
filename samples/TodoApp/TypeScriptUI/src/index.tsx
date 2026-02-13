@@ -1,0 +1,58 @@
+import React from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { FusionHub } from "@actuallab/fusion-rpc";
+import { RpcClientPeer } from "@actuallab/rpc";
+import { UIActionTracker, UIActionTrackerContext } from "@actuallab/fusion-react";
+import { TodoApiComputeDef, TodoApiCommandDef } from "./todo-api.js";
+import type { ITodoApiCompute, ITodoApiCommand } from "./todo-api.js";
+import { Todos } from "./todos.js";
+import { TodoApp } from "./TodoApp.js";
+
+// --- Module-level singletons (created once per page load) ---
+
+function getWsUrl(): string {
+  const loc = window.location;
+  const protocol = loc.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${loc.host}/rpc/ws?f=json5`;
+}
+
+const hub = new FusionHub();
+const peer = new RpcClientPeer(hub, getWsUrl());
+hub.addPeer(peer);
+
+const computeApi = hub.addClient<ITodoApiCompute>(peer, TodoApiComputeDef);
+const commandApi = hub.addClient<ITodoApiCommand>(peer, TodoApiCommandDef);
+const todos = new Todos(computeApi);
+const tracker = new UIActionTracker();
+
+// Start the peer connection once
+void peer.run();
+
+// --- React mount/unmount (called by Blazor interop) ---
+
+let root: Root | null = null;
+
+const todoReactApp = {
+  mount(elementId: string) {
+    const container = document.getElementById(elementId);
+    if (!container) {
+      console.error(`TodoReactApp: element #${elementId} not found`);
+      return;
+    }
+
+    root = createRoot(container);
+    root.render(
+      <UIActionTrackerContext.Provider value={tracker}>
+        <TodoApp todos={todos} commandApi={commandApi} tracker={tracker} />
+      </UIActionTrackerContext.Provider>
+    );
+  },
+
+  unmount() {
+    root?.unmount();
+    root = null;
+  },
+};
+
+// Expose to global scope for Blazor interop
+(window as any).TodoReactApp = todoReactApp;
