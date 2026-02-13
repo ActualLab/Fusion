@@ -25,8 +25,8 @@ export function TodoSummaryBadge({ todos, tracker }: Props) {
 
   return (
     <>
-      <span className="badge bg-success"><b>{summary.DoneCount}</b> done</span>{" "}
-      <span className="badge bg-primary"><b>{summary.Count}</b> total</span>
+      <span className="badge bg-success"><b>{summary.doneCount}</b> done</span>{" "}
+      <span className="badge bg-primary"><b>{summary.count}</b> total</span>
     </>
   );
 }

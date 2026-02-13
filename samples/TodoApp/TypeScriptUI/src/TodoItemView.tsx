@@ -10,19 +10,19 @@ interface Props {
 
 export function TodoItemView({ item, commandApi }: Props) {
   const commander = useUICommander();
-  const [editTitle, setEditTitle] = React.useState(item.Title);
+  const [editTitle, setEditTitle] = React.useState(item.title);
   const debounceTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync editTitle when the item changes from server
   React.useEffect(() => {
-    setEditTitle(item.Title);
-  }, [item.Title]);
+    setEditTitle(item.title);
+  }, [item.title]);
 
   const toggleDone = () => {
     void commander.run(async () => {
       await commandApi.AddOrUpdate({
-        Session: DEFAULT_SESSION,
-        Item: { ...item, IsDone: !item.IsDone },
+        session: DEFAULT_SESSION,
+        item: { ...item, isDone: !item.isDone },
       });
     });
   };
@@ -34,11 +34,11 @@ export function TodoItemView({ item, commandApi }: Props) {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       const trimmed = newTitle.trim();
-      if (trimmed && trimmed !== item.Title) {
+      if (trimmed && trimmed !== item.title) {
         void commander.run(async () => {
           await commandApi.AddOrUpdate({
-            Session: DEFAULT_SESSION,
-            Item: { ...item, Title: trimmed },
+            session: DEFAULT_SESSION,
+            item: { ...item, title: trimmed },
           });
         });
       }
@@ -48,8 +48,8 @@ export function TodoItemView({ item, commandApi }: Props) {
   const remove = () => {
     void commander.run(async () => {
       await commandApi.Remove({
-        Session: DEFAULT_SESSION,
-        Id: item.Id,
+        session: DEFAULT_SESSION,
+        id: item.id,
       });
     });
   };
@@ -57,7 +57,7 @@ export function TodoItemView({ item, commandApi }: Props) {
   return (
     <div className="input-group my-1">
       <span className="input-group-text" onClick={toggleDone} style={{ cursor: "pointer" }}>
-        <i className={`fa fa-${item.IsDone ? "check-square" : "square"}`} />
+        <i className={`fa fa-${item.isDone ? "check-square" : "square"}`} />
       </span>
       <input
         type="text"

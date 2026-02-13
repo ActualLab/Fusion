@@ -32,8 +32,8 @@ export function TodoApp({ todos, commandApi, tracker }: Props) {
     setNewTitle("");
     void commander.run(async () => {
       await commandApi.AddOrUpdate({
-        Session: DEFAULT_SESSION,
-        Item: { Id: ULID_EMPTY, Title: title, IsDone: false },
+        session: DEFAULT_SESSION,
+        item: { id: ULID_EMPTY, title: title, isDone: false },
       });
     });
   };
@@ -50,7 +50,7 @@ export function TodoApp({ todos, commandApi, tracker }: Props) {
         {isInitial && <p className="text-muted">Loading...</p>}
 
         {items.map((item) => (
-          <TodoItemView key={item.Id} item={item} commandApi={commandApi} />
+          <TodoItemView key={item.id} item={item} commandApi={commandApi} />
         ))}
 
         {hasMore && (

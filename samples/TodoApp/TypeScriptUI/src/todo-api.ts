@@ -1,29 +1,29 @@
 import { defineComputeService } from "@actuallab/fusion-rpc";
 import { defineRpcService } from "@actuallab/rpc";
 
-// Data types matching .NET TodoItem and TodoSummary
+// Data types matching .NET TodoItem and TodoSummary (camelCase — server uses JsonNamingPolicy.CamelCase)
 
 export interface TodoItem {
-  Id: string;       // Ulid as string
-  Title: string;
-  IsDone: boolean;
+  id: string;       // Ulid as string
+  title: string;
+  isDone: boolean;
 }
 
 export interface TodoSummary {
-  Count: number;
-  DoneCount: number;
+  count: number;
+  doneCount: number;
 }
 
 // Command types matching .NET Todos_AddOrUpdate and Todos_Remove
 
 export interface Todos_AddOrUpdate {
-  Session: string;
-  Item: TodoItem;
+  session: string;
+  item: TodoItem;
 }
 
 export interface Todos_Remove {
-  Session: string;
-  Id: string;
+  session: string;
+  id: string;
 }
 
 // Session.Default.Id = "~"

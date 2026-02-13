@@ -53,8 +53,9 @@ export function handleSystemCall(
     case RpcSystemCalls.error: {
       const call = outboundTracker.remove(relatedId);
       if (call !== undefined) {
-        const errorInfo = args[0] as { Message?: string } | undefined;
-        call.result.reject(new Error(errorInfo?.Message ?? "RPC error"));
+        const errorInfo = args[0] as Record<string, unknown> | undefined;
+        const msg = (errorInfo?.Message ?? errorInfo?.message ?? "RPC error") as string;
+        call.result.reject(new Error(msg));
       }
       break;
     }
