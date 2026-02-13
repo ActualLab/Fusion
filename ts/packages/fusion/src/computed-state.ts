@@ -20,6 +20,7 @@ export class ComputedState<T> extends State<T> {
   private _disposeController: AbortController;
   private _cancelDelaySource = new PromiseSource<void>();
   private _renewer: () => Computed<T> | Promise<Computed<T>>;
+  private _hasOutput = false;
 
   constructor(computer: StateComputer<T>, options?: ComputedStateOptions<T>) {
     super();
@@ -33,23 +34,51 @@ export class ComputedState<T> extends State<T> {
       return this._computed;
     };
 
-    // Create initial computed
-    if (options?.initialOutput !== undefined || options?.initialValue !== undefined)
+    // Create initial computed — _updateCycle will replace it on first iteration
+    if (options?.initialOutput !== undefined || options?.initialValue !== undefined) {
       this._initialize(options.initialOutput ?? options.initialValue as T, this._renewer);
-    else
-      this._computed = new StateBoundComputed<T>(this, this._renewer);
+      this._hasOutput = true;
+    }
+    // else: _computed stays unset until _updateCycle calls _update()
 
     void this._updateCycle();
   }
 
+  override get hasValue(): boolean {
+    if (!this._hasOutput && this._updateIndex === 0) return false;
+    return this._computed.hasValue;
+  }
+
+  override get hasError(): boolean {
+    if (!this._hasOutput && this._updateIndex === 0) return false;
+    return this._computed.hasError;
+  }
+
   override get value(): T {
+    if (!this._hasOutput && this._updateIndex === 0) throw new Error("ComputedState has no value yet.");
     if (this._computed.hasValue) return this._computed.value;
     if (this._lastNonErrorValue !== undefined) return this._lastNonErrorValue;
     throw new Error("ComputedState has no value yet.");
   }
 
+  override get error(): unknown {
+    if (!this._hasOutput && this._updateIndex === 0) return undefined;
+    return this._computed.error;
+  }
+
   override get valueOrUndefined(): T | undefined {
+    if (!this._hasOutput && this._updateIndex === 0) return undefined;
     return this._computed.valueOrUndefined ?? this._lastNonErrorValue;
+  }
+
+  override get output(): Result<T> {
+    if (!this._hasOutput && this._updateIndex === 0) throw new Error("ComputedState has no output yet.");
+    return this._computed.output;
+  }
+
+  override get computed(): Computed<T> {
+    if (!this._hasOutput && this._updateIndex === 0) throw new Error("ComputedState has not been computed yet.");
+    return this._computed;
   }
 
   get isDisposed(): boolean {

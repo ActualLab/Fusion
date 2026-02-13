@@ -54,6 +54,9 @@ ts/e2e/*.js.map
 ts/e2e/*.d.ts
 ts/e2e/*.d.ts.map
 
+# Sample build output (JS built by .csproj)
+samples/**/Host/wwwroot/js/
+
 # Log files & folders
 *.log
 *.binlog
