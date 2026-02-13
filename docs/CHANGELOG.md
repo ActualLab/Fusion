@@ -8,6 +8,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.1.14+28a7e73e
+
+Release date: 2026-02-11
+
+### Fixed
+- RPC WebSocket disconnect detection was delayed by ~50 seconds instead of being instant.
+  When the server shut down, `RpcPeer.OnRun` awaited `maintainTasks` in a `finally` block
+  before cancelling `readerTokenSource`, so `SharedObjects.Maintain()` kept running its
+  keep-alive check loop for up to 55s (`KeepAliveTimeout`) before detecting the timeout.
+  The fix moves the `readerTokenSource` cancellation before the `maintainTasks` await.
+
+
+## 12.1.12+0475b1ca
+
+Release date: 2026-02-11
+
+### Breaking Changes
+- `mempack6(c)` / `msgpack6(c)` binary protocols no longer persist message size, 
+  fixing the compatibility issue with pre-v12 protocols. This seems to be the very
+  first release issue attributed to Claude Code: it somehow concluded the size has 
+  to be persisted while migrating `WebSocketChannel` to `RpcWebSocketTransport` API, 
+  but in reality is wasn't (the code branch persisting the size was disabled via other logic).
+  Sorry we caught this just now: the issue is there for two weeks already (from v12.0.9).
+
+### Fixed
+- `Option<T>` now always uses explicit `MessagePackFormatter` instead of conditional
+  `MessagePackObject(true)` with `SuppressSourceGeneration` on .NET 8+, fixing serialization
+  consistency across target frameworks
+
+### Tests
+- Added conditional flags (`UseSystemJsonSerializer`, `UseNewtonsoftJsonSerializer`,
+  `UseMessagePackSerializer`, `UseMemoryPackSerializer`) in `SerializationTestExt`
+  for selectively enabling/disabling specific serializers in tests
+- Added serialization round-trip tests for `DbUser`, `DbChat`, `DbMessage`
+
+
 ## 12.1.4+7b59e831
 
 Release date: 2026-02-07

@@ -254,15 +254,18 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
                 var readerToken = readerTokenSource.Token;
                 var isHandshakeError = false;
+                Task maintainTask = Task.CompletedTask;
                 try {
                     if (connectionState.IsFinal)
                         return;
 
                     if (connectionState.Value.Connection is not null)
-                        connectionState = SetConnectionState(connectionState.Value.NextDisconnected(), connectionState).RequireNonFinal();
+                        connectionState = SetConnectionState(connectionState.Value.NextDisconnected(), connectionState)
+                            .RequireNonFinal();
 
                     // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                    var connection = await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
+                    var connection =
+                        await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
                     var transport = connection.Transport;
 
                     // Get inbound message reader from the connection
@@ -276,20 +279,22 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     try {
                         DebugLog?.LogDebug("'{PeerRef}': Sending handshake", Ref);
                         (handshake, ownHandshake) = await Task.Run(
-                            async () => {
-                                var ownHandshake1 = new RpcHandshake(
-                                    Id, Versions, Hub.Id,
-                                    RpcHandshake.CurrentProtocolVersion,
-                                    ++handshakeIndex);
-                                Hub.SystemCallSender.Handshake(this, transport, ownHandshake1);
-                                var hasMore = await reader.MoveNextAsync().ConfigureAwait(false);
-                                if (!hasMore)
-                                    throw new ChannelClosedException(); // Mimicking channel behavior here
-                                var message = reader.Current;
-                                var handshakeContext = ProcessMessage(message, handshakeToken, handshakeToken);
-                                var remoteHandshake = handshakeContext?.Call.Arguments?.GetUntyped(0) as RpcHandshake;
-                                return (remoteHandshake ?? throw Errors.HandshakeFailed(), ownHandshake1);
-                            }, handshakeToken)
+                                async () => {
+                                    var ownHandshake1 = new RpcHandshake(
+                                        Id, Versions, Hub.Id,
+                                        RpcHandshake.CurrentProtocolVersion,
+                                        ++handshakeIndex);
+                                    Hub.SystemCallSender.Handshake(this, transport, ownHandshake1);
+                                    var hasMore = await reader.MoveNextAsync().ConfigureAwait(false);
+                                    if (!hasMore)
+                                        throw new ChannelClosedException(); // Mimicking channel behavior here
+
+                                    var message = reader.Current;
+                                    var handshakeContext = ProcessMessage(message, handshakeToken, handshakeToken);
+                                    var remoteHandshake =
+                                        handshakeContext?.Call.Arguments?.GetUntyped(0) as RpcHandshake;
+                                    return (remoteHandshake ?? throw Errors.HandshakeFailed(), ownHandshake1);
+                                }, handshakeToken)
                             .WaitAsync(handshakeToken)
                             .ConfigureAwait(false);
                         if (handshake.RemoteApiVersionSet is null)
@@ -301,6 +306,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         readerTokenSource.CancelAndDisposeSilently();
                         if (e.IsCancellationOfTimeoutToken(handshakeToken, cancellationToken))
                             throw Errors.HandshakeTimeout();
+
                         throw;
                     }
 
@@ -321,13 +327,14 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }
 
                     // Only at this point: expose the new connection state
-                    var nextConnectionState = connectionState.Value.NextConnected(connection, handshake, ownHandshake, readerTokenSource);
+                    var nextConnectionState =
+                        connectionState.Value.NextConnected(connection, handshake, ownHandshake, readerTokenSource);
                     connectionState = SetConnectionState(nextConnectionState, connectionState).RequireNonFinal();
                     var connectionStateValue = connectionState.Value;
                     if (connectionStateValue.Connection != connection)
                         continue; // Somehow disconnected
 
-                    var maintainTasks = Task.Run(async () => {
+                    maintainTask = Task.Run(async () => {
                         var tasks = new List<Task> {
                             SharedObjects.Maintain(connectionStateValue, readerToken),
                             RemoteObjects.Maintain(connectionStateValue, readerToken),
@@ -337,6 +344,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                             var isPeerChanged = peerChangeKind == RpcPeerChangeKind.Changed;
                             tasks.Add(OutboundCalls.Reconnect(connectionStateValue, isPeerChanged, readerToken));
                         }
+
                         await Task.WhenAll(tasks).SilentAwait(false);
                     }, readerToken);
 
@@ -351,7 +359,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         // Reset AsyncLocals that might be set by ProcessMessage
                         RpcInboundContext.Current = null;
                         Activity.Current = null;
-                        await maintainTasks.SilentAwait(false);
                     }
                 }
                 catch (Exception e) {
@@ -361,8 +368,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         && !isHandshakeError;
                     error = isReaderAbort ? null : e;
                 }
+                finally {
+                    readerTokenSource.CancelAndDisposeSilently();
+                    await maintainTask.SilentAwait(false);
+                }
 
-                readerTokenSource.CancelAndDisposeSilently();
                 if (cancellationToken.IsCancellationRequested) {
                     var isTerminal = error is not null && Options.TerminalErrorDetector.Invoke(this, error);
                     if (!isTerminal)

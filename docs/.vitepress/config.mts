@@ -72,6 +72,7 @@ export default withMermaid(defineConfig({
   description:
     "Fusion is a reactive framework for building scalable, real-time applications. This site hosts Fusion documentation.",
   head: [
+    ["meta", { name: "msvalidate.01", content: "1CE54B5BA968A223C22D8083ACFF0F67" }],
     ["link", { rel: "icon", href: "/favicon.ico" }],
     ["style", {}, `.vp-doc .mermaid p { line-height: normal !important; padding: 2px 0 !important; } .mermaid { background-color: #1e1b4b; background-image: radial-gradient(ellipse at 30% 20%, rgba(59, 130, 246, 0.3) 0%, transparent 40%), radial-gradient(ellipse at 70% 60%, rgba(168, 85, 247, 0.3) 0%, transparent 40%), radial-gradient(ellipse at 50% 80%, rgba(34, 211, 238, 0.2) 0%, transparent 40%); border-radius: 8px; padding: 16px; margin: 16px 0; }`],
     ["script", { async: "", src: "https://www.googletagmanager.com/gtag/js?id=G-PX4G7HX4CM" }],
