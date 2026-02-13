@@ -208,7 +208,12 @@ export class FusionHub extends RpcHub {
     };
     const cf = new ComputeFunction(methodDef.name, rpcImpl);
     const syntheticInstance = {};
-    return (...args: unknown[]) => cf.invoke(syntheticInstance, args.slice(0, methodDef.argCount)).then(c => c.value);
+    return (...args: unknown[]) => {
+      const last = args[args.length - 1];
+      const sliced = args.slice(0, methodDef.argCount);
+      const invokeArgs = last instanceof AsyncContext ? [...sliced, last] : sliced;
+      return cf.invoke(syntheticInstance, invokeArgs).then(c => c.value);
+    };
   }
 }
 

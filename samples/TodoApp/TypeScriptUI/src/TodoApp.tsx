@@ -27,7 +27,6 @@ export function TodoApp({ todos, commandApi, tracker }: Props) {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
     const title = newTitle.trim();
     setNewTitle("");
     void commander.run(async () => {

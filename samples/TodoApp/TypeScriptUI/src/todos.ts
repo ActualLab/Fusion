@@ -1,4 +1,5 @@
 import { computeMethod } from "@actuallab/fusion";
+import { AsyncContext } from "@actuallab/core";
 import type { ITodoApiCompute, TodoItem, TodoSummary } from "./todo-api.js";
 import { DEFAULT_SESSION } from "./todo-api.js";
 
@@ -16,13 +17,14 @@ export class Todos {
 
   @computeMethod
   async list(count: number): Promise<{ items: TodoItem[]; hasMore: boolean }> {
-    const ids = await this.api.ListIds(DEFAULT_SESSION, count + 1);
+    const ctx = AsyncContext.current;
+    const ids = await this.api.ListIds(DEFAULT_SESSION, count + 1, ctx);
     const hasMore = ids.length > count;
     const idsToFetch = hasMore ? ids.slice(0, count) : ids;
 
     const items: TodoItem[] = [];
     for (const id of idsToFetch) {
-      const item = await this.api.Get(DEFAULT_SESSION, id);
+      const item = await this.api.Get(DEFAULT_SESSION, id, ctx);
       if (item !== null)
         items.push(item);
     }
@@ -31,6 +33,7 @@ export class Todos {
 
   @computeMethod
   async getSummary(): Promise<TodoSummary> {
-    return await this.api.GetSummary(DEFAULT_SESSION);
+    const ctx = AsyncContext.current;
+    return await this.api.GetSummary(DEFAULT_SESSION, ctx);
   }
 }

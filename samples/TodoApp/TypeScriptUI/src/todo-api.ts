@@ -1,5 +1,6 @@
 import { defineComputeService } from "@actuallab/fusion-rpc";
 import { defineRpcService } from "@actuallab/rpc";
+import { AsyncContext } from "@actuallab/core";
 
 // Data types matching .NET TodoItem and TodoSummary (camelCase — server uses JsonNamingPolicy.CamelCase)
 
@@ -47,10 +48,11 @@ export const TodoApiCommandDef = defineRpcService("ITodoApi", {
 }, { ctOffset: 1 });
 
 // Client interface for type safety
+// Optional trailing AsyncContext enables explicit context propagation across awaits.
 export interface ITodoApiCompute {
-  Get(session: string, id: string): Promise<TodoItem | null>;
-  ListIds(session: string, count: number): Promise<string[]>;
-  GetSummary(session: string): Promise<TodoSummary>;
+  Get(session: string, id: string, ctx?: AsyncContext): Promise<TodoItem | null>;
+  ListIds(session: string, count: number, ctx?: AsyncContext): Promise<string[]>;
+  GetSummary(session: string, ctx?: AsyncContext): Promise<TodoSummary>;
 }
 
 export interface ITodoApiCommand {

@@ -302,10 +302,13 @@ export class RpcClientPeer extends RpcPeer {
   private _lastRemoteHubId: string | undefined;
   private _pendingHandshake: PromiseSource<RemoteHandshake> | undefined;
 
+  /** Base64url-encoded peer ID — matches .NET's RpcClientPeer.ClientId (Guid.ToBase64Url). */
+  readonly clientId: string;
   readonly peerChanged = new EventHandlerSet<void>();
 
   constructor(hub: RpcHub, url: string) {
     super(url, hub);
+    this.clientId = guidToBase64Url(this.id);
   }
 
   get connectionKind(): RpcPeerConnectionKind {
@@ -321,9 +324,10 @@ export class RpcClientPeer extends RpcPeer {
 
   /** Start the reconnection loop — runs until disposed. */
   async run(wsFactory?: (url: string) => WebSocketLike): Promise<void> {
+    const connUrl = this.ref + (this.ref.includes('?') ? '&' : '?') + `clientId=${this.clientId}`;
     while (!this._disposed) {
       try {
-        const ws = wsFactory?.(this.ref) ?? new WebSocket(this.ref) as unknown as WebSocketLike;
+        const ws = wsFactory?.(connUrl) ?? new WebSocket(connUrl) as unknown as WebSocketLike;
         const conn = new RpcWebSocketConnection(ws);
         this._connectionKind = RpcPeerConnectionKind.Connecting;
 
@@ -403,4 +407,31 @@ export class RpcServerPeer extends RpcPeer {
       this._hub.systemCallSender.handshake(this._connection, this.id, this._hub.hubId, 0);
     }
   }
+}
+
+/**
+ * Convert a UUID string to base64url — matches .NET's Guid.ToBase64Url().
+ * .NET Guid stores the first 3 groups in little-endian byte order.
+ */
+function guidToBase64Url(uuid: string): string {
+  const hex = uuid.replace(/-/g, '');
+  const bytes = new Uint8Array(16);
+
+  // Group 1 (bytes 0-3): little-endian
+  bytes[0] = parseInt(hex.slice(6, 8), 16);
+  bytes[1] = parseInt(hex.slice(4, 6), 16);
+  bytes[2] = parseInt(hex.slice(2, 4), 16);
+  bytes[3] = parseInt(hex.slice(0, 2), 16);
+  // Group 2 (bytes 4-5): little-endian
+  bytes[4] = parseInt(hex.slice(10, 12), 16);
+  bytes[5] = parseInt(hex.slice(8, 10), 16);
+  // Group 3 (bytes 6-7): little-endian
+  bytes[6] = parseInt(hex.slice(14, 16), 16);
+  bytes[7] = parseInt(hex.slice(12, 14), 16);
+  // Groups 4-5 (bytes 8-15): big-endian
+  for (let i = 8; i < 16; i++)
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+
+  const binary = String.fromCharCode(...bytes);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
