@@ -1,3 +1,10 @@
+// .NET counterpart: none — this is a TS-only test transport.
+//
+// .NET tests use a different mechanism: RpcTestClient creates an in-memory
+// Channel<RpcMessage> pair wrapped in an RpcTransport.  We use the browser-
+// standard MessageChannel API instead, which gives us a synchronous in-process
+// transport without requiring WebSocket mocks.
+
 import { EventHandlerSet } from "@actuallab/core";
 import { splitFrame } from "./rpc-serialization.js";
 import type { RpcConnection } from "./rpc-connection.js";

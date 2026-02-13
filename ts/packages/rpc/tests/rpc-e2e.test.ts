@@ -189,7 +189,7 @@ describe("RPC End-to-End", () => {
 
     // callNoWait should not throw and not register
     const trackerSizeBefore = clientPeer.outbound.size;
-    clientPeer.callNoWait("NoWaitService.fire", ["hello"]);
+    clientPeer.callNoWait("NoWaitService.fire:1", ["hello"]);
     expect(clientPeer.outbound.size).toBe(trackerSizeBefore);
 
     await delay(50);
@@ -217,9 +217,46 @@ describe("RPC End-to-End", () => {
     expect(greeting).toBe("Hello, addClient!");
   });
 
+  it("should resolve overloaded methods by argument count", async () => {
+    const [clientConn, serverConn] = createMessageChannelPair();
+
+    const OverloadDef = defineRpcService("OverloadService", {
+      "compute": { args: [0] },
+      "compute:2": { args: [0, 0] },
+      "compute:3": { args: [0, 0, 0] },
+    });
+
+    serverHub.addService(OverloadDef, {
+      compute: (...args: unknown[]) => {
+        const nums = args.map(Number);
+        if (nums.length === 1) return nums[0]! * 2;
+        return nums.reduce((a, b) => a + b, 0);
+      },
+    });
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn);
+    clientHub.addPeer(clientPeer);
+
+    const serverPeer = new RpcServerPeer("server", serverHub, serverConn);
+    serverHub.addPeer(serverPeer);
+
+    await delay(10);
+
+    const svc = clientHub.addClient<{
+      compute(a: number): Promise<number>;
+      compute(a: number, b: number): Promise<number>;
+      compute(a: number, b: number, c: number): Promise<number>;
+    }>(clientPeer, OverloadDef);
+
+    expect(await svc.compute(5)).toBe(10);      // 1 arg → ×2
+    expect(await svc.compute(3, 4)).toBe(7);    // 2 args → sum
+    expect(await svc.compute(1, 2, 3)).toBe(6); // 3 args → sum
+  });
+
   it("should handle noWait call on disconnected peer silently", async () => {
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
     // Not connected — should not throw
-    expect(() => clientPeer.callNoWait("CalcService.add", [1, 2])).not.toThrow();
+    expect(() => clientPeer.callNoWait("CalcService.add:2", [1, 2])).not.toThrow();
   });
 });

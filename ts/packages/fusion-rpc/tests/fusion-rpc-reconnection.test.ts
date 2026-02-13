@@ -1,22 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { AsyncContext } from "@actuallab/core";
 import {
+  Computed,
   MutableState,
   computeMethod,
 } from "@actuallab/fusion";
 import {
-  RpcHub,
   RpcClientPeer,
-  RpcServerPeer,
-  RpcOutboundComputeCall,
   rpcService,
   rpcMethod,
   defineRpcService,
-  defineComputeService,
   createRpcClient,
   createMessageChannelPair,
 } from "@actuallab/rpc";
-import { FusionHub } from "../src/index.js";
+import { FusionHub, RpcOutboundComputeCall, defineComputeService } from "../src/index.js";
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -48,12 +45,12 @@ function createServerHub(store: Map<string, MutableState<number>>): FusionHub {
     return s;
   }
 
-  hub.addServiceFromContract(ICounterService, {
-    async getCount(key: string): Promise<number> {
-      return getState(key).use();
+  hub.addService(ICounterService, {
+    async getCount(key: unknown): Promise<number> {
+      return getState(key as string).use();
     },
-    async getDoubled(key: string): Promise<number> {
-      return getState(key).use() * 2;
+    async getDoubled(key: unknown): Promise<number> {
+      return getState(key as string).use() * 2;
     },
   });
 
@@ -69,13 +66,13 @@ function createServerHub(store: Map<string, MutableState<number>>): FusionHub {
 describe("Fusion RPC Reconnection", () => {
   let storeA: Map<string, MutableState<number>>;
   let serverHubA: FusionHub;
-  let clientHub: RpcHub;
+  let clientHub: FusionHub;
 
   beforeEach(() => {
     AsyncContext.current = undefined;
     storeA = new Map();
     serverHubA = createServerHub(storeA);
-    clientHub = new RpcHub("client");
+    clientHub = new FusionHub("client");
   });
 
   afterEach(() => {
@@ -83,7 +80,7 @@ describe("Fusion RPC Reconnection", () => {
     clientHub.close();
   });
 
-  it("should invalidate active compute calls on disconnect", async () => {
+  it("should NOT invalidate stage-3 compute calls on disconnect", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
     const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
@@ -94,14 +91,72 @@ describe("Fusion RPC Reconnection", () => {
 
     // Make a compute call
     const outboundCall = clientPeer.call(
-      "CounterService.getCount", ["x"], true,
+      "CounterService.getCount:2", ["x"],
+      { callTypeId: 1, outboundCallFactory: (id: number, m: string) => new RpcOutboundComputeCall(id, m) },
     ) as RpcOutboundComputeCall;
 
     const result = await outboundCall.result.promise;
     expect(result).toBe(0);
 
-    // Disconnect — should resolve whenInvalidated
+    // Disconnect — stage-3 compute call should survive
     clientConn.close();
+    await delay(10);
+
+    expect(outboundCall.whenInvalidated.isCompleted).toBe(false);
+  });
+
+  it("should invalidate stage-3 compute calls on reconnect", async () => {
+    const [clientConn1, serverConn1] = createMessageChannelPair();
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn1);
+    clientHub.addPeer(clientPeer);
+    serverHubA.acceptRpcConnection(serverConn1);
+    await delay(10);
+
+    // Make a compute call
+    const outboundCall = clientPeer.call(
+      "CounterService.getCount:2", ["x"],
+      { callTypeId: 1, outboundCallFactory: (id: number, m: string) => new RpcOutboundComputeCall(id, m) },
+    ) as RpcOutboundComputeCall;
+
+    const result = await outboundCall.result.promise;
+    expect(result).toBe(0);
+
+    // Disconnect — stage-3 compute call survives
+    clientConn1.close();
+    await delay(10);
+    expect(outboundCall.whenInvalidated.isCompleted).toBe(false);
+
+    // Reconnect — triggers invalidation
+    const [clientConn2, serverConn2] = createMessageChannelPair();
+    clientPeer.connectWith(clientConn2);
+    serverHubA.acceptRpcConnection(serverConn2);
+    await delay(10);
+
+    expect(outboundCall.whenInvalidated.isCompleted).toBe(true);
+  });
+
+  it("should invalidate stage-3 compute calls on peer stop", async () => {
+    const [clientConn, serverConn] = createMessageChannelPair();
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn);
+    clientHub.addPeer(clientPeer);
+    serverHubA.acceptRpcConnection(serverConn);
+    await delay(10);
+
+    // Make a compute call
+    const outboundCall = clientPeer.call(
+      "CounterService.getCount:2", ["x"],
+      { callTypeId: 1, outboundCallFactory: (id: number, m: string) => new RpcOutboundComputeCall(id, m) },
+    ) as RpcOutboundComputeCall;
+
+    const result = await outboundCall.result.promise;
+    expect(result).toBe(0);
+
+    // Peer stop — triggers invalidation
+    clientPeer.close();
     await delay(10);
 
     expect(outboundCall.whenInvalidated.isCompleted).toBe(true);
@@ -119,15 +174,16 @@ describe("Fusion RPC Reconnection", () => {
 
     // Make compute call on server A
     const callA = clientPeer.call(
-      "CounterService.getCount", ["x"], true,
+      "CounterService.getCount:2", ["x"],
+      { callTypeId: 1, outboundCallFactory: (id: number, m: string) => new RpcOutboundComputeCall(id, m) },
     ) as RpcOutboundComputeCall;
     const resultA = await callA.result.promise;
     expect(resultA).toBe(0);
 
-    // Disconnect from A
+    // Disconnect from A — stage-3 compute call survives
     clientConnA.close();
     await delay(10);
-    expect(callA.whenInvalidated.isCompleted).toBe(true);
+    expect(callA.whenInvalidated.isCompleted).toBe(false);
 
     // Create server B with different state
     const storeB = new Map<string, MutableState<number>>();
@@ -137,15 +193,18 @@ describe("Fusion RPC Reconnection", () => {
     const sB = new MutableState(999);
     storeB.set("x", sB);
 
-    // Connect to server B
+    // Connect to server B — invalidates stage-3 compute calls from A
     const [clientConnB, serverConnB] = createMessageChannelPair();
     clientPeer.connectWith(clientConnB);
     serverHubB.acceptRpcConnection(serverConnB);
     await delay(10);
 
+    expect(callA.whenInvalidated.isCompleted).toBe(true);
+
     // New compute call should get B's data
     const callB = clientPeer.call(
-      "CounterService.getCount", ["x"], true,
+      "CounterService.getCount:2", ["x"],
+      { callTypeId: 1, outboundCallFactory: (id: number, m: string) => new RpcOutboundComputeCall(id, m) },
     ) as RpcOutboundComputeCall;
     const resultB = await callB.result.promise;
     expect(resultB).toBe(999);
@@ -222,7 +281,7 @@ describe("Fusion RPC Reconnection", () => {
     await delay(10);
 
     // Mutate via RPC after reconnect
-    clientPeer.callNoWait("MutationService.setCount", ["y", 77]);
+    clientPeer.callNoWait("MutationService.setCount:2", ["y", 77]);
     await delay(30);
 
     // Re-fetch should see the new value
@@ -241,32 +300,116 @@ describe("Fusion RPC Reconnection", () => {
 
     // Make a compute call
     const call1 = clientPeer.call(
-      "CounterService.getCount", ["z"], true,
+      "CounterService.getCount:2", ["z"],
+      { callTypeId: 1, outboundCallFactory: (id: number, m: string) => new RpcOutboundComputeCall(id, m) },
     ) as RpcOutboundComputeCall;
     const v1 = await call1.result.promise;
     expect(v1).toBe(0);
 
-    // Disconnect — invalidates call1
+    // Disconnect — stage-3 compute call survives
     clientConn1.close();
     await delay(10);
-    expect(call1.whenInvalidated.isCompleted).toBe(true);
+    expect(call1.whenInvalidated.isCompleted).toBe(false);
 
-    // Reconnect
+    // Reconnect — invalidates call1
     const [clientConn2, serverConn2] = createMessageChannelPair();
     clientPeer.connectWith(clientConn2);
     serverHubA.acceptRpcConnection(serverConn2);
     await delay(10);
+    expect(call1.whenInvalidated.isCompleted).toBe(true);
 
     // New compute call works
     const call2 = clientPeer.call(
-      "CounterService.getCount", ["z"], true,
+      "CounterService.getCount:2", ["z"],
+      { callTypeId: 1, outboundCallFactory: (id: number, m: string) => new RpcOutboundComputeCall(id, m) },
     ) as RpcOutboundComputeCall;
     const v2 = await call2.result.promise;
     expect(v2).toBe(0);
 
     // Server-side mutation triggers invalidation on new call
-    clientPeer.callNoWait("MutationService.setCount", ["z", 55]);
+    clientPeer.callNoWait("MutationService.setCount:2", ["z", 55]);
     await delay(50);
     expect(call2.whenInvalidated.isCompleted).toBe(true);
+  });
+
+  it("should NOT invalidate captured compute on disconnect alone", async () => {
+    const [clientConn, serverConn] = createMessageChannelPair();
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn);
+    clientHub.addPeer(clientPeer);
+    serverHubA.acceptRpcConnection(serverConn);
+    await delay(10);
+
+    const counterDef = defineComputeService("CounterService", {
+      getCount: { args: [""] },
+    });
+    const counter = clientHub.addClient<{ getCount(key: string): Promise<number> }>(clientPeer, counterDef);
+
+    const captured = await Computed.capture(() => counter.getCount("x"));
+    expect(captured.value).toBe(0);
+    expect(captured.isConsistent).toBe(true);
+
+    // Disconnect — captured computed stays consistent
+    clientConn.close();
+    await delay(10);
+    expect(captured.isConsistent).toBe(true);
+  });
+
+  it("should invalidate captured compute on reconnect", async () => {
+    const [clientConn1, serverConn1] = createMessageChannelPair();
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn1);
+    clientHub.addPeer(clientPeer);
+    serverHubA.acceptRpcConnection(serverConn1);
+    await delay(10);
+
+    const counterDef = defineComputeService("CounterService", {
+      getCount: { args: [""] },
+    });
+    const counter = clientHub.addClient<{ getCount(key: string): Promise<number> }>(clientPeer, counterDef);
+
+    const captured = await Computed.capture(() => counter.getCount("x"));
+    expect(captured.value).toBe(0);
+    expect(captured.isConsistent).toBe(true);
+
+    // Disconnect — captured computed stays consistent
+    clientConn1.close();
+    await delay(10);
+    expect(captured.isConsistent).toBe(true);
+
+    // Reconnect — triggers invalidation
+    const [clientConn2, serverConn2] = createMessageChannelPair();
+    clientPeer.connectWith(clientConn2);
+    serverHubA.acceptRpcConnection(serverConn2);
+    await delay(10);
+
+    expect(captured.isConsistent).toBe(false);
+  });
+
+  it("should invalidate captured compute on peer stop", async () => {
+    const [clientConn, serverConn] = createMessageChannelPair();
+
+    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    clientPeer.connectWith(clientConn);
+    clientHub.addPeer(clientPeer);
+    serverHubA.acceptRpcConnection(serverConn);
+    await delay(10);
+
+    const counterDef = defineComputeService("CounterService", {
+      getCount: { args: [""] },
+    });
+    const counter = clientHub.addClient<{ getCount(key: string): Promise<number> }>(clientPeer, counterDef);
+
+    const captured = await Computed.capture(() => counter.getCount("x"));
+    expect(captured.value).toBe(0);
+    expect(captured.isConsistent).toBe(true);
+
+    // Peer stop — triggers invalidation
+    clientPeer.close();
+    await delay(10);
+
+    expect(captured.isConsistent).toBe(false);
   });
 });

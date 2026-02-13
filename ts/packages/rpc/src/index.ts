@@ -19,12 +19,11 @@ export { WebSocketState, RpcWebSocketConnection } from "./rpc-connection.js";
 
 export { RpcMessageChannelConnection, createMessageChannelPair } from "./rpc-message-channel-connection.js";
 
-export type { RpcMethodDef, RpcServiceDef, RpcMethodDefInput } from "./rpc-service-def.js";
-export { RpcType, defineRpcService, defineComputeService } from "./rpc-service-def.js";
+export type { RpcMethodDef, RpcServiceDef, RpcMethodDefInput, RpcServiceDefOptions } from "./rpc-service-def.js";
+export { RpcType, defineRpcService, wireMethodName } from "./rpc-service-def.js";
 
 export {
   RpcOutboundCall,
-  RpcOutboundComputeCall,
   RpcOutboundCallTracker,
   RpcInboundCall,
   RpcInboundCallTracker,
@@ -34,6 +33,7 @@ export { handleSystemCall } from "./rpc-system-call-handler.js";
 export { RpcSystemCallSender } from "./rpc-system-call-sender.js";
 
 export { RpcPeer, RpcPeerConnectionKind, RpcClientPeer, RpcServerPeer } from "./rpc-peer.js";
+export type { RemoteHandshake, RpcCallOptions } from "./rpc-peer.js";
 export { RpcHub } from "./rpc-hub.js";
 export { RpcServiceHost } from "./rpc-service-host.js";
 export type { RpcServiceImpl, RpcDispatchContext } from "./rpc-service-host.js";

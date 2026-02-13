@@ -14,6 +14,18 @@ export const enum ConsistencyState {
 
 /** Core Fusion abstraction — a cached computation with dependency tracking and invalidation. */
 export class Computed<T> implements IResult<T> {
+  /** Capture the Computed backing a computation — works with both local and RPC compute methods. */
+  static async capture<T>(fn: () => T | Promise<T>): Promise<Computed<T>> {
+    const captureComputed = new Computed<unknown>("__capture__");
+    const captureCtx = new ComputeContext(captureComputed);
+    const asyncCtx = AsyncContext.getOrCreate().with(computeContextKey, captureCtx);
+    await asyncCtx.run(fn);
+    const deps = captureComputed.dependencies;
+    if (deps.size === 0)
+      throw new Error("No Computed was captured — fn must call a compute function.");
+    return deps.values().next().value! as Computed<T>;
+  }
+
   readonly input: ComputedInput;
   private _version: number;
   private _state: ConsistencyState;

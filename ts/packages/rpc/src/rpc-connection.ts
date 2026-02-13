@@ -1,3 +1,27 @@
+// .NET counterparts:
+//   RpcConnection — thin wrapper around RpcTransport + PropertyBag.  RpcTransport
+//     is an abstract IAsyncEnumerable<RpcInboundMessage> + Send() that can be
+//     WebSocket-based or in-memory.  The transport also handles frame batching and
+//     back-pressure via a Channel<T> send queue.
+//
+// Omitted from .NET:
+//   - PropertyBag on connection — used in .NET for per-connection metadata (e.g.
+//     authentication info attached by middleware).  TS has no middleware pipeline,
+//     so no need for an extensible property bag.
+//   - IsLocal flag — .NET distinguishes local loopback connections (same-process
+//     server) from remote ones.  TS is always a remote client.
+//   - RpcTransport as IAsyncEnumerable — .NET reads inbound messages via
+//     async iteration with cancellation.  TS uses event-based delivery
+//     (messageReceived handler) because browser WebSocket API is event-driven.
+//   - Channel<RpcOutboundMessage> send queue with backpressure — .NET buffers
+//     outbound messages in an async channel that the transport drains.  TS sends
+//     synchronously on the WebSocket; if the socket isn't ready, messages are
+//     buffered in _sendBuffer (CONNECTING) or silently dropped (CLOSING/CLOSED).
+//     JS is single-threaded so there's no contention, and WebSocket.send() itself
+//     handles buffering at the OS level.
+//   - IAsyncDisposable — .NET transports are disposable resources.  TS connections
+//     are closed via close() and garbage-collected.
+
 import { PromiseSource, EventHandlerSet } from "@actuallab/core";
 import { splitFrame, serializeFrame } from "./rpc-serialization.js";
 
