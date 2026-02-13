@@ -252,6 +252,7 @@ public readonly struct FusionBuilder
         // ~ RpcBuilder.AddClient, but for Compute Service
 
         Configure(serviceType, tryGetExisting: false)
+            .HasName(name)
             .IsClient()
             .HasCommandHandlers(hasCommandHandlers)
             .Inject();
@@ -345,6 +346,7 @@ public readonly struct FusionBuilder
         // ~ RpcBuilder.AddServer, but for Compute Service
 
         Configure(serviceType, tryGetExisting: false)
+            .HasName(name)
             .IsServer(implementationType)
             .HasCommandHandlers(hasCommandHandlers)
             .Inject();
@@ -366,6 +368,7 @@ public readonly struct FusionBuilder
         // ~ RpcBuilder.AddDistributedService, but for Compute Service
 
         Configure(serviceType, tryGetExisting: false)
+            .HasName(name)
             .IsDistributed(implementationType)
             .HasCommandHandlers(hasCommandHandlers)
             .Inject();
@@ -387,6 +390,7 @@ public readonly struct FusionBuilder
         // ~ RpcBuilder.AddDistributedService, but for Compute Service
 
         Configure(serviceType, tryGetExisting: false)
+            .HasName(name)
             .IsServer(implementationType)
             .HasClient()
             .HasCommandHandlers(hasCommandHandlers)
