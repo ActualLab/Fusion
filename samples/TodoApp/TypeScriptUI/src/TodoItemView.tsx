@@ -1,14 +1,14 @@
 import React from "react";
 import { useUICommander } from "@actuallab/fusion-react";
-import type { TodoItem, ITodoApiCommand } from "./todo-api.js";
+import type { TodoItem, ITodoApi } from "./todo-api.js";
 import { DEFAULT_SESSION } from "./todo-api.js";
 
 interface Props {
   item: TodoItem;
-  commandApi: ITodoApiCommand;
+  api: ITodoApi;
 }
 
-export function TodoItemView({ item, commandApi }: Props) {
+export function TodoItemView({ item, api }: Props) {
   const commander = useUICommander();
   const [editTitle, setEditTitle] = React.useState(item.title);
   const debounceTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -20,7 +20,7 @@ export function TodoItemView({ item, commandApi }: Props) {
 
   const toggleDone = () => {
     void commander.run(async () => {
-      await commandApi.AddOrUpdate({
+      await api.AddOrUpdate({
         session: DEFAULT_SESSION,
         item: { ...item, isDone: !item.isDone },
       });
@@ -36,7 +36,7 @@ export function TodoItemView({ item, commandApi }: Props) {
       const trimmed = newTitle.trim();
       if (trimmed && trimmed !== item.title) {
         void commander.run(async () => {
-          await commandApi.AddOrUpdate({
+          await api.AddOrUpdate({
             session: DEFAULT_SESSION,
             item: { ...item, title: trimmed },
           });
@@ -47,7 +47,7 @@ export function TodoItemView({ item, commandApi }: Props) {
 
   const remove = () => {
     void commander.run(async () => {
-      await commandApi.Remove({
+      await api.Remove({
         session: DEFAULT_SESSION,
         id: item.id,
       });

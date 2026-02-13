@@ -1,6 +1,6 @@
 import { computeMethod } from "@actuallab/fusion";
 import { AsyncContext } from "@actuallab/core";
-import type { ITodoApiCompute, TodoItem, TodoSummary } from "./todo-api.js";
+import type { ITodoApi, TodoItem, TodoSummary } from "./todo-api.js";
 import { DEFAULT_SESSION } from "./todo-api.js";
 
 /**
@@ -9,9 +9,9 @@ import { DEFAULT_SESSION } from "./todo-api.js";
  * that participate in Fusion's dependency graph.
  */
 export class Todos {
-  private api: ITodoApiCompute;
+  private api: ITodoApi;
 
-  constructor(api: ITodoApiCompute) {
+  constructor(api: ITodoApi) {
     this.api = api;
   }
 

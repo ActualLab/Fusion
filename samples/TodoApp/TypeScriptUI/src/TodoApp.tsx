@@ -2,18 +2,18 @@ import React from "react";
 import { useComputedState, useUICommander, type UIActionTracker } from "@actuallab/fusion-react";
 import { AsyncContext } from "@actuallab/core";
 import type { Todos } from "./todos.js";
-import type { ITodoApiCommand } from "./todo-api.js";
+import type { ITodoApi } from "./todo-api.js";
 import { DEFAULT_SESSION, ULID_EMPTY } from "./todo-api.js";
 import { TodoItemView } from "./TodoItemView.js";
 import { TodoSummaryBadge } from "./TodoSummaryBadge.js";
 
 interface Props {
   todos: Todos;
-  commandApi: ITodoApiCommand;
+  api: ITodoApi;
   tracker: UIActionTracker;
 }
 
-export function TodoApp({ todos, commandApi, tracker }: Props) {
+export function TodoApp({ todos, api, tracker }: Props) {
   const [loadedCount, setLoadedCount] = React.useState(5);
   const [newTitle, setNewTitle] = React.useState("");
   const commander = useUICommander();
@@ -34,7 +34,7 @@ export function TodoApp({ todos, commandApi, tracker }: Props) {
     const title = newTitle.trim();
     setNewTitle("");
     void commander.run(async () => {
-      await commandApi.AddOrUpdate({
+      await api.AddOrUpdate({
         session: DEFAULT_SESSION,
         item: { id: ULID_EMPTY, title: title, isDone: false },
       });
@@ -53,7 +53,7 @@ export function TodoApp({ todos, commandApi, tracker }: Props) {
         {isInitial && <p className="text-muted">Loading...</p>}
 
         {items.map((item) => (
-          <TodoItemView key={item.id} item={item} commandApi={commandApi} />
+          <TodoItemView key={item.id} item={item} api={api} />
         ))}
 
         {hasMore && (

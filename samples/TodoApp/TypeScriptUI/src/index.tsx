@@ -3,8 +3,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { FusionHub } from "@actuallab/fusion-rpc";
 import { RpcClientPeer } from "@actuallab/rpc";
 import { UIActionTracker, UIActionTrackerContext } from "@actuallab/fusion-react";
-import { TodoApiComputeDef, TodoApiCommandDef } from "./todo-api.js";
-import type { ITodoApiCompute, ITodoApiCommand } from "./todo-api.js";
+import { TodoApiDef } from "./todo-api.js";
+import type { ITodoApi } from "./todo-api.js";
 import { Todos } from "./todos.js";
 import { TodoApp } from "./TodoApp.js";
 
@@ -20,9 +20,8 @@ const hub = new FusionHub();
 const peer = new RpcClientPeer(hub, getWsUrl());
 hub.addPeer(peer);
 
-const computeApi = hub.addClient<ITodoApiCompute>(peer, TodoApiComputeDef);
-const commandApi = hub.addClient<ITodoApiCommand>(peer, TodoApiCommandDef);
-const todos = new Todos(computeApi);
+const api = hub.addClient<ITodoApi>(peer, TodoApiDef);
+const todos = new Todos(api);
 const tracker = new UIActionTracker();
 
 // Start the peer connection once
@@ -43,7 +42,7 @@ const todoReactApp = {
     root = createRoot(container);
     root.render(
       <UIActionTrackerContext.Provider value={tracker}>
-        <TodoApp todos={todos} commandApi={commandApi} tracker={tracker} />
+        <TodoApp todos={todos} api={api} tracker={tracker} />
       </UIActionTrackerContext.Provider>
     );
   },
