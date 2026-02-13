@@ -16,8 +16,8 @@
 //   - GetClient<T>() / GetServer<T>() — .NET resolves typed client/server proxies
 //     via the ServiceRegistry + DI.  TS uses addClient<T>(peer, def).
 //   - RpcPeerRef-keyed peer dictionary — .NET peers are keyed by RpcPeerRef (rich
-//     value object encoding route, version, serialization format).  TS uses simple
-//     string IDs.
+//     value object encoding route, version, serialization format).  TS uses string
+//     refs (URL for clients, "server://{uuid}" for servers).
 //   - Lazy peer creation + Start() — .NET's GetPeer auto-creates and starts a
 //     peer's reconnection loop.  TS requires explicit addPeer() + run().
 //   - DisposeAsync — .NET disposes all peers on hub shutdown.  TS has close().
@@ -32,7 +32,7 @@
 //   - HostId / SystemClock — infrastructure services.
 //   - DefaultPeer / LoopbackPeer / LocalPeer / NonePeer — cached well-known peers.
 
-import type { RpcPeer, RpcCallOptions } from "./rpc-peer.js";
+import { RpcClientPeer, RpcServerPeer, type RpcPeer, type RpcCallOptions } from "./rpc-peer.js";
 import { RpcServiceHost, type RpcServiceImpl } from "./rpc-service-host.js";
 import type { RpcServiceDef, RpcMethodDef } from "./rpc-service-def.js";
 import { wireMethodName } from "./rpc-service-def.js";
@@ -55,19 +55,36 @@ export class RpcHub {
   }
 
   addPeer(peer: RpcPeer): void {
-    this.peers.set(peer.id, peer);
+    this.peers.set(peer.ref, peer);
   }
 
-  removePeer(id: string): void {
-    const peer = this.peers.get(id);
+  removePeer(ref: string): void {
+    const peer = this.peers.get(ref);
     if (peer !== undefined) {
       peer.close();
-      this.peers.delete(id);
+      this.peers.delete(ref);
     }
   }
 
-  getPeer(id: string): RpcPeer | undefined {
-    return this.peers.get(id);
+  /** Get or create a peer by ref. Server peers have "server://" prefix, everything else is a client peer. */
+  getPeer(ref: string): RpcPeer {
+    let peer = this.peers.get(ref);
+    if (peer) return peer;
+    peer = ref.startsWith("server://")
+      ? new RpcServerPeer(this, ref)
+      : new RpcClientPeer(this, ref);
+    this.addPeer(peer);
+    return peer;
+  }
+
+  /** Get or create a client peer for the given URL. */
+  getClientPeer(ref: string): RpcClientPeer {
+    return this.getPeer(ref) as RpcClientPeer;
+  }
+
+  /** Get or create a server peer for the given ref. */
+  getServerPeer(ref: string): RpcServerPeer {
+    return this.getPeer(ref) as RpcServerPeer;
   }
 
   /** Register a service with optional server method wrapping for custom call types. */

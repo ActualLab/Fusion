@@ -56,7 +56,7 @@
 //     handleSystemCall or RpcServiceHost.dispatch.
 //   - RpcPeerRef / routing — .NET peers are keyed by RpcPeerRef (which encodes
 //     client/server, route state, versions, serialization format).  TS peers are
-//     keyed by string ID.
+//     keyed by string ref (URL for clients, "server://{uuid}" for servers).
 //   - StopMode / ComputeAutoStopMode — controls behavior of inbound calls when
 //     peer stops (cancel vs keep-incomplete).  TS has no stop mode.
 //   - ConnectionKind detector (Remote/Loopback/Local/None) — .NET detects if peer
@@ -108,7 +108,10 @@ export interface RemoteHandshake {
 
 /** Base class for RPC peers — handles bidirectional message dispatch. */
 export abstract class RpcPeer {
-  readonly id: string;
+  /** Routing/addressing key — used as key in hub.peers (URL for clients, "server://{uuid}" for servers). */
+  readonly ref: string;
+  /** Auto-generated GUID — used in handshakes only. */
+  readonly id: string = crypto.randomUUID();
   protected _hub: RpcHub;
   protected _connection: RpcConnection | undefined;
   readonly outbound = new RpcOutboundCallTracker();
@@ -119,8 +122,8 @@ export abstract class RpcPeer {
 
   private _keepAliveTimer: ReturnType<typeof setInterval> | undefined;
 
-  constructor(id: string, hub: RpcHub) {
-    this.id = id;
+  constructor(ref: string, hub: RpcHub) {
+    this.ref = ref;
     this._hub = hub;
   }
 
@@ -198,6 +201,7 @@ export abstract class RpcPeer {
     this._stopKeepAlive();
     this.outbound.invalidateAll();
     this._connection?.close();
+    this._hub.peers.delete(this.ref);
   }
 
   /** Override in subclasses to handle the remote peer's handshake response. */
@@ -289,9 +293,8 @@ export const enum RpcPeerConnectionKind {
   Connected = 2,
 }
 
-/** Client-side RPC peer — initiates WebSocket connection. */
+/** Client-side RPC peer — initiates WebSocket connection. ref = URL. */
 export class RpcClientPeer extends RpcPeer {
-  private _url: string;
   private _disposed = false;
   private _connectionKind = RpcPeerConnectionKind.Disconnected;
   private _tryIndex = 0;
@@ -301,9 +304,8 @@ export class RpcClientPeer extends RpcPeer {
 
   readonly peerChanged = new EventHandlerSet<void>();
 
-  constructor(id: string, hub: RpcHub, url: string) {
-    super(id, hub);
-    this._url = url;
+  constructor(hub: RpcHub, url: string) {
+    super(url, hub);
   }
 
   get connectionKind(): RpcPeerConnectionKind {
@@ -321,7 +323,7 @@ export class RpcClientPeer extends RpcPeer {
   async run(wsFactory?: (url: string) => WebSocketLike): Promise<void> {
     while (!this._disposed) {
       try {
-        const ws = wsFactory?.(this._url) ?? new WebSocket(this._url) as unknown as WebSocketLike;
+        const ws = wsFactory?.(this.ref) ?? new WebSocket(this.ref) as unknown as WebSocketLike;
         const conn = new RpcWebSocketConnection(ws);
         this._connectionKind = RpcPeerConnectionKind.Connecting;
 
@@ -384,10 +386,14 @@ export class RpcClientPeer extends RpcPeer {
   }
 }
 
-/** Server-side RPC peer — wraps an accepted connection. */
+/** Server-side RPC peer — wraps an accepted connection. ref = "server://{uuid}". */
 export class RpcServerPeer extends RpcPeer {
-  constructor(id: string, hub: RpcHub, conn: RpcConnection) {
-    super(id, hub);
+  constructor(hub: RpcHub, ref: string) {
+    super(ref, hub);
+  }
+
+  /** Accept an incoming connection — sets up message handling and handshake response. */
+  accept(conn: RpcConnection): void {
     this.setupConnection(conn);
   }
 

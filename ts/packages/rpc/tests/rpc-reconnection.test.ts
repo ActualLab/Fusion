@@ -4,7 +4,6 @@ import {
   RpcClientPeer,
   defineRpcService,
   createRpcClient,
-  RpcServerPeer,
   createMessageChannelPair,
 } from "../src/index.js";
 import { RpcTestConnection, connectionDisruptor } from "./rpc-test-connection.js";
@@ -41,7 +40,7 @@ describe("RPC Reconnection", () => {
       greet: (name: unknown) => `Hello, ${name}!`,
     });
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientHub.addPeer(clientPeer);
 
     conn = new RpcTestConnection(clientHub, serverHub, clientPeer);
@@ -202,14 +201,14 @@ describe("RPC Reconnection", () => {
     });
 
     const [conn1, conn2] = createMessageChannelPair();
-    const client = new RpcClientPeer("c", hub1, "ws://test");
+    const client = new RpcClientPeer(hub1, "ws://test");
     client.connectWith(conn1);
 
-    const server = new RpcServerPeer("s", hub2, conn2);
-    hub2.addPeer(server);
+    const server = hub2.getServerPeer("server://test");
+    server.accept(conn2);
 
     // Manually send a handshake from client → server
-    hub1.systemCallSender.handshake(conn1, "c", "hub-A", 1);
+    hub1.systemCallSender.handshake(conn1, client.id, "hub-A", 1);
 
     // Wait for the server's handshake response to arrive
     await delay(5);
