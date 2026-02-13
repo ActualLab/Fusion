@@ -1,10 +1,17 @@
 import { defineComputeService } from "@actuallab/fusion-rpc";
 import { AsyncContext } from "@actuallab/core";
 
-// Data types matching .NET TodoItem and TodoSummary (camelCase — server uses JsonNamingPolicy.CamelCase)
+// Optional trailing AsyncContext enables explicit context propagation across awaits.
+export interface ITodoApi {
+    Get(session: string, id: string, ctx?: AsyncContext): Promise<TodoItem | null>;
+    ListIds(session: string, count: number, ctx?: AsyncContext): Promise<string[]>;
+    GetSummary(session: string, ctx?: AsyncContext): Promise<TodoSummary>;
+    AddOrUpdate(command: Todos_AddOrUpdate): Promise<TodoItem>;
+    Remove(command: Todos_Remove): Promise<void>;
+}
 
 export interface TodoItem {
-  id: string;       // Ulid as string
+  id: string; // Ulid as string
   title: string;
   isDone: boolean;
 }
@@ -13,8 +20,6 @@ export interface TodoSummary {
   count: number;
   doneCount: number;
 }
-
-// Command types matching .NET Todos_AddOrUpdate and Todos_Remove
 
 export interface Todos_AddOrUpdate {
   session: string;
@@ -41,13 +46,3 @@ export const TodoApiDef = defineComputeService("ITodoApi", {
   AddOrUpdate: { args: [{}], callTypeId: 0 },  // (command) → TodoItem
   Remove: { args: [{}], callTypeId: 0 },       // (command) → void
 });
-
-// Client interface for type safety
-// Optional trailing AsyncContext enables explicit context propagation across awaits.
-export interface ITodoApi {
-  Get(session: string, id: string, ctx?: AsyncContext): Promise<TodoItem | null>;
-  ListIds(session: string, count: number, ctx?: AsyncContext): Promise<string[]>;
-  GetSummary(session: string, ctx?: AsyncContext): Promise<TodoSummary>;
-  AddOrUpdate(command: Todos_AddOrUpdate): Promise<TodoItem>;
-  Remove(command: Todos_Remove): Promise<void>;
-}
