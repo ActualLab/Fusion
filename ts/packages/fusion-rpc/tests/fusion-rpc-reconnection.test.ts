@@ -83,7 +83,7 @@ describe("Fusion RPC Reconnection", () => {
   it("should NOT invalidate stage-3 compute calls on disconnect", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConn);
@@ -108,7 +108,7 @@ describe("Fusion RPC Reconnection", () => {
   it("should invalidate stage-3 compute calls on reconnect", async () => {
     const [clientConn1, serverConn1] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn1);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConn1);
@@ -140,7 +140,7 @@ describe("Fusion RPC Reconnection", () => {
   it("should invalidate stage-3 compute calls on peer stop", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConn);
@@ -166,7 +166,7 @@ describe("Fusion RPC Reconnection", () => {
     // Connect to server A
     const [clientConnA, serverConnA] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConnA);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConnA);
@@ -215,7 +215,7 @@ describe("Fusion RPC Reconnection", () => {
   it("should re-call after reconnect and get fresh data", async () => {
     // Connect
     const [clientConn1, serverConn1] = createMessageChannelPair();
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn1);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConn1);
@@ -256,7 +256,7 @@ describe("Fusion RPC Reconnection", () => {
   it("should handle server-side mutation after reconnect", async () => {
     // Connect
     const [clientConn1, serverConn1] = createMessageChannelPair();
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn1);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConn1);
@@ -292,7 +292,7 @@ describe("Fusion RPC Reconnection", () => {
   it("should handle compute calls with invalidation after reconnect", async () => {
     // Connect
     const [clientConn1, serverConn1] = createMessageChannelPair();
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn1);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConn1);
@@ -335,7 +335,7 @@ describe("Fusion RPC Reconnection", () => {
   it("should NOT invalidate captured compute on disconnect alone", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConn);
@@ -359,7 +359,7 @@ describe("Fusion RPC Reconnection", () => {
   it("should invalidate captured compute on reconnect", async () => {
     const [clientConn1, serverConn1] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn1);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConn1);
@@ -391,7 +391,7 @@ describe("Fusion RPC Reconnection", () => {
   it("should invalidate captured compute on peer stop", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
     serverHubA.acceptRpcConnection(serverConn);

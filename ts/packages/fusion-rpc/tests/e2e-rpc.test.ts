@@ -85,7 +85,7 @@ describe("End-to-end Fusion over RPC", () => {
   it("should call a compute method and get result", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
@@ -109,7 +109,7 @@ describe("End-to-end Fusion over RPC", () => {
   it("should receive $sys-c.Invalidate when server-side computed is invalidated", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
@@ -138,7 +138,7 @@ describe("End-to-end Fusion over RPC", () => {
   it("should call multiple compute methods", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
@@ -164,7 +164,7 @@ describe("End-to-end Fusion over RPC", () => {
   it("should capture RPC compute call via Computed.capture()", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 
@@ -186,7 +186,7 @@ describe("End-to-end Fusion over RPC", () => {
   it("should observe server-side invalidation via Computed.capture()", async () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
-    const clientPeer = new RpcClientPeer("client", clientHub, "ws://test");
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     clientPeer.connectWith(clientConn);
     clientHub.addPeer(clientPeer);
 

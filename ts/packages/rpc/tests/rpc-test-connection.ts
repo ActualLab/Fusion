@@ -1,7 +1,7 @@
 import {
   RpcHub,
   RpcClientPeer,
-  RpcServerPeer,
+  type RpcServerPeer,
   createMessageChannelPair,
 } from "../src/index.js";
 
@@ -26,9 +26,9 @@ export class RpcTestConnection {
     const [clientConn, serverConn] = createMessageChannelPair();
     this.clientPeer.connectWith(clientConn);
 
-    const serverId = crypto.randomUUID();
-    this.serverPeer = new RpcServerPeer(serverId, this.serverHub, serverConn);
-    this.serverHub.addPeer(this.serverPeer);
+    const ref = `server://${crypto.randomUUID()}`;
+    this.serverPeer = this.serverHub.getServerPeer(ref);
+    this.serverPeer.accept(serverConn);
 
     await delay(1);
   }
@@ -37,7 +37,6 @@ export class RpcTestConnection {
     this.clientPeer.connection?.close();
     if (this.serverPeer !== undefined) {
       this.serverPeer.close();
-      this.serverHub.peers.delete(this.serverPeer.id);
       this.serverPeer = undefined;
     }
     await delay(1);

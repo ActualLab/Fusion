@@ -11,6 +11,7 @@
     <Compile Remove="Authentication\**" />
     <Compile Remove="Blazor\**" />
     <Compile Remove="MeshRpc\**" />
+    <Compile Remove="TypeScriptRpc\**" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('netcore')) or $(TargetFramework.StartsWith('net5'))">
     <Compile Remove="MeshRpc\**" />

@@ -88,18 +88,18 @@ export function defineComputeService(
 export class FusionHub extends RpcHub {
   /** Accept an incoming WebSocket and create a server peer. */
   acceptConnection(ws: WebSocketLike): RpcServerPeer {
-    const peerId = crypto.randomUUID();
+    const ref = `server://${crypto.randomUUID()}`;
     const conn = new RpcWebSocketConnection(ws);
-    const peer = new RpcServerPeer(peerId, this, conn);
-    this.addPeer(peer);
+    const peer = this.getServerPeer(ref);
+    peer.accept(conn);
     return peer;
   }
 
   /** Accept an RpcConnection and create a server peer. */
   acceptRpcConnection(conn: RpcConnection): RpcServerPeer {
-    const peerId = crypto.randomUUID();
-    const peer = new RpcServerPeer(peerId, this, conn);
-    this.addPeer(peer);
+    const ref = `server://${crypto.randomUUID()}`;
+    const peer = this.getServerPeer(ref);
+    peer.accept(conn);
     return peer;
   }
 
