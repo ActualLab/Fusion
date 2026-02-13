@@ -1,5 +1,6 @@
 import React from "react";
 import { useComputedState, useUICommander, type UIActionTracker } from "@actuallab/fusion-react";
+import { AsyncContext } from "@actuallab/core";
 import type { Todos } from "./todos.js";
 import type { ITodoApiCommand } from "./todo-api.js";
 import { DEFAULT_SESSION, ULID_EMPTY } from "./todo-api.js";
@@ -18,7 +19,10 @@ export function TodoApp({ todos, commandApi, tracker }: Props) {
   const commander = useUICommander();
 
   const { value, isInitial } = useComputedState(
-    () => todos.list(loadedCount),
+    () => {
+      const ctx = AsyncContext.current;
+      return todos.list(loadedCount, ctx);
+    },
     [todos, loadedCount],
   );
 

@@ -1,5 +1,6 @@
 import React from "react";
 import { useComputedState, createTrackedDelayer } from "@actuallab/fusion-react";
+import { AsyncContext } from "@actuallab/core";
 import type { Todos } from "./todos.js";
 import type { UIActionTracker } from "@actuallab/fusion-react";
 
@@ -14,7 +15,10 @@ export function TodoSummaryBadge({ todos, tracker }: Props) {
     [tracker],
   );
   const { value: summary, isInitial } = useComputedState(
-    () => todos.getSummary(),
+    () => {
+      const ctx = AsyncContext.current;
+      return todos.getSummary(ctx);
+    },
     [todos],
     { updateDelayer: delayer },
   );

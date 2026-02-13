@@ -16,8 +16,8 @@ export class Todos {
   }
 
   @computeMethod
-  async list(count: number): Promise<{ items: TodoItem[]; hasMore: boolean }> {
-    const ctx = AsyncContext.current;
+  async list(count: number, ctx?: AsyncContext): Promise<{ items: TodoItem[]; hasMore: boolean }> {
+    ctx ??= AsyncContext.current;
     const ids = await this.api.ListIds(DEFAULT_SESSION, count + 1, ctx);
     const hasMore = ids.length > count;
     const idsToFetch = hasMore ? ids.slice(0, count) : ids;
@@ -32,8 +32,8 @@ export class Todos {
   }
 
   @computeMethod
-  async getSummary(): Promise<TodoSummary> {
-    const ctx = AsyncContext.current;
+  async getSummary(ctx?: AsyncContext): Promise<TodoSummary> {
+    ctx ??= AsyncContext.current;
     return await this.api.GetSummary(DEFAULT_SESSION, ctx);
   }
 }
