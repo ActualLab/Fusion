@@ -166,9 +166,18 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
 
     protected void SetEntryState(DbSet<TDbEntry> dbEntries, TDbEntry entry, LogEntryState state)
     {
-        dbEntries.Attach(entry);
-        entry.State = state;
-        entry.Version = DbHub.VersionGenerator.NextVersion(entry.Version);
-        dbEntries.Update(entry);
+        var mustKeep = state switch {
+            LogEntryState.Processed => Settings.KeepProcessedItems,
+            LogEntryState.Discarded => Settings.KeepDiscardedItems,
+            _ => true,
+        };
+        if (mustKeep) {
+            dbEntries.Attach(entry);
+            entry.State = state;
+            entry.Version = DbHub.VersionGenerator.NextVersion(entry.Version);
+            dbEntries.Update(entry);
+        }
+        else
+            dbEntries.Remove(entry);
     }
 }

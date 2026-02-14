@@ -17,6 +17,14 @@ public interface IDbLogReader
 /// </summary>
 public abstract record DbLogReaderOptions
 {
+    // Item retention settings, typically you need both of KeepXxx options to be true:
+    // - For Operations, they have to be replayed on all hosts, so removing them instantly
+    //   will prevent other hosts from processing them.
+    // - For Events, even though they are only processed once, there are options like
+    //   KeyConflictStrategy.Skip, which typically require processed events to be stored
+    //   for a while.
+    public bool KeepProcessedItems { get; init; } = true;
+    public bool KeepDiscardedItems { get; init; } = true;
     // Gap / separate item processing settings
     public RandomTimeSpan ReprocessDelay { get; init; } = TimeSpan.FromSeconds(0.1).ToRandom(0.1);
     public IRetryPolicy ReprocessPolicy { get; init; } = null!;
