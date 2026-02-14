@@ -90,7 +90,7 @@ function delay(ms: number): Promise<void> {
 
 async function run(): Promise<void> {
   const hub = new FusionHub();
-  const clientUrl = `${serverUrl}?clientId=${encodeURIComponent(crypto.randomUUID())}&f=json5`;
+  const clientUrl = `${serverUrl}?f=json5`;
   const peer = new RpcClientPeer(hub, clientUrl);
 
   // wsFactory: create ws WebSocket (Node.js)

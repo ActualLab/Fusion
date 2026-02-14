@@ -45,7 +45,7 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
 
     private Task RunScenario(string scenario)
     {
-        var serverUrl = $"ws://localhost:{WebHost.ServerUri.Port}/rpc/ws";
+        var serverUrl = $"ws://127.0.0.1:{WebHost.ServerUri.Port}/rpc/ws";
         var ts = new TypeScriptRunner(Out);
         return ts.RunScenario(Script, scenario,
             new Dictionary<string, string> { ["RPC_SERVER_URL"] = serverUrl });
