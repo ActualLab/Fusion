@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.1.41+718a0325
+
+Release date: 2026-02-14
+
+### Added
+- TypeScript Fusion client: core abstractions, compute framework, `ComputedState`,
+  `MutableState`, invalidation support, and `fusion-react` package with React bindings.
+  **This is a work in progress, so expect breaking changes in the near future.**
+- React-based TypeScript UI for the Todo sample app with full Fusion integration
+
+### Fixed
+- Missing `HasName(...)` calls in `FusionBuilder` for `AddClient`, `AddServer`,
+  and `AddDistributedService` methods
+- Proper `ArgumentData` formatting in `RpcInboundCall` for improved readability
+
+### Infrastructure
+- Added TypeScript monorepo under `ts/` with `@actuallab/core`, `@actuallab/rpc`,
+  `@actuallab/fusion`, and `@actuallab/fusion-rpc` packages
+- Integrated TypeScript build pipeline into the Todo sample Host project via MSBuild targets
+
+
 ## 12.1.14+28a7e73e
 
 Release date: 2026-02-11
