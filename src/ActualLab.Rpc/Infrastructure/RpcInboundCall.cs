@@ -65,7 +65,7 @@ public abstract class RpcInboundCall : RpcCall
         var headers = message.Headers.OrEmpty();
         var arguments = Arguments is not null
             ? Arguments.ToString()
-            : $"ArgumentData: {message.ArgumentData}";
+            : $"(ArgumentData: {message.ArgumentData})";
         var relatedId = message.RelatedId;
         var relatedObject = relatedId == 0 ? (object?)null
             : MethodDef.SystemMethodKind.IsAnyStreaming()
