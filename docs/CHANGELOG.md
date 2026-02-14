@@ -13,10 +13,10 @@ It isn't included into the NuGet package version.
 Release date: 2026-02-14
 
 ### Added
-- TypeScript Fusion client: core abstractions, compute framework, `ComputedState`,
-  `MutableState`, invalidation support, and `fusion-react` package with React bindings.
-  **This is a work in progress, so expect breaking changes in the near future.**
-- React-based TypeScript UI for the Todo sample app with full Fusion integration
+- **Work in progress: TypeScript Fusion client.** Core abstractions, compute methods, 
+  `ComputedState`, `MutableState`, invalidation, and `fusion-react` package 
+  with React bindings.
+- React-based "Todo v3" page in the TodoApp sample showing how to use the client.
 
 ### Fixed
 - Missing `HasName(...)` calls in `FusionBuilder` for `AddClient`, `AddServer`,
