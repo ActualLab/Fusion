@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.1.50+8e1051d0
+
+Release date: 2026-02-17
+
+### Added
+- `IsSynchronized` and `WhenSynchronized` methods on `State`, `ComputedState`,
+  and `MutableState` for streamlined synchronization checks
+- `IState.IsSynchronized()`, `IState.WhenSynchronized()`, and `IState.Synchronize()`
+  extension methods in `StateExt`
+- `KeepProcessedItems` and `KeepDiscardedItems` retention settings in `DbLogReaderOptions`
+  for fine-grained control over log item lifecycle
+
+### Tests
+- Added TypeScript RPC reconnection scenario tests (both unit and E2E against .NET server)
+
 ## 12.1.41+718a0325
 
 Release date: 2026-02-14
