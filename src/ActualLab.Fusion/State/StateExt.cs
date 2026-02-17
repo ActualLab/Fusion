@@ -40,6 +40,36 @@ public static class StateExt
         return state.Update(cancellationToken);
     }
 
+    // IsSynchronized, WhenSynchronized, Synchronize
+
+    public static bool IsSynchronized(this IState state)
+        => state.IsSynchronized(ComputedSynchronizer.Current);
+
+    public static Task WhenSynchronized(this IState state, CancellationToken cancellationToken = default)
+        => state.WhenSynchronized(ComputedSynchronizer.Current, cancellationToken);
+
+    public static ValueTask<Computed> Synchronize(
+        this IState state,
+        CancellationToken cancellationToken = default)
+        => ComputedSynchronizer.Current.Synchronize(state.Computed, cancellationToken);
+
+    public static ValueTask<Computed> Synchronize(
+        this IState state,
+        ComputedSynchronizer computedSynchronizer,
+        CancellationToken cancellationToken = default)
+        => computedSynchronizer.Synchronize(state.Computed, cancellationToken);
+
+    public static ValueTask<Computed<T>> Synchronize<T>(
+        this IState<T> state,
+        CancellationToken cancellationToken = default)
+        => state.Computed.Synchronize(ComputedSynchronizer.Current, cancellationToken);
+
+    public static ValueTask<Computed<T>> Synchronize<T>(
+        this IState<T> state,
+        ComputedSynchronizer computedSynchronizer,
+        CancellationToken cancellationToken = default)
+        => state.Computed.Synchronize(computedSynchronizer, cancellationToken);
+
     // WhenNonInitial
 
     public static Task WhenNonInitial(this IState state)

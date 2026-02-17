@@ -23,6 +23,9 @@ public interface IState : IResult, IComputeFunction
     public event Action<State, StateEventKind>? Invalidated;
     public event Action<State, StateEventKind>? Updating;
     public event Action<State, StateEventKind>? Updated;
+
+    public bool IsSynchronized(ComputedSynchronizer synchronizer);
+    public  Task WhenSynchronized(ComputedSynchronizer synchronizer, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
