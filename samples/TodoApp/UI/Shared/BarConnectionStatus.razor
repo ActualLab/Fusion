@@ -1,4 +1,5 @@
 @using ActualLab.Rpc
+@inject IJSRuntime JS
 @inherits StatefulComponentBase<RpcPeerState>
 
 @{
@@ -41,6 +42,10 @@
     public override ValueTask DisposeAsync()
         => default; // State shouldn't be disposed
 
-    private void Reconnect()
-        => Services.RpcHub().InternalServices.ClientPeerReconnectDelayer.CancelDelays();
+    private async Task Reconnect()
+    {
+        Services.RpcHub().InternalServices.ClientPeerReconnectDelayer.CancelDelays();
+        try { await JS.InvokeVoidAsync("TodoReactApp.cancelReconnectDelays"); }
+        catch (JSException) { } // React app may not be mounted
+    }
 }

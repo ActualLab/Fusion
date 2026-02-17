@@ -1,5 +1,5 @@
 import React from "react";
-import { useUICommander } from "@actuallab/fusion-react";
+import { useUIActionTracker } from "@actuallab/fusion-react";
 import type { TodoItem, ITodoApi } from "./todo-api.js";
 import { DEFAULT_SESSION } from "./todo-api.js";
 
@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function TodoItemView({ item, api }: Props) {
-  const commander = useUICommander();
+  const commander = useUIActionTracker();
   const [editTitle, setEditTitle] = React.useState(item.title);
   const debounceTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 

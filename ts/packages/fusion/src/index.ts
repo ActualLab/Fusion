@@ -9,6 +9,8 @@ export { computeMethod, wrapComputeMethod, getMethodsMeta } from "./compute-meth
 export type { MethodMeta } from "./compute-method.js";
 export type { UpdateDelayer } from "./update-delayer.js";
 export { FixedDelayer, defaultUpdateDelayer } from "./update-delayer.js";
+export { UIUpdateDelayer } from "./ui-update-delayer.js";
+export { UIActionTracker, uiActions } from "./ui-action-tracker.js";
 export { State } from "./state.js";
 export { ComputedState } from "./computed-state.js";
 export type { ComputedStateOptions, StateComputer } from "./computed-state.js";

@@ -74,6 +74,7 @@
 //     threading through RpcServiceHost.dispatch).
 
 import { EventHandlerSet, PromiseSource } from "@actuallab/core";
+import { RpcClientPeerReconnectDelayer } from "./rpc-client-peer-reconnect-delayer.js";
 import { RpcWebSocketConnection, type RpcConnection, type WebSocketLike } from "./rpc-connection.js";
 import {
   RpcOutboundCall,
@@ -301,10 +302,21 @@ export class RpcClientPeer extends RpcPeer {
   private _handshakeIndex = 0;
   private _lastRemoteHubId: string | undefined;
   private _pendingHandshake: PromiseSource<RemoteHandshake> | undefined;
+  private _reconnectsAt = 0;
 
   /** Base64url-encoded peer ID — matches .NET's RpcClientPeer.ClientId (Guid.ToBase64Url). */
   readonly clientId: string;
   readonly peerChanged = new EventHandlerSet<void>();
+  readonly reconnectDelayer = new RpcClientPeerReconnectDelayer();
+  readonly reconnectsAtChanged = new EventHandlerSet<void>();
+
+  get reconnectsAt(): number { return this._reconnectsAt; }
+
+  private _setReconnectsAt(value: number): void {
+    if (this._reconnectsAt === value) return;
+    this._reconnectsAt = value;
+    this.reconnectsAtChanged.trigger();
+  }
 
   constructor(hub: RpcHub, url: string) {
     super(url, hub);
@@ -339,15 +351,19 @@ export class RpcClientPeer extends RpcPeer {
         // and we send our handshake below, so timing is safe.
         this._pendingHandshake = new PromiseSource<RemoteHandshake>();
         this.setupConnection(conn);
-        await conn.whenConnected;
+
+        // Race connection open against close — if WS fails to connect,
+        // whenConnected stays pending forever, so we must also watch for close.
+        const closedRejection = new Promise<never>((_, reject) =>
+          conn.closed.add(() => reject(new Error("Connection failed"))));
+        closedRejection.catch(() => {}); // prevent unhandled rejection when conn closes normally
+        await Promise.race([conn.whenConnected, closedRejection]);
 
         // Send our handshake, then wait for the server's response.
         this._hub.systemCallSender.handshake(conn, this.id, this._hub.hubId, ++this._handshakeIndex);
         const remoteHandshake = await Promise.race([
           this._pendingHandshake.promise,
-          // Break out if the connection closes during handshake
-          new Promise<never>((_, reject) =>
-            conn.closed.add(() => reject(new Error("Connection closed during handshake")))),
+          closedRejection,
         ]);
         this._pendingHandshake = undefined;
 
@@ -374,9 +390,12 @@ export class RpcClientPeer extends RpcPeer {
       this._connectionKind = RpcPeerConnectionKind.Disconnected;
       if (this._disposed) break;
 
-      // Backoff delay: 1s, 1.5s, 2.25s, ... up to 10s
       this._tryIndex++;
-      await new Promise(r => setTimeout(r, Math.min(1000 * Math.pow(1.5, this._tryIndex - 1), 10_000)));
+      const delay = this.reconnectDelayer.getDelay(this._tryIndex);
+      if (delay.isLimitExceeded) { this._disposed = true; break; }
+      this._setReconnectsAt(delay.endsAt);
+      try { await delay.promise; }
+      finally { this._setReconnectsAt(0); }
     }
   }
 

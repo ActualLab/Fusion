@@ -12,6 +12,13 @@
   }
 }
 
+@media (min-width: 960px) {
+  .VPHero .text,
+  .VPHero .tagline {
+    max-width: 80%;
+  }
+}
+
 .VPButton.VPButton.medium {
   border-radius: 10em;
   padding: 0 22px;

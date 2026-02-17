@@ -49,3 +49,5 @@ export class UIActionTracker {
     }
   }
 }
+
+export let uiActions = new UIActionTracker();

@@ -14,7 +14,7 @@ import {
   defineRpcService,
   type WebSocketLike,
 } from "@actuallab/rpc";
-import { Computed } from "@actuallab/fusion";
+import { Computed, ComputedState, FixedDelayer } from "@actuallab/fusion";
 import {
   FusionHub,
   defineComputeService,
@@ -121,6 +121,8 @@ async function run(): Promise<void> {
       await testAutoReconnect(hub, peer);
     if (scenario === "reconnection-torture")
       await testReconnectionTorture(hub, peer);
+    if (scenario === "server-restart")
+      await testServerRestart(hub, peer);
 
     console.log("ALL TESTS PASSED");
   } finally {
@@ -354,6 +356,71 @@ async function testReconnectionTorture(hub: FusionHub, peer: RpcClientPeer): Pro
     `  reconnection-torture: PASSED ` +
     `(${disconnectCount} disconnects, ${successCount} successful increments, final value=${rawValue})`,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Test: server-restart — verifies ComputedState resets after real .NET server restart
+// ---------------------------------------------------------------------------
+
+async function testServerRestart(hub: FusionHub, peer: RpcClientPeer): Promise<void> {
+  const svc = hub.addClient<ITypeScriptTestComputeService>(peer, TestComputeServiceDef);
+
+  // 1. Set counter to a known value
+  await svc.Set("rstKey", 42);
+
+  // 2. Create ComputedState backed by the compute method
+  const state = new ComputedState(() => svc.GetCounter("rstKey"), {
+    updateDelayer: FixedDelayer.get(300), // 300ms — ensures recomputation happens after handshake
+  });
+  await Promise.race([
+    state.whenFirstTimeUpdated(),
+    timeout(5_000, "ComputedState first update timeout"),
+  ]);
+  assert(state.value === 42, `Expected 42 initially, got ${state.value}`);
+  console.log("  server-restart: initial value confirmed (42)");
+
+  // 3. Signal the .NET server to restart (fire-and-forget)
+  //    The C# test method receives this signal, stops the host, and restarts it.
+  peer.callNoWait("IServerControlService.RequestRestart:0", []);
+  console.log("  server-restart: restart requested");
+
+  // 4. Wait for reconnection to the restarted server
+  await Promise.race([
+    new Promise<void>((resolve) => peer.connected.add(() => resolve())),
+    timeout(15_000, "Reconnection timeout after server restart"),
+  ]);
+  await delay(200); // wait for handshake exchange to complete
+  console.log("  server-restart: reconnected");
+
+  // 5. Wait for ComputedState to settle to 0 (server restarted = in-memory state is gone)
+  const deadline = Date.now() + 15_000;
+  while (state.valueOrUndefined !== 0) {
+    await Promise.race([
+      state.whenUpdated(),
+      delay(500),
+    ]);
+    if (Date.now() > deadline)
+      throw new Error(`ComputedState did not reset to 0 after server restart (current value: ${state.valueOrUndefined})`);
+  }
+  assert(state.value === 0, `Expected 0 after server restart, got ${state.value}`);
+  console.log("  server-restart: value reset to 0 confirmed");
+
+  // 6. Verify mutations work on the new server
+  const update2 = state.whenUpdated();
+  await svc.Set("rstKey", 99);
+  await Promise.race([
+    update2,
+    timeout(5_000, "ComputedState did not update after Set on new server"),
+  ]);
+  // Allow a couple more updates if the first one was transitional
+  for (let i = 0; i < 5 && state.value !== 99; i++) {
+    await Promise.race([state.whenUpdated(), delay(500)]);
+  }
+  assert(state.value === 99, `Expected 99 after Set on new server, got ${state.value}`);
+  console.log("  server-restart: post-restart mutation confirmed (99)");
+
+  state.dispose();
+  console.log("  server-restart: PASSED");
 }
 
 // ---------------------------------------------------------------------------

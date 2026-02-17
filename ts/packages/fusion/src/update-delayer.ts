@@ -36,4 +36,4 @@ export class FixedDelayer {
   }
 }
 
-export let defaultUpdateDelayer: UpdateDelayer = FixedDelayer.zero;
+export let defaultUpdateDelayer: UpdateDelayer = FixedDelayer.get(1000 / 60);

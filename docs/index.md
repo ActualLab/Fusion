@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: ActualLab.Fusion
-  text: .NET's missing piece. Your edge.
+  text: The shortest path to real-time UI.
   tagline: Add <span style="color:var(--hl-rt);">real-time updates</span> and <span style="color:var(--hl-cache);">caching</span> to any .NET app with <span style="color:var(--hl-nocode);">almost no</span> code <span style="color:var(--hl-nocode);">changes</span>. Get <span style="color:var(--hl-scale);">10⁶ scale</span> headroom. Production-proven. <span style="color:var(--hl-mit);">MIT license.</span>
   actions:
     - theme: brand

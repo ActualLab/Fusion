@@ -42,3 +42,8 @@ export type { WebSocketServer } from "./rpc-server.js";
 
 export { rpcService, rpcMethod, getServiceMeta, getMethodsMeta } from "./rpc-decorators.js";
 export type { MethodMeta, ServiceMeta } from "./rpc-decorators.js";
+
+export { RpcClientPeerReconnectDelayer } from "./rpc-client-peer-reconnect-delayer.js";
+export type { RpcPeerState } from "./rpc-peer-state.js";
+export { RpcPeerStateKind, isConnected, likelyConnected, getStateDescription } from "./rpc-peer-state.js";
+export { RpcPeerStateMonitor } from "./rpc-peer-state-monitor.js";
