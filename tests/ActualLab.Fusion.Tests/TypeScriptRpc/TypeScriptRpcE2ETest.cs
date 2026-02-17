@@ -43,11 +43,26 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
         await RunScenario("compute-invalidation");
     }
 
-    private Task RunScenario(string scenario)
+    [Fact]
+    public async Task AutoReconnection()
+    {
+        await using var _ = await WebHost.Serve();
+        await RunScenario("auto-reconnect");
+    }
+
+    [Fact]
+    public async Task ReconnectionTorture()
+    {
+        await using var _ = await WebHost.Serve();
+        await RunScenario("reconnection-torture", TimeSpan.FromSeconds(60));
+    }
+
+    private Task RunScenario(string scenario, TimeSpan? timeout = null)
     {
         var serverUrl = $"ws://127.0.0.1:{WebHost.ServerUri.Port}/rpc/ws";
         var ts = new TypeScriptRunner(Out);
         return ts.RunScenario(Script, scenario,
-            new Dictionary<string, string> { ["RPC_SERVER_URL"] = serverUrl });
+            new Dictionary<string, string> { ["RPC_SERVER_URL"] = serverUrl },
+            timeout);
     }
 }

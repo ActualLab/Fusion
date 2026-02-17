@@ -6,4 +6,5 @@ public interface ITypeScriptTestComputeService : IComputeService
     Task<int> GetCounter(string key, CancellationToken cancellationToken = default);
     Task Set(string key, int value, CancellationToken cancellationToken = default);
     Task Increment(string key, CancellationToken cancellationToken = default);
+    Task<int> GetCounterNonCompute(string key, CancellationToken cancellationToken = default);
 }

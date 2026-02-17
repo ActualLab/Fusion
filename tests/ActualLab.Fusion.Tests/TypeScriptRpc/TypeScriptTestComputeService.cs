@@ -26,4 +26,7 @@ public class TypeScriptTestComputeService : ITypeScriptTestComputeService
 
         return Task.CompletedTask;
     }
+
+    public Task<int> GetCounterNonCompute(string key, CancellationToken cancellationToken = default)
+        => Task.FromResult(_counters.GetValueOrDefault(key));
 }

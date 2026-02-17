@@ -57,13 +57,15 @@ interface ITypeScriptTestComputeService {
   GetCounter(key: string): Promise<number>;
   Set(key: string, value: number): Promise<void>;
   Increment(key: string): Promise<void>;
+  GetCounterNonCompute(key: string): Promise<number>;
 }
 
 // Only GetCounter has [ComputeMethod] — Set and Increment are regular methods
 const TestComputeServiceDef = defineComputeService("ITypeScriptTestComputeService", {
   GetCounter: { args: [""] },                 // wire: GetCounter:2 (1 arg + ctOffset)
   Set: { args: ["", 0], callTypeId: 0 },      // wire: Set:3 (2 args + ctOffset)
-  Increment: { args: [""], callTypeId: 0 },    // wire: Increment:2 (1 arg + ctOffset)
+  Increment: { args: [""], callTypeId: 0 },              // wire: Increment:2 (1 arg + ctOffset)
+  GetCounterNonCompute: { args: [""], callTypeId: 0 },   // wire: GetCounterNonCompute:2, regular call
 });
 
 // ---------------------------------------------------------------------------
@@ -115,6 +117,10 @@ async function run(): Promise<void> {
       await testOverloadResolution(hub, peer);
     if (scenario === "compute-invalidation" || scenario === "all")
       await testComputeInvalidation(hub, peer);
+    if (scenario === "auto-reconnect" || scenario === "all")
+      await testAutoReconnect(hub, peer);
+    if (scenario === "reconnection-torture")
+      await testReconnectionTorture(hub, peer);
 
     console.log("ALL TESTS PASSED");
   } finally {
@@ -216,6 +222,138 @@ async function testComputeInvalidation(hub: FusionHub, peer: RpcClientPeer): Pro
   assert(captured2.value === 43, `GetCounter after Increment expected 43, got ${captured2.value}`);
 
   console.log("  compute-invalidation: PASSED");
+}
+
+// ---------------------------------------------------------------------------
+// Test: auto-reconnect — verifies RPC client auto-reconnects after disconnect
+// ---------------------------------------------------------------------------
+
+async function testAutoReconnect(hub: FusionHub, peer: RpcClientPeer): Promise<void> {
+  const svc = hub.addClient<ITypeScriptTestComputeService>(peer, TestComputeServiceDef);
+  const basicSvc = hub.addClient<ITypeScriptTestService>(peer, TestServiceDef);
+
+  // 1. Set initial counter value and capture computed
+  await svc.Set("reconnKey", 100);
+  const captured = await Computed.capture(() => svc.GetCounter("reconnKey"));
+  assert(captured.value === 100, `Expected 100 before disconnect, got ${captured.value}`);
+  assert(captured.isConsistent, "Computed should be consistent before disconnect");
+
+  // 2. Set up reconnection waiter before disconnecting
+  const reconnectPromise = new Promise<void>((resolve) => {
+    peer.connected.add(() => resolve());
+  });
+
+  // 3. Close WebSocket to simulate disconnect
+  peer.connection?.close();
+
+  // 4. Wait for auto-reconnection (run() loop reconnects automatically)
+  await Promise.race([reconnectPromise, timeout(10_000, "Auto-reconnection timeout")]);
+  await delay(200); // Wait for handshake exchange to complete
+
+  // 5. Verify the captured computed was invalidated on reconnect
+  //    (invalidateAll() during reconnect resolves whenInvalidated, triggering invalidation)
+  await Promise.race([
+    captured.whenInvalidated(),
+    timeout(1_000, "Expected captured computed to be invalidated on reconnect"),
+  ]);
+
+  // 6. Verify basic RPC calls work after reconnection
+  const addResult = await basicSvc.Add(10, 20);
+  assert(addResult === 30, `Add(10,20) after reconnect expected 30, got ${addResult}`);
+
+  // 7. Re-fetch counter value — should still be 100
+  const captured2 = await Computed.capture(() => svc.GetCounter("reconnKey"));
+  assert(captured2.value === 100, `GetCounter after reconnect expected 100, got ${captured2.value}`);
+
+  // 8. Verify compute invalidation still works after reconnection
+  await svc.Increment("reconnKey");
+  await Promise.race([
+    captured2.whenInvalidated(),
+    timeout(5_000, "Post-reconnect invalidation timeout"),
+  ]);
+
+  // 9. Confirm updated value
+  const captured3 = await Computed.capture(() => svc.GetCounter("reconnKey"));
+  assert(captured3.value === 101, `GetCounter after post-reconnect Increment expected 101, got ${captured3.value}`);
+
+  console.log("  auto-reconnect: PASSED");
+}
+
+// ---------------------------------------------------------------------------
+// Test: reconnection-torture — stress-tests eventual consistency across many disconnects
+// ---------------------------------------------------------------------------
+
+async function testReconnectionTorture(hub: FusionHub, peer: RpcClientPeer): Promise<void> {
+  const svc = hub.addClient<ITypeScriptTestComputeService>(peer, TestComputeServiceDef);
+
+  // Helper: wait for connection to be fully established (WS open + handshake)
+  async function waitForConnection(): Promise<void> {
+    if (peer.isConnected) {
+      await delay(100);
+      return;
+    }
+    await Promise.race([
+      new Promise<void>((resolve) => peer.connected.add(() => resolve())),
+      timeout(10_000, "Reconnection timeout"),
+    ]);
+    await delay(200); // wait for handshake exchange
+  }
+
+  // Helper: disconnect and wait for auto-reconnection
+  async function disconnectAndReconnect(): Promise<void> {
+    const reconnectPromise = new Promise<void>((resolve) => {
+      peer.connected.add(() => resolve());
+    });
+    peer.connection?.close();
+    await Promise.race([reconnectPromise, timeout(10_000, "Reconnection timeout")]);
+    await delay(200); // wait for handshake exchange
+  }
+
+  // 1. Set initial counter value
+  await svc.Set("tortureKey", 0);
+
+  // 2. Perform increments with periodic disconnections
+  const totalIncrements = 20;
+  const disconnectInterval = 3; // disconnect every N successful increments
+  let successCount = 0;
+  let disconnectCount = 0;
+
+  while (successCount < totalIncrements) {
+    try {
+      await svc.Increment("tortureKey");
+      successCount++;
+
+      // Disconnect periodically (not after the last batch)
+      if (successCount % disconnectInterval === 0 && successCount < totalIncrements) {
+        disconnectCount++;
+        await disconnectAndReconnect();
+      }
+    } catch {
+      // Call failed due to disconnection — wait for reconnection and retry
+      await waitForConnection();
+    }
+  }
+
+  // 3. Ensure connection is stable
+  await waitForConnection();
+
+  // 4. Get raw counter value (non-compute) — this is the ground truth
+  const rawValue = await svc.GetCounterNonCompute("tortureKey");
+
+  // Raw value may exceed totalIncrements if some in-flight increments
+  // were processed by the server but their responses were lost during disconnect
+  assert(rawValue >= totalIncrements,
+    `Raw counter ${rawValue} should be >= ${totalIncrements}`);
+
+  // 5. Verify eventual consistency: computed value must match raw value
+  const computed = await Computed.capture(() => svc.GetCounter("tortureKey"));
+  assert(computed.value === rawValue,
+    `Eventual consistency violated: computed=${computed.value}, raw=${rawValue}`);
+
+  console.log(
+    `  reconnection-torture: PASSED ` +
+    `(${disconnectCount} disconnects, ${successCount} successful increments, final value=${rawValue})`,
+  );
 }
 
 // ---------------------------------------------------------------------------
