@@ -12,7 +12,7 @@
 
 ## Overview
 
-`ActualLab.Fusion` acts as **method-call middleware**, transparently enriching every call to Fusion-enhanced services with caching, invalidation, RPC, real-time synchronization, and more — with almost no changes to application code.
+`ActualLab.Fusion` acts as **method-call middleware**, transparently enriching every call to Fusion-enhanced services with caching, dependency tracking, invalidation, RPC, and more — with almost no changes to application code.
 
 You can think of Fusion as `make` or `msbuild`, but operating on functions and their outputs instead of source files and build artifacts. Like MSBuild, Fusion uses lazy computation:
 - When something changes, dependent results are immediately marked as inconsistent &ndash; and this signal propagates all the way to remote clients
