@@ -1,10 +1,3 @@
-import { createContext, useContext } from "react";
-import { UIActionTracker, uiActions } from "@actuallab/fusion";
-
-/** React context for UIActionTracker. */
-export const UIActionTrackerContext = createContext<UIActionTracker>(uiActions);
-
-/** Returns the UIActionTracker from context — use its run/call methods to wrap async commands. */
-export function useUIActionTracker(): UIActionTracker {
-  return useContext(UIActionTrackerContext);
-}
+// Removed: UIActionTrackerContext and useUIActionTracker are no longer needed.
+// There is a single UIActionTracker instance (uiActions) — import it directly
+// from @actuallab/fusion instead of going through React context.
