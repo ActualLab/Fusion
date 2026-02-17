@@ -131,9 +131,38 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
                 Timeouts.Clock.Now + GracefulDisposeDelay);
     }
 
+    public override Computed? GetExistingComputed()
+    {
+        lock (Lock)
+            return ComputingComputed ?? base.GetExistingComputed();
+    }
+
+    public override bool IsSynchronized(ComputedSynchronizer synchronizer)
+        => !Snapshot.IsInitial;
+
+    public override Task WhenSynchronized(ComputedSynchronizer synchronizer, CancellationToken cancellationToken = default)
+    {
+        var snapshot = Snapshot;
+        if (!snapshot.IsInitial)
+            return Task.CompletedTask;
+
+        return WhenUpdatedAndSynchronized(synchronizer, snapshot, cancellationToken);
+
+        static async Task WhenUpdatedAndSynchronized(
+            ComputedSynchronizer synchronizer,
+            StateSnapshot snapshot,
+            CancellationToken cancellationToken)
+        {
+            await snapshot.WhenUpdated().WaitAsync(cancellationToken).ConfigureAwait(false);
+            await synchronizer.WhenSynchronized(snapshot.State.Computed, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     // Handles the rest of Dispose
     void IGenericTimeoutHandler.OnTimeout(object? reason)
         => GracefulDisposeTokenSource.CancelAndDisposeSilently();
+
+    // Protected methods
 
     protected virtual async Task UpdateCycle()
     {
@@ -161,12 +190,6 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
         finally {
             GracefulDisposeTokenSource.CancelAndDisposeSilently();
         }
-    }
-
-    public override Computed? GetExistingComputed()
-    {
-        lock (Lock)
-            return ComputingComputed ?? base.GetExistingComputed();
     }
 
     protected Task? GetComputeTaskIfDisposed()

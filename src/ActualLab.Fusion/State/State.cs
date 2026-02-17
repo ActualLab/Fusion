@@ -157,6 +157,9 @@ public abstract class State : ComputedInput, IState
     public override Computed? GetExistingComputed()
         => _snapshot?.Computed;
 
+    public abstract bool IsSynchronized(ComputedSynchronizer synchronizer);
+    public abstract Task WhenSynchronized(ComputedSynchronizer synchronizer, CancellationToken cancellationToken = default);
+
     // IComputedFunction implementation
 
     FusionHub IComputeFunction.Hub => Services.GetRequiredService<FusionHub>();

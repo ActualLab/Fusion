@@ -141,6 +141,12 @@ public abstract class MutableState : State, IMutableState, IMutableResult
     public void SetError(Exception error, InvalidationSource source)
         => Set(new Result(null, error), source);
 
+    public override bool IsSynchronized(ComputedSynchronizer synchronizer)
+        => true;
+
+    public override Task WhenSynchronized(ComputedSynchronizer synchronizer, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
     // Protected methods
 
     protected internal override void OnInvalidated(Computed computed)

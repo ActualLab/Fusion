@@ -28,21 +28,14 @@ public abstract class ComputedSynchronizer
 
     public virtual bool IsSynchronized(Computed computed)
     {
-        if (computed is IRemoteComputed remoteComputed)
-            return IsSynchronized(remoteComputed);
-
-        if (computed is IStateBoundComputed stateBoundComputed) {
-            var state = stateBoundComputed.State;
-            if (state is IMutableState)
-                return true;
-
-            var snapshot = state.Snapshot;
-            if (snapshot.IsInitial)
-                return false;
+        switch (computed) {
+            case IHasSynchronizationTarget { SynchronizationTarget: { } target }:
+                return IsSynchronized(target);
+            case IStateBoundComputed stateBoundComputed:
+                return stateBoundComputed.State.IsSynchronized(this);
+            case IRemoteComputed remoteComputed:
+                return IsSynchronized(remoteComputed);
         }
-
-        if (computed is IHasSynchronizationTarget { SynchronizationTarget: { } target })
-            return IsSynchronized(target);
 
         // Computed is a regular computed instance
         var usedBuffer = ArrayBuffer<Computed>.Lease(false);
@@ -62,30 +55,14 @@ public abstract class ComputedSynchronizer
 
     public virtual Task WhenSynchronized(Computed computed, CancellationToken cancellationToken)
     {
-        if (computed is IRemoteComputed remoteComputed)
-            return WhenSynchronized(remoteComputed, cancellationToken);
-
-        if (computed is IStateBoundComputed stateBoundComputed) {
-            var state = stateBoundComputed.State;
-            if (state is IMutableState)
-                return Task.CompletedTask;
-
-            var snapshot = state.Snapshot;
-            if (snapshot.IsInitial)
-                return WhenUpdatedAndSynchronized(this, snapshot, cancellationToken);
-
-            static async Task WhenUpdatedAndSynchronized(
-                ComputedSynchronizer self,
-                StateSnapshot snapshot,
-                CancellationToken cancellationToken)
-            {
-                await snapshot.WhenUpdated().WaitAsync(cancellationToken).ConfigureAwait(false);
-                await self.WhenSynchronized(snapshot.State.Computed, cancellationToken).ConfigureAwait(false);
-            }
+        switch (computed) {
+            case IHasSynchronizationTarget { SynchronizationTarget: { } target }:
+                return WhenSynchronized(target, cancellationToken);
+            case IStateBoundComputed stateBoundComputed:
+                return stateBoundComputed.State.WhenSynchronized(this, cancellationToken);
+            case IRemoteComputed remoteComputed:
+                return WhenSynchronized(remoteComputed, cancellationToken);
         }
-
-        if (computed is IHasSynchronizationTarget { SynchronizationTarget: { } target })
-            return WhenSynchronized(target, cancellationToken);
 
         // Computed is a regular computed instance
         var usedBuffer = ArrayBuffer<Computed>.Lease(false);

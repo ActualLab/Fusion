@@ -10,7 +10,7 @@ namespace ActualLab.Fusion.Client;
 /// <summary>
 /// Defines the contract for a computed value that is produced via a remote (RPC) call.
 /// </summary>
-public interface IRemoteComputed : IHasInvalidationTarget, IHasSynchronizationTarget, IDisposable
+public interface IRemoteComputed : IHasInvalidationTarget, IDisposable
 {
     public AsyncTaskMethodBuilder<RpcOutboundComputeCall?> CallSource { get; }
     public AsyncTaskMethodBuilder SynchronizedSource { get; }
@@ -34,8 +34,6 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
 
     // IHasInvalidationTarget
     Computed? IHasInvalidationTarget.InvalidationTarget => null;
-    // IHasSynchronizationTarget
-    Computed? IHasSynchronizationTarget.SynchronizationTarget => null;
 
     // Called when computed is populated after RPC call
     public RemoteComputed(
