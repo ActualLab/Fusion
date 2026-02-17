@@ -12,7 +12,7 @@
 
 ## Overview
 
-`ActualLab.Fusion` is a successor of [Stl.Fusion](https://github.com/servicetitan/Stl.Fusion). It works similarly to a **method call middleware** that transparently "plugs" a rich set of features into every call made to Fusion services &ndash; caching, invalidation, RPC, real-time sync, and many other capabilities, all without changing how you write your code.
+`ActualLab.Fusion` acts as **method-call middleware**, transparently enriching every call to Fusion-enhanced services with caching, invalidation, RPC, real-time synchronization, and more — with almost no changes to application code.
 
 You can think of Fusion as `make` or `msbuild`, but operating on functions and their outputs instead of source files and build artifacts. Like MSBuild, Fusion uses lazy computation:
 - When something changes, dependent results are immediately marked as inconsistent &ndash; and this signal propagates all the way to remote clients
