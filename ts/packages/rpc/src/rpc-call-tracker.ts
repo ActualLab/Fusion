@@ -58,6 +58,9 @@ export class RpcOutboundCall {
    *  Subclasses (e.g. compute calls) override to false to stay in tracker for invalidation. */
   readonly removeOnOk: boolean = true;
 
+  /** The serialized wire message — stored for re-sending on reconnect. */
+  serializedMessage = "";
+
   constructor(callId: number, method: string) {
     this.callId = callId;
     this.method = method;
@@ -94,6 +97,10 @@ export class RpcOutboundCallTracker {
     const call = this._calls.get(callId);
     if (call !== undefined) this._calls.delete(callId);
     return call;
+  }
+
+  values(): IterableIterator<RpcOutboundCall> {
+    return this._calls.values();
   }
 
   activeCallIds(): number[] {

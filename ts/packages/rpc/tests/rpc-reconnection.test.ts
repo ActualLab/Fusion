@@ -64,59 +64,58 @@ describe("RPC Reconnection", () => {
     expect(r2).toBe(30);
   });
 
-  it("should reject in-flight calls on disconnect", async () => {
-    const calc = createRpcClient<ICalcService>(conn.clientPeer, CalcServiceDef);
-
-    // Start a call but disconnect before it completes
-    // We need a slow service for this
+  it("should keep in-flight calls alive across reconnect", async () => {
+    // Use a slow server so the call is still in-flight when we disconnect
     const slowHub = new RpcHub("slow-server");
     slowHub.addService(CalcServiceDef, {
       add: async (a: unknown, b: unknown) => {
-        await delay(500);
+        await delay(200);
         return (a as number) + (b as number);
       },
       greet: (name: unknown) => `Hello, ${name}!`,
     });
-
     await conn.switchHost(slowHub);
 
+    const calc = createRpcClient<ICalcService>(conn.clientPeer, CalcServiceDef);
     const promise = calc.add(1, 2);
-    promise.catch(() => {}); // prevent unhandled rejection warning
 
-    // Disconnect while the call is in-flight
+    // Disconnect while the call is in-flight, then reconnect
     await delay(10);
-    await conn.disconnect();
+    await conn.reconnect();
 
-    await expect(promise).rejects.toThrow("Connection closed");
+    // Call should complete after reconnect (re-sent to the new connection)
+    const result = await promise;
+    expect(result).toBe(3);
 
     slowHub.close();
   });
 
-  it("should reject all pending calls on disconnect", async () => {
-    // Switch to a server that never responds (slow)
+  it("should keep multiple pending calls alive across reconnect", async () => {
     const slowHub = new RpcHub("slow-server");
     slowHub.addService(CalcServiceDef, {
-      add: async () => { await delay(10_000); return 0; },
-      greet: async () => { await delay(10_000); return ""; },
+      add: async (a: unknown, b: unknown) => {
+        await delay(100);
+        return (a as number) + (b as number);
+      },
+      greet: async (name: unknown) => {
+        await delay(100);
+        return `Hello, ${name}!`;
+      },
     });
     await conn.switchHost(slowHub);
 
     const calc = createRpcClient<ICalcService>(conn.clientPeer, CalcServiceDef);
-
     const p1 = calc.add(1, 2);
     const p2 = calc.greet("test");
     const p3 = calc.add(3, 4);
-    // Prevent unhandled rejection warnings
-    p1.catch(() => {});
-    p2.catch(() => {});
-    p3.catch(() => {});
 
     await delay(10);
-    await conn.disconnect();
+    await conn.reconnect();
 
-    await expect(p1).rejects.toThrow("Connection closed");
-    await expect(p2).rejects.toThrow("Connection closed");
-    await expect(p3).rejects.toThrow("Connection closed");
+    // All calls should complete after reconnect
+    expect(await p1).toBe(3);
+    expect(await p2).toBe("Hello, test!");
+    expect(await p3).toBe(7);
 
     slowHub.close();
   });

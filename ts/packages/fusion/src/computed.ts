@@ -14,6 +14,9 @@ export const enum ConsistencyState {
 
 /** Core Fusion abstraction — a cached computation with dependency tracking and invalidation. */
 export class Computed<T> implements IResult<T> {
+  /** Delay before auto-invalidating a Computed that holds an error result. 0 = disabled. */
+  static errorAutoInvalidateDelay = 1000;
+
   /** Capture the Computed backing a computation — works with both local and RPC compute methods. */
   static async capture<T>(fn: () => T | Promise<T>): Promise<Computed<T>> {
     const captureComputed = new Computed<unknown>("__capture__");
@@ -122,6 +125,8 @@ export class Computed<T> implements IResult<T> {
     this._output = output instanceof Result ? output : result(output);
     this._state = ConsistencyState.Consistent;
     this._register();
+    if (this._output.hasError && Computed.errorAutoInvalidateDelay > 0)
+      setTimeout(() => this.invalidate(), Computed.errorAutoInvalidateDelay);
   }
 
   protected _register(): void {
