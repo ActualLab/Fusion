@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.1.61+045f13f0
+
+Release date: 2026-02-18
+
+### Added
+- "No polymorphism" JSON serialization formats (`json5np`, `njson5np`) for strict
+  non-polymorphic RPC serialization
+- `RpcLimits.PrematureDisconnectTimeout` for improved connection backoff logic
+
+### Changed
+- Connection retry logic now uses `ConnectionAttemptIndex` instead of `TryIndex`
+  with handling for premature connection closures
+- Default serialization format for `RpcClientPeer` (TypeScript) changed to `json5np`
+
+### Documentation
+- `RpcLimits` class documentation
+
+### Tests
+- Added TypeScript RPC performance harness
+
+
 ## 12.1.51+8e1051d0
 
 Release date: 2026-02-17
