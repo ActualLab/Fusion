@@ -8,6 +8,7 @@ ActualLab.Rpc provides several options classes for fine-tuning RPC behavior:
 
 | Options Class | Purpose |
 |---------------|---------|
+| `RpcLimits` | Connection timeouts, keep-alive, object lifecycle |
 | `RpcPeerOptions` | Peer creation and connection lifecycle |
 | `RpcOutboundCallOptions` | Outbound call routing, timeouts, rerouting |
 | `RpcInboundCallOptions` | Inbound call processing |
@@ -16,6 +17,38 @@ ActualLab.Rpc provides several options classes for fine-tuning RPC behavior:
 | `RpcWebSocketClientOptions` | WebSocket client connections |
 | `RpcWebSocketServerOptions` | WebSocket server endpoints |
 | `RpcTestClientOptions` | Testing with in-memory channels |
+
+## `RpcLimits`
+
+Defines timeout and periodic limits for RPC connections, keep-alive, and object lifecycle. Registered as a singleton in DI and accessible via `RpcHub.Limits`.
+
+### Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `ConnectTimeout` | `TimeSpan` | `10s` | Timeout for establishing a connection; reconnect starts if exceeded |
+| `HandshakeTimeout` | `TimeSpan` | `10s` | Timeout for completing handshake; reconnect starts if exceeded |
+| `PrematureDisconnectTimeout` | `TimeSpan` | `15s` | If a connection was alive for less than this duration, a graceful close is still treated as an error — bumping `ConnectionAttemptIndex` and applying reconnect backoff delay. This prevents rapid connect-disconnect cycles from resetting the backoff. |
+| `KeepAlivePeriod` | `TimeSpan` | `15s` | Interval at which a peer sends keep-alive messages (which also report which remote objects are still alive) |
+| `KeepAliveTimeout` | `TimeSpan` | `55s` | If no keep-alive is received within this period, the connection is dropped and reconnect starts |
+| `ObjectReleasePeriod` | `TimeSpan` | `10s` | Cycle time for checking `KeepAliveTimeout` and `ObjectReleaseTimeout` |
+| `ObjectReleaseTimeout` | `TimeSpan` | `125s` | If an object doesn't receive a keep-alive for this long, it gets released |
+| `ObjectAbortCycleCount` | `int` | `3` | Number of cycles to complete object abort (proceeds to next cycle if at least one object was disposed) |
+| `ObjectAbortCyclePeriod` | `TimeSpan` | `1s` | Duration of a single object abort cycle |
+| `CallAbortCyclePeriod` | `TimeSpan` | `1s` | Duration of a single call abort cycle |
+| `CallTimeoutCheckPeriod` | `RandomTimeSpan` | `5s ±20%` | How often call timeouts are checked |
+
+When a debugger is attached, the defaults for `HandshakeTimeout` (60s), `KeepAlivePeriod` (300s), and `KeepAliveTimeout` (1000s) are relaxed to avoid false timeouts during debugging.
+
+### Example
+
+```csharp
+services.AddSingleton(new RpcLimits(Debugger.IsAttached) {
+    PrematureDisconnectTimeout = TimeSpan.FromSeconds(30),
+    KeepAlivePeriod = TimeSpan.FromSeconds(10),
+    KeepAliveTimeout = TimeSpan.FromSeconds(40),
+});
+```
 
 ## `RpcPeerOptions`
 
