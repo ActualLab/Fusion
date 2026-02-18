@@ -91,6 +91,22 @@ import {
 } from "./rpc-serialization.js";
 import type { RpcHub } from "./rpc-hub.js";
 
+/**
+ * Default serialization format for RpcClientPeer connections.
+ * TS uses plain JSON.stringify without polymorphic type wrapping,
+ * so "json5np" (System.Text.Json, no polymorphism) is the correct match.
+ */
+export const DEFAULT_SERIALIZATION_FORMAT = "json5np";
+
+/** Builds the WebSocket connection URL for an RpcClientPeer. */
+export type RpcConnectionUrlResolver = (peer: RpcClientPeer) => string;
+
+/** Default connection URL provider — appends `clientId` and `f` query parameters. */
+export const defaultConnectionUrlResolver: RpcConnectionUrlResolver = (peer) => {
+  const sep = peer.ref.includes('?') ? '&' : '?';
+  return peer.ref + sep + `clientId=${peer.clientId}&f=${peer.serializationFormat}`;
+};
+
 /** Options for RpcPeer.call() — allows custom call types and cancellation. */
 export interface RpcCallOptions {
   /** Wire CallType field (0 = regular). */
@@ -335,6 +351,14 @@ export class RpcClientPeer extends RpcPeer {
 
   /** Base64url-encoded peer ID — matches .NET's RpcClientPeer.ClientId (Guid.ToBase64Url). */
   readonly clientId: string;
+  /**
+   * Serialization format key sent to the server via `f=` query parameter.
+   * TS uses plain JSON.stringify (no polymorphic type wrapping), so `json5np`
+   * (no-polymorphism) is the correct default.
+   */
+  readonly serializationFormat: string;
+  /** Builds the WebSocket URL for this peer. Replace to customize URL construction. */
+  connectionUrlResolver: RpcConnectionUrlResolver = defaultConnectionUrlResolver;
   readonly peerChanged = new EventHandlerSet<void>();
   readonly reconnectDelayer = new RpcClientPeerReconnectDelayer();
   readonly reconnectsAtChanged = new EventHandlerSet<void>();
@@ -347,9 +371,10 @@ export class RpcClientPeer extends RpcPeer {
     this.reconnectsAtChanged.trigger();
   }
 
-  constructor(hub: RpcHub, url: string) {
+  constructor(hub: RpcHub, url: string, serializationFormat?: string) {
     super(url, hub);
     this.clientId = guidToBase64Url(this.id);
+    this.serializationFormat = serializationFormat ?? DEFAULT_SERIALIZATION_FORMAT;
   }
 
   get connectionKind(): RpcPeerConnectionKind {
@@ -367,7 +392,7 @@ export class RpcClientPeer extends RpcPeer {
 
   /** Start the reconnection loop — runs until disposed. */
   async run(wsFactory?: (url: string) => WebSocketLike): Promise<void> {
-    const connUrl = this.ref + (this.ref.includes('?') ? '&' : '?') + `clientId=${this.clientId}`;
+    const connUrl = this.connectionUrlResolver(this);
     while (!this._disposed) {
       try {
         const ws = wsFactory?.(connUrl) ?? new WebSocket(connUrl) as unknown as WebSocketLike;

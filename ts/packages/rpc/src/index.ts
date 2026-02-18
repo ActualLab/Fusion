@@ -32,8 +32,8 @@ export {
 export { handleSystemCall } from "./rpc-system-call-handler.js";
 export { RpcSystemCallSender } from "./rpc-system-call-sender.js";
 
-export { RpcPeer, RpcPeerConnectionKind, RpcClientPeer, RpcServerPeer } from "./rpc-peer.js";
-export type { RemoteHandshake, RpcCallOptions } from "./rpc-peer.js";
+export { RpcPeer, RpcPeerConnectionKind, RpcClientPeer, RpcServerPeer, DEFAULT_SERIALIZATION_FORMAT, defaultConnectionUrlResolver } from "./rpc-peer.js";
+export type { RemoteHandshake, RpcCallOptions, RpcConnectionUrlResolver } from "./rpc-peer.js";
 export { RpcHub } from "./rpc-hub.js";
 export { RpcServiceHost } from "./rpc-service-host.js";
 export type { RpcServiceImpl, RpcDispatchContext } from "./rpc-service-host.js";

@@ -8,9 +8,10 @@
 //     delimiter, JSON-encoded argument segments.
 //
 // Omitted from .NET:
-//   - Polymorphic argument handling — .NET inspects each argument's runtime type
-//     and may wrap it in a polymorphic container for System.Text.Json.  TS uses
-//     plain JSON.stringify which is inherently polymorphic (no static type info).
+//   - Polymorphic argument handling — .NET's json5/njson5 formats inspect each
+//     argument's runtime type and may wrap it with type info for polymorphic
+//     deserialization.  TS uses plain JSON.stringify (no static type info),
+//     which matches the json5np/njson5np "no polymorphism" formats.
 //   - Binary serialization (RpcByteMessageSerializer, MessagePack, MemoryPack) —
 //     not available in browsers; JSON is the only format TS supports.
 //   - ArgumentData / ReadOnlyMemory<byte> lazy deserialization — .NET defers
