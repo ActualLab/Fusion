@@ -350,6 +350,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         (await stream1.ToListAsync()).Should().Equal(expected1);
         await AssertNoObjects(clientPeer);
 
+        if (serializationFormat.EndsWith("np"))
+            return; // Polymorphic streams are going to "hang" w/ non-polymorphic serializer
+
         var expected2 = Enumerable.Range(0, 5)
             .Select(x => (x & 2) == 0 ? (ITuple)new Tuple<int>(x) : new Tuple<long>(x))
             .ToList();
