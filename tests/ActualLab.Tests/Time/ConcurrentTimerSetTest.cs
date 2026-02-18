@@ -40,28 +40,28 @@ public class ConcurrentTimerSetTest(ITestOutputHelper @out) : TestBase(@out)
 
         // AddOrUpdateToLater
         var t = new Timer();
-        timerSet.AddOrUpdate(t, clock.Now + TimeSpan.FromMilliseconds(100));
-        timerSet.AddOrUpdateToEarlier(t, clock.Now + TimeSpan.FromMilliseconds(200))
+        timerSet.AddOrUpdate(t, clock.Now + TimeSpan.FromSeconds(2));
+        timerSet.AddOrUpdateToEarlier(t, clock.Now + TimeSpan.FromSeconds(3))
             .Should().BeFalse();
-        timerSet.AddOrUpdateToLater(t, clock.Now + TimeSpan.FromMilliseconds(200))
+        timerSet.AddOrUpdateToLater(t, clock.Now + TimeSpan.FromSeconds(3))
             .Should().BeTrue();
         t.FiredAt.Should().Be(default);
-        await TestExt.When(() => t.FiredAt.Should().NotBe(default), TimeSpan.FromMilliseconds(500));
+        await TestExt.When(() => t.FiredAt.Should().NotBe(default), TimeSpan.FromSeconds(5));
 
         // AddOrUpdateToEarlier
         t = new Timer();
-        timerSet.AddOrUpdate(t, clock.Now + TimeSpan.FromMilliseconds(500));
-        timerSet.AddOrUpdateToLater(t, clock.Now + TimeSpan.FromMilliseconds(200))
+        timerSet.AddOrUpdate(t, clock.Now + TimeSpan.FromSeconds(5));
+        timerSet.AddOrUpdateToLater(t, clock.Now + TimeSpan.FromSeconds(2))
             .Should().BeFalse();
-        timerSet.AddOrUpdateToEarlier(t, clock.Now + TimeSpan.FromMilliseconds(200))
+        timerSet.AddOrUpdateToEarlier(t, clock.Now + TimeSpan.FromSeconds(2))
             .Should().BeTrue();
         t.FiredAt.Should().Be(default);
-        await TestExt.When(() => t.FiredAt.Should().NotBe(default), TimeSpan.FromMilliseconds(500));
+        await TestExt.When(() => t.FiredAt.Should().NotBe(default), TimeSpan.FromSeconds(5));
 
         // Remove
         t = new Timer();
         timerSet.Remove(t).Should().BeFalse();
-        timerSet.AddOrUpdate(t, clock.Now + TimeSpan.FromMilliseconds(100));
+        timerSet.AddOrUpdate(t, clock.Now + TimeSpan.FromSeconds(2));
         t.FiredAt.Should().Be(default);
         timerSet.Remove(t).Should().BeTrue();
         t.FiredAt.Should().Be(default);

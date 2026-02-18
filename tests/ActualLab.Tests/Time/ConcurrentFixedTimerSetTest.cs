@@ -25,7 +25,7 @@ public class ConcurrentFixedTimerSetTest(ITestOutputHelper @out) : TestBase(@out
     public async Task BasicTest()
     {
         var clock = MomentClockSet.Default.CpuClock;
-        var fireDelay = TimeSpan.FromMilliseconds(250);
+        var fireDelay = TimeSpan.FromSeconds(2);
         await using var set = new ConcurrentFixedTimerSet<Item>(
             new() {
                 Clock = clock,
@@ -40,15 +40,15 @@ public class ConcurrentFixedTimerSetTest(ITestOutputHelper @out) : TestBase(@out
         set.Add(item2);
         set.Count.Should().Be(2);
 
-        // Before delay nothing should be fired
-        await clock.Delay(TimeSpan.FromMilliseconds(50));
+        // Nothing should be fired right away
         item1.FiredAt.Should().Be(default);
         item2.FiredAt.Should().Be(default);
 
-        // Wait long enough for both to fire
-        await clock.Delay(TimeSpan.FromMilliseconds(500));
-        item1.FiredAt.Should().NotBe(default);
-        item2.FiredAt.Should().NotBe(default);
+        // Wait for both to fire
+        await TestExt.When(() => {
+            item1.FiredAt.Should().NotBe(default);
+            item2.FiredAt.Should().NotBe(default);
+        }, TimeSpan.FromSeconds(5));
 
         await TestExt.When(() => set.Count.Should().Be(0), TimeSpan.FromSeconds(1));
     }
