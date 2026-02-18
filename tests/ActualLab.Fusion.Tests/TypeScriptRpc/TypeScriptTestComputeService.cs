@@ -4,8 +4,14 @@ public class TypeScriptTestComputeService : ITypeScriptTestComputeService
 {
     private readonly ConcurrentDictionary<string, int> _counters = new(StringComparer.Ordinal);
 
+    public Task<int> Add(int a, int b, CancellationToken cancellationToken = default)
+        => Task.FromResult(a + b);
+
     public virtual Task<int> GetCounter(string key, CancellationToken cancellationToken = default)
         => Task.FromResult(_counters.GetValueOrDefault(key));
+
+    public virtual Task<int> GetValue(int value, CancellationToken cancellationToken = default)
+        => Task.FromResult(value);
 
     public Task Set(string key, int value, CancellationToken cancellationToken = default)
     {
