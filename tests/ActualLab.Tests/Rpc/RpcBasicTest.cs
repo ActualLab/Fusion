@@ -110,6 +110,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [Theory]
     [InlineData("json5")]
     [InlineData("njson5")]
+    [InlineData("json5np")]
+    [InlineData("njson5np")]
     [InlineData("mempack5")]
     [InlineData("mempack5c")]
     [InlineData("msgpack5")]
@@ -277,6 +279,28 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await AssertNoCalls(clientPeer, Out);
     }
 
+    [Theory]
+    [InlineData("json5np")]
+    [InlineData("njson5np")]
+    public async Task PolymorphTest_NP_ShouldFail(string serializationFormat)
+    {
+        SerializationFormat = serializationFormat;
+        await using var services = CreateServices();
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+        var backendClient = services.RpcHub().GetClient<ITestRpcBackend>();
+
+        // Client-side: polymorphic arguments cause SerializationException during Send
+        await Assert.ThrowsAsync<SerializationException>(
+            () => backendClient.Polymorph(new Tuple<int>(1)));
+        await Assert.ThrowsAsync<SerializationException>(
+            () => client.PolymorphArg(new Tuple<int>(1)));
+
+        // Server-side: polymorphic result serialization also fails,
+        // but the error surfaces differently to the client
+        await Assert.ThrowsAnyAsync<Exception>(
+            () => client.PolymorphResult(2));
+    }
+
     [Fact]
     public async Task CancellationTest()
     {
@@ -300,6 +324,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     [Theory]
     [InlineData("json5")]
     [InlineData("njson5")]
+    [InlineData("json5np")]
+    [InlineData("njson5np")]
     [InlineData("mempack5")]
     [InlineData("mempack5c")]
     [InlineData("msgpack5")]

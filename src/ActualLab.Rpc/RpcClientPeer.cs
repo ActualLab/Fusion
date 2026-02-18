@@ -30,7 +30,7 @@ public class RpcClientPeer : RpcPeer
         if (Ref.ConnectionKind is RpcPeerConnectionKind.None)
             throw RpcReconnectFailedException.ReconnectFailed(Ref);
 
-        var delay = ReconnectDelayer.GetDelay(this, connectionState.TryIndex, connectionState.Error, cancellationToken);
+        var delay = ReconnectDelayer.GetDelay(this, connectionState.ConnectionAttemptIndex, connectionState.Error, cancellationToken);
         if (delay.IsLimitExceeded)
             throw RpcReconnectFailedException.ReconnectFailed(Ref);
 

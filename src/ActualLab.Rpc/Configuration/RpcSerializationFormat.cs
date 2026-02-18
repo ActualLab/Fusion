@@ -1,5 +1,7 @@
 using ActualLab.Rpc.Serialization;
 
+// ReSharper disable InconsistentNaming
+
 namespace ActualLab.Rpc;
 
 /// <summary>
@@ -12,14 +14,22 @@ public sealed class RpcSerializationFormat(
 {
     // Static members
 
-    // "json5" - System.Text.Json (legacy)
+    // "json5" - System.Text.Json
     public static readonly RpcSerializationFormat SystemJsonV5 = new("json5",
         () => new RpcTextArgumentSerializerV4(SystemJsonSerializer.Default),
         peer => new RpcTextMessageSerializerV3(peer));
+    // "json5np" - System.Text.Json, no polymorphism
+    public static readonly RpcSerializationFormat SystemJsonV5NP = new("json5np",
+        () => new RpcTextArgumentSerializerV4NP(SystemJsonSerializer.Default),
+        peer => new RpcTextMessageSerializerV3(peer));
 
-    // "njson5" - Newtonsoft.Json (legacy)
+    // "njson5" - Newtonsoft.Json
     public static readonly RpcSerializationFormat NewtonsoftJsonV5 = new("njson5",
         () => new RpcTextArgumentSerializerV4(NewtonsoftJsonSerializer.Default),
+        peer => new RpcTextMessageSerializerV3(peer));
+    // "njson5np" - Newtonsoft.Json, no polymorphism
+    public static readonly RpcSerializationFormat NewtonsoftJsonV5NP = new("njson5np",
+        () => new RpcTextArgumentSerializerV4NP(NewtonsoftJsonSerializer.Default),
         peer => new RpcTextMessageSerializerV3(peer));
 
     // "mempack5" - MemoryPack (legacy)
@@ -55,8 +65,8 @@ public sealed class RpcSerializationFormat(
         peer => new RpcByteMessageSerializerV5Compact(peer));
 
     public static ImmutableList<RpcSerializationFormat> All { get; set; } = ImmutableList.Create(
-        SystemJsonV5,
-        NewtonsoftJsonV5,
+        SystemJsonV5, SystemJsonV5NP,
+        NewtonsoftJsonV5, NewtonsoftJsonV5NP,
         MemoryPackV5, MemoryPackV5C,
         MessagePackV5, MessagePackV5C,
         MemoryPackV6, MemoryPackV6C,

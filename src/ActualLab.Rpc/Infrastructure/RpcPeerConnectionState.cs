@@ -8,7 +8,7 @@ public sealed record RpcPeerConnectionState(
     RpcHandshake? Handshake = null,
     RpcHandshake? OwnHandshake = null,
     Exception? Error = null,
-    int TryIndex = 0,
+    int ConnectionAttemptIndex = 0,
     CancellationTokenSource? ReaderTokenSource = null)
 {
     public static readonly RpcPeerConnectionState Disconnected = new();
@@ -37,6 +37,6 @@ public sealed record RpcPeerConnectionState(
             _ = connection.DisposeAsync();
         return error is null
             ? Disconnected
-            : new RpcPeerConnectionState(null, null, null, error, TryIndex + 1);
+            : new RpcPeerConnectionState(null, null, null, error, ConnectionAttemptIndex + 1);
     }
 }

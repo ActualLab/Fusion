@@ -78,8 +78,6 @@ public static class Errors
         => new SerializationException("Invalid item size. The remainder of the message will be dropped.");
     public static Exception InvalidItemTypeFormat()
         => new SerializationException("Invalid item type format.");
-    public static Exception CannotSerializeAbstractType(Type type)
-        => new SerializationException($"Cannot serialize abstract type '{type.GetName()}'.");
     public static Exception CannotDeserializeInboundCallArguments(Exception innerException)
         => new SerializationException("Cannot deserialize inbound call arguments.", innerException);
     public static Exception CannotDeserializeUnexpectedArgumentType(Type expectedType, Type actualType)
@@ -92,6 +90,10 @@ public static class Errors
         => new SerializationException(
             $"Got invalid RPC call result type: " +
             $"expected '{expectedType.GetName()}', got '{actualResult?.GetType().GetName() ?? "null"}'.");
+    public static Exception PolymorphicObjectButNonPolymorphicSerializer(Type expectedType, Type actualType)
+        => new SerializationException(
+            $"An object of type '{actualType.GetName()}' is polymorphic descendant of '{expectedType.GetName()}', "
+            + $"but polymorphic serialization is not allowed by the selected serialization format.");
 
     public static Exception ConnectTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
         => ConnectTimeout(peerRef.GetRemotePartyName());
@@ -100,6 +102,9 @@ public static class Errors
             timeout is { } t
                 ? $"Timeout while connecting to {remoteParty} ({t.ToShortString()})."
                 : $"Timeout while connecting to {remoteParty}.");
+
+    public static Exception PrematureDisconnect()
+        => new ChannelClosedException("Connection is closed prematurely.");
 
     public static Exception CallTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
         => CallTimeout(peerRef.GetRemotePartyName());

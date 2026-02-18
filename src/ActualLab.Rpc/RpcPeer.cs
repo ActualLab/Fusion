@@ -19,7 +19,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     private volatile RpcMethodResolver _serverMethodResolver;
     private volatile RpcTransport? _transport;
     private volatile RpcPeerStopMode _stopMode;
-    private bool _resetTryIndex;
+    private bool _resetConnectionAttemptIndex;
 
     protected internal readonly IServiceProvider Services;
     protected internal readonly RpcPeerOptions Options;
@@ -213,10 +213,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         return connectionState.WhenDisconnected(cancellationToken);
     }
 
-    public void ResetTryIndex()
+    public void ResetConnectionAttemptIndex()
     {
         lock (Lock)
-            _resetTryIndex = true;
+            _resetConnectionAttemptIndex = true;
     }
 
     // Protected methods
@@ -251,6 +251,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
             while (true) {
                 var error = (Exception?)null;
+                var connectedAt = Hub.SystemClock.Now;
                 var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
                 var readerToken = readerTokenSource.Token;
                 var isHandshakeError = false;
@@ -334,6 +335,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionStateValue.Connection != connection)
                         continue; // Somehow disconnected
 
+                    connectedAt = Hub.SystemClock.Now;
                     maintainTask = Task.Run(async () => {
                         var tasks = new List<Task> {
                             SharedObjects.Maintain(connectionStateValue, readerToken),
@@ -372,6 +374,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     readerTokenSource.CancelAndDisposeSilently();
                     await maintainTask.SilentAwait(false);
                 }
+
+                // If the connection closed gracefully but was too short-lived,
+                // treat it as an error to bump ConnectionAttemptIndex and apply reconnect delay
+                if (error is null && Hub.SystemClock.Now - connectedAt < Hub.Limits.PrematureDisconnectTimeout)
+                    error = Errors.PrematureDisconnect();
 
                 if (cancellationToken.IsCancellationRequested) {
                     var isTerminal = error is not null && Options.TerminalErrorDetector.Invoke(this, error);
@@ -469,9 +476,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
         Exception? terminalError = null;
         try {
-            if (newState.TryIndex != 0 && _resetTryIndex) {
-                _resetTryIndex = false;
-                newState = newState with { TryIndex = 0 };
+            if (newState.ConnectionAttemptIndex != 0 && _resetConnectionAttemptIndex) {
+                _resetConnectionAttemptIndex = false;
+                newState = newState with { ConnectionAttemptIndex = 0 };
             }
             var nextConnectionState = connectionState.TrySetNext(newState);
             if (ReferenceEquals(nextConnectionState, connectionState)) {
