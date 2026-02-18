@@ -12,7 +12,7 @@ import { TodoApp } from "./TodoApp.js";
 function getWsUrl(): string {
   const loc = window.location;
   const protocol = loc.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${loc.host}/rpc/ws?f=json5`;
+  return `${protocol}//${loc.host}/rpc/ws`;
 }
 
 const hub = new FusionHub();
