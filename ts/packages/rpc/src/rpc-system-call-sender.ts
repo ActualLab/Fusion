@@ -65,4 +65,44 @@ export class RpcSystemCallSender {
     conn.send(msg);
   }
 
+  item(conn: RpcConnection, localId: number, index: number, item: unknown): void {
+    const msg = serializeMessage(
+      { Method: RpcSystemCalls.item, RelatedId: localId },
+      [index, item],
+    );
+    conn.send(msg);
+  }
+
+  batch(conn: RpcConnection, localId: number, index: number, items: unknown[]): void {
+    const msg = serializeMessage(
+      { Method: RpcSystemCalls.batch, RelatedId: localId },
+      [index, items],
+    );
+    conn.send(msg);
+  }
+
+  end(conn: RpcConnection, localId: number, index: number, error: { Message: string } | null = null): void {
+    const msg = serializeMessage(
+      { Method: RpcSystemCalls.end, RelatedId: localId },
+      [index, error],
+    );
+    conn.send(msg);
+  }
+
+  ack(conn: RpcConnection, localId: number, nextIndex: number, hostId: string): void {
+    const msg = serializeMessage(
+      { Method: RpcSystemCalls.ack, RelatedId: localId },
+      [nextIndex, hostId],
+    );
+    conn.send(msg);
+  }
+
+  ackEnd(conn: RpcConnection, localId: number, hostId: string): void {
+    const msg = serializeMessage(
+      { Method: RpcSystemCalls.ackEnd, RelatedId: localId },
+      [hostId],
+    );
+    conn.send(msg);
+  }
+
 }

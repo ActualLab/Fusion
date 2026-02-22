@@ -42,6 +42,11 @@ export const RpcSystemCalls = {
   cancel: "$sys.Cancel:0",
   keepAlive: "$sys.KeepAlive:1",
   reconnect: "$sys.Reconnect:3",
+  ack: "$sys.Ack:2",
+  ackEnd: "$sys.AckEnd:1",
+  item: "$sys.I:2",
+  batch: "$sys.B:2",
+  end: "$sys.End:2",
 } as const;
 
 /** Wire-format RPC message envelope. */

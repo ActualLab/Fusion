@@ -19,7 +19,7 @@
 //     is Task<RpcNoWait>.  TS requires explicit { noWait: true } in @rpcMethod
 //     because return types are erased.
 //   - Automatic stream detection from return type — .NET checks for
-//     IAsyncEnumerable<T>.  TS requires explicit { stream: true }.
+//     IAsyncEnumerable<T>.  TS requires explicit { returns: RpcType.stream }.
 //   - compute flag in method metadata — stored here for FusionHub's
 //     addServiceFromContract() which reads decorator metadata to build a
 //     RpcServiceDef.  .NET determines this via the service interface hierarchy
@@ -30,7 +30,7 @@ const SERVICE_META = Symbol.for("actuallab.service");
 
 export interface MethodMeta {
   argCount: number;
-  stream?: boolean;
+  returns?: symbol;
   noWait?: boolean;
   [key: symbol]: unknown;
 }
@@ -63,8 +63,8 @@ export function rpcService(serviceName: string, options?: { ctOffset?: number })
   };
 }
 
-/** Method decorator — stores RPC method metadata (argCount, stream, noWait). Does NOT wrap the method. */
-export function rpcMethod(options?: { stream?: boolean; noWait?: boolean }) {
+/** Method decorator — stores RPC method metadata (argCount, returnType, noWait). Does NOT wrap the method. */
+export function rpcMethod(options?: { returns?: symbol; noWait?: boolean }) {
   return function<This, Args extends unknown[], Return>(
     target: (this: This, ...args: Args) => Return,
     context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Return>,
@@ -74,7 +74,7 @@ export function rpcMethod(options?: { stream?: boolean; noWait?: boolean }) {
     methods[methodName] = {
       ...methods[methodName],
       argCount: target.length,
-      stream: options?.stream ?? false,
+      returns: options?.returns,
       noWait: options?.noWait ?? false,
     };
     return target; // no wrapping — RPC proxy handles invocation

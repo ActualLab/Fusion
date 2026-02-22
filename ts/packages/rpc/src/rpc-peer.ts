@@ -90,6 +90,9 @@ import {
   deserializeMessage,
 } from "./rpc-serialization.js";
 import type { RpcHub } from "./rpc-hub.js";
+import { RpcRemoteObjectTracker } from "./rpc-remote-object-tracker.js";
+import { RpcSharedObjectTracker } from "./rpc-shared-object-tracker.js";
+import { RpcStreamSender } from "./rpc-stream-sender.js";
 
 /**
  * Default serialization format for RpcClientPeer connections.
@@ -135,6 +138,8 @@ export abstract class RpcPeer {
   protected _connection: RpcConnection | undefined;
   readonly outbound = new RpcOutboundCallTracker();
   readonly inbound = new RpcInboundCallTracker();
+  readonly remoteObjects = new RpcRemoteObjectTracker();
+  readonly sharedObjects = new RpcSharedObjectTracker();
 
   readonly connected = new EventHandlerSet<void>();
   readonly disconnected = new EventHandlerSet<{ code: number; reason: string }>();
@@ -145,6 +150,10 @@ export abstract class RpcPeer {
   constructor(ref: string, hub: RpcHub) {
     this.ref = ref;
     this._hub = hub;
+  }
+
+  get hub(): RpcHub {
+    return this._hub;
   }
 
   get connection(): RpcConnection | undefined {
@@ -228,6 +237,8 @@ export abstract class RpcPeer {
 
   close(): void {
     this._stopKeepAlive();
+    this.remoteObjects.disconnectAll();
+    this.sharedObjects.disconnectAll();
     for (const call of this._pendingSends) {
       if (!call.result.isCompleted)
         call.result.reject(new Error("Peer closed."));
@@ -268,9 +279,9 @@ export abstract class RpcPeer {
       return;
     }
 
-    // Other system calls — delegate to hub (allows FusionHub to intercept)
+    // Other system calls — delegate to hub's system call handler
     if (method.startsWith("$sys")) {
-      this._hub.handleSystemCall(message, args, this.outbound, this.inbound);
+      this._hub.systemCallHandler.handle(message, args, this);
       return;
     }
 
@@ -300,7 +311,13 @@ export abstract class RpcPeer {
             ? { __rpcDispatch: true as const, callId: relatedId, connection: this._connection }
             : undefined;
           const result = await serviceHost.dispatch(method, args, context);
-          if (!isNoWait && this._connection !== undefined) {
+          if (methodDef?.stream === true && this._connection !== undefined) {
+            // Stream method — create sender, send reference, pump items
+            const sender = new RpcStreamSender(this);
+            this.sharedObjects.register(sender);
+            this._hub.systemCallSender.ok(this._connection, relatedId, sender.toRef());
+            void sender.writeFrom(result as AsyncIterable<unknown>);
+          } else if (!isNoWait && this._connection !== undefined) {
             this._hub.systemCallSender.ok(this._connection, relatedId, result);
           }
         } catch (e) {
@@ -473,6 +490,13 @@ export class RpcClientPeer extends RpcPeer {
   private _reconnect(_isPeerChanged: boolean): void {
     if (this._connection === undefined) return;
     const conn = this._connection;
+
+    // Handle remote objects on reconnect
+    if (_isPeerChanged) {
+      this.remoteObjects.disconnectAll();
+    } else {
+      this.remoteObjects.reconnectAll();
+    }
 
     // Re-send existing tracker calls (self-invalidate stage-3 compute calls)
     const trackerCalls = [...this.outbound.values()];

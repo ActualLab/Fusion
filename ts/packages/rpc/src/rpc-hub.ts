@@ -35,12 +35,11 @@
 import { RpcClientPeer, RpcServerPeer, type RpcPeer, type RpcCallOptions } from "./rpc-peer.js";
 import { RpcServiceHost, type RpcServiceImpl } from "./rpc-service-host.js";
 import type { RpcServiceDef, RpcMethodDef } from "./rpc-service-def.js";
-import { wireMethodName } from "./rpc-service-def.js";
+import { wireMethodName, RpcType } from "./rpc-service-def.js";
 import { getServiceMeta, getMethodsMeta } from "./rpc-decorators.js";
 import { RpcSystemCallSender } from "./rpc-system-call-sender.js";
-import { handleSystemCall as handleSystemCallStandalone } from "./rpc-system-call-handler.js";
-import type { RpcOutboundCallTracker, RpcInboundCallTracker } from "./rpc-call-tracker.js";
-import type { RpcMessage } from "./rpc-message.js";
+import { RpcSystemCallHandler } from "./rpc-system-call-handler.js";
+import { RpcStream, parseStreamRef, resolveStreamRefs } from "./rpc-stream.js";
 
 /** Central RPC coordinator — manages peers, services, and configuration. */
 export class RpcHub {
@@ -48,6 +47,7 @@ export class RpcHub {
   readonly peers = new Map<string, RpcPeer>();
   readonly serviceHost: RpcServiceHost;
   readonly systemCallSender = new RpcSystemCallSender();
+  systemCallHandler: RpcSystemCallHandler = new RpcSystemCallHandler();
 
   constructor(hubId?: string) {
     this.hubId = hubId ?? crypto.randomUUID();
@@ -137,16 +137,6 @@ export class RpcHub {
     this.peers.clear();
   }
 
-  /** Dispatch an inbound system call. Override in FusionHub to handle compute-specific system calls. */
-  handleSystemCall(
-    message: RpcMessage,
-    args: unknown[],
-    outbound: RpcOutboundCallTracker,
-    inbound: RpcInboundCallTracker,
-  ): void {
-    handleSystemCallStandalone(message, args, outbound, inbound);
-  }
-
   /** Build an RpcServiceDef from decorator metadata on a contract class. Override in FusionHub for compute support. */
   protected _buildServiceDef(cls: abstract new (...args: any[]) => any): RpcServiceDef {
     const svcMeta = getServiceMeta(cls);
@@ -165,7 +155,7 @@ export class RpcHub {
         argCount: meta.argCount,
         wireArgCount,
         callTypeId: 0,
-        stream: meta.stream ?? false,
+        stream: meta.returns === RpcType.stream,
         noWait: meta.noWait ?? false,
       });
     }
@@ -202,6 +192,20 @@ export class RpcHub {
       };
     }
 
+    // Stream methods — call returns an RpcStream<T> (AsyncIterable)
+    if (methodDef.stream) {
+      return async (...args: unknown[]) => {
+        const callArgs = args.slice(0, methodDef.argCount);
+        const outboundCall = peer.call(wireName, callArgs);
+        const result = await outboundCall.result.promise;
+        const ref = parseStreamRef(result);
+        if (!ref) throw new Error(`Expected stream reference, got: ${JSON.stringify(result)}`);
+        const stream = new RpcStream(ref, peer);
+        peer.remoteObjects.register(stream);
+        return stream;
+      };
+    }
+
     // Regular methods (including non-zero callTypeId — subclass can override for custom behavior)
     const callOptions: RpcCallOptions | undefined = methodDef.callTypeId !== 0
       ? { callTypeId: methodDef.callTypeId }
@@ -210,7 +214,8 @@ export class RpcHub {
     return async (...args: unknown[]) => {
       const callArgs = args.slice(0, methodDef.argCount);
       const outboundCall = peer.call(wireName, callArgs, callOptions);
-      return outboundCall.result.promise;
+      const result = await outboundCall.result.promise;
+      return resolveStreamRefs(result, peer);
     };
   }
 }

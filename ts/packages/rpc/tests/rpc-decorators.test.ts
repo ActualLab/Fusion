@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rpcService, rpcMethod, getServiceMeta, getMethodsMeta } from "../src/index.js";
+import { rpcService, rpcMethod, getServiceMeta, getMethodsMeta, RpcType } from "../src/index.js";
 
 describe("@rpcService decorator", () => {
   it("should store service name in metadata", () => {
@@ -20,15 +20,15 @@ describe("@rpcMethod decorator", () => {
       @rpcMethod()
       async getProduct(id: string): Promise<unknown> { return undefined; }
 
-      @rpcMethod({ stream: true })
+      @rpcMethod({ returns: RpcType.stream })
       async *getProducts(query: string, limit: number): AsyncGenerator<unknown> { yield undefined; }
     }
 
     const meta = getMethodsMeta(Svc);
     expect(meta).toBeDefined();
 
-    expect(meta!["getProduct"]).toEqual({ argCount: 1, stream: false, noWait: false });
-    expect(meta!["getProducts"]).toEqual({ argCount: 2, stream: true, noWait: false });
+    expect(meta!["getProduct"]).toEqual({ argCount: 1, noWait: false });
+    expect(meta!["getProducts"]).toEqual({ argCount: 2, returns: RpcType.stream, noWait: false });
   });
 
   it("should not wrap the method", async () => {
@@ -43,7 +43,7 @@ describe("@rpcMethod decorator", () => {
 
     const meta = getMethodsMeta(Svc);
     expect(meta).toBeDefined();
-    expect(meta!["getItem"]).toEqual({ argCount: 1, stream: false, noWait: false });
+    expect(meta!["getItem"]).toEqual({ argCount: 1, noWait: false });
   });
 });
 
@@ -57,7 +57,7 @@ describe("@rpcService + @rpcMethod combined", () => {
       @rpcMethod()
       async setCount(key: string, value: number): Promise<void> {}
 
-      @rpcMethod({ stream: true })
+      @rpcMethod({ returns: RpcType.stream })
       async *watchCount(key: string): AsyncGenerator<number> { yield 0; }
     }
 
@@ -66,9 +66,9 @@ describe("@rpcService + @rpcMethod combined", () => {
 
     const methods = getMethodsMeta(ICounterService);
     expect(methods).toBeDefined();
-    expect(methods!["getCount"]).toEqual({ argCount: 1, stream: false, noWait: false });
-    expect(methods!["setCount"]).toEqual({ argCount: 2, stream: false, noWait: false });
-    expect(methods!["watchCount"]).toEqual({ argCount: 1, stream: true, noWait: false });
+    expect(methods!["getCount"]).toEqual({ argCount: 1, noWait: false });
+    expect(methods!["setCount"]).toEqual({ argCount: 2, noWait: false });
+    expect(methods!["watchCount"]).toEqual({ argCount: 1, returns: RpcType.stream, noWait: false });
   });
 
   it("should return undefined for non-decorated classes", () => {

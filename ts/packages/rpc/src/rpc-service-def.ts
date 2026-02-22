@@ -54,7 +54,6 @@ export interface RpcMethodDefInput {
   args: unknown[];
   returns?: symbol;
   callTypeId?: number;
-  stream?: boolean;
   noWait?: boolean;
 }
 
@@ -94,7 +93,7 @@ export function defineRpcService(
       argCount: input.args.length,
       wireArgCount,
       callTypeId: input.callTypeId ?? 0,
-      stream: input.stream ?? (input.returns === RpcType.stream),
+      stream: input.returns === RpcType.stream,
       noWait: input.noWait ?? false,
     });
   }

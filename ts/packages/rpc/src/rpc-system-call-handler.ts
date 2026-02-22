@@ -17,59 +17,90 @@
 //     $sys.Error; no separate system call type.
 //   - KeepAlive() / Disconnect() — manage RpcSharedObject lifetimes.  TS has no
 //     shared-object tracker.
-//   - Ack() / AckEnd() / I() / B() / End() — stream control for RpcStream
-//     (server→client IAsyncEnumerable).  Not ported; TS has no streaming yet.
 //   - IRpcPolymorphicArgumentHandler.IsValidCall — resolves the concrete
 //     deserialization type for polymorphic Ok/Item/Batch arguments by looking up
 //     the related outbound call's return type.  TS deserializes all args as
 //     unknown via JSON.parse (inherently polymorphic).
 //   - DI / IServiceProvider / RpcServiceBase — .NET system calls are resolved via
-//     DI.  TS uses a plain function.
+//     DI.  TS uses a class with a handle() method.
 
 import { RpcSystemCalls, type RpcMessage } from "./rpc-message.js";
-import type { RpcOutboundCallTracker, RpcInboundCallTracker } from "./rpc-call-tracker.js";
+import type { RpcPeer } from "./rpc-peer.js";
+import type { RpcStream } from "./rpc-stream.js";
+import { resolveStreamRefs } from "./rpc-stream.js";
+import type { RpcStreamSender } from "./rpc-stream-sender.js";
 
-/** Handles an incoming system call message and dispatches to the appropriate tracker. */
-export function handleSystemCall(
-  message: RpcMessage,
-  args: unknown[],
-  outboundTracker: RpcOutboundCallTracker,
-  inboundTracker: RpcInboundCallTracker,
-): void {
-  const method = message.Method;
-  const relatedId = message.RelatedId ?? 0;
+/** Handles incoming system call messages — class-based equivalent of the former standalone function. */
+export class RpcSystemCallHandler {
+  handle(message: RpcMessage, args: unknown[], peer: RpcPeer): void {
+    const method = message.Method;
+    const relatedId = message.RelatedId ?? 0;
 
-  switch (method) {
-    case RpcSystemCalls.ok: {
-      const call = outboundTracker.get(relatedId);
-      if (call !== undefined) {
-        if (call.removeOnOk) {
-          outboundTracker.remove(relatedId);
+    switch (method) {
+      case RpcSystemCalls.ok: {
+        const call = peer.outbound.get(relatedId);
+        if (call !== undefined) {
+          if (call.removeOnOk) {
+            peer.outbound.remove(relatedId);
+          }
+          call.result.resolve(args[0]);
         }
-        call.result.resolve(args[0]);
+        break;
       }
-      break;
-    }
-    case RpcSystemCalls.error: {
-      const call = outboundTracker.remove(relatedId);
-      if (call !== undefined) {
-        const errorInfo = args[0] as Record<string, unknown> | undefined;
-        const msg = (errorInfo?.Message ?? errorInfo?.message ?? "RPC error") as string;
-        call.result.reject(new Error(msg));
+      case RpcSystemCalls.error: {
+        const call = peer.outbound.remove(relatedId);
+        if (call !== undefined) {
+          const errorInfo = args[0] as Record<string, unknown> | undefined;
+          const msg = (errorInfo?.Message ?? errorInfo?.message ?? "RPC error") as string;
+          call.result.reject(new Error(msg));
+        }
+        break;
       }
-      break;
-    }
-    case RpcSystemCalls.cancel: {
-      // Remote peer is cancelling a call it asked us to process — remove
-      // from the inbound tracker.  Full cancellation propagation (aborting
-      // the running service handler) is not yet implemented; this just
-      // unregisters the call so we don't send a response for it.
-      inboundTracker.remove(relatedId);
-      break;
-    }
-    case RpcSystemCalls.keepAlive: {
-      // Remote keep-alive — nothing to do, just acknowledges the connection is alive
-      break;
+      case RpcSystemCalls.cancel: {
+        // Remote peer is cancelling a call it asked us to process — remove
+        // from the inbound tracker.  Full cancellation propagation (aborting
+        // the running service handler) is not yet implemented; this just
+        // unregisters the call so we don't send a response for it.
+        peer.inbound.remove(relatedId);
+        break;
+      }
+      case RpcSystemCalls.keepAlive: {
+        // Remote keep-alive — nothing to do, just acknowledges the connection is alive
+        break;
+      }
+      case RpcSystemCalls.item: {
+        const stream = peer.remoteObjects.get(relatedId) as RpcStream<unknown> | undefined;
+        if (stream) stream.onItem(args[0] as number, resolveStreamRefs(args[1], peer));
+        break;
+      }
+      case RpcSystemCalls.batch: {
+        const stream = peer.remoteObjects.get(relatedId) as RpcStream<unknown> | undefined;
+        if (stream) {
+          const items = args[1] as unknown[];
+          for (let i = 0; i < items.length; i++) items[i] = resolveStreamRefs(items[i]!, peer);
+          stream.onBatch(args[0] as number, items);
+        }
+        break;
+      }
+      case RpcSystemCalls.end: {
+        const stream = peer.remoteObjects.get(relatedId) as RpcStream<unknown> | undefined;
+        if (stream) {
+          const errorInfo = args[1] as { Message?: string } | null;
+          const error = errorInfo ? new Error(errorInfo.Message ?? "Stream error") : null;
+          stream.onEnd(args[0] as number, error);
+        }
+        break;
+      }
+      case RpcSystemCalls.ack: {
+        const sender = peer.sharedObjects.get(relatedId) as RpcStreamSender<unknown> | undefined;
+        sender?.onAck(args[0] as number, args[1] as string);
+        break;
+      }
+      case RpcSystemCalls.ackEnd: {
+        const sender = peer.sharedObjects.get(relatedId) as RpcStreamSender<unknown> | undefined;
+        sender?.onAckEnd(args[0] as string);
+        break;
+      }
     }
   }
 }

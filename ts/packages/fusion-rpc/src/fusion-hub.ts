@@ -40,9 +40,11 @@ import {
   RpcHub,
   RpcServerPeer,
   RpcWebSocketConnection,
+  RpcSystemCallHandler,
   serializeMessage,
   defineRpcService,
   wireMethodName,
+  RpcType,
   type RpcConnection,
   type WebSocketLike,
   type RpcServiceDef,
@@ -53,8 +55,6 @@ import {
   type RpcPeer,
   type RpcMessage,
   type RpcCallOptions,
-  RpcOutboundCallTracker,
-  RpcInboundCallTracker,
   getServiceMeta,
   getMethodsMeta,
 } from "@actuallab/rpc";
@@ -72,6 +72,24 @@ export const FUSION_CALL_TYPE_ID = 1;
 /** Wire method name for invalidation system call. */
 const FUSION_INVALIDATE_METHOD = "$sys-c.Invalidate:0";
 
+/** Handles Fusion-specific system calls ($sys-c.Invalidate), delegating the rest to base. */
+class FusionSystemCallHandler extends RpcSystemCallHandler {
+  override handle(message: RpcMessage, args: unknown[], peer: RpcPeer): void {
+    const method = message.Method;
+    const relatedId = message.RelatedId ?? 0;
+
+    if (method === FUSION_INVALIDATE_METHOD) {
+      const call = peer.outbound.remove(relatedId);
+      if (call instanceof RpcOutboundComputeCall) {
+        call.whenInvalidated.resolve();
+      }
+      return;
+    }
+
+    super.handle(message, args, peer);
+  }
+}
+
 /** Creates a compute service definition — all methods default to FUSION_CALL_TYPE_ID. */
 export function defineComputeService(
   name: string,
@@ -86,6 +104,11 @@ export function defineComputeService(
 
 /** Central coordinator for Fusion + RPC — manages compute services, invalidation wiring. */
 export class FusionHub extends RpcHub {
+  constructor(hubId?: string) {
+    super(hubId);
+    this.systemCallHandler = new FusionSystemCallHandler();
+  }
+
   /** Accept an incoming WebSocket and create a server peer. */
   acceptConnection(ws: WebSocketLike): RpcServerPeer {
     const ref = `server://${crypto.randomUUID()}`;
@@ -101,28 +124,6 @@ export class FusionHub extends RpcHub {
     const peer = this.getServerPeer(ref);
     peer.accept(conn);
     return peer;
-  }
-
-  /** Handle compute-specific system calls ($sys-c.Invalidate), then delegate to base. */
-  override handleSystemCall(
-    message: RpcMessage,
-    args: unknown[],
-    outbound: RpcOutboundCallTracker,
-    inbound: RpcInboundCallTracker,
-  ): void {
-    const method = message.Method;
-    const relatedId = message.RelatedId ?? 0;
-
-    if (method === FUSION_INVALIDATE_METHOD) {
-      // Server invalidated a compute call — remove from tracker and resolve
-      const call = outbound.remove(relatedId);
-      if (call instanceof RpcOutboundComputeCall) {
-        call.whenInvalidated.resolve();
-      }
-      return;
-    }
-
-    super.handleSystemCall(message, args, outbound, inbound);
   }
 
   /** Override to apply ctOffset=1 default and FUSION_CALL_TYPE_ID for compute methods. */
@@ -144,7 +145,7 @@ export class FusionHub extends RpcHub {
         argCount: meta.argCount,
         wireArgCount,
         callTypeId: (meta as any).compute === true ? FUSION_CALL_TYPE_ID : 0,
-        stream: meta.stream ?? false,
+        stream: meta.returns === RpcType.stream,
         noWait: meta.noWait ?? false,
       });
     }
