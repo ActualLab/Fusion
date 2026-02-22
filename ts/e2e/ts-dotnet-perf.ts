@@ -6,6 +6,7 @@
  *   RPC_SERVER_URL  = ws://localhost:<port>/rpc/ws
  *   WORKER_COUNT    = number of concurrent workers (default: 50)
  *   ITER_COUNT      = iterations per worker per run (default: 2000)
+ *   ITEM_COUNT      = items per stream call for stream tests (default: 10000)
  *
  * All methods live on ITypeScriptTestComputeService (IComputeService, all have CancellationToken).
  *
@@ -39,6 +40,7 @@ if (!serverUrl) {
 const scenario = process.argv[2] ?? "all";
 const workerCount = parseInt(process.env["WORKER_COUNT"] ?? "50", 10);
 const iterCount = parseInt(process.env["ITER_COUNT"] ?? "2000", 10);
+const itemCount = parseInt(process.env["ITEM_COUNT"] ?? "10000", 10);
 
 // ---------------------------------------------------------------------------
 // Service definition -single service for all perf tests
@@ -85,6 +87,7 @@ async function runBenchmark(
   runFn: (workerCount: number, iterCount: number) => Promise<void>,
   wc: number,
   ic: number,
+  itemsPerCall: number = 0,
 ): Promise<void> {
   const warmupIc = Math.max(1, Math.floor(ic / 10));
   const totalWarmup = wc * warmupIc;
@@ -95,17 +98,26 @@ async function runBenchmark(
   await runFn(wc, warmupIc);
 
   // 3 measured runs
-  let bestOpsPerSec = 0;
+  let bestCallsPerSec = 0;
   for (let run = 1; run <= 3; run++) {
     const start = performance.now();
     await runFn(wc, ic);
     const elapsedSec = (performance.now() - start) / 1000;
-    const opsPerSec = totalPerRun / elapsedSec;
-    console.log(`  ${name}: run ${run} - ${opsPerSec.toFixed(0)} ops/s (${totalPerRun} calls in ${elapsedSec.toFixed(3)}s)`);
-    if (opsPerSec > bestOpsPerSec) bestOpsPerSec = opsPerSec;
+    const callsPerSec = totalPerRun / elapsedSec;
+    if (itemsPerCall > 0) {
+      const itemsPerSec = callsPerSec * itemsPerCall;
+      console.log(`  ${name}: run ${run} - ${callsPerSec.toFixed(0)} calls/s, ${itemsPerSec.toFixed(0)} items/s (${totalPerRun} calls in ${elapsedSec.toFixed(3)}s)`);
+    } else {
+      console.log(`  ${name}: run ${run} - ${callsPerSec.toFixed(0)} calls/s (${totalPerRun} calls in ${elapsedSec.toFixed(3)}s)`);
+    }
+    if (callsPerSec > bestCallsPerSec) bestCallsPerSec = callsPerSec;
   }
 
-  console.log(`  ${name}: BEST = ${bestOpsPerSec.toFixed(0)} ops/s`);
+  if (itemsPerCall > 0) {
+    console.log(`  ${name}: BEST = ${bestCallsPerSec.toFixed(0)} calls/s, ${(bestCallsPerSec * itemsPerCall).toFixed(0)} items/s`);
+  } else {
+    console.log(`  ${name}: BEST = ${bestCallsPerSec.toFixed(0)} calls/s`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -210,24 +222,21 @@ async function testStreamPerformance(svc: IStreamPerfService): Promise<void> {
   if (checkItems.length !== 5 || checkItems[4] !== 4)
     throw new Error(`Sanity check failed: StreamInt32(5) = [${checkItems}]`);
 
-  const itemsPerStream = 1000;
-
   await runBenchmark("stream", async (wc, ic) => {
     const workers: Promise<void>[] = [];
     for (let w = 0; w < wc; w++) {
       workers.push((async () => {
         for (let i = 0; i < ic; i++) {
-          const stream = await svc.StreamInt32(itemsPerStream);
-          // Consume entire stream — count items to prevent optimization
+          const stream = await svc.StreamInt32(itemCount);
           let count = 0;
           for await (const _ of stream) count++;
-          if (count !== itemsPerStream)
-            throw new Error(`Expected ${itemsPerStream} items, got ${count}`);
+          if (count !== itemCount)
+            throw new Error(`Expected ${itemCount} items, got ${count}`);
         }
       })());
     }
     await Promise.all(workers);
-  }, workerCount, iterCount);
+  }, workerCount, iterCount, itemCount);
 }
 
 // ---------------------------------------------------------------------------

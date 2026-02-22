@@ -85,8 +85,12 @@ export class RpcSystemCallHandler {
       case RpcSystemCalls.end: {
         const stream = peer.remoteObjects.get(relatedId) as RpcStream<unknown> | undefined;
         if (stream) {
-          const errorInfo = args[1] as { Message?: string } | null;
-          const error = errorInfo ? new Error(errorInfo.Message ?? "Stream error") : null;
+          // .NET ExceptionInfo is a struct — even for normal completion, it serializes
+          // as a non-null object with empty fields (e.g. { "message": "", "typeRef": {...} }).
+          // Check both PascalCase and camelCase, and treat empty messages as no error.
+          const errorInfo = args[1] as Record<string, unknown> | null;
+          const msg = (errorInfo?.Message ?? errorInfo?.message) as string | undefined;
+          const error = msg ? new Error(msg) : null;
           stream.onEnd(args[0] as number, error);
         }
         break;

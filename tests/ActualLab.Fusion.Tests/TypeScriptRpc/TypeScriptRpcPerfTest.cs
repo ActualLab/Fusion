@@ -55,23 +55,25 @@ public class TypeScriptRpcPerfTest(ITestOutputHelper @out) : RpcTestBase(@out)
     }
 
     [Theory]
-    [InlineData("stream", 32, 5_000)]
-    public async Task StreamPerformance(string scenario, int workerCount, int iterCount)
+    [InlineData("stream", 32, 2_000, 10)]
+    [InlineData("stream", 32, 50, 5_000)]
+    public async Task StreamPerformance(string scenario, int workerCount, int iterCount, int itemCount)
     {
         await using var _ = await WebHost.Serve();
-        await RunScenario(scenario, workerCount, iterCount);
+        await RunScenario(scenario, workerCount, iterCount, itemCount);
     }
 
-    private Task RunScenario(string scenario, int workerCount, int iterCount)
+    private Task RunScenario(string scenario, int workerCount, int iterCount, int itemCount = 0)
     {
         var serverUrl = $"ws://127.0.0.1:{WebHost.ServerUri.Port}/rpc/ws";
         var ts = new TypeScriptRunner(Out);
-        return ts.RunScenario(Script, scenario,
-            new Dictionary<string, string> {
-                ["RPC_SERVER_URL"] = serverUrl,
-                ["WORKER_COUNT"] = workerCount.ToString(),
-                ["ITER_COUNT"] = iterCount.ToString(),
-            },
-            TimeSpan.FromMinutes(2));
+        var env = new Dictionary<string, string> {
+            ["RPC_SERVER_URL"] = serverUrl,
+            ["WORKER_COUNT"] = workerCount.ToString(),
+            ["ITER_COUNT"] = iterCount.ToString(),
+        };
+        if (itemCount > 0)
+            env["ITEM_COUNT"] = itemCount.ToString();
+        return ts.RunScenario(Script, scenario, env, TimeSpan.FromMinutes(2));
     }
 }
