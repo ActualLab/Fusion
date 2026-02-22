@@ -1,3 +1,5 @@
+using ActualLab.Rpc;
+
 namespace ActualLab.Fusion.Tests.TypeScriptRpc;
 
 public interface ITypeScriptTestComputeService : IComputeService
@@ -10,4 +12,5 @@ public interface ITypeScriptTestComputeService : IComputeService
     Task Set(string key, int value, CancellationToken cancellationToken = default);
     Task Increment(string key, CancellationToken cancellationToken = default);
     Task<int> GetCounterNonCompute(string key, CancellationToken cancellationToken = default);
+    Task<RpcStream<int>> StreamInt32(int count);
 }

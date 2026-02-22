@@ -1,3 +1,5 @@
+using ActualLab.Rpc;
+
 namespace ActualLab.Fusion.Tests.TypeScriptRpc;
 
 public class TypeScriptTestComputeService : ITypeScriptTestComputeService
@@ -35,4 +37,16 @@ public class TypeScriptTestComputeService : ITypeScriptTestComputeService
 
     public Task<int> GetCounterNonCompute(string key, CancellationToken cancellationToken = default)
         => Task.FromResult(_counters.GetValueOrDefault(key));
+
+    public Task<RpcStream<int>> StreamInt32(int count)
+    {
+        var seq = EnumerateInt32(count);
+        return Task.FromResult(RpcStream.New(seq));
+    }
+
+    private static async IAsyncEnumerable<int> EnumerateInt32(int count)
+    {
+        for (var i = 0; i < count; i++)
+            yield return i;
+    }
 }

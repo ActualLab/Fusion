@@ -54,6 +54,14 @@ public class TypeScriptRpcPerfTest(ITestOutputHelper @out) : RpcTestBase(@out)
         await RunScenario(scenario, workerCount, iterCount);
     }
 
+    [Theory]
+    [InlineData("stream", 32, 5_000)]
+    public async Task StreamPerformance(string scenario, int workerCount, int iterCount)
+    {
+        await using var _ = await WebHost.Serve();
+        await RunScenario(scenario, workerCount, iterCount);
+    }
+
     private Task RunScenario(string scenario, int workerCount, int iterCount)
     {
         var serverUrl = $"ws://127.0.0.1:{WebHost.ServerUri.Port}/rpc/ws";

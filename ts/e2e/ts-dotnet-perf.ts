@@ -14,12 +14,15 @@
  *   compute-rpc-unique -remote compute call, unique args (cache miss → server round-trip)
  *   compute-rpc-same   -remote compute call, same arg (cache hit after first RPC round-trip)
  *   compute            -client-side cached compute call, same arg (no RPC after first call)
+ *   stream             -streaming RPC call (StreamInt32, no compute)
  *   all                -all tests
  */
 
 import WebSocket from "ws";
 import {
   RpcClientPeer,
+  RpcType,
+  defineRpcService,
   type WebSocketLike,
 } from "@actuallab/rpc";
 import {
@@ -46,9 +49,17 @@ interface IPerfService {
   GetValue(value: number): Promise<number>;
 }
 
+interface IStreamPerfService {
+  StreamInt32(count: number): Promise<AsyncIterable<number>>;
+}
+
 const PerfServiceDef = defineComputeService("ITypeScriptTestComputeService", {
   Add: { args: [0, 0], callTypeId: 0 },  // non-compute method
   GetValue: { args: [0] },               // [ComputeMethod] -default callTypeId
+});
+
+const StreamPerfServiceDef = defineRpcService("ITypeScriptTestComputeService", {
+  StreamInt32: { args: [0], returns: RpcType.stream, wireArgCount: 1 },  // no CT
 });
 
 // ---------------------------------------------------------------------------
@@ -188,6 +199,38 @@ async function testComputePerformance(svc: IPerfService): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Stream performance test -StreamInt32(count), consume entire stream
+// ---------------------------------------------------------------------------
+
+async function testStreamPerformance(svc: IStreamPerfService): Promise<void> {
+  // Sanity check: stream 5 items
+  const checkStream = await svc.StreamInt32(5);
+  const checkItems: number[] = [];
+  for await (const item of checkStream) checkItems.push(item);
+  if (checkItems.length !== 5 || checkItems[4] !== 4)
+    throw new Error(`Sanity check failed: StreamInt32(5) = [${checkItems}]`);
+
+  const itemsPerStream = 1000;
+
+  await runBenchmark("stream", async (wc, ic) => {
+    const workers: Promise<void>[] = [];
+    for (let w = 0; w < wc; w++) {
+      workers.push((async () => {
+        for (let i = 0; i < ic; i++) {
+          const stream = await svc.StreamInt32(itemsPerStream);
+          // Consume entire stream — count items to prevent optimization
+          let count = 0;
+          for await (const _ of stream) count++;
+          if (count !== itemsPerStream)
+            throw new Error(`Expected ${itemsPerStream} items, got ${count}`);
+        }
+      })());
+    }
+    await Promise.all(workers);
+  }, workerCount, iterCount);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -205,6 +248,7 @@ async function run(): Promise<void> {
   await delay(100);
 
   const svc = hub.addClient<IPerfService>(peer, PerfServiceDef);
+  const streamSvc = hub.addClient<IStreamPerfService>(peer, StreamPerfServiceDef);
 
   console.log(`Configuration: ${workerCount} workers x ${iterCount} iterations = ${workerCount * iterCount} calls/run`);
 
@@ -217,6 +261,8 @@ async function run(): Promise<void> {
       await testComputeRpcSame(svc);
     if (scenario === "compute" || scenario === "all")
       await testComputePerformance(svc);
+    if (scenario === "stream" || scenario === "all")
+      await testStreamPerformance(streamSvc);
 
     console.log("PERF TEST COMPLETE");
   } finally {
