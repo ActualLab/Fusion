@@ -5,7 +5,8 @@
  * Environment: RPC_SERVER_URL=ws://localhost:<port>/rpc/ws
  *
  * Wire method naming: "ServiceName.MethodName:wireArgCount"
- * wireArgCount = user args + ctOffset (1 for IComputeService methods with CancellationToken)
+ * wireArgCount = args.length + 1 (CancellationToken slot) by default,
+ * override with argCount for methods without CT.
  */
 
 import WebSocket from "ws";
@@ -32,7 +33,7 @@ const scenario = process.argv[2] ?? "all";
 // Service definitions — using defineRpcService with overload support
 // ---------------------------------------------------------------------------
 
-// ITypeScriptTestService (IRpcService — no CancellationToken, ctOffset=0)
+// ITypeScriptTestService (IRpcService — no CancellationToken on any method)
 // Add has two overloads: Add(a,b) → wire Add:2, Add(a,b,c) → wire Add:3
 interface ITypeScriptTestService {
   Add(a: number, b: number): Promise<number>;
@@ -44,15 +45,15 @@ interface ITypeScriptTestService {
 }
 
 const TestServiceDef = defineRpcService("ITypeScriptTestService", {
-  Add: { args: [0, 0] },            // Add:2
-  "Add:3": { args: [0, 0, 0] },     // Add:3 (overload)
-  Greet: { args: [""] },
-  Negate: { args: [false] },
-  Divide: { args: [0.0, 0.0] },
-  Echo: { args: [""] },
+  Add: { args: [0, 0], wireArgCount: 2 },            // no CT
+  "Add:3": { args: [0, 0, 0], wireArgCount: 3 },     // no CT (overload)
+  Greet: { args: [""], wireArgCount: 1 },
+  Negate: { args: [false], wireArgCount: 1 },
+  Divide: { args: [0.0, 0.0], wireArgCount: 2 },
+  Echo: { args: [""], wireArgCount: 1 },
 });
 
-// ITypeScriptTestComputeService (IComputeService — has CancellationToken, ctOffset=1)
+// ITypeScriptTestComputeService (IComputeService — all methods have CancellationToken)
 interface ITypeScriptTestComputeService {
   GetCounter(key: string): Promise<number>;
   Set(key: string, value: number): Promise<void>;
@@ -62,10 +63,10 @@ interface ITypeScriptTestComputeService {
 
 // Only GetCounter has [ComputeMethod] — Set and Increment are regular methods
 const TestComputeServiceDef = defineComputeService("ITypeScriptTestComputeService", {
-  GetCounter: { args: [""] },                 // wire: GetCounter:2 (1 arg + ctOffset)
-  Set: { args: ["", 0], callTypeId: 0 },      // wire: Set:3 (2 args + ctOffset)
-  Increment: { args: [""], callTypeId: 0 },              // wire: Increment:2 (1 arg + ctOffset)
-  GetCounterNonCompute: { args: [""], callTypeId: 0 },   // wire: GetCounterNonCompute:2, regular call
+  GetCounter: { args: [""] },
+  Set: { args: ["", 0], callTypeId: 0 },
+  Increment: { args: [""], callTypeId: 0 },
+  GetCounterNonCompute: { args: [""], callTypeId: 0 },
 });
 
 // ---------------------------------------------------------------------------

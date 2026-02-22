@@ -16,7 +16,7 @@
 //     is configured in RpcServiceBuilder via DI.  TS uses @rpcService("name")
 //     class decorator as a convenient alternative to DI configuration.
 //   - Automatic NoWait detection from return type — .NET checks if return type
-//     is Task<RpcNoWait>.  TS requires explicit { noWait: true } in @rpcMethod
+//     is Task<RpcNoWait>.  TS requires explicit { returns: RpcType.noWait }
 //     because return types are erased.
 //   - Automatic stream detection from return type — .NET checks for
 //     IAsyncEnumerable<T>.  TS requires explicit { returns: RpcType.stream }.
@@ -31,13 +31,11 @@ const SERVICE_META = Symbol.for("actuallab.service");
 export interface MethodMeta {
   argCount: number;
   returns?: symbol;
-  noWait?: boolean;
   [key: symbol]: unknown;
 }
 
 export interface ServiceMeta {
   name: string;
-  ctOffset?: number;
 }
 
 /** Read method metadata from a decorated class. */
@@ -50,21 +48,19 @@ export function getServiceMeta(cls: abstract new (...args: any[]) => any): Servi
   return (cls as any)[Symbol.metadata]?.[SERVICE_META];
 }
 
-/** Class decorator — stores the RPC service wire name and optional ctOffset. */
-export function rpcService(serviceName: string, options?: { ctOffset?: number }) {
+/** Class decorator — stores the RPC service wire name. */
+export function rpcService(serviceName: string) {
   return function<T extends abstract new (...args: any[]) => any>(
     _target: T,
     context: ClassDecoratorContext<T>,
   ): void {
     const meta: ServiceMeta = ((context.metadata as any)[SERVICE_META] ??= {} as ServiceMeta);
     meta.name = serviceName;
-    if (options?.ctOffset !== undefined)
-      meta.ctOffset = options.ctOffset;
   };
 }
 
-/** Method decorator — stores RPC method metadata (argCount, returnType, noWait). Does NOT wrap the method. */
-export function rpcMethod(options?: { returns?: symbol; noWait?: boolean }) {
+/** Method decorator — stores RPC method metadata (argCount, returns). Does NOT wrap the method. */
+export function rpcMethod(options?: { returns?: symbol }) {
   return function<This, Args extends unknown[], Return>(
     target: (this: This, ...args: Args) => Return,
     context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Return>,
@@ -75,7 +71,6 @@ export function rpcMethod(options?: { returns?: symbol; noWait?: boolean }) {
       ...methods[methodName],
       argCount: target.length,
       returns: options?.returns,
-      noWait: options?.noWait ?? false,
     };
     return target; // no wrapping — RPC proxy handles invocation
   };

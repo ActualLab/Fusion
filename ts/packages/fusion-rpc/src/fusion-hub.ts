@@ -99,7 +99,7 @@ export function defineComputeService(
   for (const [methodName, input] of Object.entries(methods)) {
     withCallType[methodName] = { ...input, callTypeId: input.callTypeId ?? FUSION_CALL_TYPE_ID };
   }
-  return defineRpcService(name, withCallType, { ctOffset: 1 });
+  return defineRpcService(name, withCallType);
 }
 
 /** Central coordinator for Fusion + RPC — manages compute services, invalidation wiring. */
@@ -126,18 +126,16 @@ export class FusionHub extends RpcHub {
     return peer;
   }
 
-  /** Override to apply ctOffset=1 default and FUSION_CALL_TYPE_ID for compute methods. */
+  /** Override to apply FUSION_CALL_TYPE_ID for compute methods. */
   protected override _buildServiceDef(cls: abstract new (...args: any[]) => any): RpcServiceDef {
     const svcMeta = getServiceMeta(cls);
     if (svcMeta === undefined) throw new Error("Contract class missing @rpcService metadata");
 
     const methodsMeta = getMethodsMeta(cls) ?? {};
-    // FusionHub defaults ctOffset to 1 (CancellationToken convention)
-    const ctOffset = svcMeta.ctOffset ?? 1;
     const methods = new Map<string, RpcMethodDef>();
 
     for (const [name, meta] of Object.entries(methodsMeta)) {
-      const wireArgCount = meta.argCount + ctOffset;
+      const wireArgCount = meta.argCount + 1;
       const mapKey = `${name}:${wireArgCount}`;
       methods.set(mapKey, {
         name,
@@ -146,7 +144,7 @@ export class FusionHub extends RpcHub {
         wireArgCount,
         callTypeId: (meta as any).compute === true ? FUSION_CALL_TYPE_ID : 0,
         stream: meta.returns === RpcType.stream,
-        noWait: meta.noWait ?? false,
+        noWait: meta.returns === RpcType.noWait,
       });
     }
 

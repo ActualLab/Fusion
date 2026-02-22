@@ -19,7 +19,7 @@ export { WebSocketState, RpcWebSocketConnection } from "./rpc-connection.js";
 
 export { RpcMessageChannelConnection, createMessageChannelPair } from "./rpc-message-channel-connection.js";
 
-export type { RpcMethodDef, RpcServiceDef, RpcMethodDefInput, RpcServiceDefOptions } from "./rpc-service-def.js";
+export type { RpcMethodDef, RpcServiceDef, RpcMethodDefInput } from "./rpc-service-def.js";
 export { RpcType, defineRpcService, wireMethodName } from "./rpc-service-def.js";
 
 export {

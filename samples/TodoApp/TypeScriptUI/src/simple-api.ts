@@ -1,10 +1,13 @@
-import { defineRpcService } from "@actuallab/rpc";
+import { defineRpcService, RpcType } from "@actuallab/rpc";
 
 // ISimpleService wire contract — maps to .NET's ISimpleService : IRpcService.
 // Wire format uses camelCase (.NET's JsonNamingPolicy.CamelCase).
-//
-// Not using ctOffset here because Ping has no CancellationToken parameter.
-// Methods that have CT on the .NET side include a null placeholder arg instead.
+
+export interface ISimpleService {
+    Greet(name: string): Promise<string>;
+    GetTable(title: string): Promise<Table<number>>;
+    Ping(message: string): void;  // noWait
+}
 
 export interface Table<T> {
   title: string;
@@ -16,22 +19,14 @@ export interface Row<T> {
   items: AsyncIterable<T>;  // resolved from stream ref string
 }
 
-export interface ISimpleService {
-  Greet(name: string): Promise<string>;
-  GetTable(title: string): Promise<Table<number>>;
-  Ping(message: string): void;  // noWait
-}
-
 export const SimpleServiceDef = defineRpcService("ISimpleService", {
-  Greet: { args: ["", null] },          // (name, CT) → wire :2
-  GetTable: { args: ["", null] },       // (title, CT) → wire :2
-  Ping: { args: [""], noWait: true },   // (message)   → wire :1  — no CT
+  Greet: { args: [""] },
+  GetTable: { args: [""] },
+  Ping: { args: [""], returns: RpcType.noWait, wireArgCount: 1 },  // no CT
 });
 
-// ISimpleClientSideService — client-side service that receives Pong calls from the server.
-// Pong has no CancellationToken → wire :1
 export const SimpleClientSideServiceDef = defineRpcService("ISimpleClientSideService", {
-  Pong: { args: [""], noWait: true },   // (message) → wire :1
+  Pong: { args: [""], returns: RpcType.noWait, wireArgCount: 1 },  // no CT
 });
 
 /** Callback handler for Pong messages from the server. */

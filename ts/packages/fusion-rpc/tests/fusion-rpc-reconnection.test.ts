@@ -7,6 +7,7 @@ import {
 } from "@actuallab/fusion";
 import {
   RpcClientPeer,
+  RpcType,
   rpcService,
   rpcMethod,
   defineRpcService,
@@ -30,7 +31,7 @@ class ICounterService {
 }
 
 const MutationServiceDef = defineRpcService("MutationService", {
-  setCount: { args: ["", 0], noWait: true },
+  setCount: { args: ["", 0], returns: RpcType.noWait },
 });
 
 function createServerHub(store: Map<string, MutableState<number>>): FusionHub {
@@ -281,7 +282,7 @@ describe("Fusion RPC Reconnection", () => {
     await delay(10);
 
     // Mutate via RPC after reconnect
-    clientPeer.callNoWait("MutationService.setCount:2", ["y", 77]);
+    clientPeer.callNoWait("MutationService.setCount:3", ["y", 77]);
     await delay(30);
 
     // Re-fetch should see the new value
@@ -327,7 +328,7 @@ describe("Fusion RPC Reconnection", () => {
     expect(v2).toBe(0);
 
     // Server-side mutation triggers invalidation on new call
-    clientPeer.callNoWait("MutationService.setCount:2", ["z", 55]);
+    clientPeer.callNoWait("MutationService.setCount:3", ["z", 55]);
     await delay(50);
     expect(call2.whenInvalidated.isCompleted).toBe(true);
   });

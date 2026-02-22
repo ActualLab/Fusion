@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   RpcHub,
   RpcClientPeer,
+  RpcType,
   defineRpcService,
   createRpcClient,
   createMessageChannelPair,
@@ -23,7 +24,7 @@ const CalcServiceDef = defineRpcService("CalcService", {
 });
 
 const NoWaitServiceDef = defineRpcService("NoWaitService", {
-  fire: { args: [""], noWait: true },
+  fire: { args: [""], returns: RpcType.noWait },
 });
 
 describe("RPC Reconnection", () => {
@@ -155,7 +156,7 @@ describe("RPC Reconnection", () => {
 
     // Should not throw
     expect(() => {
-      conn.clientPeer.callNoWait("NoWaitService.fire:1", ["test"]);
+      conn.clientPeer.callNoWait("NoWaitService.fire:2", ["test"]);
     }).not.toThrow();
   });
 
@@ -235,7 +236,7 @@ describe("RPC Reconnection", () => {
     await conn.switchHost(slowHub);
 
     const ac = new AbortController();
-    const outboundCall = conn.clientPeer.call("CalcService.add:2", [1, 2], { signal: ac.signal });
+    const outboundCall = conn.clientPeer.call("CalcService.add:3", [1, 2], { signal: ac.signal });
     outboundCall.result.promise.catch(() => {}); // prevent unhandled rejection
 
     // Cancel after a short delay

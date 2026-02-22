@@ -7,7 +7,7 @@
  *   WORKER_COUNT    = number of concurrent workers (default: 50)
  *   ITER_COUNT      = iterations per worker per run (default: 2000)
  *
- * All methods live on ITypeScriptTestComputeService (IComputeService, ctOffset=1).
+ * All methods live on ITypeScriptTestComputeService (IComputeService, all have CancellationToken).
  *
  * Scenarios:
  *   rpc                -plain RPC call (Add, non-compute method, callTypeId=0)

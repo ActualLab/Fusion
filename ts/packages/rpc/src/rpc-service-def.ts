@@ -54,18 +54,16 @@ export interface RpcMethodDefInput {
   args: unknown[];
   returns?: symbol;
   callTypeId?: number;
-  noWait?: boolean;
+  /** Override for wireArgCount. Default: args.length + 1 (assumes a CancellationToken slot). */
+  wireArgCount?: number;
 }
 
 export const RpcType = {
   object: Symbol("object"),
   stream: Symbol("stream"),
+  noWait: Symbol("noWait"),
   void: Symbol("void"),
 } as const;
-
-export interface RpcServiceDefOptions {
-  ctOffset?: number;
-}
 
 /** Returns the full wire method name: "ServiceName.MethodName:wireArgCount". */
 export function wireMethodName(def: RpcMethodDef): string {
@@ -75,9 +73,7 @@ export function wireMethodName(def: RpcMethodDef): string {
 export function defineRpcService(
   name: string,
   methods: Record<string, RpcMethodDefInput>,
-  options?: RpcServiceDefOptions,
 ): RpcServiceDef {
-  const ctOffset = options?.ctOffset ?? 0;
   const map = new Map<string, RpcMethodDef>();
   for (const [key, input] of Object.entries(methods)) {
     // If the key contains ":", the part before ":" is the clean name
@@ -85,7 +81,7 @@ export function defineRpcService(
     // Otherwise the key IS the clean name.
     const colonIndex = key.indexOf(":");
     const cleanName = colonIndex >= 0 ? key.substring(0, colonIndex) : key;
-    const wireArgCount = input.args.length + ctOffset;
+    const wireArgCount = input.wireArgCount ?? (input.args.length + 1);
     const mapKey = `${cleanName}:${wireArgCount}`;
     map.set(mapKey, {
       name: cleanName,
@@ -94,7 +90,7 @@ export function defineRpcService(
       wireArgCount,
       callTypeId: input.callTypeId ?? 0,
       stream: input.returns === RpcType.stream,
-      noWait: input.noWait ?? false,
+      noWait: input.returns === RpcType.noWait,
     });
   }
   return { name, methods: map };

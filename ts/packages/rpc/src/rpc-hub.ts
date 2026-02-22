@@ -143,11 +143,10 @@ export class RpcHub {
     if (svcMeta === undefined) throw new Error("Contract class missing @rpcService metadata");
 
     const methodsMeta = getMethodsMeta(cls) ?? {};
-    const ctOffset = svcMeta.ctOffset ?? 0;
     const methods = new Map<string, RpcMethodDef>();
 
     for (const [name, meta] of Object.entries(methodsMeta)) {
-      const wireArgCount = meta.argCount + ctOffset;
+      const wireArgCount = meta.argCount + 1;
       const mapKey = `${name}:${wireArgCount}`;
       methods.set(mapKey, {
         name,
@@ -156,7 +155,7 @@ export class RpcHub {
         wireArgCount,
         callTypeId: 0,
         stream: meta.returns === RpcType.stream,
-        noWait: meta.noWait ?? false,
+        noWait: meta.returns === RpcType.noWait,
       });
     }
 

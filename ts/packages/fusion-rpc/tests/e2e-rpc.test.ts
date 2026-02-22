@@ -7,6 +7,7 @@ import {
 } from "@actuallab/fusion";
 import {
   RpcClientPeer,
+  RpcType,
   rpcService,
   rpcMethod,
   defineRpcService,
@@ -31,7 +32,7 @@ class ICounterService {
 
 // Legacy service def for mutation (non-compute)
 const MutationServiceDef = defineRpcService("MutationService", {
-  setCount: { args: ["", 0], noWait: true },
+  setCount: { args: ["", 0], returns: RpcType.noWait },
 });
 
 interface IMutationService {
@@ -128,7 +129,7 @@ describe("End-to-end Fusion over RPC", () => {
     expect(result).toBe(0); // default value
 
     // Trigger server-side invalidation via mutation (noWait)
-    clientPeer.callNoWait("MutationService.setCount:2", ["x", 100]);
+    clientPeer.callNoWait("MutationService.setCount:3", ["x", 100]);
 
     // Wait for invalidation notification
     await delay(50);
@@ -203,7 +204,7 @@ describe("End-to-end Fusion over RPC", () => {
     expect(captured.value).toBe(0);
 
     // Trigger server-side invalidation via mutation
-    clientPeer.callNoWait("MutationService.setCount:2", ["x", 100]);
+    clientPeer.callNoWait("MutationService.setCount:3", ["x", 100]);
 
     // Wait for invalidation notification
     await captured.whenInvalidated();

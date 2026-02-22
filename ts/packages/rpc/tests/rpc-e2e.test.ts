@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   RpcHub,
   RpcClientPeer,
+  RpcType,
   defineRpcService,
   createRpcClient,
   createMessageChannelPair,
@@ -169,7 +170,7 @@ describe("RPC End-to-End", () => {
     const [clientConn, serverConn] = createMessageChannelPair();
 
     const noWaitDef = defineRpcService("NoWaitService", {
-      fire: { args: [""], noWait: true },
+      fire: { args: [""], returns: RpcType.noWait },
     });
 
     let received: string | undefined;
@@ -188,7 +189,7 @@ describe("RPC End-to-End", () => {
 
     // callNoWait should not throw and not register
     const trackerSizeBefore = clientPeer.outbound.size;
-    clientPeer.callNoWait("NoWaitService.fire:1", ["hello"]);
+    clientPeer.callNoWait("NoWaitService.fire:2", ["hello"]);
     expect(clientPeer.outbound.size).toBe(trackerSizeBefore);
 
     await delay(50);
@@ -256,6 +257,6 @@ describe("RPC End-to-End", () => {
   it("should handle noWait call on disconnected peer silently", async () => {
     const clientPeer = new RpcClientPeer(clientHub, "ws://test");
     // Not connected — should not throw
-    expect(() => clientPeer.callNoWait("CalcService.add:2", [1, 2])).not.toThrow();
+    expect(() => clientPeer.callNoWait("CalcService.add:3", [1, 2])).not.toThrow();
   });
 });

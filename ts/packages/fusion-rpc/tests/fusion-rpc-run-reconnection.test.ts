@@ -4,6 +4,7 @@ import { MutableState, ComputedState, FixedDelayer } from "@actuallab/fusion";
 import {
   RpcClientPeer,
   RpcHub,
+  RpcType,
   RpcMessageChannelConnection,
   defineRpcService,
   createRpcClient,
@@ -64,7 +65,7 @@ class ICounterService {
 }
 
 const MutationServiceDef = defineRpcService("MutationService", {
-  setCount: { args: ["", 0], noWait: true },
+  setCount: { args: ["", 0], returns: RpcType.noWait },
 });
 
 function createServerHub(name: string, store: Map<string, MutableState<number>>): FusionHub {
@@ -268,7 +269,7 @@ describe("Fusion RPC run() reconnection", () => {
     expect(call2.whenInvalidated.isCompleted).toBe(false);
 
     // Mutate server-side state → should trigger invalidation
-    peer.callNoWait("MutationService.setCount:2", ["x", 99]);
+    peer.callNoWait("MutationService.setCount:3", ["x", 99]);
     await delay(50);
     expect(call2.whenInvalidated.isCompleted).toBe(true);
   }, 10_000);

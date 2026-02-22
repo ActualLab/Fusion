@@ -27,8 +27,8 @@ describe("@rpcMethod decorator", () => {
     const meta = getMethodsMeta(Svc);
     expect(meta).toBeDefined();
 
-    expect(meta!["getProduct"]).toEqual({ argCount: 1, noWait: false });
-    expect(meta!["getProducts"]).toEqual({ argCount: 2, returns: RpcType.stream, noWait: false });
+    expect(meta!["getProduct"]).toEqual({ argCount: 1 });
+    expect(meta!["getProducts"]).toEqual({ argCount: 2, returns: RpcType.stream });
   });
 
   it("should not wrap the method", async () => {
@@ -43,7 +43,7 @@ describe("@rpcMethod decorator", () => {
 
     const meta = getMethodsMeta(Svc);
     expect(meta).toBeDefined();
-    expect(meta!["getItem"]).toEqual({ argCount: 1, noWait: false });
+    expect(meta!["getItem"]).toEqual({ argCount: 1 });
   });
 });
 
@@ -66,9 +66,9 @@ describe("@rpcService + @rpcMethod combined", () => {
 
     const methods = getMethodsMeta(ICounterService);
     expect(methods).toBeDefined();
-    expect(methods!["getCount"]).toEqual({ argCount: 1, noWait: false });
-    expect(methods!["setCount"]).toEqual({ argCount: 2, noWait: false });
-    expect(methods!["watchCount"]).toEqual({ argCount: 1, returns: RpcType.stream, noWait: false });
+    expect(methods!["getCount"]).toEqual({ argCount: 1 });
+    expect(methods!["setCount"]).toEqual({ argCount: 2 });
+    expect(methods!["watchCount"]).toEqual({ argCount: 1, returns: RpcType.stream });
   });
 
   it("should return undefined for non-decorated classes", () => {
