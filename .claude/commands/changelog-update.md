@@ -10,9 +10,11 @@ Generate a new CHANGELOG.md entry based on commits since the last release.
 
 ## Instructions
 
-### Step 1: Determine Version Number
+### Step 1: Determine Version Numbers
 
-If `$ARGUMENTS` is provided, use it as the version number. Otherwise:
+This project publishes to both **NuGet** (.NET) and **npm** (TypeScript). You must detect both versions.
+
+If `$ARGUMENTS` is provided, use it as the NuGet version number. Otherwise:
 
 1. **Check local build artifacts**:
    ```bash
@@ -32,7 +34,15 @@ If `$ARGUMENTS` is provided, use it as the version number. Otherwise:
 
 4. Use the **greater** of artifacts/nupkg version vs NuGet version, or ask the user.
 
-**Important**: Use the exact version number detected from artifacts or NuGet—do **not** invent a new version number by incrementing the detected one (e.g., if the highest detected version is `12.0.65`, don't create an entry for `12.0.66` unless you actually see `12.0.66` in artifacts or NuGet). If the detected version is newer than the last CHANGELOG entry, add a new entry for it. The entry always points to HEAD with format `<version>+<HEAD-hash>`.
+5. **Check npm for the latest published version of `@actuallab/fusion`**:
+   ```bash
+   # Fetch latest version from npm
+   npm view @actuallab/fusion version 2>/dev/null || echo "not published yet"
+   ```
+
+**Important**: Use the exact version numbers detected from NuGet and npm—do **not** invent new version numbers by incrementing detected ones (e.g., if the highest detected NuGet version is `12.0.65`, don't create an entry for `12.0.66` unless you actually see `12.0.66` in artifacts or NuGet). If the detected version is newer than the last CHANGELOG entry, add a new entry for it.
+
+Both versions must be listed in the entry header (see Step 6 for format).
 
 ### Step 2: Read Current CHANGELOG
 
@@ -89,9 +99,9 @@ Map conventional commit prefixes to CHANGELOG sections:
 
 ### Step 6: Generate the Entry
 
-Format:
+Format (include both NuGet and npm versions in the header):
 ```markdown
-## <version>+<short-hash>
+## <nuget-version>+<short-hash> | npm: <npm-version>
 
 Release date: <YYYY-MM-DD>
 
@@ -137,6 +147,8 @@ Release date: <YYYY-MM-DD>
 git rev-parse --short HEAD
 ```
 
+Use this hash together with both version numbers to form the entry header: `## <nuget-version>+<short-hash> | npm: <npm-version>`. If the npm package is not published yet, use `npm: -` as placeholder.
+
 ### Step 9: Insert the Entry
 
 Insert the new entry at the top of `docs/CHANGELOG.md` (after the header/intro, before the first `## X.Y.Z` section).
@@ -144,7 +156,7 @@ Insert the new entry at the top of `docs/CHANGELOG.md` (after the header/intro, 
 ## Example Output
 
 ```markdown
-## 12.0.0+3e71b6ef
+## 12.0.0+3e71b6ef | npm: 0.1.5
 
 Release date: 2025-01-27
 

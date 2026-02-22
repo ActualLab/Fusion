@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.1.69+10006328 | npm: 12.1.69
+
+Release date: 2026-02-22
+
+### Added (TypeScript)
+- `RpcStream` support in TypeScript RPC client — full streaming with batching,
+  reconnection, and end-of-stream handling
+- Stream performance test (`StreamInt32`) for benchmarking TypeScript RPC stream throughput
+- `RpcType.stream` return type in TypeScript service definitions
+
+### Changed (TypeScript)
+- TypeScript RPC method definitions now use `returns: RpcType.noWait` instead of
+  a `noWait` boolean flag, improving API consistency
+- Simplified wire argument count calculations in TypeScript by assuming
+  `CancellationToken` slot as default (removed `ctOffset` option)
+
+### Tests (TypeScript)
+- Added comprehensive `RpcStream` unit tests in TypeScript covering batching,
+  reconnection, multiple enumeration, and disposal
+- New stream performance benchmarks
+
+
 ## 12.1.61+045f13f0
 
 Release date: 2026-02-18
