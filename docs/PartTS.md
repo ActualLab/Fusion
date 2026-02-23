@@ -1,9 +1,27 @@
 # TypeScript Port
 
-Fusion's TypeScript port brings the same reactive programming model to the JavaScript/TypeScript ecosystem.
-It is designed to interoperate with the .NET Fusion server over `ActualLab.Rpc`,
-giving you real-time, invalidation-driven UI updates in React (or any other JS framework) &mdash;
+The primary goal of the TypeScript port is to enable **TypeScript/JavaScript-based UI**
+to consume Fusion Compute Services and ActualLab.Rpc services running on a .NET server.
+It gives you real-time, invalidation-driven UI updates in React (or any other JS framework) &mdash;
 the same way Fusion + Blazor works on .NET.
+
+The port is intentionally **more lightweight** than the full .NET version.
+Server-side-only features like [CommandR](./PartC.md), [Operations Framework](./PartO.md),
+[Entity Framework extensions](./PartEF.md), and [Authentication](./PartAA.md) are not included &mdash;
+these remain on the .NET server where they belong.
+
+What the TypeScript port **does** provide:
+
+- **Remote Compute Service Clients** &mdash; typed proxies that call .NET Compute Services over RPC,
+  cache results locally, and automatically invalidate when the server signals changes
+- **Client-side Compute Services** &mdash; `@computeMethod` and `Computed<T>` work locally in the browser,
+  so you can compose server API calls into higher-level computed values with dependency tracking
+- **Reactive states** &mdash; `ComputedState<T>` and `MutableState<T>` for auto-updating UI
+- **RPC infrastructure** &mdash; WebSocket transport, streaming (`RpcStream<T>`),
+  fire-and-forget (`RpcNoWait`), automatic reconnection
+- **React integration** &mdash; `useComputedState` hook for real-time rendering
+
+In short, it is exactly what you need to use Fusion services from a JavaScript/TypeScript client.
 
 ::: tip
 This section assumes you are familiar with Fusion's core concepts
