@@ -30,6 +30,9 @@ jobs:
       - name: Install .NET workloads
         run: dotnet workload install wasm-tools
 
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
       - uses: dotnet/nbgv@master
         id: nbgv
         with:
