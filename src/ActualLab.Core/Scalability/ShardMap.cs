@@ -4,17 +4,19 @@ using StringBuilderExt = ActualLab.Text.StringBuilderExt;
 namespace ActualLab.Scalability;
 
 /// <summary>
-/// Maps a fixed number of shards to a set of nodes using consistent hashing.
+/// Maps a fixed number of shards to a set of nodes.
 /// </summary>
-public class ShardMap<TNode>
+public class ShardMap<TNode>(int shardCount, TNode[] nodes, ShardMapBuilder builder)
     where TNode : class
 {
-    public int ShardCount { get; }
-    public TNode[] Nodes { get; }
-    public int?[] NodeIndexes { get; }
+    public int ShardCount { get; } = shardCount;
     public bool IsEmpty => Nodes.Length == 0;
+    public TNode[] Nodes { get; } = nodes;
+    // ReSharper disable once CoVariantArrayConversion
+    public int?[] NodeIndexes { get; } = builder.Build(shardCount, nodes);
 
     // Indexers
+
     public TNode? this[int shardIndex] {
         get {
             var nodeIndex = NodeIndexes[shardIndex];
@@ -29,36 +31,11 @@ public class ShardMap<TNode>
         }
     }
 
-    public ShardMap(
-        int shardCount,
-        TNode[] nodes,
-        Func<TNode, IEnumerable<int>>? nodeHashSequenceProvider = null)
-    {
-        ShardCount = shardCount;
-        Nodes = nodes;
-        nodeHashSequenceProvider ??= node => GetDefaultHashSequence(node.ToString() ?? "");
-        var remainingNodeCount = nodes.Length;
-        var nodeIndexes = new int?[shardCount];
-        var remainingShardCount = shardCount;
-        while (remainingNodeCount != 0) {
-            var nodeIndex = nodes.Length - remainingNodeCount;
-            var node = nodes[nodeIndex];
-            var nodeShardCount = (remainingShardCount + remainingNodeCount - 1) / remainingNodeCount;
-            var nodeHashes = nodeHashSequenceProvider.Invoke(node).Take(nodeShardCount);
-            foreach (var nodeHash in nodeHashes) {
-                for (var i = 0; i < shardCount; i++) {
-                    ref var shard = ref nodeIndexes[(nodeHash + i).PositiveModulo(shardCount)];
-                    if (!shard.HasValue) {
-                        shard = nodeIndex;
-                        break;
-                    }
-                }
-            }
-            remainingShardCount -= nodeShardCount;
-            remainingNodeCount--;
-        }
-        NodeIndexes = nodeIndexes;
-    }
+    public ShardMap(int shardCount, TNode[] nodes)
+        : this(shardCount, nodes, ShardMapBuilder.Default)
+    { }
+
+    // ReSharper disable once CoVariantArrayConversion
 
     public override string ToString()
     {
@@ -89,11 +66,4 @@ public class ShardMap<TNode>
 
     protected virtual void AppendToStringArguments(StringBuilder sb)
     { }
-
-    private static IEnumerable<int> GetDefaultHashSequence(string source)
-    {
-        for (var i = 0;; i++)
-            yield return $"{source}-{i:x8}".GetXxHash3();
-        // ReSharper disable once IteratorNeverReturns
-    }
 }
