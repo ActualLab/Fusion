@@ -1,0 +1,58 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Samples.TodoApp.UI.Services
+@implements IDisposable
+
+<CascadingAuthenticationState>
+    <CascadingValue TValue="Task<AuthState>" Value="@GetAuthState()" ChildContent="@ChildContent"/>
+</CascadingAuthenticationState>
+
+@code {
+    [Inject] protected IServiceProvider Services { get; init; } = null!;
+    [Inject] protected Session Session { get; init; } = null!;
+    [Inject] protected AuthStateProvider AuthStateProvider  { get; init; } = null!;
+
+    [Parameter] public RenderFragment ChildContent { get; set; } = _ => { };
+    [Parameter] public bool UsePresenceReporter { get; set; }
+
+    protected override void OnInitialized()
+    {
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        OnAuthenticationStateChanged(AuthStateProvider.GetAuthenticationStateAsync());
+        if (UsePresenceReporter) {
+            var presenceReporter = Services.GetRequiredService<PresenceReporter>();
+            presenceReporter.Start();
+        }
+    }
+
+    void IDisposable.Dispose()
+        => AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+
+
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> newAuthStateTask)
+    {
+        _ = newAuthStateTask.ContinueWith(
+            t => {
+                if (!t.IsCompletedSuccessfully)
+                    return;
+
+                var authState = (AuthState)t.GetAwaiter().GetResult();
+                if (!authState.IsSignOutForced)
+                    return;
+
+                _ = InvokeAsync(() => {
+                    var nav = Services.GetRequiredService<NavigationManager>();
+                    nav.NavigateTo(nav.Uri, true);
+                });
+            },
+            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Current);
+    }
+
+    private Task<AuthState> GetAuthState()
+    {
+        var authStateTask = AuthStateProvider.GetAuthenticationStateAsync();
+        return authStateTask.ContinueWith(
+                t => (AuthState)t.GetAwaiter().GetResult(),
+                CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Current);
+    }
+
+}

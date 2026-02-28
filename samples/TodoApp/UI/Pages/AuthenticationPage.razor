@@ -1,7 +1,7 @@
 @page "/authentication"
 @using UAParser
 @inherits ComputedStateComponent<(User? User, List<AuthenticationPage.SessionInfoModel>? Sessions)>
-@inject IAuth Auth
+@inject IUserApi IUserApi
 @inject ClientAuthHelper ClientAuthHelper
 @inject IFusionTime FusionTime
 
@@ -157,8 +157,8 @@
     protected override async Task<(User?, List<SessionInfoModel>?)> ComputeState(CancellationToken cancellationToken)
     {
         // await Task.Delay(1000); // Uncomment to simulate loading delay
-        var user = await Auth.GetUser(Session, cancellationToken);
-        var sessionInfos = await Auth.GetUserSessions(Session, cancellationToken);
+        var user = await IUserApi.GetOwn(Session, cancellationToken);
+        var sessionInfos = await IUserApi.ListOwnSessions(Session, cancellationToken);
         var result = new List<SessionInfoModel>();
 
         foreach (var sessionInfo in sessionInfos) {

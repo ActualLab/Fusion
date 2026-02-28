@@ -8,7 +8,7 @@
   <!-- Fusion packages -->
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion\ActualLab.Fusion.csproj" />
-    <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Ext.Contracts\ActualLab.Fusion.Ext.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\src\ActualLab.Fusion.EntityFramework\ActualLab.Fusion.EntityFramework.csproj" />
   </ItemGroup>
 
   <!-- Other packages -->

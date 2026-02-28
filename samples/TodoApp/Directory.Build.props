@@ -15,7 +15,13 @@
     <Using Include="System.Threading" />
     <Using Include="System.Threading.Tasks" />
     <Using Include="System.Threading.Channels" />
+    <Using Include="System.Runtime.CompilerServices" />
+    <Using Include="System.Runtime.InteropServices" />
+    <Using Include="System.Runtime.Serialization" />
+    <Using Include="System.Text.Json.Serialization" />
+    <Using Include="MemoryPack" />
     <Using Include="ActualLab" />
+    <Using Include="ActualLab.Api" />
     <Using Include="ActualLab.Async" />
     <Using Include="ActualLab.Channels" />
     <Using Include="ActualLab.Collections" />
@@ -24,7 +30,7 @@
     <Using Include="ActualLab.CommandR.Configuration" />
     <Using Include="ActualLab.CommandR.Commands" />
     <Using Include="ActualLab.Fusion" />
-    <Using Include="ActualLab.Fusion.Authentication" />
+    <Using Include="Samples.TodoApp.Abstractions" />
     <Using Include="ActualLab.Fusion.Operations" />
     <Using Include="ActualLab.Reflection" />
     <Using Include="ActualLab.Serialization" />

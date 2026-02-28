@@ -11,9 +11,9 @@
 
   <!-- Fusion packages -->
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\ActualLab.Fusion.EntityFramework\ActualLab.Fusion.EntityFramework.csproj" />
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion\ActualLab.Fusion.csproj" />
-    <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Ext.Services\ActualLab.Fusion.Ext.Services.csproj" />
   </ItemGroup>
 
   <!-- Source generators -->
