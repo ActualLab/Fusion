@@ -4,7 +4,8 @@ using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using ActualLab.Fusion.Blazor;
-using ActualLab.Fusion.Blazor.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Configuration.Memory;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Npgsql;
@@ -26,6 +27,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Samples.TodoApp;
@@ -34,8 +36,10 @@ using Samples.TodoApp.Host;
 using Samples.TodoApp.Host.Components;
 using Samples.TodoApp.Host.Components.Pages;
 using Samples.TodoApp.Services;
+using Samples.TodoApp.Services.Auth;
 using Samples.TodoApp.Services.Db;
 using Samples.TodoApp.UI;
+using Samples.TodoApp.UI.Services;
 
 // Constrain thread pool to 1 thread to debug possible issues with async logic
 // ThreadPool.SetMinThreads(1, 1);
@@ -136,6 +140,10 @@ void ConfigureServices()
                     operations.AddFileSystemOperationLogWatcher();
                 // operations.AddRedisOperationLogWatcher();
             });
+            db.AddEntityResolver<string, DbSessionInfo>();
+            db.AddEntityResolver<string, DbUser>(_ => new DbEntityResolver<AppDbContext, string, DbUser>.Options() {
+                QueryTransformer = query => query.Include(u => u.Identities),
+            });
             db.AddEntityResolver<string, DbTodo>();
 
             if (hostSettings.UseTenants) {
@@ -166,18 +174,29 @@ void ConfigureServices()
 #endif
 
     if (hostKind == HostKind.ApiServer) {
-        fusion.AddClient<IAuth>(); // IAuth = a client of backend's IAuth
-        fusion.AddClient<IAuthBackend>(); // IAuthBackend = a client of backend's IAuthBackend
-        fusion.Configure<IAuth>().IsServer(typeof(IAuth)).HasClient(); // Expose IAuth (a client) via RPC
+        fusion.AddClient<IUserBackend>();
+        fusion.AddClient<ISessionBackend>();
     }
     else { // SingleServer or BackendServer
         fusion.AddOperationReprocessor();
-        fusion.AddDbAuthService<AppDbContext, string>();
-        if (hostKind == HostKind.BackendServer)
-            fusion.Configure<IAuthBackend>().IsServer(typeof(IAuthBackend)); // Expose IAuthBackend via RPC
+        fusion.AddServer<ISessionBackend, SessionBackend>();
+        fusion.AddServer<IUserBackend, UserBackend>();
     }
-    if (hostKind != HostKind.BackendServer)
-        fusionServer.AddAuthEndpoints();
+
+    // Auth endpoints & helper (server-side)
+    if (hostKind != HostKind.BackendServer) {
+        fusion.AddServer<IUserApi, UserApi>();
+        services.AddSingleton(c => (ISessionValidator)c.GetRequiredService<IUserApi>());
+        services.AddSingleton(_ => ServerAuthHelper.Options.Default with { NameClaimKeys = [] });
+        services.AddScoped(c => new ServerAuthHelper(c.GetRequiredService<ServerAuthHelper.Options>(), c));
+        services.AddSingleton(_ => new AuthEndpoints.Options() {
+            DefaultSignInScheme = GitHubAuthenticationDefaults.AuthenticationScheme,
+            SignInPropertiesBuilder = (_, properties) => {
+                properties.IsPersistent = true;
+            },
+        });
+        services.AddSingleton(c => new AuthEndpoints(c.GetRequiredService<AuthEndpoints.Options>()));
+    }
 
     if (hostSettings.UseTenants) {
         var tenantTagExtractor = hostSettings.TenantIndex is { } tenantIndex
@@ -187,15 +206,6 @@ void ConfigureServices()
             TagProvider = (session, httpContext) => session.WithTag(TenantExt.SessionTag, tenantTagExtractor.Invoke(httpContext)),
         });
     }
-    fusionServer.ConfigureAuthEndpoint(_ => new() {
-        DefaultSignInScheme = GitHubAuthenticationDefaults.AuthenticationScheme,
-        SignInPropertiesBuilder = (_, properties) => {
-            properties.IsPersistent = true;
-        }
-    });
-    fusionServer.ConfigureServerAuthHelper(_ => new() {
-        NameClaimKeys = [],
-    });
 
     // ITodoBackend
     _ = hostKind switch {
@@ -263,7 +273,18 @@ void ConfigureServices()
     builder.Services.AddRazorComponents()
         .AddInteractiveServerComponents()
         .AddInteractiveWebAssemblyComponents();
-    fusion.AddBlazor().AddAuthentication().AddPresenceReporter(); // Must follow services.AddServerSideBlazor()!
+
+    // Local Blazor auth (replaces fusion.AddBlazor().AddAuthentication().AddPresenceReporter())
+    fusion.AddBlazor();
+    services.AddAuthorizationCore();
+    services.RemoveAll(typeof(AuthenticationStateProvider));
+    services.AddSingleton(_ => AuthStateProvider.Options.Default);
+    services.AddScoped<AuthenticationStateProvider>(c => new AuthStateProvider(
+        c.GetRequiredService<AuthStateProvider.Options>(), c));
+    services.AddScoped(c => (AuthStateProvider)c.GetRequiredService<AuthenticationStateProvider>());
+    services.AddScoped(c => new ClientAuthHelper(c));
+    services.AddSingleton(_ => PresenceReporter.Options.Default);
+    services.AddScoped(c => new PresenceReporter(c.GetRequiredService<PresenceReporter.Options>(), c));
     services.AddBlazorCircuitActivitySuppressor();
 }
 
@@ -325,6 +346,13 @@ void ConfigureApp()
 
     // Fusion endpoints
     app.MapRpcWebSocketServer();
-    app.MapFusionAuthEndpoints();
-    app.MapFusionRenderModeEndpoints();
+
+    // Auth endpoints
+    if (hostKind != HostKind.BackendServer) {
+        app.MapFusionRenderModeEndpoints();
+        var authEndpoints = app.Services.GetRequiredService<AuthEndpoints>();
+        app.MapGet("/signIn", authEndpoints.SignIn).WithGroupName("FusionAuth");
+        app.MapGet("/signIn/{scheme}", authEndpoints.SignIn).WithGroupName("FusionAuth");
+        app.MapGet("/signOut", authEndpoints.SignOut).WithGroupName("FusionAuth");
+    }
 }

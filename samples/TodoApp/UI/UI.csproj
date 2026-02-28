@@ -41,7 +41,6 @@
   <!-- Fusion packages -->
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Blazor\ActualLab.Fusion.Blazor.csproj" />
-    <ProjectReference Include="..\..\..\src\ActualLab.Fusion.Blazor.Authentication\ActualLab.Fusion.Blazor.Authentication.csproj" />
   </ItemGroup>
 
   <!-- Other packages -->
