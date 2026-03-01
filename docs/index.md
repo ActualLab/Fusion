@@ -179,33 +179,37 @@ Think of Fusion as **MSBuild for data processed by your backend, API, and even c
 
 <AnimatedSvg src="/img/call-graph-computation.svg" alt="Animated diagram showing Fusion computing and caching a dependency graph" :duration="10" :restart-delay="5" max-width="750px" />
 
-When `GetThumbnail(imgId, 64)` is invalidated:
-- `GetUserAvatar(3)` is immediately marked as inconsistent
-- `GetUserProfile(3)` is immediately marked as inconsistent
-- Nothing recomputes yet.
+When `GetThumbnail(imgId, 64)` is invalidated, the invalidation **cascades immediately**:
 
-Next request for `GetUserProfile(3)` triggers recomputation of:
-- `GetUserAvatar(3)`
-- `GetThumbnail("user_3_avatar", 64)`
+<AnimatedSvg src="/img/call-graph-invalidation.svg" alt="Animated diagram showing invalidation cascading from GetThumbnail up through GetUserAvatar to GetUserProfile" :duration="10" :restart-delay="5" max-width="750px" />
 
-As for `GetUser(3)`, it won't be recomputed when `GetUserProfile(3)` calls it,
-because it wasn't affected by `GetThumbnail("user_3_avatar", 64)` invalidation,
-so its cached value is going to be used.
+Next request for `GetUserProfile(3)` triggers **partial recomputation** —
+only the affected parts recompute, while `GetUser(3)` is served from cache:
 
-The **invalidation is always immediate and cascading**: when you invalidate a given call, 
+<AnimatedSvg src="/img/call-graph-recomputation.svg" alt="Animated diagram showing partial recomputation: GetUser served from cache, GetThumbnail and GetUserAvatar recomputed" :duration="10" :restart-delay="5" max-width="750px" />
+
+The **invalidation is always immediate and cascading**: when you invalidate a given call,
 its dependency sub-graph is also invalidated, including remote dependencies.
 
-But **invalidation doesn't imply immediate recomputation**: 
-the recomputation typically happens later, when the call is repeated, 
+But **invalidation doesn't imply immediate recomputation**:
+the recomputation typically happens later, when the call is repeated,
 typically in a UI component.
-But old cached values wrapped into `Computed<T>` instances remain accessible indefinitely, 
-so UI can keep displaying them as long as it needs to (while updates are in progress or even later). 
+But old cached values wrapped into `Computed<T>` instances remain accessible indefinitely,
+so UI can keep displaying them as long as it needs to (while updates are in progress or even later).
 
 **The dependency graph updates automatically** as your methods call each other or when invalidation occurs,
 so typically you don't even need to know it exists.
 
-This is exactly how incremental builds work: you mark targets as dirty by removing them, 
+This is exactly how incremental builds work: you mark targets as dirty by removing them,
 but they only rebuild when you run the build, and every artifact that's still consistent is reused.
+
+### What Gets Cached
+
+Fusion tracks one `Computed<T>` per each **(service, method, arguments)** combination
+in a `WeakMap`-style structure &mdash; invalidation evicts the entry,
+so the next call recomputes it, while unrelated entries stay cached:
+
+<AnimatedSvg src="/img/computed-caching.svg" alt="Animated diagram showing how Fusion caches one Computed value per unique method-arguments pair, with invalidation and recomputation" :duration="14" :restart-delay="5" max-width="900px" />
 
 ## See The Code
 
