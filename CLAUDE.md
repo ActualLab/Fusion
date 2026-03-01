@@ -16,13 +16,9 @@ When started via the launcher, environment variables are set to help you underst
 | Variable | Description                                     |
 |----------|-------------------------------------------------|
 | `AC_OS` | Operating system/environment description        |
-| `AC_ProjectRoot` | Root directory containing all projects          |
-| `AC_Project` | Current project name (e.g., `ActualLab.Fusion`) |
+| `AC_ProjectRoot` | Root directory containing all projects (`/proj` in Docker) |
 | `AC_ProjectPath` | Full path to current project (or worktree)      |
 | `AC_Worktree` | Worktree suffix (empty if not in a worktree)    |
-| `AC_Project0Path` | Full path to project 0 (ActualChat)             |
-| `AC_Project1Path` | Full path to project 1 (ActualLab.Fusion)       |
-| `AC_Project2Path` | Full path to project 2 (ActualLab.Fusion.Samples) |
 
 If AC_OS has no value, you're started directly, so none of this is in effect.
 
@@ -71,6 +67,8 @@ Build artifacts are stored in `artifacts/claude-docker/` to avoid permission con
 
 **Google Cloud credentials**: The `~/.gcp` folder is mounted read-only to `/home/claude/.gcp`. If `GOOGLE_APPLICATION_CREDENTIALS` is set on the host, it's automatically remapped to `/home/claude/.gcp/key.json` inside the container.
 
+**Isolated mode**: Set `AC_CLAUDE_ISOLATE=true` (or `1`) to run with an isolated `.claude.json` config file. When enabled, the launcher copies `.claude.json` to `artifacts/claude-docker/.claude-{timestamp}.json` and mounts that copy instead of the original. Changes made inside the container are not synced back to the host's `.claude.json`. This is useful for parallel Claude instances or testing without affecting the main config.
+
 ## Playwright and Browser Automation
 
 Playwright and Chromium are pre-installed in the Docker image for browser automation tasks.
@@ -91,22 +89,21 @@ await page.goto('https://example.com');
 
 Since Docker uses `--network host`, `localhost:9222` reaches the host's Chrome directly.
 
-## Project Paths by Environment
+## Accessing Sibling Projects
 
-Use `AC_Project0Path`, `AC_Project1Path`, `AC_Project2Path` to get full paths to other projects you may need to access. These are automatically adjusted for the environment:
+`AC_ProjectRoot` points to the directory that contains all projects. In Docker it is `/proj`, so sibling projects are accessible at `/proj/ActualLab.Fusion`, `/proj/ActualLab.Fusion.Samples`, etc.
 
-| Environment | AC_ProjectRoot | AC_Project1Path (example) |
-|-------------|----------------|---------------------------|
+| Environment | AC_ProjectRoot | Example sibling project |
+|-------------|----------------|-------------------------|
 | Docker | `/proj` | `/proj/ActualLab.Fusion` |
 | WSL | `/mnt/d/Projects` | `/mnt/d/Projects/ActualLab.Fusion` |
 | Windows | `D:\Projects` | `D:\Projects\ActualLab.Fusion` |
 
 ## Worktree Support
 
-The launcher supports git worktrees. Worktrees are automatically detected when you run from a folder named `{ProjectName}-{Suffix}` (e.g., `ActualLab.Fusion-feature1`).
+The launcher supports git worktrees, detected automatically via git.
 
-**Auto-detection**: If you're in a folder like `ActualLab.Fusion-feature1`, the launcher recognizes it as a worktree of `ActualLab.Fusion` and sets:
-- `AC_Project` = `ActualLab.Fusion`
+**Auto-detection**: If you're in a folder like `ActualLab.Fusion-feature1`, the launcher detects it as a worktree of `ActualLab.Fusion` and sets:
 - `AC_Worktree` = `feature1`
 - `AC_ProjectPath` = path to the worktree folder
 
@@ -119,7 +116,7 @@ The worktree is created using `git worktree add` from the main project directory
 
 # Type Catalog
 
-If `docs/api-index.md` exists, use it first to quickly check whether an existing abstraction covers your need — it's a condensed reference (~300 lines) of the most important types, structured by area. For the complete list of all public types (~1000 lines), see `docs/api-index-full.md`.
+Use `docs/api-index.md` to discover existing abstractions before writing new code. It lists key public types across all non-test projects, organized by project. For the complete list, see `docs/api-index-full.md`.
 
 # Building
 
@@ -178,5 +175,4 @@ If you're missing information in test logs:
 **Important:** Do not create temporary files in the project root. Use the `<projectRoot>/tmp` folder instead for any temporary files, test scripts, debug outputs, screenshots, etc. This keeps the project root clean and makes it easier to gitignore temporary artifacts.
 
 If AC_OS environment variable is defined, you're started with Claude Launcher (c.ps1),
-so your actual OS is specified in this environment variable and you can use other environment variables
-described below to access other projects related to the current one. 
+so your actual OS is specified in this environment variable.
