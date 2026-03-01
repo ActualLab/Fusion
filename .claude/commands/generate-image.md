@@ -13,14 +13,14 @@ Generate an image using Google's Gemini API based on the user's description.
    - Image description (remaining arguments, required)
 
 2. Use the Gemini API to generate an image:
-   - API Key is available in environment variable: `Claude_GeminiAPIKey`
+   - API Key is available in environment variable: `Claude_Gemini_API_Key`
    - Use the Gemini 3 Pro Image model (`gemini-3-pro-image-preview`)
    - API endpoint: `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent`
 
 3. Run the following script (replace `<OUTPUT_FILE>` and `<USER_PROMPT>` with actual values):
 
 ```bash
-curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=$Claude_GeminiAPIKey" \
+curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=$Claude_Gemini_API_Key" \
   -H "Content-Type: application/json" \
   -d '{
     "contents": [{
