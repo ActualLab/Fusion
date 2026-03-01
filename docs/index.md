@@ -211,6 +211,14 @@ so the next call recomputes it, while unrelated entries stay cached:
 
 <AnimatedSvg src="/img/computed-caching.svg" alt="Animated diagram showing how Fusion caches one Computed value per unique method-arguments pair, with invalidation and recomputation" :duration="14" :restart-delay="5" max-width="900px" />
 
+### The Distributed Picture
+
+The same dependency graph extends across network boundaries &mdash;
+invalidation cascades from backend to client, then recomputation flows
+back from client to backend, reusing every node that's still consistent:
+
+<AnimatedSvg src="/img/distributed-graph.svg" alt="Animated diagram showing Fusion's distributed dependency graph across Client, API Server, and Backend — invalidation cascades right-to-left, recomputation flows left-to-right reusing cached nodes" :duration="18" :restart-delay="5" max-width="850px" />
+
 ## See The Code
 
 A Fusion service looks almost identical to a regular service:
