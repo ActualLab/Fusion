@@ -24,15 +24,7 @@ fusion.AddOperationReprocessor();  // Enable operation reprocessing
 4. If allowed, waits for delay and retries the command
 5. Repeats until success or max retries exceeded
 
-```mermaid
-flowchart TD
-    Start["Command&nbsp;Execution"] --> Execute["Execute"]
-    Execute -->|Success| Done["Done"]
-    Execute -->|Transient&nbsp;Error| CanRetry{"Can&nbsp;Retry?"}
-    CanRetry -->|No| Throw["Throw"]
-    CanRetry -->|Yes| Wait["Wait&nbsp;Delay"]
-    Wait --> Execute
-```
+<img src="/img/diagrams/PartO-RP-1.svg" alt="How It Works" style="width: 100%; max-width: 800px;" />
 
 
 ## Configuration Options

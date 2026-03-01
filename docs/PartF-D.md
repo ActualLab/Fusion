@@ -4,13 +4,7 @@ Text-based diagrams for the core concepts introduced in [Part 01](PartF.md).
 
 ## `Computed<T>` Lifecycle States
 
-```mermaid
-stateDiagram-v2
-    direction LR
-    [*] --> Computing
-    Computing --> Consistent : completes
-    Consistent --> Inconsistent : Invalidate
-```
+<img src="/img/diagrams/PartF-D-1.svg" alt="`Computed<T>` Lifecycle States" style="width: 100%; max-width: 800px;" />
 
 ## Capturing `Computed<T>` Values
 
@@ -49,80 +43,27 @@ using (Invalidation.Begin()) {
 
 Example from PartF: `Sum("a", "b")` depends on `Get("a")` and `Get("b")`.
 
-```mermaid
-flowchart LR
-    GetA["Get('a')<br/>Computed&lt;int&gt; = 2"] -->|used by| Sum["Sum('a', 'b')<br/>Computed&lt;int&gt; = 2"]
-    GetB["Get('b')<br/>Computed&lt;int&gt; = 0"] -->|used by| Sum
-```
+<img src="/img/diagrams/PartF-D-2.svg" alt="Computed Value Dependency Graph (DAG)" style="width: 100%; max-width: 800px;" />
 
 ### Cascading Invalidation Flow
 
-```mermaid
-flowchart LR
-    Inc["Increment('a')"] -->|invalidates| GetA["Get('a')"]
-    GetA --> I1(["Inconsistent"])
-    GetA -->|cascades| Sum["Sum('a', 'b')"]
-    Sum --> I2(["Inconsistent"])
-```
+<img src="/img/diagrams/PartF-D-3.svg" alt="Cascading Invalidation Flow" style="width: 100%; max-width: 800px;" />
 
 ## Compute Method Cache Resolution
 
-```mermaid
-flowchart LR
-    Call["Call: Get('a')"] --> Lookup{"Is cached?"}
-    Lookup -->|Yes| Return["Return cached"]
-    Lookup -->|No| Lock["Acquire async lock"] --> Check{"Is cached?"}
-    Check -->|Yes| Return
-    Check -->|No| Exec["Execute & cache"]
-```
+<img src="/img/diagrams/PartF-D-4.svg" alt="Compute Method Cache Resolution" style="width: 100%; max-width: 800px;" />
 
 ## `State<T>` Inheritance Hierarchy
 
-```mermaid
-classDiagram
-    direction LR
-    IState_T <|-- State_T
-    State_T <|-- MutableState_T
-    State_T <|-- ComputedState_T
-
-    class IState_T["IState&lt;T&gt;"] {
-        <<interface>>
-    }
-    class State_T["State&lt;T&gt;"] {
-    }
-    class MutableState_T["MutableState&lt;T&gt;"] {
-        +Set(value)
-    }
-    class ComputedState_T["ComputedState&lt;T&gt;"] {
-        Auto-update on invalidation
-    }
-```
+<img src="/img/diagrams/PartF-D-5.svg" alt="`State<T>` Inheritance Hierarchy" style="width: 100%; max-width: 800px;" />
 
 ## `ComputedState<T>` Update Loop
 
-```mermaid
-flowchart LR
-    Start([Start]) --> Compute["Compute<br/>(run lambda)"]
-    Compute --> Consistent["Consistent"]
-    Consistent -->|"invalidated"| Invalidated["Invalidated"]
-    Invalidated -->|"Delay()"| Updating["Updating"]
-    Updating --> Compute
-```
+<img src="/img/diagrams/PartF-D-6.svg" alt="`ComputedState<T>` Update Loop" style="width: 100%; max-width: 800px;" />
 
 ## `MutableState<T>` vs `ComputedState<T>`
 
-```mermaid
-flowchart LR
-    subgraph Mutable["MutableState&lt;T&gt;"]
-        direction LR
-        MU["User Code"] --> MS["State"] --> MI(["Synchronously invalidated<br/>and recomputed on .Set(..)"]) --> MR["Updated State<br/>New Computed&lt;T&gt;"]
-    end
-
-    subgraph Computed["ComputedState&lt;T&gt;"]
-        direction LR
-        CU["User Code"] --> CS["State"] --> CI(["Invalidated"]) -->|"delay"| CR(["Recompute"]) --> CN["Updated State<br/>New Computed&lt;T&gt;"]
-    end
-```
+<img src="/img/diagrams/PartF-D-7.svg" alt="`MutableState<T>` vs `ComputedState<T>`" style="width: 100%; max-width: 800px;" />
 
 | MutableState&lt;T&gt; | ComputedState&lt;T&gt; |
 |----------------------|------------------------|

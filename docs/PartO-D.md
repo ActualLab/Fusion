@@ -4,26 +4,7 @@ This page contains visual diagrams explaining how Operations Framework works.
 
 ## High-Level Architecture
 
-```mermaid
-flowchart TD
-    subgraph Pipeline ["Command&nbsp;Execution&nbsp;Pipeline"]
-        direction LR
-        NOL["NestedOperationLogger<br/>(11000)"]
-        IOSP["InMemory/DbOperation<br/>ScopeProvider<br/>(10000/1000)"]
-        ICH["InvalidatingCompletionHandler<br/>(100)"]
-    end
-
-    subgraph Background ["Background&nbsp;Services"]
-        direction LR
-        OLR["Operation Log Reader"] ~~~ OLT["Operation Log Trimmer"]
-        ELR["Event Log Reader"] ~~~ ELT["Event Log Trimmer"]
-    end
-
-    subgraph Notification ["Notification&nbsp;System"]
-        direction LR
-        CN["Completion Notifier"] ~~~ LW["Log Watcher<br/>(PG/Redis/FS)"]
-    end
-```
+<img src="/img/diagrams/PartO-D-1.svg" alt="High-Level Architecture" style="width: 100%; max-width: 800px;" />
 
 **Command Execution Pipeline:**
 
@@ -55,18 +36,7 @@ flowchart TD
 
 ## Command Execution Flow
 
-```mermaid
-flowchart TD
-    Client["Client Request<br/>CreateOrderCommand(...)"] --> P1
-
-    subgraph Handlers ["Command&nbsp;Handlers"]
-        P1["1. NestedOperationLogger (11000)<br/>Captures nested command calls<br/>Stores in Operation.NestedOperations"]
-        P1 --> P2["2. InMemoryOperationScopeProvider (10000)<br/>Provides transient operation scope<br/>Runs operation completion"]
-        P2 --> P3["3. DbOperationScopeProvider (1000)<br/>Creates DbOperationScope<br/>Manages DB transaction"]
-        P3 --> Your["YOUR COMMAND HANDLER<br/>Business logic + invalidation block"]
-        Your --> P4["4. InvalidatingCommandCompletionHandler (100)<br/>Reacts to ICompletion<br/>Runs invalidation mode"]
-    end
-```
+<img src="/img/diagrams/PartO-D-2.svg" alt="Command Execution Flow" style="width: 100%; max-width: 800px;" />
 
 | Handler | Priority | Responsibility |
 |---------|----------|----------------|
@@ -78,22 +48,7 @@ flowchart TD
 
 ## Operation Scope Lifecycle
 
-```mermaid
-flowchart TD
-    Start["Command&nbsp;Starts"] --> Provider["InMemoryOperationScopeProvider&nbsp;Creates&nbsp;Scope"]
-
-    Provider --> NoDb["No&nbsp;DB&nbsp;Access<br/>InMemoryScope<br/>IsTransient:&nbsp;true<br/>UUID:&nbsp;xxx-local"]
-    Provider --> WithDb["DB&nbsp;Access&nbsp;Used<br/>DbOperationScope<br/>IsTransient:&nbsp;false<br/>UUID:&nbsp;xxx"]
-
-    NoDb --> ExecNoDb["Command&nbsp;Executes<br/>In-memory&nbsp;only<br/>No&nbsp;persistence"]
-    WithDb --> ExecDb["BEGIN&nbsp;TRANSACTION<br/>Business&nbsp;Logic<br/>Operation&nbsp;Stored"]
-
-    ExecNoDb --> DisposeNoDb["Scope&nbsp;Disposed<br/>Local&nbsp;invalidation&nbsp;only"]
-    ExecDb --> CommitDb["COMMIT<br/>Verify&nbsp;commit&nbsp;if&nbsp;error"]
-
-    DisposeNoDb --> Completion["Operation&nbsp;Completion<br/>•&nbsp;Deduplication<br/>•&nbsp;Listener&nbsp;invocation<br/>•&nbsp;Invalidation&nbsp;trigger"]
-    CommitDb --> Completion
-```
+<img src="/img/diagrams/PartO-D-3.svg" alt="Operation Scope Lifecycle" style="width: 100%; max-width: 800px;" />
 
 
 ## Operation Items vs Context Items
@@ -106,72 +61,17 @@ flowchart TD
 | **Cross-host** | No | Yes |
 | **Usage** | `context.Items.Set(...)` / `Get<T>()` | `operation.Items.KeylessSet(x)` / `KeylessGet<T>()` |
 
-```mermaid
-flowchart TD
-    subgraph ContextItems ["CommandContext.Items&nbsp;(Local&nbsp;Only)"]
-        direction TB
-        CI1["Host A: Command Execution"]
-        CI2["context.Items.Set(...)<br/>context.Items.Get&lt;T&gt;()"]
-        CI1 --> CI2
-    end
-
-    subgraph OpItems ["Operation.Items&nbsp;(Cross-Host)"]
-        direction TB
-        OI1["Host A: Command Execution"]
-        OI2["operation.Items.KeylessSet(x)"]
-        OI3["Serialized to _Operations.ItemsJson"]
-        OI4["Host A: Invalidation Block<br/>operation.Items.KeylessGet&lt;T&gt;()"]
-        OI5["Host B: Invalidation Block<br/>Same data available!<br/>(deserialized from DB)"]
-
-        OI1 --> OI2
-        OI2 --> OI3
-        OI3 --> OI4
-        OI3 --> OI5
-    end
-```
+<img src="/img/diagrams/PartO-D-4.svg" alt="Operation Items vs Context Items" style="width: 100%; max-width: 800px;" />
 
 
 ## Multi-Host Invalidation Flow
 
-```mermaid
-sequenceDiagram
-    participant A as Host A (Originator)
-    participant DB as Database
-    participant PS as Pub/Sub (Redis/PG/FS)
-    participant B as Host B (Peer)
-
-    A->>A: 1. Execute Command
-    A->>A: 2. BEGIN TRANSACTION
-    A->>A: 3. Business Logic
-    A->>A: 4. Store Operation
-    A->>DB: 5. COMMIT
-    A->>PS: 6. Notify
-    PS->>B: Notification
-    A->>A: 7. Local Invalidation
-    B->>DB: 8. Read Operation Log
-    DB-->>B: Operation data
-    B->>B: 9. Completion Notifier
-    B->>B: 10. Run Invalidation
-```
+<img src="/img/diagrams/PartO-D-5.svg" alt="Multi-Host Invalidation Flow" style="width: 100%; max-width: 800px;" />
 
 
 ## Event Processing Flow
 
-```mermaid
-flowchart TD
-    Handler["Command&nbsp;Handler<br/>context.Operation.AddEvent(new&nbsp;OrderCreatedEvent(id))"]
-    Handler --> Commit["Commit&nbsp;Transaction<br/>_Operations:&nbsp;{&nbsp;Command,&nbsp;Items,&nbsp;Events[]&nbsp;}<br/>_Events:&nbsp;{&nbsp;Uuid,&nbsp;Value,&nbsp;State:&nbsp;New&nbsp;}"]
-
-    Commit -->|"Async&nbsp;(background)"| Reader["DbEventLogReader<br/>SELECT&nbsp;*&nbsp;FROM&nbsp;_Events<br/>WHERE&nbsp;State&nbsp;=&nbsp;'New'"]
-
-    Reader --> Processor["DbEventProcessor<br/>if&nbsp;(event.Value&nbsp;is&nbsp;ICommand)<br/>await&nbsp;Commander.Call(command)"]
-
-    Processor --> Success["Success<br/>State&nbsp;=&nbsp;Processed"]
-    Processor --> Failure["Failure<br/>Retry&nbsp;(up&nbsp;to&nbsp;5x)"]
-
-    Failure --> Discarded["If&nbsp;exhausted:<br/>State&nbsp;=&nbsp;Discarded"]
-    Discarded --> Trimmer["DbEventLogTrimmer<br/>DELETE&nbsp;FROM&nbsp;_Events<br/>WHERE&nbsp;State&nbsp;!=&nbsp;'New'"]
-```
+<img src="/img/diagrams/PartO-D-6.svg" alt="Event Processing Flow" style="width: 100%; max-width: 800px;" />
 
 | Event State | Description |
 |-------------|-------------|

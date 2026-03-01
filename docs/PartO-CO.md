@@ -63,14 +63,7 @@ operations.ConfigureOperationLogReader(_ => new() {
 
 On service startup, `StartOffset` determines how far back to look for unprocessed operations:
 
-```mermaid
-flowchart LR
-    subgraph Timeline[" "]
-        direction LR
-        Ignored["Ignored&nbsp;on<br/>startup"] ---|"StartOffset&nbsp;(3s)"| Start["Service<br/>Start"]
-        Start --> Future["..."]
-    end
-```
+<img src="/img/diagrams/PartO-CO-1.svg" alt="StartOffset Explained" style="width: 100%; max-width: 800px;" />
 
 Operations older than `StartOffset` from startup time are ignored. This prevents
 processing very old operations on service restart while ensuring recent ones aren't missed.

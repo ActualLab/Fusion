@@ -107,13 +107,7 @@ Use transient operations for:
 
 Whether transient or persistent, all operations go through **completion**:
 
-```mermaid
-flowchart TD
-    Exec["Command&nbsp;Execution"] --> Scope["Operation&nbsp;Scope"]
-    Scope --> Notifier["OperationCompletionNotifier<br/><br/>•&nbsp;Deduplication<br/>•&nbsp;Listener&nbsp;invocation"]
-    Notifier --> Producer["CompletionProducer<br/><br/>Creates&nbsp;Completion&lt;T&gt;<br/>command"]
-    Producer --> Handler["InvalidatingCommandCompletionHandler<br/><br/>Runs&nbsp;invalidation&nbsp;mode"]
-```
+<img src="/img/diagrams/PartO-TR-1.svg" alt="Operation Completion" style="width: 100%; max-width: 800px;" />
 
 The completion flow is the same for both transient and persistent operations,
 but only persistent operations are replayed on other hosts.

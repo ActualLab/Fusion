@@ -13,22 +13,7 @@ It solves several critical challenges that arise when running multiple instances
 
 Consider a typical multi-server deployment:
 
-```mermaid
-flowchart TD
-    subgraph A["Server&nbsp;A&nbsp;(Fusion)"]
-        CacheA["Cache"]
-    end
-    subgraph B["Server&nbsp;B&nbsp;(Fusion)"]
-        CacheB["Cache"]
-    end
-    subgraph C["Server&nbsp;C&nbsp;(Fusion)"]
-        CacheC["Cache"]
-    end
-    DB[("Database")]
-    A --> DB
-    B --> DB
-    C --> DB
-```
+<img src="/img/diagrams/PartO-1.svg" alt="Why Do You Need Operations Framework?" style="width: 100%; max-width: 800px;" />
 
 When a user on Server A updates their profile:
 1. Server A writes to the database and invalidates its local cache
@@ -74,19 +59,7 @@ But what if step 2 fails after step 1 succeeds? You have inconsistent state.
 Instead of publishing directly, write the message to an "outbox" table in the **same transaction**
 as your business data:
 
-```mermaid
-flowchart TD
-    subgraph TX["Single&nbsp;Transaction"]
-        BD["Business&nbsp;Data<br/>UPDATE&nbsp;users<br/>SET&nbsp;name='...'"]
-        OL["Operation&nbsp;Log&nbsp;(Outbox)<br/>INSERT&nbsp;INTO&nbsp;operations<br/>(command,&nbsp;items,&nbsp;...)"]
-    end
-    subgraph Reader["Operation&nbsp;Log&nbsp;Reader&nbsp;(Background&nbsp;Service)"]
-        R1["Reads&nbsp;committed&nbsp;operations"]
-        R2["Notifies&nbsp;other&nbsp;hosts"]
-        R3["Triggers&nbsp;invalidation"]
-    end
-    TX --> Reader
-```
+<img src="/img/diagrams/PartO-2.svg" alt="The Solution: Outbox Pattern" style="width: 100%; max-width: 800px;" />
 
 This guarantees **at-least-once delivery**: if the transaction commits, the operation will
 eventually be processed. If it fails, nothing is written.

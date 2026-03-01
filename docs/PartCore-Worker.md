@@ -15,15 +15,7 @@ graceful shutdown, and integration with .NET's `IHostedService`.
 
 ## Inheritance Hierarchy
 
-```mermaid
-flowchart BT
-    WorkerBase --> ProcessorBase
-    WorkerBase -.-> IWorker
-    IWorker -.-> IHostedService
-    IWorker -.-> IAsyncDisposable
-    ProcessorBase -.-> IHasWhenDisposed
-    IHasWhenDisposed -.-> IHasDisposeStatus
-```
+<img src="/img/diagrams/PartCore-Worker-1.svg" alt="Inheritance Hierarchy" style="width: 100%; max-width: 800px;" />
 
 **Legend:** Solid arrows = inheritance, dashed arrows = interface implementation
 
@@ -93,13 +85,7 @@ public abstract class WorkerBase : ProcessorBase, IWorker
 
 ### Lifecycle Flow
 
-```mermaid
-flowchart LR
-    Run["Run()"] --> OnStart
-    OnStart --> OnRun
-    OnRun --> |"StopToken cancelled"| OnStop
-    OnStop --> Done["WhenRunning completes"]
-```
+<img src="/img/diagrams/PartCore-Worker-2.svg" alt="Lifecycle Flow" style="width: 100%; max-width: 800px;" />
 
 
 ## Basic Usage

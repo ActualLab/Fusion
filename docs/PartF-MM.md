@@ -206,21 +206,7 @@ Fusion's reference model serves several purposes:
 
 When a user navigates away from a view in a Blazor or similar UI:
 
-```mermaid
-flowchart LR
-    subgraph Before["View A Active"]
-        CS["ComputedState&lt;T&gt;"] --> C1["Computed&lt;Order&gt;"]
-        C1 --> C2["Computed&lt;User&gt;"]
-        C1 --> C3["Computed&lt;Items&gt;"]
-    end
-
-    subgraph After["View A Disposed"]
-        X1["ComputedState disposed"] -.-> X2["No strong references"]
-        X2 -.-> X3["GC collects Order, User, Items"]
-    end
-
-    Before --> |"Navigation"| After
-```
+<img src="/img/diagrams/PartF-MM-1.svg" alt="How UI View Switches Free Memory" style="width: 100%; max-width: 800px;" />
 
 The process:
 

@@ -6,74 +6,17 @@ Diagrams for the concepts introduced in [Interceptors and Proxies](PartAP.md).
 
 How a method call flows through the proxy system:
 
-```mermaid
-flowchart TD
-    Client["Client Code<br/>proxy.GreetAsync(#quot;World#quot;)"]
-    Client --> Proxy
-
-    subgraph Proxy ["IGreetingServiceProxy"]
-        P1["1. Create Invocation(proxy, method, arguments, intercepted)"]
-        P2["2. Call interceptor.Intercept&lt;TResult&gt;(invocation)"]
-        P1 --> P2
-    end
-
-    Proxy --> Interceptor
-
-    subgraph Interceptor ["Interceptor"]
-        I1["1. GetHandler(invocation) - lookup or create"]
-        I2["2. handler(invocation) - execute your logic"]
-        I1 --> I2
-    end
-
-    Interceptor -->|"if pass-through proxy"| Target
-
-    subgraph Target ["Target&nbsp;Service"]
-        T1["invocation.InvokeIntercepted() -> real implementation"]
-    end
-
-    Target --> Result["Client receives result"]
-```
+<img src="/img/diagrams/PartAP-D-1.svg" alt="Proxy Call Flow" style="width: 100%; max-width: 800px;" />
 
 
 ## Proxy Generation at Compile Time
 
-```mermaid
-flowchart LR
-    Interface["Your Interface<br/>IGreetingService<br/>: IRequiresAsyncProxy"]
-    Generator["Source Generator<br/>ActualLab.Generators<br/>ProxyGenerator"]
-    Proxy["Generated Proxy<br/>IGreetingServiceProxy<br/>: InterfaceProxy, IGreetingService"]
-
-    Interface -->|scans| Generator
-    Generator -->|emits| Proxy
-```
+<img src="/img/diagrams/PartAP-D-2.svg" alt="Proxy Generation at Compile Time" style="width: 100%; max-width: 800px;" />
 
 
 ## Proxy Type Hierarchy
 
-```mermaid
-classDiagram
-    direction TB
-    IRequiresAsyncProxy <|-- IRequiresFullProxy
-    InterfaceProxy <|-- IGreetingServiceProxy
-
-    class IRequiresAsyncProxy {
-        <<interface>>
-    }
-    class IRequiresFullProxy {
-        <<interface>>
-        also intercepts sync methods
-    }
-    class InterfaceProxy {
-        ProxyTarget: object?
-    }
-    class IGreetingServiceProxy {
-        implements IGreetingService, IProxy
-        __interceptor: Interceptor
-        __cachedIntercepted0: Func
-        __cachedIntercept0: Func
-        GreetAsync(name, ct)
-    }
-```
+<img src="/img/diagrams/PartAP-D-3.svg" alt="Proxy Type Hierarchy" style="width: 100%; max-width: 800px;" />
 
 ### Generated Proxy Fields
 
@@ -98,13 +41,7 @@ classDiagram
 
 ## ArgumentList Variants
 
-```mermaid
-flowchart TD
-    New["ArgumentList.New&lt;T0, T1&gt;(arg0, arg1)"] --> Check{"UseGenerics?"}
-
-    Check -->|"Yes (1-4 args)"| Generic["ArgumentListG2&lt;T0,T1&gt;<br/>• Generic storage<br/>• No boxing for value types<br/>• Faster access"]
-    Check -->|"No (or 5+ args)"| Simple["ArgumentListS2<br/>• object? storage<br/>• Boxing for value types<br/>• All platforms"]
-```
+<img src="/img/diagrams/PartAP-D-4.svg" alt="ArgumentList Variants" style="width: 100%; max-width: 800px;" />
 
 | Count | Generic Type | Simple Type |
 |-------|--------------|-------------|
@@ -127,47 +64,14 @@ flowchart TD
 
 ## Handler Caching
 
-```mermaid
-flowchart TD
-    Call["Method Call"] --> Check{"Handler in cache?"}
-
-    Check -->|No| Create["CreateTypedHandler&lt;TUnwrapped&gt;(...)"]
-    Create --> Store["Store in cache"]
-    Store --> Execute
-
-    Check -->|Yes| Cached["Use cached handler"]
-    Cached --> Execute["Execute handler<br/>handler(invocation)"]
-```
+<img src="/img/diagrams/PartAP-D-5.svg" alt="Handler Caching" style="width: 100%; max-width: 800px;" />
 
 
 ## Interceptor Chain
 
 Multiple interceptors can be chained together:
 
-```mermaid
-flowchart TD
-    Client --> Proxy
-    Proxy --> Scheduling
-
-    subgraph Scheduling ["SchedulingInterceptor"]
-        S1["TaskFactoryResolver -> schedule on specific TaskFactory"]
-        S2["NextInterceptor -> chain to another interceptor"]
-    end
-
-    Scheduling -->|NextInterceptor| Logging
-
-    subgraph Logging ["LoggingInterceptor"]
-        L1["Log method entry"]
-        L2["Invoke intercepted method"]
-        L3["Log method exit or error"]
-    end
-
-    Logging -->|"InvokeIntercepted()"| Target
-
-    subgraph Target ["Target&nbsp;Service"]
-        T1["Real implementation executes"]
-    end
-```
+<img src="/img/diagrams/PartAP-D-6.svg" alt="Interceptor Chain" style="width: 100%; max-width: 800px;" />
 
 
 ## Pass-Through vs Virtual Proxy
@@ -179,20 +83,7 @@ flowchart TD
 | **Flow** | Proxy → Interceptor → `InvokeIntercepted()` → Real Service | Proxy → Interceptor → Return default/mock |
 | **Use cases** | Logging, Metrics, Caching, Retry logic | Mocking/Stubs, Default values, RPC client proxies, Lazy initialization |
 
-```mermaid
-flowchart LR
-    subgraph PassThrough ["Pass-Through&nbsp;Proxy"]
-        direction TB
-        PT1["Proxy"] --> PT2["Interceptor"]
-        PT2 -->|"InvokeIntercepted()"| PT3["Real Service"]
-    end
-
-    subgraph Virtual ["Virtual&nbsp;Proxy"]
-        direction TB
-        V1["Proxy"] --> V2["Interceptor"]
-        V2 --> V3["Return default/mock<br/>(no target)"]
-    end
-```
+<img src="/img/diagrams/PartAP-D-7.svg" alt="Pass-Through vs Virtual Proxy" style="width: 100%; max-width: 800px;" />
 
 
 ## Typed vs Untyped Handlers

@@ -359,7 +359,7 @@ The output:
 As you can see, Compute Service Client processes about **10,000,000 calls/s**
 on a single CPU core in the "cache hit" scenario.
 
-A bit more robust test would produce 18M call/s, or 55ns per-call timing on the same machine;
+A bit more robust test would produce 20M calls/s, or 50ns per-call timing on the same machine;
 for the comparison, a single `Dictionary<TKey, TValue>` lookup requires ~5-10ns on .NET 10.
 
 And it's ~200x faster than plain RPC via ActualLab.Rpc, which translates to **600-2000x

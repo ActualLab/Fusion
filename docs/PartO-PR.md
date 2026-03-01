@@ -6,21 +6,7 @@ the database periodically (every 5 seconds by default).
 
 ## Overview
 
-```mermaid
-flowchart LR
-    subgraph A["Server&nbsp;A"]
-        Writer["Operation<br/>Log&nbsp;Writer"]
-    end
-    subgraph Notify["Log&nbsp;Watcher&nbsp;Notification"]
-        N1["PostgreSQL"]
-        N2["Redis"]
-        N3["File&nbsp;System"]
-    end
-    subgraph B["Server&nbsp;B"]
-        Reader["Operation<br/>Log&nbsp;Reader"]
-    end
-    Writer --> Notify --> Reader
-```
+<img src="/img/diagrams/PartO-PR-1.svg" alt="Overview" style="width: 100%; max-width: 800px;" />
 
 ## Available Watchers
 
@@ -294,17 +280,7 @@ while relying on polling for events from other hosts.
 
 ## Choosing a Watcher
 
-```mermaid
-flowchart TD
-    Q["Which&nbsp;watcher&nbsp;should&nbsp;I&nbsp;use?"]
-    Q --> PG{"Using&nbsp;PostgreSQL?"}
-    PG -->|Yes| Npgsql["Npgsql&nbsp;Watcher"]
-    PG -->|No| Redis{"Have&nbsp;Redis?"}
-    Redis -->|Yes| RedisW["Redis&nbsp;Watcher"]
-    Redis -->|No| Single{"Single&nbsp;machine?"}
-    Single -->|Yes| FS["FileSystem&nbsp;Watcher"]
-    Single -->|No| Poll["Add&nbsp;Redis&nbsp;or<br/>use&nbsp;polling"]
-```
+<img src="/img/diagrams/PartO-PR-2.svg" alt="Choosing a Watcher" style="width: 100%; max-width: 800px;" />
 
 ### Recommendation Summary
 

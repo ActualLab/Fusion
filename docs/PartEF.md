@@ -178,17 +178,7 @@ Fusion's EF extensions support database sharding out of the box. Sharding is use
 
 ### Core Concepts
 
-```mermaid
-flowchart TD
-    subgraph Hub["DbHub"]
-        Resolver["IDbShardResolver<br/>Routes&nbsp;requests&nbsp;to&nbsp;shards"]
-        Registry["IDbShardRegistry<br/>Tracks&nbsp;available&nbsp;shards"]
-    end
-    Resolver --> Registry
-    Registry --> S1["Shard&nbsp;'tenant0'"]
-    Registry --> S2["Shard&nbsp;'tenant1'"]
-    Registry --> S3["Shard&nbsp;'tenant2'"]
-```
+<img src="/img/diagrams/PartEF-1.svg" alt="Core Concepts" style="width: 100%; max-width: 800px;" />
 
 ### IDbShardRegistry
 

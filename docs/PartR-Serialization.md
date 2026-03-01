@@ -58,16 +58,9 @@ The default format is typically `MemoryPackV5C` (or latest version) for .NET 6+ 
 
 ### Client-Server Negotiation
 
-When a client connects, it sends its supported formats. The server selects the best matching format:
+When a client connects, it requests its preferred serialization format via a URL parameter (e.g., `<endpoint>?f=msgpack6&clientId=...`). The server accepts the connection if it supports that format. Once connected, both parties simultaneously exchange `RpcHandshake` messages:
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    C->>S: Hello (supported formats: mempack5c, mempack4c, mempack3c)
-    S->>C: Hello (selected: mempack5c)
-    Note over C,S: All subsequent messages use mempack5c
-```
+<img src="/img/diagrams/PartR-Serialization-1.svg" alt="Client-Server Negotiation" style="width: 100%; max-width: 800px;" />
 
 ### Accessing All Formats
 
@@ -180,20 +173,7 @@ When choosing formats, consider:
 
 ## Serialization in RPC Pipeline
 
-```mermaid
-flowchart LR
-    subgraph Client
-        C1[Method Call] --> C2[ArgumentSerializer]
-        C2 --> C3[MessageSerializer]
-        C3 --> C4[WebSocket]
-    end
-    C4 --> S4
-    subgraph Server
-        S4[WebSocket] --> S3[MessageSerializer]
-        S3 --> S2[ArgumentSerializer]
-        S2 --> S1[Method Invoke]
-    end
-```
+<img src="/img/diagrams/PartR-Serialization-2.svg" alt="Serialization in RPC Pipeline" style="width: 100%; max-width: 800px;" />
 
 1. Client serializes method arguments using `ArgumentSerializer`
 2. Arguments are wrapped in an `RpcMessage` and serialized by `MessageSerializer`

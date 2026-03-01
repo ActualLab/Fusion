@@ -183,11 +183,7 @@ The processor:
 
 ### Event States
 
-```mermaid
-flowchart TD
-    New["New"] -->|Successful&nbsp;handling| Processed["Processed"]
-    New -->|Failed&nbsp;after&nbsp;retries| Discarded["Discarded"]
-```
+<img src="/img/diagrams/PartO-EV-1.svg" alt="Event States" style="width: 100%; max-width: 800px;" />
 
 ## Event Log Reader
 

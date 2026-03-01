@@ -6,22 +6,7 @@ This document describes the key abstractions in ActualLab.Rpc that power distrib
 
 ActualLab.Rpc is built around a few core abstractions:
 
-```
-RpcHub (singleton orchestrator)
-  ├── ServiceRegistry (RPC service definitions)
-  ├── Peers (collection of RpcPeer instances)
-  │   ├── RpcClientPeer (outbound connections)
-  │   └── RpcServerPeer (inbound connections)
-  └── RpcClient (connection factory)
-
-RpcPeerRef (identifies a peer)
-  └── Used by RpcHub.GetPeer() to create/retrieve RpcPeer
-
-RpcPeer (manages one connection)
-  ├── ConnectionState → RpcPeerConnectionState
-  │   └── Handshake → RpcHandshake
-  └── Communicates via RpcMessage over Channels
-```
+<img src="/img/diagrams/PartR-CC-1.svg" alt="RPC Core Abstractions Overview" />
 
 ## `RpcHub`
 
@@ -208,7 +193,7 @@ An immutable snapshot of a peer's connection state at a point in time.
 | `Handshake` | Remote peer's handshake info |
 | `OwnHandshake` | Local peer's handshake info |
 | `Error` | Error if disconnected |
-| `TryIndex` | Reconnection attempt number |
+| `ConnectionAttemptIndex` | Reconnection attempt number |
 
 ### State Transitions
 
@@ -303,32 +288,4 @@ public interface IUserService : IRpcService
 
 ## Relationship Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                              RpcHub                                  │
-│  (singleton - manages all peers and service proxies)                │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│   GetPeer(RpcPeerRef) ──────────────────────┐                       │
-│                                             │                       │
-│   ┌─────────────┐         ┌─────────────────▼─────────────────┐     │
-│   │ RpcPeerRef  │────────►│           RpcPeer                 │     │
-│   │ (address)   │         │ ┌───────────────┬───────────────┐ │     │
-│   └─────────────┘         │ │ RpcClientPeer │ RpcServerPeer │ │     │
-│                           │ │ (outbound)    │ (inbound)     │ │     │
-│                           │ └──────┬────────┴──────┬────────┘ │     │
-│                           └─────────┼─────────────┼───────────┘     │
-│                                     │             │                 │
-│   ┌─────────────┐                   │             │                 │
-│   │  RpcClient  │◄──────────────────┘             │                 │
-│   │ (connector) │                                 │                 │
-│   └──────┬──────┘                    SetNextConnection()            │
-│          │                                        │                 │
-│          ▼                                        │                 │
-│   ┌─────────────────┐              ┌──────────────▼──────────────┐  │
-│   │  RpcConnection  │◄─────────────│     Server Framework        │  │
-│   │   (channel)     │              │  (e.g., ASP.NET WebSocket)  │  │
-│   └─────────────────┘              └─────────────────────────────┘  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
+<img src="/img/diagrams/PartR-CC-2.svg" alt="RPC Architecture Relationship Diagram" />

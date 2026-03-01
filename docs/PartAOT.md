@@ -70,13 +70,7 @@ public abstract class CodeKeeper
 
 Specialized code keepers for each subsystem:
 
-```mermaid
-flowchart TD
-    CK["CodeKeeper"] --> PCK["ProxyCodeKeeper"]
-    PCK --> CPCK["CommanderProxyCodeKeeper"]
-    CPCK --> RPCK["RpcProxyCodeKeeper"]
-    RPCK --> FPCK["FusionProxyCodeKeeper"]
-```
+<img src="/img/diagrams/PartAOT-1.svg" alt="ProxyCodeKeeper Hierarchy" style="width: 100%; max-width: 800px;" />
 
 | Class | Purpose |
 |-------|---------|

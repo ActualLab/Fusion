@@ -1,5 +1,3 @@
-using System.Net.WebSockets;
-using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.WebSockets;
 
@@ -8,8 +6,7 @@ namespace ActualLab.Rpc.Clients;
 /// <summary>
 /// An <see cref="RpcClient"/> implementation that establishes connections via WebSockets.
 /// </summary>
-public class RpcWebSocketClient(IServiceProvider services)
-    : RpcClient(services)
+public class RpcWebSocketClient(IServiceProvider services) : RpcClient(services)
 {
     public RpcWebSocketClientOptions Options { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
 

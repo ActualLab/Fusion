@@ -5,15 +5,7 @@ Diagrams for the Blazor integration concepts introduced in [Part 3](PartB.md).
 
 ## Component Hierarchy
 
-```mermaid
-flowchart TD
-    CB["ComponentBase<br/>(Blazor)"] --> FCB["FusionComponentBase<br/>+ IHandleEvent"]
-    FCB --> CHCB["CircuitHubComponentBase<br/>+ IHasCircuitHub"]
-    CHCB --> SCB["StatefulComponentBase&lt;T&gt;"]
-    SCB --> CSC["ComputedStateComponent&lt;T&gt;"]
-    SCB --> MSC["MixedStateComponent&lt;T, TMutable&gt;"]
-    CSC --> CRSC["ComputedRenderStateComponent&lt;T&gt;"]
-```
+<img src="/img/diagrams/PartB-D-1.svg" alt="Component Hierarchy" style="width: 100%; max-width: 800px;" />
 
 | Component | Purpose |
 |-----------|---------|
@@ -28,22 +20,7 @@ flowchart TD
 
 ## FusionComponentBase Parameter Comparison Flow
 
-```mermaid
-flowchart TD
-    Parent([Parent Component Renders]) --> SetParams["SetParametersAsync() called on child"]
-    SetParams --> Check["Check ParameterComparisonMode"]
-    Check --> Standard
-    Check --> Custom
-
-    Standard --> Process["Process Parameters<br/>(standard Blazor)"]
-
-    Custom --> ShouldSet["ComponentInfo.ShouldSetParameters()"]
-    ShouldSet --> Compare["For each parameter:<br/>1. Get ParameterComparer for param<br/>2. Compare old value vs new value<br/>3. If ANY changed → return true"]
-    Compare --> AllSame["All Same"]
-    Compare --> Changed["Something Changed"]
-    AllSame --> Skip["SKIP - No render"]
-    Changed --> Process
-```
+<img src="/img/diagrams/PartB-D-2.svg" alt="FusionComponentBase Parameter Comparison Flow" style="width: 100%; max-width: 800px;" />
 
 | Comparer Resolution Order | Description |
 |---------------------------|-------------|
@@ -73,24 +50,7 @@ flowchart TD
 
 ## ComputedStateComponent Lifecycle
 
-```mermaid
-flowchart TD
-    Start([Component Created]) --> Init["OnInitialized()<br/>[sync init]"]
-    Init --> Create["CreateState()<br/>[state created]"]
-    Create --> InitAsync["OnInitializedAsync()"]
-    InitAsync --> FirstRender["First Render"]
-    FirstRender --> Loop
-
-    subgraph Loop ["&nbsp;Update&nbsp;Loop&nbsp;"]
-        direction TB
-        Consistent["State.Value is consistent"]
-        Consistent -->|Dependency invalidated| Inconsistent["State becomes inconsistent"]
-        Inconsistent -->|"UpdateDelayer.Delay()"| Compute["ComputeState() executed"]
-        Compute -->|State updated| Changed["StateChanged() event fires"]
-        Changed -->|Triggers render| Render["Component re-renders"]
-        Render --> Consistent
-    end
-```
+<img src="/img/diagrams/PartB-D-3.svg" alt="ComputedStateComponent Lifecycle" style="width: 100%; max-width: 800px;" />
 
 | Step | Description |
 |------|-------------|
@@ -102,18 +62,7 @@ flowchart TD
 
 ## MixedStateComponent Lifecycle
 
-```mermaid
-flowchart LR
-    subgraph Component ["MixedStateComponent"]
-        direction TB
-        Mutable["MutableState&lt;string&gt;<br/>(local form state)"]
-        Computed["ComputedState&lt;T&gt;<br/>(computed state)"]
-        Mutable -->|"On update: triggers State.Recompute()"| Computed
-    end
-
-    Input["User types in search box"] --> Mutable
-    Computed --> UI["UI renders search results"]
-```
+<img src="/img/diagrams/PartB-D-4.svg" alt="MixedStateComponent Lifecycle" style="width: 100%; max-width: 800px;" />
 
 | State | Purpose |
 |-------|---------|
@@ -131,25 +80,7 @@ flowchart LR
 
 ## Authentication Flow
 
-```mermaid
-flowchart TD
-    subgraph Server
-        IAuth["IAuth<br/>(Compute Service)"]
-    end
-
-    subgraph Client
-        ASP["AuthStateProvider<br/>(ComputedState&lt;AuthState&gt;)"]
-        ASP -->|Computes| Methods["GetUser() + IsSignOutForced()"]
-        ASP -->|On invalidation| Recompute["1. Recomputes auth state<br/>2. Fires NotifyAuthenticationStateChanged()"]
-        Recompute --> CAS["CascadingAuthState Component"]
-        CAS --> Normal["Normal update"]
-        CAS --> Forced["IsSignOutForced = true"]
-        Normal --> Children["Child Components<br/>(&lt;AuthorizeView&gt;, [CascadingParameter])"]
-        Forced -->|Force page reload| Children
-    end
-
-    IAuth -->|"RPC / Invalidation"| ASP
-```
+<img src="/img/diagrams/PartB-D-5.svg" alt="Authentication Flow" style="width: 100%; max-width: 800px;" />
 
 | Method | Description |
 |--------|-------------|
@@ -159,21 +90,7 @@ flowchart TD
 
 ## PresenceReporter.Run Flow
 
-```mermaid
-flowchart LR
-    Start([Start]) --> GetSession["Get Session"]
-    GetSession --> Loop
-
-    subgraph Loop ["&nbsp;Main&nbsp;Loop&nbsp;"]
-        direction TB
-        Wait["Wait UpdatePeriod<br/>(~3 min with 5% random variance)"]
-        Wait --> Update["UpdatePresence()"]
-        Update --> Success
-        Update --> Failure
-        Success --> Wait
-        Failure -->|"Wait RetryDelay (10s, then 30s)"| Wait
-    end
-```
+<img src="/img/diagrams/PartB-D-6.svg" alt="PresenceReporter.Run Flow" style="width: 100%; max-width: 800px;" />
 
 | Timeline | Sequence |
 |----------|----------|
@@ -183,15 +100,7 @@ flowchart LR
 
 ## Render Mode Switching
 
-```mermaid
-flowchart TD
-    Server["Blazor&nbsp;Server<br/>(running&nbsp;in&nbsp;circuit)"]
-    Server -->|"User&nbsp;clicks&nbsp;'Switch&nbsp;to&nbsp;WASM'"| ChangeMode["RenderModeHelper.ChangeMode()<br/>Navigates&nbsp;to:&nbsp;/fusion/renderMode/w?redirectTo=/current-page"]
-    ChangeMode --> Endpoint["Server&nbsp;Endpoint<br/>MapFusionRenderModeEndpoints"]
-    Endpoint --> SetCookie["1.&nbsp;Sets&nbsp;render&nbsp;mode&nbsp;cookie<br/>2.&nbsp;Redirects&nbsp;to&nbsp;redirectTo"]
-    SetCookie --> HostPage["_HostPage.razor<br/>Reads&nbsp;mode&nbsp;from&nbsp;cookie<br/>RenderModeDef.GetOrDefault"]
-    HostPage --> WASM["Blazor&nbsp;WebAssembly<br/>(now&nbsp;running&nbsp;in&nbsp;browser)"]
-```
+<img src="/img/diagrams/PartB-D-7.svg" alt="Render Mode Switching" style="width: 100%; max-width: 800px;" />
 
 | Mode | Code | Description |
 |------|------|-------------|

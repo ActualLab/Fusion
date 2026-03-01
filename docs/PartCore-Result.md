@@ -77,13 +77,7 @@ ProcessUser(value);
 
 ### Result Hierarchy
 
-```mermaid
-flowchart BT
-    IResult_T["IResult‹T›"] --> IResult
-    IMutableResult --> IResult
-    IMutableResult_T["IMutableResult‹T›"] --> IMutableResult
-    IMutableResult_T --> IResult_T
-```
+<img src="/img/diagrams/PartCore-Result-1.svg" alt="Result Hierarchy" style="width: 100%; max-width: 800px;" />
 
 **Implementations in Fusion:**
 

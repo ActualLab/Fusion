@@ -10,14 +10,7 @@ Clean Architecture is a software design philosophy that emphasizes separation of
 
 ## Traditional Clean Architecture
 
-```mermaid
-block-beta
-    columns 1
-    P["Presentation (Controllers, Views)"]
-    A["Application (Use Cases, DTOs, Interfaces)"]
-    D["Domain (Entities, Value Objects)"]
-    I["Infrastructure (Database, External Services, Caching)"]
-```
+<img src="/img/diagrams/ActualLab.Fusion-vs-CleanArchitecture-1.svg" alt="Traditional Clean Architecture" style="width: 100%; max-width: 800px;" />
 
 ```csharp
 // Domain
