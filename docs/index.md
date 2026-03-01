@@ -177,25 +177,20 @@ Think of Fusion as **MSBuild for data processed by your backend, API, and even c
 - **Dependencies** = Other method call results acquired during method execution
 - **Incremental builds** = When you request a result, only outdated parts recompute
 
-```
-GetUserProfile(3)
-    ├──calls──► GetUser(3)
-    └──calls──► GetUserAvatar(3)
-                    └──calls──► GetThumbnail("user_3_avatar", 64)
+<AnimatedSvg src="/img/call-graph-computation.svg" alt="Animated diagram showing Fusion computing and caching a dependency graph" :duration="10" :restart-delay="5" max-width="750px" />
 
-When GetThumbnail(imgId, 64) is invalidated:
-  - GetUserAvatar(3) is immediately marked as inconsistent
-  - GetUserProfile(3) is immediately marked as inconsistent
-  - Nothing recomputes yet.
+When `GetThumbnail(imgId, 64)` is invalidated:
+- `GetUserAvatar(3)` is immediately marked as inconsistent
+- `GetUserProfile(3)` is immediately marked as inconsistent
+- Nothing recomputes yet.
 
-Next request for GetUserProfile(3) triggers recomputation of:
-  - GetUserAvatar(3)
-  - GetThumbnail("user_3_avatar", 64)
-  
-As for GetUser(3), it won't be recomputed when GetUserProfile(3) calls it,
-because it wasn't affected by GetThumbnail("user_3_avatar", 64) invalidation,
-so its cached value is going to be used.  
-```
+Next request for `GetUserProfile(3)` triggers recomputation of:
+- `GetUserAvatar(3)`
+- `GetThumbnail("user_3_avatar", 64)`
+
+As for `GetUser(3)`, it won't be recomputed when `GetUserProfile(3)` calls it,
+because it wasn't affected by `GetThumbnail("user_3_avatar", 64)` invalidation,
+so its cached value is going to be used.
 
 The **invalidation is always immediate and cascading**: when you invalidate a given call, 
 its dependency sub-graph is also invalidated, including remote dependencies.
