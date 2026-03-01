@@ -233,12 +233,12 @@ Here are real numbers from [Voxt](https://voxt.com/) &mdash; a Fusion-based app:
 | Remote dependencies per client                     | 1–2K  |
 | Time from app start to first contact list render   | 0.5s  |
 
-A typical backend invalidation touches just a few nodes on each client &mdash;
-only a tiny fraction of the graph is ever recomputed per change. 
-
 Having thousands of remote dependencies doesn't slow down startup &mdash;
 they resolve from the local cache first and update as soon as RPC updates 
 arrive.
+
+A typical backend invalidation touches just a few nodes on each client &mdash;
+only a tiny fraction of the graph is ever recomputed per change.
 
 ## See The Code
 

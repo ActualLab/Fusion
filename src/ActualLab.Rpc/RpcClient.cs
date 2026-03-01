@@ -1,5 +1,4 @@
 using ActualLab.Channels;
-using ActualLab.IO;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
