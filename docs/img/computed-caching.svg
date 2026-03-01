@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 380" width="100%" height="100%">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#f4f8fd"/>
       <stop offset="50%" stop-color="#eaf1fb"/>
       <stop offset="100%" stop-color="#e2ebf7"/>
     </linearGradient>
-    <clipPath id="clip1"><rect x="462" y="44" width="420" height="124" rx="8"/></clipPath>
-    <clipPath id="clip2"><rect x="462" y="180" width="420" height="100" rx="8"/></clipPath>
+    <clipPath id="clip1"><rect x="412" y="44" width="420" height="124" rx="8"/></clipPath>
+    <clipPath id="clip2"><rect x="412" y="180" width="420" height="100" rx="8"/></clipPath>
     <style>
       .code { font-family: "SF Mono","Fira Code","Cascadia Code",Consolas,Menlo,Monaco,monospace; font-size: 12px; fill: #1a1a2e }
       .result { font-family: "SF Mono","Fira Code","Cascadia Code",Consolas,Menlo,Monaco,monospace; font-size: 12px; fill: #4a8c66 }
@@ -147,14 +147,14 @@
   </defs>
 
   <!-- Background -->
-  <rect width="900" height="380" rx="10" fill="url(#bg)"/>
+  <rect width="850" height="380" rx="10" fill="url(#bg)"/>
 
   <!-- Divider line -->
-  <line x1="440" y1="30" x2="440" y2="350" stroke="#c8d0dc" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>
+  <line x1="390" y1="30" x2="390" y2="350" stroke="#c8d0dc" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>
 
   <!-- Panel labels -->
-  <text x="228" y="26" class="panel-label" text-anchor="middle">Code</text>
-  <text x="670" y="26" class="panel-label" text-anchor="middle">Cached Computed Values</text>
+  <text x="195" y="26" class="panel-label" text-anchor="middle">Code</text>
+  <text x="620" y="26" class="panel-label" text-anchor="middle">Cached Computed Values</text>
 
   <!-- ==================== LEFT PANEL: Code ==================== -->
 
@@ -163,14 +163,14 @@
   <g id="ln1" opacity="0.35">
     <text x="34" y="58" class="code">GetUserName(<tspan fill="#a05020">"session1"</tspan>);</text>
   </g>
-  <text id="res1" x="290" y="58" class="result" opacity="0">// &#x2192; "Dani"</text>
+  <text id="res1" x="240" y="58" class="result" opacity="0">// &#x2192; "Dani"</text>
 
   <!-- Line 2: GetUserName("session2") -->
   <rect id="acc2" x="24" y="78" width="3" height="18" rx="1.5" fill="#5a88c0" opacity="0"/>
   <g id="ln2" opacity="0.35">
     <text x="34" y="92" class="code">GetUserName(<tspan fill="#a05020">"session2"</tspan>);</text>
   </g>
-  <text id="res2" x="290" y="92" class="result" opacity="0">// &#x2192; "Bob"</text>
+  <text id="res2" x="240" y="92" class="result" opacity="0">// &#x2192; "Bob"</text>
 
   <!-- Line 3: Invalidate -->
   <rect id="acc3" x="24" y="126" width="3" height="36" rx="1.5" fill="#b87830" opacity="0"/>
@@ -184,82 +184,82 @@
   <g id="ln4" opacity="0.35">
     <text x="34" y="196" class="code">GetUserName(<tspan fill="#a05020">"session1"</tspan>);</text>
   </g>
-  <text id="res4" x="290" y="196" class="result" opacity="0">// &#x2192; "Daniella"</text>
+  <text id="res4" x="240" y="196" class="result" opacity="0">// &#x2192; "Daniella"</text>
 
   <!-- Line 5: GetUserName("session2") again -->
   <rect id="acc5" x="24" y="216" width="3" height="18" rx="1.5" fill="#5a88c0" opacity="0"/>
   <g id="ln5" opacity="0.35">
     <text x="34" y="230" class="code">GetUserName(<tspan fill="#a05020">"session2"</tspan>);</text>
   </g>
-  <text id="res5" x="290" y="230" class="result" opacity="0">// &#x2192; "Bob" <tspan class="cached-tag">(cached)</tspan></text>
+  <text id="res5" x="240" y="230" class="result" opacity="0">// &#x2192; "Bob" <tspan class="cached-tag">(cached)</tspan></text>
 
 
   <!-- ==================== RIGHT PANEL: Cards ==================== -->
 
   <!-- ===== Card 1: GetUserName, "session1" ===== -->
   <g clip-path="url(#clip1)">
-    <rect id="c1body" x="462" y="44" width="420" height="124" rx="8" fill="#f0f4fa" stroke="#d8dce6" stroke-width="1"/>
-    <rect x="462" y="44" width="420" height="28" fill="#5c6b82"/>
+    <rect id="c1body" x="412" y="44" width="420" height="124" rx="8" fill="#f0f4fa" stroke="#d8dce6" stroke-width="1"/>
+    <rect x="412" y="44" width="420" height="28" fill="#5c6b82"/>
   </g>
-  <rect x="462" y="44" width="420" height="124" rx="8" fill="none" stroke="#d8dce6" stroke-width="0.5" opacity="0.3"/>
+  <rect x="412" y="44" width="420" height="124" rx="8" fill="none" stroke="#d8dce6" stroke-width="0.5" opacity="0.3"/>
 
-  <text x="476" y="63" class="card-title">GetUserName, "session1"</text>
+  <text x="426" y="63" class="card-title">GetUserName, "session1"</text>
 
   <!-- Card1 type label -->
-  <text x="476" y="90" class="card-type">Computed&lt;string&gt;</text>
+  <text x="426" y="90" class="card-type">Computed&lt;string&gt;</text>
 
   <!-- Card1 "computing..." / "recomputing..." labels -->
-  <text id="c1comp1" x="476" y="112" class="computing" opacity="0">computing...</text>
-  <text id="c1comp2" x="476" y="134" class="computing" opacity="0">recomputing...</text>
+  <text id="c1comp1" x="426" y="112" class="computing" opacity="0">computing...</text>
+  <text id="c1comp2" x="426" y="134" class="computing" opacity="0">recomputing...</text>
 
   <!-- Card1 v1 instance box + text (main line) -->
-  <rect id="c1v1bx" x="470" y="99" width="404" height="20" rx="5" fill="#e8f5ec" stroke="#88c4a0" stroke-width="1" opacity="0"/>
+  <rect id="c1v1bx" x="420" y="99" width="404" height="20" rx="5" fill="#e8f5ec" stroke="#88c4a0" stroke-width="1" opacity="0"/>
   <g id="c1v1" opacity="0">
-    <text x="476" y="112" class="card-val">v1: <tspan fill="#2d6a4f">"Dani"</tspan></text>
+    <text x="426" y="112" class="card-val">v1: <tspan fill="#2d6a4f">"Dani"</tspan></text>
   </g>
-  <text id="c1tag1c" x="868" y="112" class="tag-con" text-anchor="end" opacity="0">&#x2713; consistent</text>
-  <text id="c1tag1i" x="868" y="112" class="tag-inc" text-anchor="end" opacity="0">&#x2717; inconsistent</text>
+  <text id="c1tag1c" x="818" y="112" class="tag-con" text-anchor="end" opacity="0">&#x2713; consistent</text>
+  <text id="c1tag1i" x="818" y="112" class="tag-inc" text-anchor="end" opacity="0">&#x2717; inconsistent</text>
 
   <!-- Card1 v2 instance box + text (main line) -->
-  <rect id="c1v2bx" x="470" y="99" width="404" height="20" rx="5" fill="#e8f5ec" stroke="#88c4a0" stroke-width="1" opacity="0"/>
+  <rect id="c1v2bx" x="420" y="99" width="404" height="20" rx="5" fill="#e8f5ec" stroke="#88c4a0" stroke-width="1" opacity="0"/>
   <g id="c1v2" opacity="0">
-    <text x="476" y="112" class="card-val">v2: <tspan fill="#2d6a4f">"Daniella"</tspan></text>
+    <text x="426" y="112" class="card-val">v2: <tspan fill="#2d6a4f">"Daniella"</tspan></text>
   </g>
-  <text id="c1tag2c" x="868" y="112" class="tag-con" text-anchor="end" opacity="0">&#x2713; consistent</text>
+  <text id="c1tag2c" x="818" y="112" class="tag-con" text-anchor="end" opacity="0">&#x2713; consistent</text>
 
   <!-- Card1 v1 grayed instance box + text (secondary line, persists in memory) -->
-  <rect id="c1v1oldbx" x="470" y="122" width="404" height="18" rx="5" fill="#f2f2f2" stroke="#ccc" stroke-width="0.75" opacity="0"/>
+  <rect id="c1v1oldbx" x="420" y="122" width="404" height="18" rx="5" fill="#f2f2f2" stroke="#ccc" stroke-width="0.75" opacity="0"/>
   <g id="c1v1old" opacity="0">
-    <text x="476" y="134" class="card-val-old">v1: "Dani"</text>
-    <text x="564" y="134" class="tag-old">stays in RAM until unreferenced (can be used in States, etc.)</text>
+    <text x="426" y="134" class="card-val-old">v1: "Dani"</text>
+    <text x="514" y="134" class="tag-old">stays in RAM until unreferenced (can be used in States, etc.)</text>
   </g>
 
   <!-- ===== Card 2: GetUserName, "session2" ===== -->
   <g clip-path="url(#clip2)">
-    <rect id="c2body" x="462" y="180" width="420" height="100" rx="8" fill="#f0f4fa" stroke="#d8dce6" stroke-width="1"/>
-    <rect x="462" y="180" width="420" height="28" fill="#5c6b82"/>
+    <rect id="c2body" x="412" y="180" width="420" height="100" rx="8" fill="#f0f4fa" stroke="#d8dce6" stroke-width="1"/>
+    <rect x="412" y="180" width="420" height="28" fill="#5c6b82"/>
   </g>
-  <rect x="462" y="180" width="420" height="100" rx="8" fill="none" stroke="#d8dce6" stroke-width="0.5" opacity="0.3"/>
+  <rect x="412" y="180" width="420" height="100" rx="8" fill="none" stroke="#d8dce6" stroke-width="0.5" opacity="0.3"/>
 
-  <text x="476" y="199" class="card-title">GetUserName, "session2"</text>
+  <text x="426" y="199" class="card-title">GetUserName, "session2"</text>
 
   <!-- Card2 type label -->
-  <text x="476" y="228" class="card-type">Computed&lt;string&gt;</text>
+  <text x="426" y="228" class="card-type">Computed&lt;string&gt;</text>
 
   <!-- Card2 "computing..." state -->
-  <text id="c2comp" x="476" y="254" class="computing" opacity="0">computing...</text>
+  <text id="c2comp" x="426" y="254" class="computing" opacity="0">computing...</text>
 
   <!-- Card2 v1 instance box + text -->
-  <rect id="c2v1bx" x="470" y="241" width="404" height="20" rx="5" fill="#e8f5ec" stroke="#88c4a0" stroke-width="1" opacity="0"/>
+  <rect id="c2v1bx" x="420" y="241" width="404" height="20" rx="5" fill="#e8f5ec" stroke="#88c4a0" stroke-width="1" opacity="0"/>
   <g id="c2v1" opacity="0">
-    <text x="476" y="254" class="card-val">v1: <tspan fill="#2d6a4f">"Bob"</tspan></text>
+    <text x="426" y="254" class="card-val">v1: <tspan fill="#2d6a4f">"Bob"</tspan></text>
   </g>
-  <text id="c2tag1c" x="868" y="254" class="tag-con" text-anchor="end" opacity="0">&#x2713; consistent</text>
+  <text id="c2tag1c" x="818" y="254" class="tag-con" text-anchor="end" opacity="0">&#x2713; consistent</text>
 
   <!-- Card2 cache-hit flash label -->
-  <text id="c2hit" x="672" y="270" class="cached-tag" text-anchor="middle" opacity="0">&#x21E0; cache hit</text>
+  <text id="c2hit" x="622" y="270" class="cached-tag" text-anchor="middle" opacity="0">&#x21E0; cache hit</text>
 
   <!-- Legend -->
-  <text x="476" y="318" class="legend">ComputedRegistry: one Computed&lt;T&gt; per ComputedInput = (service, method, args).</text>
-  <text x="476" y="334" class="legend">Invalidation evicts the entry; old instances stay in RAM until GC'd.</text>
+  <text x="426" y="318" class="legend">ComputedRegistry: one Computed&lt;T&gt; per ComputedInput = (service, method, args).</text>
+  <text x="426" y="334" class="legend">Invalidation evicts the entry; old instances stay in RAM until GC'd.</text>
 </svg>

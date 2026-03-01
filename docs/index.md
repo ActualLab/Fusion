@@ -197,19 +197,17 @@ typically in a UI component.
 But old cached values wrapped into `Computed<T>` instances remain accessible indefinitely,
 so UI can keep displaying them as long as it needs to (while updates are in progress or even later).
 
-**The dependency graph updates automatically** as your methods call each other or when invalidation occurs,
-so typically you don't even need to know it exists.
-
-This is exactly how incremental builds work: you mark targets as dirty by removing them,
-but they only rebuild when you run the build, and every artifact that's still consistent is reused.
-
-### What Gets Cached
-
 Fusion tracks one `Computed<T>` per each **(service, method, arguments)** combination
 in a `WeakMap`-style structure &mdash; invalidation evicts the entry,
 so the next call recomputes it, while unrelated entries stay cached:
 
 <AnimatedSvg src="/img/computed-caching.svg" alt="Animated diagram showing how Fusion caches one Computed value per unique method-arguments pair, with invalidation and recomputation" :duration="14" :restart-delay="5" max-width="900px" />
+
+**The dependency graph updates automatically** as your methods call each other or when invalidation occurs,
+so typically you don't even need to know it exists.
+
+**This is exactly how incremental builds work:** you mark targets as dirty by removing them,
+but they only rebuild when you run the build, and every artifact that's still consistent is reused.
 
 ### The Distributed Picture
 
@@ -218,6 +216,28 @@ invalidation cascades from backend to client, then recomputation flows
 back from client to backend, reusing every node that's still consistent:
 
 <AnimatedSvg src="/img/distributed-graph.svg" alt="Animated diagram showing Fusion's distributed dependency graph across Client, API Server, and Backend — invalidation cascades right-to-left, recomputation flows left-to-right reusing cached nodes" :duration="18" :restart-delay="5" max-width="850px" />
+
+When multiple clients share API servers, each recomputation
+benefits from work the previous one has already done &mdash;
+the later you recompute, the more cache hits you get:
+
+<AnimatedSvg src="/img/distributed-scaling.svg" alt="Animated diagram showing Fusion's distributed dependency graph at scale across 5 clients, 2 API servers, and 3 backend servers — invalidation cascades right-to-left, then sequential recomputation flows left-to-right with increasing cache hits" :duration="48" :restart-delay="5" max-width="1100px" />
+
+In production, the dependency graph is orders of magnitude larger.
+Here are real numbers from [Voxt](https://voxt.com/) &mdash; a Fusion-based app:
+
+| Metric                                             | Value |
+|----------------------------------------------------|-------|
+| Computed instances per client                      | 5–10K |
+| Remote dependencies per client                     | 1–2K  |
+| Time from app start to first contact list render   | 0.5s  |
+
+A typical backend invalidation touches just a few nodes on each client &mdash;
+only a tiny fraction of the graph is ever recomputed per change. 
+
+Having thousands of remote dependencies doesn't slow down startup &mdash;
+they resolve from the local cache first and update as soon as RPC updates 
+arrive.
 
 ## See The Code
 
