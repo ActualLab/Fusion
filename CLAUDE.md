@@ -64,6 +64,8 @@ Build artifacts are stored in `artifacts/claude-docker/` to avoid permission con
 - `NPM_READ_TOKEN` - NPM registry read token
 - `GOOGLE_CLOUD_PROJECT` - Google Cloud project ID
 - `ActualChat_*` - Any variables prefixed with `ActualChat_`
+- `ActualLab_*` - Any variables prefixed with `ActualLab_`
+- `Claude_*` - Any variables prefixed with `Claude_`
 
 **Google Cloud credentials**: The `~/.gcp` folder is mounted read-only to `/home/claude/.gcp`. If `GOOGLE_APPLICATION_CREDENTIALS` is set on the host, it's automatically remapped to `/home/claude/.gcp/key.json` inside the container.
 

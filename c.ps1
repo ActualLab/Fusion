@@ -536,9 +536,27 @@ switch ($mode) {
         if ($debugMode) { $wslArgs += "--debug" }
         $wslArgs += $claudeArgs
 
-        # Build env vars for WSL
+        # Collect propagated env vars for WSL (same rules as Docker)
+        $wslPropagatedParts = @()
+        Get-ChildItem env: | ForEach-Object {
+            $name  = $_.Name
+            $value = $_.Value
+            if ($name -match '__' -or
+                $name -eq 'GITHUB_TOKEN' -or
+                $name -eq 'NPM_READ_TOKEN' -or
+                $name -eq 'GOOGLE_CLOUD_PROJECT' -or
+                $name -like 'ActualChat_*' -or
+                $name -like 'ActualLab_*' -or
+                $name -like 'Claude_*') {
+                $escapedValue = $value -replace "'", "'\''"
+                $wslPropagatedParts += "$name='$escapedValue'"
+            }
+        }
+
+        # Build env vars for WSL (explicit vars after propagated ones to override)
         $wslProjectPath = ConvertTo-WSLPath $projectRoot
-        $wslEnvString = "AC_ProjectRoot='$wslProjectRoot' DISABLE_AUTOUPDATER=1 AC_ProjectPath='$wslProjectPath' AC_Worktree='$worktree'"
+        $wslPropagatedString = $wslPropagatedParts -join ' '
+        $wslEnvString = ("$wslPropagatedString AC_ProjectRoot='$wslProjectRoot' DISABLE_AUTOUPDATER=1 AC_ProjectPath='$wslProjectPath' AC_Worktree='$worktree'").Trim()
 
         $wslCommandFull = "cd '$wslWorkDir' && export $wslEnvString && pwsh '$wslScriptPath' $($wslArgs -join ' ')"
 
@@ -754,7 +772,7 @@ switch ($mode) {
         # Collect environment variables to propagate:
         # - Variables with __ in their names (e.g., ChatSettings__OpenAIApiKey)
         # - GITHUB_TOKEN, NPM_READ_TOKEN, GOOGLE_CLOUD_PROJECT
-        # - ActualChat_* variables
+        # - ActualChat_*, ActualLab_*, Claude_* variables
         $propagatedEnvVars = @()
         Get-ChildItem env: | ForEach-Object {
             $name  = $_.Name
@@ -763,7 +781,9 @@ switch ($mode) {
                 $name -eq 'GITHUB_TOKEN' -or
                 $name -eq 'NPM_READ_TOKEN' -or
                 $name -eq 'GOOGLE_CLOUD_PROJECT' -or
-                $name -like 'ActualChat_*') {
+                $name -like 'ActualChat_*' -or
+                $name -like 'ActualLab_*' -or
+                $name -like 'Claude_*') {
                 $propagatedEnvVars += "-e"
                 $propagatedEnvVars += "$name=$value"
             }
@@ -784,13 +804,12 @@ switch ($mode) {
             "--label", "worktree=$containerBaseName"
         )
 
-        $dockerArgs += $volumeMounts + @(
+        $dockerArgs += $volumeMounts + $propagatedEnvVars + @(
             "-e", "ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY"
-            "-e", "Claude_GeminiAPIKey=$env:Claude_GeminiAPIKey"
             "-e", "DISABLE_AUTOUPDATER=1"
             "-e", "DOTNET_SYSTEM_NET_DISABLEIPV6=1"
             "-e", "AC_ProjectRoot=/proj"
-        ) + $projectEnvVars + $propagatedEnvVars
+        ) + $projectEnvVars
 
         $dockerArgs += @(
             "-w", $dockerWorkDir
