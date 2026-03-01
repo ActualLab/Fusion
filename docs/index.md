@@ -217,9 +217,10 @@ back from client to backend, reusing every node that's still consistent:
 
 <AnimatedSvg src="/img/distributed-graph.svg" alt="Animated diagram showing Fusion's distributed dependency graph across Client, API Server, and Backend — invalidation cascades right-to-left, recomputation flows left-to-right reusing cached nodes" :duration="18" :restart-delay="5" max-width="850px" />
 
-When multiple clients share API servers, each recomputation
-benefits from work the previous one has already done &mdash;
-the later you recompute, the more cache hits you get:
+When multiple clients use multiple servers, the reuse rate of already-computed
+results is extremely high. Typically only the first client requesting data
+after an invalidation triggers actual computation &mdash;
+nearly everyone else gets a cache hit:
 
 <AnimatedSvg src="/img/distributed-scaling.svg" alt="Animated diagram showing Fusion's distributed dependency graph at scale across 5 clients, 2 API servers, and 3 backend servers — invalidation cascades right-to-left, then sequential recomputation flows left-to-right with increasing cache hits" :duration="48" :restart-delay="5" max-width="1100px" />
 
