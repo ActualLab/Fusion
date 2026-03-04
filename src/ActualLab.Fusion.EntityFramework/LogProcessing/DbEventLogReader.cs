@@ -42,7 +42,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             var dbEntries = dbContext.Set<TDbEntry>();
             var entries = await dbEntries.WithHints(LogKind.GetReadBatchQueryHints())
                 .Where(o => o.State == LogEntryState.New && o.DelayUntil < now)
-                .OrderBy(o => o.State).ThenBy(o => o.DelayUntil)
+                .OrderBy(o => o.DelayUntil)
                 .Take(batchSize)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
