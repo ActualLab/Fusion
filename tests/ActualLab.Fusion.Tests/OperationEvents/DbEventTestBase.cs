@@ -143,6 +143,46 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
         }
     }
 
+    [Fact]
+    public async Task DelayedEventsTimingTest()
+    {
+        var c = Services.GetRequiredService<EventCatcher>();
+        var clock = SystemClock.Instance;
+        var now = clock.Now;
+        var eventCount = 5;
+        var maxJitter = TimeSpan.FromSeconds(1);
+
+        // Schedule 5 events with staggered delays: now+1s, now+2s, ..., now+5s
+        var events = new OperationEvent[eventCount];
+        var expectedAt = new Moment[eventCount];
+        for (var i = 0; i < eventCount; i++) {
+            var id = $"d{i}";
+            expectedAt[i] = now + TimeSpan.FromSeconds(i + 1);
+            events[i] = E(id, expectedAt[i]);
+        }
+        await Enqueue(events);
+
+        // Wait for all events to be processed
+        var expectedIds = events.Select(e => ((EventCatcher_Event)e.Value!).Id).ToArray();
+        await ComputedTest.When(async ct => {
+            var processed = await c.Events.Use(ct);
+            processed.Count.Should().Be(eventCount);
+        }, TimeSpan.FromSeconds(eventCount + 10));
+
+        // Assert each event was processed close to its scheduled time
+        for (var i = 0; i < eventCount; i++) {
+            var id = expectedIds[i];
+            c.ProcessedAt.TryGetValue(id, out var processedAt).Should().BeTrue();
+            var jitter = processedAt - expectedAt[i];
+            WriteLine($"Event {id}: expected={expectedAt[i]}, " +
+                $"processed={processedAt}, jitter={jitter.ToShortString()}");
+            jitter.Should().BeGreaterThanOrEqualTo(TimeSpan.Zero,
+                $"event {id} should not be processed before its DelayUntil");
+            jitter.Should().BeLessThan(maxJitter,
+                $"event {id} should be processed within {maxJitter.TotalSeconds}s of its DelayUntil");
+        }
+    }
+
     // Private methods
 
     private OperationEvent ES(string id)

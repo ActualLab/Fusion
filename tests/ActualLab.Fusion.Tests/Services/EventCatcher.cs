@@ -8,6 +8,7 @@ public class EventCatcher(IServiceProvider services) : DbServiceBase<TestDbConte
 {
     public MutableState<ImmutableList<string>> Events { get; }
         = services.StateFactory().NewMutable(ImmutableList<string>.Empty);
+    public ConcurrentDictionary<string, Moment> ProcessedAt { get; } = new(StringComparer.Ordinal);
 
     [CommandHandler]
     public virtual Task OnEvent(EventCatcher_Event command, CancellationToken cancellationToken = default)
@@ -15,6 +16,7 @@ public class EventCatcher(IServiceProvider services) : DbServiceBase<TestDbConte
         if (Invalidation.IsActive)
             return Task.CompletedTask;
 
+        ProcessedAt.TryAdd(command.Id, Clocks.SystemClock.Now);
         Events.Set(command, static (command1, r) => r.Value.Add(command1.Id));
         return Task.CompletedTask;
     }

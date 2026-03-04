@@ -23,14 +23,15 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             .FirstOrDefaultAsync(x => x.Uuid == key, cancellationToken)
             .ConfigureAwait(false);
 
-    protected override async Task<int> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken)
+    protected override async Task<Moment> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken)
     {
         var activity = FusionInstruments.ActivitySource
             .IfEnabled(Settings.IsTracingEnabled)
             .StartActivity(GetType())
             .AddShardTags(shard);
         try {
-            var dbContext = await DbHub.CreateDbContext(shard, readWrite: true, cancellationToken)
+            var dbContext = await DbHub
+                .CreateDbContext(shard, readWrite: true, cancellationToken)
                 .ConfigureAwait(false);
             await using var _1 = dbContext.ConfigureAwait(false);
             var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -48,7 +49,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
             if (entries.Count == 0)
-                return 0;
+                return await GetMinDelayUntil(dbEntries, cancellationToken).ConfigureAwait(false);
 
             var logLevel = entries.Count == batchSize ? LogLevel.Warning : LogLevel.Debug;
             // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
@@ -67,7 +68,11 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             }
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
-            return entries.Count;
+            if (entries.Count >= batchSize)
+                return default; // Full batch = there might be more entries
+
+            // Partial batch - check if there are upcoming delayed entries
+            return await GetMinDelayUntil(dbEntries, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) {
             activity?.Finalize(e, cancellationToken);
@@ -76,6 +81,15 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
         finally {
             activity?.Dispose();
         }
+    }
+
+    protected async Task<Moment> GetMinDelayUntil(DbSet<TDbEntry> dbEntries, CancellationToken cancellationToken)
+    {
+        var minDelayUntil = await dbEntries
+            .Where(o => o.State < LogEntryState.Processed)
+            .MinAsync(o => (DateTime?)o.DelayUntil, cancellationToken)
+            .ConfigureAwait(false);
+        return minDelayUntil.DefaultKind(DateTimeKind.Utc).ToMoment() ?? Moment.MaxValue;
     }
 
     protected virtual IEnumerable<Task<bool>> GetProcessTasks(

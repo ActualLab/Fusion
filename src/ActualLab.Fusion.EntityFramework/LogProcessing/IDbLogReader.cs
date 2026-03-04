@@ -32,6 +32,7 @@ public abstract record DbLogReaderOptions
     public int BatchSize { get; init; } = 64;
     public RandomTimeSpan CheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.1);
     public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(0.25, 5);
+    public TimeSpan MaxClockDrift { get; init; } = TimeSpan.FromMilliseconds(50);
     public int ConcurrencyLevel { get; init; } = HardwareInfo.GetProcessorCountFactor(4);
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
     public bool IsTracingEnabled { get; init; }

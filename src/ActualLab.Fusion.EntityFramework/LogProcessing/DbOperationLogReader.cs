@@ -24,11 +24,11 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
             .FirstOrDefaultAsync(x => x.Index == key, cancellationToken)
             .ConfigureAwait(false);
 
-    protected override async Task<int> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken)
+    protected override async Task<Moment> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken)
     {
         var nextIndexOpt = await TryGetNextIndex(shard, cancellationToken).ConfigureAwait(false);
         if (nextIndexOpt is not { } nextIndex)
-            return 0; // The log is empty
+            return Moment.MaxValue; // The log is empty
 
         var activity = FusionInstruments.ActivitySource
             .IfEnabled(Settings.IsTracingEnabled)
@@ -50,7 +50,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
             if (entries.Count == 0)
-                return 0;
+                return Moment.MaxValue; // No more entries
 
             var logLevel = entries.Count == batchSize ? LogLevel.Warning : LogLevel.Debug;
             // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
@@ -62,7 +62,9 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 .Collect(Settings.ConcurrencyLevel, useCurrentScheduler: false, cancellationToken)
                 .ConfigureAwait(false);
             NextIndexes[shard] = entries[^1].Index + 1;
-            return entries.Count;
+            return entries.Count >= batchSize
+                ? default // Full batch = there might be more entries
+                : Moment.MaxValue; // No more entries
         }
         catch (Exception e) {
             activity?.Finalize(e, cancellationToken);

@@ -28,7 +28,7 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
     public abstract DbLogKind LogKind { get; }
 
     protected abstract Task<TDbEntry?> GetEntry(TDbContext dbContext, TDbKey key, CancellationToken cancellationToken);
-    protected abstract Task<int> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken);
+    protected abstract Task<Moment> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken);
     protected abstract Task<bool> ProcessOne(string shard, TDbKey key, bool mustDiscard, CancellationToken cancellationToken);
     protected abstract Task Process(string shard, TDbEntry entry, CancellationToken cancellationToken);
 
@@ -39,18 +39,15 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
             .Log(Log)
             .Start(cancellationToken);
 
-    protected virtual Task WhenChanged(string shard, CancellationToken cancellationToken)
-        => LogWatcher.WhenChanged(shard, cancellationToken);
-
     protected virtual async Task ProcessNewEntries(string shard, CancellationToken cancellationToken)
     {
-        var timeoutCts = cancellationToken.CreateLinkedTokenSource();
+        var checkDelay = Settings.CheckPeriod.Next();
+        var checkDelayUntil = SystemClock.Now + checkDelay;
+        var timeoutCts = cancellationToken.CreateLinkedTokenSource(checkDelay);
         try {
-            var timeoutTask = SystemClock.Delay(Settings.CheckPeriod.Next(), timeoutCts.Token);
-            // WhenEntriesAdded should be invoked before we start reading!
-            var whenEntriesAdded = await Task
-                .WhenAny(WhenChanged(shard, timeoutCts.Token), timeoutTask)
-                .ConfigureAwait(false);
+            // LogWatcher.WhenChanged should be invoked before we start reading!
+            var whenChanged = LogWatcher.WhenChanged(shard, timeoutCts.Token);
+            var sleepUntil = Moment.MaxValue;
             while (true) {
                 // Reading entries in batches
                 int batchSize;
@@ -62,12 +59,32 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
 
                     await Task.Delay(250, cancellationToken).ConfigureAwait(false);
                 }
-                var entryCount = await ProcessBatch(shard, batchSize, cancellationToken).ConfigureAwait(false);
-                if (entryCount < batchSize)
-                    break;
+                var lastSleepUntil = await ProcessBatch(shard, batchSize, cancellationToken).ConfigureAwait(false);
+                if (lastSleepUntil == default)
+                    continue; // There are more entries to process
+
+                if (lastSleepUntil < Moment.MaxValue)
+                    sleepUntil = Moment.Min(sleepUntil, lastSleepUntil + Settings.MaxClockDrift);
+                break;
             }
 
-            await whenEntriesAdded.ConfigureAwait(false);
+            // Check if there are upcoming delayed entries that need earlier wake-up
+            if (sleepUntil < checkDelayUntil) {
+                try {
+                    var sleepDelay = sleepUntil - SystemClock.Now;
+                    if (sleepDelay <= TimeSpan.Zero)
+                        // ReSharper disable once MethodHasAsyncOverload
+                        timeoutCts.Cancel();
+                    else
+                        timeoutCts.CancelAfter(sleepDelay);
+                }
+                catch {
+                    // Intended
+                }
+            }
+
+            await whenChanged.SilentAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
         }
         finally {
             // We have to cancel timeoutCts to abort WhenEntriesAdded & timeoutTask
