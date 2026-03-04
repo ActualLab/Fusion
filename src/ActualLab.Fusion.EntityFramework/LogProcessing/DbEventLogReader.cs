@@ -41,9 +41,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             var now = SystemClock.Now.ToDateTime();
             var dbEntries = dbContext.Set<TDbEntry>();
             var entries = await dbEntries.WithHints(LogKind.GetReadBatchQueryHints())
-                // It's .Where(o => o.State == LogEntryState.New && o.DelayUntil < now),
-                // just written in a way that's more likely to utilize (State, DelayUntil) index
-                .Where(o => o.State < LogEntryState.Processed && o.DelayUntil < now)
+                .Where(o => o.State == LogEntryState.New && o.DelayUntil < now)
                 .OrderBy(o => o.State).ThenBy(o => o.DelayUntil)
                 .Take(batchSize)
                 .ToListAsync(cancellationToken)
@@ -90,7 +88,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
 #else
         var minDelayUntil = await dbEntries.AsQueryable()
 #endif
-            .Where(o => o.State < LogEntryState.Processed)
+            .Where(o => o.State == LogEntryState.New)
             .MinAsync(o => (DateTime?)o.DelayUntil, cancellationToken)
             .ConfigureAwait(false);
         return minDelayUntil.DefaultKind(DateTimeKind.Utc).ToMoment() ?? Moment.MaxValue;
