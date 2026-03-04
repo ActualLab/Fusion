@@ -85,7 +85,11 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
 
     protected async Task<Moment> GetMinDelayUntil(DbSet<TDbEntry> dbEntries, CancellationToken cancellationToken)
     {
+#if NET6_0_OR_GREATER
         var minDelayUntil = await dbEntries
+#else
+        var minDelayUntil = await dbEntries.AsQueryable()
+#endif
             .Where(o => o.State < LogEntryState.Processed)
             .MinAsync(o => (DateTime?)o.DelayUntil, cancellationToken)
             .ConfigureAwait(false);

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using ActualLab.OS;
 
 namespace ActualLab.Tests;
 
@@ -98,7 +99,7 @@ public class TypeScriptRunner(ITestOutputHelper @out)
         // On Windows, .cmd shims can't be started directly with UseShellExecute=false
         // (CreateProcess doesn't handle .cmd files). Route through cmd.exe.
         string fileName, finalArguments;
-        if (OperatingSystem.IsWindows() && executable.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)) {
+        if (OSInfo.IsWindows && executable.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)) {
             fileName = "cmd.exe";
             finalArguments = $"/c \"\"{executable}\" {arguments}\"";
         }
@@ -137,8 +138,13 @@ public class TypeScriptRunner(ITestOutputHelper @out)
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
         var stderrTask = process.StandardError.ReadToEndAsync();
 
-        using var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(30));
+        var processTimeout = (timeout ?? TimeSpan.FromSeconds(30)).Positive();
+#if NET5_0_OR_GREATER
+        using var cts = new CancellationTokenSource(processTimeout);
         await process.WaitForExitAsync(cts.Token);
+#else
+        process.WaitForExit((int)processTimeout.TotalMilliseconds);
+#endif
 
         var stdout = await stdoutTask;
         var stderr = await stderrTask;
@@ -151,7 +157,7 @@ public class TypeScriptRunner(ITestOutputHelper @out)
 
     private static string FindGlobalBin(string name)
     {
-        var bin = OperatingSystem.IsWindows() ? $"{name}.cmd" : name;
+        var bin = OSInfo.IsWindows ? $"{name}.cmd" : name;
         var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
         foreach (var dir in pathEnv.Split(Path.PathSeparator)) {
             if (string.IsNullOrWhiteSpace(dir))
@@ -175,7 +181,7 @@ public class TypeScriptRunner(ITestOutputHelper @out)
 
     private string? FindLocalBinOrNull(string name)
     {
-        var bin = OperatingSystem.IsWindows() ? $"{name}.cmd" : name;
+        var bin = OSInfo.IsWindows ? $"{name}.cmd" : name;
         var path = Path.Combine(TsDir, "node_modules", ".bin", bin);
         return File.Exists(path) ? path : null;
     }

@@ -88,18 +88,18 @@ public class ShardMapTest(ITestOutputHelper @out) : TestBase(@out)
         var iterations = nodeCount * 50;
         var movesList = new List<int>(iterations * 2);
 
-        var currentMap = new ShardMap<string>(shardCount, [..nodes.Order()], builder: builder);
+        var currentMap = new ShardMap<string>(shardCount, [..nodes.OrderBy(x => x)], builder: builder);
         for (var iter = 0; iter < iterations; iter++) {
             // Remove a random node
             var removeIndex = rnd.Next(nodes.Count);
             nodes.RemoveAt(removeIndex);
-            var afterRemoveMap = new ShardMap<string>(shardCount, [..nodes.Order()], builder: builder);
+            var afterRemoveMap = new ShardMap<string>(shardCount, [..nodes.OrderBy(x => x)], builder: builder);
             movesList.Add(CountMoves(currentMap, afterRemoveMap, shardCount));
             currentMap = afterRemoveMap;
 
             // Add a new node
             nodes.Add($"node-{nextNodeId++}");
-            var afterAddMap = new ShardMap<string>(shardCount, [..nodes.Order()], builder: builder);
+            var afterAddMap = new ShardMap<string>(shardCount, [..nodes.OrderBy(x => x)], builder: builder);
             movesList.Add(CountMoves(currentMap, afterAddMap, shardCount));
             currentMap = afterAddMap;
         }
@@ -133,7 +133,7 @@ public class ShardMapTest(ITestOutputHelper @out) : TestBase(@out)
                 nodes.Add($"node-{i}");
             else
                 nodes.RemoveAt(rnd.Next(nodes.Count));
-            var shardMap = new ShardMap<string>(shardCount, [..nodes.Order()]);
+            var shardMap = new ShardMap<string>(shardCount, [..nodes.OrderBy(x => x)]);
             if (!shardMap.IsEmpty) {
                 var nodeIndexes = shardMap.NodeIndexes;
                 nodeIndexes.All(x => x.HasValue).Should().BeTrue();
