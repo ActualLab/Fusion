@@ -75,9 +75,9 @@ if ($currentOS -eq "Windows" -and $hasWindowsTerminal -and -not $env:WT_SESSION 
     $hasDryRun = $args -contains "--dry-run"
     $hasHelp = $args -contains "help" -or $args -contains "-h" -or $args -contains "--help" -or $args -contains "-?"
     if ($hasDebug -or $hasBuild -or $hasDryRun -or $hasHelp) {
-        $wtArgs = @("-d", $workDir, "--", "pwsh", "-NoExit", "-File", $scriptPath) + $args
+        $wtArgs = @("-d", $workDir, "--", "pwsh", "-NoProfile", "-NoExit", "-File", $scriptPath) + $args
     } else {
-        $wtArgs = @("-d", $workDir, "--", "pwsh", "-File", $scriptPath) + $args
+        $wtArgs = @("-d", $workDir, "--", "pwsh", "-NoProfile", "-File", $scriptPath) + $args
     }
     & wt @wtArgs
     exit 0
@@ -151,6 +151,7 @@ $worktreeSuffix        = $null     # set when wt argument is used
 $featureWorktreeSuffix = $null     # set when fwt/bwt argument is used
 $wtType                = $null     # worktree type: "feature" or "bugfix"
 $newContainer          = $false
+$renewContainer        = $false
 $dryRun                = $false
 $debugMode             = $false
 $claudeArgs            = @()
@@ -174,6 +175,7 @@ function Show-Help {
     Write-Host ""
     Write-Host "Options:"
     Write-Host "  --new        Force creation of a new Docker container (skip reuse)"
+    Write-Host "  --renew      Remove existing containers and start a new one (use after image rebuild)"
     Write-Host "  --dry-run    Show environment variables and command without executing"
     Write-Host "  --debug      Show debug output for troubleshooting"
     Write-Host ""
@@ -281,6 +283,14 @@ while ($argIndex -lt $args.Count) {
     # Check for --new (force new Docker container)
     if ($currentArg -eq "--new") {
         $newContainer = $true
+        $argIndex++
+        continue
+    }
+
+    # Check for --renew (remove existing containers and start fresh)
+    if ($currentArg -eq "--renew") {
+        $renewContainer = $true
+        $newContainer = $true  # --renew implies --new
         $argIndex++
         continue
     }
@@ -728,6 +738,26 @@ switch ($mode) {
         if ($dryRun) { $dockerScriptArgs += "--dry-run" }
         if ($debugMode) { $dockerScriptArgs += "--debug" }
         $dockerScriptArgs += $claudeArgs
+
+        # --renew: remove existing containers for this worktree before creating a new one
+        if ($renewContainer) {
+            $existingToRemove = @(docker ps -a --filter "label=worktree=$containerBaseName" --format "{{.ID}}`t{{.Names}}" 2>$null | Where-Object { $_ })
+            if ($existingToRemove.Count -gt 0) {
+                foreach ($entry in $existingToRemove) {
+                    $parts = $entry -split "`t"
+                    $cId = $parts[0]
+                    $cName = $parts[1]
+                    if ($dryRun) {
+                        Write-Host "Would remove container: $cName ($cId)" -ForegroundColor Yellow
+                    } else {
+                        Write-Host "Removing container: $cName" -ForegroundColor Cyan
+                        docker rm -f $cId 2>$null | Out-Null
+                    }
+                }
+            } else {
+                Write-Host "No existing containers to remove." -ForegroundColor DarkGray
+            }
+        }
 
         # Container reuse logic (default unless --new is specified)
         if (-not $newContainer) {

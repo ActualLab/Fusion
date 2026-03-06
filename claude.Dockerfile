@@ -70,15 +70,16 @@ RUN useradd -m $USERNAME && \
 
 # Setup directories for all projects (mounted at /proj/<project-name>)
 RUN mkdir -p /home/$USERNAME/.claude && \
-    touch /home/$USERNAME/.claude.json && \
+    echo '{}' > /home/$USERNAME/.claude.json && \
     mkdir -p /proj && \
     chown -R $USERNAME:$USERNAME /home/$USERNAME/.claude /home/$USERNAME/.claude.json /proj
 
 # Configure git to trust all project directories under /proj (mounted projects)
 # This avoids "dubious ownership" errors when projects are mounted from Windows
-RUN git config --global --add safe.directory /proj/ActualChat && \
-    git config --global --add safe.directory /proj/ActualLab.Fusion && \
-    git config --global --add safe.directory /proj/ActualLab.Fusion.Samples
+# Uses --system (writes to /etc/gitconfig) because:
+# - --global as root writes to /root/.gitconfig, invisible to the claude user
+# - the host's .gitconfig is mounted over /home/claude/.gitconfig at runtime
+RUN git config --system --add safe.directory '*'
 
 # NPM global setup for user
 RUN mkdir -p /usr/local/share/npm-global && \
@@ -104,14 +105,20 @@ ENV SHELL=/bin/zsh
 # Switch to user for npm global install
 USER $USERNAME
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-ENV PATH=$PATH:/usr/local/share/npm-global/bin
+RUN mkdir -p /home/claude/.local/bin
+ENV PATH=/home/claude/.local/bin:$PATH:/usr/local/share/npm-global/bin
 
 # Pre-download Playwright Chromium browser (~280MB, speeds up first use)
 RUN playwright install chromium
 
-# Install Claude Code CLI (pinned version, auto-update disabled)
+# Install Claude Code CLI (native installer, auto-update disabled at runtime)
 ENV DISABLE_AUTOUPDATER=1
-RUN npm install -g @anthropic-ai/claude-code@2.1.63
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.69
+
+# Install frontend-design plugin
+RUN mkdir -p /home/claude/.claude/skills/frontend-design && \
+    curl -fsSL -o /home/claude/.claude/skills/frontend-design/SKILL.md \
+    https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/frontend-design/skills/frontend-design/SKILL.md
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj
