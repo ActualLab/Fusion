@@ -1,11 +1,11 @@
-# Embedded Authentication
+# Standalone Authentication
 
 Fusion's built-in authentication works well for getting started, but its generics-heavy design
-adds complexity that many apps don't need. **Embedded authentication** is an approach where you
+adds complexity that many apps don't need. **Standalone authentication** is an approach where you
 extract the authentication logic from Fusion packages into your own project, giving you full
 control and the ability to simplify it for your specific needs.
 
-The [Embedded Authentication PR](https://github.com/ActualLab/Fusion/pull/61)
+The [Standalone Authentication PR](https://github.com/ActualLab/Fusion/pull/61)
 demonstrates this approach using the TodoApp sample. It removes all dependencies on
 `ActualLab.Fusion.Ext.Contracts`, `ActualLab.Fusion.Ext.Services`, and
 `ActualLab.Fusion.Blazor.Authentication`, replacing them with local types that are simpler and
@@ -38,7 +38,7 @@ and owning it gives you the freedom to evolve it with your app.
 | `fusionAuth.js` from `Blazor.Authentication` | Local copy in `wwwroot/js/` |
 
 The key insight: instead of one monolithic `IAuth` / `IAuthBackend` pair doing everything,
-the embedded approach splits responsibilities into focused services:
+the standalone approach splits responsibilities into focused services:
 
 - **`IUserApi`** &mdash; client-facing queries (replaces `IAuth`)
 - **`ISessionBackend`** &mdash; session lifecycle management (replaces part of `IAuthBackend`)
@@ -47,7 +47,7 @@ the embedded approach splits responsibilities into focused services:
 
 ## Extracted Components
 
-The embedded auth system is organized into four layers.
+The standalone auth system is organized into four layers.
 
 ### Abstractions (shared between client and server)
 
@@ -231,12 +231,12 @@ fusion.AddDbAuthService<AppDbContext, string>();
 fusionServer.AddAuthEndpoints();
 ```
 
-The embedded version is more verbose, but every service is yours to inspect, modify, and debug.
+The standalone version is more verbose, but every service is yours to inspect, modify, and debug.
 
 
 ## Migration Steps
 
-To embed authentication in your own app:
+To set up standalone authentication in your own app:
 
 1. **Copy the contract types** (`User`, `UserId`, `UserIdentity`, `SessionInfo`, `IUserApi`)
    into your shared/abstractions project. Adjust namespaces to match your app.
@@ -264,7 +264,7 @@ To embed authentication in your own app:
 
 ::: tip Use AI to Help
 You can use AI tools like Claude to accelerate this migration. Point it at the
-[Embedded Authentication PR](https://github.com/ActualLab/Fusion/pull/61)
+[Standalone Authentication PR](https://github.com/ActualLab/Fusion/pull/61)
 and your own codebase, and ask it to adapt the extracted types to your app's needs.
 :::
 

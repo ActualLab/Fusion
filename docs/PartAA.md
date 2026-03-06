@@ -12,15 +12,15 @@ on generics and abstractions to cover many general cases, which adds significant
 you may not need.
 
 **Our recommendation**: Start with Fusion's authentication to get your app working quickly. As your
-app matures, consider **[embedding the authentication code](PartAA-X.md)** directly into your
+app matures, consider **[switching to standalone authentication](PartAA-X.md)** directly into your
 project and simplifying it to match your specific needs. The
-[Embedded Authentication PR](https://github.com/ActualLab/Fusion/pull/61)
+[Standalone Authentication PR](https://github.com/ActualLab/Fusion/pull/61)
 demonstrates exactly this approach using the TodoApp sample — it removes all Fusion auth package
 dependencies and replaces them with local, simplified types. This is exactly what we do in
 [Voxt](https://voxt.ai) — the result is clearer code with far fewer abstractions.
 
 You can use AI tools like Claude to help with this migration: point it at the
-[Embedded Authentication PR](https://github.com/ActualLab/Fusion/pull/61) and your own codebase, and ask it to adapt the extracted types to
+[Standalone Authentication PR](https://github.com/ActualLab/Fusion/pull/61) and your own codebase, and ask it to adapt the extracted types to
 your app's needs.
 :::
 
@@ -57,7 +57,7 @@ For Blazor apps, add `ActualLab.Fusion.Blazor.Authentication` which references `
 | [Interfaces & Commands](PartAA-Interfaces.md) | Core APIs: `IAuth`, `IAuthBackend`, `User`, `Session`, commands |
 | [Database Services](PartAA-DB.md) | `DbAuthService`, entity types, session trimmer |
 | [Server Components](PartAA-Server.md) | `SessionMiddleware`, `ServerAuthHelper`, ASP.NET Core integration |
-| [Embedded Authentication](PartAA-X.md) | Extracting auth into your own project for full control |
+| [Standalone Authentication](PartAA-X.md) | Extracting auth into your own project for full control |
 | [Diagrams](PartAA-D.md) | Architecture and flow diagrams |
 | [Cheat Sheet](PartAA-CS.md) | Quick reference with code snippets |
 
@@ -633,6 +633,6 @@ And if you are curious, `SignOutEverywhere()` signs out _every_ session of the c
 - [Interfaces & Commands](PartAA-Interfaces.md) - Deep dive into `IAuth`, `IAuthBackend`, `User`, `Session`, and commands
 - [Database Services](PartAA-DB.md) - Configure `DbAuthService`, customize entities, and manage sessions
 - [Server Components](PartAA-Server.md) - Understand `SessionMiddleware`, `ServerAuthHelper`, and ASP.NET Core integration
-- [Embedded Authentication](PartAA-X.md) - Extract auth into your own project for full control
+- [Standalone Authentication](PartAA-X.md) - Extract auth into your own project for full control
 - [Diagrams](PartAA-D.md) - Visual architecture and flow diagrams
 - [Cheat Sheet](PartAA-CS.md) - Quick reference with common patterns
