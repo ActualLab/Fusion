@@ -8,6 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+## 12.1.89+ee8734c3 | npm: 12.1.69
+
+Release date: 2026-03-04
+
+### Breaking Changes
+- `ShardMap<TNode>` constructor no longer accepts `Func<TNode, IEnumerable<int>>` 
+  for custom hashing — use `ShardMapBuilder` parameter instead
+- Default shard mapping algorithm changed from greedy to rendezvous hashing — 
+  existing shard assignments will differ after upgrade
+- `DbLogReader.ProcessBatch` return type changed from `Task<int>` to `Task<Moment>` — 
+  subclasses must update their override signatures
+
+### Added
+- `ShardMapBuilder` abstraction with two built-in strategies: 
+  `GreedyShardMapBuilder` (old behavior) and `RendezvousShardMapBuilder` (new default) 
+   for optimal minimal reallocation when nodes change
+- `DbEventLogReader.GetMinDelayUntil` for precise delayed event scheduling — 
+  log reader now sleeps until the next delayed entry instead of polling on a fixed interval
+
+### Changed
+- Improved log processing queries in `DbEventLogReader`: it uses `== LogEntryState.New` filter 
+  and `OrderBy(DelayUntil)` for more reliable index utilization
+
+### Fixed
+- Operation event processing now schedules precisely based on the earliest
+  pending entry's `DelayUntil`, avoiding unnecessary polling
+- `DbLogReader.ProcessNewEntries` reworked to support precise sleep-until
+  scheduling based on `ProcessBatch` return value
+
+### Documentation
+- Replaced Mermaid diagrams with SVG images in architecture docs
+- Added animated SVG diagrams for distributed scaling, dependency graphs, caching, and recomputation
+- Added TypeScript port documentation section
+
+### Tests
+- Added `ShardMapBuilder` comparison tests (greedy vs rendezvous)
+- Added delayed event processing test with precise scheduling verification
+
+
 ## 12.1.69+10006328 | npm: 12.1.69
 
 Release date: 2026-02-22
