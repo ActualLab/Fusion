@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `+HexNumber` after version number is the commit hash of this version.
 It isn't included into the NuGet package version.
 
+To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
+
+
 ## 12.1.89+ee8734c3 | npm: 12.1.69
 
 Release date: 2026-03-04
@@ -615,7 +618,87 @@ Release date: 2025-10-25
 - Added `.instructions.md` (like AGENTS.md) for agent rules
 - Finalized Part01, added examples for `Computed<T>.When()` and `Changes()` methods.
 
-## Earlier Versions
 
-For changes in earlier versions, please refer to the git commit history
-or see "Fusion/🎉Releases" on Voxt.ai: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
+## Key Changes in 2025
+
+- **Documentation website launch** &ndash; https://fusion.actuallab.net/ with VitePress,
+  migrated Parts 01–13 from the old tutorial, video TOCs, GitHub Pages deployment workflow.
+- **RPC routing and distributed services overhaul** &ndash; new `RpcLocalExecutionMode`,
+  `IRpcMiddleware` stack (replacing `IRpcInboundCallPreprocessor`), `RpcRoutingCommandHandler`,
+  `RpcCallOptions`, `RpcServiceBuilder.Inject`, and much more robust rerouting logic
+  for shard-aware distributed services.
+- **Invalidation path tracking and consolidation** &ndash; `InvalidationSource`,
+  `Invalidation.TrackingMode`, `ComputedOptions.ConsolidationDelay` for grouping rapid
+  invalidations, and `FusionMonitor` invalidation path statistics.
+- **.NET 10 support**.
+
+
+## Key Changes in 2024
+
+- **RPC serialization formats revamp** &ndash; introduced `mempack2`/`msgpack2` binary formats with
+  compact method name hashes (`mempack2c`/`msgpack2c`), serialization format negotiation,
+  and zero-copy serialization in the transport layer. `RpcByteMessageSerializer` and
+  `FastRpcMessageByteSerializer` brought significant throughput gains.
+- **`OperationEvent` introduction** &ndash; event handling with `DbEventTestBase`,
+- **.NET 9 support and Native AOT** &ndash; full .NET 9 support (RC1 → release), proxy generators
+  updated with AOT-compatible code generation (`ProxyCodeKeeper`, `KeepCode`), and
+  `[UnsafeAccessor]`-based helpers for internal reflection.
+- **.NET 9 support**.
+
+
+## Key Changes in 2023
+
+- **`ActualLab.Rpc` &ndash; new RPC framework** &ndash; built from scratch starting April 2023,
+  replacing the old `Replica`/`Publisher`/`Replicator` bridge with a modern WebSocket-based
+  RPC system. Includes `RpcPeer`, `RpcStream`, `RpcHub`, call routing, reconnection,
+  shared object tracking, and binary serialization.
+- **Compute caching (client-side)** &ndash; `ClientComputeMethodFunction` improvements and
+  `RpcCacheKey` for caching RPC compute method results on the client side.
+- **Blazor improvements** &ndash; `ComputedState.Options.TryComputeSynchronously` for faster
+  initial rendering, improved `ComputedStateComponent`, `BlazorCircuitContext` enhancements,
+  and `RpcPeerStateMonitor` for connection state UI.
+- **Rename from `Stl.*` to `ActualLab.*`** &ndash; all NuGet packages, namespaces, and project files
+  renamed in December 2023 (e.g., `Stl.Fusion` → `ActualLab.Fusion`, `Stl.CommandR` →
+  `ActualLab.CommandR`).
+- **.NET 8 support** &ndash; full .NET 8 support including `[UnsafeAccessor]` usage,
+  IL trimming markup, `[DynamicDependency]` annotations, and AOT-related preparations.
+
+
+## Key Changes in 2022
+
+- **Roslyn proxy generators** &ndash; `Stl.Generators` package with `ProxyGenerator` for
+  compile-time proxy generation via Roslyn source generators, replacing runtime Castle
+  DynamicProxy for `[ComputeMethod]` and command service interception.
+- **.NET 7 support** &ndash; added .NET 7 targeting (RC2 → release), updated framework
+  dependencies, and CI workflows.
+
+
+## Key Changes in 2021
+
+- **Binary serialization** &ndash; initial `MessagePack` serialization support,
+  `IByteSerializer`/`ITextSerializer` abstractions, and `TypeDecoratingSerializer`
+  for polymorphic serialization. Refactored text serializers from `ITextWriter`/`ITextReader`
+  to simpler Read/Write overloads.
+- **OpenTelemetry support** &ndash; initial `System.Diagnostics.DiagnosticSource` integration
+  with `ActivitySource`-based tracing for compute methods and command handlers.
+- **.NET 6 support**.
+
+
+## Key Changes in 2020
+
+Year of project inception.
+
+- **Fusion core** &ndash; established the foundational `Computed<T>`, `ComputeMethod`,
+  `State`/`MutableState`/`LiveState` abstractions, `ComputedRegistry`, automatic
+  dependency tracking, and invalidation pipeline.
+- **CQRS / CommandR** &ndash; `Stl.CommandR` command processing pipeline with
+  `ICommand<T>`, `CommandContext`, `CommandHandler`, and middleware pipeline
+  for orchestrating side-effect-producing operations alongside Fusion's read model.
+- **Replica services and WebSocket bridge** &ndash; `ReplicaService`, `Publisher`/`Replicator`
+  bridge over WebSockets, `SubscriptionProcessor` for managing live subscriptions.
+- **Entity Framework integration** &ndash; `Stl.Fusion.EntityFramework` with `DbOperationScope`,
+  `DbAuthService`, `DbSessionInfo`, early multi-tenancy support, and PostgreSQL/MySQL/SQL Server
+  provider compatibility.
+- **.NET 5 and multi-targeting** &ndash; migrated from .NET Core 3.1 to .NET 5 with
+  multi-targeting.
+

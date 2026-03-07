@@ -93,6 +93,14 @@ await page.goto('https://example.com');
 
 Since Docker uses `--network host`, `localhost:9222` reaches the host's Chrome directly.
 
+**Docker host IP resolution**: If `localhost` doesn't work (e.g., it resolves to `::1` IPv6 while Chrome listens on IPv4 only), resolve the host IP explicitly:
+
+```bash
+getent ahosts host.docker.internal | awk 'NR==1{print $1}'
+```
+
+Then use the resulting IP (e.g., `http://192.168.65.254:9222`) instead of `localhost`.
+
 ## Accessing Sibling Projects
 
 `AC_ProjectRoot` points to the directory that contains all projects. In Docker it is `/proj`, so sibling projects are accessible at `/proj/ActualLab.Fusion`, `/proj/ActualLab.Fusion.Samples`, etc.
