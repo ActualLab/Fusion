@@ -10,7 +10,6 @@ using ActualLab.Resilience;
 using ActualLab.Rpc;
 using ActualLab.Trimming;
 using ActualLab.Versioning;
-using ActualLab.Versioning.Providers;
 
 namespace ActualLab.CommandR;
 

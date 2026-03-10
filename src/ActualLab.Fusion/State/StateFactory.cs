@@ -34,6 +34,9 @@ public class StateFactory(IServiceProvider services, bool isScoped) : IHasServic
     public virtual MutableState<T> NewMutable<T>(MutableState<T>.Options options)
         => new(options, Services);
 
+    public virtual VersionState NewVersion(VersionState.Options options)
+        => new(options, Services);
+
     public virtual ComputedState<T> NewComputed<T>(
         ComputedState<T>.Options options,
         Func<CancellationToken, Task<T>> computer)

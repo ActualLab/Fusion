@@ -1,4 +1,4 @@
-namespace ActualLab.Versioning.Providers;
+namespace ActualLab.Versioning;
 
 /// <summary>
 /// A <see cref="VersionGenerator{TVersion}"/> that generates monotonically increasing
