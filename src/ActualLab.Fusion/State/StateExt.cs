@@ -28,15 +28,15 @@ public static class StateExt
         [CallerFilePath] string? file = null,
         [CallerMemberName] string? member = null,
         [CallerLineNumber] int line = 0)
-        => state.Computed.Invalidate(immediately, new InvalidationSource(file, member, line));
+        => state.GetExistingComputed()?.Invalidate(immediately, new InvalidationSource(file, member, line));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Invalidate(this IState state, bool immediately, InvalidationSource source)
-        => state.Computed.Invalidate(immediately, source);
+        => state.GetExistingComputed()?.Invalidate(immediately, source);
 
     public static ValueTask Recompute(this IState state, CancellationToken cancellationToken = default)
     {
-        state.Computed.Invalidate(immediately: true, InvalidationSource.StateExtRecompute);
+        state.GetExistingComputed()?.Invalidate(immediately: true, InvalidationSource.StateExtRecompute);
         return state.Update(cancellationToken);
     }
 

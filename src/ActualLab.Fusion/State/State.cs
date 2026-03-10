@@ -24,8 +24,9 @@ public interface IState : IResult, IComputeFunction
     public event Action<State, StateEventKind>? Updating;
     public event Action<State, StateEventKind>? Updated;
 
+    public Computed? GetExistingComputed();
     public bool IsSynchronized(ComputedSynchronizer synchronizer);
-    public  Task WhenSynchronized(ComputedSynchronizer synchronizer, CancellationToken cancellationToken = default);
+    public Task WhenSynchronized(ComputedSynchronizer synchronizer, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
