@@ -11,6 +11,30 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.1.98+62afac4f | npm: 12.1.69
+
+Release date: 2026-03-10
+
+### Added
+- `CpuTimestampBasedVersionGenerator` — a new `VersionGenerator<long>` based on `CpuTimestamp` ticks,
+  useful for in-process only high-resolution monotonic versioning
+- `IState.GetExistingComputed()` method (it was available via `ComputedInput`, but wasn't a part of `IState`)
+
+### Changed
+- Renamed `Versioning/Providers/` folder to `Versioning/Generators/` and moved
+  `ClockBasedVersionGenerator` to `ActualLab.Versioning` namespace
+
+### Fixed
+- Stale state bug in `ComputedState` during `Recompute`: concurrent invalidation could target
+  an already-replaced computed instance, causing the state to miss updates.  
+  `StateExt.Invalidate` and `Recompute` now use `GetExistingComputed()` instead of `Snapshot.Computed` 
+  to address that
+
+### Documentation
+- Added [Standalone Authentication](PartAA-X.md) guide — explains how to extract Fusion's auth
+  system into your own project for full control and simpler code
+  
+
 ## 12.1.89+ee8734c3 | npm: 12.1.69
 
 Release date: 2026-03-04
