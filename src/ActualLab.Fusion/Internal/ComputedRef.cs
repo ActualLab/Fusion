@@ -1,7 +1,7 @@
 namespace ActualLab.Fusion.Internal;
 
 /// <summary>
-/// A strongly-typed lightweight reference to a <see cref="Computed{T}"/>
+/// A strongly typed lightweight reference to a <see cref="Computed{T}"/>
 /// that can be resolved from the <see cref="ComputedRegistry"/>.
 /// </summary>
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
