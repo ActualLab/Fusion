@@ -31,20 +31,6 @@ public static class StateFactoryExt
         return factory.NewMutable(options);
     }
 
-    // NewVersion
-
-    public static VersionState NewVersion(
-        this StateFactory factory,
-        long initialValue = 0L,
-        string? category = null)
-    {
-        var options = new VersionState.Options() {
-            InitialValue = initialValue,
-            Category = category,
-        };
-        return factory.NewVersion(options);
-    }
-
     // NewComputed - simple overloads
 
     public static ComputedState<T> NewComputed<T>(
