@@ -11,6 +11,38 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.1.100+b7edfdd5 | npm: 12.1.100
+
+Release date: 2026-03-16
+
+### Breaking Changes (.NET)
+- Removed `IsReconnectable` property from `IRpcSharedObject` — replaced by `AllowReconnect` on `IRpcObject`
+- `RpcStream.New<T>()` factory method parameter renamed from `isReconnectable` to `allowReconnect`
+
+### Added (.NET)
+- `AllowReconnect` property on `IRpcObject` interface — controls whether an RPC object (stream)
+  should reconnect or immediately disconnect when a peer connection drops
+- `RpcStream<T>` now serializes `AllowReconnect` as a 5th field in the wire format
+  (backward-compatible: old 4-field format defaults to `AllowReconnect = true`)
+- Server-side `RpcSharedStream` rejects reconnect attempts for `AllowReconnect = false` streams
+  and auto-disposes them on disconnect
+- `RpcRemoteObjectTracker` disconnects non-reconnectable remote objects on peer disconnect
+
+### Added (TypeScript)
+- TypeScript RPC: `allowReconnect` support in `RpcStream`, `RpcStreamSender`, `parseStreamRef()`,
+  and `RpcRemoteObjectTracker`
+
+### Documentation
+- Updated [RpcStream](PartR-RpcStream.md) docs to reflect `AllowReconnect` replacing `IsReconnectable`
+
+### Tests
+- Added `NoReconnectStreamTest` and `NoReconnectStreamDisconnectTest` (.NET)
+- Added TypeScript unit tests for `allowReconnect` in `RpcStream`, `RpcStreamSender`, and `parseStreamRef`
+- Added TypeScript end-to-end tests for `allowReconnect = false` disconnect behavior
+- Cross-language E2E test (`StreamNoReconnect`) verifying `AllowReconnect = false` behavior
+  between TypeScript client and .NET server
+
+
 ## 12.1.98+62afac4f | npm: 12.1.69
 
 Release date: 2026-03-10
@@ -26,8 +58,8 @@ Release date: 2026-03-10
 
 ### Fixed
 - Stale state bug in `ComputedState` during `Recompute`: concurrent invalidation could target
-  an already-replaced computed instance, causing the state to miss updates.  
-  `StateExt.Invalidate` and `Recompute` now use `GetExistingComputed()` instead of `Snapshot.Computed` 
+  an already-replaced computed instance, causing the state to miss updates.
+  `StateExt.Invalidate` and `Recompute` now use `GetExistingComputed()` instead of `Snapshot.Computed`
   to address that
 
 ### Documentation
