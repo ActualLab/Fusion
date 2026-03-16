@@ -59,6 +59,13 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     }
 
     [Fact]
+    public async Task StreamNoReconnect()
+    {
+        await using var _ = await WebHost.Serve();
+        await RunScenario("stream-no-reconnect");
+    }
+
+    [Fact]
     public async Task ServerRestart()
     {
         ServerControlService.Reset();

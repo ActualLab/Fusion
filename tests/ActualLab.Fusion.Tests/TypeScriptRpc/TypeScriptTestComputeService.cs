@@ -44,6 +44,12 @@ public class TypeScriptTestComputeService : ITypeScriptTestComputeService
         return Task.FromResult(RpcStream.New(seq));
     }
 
+    public Task<RpcStream<int>> StreamInt32NoReconnect(int count)
+    {
+        var seq = EnumerateInt32(count);
+        return Task.FromResult(RpcStream.New(seq, allowReconnect: false));
+    }
+
     private static async IAsyncEnumerable<int> EnumerateInt32(int count)
     {
         for (var i = 0; i < count; i++)

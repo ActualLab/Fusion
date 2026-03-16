@@ -12,6 +12,7 @@
 import WebSocket from "ws";
 import {
   RpcClientPeer,
+  RpcType,
   defineRpcService,
   type WebSocketLike,
 } from "@actuallab/rpc";
@@ -59,6 +60,8 @@ interface ITypeScriptTestComputeService {
   Set(key: string, value: number): Promise<void>;
   Increment(key: string): Promise<void>;
   GetCounterNonCompute(key: string): Promise<number>;
+  StreamInt32(count: number): Promise<AsyncIterable<number>>;
+  StreamInt32NoReconnect(count: number): Promise<AsyncIterable<number>>;
 }
 
 // Only GetCounter has [ComputeMethod] — Set and Increment are regular methods
@@ -67,6 +70,8 @@ const TestComputeServiceDef = defineComputeService("ITypeScriptTestComputeServic
   Set: { args: ["", 0], callTypeId: 0 },
   Increment: { args: [""], callTypeId: 0 },
   GetCounterNonCompute: { args: [""], callTypeId: 0 },
+  StreamInt32: { args: [0], wireArgCount: 1, callTypeId: 0, returns: RpcType.stream },
+  StreamInt32NoReconnect: { args: [0], wireArgCount: 1, callTypeId: 0, returns: RpcType.stream },
 });
 
 // ---------------------------------------------------------------------------
@@ -119,6 +124,8 @@ async function run(): Promise<void> {
       await testComputeInvalidation(hub, peer);
     if (scenario === "auto-reconnect" || scenario === "all")
       await testAutoReconnect(hub, peer);
+    if (scenario === "stream-no-reconnect" || scenario === "all")
+      await testStreamNoReconnect(hub, peer);
     if (scenario === "reconnection-torture")
       await testReconnectionTorture(hub, peer);
     if (scenario === "server-restart")
@@ -224,6 +231,62 @@ async function testComputeInvalidation(hub: FusionHub, peer: RpcClientPeer): Pro
   assert(captured2.value === 43, `GetCounter after Increment expected 43, got ${captured2.value}`);
 
   console.log("  compute-invalidation: PASSED");
+}
+
+// ---------------------------------------------------------------------------
+// Test: stream-no-reconnect — AllowReconnect=false stream fails on disconnect
+// ---------------------------------------------------------------------------
+
+async function testStreamNoReconnect(hub: FusionHub, peer: RpcClientPeer): Promise<void> {
+  const svc = hub.addClient<ITypeScriptTestComputeService>(peer, TestComputeServiceDef);
+
+  // 1. Verify normal stream works
+  const normalStream = await svc.StreamInt32(5);
+  const normalItems: number[] = [];
+  for await (const item of normalStream) normalItems.push(item);
+  assert(normalItems.length === 5, `StreamInt32(5) expected 5 items, got ${normalItems.length}`);
+  assert(normalItems[4] === 4, `StreamInt32(5) last item expected 4, got ${normalItems[4]}`);
+
+  // 2. Verify AllowReconnect=false stream works when connection is stable
+  const stableStream = await svc.StreamInt32NoReconnect(5);
+  const stableItems: number[] = [];
+  for await (const item of stableStream) stableItems.push(item);
+  assert(stableItems.length === 5, `StreamInt32NoReconnect(5) expected 5 items, got ${stableItems.length}`);
+
+  // 3. Start a large AllowReconnect=false stream, then disconnect mid-stream
+  const stream = await svc.StreamInt32NoReconnect(100_000);
+  const items: number[] = [];
+  let gotError = false;
+
+  // Set up reconnection waiter
+  const reconnectPromise = new Promise<void>((resolve) => {
+    peer.connected.add(() => resolve());
+  });
+
+  // Disconnect after a short delay to ensure some items arrive
+  setTimeout(() => peer.connection?.close(), 50);
+
+  try {
+    for await (const item of stream) {
+      items.push(item);
+    }
+  } catch (e) {
+    gotError = true;
+    assert(
+      (e as Error).message.includes("disconnected"),
+      `Expected disconnect error, got: ${(e as Error).message}`,
+    );
+  }
+
+  assert(gotError, "AllowReconnect=false stream should have thrown on disconnect");
+  assert(items.length > 0, "Should have received some items before disconnect");
+  assert(items.length < 100_000, `Should not have received all items (got ${items.length})`);
+
+  // 4. Wait for auto-reconnection so the peer is ready for further tests
+  await Promise.race([reconnectPromise, timeout(10_000, "Auto-reconnection timeout")]);
+  await delay(200);
+
+  console.log(`  stream-no-reconnect: PASSED (received ${items.length} items before disconnect)`);
 }
 
 // ---------------------------------------------------------------------------

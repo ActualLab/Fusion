@@ -17,6 +17,7 @@ public enum RpcObjectKind
 public interface IRpcObject : IHasId<RpcObjectId>
 {
     public RpcObjectKind Kind { get; }
+    public bool AllowReconnect { get; }
     public Task Reconnect(CancellationToken cancellationToken);
     public void Disconnect();
 }
@@ -26,7 +27,6 @@ public interface IRpcObject : IHasId<RpcObjectId>
 /// </summary>
 public interface IRpcSharedObject : IRpcObject
 {
-    public bool IsReconnectable { get; }
     public Moment LastKeepAliveAt { get; }
     public void KeepAlive();
 }

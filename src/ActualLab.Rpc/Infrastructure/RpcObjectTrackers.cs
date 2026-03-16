@@ -165,7 +165,9 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
         catch {
             // Intended
         }
-        // ReSharper disable once FunctionNeverReturns
+        foreach (var (_, weakRef) in _storage)
+            if (weakRef.TryGetTarget(out var target) && !target.AllowReconnect)
+                target.Disconnect();
     }
 
     public void Disconnect(params long[] localIds)
@@ -271,7 +273,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
     {
         LastKeepAliveAt = Moment.Now;
         try {
-            while (true) {
+            while (!cancellationToken.IsCancellationRequested) {
                 await Task.Delay(Limits.ObjectReleasePeriod, cancellationToken).ConfigureAwait(false);
                 var keepAliveDelay = Moment.Now - LastKeepAliveAt;
                 if (keepAliveDelay > Limits.KeepAliveTimeout) {
@@ -289,8 +291,11 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
         catch {
             // Intended
         }
-        // ReSharper disable once FunctionNeverReturns
+        foreach (var (_, obj) in _objects)
+            if (!obj.AllowReconnect && Unregister(obj))
+                TryDispose(obj);
     }
+
 
     public void KeepAlive(long[] localIds)
     {

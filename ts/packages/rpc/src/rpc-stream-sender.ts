@@ -23,6 +23,7 @@ const DEFAULT_ACK_ADVANCE = 128;
 export class RpcStreamSender<T> implements IRpcObject {
   readonly id: RpcObjectId;
   readonly kind = RpcObjectKind.Local;
+  readonly allowReconnect: boolean;
   readonly peer: RpcPeer;
   readonly ackPeriod: number;
   readonly ackAdvance: number;
@@ -31,9 +32,15 @@ export class RpcStreamSender<T> implements IRpcObject {
   private _ended = false;
   private _started = new PromiseSource<void>();
 
-  constructor(peer: RpcPeer, ackPeriod = DEFAULT_ACK_PERIOD, ackAdvance = DEFAULT_ACK_ADVANCE) {
+  constructor(
+      peer: RpcPeer,
+      ackPeriod = DEFAULT_ACK_PERIOD,
+      ackAdvance = DEFAULT_ACK_ADVANCE,
+      allowReconnect = true
+  ) {
     const localId = peer.sharedObjects.nextId();
     this.id = { hostId: peer.hub.hubId, localId };
+    this.allowReconnect = allowReconnect;
     this.peer = peer;
     this.ackPeriod = ackPeriod;
     this.ackAdvance = ackAdvance;
@@ -41,7 +48,7 @@ export class RpcStreamSender<T> implements IRpcObject {
 
   /** Returns the stream reference string for the $sys.Ok response. */
   toRef(): string {
-    return `${this.id.hostId},${this.id.localId},${this.ackPeriod},${this.ackAdvance}`;
+    return `${this.id.hostId},${this.id.localId},${this.ackPeriod},${this.ackAdvance},${this.allowReconnect ? "1" : "0"}`;
   }
 
   /** Called by system call handler when $sys.Ack is received from the client. */

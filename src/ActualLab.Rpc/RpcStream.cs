@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Runtime.ExceptionServices;
 using ActualLab.Interception;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization.Internal;
@@ -14,7 +13,7 @@ namespace ActualLab.Rpc;
 /// Abstract base class for RPC-aware streams that can be serialized across peer boundaries.
 /// </summary>
 [DataContract]
-public abstract partial class RpcStream : IRpcObject
+public abstract class RpcStream : IRpcObject
 {
     public const int MaxBatchSize = 1024;
 
@@ -33,6 +32,8 @@ public abstract partial class RpcStream : IRpcObject
     public int AckPeriod { get; init; } = 30;
     [DataMember(Order = 1), MemoryPackOrder(1)]
     public int AckAdvance { get; init; } = 61;
+    [DataMember(Order = 3), MemoryPackOrder(3)]
+    public bool AllowReconnect { get; init; } = true;
     // See BatchSize below as well
 
     // Non-serialized members
@@ -47,13 +48,11 @@ public abstract partial class RpcStream : IRpcObject
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 64;
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public bool IsReconnectable { get; init; } = true;
 
-    public static RpcStream<T> New<T>(IAsyncEnumerable<T> outgoingSource, bool isReconnectable = true)
-        => new(outgoingSource) { IsReconnectable = isReconnectable };
-    public static RpcStream<T> New<T>(IEnumerable<T> outgoingSource, bool isReconnectable = true)
-        => new(outgoingSource.ToAsyncEnumerable()) { IsReconnectable = isReconnectable };
+    public static RpcStream<T> New<T>(IAsyncEnumerable<T> outgoingSource, bool allowReconnect = true)
+        => new(outgoingSource) { AllowReconnect = allowReconnect };
+    public static RpcStream<T> New<T>(IEnumerable<T> outgoingSource, bool allowReconnect = true)
+        => new(outgoingSource.ToAsyncEnumerable()) { AllowReconnect = allowReconnect };
 
     public override string ToString()
         => $"{GetType().GetName()}({Id} @ {Peer?.Ref}, {Kind})";
@@ -189,6 +188,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         formatter.Append(id.LocalId.ToString(CultureInfo.InvariantCulture));
         formatter.Append(stream.AckPeriod.ToString(CultureInfo.InvariantCulture));
         formatter.Append(stream.AckAdvance.ToString(CultureInfo.InvariantCulture));
+        formatter.Append(stream.AllowReconnect ? "1" : "0");
         formatter.AppendEnd();
         return formatter.Output;
     }
@@ -208,7 +208,13 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         var ackPeriod = int.Parse(parser.Item, CultureInfo.InvariantCulture);
         parser.ParseNext();
         var ackAdvance = int.Parse(parser.Item, CultureInfo.InvariantCulture);
-        return new RpcStream<T>() { SerializedId = id, AckPeriod = ackPeriod, AckAdvance = ackAdvance };
+        var allowReconnect = !parser.TryParseNext() || !parser.Item.Equals("0", StringComparison.Ordinal);
+        return new RpcStream<T>() {
+            SerializedId = id,
+            AckPeriod = ackPeriod,
+            AckAdvance = ackAdvance,
+            AllowReconnect = allowReconnect,
+        };
     }
 
     // Protected methods
@@ -290,8 +296,14 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     protected override Task Reconnect(CancellationToken cancellationToken)
     {
         lock (_lock) {
-            if (_remoteChannel is not null && !_isDisconnected)
-                SendResetFromLock(_nextIndex);
+            if (_remoteChannel is not null && !_isDisconnected) {
+                if (AllowReconnect)
+                    SendResetFromLock(_nextIndex);
+                else {
+                    _isDisconnected = true;
+                    CloseFromLock(Internal.Errors.RpcStreamNotFoundOrDisconnected());
+                }
+            }
         }
         return Task.CompletedTask;
     }

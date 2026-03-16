@@ -23,6 +23,23 @@ describe("parseStreamRef", () => {
     expect(ref!.localId).toBe(42);
     expect(ref!.ackPeriod).toBe(10);
     expect(ref!.ackAdvance).toBe(3);
+    expect(ref!.allowReconnect).toBe(true);
+  });
+
+  it("should parse allowReconnect from 5th field", () => {
+    const ref1 = parseStreamRef("abc,1,10,3,1");
+    expect(ref1).not.toBeNull();
+    expect(ref1!.allowReconnect).toBe(true);
+
+    const ref0 = parseStreamRef("abc,1,10,3,0");
+    expect(ref0).not.toBeNull();
+    expect(ref0!.allowReconnect).toBe(false);
+  });
+
+  it("should default allowReconnect to true when 5th field is missing", () => {
+    const ref = parseStreamRef("abc,1,10,3");
+    expect(ref).not.toBeNull();
+    expect(ref!.allowReconnect).toBe(true);
   });
 
   it("should return null for non-string values", () => {
@@ -33,10 +50,10 @@ describe("parseStreamRef", () => {
   });
 
   it("should return null for invalid format", () => {
-    expect(parseStreamRef("a,b,c")).toBeNull();       // too few parts
-    expect(parseStreamRef("a,b,c,d,e")).toBeNull();   // too many parts
-    expect(parseStreamRef("a,b,c,d")).toBeNull();     // non-numeric localId
-    expect(parseStreamRef("a,1,c,d")).toBeNull();     // non-numeric ackPeriod
+    expect(parseStreamRef("a,b,c")).toBeNull();         // too few parts
+    expect(parseStreamRef("a,b,c,d,e,f")).toBeNull();   // too many parts
+    expect(parseStreamRef("a,b,c,d")).toBeNull();       // non-numeric localId
+    expect(parseStreamRef("a,1,c,d")).toBeNull();       // non-numeric ackPeriod
   });
 });
 
@@ -266,6 +283,160 @@ describe("RpcStream end-to-end", () => {
 
     expect(items1).toEqual([0, 1, 2]);
     expect(items2).toEqual([0, 1]);
+  });
+});
+
+describe("RpcStream allowReconnect", () => {
+  it("should disconnect instead of reconnect when allowReconnect is false", () => {
+    const hub = new RpcHub("test-hub");
+    const [cc] = createMessageChannelPair();
+    const peer = new RpcClientPeer(hub, "ws://test");
+    peer.connectWith(cc);
+    hub.addPeer(peer);
+
+    const ref = { hostId: "h", localId: 1, ackPeriod: 30, ackAdvance: 61, allowReconnect: false };
+    const stream = new RpcStream<number>(ref, peer);
+    peer.remoteObjects.register(stream);
+
+    // Start iterating so the stream is active
+    const iter = stream[Symbol.asyncIterator]();
+
+    // Simulate reconnect — should disconnect instead
+    stream.reconnect();
+
+    // Stream should be completed with error
+    expect((stream as any)._completed).toBe(true);
+    expect((stream as any)._completionError).toBeInstanceOf(Error);
+    expect((stream as any)._completionError.message).toBe("Peer disconnected.");
+
+    hub.close();
+  });
+
+  it("should reconnect normally when allowReconnect is true", () => {
+    const hub = new RpcHub("test-hub");
+    const [cc] = createMessageChannelPair();
+    const peer = new RpcClientPeer(hub, "ws://test");
+    peer.connectWith(cc);
+    hub.addPeer(peer);
+
+    const ref = { hostId: "h", localId: 2, ackPeriod: 30, ackAdvance: 61, allowReconnect: true };
+    const stream = new RpcStream<number>(ref, peer);
+    peer.remoteObjects.register(stream);
+
+    stream.reconnect();
+
+    // Stream should NOT be completed — it sent a reset ack instead
+    expect((stream as any)._completed).toBe(false);
+    expect((stream as any)._completionError).toBeNull();
+
+    hub.close();
+  });
+
+  it("should include allowReconnect in RpcStreamSender.toRef()", () => {
+    const hub = new RpcHub("test-hub");
+    const [, sc] = createMessageChannelPair();
+    const peer = hub.getServerPeer("server://test");
+    peer.accept(sc);
+
+    const sender1 = new RpcStreamSender<number>(peer, 30, 61, true);
+    expect(sender1.toRef()).toContain(",1");
+
+    const sender0 = new RpcStreamSender<number>(peer, 30, 61, false);
+    expect(sender0.toRef().endsWith(",0")).toBe(true);
+
+    hub.close();
+  });
+
+  it("should fail immediately on disconnect (end-to-end)", async () => {
+    const serverHub = new RpcHub("server-hub");
+    const clientHub = new RpcHub("client-hub");
+
+    const [cc, sc] = createMessageChannelPair();
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
+    clientPeer.connectWith(cc);
+    clientHub.addPeer(clientPeer);
+
+    const serverPeer = serverHub.getServerPeer("server://test");
+    serverPeer.accept(sc);
+    await delay(10);
+
+    // Create sender with allowReconnect=false on server, stream on client
+    const sender = new RpcStreamSender<number>(serverPeer, 30, 61, false);
+    serverPeer.sharedObjects.register(sender);
+    const ref = parseStreamRef(sender.toRef())!;
+    expect(ref.allowReconnect).toBe(false);
+
+    const stream = new RpcStream<number>(ref, clientPeer);
+    clientPeer.remoteObjects.register(stream);
+
+    // Start pumping items slowly
+    void (async () => {
+      await sender["_started"].promise;
+      for (let i = 0; i < 100; i++) {
+        if (sender["_ended"]) return;
+        sender.sendItem(i);
+        await delay(5);
+      }
+      sender.sendEnd();
+    })();
+
+    const items: number[] = [];
+
+    // Close the client peer after collecting some items — triggers disconnectAll
+    setTimeout(() => clientPeer.close(), 30);
+
+    await expect(async () => {
+      for await (const item of stream) {
+        items.push(item);
+      }
+    }).rejects.toThrow("Peer disconnected.");
+
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.length).toBeLessThan(100);
+
+    serverHub.close();
+    clientHub.close();
+  });
+
+  it("should survive disconnect+reconnect when allowReconnect is true (end-to-end)", async () => {
+    const serverHub = new RpcHub("server-hub");
+    const clientHub = new RpcHub("client-hub");
+
+    const [cc, sc] = createMessageChannelPair();
+    const clientPeer = new RpcClientPeer(clientHub, "ws://test");
+    clientPeer.connectWith(cc);
+    clientHub.addPeer(clientPeer);
+
+    const serverPeer = serverHub.getServerPeer("server://test");
+    serverPeer.accept(sc);
+    await delay(10);
+
+    // Create sender with allowReconnect=true (default) on server, stream on client
+    const sender = new RpcStreamSender<number>(serverPeer, 30, 61, true);
+    serverPeer.sharedObjects.register(sender);
+    const ref = parseStreamRef(sender.toRef())!;
+    expect(ref.allowReconnect).toBe(true);
+
+    const stream = new RpcStream<number>(ref, clientPeer);
+    clientPeer.remoteObjects.register(stream);
+
+    // Pump all items quickly and end
+    void (async () => {
+      await sender["_started"].promise;
+      for (let i = 0; i < 5; i++) sender.sendItem(i);
+      sender.sendEnd();
+    })();
+
+    const items: number[] = [];
+    for await (const item of stream) {
+      items.push(item);
+    }
+
+    // All items should arrive since we didn't disconnect
+    expect(items).toEqual([0, 1, 2, 3, 4]);
+
+    serverHub.close();
+    clientHub.close();
   });
 });
 

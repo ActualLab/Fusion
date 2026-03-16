@@ -24,7 +24,10 @@ export class RpcRemoteObjectTracker {
 
   reconnectAll(): void {
     for (const obj of this._objects.values()) {
-      obj.reconnect();
+      if (obj.allowReconnect)
+        obj.reconnect();
+      else
+        obj.disconnect();
     }
   }
 }

@@ -9,6 +9,7 @@ export interface RpcStreamRef {
   readonly localId: number;
   readonly ackPeriod: number;
   readonly ackAdvance: number;
+  readonly allowReconnect: boolean;
 }
 
 /**
@@ -18,13 +19,14 @@ export interface RpcStreamRef {
 export function parseStreamRef(value: unknown): RpcStreamRef | null {
   if (typeof value !== "string") return null;
   const parts = value.split(",");
-  if (parts.length !== 4) return null;
+  if (parts.length < 4 || parts.length > 5) return null;
   const hostId = parts[0]!;
   const localId = parseInt(parts[1]!, 10);
   const ackPeriod = parseInt(parts[2]!, 10);
   const ackAdvance = parseInt(parts[3]!, 10);
   if (isNaN(localId) || isNaN(ackPeriod) || isNaN(ackAdvance)) return null;
-  return { hostId, localId, ackPeriod, ackAdvance };
+  const allowReconnect = parts.length < 5 || parts[4] !== "0";
+  return { hostId, localId, ackPeriod, ackAdvance, allowReconnect };
 }
 
 /**
@@ -41,6 +43,7 @@ export function parseStreamRef(value: unknown): RpcStreamRef | null {
 export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
   readonly id: RpcObjectId;
   readonly kind = RpcObjectKind.Remote;
+  readonly allowReconnect: boolean;
   readonly peer: RpcPeer;
   readonly ackPeriod: number;
   readonly ackAdvance: number;
@@ -57,6 +60,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
 
   constructor(ref: RpcStreamRef, peer: RpcPeer) {
     this.id = { hostId: ref.hostId, localId: ref.localId };
+    this.allowReconnect = ref.allowReconnect;
     this.peer = peer;
     this.ackPeriod = ref.ackPeriod;
     this.ackAdvance = ref.ackAdvance;
@@ -113,8 +117,12 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
   // -- IRpcObject --
 
   reconnect(): void {
-    // Re-request from where we left off
-    this._sendAck(this._nextExpectedIndex, true);
+    if (this.allowReconnect) {
+      // Re-request from where we left off
+      this._sendAck(this._nextExpectedIndex, true);
+    } else {
+      this.disconnect();
+    }
   }
 
   disconnect(): void {

@@ -13,4 +13,5 @@ public interface ITypeScriptTestComputeService : IComputeService
     Task Increment(string key, CancellationToken cancellationToken = default);
     Task<int> GetCounterNonCompute(string key, CancellationToken cancellationToken = default);
     Task<RpcStream<int>> StreamInt32(int count);
+    Task<RpcStream<int>> StreamInt32NoReconnect(int count);
 }

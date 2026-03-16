@@ -36,7 +36,7 @@ You might wonder why ActualLab.Rpc uses a dedicated `RpcStream<T>` type instead 
 | `AckPeriod` | How often the consumer sends acknowledgments (default: 30 items) |
 | `AckAdvance` | How many items the producer can send ahead (default: 61 items) |
 | `BatchSize` | How many items are batched together for transmission (default: 64, max: 1024) |
-| `IsReconnectable` | Whether the stream can resume after disconnection (default: true) |
+| `AllowReconnect` | Whether the stream can resume after disconnection (default: true) |
 
 ::: warning Single Enumeration
 Remote streams can only be enumerated once. Attempting to enumerate a remote `RpcStream<T>` multiple times will throw an exception.
@@ -181,7 +181,7 @@ This is useful for hierarchical data like tables with rows, where each row has i
 | **Backpressure** | Built-in acknowledgment mechanism (configurable via `AckPeriod` and `AckAdvance`) |
 | **Cancellation** | Streams can be cancelled from either end |
 | **Nesting** | Streams can be nested within other data structures |
-| **Reconnection** | Streams handle reconnection gracefully (configurable via `IsReconnectable`) |
+| **Reconnection** | Streams handle reconnection gracefully (configurable via `AllowReconnect`) |
 
 
 ## Configuration Options
@@ -193,7 +193,7 @@ This is useful for hierarchical data like tables with rows, where each row has i
 | `AckPeriod` | 30 | How often the client sends acknowledgments (every N items) |
 | `AckAdvance` | 61 | How many items the server can send ahead before waiting for acks |
 | `BatchSize` | 64 | How many items are batched together for transmission (max: 1024) |
-| `IsReconnectable` | true | Whether the stream can resume after a connection disruption |
+| `AllowReconnect` | true | Whether the stream can resume after a connection disruption |
 
 These defaults work well for most scenarios. Adjust them if you need different throughput/latency tradeoffs.
 
@@ -206,26 +206,23 @@ These defaults work well for most scenarios. Adjust them if you need different t
 
 By default, `RpcStream<T>` handles network disconnections gracefully. When a connection is temporarily lost, the stream automatically resumes from where it left off once the connection is re-established.
 
-### IsReconnectable Property
+### AllowReconnect Property
 
-The `IsReconnectable` property controls whether a stream can resume after a disconnection:
+The `AllowReconnect` property controls whether a stream can resume after a disconnection:
 
 ```cs
 // Default: stream can reconnect after network disruption
 var reconnectableStream = RpcStream.New(GetItems());
 
 // Disable reconnection: stream will fail if connection is lost
-var nonReconnectableStream = new RpcStream<int>(GetItems()) { IsReconnectable = false };
+var nonReconnectableStream = RpcStream.New(GetItems(), allowReconnect: false);
 ```
 
-When `IsReconnectable` is `false`:
-- The stream will throw `RpcStreamNotFoundException` if a disconnection occurs
+When `AllowReconnect` is `false`:
+- The client stream will throw `RpcStreamNotFoundException` immediately when the peer disconnects
+- The server-side shared stream is disposed instantly on disconnection
 - Use this for streams where resuming from an intermediate position doesn't make sense
 - Examples: real-time event streams, live data feeds where missed items are unrecoverable
-
-::: warning Non-Serializable
-`IsReconnectable` is not serialized &ndash; it's a local configuration on the server side that controls how the shared stream handles reconnection attempts.
-:::
 
 ### RpcStreamNotFoundException
 
@@ -233,7 +230,7 @@ When `IsReconnectable` is `false`:
 
 | Scenario | Description |
 |----------|-------------|
-| **Non-reconnectable stream** | A stream with `IsReconnectable = false` throws this exception when the client attempts to reconnect after a disconnection |
+| **Non-reconnectable stream** | A stream with `AllowReconnect = false` throws this exception immediately when the peer disconnects |
 | **Stream not found** | The server no longer has the stream registered (e.g., it was disposed or timed out) |
 | **Host mismatch** | After reconnection, the client connects to a different server instance that doesn't have this stream |
 

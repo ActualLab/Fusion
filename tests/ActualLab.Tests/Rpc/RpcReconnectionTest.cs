@@ -1,5 +1,6 @@
 using ActualLab.OS;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Middlewares;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
@@ -60,14 +61,43 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
     }
 
     [Fact]
-    public async Task NonReconnectableStreamTest()
+    public async Task NoReconnectStreamDisconnectTest()
     {
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<ITestRpcService>();
 
-        // Non-reconnectable stream should work initially but fail on reconnect
-        var stream = await client.StreamInt32NonReconnectable(100, -1, new RandomTimeSpan(0.05, 1));
+        // AllowReconnect=false stream should fail immediately on disconnect (no reconnect needed)
+        var stream = await client.StreamInt32NoReconnect(100, -1, new RandomTimeSpan(0.05, 1));
+        var enumerator = stream.GetAsyncEnumerator();
+
+        // Read a few items to ensure stream is active
+        for (var i = 0; i < 5; i++) {
+            (await enumerator.MoveNextAsync()).Should().BeTrue();
+            enumerator.Current.Should().Be(i);
+        }
+
+        // Disconnect only — do NOT reconnect
+        await connection.Disconnect();
+
+        // The stream should fail immediately without waiting for reconnect
+        await Assert.ThrowsAsync<RpcStreamNotFoundException>(async () => {
+            while (await enumerator.MoveNextAsync())
+                _ = enumerator.Current;
+        });
+
+        await enumerator.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task NoReconnectStreamTest()
+    {
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        // AllowReconnect=false stream should work initially but fail on peer disconnect
+        var stream = await client.StreamInt32NoReconnect(100, -1, new RandomTimeSpan(0.05, 1));
         var enumerator = stream.GetAsyncEnumerator();
 
         // Verify initial connect works - read a few items
@@ -76,18 +106,24 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
             enumerator.Current.Should().Be(i);
         }
 
-        // Disconnect and reconnect
+        // Disconnect and reconnect - client stream must throw, not attempt reconnection
         await connection.Disconnect();
         await Delay(0.05);
         await connection.Connect();
 
-        // The stream should fail on reconnect because IsReconnectable = false
+        // The stream should fail because AllowReconnect = false
         await Assert.ThrowsAsync<RpcStreamNotFoundException>(async () => {
             while (await enumerator.MoveNextAsync())
                 _ = enumerator.Current;
         });
 
         await enumerator.DisposeAsync();
+
+        // Verify server-side shared stream is gone (instantly died on disconnect)
+        var serverPeer = connection.ServerPeer;
+        foreach (var sharedObject in serverPeer.SharedObjects)
+            sharedObject.Should().NotBeOfType<RpcSharedStream<int>>(
+                "AllowReconnect=false shared stream should have been disposed");
     }
 
     [Fact]

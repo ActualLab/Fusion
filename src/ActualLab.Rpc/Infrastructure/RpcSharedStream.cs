@@ -20,7 +20,7 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
 
     public RpcObjectId Id { get; } = stream.Id;
     public RpcObjectKind Kind { get; } = stream.Kind;
-    public bool IsReconnectable { get; } = stream.IsReconnectable;
+    public bool AllowReconnect { get; } = stream.AllowReconnect;
     public RpcStream Stream { get; } = stream;
     public RpcPeer Peer { get; } = stream.Peer!;
     public Moment LastKeepAliveAt {
@@ -89,7 +89,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 SendDisconnect();
                 return;
             }
-            else if (mustReset && !IsReconnectable) {
+            else if (mustReset && !AllowReconnect) {
                 // Reconnect attempt on non-reconnectable stream - reject
                 SendDisconnect();
                 return;

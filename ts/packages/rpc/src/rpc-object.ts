@@ -9,6 +9,7 @@ export type RpcObjectKind = (typeof RpcObjectKind)[keyof typeof RpcObjectKind];
 export interface IRpcObject {
   readonly id: RpcObjectId;
   readonly kind: RpcObjectKind;
+  readonly allowReconnect: boolean;
   reconnect(): void;
   disconnect(): void;
 }
