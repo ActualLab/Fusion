@@ -7,7 +7,6 @@ namespace ActualLab.Collections.Internal;
 /// without pooling, useful when pooling overhead is undesirable.
 /// </summary>
 public sealed class NonPoolingArrayPool<T> : ArrayPool<T>
-    where T : unmanaged
 {
     public static NonPoolingArrayPool<T> Instance { get; } = new();
 
