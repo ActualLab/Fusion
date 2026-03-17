@@ -11,6 +11,19 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.1.102+00807c35 | npm: 12.1.100
+
+Release date: 2026-03-17
+
+### Fixed
+- `AsyncTaskMethodBuilderExt.FromTask` didn't work — introduced `GenericAccessors<T>` to workaround
+  unsafe accessors for generics due to runtime limitations; refactored both generic and untyped
+  `FromTask` variant 
+
+### Tests
+- Added unit tests for `FromTask` and `GenericFromTask` to validate functionality and correctness
+
+
 ## 12.1.100+b7edfdd5 | npm: 12.1.100
 
 Release date: 2026-03-16
@@ -757,4 +770,3 @@ Year of project inception.
   provider compatibility.
 - **.NET 5 and multi-targeting** &ndash; migrated from .NET Core 3.1 to .NET 5 with
   multi-targeting.
-
