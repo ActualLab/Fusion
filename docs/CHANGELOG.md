@@ -11,6 +11,20 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.1.107+fe771590 | npm: 12.1.100
+
+Release date: 2026-03-17
+
+### Added
+- `SharedFloatPool` and `SharedDoublePool` in `ArrayPools` (`ActualLab.Core`) — shared array pools for `float` and `double` types
+
+### Changed
+- Removed `unmanaged` constraint from `NonPoolingArrayPool<T>`, allowing it to work with any type
+
+### Tests
+- Added unit tests for `NonPoolingArrayPool<T>` in `ActualLab.Tests`
+
+
 ## 12.1.102+00807c35 | npm: 12.1.100
 
 Release date: 2026-03-17
