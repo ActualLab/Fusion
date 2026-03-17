@@ -22,6 +22,28 @@ public class AsyncTaskMethodBuilderExtTest(ITestOutputHelper @out) : TestBase(@o
         (await b.Task).Should().Be(1);
     }
 
+    [Fact]
+    public async Task FromTaskTest()
+    {
+        var b = AsyncTaskMethodBuilderExt.New();
+        var task = b.Task;
+        var b2 = AsyncTaskMethodBuilderExt.FromTask(task);
+        b2.Task.Should().BeSameAs(task);
+        b2.SetResult();
+        await task;
+    }
+
+    [Fact]
+    public async Task GenericFromTaskTest()
+    {
+        var b = AsyncTaskMethodBuilderExt.New<int>();
+        var task = b.Task;
+        var b2 = AsyncTaskMethodBuilderExt.FromTask(task);
+        b2.Task.Should().BeSameAs(task);
+        b2.SetResult(42);
+        (await task).Should().Be(42);
+    }
+
     private bool HasRunContinuationsAsynchronouslyStateFlag(Task task)
     {
         var stateFlags = GetStateFlags(task);

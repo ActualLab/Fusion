@@ -3,15 +3,14 @@ namespace ActualLab.Async;
 public static partial class AsyncTaskMethodBuilderExt
 {
 #if USE_UNSAFE_ACCESSORS
-    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_task")]
-    private static extern ref Task? TaskGetter(ref AsyncTaskMethodBuilder builder);
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static AsyncTaskMethodBuilder FromTask(Task task)
     {
-        AsyncTaskMethodBuilder builder = default;
-        TaskGetter(ref builder) = task;
-        return builder;
+        // AsyncTaskMethodBuilder.m_task is Task<VoidTaskResult> (internal type),
+        // but both builder structs share the same single-field layout of size 1,
+        // so we delegate to the generic FromTask<T> via Unsafe.As.
+        var typed = FromTask(Unsafe.As<Task<byte>>(task));
+        return Unsafe.As<AsyncTaskMethodBuilder<byte>, AsyncTaskMethodBuilder>(ref typed);
     }
 #endif
 

@@ -7,14 +7,11 @@ namespace ActualLab.Async;
 public static partial class AsyncTaskMethodBuilderExt
 {
 #if USE_UNSAFE_ACCESSORS
-    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_task")]
-    private static extern ref Task<T>? TaskGetter<T>(ref AsyncTaskMethodBuilder<T> builder);
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static AsyncTaskMethodBuilder<T> FromTask<T>(Task<T> task)
     {
         AsyncTaskMethodBuilder<T> builder = default;
-        TaskGetter(ref builder) = task;
+        GenericAccessors<T>.TaskGetter(ref builder) = task;
         return builder;
     }
 #endif
@@ -165,4 +162,14 @@ public static partial class AsyncTaskMethodBuilderExt
             ? target.TrySetResult(value)
             : target.TrySetException(error);
     }
+
+#if USE_UNSAFE_ACCESSORS
+    // UnsafeAccessor requires type generic parameters to be on the containing type,
+    // not on the method. See https://github.com/dotnet/runtime/issues/104268
+    private static class GenericAccessors<T>
+    {
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_task")]
+        public static extern ref Task<T>? TaskGetter(ref AsyncTaskMethodBuilder<T> builder);
+    }
+#endif
 }
