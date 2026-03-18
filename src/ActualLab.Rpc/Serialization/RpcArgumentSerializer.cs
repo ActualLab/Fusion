@@ -1,5 +1,4 @@
 using ActualLab.Interception;
-using ActualLab.IO;
 
 namespace ActualLab.Rpc.Serialization;
 
@@ -39,5 +38,5 @@ public abstract class RpcArgumentSerializer
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsPolymorphic(Type type)
-        => type.IsAbstract || type == typeof(object);
+        => (type.IsAbstract || type == typeof(object)) && RpcTypeAttribute.Get(type) is not { IsPolymorphic: false };
 }

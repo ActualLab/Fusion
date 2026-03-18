@@ -14,6 +14,40 @@ public partial record HelloCommand(
     public HelloCommand(string name) : this(name, default) { }
 }
 
+/// <summary>
+/// An abstract type that is explicitly marked as non-polymorphic for RPC.
+/// The underlying serializers handle the polymorphism via union attributes.
+/// </summary>
+[RpcType(IsPolymorphic = false)]
+[DataContract]
+[MemoryPackable]
+[MemoryPackUnion(0, typeof(NonPolymorphicDerived))]
+[MemoryPackUnion(1, typeof(NonPolymorphicDerived2))]
+[MessagePackObject]
+[Union(0, typeof(NonPolymorphicDerived))]
+[Union(1, typeof(NonPolymorphicDerived2))]
+[JsonDerivedType(typeof(NonPolymorphicDerived), "derived")]
+[JsonDerivedType(typeof(NonPolymorphicDerived2), "derived2")]
+public abstract partial class NonPolymorphicBase
+{
+    [DataMember, MemoryPackOrder(0), Key(0)]
+    public int Value { get; set; }
+}
+
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+public partial class NonPolymorphicDerived : NonPolymorphicBase
+{
+    [DataMember, MemoryPackOrder(1), Key(1)]
+    public string? Tag { get; set; }
+}
+
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+public partial class NonPolymorphicDerived2 : NonPolymorphicBase
+{
+    [DataMember, MemoryPackOrder(1), Key(1)]
+    public double Score { get; set; }
+}
+
 public interface ITestRpcService : ICommandService
 {
     public Task<int?> Div(int? a, int b);
@@ -29,6 +63,9 @@ public interface ITestRpcService : ICommandService
 
     public Task<int> PolymorphArg(ITuple argument, CancellationToken cancellationToken = default);
     public Task<ITuple> PolymorphResult(int argument, CancellationToken cancellationToken = default);
+
+    public Task<NonPolymorphicBase> NonPolymorphRoundtrip(NonPolymorphicBase item, CancellationToken cancellationToken = default);
+    public Task<RpcStream<NonPolymorphicBase>> StreamNonPolymorph(int count);
 
     public ValueTask<RpcNoWait> MaybeSet(string key, string? value);
     public ValueTask<string?> Get(string key);
@@ -102,6 +139,18 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
 
     public virtual Task<ITuple> PolymorphResult(int argument, CancellationToken cancellationToken = default)
         => Task.FromResult((ITuple)Tuple.Create(argument));
+
+    public virtual Task<NonPolymorphicBase> NonPolymorphRoundtrip(NonPolymorphicBase item, CancellationToken cancellationToken = default)
+        => Task.FromResult(item);
+
+    public virtual Task<RpcStream<NonPolymorphicBase>> StreamNonPolymorph(int count)
+    {
+        var seq = Enumerable.Range(0, count)
+            .Select<int, NonPolymorphicBase>(i => i % 2 == 0
+                ? new NonPolymorphicDerived { Value = i, Tag = $"tag-{i}" }
+                : new NonPolymorphicDerived2 { Value = i, Score = i * 0.5 });
+        return Task.FromResult(RpcStream.New(seq));
+    }
 
     public virtual Task<int> AddWithAttribute(int a, int b)
         => Task.FromResult(a + b);

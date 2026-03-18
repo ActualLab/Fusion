@@ -1,5 +1,6 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
 
@@ -243,6 +244,83 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             startedAt.Elapsed.TotalMilliseconds.Should().BeInRange(300, 1000);
             await AssertNoCalls(clientPeer, Out);
         }
+    }
+
+    [Fact]
+    public void RpcTypeAttributeTest()
+    {
+        // NonPolymorphicBase is abstract, so it would normally be polymorphic.
+        // But [RpcType(IsPolymorphic = false)] overrides that.
+        RpcArgumentSerializer.IsPolymorphic(typeof(NonPolymorphicBase)).Should().BeFalse();
+        RpcArgumentSerializer.IsPolymorphic(typeof(NonPolymorphicDerived)).Should().BeFalse();
+
+        // Types without [RpcType] still follow the default rules
+        RpcArgumentSerializer.IsPolymorphic(typeof(ITuple)).Should().BeTrue();
+        RpcArgumentSerializer.IsPolymorphic(typeof(object)).Should().BeTrue();
+        RpcArgumentSerializer.IsPolymorphic(typeof(string)).Should().BeFalse();
+        RpcArgumentSerializer.IsPolymorphic(typeof(int)).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("json5")]
+    [InlineData("json5np")]
+    [InlineData("mempack6")]
+    [InlineData("msgpack6")]
+    public async Task NonPolymorphTest(string serializationFormat)
+    {
+        SerializationFormat = serializationFormat;
+        await using var services = CreateServices();
+        var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        var methodDef = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["NonPolymorphRoundtrip:2"];
+        methodDef.HasPolymorphicArguments.Should().BeFalse();
+        methodDef.HasPolymorphicResult.Should().BeFalse();
+
+        var item1 = new NonPolymorphicDerived { Value = 42, Tag = "test" };
+        var result1 = await client.NonPolymorphRoundtrip(item1);
+        result1.Should().BeOfType<NonPolymorphicDerived>();
+        result1.Value.Should().Be(42);
+        ((NonPolymorphicDerived)result1).Tag.Should().Be("test");
+
+        var item2 = new NonPolymorphicDerived2 { Value = 7, Score = 3.14 };
+        var result2 = await client.NonPolymorphRoundtrip(item2);
+        result2.Should().BeOfType<NonPolymorphicDerived2>();
+        result2.Value.Should().Be(7);
+        ((NonPolymorphicDerived2)result2).Score.Should().Be(3.14);
+
+        await AssertNoCalls(clientPeer, Out);
+    }
+
+    [Theory]
+    [InlineData("json5")]
+    [InlineData("json5np")]
+    [InlineData("mempack6")]
+    [InlineData("msgpack6")]
+    public async Task NonPolymorphStreamTest(string serializationFormat)
+    {
+        SerializationFormat = serializationFormat;
+        await using var services = CreateServices();
+        var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        var count = 10;
+        var stream = await client.StreamNonPolymorph(count);
+        var items = await stream.ToListAsync();
+        items.Should().HaveCount(count);
+        for (var i = 0; i < count; i++) {
+            items[i].Value.Should().Be(i);
+            if (i % 2 == 0) {
+                items[i].Should().BeOfType<NonPolymorphicDerived>();
+                ((NonPolymorphicDerived)items[i]).Tag.Should().Be($"tag-{i}");
+            }
+            else {
+                items[i].Should().BeOfType<NonPolymorphicDerived2>();
+                ((NonPolymorphicDerived2)items[i]).Score.Should().Be(i * 0.5);
+            }
+        }
+
+        await AssertNoCalls(clientPeer, Out);
     }
 
     [Theory]

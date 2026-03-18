@@ -181,6 +181,86 @@ When choosing formats, consider:
 4. Server deserializes in reverse order
 
 
+## Polymorphic Serialization
+
+By default, ActualLab.Rpc treats abstract types and `object` as polymorphic.
+When a method argument or result is polymorphic, the serializer wraps it with a `TypeRef`
+so the actual runtime type can be restored on the other side.
+
+This is determined by `RpcArgumentSerializer.IsPolymorphic(Type)`:
+
+```cs
+// These are considered polymorphic by default:
+IsPolymorphic(typeof(ITuple))  // true - it's an interface (abstract)
+IsPolymorphic(typeof(object))  // true
+
+// Concrete types are not:
+IsPolymorphic(typeof(string))  // false
+IsPolymorphic(typeof(int))     // false
+```
+
+### Opting Out with `[RpcType]`
+
+When the underlying serializer already handles polymorphism
+(e.g., via `[JsonDerivedType]`, `[MemoryPackUnion]`, or `[Union]`),
+the RPC layer's `TypeRef` wrapping is redundant overhead.
+Use `[RpcType(IsPolymorphic = false)]` on the base type to opt out:
+
+<!-- snippet: PartRSerialization_RpcTypeAttribute -->
+```cs
+// The underlying serializers handle polymorphism via union attributes,
+// so we opt out of RPC's TypeRef-based polymorphic wrapping.
+[RpcType(IsPolymorphic = false)]
+[MemoryPackable]
+[MemoryPackUnion(0, typeof(ShapeCircle))]
+[MemoryPackUnion(1, typeof(ShapeRect))]
+[MessagePackObject]
+[Union(0, typeof(ShapeCircle))]
+[Union(1, typeof(ShapeRect))]
+[JsonDerivedType(typeof(ShapeCircle), "circle")]
+[JsonDerivedType(typeof(ShapeRect), "rect")]
+public abstract partial class Shape
+{
+    [DataMember, MemoryPackOrder(0), Key(0)]
+    public string? Name { get; set; }
+}
+
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+public partial class ShapeCircle : Shape
+{
+    [DataMember, MemoryPackOrder(1), Key(1)]
+    public double Radius { get; set; }
+}
+
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+public partial class ShapeRect : Shape
+{
+    [DataMember, MemoryPackOrder(1), Key(1)]
+    public double Width { get; set; }
+
+    [DataMember, MemoryPackOrder(2), Key(2)]
+    public double Height { get; set; }
+}
+```
+<!-- endSnippet -->
+
+With this attribute, `RpcArgumentSerializer.IsPolymorphic(typeof(Shape))` returns `false`,
+so methods like `Task<Shape> GetShape(...)` use regular serialization.
+The discriminated union support in each serializer takes care of preserving
+the actual runtime type.
+
+The attribute uses `Inherited = true`, so derived types also inherit the opt-out.
+
+### When to Use
+
+Use `[RpcType(IsPolymorphic = false)]` when:
+
+- Your abstract base type or interface has serializer-level union support
+  (`[JsonDerivedType]`, `[MemoryPackUnion]`, `[Union]`)
+- You want to avoid the overhead of RPC's `TypeRef` wrapping
+- All concrete subtypes are declared in the union configuration
+
+
 ## Related Topics
 
 - [Core Serialization](./PartS.md) - General serialization infrastructure

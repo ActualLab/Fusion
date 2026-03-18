@@ -1,10 +1,14 @@
 using System.Buffers;
+using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 using ActualLab.Interception;
 using ActualLab.IO;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 using ActualLab.Serialization;
+using MemoryPack;
+using MessagePack;
 using static System.Console;
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
@@ -91,6 +95,46 @@ public static class ConfiguringFormats
         #endregion
     }
 }
+
+// ============================================================================
+// RpcTypeAttribute
+// ============================================================================
+
+#region PartRSerialization_RpcTypeAttribute
+// The underlying serializers handle polymorphism via union attributes,
+// so we opt out of RPC's TypeRef-based polymorphic wrapping.
+[RpcType(IsPolymorphic = false)]
+[MemoryPackable]
+[MemoryPackUnion(0, typeof(ShapeCircle))]
+[MemoryPackUnion(1, typeof(ShapeRect))]
+[MessagePackObject]
+[Union(0, typeof(ShapeCircle))]
+[Union(1, typeof(ShapeRect))]
+[JsonDerivedType(typeof(ShapeCircle), "circle")]
+[JsonDerivedType(typeof(ShapeRect), "rect")]
+public abstract partial class Shape
+{
+    [DataMember, MemoryPackOrder(0), Key(0)]
+    public string? Name { get; set; }
+}
+
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+public partial class ShapeCircle : Shape
+{
+    [DataMember, MemoryPackOrder(1), Key(1)]
+    public double Radius { get; set; }
+}
+
+[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+public partial class ShapeRect : Shape
+{
+    [DataMember, MemoryPackOrder(1), Key(1)]
+    public double Width { get; set; }
+
+    [DataMember, MemoryPackOrder(2), Key(2)]
+    public double Height { get; set; }
+}
+#endregion
 
 // ============================================================================
 // DocPart class
