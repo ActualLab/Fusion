@@ -199,18 +199,19 @@ IsPolymorphic(typeof(string))  // false
 IsPolymorphic(typeof(int))     // false
 ```
 
-### Opting Out with `[RpcType]`
+### Opting Out with `[RpcSerializable]`
 
 When the underlying serializer already handles polymorphism
 (e.g., via `[JsonDerivedType]`, `[MemoryPackUnion]`, or `[Union]`),
 the RPC layer's `TypeRef` wrapping is redundant overhead.
-Use `[RpcType(IsPolymorphic = false)]` on the base type to opt out:
+Apply `[RpcSerializable]` to the base type to tell RPC that
+the type can be serialized directly:
 
-<!-- snippet: PartRSerialization_RpcTypeAttribute -->
+<!-- snippet: PartRSerialization_RpcSerializableAttribute -->
 ```cs
 // The underlying serializers handle polymorphism via union attributes,
-// so we opt out of RPC's TypeRef-based polymorphic wrapping.
-[RpcType(IsPolymorphic = false)]
+// so we mark this type as RPC-serializable to opt out of TypeRef wrapping.
+[RpcSerializable]
 [MemoryPackable]
 [MemoryPackUnion(0, typeof(ShapeCircle))]
 [MemoryPackUnion(1, typeof(ShapeRect))]
@@ -253,7 +254,7 @@ The attribute uses `Inherited = true`, so derived types also inherit the opt-out
 
 ### When to Use
 
-Use `[RpcType(IsPolymorphic = false)]` when:
+Use `[RpcSerializable]` when:
 
 - Your abstract base type or interface has serializer-level union support
   (`[JsonDerivedType]`, `[MemoryPackUnion]`, `[Union]`)

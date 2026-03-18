@@ -247,14 +247,14 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Fact]
-    public void RpcTypeAttributeTest()
+    public void RpcSerializableAttributeTest()
     {
         // NonPolymorphicBase is abstract, so it would normally be polymorphic.
-        // But [RpcType(IsPolymorphic = false)] overrides that.
+        // But [RpcSerializable] overrides that.
         RpcArgumentSerializer.IsPolymorphic(typeof(NonPolymorphicBase)).Should().BeFalse();
         RpcArgumentSerializer.IsPolymorphic(typeof(NonPolymorphicDerived)).Should().BeFalse();
 
-        // Types without [RpcType] still follow the default rules
+        // Types without [RpcSerializable] still follow the default rules
         RpcArgumentSerializer.IsPolymorphic(typeof(ITuple)).Should().BeTrue();
         RpcArgumentSerializer.IsPolymorphic(typeof(object)).Should().BeTrue();
         RpcArgumentSerializer.IsPolymorphic(typeof(string)).Should().BeFalse();

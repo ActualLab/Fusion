@@ -97,13 +97,13 @@ public static class ConfiguringFormats
 }
 
 // ============================================================================
-// RpcTypeAttribute
+// RpcSerializableAttribute
 // ============================================================================
 
-#region PartRSerialization_RpcTypeAttribute
+#region PartRSerialization_RpcSerializableAttribute
 // The underlying serializers handle polymorphism via union attributes,
-// so we opt out of RPC's TypeRef-based polymorphic wrapping.
-[RpcType(IsPolymorphic = false)]
+// so we mark this type as RPC-serializable to opt out of TypeRef wrapping.
+[RpcSerializable]
 [MemoryPackable]
 [MemoryPackUnion(0, typeof(ShapeCircle))]
 [MemoryPackUnion(1, typeof(ShapeRect))]

@@ -15,10 +15,11 @@ public partial record HelloCommand(
 }
 
 /// <summary>
-/// An abstract type that is explicitly marked as non-polymorphic for RPC.
-/// The underlying serializers handle the polymorphism via union attributes.
+/// An abstract type marked with <see cref="RpcSerializableAttribute"/> to indicate
+/// that the underlying serializers handle polymorphism via union attributes,
+/// so RPC should not use its own TypeRef-based polymorphic wrapping.
 /// </summary>
-[RpcType(IsPolymorphic = false)]
+[RpcSerializable]
 [DataContract]
 [MemoryPackable]
 [MemoryPackUnion(0, typeof(NonPolymorphicDerived))]

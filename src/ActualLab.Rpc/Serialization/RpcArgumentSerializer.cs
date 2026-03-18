@@ -38,5 +38,5 @@ public abstract class RpcArgumentSerializer
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsPolymorphic(Type type)
-        => (type.IsAbstract || type == typeof(object)) && RpcTypeAttribute.Get(type) is not { IsPolymorphic: false };
+        => (type.IsAbstract || type == typeof(object)) && RpcSerializableAttribute.Get(type) is null;
 }
