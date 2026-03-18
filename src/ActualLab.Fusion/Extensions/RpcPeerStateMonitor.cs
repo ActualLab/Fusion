@@ -52,7 +52,7 @@ public class RpcPeerStateMonitor : WorkerBase
         stateCategory = $"{GetType().Name}.{nameof(LastReconnectDelayCancelledAt)}";
         LastReconnectDelayCancelledAt = peerRef is null
             ? stateFactory.NewMutable((Moment)default, stateCategory)
-            : stateFactory.NewComputed<Moment>(
+            : stateFactory.NewComputed(
                 FixedDelayer.NextTick,
                 ComputeLastReconnectDelayCancelledAtState,
                 stateCategory);
