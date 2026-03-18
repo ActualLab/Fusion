@@ -398,8 +398,12 @@ public sealed class RpcWebSocketTransport : RpcTransport
                     else
                         throw;
                 }
-                if (r.MessageType == WebSocketMessageType.Close)
+                if (r.MessageType == WebSocketMessageType.Close) {
+                    if (WebSocket.CloseStatus.HasValue
+                        && (int)WebSocket.CloseStatus.Value == RpcWebSocketCloseCode.UnsupportedFormat)
+                        throw Errors.UnsupportedSerializationFormat(WebSocket.CloseStatusDescription.NullIfEmpty());
                     yield break;
+                }
                 if (r.MessageType != MessageType)
                     throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
 

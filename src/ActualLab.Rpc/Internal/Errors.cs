@@ -42,6 +42,8 @@ public static class Errors
     public static Exception NoMethod(Type serviceType, string methodName)
         => new KeyNotFoundException($"Can't resolve method '{methodName}' (by name) of '{serviceType.GetName()}'.");
 
+    public static Exception UnsupportedSerializationFormat(string? message = null)
+        => new RpcSerializationFormatException(message);
     public static Exception HandshakeFailed()
         => new RpcException("Handshake failed.");
     public static Exception PeerChanged()

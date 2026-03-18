@@ -101,6 +101,9 @@ import { RpcStreamSender } from "./rpc-stream-sender.js";
  */
 export const DEFAULT_SERIALIZATION_FORMAT = "json5np";
 
+/** WebSocket close code sent by the server when the client's serialization format is unsupported. */
+export const RPC_CLOSE_CODE_UNSUPPORTED_FORMAT = 4001;
+
 /** Builds the WebSocket connection URL for an RpcClientPeer. */
 export type RpcConnectionUrlResolver = (peer: RpcClientPeer) => string;
 
@@ -377,6 +380,8 @@ export class RpcClientPeer extends RpcPeer {
   /** Builds the WebSocket URL for this peer. Replace to customize URL construction. */
   connectionUrlResolver: RpcConnectionUrlResolver = defaultConnectionUrlResolver;
   readonly peerChanged = new EventHandlerSet<void>();
+  /** Fired when the server rejects the connection due to an unsupported serialization format (close code 4010). */
+  readonly unsupportedFormat = new EventHandlerSet<{ reason: string }>();
   readonly reconnectDelayer = new RpcClientPeerReconnectDelayer();
   readonly reconnectsAtChanged = new EventHandlerSet<void>();
 
@@ -411,10 +416,18 @@ export class RpcClientPeer extends RpcPeer {
   async run(wsFactory?: (url: string) => WebSocketLike): Promise<void> {
     const connUrl = this.connectionUrlResolver(this);
     while (!this._disposed) {
+      let lastCloseCode = 0;
+      let lastCloseReason = "";
       try {
         const ws = wsFactory?.(connUrl) ?? new WebSocket(connUrl) as unknown as WebSocketLike;
         const conn = new RpcWebSocketConnection(ws);
         this._connectionKind = RpcPeerConnectionKind.Connecting;
+
+        // Track close info for unsupported format detection
+        conn.closed.add((ev) => {
+          lastCloseCode = ev.code;
+          lastCloseReason = ev.reason;
+        });
 
         // Create a fresh handshake promise before setupConnection (which registers
         // the message handler).  The handler can only fire after the WS opens,
@@ -470,6 +483,13 @@ export class RpcClientPeer extends RpcPeer {
 
       this._connectionKind = RpcPeerConnectionKind.Disconnected;
       if (this._disposed) break;
+
+      // Server rejected our serialization format — stop reconnecting and notify listeners
+      if (lastCloseCode === RPC_CLOSE_CODE_UNSUPPORTED_FORMAT) {
+        this.unsupportedFormat.trigger({ reason: lastCloseReason });
+        this._disposed = true;
+        break;
+      }
 
       this._tryIndex++;
       const delay = this.reconnectDelayer.getDelay(this._tryIndex);

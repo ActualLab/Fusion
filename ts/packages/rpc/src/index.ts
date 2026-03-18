@@ -40,7 +40,7 @@ export { RpcStreamSender } from "./rpc-stream-sender.js";
 export { RpcRemoteObjectTracker } from "./rpc-remote-object-tracker.js";
 export { RpcSharedObjectTracker } from "./rpc-shared-object-tracker.js";
 
-export { RpcPeer, RpcPeerConnectionKind, RpcClientPeer, RpcServerPeer, DEFAULT_SERIALIZATION_FORMAT, defaultConnectionUrlResolver } from "./rpc-peer.js";
+export { RpcPeer, RpcPeerConnectionKind, RpcClientPeer, RpcServerPeer, DEFAULT_SERIALIZATION_FORMAT, RPC_CLOSE_CODE_UNSUPPORTED_FORMAT, defaultConnectionUrlResolver } from "./rpc-peer.js";
 export type { RemoteHandshake, RpcCallOptions, RpcConnectionUrlResolver } from "./rpc-peer.js";
 export { RpcHub } from "./rpc-hub.js";
 export { RpcServiceHost } from "./rpc-service-host.js";

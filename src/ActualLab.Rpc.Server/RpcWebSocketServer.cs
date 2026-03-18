@@ -41,6 +41,23 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
         RpcPeerRef? peerRef = null;
         try {
             peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
+            if (!Hub.SerializationFormats.TryGet(peerRef.SerializationFormat, out _)) {
+                Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}' for {Request}",
+                    peerRef, peerRef.SerializationFormat, requestDescription);
+#if NET6_0_OR_GREATER
+                var rejectAcceptContext = Options.ConfigureWebSocket.Invoke();
+                webSocket = await context.WebSockets.AcceptWebSocketAsync(rejectAcceptContext).ConfigureAwait(false);
+#else
+                webSocket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
+#endif
+                await webSocket.CloseAsync(
+                    (WebSocketCloseStatus)RpcWebSocketCloseCode.UnsupportedFormat,
+                    $"Unsupported RPC serialization format: '{peerRef.SerializationFormat}'",
+                    cancellationToken
+                    ).ConfigureAwait(false);
+                return;
+            }
+
             Log.LogInformation("'{PeerRef}': Accepting RPC connection for {Request}", peerRef, requestDescription);
             var peer = Hub.GetServerPeer(peerRef);
 

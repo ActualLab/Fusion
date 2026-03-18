@@ -33,6 +33,15 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
             return HttpStatusCode.BadRequest;
 
         var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
+
+        // Validate serialization format before peer creation to avoid KeyNotFoundException.
+        // Empty format is also rejected — clients must specify one explicitly.
+        if (!Hub.SerializationFormats.TryGet(peerRef.SerializationFormat, out _)) {
+            Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}'",
+                peerRef, peerRef.SerializationFormat);
+            return HttpStatusCode.BadRequest;
+        }
+
         _ = Hub.GetServerPeer(peerRef);
 
         var headers =
@@ -60,6 +69,19 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
         RpcConnection? connection = null;
         try {
             var peerRef = PeerRefFactory.Invoke(this, context, isBackend);
+
+            // Validate serialization format and close with specific code if unsupported.
+            // Empty format is also rejected — clients must specify one explicitly.
+            if (!Hub.SerializationFormats.TryGet(peerRef.SerializationFormat, out _)) {
+                webSocket = wsContext.WebSocket;
+                await webSocket.CloseAsync(
+                    (WebSocketCloseStatus)RpcWebSocketCloseCode.UnsupportedFormat,
+                    $"Unsupported RPC serialization format: '{peerRef.SerializationFormat}'",
+                    cancellationToken
+                    ).ConfigureAwait(false);
+                return;
+            }
+
             var peer = Hub.GetServerPeer(peerRef);
 
             webSocket = wsContext.WebSocket;
