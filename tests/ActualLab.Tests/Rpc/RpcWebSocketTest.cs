@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Extensions;
 using ActualLab.Rpc;
 using ActualLab.Testing.Collections;
 
@@ -366,5 +367,70 @@ public class RpcWebSocketTest : RpcTestBase
         }
         await Task.WhenAll(tasks);
         await AssertNoCalls(peer, Out);
+    }
+
+    [Fact]
+    public async Task UnsupportedFormatTest()
+    {
+        // Client requests a format key unknown to the server. The server should close
+        // with code 4001 and the client peer should terminate with RpcSerializationFormatException.
+        await using var _ = await WebHost.Serve();
+
+        // Create a fake format with a key the server doesn't know,
+        // reusing json5's serializers so the client can construct its peer.
+        var bogusFormat = new RpcSerializationFormat("bogus-format",
+            () => RpcSerializationFormat.SystemJsonV5.ArgumentSerializer,
+            RpcSerializationFormat.SystemJsonV5.MessageSerializerFactory);
+        var formats = new[] { bogusFormat };
+
+        var clientServices = new ServiceCollection();
+        clientServices.AddSingleton<TestServiceProviderTag>();
+        ConfigureServices(clientServices, isClient: true);
+        clientServices.AddSingleton(_ => new RpcSerializationFormatResolver("bogus-format", formats));
+        await using var sp = clientServices.BuildServiceProvider();
+
+        var peer = sp.RpcHub().GetClientPeer(ClientPeerRef);
+
+        // Wait for the peer to reach a terminal state — WhenNext throws when final state has an error
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var connectionState = peer.ConnectionState;
+        try {
+            while (!connectionState.IsFinal)
+                connectionState = await connectionState.WhenNext(cts.Token).ConfigureAwait(false);
+        }
+        catch (RpcSerializationFormatException) {
+            // Expected — SetFinal(error) makes WhenNext throw
+        }
+        peer.ConnectionState.IsFinal.Should().BeTrue();
+        peer.ConnectionState.Value.Error.Should().BeOfType<RpcSerializationFormatException>();
+    }
+
+    [Fact]
+    public async Task UnsupportedFormatTest_PeerStateMonitor()
+    {
+        // Same scenario, but verifies the error surfaces through RpcPeerStateMonitor.State.LastError.
+        await using var _ = await WebHost.Serve();
+
+        var bogusFormat = new RpcSerializationFormat("bogus-format",
+            () => RpcSerializationFormat.SystemJsonV5.ArgumentSerializer,
+            RpcSerializationFormat.SystemJsonV5.MessageSerializerFactory);
+        var formats = new[] { bogusFormat };
+
+        var clientServices = new ServiceCollection();
+        clientServices.AddSingleton<TestServiceProviderTag>();
+        ConfigureServices(clientServices, isClient: true);
+        clientServices.AddSingleton(_ => new RpcSerializationFormatResolver("bogus-format", formats));
+        clientServices.AddFusion(); // Required for RpcPeerStateMonitor
+        await using var sp = clientServices.BuildServiceProvider();
+
+        var peer = sp.RpcHub().GetClientPeer(ClientPeerRef);
+        var monitor = new RpcPeerStateMonitor(sp, peer.Ref);
+        var state = monitor.State;
+
+        // The monitor should eventually report the terminal error
+        await state.Computed
+            .When(x => x.LastError is RpcSerializationFormatException)
+            .WaitAsync(TimeSpan.FromSeconds(10));
+        state.Value.IsConnected.Should().BeFalse();
     }
 }
