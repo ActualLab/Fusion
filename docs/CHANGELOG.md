@@ -11,7 +11,7 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 12.1.114+a74e74b2 | npm: 12.1.100
+## 12.1.114+a74e74b2 | npm: 12.1.115
 
 Release date: 2026-03-18
 
