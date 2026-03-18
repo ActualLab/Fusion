@@ -49,7 +49,7 @@ public class ParameterComparerProvider
 
     public virtual Type? GetComparerType(PropertyInfo property)
     {
-        var type = property.GetCustomAttribute<ParameterComparerAttribute>(true)?.ComparerType;
+        var type = property.GetCustomAttribute<ParameterComparerAttribute>(inherit: true)?.ComparerType;
         if (type is not null)
             return type;
 
@@ -57,11 +57,11 @@ public class ParameterComparerProvider
         if (type is not null)
             return type;
 
-        type = property.PropertyType.GetCustomAttribute<ParameterComparerAttribute>(true)?.ComparerType;
+        type = property.PropertyType.GetCustomAttribute<ParameterComparerAttribute>(inherit: true)?.ComparerType;
         if (type is not null)
             return type;
 
-        type = property.DeclaringType?.GetCustomAttribute<ParameterComparerAttribute>(true)?.ComparerType;
+        type = property.DeclaringType?.GetCustomAttribute<ParameterComparerAttribute>(inherit: true)?.ComparerType;
         if (type is not null)
             return type;
 

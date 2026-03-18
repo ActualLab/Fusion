@@ -46,10 +46,10 @@ public sealed class ComponentInfo
         var hasCustomParameterComparers = parentComponentInfo?.HasCustomParameterComparers ?? false;
         var bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly;
         foreach (var property in type.GetProperties(bindingFlags)) {
-            var pa = property.GetCustomAttribute<ParameterAttribute>(true);
+            var pa = property.GetCustomAttribute<ParameterAttribute>(inherit: true);
             CascadingParameterAttribute? cpa = null;
             if (pa is null) {
-                cpa = property.GetCustomAttribute<CascadingParameterAttribute>(true);
+                cpa = property.GetCustomAttribute<CascadingParameterAttribute>(inherit: true);
                 if (cpa is null)
                     continue; // Not a parameter
             }
@@ -72,7 +72,7 @@ public sealed class ComponentInfo
         var fca = type.GetCustomAttribute<FusionComponentAttribute>(false);
         ParameterComparisonMode = fca?.ParameterComparisonMode.NullIfInherited()
             ?? parentComponentInfo?.ParameterComparisonMode
-            ?? CircuitHubComponentBase.DefaultParameterComparisonMode;
+            ?? FusionComponentBase.DefaultParameterComparisonMode;
     }
 
     public bool ShouldSetParameters(ComponentBase component, ParameterView parameterView)

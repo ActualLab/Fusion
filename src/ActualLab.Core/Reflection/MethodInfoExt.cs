@@ -93,7 +93,7 @@ public static class MethodInfoExt
     {
         var isEndOfChain = method == methodDef;
         if (isEndOfChain || method.DeclaringType == method.ReflectedType) {
-            var attr = method.GetCustomAttributes(false).OfType<TAttr>().FirstOrDefault();
+            var attr = method.GetCustomAttributes(inherit: false).OfType<TAttr>().FirstOrDefault();
             if (attr is not null)
                 return attr;
         }
@@ -114,7 +114,7 @@ public static class MethodInfoExt
                     if (targetMethod != method)
                         continue;
                     var iMethod = map.InterfaceMethods[index];
-                    var attr = iMethod.GetCustomAttributes(false).OfType<TAttr>().FirstOrDefault();
+                    var attr = iMethod.GetCustomAttributes(inherit: false).OfType<TAttr>().FirstOrDefault();
                     if (attr is not null)
                         return attr;
                 }
@@ -135,7 +135,7 @@ public static class MethodInfoExt
     {
         var isEndOfChain = method == methodDef;
         if (isEndOfChain || method.DeclaringType == method.ReflectedType)
-            result.AddRange(method.GetCustomAttributes(false).OfType<TAttr>());
+            result.AddRange(method.GetCustomAttributes(inherit: false).OfType<TAttr>());
         var type = method.ReflectedType;
         var baseType = method.DeclaringType;
         if (baseType == type)
@@ -155,7 +155,7 @@ public static class MethodInfoExt
                     if (targetMethod != method)
                         continue;
                     var iMethod = map.InterfaceMethods[index];
-                    result.AddRange(iMethod.GetCustomAttributes(false).OfType<TAttr>());
+                    result.AddRange(iMethod.GetCustomAttributes(inherit: false).OfType<TAttr>());
                 }
             }
         }
