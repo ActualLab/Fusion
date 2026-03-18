@@ -11,12 +11,34 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.1.114+a74e74b2 | npm: 12.1.100
+
+Release date: 2026-03-18
+
+### Added
+- `RpcSerializableAttribute` (`[RpcSerializable]`) — marks abstract types as non-polymorphic 
+  for RPC serialization, allowing the underlying serializer's union support 
+  (`[JsonDerivedType]`, `[MemoryPackUnion]`, `[Union]`) to handle type discrimination 
+  instead of RPC's `TypeRef` wrapping
+- `RpcSerializationFormatException` and `RpcWebSocketCloseCode.UnsupportedFormat` — better 
+  error handling when client requests a serialization format unknown to the server
+
+### Documentation
+- Added "Polymorphic Serialization" section to RPC Serialization docs covering `[RpcSerializable]` usage
+
+### Tests
+- Added tests for `[RpcSerializable]` with `NonPolymorphicBase` hierarchy, 
+  including `RpcStream` scenarios
+- Added tests for unsupported serialization format handling in `RpcWebSocketTest`
+
+
 ## 12.1.107+fe771590 | npm: 12.1.100
 
 Release date: 2026-03-17
 
 ### Added
-- `SharedFloatPool` and `SharedDoublePool` in `ArrayPools` (`ActualLab.Core`) — shared array pools for `float` and `double` types
+- `SharedFloatPool` and `SharedDoublePool` in `ArrayPools` (`ActualLab.Core`) — 
+  shared array pools for `float` and `double` types
 
 ### Changed
 - Removed `unmanaged` constraint from `NonPoolingArrayPool<T>`, allowing it to work with any type
