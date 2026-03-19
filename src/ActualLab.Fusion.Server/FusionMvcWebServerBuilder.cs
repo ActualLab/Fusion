@@ -40,7 +40,6 @@ public readonly struct FusionMvcWebServerBuilder
                 new SimpleModelBinderProvider<Symbol, SymbolModelBinder>(),
                 new SimpleModelBinderProvider<Session, SessionModelBinder>(),
                 new SimpleModelBinderProvider<TypeRef, TypeRefModelBinder>(),
-                new RangeModelBinderProvider(),
             };
             options.ModelBinderProviders.Clear();
             options.ModelBinderProviders.AddRange(newModelBinderProviders);
