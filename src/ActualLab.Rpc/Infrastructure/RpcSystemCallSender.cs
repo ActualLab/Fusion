@@ -1,5 +1,6 @@
 using ActualLab.Interception;
 using ActualLab.Resilience;
+using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -184,8 +185,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     {
         var context = new RpcOutboundContext(peer, localId, headers);
 #pragma warning disable MA0100
-        var itemType = typeof(TItem);
-        var arguments = itemType.IsAbstract || itemType == typeof(object)
+        var arguments = RpcArgumentSerializer.IsPolymorphic(typeof(TItem))
             ? ArgumentList.New(index, (object)items) // This ensures the serialization of this type will be polymorphic
             : ArgumentList.New(index, items);
         var call = context.PrepareCallForSendNoWait(BatchMethodDef, arguments)!;
