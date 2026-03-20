@@ -1,4 +1,5 @@
 using ActualLab.Rpc.Internal;
+using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -263,7 +264,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
     {
 
         private readonly int _batchSize;
-        private readonly bool _isPolymorphic = !(typeof(T).IsValueType || typeof(T).IsSealed);
+        private readonly bool _isPolymorphic = RpcArgumentSerializer.IsPolymorphic(typeof(T));
         private readonly List<T> _items;
         private Type? _itemType;
         private readonly RpcSharedStream<T> _stream;
