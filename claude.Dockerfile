@@ -2,7 +2,7 @@
 # Supports: ActualLab.Fusion, ActualLab.Fusion.Samples, ActualChat
 # Includes: .NET 10 SDK, .NET 9 SDK, Node.js 20, Claude Code CLI
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0
+FROM mcr.microsoft.com/dotnet/sdk:10.0.201
 
 # Timezone setup
 ARG TZ=Etc/UTC
@@ -12,27 +12,18 @@ ENV TZ="$TZ"
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
-# Install dev tools, CLI utilities, Python 3, image tools
+# Install dev tools, CLI utilities, Python 3, image tools, audio support
 RUN apt-get update && apt-get install -y \
     git git-lfs procps sudo fzf zsh man-db unzip gnupg2 \
     gh jq wget curl less ca-certificates \
     python3 python3-pip python3-venv \
     imagemagick \
     ripgrep fd-find vim nano \
+    pulseaudio-utils libpulse0 alsa-utils libasound2-plugins sox \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PowerShell (the Microsoft Debian repo is amd64-only for `powershell`)
-# TODO: do we need explicit powershell installation? it's already preinstalled
-RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
-        wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb && \
-        dpkg -i packages-microsoft-prod.deb && \
-        rm packages-microsoft-prod.deb && \
-        apt-get update && \
-        apt-get install -y powershell && \
-        apt-get clean && rm -rf /var/lib/apt/lists/*; \
-    else \
-        echo "Skipping PowerShell install on $ARCH"; \
-    fi
+# PowerShell is pre-installed in .NET SDK image (both amd64 and arm64)
+RUN pwsh -Version
 
 # Install Google Cloud CLI
 RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
@@ -60,6 +51,9 @@ RUN dotnet workload install wasm-tools
 # Install Playwright npm package globally and browser dependencies
 RUN npm install -g playwright && \
     playwright install-deps
+
+# Configure ALSA to use PulseAudio (redirects ALSA apps to PulseAudio)
+RUN echo "pcm.!default { type pulse }\nctl.!default { type pulse }" > /etc/asound.conf
 
 # Create non-root user
 ARG USERNAME=claude
@@ -111,14 +105,13 @@ ENV PATH=/home/claude/.local/bin:$PATH:/usr/local/share/npm-global/bin
 # Pre-download Playwright Chromium browser (~280MB, speeds up first use)
 RUN playwright install chromium
 
+# Install Chrome DevTools MCP server (for browser automation debugging)
+RUN npm install -g chrome-devtools-mcp
+
 # Install Claude Code CLI (native installer, auto-update disabled at runtime)
 ENV DISABLE_AUTOUPDATER=1
-RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.69
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.81
 
-# Install frontend-design plugin
-RUN mkdir -p /home/claude/.claude/skills/frontend-design && \
-    curl -fsSL -o /home/claude/.claude/skills/frontend-design/SKILL.md \
-    https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/frontend-design/skills/frontend-design/SKILL.md
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj

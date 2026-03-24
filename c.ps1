@@ -3,33 +3,13 @@
 
 # Auto-detect AC_ProjectRoot from the folder containing this script
 # e.g., if c.ps1 is at D:\Projects\ActualChat\c.ps1, AC_ProjectRoot = D:\Projects
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $env:AC_ProjectRoot) {
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
     $env:AC_ProjectRoot = Split-Path -Parent $scriptDir
 }
 
-# Detect current OS
-function Get-CurrentOS {
-    if ($IsWindows -or $env:OS -eq "Windows_NT") {
-        return "Windows"
-    } elseif ($IsLinux) {
-        # Check if running in Docker
-        if ((Test-Path "/.dockerenv") -or ((Test-Path "/proc/1/cgroup") -and (Get-Content "/proc/1/cgroup" | Select-String -Pattern "docker|kubepods" -Quiet))) {
-            return "Docker"
-        }
-        # Check if running in WSL
-        if (Test-Path "/proc/version") {
-            $version = Get-Content "/proc/version"
-            if ($version -match "microsoft|WSL") {
-                return "WSL"
-            }
-        }
-        return "Linux"
-    } elseif ($IsMacOS) {
-        return "macOS"
-    }
-    return "Unknown"
-}
+# Load common utilities
+. (Join-Path $scriptDir "scripts/Common.ps1")
 
 # Convert Windows path to WSL path
 function ConvertTo-WSLPath {
@@ -81,6 +61,53 @@ if ($currentOS -eq "Windows" -and $hasWindowsTerminal -and -not $env:WT_SESSION 
     }
     & wt @wtArgs
     exit 0
+}
+
+# Convert worktree git paths from absolute to relative so they work across
+# Windows and Docker/Linux (where mount points differ).
+function Convert-WorktreeToRelativePaths {
+    param(
+        [string]$WorktreePath,
+        [string]$MainProjectPath,
+        [switch]$Debug
+    )
+
+    $worktreeName = Split-Path -Leaf $WorktreePath
+
+    # Fix <worktree>/.git file: convert absolute gitdir to relative
+    $dotGitFile = Join-Path $WorktreePath ".git"
+    if (Test-Path $dotGitFile) {
+        $content = Get-Content $dotGitFile -Raw
+        if ($content -match '^gitdir:\s*(.+)$') {
+            $currentGitDir = $Matches[1].Trim()
+            # Only fix if the path is absolute (not already relative)
+            if ([System.IO.Path]::IsPathRooted(($currentGitDir -replace "/", [System.IO.Path]::DirectorySeparatorChar))) {
+                $relPath = [System.IO.Path]::GetRelativePath($WorktreePath, ($currentGitDir -replace "/", [System.IO.Path]::DirectorySeparatorChar))
+                $relPath = $relPath -replace "\\", "/"
+                $newContent = "gitdir: $relPath`n"
+                Set-Content -Path $dotGitFile -Value $newContent -NoNewline
+                if ($Debug) { Write-Host "[DEBUG] Fixed $dotGitFile`: gitdir: $relPath" }
+            } elseif ($Debug) {
+                Write-Host "[DEBUG] $dotGitFile already has relative path: $currentGitDir"
+            }
+        }
+    }
+
+    # Fix <main>/.git/worktrees/<name>/gitdir: convert absolute path to relative
+    $mainGitDir = Join-Path $MainProjectPath ".git"
+    $worktreeGitDir = Join-Path $mainGitDir "worktrees" $worktreeName "gitdir"
+    if (Test-Path $worktreeGitDir) {
+        $content = (Get-Content $worktreeGitDir -Raw).Trim()
+        if ([System.IO.Path]::IsPathRooted(($content -replace "/", [System.IO.Path]::DirectorySeparatorChar))) {
+            $worktreeGitDirParent = Split-Path -Parent $worktreeGitDir
+            $relPath = [System.IO.Path]::GetRelativePath($worktreeGitDirParent, ($content -replace "/", [System.IO.Path]::DirectorySeparatorChar))
+            $relPath = $relPath -replace "\\", "/"
+            Set-Content -Path $worktreeGitDir -Value "$relPath`n" -NoNewline
+            if ($Debug) { Write-Host "[DEBUG] Fixed $worktreeGitDir`: $relPath" }
+        } elseif ($Debug) {
+            Write-Host "[DEBUG] $worktreeGitDir already has relative path: $content"
+        }
+    }
 }
 
 # Find project root via git. Detects worktrees automatically.
@@ -149,6 +176,7 @@ $mode                  = "docker"  # default mode
 $fromMode              = $null     # set when self-invoked (e.g., from-docker, from-wsl)
 $worktreeSuffix        = $null     # set when wt argument is used
 $featureWorktreeSuffix = $null     # set when fwt/bwt argument is used
+$removeWorktreeSuffix  = $null     # set when rwt argument is used
 $wtType                = $null     # worktree type: "feature" or "bugfix"
 $newContainer          = $false
 $renewContainer        = $false
@@ -169,6 +197,7 @@ function Show-Help {
     Write-Host "  wt <suffix>  Create/use worktree from current branch (e.g., wt experiment)"
     Write-Host "  fwt <suffix> Create/use feature worktree with feat/<suffix> branch (e.g., fwt feature1)"
     Write-Host "  bwt <suffix> Create/use bugfix worktree with bugfix/<suffix> branch (e.g., bwt issue123)"
+    Write-Host "  rwt <suffix> Remove worktree and clean up (ports, hosts, nginx config)"
     Write-Host "  chrome       Start Chrome with remote debugging enabled (for Playwright)"
     Write-Host "  build        Build Docker image for current project"
     Write-Host "  help         Show this help message"
@@ -184,10 +213,10 @@ function Show-Help {
     Write-Host "  AC_CLAUDE_ISOLATE Set to 'true' or '1' to isolate .claude.json per container instance"
     Write-Host ""
     Write-Host "Environment variables set for Claude:"
-    Write-Host "  AC_ProjectRoot    Project root path (/proj in Docker)"
-    Write-Host "  AC_ProjectPath    Full path to current project (or worktree)"
-    Write-Host "  AC_OS             OS/environment description"
-    Write-Host "  AC_Worktree       Worktree suffix (empty if not in a worktree)"
+    Write-Host "  AC_ProjectRoot      Project root path (/proj in Docker)"
+    Write-Host "  AC_ProjectPath      Full path to current project (or worktree)"
+    Write-Host "  AC_OS               OS/environment description"
+    Write-Host "  AC_Worktree         Worktree suffix (empty if not in a worktree)"
     Write-Host ""
     Write-Host "Docker:"
     Write-Host "  AC_ProjectRoot is mounted as /proj/ — all sibling projects are accessible"
@@ -208,9 +237,11 @@ function Show-Help {
     Write-Host "  c wt experiment    Run in worktree from current branch"
     Write-Host "  c fwt feature1     Run in worktree with feat/feature1 branch"
     Write-Host "  c bwt issue123     Run in worktree with bugfix/issue123 branch"
+    Write-Host "  c rwt feature1     Remove feature1 worktree and clean up"
     Write-Host "  c os fwt feature1  Run on host OS in feature worktree"
     Write-Host "  c os bwt issue1    Run on host OS in bugfix worktree"
     Write-Host "  c chrome           Start Chrome with remote debugging"
+    Write-Host "  c audio            Setup/start PulseAudio for voice mode (macOS only)"
     Write-Host "  c build            Build Docker image"
     Write-Host "  c --resume abc     Pass --resume abc to Claude"
     Write-Host ""
@@ -225,7 +256,7 @@ while ($argIndex -lt $args.Count) {
     $currentArg = $args[$argIndex]
 
     # Check for mode commands
-    if ($currentArg -in "wsl", "os", "build", "chrome" -and $mode -eq "docker") {
+    if ($currentArg -in "wsl", "os", "build", "chrome", "audio" -and $mode -eq "docker") {
         $mode = $currentArg
         $argIndex++
         continue
@@ -262,12 +293,25 @@ while ($argIndex -lt $args.Count) {
         $wtType = if ($currentArg -eq "fwt") { "feature" } else { "bugfix" }
         $argIndex++
         if ($argIndex -lt $args.Count) {
-            $featureWorktreeSuffix = $args[$argIndex]
             # Strip feat/ or bugfix/ prefix if provided (fwt/bwt already adds the prefix)
-            $featureWorktreeSuffix = $featureWorktreeSuffix -replace '^(feat|bugfix|hotfix|fix)/', ''
+            $featureWorktreeSuffix = $args[$argIndex] -replace '^(feat|bugfix|hotfix|fix)/', ''
             $argIndex++
         } else {
             Write-Error "The $currentArg command requires a worktree suffix argument"
+            exit 1
+        }
+        continue
+    }
+
+    # Check for rwt command (remove worktree)
+    if ($currentArg -eq "rwt") {
+        $argIndex++
+        if ($argIndex -lt $args.Count) {
+            # Strip feat/ or bugfix/ prefix if provided (to match how fwt/bwt creates folders)
+            $removeWorktreeSuffix = $args[$argIndex] -replace '^(feat|bugfix|hotfix|fix)/', ''
+            $argIndex++
+        } else {
+            Write-Error "The rwt command requires a worktree suffix argument"
             exit 1
         }
         continue
@@ -312,21 +356,543 @@ if ($argIndex -lt $args.Count) {
 }
 
 # Find current project
-$projectInfo = Find-ProjectRoot -Debug:$debugMode
-if (-not $projectInfo) {
-    Write-Error "Could not find project root."
-    Write-Error "Make sure you're inside a git repository."
-    exit 1
-}
+if ($fromMode -and $env:AC_ProjectPath) {
+    # Re-invoked inside Docker/WSL: derive project info from env vars set by outer invocation.
+    # This avoids calling git rev-parse, which fails in worktrees with absolute Windows paths.
+    $projectRoot  = $env:AC_ProjectPath
+    $folderName   = Split-Path -Leaf $env:AC_ProjectPath
+    $worktree     = if ($env:AC_Worktree) { $env:AC_Worktree } else { "" }
+    $projectName  = if ($worktree -and $folderName.EndsWith("-$worktree")) {
+        $folderName.Substring(0, $folderName.Length - $worktree.Length - 1)
+    } else { $folderName }
+    $relativePath = ""
+    if ($debugMode) {
+        Write-Host "[DEBUG] Using env vars: projectRoot=$projectRoot, folderName=$folderName, worktree=$worktree, projectName=$projectName"
+    }
 
-$projectName  = $projectInfo.ProjectName
-$folderName   = $projectInfo.FolderName
-$projectRoot  = $projectInfo.ProjectRoot
-$relativePath = $projectInfo.RelativePath -replace "\\", "/"
-$worktree     = $projectInfo.Worktree
+    # Fix worktree git paths if they still have absolute Windows paths (from host)
+    if ($worktree) {
+        $mainProjectPath = Join-Path $env:AC_ProjectRoot $projectName
+        Convert-WorktreeToRelativePaths -WorktreePath $projectRoot -MainProjectPath $mainProjectPath -Debug:$debugMode
+    }
+} else {
+    $projectInfo = Find-ProjectRoot -Debug:$debugMode
+    if (-not $projectInfo) {
+        Write-Error "Could not find project root."
+        Write-Error "Make sure you're inside a git repository."
+        exit 1
+    }
+
+    $projectName  = $projectInfo.ProjectName
+    $folderName   = $projectInfo.FolderName
+    $projectRoot  = $projectInfo.ProjectRoot
+    $relativePath = $projectInfo.RelativePath -replace "\\", "/"
+    $worktree     = $projectInfo.Worktree
+}
 
 # Save the original folder name (where c.ps1 was invoked from, before wt/fwt/bwt)
 $originalFolderName = $folderName
+
+# Port registry for worktree server ports
+class PortRegistry {
+    [string]$ProjectPath
+    [string]$RegistryPath
+    [int]$BasePort = 7080
+    [int]$PortIncrement = 10
+    [int]$MaxPort = 7370
+
+    PortRegistry([string]$projectPath) {
+        $this.ProjectPath = $projectPath
+        $this.RegistryPath = Join-Path $projectPath "artifacts" "server-ports.json"
+    }
+
+    hidden [hashtable] Load() {
+        if (Test-Path $this.RegistryPath) {
+            return Get-Content $this.RegistryPath -Raw | ConvertFrom-Json -AsHashtable
+        }
+        return @{ "dev" = $this.BasePort }
+    }
+
+    hidden [void] Save([hashtable]$registry) {
+        $registry | ConvertTo-Json -Depth 10 | Set-Content $this.RegistryPath
+    }
+
+    [object] Get([string]$instanceName) {
+        $registry = $this.Load()
+        if ($registry.ContainsKey($instanceName)) {
+            return $registry[$instanceName]
+        }
+        return $null
+    }
+
+    [int] Allocate([string]$instanceName) {
+        $registry = $this.Load()
+
+        # Return existing port if already allocated
+        if ($registry.ContainsKey($instanceName)) {
+            return $registry[$instanceName]
+        }
+
+        # Allocate new port
+        $usedPorts = [System.Collections.Generic.HashSet[int]]::new([int[]]@($registry.Values))
+        $port = $this.BasePort
+        while ($usedPorts.Contains($port) -and $port -le $this.MaxPort) {
+            $port += $this.PortIncrement
+        }
+
+        if ($port -gt $this.MaxPort) {
+            throw "No more port blocks available. Maximum port $($this.MaxPort) exceeded."
+        }
+
+        $registry[$instanceName] = $port
+        $this.Save($registry)
+
+        return $port
+    }
+
+    [bool] Deallocate([string]$instanceName) {
+        if (-not (Test-Path $this.RegistryPath)) {
+            return $false
+        }
+
+        $registry = $this.Load()
+        if (-not $registry.ContainsKey($instanceName)) {
+            return $false
+        }
+
+        $registry.Remove($instanceName)
+        $this.Save($registry)
+
+        return $true
+    }
+}
+
+# Worktree server configuration and registration
+class WorktreeServer {
+    [string]$ProjectPath
+    [string]$WorktreeSuffix
+    [string]$InstanceName
+    [int]$Port
+    [string[]]$Hostnames
+    [PortRegistry]$PortRegistry
+    [bool]$IsMainProject
+
+    WorktreeServer([string]$projectPath, [string]$worktreeSuffix) {
+        $this.ProjectPath = $projectPath
+        $this.WorktreeSuffix = $worktreeSuffix
+        $this.IsMainProject = -not $worktreeSuffix
+
+        # Truncate suffix for domain/instance names (max 20 chars), default to "dev" for main project
+        $this.InstanceName = if ($worktreeSuffix) {
+            -join $worktreeSuffix[0..([Math]::Min(19, $worktreeSuffix.Length - 1))]
+        } else { "dev" }
+
+        # Build hostnames for this worktree (main project doesn't need custom hostnames)
+        $this.Hostnames = if (-not $this.IsMainProject) {
+            @(
+                "$($this.InstanceName).local.voxt.ai",
+                "cdn.$($this.InstanceName).local.voxt.ai",
+                "media.$($this.InstanceName).local.voxt.ai"
+            )
+        } else { @() }
+
+        $this.PortRegistry = [PortRegistry]::new($projectPath)
+        $this.Port = $this.PortRegistry.Get($this.InstanceName)
+    }
+
+    [hashtable] GetConfig() {
+        return @{
+            InstanceName = $this.InstanceName
+            Port         = $this.Port
+        }
+    }
+
+    [hashtable] Register([bool]$debug) {
+        # Return existing config if already registered
+        if ($this.Port) {
+            return $this.GetConfig()
+        }
+
+        # Allocate new port
+        $this.Port = $this.PortRegistry.Allocate($this.InstanceName)
+        if ($debug) { Write-Host "[DEBUG] Allocated port $($this.Port) for instance '$($this.InstanceName)'" }
+
+        # Write nginx config and update hosts (only for worktrees, not main project)
+        if (-not $this.IsMainProject) {
+            $this.WriteNginxConfig($debug)
+            $this.ReloadNginx($debug)
+            $this.AddHostsEntries($debug)
+        }
+
+        return $this.GetConfig()
+    }
+
+    [void] Unregister([bool]$debug) {
+        if ($this.IsMainProject) { return }
+
+        # Remove from port registry
+        $removed = $this.PortRegistry.Deallocate($this.InstanceName)
+        if (-not $removed) {
+            if ($debug) { Write-Host "[DEBUG] Instance '$($this.InstanceName)' not found in registry" }
+            return
+        }
+        if ($debug) { Write-Host "[DEBUG] Removed instance '$($this.InstanceName)' from server registry" }
+
+        $this.RemoveNginxConfig($debug)
+        $this.ReloadNginx($debug)
+        $this.RemoveHostsEntries($debug)
+
+        $this.Port = 0
+    }
+
+    hidden [string] GetNginxConfigPath() {
+        $worktreePortsDir = Join-Path $this.ProjectPath "artifacts" "worktree-ports.d"
+        return Join-Path $worktreePortsDir "$($this.InstanceName).conf"
+    }
+
+    hidden [void] WriteNginxConfig([bool]$debug) {
+        if ($this.IsMainProject) { return }
+
+        $worktreePortsDir = Join-Path $this.ProjectPath "artifacts" "worktree-ports.d"
+        if (-not (Test-Path $worktreePortsDir)) {
+            New-Item -ItemType Directory -Path $worktreePortsDir -Force | Out-Null
+        }
+
+        $nginxConfPath = $this.GetNginxConfigPath()
+        Set-Content -Path $nginxConfPath -Value "`"$($this.InstanceName)`" $($this.Port);"
+        if ($debug) { Write-Host "[DEBUG] Wrote nginx port mapping: $nginxConfPath" }
+    }
+
+    hidden [void] RemoveNginxConfig([bool]$debug) {
+        $nginxConfPath = $this.GetNginxConfigPath()
+        if (Test-Path $nginxConfPath) {
+            Remove-Item $nginxConfPath -Force
+            if ($debug) { Write-Host "[DEBUG] Removed nginx port mapping: $nginxConfPath" }
+        }
+    }
+
+    hidden [void] ReloadNginx([bool]$debug) {
+        $originalLocation = Get-Location
+        Set-Location $this.ProjectPath
+        try {
+            $null = docker compose exec -T nginx nginx -s reload 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                if ($debug) { Write-Host "[DEBUG] Reloaded nginx" }
+            } else {
+                if ($debug) { Write-Host "[DEBUG] nginx reload failed (docker-compose may not be running)" }
+            }
+        } finally {
+            Set-Location $originalLocation
+        }
+    }
+
+    hidden [void] AddHostsEntries([bool]$debug) {
+        if (-not $this.Hostnames) { return }
+        if ($debug) { Write-Host "[DEBUG] Adding hosts entries for: $($this.Hostnames -join ', ')" }
+        Update-HostEntries -Hostnames $this.Hostnames -DetectIP | Out-Null
+    }
+
+    hidden [void] RemoveHostsEntries([bool]$debug) {
+        if (-not $this.Hostnames) { return }
+        if ($debug) { Write-Host "[DEBUG] Removing hosts entries for: $($this.Hostnames -join ', ')" }
+        Remove-HostEntries -Hostnames $this.Hostnames
+    }
+}
+
+# PulseAudio setup for voice mode in Docker
+class PulseAudioSetup {
+    [int]$Port = 4713
+
+    [bool] IsRunning() {
+        if ((Get-CurrentOS) -eq "Windows") {
+            $listening = netstat -an | Select-String ":$($this.Port)\s+.*LISTENING"
+            return $null -ne $listening
+        } else {
+            $listening = bash -c "lsof -i :$($this.Port) -sTCP:LISTEN 2>/dev/null || ss -tln 2>/dev/null | grep -q ':$($this.Port) '"
+            return $LASTEXITCODE -eq 0 -and $listening
+        }
+    }
+
+    [bool] WaitForStart([int]$maxWaitSeconds) {
+        $waited = 0
+        while (-not $this.IsRunning() -and $waited -lt ($maxWaitSeconds * 2)) {
+            Start-Sleep -Milliseconds 500
+            $waited++
+        }
+        return $this.IsRunning()
+    }
+
+    [bool] IsInstalled() {
+        $os = Get-CurrentOS
+        if ($os -eq "macOS") {
+            return $null -ne (Get-Command "pulseaudio" -ErrorAction SilentlyContinue)
+        } elseif ($os -eq "Windows") {
+            return (Test-Path "$env:LOCALAPPDATA\PulseAudio\bin\pulseaudio.exe") -or
+                   (Test-Path "$env:ProgramFiles\PulseAudio\bin\pulseaudio.exe")
+        }
+        return $false
+    }
+
+    [void] EnsureRunning() {
+        if ($this.IsRunning() -or -not $this.IsInstalled()) { return }
+        Write-Host "Starting PulseAudio for voice mode..." -ForegroundColor Cyan
+        $this.Setup()
+    }
+
+    [void] Setup() {
+        switch (Get-CurrentOS) {
+            "macOS"   { $this.SetupMacOS() }
+            "Windows" { $this.SetupWindows() }
+            "Linux"   { $this.SetupLinux() }
+            default   { Write-Host "Unsupported OS for audio setup" -ForegroundColor Red; exit 1 }
+        }
+    }
+
+    hidden [void] SetupMacOS() {
+        # Check if PulseAudio is installed
+        if (-not (Get-Command "pulseaudio" -ErrorAction SilentlyContinue)) {
+            Write-Host "PulseAudio is not installed. Installing via Homebrew..." -ForegroundColor Cyan
+            & brew install pulseaudio
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to install PulseAudio. Please install Homebrew first: https://brew.sh"
+                exit 1
+            }
+        }
+
+        # Check if already running
+        if ($this.IsRunning()) {
+            Write-Host "PulseAudio is already running on port $($this.Port)" -ForegroundColor Green
+            return
+        }
+
+        # Create config directory
+        $configDir = "$env:HOME/.pulse"
+        if (-not (Test-Path $configDir)) {
+            New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+        }
+
+        # Create config with TCP module
+        $configFile = "$configDir/default.pa"
+        $homebrewPrefix = if (Test-Path "/opt/homebrew") { "/opt/homebrew" } else { "/usr/local" }
+        $defaultPaPath = "$homebrewPrefix/etc/pulse/default.pa"
+
+        if (-not (Test-Path $configFile) -or -not (Select-String -Path $configFile -Pattern "module-native-protocol-tcp" -Quiet)) {
+            Write-Host "Configuring PulseAudio for Docker connections..." -ForegroundColor Cyan
+            $configContent = @"
+.include $defaultPaPath
+load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1;192.168.65.0/24 auth-anonymous=1
+"@
+            Set-Content -Path $configFile -Value $configContent
+            Write-Host "Created config: $configFile" -ForegroundColor Green
+        }
+
+        # Start daemon
+        Write-Host "Starting PulseAudio daemon..." -ForegroundColor Cyan
+        & pulseaudio --load=module-native-protocol-tcp --exit-idle-time=-1 --daemon 2>&1 | Out-Null
+
+        if ($this.WaitForStart(10)) {
+            Write-Host "PulseAudio started successfully on port $($this.Port)" -ForegroundColor Green
+            Write-Host "`nVoice mode should now work in Docker. Run 'c' to start Claude." -ForegroundColor Cyan
+            Write-Host "`nTo stop: pulseaudio --kill" -ForegroundColor DarkGray
+        } else {
+            Write-Host "Failed to start PulseAudio. Try manually:" -ForegroundColor Yellow
+            Write-Host "  pulseaudio --load=module-native-protocol-tcp --exit-idle-time=-1 --daemon" -ForegroundColor White
+        }
+    }
+
+    hidden [void] SetupWindows() {
+        $portableDir = "$env:LOCALAPPDATA\PulseAudio"
+        $legacyDir = "$env:ProgramFiles\PulseAudio"
+        # Prefer portable location, fall back to legacy (exe installer) location
+        $installDir = if (Test-Path "$portableDir\bin\pulseaudio.exe") { $portableDir }
+            elseif (Test-Path "$legacyDir\bin\pulseaudio.exe") { $legacyDir }
+            else { $portableDir }
+        $exePath = "$installDir\bin\pulseaudio.exe"
+        $configDir = "$env:APPDATA\PulseAudio"
+        $configFile = "$configDir\default.pa"
+
+        # Install if needed
+        if (-not (Test-Path $exePath)) {
+            Write-Host "PulseAudio is not installed. Downloading..." -ForegroundColor Cyan
+            $zipUrl = "https://github.com/pgaskin/pulseaudio-win32/releases/download/v5/pulseaudio.zip"
+            $zipPath = "$env:TEMP\pulseaudio.zip"
+            try {
+                Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
+            } catch {
+                Write-Error "Failed to download PulseAudio from $zipUrl"
+                exit 1
+            }
+            # Zip contains a "pulseaudio/" root folder, so extract to parent directory
+            Expand-Archive -Path $zipPath -DestinationPath (Split-Path $installDir) -Force
+            Remove-Item $zipPath -ErrorAction SilentlyContinue
+
+            if (-not (Test-Path $exePath)) {
+                Write-Error "PulseAudio installation failed."
+                exit 1
+            }
+            Write-Host "PulseAudio installed to $installDir" -ForegroundColor Green
+        }
+
+        # Check if already running
+        if ($this.IsRunning()) {
+            Write-Host "PulseAudio is already running on port $($this.Port)" -ForegroundColor Green
+            return
+        }
+
+        # Create config directory
+        if (-not (Test-Path $configDir)) {
+            New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+        }
+
+        # Create config with TCP module
+        if (-not (Test-Path $configFile) -or -not (Select-String -Path $configFile -Pattern "module-native-protocol-tcp" -Quiet)) {
+            Write-Host "Configuring PulseAudio for Docker connections..." -ForegroundColor Cyan
+            $configContent = @"
+.include $installDir/etc/pulse/default.pa
+load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1;192.168.65.0/24 auth-anonymous=1
+"@
+            Set-Content -Path $configFile -Value $configContent
+            Write-Host "Created config: $configFile" -ForegroundColor Green
+        }
+
+        # Start daemon
+        Write-Host "Starting PulseAudio..." -ForegroundColor Cyan
+        Start-Process -FilePath $exePath -ArgumentList "--exit-idle-time=-1", "-F", $configFile -WindowStyle Hidden
+
+        if ($this.WaitForStart(10)) {
+            Write-Host "PulseAudio started successfully on port $($this.Port)" -ForegroundColor Green
+            Write-Host "`nVoice mode should now work in Docker. Run 'c' to start Claude." -ForegroundColor Cyan
+            Write-Host "`nTo stop: taskkill /IM pulseaudio.exe" -ForegroundColor DarkGray
+        } else {
+            Write-Host "Failed to start PulseAudio. Try running manually:" -ForegroundColor Yellow
+            Write-Host "  `"$exePath`" --exit-idle-time=-1 -F `"$configFile`"" -ForegroundColor White
+        }
+    }
+
+    hidden [void] SetupLinux() {
+        Write-Host "On Linux, PulseAudio/PipeWire should already be available." -ForegroundColor Yellow
+        Write-Host "If voice mode doesn't work, ensure the TCP module is loaded:" -ForegroundColor Yellow
+        Write-Host "  pactl load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" -ForegroundColor White
+    }
+}
+
+# Update .env file with server configuration
+# Preserves existing file structure (comments, ordering, unrelated variables).
+# Only updates lines whose values changed and appends new variables at the end.
+function Update-EnvFile {
+    param(
+        [string]$ProjectPath,
+        [hashtable]$Variables,
+        [switch]$Debug
+    )
+
+    $envFilePath = Join-Path $ProjectPath ".env"
+    $remaining  = [System.Collections.Generic.Dictionary[string,string]]::new()
+    foreach ($k in $Variables.Keys) { $remaining[$k] = $Variables[$k] }
+    $lines      = @()
+    $changed    = $false
+
+    # Read existing file, updating matching lines in place
+    if (Test-Path $envFilePath) {
+        $lines = @(Get-Content $envFilePath | ForEach-Object {
+            $line = $_
+            if ($line.Trim() -and -not $line.TrimStart().StartsWith('#')) {
+                $eqIndex = $line.IndexOf('=')
+                if ($eqIndex -gt 0) {
+                    $key = $line.Substring(0, $eqIndex)
+                    if ($remaining.ContainsKey($key)) {
+                        $newValue = $remaining[$key]
+                        $null = $remaining.Remove($key)
+                        $newLine = "$key=$newValue"
+                        if ($newLine -ne $line) { $changed = $true }
+                        return $newLine
+                    }
+                }
+            }
+            return $line
+        })
+    }
+
+    # Append any variables that weren't already in the file
+    foreach ($entry in $remaining.GetEnumerator() | Sort-Object Key) {
+        $lines += "$($entry.Key)=$($entry.Value)"
+        $changed = $true
+    }
+
+    if ($changed) {
+        Set-Content -Path $envFilePath -Value $lines
+        if ($Debug) { Write-Host "[DEBUG] Updated .env file: $envFilePath" }
+    } elseif ($Debug) {
+        Write-Host "[DEBUG] .env file unchanged: $envFilePath"
+    }
+}
+
+# Handle rwt command: remove worktree and its configuration
+if ($removeWorktreeSuffix) {
+    $mainProjectPath = Join-Path $env:AC_ProjectRoot $projectName
+    $worktreePath = Join-Path $env:AC_ProjectRoot "$projectName-$removeWorktreeSuffix"
+
+    Write-Host "Removing worktree: $projectName-$removeWorktreeSuffix" -ForegroundColor Cyan
+
+    # Remove server config and .env file (ActualChat projects only)
+    if (Test-Path (Join-Path $mainProjectPath "ActualChat.sln")) {
+        $server = [WorktreeServer]::new($mainProjectPath, $removeWorktreeSuffix)
+        $server.Unregister($debugMode)
+
+        $worktreeEnvFile = Join-Path $worktreePath ".env"
+        if (Test-Path $worktreeEnvFile) {
+            Remove-Item $worktreeEnvFile -Force
+            if ($debugMode) { Write-Host "[DEBUG] Removed worktree .env file" }
+        }
+    }
+
+    # Remove git worktree and its branch
+    if (Test-Path $worktreePath) {
+        $originalLocation = Get-Location
+        Set-Location $mainProjectPath
+        try {
+            # Get branch name before removing worktree
+            $worktreeBranch = $null
+            $worktreeListOutput = git worktree list --porcelain 2>&1
+            $inTargetWorktree = $false
+            foreach ($line in $worktreeListOutput -split "`n") {
+                if ($line -match "^worktree (.+)$" -and $Matches[1] -eq $worktreePath) {
+                    $inTargetWorktree = $true
+                } elseif ($line -match "^worktree " -and $inTargetWorktree) {
+                    break
+                } elseif ($inTargetWorktree -and $line -match "^branch refs/heads/(.+)$") {
+                    $worktreeBranch = $Matches[1]
+                    break
+                }
+            }
+
+            # Remove worktree
+            git worktree remove $worktreePath --force 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "Git worktree removed" -ForegroundColor Green
+            } else {
+                Write-Host "Warning: git worktree remove failed, you may need to remove manually" -ForegroundColor Yellow
+            }
+
+            # Delete local branch if found
+            if ($worktreeBranch) {
+                git branch -D $worktreeBranch 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "Local branch '$worktreeBranch' deleted" -ForegroundColor Green
+                } else {
+                    Write-Host "Warning: could not delete branch '$worktreeBranch'" -ForegroundColor Yellow
+                }
+            }
+        } finally {
+            Set-Location $originalLocation
+        }
+    } else {
+        Write-Host "Worktree directory not found: $worktreePath" -ForegroundColor Yellow
+    }
+
+    Write-Host "Done" -ForegroundColor Green
+    exit 0
+}
 
 # Handle wt argument: create regular worktree from current branch and switch to it
 if ($worktreeSuffix) {
@@ -360,6 +926,9 @@ if ($worktreeSuffix) {
             Set-Location $originalLocation
         }
     }
+
+    # Convert worktree git paths to relative so they work in Docker
+    Convert-WorktreeToRelativePaths -WorktreePath $worktreePath -MainProjectPath $mainProjectPath -Debug:$debugMode
 
     # Update project info for the worktree
     $projectRoot  = $worktreePath
@@ -427,12 +996,43 @@ if ($featureWorktreeSuffix) {
         }
     }
 
+    # Convert worktree git paths to relative so they work in Docker
+    $mainProjectPath = Join-Path $env:AC_ProjectRoot $projectName
+    Convert-WorktreeToRelativePaths -WorktreePath $worktreePath -MainProjectPath $mainProjectPath -Debug:$debugMode
+
     # Update project info for the worktree
     $projectRoot  = $worktreePath
     $folderName   = "$projectName-$featureWorktreeSuffix"
     $worktree     = $featureWorktreeSuffix
     $relativePath = ""
     Set-Location $worktreePath
+}
+
+# Register server config and write .env file (ActualChat projects only)
+$isActualChatProject = Test-Path (Join-Path $projectRoot "ActualChat.sln")
+$serverConfig = $null
+if ($isActualChatProject) {
+    $mainProjectPath = if ($worktree -or $worktreeSuffix -or $featureWorktreeSuffix) {
+        Join-Path $env:AC_ProjectRoot $projectName
+    } else {
+        $projectRoot
+    }
+    $server = [WorktreeServer]::new($mainProjectPath, $worktree)
+    $serverConfig = $server.Register($debugMode)
+
+    # Write server configuration to .env file in the project/worktree directory
+    # Uses .NET configuration names so they're automatically picked up by the server
+    $baseUri = if ($serverConfig.InstanceName -ne "dev") { "https://$($serverConfig.InstanceName).local.voxt.ai" } else { "https://local.voxt.ai" }
+    $urlsValue = "http://0.0.0.0:$($serverConfig.Port)"
+    $envVarsToSave = @{
+        "CoreSettings__Instance" = $serverConfig.InstanceName
+        # Use 0.0.0.0 to allow connections from nginx container
+        # "urls" is for .NET config loading, "ASPNETCORE_URLS" is for env var loading
+        "urls" = $urlsValue
+        "ASPNETCORE_URLS" = $urlsValue
+        "HostSettings__BaseUri" = $baseUri
+    }
+    Update-EnvFile -ProjectPath $projectRoot -Variables $envVarsToSave -Debug:$debugMode
 }
 
 # Suppress output when launching docker (inner instance will output)
@@ -614,14 +1214,16 @@ switch ($mode) {
         Write-Host "Running Claude on: $($env:AC_OS)"
         Write-Host "Working Directory: $(Get-Location) @ $env:AC_ProjectRoot"
         if ($worktree) {
-            Write-Host "Worktree: $worktree"
+            $worktreeInfo = "Worktree: $worktree"
+            if ($serverConfig) { $worktreeInfo += " (port: $($serverConfig.Port))" }
+            Write-Host $worktreeInfo
         }
 
         $envVars = @{
-            "AC_ProjectRoot" = $env:AC_ProjectRoot
-            "AC_ProjectPath" = $env:AC_ProjectPath
-            "AC_OS"          = $env:AC_OS
-            "AC_Worktree"    = $env:AC_Worktree
+            "AC_ProjectRoot"    = $env:AC_ProjectRoot
+            "AC_ProjectPath"    = $env:AC_ProjectPath
+            "AC_OS"             = $env:AC_OS
+            "AC_Worktree"       = $env:AC_Worktree
         }
 
         if ($dryRun) {
@@ -651,6 +1253,20 @@ switch ($mode) {
     }
 
     "docker" {
+        # macOS: warn if Docker Desktop is too old for --network host support
+        if ($currentOS -eq "macOS") {
+            $dockerVersion = docker version --format '{{.Server.Version}}' 2>$null
+            if ($debugMode) { Write-Host "[DEBUG] Docker version: $dockerVersion" }
+            if ($dockerVersion -and $dockerVersion -match "^(\d+)\.(\d+)") {
+                $major = [int]$Matches[1]
+                $minor = [int]$Matches[2]
+                if ($major -lt 4 -or ($major -eq 4 -and $minor -lt 34)) {
+                    Write-Host "WARNING: Docker Desktop 4.34+ is required for --network host on macOS." -ForegroundColor Yellow
+                    Write-Host "         Current version: $dockerVersion. Host services may not be reachable." -ForegroundColor Yellow
+                }
+            }
+        }
+
         $homeDir = if ($currentOS -eq "Windows") { $env:USERPROFILE } else { $env:HOME }
         $volumeMounts = @()
 
@@ -797,7 +1413,10 @@ switch ($mode) {
 
         # Build project path env vars for Docker
         $dockerProjectPath = "/proj/$currentFolderName"
-        $projectEnvVars = @("-e", "AC_ProjectPath=$dockerProjectPath", "-e", "AC_Worktree=$worktree")
+        $projectEnvVars = @(
+            "-e", "AC_ProjectPath=$dockerProjectPath",
+            "-e", "AC_Worktree=$worktree"
+        )
 
         # Collect environment variables to propagate:
         # - Variables with __ in their names (e.g., ChatSettings__OpenAIApiKey)
@@ -834,11 +1453,23 @@ switch ($mode) {
             "--label", "worktree=$containerBaseName"
         )
 
-        $dockerArgs += $volumeMounts + $propagatedEnvVars + @(
+        # Chrome DevTools MCP: pass debug port so the MCP wrapper script can resolve the host IP
+        # Docker Desktop on Windows uses a VM, so localhost/127.0.0.1 won't reach the host.
+        # Chrome rejects non-IP Host headers, so the wrapper resolves host.docker.internal to an IPv4 IP.
+
+        # PulseAudio for voice mode: auto-start if installed but stopped
+        [PulseAudioSetup]::new().EnsureRunning()
+        $pulseServer = if ($currentOS -in "macOS", "Windows") { "tcp:host.docker.internal:4713" } else { "tcp:localhost:4713" }
+        $audioEnvVars = @(
+            "-e", "PULSE_SERVER=$pulseServer"
+        )
+
+        $dockerArgs += $volumeMounts + $propagatedEnvVars + $audioEnvVars + @(
             "-e", "ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY"
             "-e", "DISABLE_AUTOUPDATER=1"
             "-e", "DOTNET_SYSTEM_NET_DISABLEIPV6=1"
             "-e", "AC_ProjectRoot=/proj"
+            "-e", "AC_CHROME_DEBUG_PORT=$ChromeDebugPort"
         ) + $projectEnvVars
 
         $dockerArgs += @(
@@ -850,10 +1481,10 @@ switch ($mode) {
         if ($dryRun) {
             # Build env vars hashtable for display
             $dockerEnvVars = @{
-                "AC_ProjectRoot" = "/proj"
-                "AC_ProjectPath" = $dockerProjectPath
-                "AC_OS"          = "Linux in Docker"
-                "AC_Worktree"    = $worktree
+                "AC_ProjectRoot"    = "/proj"
+                "AC_ProjectPath"    = $dockerProjectPath
+                "AC_OS"             = "Linux in Docker"
+                "AC_Worktree"       = $worktree
             }
 
             Write-Host ""
@@ -874,6 +1505,10 @@ switch ($mode) {
             # On Windows, we're already in wt (handled at script start)
             & docker @dockerArgs
         }
+    }
+
+    "audio" {
+        [PulseAudioSetup]::new().Setup()
     }
 
     "chrome" {
