@@ -110,10 +110,20 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         var lastSummaryReportAt = CpuTimestamp.Now;
         var delayedCallLimit = Limits.LogDelayedCallLimit;
         var summaryLogSettings = Limits.LogCallSummarySettings;
+        var keepAliveTimeout = Limits.KeepAliveTimeout;
         var delayedCalls = new List<RpcOutboundCall>();
         try {
             // This loop aborts timed out calls every CallTimeoutCheckPeriod
             while (!cancellationToken.IsCancellationRequested) {
+                await Task.Delay(Limits.CallTimeoutCheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
+
+                // When keep-alive is stale, disconnect is imminent (SharedObjects.Maintain handles it).
+                // Don't time out calls here — they'll be resent on reconnect.
+                // This prevents a race on mobile app resume where this loop could time out calls
+                // before the keep-alive disconnect fires and triggers reconnect.
+                if (Moment.Now - Peer.LastKeepAliveAt > keepAliveTimeout)
+                    continue;
+
                 var callCount = 0;
                 var inProgressCallCount = 0;
                 delayedCalls.Clear();
@@ -173,7 +183,6 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 }
 
                 delayedCalls.Clear();
-                await Task.Delay(Limits.CallTimeoutCheckPeriod.Next(), cancellationToken).ConfigureAwait(false);
             }
         }
         catch {
