@@ -11,6 +11,19 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.1.123+9dc3aaeb | npm: 12.1.115
+
+Release date: 2026-03-24
+
+### Fixed
+- Prevented race condition in `RpcCallTrackers` on mobile app resume that caused
+  misleading "delayed call" reports — added keep-alive timeout check to avoid
+  premature call timeouts during app resume scenarios
+
+### Changed
+- `RpcCallStage` now outputs "None" for stage value 0 instead of a numeric representation
+
+
 ## 12.1.119+8e01cd91 | npm: 12.1.115
 
 Release date: 2026-03-20
