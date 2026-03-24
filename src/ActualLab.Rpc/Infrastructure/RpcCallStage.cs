@@ -34,5 +34,5 @@ public static class RpcCallStage
     }
 
     public static string GetName(int completedStage)
-        => _callStageNames.GetValueOrDefault(completedStage) ?? "";
+        => _callStageNames.GetValueOrDefault(completedStage) ?? "None";
 }
