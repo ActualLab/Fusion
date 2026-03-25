@@ -31,12 +31,11 @@ public class RpcWebSocketClient(IServiceProvider services) : RpcClient(services)
             "'{PeerRef}': Connecting ClientId='{ClientId}' to {Url}",
             clientPeer.Ref, clientPeer.ClientId, uri);
         var hub = clientPeer.Hub;
-        var connectCts = new CancellationTokenSource();
-        var connectToken = connectCts.Token;
+        var connectTokenSource = new CancellationTokenSource();
+        var connectToken = connectTokenSource.Token;
         _ = hub.SystemClock
-            // ReSharper disable once PossiblyMistakenUseOfCancellationToken
             .Delay(hub.Limits.ConnectTimeout, cancellationToken)
-            .ContinueWith(_ => connectCts.CancelAndDisposeSilently(), TaskScheduler.Default);
+            .ContinueWith(_ => connectTokenSource.CancelAndDisposeSilently(), TaskScheduler.Default);
         WebSocketOwner webSocketOwner;
         try {
             webSocketOwner = await Task
@@ -54,11 +53,19 @@ public class RpcWebSocketClient(IServiceProvider services) : RpcClient(services)
                         catch {
                             // Intended
                         }
+
                         throw;
                     }
                 }, connectToken)
                 .WaitAsync(connectToken) // MAUI sometimes stucks in the sync part of ConnectAsync
                 .ConfigureAwait(false);
+
+            // If we're here, the connection was established successfully.
+            // On some platforms / .NET versions, ClientWebSocket.ConnectAsync may retain a CancellationToken
+            // registration on the underlying socket; if connectToken fires after connect completes,
+            // it can abort the already-established socket, causing SocketError 125 (ECANCELED) on ReceiveAsync.
+            // ReSharper disable once AccessToModifiedClosure
+            connectTokenSource.DisposeSilently();
         }
         catch (Exception e) {
             if (e.IsCancellationOf(connectToken) && !cancellationToken.IsCancellationRequested)
@@ -66,6 +73,9 @@ public class RpcWebSocketClient(IServiceProvider services) : RpcClient(services)
 
             Log.LogWarning(e, "'{PeerRef}': Failed to connect to {Url}", clientPeer.Ref, uri);
             throw;
+        }
+        finally {
+            connectTokenSource.CancelAndDisposeSilently();
         }
 
         var properties = PropertyBag.Empty
