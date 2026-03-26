@@ -36,7 +36,7 @@ public sealed partial class Session : IHasId<string>,
     {
         // The check is here to prevent use of sessions with empty or other special Ids,
         // which could be a source of security problems later.
-        if (id.IsNullOrEmpty() || (id.Length < 8 && !(id is ['~'])))
+        if (id.IsNullOrEmpty() || (id.Length < 8 && id is not ['~']))
             throw Errors.InvalidSessionId(id);
 
         Id = id;
