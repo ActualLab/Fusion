@@ -11,6 +11,17 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.1.125+ba936b35 | npm: 12.1.115
+
+Release date: 2026-03-26
+
+### Fixed
+- Fixed potential socket errors (SocketError 125 / ECANCELED) during WebSocket connection
+  in `RpcWebSocketClient` — the connect timeout `CancellationTokenSource` could fire after
+  a successful connect, aborting the already-established socket. Now disposed immediately
+  after successful connection to prevent late cancellation from affecting the live socket
+
+
 ## 12.1.123+9dc3aaeb | npm: 12.1.115
 
 Release date: 2026-03-24
