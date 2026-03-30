@@ -112,7 +112,7 @@ public class AsyncLockSet<TKey>(
                 }
             }
             finally {
-                _entry.EndUse();
+                _entry?.EndUse();
             }
         }
     }
