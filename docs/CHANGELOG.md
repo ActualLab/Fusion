@@ -11,6 +11,14 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.1.128+31a47345 | npm: 12.1.115
+
+Release date: 2026-03-30
+
+### Fixed
+- Fixed `NullReferenceException` in `AsyncLockSet.Releaser.Dispose()` when the releaser is default-valued (uninitialized)
+
+
 ## 12.1.125+ba936b35 | npm: 12.1.115
 
 Release date: 2026-03-26
