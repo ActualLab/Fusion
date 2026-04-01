@@ -11,6 +11,18 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.1.130+4189e1bf | npm: 12.1.115
+
+Release date: 2026-04-01
+
+### Added
+- Added `AllowExecuteDeleteAsync` option to `DbLogTrimmerOptions` and `DbSessionInfoTrimmer.Options`, allowing control over whether `ExecuteDeleteAsync` (bulk SQL DELETE) is used in trimmer operations. Defaults to `true` on .NET 7+ and `false` on older targets
+- When `AllowExecuteDeleteAsync` is `false` (or on pre-.NET 7), trimmers now fall through to the row-by-row deletion path even on .NET 7+, enabling compatibility with EF providers that don't support `ExecuteDeleteAsync`
+
+### Changed
+- `DbAuthServiceBuilder` now registers `DbSessionInfoTrimmer.Options.Default` via factory instead of direct `TryAddSingleton<Options>()`, allowing easier default customization
+
+
 ## 12.1.128+31a47345 | npm: 12.1.115
 
 Release date: 2026-03-30
