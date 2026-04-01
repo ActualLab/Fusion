@@ -112,13 +112,14 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
                 return 0;
 
 #if NET7_0_OR_GREATER
-            return await dbContext.Set<TDbEntry>()
-                .Where(o => o.Index <= lastCandidate.Index)
-                .OrderBy(o => o.Index)
-                .Take(batchSize)
-                .ExecuteDeleteAsync(cancellationToken)
-                .ConfigureAwait(false);
-#else
+            if (Settings.AllowExecuteDeleteAsync)
+                return await dbContext.Set<TDbEntry>()
+                    .Where(o => o.Index <= lastCandidate.Index)
+                    .OrderBy(o => o.Index)
+                    .Take(batchSize)
+                    .ExecuteDeleteAsync(cancellationToken)
+                    .ConfigureAwait(false);
+#endif
             var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             await using var _2 = tx.ConfigureAwait(false);
 
@@ -134,7 +135,6 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
             return entries.Count;
-#endif
         }
         catch (Exception e) {
             activity?.Finalize(e, cancellationToken);

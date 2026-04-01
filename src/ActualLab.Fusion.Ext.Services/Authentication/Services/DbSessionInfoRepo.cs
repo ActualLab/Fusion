@@ -19,7 +19,7 @@ public interface IDbSessionInfoRepo<in TDbContext, TDbSessionInfo, in TDbUserId>
     public Task<TDbSessionInfo> Upsert(
         TDbContext dbContext, string sessionId, SessionInfo sessionInfo, CancellationToken cancellationToken = default);
     public Task<int> Trim(
-        string shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default);
+        string shard, DateTime maxLastSeenAt, int maxCount, bool allowExecuteDeleteAsync, CancellationToken cancellationToken = default);
 
     // Read methods
     public Task<TDbSessionInfo?> Get(
@@ -97,20 +97,21 @@ public class DbSessionInfoRepo<TDbContext,
     }
 
     public virtual async Task<int> Trim(
-        string shard, DateTime maxLastSeenAt, int maxCount, CancellationToken cancellationToken = default)
+        string shard, DateTime maxLastSeenAt, int maxCount, bool allowExecuteDeleteAsync, CancellationToken cancellationToken = default)
     {
         var dbContext = await DbHub.CreateDbContext(shard, true, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false);
 
 #if NET7_0_OR_GREATER
-        return await dbContext.Set<TDbSessionInfo>()
-            .Where(o => o.LastSeenAt < maxLastSeenAt)
-            .OrderBy(o => o.LastSeenAt)
-            .Take(maxCount)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
-#else
+        if (allowExecuteDeleteAsync)
+            return await dbContext.Set<TDbSessionInfo>()
+                .Where(o => o.LastSeenAt < maxLastSeenAt)
+                .OrderBy(o => o.LastSeenAt)
+                .Take(maxCount)
+                .ExecuteDeleteAsync(cancellationToken)
+                .ConfigureAwait(false);
+#endif
         var tx = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         await using var _2 = tx.ConfigureAwait(false);
 
@@ -126,7 +127,6 @@ public class DbSessionInfoRepo<TDbContext,
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return entities.Count;
-#endif
     }
 
     // Read methods

@@ -18,10 +18,14 @@ public abstract class DbSessionInfoTrimmer<TDbContext>(
     /// </summary>
     public record Options
     {
+        public static Options Default { get; set; } = new();
+
 #if NET7_0_OR_GREATER
-        public int BatchSize { get; init; } = 4096; // .NET 7+ uses ExecuteDeleteAsync
+        public bool AllowExecuteDeleteAsync { get; init; } = true;
+        public int BatchSize { get; init; } = 4096; // ExecuteDeleteAsync is used when allowed
 #else
-        public int BatchSize { get; init; } = 1024; // .NET 6- deletes rows one-by-one
+        public bool AllowExecuteDeleteAsync { get; init; } // = false
+        public int BatchSize { get; init; } = 1024; // Deletes rows one-by-one
 #endif
         public TimeSpan MaxSessionAge { get; init; } = TimeSpan.FromDays(60);
         public RandomTimeSpan CheckPeriod { get; init; } =  TimeSpan.FromMinutes(15).ToRandom(0.25);
@@ -68,7 +72,7 @@ public class DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>(
                 .StartActivity(GetType())
                 .AddShardTags(shard);
             try {
-                var count = await Sessions.Trim(shard, maxLastSeenAt, batchSize, cancellationToken)
+                var count = await Sessions.Trim(shard, maxLastSeenAt, batchSize, Settings.AllowExecuteDeleteAsync, cancellationToken)
                     .ConfigureAwait(false);
                 if (count > 0)
                     DefaultLog?.Log(Settings.LogLevel, "Trim({Shard}) trimmed {Count} sessions", shard, count);

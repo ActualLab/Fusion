@@ -17,9 +17,11 @@ public record DbLogTrimmerOptions
     // Should be greater than zero; higher values ensure entries are stored longer after processing
     public TimeSpan MaxEntryAge { get; init; } = TimeSpan.FromHours(4);
 #if NET7_0_OR_GREATER
-    public int BatchSize { get; init; } = 4096; // .NET 7+ uses ExecuteDeleteAsync
+    public bool AllowExecuteDeleteAsync { get; init; } = true;
+    public int BatchSize { get; init; } = 4096; // ExecuteDeleteAsync is used when allowed
 #else
-    public int BatchSize { get; init; } = 1024; // .NET 6- deletes rows one-by-one
+    public bool AllowExecuteDeleteAsync { get; init; } // = false
+    public int BatchSize { get; init; } = 1024; // Deletes rows one-by-one
 #endif
     public RandomTimeSpan CheckPeriod { get; init; } = TimeSpan.FromMinutes(15).ToRandom(0.25);
     public RetryDelaySeq RetryDelays { get; init; } = RetryDelaySeq.Exp(TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(10));

@@ -68,7 +68,7 @@ public readonly struct DbAuthServiceBuilder<TDbContext,
         services.TryAddSingleton<IDbUserIdHandler<TDbUserId>, DbUserIdHandler<TDbUserId>>();
 
         // DbSessionInfoTrimmer - hosted service!
-        services.TryAddSingleton<DbSessionInfoTrimmer<TDbContext>.Options>();
+        services.TryAddSingleton(_ => DbSessionInfoTrimmer<TDbContext>.Options.Default);
         services.TryAddSingleton<
             DbSessionInfoTrimmer<TDbContext>,
             DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>>();
