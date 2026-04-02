@@ -27,7 +27,7 @@ Fusion solves a set of infamously hard problems with a 🦄 single abstraction:
 | 🪄 Real-time updates            | Fusion client automatically propagates server-side cache invalidation back to the client making it aware of state changes on the server side                                      | SignalR, WebSockets, custom pub/sub, ...                                                                       |
 | ✈️ Offline operation            | Client-side persistent cache support (IndexedDB, SQLite) is integrated right into the Fusion RPC client, so you get offline mode for free!                                       | Service workers, sync logic, conflict resolution, ...                                                          |
 | 🤬 Network chattiness           | Persistent cache enables speculative execution on the client side, allowing `ActualLab.Rpc` to batch hundreds of RPC calls into a single transmission frame                      | Request batching, debouncing, manual optimization, ...                                                         |
-| 📡 Network traffic              | `ActualLab.Rpc` is 2-5x faster than gRPC and SignalR even in its "raw" mode; Fusion integration, if enabled, turns it into an efficiency beast by adding "cache match" responses | Protocol tuning, custom serialization, ...                                                                     |
+| 📡 Network traffic              | `ActualLab.Rpc` is 2-7x faster than gRPC and SignalR even in its "raw" mode; Fusion integration, if enabled, turns it into an efficiency beast by adding "cache match" responses | Protocol tuning, custom serialization, ...                                                                     |
 | 🧩 Client-side state management | Same abstractions everywhere: `Computed<T>`, `MutableState<T>`, and compute methods                                                                                              | MobX, Flux/Redux, Recoil, ...                                                                                  |
 | 💰 Single codebase              | Single codebase for Blazor Server, WebAssembly, and MAUI (iOS, Android, Windows, macOS, and more)                                                                                | Platform-specific code, multiple implementations, ...                                                          |
 
@@ -83,8 +83,8 @@ Our [benchmarks](./docs/Performance.md) show Fusion delivering **over 300 millio
 | Scenario                                       | Without Fusion        | With Fusion     | Speedup     |
 |------------------------------------------------|-----------------------|-----------------|-------------|
 | Local DAL, almost no writes (peak performance) | 38.61K calls/s        | 313.75M calls/s | **>8,000x** |
-| Local repo-like service, non-stop writes       | 135.44K calls/s       | 266.58M calls/s | **~1,968x** |
-| Remote repo-like service, non-stop writes      | 100.72K calls/s (REST) | 226.73M calls/s | **~2,251x** |
+| Local repo-like service, non-stop writes       | 112.07K calls/s       | 253.12M calls/s | **~2,259x** |
+| Remote repo-like service, non-stop writes      | 76.03K calls/s (REST) | 216.00M calls/s | **~2,841x** |
 
 These aren't typos &ndash; Fusion makes your services **thousands of times faster** by eliminating redundant computation, RPC, and database access.
 
@@ -96,9 +96,9 @@ Note that these benchmarks test Fusion method calls with no dependency chains. R
 
 | Framework | Calls/s | Streaming |
 |-----------|---------|-----------|
-| **ActualLab.Rpc** | **9.33M** | **101.17M items/s** |
-| SignalR | 5.30M | 17.17M items/s |
-| gRPC | 1.11M | 39.59M items/s |
+| **ActualLab.Rpc** | **9.46M** | **97.55M items/s** |
+| SignalR | 5.03M | 16.39M items/s |
+| gRPC | 1.30M | 42.70M items/s |
 
 So it's **significantly faster** than gRPC and SignalR, both for calls and for streaming.
 

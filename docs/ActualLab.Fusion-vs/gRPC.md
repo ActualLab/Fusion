@@ -151,11 +151,11 @@ ActualLab.Rpc (Fusion's RPC layer) outperforms gRPC in benchmarks:
 
 | Benchmark | ActualLab.Rpc | gRPC | Speedup |
 |-----------|---------------|------|---------|
-| RPC calls (Sum) | 9.33M calls/s | 1.11M calls/s | ~8.4x |
-| RPC calls (GetUser) | 8.37M calls/s | 1.10M calls/s | ~7.6x |
-| Streaming (1-byte items) | 101.17M items/s | 39.59M items/s | ~2.6x |
-| Streaming (100-byte items) | 47.53M items/s | 21.19M items/s | ~2.2x |
-| Streaming (10KB items) | 955.44K items/s | 691.20K items/s | ~1.4x |
+| RPC calls (Sum) | 9.46M calls/s | 1.30M calls/s | ~7.3x |
+| RPC calls (GetUser) | 8.75M calls/s | 1.27M calls/s | ~6.9x |
+| Streaming (1-byte items) | 97.55M items/s | 42.70M items/s | ~2.3x |
+| Streaming (100-byte items) | 43.31M items/s | 25.14M items/s | ~1.7x |
+| Streaming (10KB items) | 808.56K items/s | 578.52K items/s | ~1.4x |
 
 See [Performance Benchmarks](/Performance) for full details and test environment.
 

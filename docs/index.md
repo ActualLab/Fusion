@@ -28,7 +28,7 @@ features:
     details: "Automatic <span style='color:var(--hl-feat);'>state sync</span> across your <span style='color:var(--hl-feat);'>server cluster and every client</span> connected to it. No SignalR hubs. No event handlers. No manual pub/sub."
   - icon: ⚡
     title: Unbeatable Speed
-    details: "<span style='color:var(--hl-feat);'>100x faster than Redis:</span> 20M cache-resolving calls/s per core. The fastest RPC available: <span style='color:var(--hl-feat);'>3–5x faster than gRPC and SignalR.</span>"
+    details: "<span style='color:var(--hl-feat);'>100x faster than Redis:</span> 20M cache-resolving calls/s per core. The fastest RPC available: <span style='color:var(--hl-feat);'>2–7x faster than gRPC and SignalR.</span>"
     link: /Performance#results
     linkText: See benchmarks
   - icon: ✈️
@@ -148,8 +148,8 @@ Fusion doesn't just add real-time—it makes your app **thousands of times faste
 | Scenario | Without Fusion | With Fusion | Speedup |
 |----------|----------------|-------------|---------|
 | Local service, minimal writes | 38.6K calls/s | **313.8M calls/s** | <span style="color: #22c55e; font-weight: bold;">8,127x</span> |
-| Local service, continuous writes | 135.4K calls/s | **266.6M calls/s** | <span style="color: #22c55e; font-weight: bold;">1,968x</span> |
-| Remote service, continuous writes | 100.7K calls/s (REST) | **226.7M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,251x</span> |
+| Local service, continuous writes | 112.1K calls/s | **253.1M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,259x</span> |
+| Remote service, continuous writes | 76.0K calls/s (REST) | **216.0M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,841x</span> |
 
 <p style="font-size: 0.85em; color: #666; margin-top: 0.5rem;">
 Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark details</a>.
@@ -159,13 +159,13 @@ Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark det
 
 | Framework | RPC Calls/sec | Streaming Items/sec |
 |-----------|---------------|---------------------|
-| **ActualLab.Rpc** | **9.33M** | **101.17M** |
-| SignalR | 5.30M | 17.17M |
-| gRPC | 1.11M | 39.59M |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">1.8..8.4x</span> | <span style="color: #22c55e; font-weight: bold;">2.6..5.9x</span> |
+| **ActualLab.Rpc** | **9.46M** | **97.55M** |
+| SignalR | 5.03M | 16.39M |
+| gRPC | 1.30M | 42.70M |
+| **Speedup** | <span style="color: #22c55e; font-weight: bold;">1.9..7.3x</span> | <span style="color: #22c55e; font-weight: bold;">2.3..6.0x</span> |
 
 <p style="font-size: 0.85em; color: #666;">
-8.4x faster than gRPC for calls. 5.9x faster than SignalR for streaming.
+7.3x faster than gRPC for calls. 6.0x faster than SignalR for streaming.
 </p>
 
 ## How It Works: The MSBuild/Make Analogy
