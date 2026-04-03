@@ -11,6 +11,45 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.2.1+41e24193 | npm: -
+
+Release date: 2026-04-03
+
+### Breaking Changes
+- `CodeKeeper` API overhauled:
+  - New and simpler `XxxCodeKeeper.IExtension` extension points.
+  - Removed instance-based `Get<T>()`/`Set<T, TImpl>()`, `AddAction()`, `RunActions()`, `KeepUnconstructable()`, 
+    `CallSilently()`, and `FakeCallSilently()` methods 
+  - `CodeKeeper` is now a static utility with simplified `Keep<T>()`, `Keep(Type)`, `KeepSerializable<T>()` methods
+  - Removed `TypeCodeKeeper`, `SerializableTypeCodeKeeper`, `RpcMethodDefCodeKeeper`
+  - `RpcProxyCodeKeeper`, `CommanderProxyCodeKeeper`, `FusionProxyCodeKeeper` are replaced by 
+    `ProxyCodeKeeper.IExtension` implementations (`RpcProxyCodeKeeperExtension`, `CommanderProxyCodeKeeperExtension`, 
+    `FusionProxyCodeKeeperExtension`)
+- `RpcCallTimeouts.LogTimeout` renamed to `DelayTimeout`; `RpcCallTimeouts.DefaultLogTimeout`
+  renamed to `DefaultDelayTimeout` — update any code referencing these properties
+- `RpcMethodAttribute.LogTimeout` renamed to `DelayTimeout` — update attribute usages in service interfaces
+- `RpcOutboundCallOptions.ReroutingDelayer` signature changed — now takes `(RpcMethodDef, int, CancellationToken)`
+  instead of `(int, CancellationToken)`
+
+### Added
+- `CodeKeeper.IExtension` interface for pluggable trimming/NativeAOT code retention
+- `RpcDelayedCallAction` flags enum for configurable delayed call handling: 
+   `None`, `Abort`, `Resend`, `Log`, `LogAndAbort`, `LogAndResend`
+- `RpcMethodAttribute.DelayAction` property to control per-method delayed call behavior
+- `RpcOutboundCallOptions.DelayHandler` for custom delayed call handling logic
+- Delayed compute calls are now automatically re-sent by default (`LogAndResend`), improving reliability
+
+### Changed
+- NativeAOT sample restructured: all `CodeKeeper.Set`/`RunActions` calls are removed (they're unnecessary now)
+
+### Fixed
+- Fixed `RpcSharedStream` using `IsCompleted` instead of `IsCompletedSuccessfully` for task state checks, 
+  preventing incorrect behavior when tasks are faulted or cancelled
+
+### Documentation
+- Updated benchmark data to v12.1.130 (.NET 10.0.5) with new latency tables
+
+
 ## 12.1.130+4189e1bf | npm: 12.1.115
 
 Release date: 2026-04-01
