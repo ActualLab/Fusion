@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
 
 # PowerShell is pre-installed in .NET SDK image (both amd64 and arm64)
 RUN pwsh -Version
+RUN pwsh -NoProfile -c "Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; Install-Module Pester -Scope AllUsers -Force"
 
 # Install Google Cloud CLI
 RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
@@ -110,8 +111,7 @@ RUN npm install -g chrome-devtools-mcp
 
 # Install Claude Code CLI (native installer, auto-update disabled at runtime)
 ENV DISABLE_AUTOUPDATER=1
-RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.81
-
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.90
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj

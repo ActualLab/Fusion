@@ -182,6 +182,7 @@ $newContainer          = $false
 $renewContainer        = $false
 $dryRun                = $false
 $debugMode             = $false
+$buildAgentFlag        = $null     # $null = auto (ActualChat only), $true = force on, $false = force off
 $claudeArgs            = @()
 
 # Show help
@@ -205,6 +206,8 @@ function Show-Help {
     Write-Host "Options:"
     Write-Host "  --new        Force creation of a new Docker container (skip reuse)"
     Write-Host "  --renew      Remove existing containers and start a new one (use after image rebuild)"
+    Write-Host "  --agent      Force start build agent (for server management from Docker)"
+    Write-Host "  --no-agent   Disable build agent (default for non-ActualChat projects)"
     Write-Host "  --dry-run    Show environment variables and command without executing"
     Write-Host "  --debug      Show debug output for troubleshooting"
     Write-Host ""
@@ -342,6 +345,18 @@ while ($argIndex -lt $args.Count) {
     # Check for --debug
     if ($currentArg -eq "--debug") {
         $debugMode = $true
+        $argIndex++
+        continue
+    }
+
+    # Check for --agent / --no-agent
+    if ($currentArg -eq "--agent") {
+        $buildAgentFlag = $true
+        $argIndex++
+        continue
+    }
+    if ($currentArg -eq "--no-agent") {
+        $buildAgentFlag = $false
         $argIndex++
         continue
     }
@@ -834,9 +849,32 @@ if ($removeWorktreeSuffix) {
 
     Write-Host "Removing worktree: $projectName-$removeWorktreeSuffix" -ForegroundColor Cyan
 
-    # Remove server config and .env file (ActualChat projects only)
+    # Stop server, build agent, and Docker containers; then remove server config
     if (Test-Path (Join-Path $mainProjectPath "ActualChat.sln")) {
         $server = [WorktreeServer]::new($mainProjectPath, $removeWorktreeSuffix)
+
+        # Stop orphaned server and build agent from previous sessions
+        if ($server.Port -and (Test-Path $worktreePath)) {
+            [BuildAgent]::new($worktreePath).StopServer()
+            [BuildAgentHost]::new($worktreePath).Stop()
+        }
+
+        # Kill Docker containers for this worktree
+        $containerBaseName = "$($projectName.ToLower())-$($removeWorktreeSuffix.ToLower())"
+        $existingContainers = @(docker ps -a --filter "label=worktree=$containerBaseName" --format "{{.ID}}`t{{.Names}}" 2>$null | Where-Object { $_ })
+        if ($existingContainers.Count -gt 0) {
+            foreach ($entry in $existingContainers) {
+                $parts = $entry -split "`t"
+                $cId = $parts[0]
+                $cName = $parts[1]
+                Write-Host "Removing container: $cName" -ForegroundColor Cyan
+                docker rm -f $cId 2>$null | Out-Null
+            }
+            Write-Host "Docker containers removed" -ForegroundColor Green
+        } elseif ($debugMode) {
+            Write-Host "[DEBUG] No Docker containers found for worktree '$containerBaseName'"
+        }
+
         $server.Unregister($debugMode)
 
         $worktreeEnvFile = Join-Path $worktreePath ".env"
@@ -1031,6 +1069,7 @@ if ($isActualChatProject) {
         "urls" = $urlsValue
         "ASPNETCORE_URLS" = $urlsValue
         "HostSettings__BaseUri" = $baseUri
+        "AC_BUILD_AGENT_PORT" = $serverConfig.Port + 9
     }
     Update-EnvFile -ProjectPath $projectRoot -Variables $envVarsToSave -Debug:$debugMode
 }
@@ -1109,6 +1148,11 @@ function Show-DryRun {
     Write-Host ""
 }
 
+# Expose AC_GITHUB_TOKEN as GH_TOKEN so `gh` CLI picks it up automatically
+if ($env:AC_GITHUB_TOKEN -and -not $env:GH_TOKEN) {
+    $env:GH_TOKEN = $env:AC_GITHUB_TOKEN
+}
+
 switch ($mode) {
     "build" {
         # Build Docker image
@@ -1152,7 +1196,8 @@ switch ($mode) {
             $name  = $_.Name
             $value = $_.Value
             if ($name -match '__' -or
-                $name -eq 'GITHUB_TOKEN' -or
+                $name -eq 'AC_GITHUB_TOKEN' -or
+                $name -eq 'GH_TOKEN' -or
                 $name -eq 'NPM_READ_TOKEN' -or
                 $name -eq 'GOOGLE_CLOUD_PROJECT' -or
                 $name -like 'ActualChat_*' -or
@@ -1420,14 +1465,15 @@ switch ($mode) {
 
         # Collect environment variables to propagate:
         # - Variables with __ in their names (e.g., ChatSettings__OpenAIApiKey)
-        # - GITHUB_TOKEN, NPM_READ_TOKEN, GOOGLE_CLOUD_PROJECT
+        # - AC_GITHUB_TOKEN, GH_TOKEN, NPM_READ_TOKEN, GOOGLE_CLOUD_PROJECT
         # - ActualChat_*, ActualLab_*, Claude_* variables
         $propagatedEnvVars = @()
         Get-ChildItem env: | ForEach-Object {
             $name  = $_.Name
             $value = $_.Value
             if ($name -match '__' -or
-                $name -eq 'GITHUB_TOKEN' -or
+                $name -eq 'AC_GITHUB_TOKEN' -or
+                $name -eq 'GH_TOKEN' -or
                 $name -eq 'NPM_READ_TOKEN' -or
                 $name -eq 'GOOGLE_CLOUD_PROJECT' -or
                 $name -like 'ActualChat_*' -or
@@ -1464,7 +1510,19 @@ switch ($mode) {
             "-e", "PULSE_SERVER=$pulseServer"
         )
 
-        $dockerArgs += $volumeMounts + $propagatedEnvVars + $audioEnvVars + @(
+        # Build agent for server/build management: on macOS/Windows, --network host doesn't
+        # truly share ports, so the .NET server must run on the host. The build agent host
+        # provides an HTTP API that Claude in Docker calls to build/start/stop the server.
+        # Controlled by --agent/--no-agent flags; defaults to auto (ActualChat projects only).
+        $useBuildAgent = if ($buildAgentFlag -ne $null) { $buildAgentFlag } else { $isActualChatProject }
+        $buildAgent = $null
+        $buildAgentEnvVars = @()
+        if ($useBuildAgent -and $currentOS -in "macOS", "Windows") {
+            $buildAgent = [BuildAgentHost]::new($projectRoot)
+            $buildAgentEnvVars = @("-e", "AC_BUILD_AGENT_PORT=$($buildAgent.Port)")
+        }
+
+        $dockerArgs += $volumeMounts + $propagatedEnvVars + $audioEnvVars + $buildAgentEnvVars + @(
             "-e", "ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY"
             "-e", "DISABLE_AUTOUPDATER=1"
             "-e", "DOTNET_SYSTEM_NET_DISABLEIPV6=1"
@@ -1502,8 +1560,18 @@ switch ($mode) {
             Write-Host "  docker $($dockerArgs -join ' ')"
             Write-Host ""
         } else {
-            # On Windows, we're already in wt (handled at script start)
-            & docker @dockerArgs
+            # Start build agent if enabled — runs build/server operations over HTTP
+            # so Claude in Docker can build/start/stop the server on the host
+            if ($buildAgent) {
+                $buildAgent.Start()
+            }
+
+            try {
+                # On Windows, we're already in wt (handled at script start)
+                & docker @dockerArgs
+            } finally {
+                if ($buildAgent) { $buildAgent.Stop() }
+            }
         }
     }
 
