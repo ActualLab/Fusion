@@ -120,7 +120,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             // 1. Await for an acknowledgement & process accumulated acknowledgements
             _batcher.Flush(index);
             (long NextIndex, bool MustReset) ack = (-1L, false);
-            if (!whenAckReady.IsCompleted) {
+            if (!whenAckReady.IsCompletedSuccessfully) {
                 // Debug.WriteLine($"{Id}: ?ACK");
                 await whenAckReady.ConfigureAwait(false);
             }
@@ -138,7 +138,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 return;
             }
             whenAckReady = ackReader.WaitToReadAsync(cancellationToken).AsTask();
-            if (whenAckReady.IsCompleted)
+            if (whenAckReady.IsCompletedSuccessfully)
                 goto nextAck;
 
             // 2. Remove what's useless from buffer
