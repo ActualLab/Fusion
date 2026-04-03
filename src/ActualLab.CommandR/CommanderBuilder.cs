@@ -3,12 +3,8 @@ using ActualLab.CommandR.Diagnostics;
 using ActualLab.CommandR.Interception;
 using ActualLab.CommandR.Internal;
 using ActualLab.CommandR.Rpc;
-using ActualLab.CommandR.Trimming;
-using ActualLab.Interception;
-using ActualLab.Interception.Trimming;
 using ActualLab.Resilience;
 using ActualLab.Rpc;
-using ActualLab.Trimming;
 using ActualLab.Versioning;
 
 namespace ActualLab.CommandR;
@@ -27,24 +23,7 @@ public readonly struct CommanderBuilder
     public HashSet<CommandHandler> Handlers { get; }
 
     static CommanderBuilder()
-    {
-        CodeKeeper.AddFakeAction(static () => {
-            CodeKeeper.KeepUnconstructable(typeof(Proxies));
-
-            // Configuration
-            CodeKeeper.Keep<CommandHandlerMethodDef>();
-            CodeKeeper.Keep<MethodCommandHandler<ICommand>>();
-            CodeKeeper.Keep<InterfaceCommandHandler<ICommand>>();
-
-            // Interceptors
-            CodeKeeper.Keep<CommanderProxyCodeKeeper>();
-            CodeKeeper.Keep<CommandServiceInterceptor>();
-
-            // Stuff that might be forgotten
-            var c = CodeKeeper.Get<ProxyCodeKeeper>();
-            c.KeepAsyncMethod<Unit, ICommand<Unit>, CancellationToken>();
-        });
-    }
+        => CommanderModuleInitializer.Touch();
 
     internal CommanderBuilder(
         IServiceCollection services,

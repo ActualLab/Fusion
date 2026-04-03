@@ -8,15 +8,18 @@ namespace ActualLab.Interception.Trimming;
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
-public class ArgumentListCodeKeeper : CodeKeeper
+public static class ArgumentListCodeKeeper
 {
-    public virtual void KeepArgumentListArgument<
+    public static IExtension? Extension { get; set; }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepArgumentListArgument<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>()
     {
-        if (AlwaysTrue)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
-        Keep<TArg>();
+        CodeKeeper.Keep<TArg>();
         var tArg = typeof(TArg);
         KeepArgumentListArgument<ArgumentList0, TArg>(
             new ArgumentList0());
@@ -40,18 +43,28 @@ public class ArgumentListCodeKeeper : CodeKeeper
             new ArgumentListS9(ArgumentListType.Get(false, tArg, tArg, tArg, tArg, tArg, tArg, tArg, tArg, tArg)));
         KeepArgumentListArgument<ArgumentListS10, TArg>(
             new ArgumentListS10(ArgumentListType.Get(false, tArg, tArg, tArg, tArg, tArg, tArg, tArg, tArg, tArg, tArg)));
+        Extension?.KeepArgumentListArgument<TArg>();
     }
 
-    public virtual void KeepArgumentListArgument<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepArgumentListArgument<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TList,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(TList list)
         where TList : ArgumentList
     {
-        if (AlwaysTrue)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
-        Keep<TList>();
-        CallSilently(() => list.Get<TArg>(0));
-        CallSilently(() => list.Set<TArg>(0, default!));
+        CodeKeeper.Keep<TList>();
+        list.Get<TArg>(0);
+        list.Set<TArg>(0, default!);
+    }
+
+    // Nested types
+
+    public interface IExtension
+    {
+        public void KeepArgumentListArgument<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>();
     }
 }

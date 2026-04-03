@@ -15,6 +15,7 @@
 <!--    <TrimmerSingleWarn>false</TrimmerSingleWarn>-->
     <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
     <IlcDisableReflection>false</IlcDisableReflection>
+    <IlcTrimMetadata>true</IlcTrimMetadata>
   </PropertyGroup>
 
   <!-- Required by SizoScope tool -->

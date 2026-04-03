@@ -19,34 +19,37 @@ public static class Proxies
     internal static readonly ConcurrentDictionary<Type, Type?> Cache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
-    static Proxies() => CodeKeeper.AddFakeAction(
-        static () => {
-            CodeKeeper.KeepUnconstructable(typeof(ProxyHelper));
+    static Proxies()
+    {
+        if (CodeKeeper.AlwaysTrue)
+            return;
 
-            // ArgumentList
-            CodeKeeper.Keep<ArgumentListType>();
-            CodeKeeper.Keep<ArgumentList0>();
-            CodeKeeper.Keep<ArgumentListS1>();
-            CodeKeeper.Keep<ArgumentListS2>();
-            CodeKeeper.Keep<ArgumentListS3>();
-            CodeKeeper.Keep<ArgumentListS4>();
-            CodeKeeper.Keep<ArgumentListS5>();
-            CodeKeeper.Keep<ArgumentListS6>();
-            CodeKeeper.Keep<ArgumentListS7>();
-            CodeKeeper.Keep<ArgumentListS8>();
-            CodeKeeper.Keep<ArgumentListS9>();
-            CodeKeeper.Keep<ArgumentListS10>();
+        CodeKeeper.Keep(typeof(ProxyHelper));
 
-            // Invocation, interceptor, proxies
-            CodeKeeper.Keep<MethodDef>();
-            CodeKeeper.Keep<Invocation>();
-            CodeKeeper.Keep<Interceptor>();
-            CodeKeeper.Keep<InterfaceProxy>();
+        // ArgumentList
+        CodeKeeper.Keep<ArgumentListType>();
+        CodeKeeper.Keep<ArgumentList0>();
+        CodeKeeper.Keep<ArgumentListS1>();
+        CodeKeeper.Keep<ArgumentListS2>();
+        CodeKeeper.Keep<ArgumentListS3>();
+        CodeKeeper.Keep<ArgumentListS4>();
+        CodeKeeper.Keep<ArgumentListS5>();
+        CodeKeeper.Keep<ArgumentListS6>();
+        CodeKeeper.Keep<ArgumentListS7>();
+        CodeKeeper.Keep<ArgumentListS8>();
+        CodeKeeper.Keep<ArgumentListS9>();
+        CodeKeeper.Keep<ArgumentListS10>();
 
-            // Build-in interceptors
-            CodeKeeper.Keep<TypedFactoryInterceptor>();
-            CodeKeeper.Keep<SchedulingInterceptor>();
-        });
+        // Invocation, interceptor, proxies
+        CodeKeeper.Keep<MethodDef>();
+        CodeKeeper.Keep<Invocation>();
+        CodeKeeper.Keep<Interceptor>();
+        CodeKeeper.Keep<InterfaceProxy>();
+
+        // Built-in interceptors
+        CodeKeeper.Keep<TypedFactoryInterceptor>();
+        CodeKeeper.Keep<SchedulingInterceptor>();
+    }
 
     public static IProxy New(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type baseType,

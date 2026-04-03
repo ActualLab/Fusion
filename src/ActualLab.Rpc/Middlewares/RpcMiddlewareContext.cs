@@ -18,7 +18,11 @@ public sealed class RpcMiddlewareContext<T>
         RemainingMiddlewares = MethodDef.Hub.Middlewares.ToList();
         if (MethodDef.MiddlewareFilter is { } middlewareFilter)
             RemainingMiddlewares.RemoveAll(x => !middlewareFilter.Invoke(x));
-        var firstOutput = new RpcMiddlewareOutput<T>(null, (Func<RpcInboundCall, Task<T>>)MethodDef.InboundCallInvoker);
+        // This downcast triggers assertion/FailFast (exit code 3) in NativeAOT, which is a bug.
+        // We workaround it with unsafe cast, which is fully safe here.
+        // var inboundCallInvoker = (Func<RpcInboundCall, Task<T>>)MethodDef.InboundCallInvoker;
+        var inboundCallInvoker = Unsafe.As<Func<RpcInboundCall, Task<T>>>(MethodDef.InboundCallInvoker);
+        var firstOutput = new RpcMiddlewareOutput<T>(Middleware: null, inboundCallInvoker);
         Outputs = [firstOutput];
     }
 }

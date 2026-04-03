@@ -12,8 +12,8 @@ Fusion uses runtime code generation for:
 - Method invocation infrastructure
 
 When publishing with AOT or trimming, the .NET linker may remove code that appears unused at compile time
-but is needed at runtime. The `CodeKeeper` infrastructure solves this by registering "fake" usage of
-required types and methods.
+but is needed at runtime. The `CodeKeeper` infrastructure solves this by using dead-branch references
+that the trimmer can see but the runtime never executes.
 
 
 ## RuntimeCodegen Modes
@@ -44,62 +44,57 @@ Console.WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
 
 ### Base CodeKeeper Class
 
-`CodeKeeper` is the base class for preventing trimming of required code:
+`CodeKeeper` is a static utility that prevents trimming of required code. It uses the dual-mechanism
+approach: `[DynamicallyAccessedMembers(All)]` preserves metadata, while `typeof(T).GetMembers()` in
+a dead branch forces ILC to generate native code (critical for struct generics).
 
 <!-- snippet: PartAOT_CodeKeeperBase -->
 ```cs
-public abstract class CodeKeeper
+public static class CodeKeeper
 {
     // Never evaluates to true at runtime, but compiler can't prove it
     public static readonly bool AlwaysFalse;
     public static readonly bool AlwaysTrue;
 
+    // Extension point for downstream projects
+    public static IExtension? Extension { get; set; }
+
     // Register a type to prevent trimming
-    public static T Keep<T>(bool ensureInitialized = false);
+    public static void Keep<T>();
+    public static void Keep(Type type);
+    public static void Keep(string assemblyQualifiedTypeName);
 
     // Register serializable types
-    public static T KeepSerializable<T>();
+    public static void KeepSerializable<T>();
 
-    // Run all registered actions (called at startup)
-    public static void RunActions();
+    public interface IExtension { ... }
 }
 ```
 <!-- endSnippet -->
 
-### ProxyCodeKeeper Hierarchy
+### Extension Architecture
 
-Specialized code keepers for each subsystem:
+All keepers are static classes with nested `IExtension` interfaces and `Extension` properties.
+The old virtual dispatch inheritance chain is replaced by composition in extension implementations.
 
-<img src="/img/diagrams/PartAOT-1.svg" alt="ProxyCodeKeeper Hierarchy" style="width: 100%; max-width: 800px;" />
+Each subsystem provides a `ProxyCodeKeeper.IExtension` implementation:
 
 | Class | Purpose |
 |-------|---------|
 | `ProxyCodeKeeper` | Base proxy and ArgumentList support |
-| `CommanderProxyCodeKeeper` | Commander command handlers |
-| `RpcProxyCodeKeeper` | RPC service methods |
-| `FusionProxyCodeKeeper` | Compute methods and Fusion-specific types |
+| `RpcProxyCodeKeeperExtension` | RPC serialization, calls, and service infrastructure |
+| `CommanderProxyCodeKeeperExtension` | Commander command handlers and contexts |
+| `FusionProxyCodeKeeperExtension` | Compute methods and Fusion-specific types |
+
+Extensions compose by triggering each other's static constructors. `FusionProxyCodeKeeperExtension`
+creates `CommanderProxyCodeKeeperExtension`, which creates `RpcProxyCodeKeeperExtension`, which
+creates `RpcMethodDefCodeKeeperExtension`. Module initializers in each assembly assign the extension
+to the corresponding static property at runtime.
 
 
 ## Usage in Native AOT Applications
 
-### Basic Setup
-
-At the start of your program, before any Fusion code runs:
-
-<!-- snippet: PartAOT_BasicSetup -->
-```cs
-// Set the code keeper to use (FusionProxyCodeKeeper includes all subsystems)
-CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
-
-// Run the code keeper actions to register types
-if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
-    CodeKeeper.RunActions();
-```
-<!-- endSnippet -->
-
-### Complete Example
-
-From the `NativeAot` sample:
+No manual setup is needed. Module initializers automatically configure the extensions:
 
 <!-- snippet: PartAOT_CompleteExample -->
 ```cs
@@ -107,12 +102,11 @@ From the `NativeAot` sample:
 
 public static async Task Main()
 {
-    // Configure code keeper before anything else
-    CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
-    if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
-        CodeKeeper.RunActions();
+    // No CodeKeeper setup needed — module initializers handle it automatically.
+    // FusionModuleInitializer sets ProxyCodeKeeper.Extension = new FusionProxyCodeKeeperExtension()
+    // RpcModuleInitializer sets MethodDefCodeKeeper.Extension = new RpcMethodDefCodeKeeperExtension()
 
-    // Now configure services as usual
+    // Configure services as usual
     var services = new ServiceCollection()
         .AddLogging(l => l.AddSimpleConsole())
         .AddFusion(fusion => {
@@ -138,27 +132,37 @@ public static async Task Main()
 
 ### For Service Methods
 
-Register the types used in your service methods:
+Implement `ProxyCodeKeeper.IExtension` to keep application-specific types:
 
 <!-- snippet: PartAOT_CustomCodeKeeperMethods -->
 ```cs
-public class MyAppCodeKeeper : FusionProxyCodeKeeper
+public class MyAppCodeKeeperExt : ProxyCodeKeeper.IExtension
 {
-    public MyAppCodeKeeper()
+    public void KeepProxy<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TBase,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxy>()
+        where TBase : IRequiresAsyncProxy
+        where TProxy : IProxy
+    { }
+
+    public void KeepMethodArgument<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(
+        string name, int index)
+    { }
+
+    public void KeepMethodResult<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+        string name)
     {
-        if (AlwaysTrue)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
         // Keep types used as method results
-        KeepAsyncMethod<MyResult>();                    // Task<MyResult>
-        KeepAsyncMethod<MyResult, string>();            // Task<MyResult> Method(string arg)
-        KeepAsyncMethod<MyResult, string, int>();       // Task<MyResult> Method(string, int)
-
-        // Keep types used as method arguments
-        KeepMethodArgument<MyCommand>();
+        CodeKeeper.Keep<MyResult>();
 
         // Keep serializable types
-        KeepSerializable<MyDto>();
+        CodeKeeper.KeepSerializable<MyDto>();
     }
 }
 ```
@@ -170,41 +174,57 @@ If you pre-generate proxy classes, keep them explicitly:
 
 <!-- snippet: PartAOT_CustomCodeKeeperProxy -->
 ```cs
-public class MyAppProxyCodeKeeper : FusionProxyCodeKeeper
+public class MyAppProxyCodeKeeperExt : ProxyCodeKeeper.IExtension
 {
-    public MyAppProxyCodeKeeper()
+    public void KeepProxy<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TBase,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxy>()
+        where TBase : IRequiresAsyncProxy
+        where TProxy : IProxy
     {
-        if (AlwaysTrue)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
         // Keep service interface and its generated proxy
-        KeepProxy<IMyService, MyServiceProxy>();
+        CodeKeeper.Keep<IMyService>();
+        CodeKeeper.Keep<MyServiceProxy>();
     }
+
+    public void KeepMethodArgument<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(
+        string name, int index)
+    { }
+
+    public void KeepMethodResult<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+        string name)
+    { }
 }
 
-// Use your custom code keeper
-// CodeKeeper.Set<ProxyCodeKeeper, MyAppProxyCodeKeeper>();
+// Use your custom code keeper extension
+// ProxyCodeKeeper.Extension = new MyAppProxyCodeKeeperExt();
 ```
 <!-- endSnippet -->
 
 
 ## How CodeKeeper Works
 
-CodeKeepers use a clever pattern to prevent trimming while avoiding runtime overhead:
+CodeKeepers use a dead-branch pattern to prevent trimming while avoiding runtime overhead:
 
 <!-- snippet: PartAOT_HowCodeKeeperWorks -->
 ```cs
-public class MyCodeKeeper : CodeKeeper
+public static class MyCodeKeeper
 {
-    public void KeepMyType()
+    public static void KeepMyType()
     {
-        // This condition is always false at runtime, but the compiler can't prove it
-        if (AlwaysTrue)
+        // This condition is always true at runtime, but the compiler can't prove it
+        if (CodeKeeper.AlwaysTrue)
             return;
 
         // This code is never executed, but the trimmer sees the reference
         // and preserves the type
-        Keep<MyType>();
+        CodeKeeper.Keep<MyType>();
     }
 }
 ```
@@ -214,10 +234,23 @@ The `AlwaysFalse`/`AlwaysTrue` constants use runtime values that the compiler ca
 
 <!-- snippet: PartAOT_AlwaysFalseImplementation -->
 ```cs
-public static readonly bool AlwaysFalse =
-    CpuTimestamp.Now.Value == -1 && RandomShared.NextDouble() < 1e-300;
+public static readonly bool AlwaysFalse = RandomShared.NextDouble() > 2;
 ```
 <!-- endSnippet -->
+
+Since `AlwaysFalse` is evaluated at runtime, ILC must assume either branch is reachable and generate
+code for both.
+
+
+## Source Generator
+
+The `ActualLab.Generators` proxy source generator emits `KeepCode()` methods as `[ModuleInitializer]`s
+in each generated proxy. These call `ProxyCodeKeeper.KeepProxy<TBase, TProxy>()`,
+`ProxyCodeKeeper.KeepAsyncMethod<TResult, T0, ...>()`, etc. inside `if (CodeKeeper.AlwaysFalse) { ... }`
+blocks. This ensures ILC traces through the entire extension chain and preserves all required types.
+
+**Important**: The source generator requires types to be in a namespace. Types declared at the top level
+(without a namespace) will be silently skipped.
 
 
 ## Project Configuration
@@ -296,14 +329,17 @@ public void KeepArgumentListArgument<T>()
 3. **Serialization**: All serialized types must be annotated with appropriate attributes
    (`[DynamicallyAccessedMembers]`, `[MemoryPackable]`, etc.)
 
+4. **Namespace requirement**: Service types and their implementations must be declared inside
+   a namespace for the proxy source generator to produce output.
+
 
 ## Best Practices
 
-1. **Initialize early**: Call `CodeKeeper.Set()` and `CodeKeeper.RunActions()` at the very start
-   of your application, before any DI containers are built.
+1. **Use the source generator**: Reference `ActualLab.Generators` as an analyzer in your project.
+   It automatically generates proxy types and `KeepCode()` module initializers.
 
-2. **Use FusionProxyCodeKeeper**: It includes all subsystems (Commander, RPC, Fusion).
-   Only create a custom code keeper if you need to add application-specific types.
+2. **Use FusionProxyCodeKeeperExtension**: It includes all subsystems (Commander, RPC, Fusion).
+   Only create a custom extension if you need to add application-specific types.
 
 3. **Test in AOT mode**: Run `dotnet publish -c Release` and test the AOT binary regularly
    during development to catch trimming issues early.
@@ -317,5 +353,8 @@ public void KeepArgumentListArgument<T>()
 
 ## Related Topics
 
+- [NativeAotQuirks](https://github.com/ActualLab/NativeAotQuirks) - Test project documenting NativeAOT
+  code generation, trimming, and type retention quirks. The `CodeKeeper` approach is based on findings
+  from this project.
 - [Serialization](./PartS.md) - Type annotations for serialization
 - [Interceptors and Proxies](./PartAP.md) - Proxy generation details

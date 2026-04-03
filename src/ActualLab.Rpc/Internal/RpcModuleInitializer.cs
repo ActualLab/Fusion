@@ -1,5 +1,8 @@
+using ActualLab.Interception.Trimming;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Trimming;
+using ActualLab.Trimming;
 
 namespace ActualLab.Rpc.Internal;
 
@@ -12,9 +15,11 @@ internal static class RpcModuleInitializer
 {
     static RpcModuleInitializer()
     {
+        if (CodeKeeper.AlwaysFalse)
+            ProxyCodeKeeper.Extension = new RpcProxyCodeKeeperExtension();
+
         // Access a bunch of types here to ensure JIT generates calls
         // to their methods w/o type initializer check further.
-        _ = CpuTimestamp.Now;
         _ = SystemClock.Instance.Now;
         _ = CpuClock.Instance.Now;
         _ = CoarseSystemClock.Instance.Now;

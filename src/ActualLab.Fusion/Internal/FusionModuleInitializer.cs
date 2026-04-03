@@ -1,6 +1,9 @@
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Rpc;
+using ActualLab.Fusion.Trimming;
+using ActualLab.Interception.Trimming;
 using ActualLab.Rpc;
+using ActualLab.Trimming;
 
 namespace ActualLab.Fusion.Internal;
 
@@ -14,6 +17,9 @@ internal static class FusionModuleInitializer
 {
     static FusionModuleInitializer()
     {
+        if (CodeKeeper.AlwaysFalse)
+            ProxyCodeKeeper.Extension = new FusionProxyCodeKeeperExtension();
+
         _ = RpcComputeCallType.Value;
         RpcDefaults.OptionDefaults.ApplyFusionOverrides();
         // Access a bunch of types here to ensure JIT generates calls

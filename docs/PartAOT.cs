@@ -62,42 +62,27 @@ public static class RuntimeCodegenModes
 // Below shows the conceptual API:
 /*
 #region PartAOT_CodeKeeperBase
-public abstract class CodeKeeper
+public static class CodeKeeper
 {
     // Never evaluates to true at runtime, but compiler can't prove it
     public static readonly bool AlwaysFalse;
     public static readonly bool AlwaysTrue;
 
+    // Extension point for downstream projects
+    public static IExtension? Extension { get; set; }
+
     // Register a type to prevent trimming
-    public static T Keep<T>(bool ensureInitialized = false);
+    public static void Keep<T>();
+    public static void Keep(Type type);
+    public static void Keep(string assemblyQualifiedTypeName);
 
     // Register serializable types
-    public static T KeepSerializable<T>();
+    public static void KeepSerializable<T>();
 
-    // Run all registered actions (called at startup)
-    public static void RunActions();
+    public interface IExtension { ... }
 }
 #endregion
 */
-
-// ============================================================================
-// Basic Setup
-// ============================================================================
-
-public static class BasicSetup
-{
-    public static void Example()
-    {
-        #region PartAOT_BasicSetup
-        // Set the code keeper to use (FusionProxyCodeKeeper includes all subsystems)
-        CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
-
-        // Run the code keeper actions to register types
-        if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
-            CodeKeeper.RunActions();
-        #endregion
-    }
-}
 
 // ============================================================================
 // Complete Example - conceptual (would have entry point conflict)
@@ -109,12 +94,11 @@ public static class BasicSetup
 
 public static async Task Main()
 {
-    // Configure code keeper before anything else
-    CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
-    if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
-        CodeKeeper.RunActions();
+    // No CodeKeeper setup needed — module initializers handle it automatically.
+    // FusionModuleInitializer sets ProxyCodeKeeper.Extension = new FusionProxyCodeKeeperExtension()
+    // RpcModuleInitializer sets MethodDefCodeKeeper.Extension = new RpcMethodDefCodeKeeperExtension()
 
-    // Now configure services as usual
+    // Configure services as usual
     var services = new ServiceCollection()
         .AddLogging(l => l.AddSimpleConsole())
         .AddFusion(fusion => {
@@ -140,23 +124,33 @@ public static async Task Main()
 // ============================================================================
 
 #region PartAOT_CustomCodeKeeperMethods
-public class MyAppCodeKeeper : FusionProxyCodeKeeper
+public class MyAppCodeKeeperExt : ProxyCodeKeeper.IExtension
 {
-    public MyAppCodeKeeper()
+    public void KeepProxy<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TBase,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxy>()
+        where TBase : IRequiresAsyncProxy
+        where TProxy : IProxy
+    { }
+
+    public void KeepMethodArgument<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(
+        string name, int index)
+    { }
+
+    public void KeepMethodResult<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+        string name)
     {
-        if (AlwaysTrue)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
         // Keep types used as method results
-        KeepAsyncMethod<MyResult>();                    // Task<MyResult>
-        KeepAsyncMethod<MyResult, string>();            // Task<MyResult> Method(string arg)
-        KeepAsyncMethod<MyResult, string, int>();       // Task<MyResult> Method(string, int)
-
-        // Keep types used as method arguments
-        KeepMethodArgument<MyCommand>();
+        CodeKeeper.Keep<MyResult>();
 
         // Keep serializable types
-        KeepSerializable<MyDto>();
+        CodeKeeper.KeepSerializable<MyDto>();
     }
 }
 #endregion
@@ -166,20 +160,36 @@ public class MyAppCodeKeeper : FusionProxyCodeKeeper
 // ============================================================================
 
 #region PartAOT_CustomCodeKeeperProxy
-public class MyAppProxyCodeKeeper : FusionProxyCodeKeeper
+public class MyAppProxyCodeKeeperExt : ProxyCodeKeeper.IExtension
 {
-    public MyAppProxyCodeKeeper()
+    public void KeepProxy<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TBase,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxy>()
+        where TBase : IRequiresAsyncProxy
+        where TProxy : IProxy
     {
-        if (AlwaysTrue)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
         // Keep service interface and its generated proxy
-        KeepProxy<IMyService, MyServiceProxy>();
+        CodeKeeper.Keep<IMyService>();
+        CodeKeeper.Keep<MyServiceProxy>();
     }
+
+    public void KeepMethodArgument<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(
+        string name, int index)
+    { }
+
+    public void KeepMethodResult<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+        string name)
+    { }
 }
 
-// Use your custom code keeper
-// CodeKeeper.Set<ProxyCodeKeeper, MyAppProxyCodeKeeper>();
+// Use your custom code keeper extension
+// ProxyCodeKeeper.Extension = new MyAppProxyCodeKeeperExt();
 #endregion
 
 // ============================================================================
@@ -187,17 +197,17 @@ public class MyAppProxyCodeKeeper : FusionProxyCodeKeeper
 // ============================================================================
 
 #region PartAOT_HowCodeKeeperWorks
-public class MyCodeKeeper : CodeKeeper
+public static class MyCodeKeeper
 {
-    public void KeepMyType()
+    public static void KeepMyType()
     {
-        // This condition is always false at runtime, but the compiler can't prove it
-        if (AlwaysTrue)
+        // This condition is always true at runtime, but the compiler can't prove it
+        if (CodeKeeper.AlwaysTrue)
             return;
 
         // This code is never executed, but the trimmer sees the reference
         // and preserves the type
-        Keep<MyType>();
+        CodeKeeper.Keep<MyType>();
     }
 }
 #endregion
@@ -209,8 +219,7 @@ public class MyCodeKeeper : CodeKeeper
 // The actual implementation uses runtime values that can't be evaluated at compile time
 /*
 #region PartAOT_AlwaysFalseImplementation
-public static readonly bool AlwaysFalse =
-    CpuTimestamp.Now.Value == -1 && RandomShared.NextDouble() < 1e-300;
+public static readonly bool AlwaysFalse = RandomShared.NextDouble() > 2;
 #endregion
 */
 
@@ -273,9 +282,9 @@ public class PartAOT : DocPart
         // Core trimming infrastructure
         _ = typeof(CodeKeeper);
         _ = typeof(ProxyCodeKeeper);
-        _ = typeof(CommanderProxyCodeKeeper);
-        _ = typeof(RpcProxyCodeKeeper);
-        _ = typeof(FusionProxyCodeKeeper);
+        _ = typeof(CommanderProxyCodeKeeperExtension);
+        _ = typeof(RpcProxyCodeKeeperExtension);
+        _ = typeof(FusionProxyCodeKeeperExtension);
 
         // RuntimeCodegen
         _ = typeof(RuntimeCodegen);

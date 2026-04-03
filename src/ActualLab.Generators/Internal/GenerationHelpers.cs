@@ -52,10 +52,8 @@ public static class GenerationHelpers
     public static readonly GenericNameSyntax InterceptGenericMethodName = GenericName(InterceptMethodName.Identifier.Text);
     public static readonly IdentifierNameSyntax NoInterceptorMethodName = IdentifierName("NoInterceptor");
     public static readonly IdentifierNameSyntax KeepCodeMethodName = IdentifierName("KeepCode");
-    public static readonly IdentifierNameSyntax AddActionMethodName = IdentifierName("AddAction");
-    public static readonly IdentifierNameSyntax AddFakeActionMethodName = IdentifierName("AddFakeAction");
-    public static readonly IdentifierNameSyntax FakeCallSilentlyMethodName = IdentifierName("FakeCallSilently");
-    public static readonly GenericNameSyntax CodeKeeperGetGenericMethodName = GenericName("Get");
+    public static readonly IdentifierNameSyntax AlwaysFalseFieldName = IdentifierName("AlwaysFalse");
+    public static readonly GenericNameSyntax CodeKeeperKeepMethodName = GenericName("Keep");
     public static readonly GenericNameSyntax CodeKeeperKeepProxyGenericMethodName = GenericName("KeepProxy");
     public static readonly GenericNameSyntax CodeKeeperKeepAsyncMethodGenericMethodName = GenericName("KeepAsyncMethod");
     public static readonly GenericNameSyntax CodeKeeperKeepSyncMethodGenericMethodName = GenericName("KeepSyncMethod");
@@ -66,7 +64,6 @@ public static class GenerationHelpers
     public static readonly IdentifierNameSyntax ValueParameterName = IdentifierName("value");
     public static readonly IdentifierNameSyntax InterceptedVarName = IdentifierName("intercepted");
     public static readonly IdentifierNameSyntax InvocationVarName = IdentifierName("invocation");
-    public static readonly IdentifierNameSyntax ProxyCodeKeeperVarName = IdentifierName("proxyCodeKeeper");
 
     // Helpers
 

@@ -141,14 +141,9 @@ public partial class RpcMethodDef : MethodDef
             MiddlewareFilter = _ => false; // Middlewares are unused for System and NoWait calls
 
         if (IsSystem) {
-            // System calls have no inbound call filter, middlewares, and validator;
-            // thus most of the pipeline invokers there must be identical to the server invoker.
-            // NotFound call overrides InvokeServer, so it requires a regular invoker.
             InboundCallInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
         }
         else {
-            // InboundCallMiddlewareInvokerFactory uses InboundCallInvoker produced by InboundCallInvokerFactory
-            // as the very first "next" delegate - that's why we build the final invoker in two steps here.
             InboundCallInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallServerInvokerFactory<>));
             InboundCallInvoker = GetCachedFunc<Func<RpcInboundCall, Task>>(typeof(InboundCallMiddlewareInvokerFactory<>));
         }

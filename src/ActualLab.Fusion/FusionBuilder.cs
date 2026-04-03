@@ -8,11 +8,9 @@ using ActualLab.Fusion.Operations.Reprocessing;
 using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Rpc;
-using ActualLab.Fusion.Trimming;
 using ActualLab.Fusion.UI;
 using ActualLab.Resilience;
 using ActualLab.Rpc;
-using ActualLab.Trimming;
 using Errors = ActualLab.Internal.Errors;
 
 namespace ActualLab.Fusion;
@@ -32,21 +30,7 @@ public readonly struct FusionBuilder
     [UnconditionalSuppressMessage("Trimming", "IL2110", Justification = "CodeKeepers are used only to retain the code")]
     [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
     static FusionBuilder()
-    {
-        FusionModuleInitializer.Touch();
-        CodeKeeper.AddFakeAction(static () => {
-            CodeKeeper.Keep<CommanderBuilder>();
-            CodeKeeper.Keep<RpcBuilder>();
-
-            // Interceptors
-            CodeKeeper.Keep<FusionProxyCodeKeeper>();
-            CodeKeeper.Keep<ComputeServiceInterceptor>();
-            CodeKeeper.Keep<RemoteComputeServiceInterceptor>();
-
-            // Other services
-            CodeKeeper.Keep<RpcComputeSystemCalls>();
-        });
-    }
+        => FusionModuleInitializer.Touch();
 
     internal FusionBuilder(
         IServiceCollection services,

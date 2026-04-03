@@ -1,110 +1,97 @@
+using System.Buffers;
 using ActualLab.Generators;
+// ReSharper disable ReturnValueOfPureMethodIsNotUsed
 
 namespace ActualLab.Trimming;
 
 /// <summary>
-/// Base class for code keepers that prevent .NET trimming from removing
+/// Static utility that prevents .NET trimming / NativeAOT from removing
 /// types and code that are only used via reflection or dynamic dispatch.
+/// Uses the dual-mechanism approach: <c>[DynamicallyAccessedMembers(All)]</c>
+/// preserves metadata, while <c>typeof(T).GetMembers()</c> in a dead branch
+/// forces ILC to generate native code (critical for struct generics).
 /// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL2057", Justification = "CodeKeepers are used only to retain the code")]
+[UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
-public abstract class CodeKeeper
+public static class CodeKeeper
 {
-#if NET9_0_OR_GREATER
-    private static readonly Lock StaticLock = new();
-#else
-    private static readonly object StaticLock = new();
-#endif
-    private static readonly List<Action> Actions = new();
-    private static readonly HashSet<Action> ActionSet = new();
-
     // Any kind of logic compiler won't fold to "true" or "false"
-    public static readonly bool AlwaysFalse = CpuTimestamp.Now.Value == -1 && RandomShared.NextDouble() < 1e-300;
+    public static readonly bool AlwaysFalse = RandomShared.NextDouble() > 2;
     public static readonly bool AlwaysTrue = !AlwaysFalse;
 
-    public static void AddAction(Action action)
+    public static IExtension? Extension { get; set; }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void Keep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()
     {
-        lock (StaticLock) {
-            if (ActionSet.Add(action))
-                Actions.Add(action);
-        }
+        if (AlwaysTrue)
+            return;
+
+        var t = typeof(T);
+        t.GetConstructors();
+        t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.CreateInstance);
+        t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        // _ = (AlwaysTrue ? new object() : default(T)) is T; // Force ILC to generate native code for casting
+        Extension?.Keep<T>();
     }
 
-    public static void AddFakeAction(Action action)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void Keep([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
     {
-        if (AlwaysFalse)
-            AddAction(action);
+        if (AlwaysTrue)
+            return;
+
+        type.GetConstructors();
+        type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.CreateInstance);
+        type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        Extension?.Keep(type);
     }
 
-    public static void RunActions()
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void Keep(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] string assemblyQualifiedTypeName)
     {
-        lock (StaticLock) {
-            while (Actions.Count != 0) {
-                var actions = Actions.ToArray();
-                Actions.Clear();
-                ActionSet.Clear();
-                foreach (var action in actions)
-                    CallSilently(action); // action may add more actions
-            }
-        }
+        if (AlwaysTrue)
+            return;
+
+        var t = Type.GetType(assemblyQualifiedTypeName);
+        t!.GetConstructors();
+        t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.CreateInstance);
+        t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        t.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        Extension?.Keep(assemblyQualifiedTypeName);
     }
 
-    public static TKeeper Get<TKeeper>()
-        where TKeeper : CodeKeeper, new()
-        => Cache<TKeeper>.Instance;
-
-    public static TKeeper Set<TKeeper, TKeeperImpl>()
-        where TKeeper : CodeKeeper, new()
-        where TKeeperImpl : TKeeper, new()
-        => Cache<TKeeper>.Instance = new TKeeperImpl();
-
-    public static T Keep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>(bool ensureInitialized = false)
-        => ensureInitialized || AlwaysFalse
-            ? Get<TypeCodeKeeper>().KeepType<T>(ensureInitialized)
-            : default!;
-
-    public static T KeepSerializable<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()
-        => Get<SerializableTypeCodeKeeper>().KeepType<T>();
-
-    public static void KeepUnconstructable([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
-    { }
-
-    public static T CallSilently<T>(Func<T> func)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSerializable<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()
     {
-        try {
-            return func.Invoke();
-        }
-        catch {
-            // Intended
-        }
-        return default!;
-    }
+        if (AlwaysTrue)
+            return;
 
-    public static void CallSilently(Action action)
-    {
-        try {
-            action.Invoke();
-        }
-        catch {
-            // Intended
-        }
-    }
-
-    public static void FakeCallSilently(Action action)
-    {
-        if (AlwaysFalse)
-            CallSilently(action);
+        Keep<T>();
+        Keep<UniSerialized<T>>();
+        Keep<MemoryPackSerialized<T>>();
+        Keep<MemoryPackByteSerializer<T>>();
+#if !NETSTANDARD2_0
+        MemoryPackSerializer.Deserialize<T>(ReadOnlySpan<byte>.Empty);
+        MemoryPackSerializer.Deserialize<T>(ReadOnlySequence<byte>.Empty);
+        MemoryPackSerializer.Serialize<T>(default);
+#endif
+        Extension?.KeepSerializable<T>();
     }
 
     // Nested types
 
-    /// <summary>
-    /// Caches singleton instances of <see cref="CodeKeeper"/> subtypes.
-    /// </summary>
-    private static class Cache<TKeeper>
-        where TKeeper : CodeKeeper, new()
+    public interface IExtension
     {
-        public static TKeeper Instance { get; set; } = new();
+        public void Keep<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>();
+        public void Keep([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type);
+        public void Keep([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] string assemblyQualifiedTypeName);
+        public void KeepSerializable<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>();
     }
 }

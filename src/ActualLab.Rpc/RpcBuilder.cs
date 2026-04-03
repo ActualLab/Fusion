@@ -24,52 +24,7 @@ public readonly struct RpcBuilder
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
     [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
     static RpcBuilder()
-    {
-        RpcModuleInitializer.Touch();
-        CodeKeeper.AddFakeAction(static () => {
-            CodeKeeper.KeepUnconstructable(typeof(Proxies));
-
-            // Serializable types
-            CodeKeeper.KeepSerializable<TypeRef>();
-
-            // Interceptors
-            CodeKeeper.Keep<RpcProxyCodeKeeper>();
-            CodeKeeper.Keep<RpcInterceptor>();
-
-            // Configuration
-            CodeKeeper.Keep<RpcRegistryOptions>();
-            CodeKeeper.Keep<RpcPeerOptions>();
-            CodeKeeper.Keep<RpcInboundCallOptions>();
-            CodeKeeper.Keep<RpcOutboundCallOptions>();
-            CodeKeeper.Keep<RpcWebSocketClientOptions>();
-            CodeKeeper.Keep<RpcDiagnosticsOptions>();
-            CodeKeeper.Keep<RpcMethodDef>();
-            CodeKeeper.Keep<RpcServiceDef>();
-            CodeKeeper.Keep<RpcServiceRegistry>();
-            CodeKeeper.Keep<RpcConfiguration>();
-            CodeKeeper.Keep<RpcSerializationFormat>();
-            CodeKeeper.Keep<RpcSerializationFormatResolver>();
-            CodeKeeper.Keep<RpcByteArgumentSerializerV4>();
-            CodeKeeper.Keep<RpcByteMessageSerializerV4>();
-            CodeKeeper.Keep<RpcDefaultCallTracer>();
-
-            // Per-hub
-            CodeKeeper.Keep<RpcHub>();
-            CodeKeeper.Keep<RpcSystemCalls>();
-
-            // Per-peer
-            CodeKeeper.Keep<RpcClientPeer>();
-            CodeKeeper.Keep<RpcServerPeer>();
-            CodeKeeper.Keep<RpcRemoteObjectTracker>();
-            CodeKeeper.Keep<RpcSharedObjectTracker>();
-            CodeKeeper.Keep<RpcSharedStream>();
-
-            // Per-call
-            CodeKeeper.Keep<RpcInboundContext>();
-            CodeKeeper.Keep<RpcOutboundContext>();
-            CodeKeeper.Keep<RpcCacheInfoCapture>();
-        });
-    }
+        => RpcModuleInitializer.Touch();
 
     internal RpcBuilder(
         IServiceCollection services,

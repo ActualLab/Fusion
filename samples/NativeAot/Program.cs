@@ -1,20 +1,21 @@
-﻿using System.Reflection;
-using ActualLab.Fusion.Rpc;
-using ActualLab.Fusion.Trimming;
+using System.Reflection;
 using ActualLab.Interception;
-using ActualLab.Interception.Trimming;
 using ActualLab.Rpc;
-using ActualLab.Trimming;
 using MemoryPack;
 using MessagePack;
+using Samples.NativeAot;
 using static System.Console;
 
 #pragma warning disable IL3050
 
-// TestServiceProxy.KeepCode(); // A code like this this might be used to force-load assemblies with proxies
-CodeKeeper.Set<ProxyCodeKeeper, FusionProxyCodeKeeper>();
-if (RuntimeCodegen.NativeMode != RuntimeCodegenMode.DynamicMethods)
-    CodeKeeper.RunActions();
+AppDomain.CurrentDomain.UnhandledException += (_, args) => {
+    Error.WriteLine($"UNHANDLED: {args.ExceptionObject}");
+    Error.Flush();
+};
+AppDomain.CurrentDomain.FirstChanceException += (_, args) => {
+    Error.WriteLine($"FCE: {args.Exception.GetType().Name}: {args.Exception.Message}");
+    Error.Flush();
+};
 
 WriteLine($"RuntimeCodegen.Mode: {RuntimeCodegen.Mode}");
 WriteLine($"ArgumentList.UseGenerics: {ArgumentList.UseGenerics}");
@@ -58,42 +59,43 @@ for (var i = 0; i < 5; i++) {
 var hello = await client.OnSayHello(new SayHelloCommand("AOT"));
 Out.WriteLine($"OnSayHello() -> {hello}");
 
-// Used types
-
-public static class Invoker
+namespace Samples.NativeAot
 {
-    public static string Format0()
-        => "Format0";
-    public static string Format2(int i, string s)
-        => $"Format2: {i}, {s}";
-    public static string Format10(int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8, int i9)
-        => $"Format10: {i0}, {i1}, {i2}, {i3}, {i4}, {i5}, {i6}, {i7}, {i8}, {i9}";
-}
+    public static class Invoker
+    {
+        public static string Format0()
+            => "Format0";
+        public static string Format2(int i, string s)
+            => $"Format2: {i}, {s}";
+        public static string Format10(int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7, int i8, int i9)
+            => $"Format10: {i0}, {i1}, {i2}, {i3}, {i4}, {i5}, {i6}, {i7}, {i8}, {i9}";
+    }
 
-public interface ITestService : IComputeService
-{
-    public Task<Moment> GetTime(CancellationToken cancellationToken = default);
+    public interface ITestService : IComputeService
+    {
+        public Task<Moment> GetTime(CancellationToken cancellationToken = default);
 
-    [ComputeMethod(AutoInvalidationDelay = 1)]
-    public Task<Moment> GetTimeComputed(CancellationToken cancellationToken = default);
+        [ComputeMethod(AutoInvalidationDelay = 1)]
+        public Task<Moment> GetTimeComputed(CancellationToken cancellationToken = default);
 
-    [CommandHandler]
-    public Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
-}
+        [CommandHandler]
+        public Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default);
+    }
 
-[MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
-public sealed partial record SayHelloCommand(
-    [property: MemoryPackOrder(0)] string Name
-) : ICommand<string>;
+    [MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
+    public sealed partial record SayHelloCommand(
+        [property: MemoryPackOrder(0)] string Name
+    ) : ICommand<string>;
 
-public class TestService : ITestService
-{
-    public virtual Task<Moment> GetTime(CancellationToken cancellationToken = default)
-        => Task.FromResult(Moment.Now);
+    public class TestService : ITestService
+    {
+        public virtual Task<Moment> GetTime(CancellationToken cancellationToken = default)
+            => Task.FromResult(Moment.Now);
 
-    public virtual Task<Moment> GetTimeComputed(CancellationToken cancellationToken = default)
-        => Task.FromResult(Moment.Now);
+        public virtual Task<Moment> GetTimeComputed(CancellationToken cancellationToken = default)
+            => Task.FromResult(Moment.Now);
 
-    public virtual Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default)
-        => Task.FromResult($"Hello, {command.Name}");
+        public virtual Task<string> OnSayHello(SayHelloCommand command, CancellationToken cancellationToken = default)
+            => Task.FromResult($"Hello, {command.Name}");
+    }
 }

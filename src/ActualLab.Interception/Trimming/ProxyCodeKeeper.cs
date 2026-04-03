@@ -9,65 +9,61 @@ namespace ActualLab.Interception.Trimming;
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "CodeKeepers are used only to retain the code")]
 [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "CodeKeepers are used only to retain the code")]
-public class ProxyCodeKeeper : CodeKeeper
+public static class ProxyCodeKeeper
 {
-    protected static MethodDefCodeKeeper MethodDefCodeKeeper => Get<MethodDefCodeKeeper>();
+    public static IExtension? Extension { get; set; }
 
     static ProxyCodeKeeper()
-        => _ = Proxies.Cache;
-
-    public ProxyCodeKeeper()
     {
-        if (AlwaysTrue)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
-#pragma warning disable CA2214
-        // ReSharper disable once VirtualMemberCallInConstructor
-        KeepMethodResult<Task, Unit>();
-        // ReSharper disable once VirtualMemberCallInConstructor
-        KeepMethodResult<Task, VoidSurrogate>();
-        // ReSharper disable once VirtualMemberCallInConstructor
-        KeepMethodResult<ValueTask, Unit>();
-        // ReSharper disable once VirtualMemberCallInConstructor
-        KeepMethodResult<ValueTask, VoidSurrogate>();
-#pragma warning restore CA2214
+        CodeKeeper.Keep(typeof(Proxies));
+        CodeKeeper.Keep<MethodDef>();
     }
 
-    public virtual void KeepProxy<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepProxy<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TBase,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxy>()
         where TBase : IRequiresAsyncProxy
         where TProxy : IProxy
     {
-        if (AlwaysTrue)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
-        Keep<TBase>();
-        Keep<TProxy>();
+        CodeKeeper.Keep<TBase>();
+        CodeKeeper.Keep<TProxy>();
+        Extension?.KeepProxy<TBase, TProxy>();
     }
 
-    public void KeepSyncMethod<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult>(string name = "")
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult>(string name = "")
         => KeepMethod<TResult, TResult>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0>(string name = "")
         => KeepMethod<TResult, TResult, T0>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T2>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1, T2>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -75,7 +71,8 @@ public class ProxyCodeKeeper : CodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T3>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1, T2, T3>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -84,7 +81,8 @@ public class ProxyCodeKeeper : CodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T4>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -94,7 +92,8 @@ public class ProxyCodeKeeper : CodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T5>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -105,7 +104,8 @@ public class ProxyCodeKeeper : CodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T6>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -117,7 +117,8 @@ public class ProxyCodeKeeper : CodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T7>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -130,7 +131,8 @@ public class ProxyCodeKeeper : CodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T8>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -144,7 +146,8 @@ public class ProxyCodeKeeper : CodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T9>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(name);
 
-    public void KeepSyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepSyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -159,14 +162,16 @@ public class ProxyCodeKeeper : CodeKeeper
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T10>(string name = "")
         => KeepMethod<TResult, TResult, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(name);
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(string name = "")
     {
         KeepMethod<Task<TUnwrapped>, TUnwrapped>(name);
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0>(string name = "")
     {
@@ -174,7 +179,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1>(string name = "")
@@ -183,7 +189,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -193,7 +200,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -204,7 +212,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -216,7 +225,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -229,7 +239,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -243,7 +254,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -258,7 +270,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -274,7 +287,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -291,7 +305,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(name);
     }
 
-    public void KeepAsyncMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepAsyncMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T1,
@@ -309,12 +324,14 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethod<ValueTask<TUnwrapped>, TUnwrapped, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(name);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(string name = "")
         => KeepMethodResult<TResult, TUnwrapped>(name);
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0>(string name = "")
@@ -323,7 +340,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T0>(name, 0);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -333,7 +351,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T1>(name, 1);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -344,7 +363,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T2>(name, 2);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -356,7 +376,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T3>(name, 3);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -369,7 +390,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T4>(name, 4);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -383,7 +405,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T5>(name, 5);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -398,7 +421,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T6>(name, 6);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -414,7 +438,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T7>(name, 7);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -431,7 +456,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T8>(name, 8);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -449,7 +475,8 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T9>(name, 9);
     }
 
-    public virtual void KeepMethod<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethod<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T0,
@@ -468,39 +495,87 @@ public class ProxyCodeKeeper : CodeKeeper
         KeepMethodArgument<T10>(name, 10);
     }
 
-    public virtual void KeepMethodArgument<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethodArgument<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(
         string name = "", int index = -1)
     {
-        if (AlwaysFalse)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
-        Keep<TArg>();
-        KeepArgumentListArgument<TArg>();
+        CodeKeeper.Keep<TArg>();
+        ArgumentListCodeKeeper.KeepArgumentListArgument<TArg>();
+        Extension?.KeepMethodArgument<TArg>(name, index);
     }
 
-    public virtual void KeepMethodResult<
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void KeepMethodResult<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(string name = "")
     {
-        if (AlwaysTrue)
+        if (CodeKeeper.AlwaysTrue)
             return;
 
-        Keep<IGenericInstanceFactory<TUnwrapped>>();
-        Keep<Result.NewErrorFactory<TUnwrapped>>();
-        Keep<TaskExt.FromExceptionFactory<TUnwrapped>>();
-        Keep<TaskExt.FromCancelledTaskFactory<TUnwrapped>>();
-        Keep<TaskExt.ToTypedValueTaskFactory<TUnwrapped>>();
-        Keep<TaskExt.ToTypedResultSynchronouslyFactory<TUnwrapped>>();
-        Keep<TaskExt.ToObjectValueTaskFactory<TUnwrapped>>();
-        Keep<TaskExt.ToUntypedResultSynchronouslyFactory<TUnwrapped>>();
-        Keep<TaskExt.GetResultAsObjectSynchronouslyFactory<TUnwrapped>>();
+        // Generic factories
+        CodeKeeper.Keep<IGenericInstanceFactory<TUnwrapped>>();
+        CodeKeeper.Keep<Result.NewErrorFactory<TUnwrapped>>();
+        CodeKeeper.Keep<TaskExt.FromExceptionFactory<TUnwrapped>>();
+        CodeKeeper.Keep<TaskExt.FromCancelledTaskFactory<TUnwrapped>>();
+        CodeKeeper.Keep<TaskExt.ToTypedValueTaskFactory<TUnwrapped>>();
+        CodeKeeper.Keep<TaskExt.ToTypedResultSynchronouslyFactory<TUnwrapped>>();
+        CodeKeeper.Keep<TaskExt.ToObjectValueTaskFactory<TUnwrapped>>();
+        CodeKeeper.Keep<TaskExt.ToUntypedResultSynchronouslyFactory<TUnwrapped>>();
+        CodeKeeper.Keep<TaskExt.GetResultAsObjectSynchronouslyFactory<TUnwrapped>>();
 
-        Keep<Interceptor>().CreateTypedHandler<TUnwrapped>(default, null!);
-        MethodDefCodeKeeper.KeepCodeForResult<TResult, TUnwrapped>();
+        // TResult, TUnwrapped, Result<...> code
+        CodeKeeper.Keep<TResult>();
+        CodeKeeper.Keep<TUnwrapped>();
+        CodeKeeper.Keep<Task<TUnwrapped>>();
+        CodeKeeper.Keep<ValueTask<TUnwrapped>>();
+        CodeKeeper.Keep<Result>();
+        CodeKeeper.Keep<Result<TUnwrapped>>();
+        CodeKeeper.Keep<Result<Task<TUnwrapped>>>();
+        CodeKeeper.Keep<Result<ValueTask<TUnwrapped>>>();
+
+        // MethodDef: generic methods
+        var methodDef = default(MethodDef)!;
+        methodDef.WrapResult<TUnwrapped>(default!);
+        methodDef.WrapAsyncInvokerResult<TUnwrapped>(default!);
+        methodDef.WrapResultOfAsyncMethod<TUnwrapped>(default!);
+        methodDef.WrapAsyncInvokerResultOfAsyncMethod<TUnwrapped>(default!);
+        methodDef.SelectAsyncInvoker<TUnwrapped>(null!);
+        methodDef.GetCachedFunc<TUnwrapped>(null!);
+
+        // MethodDef: invoker factories
+        CodeKeeper.Keep<MethodDef.TargetAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<MethodDef.InterceptorAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<MethodDef.InterceptedAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<MethodDef.TargetObjectAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<MethodDef.InterceptorObjectAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<MethodDef.InterceptedObjectAsyncInvokerFactory<TUnwrapped>>();
+        CodeKeeper.Keep<MethodDef.UniversalAsyncResultConverterFactory<TUnwrapped>>();
+
+        default(Interceptor)!.CreateTypedHandler<TUnwrapped>(default, null!);
+        Extension?.KeepMethodResult<TResult, TUnwrapped>(name);
     }
 
-    public virtual void KeepArgumentListArgument<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>()
-        => Get<ArgumentListCodeKeeper>().KeepArgumentListArgument<TArg>();
+    // Nested types
+
+    public interface IExtension
+    {
+        public void KeepProxy<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TBase,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TProxy>()
+            where TBase : IRequiresAsyncProxy
+            where TProxy : IProxy;
+
+        public void KeepMethodArgument<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TArg>(
+            string name, int index);
+
+        public void KeepMethodResult<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult,
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TUnwrapped>(
+            string name);
+    }
 }

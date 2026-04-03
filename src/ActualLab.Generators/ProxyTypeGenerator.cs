@@ -122,19 +122,11 @@ public class ProxyTypeGenerator
                 TypeDef.TypeParameterList?.Parameters.Select(x => IdentifierName(x.Identifier.Text)) ?? [])))
             : IdentifierName(ProxyTypeName);
 
-        KeepCodeMethodStatements.Add(VarStatement(
-            ProxyCodeKeeperVarName.Identifier,
-            InvocationExpression(
-                MemberAccessExpression(
-                    SyntaxKind.SimpleMemberAccessExpression,
-                    CodeKeeperTypeName,
-                    CodeKeeperGetGenericMethodName.WithTypeArgumentList(
-                        TypeArgumentList(SingletonSeparatedList<TypeSyntax>(ProxyCodeKeeperTypeName)))))));
         KeepCodeMethodStatements.Add(ExpressionStatement(
             InvocationExpression(
                 MemberAccessExpression(
                     SyntaxKind.SimpleMemberAccessExpression,
-                    ProxyCodeKeeperVarName,
+                    ProxyCodeKeeperTypeName,
                     CodeKeeperKeepProxyGenericMethodName.WithTypeArgumentList(
                         TypeArgumentList(CommaSeparatedList(TypeRef, ProxyRef)))))));
 
@@ -221,18 +213,14 @@ public class ProxyTypeGenerator
                         SyntaxKind.SuppressNullableWarningExpression,
                         DefaultExpression(p.Type.ToTypeRef()))))
                 .ToArray() ?? [];
-            var fakeCtorCallExpression =
+            var keepProxyTypeExpression =
                 InvocationExpression(
                     MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
                         CodeKeeperTypeName,
-                        FakeCallSilentlyMethodName))
-                .WithArgumentList(ArgumentList(SingletonSeparatedList(Argument(
-                    ParenthesizedLambdaExpression()
-                        .WithExpressionBody(
-                            ObjectCreationExpression(ProxyRef)
-                                .WithArgumentList(ArgumentList(SeparatedList(defaultArguments))))))));
-            KeepCodeMethodStatements.Add(ExpressionStatement(fakeCtorCallExpression));
+                        CodeKeeperKeepMethodName.WithTypeArgumentList(
+                            TypeArgumentList(SingletonSeparatedList<TypeSyntax>(ProxyRef)))));
+            KeepCodeMethodStatements.Add(ExpressionStatement(keepProxyTypeExpression));
         }
         return true;
     }
@@ -352,7 +340,7 @@ public class ProxyTypeGenerator
                 InvocationExpression(
                     MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
-                        ProxyCodeKeeperVarName,
+                        ProxyCodeKeeperTypeName,
                         keepGenericMethodName.WithTypeArgumentList(keepMethodTypeArguments)))
                 .WithArgumentList(keepMethodArguments);
             KeepCodeMethodStatements.Add(ExpressionStatement(keepMethodCallExpression));
@@ -362,22 +350,13 @@ public class ProxyTypeGenerator
 
     private void AddModuleInitializer()
     {
-        var bodyExpression =
-            ArrowExpressionClause(
-                InvocationExpression(
-                    MemberAccessExpression(
-                        SyntaxKind.SimpleMemberAccessExpression,
-                        CodeKeeperTypeName,
-                        AddFakeActionMethodName))
-                .WithArgumentList(
-                    ArgumentList(
-                        SingletonSeparatedList(
-                            Argument(
-                                ParenthesizedLambdaExpression()
-                                    .WithModifiers(
-                                        TokenList(Token(SyntaxKind.StaticKeyword)))
-                                    .WithBlock(Block(KeepCodeMethodStatements))))))
-                );
+        // if (CodeKeeper.AlwaysFalse) { ...keepCodeStatements... }
+        var ifAlwaysFalseBlock = IfStatement(
+            MemberAccessExpression(
+                SyntaxKind.SimpleMemberAccessExpression,
+                CodeKeeperTypeName,
+                AlwaysFalseFieldName),
+            Block(KeepCodeMethodStatements));
 
         var method = MethodDeclaration(
                 PredefinedType(Token(SyntaxKind.VoidKeyword)),
@@ -392,9 +371,7 @@ public class ProxyTypeGenerator
         method = method
             .WithModifiers(
                 TokenList(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.StaticKeyword)))
-            .WithExpressionBody(bodyExpression)
-            .WithSemicolonToken(
-                Token(SyntaxKind.SemicolonToken));
+            .WithBody(Block(ifAlwaysFalseBlock));
         Methods.Add(method);
     }
 
