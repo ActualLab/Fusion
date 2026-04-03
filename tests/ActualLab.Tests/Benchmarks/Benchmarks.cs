@@ -50,6 +50,24 @@ public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
             }
             return sum;
         });
+        RunOne("Enum.HasFlag", baseOpCount, opCount => {
+            var sum = 0L;
+            var value = AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property;
+            for (; opCount > 0; opCount--) {
+                if (value.HasFlag(AttributeTargets.Method))
+                    sum++;
+            }
+            return sum;
+        });
+        RunOne("Enum bitwise (e & flag) == flag", baseOpCount, opCount => {
+            var sum = 0L;
+            var value = AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property;
+            for (; opCount > 0; opCount--) {
+                if ((value & AttributeTargets.Method) == AttributeTargets.Method)
+                    sum++;
+            }
+            return sum;
+        });
     }
 
     // [Fact]

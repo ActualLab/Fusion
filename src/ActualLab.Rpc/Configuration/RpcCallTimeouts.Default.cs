@@ -16,7 +16,7 @@ public sealed partial record RpcCallTimeouts
         public static RpcCallTimeouts Command { get; set; } = new(1.5, 10);
         public static RpcCallTimeouts BackendQuery { get; set; } = None;
         public static RpcCallTimeouts BackendCommand { get; set; } = new(300, 300);
-        // public static RpcCallTimeouts Test { get; set; } = new(double.NaN, 30) { LogTimeout = TimeSpan.FromSeconds(10) };
+        // public static RpcCallTimeouts Test { get; set; } = new(double.NaN, 30) { DelayTimeout = TimeSpan.FromSeconds(10) };
 
         public static RpcCallTimeouts Get(RpcMethodDef methodDef)
         {

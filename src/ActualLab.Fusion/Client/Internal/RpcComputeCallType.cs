@@ -7,7 +7,7 @@ namespace ActualLab.Fusion.Client.Internal;
 /// </summary>
 public static class RpcComputeCallType
 {
-    public const byte Id = 1;
+    public const byte Id = RpcCallTypeIds.Compute;
     public static readonly RpcCallType Value;
 
     static RpcComputeCallType()

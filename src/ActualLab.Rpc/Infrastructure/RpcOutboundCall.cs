@@ -97,7 +97,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (!Peer.IsConnected())
             return CompleteAsync(); // Slow path
 
-        SendRegistered(isFirstAttempt: true); // Fast path
+        SendRegistered(); // Fast path
         return ResultTask;
 
         async Task<object?> CompleteAsync() {
@@ -106,7 +106,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
                 await Peer
                     .WhenConnected(MethodDef.OutboundCallTimeouts.ConnectTimeout, Context.CancellationToken)
                     .ConfigureAwait(false);
-                SendRegistered(isFirstAttempt: true);
+                SendRegistered();
             }
             catch (Exception error) {
                 SetError(error, null);
@@ -167,7 +167,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public void SendRegistered(bool isFirstAttempt)
+    public void SendRegistered()
     {
         // Use lazy CreateOutboundMessage - serialization happens in transport.
         // Serialization errors propagate via message.SendHandler.

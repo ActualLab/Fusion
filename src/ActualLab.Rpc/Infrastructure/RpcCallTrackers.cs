@@ -111,7 +111,9 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         var delayedCallLimit = Limits.LogDelayedCallLimit;
         var summaryLogSettings = Limits.LogCallSummarySettings;
         var keepAliveTimeout = Limits.KeepAliveTimeout;
+        var delayHandler = Peer.Hub.OutboundCallOptions.DelayHandler;
         var delayedCalls = new List<RpcOutboundCall>();
+        var callsToResend = new List<RpcOutboundCall>();
         try {
             // This loop aborts timed out calls every CallTimeoutCheckPeriod
             while (!cancellationToken.IsCancellationRequested) {
@@ -127,6 +129,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 var callCount = 0;
                 var inProgressCallCount = 0;
                 delayedCalls.Clear();
+                callsToResend.Clear();
                 foreach (var call in this) {
                     callCount++;
                     if (call.ResultTask.IsCompleted)
@@ -148,16 +151,23 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                             elapsed.ToShortString(), timeouts.RunTimeout.ToShortString(),
                             call.CompletedStageName, call.Context.RoutingMode);
                     }
-                    else if (elapsed >= timeouts.LogTimeout) {
+                    else if (elapsed >= timeouts.DelayTimeout) {
                         delayedCalls.Add(call);
-                        if (delayedCalls.Count > delayedCallLimit)
-                            continue;
+                        var action = delayHandler.Invoke(call, Peer);
 
-                        Peer.Log.LogWarning(
-                            "'{PeerRef}': call {Call} is delayed ({Elapsed} > {LogTimeout}), completed stage: {Stage}, routing mode: {RoutingMode}",
-                            Peer.Ref, call,
-                            elapsed.ToShortString(), timeouts.LogTimeout.ToShortString(),
-                            call.CompletedStageName, call.Context.RoutingMode);
+                        if (action.HasFlag(RpcDelayedCallAction.Log) && delayedCalls.Count <= delayedCallLimit)
+                            Peer.Log.LogWarning(
+                                "'{PeerRef}': call {Call} is delayed ({Elapsed} > {DelayTimeout}), completed stage: {Stage}, routing mode: {RoutingMode}",
+                                Peer.Ref, call,
+                                elapsed.ToShortString(), timeouts.DelayTimeout.ToShortString(),
+                                call.CompletedStageName, call.Context.RoutingMode);
+
+                        if (action.HasFlag(RpcDelayedCallAction.Abort)) {
+                            var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.DelayTimeout);
+                            call.SetError(error, context: null, assumeCancelled: false);
+                        }
+                        else if (action.HasFlag(RpcDelayedCallAction.Resend))
+                            callsToResend.Add(call);
                     }
                 }
 
@@ -174,6 +184,11 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         Peer.Ref, delayedCalls.Count - delayedCallLimit);
                 }
 
+                // Resend delayed calls if requested by the handler
+                if (callsToResend.Count > 0)
+                    foreach (var call in callsToResend)
+                        call.SendRegistered();
+
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period
                     && callCount > summaryLogSettings.MinCount) {
                     lastSummaryReportAt = CpuTimestamp.Now;
@@ -183,6 +198,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 }
 
                 delayedCalls.Clear();
+                callsToResend.Clear();
             }
         }
         catch {
@@ -214,7 +230,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             foreach (var call in calls) {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (call.GetReconnectStage(isPeerChanged: true) is not null)
-                    call.SendRegistered(isFirstAttempt: false);
+                    call.SendRegistered();
             }
         }
 

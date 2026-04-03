@@ -151,8 +151,8 @@ public sealed class RpcInterceptor : Interceptor
                 if (methodDef.CancellationTokenIndex >= 0)
                     invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
                 Log.LogWarning(e, "Rerouting #{RerouteCount}: {Invocation}", rerouteCount, invocation);
-                await Hub.OutboundCallOptions
-                    .GetReroutingDelay(rerouteCount, cancellationToken)
+                await Hub.OutboundCallOptions.ReroutingDelayer
+                    .Invoke(methodDef, rerouteCount, cancellationToken)
                     .ConfigureAwait(false);
                 call = context.PrepareReroutedCall();
             }

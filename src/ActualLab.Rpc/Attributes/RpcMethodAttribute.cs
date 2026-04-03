@@ -24,10 +24,16 @@ public sealed class RpcMethodAttribute : Attribute
     public double RunTimeout { get; set; } = double.NaN;
 
     /// <summary>
-    /// Log timeout (in seconds) for outbound calls.
+    /// Delay timeout (in seconds) for outbound calls — calls exceeding this are considered delayed.
     /// <code>double.NaN</code> means "use default".
     /// </summary>
-    public double LogTimeout { get; set; } = double.NaN;
+    public double DelayTimeout { get; set; } = double.NaN;
+
+    /// <summary>
+    /// Action to take when an outbound call is detected as delayed.
+    /// <c>null</c> means "use default" (<see cref="RpcDelayedCallAction.Log"/>).
+    /// </summary>
+    public RpcDelayedCallAction? DelayAction { get; set; }
 
     /// <summary>
     /// Shard routing mode.

@@ -15,7 +15,7 @@ public static class RpcCallTypes
 #endif
     private static readonly RpcCallType?[] Registry;
 
-    public static readonly RpcCallType Regular = new(0);
+    public static readonly RpcCallType Regular = new(RpcCallTypeIds.Regular);
 
     static RpcCallTypes()
     {

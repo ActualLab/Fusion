@@ -75,8 +75,18 @@ public partial class RpcMethodDef
 
     // Protected methods
 
+    protected internal virtual RpcDelayedCallAction GetDefaultDelayedCallAction()
+        => CallType.Id == RpcCallTypeIds.Compute
+            ? RpcDelayedCallAction.LogAndResend
+            : RpcDelayedCallAction.Log;
+
     protected virtual RpcLocalExecutionMode GetDefaultLocalExecutionMode()
-        => Service.Mode is RpcServiceMode.Distributed
-            ? RpcLocalExecutionMode.Constrained
-            : RpcLocalExecutionMode.Unconstrained;
+    {
+        if (Service.Mode is not RpcServiceMode.Distributed)
+            return RpcLocalExecutionMode.Unconstrained;
+
+        return CallType.Id == RpcCallTypeIds.Compute
+            ? RpcLocalExecutionMode.ConstrainedEntry
+            : RpcLocalExecutionMode.Constrained;
+    }
 }
