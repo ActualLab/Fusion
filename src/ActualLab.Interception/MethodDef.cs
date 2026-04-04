@@ -198,19 +198,33 @@ public partial class MethodDef
     {
         if (target is Interceptor interceptor) {
             // Interceptor is available -> invoke it
+            // NativeAOT bug: delegate downcast triggers FailFast for value-type generic args.
+            // The actual runtime types are correct, so Unsafe.As is safe here.
+#if DEBUG
             var invoker = (Func<Interceptor, Invocation, Task<TUnwrapped>>)InterceptorAsyncInvoker;
+#else
+            var invoker = Unsafe.As<Func<Interceptor, Invocation, Task<TUnwrapped>>>(InterceptorAsyncInvoker);
+#endif
             return invocation => invoker.Invoke(interceptor, invocation);
         }
 
         if (!ReferenceEquals(target, null) && !ReferenceEquals(target, proxy)) {
             // There is a target, and the target is not proxy -> invoke its method
+#if DEBUG
             var invoker = (Func<object, ArgumentList, Task<TUnwrapped>>)TargetAsyncInvoker;
+#else
+            var invoker = Unsafe.As<Func<object, ArgumentList, Task<TUnwrapped>>>(TargetAsyncInvoker);
+#endif
             return invocation => invoker.Invoke(target, invocation.Arguments);
         }
 
         // No target -> invoke intercepted method
         if (proxy is not InterfaceProxy)
+#if DEBUG
             return (Func<Invocation, Task<TUnwrapped>>)InterceptedAsyncInvoker;
+#else
+            return Unsafe.As<Func<Invocation, Task<TUnwrapped>>>(InterceptedAsyncInvoker);
+#endif
 
         // Nothing to invoke
         return null;
