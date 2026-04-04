@@ -2,7 +2,7 @@ using Samples.TodoApp.Abstractions;
 
 namespace Samples.TodoApp.Services;
 
-public class TodoApi(IAuth auth, ITodoBackend backend, ICommander commander) : ITodoApi
+public class TodoApi(IUserApi userApi, ITodoBackend backend, ICommander commander) : ITodoApi
 {
     // Commands
 
@@ -49,7 +49,7 @@ public class TodoApi(IAuth auth, ITodoBackend backend, ICommander commander) : I
 
     private async ValueTask<string> GetFolder(Session session, CancellationToken cancellationToken)
     {
-        var user = await auth.GetUser(session, cancellationToken).ConfigureAwait(false);
+        var user = await userApi.GetOwn(session, cancellationToken).ConfigureAwait(false);
         var tenant = session.GetTenant(); // tenant is associated with a session
         return user is not null
             ? $"{tenant}/user/{user.Id}"

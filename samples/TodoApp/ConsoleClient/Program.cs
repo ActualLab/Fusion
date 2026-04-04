@@ -49,7 +49,7 @@ IServiceProvider CreateServiceProvider()
 
     var fusion = services.AddFusion();
     fusion.Rpc.AddWebSocketClient("http://localhost:5005");
-    fusion.AddAuthClient();
+    fusion.AddClient<IUserApi>(); // Client-facing auth service
     fusion.AddClient<ITodoApi>(); // Compute service client
     fusion.Rpc.AddClient<ISimpleService>(); // Simple RPC service client
     services.AddScoped<IUpdateDelayer>(
