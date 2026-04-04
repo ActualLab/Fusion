@@ -11,7 +11,7 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 12.2.4+09f1dc55 | npm: -
+## 12.2.4+09f1dc55 | npm: 12.1.115
 
 Release date: 2026-04-04
 
@@ -20,7 +20,7 @@ Release date: 2026-04-04
   with conditional `Unsafe.As` workaround
 
 
-## 12.2.1+41e24193 | npm: -
+## 12.2.1+41e24193 | npm: 12.1.115
 
 Release date: 2026-04-03
 
