@@ -129,6 +129,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     if (this._completed) return;
     this._completed = true;
     this._completionError = new Error("Peer disconnected.");
+    this.peer.remoteObjects.unregister(this);
     this._notifyConsumer();
   }
 

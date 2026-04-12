@@ -81,17 +81,23 @@ export class RpcSystemCallHandler {
       }
       case RpcSystemCalls.disconnect: {
         // Server tells us these IDs are no longer tracked in its SharedObjects.
+        // Process both outbound calls and remote objects (streams).
         // Compute calls (removeOnOk=false) are tracked in InboundCalls on the
-        // server, NOT SharedObjects, so they should be ignored here — they
-        // receive invalidation via $sys-c.Invalidate instead.
-        // Only disconnect non-compute calls (streams, etc.).
+        // server, NOT SharedObjects — skip them (they use $sys-c.Invalidate).
         const ids = args[0] as number[];
         if (Array.isArray(ids)) {
           for (const id of ids) {
+            // Check outbound calls (non-compute only)
             const call = peer.outbound.get(id);
             if (call !== undefined && call.removeOnOk) {
               call.onDisconnect();
               peer.outbound.remove(id);
+              continue;
+            }
+            // Check remote objects (streams) — disconnect if server lost track
+            const remoteObj = peer.remoteObjects.get(id);
+            if (remoteObj !== undefined) {
+              remoteObj.disconnect();
             }
           }
         }
