@@ -65,6 +65,11 @@ export class RpcSystemCallSender {
     conn.send(msg);
   }
 
+  disconnect(conn: RpcConnection, ids: number[]): void {
+    const msg = serializeMessage({ Method: RpcSystemCalls.disconnect }, [ids]);
+    conn.send(msg);
+  }
+
   item(conn: RpcConnection, localId: number, index: number, item: unknown): void {
     const msg = serializeMessage(
       { Method: RpcSystemCalls.item, RelatedId: localId },

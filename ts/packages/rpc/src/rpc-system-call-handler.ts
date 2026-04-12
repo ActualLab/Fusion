@@ -68,7 +68,15 @@ export class RpcSystemCallHandler {
         break;
       }
       case RpcSystemCalls.keepAlive: {
-        // Remote keep-alive — nothing to do, just acknowledges the connection is alive
+        // Server sends IDs of remote objects it tracks — respond with $sys.Disconnect
+        // for any IDs we don't recognize (so the server can clean up its side).
+        const ids = args[0] as number[] | undefined;
+        if (Array.isArray(ids) && ids.length > 0) {
+          const unknownIds = peer.remoteObjects.keepAlive(ids);
+          if (unknownIds.length > 0 && peer.connection) {
+            peer.hub.systemCallSender.disconnect(peer.connection, unknownIds);
+          }
+        }
         break;
       }
       case RpcSystemCalls.disconnect: {

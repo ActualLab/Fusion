@@ -339,7 +339,10 @@ export abstract class RpcPeer {
   private _startKeepAlive(): void {
     this._keepAliveTimer = setInterval(() => {
       if (this._connection !== undefined) {
-        this._hub.systemCallSender.keepAlive(this._connection, this.outbound.keepAliveCallIds());
+        // Send both outbound call IDs (non-compute) and remote object IDs (streams)
+        const callIds = this.outbound.keepAliveCallIds();
+        const remoteIds = this.remoteObjects.activeIds();
+        this._hub.systemCallSender.keepAlive(this._connection, [...callIds, ...remoteIds]);
       }
     }, 15_000);
   }
