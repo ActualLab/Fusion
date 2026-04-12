@@ -41,6 +41,7 @@ export const RpcSystemCalls = {
   error: "$sys.Error:1",
   cancel: "$sys.Cancel:0",
   keepAlive: "$sys.KeepAlive:1",
+  disconnect: "$sys.Disconnect:1",
   reconnect: "$sys.Reconnect:3",
   ack: "$sys.Ack:2",
   ackEnd: "$sys.AckEnd:1",

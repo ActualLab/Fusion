@@ -15,8 +15,11 @@
 //     instead of the response payload.  TS has no response caching.
 //   - NotFound() — throws an EndpointNotFound error.  TS sends this as a regular
 //     $sys.Error; no separate system call type.
-//   - KeepAlive() / Disconnect() — manage RpcSharedObject lifetimes.  TS has no
-//     shared-object tracker.
+//   - KeepAlive() — manages RpcSharedObject lifetimes on the server side.
+//     TS client doesn't need to act on inbound KeepAlive.
+//   Ported:
+//   - Disconnect() — server tells client to invalidate outbound compute calls
+//     whose IDs it no longer tracks.  Essential for resubscription after idle.
 //   - IRpcPolymorphicArgumentHandler.IsValidCall — resolves the concrete
 //     deserialization type for polymorphic Ok/Item/Batch arguments by looking up
 //     the related outbound call's return type.  TS deserializes all args as
@@ -66,6 +69,24 @@ export class RpcSystemCallHandler {
       }
       case RpcSystemCalls.keepAlive: {
         // Remote keep-alive — nothing to do, just acknowledges the connection is alive
+        break;
+      }
+      case RpcSystemCalls.disconnect: {
+        // Server tells us these IDs are no longer tracked in its SharedObjects.
+        // Compute calls (removeOnOk=false) are tracked in InboundCalls on the
+        // server, NOT SharedObjects, so they should be ignored here — they
+        // receive invalidation via $sys-c.Invalidate instead.
+        // Only disconnect non-compute calls (streams, etc.).
+        const ids = args[0] as number[];
+        if (Array.isArray(ids)) {
+          for (const id of ids) {
+            const call = peer.outbound.get(id);
+            if (call !== undefined && call.removeOnOk) {
+              call.onDisconnect();
+              peer.outbound.remove(id);
+            }
+          }
+        }
         break;
       }
       case RpcSystemCalls.item: {
