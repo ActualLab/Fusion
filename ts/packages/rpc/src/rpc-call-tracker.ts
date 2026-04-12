@@ -107,6 +107,16 @@ export class RpcOutboundCallTracker {
     return [...this._calls.keys()];
   }
 
+  /** Call IDs suitable for KeepAlive — excludes compute calls (removeOnOk=false)
+   *  which are tracked server-side in InboundCalls, not SharedObjects. */
+  keepAliveCallIds(): number[] {
+    const ids: number[] = [];
+    for (const [id, call] of this._calls) {
+      if (call.removeOnOk) ids.push(id);
+    }
+    return ids;
+  }
+
   /** Reject all pending calls with the given error.
    *  Stage-3 compute calls (result resolved, awaiting invalidation) are kept in the tracker. */
   rejectAll(error: Error): void {

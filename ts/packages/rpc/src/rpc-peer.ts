@@ -339,7 +339,7 @@ export abstract class RpcPeer {
   private _startKeepAlive(): void {
     this._keepAliveTimer = setInterval(() => {
       if (this._connection !== undefined) {
-        this._hub.systemCallSender.keepAlive(this._connection, this.outbound.activeCallIds());
+        this._hub.systemCallSender.keepAlive(this._connection, this.outbound.keepAliveCallIds());
       }
     }, 15_000);
   }
