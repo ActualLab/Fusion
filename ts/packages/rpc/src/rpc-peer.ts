@@ -521,15 +521,20 @@ export class RpcClientPeer extends RpcPeer {
       this.remoteObjects.reconnectAll();
     }
 
-    // Re-send existing tracker calls (self-invalidate stage-3 compute calls)
+    // Re-send existing tracker calls, self-invalidate ALL compute calls.
+    // Without $sys.Reconnect protocol, the server's invalidation tracking
+    // is lost on disconnect. Re-sending compute calls would either:
+    // - Stage-3 (completed): get duplicate $sys.Ok (PromiseSource already resolved)
+    // - In-flight: create duplicate execution on the new connection
+    // Self-invalidation forces a fresh recompute with new invalidation tracking.
     const trackerCalls = [...this.outbound.values()];
     for (const call of trackerCalls) {
-      if (!call.removeOnOk && call.result.isCompleted) {
-        // Stage-3 compute call: self-invalidate, forcing fresh recompute
+      if (!call.removeOnOk) {
+        // Compute call (any stage): self-invalidate
         call.onDisconnect();
         this.outbound.remove(call.callId);
       } else {
-        // Regular call or in-flight compute call: re-send
+        // Regular call: re-send on new connection
         conn.send(call.serializedMessage);
       }
     }
