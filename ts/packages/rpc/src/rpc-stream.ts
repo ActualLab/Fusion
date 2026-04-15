@@ -267,6 +267,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             const hostId = mustReset ? this.id.hostId : RpcStream._emptyGuid;
             this.peer.hub.systemCallSender.ack(
                 conn,
+                this.peer.format,
                 this.id.localId,
                 nextIndex,
                 hostId
@@ -279,6 +280,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         if (conn) {
             this.peer.hub.systemCallSender.ackEnd(
                 conn,
+                this.peer.format,
                 this.id.localId,
                 this.id.hostId
             );

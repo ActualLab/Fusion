@@ -99,3 +99,24 @@ export {
     getStateDescription,
 } from './rpc-peer-state.js';
 export { RpcPeerStateMonitor } from './rpc-peer-state-monitor.js';
+
+export {
+    RpcSerializationFormat,
+    RpcJsonSerializationFormat,
+    RpcMessagePackSerializationFormat,
+    RpcMessagePackCompactSerializationFormat,
+    registerCompactFormats,
+} from './rpc-serialization-format.js';
+export type {
+    RpcDeserializedMessage,
+    RpcWireData,
+} from './rpc-serialization-format.js';
+
+export { RpcMethodRegistry } from './rpc-method-registry.js';
+export { xxh3_64, xxh3_64str, computeMethodHash } from './rpc-xxhash3.js';
+
+export {
+    serializeCompactBinaryMessage,
+    deserializeCompactBinaryMessage,
+    splitCompactBinaryFrame,
+} from './rpc-serialization.js';

@@ -71,6 +71,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         if (!conn) return;
         this.peer.hub.systemCallSender.item(
             conn,
+            this.peer.format,
             this.id.localId,
             this._nextIndex,
             item
@@ -85,6 +86,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         if (!conn) return;
         this.peer.hub.systemCallSender.batch(
             conn,
+            this.peer.format,
             this.id.localId,
             this._nextIndex,
             items
@@ -106,6 +108,7 @@ export class RpcStreamSender<T> implements IRpcObject {
             : { TypeRef: '', Message: '' };
         this.peer.hub.systemCallSender.end(
             conn,
+            this.peer.format,
             this.id.localId,
             this._nextIndex,
             errorInfo

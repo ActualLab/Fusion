@@ -90,15 +90,12 @@ import {
     RpcInboundCallTracker,
 } from './rpc-call-tracker.js';
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
-import {
-    serializeMessage,
-    deserializeMessage,
-    serializeBinaryMessage,
-} from './rpc-serialization.js';
+import { deserializeMessage } from './rpc-serialization.js';
 import type { RpcHub } from './rpc-hub.js';
 import { RpcRemoteObjectTracker } from './rpc-remote-object-tracker.js';
 import { RpcSharedObjectTracker } from './rpc-shared-object-tracker.js';
 import { RpcStreamSender } from './rpc-stream-sender.js';
+import { RpcSerializationFormat } from './rpc-serialization-format.js';
 
 /**
  * Default serialization format for RpcClientPeer connections.
@@ -196,9 +193,9 @@ export abstract class RpcPeer {
         });
     }
 
-    /** Whether this peer uses binary (MessagePack) serialization. */
-    get isBinaryMode(): boolean {
-        return false;
+    /** The serialization format used by this peer. Override in subclasses. */
+    get format(): RpcSerializationFormat {
+        return RpcSerializationFormat.get('json5np');
     }
 
     call(
@@ -216,24 +213,14 @@ export abstract class RpcPeer {
             RelatedId: callId,
             CallType: options?.callTypeId ?? 0,
         };
-        if (this.isBinaryMode) {
-            // Pass the connection's reusable encoder so we don't construct a
-            // new `@msgpack/msgpack.Encoder` for every outbound call.
-            outboundCall.serializedBinaryMessage = serializeBinaryMessage(
-                envelope,
-                args,
-                this._connection?.encoder
-            );
-        } else {
-            outboundCall.serializedMessage = serializeMessage(envelope, args);
-        }
+        outboundCall.serializedWireData = this.format.serializeMessage(
+            envelope,
+            args,
+            this._connection?.encoder
+        );
         if (this._connection !== undefined) {
             this.outbound.register(outboundCall);
-            if (this.isBinaryMode)
-                this._connection.sendBinary(
-                    outboundCall.serializedBinaryMessage!
-                );
-            else this._connection.send(outboundCall.serializedMessage);
+            this._sendWireData(outboundCall.serializedWireData);
         } else {
             this._pendingSends.push(outboundCall);
         }
@@ -249,7 +236,7 @@ export abstract class RpcPeer {
                     outboundCall.result.reject(new Error('Call cancelled.'));
                     outboundCall.onDisconnect();
                     if (peer._connection !== undefined)
-                        hub.systemCallSender.cancel(peer._connection, callId);
+                        hub.systemCallSender.cancel(peer._connection, peer.format, callId);
                 } else {
                     const idx = peer._pendingSends.findIndex(
                         c => c.callId === callId
@@ -276,13 +263,12 @@ export abstract class RpcPeer {
     callNoWait(method: string, args?: unknown[]): void {
         if (this._connection === undefined) return; // silently drop
         const envelope: RpcMessage = { Method: method, RelatedId: 0 };
-        if (this.isBinaryMode) {
-            this._connection.sendBinary(
-                serializeBinaryMessage(envelope, args, this._connection.encoder)
-            );
-        } else {
-            this._connection.send(serializeMessage(envelope, args));
-        }
+        const wireData = this.format.serializeMessage(
+            envelope,
+            args,
+            this._connection.encoder
+        );
+        this._sendWireData(wireData);
     }
 
     close(): void {
@@ -307,11 +293,19 @@ export abstract class RpcPeer {
             return;
         for (const call of this._pendingSends) {
             this.outbound.register(call);
-            if (this.isBinaryMode && call.serializedBinaryMessage)
-                this._connection.sendBinary(call.serializedBinaryMessage);
-            else this._connection.send(call.serializedMessage);
+            this._sendWireData(call.serializedWireData);
         }
         this._pendingSends.length = 0;
+    }
+
+    /** Send pre-serialized wire data through the current connection. */
+    protected _sendWireData(data: string | Uint8Array): void {
+        if (this._connection === undefined) return;
+        if (typeof data === 'string') {
+            this._connection.send(data);
+        } else {
+            this._connection.sendBinary(data);
+        }
     }
 
     /** Override in subclasses to handle the remote peer's handshake response. */
@@ -390,6 +384,7 @@ export abstract class RpcPeer {
                         this.sharedObjects.register(sender);
                         this._hub.systemCallSender.ok(
                             this._connection,
+                            this.format,
                             relatedId,
                             sender.toRef()
                         );
@@ -397,6 +392,7 @@ export abstract class RpcPeer {
                     } else if (!isNoWait && this._connection !== undefined) {
                         this._hub.systemCallSender.ok(
                             this._connection,
+                            this.format,
                             relatedId,
                             result
                         );
@@ -405,6 +401,7 @@ export abstract class RpcPeer {
                     if (!isNoWait && this._connection !== undefined) {
                         this._hub.systemCallSender.error(
                             this._connection,
+                            this.format,
                             relatedId,
                             e
                         );
@@ -426,7 +423,7 @@ export abstract class RpcPeer {
                 // cause the server to send $sys.Disconnect for IDs it doesn't recognize, which
                 // the client may misinterpret as a disconnect of its own shared objects (e.g.
                 // RpcClientStreamSender) when the IDs collide numerically.
-                this._hub.systemCallSender.keepAlive(this._connection, [
+                this._hub.systemCallSender.keepAlive(this._connection, this.format, [
                     ...this.remoteObjects.keys(),
                 ]);
             }
@@ -485,18 +482,18 @@ export class RpcClientPeer extends RpcPeer {
         this.reconnectsAtChanged.trigger();
     }
 
+    private _format: RpcSerializationFormat;
+
     constructor(hub: RpcHub, url: string, serializationFormat?: string) {
         super(url, hub);
         this.clientId = guidToBase64Url(this.id);
         this.serializationFormat =
             serializationFormat ?? DEFAULT_SERIALIZATION_FORMAT;
+        this._format = RpcSerializationFormat.get(this.serializationFormat);
     }
 
-    override get isBinaryMode(): boolean {
-        return (
-            this.serializationFormat.startsWith('msgpack') ||
-            this.serializationFormat.startsWith('mempack')
-        );
+    override get format(): RpcSerializationFormat {
+        return this._format;
     }
 
     get connectionKind(): RpcPeerConnectionKind {
@@ -522,7 +519,7 @@ export class RpcClientPeer extends RpcPeer {
                 const ws =
                     wsFactory?.(connUrl) ??
                     (new WebSocket(connUrl) as unknown as WebSocketLike);
-                const conn = new RpcWebSocketConnection(ws, this.isBinaryMode);
+                const conn = new RpcWebSocketConnection(ws, this.format.isBinary);
                 this._connectionKind = RpcPeerConnectionKind.Connecting;
 
                 // Track close info for unsupported format detection
@@ -555,6 +552,7 @@ export class RpcClientPeer extends RpcPeer {
                 // Send our handshake, then wait for the server's response.
                 this._hub.systemCallSender.handshake(
                     conn,
+                    this.format,
                     this.id,
                     this._hub.hubId,
                     ++this._handshakeIndex
@@ -627,7 +625,6 @@ export class RpcClientPeer extends RpcPeer {
      *  Regular in-flight calls are re-sent transparently. */
     private _reconnect(_isPeerChanged: boolean): void {
         if (this._connection === undefined) return;
-        const conn = this._connection;
 
         // Handle remote objects on reconnect
         if (_isPeerChanged) {
@@ -645,7 +642,7 @@ export class RpcClientPeer extends RpcPeer {
                 this.outbound.remove(call.callId);
             } else {
                 // Regular call or in-flight compute call: re-send
-                conn.send(call.serializedMessage);
+                this._sendWireData(call.serializedWireData);
             }
         }
 
@@ -679,6 +676,7 @@ export class RpcServerPeer extends RpcPeer {
         if (this._connection !== undefined) {
             this._hub.systemCallSender.handshake(
                 this._connection,
+                this.format,
                 this.id,
                 this._hub.hubId,
                 0

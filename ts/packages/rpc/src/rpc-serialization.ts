@@ -374,3 +374,162 @@ export function splitBinaryFrame(
 export function serializeBinaryFrame(messages: Uint8Array[]): Uint8Array {
     return concatUint8Arrays(messages);
 }
+
+// ============================================================
+// Compact binary format (V5Compact) — 4-byte method hash
+// ============================================================
+
+import type { RpcMethodRegistry } from './rpc-method-registry.js';
+
+/**
+ * Serializes an RpcMessage + args into V5Compact binary format.
+ * Same as V5 except the method is encoded as a 4-byte LE hash
+ * instead of an LVar-prefixed UTF-8 string.
+ *
+ * Layout:
+ *   [byte 0: (CallTypeId<<5) | HeaderCount] [VarUint relatedId]
+ *   [4-byte LE methodHash] [4-byte LE argLen]
+ *   [argData]
+ */
+export function serializeCompactBinaryMessage(
+    message: RpcMessage,
+    args?: unknown[],
+    registry?: RpcMethodRegistry,
+    encoder: Encoder = defaultBinaryEncoder
+): Uint8Array {
+    // 1. Encode args
+    let argsDataLen = 0;
+    let argBufs: Uint8Array[] | null = null;
+    if (args && args.length > 0) {
+        argBufs = new Array<Uint8Array>(args.length);
+        for (let i = 0; i < args.length; i++) {
+            const buf = encoder.encode(args[i]);
+            argBufs[i] = buf;
+            argsDataLen += buf.length;
+        }
+    }
+
+    // 2. Get method hash
+    const methodName = message.Method ?? '';
+    const methodHash = registry?.requireHash(methodName) ?? 0;
+
+    // 3. Compute sizes
+    const callType = message.CallType ?? 0;
+    const relatedId = message.RelatedId ?? 0;
+    const relatedIdLen = varUintByteLen(relatedId);
+    // Compact: 4 bytes for hash (instead of LVar method name)
+    const headerSize = 1 + relatedIdLen + 4;
+    const totalSize = headerSize + 4 + argsDataLen;
+
+    // 4. Build wire buffer
+    const out = new Uint8Array(totalSize);
+    let pos = 0;
+    out[pos++] = (callType << 5) & 0xe0;
+    pos = writeVarUintInto(out, pos, relatedId);
+    // Method hash as 4-byte LE uint32
+    const hashU32 = methodHash >>> 0;
+    out[pos++] = hashU32 & 0xff;
+    out[pos++] = (hashU32 >>> 8) & 0xff;
+    out[pos++] = (hashU32 >>> 16) & 0xff;
+    out[pos++] = (hashU32 >>> 24) & 0xff;
+    // argLen as int32 LE
+    out[pos++] = argsDataLen & 0xff;
+    out[pos++] = (argsDataLen >>> 8) & 0xff;
+    out[pos++] = (argsDataLen >>> 16) & 0xff;
+    out[pos++] = (argsDataLen >>> 24) & 0xff;
+    if (argBufs !== null) {
+        for (const buf of argBufs) {
+            out.set(buf, pos);
+            pos += buf.length;
+        }
+    }
+    return out;
+}
+
+/**
+ * Deserializes a single V5Compact binary message starting at `offset`.
+ * Reads a 4-byte LE method hash and resolves it via the registry.
+ */
+export function deserializeCompactBinaryMessage(
+    data: Uint8Array,
+    offset: number,
+    registry?: RpcMethodRegistry,
+    decoder: Decoder = defaultBinaryDecoder
+): { message: RpcMessage; args: unknown[]; bytesRead: number } {
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    let pos = offset;
+
+    // Byte 0: upper 3 bits = CallTypeId, lower 5 bits = HeaderCount
+    const byte0 = data[pos++]!;
+    const callTypeId = (byte0 >> 5) & 0x7;
+    const headerCount = byte0 & 0x1f;
+
+    // RelatedId as VarUint
+    const relId = readVarUint(data, pos);
+    pos += relId.bytesRead;
+
+    // Method hash as fixed 4-byte LE uint32
+    const methodHash = view.getUint32(pos, true);
+    pos += 4;
+    const method =
+        registry?.getName(methodHash | 0) ??
+        `<hash:0x${methodHash.toString(16).padStart(8, '0')}>`;
+
+    // ArgData length as fixed 4-byte LE
+    const argDataLen = view.getInt32(pos, true);
+    pos += 4;
+
+    // Skip headers (if any)
+    if (headerCount > 0) {
+        for (let h = 0; h < headerCount; h++) {
+            const keyLen = data[pos++]!;
+            pos += keyLen;
+            const valLen = readVarUint(data, pos);
+            pos += valLen.bytesRead + valLen.value;
+        }
+    }
+
+    // Deserialize arguments
+    const args: unknown[] = [];
+    const argEnd = pos + argDataLen;
+    if (argDataLen > 0) {
+        const argSlice = data.subarray(pos, argEnd);
+        for (const decoded of decoder.decodeMulti(argSlice)) {
+            args.push(decoded);
+        }
+        pos = argEnd;
+    }
+
+    const message: RpcMessage = {
+        Method: method,
+        RelatedId: relId.value,
+        CallType: callTypeId,
+    };
+
+    return { message, args, bytesRead: pos - offset };
+}
+
+/**
+ * Splits a compact binary frame into individual deserialized messages.
+ */
+export function splitCompactBinaryFrame(
+    frame: Uint8Array,
+    registry?: RpcMethodRegistry,
+    decoder: Decoder = defaultBinaryDecoder
+): Array<{ message: RpcMessage; args: unknown[] }> {
+    const results: Array<{ message: RpcMessage; args: unknown[] }> = [];
+    let offset = 0;
+    while (offset < frame.length) {
+        const { message, args, bytesRead } =
+            deserializeCompactBinaryMessage(
+                frame,
+                offset,
+                registry,
+                decoder
+            );
+        if (bytesRead <= 0) break;
+        results.push({ message, args });
+        offset += bytesRead;
+    }
+    return results;
+}
