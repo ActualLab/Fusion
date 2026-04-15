@@ -11,6 +11,15 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## npm: 12.3.4+2e63912e
+
+Release date: 2026-04-15
+
+### Changed
+- TypeScript: tightened ESLint rules — removed overly permissive overrides for `@typescript-eslint/no-unsafe-*` rules
+- TypeScript: cleaned up code, fix ESLint warnings, and removed redundant ESLint disable directives across all packages
+
+
 ## 12.3.2+f23f4ac2 | npm: 12.3.2
 
 Release date: 2026-04-15
