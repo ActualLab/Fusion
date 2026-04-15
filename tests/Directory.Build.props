@@ -105,7 +105,8 @@
           SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(NuGetPackageRoot)\system.valuetuple\4.5.0\lib\net47\System.ValueTuple.xml"
           DestinationFolder="$(OutDir)"
-          SkipUnchangedFiles="true" />
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(NuGetPackageRoot)\system.valuetuple\4.5.0\lib\net47\System.ValueTuple.xml')" />
   </Target>
 
   <!-- Analyzers -->

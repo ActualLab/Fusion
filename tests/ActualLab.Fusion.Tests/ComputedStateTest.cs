@@ -92,7 +92,7 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         var mutableState = stateFactory.NewMutable("v0");
 
         // A gate to pause computation mid-flight
-        var computeGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var computeGate = TaskCompletionSourceExt.New<Unit>();
         var computeCount = 0;
 
         // Create a ComputedState that reads MutableState.Value directly (not via Use()),
@@ -118,13 +118,13 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         // Let initial computation (#1, reading "v0") start and complete
         await Task.Delay(100);
         computeCount.Should().Be(1);
-        computeGate.SetResult();
+        computeGate.SetResult(default);
         await Task.Delay(200);
         state.Value.Should().Be("v0");
 
         // Step 1: Set v1 — this triggers Recompute(), starts computation #2.
         // Use a new gate to pause #2 mid-computation.
-        computeGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        computeGate = TaskCompletionSourceExt.New<Unit>();
         mutableState.Value = "v1";
         await Task.Delay(200);
         computeCount.Should().Be(2); // Computation #2 started, paused at gate
@@ -136,7 +136,7 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         await Task.Delay(100);
 
         // Step 3: Release the gate — computation #2 finishes with "v1"
-        computeGate.SetResult();
+        computeGate.SetResult(default);
         await Task.Delay(500);
 
         // BUG (before fix): state shows "v1" even though MutableState is "v2"

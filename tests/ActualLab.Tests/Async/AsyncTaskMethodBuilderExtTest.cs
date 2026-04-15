@@ -22,6 +22,7 @@ public class AsyncTaskMethodBuilderExtTest(ITestOutputHelper @out) : TestBase(@o
         (await b.Task).Should().Be(1);
     }
 
+#if NET8_0_OR_GREATER
     [Fact]
     public async Task FromTaskTest()
     {
@@ -43,6 +44,7 @@ public class AsyncTaskMethodBuilderExtTest(ITestOutputHelper @out) : TestBase(@o
         b2.SetResult(42);
         (await task).Should().Be(42);
     }
+#endif
 
     private bool HasRunContinuationsAsynchronouslyStateFlag(Task task)
     {

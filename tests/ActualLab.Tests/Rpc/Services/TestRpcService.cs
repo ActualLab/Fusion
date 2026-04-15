@@ -27,8 +27,10 @@ public partial record HelloCommand(
 [MessagePackObject]
 [Union(0, typeof(NonPolymorphicDerived))]
 [Union(1, typeof(NonPolymorphicDerived2))]
+#if NET7_0_OR_GREATER
 [JsonDerivedType(typeof(NonPolymorphicDerived), "derived")]
 [JsonDerivedType(typeof(NonPolymorphicDerived2), "derived2")]
+#endif
 public abstract partial class NonPolymorphicBase
 {
     [DataMember, MemoryPackOrder(0), Key(0)]
