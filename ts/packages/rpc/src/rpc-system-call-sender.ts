@@ -27,6 +27,7 @@
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
 import type { RpcConnection } from './rpc-connection.js';
 import type { RpcSerializationFormat } from './rpc-serialization-format.js';
+import type { RpcMethodRegistry } from './rpc-method-registry.js';
 
 /**
  * Sends system RPC messages — like .NET's RpcSystemCallSender.
@@ -81,6 +82,8 @@ export class RpcSystemCallSender {
             Message: string;
         };
 
+    registry?: RpcMethodRegistry;
+
     private _send(
         conn: RpcConnection,
         format: RpcSerializationFormat,
@@ -90,7 +93,8 @@ export class RpcSystemCallSender {
         const wireData = format.serializeMessage(
             envelope,
             args,
-            conn.encoder
+            conn.encoder,
+            this.registry
         );
         if (typeof wireData === 'string') {
             conn.send(wireData);

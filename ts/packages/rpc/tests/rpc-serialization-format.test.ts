@@ -126,22 +126,21 @@ describe('RpcMessagePackSerializationFormat', () => {
 
 describe('RpcMessagePackCompactSerializationFormat', () => {
     let registry: RpcMethodRegistry;
-    let fmt: RpcMessagePackCompactSerializationFormat;
+    const fmt = RpcSerializationFormat.get(
+        'msgpack6c'
+    ) as RpcMessagePackCompactSerializationFormat;
 
-    // Register compact formats with a fresh registry
     beforeEach(() => {
         registry = new RpcMethodRegistry();
-        fmt = new RpcMessagePackCompactSerializationFormat(
-            'test-compact',
-            registry
-        );
     });
 
     it('should serialize using method hash instead of name', () => {
         registry.register('Svc.get:2');
         const wire = fmt.serializeMessage(
             { Method: 'Svc.get:2', RelatedId: 1 },
-            ['hello']
+            ['hello'],
+            undefined,
+            registry
         ) as Uint8Array;
 
         // Should be shorter than non-compact (4-byte hash vs LVar "Svc.get:2")
@@ -157,9 +156,11 @@ describe('RpcMessagePackCompactSerializationFormat', () => {
         registry.register('Svc.get:2');
         const wire = fmt.serializeMessage(
             { Method: 'Svc.get:2', RelatedId: 5 },
-            ['hello', 42]
+            ['hello', 42],
+            undefined,
+            registry
         ) as Uint8Array;
-        const results = fmt.splitBinaryFrame(wire);
+        const results = fmt.splitBinaryFrame(wire, undefined, registry);
         expect(results).toHaveLength(1);
         expect(results[0]!.message.Method).toBe('Svc.get:2');
         expect(results[0]!.message.RelatedId).toBe(5);
@@ -167,20 +168,21 @@ describe('RpcMessagePackCompactSerializationFormat', () => {
     });
 
     it('should use hex hash placeholder for unregistered methods on deserialize', () => {
-        // Serialize with known method
         registry.register('Svc.get:2');
         const wire = fmt.serializeMessage(
             { Method: 'Svc.get:2', RelatedId: 1 },
-            ['x']
+            ['x'],
+            undefined,
+            registry
         ) as Uint8Array;
 
         // Deserialize with a fresh registry that doesn't know the method
         const freshRegistry = new RpcMethodRegistry();
-        const freshFmt = new RpcMessagePackCompactSerializationFormat(
-            'test-compact-2',
+        const results = fmt.splitBinaryFrame(
+            wire,
+            undefined,
             freshRegistry
         );
-        const results = freshFmt.splitBinaryFrame(wire);
         expect(results).toHaveLength(1);
         expect(results[0]!.message.Method).toMatch(/^<hash:0x[0-9a-f]+>$/);
     });

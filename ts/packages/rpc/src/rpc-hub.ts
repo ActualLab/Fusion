@@ -45,6 +45,7 @@ import { getServiceMeta, getMethodsMeta } from './rpc-decorators.js';
 import { RpcSystemCallSender } from './rpc-system-call-sender.js';
 import { RpcSystemCallHandler } from './rpc-system-call-handler.js';
 import { RpcStream, parseStreamRef, resolveStreamRefs } from './rpc-stream.js';
+import { RpcMethodRegistry } from './rpc-method-registry.js';
 
 /** Central RPC coordinator — manages peers, services, and configuration. */
 export class RpcHub {
@@ -54,9 +55,14 @@ export class RpcHub {
     readonly systemCallSender = new RpcSystemCallSender();
     systemCallHandler: RpcSystemCallHandler = new RpcSystemCallHandler();
 
+    /** Method registry for compact format hash ↔ name resolution.
+     *  Created lazily, populated by addService/addClient. */
+    readonly registry = new RpcMethodRegistry();
+
     constructor(hubId?: string) {
         this.hubId = hubId ?? crypto.randomUUID();
         this.serviceHost = new RpcServiceHost();
+        this.systemCallSender.registry = this.registry;
     }
 
     addPeer(peer: RpcPeer): void {
@@ -108,6 +114,7 @@ export class RpcHub {
                     : fn;
         }
         this.serviceHost.register(def, wrappedImpl);
+        this.registry.registerService(def.name, def.methods);
     }
 
     /** Create a typed client proxy for a service on a remote peer. */
@@ -116,6 +123,7 @@ export class RpcHub {
         defOrContract: RpcServiceDef | (abstract new (...args: any[]) => any)
     ): T {
         const def = this._resolveServiceDef(defOrContract);
+        this.registry.registerService(def.name, def.methods);
 
         // Group methods by clean name, indexed by argCount for overload resolution
         const overloads = new Map<string, Map<number, Function>>();

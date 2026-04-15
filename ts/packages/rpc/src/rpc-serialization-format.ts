@@ -1,7 +1,8 @@
 // RPC serialization format definitions — mirrors .NET RpcSerializationFormat.
 //
 // Each format knows how to serialize/deserialize RPC messages on the wire.
-// Consumers call format methods instead of checking isBinary/isCompact flags.
+// Format instances are immutable singletons — state like method registries
+// is passed in via parameters, not held by the format.
 
 import { Encoder, Decoder } from '@msgpack/msgpack';
 import type { RpcMessage } from './rpc-message.js';
@@ -28,17 +29,21 @@ export type RpcWireData = string | Uint8Array;
 
 /**
  * Base class for RPC serialization formats.
- * Each format provides serialize/deserialize handlers for the wire protocol.
+ * Instances are immutable singletons — one per format key.
+ * State (like method registries) is passed via parameters.
  */
 export abstract class RpcSerializationFormat {
     abstract readonly key: string;
     abstract readonly isBinary: boolean;
+    /** Whether this format uses compact method hashes (needs RpcMethodRegistry). */
+    abstract readonly isCompact: boolean;
 
     /** Serialize an outbound message. */
     abstract serializeMessage(
         message: RpcMessage,
         args?: unknown[],
-        encoder?: Encoder
+        encoder?: Encoder,
+        registry?: RpcMethodRegistry
     ): RpcWireData;
 
     /** Deserialize a single text message (only called for text formats). */
@@ -47,7 +52,8 @@ export abstract class RpcSerializationFormat {
     /** Split + deserialize a binary frame (only called for binary formats). */
     abstract splitBinaryFrame(
         frame: Uint8Array,
-        decoder?: Decoder
+        decoder?: Decoder,
+        registry?: RpcMethodRegistry
     ): RpcDeserializedMessage[];
 
     /** Concatenate multiple serialized binary messages into one frame. */
@@ -84,16 +90,16 @@ export abstract class RpcSerializationFormat {
 }
 
 // ============================================================
-// Concrete formats
+// Concrete formats (immutable singletons)
 // ============================================================
 
 /**
  * JSON text format — "json5np" (System.Text.Json, no polymorphism).
- * Wire: JSON envelope + delimiter-separated JSON args.
  */
 export class RpcJsonSerializationFormat extends RpcSerializationFormat {
     readonly key: string;
     readonly isBinary = false;
+    readonly isCompact = false;
 
     constructor(key: string) {
         super();
@@ -119,11 +125,11 @@ export class RpcJsonSerializationFormat extends RpcSerializationFormat {
 
 /**
  * MessagePack binary format — "msgpack6" / "mempack6" (V5 wire format).
- * Wire: binary envelope with LVar method name + MessagePack args.
  */
 export class RpcMessagePackSerializationFormat extends RpcSerializationFormat {
     readonly key: string;
     readonly isBinary = true;
+    readonly isCompact = false;
 
     constructor(key: string) {
         super();
@@ -163,30 +169,30 @@ export class RpcMessagePackSerializationFormat extends RpcSerializationFormat {
 }
 
 /**
- * MessagePack compact binary format — "msgpack6c" / "mempack6c" (V5Compact wire format).
- * Wire: binary envelope with 4-byte method hash + MessagePack args.
- * Requires an RpcMethodRegistry for hash ↔ name resolution.
+ * MessagePack compact binary format — "msgpack6c" / "mempack6c" (V5Compact).
+ * Uses 4-byte method hash instead of full method name.
+ * Registry is passed via parameters — format instance is immutable.
  */
 export class RpcMessagePackCompactSerializationFormat extends RpcSerializationFormat {
     readonly key: string;
     readonly isBinary = true;
-    readonly methodRegistry: RpcMethodRegistry;
+    readonly isCompact = true;
 
-    constructor(key: string, methodRegistry: RpcMethodRegistry) {
+    constructor(key: string) {
         super();
         this.key = key;
-        this.methodRegistry = methodRegistry;
     }
 
     serializeMessage(
         message: RpcMessage,
         args?: unknown[],
-        encoder?: Encoder
+        encoder?: Encoder,
+        registry?: RpcMethodRegistry
     ): Uint8Array {
         return serializeCompactBinaryMessage(
             message,
             args,
-            this.methodRegistry,
+            registry,
             encoder
         );
     }
@@ -197,13 +203,10 @@ export class RpcMessagePackCompactSerializationFormat extends RpcSerializationFo
 
     splitBinaryFrame(
         frame: Uint8Array,
-        decoder?: Decoder
+        decoder?: Decoder,
+        registry?: RpcMethodRegistry
     ): RpcDeserializedMessage[] {
-        return splitCompactBinaryFrame(
-            frame,
-            this.methodRegistry,
-            decoder
-        );
+        return splitCompactBinaryFrame(frame, registry, decoder);
     }
 
     serializeBinaryFrame(messages: Uint8Array[]): Uint8Array {
@@ -220,17 +223,16 @@ export class RpcMessagePackCompactSerializationFormat extends RpcSerializationFo
 }
 
 // ============================================================
-// Register default formats
+// Register all default formats
 // ============================================================
 
-// Text formats
+// Text
 RpcSerializationFormat.register(new RpcJsonSerializationFormat('json5'));
 RpcSerializationFormat.register(new RpcJsonSerializationFormat('json5np'));
 RpcSerializationFormat.register(new RpcJsonSerializationFormat('njson5'));
 RpcSerializationFormat.register(new RpcJsonSerializationFormat('njson5np'));
 
-// Binary formats (non-compact) — note: TS uses msgpack for both msgpack and mempack
-// since both use the same V5 envelope; argument encoding is handled by @msgpack/msgpack
+// Binary (non-compact)
 RpcSerializationFormat.register(
     new RpcMessagePackSerializationFormat('msgpack6')
 );
@@ -238,20 +240,10 @@ RpcSerializationFormat.register(
     new RpcMessagePackSerializationFormat('mempack6')
 );
 
-// Compact formats are registered dynamically via registerCompactFormat()
-// because they require an RpcMethodRegistry instance.
-
-/**
- * Register compact formats with a method registry.
- * Called during hub initialization when compact format support is needed.
- */
-export function registerCompactFormats(
-    registry: RpcMethodRegistry
-): void {
-    RpcSerializationFormat.register(
-        new RpcMessagePackCompactSerializationFormat('msgpack6c', registry)
-    );
-    RpcSerializationFormat.register(
-        new RpcMessagePackCompactSerializationFormat('mempack6c', registry)
-    );
-}
+// Binary (compact) — immutable, registry passed at call time
+RpcSerializationFormat.register(
+    new RpcMessagePackCompactSerializationFormat('msgpack6c')
+);
+RpcSerializationFormat.register(
+    new RpcMessagePackCompactSerializationFormat('mempack6c')
+);

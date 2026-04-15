@@ -216,7 +216,8 @@ export abstract class RpcPeer {
         outboundCall.serializedWireData = this.format.serializeMessage(
             envelope,
             args,
-            this._connection?.encoder
+            this._connection?.encoder,
+            this._hub.registry
         );
         if (this._connection !== undefined) {
             this.outbound.register(outboundCall);
@@ -266,7 +267,8 @@ export abstract class RpcPeer {
         const wireData = this.format.serializeMessage(
             envelope,
             args,
-            this._connection.encoder
+            this._connection.encoder,
+            this._hub.registry
         );
         this._sendWireData(wireData);
     }
@@ -519,7 +521,12 @@ export class RpcClientPeer extends RpcPeer {
                 const ws =
                     wsFactory?.(connUrl) ??
                     (new WebSocket(connUrl) as unknown as WebSocketLike);
-                const conn = new RpcWebSocketConnection(ws, this.format.isBinary);
+                const conn = new RpcWebSocketConnection(
+                    ws,
+                    this.format.isBinary,
+                    this.format,
+                    this._hub.registry
+                );
                 this._connectionKind = RpcPeerConnectionKind.Connecting;
 
                 // Track close info for unsupported format detection

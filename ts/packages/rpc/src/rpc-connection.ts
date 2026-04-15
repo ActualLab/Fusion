@@ -27,11 +27,13 @@ import { PromiseSource, EventHandlerSet } from '@actuallab/core';
 import {
     splitFrame,
     serializeFrame,
-    splitBinaryFrame,
+    splitBinaryFrame as splitBinaryFrameFn,
     serializeBinaryFrame,
     createBinaryEncoder,
 } from './rpc-serialization.js';
 import type { RpcMessage } from './rpc-message.js';
+import type { RpcSerializationFormat } from './rpc-serialization-format.js';
+import type { RpcMethodRegistry } from './rpc-method-registry.js';
 
 /** Abstract WebSocket interface — works with both browser WebSocket and Node.js ws. */
 export interface WebSocketLike {
@@ -100,14 +102,24 @@ export class RpcWebSocketConnection implements RpcConnection {
         return this._decoder;
     }
 
+    private _format: RpcSerializationFormat | undefined;
+    private _methodRegistry: RpcMethodRegistry | undefined;
+
     readonly binaryMode: boolean;
     readonly messageReceived = new EventHandlerSet<RpcReceivedMessage>();
     readonly closed = new EventHandlerSet<{ code: number; reason: string }>();
     readonly error = new EventHandlerSet<unknown>();
 
-    constructor(ws: WebSocketLike, binaryMode = false) {
+    constructor(
+        ws: WebSocketLike,
+        binaryMode = false,
+        format?: RpcSerializationFormat,
+        methodRegistry?: RpcMethodRegistry
+    ) {
         this._ws = ws;
         this.binaryMode = binaryMode;
+        this._format = format;
+        this._methodRegistry = methodRegistry;
 
         if (binaryMode && ws.binaryType !== undefined)
             ws.binaryType = 'arraybuffer';
@@ -145,7 +157,7 @@ export class RpcWebSocketConnection implements RpcConnection {
                         ? ev.data
                         : new Uint8Array(ev.data);
                 try {
-                    const messages = splitBinaryFrame(frame, this._decoder);
+                    const messages = this._splitBinary(frame);
                     for (const { message, args } of messages) {
                         this.messageReceived.trigger({
                             kind: 'binary',
@@ -167,7 +179,7 @@ export class RpcWebSocketConnection implements RpcConnection {
                 void ev.data.arrayBuffer().then(ab => {
                     const frame = new Uint8Array(ab);
                     try {
-                        const messages = splitBinaryFrame(frame, this._decoder);
+                        const messages = this._splitBinary(frame);
                         for (const { message, args } of messages) {
                             this.messageReceived.trigger({
                                 kind: 'binary',
@@ -225,6 +237,20 @@ export class RpcWebSocketConnection implements RpcConnection {
 
     sendBinaryBatch(messages: Uint8Array[]): void {
         this._sendRaw(serializeBinaryFrame(messages));
+    }
+
+    /** Split a binary frame using the format (compact-aware) or default splitter. */
+    private _splitBinary(
+        frame: Uint8Array
+    ): Array<{ message: RpcMessage; args: unknown[] }> {
+        if (this._format) {
+            return this._format.splitBinaryFrame(
+                frame,
+                this._decoder,
+                this._methodRegistry
+            );
+        }
+        return splitBinaryFrameFn(frame, this._decoder);
     }
 
     close(code?: number, reason?: string): void {

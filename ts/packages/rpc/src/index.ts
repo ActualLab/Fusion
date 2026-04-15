@@ -105,7 +105,6 @@ export {
     RpcJsonSerializationFormat,
     RpcMessagePackSerializationFormat,
     RpcMessagePackCompactSerializationFormat,
-    registerCompactFormats,
 } from './rpc-serialization-format.js';
 export type {
     RpcDeserializedMessage,
