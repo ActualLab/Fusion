@@ -305,11 +305,11 @@ function accumulate512(
     secretOff: number
 ): void {
     for (let i = 0; i < ACC_NB; i++) {
-        let inputVal = read64LE(input, inputOff + 8 * i);
-        acc[i] = u64(acc[i]! + inputVal);
-        inputVal ^= read64LE(secret, secretOff + 8 * i);
-        const low32 = inputVal & U32_MASK;
-        const high32 = inputVal >> 32n;
+        const dataVal = read64LE(input, inputOff + 8 * i);
+        const dataKey = dataVal ^ read64LE(secret, secretOff + 8 * i);
+        acc[i ^ 1] = u64(acc[i ^ 1]! + dataVal);
+        const low32 = dataKey & U32_MASK;
+        const high32 = dataKey >> 32n;
         acc[i] = u64(acc[i]! + low32 * high32);
     }
 }
