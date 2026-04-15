@@ -39,7 +39,7 @@ describe('RpcWebSocketConnection binary mode', () => {
         await delay(10);
 
         expect(received.length).toBe(1);
-        const msg = received[0]!;
+        const msg = received[0];
         expect(msg.kind).toBe('binary');
         if (msg.kind === 'binary') {
             expect(msg.message.Method).toBe('TestService.Hello');
@@ -70,7 +70,7 @@ describe('RpcWebSocketConnection binary mode', () => {
         await delay(10);
 
         expect(received.length).toBe(1);
-        const msg = received[0]!;
+        const msg = received[0];
         expect(msg.kind).toBe('text');
         if (msg.kind === 'text') {
             expect(msg.raw).toBe(serialized);
@@ -98,13 +98,13 @@ describe('RpcWebSocketConnection binary mode', () => {
         await delay(10);
 
         expect(received.length).toBe(2);
-        expect(received[0]!.kind).toBe('text');
-        expect(received[1]!.kind).toBe('text');
-        if (received[0]!.kind === 'text') {
-            expect(received[0]!.raw).toBe(msg1);
+        expect(received[0].kind).toBe('text');
+        expect(received[1].kind).toBe('text');
+        if (received[0].kind === 'text') {
+            expect(received[0].raw).toBe(msg1);
         }
-        if (received[1]!.kind === 'text') {
-            expect(received[1]!.raw).toBe(msg2);
+        if (received[1].kind === 'text') {
+            expect(received[1].raw).toBe(msg2);
         }
 
         connA.close();
@@ -138,7 +138,7 @@ describe('RpcWebSocketConnection binary mode', () => {
 
         expect(received.length).toBe(2);
 
-        const r0 = received[0]!;
+        const r0 = received[0];
         expect(r0.kind).toBe('binary');
         if (r0.kind === 'binary') {
             expect(r0.message.Method).toBe('Svc.X');
@@ -146,7 +146,7 @@ describe('RpcWebSocketConnection binary mode', () => {
             expect(r0.args).toEqual([100]);
         }
 
-        const r1 = received[1]!;
+        const r1 = received[1];
         expect(r1.kind).toBe('binary');
         if (r1.kind === 'binary') {
             expect(r1.message.Method).toBe('Svc.Y');

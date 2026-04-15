@@ -262,8 +262,8 @@ describe('computeMethodHash — benchmark', () => {
 
     const names: string[] = [];
     for (let i = 0; i < 1000; i++) {
-        const svc = SERVICE_NAMES[i % SERVICE_NAMES.length]!;
-        const method = METHOD_NAMES[Math.floor(i / SERVICE_NAMES.length) % METHOD_NAMES.length]!;
+        const svc = SERVICE_NAMES[i % SERVICE_NAMES.length];
+        const method = METHOD_NAMES[Math.floor(i / SERVICE_NAMES.length) % METHOD_NAMES.length];
         const arity = (i % 5) + 1;
         names.push(`${svc}.${method}${i}:${arity}`);
     }

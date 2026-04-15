@@ -163,7 +163,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
             getStrings: async function* (count: unknown) {
                 const words = ['hello', 'world', 'foo', 'bar'];
                 for (let i = 0; i < (count as number); i++) {
-                    yield words[i % words.length]!;
+                    yield words[i % words.length];
                 }
             },
         });

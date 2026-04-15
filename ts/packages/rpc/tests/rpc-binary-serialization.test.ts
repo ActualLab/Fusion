@@ -153,12 +153,12 @@ describe('RPC Binary Serialization', () => {
             const results = splitBinaryFrame(frame);
 
             expect(results.length).toBe(3);
-            expect(results[0]!.message.Method).toBe('a');
-            expect(results[0]!.args).toEqual([]);
-            expect(results[1]!.message.Method).toBe('b');
-            expect(results[1]!.args).toEqual(['hello']);
-            expect(results[2]!.message.Method).toBe('c');
-            expect(results[2]!.args).toEqual([42, true]);
+            expect(results[0].message.Method).toBe('a');
+            expect(results[0].args).toEqual([]);
+            expect(results[1].message.Method).toBe('b');
+            expect(results[1].args).toEqual(['hello']);
+            expect(results[2].message.Method).toBe('c');
+            expect(results[2].args).toEqual([42, true]);
         });
 
         it('should handle a single message frame', () => {
@@ -170,9 +170,9 @@ describe('RPC Binary Serialization', () => {
             const results = splitBinaryFrame(frame);
 
             expect(results.length).toBe(1);
-            expect(results[0]!.message.Method).toBe('single');
-            expect(results[0]!.message.RelatedId).toBe(99);
-            expect(results[0]!.args).toEqual(['only']);
+            expect(results[0].message.Method).toBe('single');
+            expect(results[0].message.RelatedId).toBe(99);
+            expect(results[0].args).toEqual(['only']);
         });
 
         it('should handle an empty frame', () => {

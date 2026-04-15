@@ -38,10 +38,10 @@ export function parseStreamRef(value: unknown): RpcStreamRef | null {
     if (typeof value === 'string') {
         const parts = value.split(',');
         if (parts.length < 4 || parts.length > 6) return null;
-        const hostId = parts[0]!;
-        const localId = parseInt(parts[1]!, 10);
-        const ackPeriod = parseInt(parts[2]!, 10);
-        const ackAdvance = parseInt(parts[3]!, 10);
+        const hostId = parts[0];
+        const localId = parseInt(parts[1], 10);
+        const ackPeriod = parseInt(parts[2], 10);
+        const ackAdvance = parseInt(parts[3], 10);
         if (isNaN(localId) || isNaN(ackPeriod) || isNaN(ackAdvance))
             return null;
         const allowReconnect = parts.length < 5 || parts[4] !== '0';

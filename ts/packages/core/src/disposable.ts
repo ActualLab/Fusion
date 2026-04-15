@@ -31,7 +31,7 @@ export class DisposableBag implements Disposable, AsyncDisposable {
         // Dispose in reverse order (LIFO)
         for (let i = items.length - 1; i >= 0; i--) {
             const item = items[i];
-            if (item != null && 'dispose' in item) item.dispose();
+            if ('dispose' in item) item.dispose();
         }
     }
 
@@ -42,7 +42,6 @@ export class DisposableBag implements Disposable, AsyncDisposable {
         this._items = [];
         for (let i = items.length - 1; i >= 0; i--) {
             const item = items[i];
-            if (item == null) continue;
             if ('disposeAsync' in item) await item.disposeAsync();
             else if ('dispose' in item) item.dispose();
         }

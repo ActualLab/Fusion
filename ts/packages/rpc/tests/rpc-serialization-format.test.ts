@@ -97,9 +97,9 @@ describe('RpcMessagePackSerializationFormat', () => {
         );
         const results = fmt.splitBinaryFrame(wire as Uint8Array);
         expect(results).toHaveLength(1);
-        expect(results[0]!.message.Method).toBe('Svc.get');
-        expect(results[0]!.message.RelatedId).toBe(5);
-        expect(results[0]!.args).toEqual(['hello', 42]);
+        expect(results[0].message.Method).toBe('Svc.get');
+        expect(results[0].message.RelatedId).toBe(5);
+        expect(results[0].args).toEqual(['hello', 42]);
     });
 
     it('should handle multiple messages in a frame', () => {
@@ -114,8 +114,8 @@ describe('RpcMessagePackSerializationFormat', () => {
         const frame = fmt.serializeBinaryFrame([msg1, msg2]);
         const results = fmt.splitBinaryFrame(frame);
         expect(results).toHaveLength(2);
-        expect(results[0]!.message.Method).toBe('a');
-        expect(results[1]!.message.Method).toBe('b');
+        expect(results[0].message.Method).toBe('a');
+        expect(results[1].message.Method).toBe('b');
     });
 
     it('should create encoder and decoder', () => {
@@ -162,9 +162,9 @@ describe('RpcMessagePackCompactSerializationFormat', () => {
         );
         const results = fmt.splitBinaryFrame(wire, undefined, registry);
         expect(results).toHaveLength(1);
-        expect(results[0]!.message.Method).toBe('Svc.get:2');
-        expect(results[0]!.message.RelatedId).toBe(5);
-        expect(results[0]!.args).toEqual(['hello', 42]);
+        expect(results[0].message.Method).toBe('Svc.get:2');
+        expect(results[0].message.RelatedId).toBe(5);
+        expect(results[0].args).toEqual(['hello', 42]);
     });
 
     it('should use hex hash placeholder for unregistered methods on deserialize', () => {
@@ -184,7 +184,7 @@ describe('RpcMessagePackCompactSerializationFormat', () => {
             freshRegistry
         );
         expect(results).toHaveLength(1);
-        expect(results[0]!.message.Method).toMatch(/^<hash:0x[0-9a-f]+>$/);
+        expect(results[0].message.Method).toMatch(/^<hash:0x[0-9a-f]+>$/);
     });
 
     it('should compute hashes on demand via getHash', () => {

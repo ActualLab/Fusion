@@ -56,24 +56,24 @@ function u64(x: bigint): bigint {
 
 function read32LE(buf: Uint8Array, off: number): number {
     return (
-        (buf[off]! |
-            (buf[off + 1]! << 8) |
-            (buf[off + 2]! << 16) |
-            (buf[off + 3]! << 24)) >>>
+        (buf[off] |
+            (buf[off + 1] << 8) |
+            (buf[off + 2] << 16) |
+            (buf[off + 3] << 24)) >>>
         0
     );
 }
 
 function read64LE(buf: Uint8Array, off: number): bigint {
     return (
-        BigInt(buf[off]!) |
-        (BigInt(buf[off + 1]!) << 8n) |
-        (BigInt(buf[off + 2]!) << 16n) |
-        (BigInt(buf[off + 3]!) << 24n) |
-        (BigInt(buf[off + 4]!) << 32n) |
-        (BigInt(buf[off + 5]!) << 40n) |
-        (BigInt(buf[off + 6]!) << 48n) |
-        (BigInt(buf[off + 7]!) << 56n)
+        BigInt(buf[off]) |
+        (BigInt(buf[off + 1]) << 8n) |
+        (BigInt(buf[off + 2]) << 16n) |
+        (BigInt(buf[off + 3]) << 24n) |
+        (BigInt(buf[off + 4]) << 32n) |
+        (BigInt(buf[off + 5]) << 40n) |
+        (BigInt(buf[off + 6]) << 48n) |
+        (BigInt(buf[off + 7]) << 56n)
     );
 }
 
@@ -150,9 +150,9 @@ function len1to3(
     secret: Uint8Array,
     seed: bigint
 ): bigint {
-    const byte1 = input[0]!;
-    const byte2 = length > 1 ? input[1]! : input[0]!;
-    const byte3 = input[length - 1]!;
+    const byte1 = input[0];
+    const byte2 = length > 1 ? input[1] : input[0];
+    const byte3 = input[length - 1];
     const combined =
         ((byte1 << 16) | (byte2 << 24) | byte3 | (length << 8)) >>> 0;
     const bitflip = u64(
@@ -307,10 +307,10 @@ function accumulate512(
     for (let i = 0; i < ACC_NB; i++) {
         const dataVal = read64LE(input, inputOff + 8 * i);
         const dataKey = dataVal ^ read64LE(secret, secretOff + 8 * i);
-        acc[i ^ 1] = u64(acc[i ^ 1]! + dataVal);
+        acc[i ^ 1] = u64(acc[i ^ 1] + dataVal);
         const low32 = dataKey & U32_MASK;
         const high32 = dataKey >> 32n;
-        acc[i] = u64(acc[i]! + low32 * high32);
+        acc[i] = u64(acc[i] + low32 * high32);
     }
 }
 
@@ -320,7 +320,7 @@ function scrambleAcc(
     secretOff: number
 ): void {
     for (let i = 0; i < ACC_NB; i++) {
-        let x = acc[i]!;
+        let x = acc[i];
         x ^= x >> 47n;
         x ^= read64LE(secret, secretOff + 8 * i);
         x = u64(x * BigInt(PRIME32_1));
@@ -354,8 +354,8 @@ function mix2Accs(
     secretOff: number
 ): bigint {
     return mul128Fold64(
-        acc[accOff]! ^ read64LE(secret, secretOff),
-        acc[accOff + 1]! ^ read64LE(secret, secretOff + 8)
+        acc[accOff] ^ read64LE(secret, secretOff),
+        acc[accOff + 1] ^ read64LE(secret, secretOff + 8)
     );
 }
 

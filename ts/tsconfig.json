@@ -8,7 +8,6 @@
     "declarationMap": true,
     "sourceMap": true,
     "strict": true,
-    "noUncheckedIndexedAccess": true,
     "noEmitOnError": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

@@ -158,7 +158,7 @@ describe.each(FORMATS)('RPC End-to-End [%s]', (formatKey) => {
         pair.serverHub.addService(OverloadDef, {
             compute: (...args: unknown[]) => {
                 const nums = args.map(Number);
-                if (nums.length === 1) return nums[0]! * 2;
+                if (nums.length === 1) return nums[0] * 2;
                 return nums.reduce((a, b) => a + b, 0);
             },
         });

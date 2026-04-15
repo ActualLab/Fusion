@@ -67,7 +67,7 @@ export async function connectionDisruptor(
 ): Promise<void> {
     function randomInRange(range: number[]): number {
         const [min, max] = range;
-        return min! + Math.random() * (max! - min!);
+        return min + Math.random() * (max - min);
     }
 
     while (!signal.aborted) {

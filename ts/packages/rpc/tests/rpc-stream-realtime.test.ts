@@ -240,7 +240,7 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
         expect(sentItems[0]).toBe(0);
         // Items should be in ascending order
         for (let i = 1; i < sentItems.length; i++) {
-            expect(sentItems[i]!).toBeGreaterThan(sentItems[i - 1]!);
+            expect(sentItems[i]).toBeGreaterThan(sentItems[i - 1]);
         }
     });
 
@@ -313,14 +313,14 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
 
         // Items should be in ascending order
         for (let i = 1; i < sentItems.length; i++) {
-            expect(sentItems[i]!).toBeGreaterThan(sentItems[i - 1]!);
+            expect(sentItems[i]).toBeGreaterThan(sentItems[i - 1]);
         }
 
         // After skipping, there should be gaps in the sequence
         const gaps: number[] = [];
         for (let i = 1; i < sentItems.length; i++) {
-            if (sentItems[i]! > sentItems[i - 1]! + 1) {
-                gaps.push(sentItems[i]!);
+            if (sentItems[i] > sentItems[i - 1] + 1) {
+                gaps.push(sentItems[i]);
             }
         }
         expect(gaps.length).toBeGreaterThan(0);
@@ -387,14 +387,14 @@ describe.each([1, 3, 5])('RpcStreamSender real-time reconnect (ackPeriod=%i)', (
 
         // Items should be in ascending order
         for (let i = 1; i < sentItems.length; i++) {
-            expect(sentItems[i]!).toBeGreaterThan(sentItems[i - 1]!);
+            expect(sentItems[i]).toBeGreaterThan(sentItems[i - 1]);
         }
 
         // Find gaps
         const gaps: { before: number; after: number }[] = [];
         for (let i = 1; i < sentItems.length; i++) {
-            if (sentItems[i]! > sentItems[i - 1]! + 1) {
-                gaps.push({ before: sentItems[i - 1]!, after: sentItems[i]! });
+            if (sentItems[i] > sentItems[i - 1] + 1) {
+                gaps.push({ before: sentItems[i - 1], after: sentItems[i] });
             }
         }
 
@@ -441,7 +441,7 @@ describe.each([1, 3, 5])('RpcStreamSender real-time reconnect (ackPeriod=%i)', (
 
         // Items should be in ascending order
         for (let i = 1; i < sentItems.length; i++) {
-            expect(sentItems[i]!).toBeGreaterThan(sentItems[i - 1]!);
+            expect(sentItems[i]).toBeGreaterThan(sentItems[i - 1]);
         }
 
         // With default canSkipTo (all true), the very next item is accepted,
