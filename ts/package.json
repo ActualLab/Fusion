@@ -8,7 +8,7 @@
     "build": "npm run build --workspaces",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint packages/*/src/ packages/*/tests/",
+    "lint": "eslint packages/*/src/**/*.ts packages/*/tests/**/*.ts",
     "typecheck": "tsc -b packages/*/tsconfig.json",
     "clean": "npm run clean --workspaces"
   },

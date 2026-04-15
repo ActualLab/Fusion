@@ -1,3 +1,3 @@
 @echo off
 cd /d "%~dp0"
-npm run lint %*
+npm run build && npm run lint %*
