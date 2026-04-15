@@ -11,6 +11,7 @@ export interface RpcStreamRef {
     readonly ackPeriod: number;
     readonly ackAdvance: number;
     readonly allowReconnect: boolean;
+    readonly isRealTime: boolean;
 }
 
 /**
@@ -18,10 +19,10 @@ export interface RpcStreamRef {
  * Returns null if the value is not a valid stream reference.
  */
 export function parseStreamRef(value: unknown): RpcStreamRef | null {
-    // Text format: "hostId,localId,ackPeriod,ackAdvance[,allowReconnect]"
+    // Text format: "hostId,localId,ackPeriod,ackAdvance[,allowReconnect[,isRealTime]]"
     if (typeof value === 'string') {
         const parts = value.split(',');
-        if (parts.length < 4 || parts.length > 5) return null;
+        if (parts.length < 4 || parts.length > 6) return null;
         const hostId = parts[0]!;
         const localId = parseInt(parts[1]!, 10);
         const ackPeriod = parseInt(parts[2]!, 10);
@@ -29,7 +30,8 @@ export function parseStreamRef(value: unknown): RpcStreamRef | null {
         if (isNaN(localId) || isNaN(ackPeriod) || isNaN(ackAdvance))
             return null;
         const allowReconnect = parts.length < 5 || parts[4] !== '0';
-        return { hostId, localId, ackPeriod, ackAdvance, allowReconnect };
+        const isRealTime = parts.length >= 6 && parts[5] === '1';
+        return { hostId, localId, ackPeriod, ackAdvance, allowReconnect, isRealTime };
     }
     // Binary (MessagePack) format: { SerializedId: [hostId, localId], AckPeriod, AckAdvance, AllowReconnect }
     if (typeof value === 'object' && value !== null) {
@@ -43,7 +45,8 @@ export function parseStreamRef(value: unknown): RpcStreamRef | null {
         const ackPeriod = Number(obj.AckPeriod ?? 256);
         const ackAdvance = Number(obj.AckAdvance ?? 128);
         const allowReconnect = obj.AllowReconnect !== false;
-        return { hostId, localId, ackPeriod, ackAdvance, allowReconnect };
+        const isRealTime = obj.IsRealTime === true;
+        return { hostId, localId, ackPeriod, ackAdvance, allowReconnect, isRealTime };
     }
     return null;
 }

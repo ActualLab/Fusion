@@ -24,6 +24,8 @@ export class RpcStreamSender<T> implements IRpcObject {
     readonly id: RpcObjectId;
     readonly kind = RpcObjectKind.Local;
     readonly allowReconnect: boolean;
+    readonly isRealTime: boolean;
+    readonly canSkipTo: (item: T) => boolean;
     readonly peer: RpcPeer;
     readonly ackPeriod: number;
     readonly ackAdvance: number;
@@ -31,16 +33,22 @@ export class RpcStreamSender<T> implements IRpcObject {
     private _nextIndex = 0;
     private _ended = false;
     private _started = new PromiseSource<void>();
+    private _lastAckedIndex = 0;
+    private _ackWaiting: PromiseSource<void> | null = null;
 
     constructor(
         peer: RpcPeer,
         ackPeriod = DEFAULT_ACK_PERIOD,
         ackAdvance = DEFAULT_ACK_ADVANCE,
-        allowReconnect = true
+        allowReconnect = true,
+        isRealTime = false,
+        canSkipTo: (item: T) => boolean = () => true,
     ) {
         const localId = peer.sharedObjects.nextId();
         this.id = { hostId: peer.hub.hubId, localId };
         this.allowReconnect = allowReconnect;
+        this.isRealTime = isRealTime;
+        this.canSkipTo = canSkipTo;
         this.peer = peer;
         this.ackPeriod = ackPeriod;
         this.ackAdvance = ackAdvance;
@@ -48,13 +56,20 @@ export class RpcStreamSender<T> implements IRpcObject {
 
     /** Returns the stream reference string for the $sys.Ok response. */
     toRef(): string {
-        return `${this.id.hostId},${this.id.localId},${this.ackPeriod},${this.ackAdvance},${this.allowReconnect ? '1' : '0'}`;
+        return `${this.id.hostId},${this.id.localId},${this.ackPeriod},${this.ackAdvance},${this.allowReconnect ? '1' : '0'},${this.isRealTime ? '1' : '0'}`;
     }
 
     /** Called by system call handler when $sys.Ack is received from the client. */
-    onAck(_nextIndex: number, _hostId: string): void {
+    onAck(nextIndex: number, _hostId: string): void {
         if (!this._started.isCompleted) {
             this._started.resolve();
+        }
+        if (nextIndex > this._lastAckedIndex) {
+            this._lastAckedIndex = nextIndex;
+        }
+        if (this._ackWaiting) {
+            this._ackWaiting.resolve();
+            this._ackWaiting = null;
         }
     }
 
@@ -118,14 +133,66 @@ export class RpcStreamSender<T> implements IRpcObject {
     /**
      * Consume an AsyncIterable and send all items to the client.
      * Waits for the client's initial Ack before starting to pump items.
+     *
+     * When `isRealTime` is true, applies flow control based on `ackAdvance`:
+     * if the sender is `ackAdvance` items ahead of the last ACK, it enters
+     * skip mode — draining the source and discarding items until it finds
+     * one where `canSkipTo` returns true.
      */
     async writeFrom(source: AsyncIterable<T>): Promise<void> {
         await this._started.promise;
 
+        const iterator = source[Symbol.asyncIterator]();
         try {
-            for await (const item of source) {
+            while (true) {
+                const next = await iterator.next();
+                if (next.done || this._ended) break;
+
+                const item = next.value;
+
+                // Flow control: check if we've hit the AckAdvance ceiling
+                if (this._nextIndex < this._lastAckedIndex + this.ackAdvance) {
+                    // Under budget — send normally
+                    this.sendItem(item);
+                    continue;
+                }
+
+                if (!this.isRealTime) {
+                    // Normal mode: wait for ACK before sending
+                    await this._waitForAckBudget();
+                    if (this._ended) return;
+                    this.sendItem(item);
+                    continue;
+                }
+
+                // Real-time mode: hit the ceiling. Drain the source,
+                // discarding non-skip-targets, keeping the latest skip target.
+                // Stop draining when budget becomes available or source exhausts.
+                let latestSkipTarget: T | undefined = this.canSkipTo(item) ? item : undefined;
+                let sourceExhausted = false;
+
+                while (this._nextIndex >= this._lastAckedIndex + this.ackAdvance) {
+                    if (this._ended) return;
+                    const n = await iterator.next();
+                    if (n.done) {
+                        sourceExhausted = true;
+                        break;
+                    }
+                    if (this.canSkipTo(n.value)) {
+                        latestSkipTarget = n.value;
+                    }
+                }
+
                 if (this._ended) return;
-                this.sendItem(item);
+
+                if (latestSkipTarget !== undefined) {
+                    this.sendItem(latestSkipTarget);
+                }
+
+                if (sourceExhausted) {
+                    if (!this._ended) this.sendEnd();
+                    return;
+                }
             }
             if (!this._ended) {
                 this.sendEnd();
@@ -134,6 +201,15 @@ export class RpcStreamSender<T> implements IRpcObject {
             if (!this._ended) {
                 this.sendEnd(e instanceof Error ? e : new Error(String(e)));
             }
+        }
+    }
+
+    /** Wait until _nextIndex < _lastAckedIndex + ackAdvance. */
+    private async _waitForAckBudget(): Promise<void> {
+        while (this._nextIndex >= this._lastAckedIndex + this.ackAdvance) {
+            if (this._ended) return;
+            this._ackWaiting = new PromiseSource<void>();
+            await this._ackWaiting.promise;
         }
     }
 

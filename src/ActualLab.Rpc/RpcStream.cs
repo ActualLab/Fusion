@@ -34,6 +34,8 @@ public abstract class RpcStream : IRpcObject
     public int AckAdvance { get; init; } = 61;
     [DataMember(Order = 3), MemoryPackOrder(3)]
     public bool AllowReconnect { get; init; } = true;
+    [DataMember(Order = 4), MemoryPackOrder(4)]
+    public bool IsRealTime { get; init; }
     // See BatchSize below as well
 
     // Non-serialized members
@@ -133,6 +135,9 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreMember]
     public override RpcObjectKind Kind => _localSource is not null ? RpcObjectKind.Local : RpcObjectKind.Remote;
 
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    public Func<T, bool> CanSkipTo { get; init; } = _ => true;
+
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public RpcStream() { }
 
@@ -189,6 +194,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         formatter.Append(stream.AckPeriod.ToString(CultureInfo.InvariantCulture));
         formatter.Append(stream.AckAdvance.ToString(CultureInfo.InvariantCulture));
         formatter.Append(stream.AllowReconnect ? "1" : "0");
+        formatter.Append(stream.IsRealTime ? "1" : "0");
         formatter.AppendEnd();
         return formatter.Output;
     }
@@ -209,11 +215,13 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         parser.ParseNext();
         var ackAdvance = int.Parse(parser.Item, CultureInfo.InvariantCulture);
         var allowReconnect = !parser.TryParseNext() || !parser.Item.Equals("0", StringComparison.Ordinal);
+        var isRealTime = parser.TryParseNext() && parser.Item.Equals("1", StringComparison.Ordinal);
         return new RpcStream<T>() {
             SerializedId = id,
             AckPeriod = ackPeriod,
             AckAdvance = ackAdvance,
             AllowReconnect = allowReconnect,
+            IsRealTime = isRealTime,
         };
     }
 

@@ -107,6 +107,8 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         var enumerator = Stream.GetLocalSource().GetAsyncEnumerator(cancellationToken);
         await using var _ = enumerator.ConfigureAwait(false);
 
+        var isRealTime = Stream.IsRealTime;
+        var canSkipTo = Stream.CanSkipTo;
         var isFullyBuffered = false;
         var ackReader = _acks.Reader;
         var buffer = new RingBuffer<Result<T>>(Stream.AckAdvance + 1);
@@ -211,6 +213,58 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                     .ConfigureAwait(false);
                 if (completedTask == whenAckReady)
                     goto nextAck; // Got Ack, must restart
+            }
+
+            // 4. Real-time skip: we've hit maxIndex (AckAdvance ceiling).
+            //    Instead of waiting for ACK (back-pressure), drain the source
+            //    and skip to the next item that CanSkipTo returns true for.
+            //    Also check for new ACKs between reads — if budget is restored
+            //    (e.g. ACK arrived while we were awaiting the source), stop
+            //    draining and resume normal sending.
+            if (isRealTime && !isFullyBuffered) {
+                while (true) {
+                    // Check if ACK arrived and budget is restored
+                    if (ackReader.TryRead(out var newAck)) {
+                        if (newAck.NextIndex == long.MaxValue)
+                            return;
+                        if (newAck.MustReset || index < newAck.NextIndex)
+                            index = newAck.NextIndex;
+                        // Recalculate maxIndex — budget may now be available
+                        maxIndex = newAck.NextIndex + Stream.AckAdvance;
+                        if (index < maxIndex)
+                            break; // Budget restored, resume normal sending
+                    }
+
+                    if (!whenMovedNext.IsCompleted)
+                        await whenMovedNext.ConfigureAwait(false);
+
+                    try {
+                        if (whenMovedNext.Result) {
+                            var candidate = enumerator.Current;
+                            whenMovedNext = SafeMoveNext(enumerator);
+                            whenMovedNextAsTask = null;
+                            if (canSkipTo(candidate)) {
+                                buffer.PushTailAndMoveHeadIfFull(candidate);
+                                break;
+                            }
+                        }
+                        else {
+                            buffer.PushTailAndMoveHeadIfFull(Result.NewError<T>(NoMoreItemsTag));
+                            isFullyBuffered = true;
+                            break;
+                        }
+                    }
+                    catch (Exception e) {
+                        buffer.PushTailAndMoveHeadIfFull(Result.NewError<T>(e.IsCancellationOf(cancellationToken)
+                            ? Errors.RpcStreamNotFoundOrDisconnected()
+                            : e));
+                        isFullyBuffered = true;
+                        break;
+                    }
+                }
+                // Go back to nextAck to flush batcher, process any remaining ACKs,
+                // and resume the send loop with updated maxIndex.
+                goto nextAck;
             }
         }
     }
