@@ -27,45 +27,56 @@
 //     so system call handlers can access the current peer/message.  TS passes
 //     context explicitly as a function argument (RpcDispatchContext).
 
-import type { RpcMethodDef } from "./rpc-service-def.js";
-import { wireMethodName } from "./rpc-service-def.js";
-import type { RpcServiceDef } from "./rpc-service-def.js";
-import type { RpcConnection } from "./rpc-connection.js";
+import type { RpcMethodDef } from './rpc-service-def.js';
+import { wireMethodName } from './rpc-service-def.js';
+import type { RpcServiceDef } from './rpc-service-def.js';
+import type { RpcConnection } from './rpc-connection.js';
 
 export type RpcServiceImpl = Record<string, (...args: unknown[]) => unknown>;
 
 /** Context passed to service dispatch — carries callId and connection for compute tracking. */
 export interface RpcDispatchContext {
-  __rpcDispatch: true;
-  callId: number;
-  connection: RpcConnection;
+    __rpcDispatch: true;
+    callId: number;
+    connection: RpcConnection;
 }
 
 /** Dispatches inbound RPC calls to registered service implementations. */
 export class RpcServiceHost {
-  private _methods = new Map<string, { def: RpcMethodDef; fn: (...args: unknown[]) => unknown }>();
+    private _methods = new Map<
+        string,
+        { def: RpcMethodDef; fn: (...args: unknown[]) => unknown }
+    >();
 
-  register(def: RpcServiceDef, impl: RpcServiceImpl): void {
-    for (const methodDef of def.methods.values()) {
-      const fn = impl[methodDef.name];
-      if (!fn) continue;
-      this._methods.set(wireMethodName(methodDef), { def: methodDef, fn });
+    register(def: RpcServiceDef, impl: RpcServiceImpl): void {
+        for (const methodDef of def.methods.values()) {
+            const fn = impl[methodDef.name];
+            if (!fn) continue;
+            this._methods.set(wireMethodName(methodDef), {
+                def: methodDef,
+                fn,
+            });
+        }
     }
-  }
 
-  async dispatch(wireMethod: string, args: unknown[], context?: RpcDispatchContext): Promise<unknown> {
-    const entry = this._methods.get(wireMethod);
-    if (entry === undefined) throw new Error(`Method not found: ${wireMethod}`);
+    async dispatch(
+        wireMethod: string,
+        args: unknown[],
+        context?: RpcDispatchContext
+    ): Promise<unknown> {
+        const entry = this._methods.get(wireMethod);
+        if (entry === undefined)
+            throw new Error(`Method not found: ${wireMethod}`);
 
-    // Pass context as the last arg only for custom call types (e.g., compute) — their
-    // wrapped functions use it; regular methods should not see it to avoid polluting ...args.
-    if (context !== undefined && entry.def.callTypeId !== 0) {
-      return await entry.fn(...args, context);
+        // Pass context as the last arg only for custom call types (e.g., compute) — their
+        // wrapped functions use it; regular methods should not see it to avoid polluting ...args.
+        if (context !== undefined && entry.def.callTypeId !== 0) {
+            return await entry.fn(...args, context);
+        }
+        return await entry.fn(...args);
     }
-    return await entry.fn(...args);
-  }
 
-  getMethodDef(wireMethod: string): RpcMethodDef | undefined {
-    return this._methods.get(wireMethod)?.def;
-  }
+    getMethodDef(wireMethod: string): RpcMethodDef | undefined {
+        return this._methods.get(wireMethod)?.def;
+    }
 }

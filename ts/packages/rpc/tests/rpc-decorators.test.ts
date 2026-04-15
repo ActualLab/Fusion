@@ -1,82 +1,109 @@
-import { describe, it, expect } from "vitest";
-import { rpcService, rpcMethod, getServiceMeta, getMethodsMeta, RpcType } from "../src/index.js";
+import { describe, it, expect } from 'vitest';
+import {
+    rpcService,
+    rpcMethod,
+    getServiceMeta,
+    getMethodsMeta,
+    RpcType,
+} from '../src/index.js';
 
-describe("@rpcService decorator", () => {
-  it("should store service name in metadata", () => {
-    @rpcService("ProductService")
-    class ProductService {
-      async getProduct(id: string): Promise<unknown> { return undefined; }
-    }
+describe('@rpcService decorator', () => {
+    it('should store service name in metadata', () => {
+        @rpcService('ProductService')
+        class ProductService {
+            async getProduct(id: string): Promise<unknown> {
+                return undefined;
+            }
+        }
 
-    const meta = getServiceMeta(ProductService);
-    expect(meta).toBeDefined();
-    expect(meta!.name).toBe("ProductService");
-  });
+        const meta = getServiceMeta(ProductService);
+        expect(meta).toBeDefined();
+        expect(meta!.name).toBe('ProductService');
+    });
 });
 
-describe("@rpcMethod decorator", () => {
-  it("should store method metadata", () => {
-    class Svc {
-      @rpcMethod()
-      async getProduct(id: string): Promise<unknown> { return undefined; }
+describe('@rpcMethod decorator', () => {
+    it('should store method metadata', () => {
+        class Svc {
+            @rpcMethod()
+            async getProduct(id: string): Promise<unknown> {
+                return undefined;
+            }
 
-      @rpcMethod({ returns: RpcType.stream })
-      async *getProducts(query: string, limit: number): AsyncGenerator<unknown> { yield undefined; }
-    }
+            @rpcMethod({ returns: RpcType.stream })
+            async *getProducts(
+                query: string,
+                limit: number
+            ): AsyncGenerator<unknown> {
+                yield undefined;
+            }
+        }
 
-    const meta = getMethodsMeta(Svc);
-    expect(meta).toBeDefined();
+        const meta = getMethodsMeta(Svc);
+        expect(meta).toBeDefined();
 
-    expect(meta!["getProduct"]).toEqual({ argCount: 1 });
-    expect(meta!["getProducts"]).toEqual({ argCount: 2, returns: RpcType.stream });
-  });
+        expect(meta!['getProduct']).toEqual({ argCount: 1 });
+        expect(meta!['getProducts']).toEqual({
+            argCount: 2,
+            returns: RpcType.stream,
+        });
+    });
 
-  it("should not wrap the method", async () => {
-    class Svc {
-      @rpcMethod()
-      async getItem(id: string): Promise<string> { return id; }
-    }
+    it('should not wrap the method', async () => {
+        class Svc {
+            @rpcMethod()
+            async getItem(id: string): Promise<string> {
+                return id;
+            }
+        }
 
-    // rpcMethod returns target unchanged — method still works normally
-    const svc = new Svc();
-    expect(await svc.getItem("abc")).toBe("abc");
+        // rpcMethod returns target unchanged — method still works normally
+        const svc = new Svc();
+        expect(await svc.getItem('abc')).toBe('abc');
 
-    const meta = getMethodsMeta(Svc);
-    expect(meta).toBeDefined();
-    expect(meta!["getItem"]).toEqual({ argCount: 1 });
-  });
+        const meta = getMethodsMeta(Svc);
+        expect(meta).toBeDefined();
+        expect(meta!['getItem']).toEqual({ argCount: 1 });
+    });
 });
 
-describe("@rpcService + @rpcMethod combined", () => {
-  it("should store both service and method metadata on same class", () => {
-    @rpcService("CounterService")
-    class ICounterService {
-      @rpcMethod()
-      async getCount(key: string): Promise<number> { return 0; }
+describe('@rpcService + @rpcMethod combined', () => {
+    it('should store both service and method metadata on same class', () => {
+        @rpcService('CounterService')
+        class ICounterService {
+            @rpcMethod()
+            async getCount(key: string): Promise<number> {
+                return 0;
+            }
 
-      @rpcMethod()
-      async setCount(key: string, value: number): Promise<void> {}
+            @rpcMethod()
+            async setCount(key: string, value: number): Promise<void> {}
 
-      @rpcMethod({ returns: RpcType.stream })
-      async *watchCount(key: string): AsyncGenerator<number> { yield 0; }
-    }
+            @rpcMethod({ returns: RpcType.stream })
+            async *watchCount(key: string): AsyncGenerator<number> {
+                yield 0;
+            }
+        }
 
-    const svcMeta = getServiceMeta(ICounterService);
-    expect(svcMeta).toEqual({ name: "CounterService" });
+        const svcMeta = getServiceMeta(ICounterService);
+        expect(svcMeta).toEqual({ name: 'CounterService' });
 
-    const methods = getMethodsMeta(ICounterService);
-    expect(methods).toBeDefined();
-    expect(methods!["getCount"]).toEqual({ argCount: 1 });
-    expect(methods!["setCount"]).toEqual({ argCount: 2 });
-    expect(methods!["watchCount"]).toEqual({ argCount: 1, returns: RpcType.stream });
-  });
+        const methods = getMethodsMeta(ICounterService);
+        expect(methods).toBeDefined();
+        expect(methods!['getCount']).toEqual({ argCount: 1 });
+        expect(methods!['setCount']).toEqual({ argCount: 2 });
+        expect(methods!['watchCount']).toEqual({
+            argCount: 1,
+            returns: RpcType.stream,
+        });
+    });
 
-  it("should return undefined for non-decorated classes", () => {
-    class Plain {
-      async doStuff(): Promise<void> {}
-    }
+    it('should return undefined for non-decorated classes', () => {
+        class Plain {
+            async doStuff(): Promise<void> {}
+        }
 
-    expect(getServiceMeta(Plain)).toBeUndefined();
-    expect(getMethodsMeta(Plain)).toBeUndefined();
-  });
+        expect(getServiceMeta(Plain)).toBeUndefined();
+        expect(getMethodsMeta(Plain)).toBeUndefined();
+    });
 });

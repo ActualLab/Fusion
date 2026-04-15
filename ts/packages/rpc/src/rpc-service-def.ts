@@ -35,63 +35,63 @@
 
 /** Describes a single method on an RPC service. */
 export interface RpcMethodDef {
-  readonly name: string;
-  readonly serviceName: string;
-  readonly argCount: number;
-  readonly wireArgCount: number;
-  readonly callTypeId: number;
-  readonly stream: boolean;
-  readonly noWait: boolean;
+    readonly name: string;
+    readonly serviceName: string;
+    readonly argCount: number;
+    readonly wireArgCount: number;
+    readonly callTypeId: number;
+    readonly stream: boolean;
+    readonly noWait: boolean;
 }
 
 /** Describes an RPC service — its name and method definitions. */
 export interface RpcServiceDef {
-  readonly name: string;
-  readonly methods: ReadonlyMap<string, RpcMethodDef>;
+    readonly name: string;
+    readonly methods: ReadonlyMap<string, RpcMethodDef>;
 }
 
 export interface RpcMethodDefInput {
-  args: unknown[];
-  returns?: symbol;
-  callTypeId?: number;
-  /** Override for wireArgCount. Default: args.length + 1 (assumes a CancellationToken slot). */
-  wireArgCount?: number;
+    args: unknown[];
+    returns?: symbol;
+    callTypeId?: number;
+    /** Override for wireArgCount. Default: args.length + 1 (assumes a CancellationToken slot). */
+    wireArgCount?: number;
 }
 
 export const RpcType = {
-  object: Symbol("object"),
-  stream: Symbol("stream"),
-  noWait: Symbol("noWait"),
-  void: Symbol("void"),
+    object: Symbol('object'),
+    stream: Symbol('stream'),
+    noWait: Symbol('noWait'),
+    void: Symbol('void'),
 } as const;
 
 /** Returns the full wire method name: "ServiceName.MethodName:wireArgCount". */
 export function wireMethodName(def: RpcMethodDef): string {
-  return `${def.serviceName}.${def.name}:${def.wireArgCount}`;
+    return `${def.serviceName}.${def.name}:${def.wireArgCount}`;
 }
 
 export function defineRpcService(
-  name: string,
-  methods: Record<string, RpcMethodDefInput>,
+    name: string,
+    methods: Record<string, RpcMethodDefInput>
 ): RpcServiceDef {
-  const map = new Map<string, RpcMethodDef>();
-  for (const [key, input] of Object.entries(methods)) {
-    // If the key contains ":", the part before ":" is the clean name
-    // (the suffix is for JS object key disambiguation of overloads).
-    // Otherwise the key IS the clean name.
-    const colonIndex = key.indexOf(":");
-    const cleanName = colonIndex >= 0 ? key.substring(0, colonIndex) : key;
-    const wireArgCount = input.wireArgCount ?? (input.args.length + 1);
-    const mapKey = `${cleanName}:${wireArgCount}`;
-    map.set(mapKey, {
-      name: cleanName,
-      serviceName: name,
-      argCount: input.args.length,
-      wireArgCount,
-      callTypeId: input.callTypeId ?? 0,
-      stream: input.returns === RpcType.stream,
-      noWait: input.returns === RpcType.noWait,
-    });
-  }
-  return { name, methods: map };
+    const map = new Map<string, RpcMethodDef>();
+    for (const [key, input] of Object.entries(methods)) {
+        // If the key contains ":", the part before ":" is the clean name
+        // (the suffix is for JS object key disambiguation of overloads).
+        // Otherwise the key IS the clean name.
+        const colonIndex = key.indexOf(':');
+        const cleanName = colonIndex >= 0 ? key.substring(0, colonIndex) : key;
+        const wireArgCount = input.wireArgCount ?? input.args.length + 1;
+        const mapKey = `${cleanName}:${wireArgCount}`;
+        map.set(mapKey, {
+            name: cleanName,
+            serviceName: name,
+            argCount: input.args.length,
+            wireArgCount,
+            callTypeId: input.callTypeId ?? 0,
+            stream: input.returns === RpcType.stream,
+            noWait: input.returns === RpcType.noWait,
+        });
+    }
+    return { name, methods: map };
 }

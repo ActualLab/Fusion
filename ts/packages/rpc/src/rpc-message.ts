@@ -30,34 +30,34 @@
 
 /** Identifies the type of an RPC call on the wire. */
 export const enum RpcCallTypeId {
-  Regular = 0,
-  Reliable = 1,
+    Regular = 0,
+    Reliable = 1,
 }
 
 /** Identifies system call methods — names include :argCount suffix for .NET interop. */
 export const RpcSystemCalls = {
-  handshake: "$sys.Handshake:1",
-  ok: "$sys.Ok:1",
-  error: "$sys.Error:1",
-  cancel: "$sys.Cancel:0",
-  keepAlive: "$sys.KeepAlive:1",
-  reconnect: "$sys.Reconnect:3",
-  ack: "$sys.Ack:2",
-  ackEnd: "$sys.AckEnd:1",
-  item: "$sys.I:2",
-  batch: "$sys.B:2",
-  end: "$sys.End:2",
+    handshake: '$sys.Handshake:1',
+    ok: '$sys.Ok:1',
+    error: '$sys.Error:1',
+    cancel: '$sys.Cancel:0',
+    keepAlive: '$sys.KeepAlive:1',
+    reconnect: '$sys.Reconnect:3',
+    ack: '$sys.Ack:2',
+    ackEnd: '$sys.AckEnd:1',
+    item: '$sys.I:2',
+    batch: '$sys.B:2',
+    end: '$sys.End:2',
 } as const;
 
 /** Wire-format RPC message envelope. */
 export interface RpcMessage {
-  CallType?: number;
-  RelatedId?: number;
-  Method?: string;
-  Headers?: unknown[];
+    CallType?: number;
+    RelatedId?: number;
+    Method?: string;
+    Headers?: unknown[];
 }
 
 // Delimiters used in the wire format
-export const ENVELOPE_DELIMITER = "\n";        // \x0A between envelope and args
-export const ARG_DELIMITER = "\x1F";           // Unit Separator between args
-export const FRAME_DELIMITER = "\n\x1E";       // \x0A\x1E between messages in a frame
+export const ENVELOPE_DELIMITER = '\n'; // \x0A between envelope and args
+export const ARG_DELIMITER = '\x1F'; // Unit Separator between args
+export const FRAME_DELIMITER = '\n\x1E'; // \x0A\x1E between messages in a frame

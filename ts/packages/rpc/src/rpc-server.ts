@@ -12,10 +12,10 @@
 //   - Connection properties (PropertyBag) from HTTP headers — .NET attaches
 //     request metadata to the connection.  TS has no such mechanism.
 
-import type { WebSocketLike } from "./rpc-connection.js";
+import type { WebSocketLike } from './rpc-connection.js';
 
 /** Abstract WebSocket server interface — implement with `ws` or other library. */
 export interface WebSocketServer {
-  onConnection(handler: (ws: WebSocketLike) => void): void;
-  close(): void;
+    onConnection(handler: (ws: WebSocketLike) => void): void;
+    close(): void;
 }

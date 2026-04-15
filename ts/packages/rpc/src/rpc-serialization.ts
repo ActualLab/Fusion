@@ -7,67 +7,75 @@
 // The format is selected at connection time via the `f=` query parameter.
 
 import {
-  decode as _msgpackDecode,
-  Encoder,
-  Decoder,
-  type DecodeOptions,
-} from "@msgpack/msgpack";
-import type { RpcMessage } from "./rpc-message.js";
+    decode as _msgpackDecode,
+    Encoder,
+    Decoder,
+    type DecodeOptions,
+} from '@msgpack/msgpack';
+import type { RpcMessage } from './rpc-message.js';
 import {
-  ENVELOPE_DELIMITER,
-  ARG_DELIMITER,
-  FRAME_DELIMITER,
-} from "./rpc-message.js";
+    ENVELOPE_DELIMITER,
+    ARG_DELIMITER,
+    FRAME_DELIMITER,
+} from './rpc-message.js';
 
 // ============================================================
 // Text format (json5np) — V3 wire format
 // ============================================================
 
 /** Serializes an RpcMessage + args into the json5 wire format. */
-export function serializeMessage(message: RpcMessage, args?: unknown[]): string {
-  const envelope = JSON.stringify(message);
-  if (args === undefined || args.length === 0) {
-    return envelope + ENVELOPE_DELIMITER;
-  }
-  const argsStr = args.map((a) => JSON.stringify(a)).join(ARG_DELIMITER);
-  return envelope + ENVELOPE_DELIMITER + argsStr;
+export function serializeMessage(
+    message: RpcMessage,
+    args?: unknown[]
+): string {
+    const envelope = JSON.stringify(message);
+    if (args === undefined || args.length === 0) {
+        return envelope + ENVELOPE_DELIMITER;
+    }
+    const argsStr = args.map(a => JSON.stringify(a)).join(ARG_DELIMITER);
+    return envelope + ENVELOPE_DELIMITER + argsStr;
 }
 
 /** Serializes multiple messages into a single WebSocket frame. */
 export function serializeFrame(messages: string[]): string {
-  return messages.join(FRAME_DELIMITER);
+    return messages.join(FRAME_DELIMITER);
 }
 
 /** Splits a WebSocket text frame into individual message strings. */
 export function splitFrame(frame: string): string[] {
-  return frame.split(FRAME_DELIMITER);
+    return frame.split(FRAME_DELIMITER);
 }
 
 /** Deserializes a single message string into envelope + args. */
-export function deserializeMessage(raw: string): { message: RpcMessage; args: unknown[] } {
-  const nlIndex = raw.indexOf(ENVELOPE_DELIMITER);
-  if (nlIndex === -1) {
-    return { message: JSON.parse(raw) as RpcMessage, args: [] };
-  }
-
-  const envelopeStr = raw.substring(0, nlIndex);
-  const argsStr = raw.substring(nlIndex + 1);
-  const message = JSON.parse(envelopeStr) as RpcMessage;
-
-  if (argsStr.length === 0) {
-    return { message, args: [] };
-  }
-
-  const args = argsStr.split(ARG_DELIMITER).map((s) => {
-    try {
-      return JSON.parse(s) as unknown;
-    } catch {
-      console.warn(`[RpcSerialization] failed to parse arg as JSON: ${s.substring(0, 100)}`);
-      return s; // Return raw string if not valid JSON
+export function deserializeMessage(raw: string): {
+    message: RpcMessage;
+    args: unknown[];
+} {
+    const nlIndex = raw.indexOf(ENVELOPE_DELIMITER);
+    if (nlIndex === -1) {
+        return { message: JSON.parse(raw) as RpcMessage, args: [] };
     }
-  });
 
-  return { message, args };
+    const envelopeStr = raw.substring(0, nlIndex);
+    const argsStr = raw.substring(nlIndex + 1);
+    const message = JSON.parse(envelopeStr) as RpcMessage;
+
+    if (argsStr.length === 0) {
+        return { message, args: [] };
+    }
+
+    const args = argsStr.split(ARG_DELIMITER).map(s => {
+        try {
+            return JSON.parse(s) as unknown;
+        } catch {
+            console.warn(
+                `[RpcSerialization] failed to parse arg as JSON: ${s.substring(0, 100)}`
+            );
+            return s; // Return raw string if not valid JSON
+        }
+    });
+
+    return { message, args };
 }
 
 // ============================================================
@@ -102,65 +110,79 @@ const textDecoder = new TextDecoder();
  */
 const INITIAL_ENCODER_BUFFER_SIZE = 32 * 1024;
 export const defaultBinaryEncoder = new Encoder(
-  undefined, undefined, undefined, INITIAL_ENCODER_BUFFER_SIZE);
+    undefined,
+    undefined,
+    undefined,
+    INITIAL_ENCODER_BUFFER_SIZE
+);
 export const defaultBinaryDecoder = new Decoder();
 /** Exposed so connection code can instantiate a matching Encoder
  *  with the same initial buffer size without needing to reach into
  *  this module's private constants. */
 export function createBinaryEncoder(): Encoder {
-  return new Encoder(undefined, undefined, undefined, INITIAL_ENCODER_BUFFER_SIZE);
+    return new Encoder(
+        undefined,
+        undefined,
+        undefined,
+        INITIAL_ENCODER_BUFFER_SIZE
+    );
 }
 
 // --- LEB128 VarUInt helpers ---
 
 /** Number of bytes a VarUint encoding of `value` will occupy. */
 function varUintByteLen(value: number): number {
-  if (value < 0) value = 0;
-  let n = 0;
-  do {
-    n++;
-    value >>>= 7;
-  } while (value > 0);
-  return n;
+    if (value < 0) value = 0;
+    let n = 0;
+    do {
+        n++;
+        value >>>= 7;
+    } while (value > 0);
+    return n;
 }
 
 /** Write VarUint directly into a `Uint8Array` at `pos`. Returns new pos. */
 function writeVarUintInto(out: Uint8Array, pos: number, value: number): number {
-  if (value < 0) value = 0;
-  do {
-    let byte = value & 0x7F;
-    value >>>= 7;
-    if (value > 0) byte |= 0x80;
-    out[pos++] = byte;
-  } while (value > 0);
-  return pos;
+    if (value < 0) value = 0;
+    do {
+        let byte = value & 0x7f;
+        value >>>= 7;
+        if (value > 0) byte |= 0x80;
+        out[pos++] = byte;
+    } while (value > 0);
+    return pos;
 }
 
-function readVarUint(data: Uint8Array, offset: number): { value: number; bytesRead: number } {
-  let value = 0, shift = 0, bytesRead = 0;
-  do {
-    if (offset + bytesRead >= data.length) break;
-    const byte = data[offset + bytesRead]!;
-    value |= (byte & 0x7F) << shift;
-    bytesRead++;
-    if ((byte & 0x80) === 0) break;
-    shift += 7;
-  } while (shift < 35); // Max 5 bytes for uint32
-  return { value: value >>> 0, bytesRead };
+function readVarUint(
+    data: Uint8Array,
+    offset: number
+): { value: number; bytesRead: number } {
+    let value = 0,
+        shift = 0,
+        bytesRead = 0;
+    do {
+        if (offset + bytesRead >= data.length) break;
+        const byte = data[offset + bytesRead]!;
+        value |= (byte & 0x7f) << shift;
+        bytesRead++;
+        if ((byte & 0x80) === 0) break;
+        shift += 7;
+    } while (shift < 35); // Max 5 bytes for uint32
+    return { value: value >>> 0, bytesRead };
 }
 
 // --- Binary helpers ---
 
 function concatUint8Arrays(arrays: Uint8Array[]): Uint8Array {
-  let totalLength = 0;
-  for (const arr of arrays) totalLength += arr.length;
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const arr of arrays) {
-    result.set(arr, offset);
-    offset += arr.length;
-  }
-  return result;
+    let totalLength = 0;
+    for (const arr of arrays) totalLength += arr.length;
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const arr of arrays) {
+        result.set(arr, offset);
+        offset += arr.length;
+    }
+    return result;
 }
 
 /**
@@ -190,52 +212,53 @@ function concatUint8Arrays(arrays: Uint8Array[]): Uint8Array {
  * subsequent `resizeBuffer` calls are needed.
  */
 export function serializeBinaryMessage(
-  message: RpcMessage,
-  args?: unknown[],
-  encoder: Encoder = defaultBinaryEncoder,
+    message: RpcMessage,
+    args?: unknown[],
+    encoder: Encoder = defaultBinaryEncoder
 ): Uint8Array {
-  // 1. Encode each arg. encode() returns a fresh Uint8Array copy per
-  //    call, so the results are safe to retain across subsequent encodes.
-  let argsDataLen = 0;
-  let argBufs: Uint8Array[] | null = null;
-  if (args && args.length > 0) {
-    argBufs = new Array<Uint8Array>(args.length);
-    for (let i = 0; i < args.length; i++) {
-      const buf = encoder.encode(args[i]);
-      argBufs[i] = buf;
-      argsDataLen += buf.length;
+    // 1. Encode each arg. encode() returns a fresh Uint8Array copy per
+    //    call, so the results are safe to retain across subsequent encodes.
+    let argsDataLen = 0;
+    let argBufs: Uint8Array[] | null = null;
+    if (args && args.length > 0) {
+        argBufs = new Array<Uint8Array>(args.length);
+        for (let i = 0; i < args.length; i++) {
+            const buf = encoder.encode(args[i]);
+            argBufs[i] = buf;
+            argsDataLen += buf.length;
+        }
     }
-  }
 
-  // 2. Compute header sizes without intermediate allocations.
-  const callType = message.CallType ?? 0;
-  const relatedId = message.RelatedId ?? 0;
-  const methodBytes = textEncoder.encode(message.Method ?? "");
-  const relatedIdLen = varUintByteLen(relatedId);
-  const methodLenVarintLen = varUintByteLen(methodBytes.length);
-  const headerSize = 1 + relatedIdLen + methodLenVarintLen + methodBytes.length;
-  const totalSize = headerSize + 4 + argsDataLen;
+    // 2. Compute header sizes without intermediate allocations.
+    const callType = message.CallType ?? 0;
+    const relatedId = message.RelatedId ?? 0;
+    const methodBytes = textEncoder.encode(message.Method ?? '');
+    const relatedIdLen = varUintByteLen(relatedId);
+    const methodLenVarintLen = varUintByteLen(methodBytes.length);
+    const headerSize =
+        1 + relatedIdLen + methodLenVarintLen + methodBytes.length;
+    const totalSize = headerSize + 4 + argsDataLen;
 
-  // 3. Allocate the final wire buffer once and fill it in place.
-  const out = new Uint8Array(totalSize);
-  let pos = 0;
-  out[pos++] = (callType << 5) & 0xE0;
-  pos = writeVarUintInto(out, pos, relatedId);
-  pos = writeVarUintInto(out, pos, methodBytes.length);
-  out.set(methodBytes, pos);
-  pos += methodBytes.length;
-  // argLen as int32 LE
-  out[pos++] = argsDataLen & 0xff;
-  out[pos++] = (argsDataLen >>> 8) & 0xff;
-  out[pos++] = (argsDataLen >>> 16) & 0xff;
-  out[pos++] = (argsDataLen >>> 24) & 0xff;
-  if (argBufs !== null) {
-    for (const buf of argBufs) {
-      out.set(buf, pos);
-      pos += buf.length;
+    // 3. Allocate the final wire buffer once and fill it in place.
+    const out = new Uint8Array(totalSize);
+    let pos = 0;
+    out[pos++] = (callType << 5) & 0xe0;
+    pos = writeVarUintInto(out, pos, relatedId);
+    pos = writeVarUintInto(out, pos, methodBytes.length);
+    out.set(methodBytes, pos);
+    pos += methodBytes.length;
+    // argLen as int32 LE
+    out[pos++] = argsDataLen & 0xff;
+    out[pos++] = (argsDataLen >>> 8) & 0xff;
+    out[pos++] = (argsDataLen >>> 16) & 0xff;
+    out[pos++] = (argsDataLen >>> 24) & 0xff;
+    if (argBufs !== null) {
+        for (const buf of argBufs) {
+            out.set(buf, pos);
+            pos += buf.length;
+        }
     }
-  }
-  return out;
+    return out;
 }
 
 /**
@@ -247,68 +270,68 @@ export function serializeBinaryMessage(
  * (and its internal resolver/table state) on every inbound message.
  */
 export function deserializeBinaryMessage(
-  data: Uint8Array,
-  offset: number,
-  decoder: Decoder = defaultBinaryDecoder,
+    data: Uint8Array,
+    offset: number,
+    decoder: Decoder = defaultBinaryDecoder
 ): { message: RpcMessage; args: unknown[]; bytesRead: number } {
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
-  // V5: no frame-level size prefix. Parse envelope directly.
-  let pos = offset;
+    // V5: no frame-level size prefix. Parse envelope directly.
+    let pos = offset;
 
-  // Byte 0: upper 3 bits = CallTypeId, lower 5 bits = HeaderCount
-  const byte0 = data[pos++]!;
-  const callTypeId = (byte0 >> 5) & 0x7;
-  const headerCount = byte0 & 0x1F;
+    // Byte 0: upper 3 bits = CallTypeId, lower 5 bits = HeaderCount
+    const byte0 = data[pos++]!;
+    const callTypeId = (byte0 >> 5) & 0x7;
+    const headerCount = byte0 & 0x1f;
 
-  // RelatedId as VarUint
-  const relId = readVarUint(data, pos);
-  pos += relId.bytesRead;
+    // RelatedId as VarUint
+    const relId = readVarUint(data, pos);
+    pos += relId.bytesRead;
 
-  // MethodRef as LVarSpan
-  const methodLen = readVarUint(data, pos);
-  pos += methodLen.bytesRead;
-  const methodBytes = data.subarray(pos, pos + methodLen.value);
-  const method = textDecoder.decode(methodBytes);
-  pos += methodLen.value;
+    // MethodRef as LVarSpan
+    const methodLen = readVarUint(data, pos);
+    pos += methodLen.bytesRead;
+    const methodBytes = data.subarray(pos, pos + methodLen.value);
+    const method = textDecoder.decode(methodBytes);
+    pos += methodLen.value;
 
-  // ArgData length as fixed 4-byte LE
-  const argDataLen = view.getInt32(pos, true);
-  pos += 4;
+    // ArgData length as fixed 4-byte LE
+    const argDataLen = view.getInt32(pos, true);
+    pos += 4;
 
-  // Skip headers (if any — TS client doesn't use them)
-  if (headerCount > 0) {
-    for (let h = 0; h < headerCount; h++) {
-      // L1Memory: 1-byte length prefix + key bytes
-      const keyLen = data[pos++]!;
-      pos += keyLen;
-      // LVarSpan: VarUint length + value bytes
-      const valLen = readVarUint(data, pos);
-      pos += valLen.bytesRead + valLen.value;
+    // Skip headers (if any — TS client doesn't use them)
+    if (headerCount > 0) {
+        for (let h = 0; h < headerCount; h++) {
+            // L1Memory: 1-byte length prefix + key bytes
+            const keyLen = data[pos++]!;
+            pos += keyLen;
+            // LVarSpan: VarUint length + value bytes
+            const valLen = readVarUint(data, pos);
+            pos += valLen.bytesRead + valLen.value;
+        }
     }
-  }
 
-  // Deserialize arguments from argData — multiple concatenated MessagePack values
-  const args: unknown[] = [];
-  const argEnd = pos + argDataLen;
-  if (argDataLen > 0) {
-    const argSlice = data.subarray(pos, argEnd);
-    // Reuse the provided decoder across calls; `decodeMulti` is a generator
-    // so each yield completes before the next `decode` begins, which is
-    // safe on a single-threaded event loop.
-    for (const decoded of decoder.decodeMulti(argSlice)) {
-      args.push(decoded);
+    // Deserialize arguments from argData — multiple concatenated MessagePack values
+    const args: unknown[] = [];
+    const argEnd = pos + argDataLen;
+    if (argDataLen > 0) {
+        const argSlice = data.subarray(pos, argEnd);
+        // Reuse the provided decoder across calls; `decodeMulti` is a generator
+        // so each yield completes before the next `decode` begins, which is
+        // safe on a single-threaded event loop.
+        for (const decoded of decoder.decodeMulti(argSlice)) {
+            args.push(decoded);
+        }
+        pos = argEnd;
     }
-    pos = argEnd;
-  }
 
-  const message: RpcMessage = {
-    Method: method,
-    RelatedId: relId.value,
-    CallType: callTypeId,
-  };
+    const message: RpcMessage = {
+        Method: method,
+        RelatedId: relId.value,
+        CallType: callTypeId,
+    };
 
-  return { message, args, bytesRead: pos - offset };
+    return { message, args, bytesRead: pos - offset };
 }
 
 /**
@@ -326,18 +349,22 @@ export function deserializeBinaryMessage(
  * connection — forwarded to `deserializeBinaryMessage`.
  */
 export function splitBinaryFrame(
-  frame: Uint8Array,
-  decoder: Decoder = defaultBinaryDecoder,
+    frame: Uint8Array,
+    decoder: Decoder = defaultBinaryDecoder
 ): Array<{ message: RpcMessage; args: unknown[] }> {
-  const results: Array<{ message: RpcMessage; args: unknown[] }> = [];
-  let offset = 0;
-  while (offset < frame.length) {
-    const { message, args, bytesRead } = deserializeBinaryMessage(frame, offset, decoder);
-    if (bytesRead <= 0) break; // defensive — avoid infinite loop on malformed data
-    results.push({ message, args });
-    offset += bytesRead;
-  }
-  return results;
+    const results: Array<{ message: RpcMessage; args: unknown[] }> = [];
+    let offset = 0;
+    while (offset < frame.length) {
+        const { message, args, bytesRead } = deserializeBinaryMessage(
+            frame,
+            offset,
+            decoder
+        );
+        if (bytesRead <= 0) break; // defensive — avoid infinite loop on malformed data
+        results.push({ message, args });
+        offset += bytesRead;
+    }
+    return results;
 }
 
 /**
@@ -345,5 +372,5 @@ export function splitBinaryFrame(
  * Simply concatenates the already size-prefixed messages.
  */
 export function serializeBinaryFrame(messages: Uint8Array[]): Uint8Array {
-  return concatUint8Arrays(messages);
+    return concatUint8Arrays(messages);
 }

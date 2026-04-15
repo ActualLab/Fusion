@@ -46,132 +46,132 @@
 //   - RpcCall.Lock (monitor-based synchronisation) — .NET uses lock(this) for
 //     thread-safe result setting.  TS is single-threaded; no locking needed.
 
-import { PromiseSource } from "@actuallab/core";
+import { PromiseSource } from '@actuallab/core';
 
 /** Tracks a pending outbound RPC call. */
 export class RpcOutboundCall {
-  readonly callId: number;
-  readonly method: string;
-  readonly result = new PromiseSource<unknown>();
+    readonly callId: number;
+    readonly method: string;
+    readonly result = new PromiseSource<unknown>();
 
-  /** Whether to remove this call from the tracker on $sys.Ok. Default: true.
-   *  Subclasses (e.g. compute calls) override to false to stay in tracker for invalidation. */
-  readonly removeOnOk: boolean = true;
+    /** Whether to remove this call from the tracker on $sys.Ok. Default: true.
+     *  Subclasses (e.g. compute calls) override to false to stay in tracker for invalidation. */
+    readonly removeOnOk: boolean = true;
 
-  /** The serialized wire message (text) — stored for re-sending on reconnect. */
-  serializedMessage = "";
-  /** The serialized wire message (binary) — stored for re-sending on reconnect. */
-  serializedBinaryMessage?: Uint8Array;
+    /** The serialized wire message (text) — stored for re-sending on reconnect. */
+    serializedMessage = '';
+    /** The serialized wire message (binary) — stored for re-sending on reconnect. */
+    serializedBinaryMessage?: Uint8Array;
 
-  constructor(callId: number, method: string) {
-    this.callId = callId;
-    this.method = method;
-  }
+    constructor(callId: number, method: string) {
+        this.callId = callId;
+        this.method = method;
+    }
 
-  /** Called when the connection is lost. Subclasses can override to resolve invalidation promises. */
-  onDisconnect(): void {
-    // no-op by default
-  }
+    /** Called when the connection is lost. Subclasses can override to resolve invalidation promises. */
+    onDisconnect(): void {
+        // no-op by default
+    }
 }
 
 /** Manages outbound calls by their RelatedId. */
 export class RpcOutboundCallTracker {
-  private _calls = new Map<number, RpcOutboundCall>();
-  private _nextId = 1;
+    private _calls = new Map<number, RpcOutboundCall>();
+    private _nextId = 1;
 
-  get size(): number {
-    return this._calls.size;
-  }
-
-  nextId(): number {
-    return this._nextId++;
-  }
-
-  register(call: RpcOutboundCall): void {
-    this._calls.set(call.callId, call);
-  }
-
-  get(callId: number): RpcOutboundCall | undefined {
-    return this._calls.get(callId);
-  }
-
-  remove(callId: number): RpcOutboundCall | undefined {
-    const call = this._calls.get(callId);
-    if (call !== undefined) this._calls.delete(callId);
-    return call;
-  }
-
-  values(): IterableIterator<RpcOutboundCall> {
-    return this._calls.values();
-  }
-
-  activeCallIds(): number[] {
-    return [...this._calls.keys()];
-  }
-
-  /** Reject all pending calls with the given error.
-   *  Stage-3 compute calls (result resolved, awaiting invalidation) are kept in the tracker. */
-  rejectAll(error: Error): void {
-    for (const [id, call] of this._calls) {
-      if (!call.removeOnOk && call.result.isCompleted) {
-        // Stage-3 compute call — keep it for later invalidation on reconnect/stop
-        continue;
-      }
-      call.result.reject(error);
-      call.onDisconnect();
-      this._calls.delete(id);
+    get size(): number {
+        return this._calls.size;
     }
-  }
 
-  /** Invalidate all remaining stage-3 calls (on reconnect or peer stop). */
-  invalidateAll(): void {
-    for (const call of this._calls.values()) {
-      call.onDisconnect();
+    nextId(): number {
+        return this._nextId++;
     }
-    this._calls.clear();
-  }
 
-  clear(): void {
-    this._calls.clear();
-  }
+    register(call: RpcOutboundCall): void {
+        this._calls.set(call.callId, call);
+    }
+
+    get(callId: number): RpcOutboundCall | undefined {
+        return this._calls.get(callId);
+    }
+
+    remove(callId: number): RpcOutboundCall | undefined {
+        const call = this._calls.get(callId);
+        if (call !== undefined) this._calls.delete(callId);
+        return call;
+    }
+
+    values(): IterableIterator<RpcOutboundCall> {
+        return this._calls.values();
+    }
+
+    activeCallIds(): number[] {
+        return [...this._calls.keys()];
+    }
+
+    /** Reject all pending calls with the given error.
+     *  Stage-3 compute calls (result resolved, awaiting invalidation) are kept in the tracker. */
+    rejectAll(error: Error): void {
+        for (const [id, call] of this._calls) {
+            if (!call.removeOnOk && call.result.isCompleted) {
+                // Stage-3 compute call — keep it for later invalidation on reconnect/stop
+                continue;
+            }
+            call.result.reject(error);
+            call.onDisconnect();
+            this._calls.delete(id);
+        }
+    }
+
+    /** Invalidate all remaining stage-3 calls (on reconnect or peer stop). */
+    invalidateAll(): void {
+        for (const call of this._calls.values()) {
+            call.onDisconnect();
+        }
+        this._calls.clear();
+    }
+
+    clear(): void {
+        this._calls.clear();
+    }
 }
 
 /** Tracks an incoming inbound RPC call. */
 export class RpcInboundCall {
-  readonly callId: number;
-  readonly method: string;
-  readonly args: unknown[];
+    readonly callId: number;
+    readonly method: string;
+    readonly args: unknown[];
 
-  constructor(callId: number, method: string, args: unknown[]) {
-    this.callId = callId;
-    this.method = method;
-    this.args = args;
-  }
+    constructor(callId: number, method: string, args: unknown[]) {
+        this.callId = callId;
+        this.method = method;
+        this.args = args;
+    }
 }
 
 /** Manages inbound calls by their RelatedId. */
 export class RpcInboundCallTracker {
-  private _calls = new Map<number, RpcInboundCall>();
+    private _calls = new Map<number, RpcInboundCall>();
 
-  get size(): number {
-    return this._calls.size;
-  }
+    get size(): number {
+        return this._calls.size;
+    }
 
-  register(call: RpcInboundCall): void {
-    this._calls.set(call.callId, call);
-  }
+    register(call: RpcInboundCall): void {
+        this._calls.set(call.callId, call);
+    }
 
-  get(callId: number): RpcInboundCall | undefined {
-    return this._calls.get(callId);
-  }
+    get(callId: number): RpcInboundCall | undefined {
+        return this._calls.get(callId);
+    }
 
-  remove(callId: number): RpcInboundCall | undefined {
-    const call = this._calls.get(callId);
-    if (call !== undefined) this._calls.delete(callId);
-    return call;
-  }
+    remove(callId: number): RpcInboundCall | undefined {
+        const call = this._calls.get(callId);
+        if (call !== undefined) this._calls.delete(callId);
+        return call;
+    }
 
-  clear(): void {
-    this._calls.clear();
-  }
+    clear(): void {
+        this._calls.clear();
+    }
 }

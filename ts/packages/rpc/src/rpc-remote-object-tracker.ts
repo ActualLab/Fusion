@@ -1,37 +1,35 @@
-import type { IRpcObject } from "./rpc-object.js";
+import type { IRpcObject } from './rpc-object.js';
 
 export class RpcRemoteObjectTracker {
-  private _objects = new Map<number, IRpcObject>();
+    private _objects = new Map<number, IRpcObject>();
 
-  register(obj: IRpcObject): void {
-    this._objects.set(obj.id.localId, obj);
-  }
-
-  get(localId: number): IRpcObject | undefined {
-    return this._objects.get(localId);
-  }
-
-  keys(): IterableIterator<number> {
-    return this._objects.keys();
-  }
-
-  unregister(obj: IRpcObject): void {
-    this._objects.delete(obj.id.localId);
-  }
-
-  disconnectAll(): void {
-    for (const obj of this._objects.values()) {
-      obj.disconnect();
+    register(obj: IRpcObject): void {
+        this._objects.set(obj.id.localId, obj);
     }
-    this._objects.clear();
-  }
 
-  reconnectAll(): void {
-    for (const obj of this._objects.values()) {
-      if (obj.allowReconnect)
-        obj.reconnect();
-      else
-        obj.disconnect();
+    get(localId: number): IRpcObject | undefined {
+        return this._objects.get(localId);
     }
-  }
+
+    keys(): IterableIterator<number> {
+        return this._objects.keys();
+    }
+
+    unregister(obj: IRpcObject): void {
+        this._objects.delete(obj.id.localId);
+    }
+
+    disconnectAll(): void {
+        for (const obj of this._objects.values()) {
+            obj.disconnect();
+        }
+        this._objects.clear();
+    }
+
+    reconnectAll(): void {
+        for (const obj of this._objects.values()) {
+            if (obj.allowReconnect) obj.reconnect();
+            else obj.disconnect();
+        }
+    }
 }

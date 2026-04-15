@@ -16,56 +16,65 @@
 //   - This standalone function is superseded by RpcHub.addClient() which adds
 //     noWait and compute-aware dispatch.  Kept for backward compatibility.
 
-import type { RpcPeer } from "./rpc-peer.js";
-import type { RpcServiceDef, RpcMethodDef } from "./rpc-service-def.js";
-import { wireMethodName } from "./rpc-service-def.js";
+import type { RpcPeer } from './rpc-peer.js';
+import type { RpcServiceDef, RpcMethodDef } from './rpc-service-def.js';
+import { wireMethodName } from './rpc-service-def.js';
 
 /** Creates a typed RPC client proxy — intercepts method calls and sends them over RPC. */
 export function createRpcClient<T extends object>(
-  peer: RpcPeer,
-  serviceDef: RpcServiceDef,
+    peer: RpcPeer,
+    serviceDef: RpcServiceDef
 ): T {
-  // Group methods by clean name, indexed by argCount for overload resolution
-  const overloads = new Map<string, Map<number, RpcMethodDef>>();
-  for (const methodDef of serviceDef.methods.values()) {
-    let byArgCount = overloads.get(methodDef.name);
-    if (!byArgCount) { byArgCount = new Map(); overloads.set(methodDef.name, byArgCount); }
-    byArgCount.set(methodDef.argCount, methodDef);
-  }
-
-  // Build proxy methods
-  const methods = new Map<string, Function>();
-  for (const [name, byArgCount] of overloads) {
-    if (byArgCount.size === 1) {
-      const methodDef = byArgCount.values().next().value!;
-      methods.set(name, createMethod(peer, methodDef));
-    } else {
-      const fns = new Map<number, Function>();
-      for (const [argCount, methodDef] of byArgCount) {
-        fns.set(argCount, createMethod(peer, methodDef));
-      }
-      methods.set(name, (...args: unknown[]) => {
-        const fn = fns.get(args.length);
-        if (!fn) throw new Error(`No overload of ${name} accepts ${args.length} arguments`);
-        return fn(...args);
-      });
+    // Group methods by clean name, indexed by argCount for overload resolution
+    const overloads = new Map<string, Map<number, RpcMethodDef>>();
+    for (const methodDef of serviceDef.methods.values()) {
+        let byArgCount = overloads.get(methodDef.name);
+        if (!byArgCount) {
+            byArgCount = new Map();
+            overloads.set(methodDef.name, byArgCount);
+        }
+        byArgCount.set(methodDef.argCount, methodDef);
     }
-  }
 
-  return new Proxy({} as T, {
-    get(_target, prop) {
-      if (typeof prop !== "string") return undefined;
-      return methods.get(prop);
-    },
-  });
+    // Build proxy methods
+    const methods = new Map<string, Function>();
+    for (const [name, byArgCount] of overloads) {
+        if (byArgCount.size === 1) {
+            const methodDef = byArgCount.values().next().value!;
+            methods.set(name, createMethod(peer, methodDef));
+        } else {
+            const fns = new Map<number, Function>();
+            for (const [argCount, methodDef] of byArgCount) {
+                fns.set(argCount, createMethod(peer, methodDef));
+            }
+            methods.set(name, (...args: unknown[]) => {
+                const fn = fns.get(args.length);
+                if (!fn)
+                    throw new Error(
+                        `No overload of ${name} accepts ${args.length} arguments`
+                    );
+                return fn(...args);
+            });
+        }
+    }
+
+    return new Proxy({} as T, {
+        get(_target, prop) {
+            if (typeof prop !== 'string') return undefined;
+            return methods.get(prop);
+        },
+    });
 }
 
 function createMethod(peer: RpcPeer, methodDef: RpcMethodDef): Function {
-  return async (...args: unknown[]) => {
-    const callArgs = args.slice(0, methodDef.argCount);
-    const wireName = wireMethodName(methodDef);
-    const options = methodDef.callTypeId !== 0 ? { callTypeId: methodDef.callTypeId } : undefined;
-    const outboundCall = peer.call(wireName, callArgs, options);
-    return outboundCall.result.promise;
-  };
+    return async (...args: unknown[]) => {
+        const callArgs = args.slice(0, methodDef.argCount);
+        const wireName = wireMethodName(methodDef);
+        const options =
+            methodDef.callTypeId !== 0
+                ? { callTypeId: methodDef.callTypeId }
+                : undefined;
+        const outboundCall = peer.call(wireName, callArgs, options);
+        return outboundCall.result.promise;
+    };
 }
