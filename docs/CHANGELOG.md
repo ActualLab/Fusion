@@ -11,7 +11,7 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 12.2.17+d20453f0 | npm: 12.2.23
+## 12.3.2+f23f4ac2 | npm: 12.3.2
 
 Release date: 2026-04-15
 
@@ -19,18 +19,34 @@ Release date: 2026-04-15
 - .NET and TypeScript: Real-time stream mode with skip-to-keyframe support in `RpcStream`: 
   - New `IsRealTime` / `isRealTime` property
   - New `CanSendTo` / `canSkipTo` property
+  - When `IsRealTime` and `AllowReconnect` are both true, reconnection clears the stale buffer and skips to the next `CanSkipTo` item
+- TypeScript: `RpcStream` is now dual-mode (local + remote), matching the .NET design — service methods can return 
+  `new RpcStream(source, { isRealTime: true, ... })` with full configuration
+- TypeScript: `RpcStream.toRef(peer)` method creates and registers an `RpcStreamSender`, starts pumping items, and returns 
+  the serialized stream reference (text or binary format)
+- TypeScript: `RpcStream.whenSent` property — a `Promise` that resolves when the sender finishes pumping all items
+- TypeScript: `RpcStreamOptions<T>` interface for configuring local streams
 - TypeScript: `RpcSerializationFormat` and `RpcSerializationFormatResolver` types similar to the .NET ones
 - TypeScript: MessagePack format support (`msgpack6` and `msgpack6c`)
 - TypeScript: "Compact" call format support (name hash-based method resolution)
 - TypeScript: bundled XXH3-64 hash implementation for method name hashing
 
 ### Changed
+- TypeScript: `rpc-peer.ts` stream dispatch now wraps raw `AsyncIterable` results in `RpcStream` and delegates to `toRef()` instead of creating `RpcStreamSender` directly
 - TypeScript: adopted Voxt.ai TypeScript coding style (4-space indent, single quotes, prettier)
 - Consolidated C# E2E tests into single class with `[Theory]`
 
+### Documentation
+- Documented `IsRealTime`, `CanSkipTo`, and real-time reconnection behavior in `PartR-RpcStream.md`
+- Added TypeScript dual-mode `RpcStream` API documentation with `toRef()` and `whenSent` examples
+
 ### Tests
-- Comprehensive tests for `RpcStream.IsRealTime` feature and XXH3-64 implementation
+- .NET: Comprehensive tests for `RpcStream.IsRealTime` feature 
+- .NET: New tests verifying that after disconnect/reconnect, the first item is a keyframe (multiple of `keyFrameInterval`)
 - TypeScript: E2E tests for all 3 serialization formats and `isRealTime` stream feature
+- TypeScript: Added local-mode `RpcStream` tests (construction, config, iteration, `toRef`, `whenSent`, E2E config propagation)
+- TypeScript: Added real-time, reconnect tests, and tests verifying `canSkipTo` filtering on reset ACK
+- TypeScript: XXH3-64 implementation tests
 
 ### Infrastructure
 - TypeScript: added `Run-Lint.cmd` build script, renamed `Install-Packages.cmd` to `Npm-Install.cmd`
