@@ -37,6 +37,8 @@ You might wonder why ActualLab.Rpc uses a dedicated `RpcStream<T>` type instead 
 | `AckAdvance` | How many items the producer can send ahead (default: 61 items) |
 | `BatchSize` | How many items are batched together for transmission (default: 64, max: 1024) |
 | `AllowReconnect` | Whether the stream can resume after disconnection (default: true) |
+| `IsRealTime` | Enables real-time mode with adaptive item skipping (default: false) |
+| `CanSkipTo` | Predicate that determines which items can be skipped to during real-time mode (default: all items) |
 
 ::: warning Single Enumeration
 Remote streams can only be enumerated once. Attempting to enumerate a remote `RpcStream<T>` multiple times will throw an exception.
@@ -194,6 +196,8 @@ This is useful for hierarchical data like tables with rows, where each row has i
 | `AckAdvance` | 61 | How many items the server can send ahead before waiting for acks |
 | `BatchSize` | 64 | How many items are batched together for transmission (max: 1024) |
 | `AllowReconnect` | true | Whether the stream can resume after a connection disruption |
+| `IsRealTime` | false | Enables real-time mode: drops items instead of applying backpressure |
+| `CanSkipTo` | `_ => true` | Predicate controlling which items are valid skip targets in real-time mode |
 
 These defaults work well for most scenarios. Adjust them if you need different throughput/latency tradeoffs.
 
@@ -247,6 +251,83 @@ catch (RpcStreamNotFoundException) {
     // Consider re-fetching the stream from the server
 }
 ```
+
+
+## Real-Time Streaming
+
+For latency-sensitive streams like live video, audio, or sensor data, you can enable **real-time mode**. In this mode, when the consumer falls behind (backpressure ceiling is hit), the producer **drops items** instead of waiting &ndash; ensuring the consumer always gets the freshest data.
+
+### IsRealTime and CanSkipTo
+
+```cs
+// Real-time stream that skips to keyframes when the consumer is slow
+var stream = new RpcStream<VideoFrame>(source) {
+    IsRealTime = true,
+    CanSkipTo = frame => frame.IsKeyFrame,  // Only skip to keyframes
+};
+
+// Real-time stream that can skip to any item (default)
+var stream = new RpcStream<SensorReading>(source) {
+    IsRealTime = true,
+    // CanSkipTo defaults to _ => true
+};
+```
+
+When `IsRealTime` is `true`:
+- If the producer is `AckAdvance` items ahead of the consumer's last acknowledgment, it enters **skip mode**
+- In skip mode, items are drained from the source without sending them
+- Only items where `CanSkipTo` returns `true` are kept as potential resume points
+- Once the consumer catches up (sends an ACK), normal sending resumes from the latest skip target
+
+`CanSkipTo` is a local predicate (not serialized) that controls which items are valid skip targets. Common patterns:
+- `_ => true` (default) &ndash; any item is a valid skip target
+- `frame => frame.IsKeyFrame` &ndash; only skip to video keyframes
+- `x => x % 10 == 0` &ndash; skip to every 10th item
+
+::: tip CanSkipTo and Video Streaming
+For video streams, set `CanSkipTo` to match your keyframe interval. This ensures that when frames are dropped due to a slow consumer, playback resumes from a keyframe rather than a delta frame that would produce visual artifacts.
+:::
+
+### Real-Time Reconnection
+
+When `IsRealTime` and `AllowReconnect` are both `true`, reconnection behavior is optimized for freshness:
+
+1. On reconnect, the server-side buffer of pre-disconnect items is **cleared** (they are stale)
+2. The source is drained until the next item where `CanSkipTo` returns `true`
+3. Streaming resumes from that fresh skip target
+
+This means after a network disruption, the consumer receives the freshest available data rather than stale buffered items from before the disconnect.
+
+```cs
+// A reconnectable real-time stream with keyframe skipping
+var stream = new RpcStream<VideoFrame>(source) {
+    IsRealTime = true,
+    AllowReconnect = true,
+    CanSkipTo = frame => frame.IsKeyFrame,
+};
+```
+
+### TypeScript
+
+In TypeScript, `RpcStream` is dual-mode &ndash; the same class works on both the origin (server) and target (client) side, matching the .NET design:
+
+```ts
+// Server-side: create a local RpcStream with configuration
+// (returned from service methods)
+const stream = new RpcStream(source, {
+    isRealTime: true,
+    canSkipTo: (frame) => frame.isKeyFrame,
+    ackPeriod: 30,
+    ackAdvance: 61,
+});
+
+// Client-side: RpcStream is created automatically from stream references
+const stream = await client.getVideoStream();
+console.log(stream.isRealTime); // true (propagated from server)
+for await (const frame of stream) { /* ... */ }
+```
+
+When a service method returns a local `RpcStream`, the RPC framework automatically extracts its configuration and passes it to the underlying `RpcStreamSender`. If you need custom sending behavior, you can create an `RpcStreamSender` directly &ndash; it remains a public API.
 
 
 ## Complete Example

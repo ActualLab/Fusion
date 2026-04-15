@@ -4,6 +4,7 @@ import {
     RpcClientPeer,
     RpcStream,
     RpcStreamSender,
+    RpcObjectKind,
     RpcType,
     parseStreamRef,
     defineRpcService,
@@ -607,5 +608,102 @@ describe('RpcStreamSender direct', () => {
         sender.onAckEnd('test');
 
         expect(serverPeer.sharedObjects.get(sender.id.localId)).toBeUndefined();
+    });
+});
+
+// -- RpcStream dual-mode (local + remote) --
+
+describe('RpcStream local mode', () => {
+    it('should create a local stream from async iterable', () => {
+        async function* source() { yield 1; yield 2; }
+        const stream = new RpcStream(source());
+        expect(stream.kind).toBe(RpcObjectKind.Local);
+        expect(stream.localSource).toBeDefined();
+        expect(stream.allowReconnect).toBe(true);
+        expect(stream.isRealTime).toBe(false);
+        expect(stream.ackPeriod).toBe(30);
+        expect(stream.ackAdvance).toBe(61);
+    });
+
+    it('should accept configuration options', () => {
+        async function* source() { yield 1; }
+        const canSkip = (x: number) => x % 10 === 0;
+        const stream = new RpcStream(source(), {
+            isRealTime: true,
+            canSkipTo: canSkip,
+            ackPeriod: 5,
+            ackAdvance: 10,
+            allowReconnect: false,
+        });
+        expect(stream.isRealTime).toBe(true);
+        expect(stream.canSkipTo).toBe(canSkip);
+        expect(stream.ackPeriod).toBe(5);
+        expect(stream.ackAdvance).toBe(10);
+        expect(stream.allowReconnect).toBe(false);
+    });
+
+    it('should be iterable (delegates to local source)', async () => {
+        async function* source() { yield 10; yield 20; yield 30; }
+        const stream = new RpcStream(source());
+        const items: number[] = [];
+        for await (const item of stream) items.push(item);
+        expect(items).toEqual([10, 20, 30]);
+    });
+
+    it('should have no-op reconnect and disconnect', () => {
+        async function* source() { yield 1; }
+        const stream = new RpcStream(source());
+        // Should not throw
+        stream.reconnect();
+        stream.disconnect();
+    });
+});
+
+describe('RpcStream local mode E2E (service returns RpcStream)', () => {
+    let pair: TestHubPair;
+
+    const ConfigStreamServiceDef = defineRpcService('ConfigStreamService', {
+        getStream: { args: [], returns: RpcType.stream },
+    });
+
+    beforeEach(async () => {
+        pair = createTestHubPair('json5np');
+        await delay(10);
+    });
+
+    afterEach(() => {
+        pair.serverHub.close();
+        pair.clientHub.close();
+    });
+
+    it('should propagate config through RpcStreamSender', async () => {
+        pair.serverHub.addService(ConfigStreamServiceDef, {
+            getStream() {
+                async function* source() {
+                    for (let i = 0; i < 20; i++) yield i;
+                }
+                return new RpcStream(source(), {
+                    isRealTime: true,
+                    ackPeriod: 5,
+                    ackAdvance: 10,
+                });
+            },
+        });
+
+        const client = pair.clientHub.addClient<{
+                getStream(): Promise<AsyncIterable<number>>;
+                    }>(pair.clientPeer, ConfigStreamServiceDef);
+
+        const stream = (await client.getStream()) as RpcStream<number>;
+
+        // The client-side stream should have the config from the server
+        expect(stream.isRealTime).toBe(true);
+        expect(stream.ackPeriod).toBe(5);
+        expect(stream.ackAdvance).toBe(10);
+
+        // Should be able to consume items
+        const items: number[] = [];
+        for await (const item of stream) items.push(item);
+        expect(items).toEqual(Array.from({ length: 20 }, (_, i) => i));
     });
 });

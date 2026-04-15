@@ -4,6 +4,11 @@ import type { RpcObjectId, IRpcObject } from './rpc-object.js';
 import { RpcObjectKind } from './rpc-object.js';
 import type { RpcPeer } from './rpc-peer.js';
 
+/** Default ack period (matches .NET RpcStream defaults). */
+const DEFAULT_ACK_PERIOD = 30;
+/** Default ack advance (matches .NET RpcStream defaults). */
+const DEFAULT_ACK_ADVANCE = 61;
+
 /** Parsed stream reference from the server's result payload. */
 export interface RpcStreamRef {
     readonly hostId: string;
@@ -12,6 +17,15 @@ export interface RpcStreamRef {
     readonly ackAdvance: number;
     readonly allowReconnect: boolean;
     readonly isRealTime: boolean;
+}
+
+/** Configuration options for creating a local (origin-side) RpcStream. */
+export interface RpcStreamOptions<T> {
+    ackPeriod?: number;
+    ackAdvance?: number;
+    allowReconnect?: boolean;
+    isRealTime?: boolean;
+    canSkipTo?: (item: T) => boolean;
 }
 
 /**
@@ -52,30 +66,33 @@ export function parseStreamRef(value: unknown): RpcStreamRef | null {
 }
 
 /**
- * Client-side RPC stream — consumes items sent by the server via system calls
- * ($sys.I, $sys.B, $sys.End) and implements AsyncIterable<T> for for-await-of consumption.
+ * Dual-mode RPC stream — works as both local (origin-side) and remote (target-side).
  *
- * Wire protocol:
- * - Client sends Ack(0, hostId) to start the stream
- * - Server sends I (single item) / B (batch) messages
- * - Client acks every ackPeriod items for flow control
- * - Server sends End to signal completion (with optional error)
- * - Client sends AckEnd to acknowledge completion
+ * **Local mode**: wraps an AsyncIterable and carries streaming configuration
+ * (IsRealTime, CanSkipTo, etc.). Created by service methods and sent to the
+ * remote peer via RpcStreamSender.
+ *
+ * **Remote mode**: consumes items sent by the server via system calls
+ * ($sys.I, $sys.B, $sys.End) and implements AsyncIterable for for-await-of consumption.
+ *
+ * This mirrors the .NET RpcStream<T> design where the same type serves both roles.
  */
 export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     readonly id: RpcObjectId;
-    readonly kind = RpcObjectKind.Remote;
+    readonly kind: RpcObjectKind;
     readonly allowReconnect: boolean;
-    readonly peer: RpcPeer;
+    readonly isRealTime: boolean;
+    readonly canSkipTo: (item: T) => boolean;
     readonly ackPeriod: number;
     readonly ackAdvance: number;
 
-    // Double-ended queue so consumption via `shift()` is O(1) and the
-    // backing store frees memory as items are drained. The previous
-    // `T[]` buffer kept every item for the life of the stream because
-    // the iterator tracked a read index instead of shifting — fine for
-    // short runs but a slow leak in the browser where a video call can
-    // last an hour.
+    // Local (origin) mode
+    readonly localSource?: AsyncIterable<T>;
+
+    // Remote (target) mode
+    readonly peer!: RpcPeer;
+
+    // Remote-only state
     private _buffer: Denque<T> = new Denque<T>();
     private _nextExpectedIndex = 0;
     private _consumerWaiting: PromiseSource<void> | null = null;
@@ -86,12 +103,38 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     private _iterating = false;
     private _ackSentUpTo = 0;
 
-    constructor(ref: RpcStreamRef, peer: RpcPeer) {
-        this.id = { hostId: ref.hostId, localId: ref.localId };
-        this.allowReconnect = ref.allowReconnect;
-        this.peer = peer;
-        this.ackPeriod = ref.ackPeriod;
-        this.ackAdvance = ref.ackAdvance;
+    /** Create a local (origin-side) stream wrapping an async iterable with optional configuration. */
+    constructor(source: AsyncIterable<T>, options?: RpcStreamOptions<T>);
+    /** Create a remote (target-side) stream from a parsed stream reference and peer. */
+    constructor(ref: RpcStreamRef, peer: RpcPeer);
+    constructor(
+        sourceOrRef: AsyncIterable<T> | RpcStreamRef,
+        optionsOrPeer?: RpcStreamOptions<T> | RpcPeer,
+    ) {
+        if (_isAsyncIterable(sourceOrRef)) {
+            // Local (origin) mode
+            const options = (optionsOrPeer as RpcStreamOptions<T> | undefined) ?? {};
+            this.kind = RpcObjectKind.Local;
+            this.localSource = sourceOrRef;
+            this.id = { hostId: '', localId: 0 };
+            this.allowReconnect = options.allowReconnect ?? true;
+            this.isRealTime = options.isRealTime ?? false;
+            this.canSkipTo = options.canSkipTo ?? (() => true);
+            this.ackPeriod = options.ackPeriod ?? DEFAULT_ACK_PERIOD;
+            this.ackAdvance = options.ackAdvance ?? DEFAULT_ACK_ADVANCE;
+        } else {
+            // Remote (target) mode
+            const ref = sourceOrRef;
+            const peer = optionsOrPeer as RpcPeer;
+            this.kind = RpcObjectKind.Remote;
+            this.id = { hostId: ref.hostId, localId: ref.localId };
+            this.peer = peer;
+            this.allowReconnect = ref.allowReconnect;
+            this.isRealTime = ref.isRealTime;
+            this.canSkipTo = () => true; // not serialized
+            this.ackPeriod = ref.ackPeriod;
+            this.ackAdvance = ref.ackAdvance;
+        }
     }
 
     /** Called by system call handler when a single item arrives ($sys.I). */
@@ -103,10 +146,6 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
                 `[RpcStream] item index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`
             );
             if (!this.allowReconnect) {
-                // Sending a reset ack on a non-reconnectable stream only produces a
-                // $sys.Disconnect from the server with a generic "Peer disconnected."
-                // error. Fail fast with a descriptive error instead so the consumer's
-                // retry loop (e.g. VideoPlayer.startPull) can re-pull cleanly.
                 this._completed = true;
                 this._completionError = new Error(
                     `Stream gap at index ${index} (expected ${this._nextExpectedIndex}); reconnect not allowed`
@@ -170,8 +209,8 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     // -- IRpcObject --
 
     reconnect(): void {
+        if (this.kind === RpcObjectKind.Local) return; // no-op for local streams
         if (this.allowReconnect) {
-            // Re-request from where we left off
             this._sendAck(this._nextExpectedIndex, true);
         } else {
             this.disconnect();
@@ -179,6 +218,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     }
 
     disconnect(): void {
+        if (this.kind === RpcObjectKind.Local) return; // no-op for local streams
         if (this._completed) return;
         this._completed = true;
         this._completionError = new Error('Peer disconnected.');
@@ -188,6 +228,12 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     // -- AsyncIterable --
 
     [Symbol.asyncIterator](): AsyncIterator<T> {
+        // Local mode: delegate to the local source
+        if (this.kind === RpcObjectKind.Local) {
+            return this.localSource![Symbol.asyncIterator]();
+        }
+
+        // Remote mode: buffer-based consumption
         if (this._iterating)
             throw new Error('RpcStream can only be iterated once.');
         this._iterating = true;
@@ -234,7 +280,9 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         if (this._disposed) return;
         this._disposed = true;
         this._completed = true;
-        this.peer.remoteObjects.unregister(this);
+        if (this.kind === RpcObjectKind.Remote) {
+            this.peer.remoteObjects.unregister(this);
+        }
         this._notifyConsumer();
     }
 
@@ -249,7 +297,6 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
 
     private _maybeSendAck(nextIndex: number): void {
         if (this.ackPeriod <= 0) return;
-        // Send ack when we've consumed enough items since the last ack
         const threshold = this._ackSentUpTo + this.ackPeriod;
         if (nextIndex >= threshold) {
             this._sendAck(nextIndex, false);
@@ -262,11 +309,6 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         this._ackSentUpTo = nextIndex;
         const conn = this.peer.connection;
         if (conn) {
-            // .NET server treats any non-default hostId as a reset/reconnect request
-            // (RpcSharedStream.OnAck: `var mustReset = hostId != default;`).  When the
-            // stream has AllowReconnect=false, a reset-flagged ack on an already-running
-            // stream is rejected with $sys.Disconnect.  Mirror the .NET client behavior
-            // and send the empty Guid for normal progress acks.
             const hostId = mustReset ? this.id.hostId : RpcStream._emptyGuid;
             this.peer.hub.systemCallSender.ack(
                 conn,
@@ -289,6 +331,15 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             );
         }
     }
+}
+
+/** @internal Type guard for AsyncIterable (has Symbol.asyncIterator). */
+function _isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+    return (
+        value !== null &&
+        typeof value === 'object' &&
+        Symbol.asyncIterator in (value as object)
+    );
 }
 
 /**
@@ -318,11 +369,6 @@ export function resolveStreamRefs(value: unknown, peer: RpcPeer): unknown {
     }
 
     if (typeof value === 'object') {
-        // Short-circuit binary payloads. TypedArray views (Uint8Array, etc.)
-        // and raw ArrayBuffers are "objects" to `typeof`, but Object.keys()
-        // returns every numeric index as a "key" — so naive recursion here is
-        // O(byteLength) per frame. Binary views can never
-        // contain nested stream-ref strings by construction; skip them.
         if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer)
             return value;
 

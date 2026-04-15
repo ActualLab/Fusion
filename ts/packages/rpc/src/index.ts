@@ -57,7 +57,7 @@ export { RpcSystemCallSender } from './rpc-system-call-sender.js';
 export type { RpcObjectId, IRpcObject } from './rpc-object.js';
 export { RpcObjectKind } from './rpc-object.js';
 export { RpcStream, parseStreamRef, resolveStreamRefs } from './rpc-stream.js';
-export type { RpcStreamRef } from './rpc-stream.js';
+export type { RpcStreamRef, RpcStreamOptions } from './rpc-stream.js';
 export { RpcStreamSender } from './rpc-stream-sender.js';
 export { RpcRemoteObjectTracker } from './rpc-remote-object-tracker.js';
 export { RpcSharedObjectTracker } from './rpc-shared-object-tracker.js';
