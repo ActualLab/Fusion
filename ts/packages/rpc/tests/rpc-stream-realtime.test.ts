@@ -327,6 +327,130 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
     });
 });
 
+// -- Real-time reconnect tests --
+// When a reset ACK arrives on a real-time stream, the sender should
+// skip to the next canSkipTo item.
+// We use a very large ackAdvance so backpressure never triggers — all gaps
+// are exclusively from reconnect skipping.
+
+describe.each([1, 3, 5])('RpcStreamSender real-time reconnect (ackPeriod=%i)', (ackPeriod) => {
+    let setup: RealTimeTestSetup;
+
+    beforeEach(async () => {
+        setup = createRealTimeTestSetup();
+        await delay(10);
+    });
+
+    afterEach(() => {
+        setup.serverHub.close();
+        setup.clientHub.close();
+    });
+
+    it('should skip to keyframe on reconnect with canSkipTo filter', async () => {
+        const totalItems = 200;
+        const ackAdvance = totalItems; // No backpressure — isolates reconnect behavior
+        const keyFrameInterval = 10;
+
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, ackPeriod, ackAdvance, true, true,
+            (item) => item % keyFrameInterval === 0,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+
+        const sentItems: number[] = [];
+        const origSendItem = sender.sendItem.bind(sender);
+        sender.sendItem = (item: number) => {
+            sentItems.push(item);
+            origSendItem(item);
+        };
+
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < totalItems; i++) {
+                yield i;
+                await new Promise(r => setTimeout(r, 1));
+            }
+        }
+
+        // Start the stream
+        sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+
+        // Wait until enough items are sent (past a keyframe boundary)
+        while (sentItems.length < 13) await delay(5);
+
+        // Simulate reconnect: send a reset ACK with hostId
+        const countBefore = sentItems.length;
+        sender.onAck(countBefore, sender.id.hostId);
+
+        // Wait for stream to complete
+        await writeDone;
+
+        // Items should be in ascending order
+        for (let i = 1; i < sentItems.length; i++) {
+            expect(sentItems[i]!).toBeGreaterThan(sentItems[i - 1]!);
+        }
+
+        // Find gaps
+        const gaps: { before: number; after: number }[] = [];
+        for (let i = 1; i < sentItems.length; i++) {
+            if (sentItems[i]! > sentItems[i - 1]! + 1) {
+                gaps.push({ before: sentItems[i - 1]!, after: sentItems[i]! });
+            }
+        }
+
+        // Should have at least one gap (the reconnect skip)
+        expect(gaps.length).toBeGreaterThanOrEqual(1);
+
+        // Every item after a gap should be a keyframe (multiple of keyFrameInterval)
+        for (const gap of gaps) {
+            expect(gap.after % keyFrameInterval).toBe(0);
+        }
+    });
+
+    it('should resume immediately on reconnect when canSkipTo is default', async () => {
+        const totalItems = 100;
+        const ackAdvance = totalItems;
+
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, ackPeriod, ackAdvance, true, true,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+
+        const sentItems: number[] = [];
+        const origSendItem = sender.sendItem.bind(sender);
+        sender.sendItem = (item: number) => {
+            sentItems.push(item);
+            origSendItem(item);
+        };
+
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < totalItems; i++) {
+                yield i;
+                await new Promise(r => setTimeout(r, 1));
+            }
+        }
+
+        sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+
+        // Wait for items, then reconnect
+        while (sentItems.length < 15) await delay(5);
+        sender.onAck(sentItems.length, sender.id.hostId);
+
+        await writeDone;
+
+        // Items should be in ascending order
+        for (let i = 1; i < sentItems.length; i++) {
+            expect(sentItems[i]!).toBeGreaterThan(sentItems[i - 1]!);
+        }
+
+        // With default canSkipTo (all true), the very next item is accepted,
+        // so there may be at most a gap of 1 (the item consumed during reset check).
+        // All items should still be accounted for.
+        expect(sentItems.length).toBeGreaterThan(15);
+    });
+});
+
 // -- Non-real-time flow control (back-pressure) --
 
 describe('RpcStreamSender flow control (non-real-time)', () => {

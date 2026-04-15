@@ -14,6 +14,7 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         rpc.AddServerAndClient<IRealTimeStreamTestService, RealTimeStreamTestService>();
     }
 
+
     // -- Properties & serialization --
 
     [Fact]
@@ -206,6 +207,73 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         }
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task RealTimeStream_Reconnect_SkipsToKeyFrame(int ackPeriod)
+    {
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var client = services.RpcHub().GetClient<IRealTimeStreamTestService>();
+
+        const int totalItems = 500;
+        var ackAdvance = Math.Max(ackPeriod + 2, 5);
+        const int keyFrameInterval = 10;
+        // Source delay must be small enough that many items are produced
+        // during the disconnect window, ensuring a real gap on reconnect.
+        const int sourceDelayMs = 2;
+
+        var stream = await client.GetRealTimeStreamWithKeyFramesReconnectable(
+            totalItems, ackPeriod, ackAdvance, keyFrameInterval, sourceDelayMs);
+
+        var received = new List<int>();
+        var enumerator = stream.GetAsyncEnumerator();
+
+        // Read some items to establish the stream (stop mid-interval, not on a keyframe)
+        for (var i = 0; i < 13 && await enumerator.MoveNextAsync(); i++)
+            received.Add(enumerator.Current);
+
+        Out.WriteLine($"Before disconnect: received {received.Count} items, last = {received[^1]}");
+
+        // Disconnect long enough for the source to advance well past the next keyframe
+        await connection.Disconnect();
+        await Delay(0.2);
+        await connection.Connect();
+
+        // Continue reading
+        while (await enumerator.MoveNextAsync())
+            received.Add(enumerator.Current);
+        await enumerator.DisposeAsync();
+
+        Out.WriteLine($"Total received: {received.Count} of {totalItems}");
+        Out.WriteLine($"  Items: [{string.Join(", ", received.Take(40))}]{(received.Count > 40 ? "..." : "")}");
+
+        // Items should be in ascending order (no reordering)
+        received.Should().BeInAscendingOrder();
+
+        // Find gaps — items after gaps should be keyframes (multiples of keyFrameInterval)
+        var gaps = new List<(int Before, int After)>();
+        for (var i = 1; i < received.Count; i++) {
+            if (received[i] > received[i - 1] + 1)
+                gaps.Add((received[i - 1], received[i]));
+        }
+
+        Out.WriteLine($"  Gaps: {gaps.Count}");
+        foreach (var (before, after) in gaps)
+            Out.WriteLine($"    {before} -> {after} (keyframe: {after % keyFrameInterval == 0})");
+
+        // At least one gap should exist (the reconnect gap)
+        gaps.Should().NotBeEmpty("reconnect should cause at least one gap");
+
+        // The first gap is the reconnect gap — its target must be a keyframe.
+        // Subsequent gaps (if any) come from normal real-time backpressure
+        // skipping, which is already covered by other tests.
+        var (_, reconnectTarget) = gaps[0];
+        (reconnectTarget % keyFrameInterval).Should().Be(0,
+            $"first item after reconnect gap ({reconnectTarget}) should be a keyframe (multiple of {keyFrameInterval})");
+    }
+
     [Fact]
     public async Task NonRealTimeStream_SlowConsumer_DoesNotSkip()
     {
@@ -234,6 +302,7 @@ public interface IRealTimeStreamTestService : IRpcService
     Task<RpcStream<int>> GetRealTimeStream(int count, int ackPeriod, int ackAdvance);
     Task<RpcStream<int>> GetRealTimeStreamWithDelay(int count, int ackPeriod, int ackAdvance, int sourceDelayMs);
     Task<RpcStream<int>> GetRealTimeStreamWithKeyFrames(int count, int ackPeriod, int ackAdvance, int keyFrameInterval);
+    Task<RpcStream<int>> GetRealTimeStreamWithKeyFramesReconnectable(int count, int ackPeriod, int ackAdvance, int keyFrameInterval, int sourceDelayMs);
     Task<RpcStream<int>> GetNonRealTimeStream(int count);
 }
 
@@ -269,6 +338,19 @@ public class RealTimeStreamTestService : IRealTimeStreamTestService
             AckPeriod = ackPeriod,
             AckAdvance = ackAdvance,
             AllowReconnect = false,
+            CanSkipTo = x => x % keyFrameInterval == 0,
+        });
+    }
+
+    public Task<RpcStream<int>> GetRealTimeStreamWithKeyFramesReconnectable(
+        int count, int ackPeriod, int ackAdvance, int keyFrameInterval, int sourceDelayMs)
+    {
+        var source = EnumerateWithDelay(count, sourceDelayMs);
+        return Task.FromResult(new RpcStream<int>(source) {
+            IsRealTime = true,
+            AckPeriod = ackPeriod,
+            AckAdvance = ackAdvance,
+            AllowReconnect = true,
             CanSkipTo = x => x % keyFrameInterval == 0,
         });
     }

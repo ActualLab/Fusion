@@ -143,6 +143,42 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             if (whenAckReady.IsCompletedSuccessfully)
                 goto nextAck;
 
+            // 1.1. Real-time reconnect: clear stale buffer and skip to next CanSkipTo item
+            if (ack.MustReset && isRealTime && !isFullyBuffered) {
+                buffer.Clear();
+                bufferStart = index;
+                while (true) {
+                    // whenMovedNext may have been converted to Task (section 3.3),
+                    // so its ValueTask token is consumed — await the Task instead.
+                    if (!whenMovedNext.IsCompleted)
+                        await (whenMovedNextAsTask ??= whenMovedNext.AsTask()).ConfigureAwait(false);
+
+                    try {
+                        if (whenMovedNext.Result) {
+                            var candidate = enumerator.Current;
+                            whenMovedNext = SafeMoveNext(enumerator);
+                            whenMovedNextAsTask = null;
+                            if (canSkipTo(candidate)) {
+                                buffer.PushTail(candidate);
+                                break;
+                            }
+                        }
+                        else {
+                            buffer.PushTail(Result.NewError<T>(NoMoreItemsTag));
+                            isFullyBuffered = true;
+                            break;
+                        }
+                    }
+                    catch (Exception e) {
+                        buffer.PushTail(Result.NewError<T>(e.IsCancellationOf(cancellationToken)
+                            ? Errors.RpcStreamNotFoundOrDisconnected()
+                            : e));
+                        isFullyBuffered = true;
+                        break;
+                    }
+                }
+            }
+
             // 2. Remove what's useless from buffer
             {
                 var bufferShift = (int)(ack.NextIndex - bufferStart).Clamp(0, buffer.Count);
@@ -235,8 +271,10 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                             break; // Budget restored, resume normal sending
                     }
 
+                    // whenMovedNext may have been converted to Task (section 3.3),
+                    // so its ValueTask token is consumed — await the Task instead.
                     if (!whenMovedNext.IsCompleted)
-                        await whenMovedNext.ConfigureAwait(false);
+                        await (whenMovedNextAsTask ??= whenMovedNext.AsTask()).ConfigureAwait(false);
 
                     try {
                         if (whenMovedNext.Result) {

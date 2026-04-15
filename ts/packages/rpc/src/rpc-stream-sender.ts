@@ -21,6 +21,8 @@ const DEFAULT_ACK_ADVANCE = 128;
  * - Client sends AckEnd to acknowledge completion
  */
 export class RpcStreamSender<T> implements IRpcObject {
+    private static readonly _emptyGuid = '00000000-0000-0000-0000-000000000000';
+
     readonly id: RpcObjectId;
     readonly kind = RpcObjectKind.Local;
     readonly allowReconnect: boolean;
@@ -35,6 +37,7 @@ export class RpcStreamSender<T> implements IRpcObject {
     private _started = new PromiseSource<void>();
     private _lastAckedIndex = 0;
     private _ackWaiting: PromiseSource<void> | null = null;
+    private _resetRequested = false;
 
     constructor(
         peer: RpcPeer,
@@ -60,13 +63,24 @@ export class RpcStreamSender<T> implements IRpcObject {
     }
 
     /** Called by system call handler when $sys.Ack is received from the client. */
-    onAck(nextIndex: number, _hostId: string): void {
+    onAck(nextIndex: number, hostId: string): void {
+        const mustReset = hostId !== '' && hostId !== RpcStreamSender._emptyGuid;
+
         if (!this._started.isCompleted) {
             this._started.resolve();
         }
-        if (nextIndex > this._lastAckedIndex) {
+
+        if (mustReset && this.isRealTime) {
+            // Real-time reconnect: reset position and request skip to next canSkipTo item
+            this._nextIndex = nextIndex;
             this._lastAckedIndex = nextIndex;
+            this._resetRequested = true;
+        } else {
+            if (mustReset || nextIndex > this._lastAckedIndex) {
+                this._lastAckedIndex = nextIndex;
+            }
         }
+
         if (this._ackWaiting) {
             this._ackWaiting.resolve();
             this._ackWaiting = null;
@@ -115,9 +129,8 @@ export class RpcStreamSender<T> implements IRpcObject {
         this._ended = true;
         const conn = this.peer.connection;
         if (!conn) return;
-        // See rpc-client-stream-sender.ts sendEnd() for the rationale: .NET
-        // ExceptionInfo is a non-nullable value type, so we must always emit a
-        // valid map shape (empty TypeRef+Message for the "no error" case).
+        // .NET ExceptionInfo is a non-nullable value type, so we must always
+        // emit a valid map shape (empty TypeRef+Message for the "no error" case).
         const errorInfo = error
             ? { TypeRef: 'System.Exception', Message: error.message }
             : { TypeRef: '', Message: '' };
@@ -149,6 +162,14 @@ export class RpcStreamSender<T> implements IRpcObject {
                 if (next.done || this._ended) break;
 
                 const item = next.value;
+
+                // Real-time reconnect: drain source to next canSkipTo item
+                if (this._resetRequested) {
+                    if (!this.canSkipTo(item)) continue;
+                    this._resetRequested = false;
+                    this.sendItem(item);
+                    continue;
+                }
 
                 // Flow control: check if we've hit the AckAdvance ceiling
                 if (this._nextIndex < this._lastAckedIndex + this.ackAdvance) {
