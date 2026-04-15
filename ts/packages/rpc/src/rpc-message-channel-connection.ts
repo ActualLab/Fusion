@@ -7,14 +7,15 @@
 
 import { EventHandlerSet } from "@actuallab/core";
 import { splitFrame } from "./rpc-serialization.js";
-import type { RpcConnection } from "./rpc-connection.js";
+import type { RpcConnection, RpcReceivedMessage } from "./rpc-connection.js";
 
 /** MessagePort-based RpcConnection — for in-process testing without WebSocket mocks. */
 export class RpcMessageChannelConnection implements RpcConnection {
   private _port: MessagePort;
   private _open = true;
 
-  readonly messageReceived = new EventHandlerSet<string>();
+  readonly binaryMode = false;
+  readonly messageReceived = new EventHandlerSet<RpcReceivedMessage>();
   readonly closed = new EventHandlerSet<{ code: number; reason: string }>();
   readonly whenConnected: Promise<void> = Promise.resolve(); // immediately connected
 
@@ -23,7 +24,7 @@ export class RpcMessageChannelConnection implements RpcConnection {
     port.onmessage = (ev: MessageEvent) => {
       const data = typeof ev.data === "string" ? ev.data : String(ev.data);
       for (const msg of splitFrame(data))
-        if (msg.length > 0) this.messageReceived.trigger(msg);
+        if (msg.length > 0) this.messageReceived.trigger({ kind: "text", raw: msg });
     };
   }
 
@@ -35,6 +36,15 @@ export class RpcMessageChannelConnection implements RpcConnection {
     if (!this._open) return;
     try {
       this._port.postMessage(serializedMessage);
+    } catch {
+      // never fail
+    }
+  }
+
+  sendBinary(data: Uint8Array): void {
+    if (!this._open) return;
+    try {
+      this._port.postMessage(data, [data.buffer]);
     } catch {
       // never fail
     }

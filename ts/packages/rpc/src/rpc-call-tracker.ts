@@ -58,8 +58,10 @@ export class RpcOutboundCall {
    *  Subclasses (e.g. compute calls) override to false to stay in tracker for invalidation. */
   readonly removeOnOk: boolean = true;
 
-  /** The serialized wire message — stored for re-sending on reconnect. */
+  /** The serialized wire message (text) — stored for re-sending on reconnect. */
   serializedMessage = "";
+  /** The serialized wire message (binary) — stored for re-sending on reconnect. */
+  serializedBinaryMessage?: Uint8Array;
 
   constructor(callId: number, method: string) {
     this.callId = callId;

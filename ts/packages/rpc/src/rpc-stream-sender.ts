@@ -33,10 +33,10 @@ export class RpcStreamSender<T> implements IRpcObject {
   private _started = new PromiseSource<void>();
 
   constructor(
-      peer: RpcPeer,
-      ackPeriod = DEFAULT_ACK_PERIOD,
-      ackAdvance = DEFAULT_ACK_ADVANCE,
-      allowReconnect = true
+    peer: RpcPeer,
+    ackPeriod = DEFAULT_ACK_PERIOD,
+    ackAdvance = DEFAULT_ACK_ADVANCE,
+    allowReconnect = true
   ) {
     const localId = peer.sharedObjects.nextId();
     this.id = { hostId: peer.hub.hubId, localId };
@@ -88,7 +88,12 @@ export class RpcStreamSender<T> implements IRpcObject {
     this._ended = true;
     const conn = this.peer.connection;
     if (!conn) return;
-    const errorInfo = error ? { Message: error.message } : null;
+    // See rpc-client-stream-sender.ts sendEnd() for the rationale: .NET
+    // ExceptionInfo is a non-nullable value type, so we must always emit a
+    // valid map shape (empty TypeRef+Message for the "no error" case).
+    const errorInfo = error
+      ? { TypeRef: "System.Exception", Message: error.message }
+      : { TypeRef: "", Message: "" };
     this.peer.hub.systemCallSender.end(conn, this.id.localId, this._nextIndex, errorInfo);
   }
 

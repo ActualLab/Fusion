@@ -11,6 +11,10 @@ export class RpcRemoteObjectTracker {
     return this._objects.get(localId);
   }
 
+  keys(): IterableIterator<number> {
+    return this._objects.keys();
+  }
+
   unregister(obj: IRpcObject): void {
     this._objects.delete(obj.id.localId);
   }

@@ -77,7 +77,7 @@
 
 import { EventHandlerSet, PromiseSource } from "@actuallab/core";
 import { RpcClientPeerReconnectDelayer } from "./rpc-client-peer-reconnect-delayer.js";
-import { RpcWebSocketConnection, type RpcConnection, type WebSocketLike } from "./rpc-connection.js";
+import { RpcWebSocketConnection, type RpcConnection, type RpcReceivedMessage, type WebSocketLike } from "./rpc-connection.js";
 import {
   RpcOutboundCall,
   RpcOutboundCallTracker,
@@ -88,6 +88,7 @@ import { RpcSystemCalls, type RpcMessage } from "./rpc-message.js";
 import {
   serializeMessage,
   deserializeMessage,
+  serializeBinaryMessage,
 } from "./rpc-serialization.js";
 import type { RpcHub } from "./rpc-hub.js";
 import { RpcRemoteObjectTracker } from "./rpc-remote-object-tracker.js";
@@ -109,7 +110,7 @@ export type RpcConnectionUrlResolver = (peer: RpcClientPeer) => string;
 
 /** Default connection URL provider — appends `clientId` and `f` query parameters. */
 export const defaultConnectionUrlResolver: RpcConnectionUrlResolver = (peer) => {
-  const sep = peer.ref.includes('?') ? '&' : '?';
+  const sep = peer.ref.includes("?") ? "&" : "?";
   return peer.ref + sep + `clientId=${peer.clientId}&f=${peer.serializationFormat}`;
 };
 
@@ -183,20 +184,29 @@ export abstract class RpcPeer {
     });
   }
 
+  /** Whether this peer uses binary (MessagePack) serialization. */
+  get isBinaryMode(): boolean { return false; }
+
   call(method: string, args?: unknown[], options?: RpcCallOptions): RpcOutboundCall {
     const callId = this.outbound.nextId();
     const outboundCall = options?.outboundCallFactory
       ? options.outboundCallFactory(callId, method)
       : new RpcOutboundCall(callId, method);
 
-    const msg = serializeMessage(
-      { Method: method, RelatedId: callId, CallType: options?.callTypeId ?? 0 },
-      args,
-    );
-    outboundCall.serializedMessage = msg;
+    const envelope: RpcMessage = { Method: method, RelatedId: callId, CallType: options?.callTypeId ?? 0 };
+    if (this.isBinaryMode) {
+      // Pass the connection's reusable encoder so we don't construct a
+      // new `@msgpack/msgpack.Encoder` for every outbound call.
+      outboundCall.serializedBinaryMessage = serializeBinaryMessage(envelope, args, this._connection?.encoder);
+    } else {
+      outboundCall.serializedMessage = serializeMessage(envelope, args);
+    }
     if (this._connection !== undefined) {
       this.outbound.register(outboundCall);
-      this._connection.send(msg);
+      if (this.isBinaryMode)
+        this._connection.sendBinary(outboundCall.serializedBinaryMessage!);
+      else
+        this._connection.send(outboundCall.serializedMessage);
     } else {
       this._pendingSends.push(outboundCall);
     }
@@ -234,8 +244,12 @@ export abstract class RpcPeer {
 
   callNoWait(method: string, args?: unknown[]): void {
     if (this._connection === undefined) return; // silently drop
-    const msg = serializeMessage({ Method: method, RelatedId: 0 }, args);
-    this._connection.send(msg); // never throws
+    const envelope: RpcMessage = { Method: method, RelatedId: 0 };
+    if (this.isBinaryMode) {
+      this._connection.sendBinary(serializeBinaryMessage(envelope, args, this._connection.encoder));
+    } else {
+      this._connection.send(serializeMessage(envelope, args));
+    }
   }
 
   close(): void {
@@ -259,7 +273,10 @@ export abstract class RpcPeer {
     if (this._pendingSends.length === 0 || this._connection === undefined) return;
     for (const call of this._pendingSends) {
       this.outbound.register(call);
-      this._connection.send(call.serializedMessage);
+      if (this.isBinaryMode && call.serializedBinaryMessage)
+        this._connection.sendBinary(call.serializedBinaryMessage);
+      else
+        this._connection.send(call.serializedMessage);
     }
     this._pendingSends.length = 0;
   }
@@ -270,8 +287,17 @@ export abstract class RpcPeer {
     // RpcServerPeer sends its own handshake back.
   }
 
-  private _handleMessage(raw: string): void {
-    const { message, args } = deserializeMessage(raw);
+  private _handleMessage(received: RpcReceivedMessage): void {
+    let message: RpcMessage;
+    let args: unknown[];
+    if (received.kind === "binary") {
+      message = received.message;
+      args = received.args;
+    } else {
+      const parsed = deserializeMessage(received.raw);
+      message = parsed.message;
+      args = parsed.args;
+    }
     const method = message.Method ?? "";
 
     // Handshake — dispatch to subclass handler
@@ -339,7 +365,12 @@ export abstract class RpcPeer {
   private _startKeepAlive(): void {
     this._keepAliveTimer = setInterval(() => {
       if (this._connection !== undefined) {
-        this._hub.systemCallSender.keepAlive(this._connection, this.outbound.activeCallIds());
+        // Send remote object IDs so the server's SharedObjectTracker keeps them alive.
+        // Must NOT send outbound call IDs — those are a different ID namespace and would
+        // cause the server to send $sys.Disconnect for IDs it doesn't recognize, which
+        // the client may misinterpret as a disconnect of its own shared objects (e.g.
+        // RpcClientStreamSender) when the IDs collide numerically.
+        this._hub.systemCallSender.keepAlive(this._connection, [...this.remoteObjects.keys()]);
       }
     }, 15_000);
   }
@@ -399,6 +430,10 @@ export class RpcClientPeer extends RpcPeer {
     this.serializationFormat = serializationFormat ?? DEFAULT_SERIALIZATION_FORMAT;
   }
 
+  override get isBinaryMode(): boolean {
+    return this.serializationFormat.startsWith("msgpack") || this.serializationFormat.startsWith("mempack");
+  }
+
   get connectionKind(): RpcPeerConnectionKind {
     return this._connectionKind;
   }
@@ -420,7 +455,7 @@ export class RpcClientPeer extends RpcPeer {
       let lastCloseReason = "";
       try {
         const ws = wsFactory?.(connUrl) ?? new WebSocket(connUrl) as unknown as WebSocketLike;
-        const conn = new RpcWebSocketConnection(ws);
+        const conn = new RpcWebSocketConnection(ws, this.isBinaryMode);
         this._connectionKind = RpcPeerConnectionKind.Connecting;
 
         // Track close info for unsupported format detection
@@ -569,7 +604,7 @@ export class RpcServerPeer extends RpcPeer {
  * .NET Guid stores the first 3 groups in little-endian byte order.
  */
 function guidToBase64Url(uuid: string): string {
-  const hex = uuid.replace(/-/g, '');
+  const hex = uuid.replace(/-/g, "");
   const bytes = new Uint8Array(16);
 
   // Group 1 (bytes 0-3): little-endian
@@ -588,5 +623,5 @@ function guidToBase64Url(uuid: string): string {
     bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
 
   const binary = String.fromCharCode(...bytes);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

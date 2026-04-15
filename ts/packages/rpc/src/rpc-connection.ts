@@ -22,13 +22,20 @@
 //   - IAsyncDisposable — .NET transports are disposable resources.  TS connections
 //     are closed via close() and garbage-collected.
 
+import { Encoder, Decoder } from "@msgpack/msgpack";
 import { PromiseSource, EventHandlerSet } from "@actuallab/core";
-import { splitFrame, serializeFrame } from "./rpc-serialization.js";
+import {
+  splitFrame, serializeFrame,
+  splitBinaryFrame, serializeBinaryFrame,
+  createBinaryEncoder,
+} from "./rpc-serialization.js";
+import type { RpcMessage } from "./rpc-message.js";
 
 /** Abstract WebSocket interface — works with both browser WebSocket and Node.js ws. */
 export interface WebSocketLike {
   readonly readyState: number;
-  send(data: string): void;
+  binaryType?: string;
+  send(data: string | ArrayBufferLike | Uint8Array | ArrayBufferView): void;
   close(code?: number, reason?: string): void;
   onopen: ((ev: unknown) => void) | null;
   onmessage: ((ev: { data: unknown }) => void) | null;
@@ -43,28 +50,61 @@ export const WebSocketState = {
   CLOSED: 3,
 } as const;
 
+/** Received message — either text (string) or binary (already parsed). */
+export type RpcReceivedMessage =
+  | { kind: "text"; raw: string }
+  | { kind: "binary"; message: RpcMessage; args: unknown[] };
+
 /** Abstract RPC connection — transport-agnostic interface for sending/receiving messages. */
 export interface RpcConnection {
   readonly isOpen: boolean;
+  readonly binaryMode: boolean;
   readonly whenConnected: Promise<void>;
-  readonly messageReceived: EventHandlerSet<string>;
+  readonly messageReceived: EventHandlerSet<RpcReceivedMessage>;
   readonly closed: EventHandlerSet<{ code: number; reason: string }>;
+  /** Optional reusable msgpack encoder for outbound binary messages.
+   *  Callers passing this to `serializeBinaryMessage` skip the per-call
+   *  Encoder construction + resizeBuffer growth. Implementations that
+   *  don't support binary serialization can leave it undefined. */
+  readonly encoder?: Encoder;
   send(serializedMessage: string): void;
+  sendBinary(data: Uint8Array): void;
   close(code?: number, reason?: string): void;
 }
 
-/** WebSocket-based RpcConnection — handles frame splitting and message queueing. */
+/** WebSocket-based RpcConnection — handles frame splitting, binary/text modes, and message queueing. */
 export class RpcWebSocketConnection implements RpcConnection {
   private _ws: WebSocketLike;
-  private _sendBuffer: string[] = [];
+  private _sendBuffer: Array<string | Uint8Array> = [];
   private _connected = new PromiseSource<void>();
 
-  readonly messageReceived = new EventHandlerSet<string>();
+  /** Per-connection msgpack encoder — reused across outbound messages to
+   *  amortise construction cost and to keep the internal write buffer at
+   *  its largest observed size (avoids repeated `resizeBuffer` growth on
+   *  large video frames). See serializeBinaryMessage() for details. */
+  private _encoder: Encoder = createBinaryEncoder();
+
+  /** Per-connection msgpack decoder — reused across inbound messages
+   *  rather than reconstructing one for every `decodeMulti` call. */
+  private _decoder: Decoder = new Decoder();
+
+  /** Exposed for callers who need to encode outbound binary messages
+   *  through this connection (e.g. `serializeBinaryMessage`). Safe to
+   *  pass to synchronous encode calls on the same event-loop turn. */
+  get encoder(): Encoder { return this._encoder; }
+  get decoder(): Decoder { return this._decoder; }
+
+  readonly binaryMode: boolean;
+  readonly messageReceived = new EventHandlerSet<RpcReceivedMessage>();
   readonly closed = new EventHandlerSet<{ code: number; reason: string }>();
   readonly error = new EventHandlerSet<unknown>();
 
-  constructor(ws: WebSocketLike) {
+  constructor(ws: WebSocketLike, binaryMode = false) {
     this._ws = ws;
+    this.binaryMode = binaryMode;
+
+    if (binaryMode && ws.binaryType !== undefined)
+      ws.binaryType = "arraybuffer";
 
     if (ws.readyState === WebSocketState.OPEN) {
       this._connected.resolve();
@@ -77,10 +117,53 @@ export class RpcWebSocketConnection implements RpcConnection {
     };
 
     ws.onmessage = (ev) => {
-      const data = typeof ev.data === "string" ? ev.data : String(ev.data);
-      const messages = splitFrame(data);
-      for (const msg of messages) {
-        if (msg.length > 0) this.messageReceived.trigger(msg);
+      // Binary frame — V5 self-delimiting envelopes (one or more per WS frame).
+      //
+      // Accept BOTH `ArrayBuffer` (browser WebSocket when `binaryType` is
+      // 'arraybuffer') AND `Uint8Array`-shaped views (Node `ws` delivering a
+      // `Buffer`, which is a `Uint8Array` subclass). The node-ws adapter
+      // intentionally passes Buffer through without an ArrayBuffer copy —
+      // at 300 concurrent video streams that copy was ~100 MB/s of pure
+      // memcpy + allocation pressure. Matching `ArrayBuffer.isView` here
+      // keeps the zero-copy path alive all the way to `splitBinaryFrame`.
+      if (ev.data instanceof Uint8Array || ev.data instanceof ArrayBuffer) {
+        // Node `Buffer` is a `Uint8Array` subclass, so we can hand it to
+        // `splitBinaryFrame` directly with no view wrapping or copying.
+        // Browsers deliver `ArrayBuffer`, which needs a single zero-copy
+        // view wrap.
+        const frame = ev.data instanceof Uint8Array
+          ? ev.data
+          : new Uint8Array(ev.data);
+        try {
+          const messages = splitBinaryFrame(frame, this._decoder);
+          for (const { message, args } of messages) {
+            this.messageReceived.trigger({ kind: "binary", message, args });
+          }
+        } catch (e) {
+          this.error.trigger(e);
+        }
+      } else if (typeof Blob !== "undefined" && ev.data instanceof Blob && this.binaryMode) {
+        // Fallback: some Chromium builds deliver the first frames as Blob even
+        // after setting binaryType='arraybuffer'. Convert and route through
+        // the binary path so we don't silently drop them.
+        void ev.data.arrayBuffer().then((ab) => {
+          const frame = new Uint8Array(ab);
+          try {
+            const messages = splitBinaryFrame(frame, this._decoder);
+            for (const { message, args } of messages) {
+              this.messageReceived.trigger({ kind: "binary", message, args });
+            }
+          } catch (e) {
+            this.error.trigger(e);
+          }
+        });
+      } else {
+        // Text frame — JSON delimited messages
+        const data = typeof ev.data === "string" ? ev.data : String(ev.data);
+        const messages = splitFrame(data);
+        for (const msg of messages) {
+          if (msg.length > 0) this.messageReceived.trigger({ kind: "text", raw: msg });
+        }
       }
     };
 
@@ -102,32 +185,44 @@ export class RpcWebSocketConnection implements RpcConnection {
   }
 
   send(serializedMessage: string): void {
-    try {
-      if (this._ws.readyState === WebSocketState.OPEN)
-        this._ws.send(serializedMessage);
-      else if (this._ws.readyState === WebSocketState.CONNECTING)
-        this._sendBuffer.push(serializedMessage);
-      // CLOSING/CLOSED: silently drop
-    } catch {
-      // Swallow — disconnect event handles cleanup
-    }
+    this._sendRaw(serializedMessage);
   }
 
-  sendBatch(messages: string[]): void {
-    const frame = serializeFrame(messages);
-    this.send(frame);
+  sendBinary(data: Uint8Array): void {
+    this._sendRaw(data);
+  }
+
+  sendTextBatch(messages: string[]): void {
+    this._sendRaw(serializeFrame(messages));
+  }
+
+  sendBinaryBatch(messages: Uint8Array[]): void {
+    this._sendRaw(serializeBinaryFrame(messages));
   }
 
   close(code?: number, reason?: string): void {
     this._ws.close(code, reason);
   }
 
+  private _sendRaw(data: string | Uint8Array): void {
+    try {
+      if (this._ws.readyState === WebSocketState.OPEN) {
+        this._ws.send(data);
+      } else if (this._ws.readyState === WebSocketState.CONNECTING)
+        this._sendBuffer.push(data);
+      // CLOSING/CLOSED: silently drop
+    } catch {
+      // Swallow — disconnect event handles cleanup
+    }
+  }
+
   private _flush(): void {
     if (this._sendBuffer.length === 0) return;
-    const frame = serializeFrame(this._sendBuffer);
+    const buffer = this._sendBuffer;
     this._sendBuffer = [];
     try {
-      this._ws.send(frame);
+      for (const item of buffer)
+        this._ws.send(item);
     } catch {
       // Swallow — disconnect event handles cleanup
     }

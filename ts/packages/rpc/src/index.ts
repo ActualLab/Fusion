@@ -12,9 +12,16 @@ export {
   serializeFrame,
   splitFrame,
   deserializeMessage,
+  serializeBinaryMessage,
+  deserializeBinaryMessage,
+  splitBinaryFrame,
+  serializeBinaryFrame,
+  createBinaryEncoder,
+  defaultBinaryEncoder,
+  defaultBinaryDecoder,
 } from "./rpc-serialization.js";
 
-export type { WebSocketLike, RpcConnection } from "./rpc-connection.js";
+export type { WebSocketLike, RpcConnection, RpcReceivedMessage } from "./rpc-connection.js";
 export { WebSocketState, RpcWebSocketConnection } from "./rpc-connection.js";
 
 export { RpcMessageChannelConnection, createMessageChannelPair } from "./rpc-message-channel-connection.js";
