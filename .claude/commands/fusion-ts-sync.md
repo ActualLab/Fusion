@@ -8,32 +8,32 @@ argument-hint: [direction-or-instructions]
 
 Synchronize the local copy of Fusion TypeScript source files between two repositories.
 
-## Source Locations
+## Packages to Sync
 
-**Fusion (canonical source):**
-- Project root: `/proj/ActualLab.Fusion`
-- Core package: `/proj/ActualLab.Fusion/ts/packages/core/src/`
-- RPC package: `/proj/ActualLab.Fusion/ts/packages/rpc/src/`
-
-**ActualChat (local copy):**
-- Project root: `/proj/ActualChat`
-- Core copy: `/proj/ActualChat/src/nodejs/src/actuallab-core/`
-- RPC copy: `/proj/ActualChat/src/nodejs/src/actuallab-rpc/`
-
-## Package Mapping
+Two packages are synced: `@actuallab/core` and `@actuallab/rpc`. These are the only Fusion TS packages that ActualChat consumes. The other Fusion packages (`fusion`, `fusion-react`, `fusion-rpc`) are NOT present in ActualChat — ignore them.
 
 | Fusion package | Fusion path | ActualChat path |
 |---|---|---|
 | `@actuallab/core` | `ts/packages/core/src/` | `src/nodejs/src/actuallab-core/` |
 | `@actuallab/rpc` | `ts/packages/rpc/src/` | `src/nodejs/src/actuallab-rpc/` |
 
-**Only `core` and `rpc` packages are copied to ActualChat.** The other Fusion packages (`fusion`, `fusion-react`, `fusion-rpc`) are NOT present in ActualChat - ignore them.
+**Source locations:**
+- Fusion project root: `/proj/ActualLab.Fusion`
+- ActualChat project root: `/proj/ActualChat`
 
-## Known Differences
+## Expected Differences
 
-- **`rpc-client-stream-sender.ts`** exists ONLY in ActualChat's `actuallab-rpc/`. It is an ActualChat-specific addition. If it doesn't exist in Fusion, that's expected - don't flag it as missing unless the user asks.
-- Import paths differ: ActualChat uses relative imports like `../actuallab-core/index.js` while Fusion uses package imports like `@actuallab/core`. This is structural and NOT a difference to sync - ignore import path style differences when comparing.
-- Test files exist only in Fusion (`tests/` subdirectories) - these are not synced.
+The two copies should be **identical** except for one structural difference:
+
+- **Cross-package import paths**: RPC files that import from core use different path styles:
+  - Fusion: `from '@actuallab/core'` (npm package import)
+  - ActualChat: `from '../actuallab-core/index.js'` (relative import)
+
+This is the ONLY expected difference. When comparing files, ignore lines that differ solely in this import path style. When syncing, translate between the two styles.
+
+**Files must match 1:1** — the same set of files should exist on both sides. If a file exists on one side but not the other, it should be synced (created) or flagged.
+
+**Test files** (`tests/` subdirectories) exist only in Fusion and are not synced.
 
 ## Sync Procedure
 
@@ -47,18 +47,17 @@ Synchronize the local copy of Fusion TypeScript source files between two reposit
 
 2. For each package (core, rpc), compare files between both sides. Use `diff` to find content differences, ignoring import path style differences:
    ```bash
-   # For each matching file pair, diff ignoring whitespace
    diff -u "/proj/ActualLab.Fusion/ts/packages/core/src/FILE" "/proj/ActualChat/src/nodejs/src/actuallab-core/FILE"
    diff -u "/proj/ActualLab.Fusion/ts/packages/rpc/src/FILE" "/proj/ActualChat/src/nodejs/src/actuallab-rpc/FILE"
    ```
 
-3. For files that differ, check recent git log on BOTH sides to determine where changes were made:
+3. For files that differ (beyond the expected import path difference), check recent git log on BOTH sides to determine where changes were made:
    ```bash
    git -C /proj/ActualLab.Fusion log --oneline -10 -- "ts/packages/core/src/FILE"
    git -C /proj/ActualChat log --oneline -10 -- "src/nodejs/src/actuallab-core/FILE"
    ```
 
-4. Identify files that exist only on one side (excluding known exceptions like `rpc-client-stream-sender.ts`).
+4. Identify files that exist only on one side.
 
 ### Step 2: Determine Sync Direction
 
@@ -100,10 +99,10 @@ Print a summary in this format:
 ### Files only in one side:
 | File | Package | Location | Action |
 |------|---------|----------|--------|
-| rpc-client-stream-sender.ts | rpc | ActualChat only | (known, skip) |
+| new-file.ts | rpc | Fusion only | Create in ActualChat |
 
 ### No changes needed:
-X files are identical.
+X files are identical (modulo import paths).
 ```
 
 Then ask: **"Proceed with sync? (yes/no/modify)"**
@@ -112,14 +111,19 @@ Wait for the user's confirmation before making ANY file changes.
 
 ### Step 4: Execute Sync (only after confirmation)
 
-For each file to sync, copy the content from source to destination:
-- When copying FROM Fusion TO ActualChat: read the Fusion file, adjust import paths from package-style (`@actuallab/core`) to relative-style (`../actuallab-core/index.js`), write to ActualChat.
-- When copying FROM ActualChat TO Fusion: read the ActualChat file, adjust import paths from relative-style to package-style, write to Fusion.
+For each file to sync, copy the source file to the destination, then fix import paths:
 
-**Import path translation rules:**
-- `@actuallab/core` ↔ `../actuallab-core/index.js`
-- `@actuallab/rpc` ↔ `../actuallab-rpc/index.js` (if cross-package imports exist)
-- Within same package: relative imports should stay relative on both sides.
+```bash
+# Fusion → ActualChat: copy then fix imports
+cp "/proj/ActualLab.Fusion/ts/packages/rpc/src/FILE" "/proj/ActualChat/src/nodejs/src/actuallab-rpc/FILE"
+sed -i "s|from '@actuallab/core'|from '../actuallab-core/index.js'|g" "/proj/ActualChat/src/nodejs/src/actuallab-rpc/FILE"
+
+# ActualChat → Fusion: copy then fix imports
+cp "/proj/ActualChat/src/nodejs/src/actuallab-rpc/FILE" "/proj/ActualLab.Fusion/ts/packages/rpc/src/FILE"
+sed -i "s|from '../actuallab-core/index.js'|from '@actuallab/core'|g" "/proj/ActualLab.Fusion/ts/packages/rpc/src/FILE"
+```
+
+Core files have no cross-package imports, so no import path fixup is needed for them.
 
 After syncing, verify with a final diff that files match (modulo import paths).
 
