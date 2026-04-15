@@ -109,6 +109,8 @@ export class FusionHub extends RpcHub {
     constructor(hubId?: string) {
         super(hubId);
         this.systemCallHandler = new FusionSystemCallHandler();
+        // Register Fusion-specific system call for compact format hash resolution
+        this.registry.register(FUSION_INVALIDATE_METHOD);
     }
 
     /** Accept an incoming WebSocket and create a server peer. */

@@ -46,6 +46,7 @@ import { RpcSystemCallSender } from './rpc-system-call-sender.js';
 import { RpcSystemCallHandler } from './rpc-system-call-handler.js';
 import { RpcStream, parseStreamRef, resolveStreamRefs } from './rpc-stream.js';
 import { RpcMethodRegistry } from './rpc-method-registry.js';
+import { RpcSystemCalls } from './rpc-message.js';
 
 /** Central RPC coordinator — manages peers, services, and configuration. */
 export class RpcHub {
@@ -63,6 +64,10 @@ export class RpcHub {
         this.hubId = hubId ?? crypto.randomUUID();
         this.serviceHost = new RpcServiceHost();
         this.systemCallSender.registry = this.registry;
+        // Pre-register system call method names for compact format hash resolution
+        for (const methodName of Object.values(RpcSystemCalls)) {
+            this.registry.register(methodName);
+        }
     }
 
     addPeer(peer: RpcPeer): void {

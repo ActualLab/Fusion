@@ -4,13 +4,10 @@ import {
     RpcClientPeer,
     RpcType,
     defineRpcService,
-    createRpcClient,
     createMessageChannelPair,
 } from '../src/index.js';
-
-function delay(ms: number): Promise<void> {
-    return new Promise(r => setTimeout(r, ms));
-}
+import { createTestHubPair, FORMATS, delay } from './rpc-test-helpers.js';
+import type { TestHubPair } from './rpc-test-helpers.js';
 
 interface ICalcService {
     add(a: number, b: number): Promise<number>;
@@ -24,60 +21,44 @@ const CalcServiceDef = defineRpcService('CalcService', {
     fail: { args: [] },
 });
 
-describe('RPC End-to-End', () => {
-    let serverHub: RpcHub;
-    let clientHub: RpcHub;
+describe.each(FORMATS)('RPC End-to-End [%s]', (formatKey) => {
+    let pair: TestHubPair;
 
-    beforeEach(() => {
-        serverHub = new RpcHub('server-hub');
-        clientHub = new RpcHub('client-hub');
+    beforeEach(async () => {
+        pair = createTestHubPair(formatKey);
 
         // Register service on server
-        serverHub.addService(CalcServiceDef, {
+        pair.serverHub.addService(CalcServiceDef, {
             add: (a: unknown, b: unknown) => (a as number) + (b as number),
             greet: (name: unknown) => `Hello, ${String(name)}!`,
             fail: () => {
                 throw new Error('intentional failure');
             },
         });
+
+        await delay(10);
     });
 
     afterEach(() => {
-        serverHub.close();
-        clientHub.close();
+        pair.serverHub.close();
+        pair.clientHub.close();
     });
 
     it('should call a remote method and get a result', async () => {
-        const [clientConn, serverConn] = createMessageChannelPair();
-
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
-        clientPeer.connectWith(clientConn);
-        clientHub.addPeer(clientPeer);
-
-        const serverPeer = serverHub.getServerPeer('server://test');
-        serverPeer.accept(serverConn);
-
-        await delay(10); // Wait for connection
-
-        const calc = createRpcClient<ICalcService>(clientPeer, CalcServiceDef);
+        const calc = pair.clientHub.addClient<ICalcService>(
+            pair.clientPeer,
+            CalcServiceDef
+        );
 
         const result = await calc.add(3, 4);
         expect(result).toBe(7);
     });
 
     it('should call multiple methods', async () => {
-        const [clientConn, serverConn] = createMessageChannelPair();
-
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
-        clientPeer.connectWith(clientConn);
-        clientHub.addPeer(clientPeer);
-
-        const serverPeer = serverHub.getServerPeer('server://test');
-        serverPeer.accept(serverConn);
-
-        await delay(10);
-
-        const calc = createRpcClient<ICalcService>(clientPeer, CalcServiceDef);
+        const calc = pair.clientHub.addClient<ICalcService>(
+            pair.clientPeer,
+            CalcServiceDef
+        );
 
         const sum = await calc.add(10, 20);
         expect(sum).toBe(30);
@@ -87,35 +68,19 @@ describe('RPC End-to-End', () => {
     });
 
     it('should propagate server errors', async () => {
-        const [clientConn, serverConn] = createMessageChannelPair();
-
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
-        clientPeer.connectWith(clientConn);
-        clientHub.addPeer(clientPeer);
-
-        const serverPeer = serverHub.getServerPeer('server://test');
-        serverPeer.accept(serverConn);
-
-        await delay(10);
-
-        const calc = createRpcClient<ICalcService>(clientPeer, CalcServiceDef);
+        const calc = pair.clientHub.addClient<ICalcService>(
+            pair.clientPeer,
+            CalcServiceDef
+        );
 
         await expect(calc.fail()).rejects.toThrow('intentional failure');
     });
 
     it('should handle concurrent calls', async () => {
-        const [clientConn, serverConn] = createMessageChannelPair();
-
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
-        clientPeer.connectWith(clientConn);
-        clientHub.addPeer(clientPeer);
-
-        const serverPeer = serverHub.getServerPeer('server://test');
-        serverPeer.accept(serverConn);
-
-        await delay(10);
-
-        const calc = createRpcClient<ICalcService>(clientPeer, CalcServiceDef);
+        const calc = pair.clientHub.addClient<ICalcService>(
+            pair.clientPeer,
+            CalcServiceDef
+        );
 
         const [r1, r2, r3] = await Promise.all([
             calc.add(1, 2),
@@ -129,93 +94,51 @@ describe('RPC End-to-End', () => {
     });
 
     it('should detect disconnection', async () => {
-        const [clientConn, serverConn] = createMessageChannelPair();
-
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
-        clientPeer.connectWith(clientConn);
-        clientHub.addPeer(clientPeer);
-
-        const serverPeer = serverHub.getServerPeer('server://test');
-        serverPeer.accept(serverConn);
-
-        await delay(10);
-        expect(clientPeer.isConnected).toBe(true);
+        expect(pair.clientPeer.isConnected).toBe(true);
 
         let clientDisconnected = false;
-        clientPeer.disconnected.add(() => {
+        pair.clientPeer.disconnected.add(() => {
             clientDisconnected = true;
         });
 
-        clientPeer.close();
+        pair.clientPeer.close();
         await delay(10);
         expect(clientDisconnected).toBe(true);
     });
 
     it('should never throw from RpcConnection.send() on closed connection', async () => {
-        const [clientConn, serverConn] = createMessageChannelPair();
-
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
-        clientPeer.connectWith(clientConn);
-        clientHub.addPeer(clientPeer);
-
-        const serverPeer = serverHub.getServerPeer('server://test');
-        serverPeer.accept(serverConn);
-
-        await delay(10);
-
-        clientConn.close();
+        const conn = pair.clientPeer.connection!;
+        conn.close();
         await delay(10);
 
         // Should not throw
-        expect(() => clientConn.send('test')).not.toThrow();
+        expect(() => conn.send('test')).not.toThrow();
     });
 
     it('should handle noWait calls without registering in tracker', async () => {
-        const [clientConn, serverConn] = createMessageChannelPair();
-
         const noWaitDef = defineRpcService('NoWaitService', {
             fire: { args: [''], returns: RpcType.noWait },
         });
 
         let received: string | undefined;
-        serverHub.addService(noWaitDef, {
+        pair.serverHub.addService(noWaitDef, {
             fire: (msg: unknown) => {
                 received = msg as string;
             },
         });
 
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
-        clientPeer.connectWith(clientConn);
-        clientHub.addPeer(clientPeer);
-
-        const serverPeer = serverHub.getServerPeer('server://test');
-        serverPeer.accept(serverConn);
-
-        await delay(10);
-
         // callNoWait should not throw and not register
-        const trackerSizeBefore = clientPeer.outbound.size;
-        clientPeer.callNoWait('NoWaitService.fire:2', ['hello']);
-        expect(clientPeer.outbound.size).toBe(trackerSizeBefore);
+        const trackerSizeBefore = pair.clientPeer.outbound.size;
+        pair.clientPeer.callNoWait('NoWaitService.fire:2', ['hello']);
+        expect(pair.clientPeer.outbound.size).toBe(trackerSizeBefore);
 
         await delay(50);
         expect(received).toBe('hello');
     });
 
     it('should work with addService/addClient unified API', async () => {
-        const [clientConn, serverConn] = createMessageChannelPair();
-
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
-        clientPeer.connectWith(clientConn);
-        clientHub.addPeer(clientPeer);
-
-        const serverPeer = serverHub.getServerPeer('server://test');
-        serverPeer.accept(serverConn);
-
-        await delay(10);
-
-        const calc = clientHub.addClient<ICalcService>(
-            clientPeer,
+        const calc = pair.clientHub.addClient<ICalcService>(
+            pair.clientPeer,
             CalcServiceDef
         );
 
@@ -227,15 +150,13 @@ describe('RPC End-to-End', () => {
     });
 
     it('should resolve overloaded methods by argument count', async () => {
-        const [clientConn, serverConn] = createMessageChannelPair();
-
         const OverloadDef = defineRpcService('OverloadService', {
             compute: { args: [0] },
             'compute:2': { args: [0, 0] },
             'compute:3': { args: [0, 0, 0] },
         });
 
-        serverHub.addService(OverloadDef, {
+        pair.serverHub.addService(OverloadDef, {
             compute: (...args: unknown[]) => {
                 const nums = args.map(Number);
                 if (nums.length === 1) return nums[0]! * 2;
@@ -243,18 +164,9 @@ describe('RPC End-to-End', () => {
             },
         });
 
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
-        clientPeer.connectWith(clientConn);
-        clientHub.addPeer(clientPeer);
-
-        const serverPeer = serverHub.getServerPeer('server://test');
-        serverPeer.accept(serverConn);
-
-        await delay(10);
-
-        const svc = clientHub.addClient<{
+        const svc = pair.clientHub.addClient<{
             compute(a: number, b?: number, c?: number): Promise<number>;
-                }>(clientPeer, OverloadDef);
+                }>(pair.clientPeer, OverloadDef);
 
         expect(await svc.compute(5)).toBe(10); // 1 arg → ×2
         expect(await svc.compute(3, 4)).toBe(7); // 2 args → sum
@@ -262,10 +174,10 @@ describe('RPC End-to-End', () => {
     });
 
     it('should handle noWait call on disconnected peer silently', async () => {
-        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
+        const disconnectedPeer = new RpcClientPeer(pair.clientHub, 'ws://test-disconnected');
         // Not connected — should not throw
         expect(() =>
-            clientPeer.callNoWait('CalcService.add:3', [1, 2])
+            disconnectedPeer.callNoWait('CalcService.add:3', [1, 2])
         ).not.toThrow();
     });
 });
