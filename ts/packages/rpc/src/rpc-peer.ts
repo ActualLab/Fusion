@@ -94,9 +94,7 @@ import { deserializeMessage } from './rpc-serialization.js';
 import type { RpcHub } from './rpc-hub.js';
 import { RpcRemoteObjectTracker } from './rpc-remote-object-tracker.js';
 import { RpcSharedObjectTracker } from './rpc-shared-object-tracker.js';
-import { RpcObjectKind } from './rpc-object.js';
 import { RpcStream } from './rpc-stream.js';
-import { RpcStreamSender } from './rpc-stream-sender.js';
 import { RpcSerializationFormat, RpcSerializationFormatResolver } from './rpc-serialization-format.js';
 
 /** WebSocket close code sent by the server when the client's serialization format is unsupported. */
@@ -376,30 +374,17 @@ export abstract class RpcPeer {
                         methodDef?.stream === true &&
                         this._connection !== undefined
                     ) {
-                        // Stream method — create sender, send reference, pump items.
-                        // If the service returned a local RpcStream, extract its config;
-                        // otherwise use defaults for a raw AsyncIterable.
-                        let sender: RpcStreamSender<unknown>;
-                        let source: AsyncIterable<unknown>;
-                        if (result instanceof RpcStream && result.kind === RpcObjectKind.Local) {
-                            const s = result as RpcStream<unknown>;
-                            sender = new RpcStreamSender(
-                                this, s.ackPeriod, s.ackAdvance,
-                                s.allowReconnect, s.isRealTime, s.canSkipTo,
-                            );
-                            source = s.localSource!;
-                        } else {
-                            sender = new RpcStreamSender(this);
-                            source = result as AsyncIterable<unknown>;
-                        }
-                        this.sharedObjects.register(sender);
+                        // Stream method — wrap result in RpcStream if needed,
+                        // then let toRef() create the sender, register it, and start pumping.
+                        const stream = result instanceof RpcStream
+                            ? result as RpcStream<unknown>
+                            : new RpcStream<unknown>(result as AsyncIterable<unknown>);
                         this._hub.systemCallSender.ok(
                             this._connection,
                             this.format,
                             relatedId,
-                            sender.toRef()
+                            stream.toRef(this)
                         );
-                        void sender.writeFrom(source);
                     } else if (!isNoWait && this._connection !== undefined) {
                         this._hub.systemCallSender.ok(
                             this._connection,

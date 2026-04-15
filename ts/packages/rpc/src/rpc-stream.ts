@@ -3,6 +3,7 @@ import { PromiseSource } from '@actuallab/core';
 import type { RpcObjectId, IRpcObject } from './rpc-object.js';
 import { RpcObjectKind } from './rpc-object.js';
 import type { RpcPeer } from './rpc-peer.js';
+import { RpcStreamSender } from './rpc-stream-sender.js';
 
 /** Default ack period (matches .NET RpcStream defaults). */
 const DEFAULT_ACK_PERIOD = 30;
@@ -92,6 +93,11 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     // Remote (target) mode
     readonly peer!: RpcPeer;
 
+    // Local-only state
+    private _sender?: RpcStreamSender<T>;
+    private _toRefValue?: unknown;
+    private _whenSent?: Promise<void>;
+
     // Remote-only state
     private _buffer: Denque<T> = new Denque<T>();
     private _nextExpectedIndex = 0;
@@ -135,6 +141,59 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             this.ackPeriod = ref.ackPeriod;
             this.ackAdvance = ref.ackAdvance;
         }
+    }
+
+    /**
+     * For local streams: resolves when the sender finishes pumping (after `toRef()` was called).
+     * Rejects if the source throws. Throws if `toRef()` hasn't been called yet.
+     */
+    get whenSent(): Promise<void> {
+        if (!this._whenSent)
+            throw new Error('toRef() must be called before awaiting whenSent.');
+        return this._whenSent;
+    }
+
+    /**
+     * For local streams: bind to a peer, create and register an `RpcStreamSender`,
+     * start pumping items from the local source in the background, and return the
+     * stream reference.
+     *
+     * For binary peers the ref is a MessagePack-compatible object
+     * (`{ SerializedId, AckPeriod, AckAdvance, AllowReconnect }`);
+     * for text peers it is a comma-separated string.
+     *
+     * Can only be called once per stream.
+     */
+    toRef(peer: RpcPeer): unknown {
+        if (this.kind !== RpcObjectKind.Local)
+            throw new Error('toRef() is only valid for local streams.');
+        if (this._sender) {
+            if (this._sender.peer !== peer)
+                throw new Error('toRef() was already called with a different peer.');
+            // Same peer — return the cached ref
+            return this._toRefValue!;
+        }
+
+        const sender = new RpcStreamSender<T>(
+            peer, this.ackPeriod, this.ackAdvance,
+            this.allowReconnect, this.isRealTime, this.canSkipTo,
+        );
+        peer.sharedObjects.register(sender);
+        this._sender = sender;
+
+        // Start pumping in background (writeFrom awaits the initial Ack)
+        this._whenSent = sender.writeFrom(this.localSource!);
+
+        // Cache and return ref in the format appropriate for the peer's serialization
+        this._toRefValue = peer.format.isBinary
+            ? {
+                SerializedId: [sender.id.hostId, sender.id.localId],
+                AckPeriod: sender.ackPeriod,
+                AckAdvance: sender.ackAdvance,
+                AllowReconnect: sender.allowReconnect,
+            }
+            : sender.toRef();
+        return this._toRefValue;
     }
 
     /** Called by system call handler when a single item arrives ($sys.I). */

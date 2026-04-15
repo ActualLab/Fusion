@@ -313,7 +313,6 @@ In TypeScript, `RpcStream` is dual-mode &ndash; the same class works on both the
 
 ```ts
 // Server-side: create a local RpcStream with configuration
-// (returned from service methods)
 const stream = new RpcStream(source, {
     isRealTime: true,
     canSkipTo: (frame) => frame.isKeyFrame,
@@ -321,13 +320,22 @@ const stream = new RpcStream(source, {
     ackAdvance: 61,
 });
 
+// Return from a service method — the framework calls toRef() automatically
+async getVideoStream() {
+    return new RpcStream(this.captureFrames(), { isRealTime: true });
+}
+
 // Client-side: RpcStream is created automatically from stream references
 const stream = await client.getVideoStream();
 console.log(stream.isRealTime); // true (propagated from server)
 for await (const frame of stream) { /* ... */ }
 ```
 
-When a service method returns a local `RpcStream`, the RPC framework automatically extracts its configuration and passes it to the underlying `RpcStreamSender`. If you need custom sending behavior, you can create an `RpcStreamSender` directly &ndash; it remains a public API.
+**`toRef(peer)`** &ndash; binds a local stream to a peer, creates an `RpcStreamSender`, registers it, starts pumping items in the background, and returns the serialized stream reference. Called automatically by the framework when a service method returns an `RpcStream`, but can also be called manually.
+
+**`whenSent`** &ndash; a `Promise` that resolves when the sender finishes pumping all items (after `toRef()` was called). Useful for tracking completion or catching source errors on the server side.
+
+When a service method returns a local `RpcStream`, the RPC framework wraps raw `AsyncIterable` results in an `RpcStream` with defaults, then calls `toRef(peer)`. If you need custom sending behavior, you can create an `RpcStreamSender` directly &ndash; it remains a public API.
 
 
 ## Complete Example

@@ -303,7 +303,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
     });
 
     it('should error on item gap when allowReconnect is false', async () => {
-        const ref = { hostId: 'h', localId: 1, ackPeriod: 10, ackAdvance: 5, allowReconnect: false };
+        const ref = { hostId: 'h', localId: 1, ackPeriod: 10, ackAdvance: 5, allowReconnect: false, isRealTime: false };
         const stream = new RpcStream<string>(ref, pair.clientPeer);
         pair.clientPeer.remoteObjects.register(stream);
 
@@ -319,7 +319,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
     });
 
     it('should error on batch gap when allowReconnect is false', async () => {
-        const ref = { hostId: 'h', localId: 2, ackPeriod: 10, ackAdvance: 5, allowReconnect: false };
+        const ref = { hostId: 'h', localId: 2, ackPeriod: 10, ackAdvance: 5, allowReconnect: false, isRealTime: false };
         const stream = new RpcStream<string>(ref, pair.clientPeer);
         pair.clientPeer.remoteObjects.register(stream);
 
@@ -386,6 +386,7 @@ describe('RpcStream allowReconnect', () => {
             ackPeriod: 30,
             ackAdvance: 61,
             allowReconnect: false,
+            isRealTime: false,
         };
         const stream = new RpcStream<number>(ref, peer);
         peer.remoteObjects.register(stream);
@@ -419,6 +420,7 @@ describe('RpcStream allowReconnect', () => {
             ackPeriod: 30,
             ackAdvance: 61,
             allowReconnect: true,
+            isRealTime: false,
         };
         const stream = new RpcStream<number>(ref, peer);
         peer.remoteObjects.register(stream);
@@ -657,6 +659,24 @@ describe('RpcStream local mode', () => {
         stream.reconnect();
         stream.disconnect();
     });
+
+    it('should throw whenSent before toRef is called', () => {
+        async function* source() { yield 1; }
+        const stream = new RpcStream(source());
+        expect(() => stream.whenSent).toThrow(/toRef/);
+    });
+
+    it('should throw toRef on remote stream', () => {
+        const ref = { hostId: 'h', localId: 1, ackPeriod: 30, ackAdvance: 61, allowReconnect: true, isRealTime: false };
+        const hub = new RpcHub('test-hub');
+        const [cc] = createMessageChannelPair();
+        const peer = new RpcClientPeer(hub, 'ws://test');
+        peer.connectWith(cc);
+        hub.addPeer(peer);
+        const stream = new RpcStream<number>(ref, peer);
+        expect(() => stream.toRef(peer)).toThrow(/local/i);
+        hub.close();
+    });
 });
 
 describe('RpcStream local mode E2E (service returns RpcStream)', () => {
@@ -676,7 +696,7 @@ describe('RpcStream local mode E2E (service returns RpcStream)', () => {
         pair.clientHub.close();
     });
 
-    it('should propagate config through RpcStreamSender', async () => {
+    it('should propagate config via toRef and deliver all items', async () => {
         pair.serverHub.addService(ConfigStreamServiceDef, {
             getStream() {
                 async function* source() {
@@ -705,5 +725,33 @@ describe('RpcStream local mode E2E (service returns RpcStream)', () => {
         const items: number[] = [];
         for await (const item of stream) items.push(item);
         expect(items).toEqual(Array.from({ length: 20 }, (_, i) => i));
+    });
+
+    it('should expose whenSent that resolves after stream completes', async () => {
+        let streamInstance: RpcStream<number> | undefined;
+        pair.serverHub.addService(ConfigStreamServiceDef, {
+            getStream() {
+                async function* source() {
+                    for (let i = 0; i < 5; i++) yield i;
+                }
+                streamInstance = new RpcStream(source(), { ackPeriod: 3, ackAdvance: 10 });
+                return streamInstance;
+            },
+        });
+
+        const client = pair.clientHub.addClient<{
+                getStream(): Promise<AsyncIterable<number>>;
+                    }>(pair.clientPeer, ConfigStreamServiceDef);
+
+        const remoteStream = await client.getStream();
+
+        // Consume all items
+        const items: number[] = [];
+        for await (const item of remoteStream) items.push(item);
+        expect(items).toEqual([0, 1, 2, 3, 4]);
+
+        // The server-side stream's whenSent should now resolve
+        expect(streamInstance).toBeDefined();
+        await streamInstance!.whenSent;
     });
 });
