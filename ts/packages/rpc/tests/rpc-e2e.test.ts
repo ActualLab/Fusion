@@ -1,10 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
-    RpcHub,
     RpcClientPeer,
     RpcType,
     defineRpcService,
-    createMessageChannelPair,
 } from '../src/index.js';
 import { createTestHubPair, FORMATS, delay } from './rpc-test-helpers.js';
 import type { TestHubPair } from './rpc-test-helpers.js';
