@@ -95,14 +95,7 @@ import type { RpcHub } from './rpc-hub.js';
 import { RpcRemoteObjectTracker } from './rpc-remote-object-tracker.js';
 import { RpcSharedObjectTracker } from './rpc-shared-object-tracker.js';
 import { RpcStreamSender } from './rpc-stream-sender.js';
-import { RpcSerializationFormat } from './rpc-serialization-format.js';
-
-/**
- * Default serialization format for RpcClientPeer connections.
- * TS uses plain JSON.stringify without polymorphic type wrapping,
- * so "json5np" (System.Text.Json, no polymorphism) is the correct match.
- */
-export const DEFAULT_SERIALIZATION_FORMAT = 'json5np';
+import { RpcSerializationFormat, RpcSerializationFormatResolver } from './rpc-serialization-format.js';
 
 /** WebSocket close code sent by the server when the client's serialization format is unsupported. */
 export const RPC_CLOSE_CODE_UNSUPPORTED_FORMAT = 4001;
@@ -195,7 +188,7 @@ export abstract class RpcPeer {
 
     /** The serialization format used by this peer. Override in subclasses. */
     get format(): RpcSerializationFormat {
-        return RpcSerializationFormat.get('json5np');
+        return RpcSerializationFormatResolver.Default.defaultFormat;
     }
 
     call(
@@ -489,9 +482,10 @@ export class RpcClientPeer extends RpcPeer {
     constructor(hub: RpcHub, url: string, serializationFormat?: string) {
         super(url, hub);
         this.clientId = guidToBase64Url(this.id);
+        const resolver = RpcSerializationFormatResolver.Default;
         this.serializationFormat =
-            serializationFormat ?? DEFAULT_SERIALIZATION_FORMAT;
-        this._format = RpcSerializationFormat.get(this.serializationFormat);
+            serializationFormat ?? resolver.defaultFormatKey;
+        this._format = resolver.get(this.serializationFormat);
     }
 
     override get format(): RpcSerializationFormat {

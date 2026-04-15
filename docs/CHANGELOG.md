@@ -11,6 +11,31 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.2.17+d5cb4e27 | npm: 12.2.21
+
+Release date: 2026-04-15
+
+### Added
+- .NET and TypeScript: Real-time stream mode with skip-to-keyframe support in `RpcStream`: 
+  - New `IsRealTime` / `isRealTime` property
+  - New `CanSendTo` / `canSkipTo` property
+- TypeScript: `RpcSerializationFormat` and `RpcSerializationFormatResolver` types similar to the .NET ones
+- TypeScript: MessagePack format support (`msgpack6` and `msgpack6c`)
+- TypeScript: "Compact" call format support (name hash-based method resolution)
+- TypeScript: bundled XXH3-64 hash implementation for method name hashing
+
+### Changed
+- TypeScript: adopted Voxt.ai TypeScript coding style (4-space indent, single quotes, prettier)
+- Consolidated C# E2E tests into single class with `[Theory]`
+
+### Tests
+- Comprehensive tests for `RpcStream.IsRealTime` feature and XXH3-64 implementation
+- TypeScript: E2E tests for all 3 serialization formats and `isRealTime` stream feature
+
+### Infrastructure
+- TypeScript: added `Run-Lint.cmd` build script, renamed `Install-Packages.cmd` to `Npm-Install.cmd`
+
+
 ## 12.2.4+09f1dc55 | npm: 12.1.115
 
 Release date: 2026-04-04

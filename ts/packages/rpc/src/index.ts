@@ -67,7 +67,6 @@ export {
     RpcPeerConnectionKind,
     RpcClientPeer,
     RpcServerPeer,
-    DEFAULT_SERIALIZATION_FORMAT,
     RPC_CLOSE_CODE_UNSUPPORTED_FORMAT,
     defaultConnectionUrlResolver,
 } from './rpc-peer.js';
@@ -102,6 +101,7 @@ export { RpcPeerStateMonitor } from './rpc-peer-state-monitor.js';
 
 export {
     RpcSerializationFormat,
+    RpcSerializationFormatResolver,
     RpcJsonSerializationFormat,
     RpcMessagePackSerializationFormat,
     RpcMessagePackCompactSerializationFormat,

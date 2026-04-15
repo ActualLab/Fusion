@@ -69,23 +69,25 @@ export abstract class RpcSerializationFormat {
         return undefined;
     }
 
-    // --- Static registry ---
+    // Named format instances — initialized in initFormats() below (after subclasses are defined)
+    static SystemJsonV5: RpcSerializationFormat;
+    static SystemJsonV5NP: RpcSerializationFormat;
+    static NewtonsoftJsonV5: RpcSerializationFormat;
+    static NewtonsoftJsonV5NP: RpcSerializationFormat;
+    static MessagePackV6: RpcSerializationFormat;
+    static MemoryPackV6: RpcSerializationFormat;
+    static MessagePackV6C: RpcSerializationFormat;
+    static MemoryPackV6C: RpcSerializationFormat;
+    static All: readonly RpcSerializationFormat[];
 
-    private static _all = new Map<string, RpcSerializationFormat>();
-
-    static register(format: RpcSerializationFormat): void {
-        RpcSerializationFormat._all.set(format.key, format);
-    }
-
+    /** Convenience shortcut for RpcSerializationFormatResolver.Default.get(key). */
     static get(key: string): RpcSerializationFormat {
-        const format = RpcSerializationFormat._all.get(key);
-        if (!format)
-            throw new Error(`Unknown RPC serialization format: "${key}"`);
-        return format;
+        return RpcSerializationFormatResolver.Default.get(key);
     }
 
+    /** Convenience shortcut for RpcSerializationFormatResolver.Default.tryGet(key). */
     static tryGet(key: string): RpcSerializationFormat | undefined {
-        return RpcSerializationFormat._all.get(key);
+        return RpcSerializationFormatResolver.Default.tryGet(key);
     }
 }
 
@@ -223,27 +225,73 @@ export class RpcMessagePackCompactSerializationFormat extends RpcSerializationFo
 }
 
 // ============================================================
-// Register all default formats
+// Initialize named format instances (after subclasses are defined)
 // ============================================================
 
-// Text
-RpcSerializationFormat.register(new RpcJsonSerializationFormat('json5'));
-RpcSerializationFormat.register(new RpcJsonSerializationFormat('json5np'));
-RpcSerializationFormat.register(new RpcJsonSerializationFormat('njson5'));
-RpcSerializationFormat.register(new RpcJsonSerializationFormat('njson5np'));
+// Text: System.Text.Json
+RpcSerializationFormat.SystemJsonV5 = new RpcJsonSerializationFormat('json5');
+RpcSerializationFormat.SystemJsonV5NP = new RpcJsonSerializationFormat('json5np');
+// Text: Newtonsoft.Json
+RpcSerializationFormat.NewtonsoftJsonV5 = new RpcJsonSerializationFormat('njson5');
+RpcSerializationFormat.NewtonsoftJsonV5NP = new RpcJsonSerializationFormat('njson5np');
+// Binary: MessagePack (non-compact)
+RpcSerializationFormat.MessagePackV6 = new RpcMessagePackSerializationFormat('msgpack6');
+RpcSerializationFormat.MemoryPackV6 = new RpcMessagePackSerializationFormat('mempack6');
+// Binary: MessagePack (compact)
+RpcSerializationFormat.MessagePackV6C = new RpcMessagePackCompactSerializationFormat('msgpack6c');
+RpcSerializationFormat.MemoryPackV6C = new RpcMessagePackCompactSerializationFormat('mempack6c');
 
-// Binary (non-compact)
-RpcSerializationFormat.register(
-    new RpcMessagePackSerializationFormat('msgpack6')
-);
-RpcSerializationFormat.register(
-    new RpcMessagePackSerializationFormat('mempack6')
-);
+RpcSerializationFormat.All = [
+    RpcSerializationFormat.SystemJsonV5,
+    RpcSerializationFormat.SystemJsonV5NP,
+    RpcSerializationFormat.NewtonsoftJsonV5,
+    RpcSerializationFormat.NewtonsoftJsonV5NP,
+    RpcSerializationFormat.MessagePackV6,
+    RpcSerializationFormat.MemoryPackV6,
+    RpcSerializationFormat.MessagePackV6C,
+    RpcSerializationFormat.MemoryPackV6C,
+];
 
-// Binary (compact) — immutable, registry passed at call time
-RpcSerializationFormat.register(
-    new RpcMessagePackCompactSerializationFormat('msgpack6c')
-);
-RpcSerializationFormat.register(
-    new RpcMessagePackCompactSerializationFormat('mempack6c')
-);
+// ============================================================
+// RpcSerializationFormatResolver — mirrors .NET RpcSerializationFormatResolver
+// ============================================================
+
+/**
+ * Resolves RpcSerializationFormat instances by key, with a configurable default.
+ * Mirrors .NET RpcSerializationFormatResolver.
+ */
+export class RpcSerializationFormatResolver {
+    static DefaultFormats: readonly RpcSerializationFormat[] = RpcSerializationFormat.All;
+    static Default = new RpcSerializationFormatResolver('json5np');
+
+    readonly defaultFormatKey: string;
+    readonly formats: ReadonlyMap<string, RpcSerializationFormat>;
+
+    get defaultFormat(): RpcSerializationFormat {
+        return this.get(this.defaultFormatKey);
+    }
+
+    constructor(defaultFormatKey: string, formats?: Iterable<RpcSerializationFormat>) {
+        const map = new Map<string, RpcSerializationFormat>();
+        for (const f of formats ?? RpcSerializationFormatResolver.DefaultFormats)
+            map.set(f.key, f);
+
+        if (!map.has(defaultFormatKey))
+            throw new Error(`No format with key '${defaultFormatKey}'.`);
+
+        this.defaultFormatKey = defaultFormatKey;
+        this.formats = map;
+    }
+
+    get(key: string): RpcSerializationFormat {
+        const format = this.tryGet(key);
+        if (!format)
+            throw new Error(`No format with key '${key}'.`);
+        return format;
+    }
+
+    tryGet(key: string): RpcSerializationFormat | undefined {
+        if (!key) key = this.defaultFormatKey;
+        return this.formats.get(key);
+    }
+}
