@@ -232,3 +232,69 @@ describe('computeMethodHash', () => {
         ).not.toBe(computeMethodHash('ITypeScriptTestService.Add:3'));
     });
 });
+
+describe('computeMethodHash — benchmark', () => {
+    // Generate 1000 realistic RPC method names (20–50 bytes each)
+    const SERVICE_NAMES = [
+        'IUserService',
+        'IOrderService',
+        'IChatService',
+        'IAuthService',
+        'IStreamService',
+        'IComputeService',
+        'INotificationSvc',
+        'IPaymentService',
+        'IAnalyticsService',
+        'IInventoryService',
+    ];
+    const METHOD_NAMES = [
+        'Get',
+        'Set',
+        'Delete',
+        'Update',
+        'List',
+        'Search',
+        'Create',
+        'Remove',
+        'Subscribe',
+        'Validate',
+    ];
+
+    const names: string[] = [];
+    for (let i = 0; i < 1000; i++) {
+        const svc = SERVICE_NAMES[i % SERVICE_NAMES.length]!;
+        const method = METHOD_NAMES[Math.floor(i / SERVICE_NAMES.length) % METHOD_NAMES.length]!;
+        const arity = (i % 5) + 1;
+        names.push(`${svc}.${method}${i}:${arity}`);
+    }
+
+    it('should hash 1000 method names (20–50 bytes) — 3 runs, best time', () => {
+        // Verify lengths are in range
+        const lengths = names.map(n => new TextEncoder().encode(n).length);
+        expect(Math.min(...lengths)).toBeGreaterThanOrEqual(15);
+        expect(Math.max(...lengths)).toBeLessThanOrEqual(55);
+
+        // Warmup
+        for (const name of names) computeMethodHash(name);
+
+        // 3 timed runs
+        const times: number[] = [];
+        for (let run = 0; run < 3; run++) {
+            const start = performance.now();
+            for (const name of names) computeMethodHash(name);
+            times.push(performance.now() - start);
+        }
+
+        const best = Math.min(...times);
+        const perHash = (best / names.length) * 1000;
+        console.log(
+            `  computeMethodHash: ${names.length} names, ` +
+                `best of 3: ${best.toFixed(1)} ms ` +
+                `(${perHash.toFixed(1)} µs/hash, ` +
+                `${((names.length / best) * 1000).toFixed(0)} hashes/sec)`
+        );
+
+        // Sanity: should complete in reasonable time (< 500ms for 1000 hashes)
+        expect(best).toBeLessThan(500);
+    });
+});
