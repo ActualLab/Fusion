@@ -29,15 +29,15 @@ export function getStateDescription(
     useLastError = false
 ): string {
     switch (state.kind) {
-        case RpcPeerStateKind.JustConnected:
-            return 'Just connected.';
-        case RpcPeerStateKind.Connected:
-            return 'Connected.';
-        case RpcPeerStateKind.JustDisconnected:
-            return 'Just disconnected, reconnecting...';
-        case RpcPeerStateKind.Disconnected:
-            if (state.reconnectsIn > 0) break; // fall through to error message below
-            return 'Reconnecting...';
+    case RpcPeerStateKind.JustConnected:
+        return 'Just connected.';
+    case RpcPeerStateKind.Connected:
+        return 'Connected.';
+    case RpcPeerStateKind.JustDisconnected:
+        return 'Just disconnected, reconnecting...';
+    case RpcPeerStateKind.Disconnected:
+        if (state.reconnectsIn > 0) break; // fall through to error message below
+        return 'Reconnecting...';
     }
     if (state.lastError == null || !useLastError) return 'Disconnected.';
 

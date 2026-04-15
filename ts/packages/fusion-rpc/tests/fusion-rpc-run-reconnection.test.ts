@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { AsyncContext, RetryDelaySeq } from '@actuallab/core';
-import { MutableState, ComputedState, FixedDelayer } from '@actuallab/fusion';
+import { MutableState } from '@actuallab/fusion';
 import {
     RpcClientPeer,
     RpcHub,
@@ -66,7 +66,7 @@ class FakeWebSocket implements WebSocketLike {
 class ICounterService {
     @computeMethod
     @rpcMethod()
-    async getCount(key: string): Promise<number> {
+    async getCount(_key: string): Promise<number> {
         return undefined!;
     }
 }
@@ -153,6 +153,7 @@ describe('Fusion RPC run() reconnection', () => {
         peers.push(peer);
         peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
         void peer.run(factory);
 
@@ -164,7 +165,7 @@ describe('Fusion RPC run() reconnection', () => {
         });
         const counter = createRpcClient<{
             getCount(key: string): Promise<number>;
-        }>(peer, counterDef);
+                }>(peer, counterDef);
 
         // Initial call
         const r1 = await counter.getCount('x');
@@ -200,6 +201,7 @@ describe('Fusion RPC run() reconnection', () => {
         peers.push(peer);
         peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
         void peer.run(factory);
 
@@ -245,6 +247,7 @@ describe('Fusion RPC run() reconnection', () => {
         peers.push(peer);
         peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
         void peer.run(factory);
 

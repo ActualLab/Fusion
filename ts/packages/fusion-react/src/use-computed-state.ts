@@ -69,7 +69,6 @@ export function useComputedState<T>(
             cancelled = true;
             state.dispose();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state]);
 
     const isInitial = state.updateIndex === 0;

@@ -11,7 +11,7 @@ describe('@rpcService decorator', () => {
     it('should store service name in metadata', () => {
         @rpcService('ProductService')
         class ProductService {
-            async getProduct(id: string): Promise<unknown> {
+            async getProduct(_id: string): Promise<unknown> {
                 return undefined;
             }
         }
@@ -26,15 +26,15 @@ describe('@rpcMethod decorator', () => {
     it('should store method metadata', () => {
         class Svc {
             @rpcMethod()
-            async getProduct(id: string): Promise<unknown> {
+            async getProduct(_id: string): Promise<unknown> {
                 return undefined;
             }
 
             @rpcMethod({ returns: RpcType.stream })
             async *getProducts(
-                query: string,
-                limit: number
-            ): AsyncGenerator<unknown> {
+                _query: string,
+                _limit: number
+            ): AsyncGenerator {
                 yield undefined;
             }
         }
@@ -72,15 +72,15 @@ describe('@rpcService + @rpcMethod combined', () => {
         @rpcService('CounterService')
         class ICounterService {
             @rpcMethod()
-            async getCount(key: string): Promise<number> {
+            async getCount(_key: string): Promise<number> {
                 return 0;
             }
 
             @rpcMethod()
-            async setCount(key: string, value: number): Promise<void> {}
+            async setCount(_key: string, _value: number): Promise<void> {}
 
             @rpcMethod({ returns: RpcType.stream })
-            async *watchCount(key: string): AsyncGenerator<number> {
+            async *watchCount(_key: string): AsyncGenerator<number> {
                 yield 0;
             }
         }

@@ -249,7 +249,7 @@ describe('Computed.capture()', () => {
 
         class Svc {
             @computeMethod
-            async getValue(key: string): Promise<number> {
+            async getValue(_key: string): Promise<number> {
                 return source.use();
             }
         }

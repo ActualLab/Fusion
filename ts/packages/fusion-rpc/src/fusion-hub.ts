@@ -50,7 +50,6 @@ import {
     type RpcServiceDef,
     type RpcMethodDef,
     type RpcMethodDefInput,
-    type RpcServiceImpl,
     type RpcDispatchContext,
     type RpcPeer,
     type RpcMessage,
@@ -219,7 +218,7 @@ export class FusionHub extends RpcHub {
             const value = await outboundCall.result.promise;
             // Wire server invalidation → local computed invalidation
             if (computeCtx) {
-                outboundCall.whenInvalidated.promise.then(() =>
+                void outboundCall.whenInvalidated.promise.then(() =>
                     computeCtx.computed.invalidate()
                 );
             }

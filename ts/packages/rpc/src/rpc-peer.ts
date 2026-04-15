@@ -371,10 +371,10 @@ export abstract class RpcPeer {
                     const context =
                         this._connection !== undefined
                             ? {
-                                  __rpcDispatch: true as const,
-                                  callId: relatedId,
-                                  connection: this._connection,
-                              }
+                                __rpcDispatch: true as const,
+                                callId: relatedId,
+                                connection: this._connection,
+                            }
                             : undefined;
                     const result = await serviceHost.dispatch(
                         method,

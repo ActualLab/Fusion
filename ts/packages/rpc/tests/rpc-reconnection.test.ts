@@ -26,7 +26,7 @@ const CalcServiceDef = defineRpcService('CalcService', {
     greet: { args: [''] },
 });
 
-const NoWaitServiceDef = defineRpcService('NoWaitService', {
+const _NoWaitServiceDef = defineRpcService('NoWaitService', {
     fire: { args: [''], returns: RpcType.noWait },
 });
 
@@ -41,7 +41,7 @@ describe('RPC Reconnection', () => {
 
         serverHub.addService(CalcServiceDef, {
             add: (a: unknown, b: unknown) => (a as number) + (b as number),
-            greet: (name: unknown) => `Hello, ${name}!`,
+            greet: (name: unknown) => `Hello, ${String(name)}!`,
         });
 
         const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
@@ -79,7 +79,7 @@ describe('RPC Reconnection', () => {
                 await delay(200);
                 return (a as number) + (b as number);
             },
-            greet: (name: unknown) => `Hello, ${name}!`,
+            greet: (name: unknown) => `Hello, ${String(name)}!`,
         });
         await conn.switchHost(slowHub);
 
@@ -109,7 +109,7 @@ describe('RPC Reconnection', () => {
             },
             greet: async (name: unknown) => {
                 await delay(100);
-                return `Hello, ${name}!`;
+                return `Hello, ${String(name)}!`;
             },
         });
         await conn.switchHost(slowHub);
@@ -195,7 +195,7 @@ describe('RPC Reconnection', () => {
         newServerHub.addService(CalcServiceDef, {
             add: (a: unknown, b: unknown) =>
                 (a as number) + (b as number) + 100,
-            greet: (name: unknown) => `Hi, ${name}!`,
+            greet: (name: unknown) => `Hi, ${String(name)}!`,
         });
         await conn.switchHost(newServerHub);
 
@@ -219,7 +219,7 @@ describe('RPC Reconnection', () => {
         const hub2 = new RpcHub('hub-B');
         hub2.addService(CalcServiceDef, {
             add: (a: unknown, b: unknown) => (a as number) + (b as number),
-            greet: (name: unknown) => `Hello, ${name}!`,
+            greet: (name: unknown) => `Hello, ${String(name)}!`,
         });
 
         const [conn1, conn2] = createMessageChannelPair();
@@ -253,7 +253,7 @@ describe('RPC Reconnection', () => {
                 await delay(500);
                 return (a as number) + (b as number);
             },
-            greet: (name: unknown) => `Hello, ${name}!`,
+            greet: (name: unknown) => `Hello, ${String(name)}!`,
         });
         await conn.switchHost(slowHub);
 

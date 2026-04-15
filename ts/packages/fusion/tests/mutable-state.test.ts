@@ -84,7 +84,7 @@ describe('MutableState.update()', () => {
         expect(state.updateIndex).toBe(0);
 
         state.computed.invalidate();
-        state.update();
+        void state.update();
         expect(state.updateIndex).toBe(1);
     });
 
@@ -94,7 +94,7 @@ describe('MutableState.update()', () => {
         expect(state.hasError).toBe(true);
 
         state.computed.invalidate();
-        state.update();
+        void state.update();
 
         expect(state.hasError).toBe(true);
         expect(() => state.value).toThrow('fail');
@@ -104,7 +104,7 @@ describe('MutableState.update()', () => {
         const state = new MutableState(1);
         for (let i = 0; i < 5; i++) {
             state.computed.invalidate();
-            state.update();
+            void state.update();
         }
         expect(state.updateIndex).toBe(5);
         expect(state.value).toBe(1);
@@ -117,7 +117,7 @@ describe('MutableState.update()', () => {
         expect(state.value).toBe(99);
 
         state.computed.invalidate();
-        state.update();
+        void state.update();
         expect(state.value).toBe(99);
         expect(state.computed.isConsistent).toBe(true);
     });
@@ -144,15 +144,15 @@ describe('MutableState.recompute()', () => {
         const state = new MutableState('hello');
         expect(state.updateIndex).toBe(0);
 
-        state.recompute();
+        void state.recompute();
         expect(state.updateIndex).toBe(1);
     });
 
     it('should be idempotent when called repeatedly', () => {
         const state = new MutableState(10);
-        state.recompute();
-        state.recompute();
-        state.recompute();
+        void state.recompute();
+        void state.recompute();
+        void state.recompute();
 
         expect(state.updateIndex).toBe(3);
         expect(state.value).toBe(10);
@@ -162,7 +162,7 @@ describe('MutableState.recompute()', () => {
     it('should resolve whenUpdated promise', async () => {
         const state = new MutableState(42);
         const updated = state.whenUpdated();
-        state.recompute();
+        void state.recompute();
         await updated;
         expect(state.updateIndex).toBe(1);
     });
@@ -170,7 +170,7 @@ describe('MutableState.recompute()', () => {
     it('should preserve value after set then recompute', () => {
         const state = new MutableState(1);
         state.set(100);
-        state.recompute();
+        void state.recompute();
 
         expect(state.value).toBe(100);
         expect(state.updateIndex).toBe(2); // 1 from set, 1 from recompute

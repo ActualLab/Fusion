@@ -49,7 +49,7 @@ describe('@computeMethod decorator', () => {
 
         class Svc {
             @computeMethod
-            async getCount(id: string): Promise<number> {
+            async getCount(_id: string): Promise<number> {
                 return ++counter;
             }
         }
@@ -102,12 +102,12 @@ describe('@computeMethod decorator', () => {
     it('should store metadata via Symbol.metadata', () => {
         class Svc {
             @computeMethod
-            async getValue(id: string): Promise<number> {
+            async getValue(_id: string): Promise<number> {
                 return 0;
             }
 
             @computeMethod
-            async getOther(a: string, b: number): Promise<string> {
+            async getOther(_a: string, _b: number): Promise<string> {
                 return '';
             }
         }
@@ -121,7 +121,7 @@ describe('@computeMethod decorator', () => {
     it('should handle errors in compute methods', async () => {
         class Svc {
             @computeMethod
-            async getValue(id: string): Promise<number> {
+            async getValue(_id: string): Promise<number> {
                 throw new Error('compute error');
             }
         }
@@ -150,7 +150,7 @@ describe('wrapComputeMethod', () => {
 
     it('should support invalidation', async () => {
         let counter = 0;
-        const computeValue = wrapComputeMethod((id: string) => {
+        const computeValue = wrapComputeMethod((_id: string) => {
             return ++counter;
         });
 

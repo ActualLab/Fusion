@@ -35,7 +35,7 @@ describe('RPC End-to-End', () => {
         // Register service on server
         serverHub.addService(CalcServiceDef, {
             add: (a: unknown, b: unknown) => (a as number) + (b as number),
-            greet: (name: unknown) => `Hello, ${name}!`,
+            greet: (name: unknown) => `Hello, ${String(name)}!`,
             fail: () => {
                 throw new Error('intentional failure');
             },
@@ -253,10 +253,8 @@ describe('RPC End-to-End', () => {
         await delay(10);
 
         const svc = clientHub.addClient<{
-            compute(a: number): Promise<number>;
-            compute(a: number, b: number): Promise<number>;
-            compute(a: number, b: number, c: number): Promise<number>;
-        }>(clientPeer, OverloadDef);
+            compute(a: number, b?: number, c?: number): Promise<number>;
+                }>(clientPeer, OverloadDef);
 
         expect(await svc.compute(5)).toBe(10); // 1 arg → ×2
         expect(await svc.compute(3, 4)).toBe(7); // 2 args → sum

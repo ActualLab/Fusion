@@ -12,9 +12,7 @@ export function useMutableState<T>(
     const [, forceRender] = useReducer(c => c + 1, 0);
     const stateRef = useRef<MutableState<T> | null>(null);
 
-    if (stateRef.current === null) {
-        stateRef.current = new MutableState<T>(initial);
-    }
+    stateRef.current ??= new MutableState<T>(initial);
 
     const state = stateRef.current;
 

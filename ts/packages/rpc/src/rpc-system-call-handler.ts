@@ -38,145 +38,145 @@ export class RpcSystemCallHandler {
         const relatedId = message.RelatedId ?? 0;
 
         switch (method) {
-            case RpcSystemCalls.ok: {
-                const call = peer.outbound.get(relatedId);
-                if (call !== undefined) {
-                    if (call.removeOnOk) {
-                        peer.outbound.remove(relatedId);
-                    }
-                    call.result.resolve(args[0]);
+        case RpcSystemCalls.ok: {
+            const call = peer.outbound.get(relatedId);
+            if (call !== undefined) {
+                if (call.removeOnOk) {
+                    peer.outbound.remove(relatedId);
                 }
-                break;
+                call.result.resolve(args[0]);
             }
-            case RpcSystemCalls.error: {
-                const call = peer.outbound.remove(relatedId);
-                if (call !== undefined) {
-                    const errorInfo = args[0] as
+            break;
+        }
+        case RpcSystemCalls.error: {
+            const call = peer.outbound.remove(relatedId);
+            if (call !== undefined) {
+                const errorInfo = args[0] as
                         | Record<string, unknown>
                         | undefined;
-                    const msg = (errorInfo?.Message ??
+                const msg = (errorInfo?.Message ??
                         errorInfo?.message ??
                         'RPC error') as string;
-                    call.result.reject(new Error(msg));
-                }
-                break;
+                call.result.reject(new Error(msg));
             }
-            case RpcSystemCalls.cancel: {
-                // Remote peer is cancelling a call it asked us to process — remove
-                // from the inbound tracker.  Full cancellation propagation (aborting
-                // the running service handler) is not yet implemented; this just
-                // unregisters the call so we don't send a response for it.
-                peer.inbound.remove(relatedId);
-                break;
-            }
-            case RpcSystemCalls.keepAlive: {
-                // Remote keep-alive — nothing to do, just acknowledges the connection is alive
-                break;
-            }
-            case RpcSystemCalls.item: {
-                const stream = peer.remoteObjects.get(relatedId) as
+            break;
+        }
+        case RpcSystemCalls.cancel: {
+            // Remote peer is cancelling a call it asked us to process — remove
+            // from the inbound tracker.  Full cancellation propagation (aborting
+            // the running service handler) is not yet implemented; this just
+            // unregisters the call so we don't send a response for it.
+            peer.inbound.remove(relatedId);
+            break;
+        }
+        case RpcSystemCalls.keepAlive: {
+            // Remote keep-alive — nothing to do, just acknowledges the connection is alive
+            break;
+        }
+        case RpcSystemCalls.item: {
+            const stream = peer.remoteObjects.get(relatedId) as
                     | RpcStream<unknown>
                     | undefined;
-                if (!stream) {
-                    console.warn(
-                        `[RpcSysHandler] $sys.I: no stream for relatedId=${relatedId}`
-                    );
-                } else {
-                    stream.onItem(
+            if (!stream) {
+                console.warn(
+                    `[RpcSysHandler] $sys.I: no stream for relatedId=${relatedId}`
+                );
+            } else {
+                stream.onItem(
                         args[0] as number,
                         resolveStreamRefs(args[1], peer)
-                    );
-                }
-                break;
+                );
             }
-            case RpcSystemCalls.batch: {
-                const stream = peer.remoteObjects.get(relatedId) as
+            break;
+        }
+        case RpcSystemCalls.batch: {
+            const stream = peer.remoteObjects.get(relatedId) as
                     | RpcStream<unknown>
                     | undefined;
-                if (!stream) {
-                    console.warn(
-                        `[RpcSysHandler] $sys.B: no stream for relatedId=${relatedId}`
-                    );
-                } else if (Array.isArray(args[1])) {
-                    const items = args[1] as unknown[];
-                    for (let i = 0; i < items.length; i++)
-                        items[i] = resolveStreamRefs(items[i]!, peer);
-                    stream.onBatch(args[0] as number, items);
-                }
-                break;
+            if (!stream) {
+                console.warn(
+                    `[RpcSysHandler] $sys.B: no stream for relatedId=${relatedId}`
+                );
+            } else if (Array.isArray(args[1])) {
+                const items = args[1] as unknown[];
+                for (let i = 0; i < items.length; i++)
+                    items[i] = resolveStreamRefs(items[i]!, peer);
+                stream.onBatch(args[0] as number, items);
             }
-            case RpcSystemCalls.end: {
-                const stream = peer.remoteObjects.get(relatedId) as
+            break;
+        }
+        case RpcSystemCalls.end: {
+            const stream = peer.remoteObjects.get(relatedId) as
                     | RpcStream<unknown>
                     | undefined;
-                if (!stream) {
-                    console.warn(
-                        `[RpcSysHandler] $sys.End: no stream for relatedId=${relatedId}`
-                    );
-                } else {
-                    // .NET ExceptionInfo is a struct — even for normal completion, it serializes
-                    // as a non-null object with empty fields (e.g. { "message": "", "typeRef": {...} }).
-                    // Check both PascalCase and camelCase, and treat empty messages as no error.
-                    const errorInfo = args[1] as Record<string, unknown> | null;
-                    const msg = (errorInfo?.Message ?? errorInfo?.message) as
+            if (!stream) {
+                console.warn(
+                    `[RpcSysHandler] $sys.End: no stream for relatedId=${relatedId}`
+                );
+            } else {
+                // .NET ExceptionInfo is a struct — even for normal completion, it serializes
+                // as a non-null object with empty fields (e.g. { "message": "", "typeRef": {...} }).
+                // Check both PascalCase and camelCase, and treat empty messages as no error.
+                const errorInfo = args[1] as Record<string, unknown> | null;
+                const msg = (errorInfo?.Message ?? errorInfo?.message) as
                         | string
                         | undefined;
-                    const error = msg ? new Error(msg) : null;
-                    stream.onEnd(args[0] as number, error);
-                }
-                break;
+                const error = msg ? new Error(msg) : null;
+                stream.onEnd(args[0] as number, error);
             }
-            case RpcSystemCalls.ack: {
-                const sender = peer.sharedObjects.get(relatedId) as
+            break;
+        }
+        case RpcSystemCalls.ack: {
+            const sender = peer.sharedObjects.get(relatedId) as
                     | RpcStreamSender<unknown>
                     | undefined;
-                sender?.onAck(args[0] as number, args[1] as string);
-                break;
-            }
-            case RpcSystemCalls.ackEnd: {
-                const sender = peer.sharedObjects.get(relatedId) as
+            sender?.onAck(args[0] as number, args[1] as string);
+            break;
+        }
+        case RpcSystemCalls.ackEnd: {
+            const sender = peer.sharedObjects.get(relatedId) as
                     | RpcStreamSender<unknown>
                     | undefined;
-                sender?.onAckEnd(args[0] as string);
-                break;
-            }
-            default: {
-                if (
-                    method === '$sys.Disconnect' ||
+            sender?.onAckEnd(args[0] as string);
+            break;
+        }
+        default: {
+            if (
+                method === '$sys.Disconnect' ||
                     method?.startsWith('$sys.Disconnect')
-                ) {
-                    // Server is telling us the listed remote object IDs have been torn down
-                    // on its side (e.g. shared stream closed).  Propagate disconnect() to the
-                    // matching remote objects so any pending consumers (for-await loops) exit
-                    // cleanly instead of hanging.
-                    const ids = args[0] as number[] | undefined;
-                    if (Array.isArray(ids)) {
-                        for (const id of ids) {
-                            const remoteObj = peer.remoteObjects.get(id) as
+            ) {
+                // Server is telling us the listed remote object IDs have been torn down
+                // on its side (e.g. shared stream closed).  Propagate disconnect() to the
+                // matching remote objects so any pending consumers (for-await loops) exit
+                // cleanly instead of hanging.
+                const ids = args[0] as number[] | undefined;
+                if (Array.isArray(ids)) {
+                    for (const id of ids) {
+                        const remoteObj = peer.remoteObjects.get(id) as
                                 | IRpcObject
                                 | undefined;
-                            if (
-                                remoteObj &&
+                        if (
+                            remoteObj &&
                                 typeof remoteObj.disconnect === 'function'
-                            ) {
-                                remoteObj.disconnect();
-                            }
-                            // Also check shared objects — server may disconnect a client-to-server
-                            // stream sender (e.g. audio stream) after pod restart or timeout.
-                            const sharedObj = peer.sharedObjects.get(id) as
+                        ) {
+                            remoteObj.disconnect();
+                        }
+                        // Also check shared objects — server may disconnect a client-to-server
+                        // stream sender (e.g. audio stream) after pod restart or timeout.
+                        const sharedObj = peer.sharedObjects.get(id) as
                                 | IRpcObject
                                 | undefined;
-                            if (
-                                sharedObj &&
+                        if (
+                            sharedObj &&
                                 typeof sharedObj.disconnect === 'function'
-                            ) {
-                                sharedObj.disconnect();
-                            }
+                        ) {
+                            sharedObj.disconnect();
                         }
                     }
                 }
-                break;
             }
+            break;
+        }
         }
     }
 }

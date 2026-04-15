@@ -79,6 +79,7 @@ export class ComputeFunction {
             if (cached?.isConsistent) return cached;
 
             // 6. Create new Computed + ComputeContext
+            // eslint-disable-next-line prefer-const
             let newComputed: Computed<unknown>;
             const renewer =
                 prevComputed?._renewer ??

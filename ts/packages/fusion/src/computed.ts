@@ -212,13 +212,6 @@ export class Computed<T> implements IResult<T> {
 
 /** Computed variant for State types — skips registry registration since the State holds a direct reference. */
 export class StateBoundComputed<T> extends Computed<T> {
-    constructor(
-        state: State<T>,
-        renewer?: () => Computed<T> | Promise<Computed<T>>
-    ) {
-        super(state, renewer);
-    }
-
     protected override _latest(): Computed<T> | undefined {
         return (this.input as State<T>).computed;
     }

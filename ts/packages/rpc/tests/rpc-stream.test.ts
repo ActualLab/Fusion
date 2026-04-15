@@ -103,7 +103,7 @@ describe('RpcStream end-to-end', () => {
 
         const client = clientHub.addClient<{
             getNumbers(count: number): Promise<AsyncIterable<number>>;
-        }>(clientPeer, StreamServiceDef);
+                }>(clientPeer, StreamServiceDef);
 
         const stream = await client.getNumbers(4);
         const items: number[] = [];
@@ -126,7 +126,7 @@ describe('RpcStream end-to-end', () => {
 
         const client = clientHub.addClient<{
             getStrings(count: number): Promise<AsyncIterable<string>>;
-        }>(clientPeer, StreamServiceDef);
+                }>(clientPeer, StreamServiceDef);
 
         const stream = await client.getStrings(3);
         const items: string[] = [];
@@ -146,7 +146,7 @@ describe('RpcStream end-to-end', () => {
 
         const client = clientHub.addClient<{
             emptyStream(): Promise<AsyncIterable<number>>;
-        }>(clientPeer, StreamServiceDef);
+                }>(clientPeer, StreamServiceDef);
 
         const stream = await client.emptyStream();
         const items: number[] = [];
@@ -168,7 +168,7 @@ describe('RpcStream end-to-end', () => {
 
         const client = clientHub.addClient<{
             failingStream(): Promise<AsyncIterable<number>>;
-        }>(clientPeer, StreamServiceDef);
+                }>(clientPeer, StreamServiceDef);
 
         const stream = await client.failingStream();
         const items: number[] = [];
@@ -182,11 +182,11 @@ describe('RpcStream end-to-end', () => {
     });
 
     it('should support early break from client', async () => {
-        let yieldCount = 0;
+        let _yieldCount = 0;
         serverHub.addService(StreamServiceDef, {
             infiniteStream: async function* () {
                 for (let i = 0; ; i++) {
-                    yieldCount++;
+                    _yieldCount++;
                     yield i;
                     // Small delay to give the client a chance to break
                     await delay(1);
@@ -196,7 +196,7 @@ describe('RpcStream end-to-end', () => {
 
         const client = clientHub.addClient<{
             infiniteStream(): Promise<AsyncIterable<number>>;
-        }>(clientPeer, StreamServiceDef);
+                }>(clientPeer, StreamServiceDef);
 
         const stream = await client.infiniteStream();
         const items: number[] = [];
@@ -220,7 +220,7 @@ describe('RpcStream end-to-end', () => {
 
         const client = clientHub.addClient<{
             infiniteStream(): Promise<AsyncIterable<number>>;
-        }>(clientPeer, StreamServiceDef);
+                }>(clientPeer, StreamServiceDef);
 
         const stream = await client.infiniteStream();
         const items: number[] = [];
@@ -248,7 +248,7 @@ describe('RpcStream end-to-end', () => {
 
         const client = clientHub.addClient<{
             getNumbers(count: number): Promise<AsyncIterable<number>>;
-        }>(clientPeer, StreamServiceDef);
+                }>(clientPeer, StreamServiceDef);
 
         const stream = await client.getNumbers(1);
         const iter = stream[Symbol.asyncIterator]();
@@ -271,7 +271,7 @@ describe('RpcStream end-to-end', () => {
 
         const client = clientHub.addClient<{
             getNumbers(count: number): Promise<AsyncIterable<number>>;
-        }>(clientPeer, StreamServiceDef);
+                }>(clientPeer, StreamServiceDef);
 
         const [stream1, stream2] = await Promise.all([
             client.getNumbers(3),
@@ -315,7 +315,7 @@ describe('RpcStream allowReconnect', () => {
         peer.remoteObjects.register(stream);
 
         // Start iterating so the stream is active
-        const iter = stream[Symbol.asyncIterator]();
+        const _iter = stream[Symbol.asyncIterator]();
 
         // Simulate reconnect — should disconnect instead
         stream.reconnect();

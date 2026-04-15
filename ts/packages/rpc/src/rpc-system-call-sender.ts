@@ -120,12 +120,12 @@ export class RpcSystemCallSender {
         const handshakeArg = conn.binaryMode
             ? [peerId, null, hubId, 2, index] // Array for MessagePack
             : {
-                  RemotePeerId: peerId,
-                  RemoteApiVersionSet: null,
-                  RemoteHubId: hubId,
-                  ProtocolVersion: 2,
-                  Index: index,
-              };
+                RemotePeerId: peerId,
+                RemoteApiVersionSet: null,
+                RemoteHubId: hubId,
+                ProtocolVersion: 2,
+                Index: index,
+            };
         this._send(conn, { Method: RpcSystemCalls.handshake }, [handshakeArg]);
     }
 

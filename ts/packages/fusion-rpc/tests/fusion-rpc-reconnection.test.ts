@@ -25,13 +25,13 @@ function delay(ms: number): Promise<void> {
 class ICounterService {
     @computeMethod
     @rpcMethod()
-    async getCount(key: string): Promise<number> {
+    async getCount(_key: string): Promise<number> {
         return undefined!;
     }
 
     @computeMethod
     @rpcMethod()
-    async getDoubled(key: string): Promise<number> {
+    async getDoubled(_key: string): Promise<number> {
         return undefined!;
     }
 }
@@ -250,7 +250,7 @@ describe('Fusion RPC Reconnection', () => {
         });
         const counter = createRpcClient<{
             getCount(key: string): Promise<number>;
-        }>(clientPeer, counterDef);
+                }>(clientPeer, counterDef);
 
         // Initial call
         const r1 = await counter.getCount('key1');
@@ -293,7 +293,7 @@ describe('Fusion RPC Reconnection', () => {
         });
         const counter = createRpcClient<{
             getCount(key: string): Promise<number>;
-        }>(clientPeer, counterDef);
+                }>(clientPeer, counterDef);
 
         // Initial value
         const r1 = await counter.getCount('y');
@@ -376,7 +376,7 @@ describe('Fusion RPC Reconnection', () => {
         });
         const counter = clientHub.addClient<{
             getCount(key: string): Promise<number>;
-        }>(clientPeer, counterDef);
+                }>(clientPeer, counterDef);
 
         const captured = await Computed.capture(() => counter.getCount('x'));
         expect(captured.value).toBe(0);
@@ -402,7 +402,7 @@ describe('Fusion RPC Reconnection', () => {
         });
         const counter = clientHub.addClient<{
             getCount(key: string): Promise<number>;
-        }>(clientPeer, counterDef);
+                }>(clientPeer, counterDef);
 
         const captured = await Computed.capture(() => counter.getCount('x'));
         expect(captured.value).toBe(0);
@@ -436,7 +436,7 @@ describe('Fusion RPC Reconnection', () => {
         });
         const counter = clientHub.addClient<{
             getCount(key: string): Promise<number>;
-        }>(clientPeer, counterDef);
+                }>(clientPeer, counterDef);
 
         const captured = await Computed.capture(() => counter.getCount('x'));
         expect(captured.value).toBe(0);

@@ -58,7 +58,7 @@ describe('RPC Serialization', () => {
         const second = split[1];
         expect(first).toBeDefined();
         expect(second).toBeDefined();
-        expect(deserializeMessage(first as string).message.Method).toBe('a');
-        expect(deserializeMessage(second as string).message.Method).toBe('b');
+        expect(deserializeMessage(first!).message.Method).toBe('a');
+        expect(deserializeMessage(second!).message.Method).toBe('b');
     });
 });

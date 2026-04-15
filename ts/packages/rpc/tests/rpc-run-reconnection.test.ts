@@ -128,6 +128,7 @@ describe('RPC run() reconnection', () => {
         // Use short delays for fast test
         peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
 
         // Start the reconnection loop
@@ -169,6 +170,7 @@ describe('RPC run() reconnection', () => {
 
         peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
         void peer.run(factory);
 

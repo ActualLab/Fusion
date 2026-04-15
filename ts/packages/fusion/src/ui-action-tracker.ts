@@ -50,4 +50,4 @@ export class UIActionTracker {
     }
 }
 
-export let uiActions = new UIActionTracker();
+export const uiActions = new UIActionTracker();

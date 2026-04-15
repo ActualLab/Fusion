@@ -31,7 +31,7 @@ export class UIUpdateDelayer {
                     if (abortSignal.aborted) {
                         clearTimeout(timer);
                         t.changed.remove(onChanged);
-                        reject(abortSignal.reason);
+                        reject(abortSignal.reason instanceof Error ? abortSignal.reason : new Error(String(abortSignal.reason)));
                         return;
                     }
                     abortSignal.addEventListener(
@@ -39,7 +39,7 @@ export class UIUpdateDelayer {
                         () => {
                             clearTimeout(timer);
                             t.changed.remove(onChanged);
-                            reject(abortSignal.reason);
+                            reject(abortSignal.reason instanceof Error ? abortSignal.reason : new Error(String(abortSignal.reason)));
                         },
                         { once: true }
                     );

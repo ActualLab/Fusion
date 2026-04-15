@@ -25,13 +25,13 @@ function delay(ms: number): Promise<void> {
 class ICounterService {
     @computeMethod
     @rpcMethod()
-    async getCount(key: string): Promise<number> {
+    async getCount(_key: string): Promise<number> {
         return undefined!;
     }
 
     @computeMethod
     @rpcMethod()
-    async getDoubled(key: string): Promise<number> {
+    async getDoubled(_key: string): Promise<number> {
         return undefined!;
     }
 }
@@ -40,10 +40,6 @@ class ICounterService {
 const MutationServiceDef = defineRpcService('MutationService', {
     setCount: { args: ['', 0], returns: RpcType.noWait },
 });
-
-interface IMutationService {
-    setCount(key: string, value: number): void;
-}
 
 describe('End-to-end Fusion over RPC', () => {
     let serverHub: FusionHub;
@@ -109,7 +105,7 @@ describe('End-to-end Fusion over RPC', () => {
         const counter = createRpcClient<{
             getCount(key: string): Promise<number>;
             getDoubled(key: string): Promise<number>;
-        }>(clientPeer, counterDef);
+                }>(clientPeer, counterDef);
         getState('x').set(42);
 
         const result = await counter.getCount('x');
@@ -168,7 +164,7 @@ describe('End-to-end Fusion over RPC', () => {
         const counter = createRpcClient<{
             getCount(key: string): Promise<number>;
             getDoubled(key: string): Promise<number>;
-        }>(clientPeer, counterDef);
+                }>(clientPeer, counterDef);
         getState('a').set(10);
 
         const count = await counter.getCount('a');
@@ -194,7 +190,7 @@ describe('End-to-end Fusion over RPC', () => {
         });
         const counter = clientHub.addClient<{
             getCount(key: string): Promise<number>;
-        }>(clientPeer, counterDef);
+                }>(clientPeer, counterDef);
         getState('x').set(42);
 
         const captured = await Computed.capture(() => counter.getCount('x'));
@@ -218,7 +214,7 @@ describe('End-to-end Fusion over RPC', () => {
         });
         const counter = clientHub.addClient<{
             getCount(key: string): Promise<number>;
-        }>(clientPeer, counterDef);
+                }>(clientPeer, counterDef);
 
         const captured = await Computed.capture(() => counter.getCount('x'));
         expect(captured.value).toBe(0);

@@ -64,7 +64,7 @@ export class RpcMessageChannelConnection implements RpcConnection {
 export function createMessageChannelPair(): [
     RpcMessageChannelConnection,
     RpcMessageChannelConnection,
-] {
+    ] {
     const channel = new MessageChannel();
     return [
         new RpcMessageChannelConnection(channel.port1),

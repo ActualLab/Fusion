@@ -25,28 +25,28 @@ export class FixedDelayer {
         this.delay =
             ms > 10_000
                 ? (abortSignal?: AbortSignal) =>
-                      new Promise<void>((resolve, reject) => {
-                          const timer = setTimeout(resolve, this.ms);
-                          if (abortSignal === undefined) return;
-                          if (abortSignal.aborted) {
-                              clearTimeout(timer);
-                              reject(abortSignal.reason);
-                              return;
-                          }
-                          abortSignal.addEventListener(
-                              'abort',
-                              () => {
-                                  clearTimeout(timer);
-                                  reject(abortSignal.reason);
-                              },
-                              { once: true }
-                          );
-                      })
+                    new Promise<void>((resolve, reject) => {
+                        const timer = setTimeout(resolve, this.ms);
+                        if (abortSignal === undefined) return;
+                        if (abortSignal.aborted) {
+                            clearTimeout(timer);
+                            reject(abortSignal.reason instanceof Error ? abortSignal.reason : new Error(String(abortSignal.reason)));
+                            return;
+                        }
+                        abortSignal.addEventListener(
+                            'abort',
+                            () => {
+                                clearTimeout(timer);
+                                reject(abortSignal.reason instanceof Error ? abortSignal.reason : new Error(String(abortSignal.reason)));
+                            },
+                            { once: true }
+                        );
+                    })
                 : () =>
-                      new Promise<void>(resolve =>
-                          setTimeout(resolve, this.ms)
-                      );
+                    new Promise<void>(resolve =>
+                        setTimeout(resolve, this.ms)
+                    );
     }
 }
 
-export let defaultUpdateDelayer: UpdateDelayer = FixedDelayer.get(1000 / 60);
+export const defaultUpdateDelayer: UpdateDelayer = FixedDelayer.get(1000 / 60);

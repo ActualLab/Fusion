@@ -144,7 +144,7 @@ export class ComputedState<T> extends State<T> {
                     this._cancelDelaySource.promise,
                 ]);
             }
-        } catch (e) {
+        } catch {
             // Intended, do nothing
         }
     }
