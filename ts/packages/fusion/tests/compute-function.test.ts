@@ -43,10 +43,8 @@ describe('ComputeFunction', () => {
     });
 
     it('should produce a Consistent computed with the function result', async () => {
-        const fn = new ComputeFunction('double', function (
-            this: any,
-            x: unknown
-        ) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fn = new ComputeFunction('double', function (this: any, x: unknown) {
             return (x as number) * 2;
         });
         const computed = await fn.invoke(testInstance, [5]);
@@ -69,6 +67,7 @@ describe('ComputeFunction', () => {
     });
 
     it('should produce different computed for different args', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fn = new ComputeFunction('id', function (this: any, x: unknown) {
             return x;
         });
@@ -109,10 +108,8 @@ describe('ComputeFunction', () => {
     });
 
     it('should handle async compute functions', async () => {
-        const fn = new ComputeFunction('async', async function (
-            this: any,
-            x: unknown
-        ) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fn = new ComputeFunction('async', async function (this: any, x: unknown) {
             await new Promise(r => setTimeout(r, 5));
             return (x as number) + 1;
         });
@@ -122,16 +119,12 @@ describe('ComputeFunction', () => {
     });
 
     it('should capture dependencies between compute functions', async () => {
-        const innerFn = new ComputeFunction('inner', function (
-            this: any,
-            x: unknown
-        ) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const innerFn = new ComputeFunction('inner', function (this: any, x: unknown) {
             return (x as number) * 2;
         });
-        const outerFn = new ComputeFunction('outer', async function (
-            this: any,
-            x: unknown
-        ) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const outerFn = new ComputeFunction('outer', async function (this: any, x: unknown) {
             const innerComputed = await innerFn.invoke(testInstance, [x]);
             return (innerComputed.value as number) + 1;
         });

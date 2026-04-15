@@ -11,7 +11,7 @@ describe('@rpcService decorator', () => {
     it('should store service name in metadata', () => {
         @rpcService('ProductService')
         class ProductService {
-            async getProduct(_id: string): Promise<unknown> {
+            getProduct(_id: string): unknown {
                 return undefined;
             }
         }
@@ -26,11 +26,12 @@ describe('@rpcMethod decorator', () => {
     it('should store method metadata', () => {
         class Svc {
             @rpcMethod()
-            async getProduct(_id: string): Promise<unknown> {
+            getProduct(_id: string): unknown {
                 return undefined;
             }
 
             @rpcMethod({ returns: RpcType.stream })
+            // eslint-disable-next-line @typescript-eslint/require-await
             async *getProducts(
                 _query: string,
                 _limit: number
@@ -49,17 +50,17 @@ describe('@rpcMethod decorator', () => {
         });
     });
 
-    it('should not wrap the method', async () => {
+    it('should not wrap the method', () => {
         class Svc {
             @rpcMethod()
-            async getItem(id: string): Promise<string> {
+            getItem(id: string): string {
                 return id;
             }
         }
 
         // rpcMethod returns target unchanged — method still works normally
         const svc = new Svc();
-        expect(await svc.getItem('abc')).toBe('abc');
+        expect(svc.getItem('abc')).toBe('abc');
 
         const meta = getMethodsMeta(Svc);
         expect(meta).toBeDefined();
@@ -72,14 +73,15 @@ describe('@rpcService + @rpcMethod combined', () => {
         @rpcService('CounterService')
         class ICounterService {
             @rpcMethod()
-            async getCount(_key: string): Promise<number> {
+            getCount(_key: string): number {
                 return 0;
             }
 
             @rpcMethod()
-            async setCount(_key: string, _value: number): Promise<void> {}
+            setCount(_key: string, _value: number): void { /* noop */ }
 
             @rpcMethod({ returns: RpcType.stream })
+            // eslint-disable-next-line @typescript-eslint/require-await
             async *watchCount(_key: string): AsyncGenerator<number> {
                 yield 0;
             }
@@ -100,7 +102,7 @@ describe('@rpcService + @rpcMethod combined', () => {
 
     it('should return undefined for non-decorated classes', () => {
         class Plain {
-            async doStuff(): Promise<void> {}
+            doStuff(): void { /* noop */ }
         }
 
         expect(getServiceMeta(Plain)).toBeUndefined();

@@ -2,7 +2,7 @@ import { PromiseSource } from './promise-source.js';
 
 /** Typed pub/sub event handler set — similar to .NET's EventHandler<T> multicast delegate. */
 export class EventHandlerSet<T> {
-    private _handlers: Set<(arg: T) => void> = new Set();
+    private _handlers = new Set<(arg: T) => void>();
 
     get count(): number {
         return this._handlers.size;

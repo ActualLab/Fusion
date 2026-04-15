@@ -157,8 +157,9 @@ export class RpcStreamSender<T> implements IRpcObject {
 
         const iterator = source[Symbol.asyncIterator]();
         try {
-            while (true) {
+            for (;;) {
                 const next = await iterator.next();
+                 
                 if (next.done || this._ended) break;
 
                 const item = next.value;
@@ -181,6 +182,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                 if (!this.isRealTime) {
                     // Normal mode: wait for ACK before sending
                     await this._waitForAckBudget();
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- _ended can change during await
                     if (this._ended) return;
                     this.sendItem(item);
                     continue;
@@ -193,6 +195,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                 let sourceExhausted = false;
 
                 while (this._nextIndex >= this._lastAckedIndex + this.ackAdvance) {
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- _ended can change during await
                     if (this._ended) return;
                     const n = await iterator.next();
                     if (n.done) {
@@ -204,6 +207,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                     }
                 }
 
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- _ended can change during await
                 if (this._ended) return;
 
                 if (latestSkipTarget !== undefined) {
@@ -211,10 +215,12 @@ export class RpcStreamSender<T> implements IRpcObject {
                 }
 
                 if (sourceExhausted) {
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- _ended can change during await
                     if (!this._ended) this.sendEnd();
                     return;
                 }
             }
+             
             if (!this._ended) {
                 this.sendEnd();
             }

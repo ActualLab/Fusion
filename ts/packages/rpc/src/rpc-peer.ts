@@ -222,21 +222,18 @@ export abstract class RpcPeer {
         // Wire up caller-initiated cancellation → sends $sys.Cancel to remote peer
         const signal = options?.signal;
         if (signal !== undefined) {
-            const peer = this;
-            const hub = this._hub;
-            const tracker = this.outbound;
             const onAbort = () => {
-                if (tracker.remove(callId) !== undefined) {
+                if (this.outbound.remove(callId) !== undefined) {
                     outboundCall.result.reject(new Error('Call cancelled.'));
                     outboundCall.onDisconnect();
-                    if (peer._connection !== undefined)
-                        hub.systemCallSender.cancel(peer._connection, peer.format, callId);
+                    if (this._connection !== undefined)
+                        this._hub.systemCallSender.cancel(this._connection, this.format, callId);
                 } else {
-                    const idx = peer._pendingSends.findIndex(
+                    const idx = this._pendingSends.findIndex(
                         c => c.callId === callId
                     );
                     if (idx !== -1) {
-                        peer._pendingSends.splice(idx, 1);
+                        this._pendingSends.splice(idx, 1);
                         outboundCall.result.reject(
                             new Error('Call cancelled.')
                         );
@@ -354,61 +351,59 @@ export abstract class RpcPeer {
 
         // Dispatch to the hub's service host
         const serviceHost = this._hub.serviceHost;
-        if (serviceHost !== undefined) {
-            void (async () => {
-                try {
-                    const context =
-                        this._connection !== undefined
-                            ? {
-                                __rpcDispatch: true as const,
-                                callId: relatedId,
-                                connection: this._connection,
-                            }
-                            : undefined;
-                    const result = await serviceHost.dispatch(
-                        method,
-                        args,
-                        context
+        void (async () => {
+            try {
+                const context =
+                    this._connection !== undefined
+                        ? {
+                            __rpcDispatch: true as const,
+                            callId: relatedId,
+                            connection: this._connection,
+                        }
+                        : undefined;
+                const result = await serviceHost.dispatch(
+                    method,
+                    args,
+                    context
+                );
+                if (
+                    methodDef?.stream === true &&
+                    this._connection !== undefined
+                ) {
+                    // Stream method — wrap result in RpcStream if needed,
+                    // then let toRef() create the sender, register it, and start pumping.
+                    const stream = result instanceof RpcStream
+                        ? result as RpcStream<unknown>
+                        : new RpcStream<unknown>(result as AsyncIterable<unknown>);
+                    this._hub.systemCallSender.ok(
+                        this._connection,
+                        this.format,
+                        relatedId,
+                        stream.toRef(this)
                     );
-                    if (
-                        methodDef?.stream === true &&
-                        this._connection !== undefined
-                    ) {
-                        // Stream method — wrap result in RpcStream if needed,
-                        // then let toRef() create the sender, register it, and start pumping.
-                        const stream = result instanceof RpcStream
-                            ? result as RpcStream<unknown>
-                            : new RpcStream<unknown>(result as AsyncIterable<unknown>);
-                        this._hub.systemCallSender.ok(
-                            this._connection,
-                            this.format,
-                            relatedId,
-                            stream.toRef(this)
-                        );
-                    } else if (!isNoWait && this._connection !== undefined) {
-                        this._hub.systemCallSender.ok(
-                            this._connection,
-                            this.format,
-                            relatedId,
-                            result
-                        );
-                    }
-                } catch (e) {
-                    if (!isNoWait && this._connection !== undefined) {
-                        this._hub.systemCallSender.error(
-                            this._connection,
-                            this.format,
-                            relatedId,
-                            e
-                        );
-                    }
-                } finally {
-                    if (!isNoWait) {
-                        this.inbound.remove(relatedId);
-                    }
+                } else if (!isNoWait && this._connection !== undefined) {
+                    this._hub.systemCallSender.ok(
+                        this._connection,
+                        this.format,
+                        relatedId,
+                        result
+                    );
                 }
-            })();
-        }
+            } catch (e) {
+                if (!isNoWait && this._connection !== undefined) {
+                    this._hub.systemCallSender.error(
+                        this._connection,
+                        this.format,
+                        relatedId,
+                        e
+                    );
+                }
+            } finally {
+                if (!isNoWait) {
+                    this.inbound.remove(relatedId);
+                }
+            }
+        })();
     }
 
     private _startKeepAlive(): void {
@@ -548,7 +543,7 @@ export class RpcClientPeer extends RpcPeer {
                         reject(new Error('Connection failed'))
                     )
                 );
-                closedRejection.catch(() => {}); // prevent unhandled rejection when conn closes normally
+                closedRejection.catch(() => { /* noop — prevent unhandled rejection when conn closes normally */ });
                 await Promise.race([conn.whenConnected, closedRejection]);
 
                 // Send our handshake, then wait for the server's response.
@@ -594,6 +589,7 @@ export class RpcClientPeer extends RpcPeer {
             }
 
             this._connectionKind = RpcPeerConnectionKind.Disconnected;
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- _disposed can change during await
             if (this._disposed) break;
 
             // Server rejected our serialization format — stop reconnecting and notify listeners

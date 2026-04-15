@@ -1,3 +1,4 @@
+ 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AsyncContext, errorResult } from '@actuallab/core';
 import {
@@ -190,7 +191,7 @@ describe('Computed.use() dependency capture', () => {
         expect(() => c.useInconsistent()).toThrow('no output');
     });
 
-    it('should recompute via renewer when invalidated', async () => {
+    it('should recompute via renewer when invalidated', () => {
         const renewed = new Computed<number>(makeKey('get', 2));
         renewed.setOutput(99);
 
@@ -233,7 +234,7 @@ describe('Computed.capture()', () => {
     it('should capture a @computeMethod result', async () => {
         class Svc {
             @computeMethod
-            async getValue(key: string): Promise<number> {
+            getValue(key: string): number {
                 return key === 'x' ? 42 : 0;
             }
         }
@@ -249,7 +250,7 @@ describe('Computed.capture()', () => {
 
         class Svc {
             @computeMethod
-            async getValue(_key: string): Promise<number> {
+            getValue(_key: string): number {
                 return source.use();
             }
         }
@@ -265,7 +266,7 @@ describe('Computed.capture()', () => {
     });
 
     it('should capture a wrapComputeMethod function', async () => {
-        const getDouble = wrapComputeMethod(async (n: number) => n * 2);
+        const getDouble = wrapComputeMethod((n: number) => n * 2);
 
         const captured = await Computed.capture(() => getDouble(5));
         expect(captured.value).toBe(10);

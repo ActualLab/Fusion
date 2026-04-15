@@ -132,6 +132,7 @@ export class FusionHub extends RpcHub {
 
     /** Override to apply FUSION_CALL_TYPE_ID for compute methods. */
     protected override _buildServiceDef(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cls: abstract new (...args: any[]) => any
     ): RpcServiceDef {
         const svcMeta = getServiceMeta(cls);
@@ -150,6 +151,7 @@ export class FusionHub extends RpcHub {
                 argCount: meta.argCount,
                 wireArgCount,
                 callTypeId:
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                     (meta as any).compute === true ? FUSION_CALL_TYPE_ID : 0,
                 stream: meta.returns === RpcType.stream,
                 noWait: meta.returns === RpcType.noWait,

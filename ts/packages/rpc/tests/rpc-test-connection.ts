@@ -73,12 +73,14 @@ export async function connectionDisruptor(
     while (!signal.aborted) {
         // Stay connected for a random duration
         await delay(randomInRange(connectedMs));
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (signal.aborted) break;
 
         await conn.disconnect();
 
         // Stay disconnected for a random duration
         await delay(randomInRange(disconnectedMs));
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (signal.aborted) break;
 
         await conn.connect();

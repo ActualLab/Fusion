@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/await-thenable, @typescript-eslint/no-confusing-void-expression -- @computeMethod decorator wraps methods to return Promise at runtime */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AsyncContext } from '@actuallab/core';
 import {
@@ -86,12 +87,13 @@ describe('End-to-end local Fusion', () => {
             private store = new Map<string, number>();
 
             @computeMethod
-            async getValue(id: string): Promise<number> {
+            getValue(id: string): number {
                 return this.store.get(id) ?? 0;
             }
 
-            async increment(id: string): Promise<void> {
+            increment(id: string): void {
                 this.store.set(id, (this.store.get(id) ?? 0) + 1);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
                 (this.getValue as any).invalidate(id);
             }
         }

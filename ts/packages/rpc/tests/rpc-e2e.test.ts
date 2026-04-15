@@ -1,3 +1,4 @@
+ 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
     RpcClientPeer,
@@ -171,7 +172,7 @@ describe.each(FORMATS)('RPC End-to-End [%s]', (formatKey) => {
         expect(await svc.compute(1, 2, 3)).toBe(6); // 3 args → sum
     });
 
-    it('should handle noWait call on disconnected peer silently', async () => {
+    it('should handle noWait call on disconnected peer silently', () => {
         const disconnectedPeer = new RpcClientPeer(pair.clientHub, 'ws://test-disconnected');
         // Not connected — should not throw
         expect(() =>

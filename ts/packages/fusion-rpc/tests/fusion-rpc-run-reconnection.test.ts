@@ -1,3 +1,4 @@
+ 
 import { describe, it, expect, afterEach } from 'vitest';
 import { AsyncContext, RetryDelaySeq } from '@actuallab/core';
 import { MutableState } from '@actuallab/fusion';
@@ -66,7 +67,7 @@ class FakeWebSocket implements WebSocketLike {
 class ICounterService {
     @computeMethod
     @rpcMethod()
-    async getCount(_key: string): Promise<number> {
+    getCount(_key: string): number {
         return undefined!;
     }
 }
@@ -91,7 +92,7 @@ function createServerHub(
     }
 
     hub.addService(ICounterService, {
-        async getCount(key: unknown): Promise<number> {
+        getCount(key: unknown): number {
             return getState(key as string).use();
         },
     });

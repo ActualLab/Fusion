@@ -1,3 +1,4 @@
+ 
 import { describe, it, expect } from 'vitest';
 import {
     RpcWebSocketConnection,
@@ -12,7 +13,7 @@ function delay(ms: number): Promise<void> {
 }
 
 describe('RpcWebSocketConnection binary mode', () => {
-    it('constructor sets binaryType to arraybuffer', async () => {
+    it('constructor sets binaryType to arraybuffer', () => {
         const [wsA] = createMockWsPair();
         const conn = new RpcWebSocketConnection(wsA, true);
         expect(wsA.binaryType).toBe('arraybuffer');

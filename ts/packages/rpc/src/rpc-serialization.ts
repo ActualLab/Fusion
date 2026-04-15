@@ -351,8 +351,8 @@ export function deserializeBinaryMessage(
 export function splitBinaryFrame(
     frame: Uint8Array,
     decoder: Decoder = defaultBinaryDecoder
-): Array<{ message: RpcMessage; args: unknown[] }> {
-    const results: Array<{ message: RpcMessage; args: unknown[] }> = [];
+): { message: RpcMessage; args: unknown[] }[] {
+    const results: { message: RpcMessage; args: unknown[] }[] = [];
     let offset = 0;
     while (offset < frame.length) {
         const { message, args, bytesRead } = deserializeBinaryMessage(
@@ -516,8 +516,8 @@ export function splitCompactBinaryFrame(
     frame: Uint8Array,
     registry?: RpcMethodRegistry,
     decoder: Decoder = defaultBinaryDecoder
-): Array<{ message: RpcMessage; args: unknown[] }> {
-    const results: Array<{ message: RpcMessage; args: unknown[] }> = [];
+): { message: RpcMessage; args: unknown[] }[] {
+    const results: { message: RpcMessage; args: unknown[] }[] = [];
     let offset = 0;
     while (offset < frame.length) {
         const { message, args, bytesRead } =

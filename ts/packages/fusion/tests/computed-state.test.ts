@@ -28,7 +28,7 @@ describe('ComputedState', () => {
         await state.whenFirstTimeUpdated();
         expect(state.value).toBe(1);
 
-        state.computed?.invalidate();
+        state.computed.invalidate();
         await delay(20);
         expect(state.updateIndex).toBe(2);
         expect(state.value).toBe(2);
@@ -43,7 +43,7 @@ describe('ComputedState', () => {
         await state.whenFirstTimeUpdated();
         expect(state.value).toBe(1);
 
-        state.computed?.invalidate();
+        state.computed.invalidate();
 
         // Should not have updated yet
         await delay(10);
@@ -86,7 +86,7 @@ describe('ComputedState', () => {
         expect(state.value).toBe(1);
         expect(state.lastNonErrorValue).toBe(1);
 
-        state.computed?.invalidate();
+        state.computed.invalidate();
         await delay(20);
 
         expect(state.error).toBeDefined();
@@ -105,7 +105,7 @@ describe('ComputedState', () => {
         state.dispose();
         expect(state.isDisposed).toBe(true);
 
-        computed?.invalidate();
+        computed.invalidate();
         await delay(20);
 
         expect(counter).toBe(1);

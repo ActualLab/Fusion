@@ -136,6 +136,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
 
     it('should stream items from server to client via async generator', async () => {
         pair.serverHub.addService(StreamServiceDef, {
+            // eslint-disable-next-line @typescript-eslint/require-await
             getNumbers: async function* (count: unknown) {
                 for (let i = 0; i < (count as number); i++) {
                     yield i * 10;
@@ -158,6 +159,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
 
     it('should stream string items', async () => {
         pair.serverHub.addService(StreamServiceDef, {
+            // eslint-disable-next-line @typescript-eslint/require-await
             getStrings: async function* (count: unknown) {
                 const words = ['hello', 'world', 'foo', 'bar'];
                 for (let i = 0; i < (count as number); i++) {
@@ -201,6 +203,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
 
     it('should propagate server-side stream errors', async () => {
         pair.serverHub.addService(StreamServiceDef, {
+            // eslint-disable-next-line @typescript-eslint/require-await
             failingStream: async function* () {
                 yield 1;
                 yield 2;
@@ -283,6 +286,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
 
     it('should throw if client iterates the same stream twice', async () => {
         pair.serverHub.addService(StreamServiceDef, {
+            // eslint-disable-next-line @typescript-eslint/require-await
             getNumbers: async function* (count: unknown) {
                 for (let i = 0; i < (count as number); i++) yield i;
             },
@@ -338,6 +342,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
 
     it('should handle multiple concurrent streams', async () => {
         pair.serverHub.addService(StreamServiceDef, {
+            // eslint-disable-next-line @typescript-eslint/require-await
             getNumbers: async function* (count: unknown) {
                 for (let i = 0; i < (count as number); i++) {
                     yield i;
@@ -398,8 +403,11 @@ describe('RpcStream allowReconnect', () => {
         stream.reconnect();
 
         // Stream should be completed with error
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         expect((stream as any)._completed).toBe(true);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         expect((stream as any)._completionError).toBeInstanceOf(Error);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         expect((stream as any)._completionError.message).toBe(
             'Peer disconnected.'
         );
@@ -428,7 +436,9 @@ describe('RpcStream allowReconnect', () => {
         stream.reconnect();
 
         // Stream should NOT be completed — it sent a reset ack instead
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         expect((stream as any)._completed).toBe(false);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         expect((stream as any)._completionError).toBeNull();
 
         hub.close();
@@ -473,6 +483,7 @@ describe('RpcStream allowReconnect', () => {
 
         // Start pumping items slowly
         void (async () => {
+             
             await sender['_started'].promise;
             for (let i = 0; i < 100; i++) {
                 if (sender['_ended']) return;
@@ -524,6 +535,7 @@ describe('RpcStream allowReconnect', () => {
 
         // Pump all items quickly and end
         void (async () => {
+             
             await sender['_started'].promise;
             for (let i = 0; i < 5; i++) sender.sendItem(i);
             sender.sendEnd();
@@ -581,6 +593,7 @@ describe('RpcStreamSender direct', () => {
 
         // Pump items via batch
         void (async () => {
+             
             await sender['_started'].promise;
             sender.sendBatch([10, 20, 30]);
             sender.sendEnd();
@@ -601,7 +614,7 @@ describe('RpcStreamSender direct', () => {
         expect(sender1.id.localId).not.toBe(sender2.id.localId);
     });
 
-    it('should unregister on AckEnd', async () => {
+    it('should unregister on AckEnd', () => {
         const sender = new RpcStreamSender<number>(serverPeer);
         serverPeer.sharedObjects.register(sender);
 
@@ -617,6 +630,7 @@ describe('RpcStreamSender direct', () => {
 
 describe('RpcStream local mode', () => {
     it('should create a local stream from async iterable', () => {
+        // eslint-disable-next-line @typescript-eslint/require-await
         async function* source() { yield 1; yield 2; }
         const stream = new RpcStream(source());
         expect(stream.kind).toBe(RpcObjectKind.Local);
@@ -628,6 +642,7 @@ describe('RpcStream local mode', () => {
     });
 
     it('should accept configuration options', () => {
+        // eslint-disable-next-line @typescript-eslint/require-await
         async function* source() { yield 1; }
         const canSkip = (x: number) => x % 10 === 0;
         const stream = new RpcStream(source(), {
@@ -645,6 +660,7 @@ describe('RpcStream local mode', () => {
     });
 
     it('should be iterable (delegates to local source)', async () => {
+        // eslint-disable-next-line @typescript-eslint/require-await
         async function* source() { yield 10; yield 20; yield 30; }
         const stream = new RpcStream(source());
         const items: number[] = [];
@@ -653,6 +669,7 @@ describe('RpcStream local mode', () => {
     });
 
     it('should have no-op reconnect and disconnect', () => {
+        // eslint-disable-next-line @typescript-eslint/require-await
         async function* source() { yield 1; }
         const stream = new RpcStream(source());
         // Should not throw
@@ -661,6 +678,7 @@ describe('RpcStream local mode', () => {
     });
 
     it('should throw whenSent before toRef is called', () => {
+        // eslint-disable-next-line @typescript-eslint/require-await
         async function* source() { yield 1; }
         const stream = new RpcStream(source());
         expect(() => stream.whenSent).toThrow(/toRef/);
@@ -699,6 +717,7 @@ describe('RpcStream local mode E2E (service returns RpcStream)', () => {
     it('should propagate config via toRef and deliver all items', async () => {
         pair.serverHub.addService(ConfigStreamServiceDef, {
             getStream() {
+                // eslint-disable-next-line @typescript-eslint/require-await
                 async function* source() {
                     for (let i = 0; i < 20; i++) yield i;
                 }
@@ -731,6 +750,7 @@ describe('RpcStream local mode E2E (service returns RpcStream)', () => {
         let streamInstance: RpcStream<number> | undefined;
         pair.serverHub.addService(ConfigStreamServiceDef, {
             getStream() {
+                // eslint-disable-next-line @typescript-eslint/require-await
                 async function* source() {
                     for (let i = 0; i < 5; i++) yield i;
                 }

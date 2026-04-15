@@ -12,7 +12,7 @@ describe('AsyncLock', () => {
             order.push(2);
         });
 
-        const task2 = lock.run(async () => {
+        const task2 = lock.run(() => {
             order.push(3);
             order.push(4);
         });

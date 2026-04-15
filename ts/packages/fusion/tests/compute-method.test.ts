@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/await-thenable -- @computeMethod decorator wraps methods to return Promise at runtime */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AsyncContext } from '@actuallab/core';
 import {
@@ -16,7 +17,7 @@ describe('@computeMethod decorator', () => {
 
         class Svc {
             @computeMethod
-            async getValue(id: string): Promise<number> {
+            getValue(id: string): number {
                 callCount++;
                 return id.length;
             }
@@ -34,7 +35,7 @@ describe('@computeMethod decorator', () => {
     it('should produce different results for different args', async () => {
         class Svc {
             @computeMethod
-            async getValue(id: string): Promise<number> {
+            getValue(id: string): number {
                 return id.length;
             }
         }
@@ -49,7 +50,7 @@ describe('@computeMethod decorator', () => {
 
         class Svc {
             @computeMethod
-            async getCount(_id: string): Promise<number> {
+            getCount(_id: string): number {
                 return ++counter;
             }
         }
@@ -58,6 +59,7 @@ describe('@computeMethod decorator', () => {
         expect(await svc.getCount('x')).toBe(1);
         expect(await svc.getCount('x')).toBe(1); // cached
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         (svc.getCount as any).invalidate('x');
 
         expect(await svc.getCount('x')).toBe(2); // recomputed
@@ -68,7 +70,7 @@ describe('@computeMethod decorator', () => {
             private store = new Map<string, number>();
 
             @computeMethod
-            async getValue(id: string): Promise<number> {
+            getValue(id: string): number {
                 return this.store.get(id) ?? 0;
             }
 
@@ -87,7 +89,7 @@ describe('@computeMethod decorator', () => {
             constructor(private prefix: string) {}
 
             @computeMethod
-            async getValue(id: string): Promise<string> {
+            getValue(id: string): string {
                 return `${this.prefix}-${id}`;
             }
         }
@@ -102,12 +104,12 @@ describe('@computeMethod decorator', () => {
     it('should store metadata via Symbol.metadata', () => {
         class Svc {
             @computeMethod
-            async getValue(_id: string): Promise<number> {
+            getValue(_id: string): number {
                 return 0;
             }
 
             @computeMethod
-            async getOther(_a: string, _b: number): Promise<string> {
+            getOther(_a: string, _b: number): string {
                 return '';
             }
         }
@@ -121,7 +123,7 @@ describe('@computeMethod decorator', () => {
     it('should handle errors in compute methods', async () => {
         class Svc {
             @computeMethod
-            async getValue(_id: string): Promise<number> {
+            getValue(_id: string): number {
                 throw new Error('compute error');
             }
         }

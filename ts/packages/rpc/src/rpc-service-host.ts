@@ -32,7 +32,7 @@ import { wireMethodName } from './rpc-service-def.js';
 import type { RpcServiceDef } from './rpc-service-def.js';
 import type { RpcConnection } from './rpc-connection.js';
 
-export type RpcServiceImpl = Record<string, (...args: unknown[]) => unknown>;
+export type RpcServiceImpl = Record<string, ((...args: unknown[]) => unknown) | undefined>;
 
 /** Context passed to service dispatch — carries callId and connection for compute tracking. */
 export interface RpcDispatchContext {

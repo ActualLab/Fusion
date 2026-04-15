@@ -1,3 +1,4 @@
+ 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AsyncContext, errorResult } from '@actuallab/core';
 import { ConsistencyState, MutableState } from '../src/index.js';

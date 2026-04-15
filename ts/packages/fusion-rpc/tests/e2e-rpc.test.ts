@@ -1,3 +1,4 @@
+ 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { AsyncContext } from '@actuallab/core';
 import { Computed, MutableState, computeMethod } from '@actuallab/fusion';
@@ -25,13 +26,13 @@ function delay(ms: number): Promise<void> {
 class ICounterService {
     @computeMethod
     @rpcMethod()
-    async getCount(_key: string): Promise<number> {
+    getCount(_key: string): number {
         return undefined!;
     }
 
     @computeMethod
     @rpcMethod()
-    async getDoubled(_key: string): Promise<number> {
+    getDoubled(_key: string): number {
         return undefined!;
     }
 }
@@ -64,10 +65,10 @@ describe('End-to-end Fusion over RPC', () => {
 
         // Register compute service on server using contract class
         serverHub.addService(ICounterService, {
-            async getCount(key: unknown): Promise<number> {
+            getCount(key: unknown): number {
                 return getState(key as string).use();
             },
-            async getDoubled(key: unknown): Promise<number> {
+            getDoubled(key: unknown): number {
                 return getState(key as string).use() * 2;
             },
         });

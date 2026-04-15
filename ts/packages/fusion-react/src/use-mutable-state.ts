@@ -26,6 +26,7 @@ export function useMutableState<T>(
                 } catch {
                     return;
                 }
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 if (!cancelled) forceRender();
             }
         };

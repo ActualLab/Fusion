@@ -1,12 +1,12 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  format: ["esm", "cjs"],
-  dts: {
-    compilerOptions: {
-      composite: false,
+    format: ['esm', 'cjs'],
+    dts: {
+        compilerOptions: {
+            composite: false,
+        },
     },
-  },
-  clean: true,
-  sourcemap: true,
+    clean: true,
+    sourcemap: true,
 });

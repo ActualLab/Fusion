@@ -297,40 +297,38 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             throw new Error('RpcStream can only be iterated once.');
         this._iterating = true;
 
-        const self = this;
-
         return {
-            async next(): Promise<IteratorResult<T>> {
+            next: async (): Promise<IteratorResult<T>> => {
                 // Lazy start: send initial ack on first next() call
-                if (!self._started) {
-                    self._started = true;
-                    self._sendAck(0, true);
+                if (!this._started) {
+                    this._started = true;
+                    this._sendAck(0, true);
                 }
 
                 // Read from buffer or wait for new data
-                while (true) {
-                    if (!self._buffer.isEmpty()) {
+                for (;;) {
+                    if (!this._buffer.isEmpty()) {
                         // shift() is O(1) on Denque and releases the slot so the
                         // ring buffer can be reclaimed as the consumer drains.
-                        const value = self._buffer.shift()!;
+                        const value = this._buffer.shift()!;
                         return { value, done: false };
                     }
 
-                    if (self._completed) {
-                        if (self._completionError) throw self._completionError;
-                        return { value: undefined as any, done: true };
+                    if (this._completed) {
+                        if (this._completionError) throw this._completionError;
+                        return { value: undefined as T, done: true };
                     }
 
                     // Wait for more data
-                    self._consumerWaiting = new PromiseSource<void>();
-                    await self._consumerWaiting.promise;
+                    this._consumerWaiting = new PromiseSource<void>();
+                    await this._consumerWaiting.promise;
                 }
             },
 
-            async return(): Promise<IteratorResult<T>> {
-                self._sendAckEnd();
-                self.dispose();
-                return { value: undefined as any, done: true };
+            return: (): Promise<IteratorResult<T>> => {
+                this._sendAckEnd();
+                this.dispose();
+                return Promise.resolve({ value: undefined as T, done: true });
             },
         };
     }
@@ -397,7 +395,7 @@ function _isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
     return (
         value !== null &&
         typeof value === 'object' &&
-        Symbol.asyncIterator in (value as object)
+        Symbol.asyncIterator in (value)
     );
 }
 

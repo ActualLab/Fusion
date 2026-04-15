@@ -20,7 +20,10 @@ import type { RpcPeer } from './rpc-peer.js';
 import type { RpcServiceDef, RpcMethodDef } from './rpc-service-def.js';
 import { wireMethodName } from './rpc-service-def.js';
 
+type RpcClientFn = (...args: unknown[]) => unknown;
+
 /** Creates a typed RPC client proxy — intercepts method calls and sends them over RPC. */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- T is used for caller-specified proxy type
 export function createRpcClient<T extends object>(
     peer: RpcPeer,
     serviceDef: RpcServiceDef
@@ -30,20 +33,20 @@ export function createRpcClient<T extends object>(
     for (const methodDef of serviceDef.methods.values()) {
         let byArgCount = overloads.get(methodDef.name);
         if (!byArgCount) {
-            byArgCount = new Map();
+            byArgCount = new Map<number, RpcMethodDef>();
             overloads.set(methodDef.name, byArgCount);
         }
         byArgCount.set(methodDef.argCount, methodDef);
     }
 
     // Build proxy methods
-    const methods = new Map<string, Function>();
+    const methods = new Map<string, RpcClientFn>();
     for (const [name, byArgCount] of overloads) {
         if (byArgCount.size === 1) {
             const methodDef = byArgCount.values().next().value!;
             methods.set(name, createMethod(peer, methodDef));
         } else {
-            const fns = new Map<number, Function>();
+            const fns = new Map<number, RpcClientFn>();
             for (const [argCount, methodDef] of byArgCount) {
                 fns.set(argCount, createMethod(peer, methodDef));
             }
@@ -66,7 +69,7 @@ export function createRpcClient<T extends object>(
     });
 }
 
-function createMethod(peer: RpcPeer, methodDef: RpcMethodDef): Function {
+function createMethod(peer: RpcPeer, methodDef: RpcMethodDef): RpcClientFn {
     return async (...args: unknown[]) => {
         const callArgs = args.slice(0, methodDef.argCount);
         const wireName = wireMethodName(methodDef);

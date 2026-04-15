@@ -79,7 +79,7 @@ export interface RpcConnection {
 /** WebSocket-based RpcConnection — handles frame splitting, binary/text modes, and message queueing. */
 export class RpcWebSocketConnection implements RpcConnection {
     private _ws: WebSocketLike;
-    private _sendBuffer: Array<string | Uint8Array> = [];
+    private _sendBuffer: (string | Uint8Array)[] = [];
     private _connected = new PromiseSource<void>();
 
     /** Per-connection msgpack encoder — reused across outbound messages to
@@ -242,7 +242,7 @@ export class RpcWebSocketConnection implements RpcConnection {
     /** Split a binary frame using the format (compact-aware) or default splitter. */
     private _splitBinary(
         frame: Uint8Array
-    ): Array<{ message: RpcMessage; args: unknown[] }> {
+    ): { message: RpcMessage; args: unknown[] }[] {
         if (this._format) {
             return this._format.splitBinaryFrame(
                 frame,

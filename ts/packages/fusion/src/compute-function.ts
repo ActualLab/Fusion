@@ -10,12 +10,14 @@ import { getInstanceId } from './computed-input.js';
 import { ComputeContext, computeContextKey } from './compute-context.js';
 import { ComputedRegistry } from './computed-registry.js';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ComputeFunctionImpl = (this: any, ...args: unknown[]) => unknown;
 
 /** Record Separator — delimiter between key components. */
 const RS = '\x1E';
 
 function defaultArgToString(arg: unknown): string {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- JSON.stringify returns undefined for undefined input
     return JSON.stringify(arg) ?? 'undefined';
 }
 
@@ -98,6 +100,7 @@ export class ComputeFunction {
                 const value = childAsyncCtx.run(() =>
                     this._impl.call(instance, ...argsWithoutCtx)
                 );
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 const resolved = value instanceof Promise ? await value : value;
                 fnResult = result(resolved);
             } catch (e) {

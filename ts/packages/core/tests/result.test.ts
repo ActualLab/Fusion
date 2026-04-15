@@ -34,14 +34,14 @@ describe('Result', () => {
     });
 
     it('resultFromAsync should capture async success', async () => {
-        const r = await resultFromAsync(async () => 42);
+        const r = await resultFromAsync(() => Promise.resolve(42));
         expect(r.hasValue).toBe(true);
         expect(r.value).toBe(42);
     });
 
     it('resultFromAsync should capture async error', async () => {
-        const r = await resultFromAsync(async () => {
-            throw new Error('async boom');
+        const r = await resultFromAsync(() => {
+            return Promise.reject(new Error('async boom'));
         });
         expect(r.hasError).toBe(true);
     });

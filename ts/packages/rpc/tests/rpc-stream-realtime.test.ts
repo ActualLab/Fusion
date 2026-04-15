@@ -475,6 +475,7 @@ describe('RpcStreamSender flow control (non-real-time)', () => {
             isRealTime: false,
         });
 
+        // eslint-disable-next-line @typescript-eslint/require-await
         async function* source(): AsyncGenerator<number> {
             for (let i = 0; i < totalItems; i++) {
                 yield i;

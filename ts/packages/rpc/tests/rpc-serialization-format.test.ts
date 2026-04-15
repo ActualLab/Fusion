@@ -141,7 +141,7 @@ describe('RpcMessagePackCompactSerializationFormat', () => {
             ['hello'],
             undefined,
             registry
-        ) as Uint8Array;
+        );
 
         // Should be shorter than non-compact (4-byte hash vs LVar "Svc.get:2")
         const nonCompactFmt = RpcSerializationFormat.get('msgpack6');
@@ -159,7 +159,7 @@ describe('RpcMessagePackCompactSerializationFormat', () => {
             ['hello', 42],
             undefined,
             registry
-        ) as Uint8Array;
+        );
         const results = fmt.splitBinaryFrame(wire, undefined, registry);
         expect(results).toHaveLength(1);
         expect(results[0]!.message.Method).toBe('Svc.get:2');
@@ -174,7 +174,7 @@ describe('RpcMessagePackCompactSerializationFormat', () => {
             ['x'],
             undefined,
             registry
-        ) as Uint8Array;
+        );
 
         // Deserialize with a fresh registry that doesn't know the method
         const freshRegistry = new RpcMethodRegistry();

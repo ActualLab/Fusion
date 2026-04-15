@@ -25,7 +25,7 @@ describe('EventHandlerSet', () => {
     it('should track count', () => {
         const events = new EventHandlerSet<void>();
         expect(events.count).toBe(0);
-        const handler = () => {};
+        const handler = () => { /* noop */ };
         events.add(handler);
         expect(events.count).toBe(1);
         events.remove(handler);

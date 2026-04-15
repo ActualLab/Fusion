@@ -24,14 +24,14 @@ describe('DisposableBag', () => {
     it('should throw when adding to disposed bag', () => {
         const bag = new DisposableBag();
         bag.dispose();
-        expect(() => bag.add({ dispose: () => {} })).toThrow();
+        expect(() => bag.add({ dispose: () => { /* noop */ } })).toThrow();
     });
 
     it('should support async disposal', async () => {
         const order: number[] = [];
         const bag = new DisposableBag();
         bag.add({
-            disposeAsync: async () => {
+            disposeAsync: () => {
                 order.push(1);
             },
         });

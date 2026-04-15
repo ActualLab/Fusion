@@ -25,7 +25,6 @@
 //     DI.  TS uses a class with a handle() method.
 
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
-import type { IRpcObject } from './rpc-object.js';
 import type { RpcPeer } from './rpc-peer.js';
 import type { RpcStream } from './rpc-stream.js';
 import { resolveStreamRefs } from './rpc-stream.js';
@@ -100,7 +99,7 @@ export class RpcSystemCallHandler {
             } else if (Array.isArray(args[1])) {
                 const items = args[1] as unknown[];
                 for (let i = 0; i < items.length; i++)
-                    items[i] = resolveStreamRefs(items[i]!, peer);
+                    items[i] = resolveStreamRefs(items[i], peer);
                 stream.onBatch(args[0] as number, items);
             }
             break;
@@ -152,9 +151,7 @@ export class RpcSystemCallHandler {
                 const ids = args[0] as number[] | undefined;
                 if (Array.isArray(ids)) {
                     for (const id of ids) {
-                        const remoteObj = peer.remoteObjects.get(id) as
-                                | IRpcObject
-                                | undefined;
+                        const remoteObj = peer.remoteObjects.get(id);
                         if (
                             remoteObj &&
                                 typeof remoteObj.disconnect === 'function'
@@ -163,9 +160,7 @@ export class RpcSystemCallHandler {
                         }
                         // Also check shared objects — server may disconnect a client-to-server
                         // stream sender (e.g. audio stream) after pod restart or timeout.
-                        const sharedObj = peer.sharedObjects.get(id) as
-                                | IRpcObject
-                                | undefined;
+                        const sharedObj = peer.sharedObjects.get(id);
                         if (
                             sharedObj &&
                                 typeof sharedObj.disconnect === 'function'

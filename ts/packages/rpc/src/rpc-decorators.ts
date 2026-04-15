@@ -38,26 +38,32 @@ export interface ServiceMeta {
     name: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- constructor type requires any for maximum compatibility
+export type AnyConstructor = abstract new (...args: any[]) => any;
+
 /** Read method metadata from a decorated class. */
 export function getMethodsMeta(
-    cls: abstract new (...args: any[]) => any
+    cls: AnyConstructor,
 ): Record<string, MethodMeta> | undefined {
-    return (cls as any)[Symbol.metadata]?.[METHODS_META];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any -- Symbol.metadata is not in standard typings
+    return (cls as any)[Symbol.metadata]?.[METHODS_META] as Record<string, MethodMeta> | undefined;
 }
 
 /** Read service metadata from a decorated class. */
 export function getServiceMeta(
-    cls: abstract new (...args: any[]) => any
+    cls: AnyConstructor,
 ): ServiceMeta | undefined {
-    return (cls as any)[Symbol.metadata]?.[SERVICE_META];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any -- Symbol.metadata is not in standard typings
+    return (cls as any)[Symbol.metadata]?.[SERVICE_META] as ServiceMeta | undefined;
 }
 
 /** Class decorator — stores the RPC service wire name. */
 export function rpcService(serviceName: string) {
-    return function <T extends abstract new (...args: any[]) => any>(
+    return function <T extends AnyConstructor>(
         _target: T,
-        context: ClassDecoratorContext<T>
+        context: ClassDecoratorContext<T>,
     ): void {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any -- decorator metadata requires untyped access
         const meta: ServiceMeta = ((context.metadata as any)[SERVICE_META] ??=
             {} as ServiceMeta);
         meta.name = serviceName;
@@ -71,12 +77,14 @@ export function rpcMethod(options?: { returns?: symbol }) {
         context: ClassMethodDecoratorContext<
             This,
             (this: This, ...args: Args) => Return
-        >
+        >,
     ): (this: This, ...args: Args) => Return {
         const methodName = String(context.name);
+        /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any -- decorator metadata requires untyped access */
         const methods: Record<string, MethodMeta> = ((context.metadata as any)[
             METHODS_META
         ] ??= {});
+        /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
         methods[methodName] = {
             ...methods[methodName],
             argCount: target.length,

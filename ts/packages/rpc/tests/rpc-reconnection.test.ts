@@ -1,3 +1,4 @@
+ 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
     RpcHub,
@@ -261,7 +262,7 @@ describe('RPC Reconnection', () => {
         const outboundCall = conn.clientPeer.call('CalcService.add:3', [1, 2], {
             signal: ac.signal,
         });
-        outboundCall.result.promise.catch(() => {}); // prevent unhandled rejection
+        outboundCall.result.promise.catch(() => { /* noop */ }); // prevent unhandled rejection
 
         // Cancel after a short delay
         await delay(10);
@@ -308,7 +309,7 @@ describe('RPC Reconnection', () => {
         await Promise.allSettled(workers);
 
         ac.abort();
-        await disruptorPromise.catch(() => {});
+        await disruptorPromise.catch(() => { /* noop */ });
 
         // Under disruption, some calls may fail and some may succeed
         // The key invariant is: no unhandled errors, no hangs

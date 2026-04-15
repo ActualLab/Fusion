@@ -28,7 +28,7 @@ export class AsyncContext {
     private _values: Map<symbol, unknown>;
 
     constructor(values?: Map<symbol, unknown>) {
-        this._values = values ?? new Map();
+        this._values = values ?? new Map<symbol, unknown>();
     }
 
     get<T>(key: AsyncContextKey<T>): T {

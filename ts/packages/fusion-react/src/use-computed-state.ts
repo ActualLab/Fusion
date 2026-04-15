@@ -53,12 +53,14 @@ export function useComputedState<T>(
             forceRender();
 
             // Subscribe to subsequent updates
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             while (!cancelled && !state.isDisposed) {
                 try {
                     await state.whenUpdated();
                 } catch {
                     return;
                 }
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 if (!cancelled && !state.isDisposed) forceRender();
             }
         };

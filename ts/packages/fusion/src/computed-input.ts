@@ -18,4 +18,5 @@ export function getInstanceId(instance: object): number {
  * - String for compute method results (built from instance + function + args)
  * - State for state types (identity by reference)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ComputedInput = string | State<any>;
