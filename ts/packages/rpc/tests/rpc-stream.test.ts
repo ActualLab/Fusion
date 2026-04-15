@@ -49,6 +49,63 @@ describe('parseStreamRef', () => {
         expect(parseStreamRef({})).toBeNull();
     });
 
+    describe('binary (MessagePack) format', () => {
+        it('should parse binary format stream ref', () => {
+            const ref = parseStreamRef({
+                SerializedId: ['host-abc', 42],
+                AckPeriod: 100,
+                AckAdvance: 50,
+                AllowReconnect: true,
+            });
+            expect(ref).not.toBeNull();
+            expect(ref!.hostId).toBe('host-abc');
+            expect(ref!.localId).toBe(42);
+            expect(ref!.ackPeriod).toBe(100);
+            expect(ref!.ackAdvance).toBe(50);
+            expect(ref!.allowReconnect).toBe(true);
+        });
+
+        it('should use defaults when AckPeriod/AckAdvance are missing', () => {
+            const ref = parseStreamRef({
+                SerializedId: ['host-def', 7],
+            });
+            expect(ref).not.toBeNull();
+            expect(ref!.hostId).toBe('host-def');
+            expect(ref!.localId).toBe(7);
+            expect(ref!.ackPeriod).toBe(256);
+            expect(ref!.ackAdvance).toBe(128);
+            expect(ref!.allowReconnect).toBe(true);
+        });
+
+        it('should parse AllowReconnect=false', () => {
+            const ref = parseStreamRef({
+                SerializedId: ['host-xyz', 99],
+                AckPeriod: 64,
+                AckAdvance: 32,
+                AllowReconnect: false,
+            });
+            expect(ref).not.toBeNull();
+            expect(ref!.allowReconnect).toBe(false);
+        });
+
+        it('should return null for invalid SerializedId (too short)', () => {
+            expect(parseStreamRef({ SerializedId: ['only-one'] })).toBeNull();
+        });
+
+        it('should return null for missing SerializedId', () => {
+            expect(parseStreamRef({ AckPeriod: 10 })).toBeNull();
+        });
+
+        it('should return null for non-array SerializedId', () => {
+            expect(parseStreamRef({ SerializedId: 'not-an-array' })).toBeNull();
+        });
+
+        it('should return null for objects that are not stream refs', () => {
+            expect(parseStreamRef({ foo: 'bar' })).toBeNull();
+            expect(parseStreamRef({ name: 'test', value: 123 })).toBeNull();
+        });
+    });
+
     it('should return null for invalid format', () => {
         expect(parseStreamRef('a,b,c')).toBeNull(); // too few parts
         expect(parseStreamRef('a,b,c,d,e,f')).toBeNull(); // too many parts
@@ -258,6 +315,40 @@ describe('RpcStream end-to-end', () => {
         );
 
         await iter.return!();
+    });
+
+    it('should error on item gap when allowReconnect is false', async () => {
+        const ref = { hostId: 'h', localId: 1, ackPeriod: 10, ackAdvance: 5, allowReconnect: false };
+        const stream = new RpcStream<string>(ref, clientPeer);
+        clientPeer.remoteObjects.register(stream);
+
+        // Send item 0, then skip to item 5 (gap)
+        stream.onItem(0, 'a');
+        stream.onItem(5, 'f');
+
+        const iter = stream[Symbol.asyncIterator]();
+        const first = await iter.next();
+        expect(first.value).toBe('a');
+
+        await expect(iter.next()).rejects.toThrow(/gap/i);
+    });
+
+    it('should error on batch gap when allowReconnect is false', async () => {
+        const ref = { hostId: 'h', localId: 2, ackPeriod: 10, ackAdvance: 5, allowReconnect: false };
+        const stream = new RpcStream<string>(ref, clientPeer);
+        clientPeer.remoteObjects.register(stream);
+
+        // Send batch at index 0, then batch at index 10 (gap)
+        stream.onBatch(0, ['a', 'b']);
+        stream.onBatch(10, ['x', 'y']);
+
+        const iter = stream[Symbol.asyncIterator]();
+        const first = await iter.next();
+        expect(first.value).toBe('a');
+        const second = await iter.next();
+        expect(second.value).toBe('b');
+
+        await expect(iter.next()).rejects.toThrow(/gap/i);
     });
 
     it('should handle multiple concurrent streams', async () => {

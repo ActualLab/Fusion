@@ -19,6 +19,7 @@ export function createMockWsPair(): [WebSocketLike, WebSocketLike] {
 class MockWebSocket implements WebSocketLike {
     _readyState = 0; // CONNECTING
     _remote: MockWebSocket | undefined;
+    binaryType?: string = '';
 
     onopen: ((ev: unknown) => void) | null = null;
     onmessage: ((ev: { data: unknown }) => void) | null = null;
@@ -29,7 +30,7 @@ class MockWebSocket implements WebSocketLike {
         return this._readyState;
     }
 
-    send(data: string): void {
+    send(data: string | ArrayBufferLike | Uint8Array | ArrayBufferView): void {
         if (this._readyState !== 1) throw new Error('WebSocket is not open');
         // Deliver to remote side in next microtask
         queueMicrotask(() => {

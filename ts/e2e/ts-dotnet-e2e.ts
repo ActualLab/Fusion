@@ -28,6 +28,7 @@ if (!serverUrl) {
   process.exit(1);
 }
 
+const rpcFormat = process.env["RPC_FORMAT"] ?? "json5np";
 const scenario = process.argv[2] ?? "all";
 
 // ---------------------------------------------------------------------------
@@ -97,8 +98,9 @@ function delay(ms: number): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function run(): Promise<void> {
+  console.log(`  format: ${rpcFormat}`);
   const hub = new FusionHub();
-  const peer = new RpcClientPeer(hub, serverUrl);
+  const peer = new RpcClientPeer(hub, serverUrl, rpcFormat);
 
   // wsFactory: create ws WebSocket (Node.js)
   const wsFactory = (url: string) => new WebSocket(url) as unknown as WebSocketLike;
