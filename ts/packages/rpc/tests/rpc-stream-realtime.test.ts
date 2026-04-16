@@ -228,10 +228,17 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
             await delay(100); // long delay between ACKs to simulate slow consumer
         }
 
-        // Send final ACK to let stream finish
+        // Tear the sender down to make `writeDone` resolve. The previous
+        // approach (final `onAck(sentItems.length + ackAdvance, '')` then
+        // `await writeDone`) relied on the source naturally exhausting
+        // within the given budget — which depends on the OS-level
+        // setTimeout(0) granularity and is too tight on Windows (~15ms
+        // vs ~1ms on Linux). The invariants we actually want to assert
+        // (skipping happened, items are ordered, first item is 0) are
+        // independent of whether the source ran to completion.
         await delay(50);
-        sender.onAck(sentItems.length + ackAdvance, '');
-        await writeDone;
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
 
         // Should have sent fewer items than total (skipping occurred)
         expect(sentItems.length).toBeLessThan(totalItems);
@@ -303,9 +310,12 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
             sender.onAck(sentItems.length, '');
         }
 
+        // Force completion (see the equivalent comment in
+        // `should skip items when ACKs are delayed` above for why we
+        // disconnect rather than wait for natural source exhaustion).
         await delay(50);
-        sender.onAck(sentItems.length + ackAdvance, '');
-        await writeDone;
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
 
         // Should have skipped some items
         expect(sentItems.length).toBeLessThan(totalItems);
