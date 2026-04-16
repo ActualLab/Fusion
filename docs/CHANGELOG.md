@@ -11,6 +11,37 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## npm: 12.3.31+c50e8c6f
+
+Release date: 2026-04-16
+
+### Added
+- TypeScript: scoped logging API in `@actuallab/core` — `Log`, `LogLevel`,
+  and `createLogProvider(prefix, defaults)` factory for per-package, typed
+  `getLogs(scope)` helpers. Each `Log.get(scope)` returns a bag of optional
+  loggers (`debugLog`, `infoLog`, `warnLog`, `errorLog`) that are `null`
+  when below the scope's minimum level — call sites use
+  `debugLog?.log(...)` so disabled logs cost a single nullish check.
+- TypeScript: `initLogging()` persists user-set minimum levels to
+  `sessionStorage` (3-day TTL) and installs a `globalThis.logLevels`
+  controller exposing `override(scope, level)`, `overrideAll(prefix, level)`,
+  `dump()` (prints every known scope as a `console.table`), `reset()`, and
+  `clear()` for runtime tweaking from the browser dev console.
+- TypeScript: per-package `getLogs` helpers in `@actuallab/rpc` and
+  `@actuallab/fusion` with package-prefixed scopes (e.g. `'rpc.RpcPeer'`,
+  `'fusion.ComputedState'`) and explicit per-scope `LogLevel` defaults.
+  Global baseline is `Warn`; `rpc.RpcPeer` is `Info` so connection-lifecycle
+  events surface out of the box. All other scopes are `Warn` — quiet by
+  default; users opt in via `logLevels.override(...)`.
+
+### Changed
+- TypeScript: replaced ad-hoc `console.warn` calls across `rpc-peer`,
+  `rpc-stream`, `rpc-stream-sender`, `rpc-system-call-handler`,
+  `rpc-system-call-sender`, `rpc-hub`, `rpc-service-host`, `rpc-connection`,
+  `rpc-peer-state-monitor`, `computed-state`, and `ui-action-tracker` with
+  the new scoped logger, mirroring the corresponding .NET log calls.
+
+
 ## 12.3.25+0a851ea7 | npm: 12.3.29
 
 Release date: 2026-04-16
