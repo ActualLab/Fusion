@@ -11,6 +11,38 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.16+47f5b5a0 | npm: 12.3.14
+
+Release date: 2026-04-16
+
+### Added
+- New `RpcRemoteExecutionMode` `[Flags]` enum (`AwaitForConnection`, `AllowReconnect`, `AllowResend`)
+  giving per-method control over outbound RPC connection waiting, reconnection, and resending behavior
+- `RpcMethodAttribute.RemoteExecutionMode` property for overriding the default (`AwaitForConnection | AllowResend`)
+  on a per-interface or per-method basis; `NoWait` methods use `0`, compute methods must use `Default`
+- TypeScript: matching `RpcRemoteExecutionMode` support in `rpc-service-def`, `rpc-client`, and decorators
+- `ShardMapBuilder.Maglev` — Google's 
+  [Maglev consistent hashing](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/44824.pdf)
+  algorithm as a new shard map builder with perfect balance (max-min ≤ 1) and lower disruption than
+  Rendezvous at higher node counts
+- TypeScript: `AbortSignal`-based cancellation for local `RpcStream` sources — `RpcStreamSource<T>`
+  now also accepts a factory `(abortSignal: AbortSignal) => AsyncIterable<T>`, letting sources
+  release resources (camera, microphone, etc.) promptly on disconnect
+- TypeScript: `RpcServerPeer.accept()` now disconnects shared objects on connection close,
+  and `onAckEnd()` delegates to `disconnect()` for proper iterator cleanup
+
+### Tests
+- Expanded `ShardMapTest.BuilderComparisonTest` with additional `InlineData` scenarios,
+  winner/tie tracking, and detailed comparison metrics across builder strategies
+- New `RpcRemoteExecutionModeTest` (.NET) and `rpc-remote-execution-mode.test.ts` covering
+  connection waiting, reconnection, in-flight calls, and method-definition validation
+- New `rpc-stream-cancellation.test.ts` and `NoReconnectStreamSourceCancellationTest` verifying
+  source enumerator finalization on client disconnect with `AllowReconnect=false`
+
+### Infrastructure
+- TypeScript: ESLint warning cleanup across all packages
+
+
 ## npm: 12.3.6+872c4869
 
 Release date: 2026-04-15
