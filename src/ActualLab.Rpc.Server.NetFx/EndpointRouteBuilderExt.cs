@@ -24,10 +24,9 @@ public static class EndpointRouteBuilderExt
         return appBuilder;
 
         void MapEndpoint(IAppBuilder app, bool isBackend)
-            => app.Run(context => {
-                var statusCode = server.Invoke(context, isBackend);
+            => app.Run(async context => {
+                var statusCode = await server.Invoke(context, isBackend).ConfigureAwait(false);
                 context.Response.StatusCode = (int)statusCode;
-                return Task.CompletedTask;
             });
     }
 }

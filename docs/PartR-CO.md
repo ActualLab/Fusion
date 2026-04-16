@@ -255,7 +255,6 @@ Configures WebSocket-based RPC server endpoints.
 | `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
 | `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
-| `ChangeConnectionDelay` | `TimeSpan` | `0.5 seconds` | Delay when switching connections |
 | `ConfigureWebSocket` | `Func<...>` | Empty context | Configure WebSocketAcceptContext (.NET 6+) |
 
 ### Example
@@ -268,9 +267,6 @@ services.AddRpc().Configure<RpcWebSocketServerOptions>(options => {
     // Custom endpoint paths (must match client)
     options.RequestPath = "/api/rpc";
     options.BackendRequestPath = "/internal/rpc"; // Must NOT be publicly exposed!
-
-    // Longer delay for connection switching
-    options.ChangeConnectionDelay = TimeSpan.FromSeconds(1);
 });
 ```
 

@@ -61,6 +61,17 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             Log.LogInformation("'{PeerRef}': Accepting RPC connection for {Request}", peerRef, requestDescription);
             var peer = Hub.GetServerPeer(peerRef);
 
+            // Disconnect any stale connection BEFORE upgrading the new WebSocket.
+            // Doing this after AcceptWebSocketAsync would consume the client's HandshakeTimeout,
+            // because old-connection teardown can take up to RpcWebSocketTransport.Options.CloseTimeout
+            // on a dead socket; performing it before the upgrade consumes ConnectTimeout instead,
+            // which is the correct budget for "waiting for server to be ready to talk".
+            if (peer.IsConnected()) {
+                Log.LogWarning("'{PeerRef}': {Peer} is already connected, disconnecting the old connection first...",
+                    peerRef, peer);
+                await peer.Disconnect(cancellationToken).ConfigureAwait(false);
+            }
+
 #if NET6_0_OR_GREATER
             var webSocketAcceptContext = Options.ConfigureWebSocket.Invoke();
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync(webSocketAcceptContext);
@@ -82,12 +93,6 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
                 .Invoke(peer, transport, properties, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (peer.IsConnected()) {
-                var delay = Options.ChangeConnectionDelay;
-                Log.LogWarning("'{PeerRef}': {Peer} is already connected, will change its connection in {Delay}...",
-                    peerRef, peer, delay.ToShortString());
-                await peer.Hub.SystemClock.Delay(delay, cancellationToken).ConfigureAwait(false);
-            }
             await peer.SetNextConnection(connection, cancellationToken).ConfigureAwait(false);
             await transport.WhenClosed.ConfigureAwait(false);
         }

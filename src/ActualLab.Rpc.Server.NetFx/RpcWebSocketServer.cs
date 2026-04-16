@@ -24,7 +24,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
     public RpcWebSocketClientOptions WebSocketClientOptions { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
     public RpcWebSocketServerPeerRefFactory PeerRefFactory { get; } = services.GetRequiredService<RpcWebSocketServerPeerRefFactory>();
 
-    public virtual HttpStatusCode Invoke(IOwinContext context, bool isBackend)
+    public virtual async Task<HttpStatusCode> Invoke(IOwinContext context, bool isBackend)
     {
         // Based on https://stackoverflow.com/questions/41848095/websockets-using-owin
 
@@ -42,7 +42,24 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
             return HttpStatusCode.BadRequest;
         }
 
-        _ = Hub.GetServerPeer(peerRef);
+        var peer = Hub.GetServerPeer(peerRef);
+
+        // Disconnect any stale connection BEFORE upgrading the new WebSocket.
+        // Doing this after the upgrade would consume the client's HandshakeTimeout,
+        // because old-connection teardown can take up to RpcWebSocketTransport.Options.CloseTimeout
+        // on a dead socket; performing it before the upgrade consumes ConnectTimeout instead,
+        // which is the correct budget for "waiting for server to be ready to talk".
+        if (peer.IsConnected()) {
+            Log.LogWarning("'{PeerRef}': {Peer} is already connected, disconnecting the old connection first...",
+                peerRef, peer);
+            try {
+                await peer.Disconnect(context.Request.CallCancelled).ConfigureAwait(false);
+            }
+            catch (Exception e) when (!e.IsCancellationOf(context.Request.CallCancelled)) {
+                Log.LogWarning(e, "'{PeerRef}': Failed to disconnect old connection", peerRef);
+                return HttpStatusCode.InternalServerError;
+            }
+        }
 
         var headers =
             GetValue<IDictionary<string, string[]>>(context.Environment, "owin.RequestHeaders")
@@ -99,12 +116,6 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
                 .Invoke(peer, transport, properties, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (peer.IsConnected()) {
-                var delay = Settings.ChangeConnectionDelay;
-                Log.LogWarning("{Peer} is already connected, will change its connection in {Delay}...",
-                    peer, delay.ToShortString());
-                await peer.Hub.SystemClock.Delay(delay, cancellationToken).ConfigureAwait(false);
-            }
             await peer.SetNextConnection(connection, cancellationToken).ConfigureAwait(false);
             await transport.WhenClosed.ConfigureAwait(false);
         }
