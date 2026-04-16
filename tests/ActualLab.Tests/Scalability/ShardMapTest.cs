@@ -55,22 +55,119 @@ public class ShardMapTest(ITestOutputHelper @out) : TestBase(@out)
     public void BuilderComparisonTest(int shardCount, int maxNodeCount, int maxImbalance = 1)
     {
         var greedy = ShardMapBuilder.Greedy;
+        var maglev = ShardMapBuilder.Maglev;
         var rendezvous = ShardMapBuilder.Rendezvous with { MaxImbalance = maxImbalance };
         WriteLine($"Shards: {shardCount}");
         for (var nodeCount = 2; nodeCount <= maxNodeCount; nodeCount++) {
             var idealMoveCount = shardCount / nodeCount;
             var gMoves = CollectMoves(shardCount, nodeCount, greedy);
+            var mMoves = CollectMoves(shardCount, nodeCount, maglev);
             var rMoves = CollectMoves(shardCount, nodeCount, rendezvous);
             var gMedian = Median(gMoves);
+            var mMedian = Median(mMoves);
             var rMedian = Median(rMoves);
-            var cmp = rMedian.CompareTo(gMedian);
-            if (cmp == 0)
-                cmp = rMoves[^1].CompareTo(gMoves[^1]);
-            var winner = cmp < 0 ? "Rend." : cmp > 0 ? "Greedy" : "tie";
+
+            var medians = new[] { ("Rend.", rMedian, rMoves), ("Maglev", mMedian, mMoves), ("Greedy", gMedian, gMoves) };
+            var best = medians.OrderBy(x => x.Item2).ThenBy(x => x.Item3[^1]).First();
+
             WriteLine($"  {nodeCount - 1}<->{nodeCount}: ideal {idealMoveCount}, "
                 + $"Rend. [{rMoves[0]} .. {rMedian:F0} .. {rMoves[^1]}], "
+                + $"Maglev [{mMoves[0]} .. {mMedian:F0} .. {mMoves[^1]}], "
                 + $"Greedy [{gMoves[0]} .. {gMedian:F0} .. {gMoves[^1]}], "
-                + $"won: {winner}");
+                + $"won: {best.Item1}");
+        }
+    }
+
+    [Fact]
+    public void MaglevBalanceTest()
+    {
+        // Maglev should produce perfectly balanced maps (max - min <= 1)
+        var shardCounts = new[] { 12, 60, 120 };
+        var nodeCounts = new[] { 2, 3, 5, 7, 10, 20 };
+        var maglev = ShardMapBuilder.Maglev;
+
+        foreach (var shardCount in shardCounts)
+        foreach (var nodeCount in nodeCounts) {
+            if (nodeCount > shardCount)
+                continue;
+
+            var nodes = Enumerable.Range(0, nodeCount).Select(i => $"node-{i}").ToArray();
+            var map = new ShardMap<string>(shardCount, nodes, maglev);
+
+            var nodeIndexes = map.NodeIndexes;
+            nodeIndexes.All(x => x.HasValue).Should().BeTrue();
+            var groups = nodeIndexes.GroupBy(x => x).ToArray();
+            groups.Length.Should().Be(nodeCount);
+            var minCount = groups.Min(g => g.Count());
+            var maxCount = groups.Max(g => g.Count());
+            var delta = maxCount - minCount;
+            delta.Should().BeInRange(0, 1,
+                $"Maglev should be perfectly balanced for {shardCount} shards, {nodeCount} nodes (was {minCount}-{maxCount})");
+            WriteLine($"Shards: {shardCount}, Nodes: {nodeCount}, Range: {minCount}-{maxCount} - OK");
+        }
+    }
+
+    [Fact]
+    public void MaglevReallocationTest()
+    {
+        const int shardCount = 60;
+        var maglev = ShardMapBuilder.Maglev;
+
+        var nodes3 = new[] { "node-1", "node-2", "node-3" };
+        var nodes2 = new[] { "node-1", "node-2" }; // node-3 dies
+
+        var map3 = new ShardMap<string>(shardCount, nodes3, maglev);
+        var map2 = new ShardMap<string>(shardCount, nodes2, maglev);
+
+        var reallocated = 0;
+        var node3Shards = 0;
+        for (var s = 0; s < shardCount; s++) {
+            var owner3 = map3[s];
+            var owner2 = map2[s];
+            if (owner3 == "node-3")
+                node3Shards++;
+            else if (owner3 != owner2)
+                reallocated++;
+        }
+
+        WriteLine($"Shards on dead node: {node3Shards}");
+        WriteLine($"Extra reallocations: {reallocated}");
+        WriteLine($"Map with 3 nodes:\n{map3}");
+        WriteLine($"Map with 2 nodes:\n{map2}");
+
+        // Maglev is not zero-disruption like rendezvous, but should be reasonable
+        var totalMoves = node3Shards + reallocated;
+        totalMoves.Should().BeGreaterThan(0, "some shards must move when a node dies");
+        WriteLine($"Total moves: {totalMoves} (ideal: {node3Shards})");
+    }
+
+    [Fact]
+    public void MaglevStressTest()
+    {
+        // Stress test with random node churn, like BalanceTest but using Maglev
+        const int shardCount = 60;
+        var maglev = ShardMapBuilder.Maglev;
+        var rnd = new Random(42);
+        var nodes = new List<string>();
+
+        for (var i = 0; i < 200; i++) {
+            var mustAdd = nodes.Count == 0 || rnd.Next(nodes.Count + 10) > nodes.Count;
+            if (mustAdd)
+                nodes.Add($"node-{i}");
+            else
+                nodes.RemoveAt(rnd.Next(nodes.Count));
+            var shardMap = new ShardMap<string>(shardCount, [..nodes.OrderBy(x => x)], maglev);
+            if (!shardMap.IsEmpty) {
+                var nodeIndexes = shardMap.NodeIndexes;
+                nodeIndexes.All(x => x.HasValue).Should().BeTrue();
+                var shardGroups = nodeIndexes.GroupBy(x => x).ToArray();
+                shardGroups.Length.Should().Be(Math.Min(nodes.Count, shardMap.NodeIndexes.Length));
+                var minCount = shardGroups.Min(g => g.Count());
+                var maxCount = shardGroups.Max(g => g.Count());
+                var delta = maxCount - minCount;
+                delta.Should().BeInRange(0, 1,
+                    $"iteration {i}: {nodes.Count} nodes, balance {minCount}-{maxCount}");
+            }
         }
     }
 

@@ -5,6 +5,7 @@ namespace ActualLab.Scalability;
 public abstract record ShardMapBuilder
 {
     public static GreedyShardMapBuilder Greedy { get; } = new();
+    public static MaglevShardMapBuilder Maglev { get; } = new();
     public static RendezvousShardMapBuilder Rendezvous { get; } = new();
     public static ShardMapBuilder Default { get; set; } = Rendezvous;
 
