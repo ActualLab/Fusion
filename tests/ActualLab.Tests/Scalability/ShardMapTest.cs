@@ -48,34 +48,54 @@ public class ShardMapTest(ITestOutputHelper @out) : TestBase(@out)
 
     [Theory]
     [InlineData(12, 6)]
+    [InlineData(13, 6)]
+    [InlineData(17, 6)]
     [InlineData(60, 20)]
     [InlineData(60, 20, 2)]
+    [InlineData(61, 20)]
     [InlineData(120, 30)]
     [InlineData(120, 30, 2)]
+    [InlineData(127, 30)]
     public void BuilderComparisonTest(int shardCount, int maxNodeCount, int maxImbalance = 1)
     {
         var greedy = ShardMapBuilder.Greedy;
         var maglev = ShardMapBuilder.Maglev;
-        var rendezvous = ShardMapBuilder.Rendezvous with { MaxImbalance = maxImbalance };
+        var rendez = ShardMapBuilder.Rendezvous with { MaxImbalance = maxImbalance };
+        var names = new[] { "Rendez", "Maglev", "Greedy" };
+        var winMaps = names.ToDictionary(x => x, _ => new List<char>());
+
         WriteLine($"Shards: {shardCount}");
         for (var nodeCount = 2; nodeCount <= maxNodeCount; nodeCount++) {
             var idealMoveCount = shardCount / nodeCount;
             var gMoves = CollectMoves(shardCount, nodeCount, greedy);
             var mMoves = CollectMoves(shardCount, nodeCount, maglev);
-            var rMoves = CollectMoves(shardCount, nodeCount, rendezvous);
+            var rMoves = CollectMoves(shardCount, nodeCount, rendez);
             var gMedian = Median(gMoves);
             var mMedian = Median(mMoves);
             var rMedian = Median(rMoves);
 
-            var medians = new[] { ("Rend.", rMedian, rMoves), ("Maglev", mMedian, mMoves), ("Greedy", gMedian, gMoves) };
-            var best = medians.OrderBy(x => x.Item2).ThenBy(x => x.Item3[^1]).First();
+            var medians = new[] { ("Rendez", rMedian, rMoves), ("Maglev", mMedian, mMoves), ("Greedy", gMedian, gMoves) };
+            var sorted = medians.OrderBy(x => x.Item2).ThenBy(x => x.Item3[^1]).ToArray();
+            var winners = sorted.TakeWhile(x => x.Item2 == sorted[0].Item2 && x.Item3[^1] == sorted[0].Item3[^1]).ToArray();
+            var winnerNames = winners.Select(x => x.Item1).ToHashSet();
+            var label = winners.Length > 1
+                ? "tie: " + string.Join(", ", winnerNames)
+                : "won: " + winners[0].Item1;
+
+            foreach (var name in names)
+                winMaps[name].Add(winnerNames.Contains(name) ? '1' : '0');
 
             WriteLine($"  {nodeCount - 1}<->{nodeCount}: ideal {idealMoveCount}, "
-                + $"Rend. [{rMoves[0]} .. {rMedian:F0} .. {rMoves[^1]}], "
+                + $"Rendez [{rMoves[0]} .. {rMedian:F0} .. {rMoves[^1]}], "
                 + $"Maglev [{mMoves[0]} .. {mMedian:F0} .. {mMoves[^1]}], "
                 + $"Greedy [{gMoves[0]} .. {gMedian:F0} .. {gMoves[^1]}], "
-                + $"won: {best.Item1}");
+                + label);
         }
+
+        // Print win/tie summary sorted by count
+        WriteLine("Summary:");
+        foreach (var (name, map) in winMaps.OrderByDescending(x => x.Value.Count(c => c == '1')))
+            WriteLine($"  {name}: {map.Count(c => c == '1')} wins [{new string(map.ToArray())}]");
     }
 
     [Fact]
