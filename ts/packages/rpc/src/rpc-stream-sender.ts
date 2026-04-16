@@ -2,6 +2,7 @@ import { PromiseSource } from '@actuallab/core';
 import type { RpcObjectId, IRpcObject } from './rpc-object.js';
 import { RpcObjectKind } from './rpc-object.js';
 import type { RpcPeer } from './rpc-peer.js';
+import { RpcStream } from './rpc-stream.js';
 
 /** Default ack period for server-side streams. */
 const DEFAULT_ACK_PERIOD = 256;
@@ -31,6 +32,16 @@ export class RpcStreamSender<T> implements IRpcObject {
     readonly peer: RpcPeer;
     readonly ackPeriod: number;
     readonly ackAdvance: number;
+    /**
+     * If true, the source was produced by a factory `(abortSignal) => AsyncIterable<T>`
+     * and may honor the AbortSignal to exit gracefully. `disconnect()` first aborts
+     * the signal and gives the source up to `RpcStream.disconnectGracePeriodMs` ms
+     * before force-closing via `iterator.return()`.
+     *
+     * If false, the source is a plain AsyncIterable that cannot observe the signal,
+     * so `disconnect()` force-closes immediately.
+     */
+    readonly sourceUsesAbortSignal: boolean;
 
     private _nextIndex = 0;
     private _ended = false;
@@ -48,6 +59,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         allowReconnect = true,
         isRealTime = false,
         canSkipTo: (item: T) => boolean = () => true,
+        sourceUsesAbortSignal = false,
     ) {
         const localId = peer.sharedObjects.nextId();
         this.id = { hostId: peer.hub.hubId, localId };
@@ -57,6 +69,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         this.peer = peer;
         this.ackPeriod = ackPeriod;
         this.ackAdvance = ackAdvance;
+        this.sourceUsesAbortSignal = sourceUsesAbortSignal;
     }
 
     /** AbortSignal that is aborted when the sender is disconnected. */
@@ -163,11 +176,21 @@ export class RpcStreamSender<T> implements IRpcObject {
 
         const iterator = source[Symbol.asyncIterator]();
         this._iterator = iterator;
+        // Tracks whether the generator has reached a terminal state (done=true or
+        // thrown).  When true, its finally block has already run and _iterator can
+        // be cleared; when false, the generator is still paused at a yield and
+        // disconnect()'s scheduled iterator.return() is what will drive it to
+        // completion — so we must leave _iterator set as the timer's guard signal.
+        let iteratorDone = false;
         try {
             for (;;) {
                 const next = await iterator.next();
-                 
-                if (next.done || this._ended) break;
+
+                if (next.done) {
+                    iteratorDone = true;
+                    break;
+                }
+                if (this._ended) break;
 
                 const item = next.value;
 
@@ -207,6 +230,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                     const n = await iterator.next();
                     if (n.done) {
                         sourceExhausted = true;
+                        iteratorDone = true;
                         break;
                     }
                     if (this.canSkipTo(n.value)) {
@@ -232,8 +256,19 @@ export class RpcStreamSender<T> implements IRpcObject {
                 this.sendEnd();
             }
         } catch (e) {
+            // An exception from iterator.next() means the generator threw —
+            // its finally block has already run.
+            iteratorDone = true;
             if (!this._ended) {
                 this.sendEnd(e instanceof Error ? e : new Error(String(e)));
+            }
+        } finally {
+            // Only clear _iterator if the generator is actually done.  If we
+            // bailed on _ended while the generator was paused at a yield, leave
+            // _iterator set so disconnect()'s scheduled iterator.return() can
+            // still find it and drive the generator to its finally block.
+            if (iteratorDone && this._iterator === iterator) {
+                this._iterator = null;
             }
         }
     }
@@ -268,12 +303,37 @@ export class RpcStreamSender<T> implements IRpcObject {
             this._ackWaiting.resolve();
             this._ackWaiting = null;
         }
-        // Force-terminate the iterator to interrupt blocking next() calls
-        // and trigger finally blocks in async generators
-        if (this._iterator) {
-            void this._iterator.return?.(undefined);
-            this._iterator = null;
-        }
         this.peer.sharedObjects.unregister(this);
+
+        // Iterator force-close policy:
+        //  - Plain AsyncIterable: abortSignal is unobserved, so force-close now.
+        //  - Factory source (abortSignal-aware): give it a grace period to exit
+        //    gracefully, then force-close if still pumping.
+        const iterator = this._iterator;
+        if (!iterator) return;
+        if (!this.sourceUsesAbortSignal) {
+            this._iterator = null;
+            this._forceCloseIterator(iterator);
+            return;
+        }
+        setTimeout(() => {
+            // Guard: writeFrom()'s finally may have cleared _iterator if the
+            // generator exited naturally (observed abortSignal or finished).
+            // Only force-close if the same iterator is still parked.
+            if (this._iterator === iterator) {
+                this._iterator = null;
+                this._forceCloseIterator(iterator);
+            }
+        }, RpcStream.disconnectGracePeriodMs);
+    }
+
+    private _forceCloseIterator(iterator: AsyncIterator<T>): void {
+        // iterator.return() can reject if the generator throws in its finally
+        // block; swallow the rejection to avoid polluting the process with
+        // unhandled-rejection noise on a disconnect path.
+        try {
+            const ret = iterator.return?.(undefined);
+            if (ret) void ret.catch(() => { /* ignore */ });
+        } catch { /* ignore */ }
     }
 }

@@ -87,6 +87,16 @@ export function parseStreamRef(value: unknown): RpcStreamRef | null {
  * This mirrors the .NET RpcStream<T> design where the same type serves both roles.
  */
 export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
+    /**
+     * Grace period (ms) given to a factory-form local source to honor its
+     * AbortSignal and exit naturally before the sender force-closes the
+     * iterator via `iterator.return()`.
+     *
+     * Only applies to sources provided as `(abortSignal) => AsyncIterable<T>`.
+     * Plain `AsyncIterable<T>` sources are force-closed immediately on disconnect.
+     */
+    public static disconnectGracePeriodMs = 100;
+
     readonly id: RpcObjectId;
     readonly kind: RpcObjectKind;
     readonly allowReconnect: boolean;
@@ -182,17 +192,19 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             return this._toRefValue!;
         }
 
+        const isFactory = typeof this.localSource === 'function';
         const sender = new RpcStreamSender<T>(
             peer, this.ackPeriod, this.ackAdvance,
             this.allowReconnect, this.isRealTime, this.canSkipTo,
+            isFactory,
         );
         peer.sharedObjects.register(sender);
         this._sender = sender;
 
         // Resolve source: if it's a factory, call it with the sender's AbortSignal
-        const source = typeof this.localSource === 'function'
-            ? this.localSource(sender.abortSignal)
-            : this.localSource!;
+        const source = isFactory
+            ? (this.localSource as (s: AbortSignal) => AsyncIterable<T>)(sender.abortSignal)
+            : this.localSource as AsyncIterable<T>;
 
         // Start pumping in background (writeFrom awaits the initial Ack)
         this._whenSent = sender.writeFrom(source);

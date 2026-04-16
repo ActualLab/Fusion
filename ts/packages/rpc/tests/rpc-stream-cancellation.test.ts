@@ -273,8 +273,15 @@ describe('RpcStream disconnect propagation for local streams', () => {
     let clientHub: RpcHub;
     let clientPeer: RpcClientPeer;
     let serverPeer: RpcServerPeer;
+    let originalGracePeriod: number;
 
     beforeEach(async () => {
+        // Factory-form sources get a grace period before iterator.return() is
+        // force-called; shrink it for tests so they don't spend the default
+        // 100ms waiting for force-close of abort-unaware generators.
+        originalGracePeriod = RpcStream.disconnectGracePeriodMs;
+        RpcStream.disconnectGracePeriodMs = 10;
+
         serverHub = new RpcHub('server-hub');
         clientHub = new RpcHub('client-hub');
 
@@ -293,6 +300,7 @@ describe('RpcStream disconnect propagation for local streams', () => {
     afterEach(() => {
         serverHub.close();
         clientHub.close();
+        RpcStream.disconnectGracePeriodMs = originalGracePeriod;
     });
 
     it('should propagate disconnect from RpcStream to sender', async () => {
@@ -447,6 +455,18 @@ describe('RpcStream cancellation end-to-end (service layer)', () => {
     const StreamServiceDef = defineRpcService('CancellationE2EService', {
         infiniteStream: { args: [], returns: RpcType.stream },
         infiniteStreamFactory: { args: [], returns: RpcType.stream },
+    });
+
+    let originalGracePeriod: number;
+    beforeEach(() => {
+        // Factory-form sources get a grace period before iterator.return() is
+        // force-called; shrink it for tests so they don't spend the default
+        // 100ms waiting on abort-unaware generators.
+        originalGracePeriod = RpcStream.disconnectGracePeriodMs;
+        RpcStream.disconnectGracePeriodMs = 10;
+    });
+    afterEach(() => {
+        RpcStream.disconnectGracePeriodMs = originalGracePeriod;
     });
 
     it('should cancel server source when client peer closes (plain async iterable)', async () => {
