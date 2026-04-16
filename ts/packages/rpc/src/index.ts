@@ -52,6 +52,9 @@ export {
     RpcInboundCallTracker,
 } from './rpc-call-tracker.js';
 
+export { RpcCallStage } from './rpc-call-stage.js';
+export { IncreasingSeqCompressor } from './increasing-seq-compressor.js';
+
 export { RpcSystemCallHandler } from './rpc-system-call-handler.js';
 export { RpcSystemCallSender } from './rpc-system-call-sender.js';
 

@@ -29,6 +29,9 @@ import type { RpcPeer } from './rpc-peer.js';
 import type { RpcStream } from './rpc-stream.js';
 import { resolveStreamRefs } from './rpc-stream.js';
 import type { RpcStreamSender } from './rpc-stream-sender.js';
+import { RpcCallStage } from './rpc-call-stage.js';
+import { IncreasingSeqCompressor } from './increasing-seq-compressor.js';
+import { base64Decode, base64Encode } from './base64.js';
 
 /** Handles incoming system call messages — class-based equivalent of the former standalone function. */
 export class RpcSystemCallHandler {
@@ -40,11 +43,26 @@ export class RpcSystemCallHandler {
         case RpcSystemCalls.ok: {
             const call = peer.outbound.get(relatedId);
             if (call !== undefined) {
+                call.completedStage |= RpcCallStage.ResultReady;
                 if (call.removeOnOk) {
                     peer.outbound.remove(relatedId);
                 }
                 call.result.resolve(args[0]);
             }
+            break;
+        }
+        case RpcSystemCalls.reconnect: {
+            // Server-side `$sys.Reconnect` handler. Computes the set of call
+            // IDs the inbound tracker doesn't know about, replies with a
+            // byte[] result via $sys.Ok. Mirrors .NET `RpcSystemCalls.Reconnect`
+            // at src/ActualLab.Rpc/Infrastructure/RpcSystemCalls.cs:51-85.
+            //
+            // Limitations vs .NET: does not validate `handshakeIndex` against
+            // this peer's own handshake, and does not perform per-stage
+            // re-processing of compute calls (TS has no compute-invalidation
+            // tracking on the inbound side). A call ID is reported as
+            // "known" iff it is still in the inbound tracker.
+            this._handleReconnect(relatedId, args, peer);
             break;
         }
         case RpcSystemCalls.error: {
@@ -174,4 +192,64 @@ export class RpcSystemCallHandler {
         }
         }
     }
+
+    /**
+     * Server-side handler for the `$sys.Reconnect` call. Parses the peer's
+     * report of in-flight call IDs (grouped by stage, IncreasingSeqCompressor-
+     * encoded, base64-wrapped for JSON transport), computes the subset this
+     * peer does not recognize, and replies with a compressed byte[] of the
+     * unknown IDs wrapped in `$sys.Ok`.
+     *
+     * @param relatedId The outbound call ID the client used for this
+     *                  `$sys.Reconnect` invocation — we send `$sys.Ok` back
+     *                  with the same `RelatedId`.
+     */
+    private _handleReconnect(relatedId: number, args: unknown[], peer: RpcPeer): void {
+        if (peer.connection === undefined) return;
+
+        // args[0]: handshakeIndex (number) — not validated in TS, see class comment.
+        // args[1]: completedStagesData — shape depends on wire format.
+        //    JSON:    { [stage: string]: base64-string }
+        //    msgpack: Map-like with int keys and Uint8Array values (unsupported in TS).
+        let unknownIds: number[] = [];
+        try {
+            const stagesRaw = args[1];
+            if (stagesRaw && typeof stagesRaw === 'object' && !Array.isArray(stagesRaw)) {
+                const unknownSet = new Set<number>();
+                for (const [, rawValue] of Object.entries(stagesRaw as Record<string, unknown>)) {
+                    const bytes = _toBytes(rawValue);
+                    if (bytes === null) continue;
+                    const callIds = IncreasingSeqCompressor.deserialize(bytes);
+                    for (const callId of callIds) {
+                        if (peer.inbound.get(callId) === undefined) {
+                            unknownSet.add(callId);
+                        }
+                    }
+                }
+                unknownIds = [...unknownSet].sort((a, b) => a - b);
+            }
+        } catch {
+            // If parsing fails, report all as unknown (safest behavior — client
+            // will resend everything).
+            // Client handles this via its own try/catch around the reconcile call.
+        }
+
+        const responseBytes = IncreasingSeqCompressor.serialize(unknownIds);
+        const responseValue = peer.format.isBinary ? responseBytes : base64Encode(responseBytes);
+        peer.hub.systemCallSender.ok(peer.connection, peer.format, relatedId, responseValue);
+    }
+}
+
+/**
+ * Coerce a wire value carrying a byte[] into a Uint8Array.
+ *  - JSON format sends byte[] as a base64 string.
+ *  - msgpack format sends byte[] as native `bin` (Uint8Array).
+ * Returns `null` if the value is neither.
+ */
+function _toBytes(value: unknown): Uint8Array | null {
+    if (value instanceof Uint8Array) return value;
+    if (typeof value === 'string') {
+        try { return base64Decode(value); } catch { return null; }
+    }
+    return null;
 }

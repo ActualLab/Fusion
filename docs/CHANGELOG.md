@@ -14,6 +14,16 @@ To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://vo
 ## Unreleased
 
 ### Fixed
+- TypeScript: `RpcClientPeer._reconnect` now runs the `$sys.Reconnect:3`
+  protocol on same-peer reconnects to ask the server which call IDs it no
+  longer recognizes, and only resends those. Previously the client blindly
+  re-sent every in-flight outbound call on every reconnect, causing the
+  server to spawn a second handler for streaming calls (e.g. ActualChat's
+  `PushAudio`) and double-process the stream. Matches .NET
+  `RpcOutboundCallTracker.Reconnect`.
+  TS also now handles incoming `$sys.Reconnect` calls: when a peer acts as
+  server, the inbound-call tracker is consulted to produce the set of
+  unknown call IDs, wrapped in `$sys.Ok` exactly as .NET does.
 - TypeScript: `RpcStreamSender.writeFrom` is now ACK-driven (mirroring .NET
   `RpcSharedStream<T>`): the main loop blocks waiting for a client ACK, so
   while the peer is disconnected no source items are pulled. Previously
@@ -28,8 +38,25 @@ To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://vo
   stream-sender state and source iterators.
 
 ### Added
+- TypeScript: `RpcCallStage` constants (ResultReady, Invalidated,
+  Unregistered) and `completedStage` tracking on `RpcOutboundCall`, both
+  ported from .NET.
+- TypeScript: `IncreasingSeqCompressor` in `@actuallab/rpc` — LEB128-based
+  sorted-integer-sequence compression, wire-compatible with .NET. Shared
+  fixtures between the TS test suite and a new .NET `Theory` confirm
+  byte-for-byte wire compatibility for the `$sys.Reconnect` protocol.
 - TypeScript: `RingBuffer<T>` in `@actuallab/core` — fixed-capacity circular
   buffer matching .NET `ActualLab.Collections.RingBuffer<T>`.
+- TypeScript: `RpcPeer.format` is now a mutable property (getter/setter);
+  `RpcServerPeer` now accepts an explicit format override, letting the
+  test harness align both peers on any supported wire format.
+
+### Tests
+- New `.NET` `IncreasingSeqCompressorTest.CrossPlatformWireFormatFixtures`
+  theory locks in the exact byte output of 10 representative inputs. The
+  same fixtures are asserted by the TypeScript
+  `increasing-seq-compressor.test.ts` suite, giving us a bidirectional
+  wire-compatibility contract for `$sys.Reconnect`.
 
 
 ## 12.3.16+47f5b5a0 | npm: 12.3.14
