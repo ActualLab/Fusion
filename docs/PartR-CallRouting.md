@@ -284,6 +284,93 @@ public interface IMyService : IRpcService
 - **Constrained**: For operations with side effects (database writes, external API calls) that must not complete on a server that's no longer responsible for the data. This ensures consistency during topology changes.
 
 
+## Remote Execution Mode
+
+While `RpcLocalExecutionMode` (above) governs how *local* execution coordinates with rerouting, `RpcRemoteExecutionMode` governs how *remote* outbound calls behave with respect to the underlying connection: whether they wait for the peer to be connected, whether they resume after a reconnect, and whether they survive a change in peer identity.
+
+It's a `[Flags]` enum, so values can be combined with `|`.
+
+### RpcRemoteExecutionMode Values
+
+| Flag | Value | When set | When unset |
+|------|-------|----------|------------|
+| `AwaitForConnection` | `1` | Wait for the peer to connect if it's disconnected when the call is made | The call fails immediately if the peer isn't connected |
+| `AllowReconnect` | `2` | Resend the call after reconnecting to the same peer | The call is aborted on disconnect |
+| `AllowResend` | `6` (`4 \| AllowReconnect`) | Resend the call even after reconnecting to a *different* peer (implies `AllowReconnect`) | The call is aborted when peer identity changes |
+| `Default` | `7` (`AwaitForConnection \| AllowResend`) | Wait, reconnect, and resend &mdash; the default for regular outbound calls | |
+
+Special cases:
+
+- **`NoWait` methods** always use `0` regardless of this setting &mdash; they're fire-and-forget by design.
+- **Compute methods** must use `Default`. Any other value is rejected at registration time, because compute-call semantics rely on the call eventually reaching *some* responsible peer.
+
+**Resolution order** (same as for `RpcLocalExecutionMode`):
+
+1. Method-level `[RpcMethod(RemoteExecutionMode = ...)]` attribute
+2. Service-level configuration via `HasRemoteExecutionMode()`
+3. `RpcRemoteExecutionMode.Default`
+
+### Configuration
+
+Configure at the **service level**:
+
+```cs
+services.AddRpc()
+    .AddClient<IMyService>()
+    .HasRemoteExecutionMode(RpcRemoteExecutionMode.AwaitForConnection);
+```
+
+Override at the **method level** using `RpcMethodAttribute`:
+
+```cs
+public interface IMyService : IRpcService
+{
+    // Fail fast if disconnected; don't resend on reconnect
+    [RpcMethod(RemoteExecutionMode = RpcRemoteExecutionMode.AwaitForConnection)]
+    Task<Quote> GetLiveQuote(string symbol, CancellationToken ct);
+
+    // Fire-and-forget: mode is forced to 0 regardless of the attribute
+    Task<RpcNoWait> Ping();
+
+    // Full default: wait, reconnect, and resend even across peer changes
+    [RpcMethod(RemoteExecutionMode = RpcRemoteExecutionMode.Default)]
+    Task<Report> GenerateReport(ReportRequest request, CancellationToken ct);
+}
+```
+
+### TypeScript
+
+The same enum &mdash; with identical numeric values &mdash; is available in the TypeScript client (`@actuallab/rpc`). It can be applied either through `defineRpcService(...)` or through the `@rpcMethod(...)` decorator:
+
+```ts
+import {
+    defineRpcService, RpcRemoteExecutionMode, RpcType, rpcMethod, rpcService,
+} from '@actuallab/rpc';
+
+// Via defineRpcService
+const MyServiceDef = defineRpcService('MyService', {
+    getLiveQuote: {
+        args: ['symbol'],
+        remoteExecutionMode: RpcRemoteExecutionMode.AwaitForConnection,
+    },
+    generateReport: {
+        args: ['request'],
+        // remoteExecutionMode: RpcRemoteExecutionMode.Default is the default
+    },
+    ping: { args: [], returns: RpcType.noWait }, // always uses 0
+});
+
+// Or via decorators
+@rpcService('MyService')
+class MyServiceClient {
+    @rpcMethod({ remoteExecutionMode: RpcRemoteExecutionMode.AwaitForConnection })
+    getLiveQuote(symbol: string): Promise<Quote> { /* ... */ }
+}
+```
+
+Flag values on the TS side match .NET exactly: `AwaitForConnection = 1`, `AllowReconnect = 2`, `AllowResend = 6`, `Default = 7`. `NoWait` methods are likewise forced to `0`.
+
+
 ## Configuration
 
 ### Rerouting Delays
