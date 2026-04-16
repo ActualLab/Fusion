@@ -11,70 +11,74 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## Unreleased
+## 12.3.25+0a851ea7 | npm: 12.3.29
 
-### Fixed
-- TypeScript: `RpcStreamSender` real-time ceiling-skip loop no longer races
-  `iterator.next()` against an ACK promise via `Promise.race`. The race
-  pattern (a) lost one source item per ACK arrival because the abandoned
-  source-pull promise still advanced the iterator, and (b) created two
-  promises per drain iteration, which on Windows's coarser microtask
-  scheduling was slow enough to push the `rpc-stream-realtime.test.ts`
-  "should skip items when ACKs are delayed" tests past their 5-second
-  timeout. The drain now awaits each source pull and checks the ACK
-  queue in the gap — same overall behavior, simpler, faster.
-- TypeScript ↔ .NET: full wire-format compatibility for `$sys.Reconnect:3`
-  on every supported serialization format.
-  - JSON path was already wire-compatible; the MessagePack path was not —
-    `Dictionary<int, byte[]>` is `map<int, bin>` on the .NET side, but
-    `@msgpack/msgpack`'s default `Encoder` ignores JS `Map` instances
-    (silently encodes them as `{}`). Added an idempotent module-level patch
-    in `@actuallab/rpc/src/msgpack-map-patch.ts` that teaches the encoder
-    to handle `Map` properly, producing the exact byte sequence
-    `MessagePack-CSharp` expects for `Dictionary<K, V>`.
-  - The TS client now sends the server's OWN handshake index in
-    `$sys.Reconnect` (captured from the remote handshake), not the
-    client's own — matching the `ownHandshake.Index == handshakeIndex`
-    check in .NET `RpcSystemCalls.Reconnect`.
-  - `RpcPeer._handleMessage` now normalises both shapes of the inbound
-    handshake payload — JSON (`{ RemoteHubId, Index, ... }`) and
-    MessagePack `[MessagePackObject(Key)]` array `[peerId, _, hubId, _, index]`.
-- TypeScript: `RpcClientPeer._reconnect` now runs the `$sys.Reconnect:3`
-  protocol on same-peer reconnects to ask the server which call IDs it no
-  longer recognizes, and only resends those. Previously the client blindly
-  re-sent every in-flight outbound call on every reconnect, causing the
-  server to spawn a second handler for streaming calls (e.g. ActualChat's
-  `PushAudio`) and double-process the stream. Matches .NET
-  `RpcOutboundCallTracker.Reconnect`.
-  TS also now handles incoming `$sys.Reconnect` calls: when a peer acts as
-  server, the inbound-call tracker is consulted to produce the set of
-  unknown call IDs, wrapped in `$sys.Ok` exactly as .NET does.
-- TypeScript: `RpcStreamSender.writeFrom` is now ACK-driven (mirroring .NET
-  `RpcSharedStream<T>`): the main loop blocks waiting for a client ACK, so
-  while the peer is disconnected no source items are pulled. Previously
-  `sendItem` was a no-op when disconnected but the pump kept pulling from
-  the source, silently discarding up to thousands of items per disconnect
-  window. A bounded replay buffer holds unacknowledged items so they can be
-  resent on reconnect.
-- TypeScript: `RpcClientPeer._reconnect` now disposes client-owned shared objects
-  (e.g. `RpcStreamSender` instances) on peer change, matching .NET
-  `RpcPeer.Reset()`. Previously these senders lingered indefinitely after a
-  reconnect to a server with a different `hubId`, causing an unbounded leak of
-  stream-sender state and source iterators.
+Release date: 2026-04-16
+
+### Breaking Changes
+- Removed the `RpcWebSocketServerOptions.ChangeConnectionDelay` option (both
+  ASP.NET Core and OWIN/NetFx variants). Stale-connection teardown now
+  happens synchronously *before* the WebSocket upgrade, so the dedicated
+  delay is no longer meaningful. Drop any code that sets this option.
 
 ### Added
-- TypeScript: `RpcCallStage` constants (ResultReady, Invalidated,
-  Unregistered) and `completedStage` tracking on `RpcOutboundCall`, both
-  ported from .NET.
+- TypeScript: `RpcStream` source factories of the form
+  `(abortSignal: AbortSignal) => AsyncIterable<T>` now get a grace
+  period (`RpcStream.disconnectGracePeriodMs`, default 100ms) on
+  `disconnect()` to honor the AbortSignal and exit cooperatively
+  before the sender force-closes via `iterator.return()`. Plain
+  `AsyncIterable<T>` sources (which can't observe the signal) are
+  force-closed immediately as before.
+- TypeScript: `RpcCallStage` constants (`ResultReady`, `Invalidated`,
+  `Unregistered`) and `completedStage` tracking on `RpcOutboundCall`,
+  both ported from .NET.
 - TypeScript: `IncreasingSeqCompressor` in `@actuallab/rpc` — LEB128-based
   sorted-integer-sequence compression, wire-compatible with .NET. Shared
   fixtures between the TS test suite and a new .NET `Theory` confirm
   byte-for-byte wire compatibility for the `$sys.Reconnect` protocol.
-- TypeScript: `RingBuffer<T>` in `@actuallab/core` — fixed-capacity circular
-  buffer matching .NET `ActualLab.Collections.RingBuffer<T>`.
-- TypeScript: `RpcPeer.format` is now a mutable property (getter/setter);
-  `RpcServerPeer` now accepts an explicit format override, letting the
-  test harness align both peers on any supported wire format.
+- TypeScript: `RingBuffer<T>` in `@actuallab/core` — fixed-capacity
+  circular buffer matching .NET `ActualLab.Collections.RingBuffer<T>`.
+- TypeScript: `RpcPeer.format` is now a mutable property
+  (getter/setter); `RpcServerPeer` accepts an explicit format override,
+  letting the test harness align both peers on any supported wire
+  format.
+
+### Fixed
+- RPC server: stale connections are now disconnected *before* the new
+  WebSocket upgrade rather than after. Previously the old-connection
+  teardown could consume the client's `HandshakeTimeout` budget on a
+  dead socket; performing it before the upgrade consumes `ConnectTimeout`
+  instead, which is the correct budget for "waiting for server to be
+  ready to talk".
+- RPC WebSockets: reduced the default `RpcWebSocketTransport.CloseTimeout`
+  from its previous value to **1 second** to limit effective
+  `ConnectTimeout` shrinkage and lower the abrupt/graceful-close ratio
+  impact on connection handling.
+- TypeScript: `RpcClientPeer._reconnect` now runs the `$sys.Reconnect:3`
+  protocol on same-peer reconnects to ask the server which call IDs it
+  no longer recognizes, and only resends those. Previously the client
+  blindly re-sent every in-flight outbound call on every reconnect,
+  causing the server to spawn a second handler for streaming calls
+  (e.g. ActualChat's `PushAudio`) and double-process the stream. Matches
+  .NET `RpcOutboundCallTracker.Reconnect`. TS also now handles incoming
+  `$sys.Reconnect` calls: when a peer acts as server, the inbound-call
+  tracker is consulted to produce the set of unknown call IDs, wrapped
+  in `$sys.Ok` exactly as .NET does.
+- TypeScript: `RpcClientPeer._reconnect` now disposes client-owned shared
+  objects (e.g. `RpcStreamSender` instances) on peer change, matching
+  .NET `RpcPeer.Reset()`. Previously these senders lingered indefinitely
+  after a reconnect to a server with a different `hubId`, causing an
+  unbounded leak of stream-sender state and source iterators.
+- TypeScript: `RpcStreamSender.writeFrom` is now ACK-driven (mirroring
+  .NET `RpcSharedStream<T>`): the main loop blocks waiting for a client
+  ACK, so while the peer is disconnected no source items are pulled.
+  Previously `sendItem` was a no-op when disconnected but the pump kept
+  pulling from the source, silently discarding up to thousands of items
+  per disconnect window. A bounded replay buffer holds unacknowledged
+  items so they can be resent on reconnect.
+
+### Documentation
+- Documented `RpcRemoteExecutionMode` in the Call Routing reference page.
 
 ### Tests
 - New `.NET` `TypeScriptRpcE2ETest.ReconnectNoDuplicate` cross-language
@@ -93,10 +97,8 @@ To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://vo
   wire-compatibility contract for `$sys.Reconnect`.
 
 ### Infrastructure
-- TypeScript: cleaned up two stale `eslint-disable` directives in the
-  `e2e/` cross-language test scripts and ignored `eslint.config.js` itself
-  in the lint config (it can't be type-checked because it lives outside
-  the TS project graph).
+- TypeScript: `Run-Tests.cmd` now sets `CI=1` and `NO_COLOR=1` and uses
+  Vitest's `basic` reporter for consistent, silent CI output.
 
 
 ## 12.3.16+47f5b5a0 | npm: 12.3.14
