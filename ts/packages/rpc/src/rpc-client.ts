@@ -18,7 +18,7 @@
 
 import type { RpcPeer } from './rpc-peer.js';
 import type { RpcServiceDef, RpcMethodDef } from './rpc-service-def.js';
-import { wireMethodName } from './rpc-service-def.js';
+import { wireMethodName, RpcRemoteExecutionMode } from './rpc-service-def.js';
 
 type RpcClientFn = (...args: unknown[]) => unknown;
 
@@ -70,12 +70,16 @@ export function createRpcClient<T extends object>(
 }
 
 function createMethod(peer: RpcPeer, methodDef: RpcMethodDef): RpcClientFn {
+    const mode = methodDef.remoteExecutionMode;
+    const mustCheckConnection = !(mode & RpcRemoteExecutionMode.AwaitForConnection);
     return async (...args: unknown[]) => {
+        if (mustCheckConnection && !peer.isConnected)
+            throw new Error('Outbound call failed: not connected and AwaitForConnection is not set.');
         const callArgs = args.slice(0, methodDef.argCount);
         const wireName = wireMethodName(methodDef);
         const options =
-            methodDef.callTypeId !== 0
-                ? { callTypeId: methodDef.callTypeId }
+            (methodDef.callTypeId !== 0 || mode !== RpcRemoteExecutionMode.Default)
+                ? { callTypeId: methodDef.callTypeId, remoteExecutionMode: mode }
                 : undefined;
         const outboundCall = peer.call(wireName, callArgs, options);
         return outboundCall.result.promise;

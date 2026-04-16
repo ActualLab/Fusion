@@ -11,7 +11,7 @@ public class RpcException : Exception
     public RpcException() : this(null) { }
     public RpcException(string? message)
         : base(message ?? "RPC error.") { }
-    public RpcException(string? message, Exception innerException)
+    public RpcException(string? message, Exception? innerException)
         : base(message ?? "RPC error.", innerException) { }
 
     [Obsolete("Obsolete")]

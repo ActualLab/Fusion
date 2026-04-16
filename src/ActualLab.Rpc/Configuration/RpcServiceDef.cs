@@ -33,6 +33,7 @@ public class RpcServiceDef
     public bool HasServer => ServerResolver is not null;
     public IReadOnlyCollection<RpcMethodDef> Methods => _methodByName.Values;
     public RpcLocalExecutionMode LocalExecutionMode { get; init; }
+    public RpcRemoteExecutionMode RemoteExecutionMode { get; init; }
     public string Scope { get; init; }
     public LegacyNames LegacyNames { get; init; }
     public PropertyBag Properties { get; protected set; }
@@ -57,6 +58,7 @@ public class RpcServiceDef
         IsSystem = typeof(IRpcSystemService).IsAssignableFrom(Type);
         IsBackend = typeof(IBackendService).IsAssignableFrom(Type);
         LocalExecutionMode = service.LocalExecutionMode;
+        RemoteExecutionMode = service.RemoteExecutionMode;
         Scope = hub.RegistryOptions.ServiceScopeResolver.Invoke(this);
         LegacyNames = new LegacyNames(Type);
 

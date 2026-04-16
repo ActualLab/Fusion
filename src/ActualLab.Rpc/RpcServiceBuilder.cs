@@ -15,6 +15,7 @@ public class RpcServiceBuilder
     public RpcServiceMode Mode { get; private set; }
     public ServiceResolver? ImplementationResolver { get; private set; }
     public RpcLocalExecutionMode LocalExecutionMode { get; private set; }
+    public RpcRemoteExecutionMode RemoteExecutionMode { get; private set; } = RpcRemoteExecutionMode.Default;
 
     public Type? ClientType => Mode switch {
         RpcServiceMode.Client => Type,
@@ -111,6 +112,13 @@ public class RpcServiceBuilder
     public RpcServiceBuilder HasLocalExecutionMode(RpcLocalExecutionMode mode)
     {
         LocalExecutionMode = mode;
+        return  this;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public RpcServiceBuilder HasRemoteExecutionMode(RpcRemoteExecutionMode mode)
+    {
+        RemoteExecutionMode = mode;
         return  this;
     }
 

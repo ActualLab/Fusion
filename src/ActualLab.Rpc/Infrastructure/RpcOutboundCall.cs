@@ -334,6 +334,12 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             if ((completedStage & RpcCallStage.Unregistered) != 0 || ServiceDef.Type == typeof(IRpcSystemCalls))
                 return null;
 
+            var mode = MethodDef.RemoteExecutionMode;
+            if (!mode.HasFlag(RpcRemoteExecutionMode.AllowReconnect))
+                return null;
+            if (isPeerChanged && !mode.HasFlag(RpcRemoteExecutionMode.AllowResend))
+                return null;
+
             StartedAt = CpuTimestamp.Now;
             return completedStage;
         }

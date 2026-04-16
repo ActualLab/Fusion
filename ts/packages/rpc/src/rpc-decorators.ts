@@ -31,6 +31,8 @@ const SERVICE_META = Symbol.for('actuallab.service');
 export interface MethodMeta {
     argCount: number;
     returns?: symbol;
+    /** Bitfield of RpcRemoteExecutionMode flags. */
+    remoteExecutionMode?: number;
     [key: symbol]: unknown;
 }
 
@@ -70,8 +72,8 @@ export function rpcService(serviceName: string) {
     };
 }
 
-/** Method decorator — stores RPC method metadata (argCount, returns). Does NOT wrap the method. */
-export function rpcMethod(options?: { returns?: symbol }) {
+/** Method decorator — stores RPC method metadata (argCount, returns, remoteExecutionMode). Does NOT wrap the method. */
+export function rpcMethod(options?: { returns?: symbol; remoteExecutionMode?: number }) {
     return function <This, Args extends unknown[], Return>(
         target: (this: This, ...args: Args) => Return,
         context: ClassMethodDecoratorContext<
@@ -89,6 +91,7 @@ export function rpcMethod(options?: { returns?: symbol }) {
             ...methods[methodName],
             argCount: target.length,
             returns: options?.returns,
+            remoteExecutionMode: options?.remoteExecutionMode,
         };
         return target; // no wrapping — RPC proxy handles invocation
     };

@@ -213,6 +213,23 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     {
         try {
             var calls = Calls.Values.ToList();
+
+            // Abort calls that shouldn't survive reconnection based on their RemoteExecutionMode
+            for (var i = calls.Count - 1; i >= 0; i--) {
+                var call = calls[i];
+                var mode = call.MethodDef.RemoteExecutionMode;
+                if (!mode.HasFlag(RpcRemoteExecutionMode.AllowReconnect)) {
+                    call.SetError(Internal.Errors.OutboundCallFailedCannotReconnect(connectionState.Error),
+                        context: null, assumeCancelled: false);
+                    calls.RemoveAt(i);
+                }
+                else if (isPeerChanged && !mode.HasFlag(RpcRemoteExecutionMode.AllowResend)) {
+                    call.SetError(Internal.Errors.OutboundCallFailedCannotResend(connectionState.Error),
+                        context: null, assumeCancelled: false);
+                    calls.RemoveAt(i);
+                }
+            }
+
             if (isPeerChanged) {
                 Resend(calls);
                 return;

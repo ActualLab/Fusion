@@ -105,6 +105,8 @@ public partial class RpcMethodDef : MethodDef
         IsBackend = service.IsBackend || isBackend;
         LocalExecutionMode = (Attribute?.LocalExecutionMode ?? RpcLocalExecutionMode.Default)
             .Or(Service.LocalExecutionMode);
+        RemoteExecutionMode = NoWait ? 0
+            : Attribute?.RemoteExecutionMode ?? Service.RemoteExecutionMode;
         LegacyNames = new LegacyNames(MethodInfo, nameSuffix);
 
         // Call tracing

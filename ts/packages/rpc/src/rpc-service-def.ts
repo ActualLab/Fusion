@@ -33,6 +33,20 @@
 //   - PropertyBag — extensible metadata on service/method def.  Not needed.
 //   - Mode (ServiceMode) / Scope / ServerResolver / ClientType — DI wiring.
 
+/** Controls outbound RPC call behavior regarding connection waiting, reconnection, and resending. */
+export const RpcRemoteExecutionMode = {
+    /** Wait for connection if disconnected when the call is made. */
+    AwaitForConnection: 1,
+    /** Resend on reconnection to the same peer. */
+    AllowReconnect: 2,
+    /** Resend on reconnection to a different peer (implies AllowReconnect). */
+    AllowResend: 6, // 4 | AllowReconnect
+    /** Default: wait + reconnect + resend. */
+    Default: 7, // AwaitForConnection | AllowResend
+} as const;
+/** Bitfield combination of RpcRemoteExecutionMode flags. */
+export type RpcRemoteExecutionMode = number;
+
 /** Describes a single method on an RPC service. */
 export interface RpcMethodDef {
     readonly name: string;
@@ -42,6 +56,7 @@ export interface RpcMethodDef {
     readonly callTypeId: number;
     readonly stream: boolean;
     readonly noWait: boolean;
+    readonly remoteExecutionMode: RpcRemoteExecutionMode;
 }
 
 /** Describes an RPC service — its name and method definitions. */
@@ -56,6 +71,8 @@ export interface RpcMethodDefInput {
     callTypeId?: number;
     /** Override for wireArgCount. Default: args.length + 1 (assumes a CancellationToken slot). */
     wireArgCount?: number;
+    /** Override for remoteExecutionMode. Default: RpcRemoteExecutionMode.Default (7). NoWait methods always use 0. */
+    remoteExecutionMode?: RpcRemoteExecutionMode;
 }
 
 export const RpcType = {
@@ -83,6 +100,7 @@ export function defineRpcService(
         const cleanName = colonIndex >= 0 ? key.substring(0, colonIndex) : key;
         const wireArgCount = input.wireArgCount ?? input.args.length + 1;
         const mapKey = `${cleanName}:${wireArgCount}`;
+        const isNoWait = input.returns === RpcType.noWait;
         map.set(mapKey, {
             name: cleanName,
             serviceName: name,
@@ -90,7 +108,10 @@ export function defineRpcService(
             wireArgCount,
             callTypeId: input.callTypeId ?? 0,
             stream: input.returns === RpcType.stream,
-            noWait: input.returns === RpcType.noWait,
+            noWait: isNoWait,
+            remoteExecutionMode: isNoWait
+                ? 0
+                : (input.remoteExecutionMode ?? RpcRemoteExecutionMode.Default),
         });
     }
     return { name, methods: map };

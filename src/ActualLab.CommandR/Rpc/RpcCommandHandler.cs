@@ -2,6 +2,7 @@ using ActualLab.CommandR.Internal;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.CommandR.Rpc;
 
@@ -49,6 +50,10 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                 var routeState = peer.Ref.RouteState;
                 try {
                     if (peer.ConnectionKind is not RpcPeerConnectionKind.Local) {
+                        if (!rpcMethodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
+                            && !peer.IsConnected())
+                            throw Errors.OutboundCallFailedNoConnection();
+
                         // Remote call -> send the RPC call by invoking the final handler
                         context.ExecutionState = preFinalExecutionState;
                         context.Items.KeylessSet(new RpcOutboundCallSetup(peer));

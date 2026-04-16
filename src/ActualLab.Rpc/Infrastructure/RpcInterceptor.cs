@@ -50,7 +50,11 @@ public sealed class RpcInterceptor : Interceptor
                     // There is no RoutingState, and thus no rerouting and no shard routing
                     if (call is not null) {
                         // Direct outbound RPC call
-                        resultTask = call.Invoke();
+                        if (!rpcMethodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
+                            && !peer.IsConnected())
+                            resultTask = Task.FromException<object?>(Errors.OutboundCallFailedNoConnection());
+                        else
+                            resultTask = call.Invoke();
                     }
                     else {
                         // call is null
@@ -79,7 +83,11 @@ public sealed class RpcInterceptor : Interceptor
 
                     // RoutingMode is None
                     // Direct outbound RPC call
-                    resultTask = call.Invoke();
+                    if (!rpcMethodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
+                        && !peer.IsConnected())
+                        resultTask = Task.FromException<object?>(Errors.OutboundCallFailedNoConnection());
+                    else
+                        resultTask = call.Invoke();
                 }
                 else {
                     // call is null
@@ -120,6 +128,10 @@ public sealed class RpcInterceptor : Interceptor
                         // but was re-routed to a non-local peer later.
                         throw RpcRerouteException.MustRerouteInbound();
                     }
+
+                    if (!methodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
+                        && !peer.IsConnected())
+                        throw Errors.OutboundCallFailedNoConnection();
 
                     return await call.Invoke().ConfigureAwait(false);
                 }

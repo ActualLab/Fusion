@@ -45,6 +45,7 @@ import {
     defineRpcService,
     wireMethodName,
     RpcType,
+    RpcRemoteExecutionMode,
     type RpcConnection,
     type WebSocketLike,
     type RpcServiceDef,
@@ -155,6 +156,7 @@ export class FusionHub extends RpcHub {
                     (meta as any).compute === true ? FUSION_CALL_TYPE_ID : 0,
                 stream: meta.returns === RpcType.stream,
                 noWait: meta.returns === RpcType.noWait,
+                remoteExecutionMode: RpcRemoteExecutionMode.Default,
             });
         }
 

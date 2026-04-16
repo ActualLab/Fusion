@@ -40,6 +40,7 @@ export type {
 } from './rpc-service-def.js';
 export {
     RpcType,
+    RpcRemoteExecutionMode,
     defineRpcService,
     wireMethodName,
 } from './rpc-service-def.js';

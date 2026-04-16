@@ -145,6 +145,13 @@ public static class Errors
     public static Exception InvalidWebSocketMessageType(WebSocketMessageType type, WebSocketMessageType expectedType)
         => new InvalidOperationException($"Invalid WebSocket message type: got {type:G}, but expected {expectedType:G}.");
 
+    public static RpcException OutboundCallFailedNoConnection(Exception? innerException = null)
+        => new("Outbound call failed: not connected and AwaitForConnection is not set.", innerException);
+    public static RpcException OutboundCallFailedCannotReconnect(Exception? innerException = null)
+        => new("Outbound call failed: disconnected and AllowReconnect is not set.", innerException);
+    public static RpcException OutboundCallFailedCannotResend(Exception? innerException = null)
+        => new("Outbound call failed: reconnected to a different peer and AllowResend is not set.", innerException);
+
     public static Exception CannotExecuteInterfaceCallLocally()
         => new InvalidOperationException(
             "Cannot execute interface call locally (no local call invoker). "

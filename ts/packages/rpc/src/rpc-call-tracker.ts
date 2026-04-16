@@ -53,6 +53,8 @@ export class RpcOutboundCall {
     readonly callId: number;
     readonly method: string;
     readonly result = new PromiseSource<unknown>();
+    /** Bitfield of RpcRemoteExecutionMode flags controlling reconnect/resend behavior. */
+    readonly remoteExecutionMode: number;
 
     /** Whether to remove this call from the tracker on $sys.Ok. Default: true.
      *  Subclasses (e.g. compute calls) override to false to stay in tracker for invalidation. */
@@ -61,9 +63,10 @@ export class RpcOutboundCall {
     /** The serialized wire data — stored for re-sending on reconnect. */
     serializedWireData: string | Uint8Array = '';
 
-    constructor(callId: number, method: string) {
+    constructor(callId: number, method: string, remoteExecutionMode: number = 7) {
         this.callId = callId;
         this.method = method;
+        this.remoteExecutionMode = remoteExecutionMode;
     }
 
     /** Called when the connection is lost. Subclasses can override to resolve invalidation promises. */

@@ -14,6 +14,11 @@ public class RpcComputeMethodDef : RpcMethodDef
     public RpcComputeMethodDef(RpcServiceDef service, MethodInfo methodInfo, ComputedOptions computedOptions)
         : base(service, methodInfo)
     {
+        if (RemoteExecutionMode != RpcRemoteExecutionMode.Default)
+            throw new InvalidOperationException(
+                $"Compute method '{FullName}' must use "
+                + $"{nameof(RpcRemoteExecutionMode)}.{nameof(RpcRemoteExecutionMode.Default)}.");
+
         CallType = RpcComputeCallType.Value;
         ComputedOptions = computedOptions;
     }

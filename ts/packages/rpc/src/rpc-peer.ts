@@ -121,6 +121,8 @@ export interface RpcCallOptions {
     outboundCallFactory?: (id: number, method: string) => RpcOutboundCall;
     /** AbortSignal for caller-initiated cancellation. */
     signal?: AbortSignal;
+    /** Bitfield of RpcRemoteExecutionMode flags (default: 7 = Default). */
+    remoteExecutionMode?: number;
 }
 
 /** Data extracted from an inbound $sys.Handshake message. */
@@ -199,7 +201,7 @@ export abstract class RpcPeer {
         const callId = this.outbound.nextId();
         const outboundCall = options?.outboundCallFactory
             ? options.outboundCallFactory(callId, method)
-            : new RpcOutboundCall(callId, method);
+            : new RpcOutboundCall(callId, method, options?.remoteExecutionMode ?? 7);
 
         const envelope: RpcMessage = {
             Method: method,
@@ -631,10 +633,23 @@ export class RpcClientPeer extends RpcPeer {
             this.remoteObjects.reconnectAll();
         }
 
-        // Re-send existing tracker calls (self-invalidate stage-3 compute calls)
+        // Re-send existing tracker calls, abort those whose RemoteExecutionMode disallows it
         const trackerCalls = [...this.outbound.values()];
         for (const call of trackerCalls) {
-            if (!call.removeOnOk && call.result.isCompleted) {
+            const mode = call.remoteExecutionMode;
+            if (!(mode & 2)) {
+                // AllowReconnect not set — abort
+                if (!call.result.isCompleted)
+                    call.result.reject(new Error('Outbound call failed: disconnected and AllowReconnect is not set.'));
+                call.onDisconnect();
+                this.outbound.remove(call.callId);
+            } else if (_isPeerChanged && !(mode & 4)) {
+                // AllowResend not set, peer changed — abort
+                if (!call.result.isCompleted)
+                    call.result.reject(new Error('Outbound call failed: reconnected to a different peer and AllowResend is not set.'));
+                call.onDisconnect();
+                this.outbound.remove(call.callId);
+            } else if (!call.removeOnOk && call.result.isCompleted) {
                 // Stage-3 compute call: self-invalidate, forcing fresh recompute
                 call.onDisconnect();
                 this.outbound.remove(call.callId);

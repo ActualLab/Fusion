@@ -39,4 +39,12 @@ public sealed class RpcMethodAttribute : Attribute
     /// Shard routing mode.
     /// </summary>
     public RpcLocalExecutionMode LocalExecutionMode { get; set; } = RpcLocalExecutionMode.Default;
+
+    /// <summary>
+    /// Controls outbound call behavior for connection waiting, reconnection, and resending.
+    /// Default is <see cref="RpcRemoteExecutionMode.Default"/> (all flags set).
+    /// NoWait methods always use <c>0</c> regardless of this setting.
+    /// Compute methods must use <see cref="RpcRemoteExecutionMode.Default"/>.
+    /// </summary>
+    public RpcRemoteExecutionMode RemoteExecutionMode { get; set; } = RpcRemoteExecutionMode.Default;
 }

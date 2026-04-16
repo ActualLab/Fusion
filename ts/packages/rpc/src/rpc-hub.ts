@@ -40,7 +40,7 @@ import {
 } from './rpc-peer.js';
 import { RpcServiceHost, type RpcServiceImpl } from './rpc-service-host.js';
 import type { RpcServiceDef, RpcMethodDef } from './rpc-service-def.js';
-import { wireMethodName, RpcType } from './rpc-service-def.js';
+import { wireMethodName, RpcType, RpcRemoteExecutionMode } from './rpc-service-def.js';
 import { getServiceMeta, getMethodsMeta, type AnyConstructor } from './rpc-decorators.js';
 import { RpcSystemCallSender } from './rpc-system-call-sender.js';
 import { RpcSystemCallHandler } from './rpc-system-call-handler.js';
@@ -190,6 +190,7 @@ export class RpcHub {
         for (const [name, meta] of Object.entries(methodsMeta)) {
             const wireArgCount = meta.argCount + 1;
             const mapKey = `${name}:${wireArgCount}`;
+            const isNoWait = meta.returns === RpcType.noWait;
             methods.set(mapKey, {
                 name,
                 serviceName: svcMeta.name,
@@ -197,7 +198,10 @@ export class RpcHub {
                 wireArgCount,
                 callTypeId: 0,
                 stream: meta.returns === RpcType.stream,
-                noWait: meta.returns === RpcType.noWait,
+                noWait: isNoWait,
+                remoteExecutionMode: isNoWait
+                    ? 0
+                    : ((meta.remoteExecutionMode as number | undefined) ?? RpcRemoteExecutionMode.Default),
             });
         }
 
@@ -228,8 +232,10 @@ export class RpcHub {
         methodDef: RpcMethodDef
     ): (...args: unknown[]) => unknown {
         const wireName = wireMethodName(methodDef);
+        const mode = methodDef.remoteExecutionMode;
+        const mustCheckConnection = !(mode & RpcRemoteExecutionMode.AwaitForConnection);
 
-        // NoWait methods
+        // NoWait methods — remoteExecutionMode is always 0, silently drop if disconnected
         if (methodDef.noWait) {
             return (...args: unknown[]) => {
                 const callArgs = args.slice(0, methodDef.argCount);
@@ -240,6 +246,8 @@ export class RpcHub {
         // Stream methods — call returns an RpcStream<T> (AsyncIterable)
         if (methodDef.stream) {
             return async (...args: unknown[]) => {
+                if (mustCheckConnection && !peer.isConnected)
+                    throw new Error('Outbound call failed: not connected and AwaitForConnection is not set.');
                 const callArgs = args.slice(0, methodDef.argCount);
                 const outboundCall = peer.call(wireName, callArgs);
                 const result = await outboundCall.result.promise;
@@ -256,11 +264,13 @@ export class RpcHub {
 
         // Regular methods (including non-zero callTypeId — subclass can override for custom behavior)
         const callOptions: RpcCallOptions | undefined =
-            methodDef.callTypeId !== 0
-                ? { callTypeId: methodDef.callTypeId }
+            (methodDef.callTypeId !== 0 || mode !== RpcRemoteExecutionMode.Default)
+                ? { callTypeId: methodDef.callTypeId, remoteExecutionMode: mode }
                 : undefined;
 
         return async (...args: unknown[]) => {
+            if (mustCheckConnection && !peer.isConnected)
+                throw new Error('Outbound call failed: not connected and AwaitForConnection is not set.');
             const callArgs = args.slice(0, methodDef.argCount);
             const outboundCall = peer.call(wireName, callArgs, callOptions);
             const result = await outboundCall.result.promise;
