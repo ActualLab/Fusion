@@ -151,7 +151,8 @@ export class RpcHub {
         const methods = new Map<string, RpcClientFn>();
         for (const [name, byArgCount] of overloads) {
             if (byArgCount.size === 1) {
-                methods.set(name, byArgCount.values().next().value!);
+                const [[, singleFn]] = byArgCount;
+                methods.set(name, singleFn);
             } else {
                 methods.set(name, (...args: unknown[]) => {
                     const fn = byArgCount.get(args.length);

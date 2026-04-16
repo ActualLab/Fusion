@@ -43,7 +43,7 @@ export function createRpcClient<T extends object>(
     const methods = new Map<string, RpcClientFn>();
     for (const [name, byArgCount] of overloads) {
         if (byArgCount.size === 1) {
-            const methodDef = byArgCount.values().next().value!;
+            const [[, methodDef]] = byArgCount;
             methods.set(name, createMethod(peer, methodDef));
         } else {
             const fns = new Map<number, RpcClientFn>();
