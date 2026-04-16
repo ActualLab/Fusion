@@ -451,36 +451,53 @@ export class RpcStreamSender<T> implements IRpcObject {
             //    microtask gap between iterations and is observable on the
             //    next `_acks.length` check.
             if (this._nextIndex >= maxIndex && !isFullyBuffered && !this._ended) {
-                let latest: _StreamItem<T> | null = null;
+                let latestValue: T | undefined;
+                let haveLatest = false;
+                let exitReason: 'ack' | 'end' | 'error' = 'ack';
+                let exitError: Error | null = null;
                 drain: while (!this._ended) {
-                    if (this._acks.length > 0) break drain;
+                    if (this._acks.length > 0) {
+                        exitReason = 'ack';
+                        break drain;
+                    }
                     let r: IteratorResult<T>;
                     try {
                         r = await iterator.next();
                     } catch (e) {
                         state.iteratorDone = true;
                         isFullyBuffered = true;
-                        latest = {
-                            kind: 'error',
-                            error: e instanceof Error ? e : new Error(String(e)),
-                        };
+                        exitReason = 'error';
+                        exitError = e instanceof Error ? e : new Error(String(e));
                         break drain;
                     }
                     if (this._ended) return;
                     if (r.done) {
-                        latest = _endItem;
-                        isFullyBuffered = true;
                         state.iteratorDone = true;
+                        isFullyBuffered = true;
+                        exitReason = 'end';
                         break drain;
                     }
                     if (this.canSkipTo(r.value)) {
-                        latest = { kind: 'value', value: r.value };
+                        latestValue = r.value;
+                        haveLatest = true;
                     }
                     // else: discard, keep draining.
                 }
-                if (latest !== null) {
+                // If the source ended (or threw), we must NOT loop back to
+                // step 1 to wait for another ACK — there's no consumer to
+                // ACK from. Send the latest skipped item (if any) right
+                // here, then `sendEnd` and exit. Matches the old TS-side
+                // realtime behavior.
+                if (exitReason === 'end' || exitReason === 'error') {
+                    if (haveLatest && !this._ended) this.sendItem(latestValue!);
+                    if (!this._ended) this.sendEnd(exitError);
+                    return;
+                }
+                // ACK exit: stash the latest skip target into the buffer so
+                // the next `step 3` round picks it up at `_nextIndex`.
+                if (haveLatest) {
                     const wasFull = buffer.isFull;
-                    buffer.pushTailAndMoveHeadIfFull(latest);
+                    buffer.pushTailAndMoveHeadIfFull({ kind: 'value', value: latestValue! });
                     if (wasFull) bufferStart++;
                 }
                 // Go back to nextAck (outer loop) to flush/send what we buffered.
