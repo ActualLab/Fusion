@@ -14,11 +14,22 @@ To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://vo
 ## Unreleased
 
 ### Fixed
+- TypeScript: `RpcStreamSender.writeFrom` is now ACK-driven (mirroring .NET
+  `RpcSharedStream<T>`): the main loop blocks waiting for a client ACK, so
+  while the peer is disconnected no source items are pulled. Previously
+  `sendItem` was a no-op when disconnected but the pump kept pulling from
+  the source, silently discarding up to thousands of items per disconnect
+  window. A bounded replay buffer holds unacknowledged items so they can be
+  resent on reconnect.
 - TypeScript: `RpcClientPeer._reconnect` now disposes client-owned shared objects
   (e.g. `RpcStreamSender` instances) on peer change, matching .NET
   `RpcPeer.Reset()`. Previously these senders lingered indefinitely after a
   reconnect to a server with a different `hubId`, causing an unbounded leak of
   stream-sender state and source iterators.
+
+### Added
+- TypeScript: `RingBuffer<T>` in `@actuallab/core` — fixed-capacity circular
+  buffer matching .NET `ActualLab.Collections.RingBuffer<T>`.
 
 
 ## 12.3.16+47f5b5a0 | npm: 12.3.14

@@ -9,6 +9,7 @@ export type { Disposable, AsyncDisposable } from './disposable.js';
 export { DisposableBag } from './disposable.js';
 export { EventHandlerSet } from './events.js';
 export { PromiseSource, resolvedVoidPromise } from './promise-source.js';
+export { RingBuffer } from './ring-buffer.js';
 export type { IResult } from './result.js';
 export {
     Result,
