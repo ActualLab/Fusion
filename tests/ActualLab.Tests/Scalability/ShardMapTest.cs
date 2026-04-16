@@ -64,7 +64,7 @@ public class ShardMapTest(ITestOutputHelper @out) : TestBase(@out)
         var names = new[] { "Rendez", "Maglev", "Greedy" };
         var winMaps = names.ToDictionary(x => x, _ => new List<char>());
 
-        WriteLine($"Shards: {shardCount}");
+        WriteLine($"Shards: {shardCount}, MaxImbalance: {maxImbalance}");
         for (var nodeCount = 2; nodeCount <= maxNodeCount; nodeCount++) {
             var idealMoveCount = shardCount / nodeCount;
             var gMoves = CollectMoves(shardCount, nodeCount, greedy);
