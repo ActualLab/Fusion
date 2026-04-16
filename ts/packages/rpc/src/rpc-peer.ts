@@ -494,13 +494,14 @@ export class RpcClientPeer extends RpcPeer {
         return this._connectionKind;
     }
 
-    /** One-shot connection for tests — no reconnection loop, no handshake. */
-    connectWith(conn: RpcConnection): void {
-        // Set up new connection and re-send outbound calls (treat as peer change —
-        // no handshake exchange to determine same-peer, so stage-3 compute calls
-        // are self-invalidated while regular in-flight calls are re-sent).
+    /** One-shot connection for tests — no reconnection loop, no handshake.
+     *  @param isPeerChanged Whether to treat this as a peer-identity change
+     *  (default `true` — no handshake was exchanged, so stage-3 compute calls
+     *  self-invalidate and remote/shared objects are disposed). Pass `false`
+     *  to simulate a same-peer reconnect in tests. */
+    connectWith(conn: RpcConnection, isPeerChanged = true): void {
         this.setupConnection(conn);
-        this._reconnect(true);
+        this._reconnect(isPeerChanged);
     }
 
     /** Start the reconnection loop — runs until disposed. */
@@ -626,9 +627,16 @@ export class RpcClientPeer extends RpcPeer {
     private _reconnect(_isPeerChanged: boolean): void {
         if (this._connection === undefined) return;
 
-        // Handle remote objects on reconnect
+        // Handle remote and shared objects on reconnect.
+        // On peer change, the remote server is gone — both remote objects
+        // (proxies registered here for server-owned objects) and shared objects
+        // (e.g. RpcStreamSender instances this peer owns and is pushing to the
+        // server) must be disposed: the new server has no corresponding entries,
+        // so they would hang forever waiting for ACKs that never arrive.
+        // Mirrors .NET RpcPeer.Reset (src/ActualLab.Rpc/RpcPeer.cs:430-440).
         if (_isPeerChanged) {
             this.remoteObjects.disconnectAll();
+            this.sharedObjects.disconnectAll();
         } else {
             this.remoteObjects.reconnectAll();
         }

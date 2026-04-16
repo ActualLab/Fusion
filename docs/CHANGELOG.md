@@ -11,6 +11,16 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## Unreleased
+
+### Fixed
+- TypeScript: `RpcClientPeer._reconnect` now disposes client-owned shared objects
+  (e.g. `RpcStreamSender` instances) on peer change, matching .NET
+  `RpcPeer.Reset()`. Previously these senders lingered indefinitely after a
+  reconnect to a server with a different `hubId`, causing an unbounded leak of
+  stream-sender state and source iterators.
+
+
 ## 12.3.16+47f5b5a0 | npm: 12.3.14
 
 Release date: 2026-04-16

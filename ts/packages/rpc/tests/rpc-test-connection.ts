@@ -26,9 +26,9 @@ export class RpcTestConnection {
         this.clientPeer = clientPeer;
     }
 
-    async connect(): Promise<void> {
+    async connect(isPeerChanged = true): Promise<void> {
         const [clientConn, serverConn] = createMessageChannelPair();
-        this.clientPeer.connectWith(clientConn);
+        this.clientPeer.connectWith(clientConn, isPeerChanged);
 
         const ref = `server://${crypto.randomUUID()}`;
         this.serverPeer = this.serverHub.getServerPeer(ref);
@@ -46,10 +46,15 @@ export class RpcTestConnection {
         await delay(1);
     }
 
-    async reconnect(delayMs = 10): Promise<void> {
+    async reconnect(delayMs = 10, isPeerChanged = true): Promise<void> {
         await this.disconnect();
         await delay(delayMs);
-        await this.connect();
+        await this.connect(isPeerChanged);
+    }
+
+    /** Simulate a same-peer reconnect (e.g. transient network drop, server still alive). */
+    async reconnectSamePeer(delayMs = 10): Promise<void> {
+        await this.reconnect(delayMs, false);
     }
 
     async switchHost(newServerHub: RpcHub): Promise<void> {
