@@ -201,7 +201,7 @@ export class RpcHub {
                 noWait: isNoWait,
                 remoteExecutionMode: isNoWait
                     ? 0
-                    : ((meta.remoteExecutionMode as number | undefined) ?? RpcRemoteExecutionMode.Default),
+                    : (meta.remoteExecutionMode ?? RpcRemoteExecutionMode.Default),
             });
         }
 

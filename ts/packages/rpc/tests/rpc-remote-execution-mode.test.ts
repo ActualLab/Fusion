@@ -133,7 +133,7 @@ describe('RpcRemoteExecutionMode', () => {
         const calc = clientHub.addClient<ICalcService>(conn.clientPeer, NoneServiceDef);
         const promise = calc.add(10, 20);
         // Prevent unhandled rejection
-        promise.catch(() => {});
+        promise.catch(() => { /* prevent unhandled rejection */ });
 
         // Reconnect while call is in-flight
         await conn.reconnect();
@@ -151,7 +151,7 @@ describe('RpcRemoteExecutionMode', () => {
 
         const calc = clientHub.addClient<ICalcService>(conn.clientPeer, AwaitOnlyServiceDef);
         const promise = calc.add(10, 20);
-        promise.catch(() => {});
+        promise.catch(() => { /* prevent unhandled rejection */ });
 
         await conn.reconnect();
 
@@ -170,7 +170,7 @@ describe('RpcRemoteExecutionMode', () => {
 
         const calc = clientHub.addClient<ICalcService>(conn.clientPeer, ReconnectServiceDef);
         const promise = calc.add(10, 20);
-        promise.catch(() => {});
+        promise.catch(() => { /* prevent unhandled rejection */ });
 
         await conn.reconnect();
 

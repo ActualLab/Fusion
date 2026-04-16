@@ -63,7 +63,7 @@ export class RpcOutboundCall {
     /** The serialized wire data — stored for re-sending on reconnect. */
     serializedWireData: string | Uint8Array = '';
 
-    constructor(callId: number, method: string, remoteExecutionMode: number = 7) {
+    constructor(callId: number, method: string, remoteExecutionMode = 7) {
         this.callId = callId;
         this.method = method;
         this.remoteExecutionMode = remoteExecutionMode;
