@@ -1,3 +1,5 @@
 @echo off
 cd /d "%~dp0"
-npx vitest run %*
+set CI=1
+set NO_COLOR=1
+npx vitest run --reporter=basic --silent %*
