@@ -26,7 +26,9 @@ public sealed class RpcWebSocketTransport : RpcTransport
         public int FrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
         public int BufferSize { get; init; } = 16_000;
         public int MaxBufferSize { get; init; } = 256_000;
-        public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(10);
+        // High CloseTimeout values "shrink" effective ConnectTimeout,
+        // low values increase abrupt/graceful close ratio, which is a no-op in our case.
+        public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(1);
 
         // Use of UnboundedChannelOptions is totally fine here: if the message is enqueued
         public ChannelOptions WriteChannelOptions { get; init; } = new UnboundedChannelOptions() {
