@@ -1,8 +1,11 @@
 import { PromiseSource, RingBuffer } from '@actuallab/core';
+import { getLogs } from './logging.js';
 import type { RpcObjectId, IRpcObject } from './rpc-object.js';
 import { RpcObjectKind } from './rpc-object.js';
 import type { RpcPeer } from './rpc-peer.js';
 import { RpcStream } from './rpc-stream.js';
+
+const { warnLog } = getLogs('RpcSharedStream');
 
 /** Default ack period for server-side streams. */
 const DEFAULT_ACK_PERIOD = 256;
@@ -223,7 +226,8 @@ export class RpcStreamSender<T> implements IRpcObject {
                 ack = this._tryProcessAcks();
                 if (!ack) {
                     // Should not happen (the wait resolved, so at least one ACK
-                    // was queued) — defensive exit.
+                    // was queued) — mirrors RpcSharedStream.cs:142.
+                    warnLog?.log("Something is off: couldn't read an acknowledgement");
                     return;
                 }
             }
@@ -324,7 +328,11 @@ export class RpcStreamSender<T> implements IRpcObject {
                 await this._waitAckReady();
                 if (this._ended) return;
                 ack = this._tryProcessAcks();
-                if (!ack) return;
+                if (!ack) {
+                    // Mirrors RpcSharedStream.cs:252.
+                    warnLog?.log("Something is off: couldn't read an acknowledgement");
+                    return;
+                }
             }
             this._lastAckedIndex = ack.nextIndex;
 

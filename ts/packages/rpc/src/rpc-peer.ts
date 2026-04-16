@@ -76,6 +76,7 @@
 //     threading through RpcServiceHost.dispatch).
 
 import { EventHandlerSet, PromiseSource } from '@actuallab/core';
+import { getLogs } from './logging.js';
 import { RpcClientPeerReconnectDelayer } from './rpc-client-peer-reconnect-delayer.js';
 import {
     RpcWebSocketConnection,
@@ -101,6 +102,8 @@ import { base64Decode, base64Encode } from './base64.js';
 
 /** WebSocket close code sent by the server when the client's serialization format is unsupported. */
 export const RPC_CLOSE_CODE_UNSUPPORTED_FORMAT = 4001;
+
+const { debugLog, infoLog, warnLog, errorLog } = getLogs('RpcPeer');
 
 /** Builds the WebSocket connection URL for an RpcClientPeer. */
 export type RpcConnectionUrlResolver = (peer: RpcClientPeer) => string;
@@ -181,10 +184,17 @@ export abstract class RpcPeer {
         conn.closed.add(ev => {
             this._connection = undefined;
             this._stopKeepAlive();
+            // Mirrors RpcPeer.cs:524-526 — log disconnect with reason if present.
+            if (ev.reason)
+                infoLog?.log(`'${this.ref}': Disconnected: ${ev.reason} (code=${ev.code})`);
+            else
+                infoLog?.log(`'${this.ref}': Disconnected`);
             this.disconnected.trigger(ev);
         });
 
         void conn.whenConnected.then(() => {
+            // Mirrors RpcPeer.cs:520 — "Connected".
+            infoLog?.log(`'${this.ref}': Connected`);
             this.connected.trigger();
             this._startKeepAlive();
         });
@@ -278,6 +288,8 @@ export abstract class RpcPeer {
     }
 
     close(): void {
+        // Mirrors RpcPeer.cs:397 — "Stopping".
+        infoLog?.log(`'${this.ref}': Stopping`);
         this._stopKeepAlive();
         this.remoteObjects.disconnectAll();
         this.sharedObjects.disconnectAll();
@@ -291,6 +303,8 @@ export abstract class RpcPeer {
         this.outbound.invalidateAll();
         this._connection?.close();
         this._hub.peers.delete(this.ref);
+        // Mirrors RpcPeer.cs:439 — "Stopped".
+        infoLog?.log(`'${this.ref}': Stopped`);
     }
 
     /** Send any messages buffered while disconnected. Call after connection + handshake are ready. */
@@ -323,15 +337,23 @@ export abstract class RpcPeer {
     private _handleMessage(received: RpcReceivedMessage): void {
         let message: RpcMessage;
         let args: unknown[];
-        if (received.kind === 'binary') {
-            message = received.message;
-            args = received.args;
-        } else {
-            const parsed = deserializeMessage(received.raw);
-            message = parsed.message;
-            args = parsed.args;
+        try {
+            if (received.kind === 'binary') {
+                message = received.message;
+                args = received.args;
+            } else {
+                const parsed = deserializeMessage(received.raw);
+                message = parsed.message;
+                args = parsed.args;
+            }
+        }
+        catch (e) {
+            // Mirrors RpcPeer.cs:453 — "Failed to process inbound message".
+            errorLog?.log(`'${this.ref}': Failed to process inbound message:`, received, e);
+            return;
         }
         const method = message.Method ?? '';
+        debugLog?.log(`'${this.ref}': <- ${method}#${message.RelatedId ?? 0}`);
 
         // Handshake — dispatch to subclass handler
         if (method === RpcSystemCalls.handshake) {
@@ -425,6 +447,7 @@ export abstract class RpcPeer {
                         e
                     );
                 }
+                debugLog?.log(`'${this.ref}': Inbound call failed: ${method}#${relatedId}`, e);
             } finally {
                 if (!isNoWait) {
                     this.inbound.remove(relatedId);
@@ -534,10 +557,14 @@ export class RpcClientPeer extends RpcPeer {
     /** Start the reconnection loop — runs until disposed. */
     async run(wsFactory?: (url: string) => WebSocketLike): Promise<void> {
         const connUrl = this.connectionUrlResolver(this);
+        // Mirrors RpcPeer.cs:230 — "Started".
+        infoLog?.log(`'${this.ref}': Started (Client)`);
         while (!this._disposed) {
             let lastCloseCode = 0;
             let lastCloseReason = '';
             try {
+                // Mirrors RpcClientPeer.cs:45 — "Connecting...".
+                infoLog?.log(`'${this.ref}': Connecting to ${connUrl}`);
                 const ws =
                     wsFactory?.(connUrl) ??
                     (new WebSocket(connUrl) as unknown as WebSocketLike);
@@ -577,13 +604,20 @@ export class RpcClientPeer extends RpcPeer {
                 await Promise.race([conn.whenConnected, closedRejection]);
 
                 // Send our handshake, then wait for the server's response.
-                this._hub.systemCallSender.handshake(
-                    conn,
-                    this.format,
-                    this.id,
-                    this._hub.hubId,
-                    ++this._handshakeIndex
-                );
+                try {
+                    this._hub.systemCallSender.handshake(
+                        conn,
+                        this.format,
+                        this.id,
+                        this._hub.hubId,
+                        ++this._handshakeIndex
+                    );
+                }
+                catch (e) {
+                    // Mirrors RpcPeer.cs:305 — "Failed to send handshake".
+                    warnLog?.log(`'${this.ref}': Failed to send handshake`, e);
+                    throw e;
+                }
                 const remoteHandshake = await Promise.race([
                     this._pendingHandshake.promise,
                     closedRejection,
@@ -603,10 +637,14 @@ export class RpcClientPeer extends RpcPeer {
                     if (isPeerChanged) {
                         // Server identity changed — clear inbound state
                         this.inbound.clear();
+                        // Mirrors RpcPeer.cs:439 (Peer changed branch).
+                        infoLog?.log(`'${this.ref}': Peer changed`);
                         this.peerChanged.trigger();
                     }
                     this._lastRemoteHubId = remoteHubId;
                 }
+                // Mirrors RpcPeer.cs:316 — "Handshake succeeded".
+                infoLog?.log(`'${this.ref}': Handshake succeeded, peerChanged=${isPeerChanged}`);
 
                 // Activate the connection and re-send outbound calls.
                 // All of this happens AFTER the handshake, so the server is ready to process calls.
@@ -617,8 +655,9 @@ export class RpcClientPeer extends RpcPeer {
 
                 // Wait until disconnected
                 await new Promise<void>(r => conn.closed.add(() => r()));
-            } catch {
+            } catch (e) {
                 // connection failed or handshake failed
+                debugLog?.log(`'${this.ref}': run() iteration failed:`, e);
             }
 
             this._connectionKind = RpcPeerConnectionKind.Disconnected;
@@ -627,6 +666,8 @@ export class RpcClientPeer extends RpcPeer {
 
             // Server rejected our serialization format — stop reconnecting and notify listeners
             if (lastCloseCode === RPC_CLOSE_CODE_UNSUPPORTED_FORMAT) {
+                // Mirrors RpcPeer.cs:518 — "Can't (re)connect, will shut down".
+                warnLog?.log(`'${this.ref}': Unsupported serialization format - shutting down`);
                 this.unsupportedFormat.trigger({ reason: lastCloseReason });
                 this._disposed = true;
                 break;
@@ -635,6 +676,8 @@ export class RpcClientPeer extends RpcPeer {
             this._tryIndex++;
             const delay = this.reconnectDelayer.getDelay(this._tryIndex);
             if (delay.isLimitExceeded) {
+                // Mirrors RpcPeer.cs:518 — reconnect limit exceeded.
+                warnLog?.log(`'${this.ref}': Reconnect limit exceeded - shutting down`);
                 this._disposed = true;
                 break;
             }

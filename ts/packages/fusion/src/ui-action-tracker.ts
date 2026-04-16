@@ -1,4 +1,7 @@
 import { EventHandlerSet } from '@actuallab/core';
+import { getLogs } from './logging.js';
+
+const { errorLog } = getLogs('UIActionTracker');
 
 /** Singleton tracking active UI commands — mirrors .NET's UIActionTracker. */
 export class UIActionTracker {
@@ -17,6 +20,8 @@ export class UIActionTracker {
         try {
             await fn();
         } catch (e) {
+            // Mirrors UIActionTracker.cs:58 — UI action failure.
+            errorLog?.log('UI action failed', e);
             this.errors.push(e);
         } finally {
             this._activeCount--;
@@ -33,6 +38,8 @@ export class UIActionTracker {
         try {
             return await fn();
         } catch (e) {
+            // Mirrors UIActionTracker.cs:58 — UI action failure.
+            errorLog?.log('UI action failed', e);
             this.errors.push(e);
             throw e;
         } finally {

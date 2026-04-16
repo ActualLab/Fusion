@@ -1,3 +1,6 @@
+export type { RpcLogScope } from './logging.js';
+export { getLogs } from './logging.js';
+
 export {
     RpcCallTypeId,
     RpcSystemCalls,

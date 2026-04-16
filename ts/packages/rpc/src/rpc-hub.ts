@@ -32,6 +32,7 @@
 //   - HostId / SystemClock — infrastructure services.
 //   - DefaultPeer / LoopbackPeer / LocalPeer / NonePeer — cached well-known peers.
 
+import { getLogs } from './logging.js';
 import {
     RpcClientPeer,
     RpcServerPeer,
@@ -47,6 +48,8 @@ import { RpcSystemCallHandler } from './rpc-system-call-handler.js';
 import { RpcStream, parseStreamRef, resolveStreamRefs } from './rpc-stream.js';
 import { RpcMethodRegistry } from './rpc-method-registry.js';
 import { RpcSystemCalls } from './rpc-message.js';
+
+const { warnLog } = getLogs('RpcHub');
 
 /** Central RPC coordinator — manages peers, services, and configuration. */
 export class RpcHub {
@@ -79,6 +82,8 @@ export class RpcHub {
         if (peer !== undefined) {
             peer.close();
             this.peers.delete(ref);
+            // Mirrors RpcHub.cs:137 — "peer is removed from RpcHub".
+            warnLog?.log(`'${ref}': peer is removed from RpcHub`);
         }
     }
 

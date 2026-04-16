@@ -1,9 +1,12 @@
 import Denque from 'denque';
 import { PromiseSource } from '@actuallab/core';
+import { getLogs } from './logging.js';
 import type { RpcObjectId, IRpcObject } from './rpc-object.js';
 import { RpcObjectKind } from './rpc-object.js';
 import type { RpcPeer } from './rpc-peer.js';
 import { RpcStreamSender } from './rpc-stream-sender.js';
+
+const { warnLog } = getLogs('RpcStream');
 
 /** Default ack period (matches .NET RpcStream defaults). */
 const DEFAULT_ACK_PERIOD = 30;
@@ -226,9 +229,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         if (this._disposed || this._completed) return;
 
         if (index > this._nextExpectedIndex) {
-            console.warn(
-                `[RpcStream] item index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`
-            );
+            warnLog?.log(`item index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`);
             if (!this.allowReconnect) {
                 this._completed = true;
                 this._completionError = new Error(
@@ -257,9 +258,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         if (this._disposed || this._completed) return;
 
         if (index > this._nextExpectedIndex) {
-            console.warn(
-                `[RpcStream] batch index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`
-            );
+            warnLog?.log(`batch index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`);
             if (!this.allowReconnect) {
                 this._completed = true;
                 this._completionError = new Error(

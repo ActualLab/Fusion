@@ -24,6 +24,7 @@
 //   - DI / IServiceProvider / RpcServiceBase — .NET system calls are resolved via
 //     DI.  TS uses a class with a handle() method.
 
+import { getLogs } from './logging.js';
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
 import type { RpcPeer } from './rpc-peer.js';
 import type { RpcStream } from './rpc-stream.js';
@@ -33,11 +34,14 @@ import { RpcCallStage } from './rpc-call-stage.js';
 import { IncreasingSeqCompressor } from './increasing-seq-compressor.js';
 import { base64Decode, base64Encode } from './base64.js';
 
+const { debugLog, warnLog } = getLogs('RpcSystemCallHandler');
+
 /** Handles incoming system call messages — class-based equivalent of the former standalone function. */
 export class RpcSystemCallHandler {
     handle(message: RpcMessage, args: unknown[], peer: RpcPeer): void {
         const method = message.Method;
         const relatedId = message.RelatedId ?? 0;
+        debugLog?.log(`'${peer.ref}': handle ${method}#${relatedId}`);
 
         switch (method) {
         case RpcSystemCalls.ok: {
@@ -74,6 +78,14 @@ export class RpcSystemCallHandler {
                 const msg = (errorInfo?.Message ??
                         errorInfo?.message ??
                         'RPC error') as string;
+                const errorType = errorInfo?.TypeRef ?? errorInfo?.typeRef;
+                // Mirrors RpcSystemCalls.cs:102 — surface RpcRerouteException.
+                if (errorType !== null && typeof errorType === 'object') {
+                    const t = errorType as Record<string, unknown>;
+                    if (t.TypeName === 'RpcRerouteException'
+                        || t.typeName === 'RpcRerouteException')
+                        warnLog?.log('Got RpcRerouteException from remote peer:', msg);
+                }
                 call.result.reject(new Error(msg));
             }
             break;
@@ -94,27 +106,25 @@ export class RpcSystemCallHandler {
             const stream = peer.remoteObjects.get(relatedId) as
                     | RpcStream<unknown>
                     | undefined;
-            if (!stream) {
-                console.warn(
-                    `[RpcSysHandler] $sys.I: no stream for relatedId=${relatedId}`
-                );
-            } else {
+            // Silent no-op when no stream — mirrors RpcSystemCalls.cs:164-170.
+            // This is normal during reconnect: the server may send items for
+            // streams the client has already disposed.
+            if (!stream)
+                debugLog?.log(`$sys.I: no stream for relatedId=${relatedId}`);
+            else
                 stream.onItem(
                         args[0] as number,
                         resolveStreamRefs(args[1], peer)
                 );
-            }
             break;
         }
         case RpcSystemCalls.batch: {
             const stream = peer.remoteObjects.get(relatedId) as
                     | RpcStream<unknown>
                     | undefined;
-            if (!stream) {
-                console.warn(
-                    `[RpcSysHandler] $sys.B: no stream for relatedId=${relatedId}`
-                );
-            } else if (Array.isArray(args[1])) {
+            if (!stream)
+                debugLog?.log(`$sys.B: no stream for relatedId=${relatedId}`);
+            else if (Array.isArray(args[1])) {
                 const items = args[1] as unknown[];
                 for (let i = 0; i < items.length; i++)
                     items[i] = resolveStreamRefs(items[i], peer);
@@ -127,9 +137,7 @@ export class RpcSystemCallHandler {
                     | RpcStream<unknown>
                     | undefined;
             if (!stream) {
-                console.warn(
-                    `[RpcSysHandler] $sys.End: no stream for relatedId=${relatedId}`
-                );
+                debugLog?.log(`$sys.End: no stream for relatedId=${relatedId}`);
             } else {
                 // .NET ExceptionInfo is a struct — even for normal completion, it serializes
                 // as a non-null object with empty fields (e.g. { "message": "", "typeRef": {...} }).

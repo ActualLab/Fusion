@@ -27,10 +27,13 @@
 //     so system call handlers can access the current peer/message.  TS passes
 //     context explicitly as a function argument (RpcDispatchContext).
 
+import { getLogs } from './logging.js';
 import type { RpcMethodDef } from './rpc-service-def.js';
 import { wireMethodName } from './rpc-service-def.js';
 import type { RpcServiceDef } from './rpc-service-def.js';
 import type { RpcConnection } from './rpc-connection.js';
+
+const { warnLog } = getLogs('RpcServiceHost');
 
 export type RpcServiceImpl = Record<string, ((...args: unknown[]) => unknown) | undefined>;
 
@@ -65,8 +68,11 @@ export class RpcServiceHost {
         context?: RpcDispatchContext
     ): Promise<unknown> {
         const entry = this._methods.get(wireMethod);
-        if (entry === undefined)
+        if (entry === undefined) {
+            // Mirrors .NET: missing method is sent back as $sys.Error; warn for visibility.
+            warnLog?.log(`Method not found: ${wireMethod}`);
             throw new Error(`Method not found: ${wireMethod}`);
+        }
 
         // Pass context as the last arg only for custom call types (e.g., compute) — their
         // wrapped functions use it; regular methods should not see it to avoid polluting ...args.

@@ -1,3 +1,6 @@
+export type { FusionLogScope } from './logging.js';
+export { getLogs } from './logging.js';
+
 export { getInstanceId } from './computed-input.js';
 export type { ComputedInput } from './computed-input.js';
 export { Computed, StateBoundComputed, ConsistencyState } from './computed.js';

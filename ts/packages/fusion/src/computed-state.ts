@@ -7,8 +7,11 @@ import {
 } from '@actuallab/core';
 import { type Computed, StateBoundComputed } from './computed.js';
 import { ComputeContext, computeContextKey } from './compute-context.js';
+import { getLogs } from './logging.js';
 import { defaultUpdateDelayer, type UpdateDelayer } from './update-delayer.js';
 import { State } from './state.js';
+
+const { errorLog } = getLogs('ComputedState');
 
 export type StateComputer<T> = () => T | Promise<T>;
 
@@ -144,8 +147,10 @@ export class ComputedState<T> extends State<T> {
                     this._cancelDelaySource.promise,
                 ]);
             }
-        } catch {
-            // Intended, do nothing
+        } catch (e) {
+            // Mirrors ComputedState.cs:188 — UpdateCycle failed and stopped.
+            if (!disposeSignal.aborted)
+                errorLog?.log('UpdateCycle() failed and stopped', e);
         }
     }
 }

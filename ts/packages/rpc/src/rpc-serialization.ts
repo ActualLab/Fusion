@@ -15,12 +15,15 @@ import {
 // Side-effect import: patches Encoder.prototype to handle JS Map instances
 // as proper msgpack maps with typed keys (.NET-wire-compatible).
 import './msgpack-map-patch.js';
+import { getLogs } from './logging.js';
 import type { RpcMessage } from './rpc-message.js';
 import {
     ENVELOPE_DELIMITER,
     ARG_DELIMITER,
     FRAME_DELIMITER,
 } from './rpc-message.js';
+
+const { warnLog } = getLogs('RpcSerialization');
 
 // ============================================================
 // Text format (json5np) — V3 wire format
@@ -71,9 +74,7 @@ export function deserializeMessage(raw: string): {
         try {
             return JSON.parse(s) as unknown;
         } catch {
-            console.warn(
-                `[RpcSerialization] failed to parse arg as JSON: ${s.substring(0, 100)}`
-            );
+            warnLog?.log(`failed to parse arg as JSON: ${s.substring(0, 100)}`);
             return s; // Return raw string if not valid JSON
         }
     });

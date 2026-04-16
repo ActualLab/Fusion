@@ -24,6 +24,7 @@
 
 import { Encoder, Decoder } from '@msgpack/msgpack';
 import { PromiseSource, EventHandlerSet } from '@actuallab/core';
+import { getLogs } from './logging.js';
 import {
     splitFrame,
     serializeFrame,
@@ -34,6 +35,8 @@ import {
 import type { RpcMessage } from './rpc-message.js';
 import type { RpcSerializationFormat } from './rpc-serialization-format.js';
 import type { RpcMethodRegistry } from './rpc-method-registry.js';
+
+const { warnLog } = getLogs('RpcConnection');
 
 /** Abstract WebSocket interface — works with both browser WebSocket and Node.js ws. */
 export interface WebSocketLike {
@@ -166,6 +169,7 @@ export class RpcWebSocketConnection implements RpcConnection {
                         });
                     }
                 } catch (e) {
+                    warnLog?.log('Failed to split binary frame:', e);
                     this.error.trigger(e);
                 }
             } else if (
@@ -188,6 +192,7 @@ export class RpcWebSocketConnection implements RpcConnection {
                             });
                         }
                     } catch (e) {
+                        warnLog?.log('Failed to split binary blob frame:', e);
                         this.error.trigger(e);
                     }
                 });

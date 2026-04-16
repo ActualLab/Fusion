@@ -24,10 +24,13 @@
 //     suppress error responses when the peer is shutting down.  TS has no stop
 //     mode concept.
 
+import { getLogs } from './logging.js';
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
 import type { RpcConnection } from './rpc-connection.js';
 import type { RpcSerializationFormat } from './rpc-serialization-format.js';
 import type { RpcMethodRegistry } from './rpc-method-registry.js';
+
+const { errorLog } = getLogs('RpcSystemCallSender');
 
 /**
  * Sends system RPC messages — like .NET's RpcSystemCallSender.
@@ -131,12 +134,19 @@ export class RpcSystemCallSender {
         relatedId: number,
         result: unknown
     ): void {
-        this._send(
-            conn,
-            format,
-            { Method: RpcSystemCalls.ok, RelatedId: relatedId },
-            [result]
-        );
+        try {
+            this._send(
+                conn,
+                format,
+                { Method: RpcSystemCalls.ok, RelatedId: relatedId },
+                [result]
+            );
+        }
+        catch (e) {
+            // Mirrors RpcSystemCallSender.cs:104 — "Failed to send Ok response".
+            errorLog?.log(`Failed to send Ok response for call #${relatedId}`, e);
+            this.error(conn, format, relatedId, e);
+        }
     }
 
     error(

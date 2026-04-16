@@ -2,8 +2,11 @@
 // Simplified TS version using EventHandlerSet + setTimeout (no Fusion computed state).
 
 import { EventHandlerSet } from '@actuallab/core';
+import { getLogs } from './logging.js';
 import type { RpcClientPeer } from './rpc-peer.js';
 import { type RpcPeerState, RpcPeerStateKind } from './rpc-peer-state.js';
+
+const { infoLog } = getLogs('RpcPeerStateMonitor');
 
 const JustConnectedPeriodMs = 1500;
 const JustDisconnectedPeriodMs = 3000;
@@ -82,6 +85,8 @@ export class RpcPeerStateMonitor {
                 ? JustConnectedPeriodMs
                 : JustDisconnectedPeriodMs
         );
+        // Mirrors RpcPeerStateMonitor.cs:87 — "monitor (re)started".
+        infoLog?.log(`'${peer.ref}': monitor started`);
     }
 
     get state(): RpcPeerState {
@@ -99,6 +104,8 @@ export class RpcPeerStateMonitor {
         this.peer.reconnectDelayer.cancelDelaysChanged.remove(
             this._onCancelDelaysChanged
         );
+        // Mirrors RpcPeerStateMonitor.cs:125 — "monitor stopped".
+        infoLog?.log(`'${this.peer.ref}': monitor stopped`);
     }
 
     private _recompute(): void {

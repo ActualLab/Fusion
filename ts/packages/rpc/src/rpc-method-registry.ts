@@ -6,7 +6,10 @@
 // Hashes are computed on demand (first use) and cached. The computeMethodHash
 // function uses BigInt-based XXH3-64, which is pure sync TypeScript.
 
+import { getLogs } from './logging.js';
 import { computeMethodHash } from './rpc-xxhash3.js';
+
+const { warnLog } = getLogs('RpcMethodRegistry');
 
 /**
  * Registry mapping RPC method wire names to/from their 4-byte XXH3 hashes.
@@ -25,9 +28,7 @@ export class RpcMethodRegistry {
         // Check for hash collisions
         const existing = this._hashToName.get(hash);
         if (existing !== undefined && existing !== methodName) {
-            console.warn(
-                `[RpcMethodRegistry] hash collision: "${methodName}" and "${existing}" both hash to ${hash}`
-            );
+            warnLog?.log(`hash collision: "${methodName}" and "${existing}" both hash to ${hash}`);
             return;
         }
 
