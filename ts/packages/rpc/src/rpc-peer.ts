@@ -335,8 +335,21 @@ export abstract class RpcPeer {
 
         // Handshake — dispatch to subclass handler
         if (method === RpcSystemCalls.handshake) {
-            const handshake = args[0] as RemoteHandshake | undefined;
-            if (handshake !== undefined) this._onHandshakeReceived(handshake);
+            const raw = args[0];
+            if (raw !== undefined) {
+                // .NET's RpcHandshake is [MessagePackObject(Key)] — serialized
+                // as a 5-element array in msgpack. In JSON it's an object with
+                // named properties. Normalize both shapes here.
+                const handshake = Array.isArray(raw)
+                    ? {
+                        RemotePeerId: raw[0] as string | undefined,
+                        RemoteHubId: raw[2] as string | undefined,
+                        ProtocolVersion: raw[3] as number | undefined,
+                        Index: raw[4] as number | undefined,
+                    }
+                    : raw as RemoteHandshake;
+                this._onHandshakeReceived(handshake);
+            }
             return;
         }
 
@@ -456,6 +469,12 @@ export class RpcClientPeer extends RpcPeer {
     private _connectionKind = RpcPeerConnectionKind.Disconnected;
     private _tryIndex = 0;
     private _handshakeIndex = 0;
+    /** Index from the MOST RECENTLY RECEIVED server handshake — sent back
+     *  to the server in `$sys.Reconnect:3` so the server can verify we're
+     *  talking about the current connection. Mirrors .NET's
+     *  `connectionState.Handshake.Index` path in
+     *  `RpcOutboundCallTracker.TryReconnect`. */
+    private _remoteHandshakeIndex = 0;
     private _lastRemoteHubId: string | undefined;
     private _pendingHandshake: PromiseSource<RemoteHandshake> | undefined;
     private _reconnectsAt = 0;
@@ -570,6 +589,9 @@ export class RpcClientPeer extends RpcPeer {
                     closedRejection,
                 ]);
                 this._pendingHandshake = undefined;
+
+                // Record the server's handshake index for $sys.Reconnect.
+                this._remoteHandshakeIndex = remoteHandshake.Index ?? 0;
 
                 // Peer change detection (like .NET's RpcHandshake.GetPeerChangeKind)
                 const remoteHubId = remoteHandshake.RemoteHubId;
@@ -725,6 +747,14 @@ export class RpcClientPeer extends RpcPeer {
      * Ask the server which call IDs in `eligible` it no longer recognizes
      * via `$sys.Reconnect:3`. Returns the set of call IDs that need to be
      * resent. On any failure, falls back to "resend everything".
+     *
+     * Wire format of the `completedStages` argument is chosen per wire format:
+     *   - JSON (json5np): plain object `{"<stage>": "<base64-of-bytes>"}` —
+     *     matches .NET `System.Text.Json`'s default for `Dictionary<int, byte[]>`.
+     *   - MessagePack (msgpack6/msgpack6c): `Map<number, Uint8Array>` —
+     *     the patched encoder (see `./msgpack-map-patch.ts`) writes this as a
+     *     native msgpack `map<int, bin>`, matching .NET MessagePack-CSharp's
+     *     default for `Dictionary<int, byte[]>`.
      */
     private async _reconcileReconnect(eligible: RpcOutboundCall[]): Promise<Set<number>> {
         try {
@@ -741,18 +771,30 @@ export class RpcClientPeer extends RpcPeer {
                 // Nothing to reconcile — fall back to resend-all.
                 return new Set(eligible.map(c => c.callId));
             }
-            const stagesDict: Record<string, string> = {};
+
+            const isBinary = this.format.isBinary;
+            const stagesArg: Map<number, Uint8Array> | Record<string, string> = isBinary
+                ? new Map<number, Uint8Array>()
+                : {};
             for (const [stage, ids] of byStage) {
                 ids.sort((a, b) => a - b);
                 const bytes = IncreasingSeqCompressor.serialize(ids);
-                stagesDict[String(stage)] = base64Encode(bytes);
+                if (isBinary) {
+                    (stagesArg as Map<number, Uint8Array>).set(stage, bytes);
+                } else {
+                    (stagesArg as Record<string, string>)[String(stage)] = base64Encode(bytes);
+                }
             }
 
             // Send $sys.Reconnect via the regular call path so the server's
-            // $sys.Ok reply resolves a PromiseSource we can await.
+            // $sys.Ok reply resolves a PromiseSource we can await. The
+            // first arg is the server's OWN handshake index (captured from
+            // the remote handshake we just received), not ours — this
+            // matches .NET's protocol, where the server validates
+            // `ownHandshake.Index == handshakeIndex`.
             const reconnectCall = this.call(
                 RpcSystemCalls.reconnect,
-                [this._handshakeIndex, stagesDict],
+                [this._remoteHandshakeIndex, stagesArg],
                 { remoteExecutionMode: 1 /* AwaitForConnection only; must not itself reconnect */ },
             );
             const result = await reconnectCall.result.promise;

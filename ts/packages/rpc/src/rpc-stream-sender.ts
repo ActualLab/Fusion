@@ -455,7 +455,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                         // RpcSharedStream.cs:357-363).
                         break drain;
                     }
-                    const r: IteratorResult<T> = raced;
+                    const r = raced as IteratorResult<T>;
                     if (this._ended) return;
                     if (r.done) {
                         latest = _endItem;

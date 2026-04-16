@@ -12,6 +12,9 @@ import {
     Decoder,
     type DecodeOptions,
 } from '@msgpack/msgpack';
+// Side-effect import: patches Encoder.prototype to handle JS Map instances
+// as proper msgpack maps with typed keys (.NET-wire-compatible).
+import './msgpack-map-patch.js';
 import type { RpcMessage } from './rpc-message.js';
 import {
     ENVELOPE_DELIMITER,

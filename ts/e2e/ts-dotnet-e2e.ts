@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- cross-package type resolution */
 /**
  * Cross-language E2E test script — TypeScript RPC client ↔ .NET RPC server.
  *
@@ -46,6 +45,9 @@ interface ITypeScriptTestService {
   Negate(value: boolean): Promise<boolean>;
   Divide(a: number, b: number): Promise<number>;
   Echo(message: string | null): Promise<string | null>;
+  SlowEcho(marker: string, delayMs: number): Promise<string>;
+  GetSlowEchoInvocationCount(): Promise<number>;
+  ResetSlowEchoCounter(): Promise<void>;
 }
 
 const TestServiceDef = defineRpcService('ITypeScriptTestService', {
@@ -55,6 +57,9 @@ const TestServiceDef = defineRpcService('ITypeScriptTestService', {
     Negate: { args: [false], wireArgCount: 1 },
     Divide: { args: [0.0, 0.0], wireArgCount: 2 },
     Echo: { args: [''], wireArgCount: 1 },
+    SlowEcho: { args: ['', 0], wireArgCount: 2 },
+    GetSlowEchoInvocationCount: { args: [], wireArgCount: 0 },
+    ResetSlowEchoCounter: { args: [], wireArgCount: 0 },
 });
 
 // ITypeScriptTestComputeService (IComputeService — all methods have CancellationToken)
@@ -128,6 +133,8 @@ async function run(): Promise<void> {
             await testComputeInvalidation(hub, peer);
         if (scenario === 'auto-reconnect' || scenario === 'all')
             await testAutoReconnect(hub, peer);
+        if (scenario === 'reconnect-no-duplicate' || scenario === 'all')
+            await testReconnectNoDuplicate(hub, peer);
         if (scenario === 'stream-no-reconnect' || scenario === 'all')
             await testStreamNoReconnect(hub, peer);
         if (scenario === 'reconnection-torture')
@@ -347,6 +354,75 @@ async function testAutoReconnect(hub: FusionHub, peer: RpcClientPeer): Promise<v
     assert(captured3.value === 101, `GetCounter after post-reconnect Increment expected 101, got ${captured3.value}`);
 
     console.log('  auto-reconnect: PASSED');
+}
+
+// ---------------------------------------------------------------------------
+// Test: reconnect-no-duplicate — verifies the $sys.Reconnect:3 protocol
+// prevents the server from invoking a long-running call's handler twice
+// when the WebSocket bounces while the call is still in flight.
+//
+// This is the end-to-end guard for Bug 3 (see docs/RPC_TS_FIXES): TS client
+// must group in-flight call IDs by completedStage, compress them with
+// IncreasingSeqCompressor, and send them to the .NET server as
+// Dictionary<int, byte[]> in a format the .NET server can deserialize
+// (JSON: {"stage":"base64"}, MessagePack: map<int, bin>). The .NET server
+// replies with a byte[] of unknown IDs; TS only resends those.
+//
+// With the bug: every reconnect spawns a second invocation on the server —
+// for streaming calls like PushAudio this meant every audio frame was
+// processed twice. With the fix the server sees exactly one invocation.
+// ---------------------------------------------------------------------------
+
+async function testReconnectNoDuplicate(hub: FusionHub, peer: RpcClientPeer): Promise<void> {
+    const svc = hub.addClient<ITypeScriptTestService>(peer, TestServiceDef);
+
+    // 1. Start from a clean counter.
+    await svc.ResetSlowEchoCounter();
+    const before = await svc.GetSlowEchoInvocationCount();
+    assert(before === 0, `Counter should start at 0, got ${before}`);
+
+    // 2. Kick off a slow call; hold the promise without awaiting.
+    //    The delay must cover:
+    //      * pre-disconnect observation window (100ms)
+    //      * the client's auto-reconnect back-off (~1s default)
+    //      * post-reconnect $sys.Reconnect round-trip (~200ms)
+    //      * enough slack after to let us assert the handler is still running.
+    //    3 seconds is comfortably above the ~1.3s worst-case.
+    const slowDelayMs = 3_000;
+    const slowPromise = svc.SlowEcho('hello', slowDelayMs);
+    slowPromise.catch(() => { /* prevent unhandled-rejection noise */ });
+
+    // 3. Give the server enough time to register the inbound call.
+    await delay(100);
+
+    // 4. Force a same-peer reconnect in the middle of the slow call.
+    //    .NET server's inbound tracker still has the call, so when TS
+    //    sends $sys.Reconnect the server answers "I know this call",
+    //    and the client MUST NOT resend.
+    const reconnectPromise = new Promise<void>((resolve) => {
+        peer.connected.add(() => resolve());
+    });
+    peer.connection?.close();
+    await Promise.race([reconnectPromise, timeout(15_000, 'Reconnect timeout')]);
+    await delay(200); // wait for handshake + $sys.Reconnect round-trip
+
+    // 5. The original call should resolve normally.
+    const result = await Promise.race([
+        slowPromise,
+        timeout(10_000, 'SlowEcho did not complete after reconnect'),
+    ]);
+    assert(result === 'hello', `SlowEcho expected 'hello', got '${result}'`);
+
+    // 6. THE invariant: the server invoked SlowEcho exactly ONCE.
+    //    Without the $sys.Reconnect protocol the client would blind-resend,
+    //    and the server would start a second SlowEcho handler — counter = 2.
+    const after = await svc.GetSlowEchoInvocationCount();
+    assert(after === 1,
+        `Server invocation count should be 1 after reconnect, got ${after} — ` +
+        'suggests client blind-resent the call instead of honoring the ' +
+        '$sys.Reconnect protocol.');
+
+    console.log('  reconnect-no-duplicate: PASSED');
 }
 
 // ---------------------------------------------------------------------------

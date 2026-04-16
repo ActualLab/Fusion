@@ -14,6 +14,22 @@ To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://vo
 ## Unreleased
 
 ### Fixed
+- TypeScript ↔ .NET: full wire-format compatibility for `$sys.Reconnect:3`
+  on every supported serialization format.
+  - JSON path was already wire-compatible; the MessagePack path was not —
+    `Dictionary<int, byte[]>` is `map<int, bin>` on the .NET side, but
+    `@msgpack/msgpack`'s default `Encoder` ignores JS `Map` instances
+    (silently encodes them as `{}`). Added an idempotent module-level patch
+    in `@actuallab/rpc/src/msgpack-map-patch.ts` that teaches the encoder
+    to handle `Map` properly, producing the exact byte sequence
+    `MessagePack-CSharp` expects for `Dictionary<K, V>`.
+  - The TS client now sends the server's OWN handshake index in
+    `$sys.Reconnect` (captured from the remote handshake), not the
+    client's own — matching the `ownHandshake.Index == handshakeIndex`
+    check in .NET `RpcSystemCalls.Reconnect`.
+  - `RpcPeer._handleMessage` now normalises both shapes of the inbound
+    handshake payload — JSON (`{ RemoteHubId, Index, ... }`) and
+    MessagePack `[MessagePackObject(Key)]` array `[peerId, _, hubId, _, index]`.
 - TypeScript: `RpcClientPeer._reconnect` now runs the `$sys.Reconnect:3`
   protocol on same-peer reconnects to ask the server which call IDs it no
   longer recognizes, and only resends those. Previously the client blindly
@@ -52,11 +68,26 @@ To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://vo
   test harness align both peers on any supported wire format.
 
 ### Tests
+- New `.NET` `TypeScriptRpcE2ETest.ReconnectNoDuplicate` cross-language
+  E2E theory exercises `$sys.Reconnect:3` end-to-end (Node-hosted TS
+  client ↔ ASP.NET Core .NET server) for `json5`, `msgpack6`, and
+  `msgpack6c`. Verifies the server invokes a long-running `SlowEcho`
+  handler exactly once across a same-peer reconnect — the regression
+  guard for the audio-double-processing bug.
+- New `rpc-reconnect-wire-format.test.ts` locks in byte-level wire
+  fixtures for both the JSON and MessagePack shapes of the
+  `completedStages` argument.
 - New `.NET` `IncreasingSeqCompressorTest.CrossPlatformWireFormatFixtures`
   theory locks in the exact byte output of 10 representative inputs. The
   same fixtures are asserted by the TypeScript
   `increasing-seq-compressor.test.ts` suite, giving us a bidirectional
   wire-compatibility contract for `$sys.Reconnect`.
+
+### Infrastructure
+- TypeScript: cleaned up two stale `eslint-disable` directives in the
+  `e2e/` cross-language test scripts and ignored `eslint.config.js` itself
+  in the lint config (it can't be type-checked because it lives outside
+  the TS project graph).
 
 
 ## 12.3.16+47f5b5a0 | npm: 12.3.14

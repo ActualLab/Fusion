@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return -- cross-package type resolution */
 /**
  * Cross-language performance test -TypeScript RPC client <-> .NET RPC server.
  *

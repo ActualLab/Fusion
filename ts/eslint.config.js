@@ -4,7 +4,9 @@ import prettier from "eslint-plugin-prettier";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/"],
+    // ESLint can't typecheck its own config (it's outside the TS project's
+    // tsconfig.json compile graph), so skip it. Same for build/dist outputs.
+    ignores: ["**/dist/", "eslint.config.js"],
   },
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.strictTypeChecked,

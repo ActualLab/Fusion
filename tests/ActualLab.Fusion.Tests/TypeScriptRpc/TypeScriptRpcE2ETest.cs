@@ -77,6 +77,23 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
         await RunScenario("auto-reconnect", format);
     }
 
+    // Cross-language guard for Bug 3 ($sys.Reconnect:3).
+    // TS client must not cause the .NET server to invoke a long-running call
+    // twice when the WebSocket bounces while the call is in flight. This
+    // verifies both wire paths that TS and .NET exchange for
+    // `Dictionary<int, byte[]>`: JSON (System.Text.Json object with base64
+    // values) and MessagePack (map<int, bin>).
+    [Theory]
+    [InlineData("json5")]
+    [InlineData("msgpack6")]
+    [InlineData("msgpack6c")]
+    public async Task ReconnectNoDuplicate(string format)
+    {
+        SerializationFormat = format;
+        await using var _ = await WebHost.Serve();
+        await RunScenario("reconnect-no-duplicate", format, TimeSpan.FromSeconds(20));
+    }
+
     [Fact]
     public async Task ReconnectionTorture()
     {
