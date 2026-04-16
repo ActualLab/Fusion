@@ -90,6 +90,55 @@ public class RpcReconnectionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out
     }
 
     [Fact]
+    public async Task NoReconnectStreamSourceCancellationTest()
+    {
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var serverPeer = connection.ServerPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+
+        // Start a tracked stream with AllowReconnect=false
+        var stream = await client.StreamInt32Tracked(allowReconnect: false, delay: new RandomTimeSpan(0.02, 1));
+        var enumerator = stream.GetAsyncEnumerator();
+
+        // Read a few items to ensure the server-side source enumerator is active
+        for (var i = 0; i < 5; i++) {
+            (await enumerator.MoveNextAsync()).Should().BeTrue();
+            enumerator.Current.Should().Be(i);
+        }
+
+        // Server-side source should NOT be finalized yet
+        (await client.IsStreamSourceFinalized()).Should().BeFalse();
+
+        // Disconnect — should trigger server-side cancellation and source finalization
+        await connection.Disconnect();
+
+        // The client stream should fail immediately (AllowReconnect=false)
+        await Assert.ThrowsAsync<RpcStreamNotFoundException>(async () => {
+            while (await enumerator.MoveNextAsync())
+                _ = enumerator.Current;
+        });
+        await enumerator.DisposeAsync();
+
+        // Reconnect so we can query the server
+        await connection.Connect();
+
+        // Verify server-side source enumerator was finalized (finally block ran)
+        // Poll with retries to allow async cleanup to propagate
+        var finalized = false;
+        for (var attempt = 0; attempt < 50 && !finalized; attempt++) {
+            await Delay(0.1);
+            finalized = await client.IsStreamSourceFinalized();
+        }
+        finalized.Should().BeTrue("server-side source enumerator should have been finalized on disconnect");
+
+        // Verify server-side shared stream is gone
+        foreach (var sharedObject in serverPeer.SharedObjects)
+            sharedObject.Should().NotBeOfType<RpcSharedStream<int>>(
+                "AllowReconnect=false shared stream should have been disposed");
+    }
+
+    [Fact]
     public async Task NoReconnectStreamTest()
     {
         await using var services = CreateServices();

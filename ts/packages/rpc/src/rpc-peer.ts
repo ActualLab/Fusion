@@ -667,6 +667,12 @@ export class RpcServerPeer extends RpcPeer {
     /** Accept an incoming connection — sets up message handling and handshake response. */
     accept(conn: RpcConnection): void {
         this.setupConnection(conn);
+        // When the client connection drops, clean up shared objects (stream senders).
+        // Server peers don't reconnect — once the connection is gone, senders must be
+        // terminated so their source iterators release resources promptly.
+        conn.closed.add(() => {
+            this.sharedObjects.disconnectAll();
+        });
     }
 
     protected override _onHandshakeReceived(_handshake: RemoteHandshake): void {

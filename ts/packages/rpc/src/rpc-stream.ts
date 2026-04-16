@@ -20,6 +20,14 @@ export interface RpcStreamRef {
     readonly isRealTime: boolean;
 }
 
+/**
+ * A stream source is either a plain async iterable or a factory function
+ * that receives an AbortSignal and returns an async iterable.
+ * The AbortSignal is aborted when the sender is disconnected, allowing
+ * the source to release resources (e.g., camera, microphone) promptly.
+ */
+export type RpcStreamSource<T> = AsyncIterable<T> | ((abortSignal: AbortSignal) => AsyncIterable<T>);
+
 /** Configuration options for creating a local (origin-side) RpcStream. */
 export interface RpcStreamOptions<T> {
     ackPeriod?: number;
@@ -88,7 +96,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     readonly ackAdvance: number;
 
     // Local (origin) mode
-    readonly localSource?: AsyncIterable<T>;
+    readonly localSource?: RpcStreamSource<T>;
 
     // Remote (target) mode
     readonly peer!: RpcPeer;
@@ -109,15 +117,15 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     private _iterating = false;
     private _ackSentUpTo = 0;
 
-    /** Create a local (origin-side) stream wrapping an async iterable with optional configuration. */
-    constructor(source: AsyncIterable<T>, options?: RpcStreamOptions<T>);
+    /** Create a local (origin-side) stream wrapping an async iterable or source factory with optional configuration. */
+    constructor(source: RpcStreamSource<T>, options?: RpcStreamOptions<T>);
     /** Create a remote (target-side) stream from a parsed stream reference and peer. */
     constructor(ref: RpcStreamRef, peer: RpcPeer);
     constructor(
-        sourceOrRef: AsyncIterable<T> | RpcStreamRef,
+        sourceOrRef: RpcStreamSource<T> | RpcStreamRef,
         optionsOrPeer?: RpcStreamOptions<T> | RpcPeer,
     ) {
-        if (_isAsyncIterable(sourceOrRef)) {
+        if (_isStreamSource(sourceOrRef)) {
             // Local (origin) mode
             const options = (optionsOrPeer as RpcStreamOptions<T> | undefined) ?? {};
             this.kind = RpcObjectKind.Local;
@@ -181,8 +189,13 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         peer.sharedObjects.register(sender);
         this._sender = sender;
 
+        // Resolve source: if it's a factory, call it with the sender's AbortSignal
+        const source = typeof this.localSource === 'function'
+            ? this.localSource(sender.abortSignal)
+            : this.localSource!;
+
         // Start pumping in background (writeFrom awaits the initial Ack)
-        this._whenSent = sender.writeFrom(this.localSource!);
+        this._whenSent = sender.writeFrom(source);
 
         // Cache and return ref in the format appropriate for the peer's serialization
         this._toRefValue = peer.format.isBinary
@@ -277,7 +290,11 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     }
 
     disconnect(): void {
-        if (this.kind === RpcObjectKind.Local) return; // no-op for local streams
+        if (this.kind === RpcObjectKind.Local) {
+            // Propagate to sender — aborts the AbortSignal and terminates the iterator
+            this._sender?.disconnect();
+            return;
+        }
         if (this._completed) return;
         this._completed = true;
         this._completionError = new Error('Peer disconnected.');
@@ -289,7 +306,10 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     [Symbol.asyncIterator](): AsyncIterator<T> {
         // Local mode: delegate to the local source
         if (this.kind === RpcObjectKind.Local) {
-            return this.localSource![Symbol.asyncIterator]();
+            const source = typeof this.localSource === 'function'
+                ? this.localSource(new AbortController().signal)
+                : this.localSource!;
+            return source[Symbol.asyncIterator]();
         }
 
         // Remote mode: buffer-based consumption
@@ -390,8 +410,9 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     }
 }
 
-/** @internal Type guard for AsyncIterable (has Symbol.asyncIterator). */
-function _isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+/** @internal Type guard for RpcStreamSource (AsyncIterable or factory function). */
+function _isStreamSource<T>(value: unknown): value is RpcStreamSource<T> {
+    if (typeof value === 'function') return true;
     return (
         value !== null &&
         typeof value === 'object' &&

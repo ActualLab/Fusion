@@ -78,6 +78,8 @@ public interface ITestRpcService : ICommandService
     public Task<RpcStream<ITuple>> StreamTuples(int count, int failAt = -1, RandomTimeSpan delay = default, bool allowReconnect = true);
     public Task<int> Count(RpcStream<int> items, CancellationToken cancellationToken = default);
     public Task CheckLag(RpcStream<Moment> items, int expectedCount, CancellationToken cancellationToken = default);
+    public Task<RpcStream<int>> StreamInt32Tracked(bool allowReconnect = true, RandomTimeSpan delay = default);
+    public Task<bool> IsStreamSourceFinalized();
 
     [CommandHandler]
     public Task<string> OnHello(HelloCommand command, CancellationToken cancellationToken = default);
@@ -102,6 +104,7 @@ public interface ITestRpcServiceClient : ITestRpcService
 public class TestRpcService(IServiceProvider services) : ITestRpcService
 {
     private volatile int _cancellationCount;
+    private volatile bool _streamSourceFinalized;
     private readonly ConcurrentDictionary<string, string> _values = new();
 
     private MomentClock SystemClock { get; } = services.Clocks().SystemClock;
@@ -213,6 +216,16 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
             deltas.Should().AllSatisfy(x => x.Should().BeLessThan(TimeSpan.FromMilliseconds(100)));
     }
 
+    public virtual Task<RpcStream<int>> StreamInt32Tracked(bool allowReconnect = true, RandomTimeSpan delay = default)
+    {
+        _streamSourceFinalized = false;
+        var seq = EnumerateTracked(delay);
+        return Task.FromResult(new RpcStream<int>(seq) { AllowReconnect = allowReconnect });
+    }
+
+    public virtual Task<bool> IsStreamSourceFinalized()
+        => Task.FromResult(_streamSourceFinalized);
+
     public virtual async Task<string> OnHello(HelloCommand command, CancellationToken cancellationToken = default)
     {
         if (command.Delay > TimeSpan.Zero)
@@ -225,6 +238,27 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
     }
 
     // Private methods
+
+    private async IAsyncEnumerable<int> EnumerateTracked(
+        RandomTimeSpan delay,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        try {
+            var hasDelay = delay != default;
+            var minDelay = TimeSpan.FromMilliseconds(1);
+            for (var i = 0; !cancellationToken.IsCancellationRequested; i++) {
+                yield return i;
+                if (hasDelay) {
+                    var duration = delay.Next();
+                    if (duration >= minDelay)
+                        await Task.Delay(duration, cancellationToken);
+                }
+            }
+        }
+        finally {
+            _streamSourceFinalized = true;
+        }
+    }
 
     private static async IAsyncEnumerable<int> Enumerate(
         int count,

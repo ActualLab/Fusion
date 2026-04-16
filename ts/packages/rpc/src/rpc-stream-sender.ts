@@ -38,6 +38,8 @@ export class RpcStreamSender<T> implements IRpcObject {
     private _lastAckedIndex = 0;
     private _ackWaiting: PromiseSource<void> | null = null;
     private _resetRequested = false;
+    private _abortController = new AbortController();
+    private _iterator: AsyncIterator<T> | null = null;
 
     constructor(
         peer: RpcPeer,
@@ -55,6 +57,11 @@ export class RpcStreamSender<T> implements IRpcObject {
         this.peer = peer;
         this.ackPeriod = ackPeriod;
         this.ackAdvance = ackAdvance;
+    }
+
+    /** AbortSignal that is aborted when the sender is disconnected. */
+    get abortSignal(): AbortSignal {
+        return this._abortController.signal;
     }
 
     /** Returns the stream reference string for the $sys.Ok response. */
@@ -89,8 +96,7 @@ export class RpcStreamSender<T> implements IRpcObject {
 
     /** Called by system call handler when $sys.AckEnd is received from the client. */
     onAckEnd(_hostId: string): void {
-        this._ended = true;
-        this.peer.sharedObjects.unregister(this);
+        this.disconnect();
     }
 
     /** Send a single item to the client. */
@@ -156,6 +162,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         await this._started.promise;
 
         const iterator = source[Symbol.asyncIterator]();
+        this._iterator = iterator;
         try {
             for (;;) {
                 const next = await iterator.next();
@@ -248,11 +255,24 @@ export class RpcStreamSender<T> implements IRpcObject {
     }
 
     disconnect(): void {
+        if (this._ended) return;
         this._ended = true;
+        this._abortController.abort();
         if (!this._started.isCompleted) {
             // Resolve (not reject) — writeFrom() will see _ended=true and exit cleanly.
             // Rejecting would cause unhandled rejections when writeFrom() is void-called.
             this._started.resolve();
+        }
+        // Unblock _waitForAckBudget if it's waiting
+        if (this._ackWaiting) {
+            this._ackWaiting.resolve();
+            this._ackWaiting = null;
+        }
+        // Force-terminate the iterator to interrupt blocking next() calls
+        // and trigger finally blocks in async generators
+        if (this._iterator) {
+            void this._iterator.return?.(undefined);
+            this._iterator = null;
         }
         this.peer.sharedObjects.unregister(this);
     }
