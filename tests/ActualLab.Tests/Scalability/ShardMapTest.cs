@@ -41,9 +41,9 @@ public class ShardMapTest(ITestOutputHelper @out) : TestBase(@out)
         WriteLine($"Map with 3 nodes:\n{map3}");
         WriteLine($"Map with 2 nodes:\n{map2}");
 
-        // With rendezvous hashing, extra reallocations should be very small (0-2 from rebalancing)
+        // With consistent hashing, extra reallocations should be very small (0-2 from rebalancing)
         reallocated.Should().BeInRange(0, 2,
-            "rendezvous hashing should cause minimal extra reallocations beyond the dead node's shards");
+            "consistent hashing should cause minimal extra reallocations beyond the dead node's shards");
     }
 
     [Theory]
