@@ -26,23 +26,41 @@ const sessionStorage: Storage | null = (typeof globalThis !== 'undefined' && 'se
     ? (globalThis as { sessionStorage: Storage }).sessionStorage
     : null;
 
+// Workers, worklets, and service workers run in separate JS realms with
+// their own globalThis.  Within one realm, esbuild can also produce multiple
+// chunks that each carry their own copy of @actuallab/core (so multiple
+// distinct `Log` classes exist).  We want the install + restore + console
+// message to happen exactly once per realm — gate via globalThis.logLevels.
+const isMainThread = typeof window !== 'undefined';
+
 export function initLogging(): void {
     // Warn is the global baseline — packages set per-scope defaults
     // (typically Info or Warn) via createLogProvider.
     Log.defaultMinLevel = LogLevel.Warn;
     const minLevels = Log.minLevels;
+    const g = globalThis as Record<string, unknown>;
+    const existing = g[GlobalThisKey] as LogLevelController | undefined;
 
-    // Install the controller on globalThis regardless of context (browser main
-    // thread, worker, Node test runner) — overriding at runtime is useful
-    // everywhere.  Persistence requires sessionStorage and is no-op otherwise.
-    if (typeof globalThis !== 'undefined')
-        (globalThis as Record<string, unknown>)[GlobalThisKey] = new LogLevelController(minLevels);
+    if (existing !== undefined) {
+        // Another chunk in this realm already initialized.  Mirror its
+        // overrides into our local Log.minLevels so this Log class observes
+        // the same effective levels.  (Each chunk has its own Log class with
+        // its own static minLevels Map — they only converge through this
+        // one-shot copy at init time.)
+        for (const [k, v] of existing.getMinLevels())
+            minLevels.set(k, v);
+        return;
+    }
 
+    g[GlobalThisKey] = new LogLevelController(minLevels);
     const wasRestored = restore(minLevels);
-    if (wasRestored)
-        console.log('Logging: logLevels are restored');
+    if (wasRestored) {
+        if (isMainThread)
+            console.log('Logging: logLevels are restored');
+    }
     else {
-        console.log('Logging: logLevels are reset');
+        if (isMainThread)
+            console.log('Logging: logLevels are reset');
         reset(minLevels);
     }
 }
@@ -50,6 +68,12 @@ export function initLogging(): void {
 export class LogLevelController {
     constructor(private minLevels: Map<string, LogLevel>)
     { }
+
+    /** Internal: used by initLogging() in secondary bundles to share the
+     *  primary bundle's minLevels map. */
+    public getMinLevels(): Map<string, LogLevel> {
+        return this.minLevels;
+    }
 
     /** List the current set of overrides. */
     public list(): Record<string, LogLevel> {
