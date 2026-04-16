@@ -14,6 +14,15 @@ To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://vo
 ## Unreleased
 
 ### Fixed
+- TypeScript: `RpcStreamSender` real-time ceiling-skip loop no longer races
+  `iterator.next()` against an ACK promise via `Promise.race`. The race
+  pattern (a) lost one source item per ACK arrival because the abandoned
+  source-pull promise still advanced the iterator, and (b) created two
+  promises per drain iteration, which on Windows's coarser microtask
+  scheduling was slow enough to push the `rpc-stream-realtime.test.ts`
+  "should skip items when ACKs are delayed" tests past their 5-second
+  timeout. The drain now awaits each source pull and checks the ACK
+  queue in the gap — same overall behavior, simpler, faster.
 - TypeScript ↔ .NET: full wire-format compatibility for `$sys.Reconnect:3`
   on every supported serialization format.
   - JSON path was already wire-compatible; the MessagePack path was not —

@@ -438,24 +438,34 @@ export class RpcStreamSender<T> implements IRpcObject {
             //    that the existing `rpc-stream-realtime.test.ts` suite
             //    verifies (real-time streams should aggressively drop stale
             //    frames to stay current).
+            //
+            //    Implementation note: this loop deliberately does NOT race
+            //    `iterator.next()` against an ACK promise — that pattern
+            //    (a) loses one item on every ACK arrival because the
+            //    abandoned source-pull promise still advances the iterator,
+            //    and (b) creates two promises per iteration, which on
+            //    Windows's coarser microtask scheduling is slow enough to
+            //    miss the test's deadline. Instead we await each source
+            //    pull, then check the ACK queue. JS is single-threaded, so
+            //    any onAck() invoked by inbound network events runs in the
+            //    microtask gap between iterations and is observable on the
+            //    next `_acks.length` check.
             if (this._nextIndex >= maxIndex && !isFullyBuffered && !this._ended) {
                 let latest: _StreamItem<T> | null = null;
-                drain: while (this._acks.length === 0 && !this._ended) {
-                    // Race the source against a new ACK arrival.
-                    const wait = new PromiseSource<void>();
-                    this._whenAckReady = wait;
-                    const srcPromise = iterator.next();
-                    srcPromise.catch(() => { /* defused below */ });
-                    const ackPromise = wait.promise.then(() => _ackTag);
-                    const raced = await Promise.race([srcPromise, ackPromise]);
-                    this._whenAckReady = null;
-                    if (raced === _ackTag) {
-                        // ACK arrived; abandon this source pull (its value is
-                        // lost — matches .NET's same-trade-off at
-                        // RpcSharedStream.cs:357-363).
+                drain: while (!this._ended) {
+                    if (this._acks.length > 0) break drain;
+                    let r: IteratorResult<T>;
+                    try {
+                        r = await iterator.next();
+                    } catch (e) {
+                        state.iteratorDone = true;
+                        isFullyBuffered = true;
+                        latest = {
+                            kind: 'error',
+                            error: e instanceof Error ? e : new Error(String(e)),
+                        };
                         break drain;
                     }
-                    const r = raced as IteratorResult<T>;
                     if (this._ended) return;
                     if (r.done) {
                         latest = _endItem;
@@ -558,9 +568,6 @@ type _StreamItem<T> =
 
 /** Singleton "source exhausted" marker (matches .NET's `NoMoreItemsTag`). */
 const _endItem: _StreamItem<never> = { kind: 'end' };
-
-/** Sentinel used to discriminate "ACK arrived" from a source value in a Promise.race. */
-const _ackTag = Symbol('ack');
 
 /** Shared mutable state between writeFrom and its per-mode pump. */
 interface _PumpState {
