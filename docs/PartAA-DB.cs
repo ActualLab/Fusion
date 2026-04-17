@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
+using ActualLab.Fusion.EntityFramework;
 
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
@@ -12,32 +14,38 @@ namespace Docs.PartAADB;
 // PartAA-DB.md snippets: Database Authentication Services
 // ============================================================================
 
-public class AuthServiceRegistration
+public static class AuthServiceRegistration
 {
-    #region PartAADB_InMemoryAuth
-    // var fusion = services.AddFusion();
-    // fusion.AddInMemoryAuthService();
-    #endregion
+    public static void InMemoryAuth(IServiceCollection services)
+    {
+        #region PartAADB_InMemoryAuth
+        var fusion = services.AddFusion();
+        fusion.AddInMemoryAuthService();
+        #endregion
+    }
 
-    #region PartAADB_DbAuthService
-    // var fusion = services.AddFusion();
-    //
-    // // Simple registration (uses default entity types)
-    // fusion.AddDbAuthService<AppDbContext, string>();  // string user ID
-    // fusion.AddDbAuthService<AppDbContext, long>();    // long user ID
-    //
-    // // Custom entity types
-    // fusion.AddDbAuthService<AppDbContext, MyDbSessionInfo, MyDbUser, Guid>(db => {
-    //     db.ConfigureAuthService(_ => new DbAuthService<AppDbContext>.Options() {
-    //         MinUpdatePresencePeriod = TimeSpan.FromMinutes(3),
-    //     });
-    //
-    //     db.ConfigureSessionInfoTrimmer(_ => new DbSessionInfoTrimmer<AppDbContext>.Options() {
-    //         MaxSessionAge = TimeSpan.FromDays(90),
-    //         CheckPeriod = TimeSpan.FromMinutes(30).ToRandom(0.25),
-    //     });
-    // });
-    #endregion
+    public static void DbAuthService(IServiceCollection services)
+    {
+        #region PartAADB_DbAuthService
+        var fusion = services.AddFusion();
+
+        // Simple registration (uses default entity types)
+        fusion.AddDbAuthService<AppDbContext, string>();  // string user ID
+        fusion.AddDbAuthService<AppDbContext, long>();    // long user ID
+
+        // Custom entity types
+        fusion.AddDbAuthService<AppDbContext, MyDbSessionInfo, MyDbUser, Guid>(db => {
+            db.ConfigureAuthService(_ => new DbAuthService<AppDbContext>.Options() {
+                MinUpdatePresencePeriod = TimeSpan.FromMinutes(3),
+            });
+
+            db.ConfigureSessionInfoTrimmer(_ => new DbSessionInfoTrimmer<AppDbContext>.Options() {
+                MaxSessionAge = TimeSpan.FromDays(90),
+                CheckPeriod = TimeSpan.FromMinutes(30).ToRandom(0.25),
+            });
+        });
+        #endregion
+    }
 }
 
 #region PartAADB_DbContextSetup
@@ -53,28 +61,38 @@ public class AppDbContext : DbContext
 }
 #endregion
 
-public class DbAuthServiceConfigExample
+// Custom types used by DbAuthService snippet above
+public class MyDbSessionInfo : DbSessionInfo<Guid>;
+public class MyDbUser : DbUser<Guid>;
+
+public static class DbAuthServiceConfigExample
 {
-    #region PartAADB_AuthServiceOptions
-    // fusion.AddDbAuthService<AppDbContext, long>(db => {
-    //     db.ConfigureAuthService(_ => new DbAuthService<AppDbContext>.Options() {
-    //         MinUpdatePresencePeriod = TimeSpan.FromMinutes(2),
-    //     });
-    // });
-    #endregion
+    public static void ConfigureOptions(FusionBuilder fusion)
+    {
+        #region PartAADB_AuthServiceOptions
+        fusion.AddDbAuthService<AppDbContext, long>(db => {
+            db.ConfigureAuthService(_ => new DbAuthService<AppDbContext>.Options() {
+                MinUpdatePresencePeriod = TimeSpan.FromMinutes(2),
+            });
+        });
+        #endregion
+    }
 }
 
-public class SessionTrimmerConfigExample
+public static class SessionTrimmerConfigExample
 {
-    #region PartAADB_SessionTrimmerConfig
-    // fusion.AddDbAuthService<AppDbContext, long>(db => {
-    //     db.ConfigureSessionInfoTrimmer(_ => new DbSessionInfoTrimmer<AppDbContext>.Options() {
-    //         MaxSessionAge = TimeSpan.FromDays(90),
-    //         CheckPeriod = TimeSpan.FromHours(1).ToRandom(0.1),
-    //         BatchSize = 1000,
-    //     });
-    // });
-    #endregion
+    public static void ConfigureTrimmer(FusionBuilder fusion)
+    {
+        #region PartAADB_SessionTrimmerConfig
+        fusion.AddDbAuthService<AppDbContext, long>(db => {
+            db.ConfigureSessionInfoTrimmer(_ => new DbSessionInfoTrimmer<AppDbContext>.Options() {
+                MaxSessionAge = TimeSpan.FromDays(90),
+                CheckPeriod = TimeSpan.FromHours(1).ToRandom(0.1),
+                BatchSize = 1000,
+            });
+        });
+        #endregion
+    }
 }
 
 #region PartAADB_CustomDbUser
@@ -96,77 +114,79 @@ public class AppSession : DbSessionInfo<long>
 }
 #endregion
 
-public class CustomRegistrationExample
+public static class CustomRegistrationExample
 {
-    #region PartAADB_CustomTypeRegistration
-    // fusion.AddDbAuthService<AppDbContext, AppSession, AppUser, long>();
-    #endregion
+    public static void Register(FusionBuilder fusion)
+    {
+        #region PartAADB_CustomTypeRegistration
+        fusion.AddDbAuthService<AppDbContext, AppSession, AppUser, long>();
+        #endregion
+    }
 }
 
 #region PartAADB_CustomConverter
-// public class CustomUserConverter : DbUserConverter<AppDbContext, AppUser, long>
-// {
-//     public override User ToModel(AppUser dbEntity)
-//     {
-//         var user = base.ToModel(dbEntity);
-//         // Add custom claims from your entity
-//         return user.WithClaim("email", dbEntity.Email);
-//     }
-//
-//     public override AppUser UpdateEntity(User source, AppUser target)
-//     {
-//         target = base.UpdateEntity(source, target);
-//         // Extract claims to entity properties
-//         target.Email = source.Claims.GetValueOrDefault("email") ?? "";
-//         return target;
-//     }
-// }
-//
-// // Register custom converter
-// services.AddSingleton<
-//     IDbEntityConverter<AppDbContext, AppUser, User>,
-//     CustomUserConverter>();
+public class CustomUserConverter(IServiceProvider services)
+    : DbUserConverter<AppDbContext, AppUser, long>(services)
+{
+    public override User ToModel(AppUser dbEntity)
+    {
+        var user = base.ToModel(dbEntity);
+        // Add custom claims from your entity
+        return user.WithClaim("email", dbEntity.Email);
+    }
+
+    public override void UpdateEntity(User source, AppUser target)
+    {
+        base.UpdateEntity(source, target);
+        // Extract claims to entity properties
+        target.Email = source.Claims.GetValueOrDefault("email") ?? "";
+    }
+}
+
+// Register custom converter:
+// services.AddSingleton<IDbUserConverter<AppDbContext, AppUser, long>, CustomUserConverter>();
 #endregion
 
-public class EntityResolverConfigExample
+public static class EntityResolverConfigExample
 {
-    #region PartAADB_EntityResolverConfig
-    // fusion.AddDbAuthService<AppDbContext, long>(db => {
-    //     // Configure user entity resolver
-    //     db.ConfigureUserEntityResolver(_ =>
-    //         new DbEntityResolver<AppDbContext, long, DbUser<long>>.Options() {
-    //             QueryTransformer = q => q
-    //                 .Include(u => u.Identities)
-    //                 .AsNoTracking(),
-    //         });
-    //
-    //     // Configure session info entity resolver
-    //     db.ConfigureSessionInfoEntityResolver(_ =>
-    //         new DbEntityResolver<AppDbContext, string, DbSessionInfo<long>>.Options() {
-    //             QueryTransformer = q => q.AsNoTracking(),
-    //         });
-    // });
-    #endregion
+    public static void Configure(FusionBuilder fusion)
+    {
+        #region PartAADB_EntityResolverConfig
+        fusion.AddDbAuthService<AppDbContext, long>(db => {
+            // Configure user entity resolver
+            db.ConfigureUserEntityResolver(_ =>
+                new DbEntityResolver<AppDbContext, long, DbUser<long>>.Options() {
+                    QueryTransformer = q => q
+                        .Include(u => u.Identities)
+                        .AsNoTracking(),
+                });
+
+            // Configure session info entity resolver
+            db.ConfigureSessionInfoEntityResolver(_ =>
+                new DbEntityResolver<AppDbContext, string, DbSessionInfo<long>>.Options() {
+                    QueryTransformer = q => q.AsNoTracking(),
+                });
+        });
+        #endregion
+    }
 }
 
 #region PartAADB_CustomRepo
-// public class CustomUserRepo : DbUserRepo<AppDbContext, AppUser, long>
-// {
-//     public CustomUserRepo(IServiceProvider services) : base(services) { }
-//
-//     public override async Task<AppUser?> Get(long userId, CancellationToken ct)
-//     {
-//         // Custom loading logic
-//         var user = await base.Get(userId, ct);
-//         // Additional processing...
-//         return user;
-//     }
-// }
-//
-// // Register
-// services.AddSingleton<
-//     IDbUserRepo<AppDbContext, AppUser, long>,
-//     CustomUserRepo>();
+public class CustomUserRepo(DbAuthService<AppDbContext>.Options settings, IServiceProvider services)
+    : DbUserRepo<AppDbContext, AppUser, long>(settings, services)
+{
+    public override async Task<AppUser?> Get(
+        AppDbContext dbContext, long userId, bool forUpdate, CancellationToken ct)
+    {
+        // Custom loading logic
+        var user = await base.Get(dbContext, userId, forUpdate, ct);
+        // Additional processing...
+        return user;
+    }
+}
+
+// Register:
+// services.AddSingleton<IDbUserRepo<AppDbContext, AppUser, long>, CustomUserRepo>();
 #endregion
 
 #region PartAADB_DbUserIdHandler
@@ -191,20 +211,23 @@ public class MyUserIdHandler : IDbUserIdHandler<long>
 // services.AddSingleton<IDbUserIdHandler<long>, MyUserIdHandler>();
 #endregion
 
-public class OperationsFrameworkIntegration
+public static class OperationsFrameworkIntegration
 {
-    #region PartAADB_OperationsFramework
-    // services.AddDbContextServices<AppDbContext>(db => {
-    //     db.AddOperations(operations => {
-    //         operations.ConfigureOperationLogReader(_ => new() {
-    //             CheckPeriod = TimeSpan.FromSeconds(5).ToRandom(0.05),
-    //         });
-    //
-    //         // Choose one notification mechanism:
-    //         operations.AddFileSystemOperationLogWatcher();    // File-based
-    //         // operations.AddNpgsqlOperationLogWatcher();     // PostgreSQL
-    //         // operations.AddRedisOperationLogWatcher();      // Redis
-    //     });
-    // });
-    #endregion
+    public static void Setup(IServiceCollection services)
+    {
+        #region PartAADB_OperationsFramework
+        services.AddDbContextServices<AppDbContext>(db => {
+            db.AddOperations(operations => {
+                operations.ConfigureOperationLogReader(_ => new() {
+                    CheckPeriod = TimeSpan.FromSeconds(5).ToRandom(0.05),
+                });
+
+                // Choose one notification mechanism:
+                operations.AddFileSystemOperationLogWatcher();    // File-based
+                // operations.AddNpgsqlOperationLogWatcher();     // PostgreSQL
+                // operations.AddRedisOperationLogWatcher();      // Redis
+            });
+        });
+        #endregion
+    }
 }

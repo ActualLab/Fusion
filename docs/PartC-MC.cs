@@ -2,6 +2,7 @@ using ActualLab.CommandR;
 using ActualLab.CommandR.Commands;
 using ActualLab.CommandR.Configuration;
 using ActualLab.Fusion;
+using MediatR;
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
 
@@ -14,52 +15,66 @@ namespace Docs.PartCMC;
 
 #region PartCMC_MediatRPipeline
 // Pipeline behavior applies to all commands
-// public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-// {
-//     public async Task<TResponse> Handle(TRequest request, ...)
-//     {
-//         // Runs for ALL commands
-//     }
-// }
+public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+{
+    public async Task<TResponse> Handle(
+        TRequest request,
+        RequestHandlerDelegate<TResponse> next,
+        CancellationToken ct)
+    {
+        // Runs for ALL commands
+        return await next();
+    }
+}
 #endregion
 
-#region PartCMC_CommandRPipeline
-// Filter handler can target specific command types
-// [CommandHandler(Priority = 10, IsFilter = true)]
-// public async Task OnPaymentCommand(IPaymentCommand command, CancellationToken ct)
-// {
-//     // Runs only for IPaymentCommand and its derivatives
-//     await context.InvokeRemainingHandlers(ct);
-// }
-#endregion
+public class PaymentCommandFilter : ICommandService
+{
+    #region PartCMC_CommandRPipeline
+    // Filter handler can target specific command types
+    [CommandHandler(Priority = 10, IsFilter = true)]
+    public virtual async Task OnPaymentCommand(IPaymentCommand command, CancellationToken ct)
+    {
+        // Runs only for IPaymentCommand and its derivatives
+        var context = CommandContext.GetCurrent();
+        await context.InvokeRemainingHandlers(ct);
+    }
+    #endregion
+}
 
-#region PartCMC_CommandContext
-// [CommandHandler]
-// public async Task<Order> CreateOrder(CreateOrderCommand command, CancellationToken ct)
-// {
-//     var context = CommandContext.GetCurrent();
+public class OrderServiceContextExample : ICommandService
+{
+    #region PartCMC_CommandContext
+    [CommandHandler]
+    public virtual async Task<Order> CreateOrderWithContext(CreateOrderCommand command, CancellationToken ct)
+    {
+        var context = CommandContext.GetCurrent();
 
-//     // Access scoped services
-//     var db = context.Services.GetRequiredService<AppDbContext>();
+        // Access scoped services
+        var repo = context.Services.GetRequiredService<IOrderRepository>();
 
-//     // Store data for other handlers
-//     context.Items["StartTime"] = DateTime.UtcNow;
+        // Store data for other handlers
+        context.Items["StartTime"] = DateTime.UtcNow;
 
-//     // Access outer context for nested commands
-//     var rootContext = context.OutermostContext;
+        // Access outer context for nested commands
+        var rootContext = context.OutermostContext;
+        _ = rootContext;
 
-//     // ...
-// }
-#endregion
+        return await repo.Create(command.UserId, command.Items, ct);
+    }
+    #endregion
+}
 
 #region PartCMC_MediatRHandler
-// public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, Order>
-// {
-//     public async Task<Order> Handle(CreateOrderCommand request, CancellationToken ct)
-//     {
-//         // ...
-//     }
-// }
+public class CreateOrderMediatRHandler : IRequestHandler<CreateOrderCommandMediatR, Order>
+{
+    public async Task<Order> Handle(CreateOrderCommandMediatR request, CancellationToken ct)
+    {
+        // ...
+        await Task.CompletedTask;
+        return new Order();
+    }
+}
 #endregion
 
 #region PartCMC_CommandRHandler
@@ -71,6 +86,7 @@ public class OrderHandlers
         IOrderService orderService, // Resolved from DI
         CancellationToken ct)
     {
+        await Task.CompletedTask;
         return default!;
     }
 }
@@ -83,11 +99,12 @@ public class OrderService : ICommandService
     public virtual async Task<Order> CreateOrder(
         CreateOrderCommand command, CancellationToken ct)
     {
+        await Task.CompletedTask;
         return default!;
     }
 }
 
-// Registration creates a proxy
+// Registration creates a proxy:
 // commander.AddService<OrderService>();
 
 // Correct - use Commander:
@@ -97,84 +114,81 @@ public class OrderService : ICommandService
 // await orderService.CreateOrder(new CreateOrderCommand(...), ct); // Throws!
 #endregion
 
-#region PartCMC_MediatRRegistration
-// services.AddMediatR(cfg => {
-//     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
-// });
-#endregion
+public static class RegistrationExamples
+{
+    public static void MediatRRegistration(IServiceCollection services)
+    {
+        #region PartCMC_MediatRRegistration
+        // MediatR-style registration (using the shim namespace in this doc project)
+        services.AddMediatR(cfg => {
+            cfg.RegisterServicesFromAssembly(typeof(RegistrationExamples).Assembly);
+        });
+        #endregion
+    }
 
-#region PartCMC_CommandRRegistration
-// Add specific handlers
-// services.AddCommander()
-//     .AddHandlers<OrderHandlers>()
-//     .AddHandlers<PaymentHandlers>();
+    public static void CommandRRegistration(IServiceCollection services)
+    {
+        #region PartCMC_CommandRRegistration
+        // Add specific handlers
+        services.AddCommander()
+            .AddHandlers<OrderHandlers>()
+            .AddHandlers<PaymentHandlers>();
 
-// Or add command services (creates proxies)
-// services.AddCommander()
-//     .AddService<OrderService>();
-#endregion
+        // Or add command services (creates proxies)
+        services.AddCommander()
+            .AddService<OrderService>();
+        #endregion
+    }
+}
 
 #region PartCMC_MediatRMigrationBefore
-// public record CreateOrderCommand(long UserId, List<OrderItem> Items)
-//     : IRequest<Order>;
+public record CreateOrderCommandMediatR(long UserId, List<OrderItem> Items)
+    : IRequest<Order>;
 
-// public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, Order>
-// {
-//     private readonly IOrderRepository _repository;
-
-//     public CreateOrderHandler(IOrderRepository repository)
-//     {
-//         _repository = repository;
-//     }
-
-//     public async Task<Order> Handle(CreateOrderCommand request, CancellationToken ct)
-//     {
-//         return await _repository.Create(request.UserId, request.Items, ct);
-//     }
-// }
+public class CreateOrderHandlerMediatR(IOrderRepository repository)
+    : IRequestHandler<CreateOrderCommandMediatR, Order>
+{
+    public async Task<Order> Handle(CreateOrderCommandMediatR request, CancellationToken ct)
+    {
+        return await repository.Create(request.UserId, request.Items, ct);
+    }
+}
 #endregion
 
 #region PartCMC_MediatRMigrationAfter
 public record CreateOrderCommand(long UserId, List<OrderItem> Items)
     : ICommand<Order>;
 
-public class OrderHandlersForMigration
+public class OrderHandlersForMigration(IOrderRepository repository)
 {
-    private readonly IOrderRepository _repository;
-
-    public OrderHandlersForMigration(IOrderRepository repository)
-    {
-        _repository = repository;
-    }
-
     [CommandHandler]
     public async Task<Order> CreateOrder(CreateOrderCommand command, CancellationToken ct)
     {
-        return await _repository.Create(command.UserId, command.Items, ct);
+        return await repository.Create(command.UserId, command.Items, ct);
     }
 }
 
-// Registration
+// Registration:
 // services.AddScoped<OrderHandlers>();
 // services.AddCommander().AddHandlers<OrderHandlers>();
 #endregion
 
 #region PartCMC_MediatRValidationBefore
-// public class ValidationBehavior<TRequest, TResponse>
-//     : IPipelineBehavior<TRequest, TResponse>
-// {
-//     public async Task<TResponse> Handle(
-//         TRequest request,
-//         RequestHandlerDelegate<TResponse> next,
-//         CancellationToken ct)
-//     {
-//         // Validate
-//         if (request is IValidatable v)
-//             v.Validate();
+public class ValidationBehavior<TRequest, TResponse>
+    : IPipelineBehavior<TRequest, TResponse>
+{
+    public async Task<TResponse> Handle(
+        TRequest request,
+        RequestHandlerDelegate<TResponse> next,
+        CancellationToken ct)
+    {
+        // Validate
+        if (request is IValidatable v)
+            v.Validate();
 
-//         return await next();
-//     }
-// }
+        return await next();
+    }
+}
 #endregion
 
 #region PartCMC_MediatRValidationAfter
@@ -191,29 +205,31 @@ public class ValidationHandler
     }
 }
 
-// Registration
+// Registration:
 // services.AddSingleton<ValidationHandler>();
 // services.AddCommander().AddHandlers<ValidationHandler>();
 #endregion
 
 #region PartCMC_MediatRNotificationBefore
-// public record OrderCreatedNotification(Order Order) : INotification;
+public record OrderCreatedNotification(Order Order) : INotification;
 
-// public class OrderCreatedHandler1 : INotificationHandler<OrderCreatedNotification>
-// {
-//     public Task Handle(OrderCreatedNotification notification, CancellationToken ct)
-//     {
-//         // Send email
-//     }
-// }
+public class OrderCreatedHandler1 : INotificationHandler<OrderCreatedNotification>
+{
+    public Task Handle(OrderCreatedNotification notification, CancellationToken ct)
+    {
+        // Send email
+        return Task.CompletedTask;
+    }
+}
 
-// public class OrderCreatedHandler2 : INotificationHandler<OrderCreatedNotification>
-// {
-//     public Task Handle(OrderCreatedNotification notification, CancellationToken ct)
-//     {
-//         // Update analytics
-//     }
-// }
+public class OrderCreatedHandler2 : INotificationHandler<OrderCreatedNotification>
+{
+    public Task Handle(OrderCreatedNotification notification, CancellationToken ct)
+    {
+        // Update analytics
+        return Task.CompletedTask;
+    }
+}
 #endregion
 
 #region PartCMC_MediatRNotificationAfter
@@ -253,3 +269,11 @@ public interface IValidatable
 {
     void Validate();
 }
+public interface IPaymentCommand : ICommand;
+
+public class PaymentHandlers
+{
+    [CommandHandler]
+    public Task ProcessPayment(PaymentCommand cmd, CancellationToken ct) => Task.CompletedTask;
+}
+public record PaymentCommand(decimal Amount) : IPaymentCommand, ICommand<Unit>;

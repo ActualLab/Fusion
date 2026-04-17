@@ -15,6 +15,7 @@ Operations become transient when:
 1. The command doesn't use `CreateOperationDbContext()` (no database interaction)
 2. The command explicitly disables storage with `Operation.MustStore(false)`
 
+<!-- snippet: PartOTR_TransientOperation -->
 ```cs
 // Transient: No database context requested
 [CommandHandler]
@@ -30,12 +31,14 @@ public virtual async Task IncrementCounter(
     _counters.AddOrUpdate(command.Key, 1, (_, v) => v + 1);
 }
 ```
+<!-- endSnippet -->
 
 
 ## Persistent Operations
 
 Operations become persistent when using `CreateOperationDbContext`:
 
+<!-- snippet: PartOTR_PersistentOperation -->
 ```cs
 // Persistent: Uses database context
 [CommandHandler]
@@ -50,10 +53,11 @@ public virtual async Task UpdateUser(
     // CreateOperationDbContext = persistent operation
     await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
     var user = await dbContext.Users.FindAsync(command.UserId);
-    user.Name = command.Name;
+    user!.Name = command.Name;
     await dbContext.SaveChangesAsync(cancellationToken);
 }
 ```
+<!-- endSnippet -->
 
 
 ## Comparison

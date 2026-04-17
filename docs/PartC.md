@@ -258,10 +258,12 @@ Note that each `CommandContext` has its own `Items`. To share data across nested
 
 Filter handlers wrap subsequent handlers, like middleware:
 
+<!-- snippet: PartC_FilterHandler -->
 ```cs
 [CommandHandler(Priority = 10, IsFilter = true)]
 protected virtual async Task MyFilter(ICommand command, CancellationToken ct)
 {
+    var context = CommandContext.GetCurrent();
     // Before
     try {
         await context.InvokeRemainingHandlers(ct);
@@ -271,6 +273,7 @@ protected virtual async Task MyFilter(ICommand command, CancellationToken ct)
     }
 }
 ```
+<!-- endSnippet -->
 
 Key points:
 - Higher `Priority` = runs earlier

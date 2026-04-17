@@ -19,8 +19,9 @@ When an operation is committed, it's stored as a `DbOperation` entity with the f
 
 <!-- snippet: PartOSerialization_DefaultSerializer -->
 ```cs
-// From DbOperation.cs
-// public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
+// DbOperation.Serializer is a static, mutable property.
+// Its default value is NewtonsoftJsonSerializer.Default.
+ITextSerializer serializer = DbOperation.Serializer;
 ```
 <!-- endSnippet -->
 

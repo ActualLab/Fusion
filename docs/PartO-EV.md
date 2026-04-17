@@ -20,11 +20,14 @@ Events enable:
 
 Events are persisted using the `DbEvent` entity:
 
+<!-- snippet: PartOEV_DbContextWithEvents -->
 ```cs
 public class AppDbContext : DbContextBase
 {
     public DbSet<DbOperation> Operations => Set<DbOperation>();
     public DbSet<DbEvent> Events => Set<DbEvent>();  // Required for events
+
+    public AppDbContext(DbContextOptions options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +36,7 @@ public class AppDbContext : DbContextBase
     }
 }
 ```
+<!-- endSnippet -->
 
 ### DbEvent Properties
 
@@ -61,6 +65,7 @@ CREATE INDEX IX_DelayUntil_State ON Events (DelayUntil, State);
 
 Use the `Operation.AddEvent()` method to add events:
 
+<!-- snippet: PartOEV_AddingEvents -->
 ```cs
 [CommandHandler]
 public virtual async Task<Order> CreateOrder(
@@ -84,6 +89,7 @@ public virtual async Task<Order> CreateOrder(
     return order;
 }
 ```
+<!-- endSnippet -->
 
 ### OperationEvent Properties
 
@@ -99,16 +105,19 @@ public virtual async Task<Order> CreateOrder(
 
 `OperationEvent` supports fluent configuration:
 
+<!-- snippet: PartOEV_FluentConfiguration -->
 ```cs
-var @event = context.Operation.AddEvent(new OrderCreatedEvent(order.Id))
+var @event = context.Operation.AddEvent(new OrderCreatedEvent(order.Id, order.CustomerId))
     .SetDelayBy(TimeSpan.FromMinutes(5))  // Process 5 minutes later
     .SetUuidConflictStrategy(KeyConflictStrategy.Skip);  // Skip if duplicate UUID
 ```
+<!-- endSnippet -->
 
 ## Delayed Events
 
 Events can be scheduled for future processing:
 
+<!-- snippet: PartOEV_DelayedEvents -->
 ```cs
 // Process immediately
 context.Operation.AddEvent(new ImmediateEvent());
@@ -119,22 +128,25 @@ context.Operation.AddEvent(new DelayedEvent())
 
 // Process at specific time
 context.Operation.AddEvent(new ScheduledEvent())
-    .SetDelayUntil(Clocks.SystemClock.Now + TimeSpan.FromHours(1));
+    .SetDelayUntil(SystemClock.Instance.Now + TimeSpan.FromHours(1));
 ```
+<!-- endSnippet -->
 
 ### Delay Quantization
 
 For rate limiting, you can align delays to time boundaries:
 
+<!-- snippet: PartOEV_DelayQuantization -->
 ```cs
 // Align to 1-minute boundaries (useful for rate limiting)
 context.Operation.AddEvent(new RateLimitedEvent())
     .SetDelayUntil(
-        Clocks.SystemClock.Now,
+        SystemClock.Instance.Now,
         TimeSpan.FromMinutes(1),  // Quantum
         "rate-limit"              // UUID prefix for deduplication
     );
 ```
+<!-- endSnippet -->
 
 This creates events with UUIDs like `rate-limit-at-{timestamp}` and uses `KeyConflictStrategy.Skip`,
 ensuring only one event per time quantum.
@@ -149,12 +161,14 @@ When an event UUID already exists, the conflict strategy determines behavior:
 | `Update` | Update the existing event if `State == New` |
 | `Skip` | Silently skip the duplicate |
 
+<!-- snippet: PartOEV_ConflictStrategies -->
 ```cs
 // Example: Ensure only one notification per user per hour
 context.Operation.AddEvent(new NotificationEvent(userId))
     .SetUuid($"notify-{userId}-{DateTime.UtcNow:yyyy-MM-dd-HH}")
     .SetUuidConflictStrategy(KeyConflictStrategy.Skip);
 ```
+<!-- endSnippet -->
 
 ## Event Processing
 
@@ -162,18 +176,25 @@ context.Operation.AddEvent(new NotificationEvent(userId))
 
 Events with `ICommand` values are processed by `DbEventProcessor`:
 
+<!-- snippet: PartOEV_EventProcessorCommand -->
 ```cs
-public record OrderCreatedEvent(long OrderId, long CustomerId) : ICommand<Unit>;
+public record OrderCreatedEventCommand(long OrderId, long CustomerId) : ICommand<Unit>;
 
 // This command will be executed when the event is processed
-[CommandHandler]
-public virtual async Task OnOrderCreated(
-    OrderCreatedEvent command, CancellationToken cancellationToken = default)
+public class OrderEventProcessor : IComputeService
 {
-    // Send notification, update analytics, etc.
-    await SendOrderConfirmation(command.OrderId, cancellationToken);
+    [CommandHandler]
+    public virtual async Task OnOrderCreated(
+        OrderCreatedEventCommand command, CancellationToken cancellationToken = default)
+    {
+        // Send notification, update analytics, etc.
+        await SendOrderConfirmation(command.OrderId, cancellationToken);
+    }
+
+    private Task SendOrderConfirmation(long orderId, CancellationToken ct) => Task.CompletedTask;
 }
 ```
+<!-- endSnippet -->
 
 The processor:
 1. Reads events where `State == New && DelayUntil <= now`
@@ -189,6 +210,7 @@ The processor:
 
 `DbEventLogReader` is a background service that processes events:
 
+<!-- snippet: PartOEV_EventLogReaderConfig -->
 ```cs
 db.AddOperations(operations => {
     operations.ConfigureEventLogReader(_ => new() {
@@ -198,6 +220,7 @@ db.AddOperations(operations => {
     });
 });
 ```
+<!-- endSnippet -->
 
 ### Default Settings
 
@@ -213,6 +236,7 @@ db.AddOperations(operations => {
 
 `DbEventLogTrimmer` removes old processed events:
 
+<!-- snippet: PartOEV_EventLogTrimmerConfig -->
 ```cs
 db.AddOperations(operations => {
     operations.ConfigureEventLogTrimmer(_ => new() {
@@ -221,6 +245,7 @@ db.AddOperations(operations => {
     });
 });
 ```
+<!-- endSnippet -->
 
 ### Trimming Condition
 
@@ -267,6 +292,7 @@ the `DbEventLogReader` on each host polls the database for new events.
 
 Events can carry any JSON-serializable payload:
 
+<!-- snippet: PartOEV_CustomEventValues -->
 ```cs
 // Simple value
 context.Operation.AddEvent(new StringEvent("User created"));
@@ -281,17 +307,24 @@ context.Operation.AddEvent(new UserCreatedEvent {
 // Command (will be executed)
 context.Operation.AddEvent(new SendWelcomeEmailCommand(user.Id, user.Email));
 ```
+<!-- endSnippet -->
 
 ### IHasUuid Interface
 
 If your event value implements `IHasUuid`, the UUID is extracted automatically:
 
+<!-- snippet: PartOEV_IHasUuidExample -->
 ```cs
 public record OrderEvent(string Uuid, long OrderId) : IHasUuid;
 
-// UUID is taken from the event value
-context.Operation.AddEvent(new OrderEvent($"order-{orderId}", orderId));
+// Usage: UUID is taken from the event value
+public static class OrderEventUsage
+{
+    public static void Example(CommandContext context, long orderId)
+        => context.Operation.AddEvent(new OrderEvent($"order-{orderId}", orderId));
+}
 ```
+<!-- endSnippet -->
 
 ## Best Practices
 

@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.Npgsql;
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
 
@@ -14,6 +16,14 @@ public class DbTodo
 {
     public string Id { get; set; } = "";
     public string Title { get; set; } = "";
+    public bool IsDeleted { get; set; }
+    public List<DbTag> Tags { get; set; } = new();
+}
+
+public class DbTag
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
 }
 
 public class DbUser
@@ -29,16 +39,19 @@ public class AppDbContext : DbContext
     public DbSet<DbUser> Users => Set<DbUser>();
 }
 
-public class DbHubSetupExample
+public static class DbHubSetupExample
 {
-    #region PartEF_BasicSetup
-    // services.AddDbContextServices<AppDbContext>(db => {
-    //     // Configure your DbContext
-    //     db.AddDbContextFactory(dbContext => {
-    //         dbContext.UseNpgsql(connectionString);
-    //     });
-    // });
-    #endregion
+    public static void Setup(IServiceCollection services, string connectionString)
+    {
+        #region PartEF_BasicSetup
+        services.AddDbContextFactory<AppDbContext>(dbContext => {
+            dbContext.UseNpgsql(connectionString);
+        });
+        services.AddDbContextServices<AppDbContext>(db => {
+            // Configure additional DbContext services (sharding, resolvers, operations, etc.)
+        });
+        #endregion
+    }
 }
 
 public record CreateTodoCommand(string Id, string Title) : ICommand<Unit>;
@@ -76,20 +89,23 @@ public class TodoService(DbHub<AppDbContext> dbHub) : IComputeService
 }
 #endregion
 
-public class ShardingConfigExample
+public static class ShardingConfigExample
 {
-    #region PartEF_ShardRegistry
-    // services.AddDbContextServices<AppDbContext>(db => {
-    //     db.AddSharding(sharding => {
-    //         // Register multiple shards
-    //         sharding.AddShardRegistry("tenant0", "tenant1", "tenant2");
-    //
-    //         // Or dynamically
-    //         var tenants = Enumerable.Range(0, tenantCount).Select(i => $"tenant{i}");
-    //         sharding.AddShardRegistry(tenants);
-    //     });
-    // });
-    #endregion
+    public static void Setup(IServiceCollection services, int tenantCount)
+    {
+        #region PartEF_ShardRegistry
+        services.AddDbContextServices<AppDbContext>(db => {
+            db.AddSharding(sharding => {
+                // Register multiple shards
+                sharding.AddShardRegistry("tenant0", "tenant1", "tenant2");
+
+                // Or dynamically
+                var tenants = Enumerable.Range(0, tenantCount).Select(i => $"tenant{i}");
+                sharding.AddShardRegistry(tenants);
+            });
+        });
+        #endregion
+    }
 }
 
 #region PartEF_CustomShardResolver
@@ -98,44 +114,50 @@ public interface ITenantCommand
     string TenantId { get; }
 }
 
-// public class TenantShardResolver(IServiceProvider services)
-//     : DbShardResolver<AppDbContext>(services)
-// {
-//     public override string Resolve(object source)
-//     {
-//         // Custom resolution for tenant-specific commands
-//         if (source is ITenantCommand tenantCommand)
-//             return tenantCommand.TenantId;
-//
-//         // Custom resolution for user IDs
-//         if (source is UserId userId)
-//             return GetShardForUser(userId);
-//
-//         return base.Resolve(source);
-//     }
-// }
-//
-// // Register custom resolver
-// db.AddSharding(sharding => {
-//     sharding.AddShardResolver<TenantShardResolver>();
-// });
+public readonly record struct UserId(long Value);
+
+public class TenantShardResolver(IServiceProvider services)
+    : DbShardResolver<AppDbContext>(services)
+{
+    public override string Resolve(object source)
+    {
+        // Custom resolution for tenant-specific commands
+        if (source is ITenantCommand tenantCommand)
+            return tenantCommand.TenantId;
+
+        // Custom resolution for user IDs
+        if (source is UserId userId)
+            return GetShardForUser(userId);
+
+        return base.Resolve(source);
+    }
+
+    private static string GetShardForUser(UserId userId)
+        => $"tenant{userId.Value % 3}";
+}
+
+// Register custom resolver:
+// db.AddSharding(sharding => sharding.AddShardResolver<TenantShardResolver>());
 #endregion
 
-public class EntityResolverSetupExample
+public static class EntityResolverSetupExample
 {
-    #region PartEF_EntityResolverSetup
-    // services.AddDbContextServices<AppDbContext>(db => {
-    //     // Simple setup - key extracted from entity's key property
-    //     db.AddEntityResolver<string, DbTodo>();
-    //
-    //     // With options
-    //     db.AddEntityResolver<string, DbTodo>(_ => new() {
-    //         KeyExtractor = e => e.Id,
-    //         BatchSize = 20,
-    //         Timeout = TimeSpan.FromSeconds(3),
-    //     });
-    // });
-    #endregion
+    public static void Setup(IServiceCollection services)
+    {
+        #region PartEF_EntityResolverSetup
+        services.AddDbContextServices<AppDbContext>(db => {
+            // Simple setup - key extracted from entity's key property
+            db.AddEntityResolver<string, DbTodo>();
+
+            // With options
+            db.AddEntityResolver<string, DbTodo>(_ => new() {
+                KeyExtractor = e => e.Id,
+                BatchSize = 20,
+                Timeout = TimeSpan.FromSeconds(3),
+            });
+        });
+        #endregion
+    }
 }
 
 #region PartEF_EntityResolverUsage
@@ -171,44 +193,41 @@ public class TodoServiceBase(IServiceProvider services)
 }
 #endregion
 
-public class CompleteSetupExample
+public static class CompleteSetupExample
 {
-    #region PartEF_CompleteSetup
-    // var builder = WebApplication.CreateBuilder(args);
-    //
-    // builder.Services.AddDbContextServices<AppDbContext>(db => {
-    //     // Configure DbContext factory
-    //     db.AddDbContextFactory(dbContext => {
-    //         dbContext.UseNpgsql(builder.Configuration.GetConnectionString("Default"));
-    //     });
-    //
-    //     // Optional: Configure sharding for multi-tenant
-    //     db.AddSharding(sharding => {
-    //         var tenants = new[] { "tenant0", "tenant1", "tenant2" };
-    //         sharding.AddShardRegistry(tenants);
-    //         sharding.AddTransientShardDbContextFactory((c, shard) => {
-    //             var connStr = builder.Configuration.GetConnectionString(shard.Value);
-    //             return new AppDbContext(
-    //                 new DbContextOptionsBuilder<AppDbContext>()
-    //                     .UseNpgsql(connStr)
-    //                     .Options);
-    //         });
-    //     });
-    //
-    //     // Add entity resolvers for efficient batch loading
-    //     db.AddEntityResolver<string, DbTodo>();
-    //     db.AddEntityResolver<long, DbUser>();
-    //
-    //     // Add Operations Framework (uses all the above)
-    //     db.AddOperations(operations => {
-    //         operations.AddNpgsqlOperationLogWatcher();
-    //     });
-    // });
-    //
-    // // Register your services
-    // builder.Services.AddFusion()
-    //     .AddService<TodoService>();
-    #endregion
+    public static void Setup(IServiceCollection services, IConfiguration configuration)
+    {
+        #region PartEF_CompleteSetup
+        services.AddDbContextFactory<AppDbContext>(dbContext => {
+            dbContext.UseNpgsql(configuration.GetConnectionString("Default"));
+        });
+
+        services.AddDbContextServices<AppDbContext>(db => {
+            // Optional: Configure sharding for multi-tenant
+            db.AddSharding(sharding => {
+                var tenants = new[] { "tenant0", "tenant1", "tenant2" };
+                sharding.AddShardRegistry(tenants);
+                sharding.AddTransientShardDbContextFactory((c, shard, ob) => {
+                    var connStr = configuration.GetConnectionString(shard);
+                    ob.UseNpgsql(connStr);
+                });
+            });
+
+            // Add entity resolvers for efficient batch loading
+            db.AddEntityResolver<string, DbTodo>();
+            db.AddEntityResolver<long, DbUser>();
+
+            // Add Operations Framework (uses all the above)
+            db.AddOperations(operations => {
+                operations.AddNpgsqlOperationLogWatcher();
+            });
+        });
+
+        // Register your services
+        services.AddFusion()
+            .AddService<TodoService>();
+        #endregion
+    }
 }
 
 public class ShardResolverUsageExample(DbHub<AppDbContext> dbHub, IDbShardResolver<AppDbContext> shardResolver)
@@ -230,42 +249,52 @@ public class ShardResolverUsageExample(DbHub<AppDbContext> dbHub, IDbShardResolv
     #endregion
 }
 
-public class SessionBasedShardingExample
+public static class SessionBasedShardingExample
 {
-    #region PartEF_SessionBasedSharding
-    // // Set the session tag used for shard resolution
-    // DbShardResolver.DefaultSessionShardTag = "tenant";
-    //
-    // // When creating sessions, include the shard
-    // var session = new Session($"session-id").WithTag("tenant", "tenant0");
-    #endregion
+    public static Session Setup()
+    {
+        #region PartEF_SessionBasedSharding
+        // Set the session tag used for shard resolution
+        DbShardResolver.DefaultSessionShardTag = "tenant";
+
+        // When creating sessions, include the shard
+        var session = new Session("session-id").WithTag("tenant", "tenant0");
+        #endregion
+        return session;
+    }
 }
 
-public class PerShardDbContextConfigExample
+public static class PerShardDbContextConfigExample
 {
-    #region PartEF_PerShardConfig
-    // db.AddSharding(sharding => {
-    //     sharding.AddShardRegistry("tenant0", "tenant1", "tenant2");
-    //
-    //     sharding.AddTransientShardDbContextFactory((c, shard) => {
-    //         var connectionString = GetConnectionString(shard.Value);
-    //         return new AppDbContext(
-    //             new DbContextOptionsBuilder<AppDbContext>()
-    //                 .UseNpgsql(connectionString)
-    //                 .Options);
-    //     });
-    // });
-    #endregion
+    public static void Setup(DbContextBuilder<AppDbContext> db)
+    {
+        #region PartEF_PerShardConfig
+        db.AddSharding(sharding => {
+            sharding.AddShardRegistry("tenant0", "tenant1", "tenant2");
+
+            sharding.AddTransientShardDbContextFactory((c, shard, ob) => {
+                var connectionString = GetConnectionString(shard);
+                ob.UseNpgsql(connectionString);
+            });
+        });
+        #endregion
+    }
+
+    private static string GetConnectionString(string shard)
+        => $"Host=localhost;Database={shard}";
 }
 
-public class QueryTransformationExample
+public static class QueryTransformationExample
 {
-    #region PartEF_QueryTransformation
-    // db.AddEntityResolver<string, DbTodo>(_ => new() {
-    //     // Only load active todos, include related data
-    //     QueryTransformer = q => q
-    //         .Where(t => !t.IsDeleted)
-    //         .Include(t => t.Tags),
-    // });
-    #endregion
+    public static void Setup(DbContextBuilder<AppDbContext> db)
+    {
+        #region PartEF_QueryTransformation
+        db.AddEntityResolver<string, DbTodo>(_ => new() {
+            // Only load active todos, include related data
+            QueryTransformer = q => q
+                .Where(t => !t.IsDeleted)
+                .Include(t => t.Tags),
+        });
+        #endregion
+    }
 }

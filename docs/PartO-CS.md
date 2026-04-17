@@ -6,6 +6,7 @@ Quick reference for multi-host invalidation, events, and operation reprocessing.
 
 ### Basic Configuration
 
+<!-- snippet: PartOCS_BasicConfiguration -->
 ```cs
 var fusion = services.AddFusion();
 fusion.AddOperationReprocessor();  // Enable retry for transient errors
@@ -23,25 +24,26 @@ services.AddDbContextServices<AppDbContext>(db => {
     });
 });
 ```
+<!-- endSnippet -->
 
 ### DbContext Setup
 
+<!-- snippet: PartOCS_DbContextSetup -->
 ```cs
-public class AppDbContext : DbContextBase
-{
-    public DbSet<DbOperation> Operations => Set<DbOperation>();
-    public DbSet<DbEvent> Events => Set<DbEvent>();
+public DbSet<DbOperation> Operations => Set<DbOperation>();
+public DbSet<DbEvent> Events => Set<DbEvent>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<DbOperation>().ToTable("_Operations");
-        modelBuilder.Entity<DbEvent>().ToTable("_Events");
-    }
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity<DbOperation>().ToTable("_Operations");
+    modelBuilder.Entity<DbEvent>().ToTable("_Events");
 }
 ```
+<!-- endSnippet -->
 
 ## Command Handler Pattern
 
+<!-- snippet: PartOCS_CommandHandlerPattern -->
 ```cs
 [CommandHandler]
 public virtual async Task<Order> CreateOrder(
@@ -64,9 +66,11 @@ public virtual async Task<Order> CreateOrder(
     return order;
 }
 ```
+<!-- endSnippet -->
 
 ## Passing Data to Invalidation
 
+<!-- snippet: PartOCS_PassingDataToInvalidation -->
 ```cs
 [CommandHandler]
 public virtual async Task DeleteUser(
@@ -85,23 +89,25 @@ public virtual async Task DeleteUser(
     var user = await db.Users.FindAsync(command.UserId);
 
     // Store data for invalidation
-    context.Operation.Items.KeylessSet(user.Id);
+    context.Operation.Items.KeylessSet(user!.Id);
 
     db.Users.Remove(user);
     await db.SaveChangesAsync(cancellationToken);
 }
 ```
+<!-- endSnippet -->
 
 ## Events
 
 ### Adding Events
 
+<!-- snippet: PartOCS_AddingEvents -->
 ```cs
 [CommandHandler]
-public virtual async Task<Order> CreateOrder(
+public virtual async Task<Order> CreateOrderWithEvent(
     CreateOrderCommand command, CancellationToken cancellationToken = default)
 {
-    if (Invalidation.IsActive) { /* ... */ }
+    if (Invalidation.IsActive) { /* ... */ return default!; }
 
     var context = CommandContext.GetCurrent();
     await using var db = await DbHub.CreateOperationDbContext(cancellationToken);
@@ -116,9 +122,11 @@ public virtual async Task<Order> CreateOrder(
     return order;
 }
 ```
+<!-- endSnippet -->
 
 ### Delayed Events
 
+<!-- snippet: PartOCS_DelayedEvents -->
 ```cs
 // Process after delay
 context.Operation.AddEvent(new ReminderEvent(userId))
@@ -132,9 +140,11 @@ context.Operation.AddEvent(new ScheduledEvent())
 context.Operation.AddEvent(new RateLimitedEvent())
     .SetDelayUntil(now, TimeSpan.FromMinutes(1), "rate-limit");
 ```
+<!-- endSnippet -->
 
 ### Event Conflict Strategies
 
+<!-- snippet: PartOCS_EventConflictStrategies -->
 ```cs
 // Skip duplicates (idempotent)
 context.Operation.AddEvent(new NotifyEvent(userId))
@@ -149,11 +159,13 @@ context.Operation.AddEvent(new UniqueEvent())
 context.Operation.AddEvent(new UpdatableEvent())
     .SetUuidConflictStrategy(KeyConflictStrategy.Update);
 ```
+<!-- endSnippet -->
 
 ## Configuration Quick Reference
 
 ### Operation Log Reader
 
+<!-- snippet: PartOCS_OperationLogReaderConfig -->
 ```cs
 operations.ConfigureOperationLogReader(_ => new() {
     StartOffset = TimeSpan.FromSeconds(3),     // Startup lookback
@@ -162,26 +174,32 @@ operations.ConfigureOperationLogReader(_ => new() {
     ConcurrencyLevel = Environment.ProcessorCount * 4,
 });
 ```
+<!-- endSnippet -->
 
 ### Operation Log Trimmer
 
+<!-- snippet: PartOCS_OperationLogTrimmerConfig -->
 ```cs
 operations.ConfigureOperationLogTrimmer(_ => new() {
     MaxEntryAge = TimeSpan.FromMinutes(30),    // 30 min default
     CheckPeriod = TimeSpan.FromMinutes(15),
 });
 ```
+<!-- endSnippet -->
 
 ### Operation Scope
 
+<!-- snippet: PartOCS_OperationScopeConfig -->
 ```cs
 operations.ConfigureOperationScope(_ => new() {
-    IsolationLevel = IsolationLevel.ReadCommitted,
+    IsolationLevel = System.Data.IsolationLevel.ReadCommitted,
 });
 ```
+<!-- endSnippet -->
 
 ### Event Log Reader
 
+<!-- snippet: PartOCS_EventLogReaderConfig -->
 ```cs
 operations.ConfigureEventLogReader(_ => new() {
     CheckPeriod = TimeSpan.FromSeconds(5),
@@ -189,24 +207,29 @@ operations.ConfigureEventLogReader(_ => new() {
     ConcurrencyLevel = Environment.ProcessorCount * 4,
 });
 ```
+<!-- endSnippet -->
 
 ### Event Log Trimmer
 
+<!-- snippet: PartOCS_EventLogTrimmerConfig -->
 ```cs
 operations.ConfigureEventLogTrimmer(_ => new() {
     MaxEntryAge = TimeSpan.FromHours(1),       // 1 hour default
     CheckPeriod = TimeSpan.FromMinutes(15),
 });
 ```
+<!-- endSnippet -->
 
 ### Operation Reprocessor
 
+<!-- snippet: PartOCS_OperationReprocessorConfig -->
 ```cs
 fusion.AddOperationReprocessor(_ => new() {
     MaxRetryCount = 3,                         // Retry attempts
     RetryDelays = RetryDelaySeq.Exp(0.5, 3, 0.33),  // Exponential backoff
 });
 ```
+<!-- endSnippet -->
 
 ## Log Watchers
 
@@ -219,9 +242,15 @@ fusion.AddOperationReprocessor(_ => new() {
 
 ## Command Types
 
+<!-- snippet: PartOCS_CommandTypes -->
 ```cs
 // Standard command
-public record CreateOrderCommand(long UserId) : ICommand<Order>;
+public record CreateOrderCommand(long UserId) : ICommand<Order>
+{
+    public long OrderId { get; init; }
+    public bool StatusChanged { get; init; }
+    public string OldStatus { get; init; } = "";
+}
 
 // Backend-only command (server-side execution enforced)
 public record DeleteUserCommand(long UserId) : ICommand<Unit>, IBackendCommand;
@@ -238,6 +267,7 @@ public record UpdateProfileCommand(long UserId, string Name)
     }
 }
 ```
+<!-- endSnippet -->
 
 ## Key Differences
 
@@ -267,6 +297,7 @@ public record UpdateProfileCommand(long UserId, string Name)
 
 ### Conditional Invalidation
 
+<!-- snippet: PartOCS_ConditionalInvalidation -->
 ```cs
 if (Invalidation.IsActive) {
     _ = GetOrder(command.OrderId, default);
@@ -275,9 +306,11 @@ if (Invalidation.IsActive) {
     return default!;
 }
 ```
+<!-- endSnippet -->
 
 ### Multiple Invalidations
 
+<!-- snippet: PartOCS_MultipleInvalidations -->
 ```cs
 if (Invalidation.IsActive) {
     _ = GetOrder(command.OrderId, default);
@@ -286,17 +319,22 @@ if (Invalidation.IsActive) {
     return default!;
 }
 ```
+<!-- endSnippet -->
 
 ### Nested Commands
 
+<!-- snippet: PartOCS_NestedCommands -->
 ```cs
 // Nested command is automatically logged and invalidated
 await Commander.Call(new ChildCommand(parentId), cancellationToken);
 ```
+<!-- endSnippet -->
 
 ### Control Operation Storage
 
+<!-- snippet: PartOCS_ControlOperationStorage -->
 ```cs
 // Disable storage (operation won't replicate)
 context.Operation.MustStore(false);
 ```
+<!-- endSnippet -->

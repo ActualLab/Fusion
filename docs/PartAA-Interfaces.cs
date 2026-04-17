@@ -1,3 +1,4 @@
+using System.Runtime.Serialization;
 using System.Security.Claims;
 using ActualLab.Api;
 using ActualLab.Fusion.Authentication;
@@ -47,19 +48,17 @@ public interface IOrderService : IComputeService
     Task<List<Order>> GetMyOrders(Session session, CancellationToken ct = default);
 }
 
-public class AuthSignOutCommandExample
+#region PartAAI_AuthSignOut
+// The real Auth_SignOut record (in ActualLab.Fusion.Authentication) has this shape:
+[DataContract]
+public partial record Auth_SignOutExample : ISessionCommand<Unit>
 {
-    #region PartAAI_AuthSignOut
-    // [DataContract]
-    // public partial record Auth_SignOut : ISessionCommand<Unit>
-    // {
-    //     public Session Session { get; init; }
-    //     public string? KickUserSessionHash { get; init; }  // Kick specific session
-    //     public bool KickAllUserSessions { get; init; }     // Kick all user's sessions
-    //     public bool Force { get; init; }                   // Force sign-out (requires new session)
-    // }
-    #endregion
+    public Session Session { get; init; } = null!;
+    public string? KickUserSessionHash { get; init; }  // Kick specific session
+    public bool KickAllUserSessions { get; init; }     // Kick all user's sessions
+    public bool Force { get; init; }                   // Force sign-out (requires new session)
 }
+#endregion
 
 public class AuthSignOutUsageExamples(ICommander commander)
 {
@@ -196,29 +195,35 @@ public class SessionExamples
     #endregion
 
     #region PartAAI_DefaultSession
-    public void DefaultSessionExample()
+    public static async Task DefaultSessionExample(ISessionResolver sessionResolver, IAuth auth, CancellationToken ct)
     {
         // On Blazor WASM client
-        // SessionResolver.Session = Session.Default;
+        sessionResolver.Session = Session.Default;
 
         // When calling server methods, Session.Default is auto-replaced
-        // var user = await Auth.GetUser(Session.Default, ct);
+        var user = await auth.GetUser(Session.Default, ct);
         // Server sees the real session from the cookie
+        _ = user;
     }
     #endregion
 }
 
-public class SessionResolverExample
+public static class SessionResolverExample
 {
     #region PartAAI_SessionResolver
-    // public interface ISessionResolver
-    // {
-    //     Session Session { get; set; }
-    // }
+    // The ISessionResolver interface (simplified):
     //
-    // // Automatically registered by AddFusion()
-    // services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
-    // services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
+    //   public interface ISessionResolver
+    //   {
+    //       Session Session { get; set; }
+    //   }
+    //
+    // Automatically registered by AddFusion():
+    public static void RegisterSessionResolver(IServiceCollection services)
+    {
+        services.AddScoped<ISessionResolver>(c => new SessionResolver(c));
+        services.AddScoped(c => c.GetRequiredService<ISessionResolver>().Session);
+    }
     #endregion
 }
 

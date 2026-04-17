@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.Npgsql;
+using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Versioning;
 // ReSharper disable ArrangeTypeMemberModifiers
@@ -26,23 +28,29 @@ public class AppDbContext(DbContextOptions options) : DbContextBase(options)
     #endregion
 }
 
-#region PartOCS_BasicConfiguration
-// var fusion = services.AddFusion();
-// fusion.AddOperationReprocessor();  // Enable retry for transient errors
+public static class BasicConfigurationExample
+{
+    public static void Configure(IServiceCollection services)
+    {
+        #region PartOCS_BasicConfiguration
+        var fusion = services.AddFusion();
+        fusion.AddOperationReprocessor();  // Enable retry for transient errors
 
-// services.AddDbContextServices<AppDbContext>(db => {
-//     db.AddOperations(operations => {
-//         operations.ConfigureOperationLogReader(_ => new() {
-//             CheckPeriod = TimeSpan.FromSeconds(5).ToRandom(0.1),
-//         });
+        services.AddDbContextServices<AppDbContext>(db => {
+            db.AddOperations(operations => {
+                operations.ConfigureOperationLogReader(_ => new() {
+                    CheckPeriod = TimeSpan.FromSeconds(5).ToRandom(0.1),
+                });
 
-//         // Choose one watcher:
-//         operations.AddNpgsqlOperationLogWatcher();    // PostgreSQL
-//         // operations.AddRedisOperationLogWatcher();  // Redis
-//         // operations.AddFileSystemOperationLogWatcher();  // Local dev
-//     });
-// });
-#endregion
+                // Choose one watcher:
+                operations.AddNpgsqlOperationLogWatcher();    // PostgreSQL
+                // operations.AddRedisOperationLogWatcher();  // Redis
+                // operations.AddFileSystemOperationLogWatcher();  // Local dev
+            });
+        });
+        #endregion
+    }
+}
 
 public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContextExtended>(services), IComputeService
 {
@@ -115,33 +123,62 @@ public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContex
     }
     #endregion
 
-    #region PartOCS_ConditionalInvalidation
-    // if (Invalidation.IsActive) {
-    //     _ = GetOrder(command.OrderId, default);
-    //     if (command.StatusChanged)
-    //         _ = GetOrdersByStatus(command.OldStatus, default);
-    //     return default!;
-    // }
-    #endregion
+    [CommandHandler]
+    public virtual async Task<Order> ConditionalInvalidationExample(
+        CreateOrderCommand command, CancellationToken cancellationToken = default)
+    {
+        #region PartOCS_ConditionalInvalidation
+        if (Invalidation.IsActive) {
+            _ = GetOrder(command.OrderId, default);
+            if (command.StatusChanged)
+                _ = GetOrdersByStatus(command.OldStatus, default);
+            return default!;
+        }
+        #endregion
+        await Task.CompletedTask;
+        return default!;
+    }
 
-    #region PartOCS_MultipleInvalidations
-    // if (Invalidation.IsActive) {
-    //     _ = GetOrder(command.OrderId, default);
-    //     _ = GetOrderList(command.UserId, default);
-    //     _ = GetOrderCount(command.UserId, default);
-    //     return default!;
-    // }
-    #endregion
+    [CommandHandler]
+    public virtual async Task<Order> MultipleInvalidationsExample(
+        CreateOrderCommand command, CancellationToken cancellationToken = default)
+    {
+        #region PartOCS_MultipleInvalidations
+        if (Invalidation.IsActive) {
+            _ = GetOrder(command.OrderId, default);
+            _ = GetOrderList(command.UserId, default);
+            _ = GetOrderCount(command.UserId, default);
+            return default!;
+        }
+        #endregion
+        await Task.CompletedTask;
+        return default!;
+    }
 
-    #region PartOCS_NestedCommands
-    // Nested command is automatically logged and invalidated
-    // await Commander.Call(new ChildCommand(parentId), cancellationToken);
-    #endregion
+    [CommandHandler]
+    public virtual async Task NestedCommandsExample(
+        CreateOrderCommand command, CancellationToken cancellationToken = default)
+    {
+        if (Invalidation.IsActive) return;
+        var parentId = command.OrderId;
+        #region PartOCS_NestedCommands
+        // Nested command is automatically logged and invalidated
+        await Commander.Call(new ChildCommand(parentId), cancellationToken);
+        #endregion
+    }
 
-    #region PartOCS_ControlOperationStorage
-    // Disable storage (operation won't replicate)
-    // context.Operation.MustStore(false);
-    #endregion
+    [CommandHandler]
+    public virtual async Task ControlOperationStorageExample(
+        CreateOrderCommand command, CancellationToken cancellationToken = default)
+    {
+        if (Invalidation.IsActive) return;
+        var context = CommandContext.GetCurrent();
+        await using var _ = await DbHub.CreateOperationDbContext(cancellationToken);
+        #region PartOCS_ControlOperationStorage
+        // Disable storage (operation won't replicate)
+        context.Operation.MustStore(false);
+        #endregion
+    }
 
     // Placeholder compute methods
     [ComputeMethod] public virtual Task<Order?> GetOrder(long orderId, CancellationToken ct) => Task.FromResult<Order?>(null);
@@ -191,51 +228,63 @@ public class EventExamples
     }
 }
 
-public class ConfigExamples
+public static class ConfigExamples
 {
-    #region PartOCS_OperationLogReaderConfig
-    // operations.ConfigureOperationLogReader(_ => new() {
-    //     StartOffset = TimeSpan.FromSeconds(3),     // Startup lookback
-    //     CheckPeriod = TimeSpan.FromSeconds(5),     // Poll interval
-    //     BatchSize = 64,                            // Ops per batch
-    //     ConcurrencyLevel = Environment.ProcessorCount * 4,
-    // });
-    #endregion
+    public static void ConfigureOperations(DbOperationsBuilder<AppDbContextExtended> operations)
+    {
+        {
+            #region PartOCS_OperationLogReaderConfig
+            operations.ConfigureOperationLogReader(_ => new() {
+                StartOffset = TimeSpan.FromSeconds(3),     // Startup lookback
+                CheckPeriod = TimeSpan.FromSeconds(5),     // Poll interval
+                BatchSize = 64,                            // Ops per batch
+                ConcurrencyLevel = Environment.ProcessorCount * 4,
+            });
+            #endregion
+        }
+        {
+            #region PartOCS_OperationLogTrimmerConfig
+            operations.ConfigureOperationLogTrimmer(_ => new() {
+                MaxEntryAge = TimeSpan.FromMinutes(30),    // 30 min default
+                CheckPeriod = TimeSpan.FromMinutes(15),
+            });
+            #endregion
+        }
+        {
+            #region PartOCS_OperationScopeConfig
+            operations.ConfigureOperationScope(_ => new() {
+                IsolationLevel = System.Data.IsolationLevel.ReadCommitted,
+            });
+            #endregion
+        }
+        {
+            #region PartOCS_EventLogReaderConfig
+            operations.ConfigureEventLogReader(_ => new() {
+                CheckPeriod = TimeSpan.FromSeconds(5),
+                BatchSize = 64,
+                ConcurrencyLevel = Environment.ProcessorCount * 4,
+            });
+            #endregion
+        }
+        {
+            #region PartOCS_EventLogTrimmerConfig
+            operations.ConfigureEventLogTrimmer(_ => new() {
+                MaxEntryAge = TimeSpan.FromHours(1),       // 1 hour default
+                CheckPeriod = TimeSpan.FromMinutes(15),
+            });
+            #endregion
+        }
+    }
 
-    #region PartOCS_OperationLogTrimmerConfig
-    // operations.ConfigureOperationLogTrimmer(_ => new() {
-    //     MaxEntryAge = TimeSpan.FromMinutes(30),    // 30 min default
-    //     CheckPeriod = TimeSpan.FromMinutes(15),
-    // });
-    #endregion
-
-    #region PartOCS_OperationScopeConfig
-    // operations.ConfigureOperationScope(_ => new() {
-    //     IsolationLevel = IsolationLevel.ReadCommitted,
-    // });
-    #endregion
-
-    #region PartOCS_EventLogReaderConfig
-    // operations.ConfigureEventLogReader(_ => new() {
-    //     CheckPeriod = TimeSpan.FromSeconds(5),
-    //     BatchSize = 64,
-    //     ConcurrencyLevel = Environment.ProcessorCount * 4,
-    // });
-    #endregion
-
-    #region PartOCS_EventLogTrimmerConfig
-    // operations.ConfigureEventLogTrimmer(_ => new() {
-    //     MaxEntryAge = TimeSpan.FromHours(1),       // 1 hour default
-    //     CheckPeriod = TimeSpan.FromMinutes(15),
-    // });
-    #endregion
-
-    #region PartOCS_OperationReprocessorConfig
-    // fusion.AddOperationReprocessor(_ => new() {
-    //     MaxRetryCount = 3,                         // Retry attempts
-    //     RetryDelays = RetryDelaySeq.Exp(0.5, 3, 0.33),  // Exponential backoff
-    // });
-    #endregion
+    public static void ConfigureReprocessor(FusionBuilder fusion)
+    {
+        #region PartOCS_OperationReprocessorConfig
+        fusion.AddOperationReprocessor(_ => new() {
+            MaxRetryCount = 3,                         // Retry attempts
+            RetryDelays = RetryDelaySeq.Exp(0.5, 3, 0.33),  // Exponential backoff
+        });
+        #endregion
+    }
 }
 
 #region PartOCS_CommandTypes

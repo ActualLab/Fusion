@@ -1,9 +1,17 @@
 using System.Security;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Services;
+using ActualLab.Fusion.Blazor;
+using ActualLab.Fusion.Blazor.Authentication;
+using ActualLab.Fusion.Server;
+using ActualLab.Fusion.Server.Middlewares;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Server;
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
 
@@ -14,57 +22,68 @@ namespace Docs.PartAACS;
 // PartAA-CS.md snippets: Authentication Cheat Sheet
 // ============================================================================
 
-public class ServerSetupExamples
+public static class ServerSetupExamples
 {
-    #region PartAACS_ServerSetup
-    // var fusion = services.AddFusion();
-    // var fusionServer = fusion.AddWebServer();
-    //
-    // // Database auth service (production)
-    // fusion.AddDbAuthService<AppDbContext, long>();
-    //
-    // // In-memory auth service (development/testing)
-    // // fusion.AddInMemoryAuthService();
-    //
-    // // Configure endpoints
-    // fusionServer.ConfigureAuthEndpoint(_ => new() {
-    //     DefaultSignInScheme = GoogleDefaults.AuthenticationScheme,
-    // });
-    //
-    // // Configure session middleware
-    // fusionServer.ConfigureSessionMiddleware(_ => new SessionMiddleware.Options() {
-    //     Cookie = new CookieBuilder() {
-    //         Name = "MyApp.Session",
-    //         HttpOnly = true,
-    //         SameSite = SameSiteMode.Lax,
-    //         Expiration = TimeSpan.FromDays(30),
-    //     },
-    // });
-    //
-    // // Configure server auth helper
-    // fusionServer.ConfigureServerAuthHelper(_ => new ServerAuthHelper.Options() {
-    //     NameClaimKeys = [ClaimTypes.Name, "preferred_username"],
-    // });
-    #endregion
+    public static void ServerSetup(IServiceCollection services)
+    {
+        #region PartAACS_ServerSetup
+        var fusion = services.AddFusion();
+        var fusionServer = fusion.AddWebServer();
 
-    #region PartAACS_ClientSetup
-    // var fusion = services.AddFusion();
-    // fusion.AddAuthClient();
-    // fusion.AddBlazor()
-    //     .AddAuthentication()
-    //     .AddPresenceReporter();
-    #endregion
+        // Database auth service (production)
+        fusion.AddDbAuthService<AppDbContext, long>();
 
-    #region PartAACS_AppConfig
-    // app.UseWebSockets();
-    // app.UseFusionSession();      // Session handling
-    // app.UseRouting();
-    // app.UseAuthentication();     // ASP.NET Core auth
-    // app.UseAuthorization();
-    //
-    // app.MapRpcWebSocketServer();
-    // app.MapFusionAuthEndpoints();
-    #endregion
+        // In-memory auth service (development/testing)
+        // fusion.AddInMemoryAuthService();
+
+        // Configure endpoints
+        fusionServer.ConfigureAuthEndpoint(_ => new() {
+            DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme,
+        });
+
+        // Configure session middleware
+        fusionServer.ConfigureSessionMiddleware(_ => new SessionMiddleware.Options() {
+            Cookie = new CookieBuilder() {
+                Name = "MyApp.Session",
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                Expiration = TimeSpan.FromDays(30),
+            },
+        });
+
+        // Configure server auth helper
+        fusionServer.ConfigureServerAuthHelper(_ => new ServerAuthHelper.Options() {
+            NameClaimKeys = [ClaimTypes.Name, "preferred_username"],
+        });
+        #endregion
+    }
+
+    public static void ClientSetup(IServiceCollection services)
+    {
+        #region PartAACS_ClientSetup
+        var fusion = services.AddFusion();
+        fusion.AddAuthClient();
+        fusion.AddBlazor()
+            .AddAuthentication()
+            .AddPresenceReporter();
+        #endregion
+    }
+
+    public static void AppConfig(IApplicationBuilder app)
+    {
+        #region PartAACS_AppConfig
+        app.UseWebSockets();
+        app.UseFusionSession();      // Session handling
+        app.UseRouting();
+        app.UseAuthentication();     // ASP.NET Core auth
+        app.UseAuthorization();
+
+        app.UseEndpoints(endpoints => {
+            endpoints.MapRpcWebSocketServer();
+            endpoints.MapFusionAuthEndpoints();
+        });
+        #endregion
+    }
 }
 
 public interface IMyService : IComputeService
@@ -285,17 +304,20 @@ public class AuthorizationPatternExamples(IAuth auth, AppDbContext db)
     private Task<PremiumContent> LoadPremiumContent(CancellationToken ct) => Task.FromResult(new PremiumContent());
 }
 
-public class SessionTrimmerConfigExample
+public static class SessionTrimmerConfigExample
 {
-    #region PartAACS_SessionTrimmerConfig
-    // fusion.AddDbAuthService<AppDbContext, long>(db => {
-    //     db.ConfigureSessionInfoTrimmer(_ => new() {
-    //         MaxSessionAge = TimeSpan.FromDays(90),
-    //         CheckPeriod = TimeSpan.FromHours(1).ToRandom(0.1),
-    //         BatchSize = 1000,
-    //     });
-    // });
-    #endregion
+    public static void Configure(FusionBuilder fusion)
+    {
+        #region PartAACS_SessionTrimmerConfig
+        fusion.AddDbAuthService<AppDbContext, long>(db => {
+            db.ConfigureSessionInfoTrimmer(_ => new() {
+                MaxSessionAge = TimeSpan.FromDays(90),
+                CheckPeriod = TimeSpan.FromHours(1).ToRandom(0.1),
+                BatchSize = 1000,
+            });
+        });
+        #endregion
+    }
 }
 
 #region PartAACS_ServicePattern

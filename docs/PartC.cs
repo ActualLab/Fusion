@@ -146,20 +146,23 @@ public class PartC : DocPart
 
 }
 
-#region PartC_FilterHandler
-// Filter handler example
-// [CommandHandler(Priority = 10, IsFilter = true)]
-// protected virtual async Task MyFilter(ICommand command, CancellationToken ct)
-// {
-//     // Before
-//     try {
-//         await context.InvokeRemainingHandlers(ct);
-//     }
-//     finally {
-//         // After
-//     }
-// }
-#endregion
+public class FilterHandlerExample : ICommandService
+{
+    #region PartC_FilterHandler
+    [CommandHandler(Priority = 10, IsFilter = true)]
+    protected virtual async Task MyFilter(ICommand command, CancellationToken ct)
+    {
+        var context = CommandContext.GetCurrent();
+        // Before
+        try {
+            await context.InvokeRemainingHandlers(ct);
+        }
+        finally {
+            // After
+        }
+    }
+    #endregion
+}
 
 #region PartC_RecSumCommandServiceSession
 public class RecSumCommandService : ICommandService

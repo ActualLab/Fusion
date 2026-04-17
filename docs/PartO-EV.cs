@@ -123,35 +123,50 @@ public class EventConfigExamples
 public record OrderCreatedEventCommand(long OrderId, long CustomerId) : ICommand<Unit>;
 
 // This command will be executed when the event is processed
-// [CommandHandler]
-// public virtual async Task OnOrderCreated(
-//     OrderCreatedEventCommand command, CancellationToken cancellationToken = default)
-// {
-//     // Send notification, update analytics, etc.
-//     await SendOrderConfirmation(command.OrderId, cancellationToken);
-// }
+public class OrderEventProcessor : IComputeService
+{
+    [CommandHandler]
+    public virtual async Task OnOrderCreated(
+        OrderCreatedEventCommand command, CancellationToken cancellationToken = default)
+    {
+        // Send notification, update analytics, etc.
+        await SendOrderConfirmation(command.OrderId, cancellationToken);
+    }
+
+    private Task SendOrderConfirmation(long orderId, CancellationToken ct) => Task.CompletedTask;
+}
 #endregion
 
 public class EventLogReaderConfigExample
 {
-    #region PartOEV_EventLogReaderConfig
-    // db.AddOperations(operations => {
-    //     operations.ConfigureEventLogReader(_ => new() {
-    //         CheckPeriod = TimeSpan.FromSeconds(5).ToRandom(0.1),
-    //         BatchSize = 64,
-    //         ConcurrencyLevel = Environment.ProcessorCount * 4,
-    //     });
-    // });
-    #endregion
+    public static void ReaderExample(IServiceCollection services)
+    {
+        services.AddDbContextServices<AppDbContextExtended>(db => {
+            #region PartOEV_EventLogReaderConfig
+            db.AddOperations(operations => {
+                operations.ConfigureEventLogReader(_ => new() {
+                    CheckPeriod = TimeSpan.FromSeconds(5).ToRandom(0.1),
+                    BatchSize = 64,
+                    ConcurrencyLevel = Environment.ProcessorCount * 4,
+                });
+            });
+            #endregion
+        });
+    }
 
-    #region PartOEV_EventLogTrimmerConfig
-    // db.AddOperations(operations => {
-    //     operations.ConfigureEventLogTrimmer(_ => new() {
-    //         MaxEntryAge = TimeSpan.FromHours(1),  // Keep events for 1 hour
-    //         CheckPeriod = TimeSpan.FromMinutes(15).ToRandom(0.25),
-    //     });
-    // });
-    #endregion
+    public static void TrimmerExample(IServiceCollection services)
+    {
+        services.AddDbContextServices<AppDbContextExtended>(db => {
+            #region PartOEV_EventLogTrimmerConfig
+            db.AddOperations(operations => {
+                operations.ConfigureEventLogTrimmer(_ => new() {
+                    MaxEntryAge = TimeSpan.FromHours(1),  // Keep events for 1 hour
+                    CheckPeriod = TimeSpan.FromMinutes(15).ToRandom(0.25),
+                });
+            });
+            #endregion
+        });
+    }
 }
 
 public class CustomEventValuesExample
@@ -178,9 +193,12 @@ public class CustomEventValuesExample
 #region PartOEV_IHasUuidExample
 public record OrderEvent(string Uuid, long OrderId) : IHasUuid;
 
-// Usage:
-// UUID is taken from the event value
-// context.Operation.AddEvent(new OrderEvent($"order-{orderId}", orderId));
+// Usage: UUID is taken from the event value
+public static class OrderEventUsage
+{
+    public static void Example(CommandContext context, long orderId)
+        => context.Operation.AddEvent(new OrderEvent($"order-{orderId}", orderId));
+}
 #endregion
 
 // Helper types

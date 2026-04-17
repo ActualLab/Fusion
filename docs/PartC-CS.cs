@@ -20,18 +20,24 @@ public record CreateOrderCommand(long UserId, List<OrderItem> Items) : ICommand<
 public record DeleteOrderCommand(long OrderId) : ICommand<Unit>;
 #endregion
 
-#region PartCCS_RegisterCommandR
-// var services = new ServiceCollection();
+public static class RegistrationExamples
+{
+    public static void RegisterCommandR()
+    {
+        #region PartCCS_RegisterCommandR
+        var services = new ServiceCollection();
 
-// Add CommandR
-// var commander = services.AddCommander();
+        // Add CommandR
+        var commander = services.AddCommander();
 
-// Add handler classes
-// commander.AddHandlers<OrderHandlers>();
+        // Add handler classes
+        commander.AddHandlers<OrderHandlers>();
 
-// Add command services (creates proxy)
-// commander.AddService<OrderService>();
-#endregion
+        // Add command services (creates proxy)
+        commander.AddService<OrderService>();
+        #endregion
+    }
+}
 
 #region PartCCS_InterfaceBasedHandler
 public class CreateOrderHandler : ICommandHandler<CreateOrderCommand>
@@ -88,99 +94,132 @@ public class OrderService : ICommandService
 // await orderService.CreateOrder(...); // Throws NotSupportedException!
 #endregion
 
-#region PartCCS_FilterHandler
-// [CommandHandler(Priority = 100, IsFilter = true)]
-// public async Task LoggingFilter(ICommand command, CancellationToken ct)
-// {
-//     var context = CommandContext.GetCurrent();
-//     Console.WriteLine($"Before: {command.GetType().Name}");
-//     try {
-//         await context.InvokeRemainingHandlers(ct);
-//     }
-//     finally {
-//         Console.WriteLine($"After: {command.GetType().Name}");
-//     }
-// }
-#endregion
+public class LoggingFilterService : ICommandService
+{
+    #region PartCCS_FilterHandler
+    [CommandHandler(Priority = 100, IsFilter = true)]
+    public virtual async Task LoggingFilter(ICommand command, CancellationToken ct)
+    {
+        var context = CommandContext.GetCurrent();
+        Console.WriteLine($"Before: {command.GetType().Name}");
+        try {
+            await context.InvokeRemainingHandlers(ct);
+        }
+        finally {
+            Console.WriteLine($"After: {command.GetType().Name}");
+        }
+    }
+    #endregion
+}
 
-#region PartCCS_ExecutingCommands
-// var commander = services.Commander();
+public static class ExecutingCommandsExample
+{
+    public static async Task Run(IServiceProvider services, CancellationToken ct = default)
+    {
+        #region PartCCS_ExecutingCommands
+        var commander = services.Commander();
+        var cmd = new CreateOrderCommand(1, new List<OrderItem>());
 
-// Call - returns result, throws on error
-// var order = await commander.Call(new CreateOrderCommand(...), ct);
+        // Call - returns result, throws on error
+        var order = await commander.Call(cmd, ct);
 
-// Run - returns context, never throws
-// var context = await commander.Run(new CreateOrderCommand(...), ct);
-// if (context.UntypedResult is { Error: { } error })
-//     Console.WriteLine($"Error: {error}");
+        // Run - returns context, never throws
+        var context = await commander.Run(cmd, ct);
+        if (context.UntypedResult.Error is { } error)
+            Console.WriteLine($"Error: {error}");
 
-// Start - fire and forget
-// var context = commander.Start(new CreateOrderCommand(...));
-#endregion
+        // Start - fire and forget
+        var startedContext = commander.Start(cmd);
+        #endregion
+        _ = order; _ = startedContext;
+    }
+}
 
-#region PartCCS_CommandContext
-// [CommandHandler]
-// public async Task<Order> CreateOrder(CreateOrderCommand command, CancellationToken ct)
-// {
-//     var context = CommandContext.GetCurrent();
+public class CommandContextExampleService : ICommandService
+{
+    #region PartCCS_CommandContext
+    [CommandHandler]
+    public virtual async Task<Order> CreateOrder(CreateOrderCommand command, CancellationToken ct)
+    {
+        var context = CommandContext.GetCurrent();
 
-//     // Access services
-//     var db = context.Services.GetRequiredService<AppDbContext>();
+        // Access services
+        var db = context.Services.GetRequiredService<IOrderRepository>();
 
-//     // Store data for other handlers
-//     context.Items["Key"] = value;
+        // Store data for other handlers
+        context.Items["Key"] = command.UserId;
 
-//     // Access outer context (for nested commands)
-//     var root = context.OutermostContext;
+        // Access outer context (for nested commands)
+        var root = context.OutermostContext;
 
-//     // Share data across nested calls
-//     root.Items["SharedKey"] = sharedValue;
+        // Share data across nested calls
+        root.Items["SharedKey"] = command.Items;
 
-//     // Get commander
-//     var commander = context.Commander;
-// }
-#endregion
+        // Get commander
+        var commander = context.Commander;
+        return await db.Create(command, ct);
+    }
+    #endregion
+}
 
-#region PartCCS_LocalCommands
-// Using LocalCommand factory
-// var cmd = LocalCommand.New(() => Console.WriteLine("Hello"));
-// var cmd = LocalCommand.New(async ct => await DoWorkAsync(ct));
-// var cmd = LocalCommand.New<int>(() => 42);
+public static class LocalCommandsExample
+{
+    public static async Task Run(ICommander commander, CancellationToken ct = default)
+    {
+        #region PartCCS_LocalCommands
+        // Using LocalCommand factory
+        var cmd1 = LocalCommand.New(() => Console.WriteLine("Hello"));
+        var cmd2 = LocalCommand.New(async ct1 => await DoWorkAsync(ct1));
+        var cmd3 = LocalCommand.New<int>(() => 42);
 
-// await commander.Call(cmd);
-#endregion
+        await commander.Call(cmd1, ct);
+        #endregion
+        _ = cmd2; _ = cmd3;
+    }
+
+    private static Task DoWorkAsync(CancellationToken ct) => Task.CompletedTask;
+}
 
 #region PartCCS_PreparedCommands
-// public record CreateOrderCommand(...) : IPreparedCommand, ICommand<Order>
-// {
-//     public Task Prepare(CommandContext context, CancellationToken ct)
-//     {
-//         if (Items.Count == 0)
-//             throw new ArgumentException("Order must have items");
-//         return Task.CompletedTask;
-//     }
-// }
+public record ValidatedOrderCommand(long UserId, List<OrderItem> Items)
+    : IPreparedCommand, ICommand<Order>
+{
+    public Task Prepare(CommandContext context, CancellationToken ct)
+    {
+        if (Items.Count == 0)
+            throw new ArgumentException("Order must have items");
+        return Task.CompletedTask;
+    }
+}
 #endregion
 
-#region PartCCS_WithOperationsFramework
-// [CommandHandler]
-// public virtual async Task<Order> CreateOrder(
-//     CreateOrderCommand command, CancellationToken ct)
-// {
-//     // Invalidation block (runs on all hosts)
-//     if (Invalidation.IsActive) {
-//         _ = GetOrders(command.UserId, default);
-//         return default!;
-//     }
+public class OperationsFrameworkExampleService : IComputeService
+{
+    #region PartCCS_WithOperationsFramework
+    [CommandHandler]
+    public virtual async Task<Order> CreateOrder(
+        CreateOrderCommand command, CancellationToken ct)
+    {
+        // Invalidation block (runs on all hosts)
+        if (Invalidation.IsActive) {
+            _ = GetOrders(command.UserId, default);
+            return default!;
+        }
 
-//     // Main logic (runs on originating host only)
-//     await using var db = await DbHub.CreateOperationDbContext(ct);
-//     var order = new Order { ... };
-//     db.Orders.Add(order);
-//     await db.SaveChangesAsync(ct);
-//     return order;
-// }
-#endregion
+        // Main logic (runs on originating host only)
+        // await using var db = await DbHub.CreateOperationDbContext(ct);
+        var order = new Order();
+        // db.Orders.Add(order);
+        // await db.SaveChangesAsync(ct);
+        await Task.CompletedTask;
+        return order;
+    }
+    #endregion
+
+    [ComputeMethod]
+    public virtual Task<Order[]> GetOrders(long userId, CancellationToken ct)
+        => Task.FromResult(Array.Empty<Order>());
+}
 
 // Helper types
 public record Order;

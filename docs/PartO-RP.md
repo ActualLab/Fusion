@@ -10,10 +10,12 @@ This is essential for handling temporary failures like:
 
 ## Enabling Reprocessing
 
+<!-- snippet: PartORP_EnableReprocessor -->
 ```cs
 var fusion = services.AddFusion();
 fusion.AddOperationReprocessor();  // Enable operation reprocessing
 ```
+<!-- endSnippet -->
 
 
 ## How It Works
@@ -29,13 +31,15 @@ fusion.AddOperationReprocessor();  // Enable operation reprocessing
 
 ## Configuration Options
 
+<!-- snippet: PartORP_Configuration -->
 ```cs
 fusion.AddOperationReprocessor(_ => new() {
     MaxRetryCount = 3,  // Default: 3
     RetryDelays = RetryDelaySeq.Exp(0.50, 3, 0.33),  // Exponential backoff
-    Filter = (command, context) => /* custom filter */,
+    Filter = (command, context) => true,  // custom filter
 });
 ```
+<!-- endSnippet -->
 
 ### Options Reference
 
@@ -51,23 +55,28 @@ fusion.AddOperationReprocessor(_ => new() {
 
 The default retry delays use exponential backoff:
 
+<!-- snippet: PartORP_RetryDelays -->
 ```cs
-RetryDelaySeq.Exp(0.50, 3, 0.33)
+// RetryDelaySeq.Exp(0.50, 3, 0.33)
 // Base: 0.5 seconds
 // Max multiplier: 3x
 // Jitter: ±33%
-
+//
 // Produces delays approximately:
 // Retry 1: ~0.5s (0.33s - 0.67s)
 // Retry 2: ~1.65s (1.1s - 2.2s)
 // Retry 3: ~5.45s (3.6s - 7.3s)
+var delays = RetryDelaySeq.Exp(0.50, 3, 0.33);
+_ = delays;
 ```
+<!-- endSnippet -->
 
 
 ## Default Filter
 
 The default filter determines which commands can be retried:
 
+<!-- snippet: PartORP_DefaultFilter -->
 ```cs
 public static bool DefaultFilter(ICommand command, CommandContext context)
 {
@@ -80,13 +89,14 @@ public static bool DefaultFilter(ICommand command, CommandContext context)
         return false;
 
     // Skip scoped Commander commands (UI commands)
-    if (context.Commander.Hub.IsScoped)
+    if (context.Commander.Services.IsScoped())
         return false;
 
     // Only root-level commands
     return true;
 }
 ```
+<!-- endSnippet -->
 
 
 ## Filtering Conditions
@@ -121,11 +131,13 @@ See [Transiency documentation](./PartCore-Transiency.md) for details on how exce
 Some errors are classified as **super-transient**, meaning they can retry indefinitely
 (ignoring `MaxRetryCount`):
 
+<!-- snippet: PartORP_SuperTransient -->
 ```cs
 // Super-transient errors retry without limit
 if (transiency == Transiency.SuperTransient)
     return true;  // Always retry
 ```
+<!-- endSnippet -->
 
 This is useful for errors like:
 - Connection pool exhausted (will resolve when connections free up)
@@ -136,12 +148,13 @@ This is useful for errors like:
 
 Register custom error classifiers:
 
+<!-- snippet: PartORP_CustomTransiencyResolver -->
 ```cs
-services.AddSingleton<ITransiencyResolver<IOperationReprocessor>, MyTransiencyResolver>();
-
-public class MyTransiencyResolver : ITransiencyResolver<IOperationReprocessor>
+// Register: services.AddSingleton<TransiencyResolver<IOperationReprocessor>>(
+//     _ => MyTransiencyResolver.Resolve);
+public static class MyTransiencyResolver
 {
-    public Transiency GetTransiency(Exception error)
+    public static Transiency Resolve(Exception error)
     {
         if (error is MyCustomRetryableException)
             return Transiency.Transient;
@@ -153,6 +166,7 @@ public class MyTransiencyResolver : ITransiencyResolver<IOperationReprocessor>
     }
 }
 ```
+<!-- endSnippet -->
 
 
 ## Context Reset on Retry
@@ -187,6 +201,7 @@ Reprocessing logs warnings for retries:
 
 ## Example: Custom Retry Policy
 
+<!-- snippet: PartORP_CustomRetryPolicy -->
 ```cs
 fusion.AddOperationReprocessor(_ => new() {
     MaxRetryCount = 5,
@@ -199,10 +214,11 @@ fusion.AddOperationReprocessor(_ => new() {
             return false;
 
         // Don't retry commands from specific users
-        if (command is IUserCommand userCmd && userCmd.UserId == SpecialUserId)
+        if (command is IUserCommand userCmd && userCmd.UserId == SpecialUsers.SpecialUserId)
             return false;
 
-        return OperationReprocessor.DefaultFilter(command, context);
+        return OperationReprocessor.Options.DefaultFilter(command, context);
     },
 });
 ```
+<!-- endSnippet -->

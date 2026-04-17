@@ -38,9 +38,11 @@ public static class DbOperationStorage
     public static void DefaultSerializerExample()
     {
         #region PartOSerialization_DefaultSerializer
-        // From DbOperation.cs
-        // public static ITextSerializer Serializer { get; set; } = NewtonsoftJsonSerializer.Default;
+        // DbOperation.Serializer is a static, mutable property.
+        // Its default value is NewtonsoftJsonSerializer.Default.
+        ITextSerializer serializer = DbOperation.Serializer;
         #endregion
+        _ = serializer;
     }
 
     public static void ItemsSerializationExample(Operation operation)

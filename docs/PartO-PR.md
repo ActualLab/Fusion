@@ -25,6 +25,7 @@ mechanism for instant notifications.
 
 ### Setup
 
+<!-- snippet: PartOPR_NpgsqlSetup -->
 ```cs
 services.AddDbContextServices<AppDbContext>(db => {
     db.AddOperations(operations => {
@@ -32,16 +33,19 @@ services.AddDbContextServices<AppDbContext>(db => {
     });
 });
 ```
+<!-- endSnippet -->
 
 ### Configuration
 
+<!-- snippet: PartOPR_NpgsqlConfiguration -->
 ```cs
 operations.AddNpgsqlOperationLogWatcher(_ => new() {
     ChannelNameFormatter = (shard, entryType) =>
-        $"myapp_{entryType.Name}{(shard.IsNone() ? "" : $"_{shard}")}",
+        $"myapp_{entryType.Name}{(DbShard.IsSingle(shard) ? "" : $"_{shard}")}",
     TrackerRetryDelays = RetryDelaySeq.Exp(1, 10),
 });
 ```
+<!-- endSnippet -->
 
 ### Options Reference
 
@@ -96,6 +100,7 @@ Uses Redis Pub/Sub for instant notifications. Works with any database type.
 
 ### Setup
 
+<!-- snippet: PartOPR_RedisSetup -->
 ```cs
 services.AddDbContextServices<AppDbContext>(db => {
     // First, configure Redis connection
@@ -106,16 +111,19 @@ services.AddDbContextServices<AppDbContext>(db => {
     });
 });
 ```
+<!-- endSnippet -->
 
 ### Configuration
 
+<!-- snippet: PartOPR_RedisConfiguration -->
 ```cs
 operations.AddRedisOperationLogWatcher(_ => new() {
     PubSubKeyFormatter = (shard, entryType) =>
-        $"myapp.{entryType.Name}{(shard.IsNone() ? "" : $".{shard}")}",
+        $"myapp.{entryType.Name}{(DbShard.IsSingle(shard) ? "" : $".{shard}")}",
     WatchRetryDelays = RetryDelaySeq.Exp(1, 10),
 });
 ```
+<!-- endSnippet -->
 
 ### Options Reference
 
@@ -158,6 +166,7 @@ Uses file system change notifications for cross-process communication on a singl
 
 ### Setup
 
+<!-- snippet: PartOPR_FileSystemSetup -->
 ```cs
 services.AddDbContextServices<AppDbContext>(db => {
     db.AddOperations(operations => {
@@ -165,17 +174,20 @@ services.AddDbContextServices<AppDbContext>(db => {
     });
 });
 ```
+<!-- endSnippet -->
 
 ### Configuration
 
+<!-- snippet: PartOPR_FileSystemConfiguration -->
 ```cs
 operations.AddFileSystemOperationLogWatcher(_ => new() {
     FilePathFormatter = (shard, entryType) =>
         Path.Combine(
             Path.GetTempPath(),
-            $"myapp_{entryType.Name}{(shard.IsNone() ? "" : $"_{shard}")}.tracker"),
+            $"myapp_{entryType.Name}{(DbShard.IsSingle(shard) ? "" : $"_{shard}")}.tracker"),
 });
 ```
+<!-- endSnippet -->
 
 ### Options Reference
 
@@ -232,12 +244,15 @@ by relying on polling only.
 
 When you don't configure any watcher:
 
+<!-- snippet: PartOPR_FakeWatcher -->
 ```cs
+// When you don't configure any watcher:
 db.AddOperations(operations => {
     // No AddXxxOperationLogWatcher call
     // FakeDbLogWatcher is used automatically
 });
 ```
+<!-- endSnippet -->
 
 ### Impact
 
@@ -297,25 +312,34 @@ while relying on polling for events from other hosts.
 You can only have **one watcher per log type** (operations, events). The last one
 configured wins:
 
+<!-- snippet: PartOPR_MultipleWatchers -->
 ```cs
 db.AddOperations(operations => {
     operations.AddFileSystemOperationLogWatcher();  // Overwritten
     operations.AddNpgsqlOperationLogWatcher();       // This one is used
 });
 ```
+<!-- endSnippet -->
 
 ## Custom Watcher Implementation
 
 You can implement your own watcher for other message brokers:
 
+<!-- snippet: PartOPR_CustomWatcher -->
 ```cs
-public class KafkaDbLogWatcher<TDbContext, TDbEntry> : DbLogWatcher<TDbContext, TDbEntry>
+// You can implement your own watcher for other message brokers.
+// For example, a Kafka-based watcher:
+public class KafkaDbLogWatcher<TDbContext, TDbEntry>(IServiceProvider services)
+    : DbLogWatcher<TDbContext, TDbEntry>(services)
     where TDbContext : DbContext
 {
-    // Implement NotifyChanged and WhenChanged
-    // using Kafka publish/subscribe
+    // Implement CreateShardWatcher to produce per-shard watchers
+    // that publish/subscribe via Kafka.
+    protected override DbShardWatcher CreateShardWatcher(string shard)
+        => throw new NotImplementedException();
 }
 ```
+<!-- endSnippet -->
 
 See the [PostgreSQL watcher source](https://github.com/ActualLab/Fusion/tree/master/src/ActualLab.Fusion.EntityFramework.Npgsql)
 for a reference implementation (~200 lines of code).
@@ -324,18 +348,22 @@ for a reference implementation (~200 lines of code).
 
 ### Check Watcher Registration
 
+<!-- snippet: PartOPR_CheckWatcherRegistration -->
 ```cs
 var watcher = services.GetService<IDbLogWatcher<AppDbContext, DbOperation>>();
 Console.WriteLine(watcher?.GetType().Name ?? "No watcher registered");
 ```
+<!-- endSnippet -->
 
 ### Enable Tracing
 
+<!-- snippet: PartOPR_EnableTracing -->
 ```cs
 operations.ConfigureOperationLogReader(_ => new() {
     IsTracingEnabled = true,  // Enables Activity tracing
 });
 ```
+<!-- endSnippet -->
 
 ### Log Levels
 

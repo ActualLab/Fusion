@@ -25,11 +25,13 @@ These handlers are registered automatically when you call `AddCommander()`.
 
 Handles commands implementing `IPreparedCommand` by calling their `Prepare` method before invoking remaining handlers.
 
+<!-- snippet: PartCBH_PreparedCommandHandlerReg -->
 ```cs
 // Registration (automatic in AddCommander)
 services.AddSingleton(_ => new PreparedCommandHandler());
 commander.AddHandlers<PreparedCommandHandler>();
 ```
+<!-- endSnippet -->
 
 ### CommandTracer
 
@@ -37,11 +39,13 @@ commander.AddHandlers<PreparedCommandHandler>();
 
 Provides diagnostic tracing and activity tracking for command execution. Creates OpenTelemetry activities for observability and logs errors.
 
+<!-- snippet: PartCBH_CommandTracerReg -->
 ```cs
 // Registration (automatic in AddCommander)
 services.AddSingleton(c => new CommandTracer(c));
 commander.AddHandlers<CommandTracer>();
 ```
+<!-- endSnippet -->
 
 ### LocalCommandRunner
 
@@ -49,11 +53,13 @@ commander.AddHandlers<CommandTracer>();
 
 Executes commands implementing `ILocalCommand` by calling their `Run` method.
 
+<!-- snippet: PartCBH_LocalCommandRunnerReg -->
 ```cs
 // Registration (automatic in AddCommander)
 services.AddSingleton(_ => new LocalCommandRunner());
 commander.AddHandlers<LocalCommandRunner>();
 ```
+<!-- endSnippet -->
 
 ### RpcCommandHandler
 
@@ -61,11 +67,13 @@ commander.AddHandlers<LocalCommandRunner>();
 
 Routes commands to RPC services when appropriate. Handles distributed command execution and automatic rerouting to the correct server.
 
+<!-- snippet: PartCBH_RpcCommandHandlerReg -->
 ```cs
 // Registration (automatic in AddCommander)
 services.AddSingleton(c => new RpcCommandHandler(c));
 commander.AddHandlers<RpcCommandHandler>();
 ```
+<!-- endSnippet -->
 
 ## Fusion Operations Framework Handlers
 
@@ -87,10 +95,12 @@ These handlers are registered when you call `AddFusion()`. They implement multi-
 
 Retries failed commands with transient errors using configurable retry policies.
 
+<!-- snippet: PartCBH_OperationReprocessorReg -->
 ```cs
 // Registration (optional, via AddOperationReprocessor)
 fusion.AddOperationReprocessor();
 ```
+<!-- endSnippet -->
 
 See [Part 5: Operations Framework](PartO.md) for details.
 
@@ -100,11 +110,13 @@ See [Part 5: Operations Framework](PartO.md) for details.
 
 Captures nested command invocations and logs them for invalidation replay on other hosts.
 
+<!-- snippet: PartCBH_NestedOperationLoggerReg -->
 ```cs
 // Registration (automatic in AddFusion)
 services.AddSingleton(c => new NestedOperationLogger(c));
 commander.AddHandlers<NestedOperationLogger>();
 ```
+<!-- endSnippet -->
 
 See [Part 5: Operations Framework](PartO.md) for details.
 
@@ -114,11 +126,13 @@ See [Part 5: Operations Framework](PartO.md) for details.
 
 Provides in-memory operation scopes for commands that don't use database-backed operation scopes. Also triggers operation completion notifications.
 
+<!-- snippet: PartCBH_InMemoryOperationScopeProviderReg -->
 ```cs
 // Registration (automatic in AddFusion)
 services.AddSingleton(c => new InMemoryOperationScopeProvider(c));
 commander.AddHandlers<InMemoryOperationScopeProvider>();
 ```
+<!-- endSnippet -->
 
 See [Part 5: Operations Framework](PartO.md) for details.
 
@@ -128,12 +142,15 @@ See [Part 5: Operations Framework](PartO.md) for details.
 
 Handles command completion by running the invalidation pass. Re-executes the original command and its nested commands in invalidation mode.
 
+<!-- snippet: PartCBH_InvalidatingCommandCompletionHandlerReg -->
 ```cs
 // Registration (automatic in AddFusion)
 services.AddSingleton(_ => new InvalidatingCommandCompletionHandler.Options());
-services.AddSingleton(c => new InvalidatingCommandCompletionHandler(...));
+services.AddSingleton(c => new InvalidatingCommandCompletionHandler(
+    c.GetRequiredService<InvalidatingCommandCompletionHandler.Options>(), c));
 commander.AddHandlers<InvalidatingCommandCompletionHandler>();
 ```
+<!-- endSnippet -->
 
 See [Part 5: Operations Framework](PartO.md) for details.
 
@@ -143,11 +160,13 @@ See [Part 5: Operations Framework](PartO.md) for details.
 
 Terminal handler for completion commands. Ensures the completion pipeline has a final handler.
 
+<!-- snippet: PartCBH_CompletionTerminatorReg -->
 ```cs
 // Registration (automatic in AddFusion)
 services.AddSingleton(_ => new CompletionTerminator());
 commander.AddHandlers<CompletionTerminator>();
 ```
+<!-- endSnippet -->
 
 ## Entity Framework Handlers
 
@@ -165,6 +184,7 @@ These handlers are registered when you call `AddOperations()` on a `DbContextBui
 
 Provides database operation scopes for database-backed operations. Manages transactions and ensures operations are logged to the database.
 
+<!-- snippet: PartCBH_DbOperationScopeProviderReg -->
 ```cs
 // Registration (via AddOperations on DbContextBuilder)
 services.AddDbContextServices<AppDbContext>(db => {
@@ -173,6 +193,7 @@ services.AddDbContextServices<AppDbContext>(db => {
     });
 });
 ```
+<!-- endSnippet -->
 
 See [Part 5: Operations Framework](PartO.md) for details.
 
@@ -252,6 +273,7 @@ Completion Command
 
 A filter handler wraps subsequent handlers (like middleware):
 
+<!-- snippet: PartCBH_FilterHandlerExample -->
 ```cs
 public class LoggingHandler : ICommandHandler<ICommand>
 {
@@ -268,15 +290,17 @@ public class LoggingHandler : ICommandHandler<ICommand>
     }
 }
 
-// Registration
-services.AddSingleton<LoggingHandler>();
-commander.AddHandlers<LoggingHandler>();
+// Registration:
+// services.AddSingleton<LoggingHandler>();
+// commander.AddHandlers<LoggingHandler>();
 ```
+<!-- endSnippet -->
 
 ### Final Handler
 
 A final handler doesn't call `InvokeRemainingHandlers`:
 
+<!-- snippet: PartCBH_FinalHandlerExample -->
 ```cs
 public class MyCommandHandler : ICommandHandler<MyCommand>
 {
@@ -285,8 +309,11 @@ public class MyCommandHandler : ICommandHandler<MyCommand>
         // Handle the command - don't call InvokeRemainingHandlers
         await DoWork(command, ct);
     }
+
+    private Task DoWork(MyCommand command, CancellationToken ct) => Task.CompletedTask;
 }
 ```
+<!-- endSnippet -->
 
 ## Priority Guidelines
 
