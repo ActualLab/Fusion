@@ -207,7 +207,7 @@ This is only relevant for **distributed services** (`RpcServiceMode.Distributed`
 |------|----------------------|-----------------|-------------------|----------|
 | `Unconstrained` | Not awaited | None | Original token | Non-distributed services, simple calls |
 | `ConstrainedEntry` | Awaited once | At entry point only | Original token | Compute services, where late reroutes are acceptable |
-| `Constrained` | Awaited | At entry + during execution | Linked to `ChangedToken` | Long-running calls that must abort on reroute |
+| `Constrained` | Awaited | At entry + during execution | Linked to `RpcRouteState.ChangedToken` | Long-running calls that must abort on reroute |
 
 ### How It Works
 

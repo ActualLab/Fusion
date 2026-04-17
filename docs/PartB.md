@@ -168,6 +168,16 @@ The component also optimizes the Blazor lifecycle:
 | `ComputeState(CancellationToken)` | Abstract method | Override to define how state is computed |
 | `GetStateOptions()` | Virtual method | Override to customize state options (initial value, category, etc.) |
 
+### SynchronizationContext Differences
+
+The flag `ComputeStateOnThreadPool` is relevant only on Blazor Server. Here's how `SynchronizationContext` behaves across hosting models:
+
+- **Blazor Server**: Has a per-circuit `SynchronizationContext`; UI updates are automatically marshalled to the circuit dispatcher, so `StateHasChanged()` is safe to call from any thread.
+- **Blazor WASM**: Single-threaded; no synchronization context is needed. All code already runs on the UI thread.
+- **Auto/Hybrid**: Follows the active circuit type — Server behaviour when running as Server, WASM behaviour when running as WebAssembly.
+
+By default, `ComputeState` runs on the Blazor dispatcher. Set `ComputeStateOnThreadPool` in `Options` to move the computation to the thread pool, which avoids blocking the dispatcher during long-running computations.
+
 ### ComputedStateComponentOptions Flags
 
 | Flag | Description |

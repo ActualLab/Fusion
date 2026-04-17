@@ -281,6 +281,35 @@ Key points:
 - Must call `InvokeRemainingHandlers` to continue the pipeline
 - Can handle specific command types or `ICommand` for all commands
 
+## Local Commands
+
+`ILocalCommand` is a self-executing command: instead of delegating to a registered handler,
+it carries its own `Run(context, ct)` logic. The built-in `LocalCommandRunner` (priority 900,000,000)
+dispatches it automatically — no handler registration needed.
+
+The `LocalCommand.New(...)` factory builds one from a lambda. Variants accept:
+
+- `Action` / `Action<CancellationToken>` / `Action<CommandContext, CancellationToken>`
+- `Func<Task>` / `Func<CancellationToken, Task>` / `Func<CommandContext, CancellationToken, Task>`
+- Typed result overloads: `Func<T>`, `Func<Task<T>>`, `Func<CommandContext, CancellationToken, Task<T>>`, etc.
+
+```cs
+// Void lambda — fire and forget through the pipeline
+await commander.Call(LocalCommand.New(() => Console.WriteLine("Hello")));
+
+// Async with cancellation token
+await commander.Call(LocalCommand.New(async ct => await DoWorkAsync(ct)));
+
+// Returns a value
+int result = await commander.Call(LocalCommand.New<int>(() => 42));
+```
+
+Use `LocalCommand` when you want ad-hoc work (cleanup, one-off side effects) to flow through
+the command pipeline and get logging, tracing, and filters for free — without defining a
+dedicated command record and handler.
+
+See [Command Interfaces](./PartC-CI.md) and the [Cheat Sheet](./PartC-CS.md) for the full interface listing.
+
 ## Learn More
 
 - [Command Interfaces](./PartC-CI.md) &ndash; All command interfaces and tagging interfaces

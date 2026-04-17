@@ -294,9 +294,10 @@ Operations Framework adds several filtering handlers to the command pipeline:
 
 | Priority | Handler | Purpose |
 |----------|---------|---------|
+| 100,000 | `OperationReprocessor` | Retries commands that fail with transient errors |
 | 11,000 | `NestedOperationLogger` | Logs nested commands and their items |
 | 10,000 | `InMemoryOperationScopeProvider` | Provides transient scope, runs completion |
-| 1,000 | `DbOperationScopeProvider<T>` | Provides database scope for each DbContext type |
+| 1,000 | `DbOperationScopeProvider` | Provides database scope for each DbContext type |
 | 100 | `InvalidatingCommandCompletionHandler` | Runs invalidation for completed operations |
 
 ## Backend Commands

@@ -26,6 +26,16 @@ This means the UI is highly responsive when a user performs actions (showing res
 | `Run<TResult>(command)` | `Task<UIActionResult<TResult>>` | Executes command, returns full result with metadata |
 | `Start<TResult>(command)` | `UIAction<TResult>` | Starts command (fire-and-forget style), returns immediately |
 
+### Error Propagation
+
+The three methods differ in how they surface errors:
+
+- **`Call<T>(command)`** — awaits execution and **throws** any exception directly to the caller.
+- **`Run<T>(command)`** — returns `Task<UIActionResult<T>>`; the result's `Error` property holds any exception. The task itself never throws (errors are captured).
+- **`Start<T>(command)`** — fire-and-forget; returns a `UIAction<T>` immediately. Errors are captured in the action result and accessible via `UIActionTracker.LastResult`.
+
+Use `Run` when you want to inspect or display errors inline; use `Call` when a thrown exception is more natural; use `Start` for truly fire-and-forget scenarios where the result is tracked centrally.
+
 ### Usage Example
 
 From [TodoApp/UI/Shared/TodoItemView.razor](https://github.com/ActualLab/Fusion.Samples/blob/master/src/TodoApp/UI/Shared/TodoItemView.razor):

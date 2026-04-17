@@ -206,17 +206,17 @@ public virtual async Task<Session> GetOrCreateSession(HttpContext httpContext)
 
 See [SessionMiddleware.cs:54](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Fusion.Server/Middlewares/SessionMiddleware.cs#L54) for the actual source.
 
-The `Session` class in itself is very simple, it stores a single `Symbol Id` value. `Symbol` is a struct storing a string with its cached `HashCode`, its only role is to speedup dictionary lookups when it's used. Besides that, `Session` overrides equality &ndash; they're compared by `Id`.
+The `Session` class in itself is very simple, it stores a single `string Id` value. Besides that, `Session` overrides equality &ndash; they're compared by `Id`.
 
 ```cs
-public sealed class Session : IHasId<Symbol>, IEquatable<Session>,
-    IConvertibleTo<string>, IConvertibleTo<Symbol>
+public sealed class Session : IHasId<string>, IEquatable<Session>,
+    IConvertibleTo<string>
 {
     public static Session Null { get; } = null!; // To gracefully bypass some nullability checks
     public static Session Default { get; } = new("~"); // We'll cover this later
 
     [DataMember(Order = 0)]
-    public Symbol Id { get; }
+    public string Id { get; }
     ...
 }
 ```

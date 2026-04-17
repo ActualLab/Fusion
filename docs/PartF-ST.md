@@ -44,7 +44,7 @@ StateFactory.Default = myServiceProvider.StateFactory();
 
 `StateFactory` has an `IsScoped` property indicating whether it was resolved from a scoped service provider. This is mainly relevant in Blazor scenarios where scoped services are per-circuit.
 
-The registration uses `AddScopedOrSingleton`, which registers `StateFactory` as transient but returns either a singleton or scoped instance based on where you resolve from:
+The registration uses `AddScopedOrSingleton`, which registers a `StateFactory` that resolves as singleton at the root scope and as scoped within a scope (via `AddScopedOrSingleton`):
 
 ```csharp
 services.AddScopedOrSingleton((c, isScoped) => new StateFactory(c, isScoped));

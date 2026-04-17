@@ -37,6 +37,10 @@ This document covers the core services that power Fusion's Blazor integration: `
 | `RenderMode` | `RenderModeDef` | Current render mode definition |
 | `WhenInitialized` | `Task` | Completes when CircuitHub is initialized |
 
+### Disposal Lifecycle
+
+`CircuitHub` is a **scoped** service tied to a single Blazor circuit. It is disposed automatically when the circuit ends — on server disconnect, page close, or navigation away from an interactive page. Any resource registered with or owned by `CircuitHub` should implement `IDisposable` or `IAsyncDisposable` so it is cleaned up correctly when the circuit terminates.
+
 ### Initialization
 
 CircuitHub must be initialized with a dispatcher and render mode. This typically happens automatically in `CircuitHubComponentBase`:

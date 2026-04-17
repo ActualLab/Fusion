@@ -20,7 +20,11 @@ Each combination of these is packaged as an `RpcSerializationFormat`.
 | Format | Key | Description |
 |--------|-----|-------------|
 | `SystemJsonV5` | `json5` | System.Text.Json with V4 arguments, V3 messages |
+| `SystemJsonV5NP` | `json5np` | System.Text.Json, no-polymorphism variant (plain JSON, no `TypeRef` wrapper) |
 | `NewtonsoftJsonV5` | `njson5` | Newtonsoft.Json with V4 arguments, V3 messages |
+| `NewtonsoftJsonV5NP` | `njson5np` | Newtonsoft.Json, no-polymorphism variant (plain JSON, no `TypeRef` wrapper) |
+
+The "NP" (no-polymorphism) variants skip the type-decorating `TypeRef` wrapper entirely, producing plain JSON without type metadata. Use them when all argument and result types are concrete (non-abstract) and no polymorphic dispatch is needed.
 
 ### Binary Formats (MemoryPack)
 

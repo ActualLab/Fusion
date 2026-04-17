@@ -213,6 +213,12 @@ Keep showing last valid data while error occurs:
 ```
 
 
+## IComputedState&lt;T&gt; vs ComputedState&lt;T&gt;
+
+- **`IComputedState<T>`** — the interface; use it in method signatures, DI registrations, and unit tests to avoid coupling to a concrete type.
+- **`ComputedState<T>`** — the abstract base class that implements the interface; extend it when you need a fully custom implementation.
+- **`StateFactory.NewComputed<T>(options, compute)`** — the normal way to obtain a concrete, delegate-backed `ComputedState<T>` without subclassing.
+
 ## Authentication
 
 ```razor

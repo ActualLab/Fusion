@@ -150,7 +150,7 @@ counters.Increment("a"); // Prints: Increment(a)
 // That's why Sum(a, b) is going to be recomputed on the next call, as well as Get(a),
 // which is called by Sum(a, b).
 await counters.Sum("a", "b"); // Prints: Get(a) = 2, Sum(a, b) = 2
-await counters.Sum("a", "b"); // Prints nothing, it's a cache hit; the result is 0
+await counters.Sum("a", "b"); // Prints nothing, it's a cache hit; the result is 2
 
 // Even though we expect Sum(a, b) == Sum(b, a), Fusion doesn't know that.
 // Remember, "cache key" for any compute method call is (service, method, args...),
@@ -203,7 +203,9 @@ var newComputedForSumAB = await computedForSumAB.Update();
 WriteLine(newComputedForSumAB.IsConsistent()); // True
 WriteLine(newComputedForSumAB.Value); // 2
 
-// Calling .Update() for consistent Computed<T> returns the same instance
+// .Update() returns the current consistent computed for this call:
+// a NEW instance if the original was invalidated (as on the line below),
+// or the SAME instance if the original is already consistent.
 WriteLine(computedForSumAB == newComputedForSumAB); // False
 WriteLine(newComputedForSumAB == await computedForSumAB.Update()); // True
 
@@ -375,7 +377,8 @@ var result = Result.NewError<int>(new ApplicationException("Just a test"));
 state.Set(1);
 try {
     WriteLine($"Value: {state.Value}, Computed: {state.Computed}");
-    // Accessing state.Value throws ApplicationException
+    // The State was set to an error below, so .Value throws
+    // the stored exception (ApplicationException).
 }
 catch (ApplicationException) {
     WriteLine($"Error: {state.Error?.GetType()}, Computed: {state.Computed}");

@@ -10,6 +10,7 @@ This page contains visual diagrams explaining how Operations Framework works.
 
 | Class | Description |
 |-------|-------------|
+| `OperationReprocessor` | Retries commands that fail with transient errors |
 | `NestedOperationLogger` | Captures nested command calls |
 | `InMemoryOperationScopeProvider` | Provides transient operation scope |
 | `DbOperationScopeProvider` | Provides DB-backed operation scope |
@@ -40,6 +41,7 @@ This page contains visual diagrams explaining how Operations Framework works.
 
 | Handler | Priority | Responsibility |
 |---------|----------|----------------|
+| `OperationReprocessor` | 100,000 | Retries commands that fail with transient errors |
 | `NestedOperationLogger` | 11,000 | Captures nested commands, isolates `Operation.Items` |
 | `InMemoryOperationScopeProvider` | 10,000 | Transient scope, completion handling |
 | `DbOperationScopeProvider` | 1,000 | DB transaction, operation persistence |

@@ -288,9 +288,10 @@ public record UpdateProfileCommand(long UserId, string Name)
 
 | Priority | Handler | Purpose |
 |----------|---------|---------|
+| 100,000 | `OperationReprocessor` | Transient error retry |
 | 11,000 | `NestedOperationLogger` | Nested commands |
 | 10,000 | `InMemoryOperationScopeProvider` | Transient scope |
-| 1,000 | `DbOperationScopeProvider<T>` | DB scope |
+| 1,000 | `DbOperationScopeProvider` | DB scope |
 | 100 | `InvalidatingCommandCompletionHandler` | Invalidation |
 
 ## Common Patterns

@@ -8,7 +8,7 @@ enabling intelligent retry policies throughout Fusion.
 | Type | Description | Source |
 |------|-------------|--------|
 | `Transiency` | Exception classification result | [Transiency.cs](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Resilience/Transiency.cs) |
-| `TransiencyResolver` | Determines if exception is transient | [TransiencyResolver.cs](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Resilience/TransiencyResolver.cs) |
+| `TransiencyResolver` | Delegate that classifies an exception | [TransiencyResolver.cs](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Resilience/TransiencyResolver.cs) |
 | `TransiencyResolvers` | Built-in resolver implementations | [TransiencyResolvers.cs](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Resilience/TransiencyResolvers.cs) |
 | `RetryPolicy` | Configurable retry with backoff | [RetryPolicy.cs](https://github.com/ActualLab/Fusion/blob/master/src/ActualLab.Core/Resilience/RetryPolicy.cs) |
 
@@ -34,27 +34,35 @@ Not all errors should trigger retries:
 ```cs
 public enum Transiency
 {
-    Unknown = 0,      // Not determined
-    Terminal = 1,     // Don't retry
-    Transient = 2,    // Safe to retry
-    SuperTransient = 3 // Retry immediately (no delay)
+    Unknown = 0,     // Treated as NonTransient
+    Transient,       // Safe to retry
+    SuperTransient,  // Transient error requiring infinite retries
+    NonTransient,    // Permanent error — don't retry
+    Terminal,        // Fatal error — stop the whole retry chain
 }
 ```
 
 | Value | Meaning | Typical Action |
 |-------|---------|----------------|
-| `Unknown` | Classification failed | Treat as terminal |
-| `Terminal` | Permanent error | Don't retry, report error |
+| `Unknown` | Classification failed | Treated as `NonTransient` |
 | `Transient` | Temporary error | Retry with backoff |
-| `SuperTransient` | Very temporary | Retry immediately |
+| `SuperTransient` | Very temporary | Retry indefinitely |
+| `NonTransient` | Permanent error | Don't retry, report error |
+| `Terminal` | Fatal error | Don't retry; also stop the enclosing retry chain |
 
 
 ## TransiencyResolver
 
+`TransiencyResolver` is a delegate:
+
+```cs
+public delegate Transiency TransiencyResolver(Exception error);
+```
+
 ### Basic Usage
 
 ```cs
-var resolver = TransiencyResolver.New(services);
+TransiencyResolver resolver = TransiencyResolvers.PreferTransient;
 
 try {
     await DoOperation();
@@ -62,7 +70,7 @@ try {
 catch (Exception ex) {
     var transiency = resolver.Invoke(ex);
 
-    if (transiency.IsTransient()) {
+    if (transiency.IsAnyTransient()) {
         // Retry the operation
         await Task.Delay(backoff);
         await DoOperation();
@@ -74,47 +82,41 @@ catch (Exception ex) {
 }
 ```
 
-### Default Resolver
+### Built-in Resolvers
 
-The default resolver handles common transient exceptions:
+The built-in resolvers handle common transient exceptions:
 
 ```cs
-// Built-in transient exceptions:
-// - OperationCanceledException (SuperTransient)
-// - TimeoutException
-// - SocketException
-// - HttpRequestException (certain status codes)
-// - DbException (certain error codes)
+// Built-in transient exceptions (recognized by all resolvers via CoreOnly):
+// - ITerminalException → Terminal
+// - ISuperTransientException → SuperTransient
+// - ITransientException → Transient
+// - TimeoutException → Transient
+// - RetryPolicyTimeoutException → NonTransient
 
-var resolver = TransiencyResolver.New(services);
+TransiencyResolver resolver = TransiencyResolvers.PreferTransient;
 ```
 
 ### Custom Resolver
 
 ```cs
-// Add custom logic
-var customResolver = TransiencyResolver.New(
-    TransiencyResolvers.PreferTransient,  // Base behavior
-    ex => ex switch {
-        MyCustomException e => e.IsRetryable
-            ? Transiency.Transient
-            : Transiency.Terminal,
-        _ => Transiency.Unknown  // Let other resolvers decide
-    }
-);
+// Add custom logic by assigning a lambda
+TransiencyResolver customResolver = ex => ex switch {
+    MyCustomException e => e.IsRetryable
+        ? Transiency.Transient
+        : Transiency.Terminal,
+    _ => Transiency.Unknown  // Let the fallback decide
+};
 ```
 
 ### Chaining Resolvers
 
-Resolvers can be chained — first non-`Unknown` result wins:
+Resolvers can be chained using the `.Or` extension — first non-`Unknown` result wins:
 
 ```cs
-var resolver = TransiencyResolver.New(
-    // Check custom exceptions first
-    ex => ex is MyException me ? me.Transiency : Transiency.Unknown,
-    // Then fall back to defaults
-    TransiencyResolvers.PreferTransient
-);
+TransiencyResolver resolver = e =>
+    (e is MyException me ? me.Transiency : Transiency.Unknown)
+    .Or(e, TransiencyResolvers.PreferTransient);
 ```
 
 
@@ -122,38 +124,49 @@ var resolver = TransiencyResolver.New(
 
 ### TransiencyResolvers.PreferTransient
 
-Assumes unknown exceptions are transient:
+Assumes unknown exceptions are transient. Used by Fusion's `IComputed` by default:
 
 ```cs
 var resolver = TransiencyResolvers.PreferTransient;
 // Unknown → Transient
 ```
 
-### TransiencyResolvers.PreferTerminal
+### TransiencyResolvers.PreferNonTransient
 
-Assumes unknown exceptions are terminal:
+Assumes unknown exceptions are non-transient. Used by `OperationReprocessor` by default:
 
 ```cs
-var resolver = TransiencyResolvers.PreferTerminal;
-// Unknown → Terminal
+var resolver = TransiencyResolvers.PreferNonTransient;
+// Unknown → NonTransient
+```
+
+### TransiencyResolvers.CoreOnly
+
+Classifies only the core well-known exception types; returns `Unknown` for everything else:
+
+```cs
+var resolver = TransiencyResolvers.CoreOnly;
+// Unknown → Unknown (caller decides the fallback)
 ```
 
 
 ## RetryPolicy
 
-Combines `TransiencyResolver` with retry logic:
+`RetryPolicy` is a record that combines `TransiencyResolver` with retry logic:
 
 ```cs
 var policy = new RetryPolicy(
-    maxRetryCount: 5,
-    retryDelays: RetryDelaySeq.Exp(1, 60),  // 1s → 60s exponential
-    transiencyResolver: TransiencyResolver.New(services)
-);
+    TryCount: 5,
+    Delays: RetryDelaySeq.Exp(1, 60)  // 1s → 60s exponential
+) {
+    TransiencyResolver = TransiencyResolvers.PreferTransient,
+    RetryOn = ExceptionFilters.AnyNonTerminal,
+};
 
 // Execute with retry
-await policy.Run(async ct => {
+await policy.Apply(async ct => {
     await DoOperationAsync(ct);
-}, cancellationToken);
+}, cancellationToken: cancellationToken);
 ```
 
 ### Retry Delay Sequences
@@ -167,12 +180,6 @@ var exp = RetryDelaySeq.Exp(
 
 // Fixed delay: always 5s
 var fixed = RetryDelaySeq.Fixed(TimeSpan.FromSeconds(5));
-
-// Linear: 1s, 2s, 3s, 4s, ... up to 30s
-var linear = RetryDelaySeq.Linear(
-    TimeSpan.FromSeconds(1),
-    TimeSpan.FromSeconds(30)
-);
 ```
 
 
@@ -185,8 +192,8 @@ The Operations Framework uses transiency to determine if failed operations shoul
 ```cs
 // In operation reprocessing
 catch (Exception ex) {
-    var transiency = TransiencyResolver.Invoke(ex);
-    if (transiency.IsTransient()) {
+    var transiency = transiencyResolver.Invoke(ex);
+    if (transiency.IsAnyTransient()) {
         // Mark for reprocessing
         await ScheduleReprocess(operation);
     }
@@ -206,8 +213,8 @@ RPC uses transiency for reconnection decisions:
 ```cs
 // Connection error handling
 catch (Exception ex) {
-    var transiency = TransiencyResolver.Invoke(ex);
-    if (transiency.IsTransient()) {
+    var transiency = transiencyResolver.Invoke(ex);
+    if (transiency.IsAnyTransient()) {
         // Attempt reconnection with backoff
         await ReconnectWithBackoff();
     }
@@ -220,16 +227,7 @@ catch (Exception ex) {
 
 ### DbEntityResolver
 
-Database entity resolvers use transiency for query retry:
-
-```cs
-// Retry transient database errors
-var policy = new RetryPolicy(3, RetryDelaySeq.Exp(0.1, 5));
-return await policy.Run(async ct => {
-    await using var db = await DbHub.CreateDbContext(ct);
-    return await db.Entities.FindAsync(key, ct);
-}, cancellationToken);
-```
+`DbEntityResolver` uses a `RetryPolicy` internally for query retry on transient database errors.
 
 
 ## Common Patterns
@@ -239,15 +237,13 @@ return await policy.Run(async ct => {
 ```cs
 public async Task<Data> FetchDataAsync(CancellationToken ct)
 {
-    var policy = new RetryPolicy(
-        maxRetryCount: 3,
-        retryDelays: RetryDelaySeq.Exp(0.5, 10),
-        transiencyResolver: _transiencyResolver
-    );
+    var policy = new RetryPolicy(3, RetryDelaySeq.Exp(0.5, 10)) {
+        TransiencyResolver = _transiencyResolver,
+    };
 
-    return await policy.Run(async innerCt => {
+    return await policy.Apply(async innerCt => {
         return await _httpClient.GetFromJsonAsync<Data>(url, innerCt);
-    }, ct);
+    }, cancellationToken: ct);
 }
 ```
 
@@ -261,16 +257,14 @@ public class RateLimitedException : Exception
 }
 
 // Register resolver
-services.AddSingleton<TransiencyResolver>(sp =>
-    TransiencyResolver.New(
-        ex => ex switch {
-            RateLimitedException => Transiency.Transient,
-            AuthenticationException => Transiency.Terminal,
-            _ => Transiency.Unknown
-        },
-        TransiencyResolvers.PreferTransient
-    )
-);
+services.AddSingleton<TransiencyResolver>(sp => {
+    TransiencyResolver custom = ex => ex switch {
+        RateLimitedException => Transiency.Transient,
+        AuthenticationException => Transiency.Terminal,
+        _ => Transiency.Unknown
+    };
+    return e => custom.Invoke(e).Or(e, TransiencyResolvers.PreferTransient);
+});
 ```
 
 ### Logging Transient vs Terminal Errors
@@ -279,7 +273,7 @@ services.AddSingleton<TransiencyResolver>(sp =>
 catch (Exception ex) {
     var transiency = _transiencyResolver.Invoke(ex);
 
-    if (transiency.IsTransient()) {
+    if (transiency.IsAnyTransient()) {
         _log.LogWarning(ex, "Transient error, will retry");
     }
     else {
@@ -292,11 +286,11 @@ catch (Exception ex) {
 
 ## Best Practices
 
-### Default to Terminal for Unknown
+### Default to NonTransient for Unknown
 
 ```cs
-// Good: Safer default
-var resolver = TransiencyResolvers.PreferTerminal;
+// Good: Safer default — unknown errors won't trigger unwanted retries
+var resolver = TransiencyResolvers.PreferNonTransient;
 
 // Risky: May retry non-retryable operations
 var resolver = TransiencyResolvers.PreferTransient;
@@ -311,12 +305,11 @@ public class MyServiceException : Exception
     public bool IsTransient { get; init; }
 }
 
-// Register resolver
-TransiencyResolver.New(ex =>
+// Create a resolver as a lambda
+TransiencyResolver myResolver = ex =>
     ex is MyServiceException mse
         ? mse.IsTransient ? Transiency.Transient : Transiency.Terminal
-        : Transiency.Unknown
-);
+        : Transiency.Unknown;
 ```
 
 ### Use Appropriate Backoff

@@ -127,7 +127,7 @@ void Send(RpcMessage message, ChannelWriter<RpcMessage>? sender = null);
 bool IsConnected();
 
 // Wait for connection to be established
-Task<RpcPeerConnectionState> WhenConnected(CancellationToken cancellationToken = default);
+Task<(RpcHandshake Handshake, RpcTransport Transport)> WhenConnected(CancellationToken cancellationToken = default);
 
 // Disconnect the peer
 Task Disconnect(Exception? error = null, CancellationToken cancellationToken = default);

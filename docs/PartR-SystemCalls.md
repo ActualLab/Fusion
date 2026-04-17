@@ -13,10 +13,10 @@ Understanding these calls may be helpful for debugging, extending the framework,
 
 ### Handshake & Reconnection
 
-| Method | Arguments | Description |
-|--------|-----------|-------------|
-| `Handshake` | `RpcHandshake handshake` | Initiates connection handshake between peers |
-| `Reconnect` | `int handshakeIndex, Dictionary<int, byte[]> completedStagesData, CancellationToken` | Handles reconnection after network interruption |
+| Method | Return Type | Arguments | Description |
+|--------|-------------|-----------|-------------|
+| `Handshake` | `Task<RpcNoWait>` | `RpcHandshake handshake` | Initiates connection handshake between peers |
+| `Reconnect` | `Task<byte[]>` | `int handshakeIndex, Dictionary<int, byte[]> completedStagesData, CancellationToken` | Handles reconnection after network interruption |
 
 ### Call Lifecycle
 

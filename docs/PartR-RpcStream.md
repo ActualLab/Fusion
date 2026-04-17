@@ -279,7 +279,7 @@ When `IsRealTime` is `true`:
 - Only items where `CanSkipTo` returns `true` are kept as potential resume points
 - Once the consumer catches up (sends an ACK), normal sending resumes from the latest skip target
 
-`CanSkipTo` is a local predicate (not serialized) that controls which items are valid skip targets. Common patterns:
+`CanSkipTo` is a local predicate — it is **not serialized** across RPC and is only applied on the side that constructs the stream. The remote side has no knowledge of it. Common patterns:
 - `_ => true` (default) &ndash; any item is a valid skip target
 - `frame => frame.IsKeyFrame` &ndash; only skip to video keyframes
 - `x => x % 10 == 0` &ndash; skip to every 10th item

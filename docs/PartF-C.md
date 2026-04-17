@@ -85,9 +85,9 @@ Access the currently computing `Computed<T>` from within a compute method:
 [ComputeMethod]
 public virtual async Task<Data> GetData()
 {
-    var current = Computed.Current;  // The Computed<Data> being built
+    var current = Computed.Current;              // Nullable — returns null when no current computed is tracked
     // or
-    var current = Computed.GetCurrent<Data>();  // Throws if null
+    var current = Computed.GetCurrent<Data>();  // Throws if no current computed is tracked
 }
 ```
 

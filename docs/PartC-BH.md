@@ -51,7 +51,7 @@ commander.AddHandlers<CommandTracer>();
 
 **Priority:** 900,000,000
 
-Executes commands implementing `ILocalCommand` by calling their `Run` method.
+Executes commands implementing `ILocalCommand` by calling their `Run` method. Unlike filter handlers, `LocalCommandRunner` doesn't call `InvokeRemainingHandlers` — it fully handles `ILocalCommand` by executing its `Run()` method and returns.
 
 <!-- snippet: PartCBH_LocalCommandRunnerReg -->
 ```cs

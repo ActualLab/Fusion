@@ -78,6 +78,10 @@ public record Options
 | `ComputedState` | `ComputedState<AuthState>` | The computed authentication state |
 | `GetAuthenticationStateAsync()` | `Task<AuthenticationState>` | Standard Blazor method |
 
+### Culture Preservation
+
+Fusion's `AuthStateProvider` sets `FlowExecutionContext = true` on the internal `ComputedState<AuthState>`. This preserves the ambient `CultureInfo` (and `ExecutionContext` in general) across `await` points — important for apps that use per-user or per-request culture settings, so that the culture configured before an async call remains active when the continuation runs.
+
 ### Forced Sign-Out Handling
 
 When `IsSignOutForced` becomes true, the `CascadingAuthState` component detects this and reloads the page. This ensures users are properly signed out even in WebAssembly mode.

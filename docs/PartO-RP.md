@@ -101,15 +101,21 @@ public static bool DefaultFilter(ICommand command, CommandContext context)
 
 ## Filtering Conditions
 
-A command is eligible for reprocessing when **all** of these are true:
+A command is eligible for reprocessing when **all** of these are true.
 
-1. The error is classified as transient
-2. `Filter` function returns `true`
-3. Retry count hasn't exceeded `MaxRetryCount`
-4. No existing `Operation` has started
-5. No `Invalidation` is active
-6. Not a nested command
-7. Not an `ISystemCommand`
+**Pipeline preconditions** (checked by `OperationReprocessor.OnCommand` before the filter runs):
+
+1. It is the outermost command (`context.IsOutermost`) — nested commands are not retried
+2. It is not an `ISystemCommand`
+3. No `Operation` has started yet (`context.TryGetOperation() is null`)
+4. No `Invalidation` is active
+5. The error is classified as transient and the retry count hasn't exceeded `MaxRetryCount`
+
+**Default filter conditions** (`OperationReprocessor.Options.DefaultFilter`):
+
+6. Running on the server (`RuntimeInfo.IsServer`)
+7. Not an `IDelegatingCommand` (proxy/delegating commands are skipped)
+8. Not running from a scoped `Commander` instance (i.e., not a UI command)
 
 
 ## Transient Error Detection
