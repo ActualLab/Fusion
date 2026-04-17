@@ -40,13 +40,13 @@ public static class RpcRouteStateExt
     }
 
     public static ValueTask<CancellationTokenSource?> PrepareLocalExecution(
-        this RpcRouteState? routeState, RpcMethodDef methodDef, CancellationToken cancellationToken)
+        this RpcRouteState? routeState, RpcMethodDef methodDef, bool addDependency, CancellationToken cancellationToken)
     {
         if (methodDef.LocalExecutionMode == RpcLocalExecutionMode.Unconstrained
             || routeState?.LocalExecutionAwaiter is not { } localExecutionAwaiter)
             return default;
 
-        var whenReadyTask = localExecutionAwaiter.Invoke(cancellationToken);
+        var whenReadyTask = localExecutionAwaiter.Invoke(addDependency, cancellationToken);
         if (whenReadyTask.IsCompletedSuccessfully) {
             if (methodDef.LocalExecutionMode == RpcLocalExecutionMode.ConstrainedEntry)
                 routeState.RerouteIfChanged();

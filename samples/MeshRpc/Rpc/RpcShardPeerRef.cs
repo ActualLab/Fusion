@@ -25,7 +25,7 @@ public sealed class RpcShardPeerRef : RpcPeerRef, IMeshPeerRef
         RouteState = new RpcRouteState();
         var initialExecutionDelayTask = Task.Delay(1000, RouteState.ChangedToken).SuppressExceptions();
         RouteState.LocalExecutionAwaiter =
-            ct => initialExecutionDelayTask.IsCompleted
+            (_, ct) => initialExecutionDelayTask.IsCompleted
                 ? default // Fast path
                 : initialExecutionDelayTask.WaitAsync(ct).ToValueTask(); // Slow path
         _ = Task.Run(MarkRouteStateChanged, CancellationToken.None);

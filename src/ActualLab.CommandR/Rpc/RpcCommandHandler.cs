@@ -64,7 +64,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                     // Local call -> continue the pipeline
                     var linkedCts = await routeState
                         // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                        .PrepareLocalExecution(rpcMethodDef, cancellationToken)
+                        .PrepareLocalExecution(rpcMethodDef, addDependency: false, cancellationToken)
                         .ConfigureAwait(false);
                     try {
                         context.ExecutionState = baseExecutionState;

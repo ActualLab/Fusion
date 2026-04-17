@@ -140,7 +140,7 @@ public sealed class RpcInterceptor : Interceptor
                     throw Errors.CannotExecuteInterfaceCallLocally();
 
                 var linkedCts = await routeState
-                    .PrepareLocalExecution(methodDef, cancellationToken)
+                    .PrepareLocalExecution(methodDef, addDependency: false, cancellationToken)
                     .ConfigureAwait(false);
                 if (linkedCts is not null && methodDef.CancellationTokenIndex >= 0)
                     invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, linkedCts.Token);

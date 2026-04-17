@@ -100,7 +100,7 @@ public abstract class RemoteComputeMethodFunction(
                         var routeState = peer.Ref.RouteState;
                         var linkedCts = await routeState
                             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                            .PrepareLocalExecution(RpcMethodDef, cancellationToken)
+                            .PrepareLocalExecution(RpcMethodDef, addDependency: true, cancellationToken)
                             .ConfigureAwait(false);
                         try {
                             var result = await typedInput

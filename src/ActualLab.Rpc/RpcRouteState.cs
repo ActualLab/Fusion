@@ -5,14 +5,14 @@ namespace ActualLab.Rpc;
 /// </summary>
 public sealed class RpcRouteState
 {
-    private static readonly Func<CancellationToken, ValueTask> FinalLocalExecutionAwaiter
-        = static _ => throw RpcRerouteException.MustReroute();
+    private static readonly Func<bool, CancellationToken, ValueTask> FinalLocalExecutionAwaiter
+        = static (_, _) => throw RpcRerouteException.MustReroute();
 
     private readonly TaskCompletionSource<Unit> _changedSource;
     private readonly CancellationTokenSource _changedTokenSource;
 
     public CancellationToken ChangedToken { get; }
-    public Func<CancellationToken, ValueTask>? LocalExecutionAwaiter { get; set; }
+    public Func<bool, CancellationToken, ValueTask>? LocalExecutionAwaiter { get; set; }
     public Task WhenChanged => _changedSource.Task;
 
     public RpcRouteState(CancellationTokenSource? changedTokenSource = null)
