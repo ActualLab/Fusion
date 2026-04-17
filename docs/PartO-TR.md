@@ -73,22 +73,24 @@ public virtual async Task UpdateUser(
 
 You can explicitly control whether an operation is stored:
 
+<!-- snippet: PartOTR_ControlStorage -->
 ```cs
 [CommandHandler]
 public virtual async Task SomeCommand(
     SomeCommand command, CancellationToken cancellationToken = default)
 {
-    if (Invalidation.IsActive) { /* ... */ }
+    if (Invalidation.IsActive) { /* ... */ return; }
 
     var context = CommandContext.GetCurrent();
 
-    // Even with CreateOperationDbContext, don't store this operation
-    context.Operation.MustStore(false);
-
     await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
     // ... do work ...
+
+    // Don't store the operation (thus only local invalidation, etc.)
+    context.Operation.MustStore(false);
 }
 ```
+<!-- endSnippet -->
 
 
 ## Transient Operation Limitations
