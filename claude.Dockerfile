@@ -2,11 +2,16 @@
 # Supports: ActualLab.Fusion, ActualLab.Fusion.Samples, ActualChat
 # Includes: .NET 10 SDK, .NET 9 SDK, Node.js 20, Claude Code CLI
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0.201
+FROM mcr.microsoft.com/dotnet/sdk:10.0.202
 
 # Timezone setup
 ARG TZ=Etc/UTC
 ENV TZ="$TZ"
+
+# Swap archive.ubuntu.com for a faster mirror (archive.ubuntu.com geo-routes to
+# slow nodes from some networks, capping apt throughput to ~30 KB/s).
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu|http://mirrors.edge.kernel.org/ubuntu|g; s|http://security.ubuntu.com/ubuntu|http://mirrors.edge.kernel.org/ubuntu|g' \
+    /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
 
 # Install Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
@@ -111,7 +116,7 @@ RUN npm install -g chrome-devtools-mcp
 
 # Install Claude Code CLI (native installer, auto-update disabled at runtime)
 ENV DISABLE_AUTOUPDATER=1
-RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.90
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.112
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj

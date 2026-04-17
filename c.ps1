@@ -182,7 +182,6 @@ $newContainer          = $false
 $renewContainer        = $false
 $dryRun                = $false
 $debugMode             = $false
-$buildAgentFlag        = $null     # $null = auto (ActualChat only), $true = force on, $false = force off
 $claudeArgs            = @()
 
 # Show help
@@ -206,8 +205,6 @@ function Show-Help {
     Write-Host "Options:"
     Write-Host "  --new        Force creation of a new Docker container (skip reuse)"
     Write-Host "  --renew      Remove existing containers and start a new one (use after image rebuild)"
-    Write-Host "  --agent      Force start build agent (for server management from Docker)"
-    Write-Host "  --no-agent   Disable build agent (default for non-ActualChat projects)"
     Write-Host "  --dry-run    Show environment variables and command without executing"
     Write-Host "  --debug      Show debug output for troubleshooting"
     Write-Host ""
@@ -345,18 +342,6 @@ while ($argIndex -lt $args.Count) {
     # Check for --debug
     if ($currentArg -eq "--debug") {
         $debugMode = $true
-        $argIndex++
-        continue
-    }
-
-    # Check for --agent / --no-agent
-    if ($currentArg -eq "--agent") {
-        $buildAgentFlag = $true
-        $argIndex++
-        continue
-    }
-    if ($currentArg -eq "--no-agent") {
-        $buildAgentFlag = $false
         $argIndex++
         continue
     }
@@ -502,12 +487,12 @@ class WorktreeServer {
             -join $worktreeSuffix[0..([Math]::Min(19, $worktreeSuffix.Length - 1))]
         } else { "dev" }
 
-        # Build hostnames for this worktree (main project doesn't need custom hostnames)
+        # Build hostnames for this worktree (main project doesn't need custom hostnames).
         $this.Hostnames = if (-not $this.IsMainProject) {
             @(
                 "$($this.InstanceName).local.voxt.ai",
-                "cdn.$($this.InstanceName).local.voxt.ai",
-                "media.$($this.InstanceName).local.voxt.ai"
+                "cdn-$($this.InstanceName).local.voxt.ai",
+                "media-$($this.InstanceName).local.voxt.ai"
             )
         } else { @() }
 
@@ -587,17 +572,24 @@ class WorktreeServer {
     }
 
     hidden [void] ReloadNginx([bool]$debug) {
-        $originalLocation = Get-Location
-        Set-Location $this.ProjectPath
-        try {
-            $null = docker compose exec -T nginx nginx -s reload 2>&1
+        $nginxContainer = docker ps --filter "name=actual-chat-infra-nginx" --format "{{.Names}}" 2>$null | Select-Object -First 1
+        if (-not $nginxContainer) {
+            Write-Host "WARNING: nginx container not found — worktree routing may not work." -ForegroundColor Yellow
+            return
+        }
+
+        docker exec $nginxContainer nginx -s reload 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            if ($debug) { Write-Host "[DEBUG] Reloaded nginx" }
+        } else {
+            # Reload can fail due to stale bind mounts; restart refreshes them
+            if ($debug) { Write-Host "[DEBUG] nginx reload failed, restarting container" }
+            docker restart $nginxContainer 2>$null | Out-Null
             if ($LASTEXITCODE -eq 0) {
-                if ($debug) { Write-Host "[DEBUG] Reloaded nginx" }
+                if ($debug) { Write-Host "[DEBUG] Restarted nginx" }
             } else {
-                if ($debug) { Write-Host "[DEBUG] nginx reload failed (docker-compose may not be running)" }
+                Write-Host "WARNING: nginx restart failed — worktree routing may not work." -ForegroundColor Yellow
             }
-        } finally {
-            Set-Location $originalLocation
         }
     }
 
@@ -849,15 +841,9 @@ if ($removeWorktreeSuffix) {
 
     Write-Host "Removing worktree: $projectName-$removeWorktreeSuffix" -ForegroundColor Cyan
 
-    # Stop server, build agent, and Docker containers; then remove server config
+    # Stop server and Docker containers; then remove server config
     if (Test-Path (Join-Path $mainProjectPath "ActualChat.sln")) {
         $server = [WorktreeServer]::new($mainProjectPath, $removeWorktreeSuffix)
-
-        # Stop orphaned server and build agent from previous sessions
-        if ($server.Port -and (Test-Path $worktreePath)) {
-            [BuildAgent]::new($worktreePath).StopServer()
-            [BuildAgentHost]::new($worktreePath).Stop()
-        }
 
         # Kill Docker containers for this worktree
         $containerBaseName = "$($projectName.ToLower())-$($removeWorktreeSuffix.ToLower())"
@@ -1058,20 +1044,17 @@ if ($isActualChatProject) {
     $server = [WorktreeServer]::new($mainProjectPath, $worktree)
     $serverConfig = $server.Register($debugMode)
 
-    # Write server configuration to .env file in the project/worktree directory
-    # Uses .NET configuration names so they're automatically picked up by the server
-    $baseUri = if ($serverConfig.InstanceName -ne "dev") { "https://$($serverConfig.InstanceName).local.voxt.ai" } else { "https://local.voxt.ai" }
-    $urlsValue = "http://0.0.0.0:$($serverConfig.Port)"
-    $envVarsToSave = @{
-        "CoreSettings__Instance" = $serverConfig.InstanceName
-        # Use 0.0.0.0 to allow connections from nginx container
-        # "urls" is for .NET config loading, "ASPNETCORE_URLS" is for env var loading
-        "urls" = $urlsValue
-        "ASPNETCORE_URLS" = $urlsValue
-        "HostSettings__BaseUri" = $baseUri
-        "AC_BUILD_AGENT_PORT" = $serverConfig.Port + 9
+    # Write server configuration to .env file in the worktree directory.
+    # Uses .NET configuration names so they're automatically picked up by the server.
+    # Skipped for the main project (dev instance) so its .env stays untouched.
+    if ($serverConfig.InstanceName -ne "dev") {
+        $envVarsToSave = @{
+            "CoreSettings__Instance" = $serverConfig.InstanceName
+            "HostSettings__BasePort" = "$($serverConfig.Port)"
+            "HostSettings__BaseUri" = "https://$($serverConfig.InstanceName).local.voxt.ai"
+        }
+        Update-EnvFile -ProjectPath $projectRoot -Variables $envVarsToSave -Debug:$debugMode
     }
-    Update-EnvFile -ProjectPath $projectRoot -Variables $envVarsToSave -Debug:$debugMode
 }
 
 # Suppress output when launching docker (inner instance will output)
@@ -1510,19 +1493,7 @@ switch ($mode) {
             "-e", "PULSE_SERVER=$pulseServer"
         )
 
-        # Build agent for server/build management: on macOS/Windows, --network host doesn't
-        # truly share ports, so the .NET server must run on the host. The build agent host
-        # provides an HTTP API that Claude in Docker calls to build/start/stop the server.
-        # Controlled by --agent/--no-agent flags; defaults to auto (ActualChat projects only).
-        $useBuildAgent = if ($buildAgentFlag -ne $null) { $buildAgentFlag } else { $isActualChatProject }
-        $buildAgent = $null
-        $buildAgentEnvVars = @()
-        if ($useBuildAgent -and $currentOS -in "macOS", "Windows") {
-            $buildAgent = [BuildAgentHost]::new($projectRoot)
-            $buildAgentEnvVars = @("-e", "AC_BUILD_AGENT_PORT=$($buildAgent.Port)")
-        }
-
-        $dockerArgs += $volumeMounts + $propagatedEnvVars + $audioEnvVars + $buildAgentEnvVars + @(
+        $dockerArgs += $volumeMounts + $propagatedEnvVars + $audioEnvVars + @(
             "-e", "ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY"
             "-e", "DISABLE_AUTOUPDATER=1"
             "-e", "DOTNET_SYSTEM_NET_DISABLEIPV6=1"
@@ -1560,18 +1531,8 @@ switch ($mode) {
             Write-Host "  docker $($dockerArgs -join ' ')"
             Write-Host ""
         } else {
-            # Start build agent if enabled — runs build/server operations over HTTP
-            # so Claude in Docker can build/start/stop the server on the host
-            if ($buildAgent) {
-                $buildAgent.Start()
-            }
-
-            try {
-                # On Windows, we're already in wt (handled at script start)
-                & docker @dockerArgs
-            } finally {
-                if ($buildAgent) { $buildAgent.Stop() }
-            }
+            # On Windows, we're already in wt (handled at script start)
+            & docker @dockerArgs
         }
     }
 

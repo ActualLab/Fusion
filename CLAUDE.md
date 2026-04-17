@@ -59,7 +59,9 @@ Build artifacts are stored in `artifacts/claude-docker/` to avoid permission con
 
 **Running integration tests**: Tests detect Claude's Docker environment via `AC_OS="Linux in Docker"` and use regular localhost-based configuration (not `testsettings.docker.json`). This works because `--network host` makes localhost = host.
 
-**Running the server**: Use `/server-start` to start the server, `/server-restart` to rebuild and restart, `/server-stop` to stop. Server commands use `Get-BuildAgent` from `scripts/Common.ps1` to auto-detect the environment: on **macOS/Windows**, it connects to the build agent host (which runs builds and the .NET server on the host OS so nginx can proxy via domain names like `https://worktree.local.voxt.ai`); on **Linux**, it controls the server directly in Docker (where `--network host` truly shares ports). Use `--watch` flag for auto-reload during UI development. See the "Autonomous UI Development Loop" section in `AGENTS.md` for the full workflow.
+**Running the server (Docker watch mode)**: The host runs `./run-watch.cmd` — it auto-rebuilds and restarts the server when you change files. After editing code, poll `tmp/watch-dotnet.log` until you see `Now listening on:` (ready) or `error` (fix and wait again). Do not use `/server-start` or `/server-restart` — the watch process owns the server. Frontend build output: `tmp/watch-web.log`.
+
+**Running the server (direct)**: Use `/server-start`, `/server-restart`, `/server-stop`. Use `--watch` flag for auto-reload.
 
 **Propagated environment variables**: The following environment variables are automatically propagated from the host to the Docker container:
 - Variables containing `__` in their names (e.g., `ChatSettings__OpenAIApiKey` for .NET configuration)
@@ -149,6 +151,16 @@ dotnet build ActualChat.CI.slnf
 # Only if you have all workloads installed (including maui-android, etc.)
 dotnet build ActualChat.sln
 ```
+
+## TypeScript Validation
+
+When modifying TypeScript files under `src/nodejs/` or `src/dotnet/UI.Blazor.App/`, always validate changes by running:
+
+```bash
+npm run build:Verify
+```
+
+This runs `tsc --noEmit`, `eslint`, and the debug build. It catches unused variables, type errors, and lint violations that `tsc --noEmit` alone may miss.
 
 # Testing
 
