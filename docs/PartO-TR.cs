@@ -87,11 +87,11 @@ public class ControllingStorageExample(IServiceProvider services) : DbServiceBas
 
         var context = CommandContext.GetCurrent();
 
-        // Even with CreateOperationDbContext, don't store this operation
-        context.Operation.MustStore(false);
-
         await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
         // ... do work ...
+
+        // Don't store the operation (thus only local invalidation, etc.)
+        context.Operation.MustStore(false);
     }
     #endregion
 }
