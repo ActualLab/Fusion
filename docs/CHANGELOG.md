@@ -11,6 +11,29 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.39+4e55ed7e | npm: 12.3.33
+
+Release date: 2026-04-17
+
+### Breaking Changes
+- `RpcRouteState.LocalExecutionAwaiter` signature changed from
+  `Func<CancellationToken, ValueTask>` to
+  `Func<bool, CancellationToken, ValueTask>`, and
+  `RpcRouteStateExt.PrepareLocalExecution` gained a required `addDependency`
+  parameter before `cancellationToken`. Custom awaiters and any direct
+  `PrepareLocalExecution` callers must accept and forward the new
+  `bool addDependency` argument. `addDependency` is `true` for compute
+  method calls - you can use it to actually add a dependency for such
+  call on, e.g., the current routing state.
+
+### Documentation
+- Reworked all code snippets so every block in the docs is consumed directly
+  from a compiled snippet source (no drifted hand-written duplicates).
+- Fixed placement of `MustStore(false)` in the operation-context setup
+  example and clarified its usage.
+- Miscellaneous prose and formatting cleanup across the docs set.
+
+
 ## npm: 12.3.33+59552c71
 
 Release date: 2026-04-16
