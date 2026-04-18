@@ -11,6 +11,73 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.50+c3a95b95 | npm: 12.3.50
+
+Release date: 2026-04-18
+
+### Breaking Changes
+- TypeScript: `RpcClientPeer` API reshaped &mdash; `peer.run(factory)` is
+  replaced by the `webSocketFactory` field plus `peer.start()` (ctor also
+  gained a `mustStart = true` parameter); `peer.connected` /
+  `peer.disconnected` events are gone &mdash; subscribe to
+  `peer.connectionStateChanged` (emits `RpcConnectionState`) or await
+  `peer.whenConnected()`; `peer.connectionKind` renamed to
+  `peer.connectionState`; and `peer.reconnectDelayer` moved up to
+  `RpcHub.reconnectDelayer` so every client peer on a hub shares the
+  delayer. Migration: drop `void peer.run()` (auto-starts by default) or
+  set `webSocketFactory` + call `peer.start()` when you need
+  `mustStart = false`; replace event-based checks with
+  `connectionStateChanged` or `whenConnected()`; route
+  `cancelDelays()` / `delays = ...` through `hub.reconnectDelayer`.
+
+### Added
+- `ComputeMethodResultStash<TKey, TValue>` &mdash; keyed stash with a
+  per-key `AsyncLockSet<TKey>` that lets an update operation hand a
+  freshly-produced value directly to the compute method about to
+  recompute it. `LockAndReserve(key)` acquires the lock and registers a
+  slot; `Reservation.Stash(value)` publishes it; `TryUnstash(key)` is
+  called from inside the compute method to consume it. Avoids a
+  redundant storage round-trip when invalidation is paired with a known
+  fresh value.
+- Fusion: remote compute methods now serve the last cached value when
+  the peer is disconnected (instead of failing), and auto-invalidate via
+  the new `InvalidateWhenReconnected` path once the peer reconnects
+  &mdash; improves UI resiliency across brief disconnects.
+- TypeScript: `RpcPeerRefBuilder` helper for composing peer refs.
+  `RpcPeerRefBuilder.forClient(url, format)` bakes the serialization
+  format into the URL via `?f=...`; `RpcPeerRefBuilder.forServer(id)`
+  returns `server://{id}`.
+- TypeScript: `RpcClientPeer.webSocketFactory` field for injecting a
+  custom WebSocket constructor (Node.js / tests).
+
+### Changed
+- TypeScript: `RpcClientPeerReconnectDelayer` is now a single instance
+  shared via `RpcHub.reconnectDelayer` and centralized there &mdash;
+  swap in an app-level subclass (e.g. signal-gated) on the hub before
+  peers start.
+
+### Fixed
+- TypeScript: reconnection edge cases in `RpcClientPeer` &mdash;
+  handshake timeouts now close the connection and retry after the
+  configured delay; resolved deadlock scenarios during `$sys.Reconnect`
+  calls; addressed lost-close race conditions during `run()` iterations.
+
+### Documentation
+- Rewrote `PartTS-Rpc.md`, `PartTS.md`, `PartTS-FusionRpc.md`, and
+  `PartTS-React.md` examples against the new `RpcClientPeer` API
+  (`start()` / `whenConnected()` / `connectionStateChanged` /
+  `hub.reconnectDelayer`).
+
+### Tests
+- Added regression coverage for the reconnect edge cases above
+  (`rpc-reconnect-edge-cases.test.ts`) and migrated
+  `fusion-rpc-run-reconnection.test.ts` to the new API.
+- Added `ComputeMethodResultStashTest` (11 cases covering roundtrip,
+  disposal cleanup, stash-twice / after-dispose errors, per-key
+  serialization, and shared-lock-set ctor) plus a `StashComputeService`
+  integration test.
+
+
 ## 12.3.42+3661472f | npm: 12.3.33
 
 Release date: 2026-04-18
