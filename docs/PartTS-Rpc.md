@@ -106,6 +106,7 @@ hub.close();  // Close all peers
 |--------|-------------|
 | `.hubId` | Auto-generated UUID |
 | `.peers` | `Map<string, RpcPeer>` of all managed peers |
+| `.reconnectDelayer` | Shared `RpcClientPeerReconnectDelayer` &mdash; exponential backoff for all client peers |
 | `.serviceHost` | Dispatches inbound calls to registered service implementations |
 | `.addPeer(peer)` | Register a peer |
 | `.getPeer(ref)` | Get or create a peer (client or server based on `ref` prefix) |
@@ -121,43 +122,64 @@ hub.close();  // Close all peers
 Client-side peer that manages a WebSocket connection with automatic reconnection.
 
 ```ts
-import { RpcClientPeer } from "@actuallab/rpc";
+import {
+  RpcClientPeer,
+  RpcConnectionState,
+  RpcPeerRefBuilder,
+  type WebSocketLike,
+} from "@actuallab/rpc";
 
+// Browser: constructor auto-starts the reconnect loop (mustStart defaults to true)
 const peer = new RpcClientPeer(hub, "ws://localhost:5005/rpc/ws");
-hub.addPeer(peer);
 
-// Start the reconnection loop (runs until peer.close())
-void peer.run();
+// Node.js / tests: pass mustStart=false so you can set webSocketFactory first.
+// RpcPeerRefBuilder.forClient bakes the serialization format into the URL as ?f=...
+import WebSocket from "ws";
+const peer2 = new RpcClientPeer(
+  hub,
+  RpcPeerRefBuilder.forClient("ws://localhost:5005/rpc/ws", "msgpack6"),
+  false);
+peer2.webSocketFactory = url => new WebSocket(url) as unknown as WebSocketLike;
+peer2.start();
 
-// Events
-peer.connected.add(() => console.log("Connected"));
-peer.disconnected.add(({ code, reason }) => console.log(`Disconnected: ${reason}`));
+// Wait for the first successful connection + handshake
+await peer2.whenConnected();
+
+// React to state transitions
+peer.connectionStateChanged.add(state => {
+  if (state === RpcConnectionState.Connected) console.log("Connected");
+  else if (state === RpcConnectionState.Disconnected) console.log("Disconnected");
+});
 peer.peerChanged.add(() => console.log("Server restarted"));
 
-// Connection state
-peer.isConnected;       // boolean
-peer.connectionKind;    // Disconnected | Connecting | Connected
+// Connection state snapshot
+peer.isConnected;          // boolean — underlying WS is open
+peer.connectionState;      // RpcConnectionState: Disconnected | Connecting | Connected
+peer.whenRunning;          // Promise<void> — resolves when the reconnect loop exits (after close())
 ```
 
 ### Connection Lifecycle
 
-1. `peer.run()` starts the reconnection loop
+1. `peer.start()` (or auto-start via `mustStart = true`) kicks off the reconnect loop
 2. Opens a WebSocket to the URL + query params (`clientId`, `f=json5np`)
-3. Exchanges handshakes with the server
+3. Exchanges handshakes with the server; state flips to `Connected` **after** the handshake
 4. Detects server restarts via `RemoteHubId` comparison (`peerChanged` event)
-5. On disconnect, waits (exponential backoff), then reconnects
+5. On disconnect, waits (via `hub.reconnectDelayer`), then reconnects
 6. Outbound calls made while disconnected are buffered and sent on reconnect
 
 ### Reconnection
 
+The reconnect delayer lives on the hub and is shared by all client peers &mdash;
+set it once to apply everywhere.
+
 ```ts
 // Default exponential backoff: 1s → 60s
-peer.reconnectDelayer;
+hub.reconnectDelayer;
 
-// Force immediate reconnection
-peer.reconnectDelayer.cancelDelays();
+// Force immediate reconnection for every client peer on the hub
+hub.reconnectDelayer.cancelDelays();
 
-// Track when next reconnect will happen
+// Per-peer reconnect countdown
 peer.reconnectsAt;  // timestamp (ms) or 0
 peer.reconnectsAtChanged.add(() => { /* update UI */ });
 ```

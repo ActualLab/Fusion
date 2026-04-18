@@ -158,8 +158,8 @@ const api = hub.addClient<ITodoApi>(peer, TodoApiDef);
 // 4. Monitor connection state (for UI)
 const monitor = new RpcPeerStateMonitor(peer);
 
-// 5. Start connection
-void peer.run();
+// 5. The RpcClientPeer constructor auto-starts the connection + reconnect loop.
+//    Pass `false` as the 3rd arg if you need to tweak options before starting.
 
 // 6. Use in React
 function TodoCount() {

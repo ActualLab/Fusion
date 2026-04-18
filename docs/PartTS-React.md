@@ -212,7 +212,7 @@ function ConnectionBanner({ monitor }: { monitor: RpcPeerStateMonitor }) {
           ? `Disconnected. Reconnecting in ${reconnectsIn}s.`
           : "Reconnecting..."}
       {reconnectsIn > 0 && (
-        <button onClick={() => monitor.peer.reconnectDelayer.cancelDelays()}>
+        <button onClick={() => monitor.peer.hub.reconnectDelayer.cancelDelays()}>
           Reconnect now
         </button>
       )}

@@ -90,8 +90,8 @@ hub.addPeer(peer);
 // 3. Create typed client proxy
 const api = hub.addClient<ITodoApi>(peer, TodoApiDef);
 
-// 4. Start the connection (reconnects automatically)
-void peer.run();
+// 4. Connection + reconnect loop starts automatically from the RpcClientPeer ctor
+//    (pass `false` as the 3rd arg if you need to tweak options before starting).
 
 // 5. Use the client — compute method results are cached + invalidated automatically
 const items = await api.ListIds("~", 10);
