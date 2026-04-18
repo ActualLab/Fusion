@@ -245,13 +245,14 @@ async function testStreamPerformance(svc: IStreamPerfService): Promise<void> {
 
 async function run(): Promise<void> {
     const hub = new FusionHub();
-    const peer = new RpcClientPeer(hub, serverUrl);
-    const wsFactory = (url: string) => new WebSocket(url) as unknown as WebSocketLike;
-    const runPromise = peer.run(wsFactory);
+    const peer = new RpcClientPeer(hub, serverUrl!, false);
+    peer.webSocketFactory = (url: string) => new WebSocket(url) as unknown as WebSocketLike;
+    peer.start();
+    const runPromise = peer.whenRunning;
 
     // Wait for connection + handshake
     await Promise.race([
-        new Promise<void>((resolve) => peer.connected.add(() => resolve())),
+        peer.whenConnected(),
         timeout(10_000, 'Connection timeout'),
     ]);
     await delay(100);
@@ -276,7 +277,7 @@ async function run(): Promise<void> {
         console.log('PERF TEST COMPLETE');
     } finally {
         peer.close();
-        await runPromise.catch(() => { /* noop */ });
+        await runPromise?.catch(() => { /* noop */ });
         await delay(50);
     }
 }
