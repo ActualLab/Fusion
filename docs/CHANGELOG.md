@@ -11,6 +11,20 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.42+3661472f | npm: 12.3.33
+
+Release date: 2026-04-18
+
+### Performance
+- Replaced unnecessary `Interlocked.Exchange` calls with `Volatile.Write` /
+  `Volatile.Read` across Core, Fusion, and RPC hot paths (`BatchProcessor`,
+  `SafeAsyncDisposableBase`, `ArrayPoolBuffer`, `Connector`, `Computed`,
+  `ComputedRegistry`, `ComputedSynchronizer`, `ComputedGraphPruner`,
+  `RpcObjectTrackers`, `RpcSharedStream`, `RpcWebSocketTransport`).
+  Added `InterlockedExt.VolatileRead` / `InterlockedExt.VolatileWrite`
+  helpers for cases where a full interlocked operation isn't needed.
+
+
 ## 12.3.39+4e55ed7e | npm: 12.3.33
 
 Release date: 2026-04-17
