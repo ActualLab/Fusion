@@ -166,14 +166,27 @@ public abstract class RemoteComputeMethodFunction(
         RpcPeer peer,
         CancellationToken cancellationToken)
     {
+        var existingRemoteComputed = existing as IRemoteComputed;
+        var existingCacheEntry = existingRemoteComputed?.CacheEntry;
+
+        if (!peer.IsConnected() && existingCacheEntry is not null) {
+            // Serve-stale-on-disconnect: if the peer isn't connected and we have a usable
+            // cached value from a previous successful call, return it instead of awaiting
+            // WhenConnectedChecked (which may block indefinitely when reconnect is slow).
+            // We auto-invalidate the stale computed once the peer reconnects, so
+            // ComputedState refreshes naturally on recovery.
+            var staleResult = Result.NewUntyped(existingCacheEntry.DeserializedValue);
+            var staleComputed = NewRemoteComputed(input, staleResult, existingCacheEntry);
+            _ = InvalidateWhenReconnected(staleComputed, peer);
+            return staleComputed;
+        }
+
         // SendRpcCall uses an interceptor with AssumeConnected == false,
         // so we await for the connection here.
         var whenConnected = WhenConnectedChecked(input, peer, cancellationToken);
         if (!whenConnected.IsCompletedSuccessfully) // Slow path
             await whenConnected.ConfigureAwait(false); // May throw RpcRerouteException!
 
-        var existingRemoteComputed = existing as IRemoteComputed;
-        var existingCacheEntry = existingRemoteComputed?.CacheEntry;
         var cacheInfoCapture = cache is not null
             ? new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash)
             : null;
@@ -474,6 +487,15 @@ public abstract class RemoteComputeMethodFunction(
     }
 
     // InvalidateXxx
+
+    protected async Task InvalidateWhenReconnected(Computed staleComputed, RpcPeer peer)
+    {
+        // Log.LogInformation("Will invalidate on reconnect: {Input}", staleComputed.Input);
+        await peer.WhenConnected().SilentAwait();
+        const string reason =
+            $"<FusionRpc>.{nameof(InvalidateWhenReconnected)}: peer reconnected or rerouted";
+        staleComputed.Invalidate(immediately: true, new InvalidationSource(reason));
+    }
 
     protected Task InvalidateOnError(Computed computed, Exception? error, string source)
     {
