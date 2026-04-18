@@ -15,7 +15,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 {
     public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
 
-    private volatile AsyncState<RpcPeerConnectionState> _connectionState = new(RpcPeerConnectionState.Disconnected);
+    private volatile AsyncState<RpcPeerConnectionState> _connectionState = new(new RpcPeerConnectionState());
     private volatile RpcMethodResolver _serverMethodResolver;
     private volatile RpcTransport? _transport;
     private volatile RpcPeerStopMode _stopMode;
@@ -126,54 +126,16 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         return handshake is not null;
     }
 
-    public async Task<(RpcHandshake Handshake, RpcTransport Transport)> WhenConnected(
-        CancellationToken cancellationToken = default)
-    {
-        var connectionState = ConnectionState;
-        while (true) {
-            try {
-                connectionState = await connectionState.Last.WhenConnected(cancellationToken).ConfigureAwait(false);
-                var vConnectionState = connectionState.Value;
-                if (vConnectionState.Handshake is not { } handshake)
-                    continue;
-                if (vConnectionState.Transport is not { } transport)
-                    continue;
+    public Task<RpcPeerConnectionState> WhenConnected(CancellationToken cancellationToken = default)
+        => ConnectionState.Value.WhenConnected.WaitAsync(cancellationToken);
 
-                var spinWait = new SpinWait();
-                while (!connectionState.HasNext) {
-                    // Waiting for _transport assignment
-                    if (ReferenceEquals(transport, _transport))
-                        return (handshake, transport);
-
-                    spinWait.SpinOnce();
-                }
-            }
-            catch (Exception e) {
-                if (e.IsCancellationOf(cancellationToken))
-                    throw;
-                if (Ref.RouteState.IsChanged())
-                    throw RpcRerouteException.MustReroute();
-
-                if (!ConnectionState.IsFinal) {
-                    // The error can be ChannelClosedException due to cancellation,
-                    // so we don't want to disregard the cancellation no matter what
-                    cancellationToken.ThrowIfCancellationRequested();
-                    continue;
-                }
-
-                throw;
-            }
-        }
-    }
-
-    public Task<(RpcHandshake Handshake, RpcTransport Transport)> WhenConnected(
-        TimeSpan timeout, CancellationToken cancellationToken = default)
+    public Task<RpcPeerConnectionState> WhenConnected(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         return timeout == TimeSpan.MaxValue
             ? WhenConnected(cancellationToken)
             : WhenConnectedWithTimeout(this, timeout, cancellationToken);
 
-        static async Task<(RpcHandshake Handshake, RpcTransport Transport)> WhenConnectedWithTimeout(
+        static async Task<RpcPeerConnectionState> WhenConnectedWithTimeout(
             RpcPeer peer, TimeSpan timeout, CancellationToken cancellationToken)
         {
             using var timeoutCts = cancellationToken.CreateLinkedTokenSource(timeout);
@@ -210,7 +172,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         connectionState.Value.ReaderTokenSource.CancelAndDisposeSilently();
         // The line below isn't necessary: stopping the reader aborts everything
         // connectionState.Value.Sender.TryComplete(error);
-        return connectionState.WhenDisconnected(cancellationToken);
+        return connectionState.Value.WhenDisconnected.WaitAsync(cancellationToken);
     }
 
     // WhenDisconnected
@@ -505,16 +467,18 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             return connectionState;
         }
         finally {
-            oldState.MarkDisconnected();
-            if (newState.ReaderTokenSource != oldState.ReaderTokenSource) {
-                // Cancel the old ReaderTokenSource
+            _transport = newState.Transport;
+            if (newState.IsConnected())
+                oldState.MarkConnected(newState);
+            else
+                oldState.MarkDisconnected();
+            if (terminalError is not null)
+                newState.MarkTerminated(terminalError);
+
+            if (newState.ReaderTokenSource != oldState.ReaderTokenSource)
                 oldState.ReaderTokenSource.CancelAndDisposeSilently();
-                _transport = newState.Transport;
-            }
-            if (newState.Connection != oldState.Connection) {
-                // Complete the old transport
+            if (newState.Connection != oldState.Connection)
                 oldState.Transport?.TryComplete(newState.Error);
-            }
 #if NET9_0_OR_GREATER
             Lock.Exit();
 #else

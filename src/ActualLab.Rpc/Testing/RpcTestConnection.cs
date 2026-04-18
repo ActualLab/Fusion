@@ -64,11 +64,11 @@ public class RpcTestConnection
     public async Task Connect(ChannelPair<ArrayOwner<byte>> channels, CancellationToken cancellationToken = default)
     {
         await Disconnect(cancellationToken).ConfigureAwait(false);
-        var clientConnectionState = ClientPeer.ConnectionState;
-        var serverConnectionState = ServerPeer.ConnectionState;
+        var clientConnectionState = ClientPeer.ConnectionState.Value;
+        var serverConnectionState = ServerPeer.ConnectionState.Value;
         Channels = channels;
-        var connectedTask1 = clientConnectionState.WhenConnected(cancellationToken);
-        var connectedTask2 = serverConnectionState.WhenConnected(cancellationToken);
+        var connectedTask1 = clientConnectionState.WhenConnected.WaitAsync(cancellationToken);
+        var connectedTask2 = serverConnectionState.WhenConnected.WaitAsync(cancellationToken);
         await Task.WhenAll(connectedTask1, connectedTask2).ConfigureAwait(false);
     }
 
