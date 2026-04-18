@@ -33,4 +33,10 @@ public sealed class RpcRouteState
             LocalExecutionAwaiter = FinalLocalExecutionAwaiter;
         }
     }
+
+    public void ThrowIfChanged()
+    {
+        if (ChangedToken.IsCancellationRequested)
+            throw RpcRerouteException.MustReroute();
+    }
 }

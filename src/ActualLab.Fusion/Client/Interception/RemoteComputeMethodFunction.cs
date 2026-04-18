@@ -206,6 +206,11 @@ public abstract class RemoteComputeMethodFunction(
                 var disconnectTask = peer.ConnectionState.Value.WhenDisconnected;
                 var winner = await Task.WhenAny(sendTaskAsTask, disconnectTask).ConfigureAwait(false);
                 if (winner == disconnectTask) {
+                    // If WhenDisconnected faulted (terminal error), rethrow rather than serve stale.
+                    if (disconnectTask.IsFaulted) {
+                        peer.Ref.RouteState?.ThrowIfChanged();
+                        await disconnectTask.ConfigureAwait(false);
+                    }
                     var staleResult = Result.NewUntyped(existingCacheEntry.DeserializedValue);
                     var staleComputed = NewRemoteComputed(input, staleResult, existingCacheEntry);
                     _ = InvalidateWhenReconnected(staleComputed, peer);
@@ -503,9 +508,9 @@ public abstract class RemoteComputeMethodFunction(
     protected async Task WhenConnectedCheckedAsync(
         ComputeMethodInput input, RpcPeer peer, CancellationToken cancellationToken)
     {
-        // WhenConnected may throw RpcRerouteException!
+        // WhenConnectedOrReroute may throw RpcRerouteException if the peer's route has changed.
         var connectionState = await peer
-            .WhenConnected(RpcMethodDef.OutboundCallTimeouts.ConnectTimeout, cancellationToken)
+            .WhenConnectedOrReroute(RpcMethodDef.OutboundCallTimeouts.ConnectTimeout, cancellationToken)
             .ConfigureAwait(false);
         var handshake = connectionState.Handshake!;
         if (handshake.RemoteHubId == RpcMethodDef.Hub.Id && input.Invocation.Proxy is not InterfaceProxy)

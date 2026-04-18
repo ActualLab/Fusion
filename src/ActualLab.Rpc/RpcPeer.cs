@@ -149,6 +149,40 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
+    // WhenConnectedOrReroute
+
+    public async Task<RpcPeerConnectionState> WhenConnectedOrReroute(CancellationToken cancellationToken = default)
+    {
+        Ref.RouteState?.ThrowIfChanged();
+        try {
+            return await ConnectionState.Value.WhenConnected.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+            Ref.RouteState?.ThrowIfChanged();
+            throw;
+        }
+    }
+
+    public Task<RpcPeerConnectionState> WhenConnectedOrReroute(TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        return timeout == TimeSpan.MaxValue
+            ? WhenConnectedOrReroute(cancellationToken)
+            : WhenConnectedOrRerouteWithTimeout(this, timeout, cancellationToken);
+
+        static async Task<RpcPeerConnectionState> WhenConnectedOrRerouteWithTimeout(
+            RpcPeer peer, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            using var timeoutCts = cancellationToken.CreateLinkedTokenSource(timeout);
+            var timeoutToken = timeoutCts.Token;
+            try {
+                return await peer.WhenConnectedOrReroute(timeoutToken).ConfigureAwait(false);
+            }
+            catch (Exception e) when (e.IsCancellationOfTimeoutToken(timeoutToken, cancellationToken)) {
+                throw Errors.ConnectTimeout(peer.Ref);
+            }
+        }
+    }
+
     // Disconnect
 
     public Task Disconnect(CancellationToken cancellationToken = default)
@@ -446,8 +480,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         Exception? terminalError = null;
         try {
             if (newState.ConnectionAttemptIndex != 0 && _resetConnectionAttemptIndex) {
+                newState.ConnectionAttemptIndex = 0;
                 _resetConnectionAttemptIndex = false;
-                newState = newState with { ConnectionAttemptIndex = 0 };
             }
             var nextConnectionState = connectionState.TrySetNext(newState);
             if (ReferenceEquals(nextConnectionState, connectionState)) {
@@ -468,12 +502,19 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
         finally {
             _transport = newState.Transport;
-            if (newState.IsConnected())
+            // Order matters: fault first on terminal error so TrySetException wins over
+            // any later TrySetResult on the same TCS. Covers both:
+            //  - oldState's pending WhenDisconnected (if old was connected): fault, not success.
+            //  - newState's pending WhenConnected (chained from old disconnected) + fresh
+            //    _whenDisconnectedSource (we overrode the Always-shared one for terminal states).
+            if (terminalError is not null) {
+                oldState.MarkTerminated(terminalError);
+                newState.MarkTerminated(terminalError);
+            }
+            else if (newState.IsConnected())
                 oldState.MarkConnected(newState);
             else
                 oldState.MarkDisconnected();
-            if (terminalError is not null)
-                newState.MarkTerminated(terminalError);
 
             if (newState.ReaderTokenSource != oldState.ReaderTokenSource)
                 oldState.ReaderTokenSource.CancelAndDisposeSilently();
