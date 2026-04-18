@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { FusionHub } from "@actuallab/fusion-rpc";
-import { RpcClientPeer, RpcPeerStateMonitor } from "@actuallab/rpc";
+import { RpcPeerStateMonitor } from "@actuallab/rpc";
 import { TodoApiDef } from "./todo-api.js";
 import type { ITodoApi } from "./todo-api.js";
 import { SimpleServiceDef, SimpleClientSideServiceDef, createPongService } from "./simple-api.js";
@@ -12,15 +12,14 @@ import { RpcExampleApp } from "./RpcExampleApp.js";
 
 // --- Module-level singletons (created once per page load) ---
 
-function getWsUrl(): string {
+function getApiUrl(): string {
   const loc = window.location;
   const protocol = loc.protocol === "https:" ? "wss:" : "ws:";
   return `${protocol}//${loc.host}/rpc/ws`;
 }
 
 const hub = new FusionHub();
-const peer = new RpcClientPeer(hub, getWsUrl());
-hub.addPeer(peer);
+const peer = hub.getClientPeer(getApiUrl());
 
 const api = hub.addClient<ITodoApi>(peer, TodoApiDef);
 const simpleApi = hub.addClient<ISimpleService>(peer, SimpleServiceDef);
@@ -33,8 +32,7 @@ hub.addService(SimpleClientSideServiceDef, createPongService((msg) => {
   for (const listener of pongListeners) listener(msg);
 }));
 
-// Start the peer connection once
-void peer.run();
+// Connection + reconnect loop auto-start from the RpcClientPeer ctor.
 
 // --- React mount/unmount (called by Blazor interop) ---
 
@@ -58,7 +56,7 @@ const todoReactApp = {
   },
 
   cancelReconnectDelays() {
-    peer.reconnectDelayer.cancelDelays();
+    hub.reconnectDelayer.cancelDelays();
   },
 };
 

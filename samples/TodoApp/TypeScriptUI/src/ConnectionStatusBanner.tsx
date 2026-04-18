@@ -36,7 +36,7 @@ export function ConnectionStatusBanner({ monitor }: Props) {
         <button
           type="button"
           className="btn btn-success btn-sm"
-          onClick={() => monitor.peer.reconnectDelayer.cancelDelays()}
+          onClick={() => monitor.peer.hub.reconnectDelayer.cancelDelays()}
         >
           Reconnect now
         </button>
