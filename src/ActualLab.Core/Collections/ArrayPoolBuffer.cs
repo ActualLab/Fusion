@@ -301,7 +301,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public ArrayOwner<T> ToArrayOwnerAndDispose()
     {
         var result = ArrayOwner.New(Pool, _array, _position, MustClear);
-        Interlocked.Exchange(ref _array, null!);
+        Volatile.Write(ref _array, null!);
         return result;
     }
 

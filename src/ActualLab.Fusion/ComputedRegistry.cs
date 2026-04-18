@@ -261,7 +261,7 @@ public sealed class ComputedRegistry
             UpdatePruneCounterThreshold(out keyCount);
             _opCounter.Reset();
         }
-        Interlocked.Exchange(ref Metrics.KeyCount, keyCount);
+        InterlockedExt.VolatileWrite(ref Metrics.KeyCount, keyCount);
         Metrics.PrunedKeyCount.Add(prunedKeyCount);
         Metrics.KeyPruneDuration.Record(startedAt.Elapsed.TotalMilliseconds);
     }
@@ -325,13 +325,13 @@ public sealed class ComputedRegistry
             var m = FusionInstruments.Meter;
             var ms = "computed.registry";
             CapacityCounter = m.CreateObservableCounter($"{ms}.key.count",
-                () => Interlocked.Read(ref KeyCount),
+                () => InterlockedExt.VolatileRead(ref KeyCount),
                 null, "ComputedRegistry key count.");
             NodeCounter = m.CreateObservableCounter($"{ms}.node.count",
-                () => Interlocked.Read(ref NodeCount),
+                () => InterlockedExt.VolatileRead(ref NodeCount),
                 null, "Count of nodes in Computed<T> dependency graph.");
             EdgeCounter = m.CreateObservableCounter($"{ms}.edge.count",
-                () => Interlocked.Read(ref EdgeCount),
+                () => InterlockedExt.VolatileRead(ref EdgeCount),
                 null, "Count of edges in Computed<T> dependency graph.");
 
             PrunedKeyCount = m.CreateCounter<long>($"{ms}.pruned.key.count",

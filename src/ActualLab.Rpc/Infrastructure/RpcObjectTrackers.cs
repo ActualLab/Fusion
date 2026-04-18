@@ -237,7 +237,7 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     public Moment LastKeepAliveAt {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => new(Interlocked.Read(ref _lastKeepAliveAt));
+        get => new(InterlockedExt.VolatileRead(ref _lastKeepAliveAt));
         set => InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, value.EpochOffsetTicks);
     }
 

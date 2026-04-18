@@ -176,7 +176,7 @@ public abstract class ComputedSynchronizer
         public bool AssumeSynchronized {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => _assumeSynchronized != 0;
-            set => Interlocked.Exchange(ref _assumeSynchronized, value ? 1 : 0);
+            set => _assumeSynchronized = value ? 1 : 0;
         }
 
         public Safe()

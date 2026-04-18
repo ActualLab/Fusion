@@ -1,3 +1,4 @@
+using ActualLab.Concurrency;
 using ActualLab.Internal;
 using ActualLab.Resilience;
 
@@ -18,7 +19,7 @@ public sealed class Connector<TConnection> : WorkerBase
     public AsyncState<Result<bool>> IsConnected { get; private set; } = new(false);
     public Moment? ReconnectsAt { // Relative to CpuClock.Now
         get {
-            var reconnectsAt = Interlocked.Read(ref _reconnectsAt);
+            var reconnectsAt = InterlockedExt.VolatileRead(ref _reconnectsAt);
             return reconnectsAt == default ? null : new Moment(reconnectsAt);
         }
     }
@@ -168,12 +169,12 @@ public sealed class Connector<TConnection> : WorkerBase
                     throw new RetryLimitExceededException();
 
                 if (!delay.Task.IsCompleted) {
-                    Interlocked.Exchange(ref _reconnectsAt, delay.EndsAt.EpochOffsetTicks);
+                    InterlockedExt.VolatileWrite(ref _reconnectsAt, delay.EndsAt.EpochOffsetTicks);
                     try {
                         await delay.Task.ConfigureAwait(false);
                     }
                     finally {
-                        Interlocked.Exchange(ref _reconnectsAt, 0);
+                        InterlockedExt.VolatileWrite(ref _reconnectsAt, 0);
                     }
                 }
             }

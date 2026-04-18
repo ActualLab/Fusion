@@ -1,7 +1,7 @@
 using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
 using ActualLab.Channels;
-using ActualLab.IO;
+using ActualLab.Concurrency;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
@@ -557,7 +557,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
             var m = RpcInstruments.Meter;
             var ms = "rpc.ws.transport";
             ChannelCounter = m.CreateObservableCounter($"{ms}.count",
-                () => Interlocked.Read(ref ChannelCount),
+                () => InterlockedExt.VolatileRead(ref ChannelCount),
                 null, "Number of WebSocketRpcTransport instances.");
             IncomingItemCounter = m.CreateCounter<long>($"{ms}.incoming.item.count",
                 null, "Number of items received via WebSocketRpcTransport.");

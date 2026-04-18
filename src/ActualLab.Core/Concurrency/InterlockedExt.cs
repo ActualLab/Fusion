@@ -5,6 +5,26 @@ namespace ActualLab.Concurrency;
 /// </summary>
 public static class InterlockedExt
 {
+    // Volatile.Read/Write<long> is only guaranteed atomic on 32-bit platforms starting
+    // from .NET 5; older targets need Interlocked.Read / Interlocked.Exchange to avoid tearing.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static long VolatileRead(ref long location) =>
+#if NET5_0_OR_GREATER
+        Volatile.Read(ref location);
+#else
+        Interlocked.Read(ref location);
+#endif
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void VolatileWrite(ref long location, long value)
+    {
+#if NET5_0_OR_GREATER
+        Volatile.Write(ref location, value);
+#else
+        Interlocked.Exchange(ref location, value);
+#endif
+    }
+
     public static long ExchangeIfGreater(ref int location, int value)
     {
         while (true) {
@@ -22,9 +42,7 @@ public static class InterlockedExt
     public static long ExchangeIfGreater(ref long location, long value)
     {
         while (true) {
-            // Interlocked.Read is atomic on all platforms, including 32-bit ones.
-            // We need it here to implement a volatile read of 64-bit value.
-            var readValue = Interlocked.Read(ref location);
+            var readValue = VolatileRead(ref location);
             if (value <= readValue)
                 return readValue;
 

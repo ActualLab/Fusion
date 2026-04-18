@@ -35,7 +35,7 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
     public Func<List<Item>, CancellationToken, Task> Implementation { get; set; } = (_, _) => Task.CompletedTask;
     public IBatchProcessorWorkerPolicy WorkerPolicy {
         get => _workerPolicy;
-        set => Interlocked.Exchange(ref _workerPolicy, value);
+        set => _workerPolicy = value;
     }
     public ILogger? Log { get; set; }
 

@@ -439,7 +439,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
     {
         var options = Options;
         if (options.MinCacheDuration != default) {
-            Interlocked.Exchange(ref _lastKeepAliveSlot, 0);
+            Volatile.Write(ref _lastKeepAliveSlot, 0);
             Timeouts.KeepAlive.Remove(this);
         }
     }

@@ -1,3 +1,4 @@
+using ActualLab.Concurrency;
 using ActualLab.OS;
 
 namespace ActualLab.Fusion.Internal;
@@ -128,8 +129,8 @@ public sealed class ComputedGraphPruner : WorkerBase
                 removedEdgeCount += oldEdgeCount - newEdgeCount;
             }
         }
-        Interlocked.Exchange(ref Metrics.NodeCount, computedCount);
-        Interlocked.Exchange(ref Metrics.EdgeCount, edgeCount);
+        InterlockedExt.VolatileWrite(ref Metrics.NodeCount, computedCount);
+        InterlockedExt.VolatileWrite(ref Metrics.EdgeCount, edgeCount);
         Metrics.PrunedEdgeCount.Add(removedEdgeCount);
         Metrics.EdgePruneDuration.Record(startedAt.Elapsed.TotalMilliseconds);
         Log.LogInformation(

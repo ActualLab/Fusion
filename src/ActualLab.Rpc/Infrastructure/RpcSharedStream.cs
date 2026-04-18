@@ -1,3 +1,4 @@
+using ActualLab.Concurrency;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
 
@@ -25,8 +26,8 @@ public abstract class RpcSharedStream(RpcStream stream) : WorkerBase, IRpcShared
     public RpcStream Stream { get; } = stream;
     public RpcPeer Peer { get; } = stream.Peer!;
     public Moment LastKeepAliveAt {
-        get => new(Interlocked.Read(ref _lastKeepAliveAt));
-        set => Interlocked.Exchange(ref _lastKeepAliveAt, value.EpochOffsetTicks);
+        get => new(InterlockedExt.VolatileRead(ref _lastKeepAliveAt));
+        set => InterlockedExt.ExchangeIfGreater(ref _lastKeepAliveAt, value.EpochOffsetTicks);
     }
 
     Task IRpcObject.Reconnect(CancellationToken cancellationToken)
