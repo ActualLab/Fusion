@@ -12,8 +12,10 @@
 import WebSocket from 'ws';
 import {
     RpcClientPeer,
+    RpcPeerRefBuilder,
     RpcType,
     defineRpcService,
+    type RpcConnectionState,
     type WebSocketLike,
 } from '@actuallab/rpc';
 import { Computed, ComputedState, FixedDelayer } from '@actuallab/fusion';
@@ -22,11 +24,16 @@ import {
     defineComputeService,
 } from '@actuallab/fusion-rpc';
 
-const serverUrl = process.env['RPC_SERVER_URL'];
-if (!serverUrl) {
+// RpcConnectionState.Connected — inlined to avoid `verbatimModuleSyntax`
+// restriction on cross-package `const enum` imports.
+const RPC_CONNECTED = 2 as RpcConnectionState;
+
+const serverUrlEnv = process.env['RPC_SERVER_URL'];
+if (!serverUrlEnv) {
     console.error('RPC_SERVER_URL not set');
     process.exit(1);
 }
+const serverUrl: string = serverUrlEnv;
 
 const rpcFormat = process.env['RPC_FORMAT'] ?? 'json5np';
 const scenario = process.argv[2] ?? 'all';
@@ -100,6 +107,19 @@ function delay(ms: number): Promise<void> {
     return new Promise((r) => setTimeout(r, ms));
 }
 
+/** Resolve on the NEXT transition into `Connected`, ignoring the current
+ *  state — mirrors the old `peer.connected` event semantics. */
+function whenNextConnected(peer: RpcClientPeer): Promise<void> {
+    return new Promise<void>((resolve) => {
+        const handler = (state: RpcConnectionState): void => {
+            if (state !== RPC_CONNECTED) return;
+            peer.connectionStateChanged.remove(handler);
+            resolve();
+        };
+        peer.connectionStateChanged.add(handler);
+    });
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -107,17 +127,20 @@ function delay(ms: number): Promise<void> {
 async function run(): Promise<void> {
     console.log(`  format: ${rpcFormat}`);
     const hub = new FusionHub();
-    const peer = new RpcClientPeer(hub, serverUrl, rpcFormat);
+    // Bake the serialization format into the URL via ?f=... so the peer ctor
+    // picks it up. Pass `mustStart=false` — we need to set webSocketFactory first.
+    const peer = new RpcClientPeer(hub, RpcPeerRefBuilder.forClient(serverUrl, rpcFormat), false);
 
     // wsFactory: create ws WebSocket (Node.js)
-    const wsFactory = (url: string) => new WebSocket(url) as unknown as WebSocketLike;
+    peer.webSocketFactory = (url: string) => new WebSocket(url) as unknown as WebSocketLike;
 
     // Start connection loop with handshake exchange
-    const runPromise = peer.run(wsFactory);
+    peer.start();
+    const runPromise = peer.whenRunning;
 
     // Wait for connection + handshake
     await Promise.race([
-        new Promise<void>((resolve) => peer.connected.add(() => resolve())),
+        peer.whenConnected(),
         timeout(10_000, 'Connection timeout'),
     ]);
 
@@ -145,7 +168,7 @@ async function run(): Promise<void> {
         console.log('ALL TESTS PASSED');
     } finally {
         peer.close();
-        await runPromise.catch(() => { /* noop */ });
+        await runPromise?.catch(() => { /* noop */ });
         // Give a moment for cleanup
         await delay(50);
     }
@@ -271,9 +294,7 @@ async function testStreamNoReconnect(hub: FusionHub, peer: RpcClientPeer): Promi
     let gotError = false;
 
     // Set up reconnection waiter
-    const reconnectPromise = new Promise<void>((resolve) => {
-        peer.connected.add(() => resolve());
-    });
+    const reconnectPromise = whenNextConnected(peer);
 
     // Disconnect after a short delay to ensure some items arrive
     setTimeout(() => peer.connection?.close(), 50);
@@ -316,9 +337,7 @@ async function testAutoReconnect(hub: FusionHub, peer: RpcClientPeer): Promise<v
     assert(captured.isConsistent, 'Computed should be consistent before disconnect');
 
     // 2. Set up reconnection waiter before disconnecting
-    const reconnectPromise = new Promise<void>((resolve) => {
-        peer.connected.add(() => resolve());
-    });
+    const reconnectPromise = whenNextConnected(peer);
 
     // 3. Close WebSocket to simulate disconnect
     peer.connection?.close();
@@ -399,9 +418,7 @@ async function testReconnectNoDuplicate(hub: FusionHub, peer: RpcClientPeer): Pr
     //    .NET server's inbound tracker still has the call, so when TS
     //    sends $sys.Reconnect the server answers "I know this call",
     //    and the client MUST NOT resend.
-    const reconnectPromise = new Promise<void>((resolve) => {
-        peer.connected.add(() => resolve());
-    });
+    const reconnectPromise = whenNextConnected(peer);
     peer.connection?.close();
     await Promise.race([reconnectPromise, timeout(15_000, 'Reconnect timeout')]);
     await delay(200); // wait for handshake + $sys.Reconnect round-trip
@@ -439,7 +456,7 @@ async function testReconnectionTorture(hub: FusionHub, peer: RpcClientPeer): Pro
             return;
         }
         await Promise.race([
-            new Promise<void>((resolve) => peer.connected.add(() => resolve())),
+            whenNextConnected(peer),
             timeout(10_000, 'Reconnection timeout'),
         ]);
         await delay(200); // wait for handshake exchange
@@ -447,9 +464,7 @@ async function testReconnectionTorture(hub: FusionHub, peer: RpcClientPeer): Pro
 
     // Helper: disconnect and wait for auto-reconnection
     async function disconnectAndReconnect(): Promise<void> {
-        const reconnectPromise = new Promise<void>((resolve) => {
-            peer.connected.add(() => resolve());
-        });
+        const reconnectPromise = whenNextConnected(peer);
         peer.connection?.close();
         await Promise.race([reconnectPromise, timeout(10_000, 'Reconnection timeout')]);
         await delay(200); // wait for handshake exchange
@@ -530,7 +545,7 @@ async function testServerRestart(hub: FusionHub, peer: RpcClientPeer): Promise<v
 
     // 4. Wait for reconnection to the restarted server
     await Promise.race([
-        new Promise<void>((resolve) => peer.connected.add(() => resolve())),
+        whenNextConnected(peer),
         timeout(15_000, 'Reconnection timeout after server restart'),
     ]);
     await delay(200); // wait for handshake exchange to complete

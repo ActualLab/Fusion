@@ -45,11 +45,11 @@ export class RpcSystemCallHandler {
 
         switch (method) {
         case RpcSystemCalls.ok: {
-            const call = peer.outbound.get(relatedId);
+            const call = peer.outboundCalls.get(relatedId);
             if (call !== undefined) {
                 call.completedStage |= RpcCallStage.ResultReady;
                 if (call.removeOnOk) {
-                    peer.outbound.remove(relatedId);
+                    peer.outboundCalls.remove(relatedId);
                 }
                 call.result.resolve(args[0]);
             }
@@ -70,7 +70,7 @@ export class RpcSystemCallHandler {
             break;
         }
         case RpcSystemCalls.error: {
-            const call = peer.outbound.remove(relatedId);
+            const call = peer.outboundCalls.remove(relatedId);
             if (call !== undefined) {
                 const errorInfo = args[0] as
                         | Record<string, unknown>
@@ -95,11 +95,14 @@ export class RpcSystemCallHandler {
             // from the inbound tracker.  Full cancellation propagation (aborting
             // the running service handler) is not yet implemented; this just
             // unregisters the call so we don't send a response for it.
-            peer.inbound.remove(relatedId);
+            peer.inboundCalls.remove(relatedId);
             break;
         }
         case RpcSystemCalls.keepAlive: {
-            // Remote keep-alive — nothing to do, just acknowledges the connection is alive
+            // Remote keep-alive — mark the peer as "alive" so the peer's
+            // watchdog doesn't force-close the connection. Mirrors .NET
+            // `RpcObjectTrackers.KeepAlive` which sets `LastKeepAliveAt`.
+            peer.notifyKeepAliveReceived();
             break;
         }
         case RpcSystemCalls.item: {
@@ -229,7 +232,7 @@ export class RpcSystemCallHandler {
                     if (bytes === null) continue;
                     const callIds = IncreasingSeqCompressor.deserialize(bytes);
                     for (const callId of callIds) {
-                        if (peer.inbound.get(callId) === undefined) {
+                        if (peer.inboundCalls.get(callId) === undefined) {
                             unknownSet.add(callId);
                         }
                     }
@@ -243,8 +246,8 @@ export class RpcSystemCallHandler {
         }
 
         const responseBytes = IncreasingSeqCompressor.serialize(unknownIds);
-        const responseValue = peer.format.isBinary ? responseBytes : base64Encode(responseBytes);
-        peer.hub.systemCallSender.ok(peer.connection, peer.format, relatedId, responseValue);
+        const responseValue = peer.serializationFormat.isBinary ? responseBytes : base64Encode(responseBytes);
+        peer.hub.systemCallSender.ok(peer.connection, peer.serializationFormat, relatedId, responseValue);
     }
 }
 

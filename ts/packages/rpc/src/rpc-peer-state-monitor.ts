@@ -3,7 +3,7 @@
 
 import { EventHandlerSet } from '@actuallab/core';
 import { getLogs } from './logging.js';
-import type { RpcClientPeer } from './rpc-peer.js';
+import { RpcConnectionState, type RpcClientPeer } from './rpc-peer.js';
 import { type RpcPeerState, RpcPeerStateKind } from './rpc-peer-state.js';
 
 const { infoLog } = getLogs('RpcPeerStateMonitor');
@@ -24,25 +24,24 @@ export class RpcPeerStateMonitor {
     private _timer: ReturnType<typeof setTimeout> | undefined;
 
     // Arrow functions to preserve `this` when used as event handlers
-    private _onConnected = (): void => {
-        this._rawConnected = true;
-        this._connectedAt = Date.now();
-        this._lastError = undefined;
-        this._recompute();
-    };
-
-    private _onDisconnected = (ev: { code: number; reason: string }): void => {
-        const wasConnected = this._rawConnected;
-        this._rawConnected = false;
-        this._lastError = new Error(
-            `Connection closed: ${ev.reason} (code ${ev.code})`
-        );
-        if (wasConnected) {
-            // True connected→disconnected transition — start JustDisconnected period
-            this._disconnectedAt = Date.now();
+    private _onConnectionStateChanged = (state: RpcConnectionState): void => {
+        if (state === RpcConnectionState.Connected) {
+            this._rawConnected = true;
+            this._connectedAt = Date.now();
+            this._lastError = undefined;
+        } else {
+            const wasConnected = this._rawConnected;
+            this._rawConnected = false;
+            // We no longer receive a close code/reason — only the state.
+            // Retain a generic error for UI hints.
+            this._lastError = new Error('Connection closed');
+            if (wasConnected) {
+                // True connected→disconnected transition — start JustDisconnected period
+                this._disconnectedAt = Date.now();
+            }
+            // When wasConnected=false, this is a failed reconnect attempt —
+            // keep the original _disconnectedAt so the countdown isn't reset.
         }
-        // When wasConnected=false, this is a failed reconnect attempt —
-        // keep the original _disconnectedAt so the countdown isn't reset.
         this._recompute();
     };
 
@@ -72,10 +71,9 @@ export class RpcPeerStateMonitor {
             };
         }
 
-        peer.connected.add(this._onConnected);
-        peer.disconnected.add(this._onDisconnected);
+        peer.connectionStateChanged.add(this._onConnectionStateChanged);
         peer.reconnectsAtChanged.add(this._onReconnectsAtChanged);
-        peer.reconnectDelayer.cancelDelaysChanged.add(
+        peer.hub.reconnectDelayer.cancelDelaysChanged.add(
             this._onCancelDelaysChanged
         );
 
@@ -98,10 +96,9 @@ export class RpcPeerStateMonitor {
             clearTimeout(this._timer);
             this._timer = undefined;
         }
-        this.peer.connected.remove(this._onConnected);
-        this.peer.disconnected.remove(this._onDisconnected);
+        this.peer.connectionStateChanged.remove(this._onConnectionStateChanged);
         this.peer.reconnectsAtChanged.remove(this._onReconnectsAtChanged);
-        this.peer.reconnectDelayer.cancelDelaysChanged.remove(
+        this.peer.hub.reconnectDelayer.cancelDelaysChanged.remove(
             this._onCancelDelaysChanged
         );
         // Mirrors RpcPeerStateMonitor.cs:125 — "monitor stopped".

@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
     RpcClientPeer,
+    RpcConnectionState,
     RpcType,
     defineRpcService,
 } from '../src/index.js';
@@ -96,8 +97,9 @@ describe.each(FORMATS)('RPC End-to-End [%s]', (formatKey) => {
         expect(pair.clientPeer.isConnected).toBe(true);
 
         let clientDisconnected = false;
-        pair.clientPeer.disconnected.add(() => {
-            clientDisconnected = true;
+        pair.clientPeer.connectionStateChanged.add(state => {
+            if (state === RpcConnectionState.Disconnected)
+                clientDisconnected = true;
         });
 
         pair.clientPeer.close();
@@ -127,9 +129,9 @@ describe.each(FORMATS)('RPC End-to-End [%s]', (formatKey) => {
         });
 
         // callNoWait should not throw and not register
-        const trackerSizeBefore = pair.clientPeer.outbound.size;
+        const trackerSizeBefore = pair.clientPeer.outboundCalls.size;
         pair.clientPeer.callNoWait('NoWaitService.fire:2', ['hello']);
-        expect(pair.clientPeer.outbound.size).toBe(trackerSizeBefore);
+        expect(pair.clientPeer.outboundCalls.size).toBe(trackerSizeBefore);
 
         await delay(50);
         expect(received).toBe('hello');

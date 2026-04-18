@@ -79,7 +79,7 @@ class FusionSystemCallHandler extends RpcSystemCallHandler {
         const relatedId = message.RelatedId ?? 0;
 
         if (method === FUSION_INVALIDATE_METHOD) {
-            const call = peer.outbound.remove(relatedId);
+            const call = peer.outboundCalls.remove(relatedId);
             if (call instanceof RpcOutboundComputeCall) {
                 call.whenInvalidated.resolve();
             }

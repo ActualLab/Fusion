@@ -10,9 +10,8 @@ export function base64Encode(bytes: Uint8Array): string {
     const chunkSize = 0x8000;
     let binary = '';
     for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode.apply(
-            null,
-            bytes.subarray(i, Math.min(bytes.length, i + chunkSize)) as unknown as number[],
+        binary += String.fromCharCode(
+            ...(bytes.subarray(i, Math.min(bytes.length, i + chunkSize)) as unknown as number[]),
         );
     }
     return btoa(binary);

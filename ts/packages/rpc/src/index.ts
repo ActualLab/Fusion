@@ -71,10 +71,11 @@ export { RpcSharedObjectTracker } from './rpc-shared-object-tracker.js';
 
 export {
     RpcPeer,
-    RpcPeerConnectionKind,
+    RpcConnectionState,
     RpcClientPeer,
     RpcServerPeer,
     RPC_CLOSE_CODE_UNSUPPORTED_FORMAT,
+    HANDSHAKE_TIMEOUT_MS,
     defaultConnectionUrlResolver,
 } from './rpc-peer.js';
 export type {
@@ -83,6 +84,8 @@ export type {
     RpcConnectionUrlResolver,
 } from './rpc-peer.js';
 export { RpcHub } from './rpc-hub.js';
+export type { RpcPeerFactory } from './rpc-hub.js';
+export { RpcPeerRefBuilder } from './rpc-peer-ref-builder.js';
 export { RpcServiceHost } from './rpc-service-host.js';
 export type { RpcServiceImpl, RpcDispatchContext } from './rpc-service-host.js';
 export { createRpcClient } from './rpc-client.js';

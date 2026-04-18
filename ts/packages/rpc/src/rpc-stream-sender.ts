@@ -136,7 +136,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         const conn = this.peer.connection;
         if (conn) {
             this.peer.hub.systemCallSender.item(
-                conn, this.peer.format, this.id.localId, this._nextIndex, item,
+                conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, item,
             );
         }
         this._nextIndex++;
@@ -148,7 +148,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         const conn = this.peer.connection;
         if (conn) {
             this.peer.hub.systemCallSender.batch(
-                conn, this.peer.format, this.id.localId, this._nextIndex, items,
+                conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, items,
             );
         }
         this._nextIndex += items.length;
@@ -166,7 +166,7 @@ export class RpcStreamSender<T> implements IRpcObject {
             ? { TypeRef: 'System.Exception', Message: error.message }
             : { TypeRef: '', Message: '' };
         this.peer.hub.systemCallSender.end(
-            conn, this.peer.format, this.id.localId, this._nextIndex, errorInfo,
+            conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, errorInfo,
         );
     }
 

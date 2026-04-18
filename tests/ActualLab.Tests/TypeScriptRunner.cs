@@ -5,11 +5,15 @@ namespace ActualLab.Tests;
 
 public class TypeScriptRunner(ITestOutputHelper @out)
 {
-    private static readonly SemaphoreSlim NpmInstallLock = new(1, 1);
+    // One-shot per test process: the first test that needs TS triggers the
+    // check + optional build; everyone else awaits the same build, then no-ops.
+    private static readonly SemaphoreSlim EnsureBuiltLock = new(1, 1);
+    private static bool _ensureBuiltDone;
+
     private static string? _tsDir;
 
     public ITestOutputHelper Out { get; } = @out;
-    public string TsDir => _tsDir ??= FindTypeScriptDirectory();
+    public static string TsDir => _tsDir ??= FindTypeScriptDirectory();
 
     public async Task RunScenario(
         string scriptRelativePath,
@@ -33,61 +37,72 @@ public class TypeScriptRunner(ITestOutputHelper @out)
         result.Stderr.Should().BeEmpty("TypeScript scenario produced unexpected stderr output");
     }
 
-    public async Task EnsureTsBuilt()
+    /// <summary>
+    /// Ensures <c>node_modules</c> and the TS workspace build exist. Runs at
+    /// most once per test process — the first caller does the check and
+    /// optional build, subsequent callers return instantly once it finishes.
+    /// Safe to call concurrently.
+    /// </summary>
+    public static async Task EnsureTsBuilt()
     {
-        var tsxPath = FindLocalBinOrNull("tsx");
-        var distExists = IsTsBuilt();
-        if (tsxPath != null && distExists)
+        if (Volatile.Read(ref _ensureBuiltDone))
             return;
-
-        await NpmInstallLock.WaitAsync();
+        await EnsureBuiltLock.WaitAsync().ConfigureAwait(false);
         try {
-            tsxPath = FindLocalBinOrNull("tsx");
-            distExists = IsTsBuilt();
-            if (tsxPath != null && distExists)
+            if (_ensureBuiltDone)
                 return;
-
-            var npmPath = FindGlobalBin("npm");
-
-            if (tsxPath == null) {
-                // Delete corrupt/partial node_modules to prevent local npm shim
-                // from shadowing the global npm binary
-                var nodeModulesDir = Path.Combine(TsDir, "node_modules");
-                if (Directory.Exists(nodeModulesDir)) {
-                    Out.WriteLine("node_modules exists but tsx is missing — deleting node_modules...");
-                    Directory.Delete(nodeModulesDir, recursive: true);
-                }
-
-                Out.WriteLine("Running npm install...");
-                var installResult = await RunProcess(TsDir, npmPath, "install",
-                    timeout: TimeSpan.FromSeconds(120));
-
-                if (installResult.ExitCode != 0)
-                    throw new InvalidOperationException(
-                        $"npm install failed (exit code {installResult.ExitCode}):\n{installResult.Stderr}");
-
-                Out.WriteLine("npm install completed.");
-            }
-
-            if (!distExists) {
-                Out.WriteLine("Running npm run build...");
-                var buildResult = await RunProcess(TsDir, npmPath, "run build",
-                    timeout: TimeSpan.FromSeconds(120));
-
-                if (buildResult.ExitCode != 0)
-                    throw new InvalidOperationException(
-                        $"npm run build failed (exit code {buildResult.ExitCode}):\n{buildResult.Stderr}");
-
-                File.WriteAllText(Path.Combine(TsDir, ".ts-built"), "");
-                Out.WriteLine("npm run build completed.");
-            }
+            await EnsureTsBuiltOnceAsync().ConfigureAwait(false);
+            Volatile.Write(ref _ensureBuiltDone, true);
         }
         finally {
-            NpmInstallLock.Release();
+            EnsureBuiltLock.Release();
         }
     }
 
     // Private methods
+
+    private static async Task EnsureTsBuiltOnceAsync()
+    {
+        var tsxPath = FindLocalBinOrNull("tsx");
+        var distOk = IsTsBuilt();
+        if (tsxPath != null && distOk)
+            return;
+
+        var npmPath = FindGlobalBin("npm");
+
+        if (tsxPath == null) {
+            // Delete corrupt/partial node_modules to prevent local npm shim
+            // from shadowing the global npm binary
+            var nodeModulesDir = Path.Combine(TsDir, "node_modules");
+            if (Directory.Exists(nodeModulesDir)) {
+                Console.WriteLine("node_modules exists but tsx is missing — deleting node_modules...");
+                Directory.Delete(nodeModulesDir, recursive: true);
+            }
+
+            Console.WriteLine("Running npm install...");
+            var installResult = await RunProcess(TsDir, npmPath, "install",
+                timeout: TimeSpan.FromSeconds(120));
+
+            if (installResult.ExitCode != 0)
+                throw new InvalidOperationException(
+                    $"npm install failed (exit code {installResult.ExitCode}):\n{installResult.Stderr}");
+
+            Console.WriteLine("npm install completed.");
+        }
+
+        if (!distOk) {
+            Console.WriteLine("Running npm run build...");
+            var buildResult = await RunProcess(TsDir, npmPath, "run build",
+                timeout: TimeSpan.FromSeconds(120));
+
+            if (buildResult.ExitCode != 0)
+                throw new InvalidOperationException(
+                    $"npm run build failed (exit code {buildResult.ExitCode}):\n{buildResult.Stderr}");
+
+            File.WriteAllText(Path.Combine(TsDir, ".ts-built"), "");
+            Console.WriteLine("npm run build completed.");
+        }
+    }
 
     private static async Task<ProcessResult> RunProcess(
         string workingDirectory,
@@ -152,8 +167,36 @@ public class TypeScriptRunner(ITestOutputHelper @out)
         return new ProcessResult(process.ExitCode, stdout, stderr);
     }
 
-    private bool IsTsBuilt()
-        => File.Exists(Path.Combine(TsDir, ".ts-built"));
+    // Packages that E2E scripts import. Each must have tsup's .cjs output in
+    // dist — tsc never produces .cjs, so its presence is a reliable signal that
+    // `npm run build` completed and the dist hasn't been clobbered by an
+    // incidental `tsc -b` (IDE / typecheck) since.
+    private static readonly string[] RequiredTsupPackages = [
+        "core", "rpc", "fusion", "fusion-rpc",
+    ];
+
+    private static bool IsTsBuilt()
+    {
+        if (!File.Exists(Path.Combine(TsDir, ".ts-built")))
+            return false;
+        foreach (var pkg in RequiredTsupPackages) {
+            var distDir = Path.Combine(TsDir, "packages", pkg, "dist");
+            // tsup's .cjs output is the unambiguous "tsup ran" marker (tsc
+            // doesn't emit .cjs). Its absence means either no build ran or the
+            // dist has been wiped since.
+            if (!File.Exists(Path.Combine(distDir, "index.cjs")))
+                return false;
+            // index.js can be replaced by a stray `tsc -b` (IDE or manual) with
+            // a tiny re-export skeleton like `export { getLogs } from
+            // './logging.js';`. The skeleton's siblings may be missing, so
+            // `tsx` fails at resolve time. tsup's bundled esm is always tens of
+            // KB; treat anything under 20KB as broken and force a rebuild.
+            var indexJs = Path.Combine(distDir, "index.js");
+            if (!File.Exists(indexJs) || new FileInfo(indexJs).Length < 20_000)
+                return false;
+        }
+        return true;
+    }
 
     private static string FindGlobalBin(string name)
     {
@@ -170,7 +213,7 @@ public class TypeScriptRunner(ITestOutputHelper @out)
             $"'{bin}' not found in PATH. Ensure Node.js is installed.");
     }
 
-    private string FindLocalBin(string name)
+    private static string FindLocalBin(string name)
     {
         var path = FindLocalBinOrNull(name);
         if (path == null)
@@ -179,7 +222,7 @@ public class TypeScriptRunner(ITestOutputHelper @out)
         return path;
     }
 
-    private string? FindLocalBinOrNull(string name)
+    private static string? FindLocalBinOrNull(string name)
     {
         var bin = OSInfo.IsWindows ? $"{name}.cmd" : name;
         var path = Path.Combine(TsDir, "node_modules", ".bin", bin);

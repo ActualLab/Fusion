@@ -122,21 +122,22 @@ describe('RPC run() reconnection', () => {
 
         const clientHub = new RpcHub('client');
         hubs.push(clientHub);
-        const peer = new RpcClientPeer(clientHub, 'ws://test');
+        const peer = new RpcClientPeer(clientHub, 'ws://test', false);
         clientHub.addPeer(peer);
         peers.push(peer);
 
         // Use short delays for fast test
-        peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
+        peer.hub.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
 
         // Start the reconnection loop
-        void peer.run(factory);
+        peer.webSocketFactory = factory;
+        peer.start();
 
         // Wait for initial connection
-        await peer.connected.whenNext();
+        await peer.whenConnected();
         await delay(10);
 
         // Verify calls work
@@ -152,7 +153,7 @@ describe('RPC run() reconnection', () => {
         serverRef.hub = createServerHub('server-2', 100);
 
         // Wait for reconnection
-        await peer.connected.whenNext();
+        await peer.whenConnected();
         await delay(10);
 
         // Verify calls go to the new server
@@ -165,20 +166,21 @@ describe('RPC run() reconnection', () => {
 
         const clientHub = new RpcHub('client');
         hubs.push(clientHub);
-        const peer = new RpcClientPeer(clientHub, 'ws://test');
+        const peer = new RpcClientPeer(clientHub, 'ws://test', false);
         clientHub.addPeer(peer);
         peers.push(peer);
 
-        peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
+        peer.hub.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
-        void peer.run(factory);
+        peer.webSocketFactory = factory;
+        peer.start();
 
         const calc = createRpcClient<ICalcService>(peer, CalcServiceDef);
 
         for (let i = 0; i < 3; i++) {
-            await peer.connected.whenNext();
+            await peer.whenConnected();
             await delay(10);
 
             const result = await calc.add(i, 10);
@@ -191,7 +193,7 @@ describe('RPC run() reconnection', () => {
         }
 
         // Final reconnection + call
-        await peer.connected.whenNext();
+        await peer.whenConnected();
         await delay(10);
         const final = await calc.add(99, 1);
         expect(final).toBe(100);

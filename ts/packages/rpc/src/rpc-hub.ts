@@ -39,6 +39,7 @@ import {
     type RpcPeer,
     type RpcCallOptions,
 } from './rpc-peer.js';
+import { RpcClientPeerReconnectDelayer } from './rpc-client-peer-reconnect-delayer.js';
 import { RpcServiceHost, type RpcServiceImpl } from './rpc-service-host.js';
 import type { RpcServiceDef, RpcMethodDef } from './rpc-service-def.js';
 import { wireMethodName, RpcType, RpcRemoteExecutionMode } from './rpc-service-def.js';
@@ -50,6 +51,12 @@ import { RpcMethodRegistry } from './rpc-method-registry.js';
 import { RpcSystemCalls } from './rpc-message.js';
 
 const { warnLog } = getLogs('RpcHub');
+
+/** Factory signature shared by all peer lookup/creation methods. Serialization
+ *  format is encoded in the URL via `?f=...` (see {@link RpcPeerRefBuilder}),
+ *  so the factory doesn't need an extra parameter for it. `getClientPeer` /
+ *  `getServerPeer` cast the result, so the factory returns RpcPeer. */
+export type RpcPeerFactory = (hub: RpcHub, ref: string) => RpcPeer;
 
 /** Central RPC coordinator — manages peers, services, and configuration. */
 export class RpcHub {
@@ -63,6 +70,18 @@ export class RpcHub {
      *  Created lazily, populated by addService/addClient. */
     readonly registry = new RpcMethodRegistry();
 
+    /** Shared reconnect delayer used by every client peer in this hub. Swap in
+     *  a custom subclass (e.g. app-level signal-gated) before peers start. */
+    reconnectDelayer: RpcClientPeerReconnectDelayer = new RpcClientPeerReconnectDelayer();
+
+    /** URL used by {@link defaultPeer} to resolve / create the default client
+     *  peer. Must be set before the first {@link defaultPeer} access. */
+    defaultPeerUrl: string | undefined;
+    /** Factory used by {@link defaultPeer} when the peer needs to be created.
+     *  If left undefined, `getPeer`'s built-in default (RpcClientPeer with
+     *  format derived from URL or resolver default) is used. */
+    defaultPeerFactory: RpcPeerFactory | undefined;
+
     constructor(hubId?: string) {
         this.hubId = hubId ?? crypto.randomUUID();
         this.serviceHost = new RpcServiceHost();
@@ -73,7 +92,21 @@ export class RpcHub {
         }
     }
 
+    /** Shortcut for the hub's default client peer. Fails if
+     *  {@link defaultPeerUrl} is not set. */
+    get defaultPeer(): RpcClientPeer {
+        if (this.defaultPeerUrl === undefined)
+            throw new Error('RpcHub.defaultPeerUrl is not set.');
+        return this.getClientPeer(this.defaultPeerUrl, this.defaultPeerFactory);
+    }
+
+    /** Register a peer under its ref. If a different peer is already registered
+     *  at the same ref, close it first — the hub guarantees at most one live
+     *  peer per ref, and no peer exists outside the hub. */
     addPeer(peer: RpcPeer): void {
+        const existing = this.peers.get(peer.ref);
+        if (existing !== undefined && existing !== peer)
+            existing.close(); // close() removes itself from this.peers
         this.peers.set(peer.ref, peer);
     }
 
@@ -87,25 +120,34 @@ export class RpcHub {
         }
     }
 
-    /** Get or create a peer by ref. Server peers have "server://" prefix, everything else is a client peer. */
-    getPeer(ref: string): RpcPeer {
-        let peer = this.peers.get(ref);
-        if (peer) return peer;
-        peer = ref.startsWith('server://')
-            ? new RpcServerPeer(this, ref)
-            : new RpcClientPeer(this, ref);
+    /** Get or create a peer by ref. If the peer does not exist:
+     *   - with `factory` provided: it is constructed via `factory(this, ref)`;
+     *   - otherwise: server peers (ref starts with `server://`) get a plain
+     *     RpcServerPeer, anything else gets a default-configured RpcClientPeer.
+     *  The created peer is always registered in this hub. */
+    getPeer(ref: string, factory?: RpcPeerFactory): RpcPeer {
+        const existing = this.peers.get(ref);
+        if (existing) return existing;
+
+        const peer = factory
+            ? factory(this, ref)
+            : ref.startsWith('server://')
+                ? new RpcServerPeer(this, ref)
+                : new RpcClientPeer(this, ref);
         this.addPeer(peer);
         return peer;
     }
 
-    /** Get or create a client peer for the given URL. */
-    getClientPeer(ref: string): RpcClientPeer {
-        return this.getPeer(ref) as RpcClientPeer;
+    /** Get or create a client peer for the given URL. See {@link getPeer} for
+     *  the factory semantics. */
+    getClientPeer(ref: string, factory?: RpcPeerFactory): RpcClientPeer {
+        return this.getPeer(ref, factory) as RpcClientPeer;
     }
 
-    /** Get or create a server peer for the given ref. */
-    getServerPeer(ref: string): RpcServerPeer {
-        return this.getPeer(ref) as RpcServerPeer;
+    /** Get or create a server peer for the given ref. See {@link getPeer} for
+     *  the factory semantics. */
+    getServerPeer(ref: string, factory?: RpcPeerFactory): RpcServerPeer {
+        return this.getPeer(ref, factory) as RpcServerPeer;
     }
 
     /** Register a service with optional server method wrapping for custom call types. */

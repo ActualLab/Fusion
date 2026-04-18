@@ -231,7 +231,7 @@ describe('RPC Reconnection', () => {
         server.accept(conn2);
 
         // Manually send a handshake from client → server
-        hub1.systemCallSender.handshake(conn1, client.format, client.id, 'hub-A', 1);
+        hub1.systemCallSender.handshake(conn1, client.serializationFormat, client.id, 'hub-A', 1);
 
         // Wait for the server's handshake response to arrive
         await delay(5);
@@ -273,7 +273,7 @@ describe('RPC Reconnection', () => {
         );
         // Call should be removed from the tracker
         expect(
-            conn.clientPeer.outbound.get(outboundCall.callId)
+            conn.clientPeer.outboundCalls.get(outboundCall.callId)
         ).toBeUndefined();
 
         slowHub.close();
