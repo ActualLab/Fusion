@@ -213,6 +213,13 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         return connectionState.WhenDisconnected(cancellationToken);
     }
 
+    // WhenDisconnected
+
+    public Task WhenDisconnected(CancellationToken cancellationToken = default)
+        => ConnectionState.Value.WhenDisconnected.WaitAsync(cancellationToken);
+
+    // ResetConnectionAttemptIndex
+
     public void ResetConnectionAttemptIndex()
     {
         lock (Lock)
@@ -498,6 +505,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             return connectionState;
         }
         finally {
+            oldState.MarkDisconnected();
             if (newState.ReaderTokenSource != oldState.ReaderTokenSource) {
                 // Cancel the old ReaderTokenSource
                 oldState.ReaderTokenSource.CancelAndDisposeSilently();

@@ -190,7 +190,29 @@ public abstract class RemoteComputeMethodFunction(
         var cacheInfoCapture = cache is not null
             ? new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash)
             : null;
-        var (result, call) = await SendRpcCall(input, peer, cacheInfoCapture, cancellationToken).ConfigureAwait(false);
+        var sendTask = SendRpcCall(input, peer, cacheInfoCapture, cancellationToken);
+        if (existingCacheEntry is not null) {
+            // If we have a usable cached value, race SendRpcCall against a peer disconnect.
+            // This handles the case where the call was dispatched just before the connection
+            // died — without this, the call would hang forever waiting for a response that's
+            // never coming (RpcCallTrackers preserves calls across reconnect but doesn't time
+            // them out). On disconnect, we serve stale and let the tracker resend on reconnect.
+            if (!sendTask.IsCompleted) {
+                var sendTaskAsTask = sendTask.AsTask();
+                var disconnectTask = peer.ConnectionState.Value.WhenDisconnected;
+                var winner = await Task.WhenAny(sendTaskAsTask, disconnectTask).ConfigureAwait(false);
+                if (winner == disconnectTask) {
+                    var staleResult = Result.NewUntyped(existingCacheEntry.DeserializedValue);
+                    var staleComputed = NewRemoteComputed(input, staleResult, existingCacheEntry);
+                    _ = InvalidateWhenReconnected(staleComputed, peer);
+                    return staleComputed;
+                }
+                // Assign the completed task back to sendTask, coz we "unwrapped" the old one
+                sendTask = sendTaskAsTask.ToValueTask();
+            }
+        }
+
+        var (result, call) = await sendTask.ConfigureAwait(false);
         var (value, error) = result;
         if (error is OperationCanceledException e) { // Also handles RpcRerouteException
             // WriteLine($"ComputeRpc got OCE: {e}");
@@ -497,6 +519,7 @@ public abstract class RemoteComputeMethodFunction(
         staleComputed.Invalidate(immediately: true, new InvalidationSource(reason));
     }
 
+    // Completes when the peer transitions to a non-connected state (Handshake is null).
     protected Task InvalidateOnError(Computed computed, Exception? error, string source)
     {
         if (error is RpcRerouteException)

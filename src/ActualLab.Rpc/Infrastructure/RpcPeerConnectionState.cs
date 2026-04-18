@@ -11,14 +11,27 @@ public sealed record RpcPeerConnectionState(
     int ConnectionAttemptIndex = 0,
     CancellationTokenSource? ReaderTokenSource = null)
 {
+    public static readonly TaskCompletionSource<Unit> AlwaysDisconnectedSource
+        = TaskCompletionSourceExt.New<Unit>().WithResult(default);
     public static readonly RpcPeerConnectionState Disconnected = new();
+
+    private readonly TaskCompletionSource<Unit> _whenDisconnectedSource
+        = Handshake is null
+            ? AlwaysDisconnectedSource
+            : TaskCompletionSourceExt.New<Unit>();
 
     // Transport for writing messages (handles serialization)
     public RpcTransport? Transport = Connection?.Transport;
 
+    public Task WhenDisconnected => _whenDisconnectedSource.Task;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsConnected()
         => Handshake is not null;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void MarkDisconnected()
+        => _whenDisconnectedSource.TrySetResult(default);
 
     // NextXxx
 
