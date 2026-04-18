@@ -149,16 +149,17 @@ describe('Fusion RPC run() reconnection', () => {
 
         const clientHub = new FusionHub('client');
         hubs.push(clientHub);
-        const peer = new RpcClientPeer(clientHub, 'ws://test');
+        const peer = new RpcClientPeer(clientHub, 'ws://test', false);
         clientHub.addPeer(peer);
         peers.push(peer);
-        peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
+        clientHub.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
-        void peer.run(factory);
+        peer.webSocketFactory = factory;
+        peer.start();
 
-        await peer.connected.whenNext();
+        await peer.whenConnected();
         await delay(10);
 
         const counterDef = defineComputeService('CounterService', {
@@ -182,7 +183,7 @@ describe('Fusion RPC run() reconnection', () => {
         hubs.push(serverRef.hub);
 
         // Wait for reconnection
-        await peer.connected.whenNext();
+        await peer.whenConnected();
         await delay(10);
 
         // Call after reconnection should get new server's data
@@ -197,16 +198,17 @@ describe('Fusion RPC run() reconnection', () => {
 
         const clientHub = new FusionHub('client');
         hubs.push(clientHub);
-        const peer = new RpcClientPeer(clientHub, 'ws://test');
+        const peer = new RpcClientPeer(clientHub, 'ws://test', false);
         clientHub.addPeer(peer);
         peers.push(peer);
-        peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
+        clientHub.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
-        void peer.run(factory);
+        peer.webSocketFactory = factory;
+        peer.start();
 
-        await peer.connected.whenNext();
+        await peer.whenConnected();
         await delay(10);
 
         // Make a compute call directly (low-level, like the fusion-rpc tests)
@@ -229,7 +231,7 @@ describe('Fusion RPC run() reconnection', () => {
         hubs.push(serverRef.hub);
 
         // Wait for reconnection — invalidateAll() fires in run() loop
-        await peer.connected.whenNext();
+        await peer.whenConnected();
         await delay(10);
 
         // Stage-3 compute call should be invalidated
@@ -243,16 +245,17 @@ describe('Fusion RPC run() reconnection', () => {
 
         const clientHub = new FusionHub('client');
         hubs.push(clientHub);
-        const peer = new RpcClientPeer(clientHub, 'ws://test');
+        const peer = new RpcClientPeer(clientHub, 'ws://test', false);
         clientHub.addPeer(peer);
         peers.push(peer);
-        peer.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
+        clientHub.reconnectDelayer.delays = RetryDelaySeq.fixed(50);
 
         // eslint-disable-next-line @typescript-eslint/unbound-method
         const { factory, closeCurrentWs } = createWsFactory(serverRef);
-        void peer.run(factory);
+        peer.webSocketFactory = factory;
+        peer.start();
 
-        await peer.connected.whenNext();
+        await peer.whenConnected();
         await delay(10);
 
         // Make a compute call
@@ -271,7 +274,7 @@ describe('Fusion RPC run() reconnection', () => {
         serverRef.hub = createServerHub('server-1-revived', store);
         hubs.push(serverRef.hub);
 
-        await peer.connected.whenNext();
+        await peer.whenConnected();
         await delay(10);
 
         // Old compute call should be invalidated by reconnection
