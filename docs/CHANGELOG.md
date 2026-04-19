@@ -11,6 +11,40 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.56+9d28308c | npm: 12.3.50
+
+Release date: 2026-04-19
+
+### Added
+- Fusion: `RemoteComputeMethodFunction` races `SendRpcCall` against peer
+  disconnect events &mdash; remote compute calls no longer hang
+  indefinitely when the peer drops mid-call; a stale cached value is
+  served instead when one is available.
+- `RpcPeer.WhenDisconnected` and `MarkDisconnected` &mdash;
+  disconnection is now a first-class, awaitable state.
+- `RpcPeer.WhenConnectedOrReroute` &mdash; waits for a live connection
+  and surfaces reroute exceptions so callers can re-resolve the peer
+  instead of blocking on a dead one.
+- `RpcRouteState` gained a reroute-aware hook used by the above.
+
+### Changed
+- `RpcPeerConnectionStateExt` removed; the `WhenConnected` extension
+  methods are gone - use the identical regular method directly, or
+  the new `RpcPeer.WhenConnectedOrReroute` helper. State transitions
+  (`MarkConnected` / `MarkDisconnected` / `MarkTerminated`) now live on
+  `RpcPeerConnectionState` itself.
+- RPC peer connection-state handling simplified: state transitions
+  consolidated into `RpcPeerConnectionState`, and the disconnection /
+  connection-timeout flow in `RpcPeer` tightened. `RpcTestConnection`
+  updated to match.
+
+### Fixed
+- Additional safeguards around serving stale cache on disconnect so
+  reroute exceptions and terminal errors propagate correctly, closing
+  race windows that could produce spurious failures right after a peer
+  dropped.
+
+
 ## 12.3.50+c3a95b95 | npm: 12.3.50
 
 Release date: 2026-04-18
@@ -31,14 +65,6 @@ Release date: 2026-04-18
   `cancelDelays()` / `delays = ...` through `hub.reconnectDelayer`.
 
 ### Added
-- `ComputeMethodResultStash<TKey, TValue>` &mdash; keyed stash with a
-  per-key `AsyncLockSet<TKey>` that lets an update operation hand a
-  freshly-produced value directly to the compute method about to
-  recompute it. `LockAndReserve(key)` acquires the lock and registers a
-  slot; `Reservation.Stash(value)` publishes it; `TryUnstash(key)` is
-  called from inside the compute method to consume it. Avoids a
-  redundant storage round-trip when invalidation is paired with a known
-  fresh value.
 - Fusion: remote compute methods now serve the last cached value when
   the peer is disconnected (instead of failing), and auto-invalidate via
   the new `InvalidateWhenReconnected` path once the peer reconnects
