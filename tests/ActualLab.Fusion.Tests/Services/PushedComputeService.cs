@@ -2,19 +2,22 @@ using ActualLab.Locking;
 
 namespace ActualLab.Fusion.Tests.Services;
 
-public class StashComputeService : IComputeService
+public class PushedComputeService : IComputeService
 {
     private readonly ConcurrentDictionary<string, int> _storage = new(StringComparer.Ordinal);
 
-    public ComputeMethodResultStash<string, int> Stash { get; } = new(LockReentryMode.Unchecked);
+    public ComputeMethodResultPusher<string, int> Pusher { get; }
     public int ComputeCount;
     public int StorageReadCount;
+
+    public PushedComputeService()
+        => Pusher = new ComputeMethodResultPusher<string, int>(Get, LockReentryMode.Unchecked);
 
     [ComputeMethod]
     public virtual Task<int> Get(string key, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref ComputeCount);
-        if (Stash.TryUnstash(key, out var stashed))
+        if (Pusher.TryPull(key, out var stashed))
             return Task.FromResult(stashed);
 
         Interlocked.Increment(ref StorageReadCount);
@@ -23,13 +26,9 @@ public class StashComputeService : IComputeService
 
     public async Task Set(string key, int value, CancellationToken cancellationToken = default)
     {
-        using var r = await Stash.LockAndReserve(key, cancellationToken).ConfigureAwait(false);
+        using var r = await Pusher.LockAndReserve(key, cancellationToken).ConfigureAwait(false);
         _storage[key] = value;
-        r.Stash(value);
-        using (Invalidation.Begin())
-            _ = Get(key, default);
-        // Force recompute so it consumes the stash while the reservation is alive
-        _ = await Get(key, cancellationToken).ConfigureAwait(false);
+        await r.Push(value, cancellationToken).ConfigureAwait(false);
     }
 
     public Task SetRaw(string key, int value, CancellationToken cancellationToken = default)
