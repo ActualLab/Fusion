@@ -184,6 +184,14 @@ export abstract class RpcPeer {
     readonly connectionStateChanged = new EventHandlerSet<RpcConnectionState>();
 
     protected _connection: RpcConnection | undefined;
+    /** Mirror of `_connectionState === Connected` — true only after the
+     *  handshake round-trip completes. Kept as its own field (rather than
+     *  derived from `_connection`) so outbound calls can be gated on
+     *  handshake completion, not merely WS-open: previously the run loop
+     *  nulled `_connection` during the handshake window to suppress calls,
+     *  which made `close()` a silent no-op and left a zombie peer when the
+     *  hub removed it mid-handshake. */
+    protected _isConnected = false;
     protected _connectionState: RpcConnectionState = RpcConnectionState.Disconnected;
     protected _pendingSends: RpcOutboundCall[] = [];
     private _keepAliveTimer: ReturnType<typeof setInterval> | undefined;
@@ -210,16 +218,27 @@ export abstract class RpcPeer {
     }
 
     get isConnected(): boolean {
-        return this._connection?.isOpen ?? false;
+        return this._isConnected;
     }
 
     protected _setConnectionState(value: RpcConnectionState): void {
         if (this._connectionState === value) return;
+        const previousState = this._connectionState;
         this._connectionState = value;
-        if (value === RpcConnectionState.Connected)
+        // `_isConnected` flips on entering `Connected`, and off only when
+        // leaving `Connected`. Failed-handshake transitions (Connecting →
+        // Disconnected) leave it alone — it was already false in production,
+        // and tests that set it directly via `connectWith` keep it true while
+        // the run loop spins through retry iterations without ever reaching
+        // `Connected`.
+        if (value === RpcConnectionState.Connected) {
+            this._isConnected = true;
             this._armKeepAliveWatchdog();
-        else if (value === RpcConnectionState.Disconnected)
+        } else if (value === RpcConnectionState.Disconnected) {
+            if (previousState === RpcConnectionState.Connected)
+                this._isConnected = false;
             this._disarmKeepAliveWatchdog();
+        }
         this.connectionStateChanged.trigger(value);
     }
 
@@ -244,6 +263,14 @@ export abstract class RpcPeer {
         conn.messageReceived.add(raw => this._handleMessage(raw));
         conn.closed.add(ev => {
             this._connection = undefined;
+            // A live conn going away always drops us out of "connected",
+            // regardless of where the state machine thought we were. The
+            // `_setConnectionState(Disconnected)` below only flips
+            // `_isConnected` off if we were coming from `Connected`, which
+            // misses the case where the conn closes mid-handshake (state
+            // still `Connecting`) or was set up via `connectWith` (state
+            // still `Disconnected`).
+            this._isConnected = false;
             // Mirrors RpcPeer.cs:524-526 — log disconnect with reason if present.
             if (ev.reason)
                 infoLog?.log(`'${this.ref}': Disconnected: ${ev.reason} (code=${ev.code})`);
@@ -296,7 +323,7 @@ export abstract class RpcPeer {
             this._connection?.encoder,
             this.hub.registry
         );
-        if (this._connection !== undefined) {
+        if (this._isConnected) {
             this.outboundCalls.register(outboundCall);
             this._sendWireData(outboundCall.serializedWireData);
         } else {
@@ -336,12 +363,15 @@ export abstract class RpcPeer {
     }
 
     callNoWait(method: string, args?: unknown[]): void {
-        if (this._connection === undefined) return; // silently drop
+        if (!this._isConnected) return; // silently drop
+        // Invariant: `_isConnected` is only true while `_connection` is set
+        // (they both flip together in `_setConnectionState` / `conn.closed`).
+        const conn = this._connection!;
         const envelope: RpcMessage = { Method: method, RelatedId: 0 };
         const wireData = this.serializationFormat.serializeMessage(
             envelope,
             args,
-            this._connection.encoder,
+            conn.encoder,
             this.hub.registry
         );
         this._sendWireData(wireData);
@@ -657,8 +687,12 @@ export class RpcClientPeer extends RpcPeer {
      *  to simulate a same-peer reconnect in tests. */
     connectWith(conn: RpcConnection, isPeerChanged = true): void {
         this.setupConnection(conn);
-        // Fire-and-forget — tests that need the reconcile to complete await
-        // a short delay after connect/reconnect.
+        // Test-only: synthesize the "ready for calls" state without running the
+        // handshake. Stays off the state machine on purpose — tests don't drive
+        // the run loop, and going through `_setConnectionState(Connected)` would
+        // arm the keep-alive watchdog against a mock transport that never
+        // replies to keep-alives.
+        this._isConnected = true;
         void this._reconnect(isPeerChanged);
     }
 
@@ -749,11 +783,10 @@ export class RpcClientPeer extends RpcPeer {
                     // and we send our handshake below, so timing is safe.
                     this._pendingHandshake = new PromiseSource<RemoteHandshake>();
                     this.setupConnection(conn);
-                    // Keep _connection undefined until handshake completes — prevents
-                    // calls from being sent through the connection before the handshake
-                    // (which the .NET server cannot process).  Calls made during this
-                    // window go to _pendingSends and are flushed after handshake.
-                    this._connection = undefined;
+                    // `_connection` stays set throughout the handshake window so
+                    // `close()` can tear down the WS. Outbound calls are gated by
+                    // `_isConnected`, which only flips on when we enter `Connected`
+                    // below — before that, `call()` routes to `_pendingSends`.
 
                     // Race connection open against close — if WS fails to connect,
                     // whenConnected stays pending forever, so we must also watch for close.
@@ -832,7 +865,6 @@ export class RpcClientPeer extends RpcPeer {
 
                     // Activate the connection and re-send outbound calls.
                     // All of this happens AFTER the handshake, so the server is ready to process calls.
-                    this._connection = conn;
                     this._setConnectionState(RpcConnectionState.Connected);
                     this._tryIndex = 0;
                     // Pass the close signal so `_reconcileReconnect`'s inner
