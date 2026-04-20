@@ -11,6 +11,28 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.60+21bf6f76 | npm: 12.3.60
+
+Release date: 2026-04-20
+
+### Added
+- Custom MessagePack formatters for core serialization types &mdash;
+  `ImmutableBimapMessagePackFormatter`, `ResultMessagePackFormatter`,
+  `BoxMessagePackFormatter`, and `MutableBoxMessagePackFormatter`,
+  registered in `DefaultMessagePackResolver` and wired up via
+  `[MessagePackFormatter]` attributes on `ImmutableBimap`, `Result`,
+  `Box`, `MutableBox`, and `ApiArray`. Works around a MessagePack
+  source-generator bug that emits incorrect code for struct fields
+  relying on default formatters.
+
+### Fixed
+- TypeScript: `RpcPeer` could enter a zombie state on reconnect when a
+  disconnect happened mid-handshake. Connection tracking now uses a
+  dedicated `_isConnected` flag (independent of WebSocket state), which
+  tightens state transitions, outbound call gating, and `close()`
+  behavior so silent no-ops and lingering zombie peers no longer occur.
+
+
 ## 12.3.56+9d28308c | npm: 12.3.50
 
 Release date: 2026-04-19
