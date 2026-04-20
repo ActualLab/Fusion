@@ -1,3 +1,4 @@
+using ActualLab.Serialization.Internal;
 using MessagePack;
 
 namespace ActualLab.Serialization;
@@ -7,17 +8,18 @@ namespace ActualLab.Serialization;
 /// </summary>
 public interface IBox
 {
-    object? UntypedValue { get; }
+    public object? UntypedValue { get; }
 }
 
 /// <summary>
 /// A serializable immutable box that wraps a single value of type <typeparamref name="T"/>.
 /// </summary>
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[MessagePackFormatter(typeof(BoxMessagePackFormatter<>))]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 [method: JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public sealed partial record Box<T>(
-    [property: DataMember(Order = 0), MemoryPackOrder(0), Key(0)] T Value
+    [property: DataMember(Order = 0), MemoryPackOrder(0)] T Value
     ) : IBox
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]

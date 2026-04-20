@@ -1,5 +1,6 @@
 using System.Globalization;
 using ActualLab.Api.Internal;
+using MessagePack;
 
 namespace ActualLab.Api;
 
@@ -30,6 +31,7 @@ public static class ApiArray
 [JsonConverter(typeof(ApiArrayJsonConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(ApiArrayNewtonsoftJsonConverter))]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[MessagePackFormatter(typeof(ApiArrayMessagePackFormatter<>))]
 [method: MemoryPackConstructor]
 public readonly partial struct ApiArray<T>(T[] items)
     : IReadOnlyList<T>, IEquatable<ApiArray<T>>

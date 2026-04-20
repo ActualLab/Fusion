@@ -1,4 +1,5 @@
 using ActualLab.Api.Internal;
+using ActualLab.Collections.Internal;
 using Cysharp.Serialization.MessagePack;
 using MessagePack;
 using MessagePack.Formatters;
@@ -25,6 +26,10 @@ public class DefaultMessagePackResolver : IFormatterResolver
         { typeof(ApiNullable<>), typeof(ApiNullableMessagePackFormatter<>) },
         { typeof(ApiNullable8<>), typeof(ApiNullable8MessagePackFormatter<>) },
         { typeof(ApiArray<>), typeof(ApiArrayMessagePackFormatter<>) },
+        { typeof(Box<>), typeof(BoxMessagePackFormatter<>) },
+        { typeof(MutableBox<>), typeof(MutableBoxMessagePackFormatter<>) },
+        { typeof(Result<>), typeof(ResultMessagePackFormatter<>) },
+        { typeof(ImmutableBimap<,>), typeof(ImmutableBimapMessagePackFormatter<,>) },
     };
 
     private DefaultMessagePackResolver()
