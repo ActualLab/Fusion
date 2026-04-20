@@ -1,7 +1,8 @@
 using Blazorise;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using ActualLab.Fusion.Blazor;
-using ActualLab.Fusion.Blazor.Authentication;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Extensions;
@@ -14,6 +15,7 @@ using ActualLab.Rpc.Clients;
 using Blazored.LocalStorage;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Samples.TodoApp.Abstractions;
 using Samples.TodoApp.UI.Services;
 
@@ -58,8 +60,19 @@ public static class ClientStartup
 
         // Fusion services
         var fusion = services.AddFusion();
-        fusion.AddAuthClient();
-        fusion.AddBlazor().AddAuthentication().AddPresenceReporter();
+        fusion.AddClient<IUserApi>(); // Client-facing auth service
+
+        // Local Blazor auth (replaces fusion.AddBlazor().AddAuthentication().AddPresenceReporter())
+        fusion.AddBlazor();
+        services.AddAuthorizationCore();
+        services.RemoveAll(typeof(AuthenticationStateProvider));
+        services.AddSingleton(_ => AuthStateProvider.Options.Default);
+        services.AddScoped<AuthenticationStateProvider>(c => new AuthStateProvider(
+            c.GetRequiredService<AuthStateProvider.Options>(), c));
+        services.AddScoped(c => (AuthStateProvider)c.GetRequiredService<AuthenticationStateProvider>());
+        services.AddScoped(c => new ClientAuthHelper(c));
+        services.AddSingleton(_ => PresenceReporter.Options.Default);
+        services.AddScoped(c => new PresenceReporter(c.GetRequiredService<PresenceReporter.Options>(), c));
 
         // RPC clients
         fusion.AddClient<ITodoApi>();
