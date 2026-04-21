@@ -124,6 +124,9 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 new ByteStringNerdbankConverter(),
                 new MessagePackDataNerdbankConverter(),
                 new SessionNerdbankConverter(),
+                new PropertyBagNerdbankConverter(),
+                new PropertyBagItemNerdbankConverter(),
+                new ImmutableOptionSetNerdbankConverter(),
             ],
             ConverterTypes = [
                 typeof(OptionNerdbankConverter<>),
@@ -131,7 +134,9 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 typeof(ApiNullableNerdbankConverter<>),
                 typeof(ApiNullable8NerdbankConverter<>),
                 typeof(ApiArrayNerdbankConverter<>),
+                typeof(ApiMapNerdbankConverter<,>),
                 typeof(RpcStreamNerdbankConverter<>),
+                typeof(TypeDecoratingUniSerializedNerdbankConverter<>),
             ],
         };
 }

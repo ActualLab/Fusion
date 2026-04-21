@@ -405,4 +405,61 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             serializedBox.Value.Should().Be(value);
         }
     }
+
+    [Fact]
+    public void ApiMapNerdbankConverterEdgeCases()
+    {
+        // Empty
+        var empty = new ActualLab.Api.ApiMap<string, string>();
+        var s0 = empty.PassThroughAllSerializers(Out);
+        s0.Should().BeEmpty();
+
+        // Populated
+        var populated = new ActualLab.Api.ApiMap<string, int> {
+            ["alpha"] = 1,
+            ["beta"] = 2,
+            ["gamma"] = 3,
+        };
+        var s1 = populated.PassThroughAllSerializers(Out);
+        s1.Should().BeEquivalentTo(populated);
+
+        // Nerdbank-only check — verify the closed generic converter is picked up even when
+        // the dictionary value type itself needs a registered converter (Moment here).
+        var withValueConverter = new ActualLab.Api.ApiMap<string, Moment> {
+            ["t0"] = new Moment(new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc)),
+            ["t1"] = new Moment(new DateTime(2024, 6, 7, 8, 9, 10, DateTimeKind.Utc)),
+        };
+        var s2 = withValueConverter.PassThroughAllSerializers(Out);
+        s2.Should().BeEquivalentTo(withValueConverter);
+    }
+
+    [Fact]
+    public void ImmutableOptionSetNerdbankConverterEdgeCases()
+    {
+        // Nil / empty
+        default(ImmutableOptionSet).PassThroughAllSerializers(Out)
+            .Items.IsEmpty.Should().BeTrue();
+
+        // Values of different kinds (primitives, strings, value-tuple). Symbol is intentionally
+        // omitted — the underlying transcoding layer (NewtonsoftJsonSerialized<object>) normalises
+        // Symbol to string, so the round-trip isn't reference-identical for that specific type.
+        var s = new ImmutableOptionSet()
+            .Set(42)
+            .Set("hello")
+            .Set((1, "X"));
+        var roundTripped = s.PassThroughAllSerializers(Out);
+        roundTripped.Items.Should().BeEquivalentTo(s.Items);
+    }
+
+    [Fact]
+    public void TypeDecoratingUniSerializedNerdbankConverterEdgeCases()
+    {
+        TypeDecoratingUniSerialized.New<object>("hello").PassThroughAllSerializers(Out)
+            .Value.Should().Be("hello");
+        TypeDecoratingUniSerialized.New<object>(42).PassThroughAllSerializers(Out)
+            .Value.Should().Be(42);
+        TypeDecoratingUniSerialized.New<object>(new Moment(new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc)))
+            .PassThroughAllSerializers(Out)
+            .Value.Should().BeOfType<Moment>();
+    }
 }
