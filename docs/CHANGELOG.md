@@ -11,6 +11,30 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.63+373bb905 | npm: 12.3.64
+
+Release date: 2026-04-21
+
+### Added
+- TypeScript: `RpcPeer.disconnect()` &mdash; closes the current
+  WebSocket connection without disposing the peer. For `RpcClientPeer`,
+  the run loop detects the disconnect and reopens the connection; the
+  peer stays in the hub and all client proxies bound to it remain valid.
+
+### Changed
+- `RpcStream.Disconnect()` is now public (previously an explicit
+  `IRpcObject.Disconnect()` implementation forwarding to a protected
+  abstract). Callers holding an `RpcStream` reference can now end it
+  directly without casting to `IRpcObject`.
+
+### Fixed
+- `RpcStream`: reordered the disconnect path so the `$sys.AckEnd`
+  close message is always sent before `_isDisconnected` flips. This
+  closes a race where a stream disconnecting during the "cannot
+  reconnect" branch of `Reconnect` would skip its close notification,
+  leaving the remote side waiting.
+
+
 ## 12.3.60+21bf6f76 | npm: 12.3.60
 
 Release date: 2026-04-20
