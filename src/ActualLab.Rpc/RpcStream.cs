@@ -59,11 +59,10 @@ public abstract class RpcStream : IRpcObject
     public override string ToString()
         => $"{GetType().GetName()}({Id} @ {Peer?.Ref}, {Kind})";
 
+    public abstract void Disconnect();
+
     Task IRpcObject.Reconnect(CancellationToken cancellationToken)
         => Reconnect(cancellationToken);
-
-    void IRpcObject.Disconnect()
-        => Disconnect();
 
     // Protected methods
 
@@ -73,7 +72,6 @@ public abstract class RpcStream : IRpcObject
     protected internal abstract void OnBatch(long index, object? items);
     protected internal abstract void OnEnd(long index, Exception? error);
     protected abstract Task Reconnect(CancellationToken cancellationToken);
-    protected abstract void Disconnect();
 }
 
 /// <summary>
@@ -149,6 +147,17 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         if (_localSource is null) {
             // Only complete local channel - don't send network messages from finalizer
             _remoteChannel?.Writer.TryComplete(Errors.AlreadyDisposed(GetType()));
+        }
+    }
+
+    public override void Disconnect()
+    {
+        lock (_lock) {
+            if (_isDisconnected)
+                return;
+
+            _isDisconnected = true;
+            CloseFromLock(Internal.Errors.RpcStreamNotFoundOrDisconnected());
         }
     }
 
@@ -314,17 +323,6 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             }
         }
         return Task.CompletedTask;
-    }
-
-    protected override void Disconnect()
-    {
-        lock (_lock) {
-            if (_isDisconnected)
-                return;
-
-            _isDisconnected = true;
-            CloseFromLock(Internal.Errors.RpcStreamNotFoundOrDisconnected());
-        }
     }
 
     // Private methods
