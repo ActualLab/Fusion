@@ -179,6 +179,37 @@ describe('RPC Reconnection', () => {
         }).not.toThrow();
     });
 
+    it('peer.disconnect() should close the connection but keep the peer in the hub', async () => {
+        const calc = createRpcClient<ICalcService>(
+            conn.clientPeer,
+            CalcServiceDef
+        );
+        const r1 = await calc.add(1, 2);
+        expect(r1).toBe(3);
+
+        const peerRef = conn.clientPeer.ref;
+        const peerIdBefore = conn.clientPeer.id;
+        expect(conn.clientPeer.connection).toBeDefined();
+        expect(clientHub.peers.get(peerRef)).toBe(conn.clientPeer);
+
+        // Call the public disconnect() — closes WS without disposing peer.
+        conn.clientPeer.disconnect();
+        await delay(5);
+
+        // Connection is cleared, peer instance survives with same identity.
+        expect(conn.clientPeer.connection).toBeUndefined();
+        expect(clientHub.peers.get(peerRef)).toBe(conn.clientPeer);
+        expect(conn.clientPeer.id).toBe(peerIdBefore);
+
+        // Re-attach a fresh connection — the same peer instance is reused.
+        await conn.reconnectSamePeer();
+
+        // Calls work again, still via the same peer.
+        const r2 = await calc.add(5, 7);
+        expect(r2).toBe(12);
+        expect(conn.clientPeer.id).toBe(peerIdBefore);
+    });
+
     it('should detect server identity change via handshake (peerChanged)', async () => {
         let peerChangedCount = 0;
         conn.clientPeer.peerChanged.add(() => peerChangedCount++);

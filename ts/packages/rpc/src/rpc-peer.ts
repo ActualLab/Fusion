@@ -377,6 +377,14 @@ export abstract class RpcPeer {
         this._sendWireData(wireData);
     }
 
+    /** Close the current WS connection without disposing the peer. The
+     *  `conn.closed` handler flips state to `Disconnected`; for
+     *  `RpcClientPeer` the run loop then iterates and reopens. The peer
+     *  stays in the hub and all client proxies bound to it remain valid. */
+    disconnect(): void {
+        this._connection?.close();
+    }
+
     close(): void {
         // Mirrors RpcPeer.cs:397 — "Stopping".
         infoLog?.log(`'${this.ref}': Stopping`);
