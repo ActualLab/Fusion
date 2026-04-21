@@ -317,8 +317,10 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 if (AllowReconnect)
                     SendResetFromLock(_nextIndex);
                 else {
-                    _isDisconnected = true;
+                    // Same order constraint as in Disconnect(): close (and thus
+                    // send $sys.AckEnd) BEFORE flipping _isDisconnected.
                     CloseFromLock(Internal.Errors.RpcStreamNotFoundOrDisconnected());
+                    _isDisconnected = true;
                 }
             }
         }
@@ -349,7 +351,8 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     private void SendCloseFromLock()
     {
         _nextIndex = long.MaxValue;
-        SendAckFromLock(_nextIndex, mustReset: true);
+        // No _isDisconnected check here - we try to send close no matter what
+        Peer!.Hub.SystemCallSender.AckEnd(Peer, Id.LocalId, Id.HostId);
     }
 
     private void SendResetFromLock(long index)
