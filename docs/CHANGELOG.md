@@ -11,6 +11,47 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.70+04d6f22d | npm: 12.3.70
+
+Release date: 2026-04-22
+
+### Added
+- Nerdbank MessagePack converters for `PropertyBag`, `ImmutableOptionSet`,
+  `ApiMap<TKey, TValue>`, and `TypeDecoratingUniSerialized<T>` &mdash;
+  closes the wire-compat gap where Nerdbank's default reflection shape
+  couldn't express the legacy `[Key(N)]` index-based layouts used by
+  MessagePack-CSharp. Stored blobs written by the legacy serializer
+  remain readable. Registered in the default
+  `NerdbankMessagePackByteSerializer` configuration.
+- `TextSerializedNerdbankConverter<T, TSerialized>` (and closed-over
+  `NewtonsoftJsonSerializedNerdbankConverter<T>`) &mdash; fixes a cross-
+  serializer wire gap where MessagePack-CSharp wrote
+  `NewtonsoftJsonSerialized<T>` as `[Data]` while Nerdbank emitted
+  `{Data: ...}`, breaking every composite embedding such a value
+  (notably a populated `ImmutableOptionSet`).
+- `NerdbankCrossCompatTest` suite &mdash; drives bytes directly between
+  MessagePack-CSharp and Nerdbank readers/writers to catch wire-format
+  divergence that self-round-trip tests miss.
+- TypeScript: `useBigInt64: true` in the default `msgpack` encoder &mdash;
+  `bigint` values now serialize as msgpack int64/uint64, required for
+  .NET `long` field compatibility when the value exceeds
+  `Number.MAX_SAFE_INTEGER`.
+
+### Changed
+- `TypeDecoratingUniSerialized<T>` wire format aligned with
+  MessagePack-CSharp's `[Key(0)] MessagePackData` layout &mdash; a
+  1-element array with type-decorated inner bytes &mdash; so the same
+  payload now cross-reads between Nerdbank and MessagePack-CSharp.
+- TypeScript: upgraded `@msgpack/msgpack` to v3.1.3; `Encoder`
+  initialization refactored to the new object-based configuration API.
+
+### Fixed
+- TypeScript RPC: `Dictionary<int, byte[]>` arguments now serialize
+  correctly over msgpack (unblocking the `$sys.Reconnect` method
+  argument) via a new `msgpack-map-patch.ts` alongside the v3.1.3
+  upgrade.
+
+
 ## 12.3.63+373bb905 | npm: 12.3.64
 
 Release date: 2026-04-21
