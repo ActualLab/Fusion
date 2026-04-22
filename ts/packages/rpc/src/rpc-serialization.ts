@@ -7,10 +7,8 @@
 // The format is selected at connection time via the `f=` query parameter.
 
 import {
-    decode as _msgpackDecode,
     Encoder,
     Decoder,
-    type DecodeOptions,
 } from '@msgpack/msgpack';
 // Side-effect import: patches Encoder.prototype to handle JS Map instances
 // as proper msgpack maps with typed keys (.NET-wire-compatible).
@@ -86,9 +84,6 @@ export function deserializeMessage(raw: string): {
 // Binary format (msgpack6np) — V5 wire format
 // ============================================================
 
-// MessagePack decode options
-const _msgpackDecodeOptions: DecodeOptions = {};
-
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
@@ -107,29 +102,17 @@ const textDecoder = new TextDecoder();
  * loop as long as `serializeBinaryMessage` is called synchronously (which it
  * always is — no awaits inside).
  *
- * The `@msgpack/msgpack` Encoder constructor takes positional args:
- *   (extensionCodec, context, maxDepth, initialBufferSize, sortKeys, ...)
- * We only need initialBufferSize here — set large enough to fit a typical
- * video frame (~11 KB) + envelope overhead without any resizeBuffer growth.
+ * Sized large enough to fit a typical video frame (~11 KB) + envelope
+ * overhead without any `resizeBuffer` growth.
  */
 const INITIAL_ENCODER_BUFFER_SIZE = 32 * 1024;
-export const defaultBinaryEncoder = new Encoder(
-    undefined,
-    undefined,
-    undefined,
-    INITIAL_ENCODER_BUFFER_SIZE
-);
+export const defaultBinaryEncoder = new Encoder({ initialBufferSize: INITIAL_ENCODER_BUFFER_SIZE, useBigInt64: true });
 export const defaultBinaryDecoder = new Decoder();
 /** Exposed so connection code can instantiate a matching Encoder
  *  with the same initial buffer size without needing to reach into
  *  this module's private constants. */
 export function createBinaryEncoder(): Encoder {
-    return new Encoder(
-        undefined,
-        undefined,
-        undefined,
-        INITIAL_ENCODER_BUFFER_SIZE
-    );
+    return new Encoder({ initialBufferSize: INITIAL_ENCODER_BUFFER_SIZE, useBigInt64: true });
 }
 
 // --- LEB128 VarUInt helpers ---
