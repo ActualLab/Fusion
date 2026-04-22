@@ -137,6 +137,7 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 typeof(ApiMapNerdbankConverter<,>),
                 typeof(RpcStreamNerdbankConverter<>),
                 typeof(TypeDecoratingUniSerializedNerdbankConverter<>),
+                typeof(NewtonsoftJsonSerializedNerdbankConverter<>),
             ],
         };
 }
