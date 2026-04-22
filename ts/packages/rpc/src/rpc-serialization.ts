@@ -104,6 +104,14 @@ const textDecoder = new TextDecoder();
  *
  * Sized large enough to fit a typical video frame (~11 KB) + envelope
  * overhead without any `resizeBuffer` growth.
+ *
+ * `useBigInt64: true` makes the encoder emit JS `bigint` values as msgpack
+ * int64/uint64 (0xd3/0xcf) instead of float64. Required for .NET `long`
+ * fields whose 2026-era values (e.g. `Moment.EpochOffsetTicks` ~1.8×10¹⁶)
+ * exceed `Number.MAX_SAFE_INTEGER` — a float64 payload would be rejected by
+ * the server's `ReadInt64` path. Callers must pass a real `bigint` (not a
+ * `number`) for such fields; `number` values follow the standard
+ * int-or-float branching regardless of this flag.
  */
 const INITIAL_ENCODER_BUFFER_SIZE = 32 * 1024;
 export const defaultBinaryEncoder = new Encoder({ initialBufferSize: INITIAL_ENCODER_BUFFER_SIZE, useBigInt64: true });
