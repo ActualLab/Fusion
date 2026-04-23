@@ -1,3 +1,7 @@
+using ActualLab.Rpc;
+using ActualLab.Rpc.Caching;
+using ActualLab.Rpc.Infrastructure;
+
 namespace ActualLab.Tests.Serialization;
 
 /// <summary>
@@ -122,9 +126,144 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
         MpRead<TypeDecoratingUniSerialized<object>>(nbBytes).Value.Should().Be("hello");
     }
 
+    // --- System RPC types ----------------------------------------------------------------
+    //
+    // Each of these types ships a custom Nerdbank converter that mirrors the MessagePack-CSharp
+    // [Key(N)] array layout. The wire is intentionally byte-identical so the .NET server speaks
+    // the same protocol the TS RPC client emits (which uses MessagePack-CSharp's binary format).
+
+    [Fact]
+    public void RpcHandshake_CrossCompat()
+    {
+        var handshake = new RpcHandshake(
+            RemotePeerId: Guid.Parse("12345678-1234-1234-1234-123456789012"),
+            RemoteApiVersionSet: new VersionSet("api", "1.2.3"),
+            RemoteHubId: Guid.Parse("87654321-4321-4321-4321-210987654321"),
+            ProtocolVersion: RpcHandshake.CurrentProtocolVersion,
+            Index: 7);
+        AssertBytesCrossDecode<RpcHandshake?>(handshake, AssertHandshake);
+
+        // Also exercise the null version-set path, which is what the TS client emits.
+        var withoutVersions = handshake with { RemoteApiVersionSet = null };
+        AssertBytesCrossDecode<RpcHandshake?>(withoutVersions, AssertHandshake);
+
+        static void AssertHandshake(RpcHandshake? a, RpcHandshake? b)
+        {
+            a.Should().NotBeNull();
+            b.Should().NotBeNull();
+            a!.RemotePeerId.Should().Be(b!.RemotePeerId);
+            a.RemoteHubId.Should().Be(b.RemoteHubId);
+            a.ProtocolVersion.Should().Be(b.ProtocolVersion);
+            a.Index.Should().Be(b.Index);
+            (a.RemoteApiVersionSet?.Value ?? "").Should().Be(b.RemoteApiVersionSet?.Value ?? "");
+        }
+    }
+
+    [Fact]
+    public void VersionSet_CrossCompat()
+    {
+        AssertBytesCrossDecode<VersionSet?>(
+            new VersionSet("api", "1.2.3"),
+            (a, b) => a!.Value.Should().Be(b!.Value));
+        AssertBytesCrossDecode<VersionSet?>(
+            VersionSet.Empty,
+            (a, b) => a!.Value.Should().Be(b!.Value));
+    }
+
+    [Fact]
+    public void RpcObjectId_CrossCompat()
+    {
+        var id = new RpcObjectId(Guid.Parse("11111111-2222-3333-4444-555555555555"), 42);
+        AssertBytesCrossDecode(id, (a, b) => a.Should().Be(b));
+        AssertBytesCrossDecode(default(RpcObjectId), (a, b) => a.Should().Be(b));
+    }
+
+    [Fact]
+    public void RpcHeader_CrossCompat()
+    {
+        AssertBytesCrossDecode(
+            new RpcHeader("Content-Type", "application/octet-stream"),
+            (a, b) => {
+                a.Name.Should().Be(b.Name);
+                a.Value.Should().Be(b.Value);
+            });
+        AssertBytesCrossDecode(
+            new RpcHeader("Empty", ""),
+            (a, b) => {
+                a.Name.Should().Be(b.Name);
+                a.Value.Should().Be(b.Value);
+            });
+    }
+
+    [Fact]
+    public void RpcHeaderKey_CrossCompat()
+    {
+        var key = new RpcHeaderKey("X-Trace-Id");
+        AssertBytesCrossDecode(key, (a, b) => a.Name.Should().Be(b.Name));
+    }
+
+    [Fact]
+    public void RpcMethodRef_CrossCompat()
+    {
+        var methodRef = new RpcMethodRef("MyService.MyMethod");
+        AssertBytesCrossDecode(methodRef, (a, b) => a.Name.Should().Be(b.Name));
+    }
+
+    [Fact]
+    public void RpcCacheKey_CrossCompat()
+    {
+        var key = new RpcCacheKey("MyService.MyMethod", new byte[] { 1, 2, 3, 4, 5 });
+        AssertBytesCrossDecode<RpcCacheKey?>(key, (a, b) => a.Should().Be(b));
+    }
+
+    [Fact]
+    public void RpcCacheValue_CrossCompat()
+    {
+        var value = new RpcCacheValue(new byte[] { 9, 8, 7 }, "deadbeef");
+        AssertBytesCrossDecode<RpcCacheValue?>(value, (a, b) => a.Should().Be(b));
+        AssertBytesCrossDecode<RpcCacheValue?>(
+            new RpcCacheValue(default, ""),
+            (a, b) => a.Should().Be(b));
+    }
+
+    [Fact]
+    public void Result_CrossCompat()
+    {
+        AssertBytesCrossDecode(
+            new Result<int>(42, null),
+            (a, b) => {
+                a.HasValue.Should().Be(b.HasValue);
+                a.ValueOrDefault.Should().Be(b.ValueOrDefault);
+            });
+        AssertBytesCrossDecode(
+            new Result<int>(0, new InvalidOperationException("boom")),
+            (a, b) => {
+                a.HasError.Should().Be(b.HasError);
+                a.Error!.GetType().Should().Be(b.Error!.GetType());
+                a.Error.Message.Should().Be(b.Error.Message);
+            });
+        AssertBytesCrossDecode(
+            new Result<string>("hello", null),
+            (a, b) => a.ValueOrDefault.Should().Be(b.ValueOrDefault));
+    }
+
+    [Fact]
+    public void ExceptionInfo_CrossCompat()
+    {
+        // ExceptionInfo uses [MessagePackObject(true)] (string-keyed map). It has no custom Nerdbank
+        // converter — Nerdbank's reflection-based reader/writer produces and consumes a name-keyed
+        // map by default, matching MP-CSharp's wire format. This test guards against drift.
+        var info = new ExceptionInfo(new InvalidOperationException("boom"));
+        AssertBytesCrossDecode(info, (a, b) => {
+            a.TypeRef.Should().Be(b.TypeRef);
+            a.Message.Should().Be(b.Message);
+        });
+        AssertBytesCrossDecode(default(ExceptionInfo), (a, b) => a.Should().Be(b));
+    }
+
     // --- Helpers ------------------------------------------------------------------------
 
-    private void AssertBytesCrossDecode<T>(T value, Action<T, T> assert)
+    private void AssertBytesCrossDecode<T>(T value, Action<T, T> assert, bool requireByteEquality = true)
     {
         var mpBytes = MpWrite(value);
         var nbBytes = NbWrite(value);
@@ -142,6 +281,13 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
         assert(crossMpToNb, value);
         var crossNbToMp = MpRead<T>(nbBytes);
         assert(crossNbToMp, value);
+
+        // Byte-identical wire: the converters are designed to match MessagePack-CSharp's layout
+        // exactly, so both serializers should emit the same bytes for the same value. Opt-out is
+        // provided for the few cases where independent map orderings legitimately diverge.
+        if (requireByteEquality)
+            nbBytes.Should().Equal(mpBytes,
+                "Nerdbank wire must be byte-identical to MessagePack-CSharp for cross-runtime compatibility");
     }
 
     private static byte[] MpWrite<T>(T value)

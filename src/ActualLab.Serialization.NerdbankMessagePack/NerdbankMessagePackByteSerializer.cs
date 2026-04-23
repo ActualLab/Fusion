@@ -111,7 +111,8 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
             this);
 
     private static NerdbankSerializer CreateDefaultSerializer()
-        => new() {
+    {
+        var serializer = new NerdbankSerializer {
             Converters = [
                 new UnitNerdbankConverter(),
                 new MomentNerdbankConverter(),
@@ -127,9 +128,18 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 new PropertyBagNerdbankConverter(),
                 new PropertyBagItemNerdbankConverter(),
                 new ImmutableOptionSetNerdbankConverter(),
+                new RpcHandshakeNerdbankConverter(),
+                new VersionSetNerdbankConverter(),
+                new RpcObjectIdNerdbankConverter(),
+                new RpcHeaderNerdbankConverter(),
+                new RpcHeaderKeyNerdbankConverter(),
+                new RpcMethodRefNerdbankConverter(),
+                new RpcCacheKeyNerdbankConverter(),
+                new RpcCacheValueNerdbankConverter(),
             ],
             ConverterTypes = [
                 typeof(OptionNerdbankConverter<>),
+                typeof(ResultNerdbankConverter<>),
                 typeof(ApiOptionNerdbankConverter<>),
                 typeof(ApiNullableNerdbankConverter<>),
                 typeof(ApiNullable8NerdbankConverter<>),
@@ -140,6 +150,11 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 typeof(NewtonsoftJsonSerializedNerdbankConverter<>),
             ],
         };
+        // Encode Guid as 36-char ASCII string ("d9 24 ..."), matching MessagePack-CSharp's default.
+        // Required for wire compatibility with the TS RPC client (which sends GUIDs as strings)
+        // and any legacy .NET data written by the MessagePack-CSharp serializer.
+        return serializer.WithGuidConverter(OptionalConverters.GuidStringFormat.StringD);
+    }
 }
 
 /// <summary>

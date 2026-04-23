@@ -6,6 +6,11 @@ namespace ActualLab.Rpc.Infrastructure;
 /// <summary>
 /// Identifies an RPC header by name, with efficient UTF-8 representation and well-known key caching.
 /// </summary>
+/// <remarks>
+/// Wire-format note: any change to the [Key(N)]/[MessagePackOrder] layout below MUST be mirrored
+/// in <c>RpcHeaderKeyNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
+/// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
+/// </remarks>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable, MessagePackObject]
 public readonly partial struct RpcHeaderKey : IEquatable<RpcHeaderKey>, ICanBeNone<RpcHeaderKey>

@@ -269,6 +269,12 @@ public readonly struct Result : IResult, IEquatable<Result>, IEquatable<IResult>
 /// A struct describing strongly typed result of a computation.
 /// </summary>
 /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
+/// <remarks>
+/// Wire-format note: any change to the wire shape (driven by <see cref="ResultMessagePackFormatter{T}"/>
+/// and the [DataMember]/[MemoryPackOrder] members below) MUST be mirrored in
+/// <c>ResultNerdbankConverter&lt;T&gt;</c> (ActualLab.Serialization.NerdbankMessagePack) so the
+/// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
+/// </remarks>
 [StructLayout(LayoutKind.Auto)]
 [DebuggerDisplay("({" + nameof(ValueOrDefault) + "}, Error = {" + nameof(Error) + "})")]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant)]

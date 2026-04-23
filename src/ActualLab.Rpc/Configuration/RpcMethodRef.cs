@@ -6,6 +6,11 @@ namespace ActualLab.Rpc;
 /// <summary>
 /// A serializable reference to an RPC method, identified by its UTF-8 encoded full name and hash code.
 /// </summary>
+/// <remarks>
+/// Wire-format note: any change to the [Key(N)]/[MessagePackOrder] layout below MUST be mirrored
+/// in <c>RpcMethodRefNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
+/// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
+/// </remarks>
 [DataContract, MemoryPackable, MessagePackObject]
 public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 {

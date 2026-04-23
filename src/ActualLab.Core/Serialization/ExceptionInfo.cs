@@ -7,6 +7,13 @@ namespace ActualLab.Serialization;
 /// A serializable representation of an exception's type and message,
 /// used for cross-process exception propagation.
 /// </summary>
+/// <remarks>
+/// Wire-format note: this type uses <c>[MessagePackObject(true)]</c> (string-keyed map). It has
+/// no custom Nerdbank converter — Nerdbank's reflection-based reader/writer produces a name-keyed
+/// map matching MessagePack-CSharp's wire. Any rename of <see cref="TypeRef"/> or <see cref="Message"/>
+/// (or any other member rename / addition) breaks cross-runtime wire compatibility — keep them in sync
+/// with the TS RPC client's expectations and the <c>ExceptionInfo_CrossCompat</c> test guard.
+/// </remarks>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>

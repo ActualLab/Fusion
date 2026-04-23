@@ -5,6 +5,11 @@ namespace ActualLab.Rpc.Caching;
 /// <summary>
 /// A composite key for RPC cache lookups, consisting of a method name and serialized argument data.
 /// </summary>
+/// <remarks>
+/// Wire-format note: any change to the [Key(N)]/[MessagePackOrder] layout below MUST be mirrored
+/// in <c>RpcCacheKeyNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
+/// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
+/// </remarks>
 [DataContract, MemoryPackable, MessagePackObject]
 public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>
 {

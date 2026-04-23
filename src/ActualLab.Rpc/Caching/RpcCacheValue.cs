@@ -5,6 +5,11 @@ namespace ActualLab.Rpc.Caching;
 /// <summary>
 /// Represents a cached RPC response value containing serialized data and an optional content hash.
 /// </summary>
+/// <remarks>
+/// Wire-format note: any change to the [Key(N)]/[MessagePackOrder] layout below MUST be mirrored
+/// in <c>RpcCacheValueNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
+/// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
+/// </remarks>
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]

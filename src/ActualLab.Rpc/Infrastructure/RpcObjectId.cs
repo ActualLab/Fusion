@@ -6,6 +6,11 @@ namespace ActualLab.Rpc.Infrastructure;
 /// <summary>
 /// Uniquely identifies a shared or remote RPC object by host ID and local ID.
 /// </summary>
+/// <remarks>
+/// Wire-format note: any change to the [Key(N)]/[MessagePackOrder] layout below MUST be mirrored
+/// in <c>RpcObjectIdNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
+/// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
+/// </remarks>
 [StructLayout(LayoutKind.Sequential, Pack = 8)] // Important!
 [DataContract, MemoryPackable, MessagePackObject]
 public readonly partial record struct RpcObjectId(

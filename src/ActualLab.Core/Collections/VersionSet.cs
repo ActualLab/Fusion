@@ -10,6 +10,11 @@ namespace ActualLab.Collections;
 /// An immutable, serializable set of scoped <see cref="Version"/> values,
 /// stored as a comma-separated string of scope=version pairs.
 /// </summary>
+/// <remarks>
+/// Wire-format note: any change to the [Key(N)]/[MessagePackOrder] layout below MUST be mirrored
+/// in <c>VersionSetNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
+/// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
+/// </remarks>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public sealed partial record VersionSet(

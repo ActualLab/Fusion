@@ -5,6 +5,11 @@ namespace ActualLab.Rpc.Infrastructure;
 /// <summary>
 /// A name-value pair representing a single RPC message header.
 /// </summary>
+/// <remarks>
+/// Wire-format note: any change to the [Key(N)]/[MessagePackOrder] layout below MUST be mirrored
+/// in <c>RpcHeaderNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
+/// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
+/// </remarks>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial record struct RpcHeader : ICanBeNone<RpcHeader>
