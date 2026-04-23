@@ -77,7 +77,7 @@
   </PropertyGroup>
   <!-- Dependencies -->
   <ItemGroup>
-    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="9.4.1" />
+    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
     <PackageVersion Include="Blazorise" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Bootstrap5" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.DataGrid" Version="$(BlazoriseVersion)" />
