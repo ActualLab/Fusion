@@ -1,4 +1,3 @@
-using ActualLab.Collections;
 using Nerdbank.MessagePack;
 
 namespace ActualLab.Serialization.Internal;
@@ -23,16 +22,38 @@ public sealed class ImmutableOptionSetNerdbankConverter : MessagePackConverter<I
         if (reader.TryReadNil())
             return default;
         var itemConverter = context.GetConverter<NewtonsoftJsonSerialized<object>>(context.TypeShapeProvider);
-        var count = reader.ReadMapHeader();
-        if (count == 0)
-            return default;
         var builder = ImmutableDictionary.CreateBuilder<string, NewtonsoftJsonSerialized<object>>(StringComparer.Ordinal);
-        for (var i = 0; i < count; i++) {
-            var key = reader.ReadString() ?? "";
-            var value = itemConverter.Read(ref reader, context)!;
-            builder[key] = value;
+
+        // Accept both wire shapes for the inner dictionary:
+        //   - map   {k: v, k: v, ...}          — what this converter (and the dynamic
+        //                                          DictionaryFormatter) writes.
+        //   - array [[k, v], [k, v], ...]      — what MessagePack-CSharp's source-generated
+        //                                          Collection formatter emitted historically;
+        //                                          kept readable so DB blobs written pre-migration
+        //                                          still deserialize.
+        if (reader.NextMessagePackType == MessagePackType.Array) {
+            var count = reader.ReadArrayHeader();
+            for (var i = 0; i < count; i++) {
+                var pairLen = reader.ReadArrayHeader();
+                if (pairLen != 2)
+                    throw new MessagePackSerializationException(
+                        $"Expected 2-element kv pair inside ImmutableOptionSet, got {pairLen}.");
+                var key = reader.ReadString() ?? "";
+                var value = itemConverter.Read(ref reader, context)!;
+                builder[key] = value;
+            }
         }
-        return new ImmutableOptionSet(builder.ToImmutable());
+        else {
+            var count = reader.ReadMapHeader();
+            if (count == 0)
+                return default;
+            for (var i = 0; i < count; i++) {
+                var key = reader.ReadString() ?? "";
+                var value = itemConverter.Read(ref reader, context)!;
+                builder[key] = value;
+            }
+        }
+        return builder.Count == 0 ? default : new ImmutableOptionSet(builder.ToImmutable());
     }
 
     public override void Write(ref MessagePackWriter writer, in ImmutableOptionSet value, SerializationContext context)

@@ -1,4 +1,3 @@
-using ActualLab.Api;
 using Nerdbank.MessagePack;
 
 namespace ActualLab.Serialization.Internal;
@@ -15,16 +14,36 @@ public sealed class ApiMapNerdbankConverter<TKey, TValue> : MessagePackConverter
     {
         if (reader.TryReadNil())
             return null;
-        var count = reader.ReadMapHeader();
         var map = new ApiMap<TKey, TValue>();
-        if (count == 0)
-            return map;
         var keyConverter = context.GetConverter<TKey>(context.TypeShapeProvider);
         var valueConverter = context.GetConverter<TValue>(context.TypeShapeProvider);
-        for (var i = 0; i < count; i++) {
-            var k = keyConverter.Read(ref reader, context)!;
-            var v = valueConverter.Read(ref reader, context)!;
-            map[k] = v;
+
+        // Accept both wire shapes:
+        //   - map   {k: v, k: v, ...}          — what this converter (and the dynamic
+        //                                          DictionaryFormatter) writes.
+        //   - array [[k, v], [k, v], ...]      — what MessagePack-CSharp's source-generated
+        //                                          Collection formatter emitted historically;
+        //                                          kept readable so DB blobs written pre-migration
+        //                                          still deserialize.
+        if (reader.NextMessagePackType == MessagePackType.Array) {
+            var count = reader.ReadArrayHeader();
+            for (var i = 0; i < count; i++) {
+                var pairLen = reader.ReadArrayHeader();
+                if (pairLen != 2)
+                    throw new MessagePackSerializationException(
+                        $"Expected 2-element kv pair inside ApiMap<,>, got {pairLen}.");
+                var k = keyConverter.Read(ref reader, context)!;
+                var v = valueConverter.Read(ref reader, context)!;
+                map[k] = v;
+            }
+        }
+        else {
+            var count = reader.ReadMapHeader();
+            for (var i = 0; i < count; i++) {
+                var k = keyConverter.Read(ref reader, context)!;
+                var v = valueConverter.Read(ref reader, context)!;
+                map[k] = v;
+            }
         }
         return map;
     }
