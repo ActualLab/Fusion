@@ -11,6 +11,20 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.72+94144fd7 | npm: 12.3.70
+
+Release date: 2026-04-23
+
+### Fixed
+- Nerdbank `ApiMapNerdbankConverter<TKey, TValue>` and
+  `ImmutableOptionSetNerdbankConverter` now also accept the legacy
+  array-of-kv-pairs wire shape (`[[k, v], [k, v], ...]`) in addition to
+  the standard map shape (`{k: v, k: v, ...}`). Keeps DB blobs written
+  by the MessagePack-CSharp source-generated collection formatter
+  readable after the v12.3.70 migration to Nerdbank, so no migration
+  step is required for existing stored payloads.
+
+
 ## 12.3.70+04d6f22d | npm: 12.3.70
 
 Release date: 2026-04-22
