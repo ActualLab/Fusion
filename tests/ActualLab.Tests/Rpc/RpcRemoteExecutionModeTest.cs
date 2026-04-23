@@ -191,7 +191,7 @@ public class RpcRemoteExecutionModeTest(ITestOutputHelper @out) : RpcLocalTestBa
 
         var tasks = Enumerable.Range(0, iterations).Select(async _ => {
             try {
-                await client.NoneDelay(TimeSpan.FromMilliseconds(5));
+                await client.NoneDelay(TimeSpan.FromMilliseconds(5), CancellationToken.None);
                 Interlocked.Increment(ref successCount);
             }
             catch {
@@ -214,18 +214,18 @@ public class RpcRemoteExecutionModeTest(ITestOutputHelper @out) : RpcLocalTestBa
 // Test service interface with various RemoteExecutionMode settings
 public interface ITestRemoteExecService : IRpcService
 {
-    [RpcMethod(RemoteExecutionMode = 0)]
-    Task<TimeSpan> NoneDelay(TimeSpan duration, CancellationToken cancellationToken = default);
+    [RpcMethod(RemoteExecutionMode = (RpcRemoteExecutionMode)0)]
+    public Task<TimeSpan> NoneDelay(TimeSpan duration, CancellationToken cancellationToken = default);
 
     [RpcMethod(RemoteExecutionMode = RpcRemoteExecutionMode.AwaitForConnection)]
-    Task<TimeSpan> AwaitOnlyDelay(TimeSpan duration, CancellationToken cancellationToken = default);
+    public Task<TimeSpan> AwaitOnlyDelay(TimeSpan duration, CancellationToken cancellationToken = default);
 
     [RpcMethod(RemoteExecutionMode = RpcRemoteExecutionMode.AwaitForConnection | RpcRemoteExecutionMode.AllowReconnect)]
-    Task<TimeSpan> ReconnectDelay(TimeSpan duration, CancellationToken cancellationToken = default);
+    public Task<TimeSpan> ReconnectDelay(TimeSpan duration, CancellationToken cancellationToken = default);
 
-    Task<TimeSpan> DefaultDelay(TimeSpan duration, CancellationToken cancellationToken = default);
+    public Task<TimeSpan> DefaultDelay(TimeSpan duration, CancellationToken cancellationToken = default);
 
-    ValueTask<RpcNoWait> NoWaitSet(string key, string? value);
+    public ValueTask<RpcNoWait> NoWaitSet(string key, string? value);
 }
 
 public class TestRemoteExecService : ITestRemoteExecService

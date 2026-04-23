@@ -111,8 +111,8 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
         var value = TypeDecoratingUniSerialized.New<object>("hello");
         var mpBytes = MpWrite(value);
         var nbBytes = NbWrite(value);
-        @out.WriteLine($"MP ({mpBytes.Length}): {Convert.ToHexString(mpBytes)}");
-        @out.WriteLine($"NB ({nbBytes.Length}): {Convert.ToHexString(nbBytes)}");
+        Out.WriteLine($"MP ({mpBytes.Length}): {Convert.ToHexString(mpBytes)}");
+        Out.WriteLine($"NB ({nbBytes.Length}): {Convert.ToHexString(nbBytes)}");
 
         // Byte-identical wire is the whole point of this converter's design.
         nbBytes.Should().BeEquivalentTo(mpBytes, "the Nerdbank converter is designed to be byte-identical to MessagePack-CSharp's [Key(0)] MessagePackData layout");
@@ -267,8 +267,8 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
     {
         var mpBytes = MpWrite(value);
         var nbBytes = NbWrite(value);
-        @out.WriteLine($"{typeof(T).Name} MP ({mpBytes.Length}): {Convert.ToHexString(mpBytes)}");
-        @out.WriteLine($"{typeof(T).Name} NB ({nbBytes.Length}): {Convert.ToHexString(nbBytes)}");
+        Out.WriteLine($"{typeof(T).Name} MP ({mpBytes.Length}): {Convert.ToHexString(mpBytes)}");
+        Out.WriteLine($"{typeof(T).Name} NB ({nbBytes.Length}): {Convert.ToHexString(nbBytes)}");
 
         // Self round-trips.
         var mpSelf = MpRead<T>(mpBytes);

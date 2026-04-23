@@ -128,11 +128,11 @@ public static class CustomRegistrationExample
 public class CustomUserConverter(IServiceProvider services)
     : DbUserConverter<AppDbContext, AppUser, long>(services)
 {
-    public override User ToModel(AppUser dbEntity)
+    public override User? ToModel(AppUser? dbEntity)
     {
         var user = base.ToModel(dbEntity);
         // Add custom claims from your entity
-        return user.WithClaim("email", dbEntity.Email);
+        return user?.WithClaim("email", dbEntity!.Email);
     }
 
     public override void UpdateEntity(User source, AppUser target)

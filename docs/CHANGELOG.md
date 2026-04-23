@@ -11,6 +11,23 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.74+279ac90c | npm: 12.3.70
+
+Release date: 2026-04-23
+
+### Added
+- Nerdbank MessagePack converters for a core set of RPC and serialization
+  types: `Result<T>`, `ExceptionInfo`, `VersionSet`, `RpcCacheKey`,
+  `RpcCacheValue`, `RpcHandshake`, `RpcHeader`, `RpcHeaderKey`,
+  `RpcMethodRef`, and `RpcObjectId`. All converters emit the same
+  array-based wire shape used by MessagePack-CSharp, so `msgpackX`
+  and `nmsgpackX` RPC formats are now fully byte-compatible across
+  runtimes &mdash; clients and servers can mix Nerdbank.MessagePack
+  and MessagePack-CSharp without re-serialization. Registered in the
+  default `NerdbankMessagePackByteSerializer` configuration.
+- `NerdbankCrossCompatTest` cases covering the new RPC converters.
+
+
 ## 12.3.72+94144fd7 | npm: 12.3.70
 
 Release date: 2026-04-23

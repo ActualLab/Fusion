@@ -202,7 +202,7 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         var gaps = received
             .Where((item, idx) => idx > 0 && item > received[idx - 1] + 1)
             .ToList();
-        if (gaps.Any()) {
+        if (gaps.Count != 0) {
             Out.WriteLine($"  Skipping occurred, items after gaps: [{string.Join(", ", gaps)}]");
         }
     }
