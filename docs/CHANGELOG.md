@@ -11,6 +11,22 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.76+d67c674e | npm: 12.3.76
+
+Release date: 2026-04-25
+
+### Added
+- RPC: compute methods can now serve a Regular call type (compute-to-regular
+  downgrade). When an inbound message targets a `[ComputeMethod]` but its
+  `CallTypeId` is `Regular`, the server returns the result immediately and
+  skips invalidation tracking &mdash; no entry is retained in the inbound call
+  registry past completion. Useful for callers that want a one-shot value
+  from a compute method without subscribing to invalidations. Implemented in
+  `RpcInboundContext` (accepts the alternate call type) and
+  `RpcInboundComputeCall` (new `IsRegularCall` path that unregisters after
+  `SendResult`).
+
+
 ## 12.3.74+279ac90c | npm: 12.3.70
 
 Release date: 2026-04-23
