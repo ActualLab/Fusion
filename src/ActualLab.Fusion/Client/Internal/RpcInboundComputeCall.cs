@@ -1,6 +1,6 @@
 using ActualLab.Internal;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Client.Internal;
 
@@ -12,9 +12,17 @@ namespace ActualLab.Fusion.Client.Internal;
 /// </summary>
 public abstract class RpcInboundComputeCall : RpcInboundCall
 {
-    public override string DebugTypeName => "<=";
+    /// <summary>
+    /// True when the caller requested a Regular call type for this compute method —
+    /// we then return the result immediately and skip invalidation tracking.
+    /// </summary>
+    public bool IsRegularCall => Context.Message.CallTypeId != RpcCallTypeIds.Compute;
+
+    public override string DebugTypeName => IsRegularCall ? "<-!" : "<=";
     public override int CompletedStage
-        => ResultTask is { IsCompleted: true } ? (UntypedComputed is { } c && c.IsInvalidated() ? 2 : 1) : 0;
+        => IsRegularCall
+            ? (ResultTask is { IsCompleted: true } ? 1 : 0)
+            : (ResultTask is { IsCompleted: true } ? (UntypedComputed is { } c && c.IsInvalidated() ? 2 : 1) : 0);
     public override string CompletedStageName
         => CompletedStage switch { 0 => "", 1 => "ResultReady", _ => "Invalidated" };
     public abstract Computed? UntypedComputed { get; }
@@ -34,6 +42,12 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
             var existingCall = Context.Peer.InboundCalls.Get(Id);
             if (existingCall != this || ResultTask is null)
                 return null;
+
+            if (IsRegularCall)
+                return WhenProcessed = completedStage switch {
+                    >= 1 => Task.CompletedTask,
+                    _ => ProcessStage1Plus(cancellationToken)
+                };
 
             return WhenProcessed = completedStage switch {
                 >= 2 => Task.CompletedTask,
@@ -58,6 +72,10 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
             }
         }
         SendResult();
+        if (IsRegularCall) {
+            Unregister();
+            return;
+        }
         await ProcessStage2(cancellationToken).ConfigureAwait(false);
     }
 
