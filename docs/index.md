@@ -148,8 +148,8 @@ Fusion doesn't just add real-time—it makes your app **thousands of times faste
 | Scenario | Without Fusion | With Fusion | Speedup |
 |----------|----------------|-------------|---------|
 | Local service, minimal writes | 38.6K calls/s | **313.8M calls/s** | <span style="color: #22c55e; font-weight: bold;">8,127x</span> |
-| Local service, continuous writes | 112.1K calls/s | **253.1M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,259x</span> |
-| Remote service, continuous writes | 76.0K calls/s (REST) | **216.0M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,841x</span> |
+| Local service, continuous writes | 118.2K calls/s | **261.3M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,212x</span> |
+| Remote service, continuous writes | 80.4K calls/s (REST) | **215.5M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,679x</span> |
 
 <p style="font-size: 0.85em; color: #666; margin-top: 0.5rem;">
 Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark details</a>.
@@ -159,13 +159,13 @@ Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark det
 
 | Framework | RPC Calls/sec | Streaming Items/sec |
 |-----------|---------------|---------------------|
-| **ActualLab.Rpc** | **9.46M** | **97.55M** |
-| SignalR | 5.03M | 16.39M |
-| gRPC | 1.30M | 42.70M |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">1.9..7.3x</span> | <span style="color: #22c55e; font-weight: bold;">2.3..6.0x</span> |
+| **ActualLab.Rpc** | **10.16M** | **96.96M** |
+| SignalR | 5.31M | 18.30M |
+| gRPC | 1.29M | 43.78M |
+| **Speedup** | <span style="color: #22c55e; font-weight: bold;">1.9..7.9x</span> | <span style="color: #22c55e; font-weight: bold;">2.2..5.3x</span> |
 
 <p style="font-size: 0.85em; color: #666;">
-7.3x faster than gRPC for calls. 6.0x faster than SignalR for streaming.
+7.9x faster than gRPC for calls. 5.3x faster than SignalR for streaming.
 </p>
 
 ## How It Works: The MSBuild/Make Analogy
