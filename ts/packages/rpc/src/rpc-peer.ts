@@ -262,6 +262,12 @@ export abstract class RpcPeer {
 
         conn.messageReceived.add(raw => this._handleMessage(raw));
         conn.closed.add(ev => {
+            // Bail if this conn has already been replaced (e.g. another
+            // setupConnection() call ran in between). Without this guard,
+            // a late-firing close event from the old socket would clobber
+            // the live `_connection` field and force the state machine
+            // back to Disconnected mid-session.
+            if (this._connection !== conn) return;
             this._connection = undefined;
             // A live conn going away always drops us out of "connected",
             // regardless of where the state machine thought we were. The
@@ -1101,6 +1107,10 @@ export class RpcServerPeer extends RpcPeer {
         // Server peers don't reconnect — once the connection is gone, senders must be
         // terminated so their source iterators release resources promptly.
         conn.closed.add(() => {
+            // Bail if this conn has already been replaced by a subsequent accept().
+            // Without this guard, a late-firing close from the old socket would
+            // disconnect shared objects that belong to the live session.
+            if (this._connection !== conn && this._connection !== undefined) return;
             this.sharedObjects.disconnectAll();
         });
     }

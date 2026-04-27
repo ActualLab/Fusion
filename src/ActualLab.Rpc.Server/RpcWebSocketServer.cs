@@ -66,7 +66,10 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             // because old-connection teardown can take up to RpcWebSocketTransport.Options.CloseTimeout
             // on a dead socket; performing it before the upgrade consumes ConnectTimeout instead,
             // which is the correct budget for "waiting for server to be ready to talk".
-            if (peer.IsConnected()) {
+            // Use IsConnectedOrHandshaking, not IsConnected: a client reconnecting faster than
+            // its previous handshake completes would otherwise stack new connections against a
+            // peer stuck mid-handshake instead of replacing the stale one.
+            if (peer.IsConnectedOrHandshaking()) {
                 Log.LogWarning("'{PeerRef}': {Peer} is already connected, disconnecting the old connection first...",
                     peerRef, peer);
                 await peer.Disconnect(cancellationToken).ConfigureAwait(false);
