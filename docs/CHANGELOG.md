@@ -11,6 +11,20 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.79+a4fdbdd9 | npm: 12.3.79
+
+Release date: 2026-04-28
+
+### Fixed
+- RPC: prevent connection stacking during a mid-handshake state. Connection
+  state checks now use `IsConnectedOrHandshaking` instead of `IsConnected`,
+  so new connections no longer pile up against peers stuck in transient
+  handshake states. Adds teardown safeguards and tightens disconnect
+  resolution in edge cases. Affects `RpcPeer`, `RpcServerPeer`,
+  `RpcPeerConnectionState`, `RpcWebSocketServer`, and the TypeScript
+  `RpcPeer`.
+
+
 ## 12.3.76+d67c674e | npm: 12.3.76
 
 Release date: 2026-04-25
