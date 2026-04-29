@@ -11,6 +11,24 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.79+ef249695 | npm: 12.3.81
+
+Release date: 2026-04-29
+
+### Added
+- TypeScript RPC: `RpcError` class &mdash; failed remote calls now reject with
+  an `RpcError` (instead of a plain `Error`) that carries the remote
+  exception's `typeName` when available. The handler parses `.NET`'s
+  assembly-qualified `TypeRef` string (e.g. `"System.InvalidOperationException,
+  System.Private.CoreLib"`) and exposes the type name only, so TypeScript
+  callers can branch on remote exception types. The internal
+  `RpcRerouteException` log path now matches against the fully-qualified
+  `ActualLab.Rpc.RpcRerouteException`. Exported from
+  `@actuallab/rpc`.
+- `error-propagation` E2E scenario in `TypeScriptRpcE2ETest` /
+  `ts-dotnet-e2e.ts` validating .NET → TS exception propagation.
+
+
 ## 12.3.79+a4fdbdd9 | npm: 12.3.79
 
 Release date: 2026-04-28
