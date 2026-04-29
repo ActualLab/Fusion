@@ -22,6 +22,9 @@ public class TypeScriptTestService : ITypeScriptTestService
     public Task<string?> Echo(string? message)
         => Task.FromResult(message);
 
+    public Task<string> Throw(string message)
+        => throw new InvalidOperationException(message);
+
     public async Task<string> SlowEcho(string marker, int delayMs)
     {
         // Increment BEFORE the await so the client can observe the invocation
