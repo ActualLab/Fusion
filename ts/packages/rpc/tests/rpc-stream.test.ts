@@ -340,6 +340,45 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
         await expect(iter.next()).rejects.toThrow(/gap/i);
     });
 
+    it('should ACK buffered items only as the consumer advances', async () => {
+        const ref = {
+            hostId: 'h',
+            localId: 3,
+            ackPeriod: 3,
+            ackAdvance: 5,
+            allowReconnect: false,
+            isRealTime: false,
+        };
+        const stream = new RpcStream<number>(ref, pair.clientPeer);
+        pair.clientPeer.remoteObjects.register(stream);
+
+        const ackedIndexes: number[] = [];
+        const ackSender = pair.clientHub.systemCallSender;
+        ackSender.ack = ((_conn, _format, _localId, nextIndex) => {
+            ackedIndexes.push(nextIndex);
+        }) as typeof ackSender.ack;
+
+        const iter = stream[Symbol.asyncIterator]();
+        const first = iter.next();
+        expect(ackedIndexes).toEqual([0]);
+
+        for (let i = 0; i < 5; i++)
+            stream.onItem(i, i);
+
+        await delay(0);
+        expect(ackedIndexes).toEqual([0]);
+
+        await expect(first).resolves.toMatchObject({ value: 0, done: false });
+        await expect(iter.next()).resolves.toMatchObject({ value: 1, done: false });
+        await expect(iter.next()).resolves.toMatchObject({ value: 2, done: false });
+        expect(ackedIndexes).toEqual([0]);
+
+        await expect(iter.next()).resolves.toMatchObject({ value: 3, done: false });
+        expect(ackedIndexes).toEqual([0, 3]);
+
+        await iter.return?.();
+    });
+
     it('should handle multiple concurrent streams', async () => {
         pair.serverHub.addService(StreamServiceDef, {
             // eslint-disable-next-line @typescript-eslint/require-await

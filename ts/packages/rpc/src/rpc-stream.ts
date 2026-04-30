@@ -129,6 +129,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     private _started = false;
     private _iterating = false;
     private _ackSentUpTo = 0;
+    private _nextConsumedIndex = 0;
 
     /** Create a local (origin-side) stream wrapping an async iterable or source factory with optional configuration. */
     constructor(source: RpcStreamSource<T>, options?: RpcStreamOptions<T>);
@@ -243,13 +244,12 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         }
         if (index < this._nextExpectedIndex) {
             // Duplicate — ack and ignore
-            this._maybeSendAck(index + 1);
+            this._maybeSendAck(Math.min(index + 1, this._nextConsumedIndex));
             return;
         }
 
         this._buffer.push(item);
         this._nextExpectedIndex = index + 1;
-        this._maybeSendAck(this._nextExpectedIndex);
         this._notifyConsumer();
     }
 
@@ -271,13 +271,12 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             return;
         }
         if (index < this._nextExpectedIndex) {
-            this._maybeSendAck(index + items.length);
+            this._maybeSendAck(Math.min(index + items.length, this._nextConsumedIndex));
             return;
         }
 
         for (const item of items) this._buffer.push(item);
         this._nextExpectedIndex = index + items.length;
-        this._maybeSendAck(this._nextExpectedIndex);
         this._notifyConsumer();
     }
 
@@ -335,6 +334,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
                     this._started = true;
                     this._sendAck(0, true);
                 }
+                this._maybeSendAck(this._nextConsumedIndex);
 
                 // Read from buffer or wait for new data
                 for (;;) {
@@ -342,6 +342,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
                         // shift() is O(1) on Denque and releases the slot so the
                         // ring buffer can be reclaimed as the consumer drains.
                         const value = this._buffer.shift()!;
+                        this._nextConsumedIndex++;
                         return { value, done: false };
                     }
 
