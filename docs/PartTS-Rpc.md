@@ -220,7 +220,7 @@ for await (const item of stream) {
 | Feature | Behavior |
 |---------|----------|
 | Enumeration | Can only be iterated **once** |
-| Flow control | Built-in ack-based backpressure (`ackPeriod`, `ackAdvance`) |
+| Flow control | Built-in ack-based backpressure (`ackPeriod`, `bufferSize`) |
 | Reconnection | Automatically resumes from last received index |
 | Nested streams | Stream refs inside returned objects are auto-resolved |
 | Cancellation | `break` from `for await` sends `AckEnd` to the server |

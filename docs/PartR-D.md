@@ -74,4 +74,4 @@ Diagrams for the RPC concepts introduced in [Part 2](PartR.md).
 | Property | Default | Description |
 |----------|---------|-------------|
 | `AckPeriod` | 30 | Consumer acks every N items |
-| `AckAdvance` | 61 | Producer can send N items ahead before waiting |
+| `BufferSize` | 61 | Producer can buffer N items ahead before waiting |

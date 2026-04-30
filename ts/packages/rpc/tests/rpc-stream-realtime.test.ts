@@ -48,7 +48,7 @@ describe('parseStreamRef isRealTime', () => {
         const ref = parseStreamRef({
             SerializedId: ['host-abc', 42],
             AckPeriod: 3,
-            AckAdvance: 5,
+            BufferSize: 5,
             AllowReconnect: true,
             IsRealTime: true,
         });
@@ -60,7 +60,7 @@ describe('parseStreamRef isRealTime', () => {
         const ref = parseStreamRef({
             SerializedId: ['host-abc', 42],
             AckPeriod: 3,
-            AckAdvance: 5,
+            BufferSize: 5,
         });
         expect(ref).not.toBeNull();
         expect(ref!.isRealTime).toBe(false);
@@ -99,7 +99,7 @@ describe('RpcStreamSender isRealTime', () => {
         expect(ref).not.toBeNull();
         expect(ref!.isRealTime).toBe(true);
         expect(ref!.ackPeriod).toBe(3);
-        expect(ref!.ackAdvance).toBe(5);
+        expect(ref!.bufferSize).toBe(5);
     });
 
     it('should include isRealTime=0 in toRef() by default', () => {
@@ -119,7 +119,7 @@ interface RealTimeTestSetup {
     serverPeer: RpcServerPeer;
     createSender: (opts?: {
         ackPeriod?: number;
-        ackAdvance?: number;
+        bufferSize?: number;
         isRealTime?: boolean;
         canSkipTo?: (item: number) => boolean;
     }) => {
@@ -154,12 +154,12 @@ function createRealTimeTestSetup(): RealTimeTestSetup {
         createSender(opts = {}) {
             const {
                 ackPeriod = 3,
-                ackAdvance = 5,
+                bufferSize = 5,
                 isRealTime = true,
                 canSkipTo = () => true,
             } = opts;
             const sender = new RpcStreamSender<number>(
-                serverPeer, ackPeriod, ackAdvance, false, isRealTime, canSkipTo,
+                serverPeer, ackPeriod, bufferSize, false, isRealTime, canSkipTo,
             );
             serverPeer.sharedObjects.register(sender);
             const ref = parseStreamRef(sender.toRef())!;
@@ -190,10 +190,10 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
 
     it('should skip items when ACKs are delayed', async () => {
         const totalItems = 50;
-        const ackAdvance = 5;
+        const bufferSize = 5;
 
         const sender = new RpcStreamSender<number>(
-            setup.serverPeer, ackPeriod, ackAdvance, false, true,
+            setup.serverPeer, ackPeriod, bufferSize, false, true,
         );
         setup.serverPeer.sharedObjects.register(sender);
 
@@ -216,10 +216,10 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
         // Simulate initial ACK to start the stream
         sender.onAck(0, sender.id.hostId);
 
-        // Start writing — sender will block at ackAdvance ceiling
+        // Start writing — sender will block at bufferSize ceiling
         const writeDone = sender.writeFrom(source());
 
-        // Wait for sender to fill up to ackAdvance and block
+        // Wait for sender to fill up to bufferSize and block
         await delay(50);
 
         // Simulate delayed ACKs — only send a few, spaced out
@@ -229,7 +229,7 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
         }
 
         // Tear the sender down to make `writeDone` resolve. The previous
-        // approach (final `onAck(sentItems.length + ackAdvance, '')` then
+        // approach (final `onAck(sentItems.length + bufferSize, '')` then
         // `await writeDone`) relied on the source naturally exhausting
         // within the given budget — which depends on the OS-level
         // setTimeout(0) granularity and is too tight on Windows (~15ms
@@ -253,9 +253,9 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
 
     it('should not skip when ACKs arrive promptly', async () => {
         const totalItems = 20;
-        const ackAdvance = 10;
+        const bufferSize = 10;
 
-        const { sender, stream } = setup.createSender({ ackPeriod, ackAdvance, isRealTime: true });
+        const { sender, stream } = setup.createSender({ ackPeriod, bufferSize, isRealTime: true });
 
         // Source: produces items with delay (slow source, fast consumer)
         async function* source(): AsyncGenerator<number> {
@@ -278,11 +278,14 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
 
     it('should skip to keyframes when canSkipTo filters', async () => {
         const totalItems = 100;
-        const ackAdvance = 5;
-        const keyFrameInterval = 10;
+        const bufferSize = 5;
+        // Keep keyframes close enough to fit into the already-buffered
+        // unsent suffix. Real-time streams no longer pull ahead just to
+        // discover a future skip target.
+        const keyFrameInterval = 6;
 
         const sender = new RpcStreamSender<number>(
-            setup.serverPeer, ackPeriod, ackAdvance, false, true,
+            setup.serverPeer, ackPeriod, bufferSize, false, true,
             (item) => item % keyFrameInterval === 0,
         );
         setup.serverPeer.sharedObjects.register(sender);
@@ -294,10 +297,10 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
             origSendItem(item);
         };
 
+        // eslint-disable-next-line @typescript-eslint/require-await
         async function* source(): AsyncGenerator<number> {
             for (let i = 0; i < totalItems; i++) {
                 yield i;
-                await new Promise(r => setTimeout(r, 0));
             }
         }
 
@@ -340,7 +343,7 @@ describe.each([1, 2, 3, 5])('RpcStreamSender real-time skip (ackPeriod=%i)', (ac
 // -- Real-time reconnect tests --
 // When a reset ACK arrives on a real-time stream, the sender should
 // skip to the next canSkipTo item.
-// We use a very large ackAdvance so backpressure never triggers — all gaps
+// We use a very large bufferSize so backpressure never triggers — all gaps
 // are exclusively from reconnect skipping.
 
 describe.each([1, 3, 5])('RpcStreamSender real-time reconnect (ackPeriod=%i)', (ackPeriod) => {
@@ -358,11 +361,11 @@ describe.each([1, 3, 5])('RpcStreamSender real-time reconnect (ackPeriod=%i)', (
 
     it('should skip to keyframe on reconnect with canSkipTo filter', async () => {
         const totalItems = 200;
-        const ackAdvance = totalItems; // No backpressure — isolates reconnect behavior
+        const bufferSize = totalItems; // No backpressure — isolates reconnect behavior
         const keyFrameInterval = 10;
 
         const sender = new RpcStreamSender<number>(
-            setup.serverPeer, ackPeriod, ackAdvance, true, true,
+            setup.serverPeer, ackPeriod, bufferSize, true, true,
             (item) => item % keyFrameInterval === 0,
         );
         setup.serverPeer.sharedObjects.register(sender);
@@ -419,10 +422,10 @@ describe.each([1, 3, 5])('RpcStreamSender real-time reconnect (ackPeriod=%i)', (
 
     it('should resume immediately on reconnect when canSkipTo is default', async () => {
         const totalItems = 100;
-        const ackAdvance = totalItems;
+        const bufferSize = totalItems;
 
         const sender = new RpcStreamSender<number>(
-            setup.serverPeer, ackPeriod, ackAdvance, true, true,
+            setup.serverPeer, ackPeriod, bufferSize, true, true,
         );
         setup.serverPeer.sharedObjects.register(sender);
 
@@ -481,7 +484,7 @@ describe('RpcStreamSender flow control (non-real-time)', () => {
 
         const { sender, stream } = setup.createSender({
             ackPeriod: 3,
-            ackAdvance: 5,
+            bufferSize: 5,
             isRealTime: false,
         });
 
@@ -505,6 +508,118 @@ describe('RpcStreamSender flow control (non-real-time)', () => {
     });
 });
 
+describe('RpcStreamSender backpressure modes', () => {
+    let setup: RealTimeTestSetup;
+
+    beforeEach(async () => {
+        setup = createRealTimeTestSetup();
+        await delay(10);
+    });
+
+    afterEach(() => {
+        setup.serverHub.close();
+        setup.clientHub.close();
+    });
+
+    it('should pause a non-real-time source at the ACK window', async () => {
+        const bufferSize = 5;
+        let producedCount = 0;
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 3, bufferSize, false, false, (item) => item % 10 === 0,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < 100; i++) {
+                producedCount++;
+                yield i;
+            }
+        }
+
+        sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+        await delay(0);
+
+        expect(producedCount).toBeLessThanOrEqual(bufferSize);
+
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
+    });
+
+    it('should not pull past the buffer without a real-time skip target', async () => {
+        const bufferSize = 5;
+        const keyFrameInterval = 10;
+        let producedCount = 0;
+        const sentItems: number[] = [];
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 3, bufferSize, false, true, (item) => item % keyFrameInterval === 0,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+        const origSendItem = sender.sendItem.bind(sender);
+        sender.sendItem = (item: number) => {
+            sentItems.push(item);
+            origSendItem(item);
+        };
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < 100; i++) {
+                producedCount++;
+                yield i;
+            }
+        }
+
+        sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+        await delay(0);
+
+        expect(producedCount).toBeLessThanOrEqual(bufferSize + 2);
+        expect(sentItems[0]).toBe(0);
+
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
+    });
+
+    it('should start from a buffered real-time skip target', async () => {
+        const bufferSize = 15;
+        const keyFrameInterval = 8;
+        const expectedSkipTarget = keyFrameInterval * 2;
+        const sentItems: number[] = [];
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 3, bufferSize, false, true, (item) => item % keyFrameInterval === 0,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+        const origSendItem = sender.sendItem.bind(sender);
+        sender.sendItem = (item: number) => {
+            sentItems.push(item);
+            origSendItem(item);
+        };
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < 100; i++)
+                yield i;
+        }
+
+        sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+        for (let i = 0; sentItems.length < bufferSize && i < 100; i++)
+            await delay(0);
+        expect(sentItems).toEqual(Array.from({ length: bufferSize }, (_, i) => i));
+
+        sender.onAck(1, '');
+        for (let i = 0; !sentItems.includes(expectedSkipTarget) && i < 100; i++)
+            await delay(0);
+
+        expect(sentItems).not.toContain(expectedSkipTarget - 1);
+        expect(sentItems).toContain(expectedSkipTarget);
+
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
+    });
+});
+
 // -- .NET-TS E2E wire format compatibility --
 
 describe('RpcStream real-time wire format E2E', () => {
@@ -514,7 +629,7 @@ describe('RpcStream real-time wire format E2E', () => {
         const parsed = parseStreamRef(dotnetRef);
         expect(parsed).not.toBeNull();
         expect(parsed!.ackPeriod).toBe(3);
-        expect(parsed!.ackAdvance).toBe(5);
+        expect(parsed!.bufferSize).toBe(5);
         expect(parsed!.allowReconnect).toBe(true);
         expect(parsed!.isRealTime).toBe(true);
 
@@ -529,7 +644,7 @@ describe('RpcStream real-time wire format E2E', () => {
         const reParsed = parseStreamRef(tsRef);
         expect(reParsed).not.toBeNull();
         expect(reParsed!.ackPeriod).toBe(3);
-        expect(reParsed!.ackAdvance).toBe(5);
+        expect(reParsed!.bufferSize).toBe(5);
         expect(reParsed!.isRealTime).toBe(true);
 
         serverHub.close();

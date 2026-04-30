@@ -10,15 +10,15 @@ const { warnLog } = getLogs('RpcStream');
 
 /** Default ack period (matches .NET RpcStream defaults). */
 const DEFAULT_ACK_PERIOD = 30;
-/** Default ack advance (matches .NET RpcStream defaults). */
-const DEFAULT_ACK_ADVANCE = 61;
+/** Default buffer size (matches .NET RpcStream defaults). */
+const DEFAULT_BUFFER_SIZE = 61;
 
 /** Parsed stream reference from the server's result payload. */
 export interface RpcStreamRef {
     readonly hostId: string;
     readonly localId: number;
     readonly ackPeriod: number;
-    readonly ackAdvance: number;
+    readonly bufferSize: number;
     readonly allowReconnect: boolean;
     readonly isRealTime: boolean;
 }
@@ -34,32 +34,32 @@ export type RpcStreamSource<T> = AsyncIterable<T> | ((abortSignal: AbortSignal) 
 /** Configuration options for creating a local (origin-side) RpcStream. */
 export interface RpcStreamOptions<T> {
     ackPeriod?: number;
-    ackAdvance?: number;
+    bufferSize?: number;
     allowReconnect?: boolean;
     isRealTime?: boolean;
     canSkipTo?: (item: T) => boolean;
 }
 
 /**
- * Parses a stream reference string of the form "{hostId},{localId},{ackPeriod},{ackAdvance}".
+ * Parses a stream reference string of the form "{hostId},{localId},{ackPeriod},{bufferSize}".
  * Returns null if the value is not a valid stream reference.
  */
 export function parseStreamRef(value: unknown): RpcStreamRef | null {
-    // Text format: "hostId,localId,ackPeriod,ackAdvance[,allowReconnect[,isRealTime]]"
+    // Text format: "hostId,localId,ackPeriod,bufferSize[,allowReconnect[,isRealTime]]"
     if (typeof value === 'string') {
         const parts = value.split(',');
         if (parts.length < 4 || parts.length > 6) return null;
         const hostId = parts[0];
         const localId = parseInt(parts[1], 10);
         const ackPeriod = parseInt(parts[2], 10);
-        const ackAdvance = parseInt(parts[3], 10);
-        if (isNaN(localId) || isNaN(ackPeriod) || isNaN(ackAdvance))
+        const bufferSize = parseInt(parts[3], 10);
+        if (isNaN(localId) || isNaN(ackPeriod) || isNaN(bufferSize))
             return null;
         const allowReconnect = parts.length < 5 || parts[4] !== '0';
         const isRealTime = parts.length >= 6 && parts[5] === '1';
-        return { hostId, localId, ackPeriod, ackAdvance, allowReconnect, isRealTime };
+        return { hostId, localId, ackPeriod, bufferSize, allowReconnect, isRealTime };
     }
-    // Binary (MessagePack) format: { SerializedId: [hostId, localId], AckPeriod, AckAdvance, AllowReconnect }
+    // Binary (MessagePack) format: { SerializedId: [hostId, localId], AckPeriod, BufferSize, AllowReconnect }
     if (typeof value === 'object' && value !== null) {
         const obj = value as Record<string, unknown>;
         const serializedId = obj.SerializedId as unknown[];
@@ -69,10 +69,10 @@ export function parseStreamRef(value: unknown): RpcStreamRef | null {
         const hostId = String(rawHostId);
         const localId = Number(serializedId[1]);
         const ackPeriod = Number(obj.AckPeriod ?? 256);
-        const ackAdvance = Number(obj.AckAdvance ?? 128);
+        const bufferSize = Number(obj.BufferSize ?? 128);
         const allowReconnect = obj.AllowReconnect !== false;
         const isRealTime = obj.IsRealTime === true;
-        return { hostId, localId, ackPeriod, ackAdvance, allowReconnect, isRealTime };
+        return { hostId, localId, ackPeriod, bufferSize, allowReconnect, isRealTime };
     }
     return null;
 }
@@ -106,7 +106,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     readonly isRealTime: boolean;
     readonly canSkipTo: (item: T) => boolean;
     readonly ackPeriod: number;
-    readonly ackAdvance: number;
+    readonly bufferSize: number;
 
     // Local (origin) mode
     readonly localSource?: RpcStreamSource<T>;
@@ -149,7 +149,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             this.isRealTime = options.isRealTime ?? false;
             this.canSkipTo = options.canSkipTo ?? (() => true);
             this.ackPeriod = options.ackPeriod ?? DEFAULT_ACK_PERIOD;
-            this.ackAdvance = options.ackAdvance ?? DEFAULT_ACK_ADVANCE;
+            this.bufferSize = options.bufferSize ?? DEFAULT_BUFFER_SIZE;
         } else {
             // Remote (target) mode
             const ref = sourceOrRef;
@@ -161,7 +161,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             this.isRealTime = ref.isRealTime;
             this.canSkipTo = () => true; // not serialized
             this.ackPeriod = ref.ackPeriod;
-            this.ackAdvance = ref.ackAdvance;
+            this.bufferSize = ref.bufferSize;
         }
     }
 
@@ -181,7 +181,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
      * stream reference.
      *
      * For binary peers the ref is a MessagePack-compatible object
-     * (`{ SerializedId, AckPeriod, AckAdvance, AllowReconnect }`);
+     * (`{ SerializedId, AckPeriod, BufferSize, AllowReconnect }`);
      * for text peers it is a comma-separated string.
      *
      * Can only be called once per stream.
@@ -198,7 +198,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
 
         const isFactory = typeof this.localSource === 'function';
         const sender = new RpcStreamSender<T>(
-            peer, this.ackPeriod, this.ackAdvance,
+            peer, this.ackPeriod, this.bufferSize,
             this.allowReconnect, this.isRealTime, this.canSkipTo,
             isFactory,
         );
@@ -218,7 +218,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             ? {
                 SerializedId: [sender.id.hostId, sender.id.localId],
                 AckPeriod: sender.ackPeriod,
-                AckAdvance: sender.ackAdvance,
+                BufferSize: sender.bufferSize,
                 AllowReconnect: sender.allowReconnect,
             }
             : sender.toRef();
@@ -436,7 +436,7 @@ function _isStreamSource<T>(value: unknown): value is RpcStreamSource<T> {
  * Recursively walks a deserialized value and replaces any stream ref strings
  * with live RpcStream<unknown> instances registered on the given peer.
  * This handles nested stream refs inside complex return types (e.g. Table<T>
- * containing RpcStream<Row<T>> fields serialized as "{hostId},{localId},{ackPeriod},{ackAdvance}").
+ * containing RpcStream<Row<T>> fields serialized as "{hostId},{localId},{ackPeriod},{bufferSize}").
  */
 export function resolveStreamRefs(value: unknown, peer: RpcPeer): unknown {
     if (value === null || value === undefined) return value;

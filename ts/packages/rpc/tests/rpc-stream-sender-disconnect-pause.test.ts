@@ -59,14 +59,14 @@ describe('RpcStreamSender disconnect pause', () => {
      * (mutable) for inspection.
      */
     function setupClientOwnedStream(
-        opts?: { ackPeriod?: number; ackAdvance?: number; sourceUsesAbortSignal?: boolean },
+        opts?: { ackPeriod?: number; bufferSize?: number; sourceUsesAbortSignal?: boolean },
     ) {
         const ackPeriod = opts?.ackPeriod ?? 2;
-        const ackAdvance = opts?.ackAdvance ?? 4;
+        const bufferSize = opts?.bufferSize ?? 4;
         const sourceUsesAbortSignal = opts?.sourceUsesAbortSignal ?? false;
 
         const sender = new RpcStreamSender<number>(
-            clientPeer, ackPeriod, ackAdvance, true, false, () => true, sourceUsesAbortSignal,
+            clientPeer, ackPeriod, bufferSize, true, false, () => true, sourceUsesAbortSignal,
         );
         clientPeer.sharedObjects.register(sender);
 
@@ -74,11 +74,11 @@ describe('RpcStreamSender disconnect pause', () => {
         const stream = new RpcStream<number>(ref, serverPeer);
         serverPeer.remoteObjects.register(stream);
 
-        return { sender, stream, ackPeriod, ackAdvance };
+        return { sender, stream, ackPeriod, bufferSize };
     }
 
     it('Test 1.1 — does not drain source while disconnected', async () => {
-        const { sender, stream, ackAdvance } = setupClientOwnedStream();
+        const { sender, stream, bufferSize } = setupClientOwnedStream();
 
         const yieldCounter = { n: 0 };
         async function* source(): AsyncGenerator<number> {
@@ -121,9 +121,9 @@ describe('RpcStreamSender disconnect pause', () => {
         // (iterator.next() that was already awaiting). Bug produced ≥100.
         expect(delta).toBeLessThanOrEqual(3);
 
-        // Full bound including pre-disconnect steady-state: at most ackAdvance+1
+        // Full bound including pre-disconnect steady-state: at most bufferSize+1
         // items of in-flight buffer (post-ACK budget) plus the 4 we already received.
-        expect(yieldCountAfterPause).toBeLessThanOrEqual(4 + ackAdvance + 3);
+        expect(yieldCountAfterPause).toBeLessThanOrEqual(4 + bufferSize + 3);
 
         // Cleanup
         sender.disconnect();

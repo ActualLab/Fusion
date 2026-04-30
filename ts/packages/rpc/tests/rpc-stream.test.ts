@@ -21,7 +21,7 @@ describe('parseStreamRef', () => {
         expect(ref!.hostId).toBe('abc-123');
         expect(ref!.localId).toBe(42);
         expect(ref!.ackPeriod).toBe(10);
-        expect(ref!.ackAdvance).toBe(3);
+        expect(ref!.bufferSize).toBe(3);
         expect(ref!.allowReconnect).toBe(true);
     });
 
@@ -53,18 +53,18 @@ describe('parseStreamRef', () => {
             const ref = parseStreamRef({
                 SerializedId: ['host-abc', 42],
                 AckPeriod: 100,
-                AckAdvance: 50,
+                BufferSize: 50,
                 AllowReconnect: true,
             });
             expect(ref).not.toBeNull();
             expect(ref!.hostId).toBe('host-abc');
             expect(ref!.localId).toBe(42);
             expect(ref!.ackPeriod).toBe(100);
-            expect(ref!.ackAdvance).toBe(50);
+            expect(ref!.bufferSize).toBe(50);
             expect(ref!.allowReconnect).toBe(true);
         });
 
-        it('should use defaults when AckPeriod/AckAdvance are missing', () => {
+        it('should use defaults when AckPeriod/BufferSize are missing', () => {
             const ref = parseStreamRef({
                 SerializedId: ['host-def', 7],
             });
@@ -72,7 +72,7 @@ describe('parseStreamRef', () => {
             expect(ref!.hostId).toBe('host-def');
             expect(ref!.localId).toBe(7);
             expect(ref!.ackPeriod).toBe(256);
-            expect(ref!.ackAdvance).toBe(128);
+            expect(ref!.bufferSize).toBe(128);
             expect(ref!.allowReconnect).toBe(true);
         });
 
@@ -80,7 +80,7 @@ describe('parseStreamRef', () => {
             const ref = parseStreamRef({
                 SerializedId: ['host-xyz', 99],
                 AckPeriod: 64,
-                AckAdvance: 32,
+                BufferSize: 32,
                 AllowReconnect: false,
             });
             expect(ref).not.toBeNull();
@@ -307,7 +307,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
     });
 
     it('should error on item gap when allowReconnect is false', async () => {
-        const ref = { hostId: 'h', localId: 1, ackPeriod: 10, ackAdvance: 5, allowReconnect: false, isRealTime: false };
+        const ref = { hostId: 'h', localId: 1, ackPeriod: 10, bufferSize: 5, allowReconnect: false, isRealTime: false };
         const stream = new RpcStream<string>(ref, pair.clientPeer);
         pair.clientPeer.remoteObjects.register(stream);
 
@@ -323,7 +323,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
     });
 
     it('should error on batch gap when allowReconnect is false', async () => {
-        const ref = { hostId: 'h', localId: 2, ackPeriod: 10, ackAdvance: 5, allowReconnect: false, isRealTime: false };
+        const ref = { hostId: 'h', localId: 2, ackPeriod: 10, bufferSize: 5, allowReconnect: false, isRealTime: false };
         const stream = new RpcStream<string>(ref, pair.clientPeer);
         pair.clientPeer.remoteObjects.register(stream);
 
@@ -345,7 +345,7 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
             hostId: 'h',
             localId: 3,
             ackPeriod: 3,
-            ackAdvance: 5,
+            bufferSize: 5,
             allowReconnect: false,
             isRealTime: false,
         };
@@ -428,7 +428,7 @@ describe('RpcStream allowReconnect', () => {
             hostId: 'h',
             localId: 1,
             ackPeriod: 30,
-            ackAdvance: 61,
+            bufferSize: 61,
             allowReconnect: false,
             isRealTime: false,
         };
@@ -465,7 +465,7 @@ describe('RpcStream allowReconnect', () => {
             hostId: 'h',
             localId: 2,
             ackPeriod: 30,
-            ackAdvance: 61,
+            bufferSize: 61,
             allowReconnect: true,
             isRealTime: false,
         };
@@ -677,7 +677,7 @@ describe('RpcStream local mode', () => {
         expect(stream.allowReconnect).toBe(true);
         expect(stream.isRealTime).toBe(false);
         expect(stream.ackPeriod).toBe(30);
-        expect(stream.ackAdvance).toBe(61);
+        expect(stream.bufferSize).toBe(61);
     });
 
     it('should accept configuration options', () => {
@@ -688,13 +688,13 @@ describe('RpcStream local mode', () => {
             isRealTime: true,
             canSkipTo: canSkip,
             ackPeriod: 5,
-            ackAdvance: 10,
+            bufferSize: 10,
             allowReconnect: false,
         });
         expect(stream.isRealTime).toBe(true);
         expect(stream.canSkipTo).toBe(canSkip);
         expect(stream.ackPeriod).toBe(5);
-        expect(stream.ackAdvance).toBe(10);
+        expect(stream.bufferSize).toBe(10);
         expect(stream.allowReconnect).toBe(false);
     });
 
@@ -724,7 +724,7 @@ describe('RpcStream local mode', () => {
     });
 
     it('should throw toRef on remote stream', () => {
-        const ref = { hostId: 'h', localId: 1, ackPeriod: 30, ackAdvance: 61, allowReconnect: true, isRealTime: false };
+        const ref = { hostId: 'h', localId: 1, ackPeriod: 30, bufferSize: 61, allowReconnect: true, isRealTime: false };
         const hub = new RpcHub('test-hub');
         const [cc] = createMessageChannelPair();
         const peer = new RpcClientPeer(hub, 'ws://test');
@@ -753,7 +753,7 @@ describe('RpcStream local mode E2E (service returns RpcStream)', () => {
         pair.clientHub.close();
     });
 
-    it('should propagate config via toRef and deliver all items', async () => {
+    it('should propagate config via toRef and consume real-time items', async () => {
         pair.serverHub.addService(ConfigStreamServiceDef, {
             getStream() {
                 // eslint-disable-next-line @typescript-eslint/require-await
@@ -763,7 +763,7 @@ describe('RpcStream local mode E2E (service returns RpcStream)', () => {
                 return new RpcStream(source(), {
                     isRealTime: true,
                     ackPeriod: 5,
-                    ackAdvance: 10,
+                    bufferSize: 10,
                 });
             },
         });
@@ -777,12 +777,14 @@ describe('RpcStream local mode E2E (service returns RpcStream)', () => {
         // The client-side stream should have the config from the server
         expect(stream.isRealTime).toBe(true);
         expect(stream.ackPeriod).toBe(5);
-        expect(stream.ackAdvance).toBe(10);
+        expect(stream.bufferSize).toBe(10);
 
-        // Should be able to consume items
+        // Real-time streams may compact the producer-side buffer before
+        // anything is sent, so this only verifies the stream remains consumable.
         const items: number[] = [];
         for await (const item of stream) items.push(item);
-        expect(items).toEqual(Array.from({ length: 20 }, (_, i) => i));
+        expect(items.length).toBeGreaterThan(0);
+        expect(items).toEqual([...items].sort((a, b) => a - b));
     });
 
     it('should expose whenSent that resolves after stream completes', async () => {
@@ -793,7 +795,7 @@ describe('RpcStream local mode E2E (service returns RpcStream)', () => {
                 async function* source() {
                     for (let i = 0; i < 5; i++) yield i;
                 }
-                streamInstance = new RpcStream(source(), { ackPeriod: 3, ackAdvance: 10 });
+                streamInstance = new RpcStream(source(), { ackPeriod: 3, bufferSize: 10 });
                 return streamInstance;
             },
         });

@@ -19,7 +19,7 @@ You might wonder why ActualLab.Rpc uses a dedicated `RpcStream<T>` type instead 
 
 3. **Embedding in data structures**: `RpcStream<T>` can be embedded as a property in records and classes. When these objects are serialized, the stream is serialized as a reference ID &ndash; the actual stream data flows through a separate channel. This enables nested streams (streams containing objects that contain their own streams).
 
-4. **Flow control**: `RpcStream<T>` has built-in acknowledgment-based backpressure (`AckPeriod` and `AckAdvance` properties) to prevent producers from overwhelming consumers.
+4. **Flow control**: `RpcStream<T>` has built-in acknowledgment-based backpressure (`AckPeriod` and `BufferSize` properties) to prevent producers from overwhelming consumers.
 
 5. **Reconnection handling**: `RpcStream<T>` integrates with ActualLab.Rpc's reconnection mechanism, allowing streams to resume after network interruptions.
 
@@ -34,7 +34,7 @@ You might wonder why ActualLab.Rpc uses a dedicated `RpcStream<T>` type instead 
 | `RpcStream.New<T>(IEnumerable<T>)` | Creates a stream from a synchronous enumerable |
 | `GetAsyncEnumerator()` | Implements `IAsyncEnumerable<T>` for consumption |
 | `AckPeriod` | How often the consumer sends acknowledgments (default: 30 items) |
-| `AckAdvance` | How many items the producer can send ahead (default: 61 items) |
+| `BufferSize` | How many items the producer can buffer ahead (default: 61 items) |
 | `BatchSize` | How many items are batched together for transmission (default: 64, max: 1024) |
 | `AllowReconnect` | Whether the stream can resume after disconnection (default: true) |
 | `IsRealTime` | Enables real-time mode with adaptive item skipping (default: false) |
@@ -180,7 +180,7 @@ This is useful for hierarchical data like tables with rows, where each row has i
 |---------|----------|
 | **Direction** | Bidirectional &ndash; server-to-client and client-to-server |
 | **Enumeration** | Remote streams can only be enumerated once |
-| **Backpressure** | Built-in acknowledgment mechanism (configurable via `AckPeriod` and `AckAdvance`) |
+| **Backpressure** | Built-in acknowledgment mechanism (configurable via `AckPeriod` and `BufferSize`) |
 | **Cancellation** | Streams can be cancelled from either end |
 | **Nesting** | Streams can be nested within other data structures |
 | **Reconnection** | Streams handle reconnection gracefully (configurable via `AllowReconnect`) |
@@ -193,7 +193,7 @@ This is useful for hierarchical data like tables with rows, where each row has i
 | Property | Default | Description |
 |----------|---------|-------------|
 | `AckPeriod` | 30 | How often the client sends acknowledgments (every N items) |
-| `AckAdvance` | 61 | How many items the server can send ahead before waiting for acks |
+| `BufferSize` | 61 | How many items the server can buffer ahead before waiting for acks |
 | `BatchSize` | 64 | How many items are batched together for transmission (max: 1024) |
 | `AllowReconnect` | true | Whether the stream can resume after a connection disruption |
 | `IsRealTime` | false | Enables real-time mode: drops items instead of applying backpressure |
@@ -202,7 +202,7 @@ This is useful for hierarchical data like tables with rows, where each row has i
 These defaults work well for most scenarios. Adjust them if you need different throughput/latency tradeoffs.
 
 ::: tip BatchSize
-`BatchSize` controls how many items are grouped together in a single network message. Larger batches reduce network overhead but increase latency for the first items. Unlike `AckPeriod` and `AckAdvance`, `BatchSize` is not serialized &ndash; it's a local configuration that only affects the sending side.
+`BatchSize` controls how many items are grouped together in a single network message. Larger batches reduce network overhead but increase latency for the first items. Unlike `AckPeriod` and `BufferSize`, `BatchSize` is not serialized &ndash; it's a local configuration that only affects the sending side.
 :::
 
 
@@ -274,10 +274,10 @@ var stream = new RpcStream<SensorReading>(source) {
 ```
 
 When `IsRealTime` is `true`:
-- If the producer is `AckAdvance` items ahead of the consumer's last acknowledgment, it enters **skip mode**
-- In skip mode, items are drained from the source without sending them
-- Only items where `CanSkipTo` returns `true` are kept as potential resume points
-- Once the consumer catches up (sends an ACK), normal sending resumes from the latest skip target
+- If the producer reaches the `BufferSize` window ahead of the consumer's last acknowledgment, it waits for an ACK
+- When the consumer acknowledges progress, the sender may compact the already-buffered unsent suffix
+- Compaction can skip only to an item where `CanSkipTo` returns `true`; it does not pull ahead just to discover a future skip target
+- Once compaction is done, normal sending resumes from that buffered skip target
 
 `CanSkipTo` is a local predicate — it is **not serialized** across RPC and is only applied on the side that constructs the stream. The remote side has no knowledge of it. Common patterns:
 - `_ => true` (default) &ndash; any item is a valid skip target
@@ -317,7 +317,7 @@ const stream = new RpcStream(source, {
     isRealTime: true,
     canSkipTo: (frame) => frame.isKeyFrame,
     ackPeriod: 30,
-    ackAdvance: 61,
+    bufferSize: 61,
 });
 
 // Return from a service method — the framework calls toRef() automatically
