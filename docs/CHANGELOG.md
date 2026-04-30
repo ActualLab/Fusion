@@ -11,6 +11,22 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.79+a7608a16 | npm: 12.3.83
+
+Release date: 2026-04-30
+
+### Fixed
+- TypeScript RPC: proper backpressure in `RpcStream` &mdash; acknowledgements
+  are now consumer-driven instead of producer-driven. Previously the
+  receiver sent an ACK as soon as an item landed in the buffer, which
+  signalled false capacity to the producer and effectively disabled flow
+  control. The stream now tracks `_nextConsumedIndex` and only acks up to
+  what the iterator has actually yielded; duplicate-frame fast paths cap
+  their ack at the consumed index as well, and the iterator loop emits a
+  fresh `_maybeSendAck` after each batch is drained. Adds
+  `rpc-stream.test.ts` cases covering the consumer-driven ACK behavior.
+
+
 ## 12.3.79+ef249695 | npm: 12.3.81
 
 Release date: 2026-04-29
