@@ -113,8 +113,26 @@ More restrictive than default:
 - **0 blank lines** inside types (default allows 1)
 - **0 blank lines** around single-line properties, fields, and methods
 - Keep maximum **1 blank line** in code (default allows more)
-- Blank line must follow any (yield) return, (yield) break, or continue statement -
-  in other words, any block-escaping statement - unless it's the last statement in the block.
+- A blank line typically follows any `return`, `break`, `continue`, `yield return`,
+  or `yield break` statement — i.e. any block-escaping statement — unless it's on
+  the very last line of the enclosing statement block.
+- Methods whose body ends with one or more **local functions** typically have an
+  explicit `return;` right before the first local function, followed by a blank
+  line. This marks where the method's actual execution ends and makes the
+  local-function section unambiguous to the reader.
+
+Example:
+```csharp
+protected override async Task OnRun(CancellationToken cancellationToken)
+{
+    // ... main body ...
+    return;
+
+    void Helper() {
+        // ...
+    }
+}
+```
 
 ### Code Style Preferences
 
@@ -298,9 +316,34 @@ public override async Task Require(CancellationToken cancellationToken)
 }
 ```
 
-4. Two overloads similar to `.ConfigureAwait(...)` are used:
+4. **Do not use `new TaskCompletionSource()`** directly.
+   Use `TaskCompletionSourceExt.New()` or `TaskCompletionSourceExt.New<T>()` instead.
+
+5. Two overloads similar to `.ConfigureAwait(...)` are used:
 - `.SilentAwait(true/false)` awaits a task w/o throwing any exceptions
 - `.ResultAwait(true/false)` awaits a task and returns `Result<T>` w/o throwing any exceptions.
+
+6. **Prefer `FilePath` over `string` for file paths and file names.**
+   Use `FilePath` from `ActualLab.IO` instead of raw strings when working
+   with file paths or file names. `FilePath` provides path combination
+   via `&` and `|` operators, `RelativeTo`, `DirectoryPath`,
+   `FileNameWithoutExtension`, `Extension`, and implicit conversion
+   to/from `string`.
+
+| Instead of | Use |
+|---|---|
+| `string filePath = "/some/path"` | `FilePath filePath = "/some/path"` |
+| `Path.Combine(dir, fileName)` | `dir & fileName` or `dir \| fileName` |
+| `Path.GetFileName(path)` | `path.FileName` |
+| `Path.GetExtension(path)` | `path.Extension` |
+
+   See `ActualLab.IO.FilePath` for the full API.
+
+7. **Prefer `sealed` classes and records** unless inheritance is intended.
+
+8. **Prefer `LogFor(GetType())` over `LogFor<T>()`** for the current type in non-static context.
+
+9. **Prefer primary constructors for services** when acceptable.
 
 
 ### Disabled/Silenced Warnings
@@ -308,3 +351,37 @@ public override async Task Require(CancellationToken cancellationToken)
 Search for `<NoWarn>` to see the list of disabled warnings.
 
 See [`.editorconfig`](../.editorconfig) for the complete list of silenced analyzer warnings.
+
+## TypeScript
+
+TypeScript follows the same flow-control spacing rules as C#:
+- Never place a flow-control statement on the same line as its `if`, `for`,
+  `while`, or similar condition.
+- A `return`, `break`, `continue`, `throw`, or `yield` statement is typically
+  followed by a blank line unless it is the last statement in its enclosing block.
+- If the flow-control statement is the last statement in a nested block, put the
+  blank line after that block instead, unless the block is the whole method or
+  function body.
+
+TypeScript uses the same member-section comments as .NET:
+- Order class members similarly to .NET classes: static fields first, then
+  instance fields/properties, constructor-like setup, public methods,
+  protected/internal-style helpers, private methods, and nested/local types
+  or constants last when applicable.
+- Put private helper methods under a `// Private methods` section.
+- If protected/internal-style helpers are needed, use `// Protected/internal methods`
+  before them and keep `// Private methods` below that section.
+- Do not create ad hoc alternatives such as `// Helpers`, `// Utilities`, or
+  `// Internals` when the .NET section names apply.
+
+Example:
+```ts
+// Wrong
+if (Api._isDotNetRpcConnected === value) return;
+
+// Correct
+if (Api._isDotNetRpcConnected === value)
+    return;
+
+Api._isDotNetRpcConnected = value;
+```
