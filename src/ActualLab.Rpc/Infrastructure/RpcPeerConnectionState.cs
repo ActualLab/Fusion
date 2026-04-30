@@ -46,13 +46,26 @@ public sealed record RpcPeerConnectionState
         }
         else {
             _whenConnectedSource = whenConnectedSource ?? TaskCompletionSourceExt.New<RpcPeerConnectionState>();
-            _whenDisconnectedSource = AlwaysDisconnectedSource;
+            // Use a real TCS for "handshaking" states (Connection set, Handshake null) so
+            // an external Disconnect() can await actual teardown via WhenDisconnected.
+            // For pure "no connection" states the shared AlwaysDisconnectedSource is fine.
+            _whenDisconnectedSource = connection is null
+                ? AlwaysDisconnectedSource
+                : TaskCompletionSourceExt.New<Unit>();
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsConnected()
         => Handshake is not null;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsHandshaking()
+        => Connection is not null && Handshake is null;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsConnectedOrHandshaking()
+        => Connection is not null;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void MarkConnected(RpcPeerConnectionState connectionState)
@@ -69,6 +82,14 @@ public sealed record RpcPeerConnectionState
     }
 
     // NextXxx
+
+    public RpcPeerConnectionState NextHandshaking(
+        RpcConnection connection,
+        CancellationTokenSource readerTokenSource)
+        // Pass through _whenConnectedSource so callers awaiting WhenConnected on the
+        // previous (non-connected) state continue to be served by the same TCS,
+        // which gets resolved later when the state advances to Connected.
+        => new(connection, null, null, null, ConnectionAttemptIndex, readerTokenSource, _whenConnectedSource);
 
     public RpcPeerConnectionState NextConnected(
         RpcConnection connection,

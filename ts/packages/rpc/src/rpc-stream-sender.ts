@@ -9,8 +9,8 @@ const { warnLog } = getLogs('RpcSharedStream');
 
 /** Default ack period for server-side streams. */
 const DEFAULT_ACK_PERIOD = 256;
-/** Default ack advance for server-side streams. */
-const DEFAULT_ACK_ADVANCE = 128;
+/** Default send buffer size for server-side streams. */
+const DEFAULT_BUFFER_SIZE = 128;
 
 /**
  * Server-side RPC stream producer — sends items to a remote consumer via
@@ -27,13 +27,12 @@ const DEFAULT_ACK_ADVANCE = 128;
  * The pump is ACK-driven: the main loop blocks on `_whenAckReady` until a
  * client ACK is queued, processes it (updating `_lastAckedIndex`, rewinding
  * `_index` on mustReset, trimming the replay buffer), then sends items up
- * to `ack.nextIndex + ackAdvance`. While the peer is disconnected no ACKs
+ * to `ack.nextIndex + bufferSize`. While the peer is disconnected no ACKs
  * arrive, so the source is never pulled — the sender naturally pauses
  * instead of spinning.
  *
  * Direct port of .NET `RpcSharedStream<T>` at
- * src/ActualLab.Rpc/Infrastructure/RpcSharedStream.cs — including the
- * separate non-real-time / real-time pump variants.
+ * src/ActualLab.Rpc/Infrastructure/RpcSharedStream.cs.
  */
 export class RpcStreamSender<T> implements IRpcObject {
     private static readonly _emptyGuid = '00000000-0000-0000-0000-000000000000';
@@ -45,7 +44,7 @@ export class RpcStreamSender<T> implements IRpcObject {
     readonly canSkipTo: (item: T) => boolean;
     readonly peer: RpcPeer;
     readonly ackPeriod: number;
-    readonly ackAdvance: number;
+    readonly bufferSize: number;
     /**
      * If true, the source was produced by a factory `(abortSignal) => AsyncIterable<T>`
      * and may honor the AbortSignal to exit gracefully. `disconnect()` first aborts
@@ -74,7 +73,7 @@ export class RpcStreamSender<T> implements IRpcObject {
     constructor(
         peer: RpcPeer,
         ackPeriod = DEFAULT_ACK_PERIOD,
-        ackAdvance = DEFAULT_ACK_ADVANCE,
+        bufferSize = DEFAULT_BUFFER_SIZE,
         allowReconnect = true,
         isRealTime = false,
         canSkipTo: (item: T) => boolean = () => true,
@@ -87,7 +86,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         this.canSkipTo = canSkipTo;
         this.peer = peer;
         this.ackPeriod = ackPeriod;
-        this.ackAdvance = ackAdvance;
+        this.bufferSize = bufferSize;
         this.sourceUsesAbortSignal = sourceUsesAbortSignal;
     }
 
@@ -98,7 +97,7 @@ export class RpcStreamSender<T> implements IRpcObject {
 
     /** Returns the stream reference string for the $sys.Ok response. */
     toRef(): string {
-        return `${this.id.hostId},${this.id.localId},${this.ackPeriod},${this.ackAdvance},${this.allowReconnect ? '1' : '0'},${this.isRealTime ? '1' : '0'}`;
+        return `${this.id.hostId},${this.id.localId},${this.ackPeriod},${this.bufferSize},${this.allowReconnect ? '1' : '0'},${this.isRealTime ? '1' : '0'}`;
     }
 
     /**
@@ -173,9 +172,8 @@ export class RpcStreamSender<T> implements IRpcObject {
     /**
      * Consume an AsyncIterable and send all items to the client.
      *
-     * Dispatches to the non-real-time or real-time pump, matching .NET
-     * `RpcSharedStream<T>.OnRun` at
-     * src/ActualLab.Rpc/Infrastructure/RpcSharedStream.cs:105-108.
+     * Matches .NET `RpcSharedStream<T>.OnRun` at
+     * src/ActualLab.Rpc/Infrastructure/RpcSharedStream.cs.
      */
     async writeFrom(source: AsyncIterable<T>): Promise<void> {
         await this._started.promise;
@@ -189,11 +187,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         // scheduled iterator.return() is what drives it to its finally.
         const state: _PumpState = { iteratorDone: false };
         try {
-            if (this.isRealTime) {
-                await this._runRealTime(iterator, state);
-            } else {
-                await this._runNonRealTime(iterator, state);
-            }
+            await this._run(iterator, state);
         } finally {
             if (state.iteratorDone && this._iterator === iterator) {
                 this._iterator = null;
@@ -202,123 +196,65 @@ export class RpcStreamSender<T> implements IRpcObject {
     }
 
     /**
-     * Non-real-time pump — back-pressure through buffered ACKs.
-     *
-     * Direct port of .NET `OnRunNonRealTime` at
-     * src/ActualLab.Rpc/Infrastructure/RpcSharedStream.cs:110-217.
+     * ACK-driven pump. Non-real-time streams apply normal backpressure at
+     * `bufferSize`; real-time streams may compact the already-buffered unsent
+     * suffix to the latest buffered `canSkipTo` item after the consumer ACKs.
      */
     /* eslint-disable @typescript-eslint/no-unnecessary-condition -- _ended changes across awaits */
-    private async _runNonRealTime(
+    private async _run(
         iterator: AsyncIterator<T>,
         state: _PumpState,
     ): Promise<void> {
-        const buffer = new RingBuffer<_StreamItem<T>>(this.ackAdvance + 1);
+        const buffer = new RingBuffer<_StreamItem<T>>(this.bufferSize + 1);
+        const isRealTime = this.isRealTime;
         let bufferStart = 0;
         let isFullyBuffered = false;
+        let whenMovedNext: Promise<IteratorResult<T>> | null = null;
+        const pending = Symbol('pending');
 
-        while (true) {
-            // ---- nextAck ----
-            // 1. Await for an acknowledgement & process accumulated ACKs.
-            let ack = this._tryProcessAcks();
-            if (!ack) {
-                await this._waitAckReady();
-                if (this._ended) return;
-                ack = this._tryProcessAcks();
-                if (!ack) {
-                    // Should not happen (the wait resolved, so at least one ACK
-                    // was queued) — mirrors RpcSharedStream.cs:142.
-                    warnLog?.log("Something is off: couldn't read an acknowledgement");
-                    return;
-                }
-            }
-            this._lastAckedIndex = ack.nextIndex;
+        const readNext = async (): Promise<IteratorResult<T>> => {
+            const next = whenMovedNext ?? iterator.next();
+            whenMovedNext = null;
+            return await next;
+        };
 
-            // 2. Remove what's useless from the buffer.
-            const shift = _clamp(ack.nextIndex - bufferStart, 0, buffer.count);
-            if (shift > 0) {
-                buffer.moveHead(shift);
-                bufferStart += shift;
-            }
+        const tryReadReady = async (): Promise<IteratorResult<T> | typeof pending> => {
+            whenMovedNext ??= iterator.next();
+            return await Promise.race([
+                whenMovedNext,
+                Promise.resolve(pending),
+            ]);
+        };
 
-            // 3. Recalculate the next range to send.
-            if (this._nextIndex < bufferStart) {
-                // The requested item is below the buffer's current head — the
-                // source isn't replayable, so fail the stream.
-                if (!this._ended)
-                    this.sendEnd(new Error('Stream position unavailable.'));
-                return;
-            }
-            let bufferIndex = this._nextIndex - bufferStart;
-
-            // 3. Send as much as we can.
-            //
-            // .NET separates this into 3.1 (buffer items until the source
-            // stalls, using a synchronous "is ready" check) and 3.2 (drain
-            // the buffer). TS cannot check if a Promise has resolved without
-            // awaiting it, so we collapse both into a single pull-one /
-            // send-one loop — which is equivalent when there's no Batcher
-            // (the TS sender already sends one item at a time).
-            const maxIndex = ack.nextIndex + this.ackAdvance;
-            while (this._nextIndex < maxIndex) {
-                if (this._ended) return;
-
-                // 3.a. Drain buffered items first.
-                if (bufferIndex < buffer.count) {
-                    const item = buffer.get(bufferIndex++);
-                    if (item.kind === 'value') {
-                        this.sendItem(item.value);
-                    } else if (item.kind === 'end') {
-                        if (!this._ended) this.sendEnd();
-                        return;
-                    } else {
-                        if (!this._ended) this.sendEnd(item.error);
-                        return;
-                    }
-                    continue;
-                }
-
-                // 3.b. Buffer exhausted.
-                if (isFullyBuffered) break;  // goto nextAck
-                if (!buffer.hasRemainingCapacity) break;  // goto nextAck
-
-                // 3.c. Pull one more item from the source.
-                let pulled: _StreamItem<T>;
-                try {
-                    const r = await iterator.next();
-                    if (this._ended) return;
-                    if (r.done) {
-                        pulled = _endItem;
-                        isFullyBuffered = true;
-                        state.iteratorDone = true;
-                    } else {
-                        pulled = { kind: 'value', value: r.value };
-                    }
-                } catch (e) {
-                    state.iteratorDone = true;
+        const bufferNext = async (onlyIfReady: boolean, prefetchNext: boolean): Promise<boolean> => {
+            let r: IteratorResult<T> | typeof pending;
+            try {
+                r = onlyIfReady ? await tryReadReady() : await readNext();
+                if (r === pending)
+                    return false;
+                whenMovedNext = null;
+                if (this._ended) return false;
+                if (r.done) {
+                    buffer.pushTail(_endItem);
                     isFullyBuffered = true;
-                    pulled = {
-                        kind: 'error',
-                        error: e instanceof Error ? e : new Error(String(e)),
-                    };
+                    state.iteratorDone = true;
+                } else {
+                    buffer.pushTail({ kind: 'value', value: r.value });
+                    if (prefetchNext)
+                        whenMovedNext = iterator.next();
                 }
-                buffer.pushTail(pulled);
+                return true;
+            } catch (e) {
+                whenMovedNext = null;
+                state.iteratorDone = true;
+                isFullyBuffered = true;
+                buffer.pushTail({
+                    kind: 'error',
+                    error: e instanceof Error ? e : new Error(String(e)),
+                });
+                return true;
             }
-        }
-    }
-
-    /**
-     * Real-time pump — drops stale items to stay close to the source's head.
-     *
-     * Direct port of .NET `OnRunRealTime` at
-     * src/ActualLab.Rpc/Infrastructure/RpcSharedStream.cs:219-420.
-     */
-    private async _runRealTime(
-        iterator: AsyncIterator<T>,
-        state: _PumpState,
-    ): Promise<void> {
-        const buffer = new RingBuffer<_StreamItem<T>>(this.ackAdvance + 1);
-        let bufferStart = 0;
-        let isFullyBuffered = false;
+        };
 
         while (true) {
             // ---- nextAck ----
@@ -336,8 +272,9 @@ export class RpcStreamSender<T> implements IRpcObject {
             }
             this._lastAckedIndex = ack.nextIndex;
 
-            // 1.1. Reconnect: clear stale buffer and skip to next canSkipTo.
-            if (ack.mustReset && !isFullyBuffered) {
+            // 1.1. Reconnect: real-time streams can clear stale buffered data
+            // and restart from the next source item accepted by canSkipTo.
+            if (isRealTime && ack.mustReset && !isFullyBuffered) {
                 buffer.clear();
                 bufferStart = this._nextIndex;
                 // Drain the source until we find an item that canSkipTo accepts,
@@ -347,7 +284,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                     let item: _StreamItem<T>;
                     let accepted = false;
                     try {
-                        const r = await iterator.next();
+                        const r = await readNext();
                         if (this._ended) return;
                         if (r.done) {
                             item = _endItem;
@@ -387,15 +324,34 @@ export class RpcStreamSender<T> implements IRpcObject {
             }
             let bufferIndex = this._nextIndex - bufferStart;
 
-            // 3. Send as much as we can (pull-one / send-one; see the
-            //    equivalent comment in _runNonRealTime).
-            const maxIndex = ack.nextIndex + this.ackAdvance;
+            // 3. Send as much as the current ACK window allows.
+            const maxIndex = ack.nextIndex + this.bufferSize;
             while (this._nextIndex < maxIndex) {
                 if (this._ended) return;
-                // Bail out so step 1 can process a mustReset ACK immediately.
-                if (this._acks.length > 0) break;
 
-                if (bufferIndex < buffer.count) {
+                if (isRealTime) {
+                    // Real-time compaction only uses the already-buffered
+                    // unsent suffix; it doesn't pull past the buffer just to
+                    // discover a future skip target.
+                    while (buffer.hasRemainingCapacity && !isFullyBuffered && this._acks.length === 0) {
+                        if (!await bufferNext(true, true))
+                            break;
+                    }
+                    if (bufferIndex >= buffer.count
+                        && !isFullyBuffered
+                        && buffer.hasRemainingCapacity
+                        && this._acks.length === 0) {
+                        await bufferNext(false, true);
+                    }
+                    if (ack.nextIndex > 0)
+                        bufferIndex = _compactBufferedUnsentSuffix(buffer, bufferIndex, this.canSkipTo);
+
+                    // Bail out so step 1 can process a mustReset ACK immediately.
+                    if (this._acks.length > 0) break;
+                }
+
+                // Drain buffered items until the window is full.
+                while (this._nextIndex < maxIndex && bufferIndex < buffer.count) {
                     const item = buffer.get(bufferIndex++);
                     if (item.kind === 'value') {
                         this.sendItem(item.value);
@@ -406,110 +362,19 @@ export class RpcStreamSender<T> implements IRpcObject {
                         if (!this._ended) this.sendEnd(item.error);
                         return;
                     }
-                    continue;
                 }
+                if (this._nextIndex >= maxIndex)
+                    break;
                 if (isFullyBuffered) break;  // goto nextAck
                 if (!buffer.hasRemainingCapacity) break;
 
-                let pulled: _StreamItem<T>;
-                try {
-                    const r = await iterator.next();
-                    if (this._ended) return;
-                    if (r.done) {
-                        pulled = _endItem;
-                        isFullyBuffered = true;
-                        state.iteratorDone = true;
-                    } else {
-                        pulled = { kind: 'value', value: r.value };
-                    }
-                } catch (e) {
-                    state.iteratorDone = true;
-                    isFullyBuffered = true;
-                    pulled = {
-                        kind: 'error',
-                        error: e instanceof Error ? e : new Error(String(e)),
-                    };
-                }
-                buffer.pushTail(pulled);
+                if (!isRealTime)
+                    await bufferNext(false, false);
             }
 
-            // 4. Ceiling hit (but source not exhausted): drain source while
-            //    no ACK is queued, keeping ONLY the latest canSkipTo item
-            //    seen during the drain. Once an ACK arrives (or source ends)
-            //    stash that latest item into the buffer and loop back to
-            //    process the ACK.
-            //
-            //    Deviation from .NET (RpcSharedStream.cs:366-418), which
-            //    breaks after the FIRST canSkipTo it sees. The TS version
-            //    stays closer to the consumer by continuing to consume stale
-            //    items and keeping only the freshest — matching the semantic
-            //    that the existing `rpc-stream-realtime.test.ts` suite
-            //    verifies (real-time streams should aggressively drop stale
-            //    frames to stay current).
-            //
-            //    Implementation note: this loop deliberately does NOT race
-            //    `iterator.next()` against an ACK promise — that pattern
-            //    (a) loses one item on every ACK arrival because the
-            //    abandoned source-pull promise still advances the iterator,
-            //    and (b) creates two promises per iteration, which on
-            //    Windows's coarser microtask scheduling is slow enough to
-            //    miss the test's deadline. Instead we await each source
-            //    pull, then check the ACK queue. JS is single-threaded, so
-            //    any onAck() invoked by inbound network events runs in the
-            //    microtask gap between iterations and is observable on the
-            //    next `_acks.length` check.
-            if (this._nextIndex >= maxIndex && !isFullyBuffered && !this._ended) {
-                let latestValue: T | undefined;
-                let haveLatest = false;
-                let exitReason: 'ack' | 'end' | 'error' = 'ack';
-                let exitError: Error | null = null;
-                drain: while (!this._ended) {
-                    if (this._acks.length > 0) {
-                        exitReason = 'ack';
-                        break drain;
-                    }
-                    let r: IteratorResult<T>;
-                    try {
-                        r = await iterator.next();
-                    } catch (e) {
-                        state.iteratorDone = true;
-                        isFullyBuffered = true;
-                        exitReason = 'error';
-                        exitError = e instanceof Error ? e : new Error(String(e));
-                        break drain;
-                    }
-                    if (this._ended) return;
-                    if (r.done) {
-                        state.iteratorDone = true;
-                        isFullyBuffered = true;
-                        exitReason = 'end';
-                        break drain;
-                    }
-                    if (this.canSkipTo(r.value)) {
-                        latestValue = r.value;
-                        haveLatest = true;
-                    }
-                    // else: discard, keep draining.
-                }
-                // If the source ended (or threw), we must NOT loop back to
-                // step 1 to wait for another ACK — there's no consumer to
-                // ACK from. Send the latest skipped item (if any) right
-                // here, then `sendEnd` and exit. Matches the old TS-side
-                // realtime behavior.
-                if (exitReason === 'end' || exitReason === 'error') {
-                    if (haveLatest && !this._ended) this.sendItem(latestValue!);
-                    if (!this._ended) this.sendEnd(exitError);
-                    return;
-                }
-                // ACK exit: stash the latest skip target into the buffer so
-                // the next `step 3` round picks it up at `_nextIndex`.
-                if (haveLatest) {
-                    const wasFull = buffer.isFull;
-                    buffer.pushTailAndMoveHeadIfFull({ kind: 'value', value: latestValue! });
-                    if (wasFull) bufferStart++;
-                }
-                // Go back to nextAck (outer loop) to flush/send what we buffered.
-            }
+            // 4. Ceiling hit: wait for ACK. Real-time streams compact only the
+            // already-buffered unsent suffix; they don't pull ahead just to
+            // discover a future skip target.
         }
     }
     /* eslint-enable @typescript-eslint/no-unnecessary-condition */
@@ -601,4 +466,31 @@ interface _PumpState {
 
 function _clamp(value: number, min: number, max: number): number {
     return value < min ? min : value > max ? max : value;
+}
+
+function _compactBufferedUnsentSuffix<T>(
+    buffer: RingBuffer<_StreamItem<T>>,
+    firstUnsentIndex: number,
+    canSkipTo: (item: T) => boolean,
+): number {
+    // Keep items that have already been assigned RPC stream indexes, then
+    // collapse the unsent suffix to the latest buffered restart point. The
+    // surviving suffix is intentionally sent under fresh RPC stream indexes;
+    // item-level timestamps/frame indexes are the caller's responsibility.
+    let skipToIndex = -1;
+    for (let i = firstUnsentIndex; i < buffer.count; i++) {
+        const item = buffer.get(i);
+        if (item.kind === 'value' && canSkipTo(item.value))
+            skipToIndex = i;
+    }
+    if (skipToIndex <= firstUnsentIndex)
+        return firstUnsentIndex;
+
+    const items = buffer.toArray();
+    buffer.clear();
+    for (let i = 0; i < firstUnsentIndex; i++)
+        buffer.pushTail(items[i]);
+    for (let i = skipToIndex; i < items.length; i++)
+        buffer.pushTail(items[i]);
+    return firstUnsentIndex;
 }

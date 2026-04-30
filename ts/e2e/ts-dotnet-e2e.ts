@@ -12,6 +12,7 @@
 import WebSocket from 'ws';
 import {
     RpcClientPeer,
+    RpcError,
     RpcPeerRefBuilder,
     RpcType,
     defineRpcService,
@@ -52,6 +53,7 @@ interface ITypeScriptTestService {
   Negate(value: boolean): Promise<boolean>;
   Divide(a: number, b: number): Promise<number>;
   Echo(message: string | null): Promise<string | null>;
+  Throw(message: string): Promise<string>;
   SlowEcho(marker: string, delayMs: number): Promise<string>;
   GetSlowEchoInvocationCount(): Promise<number>;
   ResetSlowEchoCounter(): Promise<void>;
@@ -64,6 +66,7 @@ const TestServiceDef = defineRpcService('ITypeScriptTestService', {
     Negate: { args: [false], wireArgCount: 1 },
     Divide: { args: [0.0, 0.0], wireArgCount: 2 },
     Echo: { args: [''], wireArgCount: 1 },
+    Throw: { args: [''], wireArgCount: 1 },
     SlowEcho: { args: ['', 0], wireArgCount: 2 },
     GetSlowEchoInvocationCount: { args: [], wireArgCount: 0 },
     ResetSlowEchoCounter: { args: [], wireArgCount: 0 },
@@ -150,6 +153,8 @@ async function run(): Promise<void> {
     try {
         if (scenario === 'basic-types' || scenario === 'all')
             await testBasicTypes(hub, peer);
+        if (scenario === 'error-propagation' || scenario === 'all')
+            await testErrorPropagation(hub, peer);
         if (scenario === 'overload-resolution' || scenario === 'all')
             await testOverloadResolution(hub, peer);
         if (scenario === 'compute-invalidation' || scenario === 'all')
@@ -211,6 +216,34 @@ async function testBasicTypes(hub: FusionHub, peer: RpcClientPeer): Promise<void
     assert(r7 === 'test', `Echo("test") expected "test", got "${r7}"`);
 
     console.log('  basic-types: PASSED');
+}
+
+// ---------------------------------------------------------------------------
+// Test: error-propagation — .NET server throws, TS client surfaces RpcError
+// with both the original message and the .NET exception type name.
+// ---------------------------------------------------------------------------
+
+async function testErrorPropagation(hub: FusionHub, peer: RpcClientPeer): Promise<void> {
+    const svc = hub.addClient<ITypeScriptTestService>(peer, TestServiceDef);
+    const message = 'boom from .NET';
+    const expectedTypeName = 'System.InvalidOperationException';
+
+    let caught: unknown = null;
+    try {
+        await svc.Throw(message);
+    } catch (e) {
+        caught = e;
+    }
+    assert(caught !== null, 'svc.Throw() should have rejected');
+    assert(caught instanceof RpcError,
+        `Expected RpcError, got ${(caught as { constructor?: { name?: string } } | null)?.constructor?.name ?? typeof caught}`);
+    const err = caught as RpcError;
+    assert(err.message === message,
+        `Expected message "${message}", got "${err.message}"`);
+    assert(err.typeName === expectedTypeName,
+        `Expected typeName "${expectedTypeName}", got "${err.typeName}"`);
+
+    console.log('  error-propagation: PASSED');
 }
 
 // ---------------------------------------------------------------------------

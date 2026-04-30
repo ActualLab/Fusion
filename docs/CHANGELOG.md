@@ -11,6 +11,87 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.79+d2bf83a0 | npm: 12.3.85
+
+Release date: 2026-04-30
+
+### Added
+- TypeScript RPC: `RpcConnectionUrlResolver` may now return `string |
+  Promise<string>`, and the connect path `await`s it. This unblocks
+  resolvers that need to fetch a per-connection token (e.g. a session
+  token) before forming the WebSocket URL.
+- TypeScript RPC: `sanitizeUrl(url)` utility exported from
+  `@actuallab/rpc` &mdash; redacts `?session=...` (URL-parsed when
+  possible, regex fallback otherwise) so the connect-attempt log line no
+  longer leaks bearer-style query parameters. Declared as `export let`
+  so library users can swap in a different sanitizer (e.g. one that
+  redacts additional query keys).
+
+
+## 12.3.79+a7608a16 | npm: 12.3.83
+
+Release date: 2026-04-30
+
+### Fixed
+- TypeScript RPC: proper backpressure in `RpcStream` &mdash; acknowledgements
+  are now consumer-driven instead of producer-driven. Previously the
+  receiver sent an ACK as soon as an item landed in the buffer, which
+  signalled false capacity to the producer and effectively disabled flow
+  control. The stream now tracks `_nextConsumedIndex` and only acks up to
+  what the iterator has actually yielded; duplicate-frame fast paths cap
+  their ack at the consumed index as well, and the iterator loop emits a
+  fresh `_maybeSendAck` after each batch is drained. Adds
+  `rpc-stream.test.ts` cases covering the consumer-driven ACK behavior.
+
+
+## 12.3.79+ef249695 | npm: 12.3.81
+
+Release date: 2026-04-29
+
+### Added
+- TypeScript RPC: `RpcError` class &mdash; failed remote calls now reject with
+  an `RpcError` (instead of a plain `Error`) that carries the remote
+  exception's `typeName` when available. The handler parses `.NET`'s
+  assembly-qualified `TypeRef` string (e.g. `"System.InvalidOperationException,
+  System.Private.CoreLib"`) and exposes the type name only, so TypeScript
+  callers can branch on remote exception types. The internal
+  `RpcRerouteException` log path now matches against the fully-qualified
+  `ActualLab.Rpc.RpcRerouteException`. Exported from
+  `@actuallab/rpc`.
+- `error-propagation` E2E scenario in `TypeScriptRpcE2ETest` /
+  `ts-dotnet-e2e.ts` validating .NET → TS exception propagation.
+
+
+## 12.3.79+a4fdbdd9 | npm: 12.3.79
+
+Release date: 2026-04-28
+
+### Fixed
+- RPC: prevent connection stacking during a mid-handshake state. Connection
+  state checks now use `IsConnectedOrHandshaking` instead of `IsConnected`,
+  so new connections no longer pile up against peers stuck in transient
+  handshake states. Adds teardown safeguards and tightens disconnect
+  resolution in edge cases. Affects `RpcPeer`, `RpcServerPeer`,
+  `RpcPeerConnectionState`, `RpcWebSocketServer`, and the TypeScript
+  `RpcPeer`.
+
+
+## 12.3.76+d67c674e | npm: 12.3.76
+
+Release date: 2026-04-25
+
+### Added
+- RPC: compute methods can now serve a Regular call type (compute-to-regular
+  downgrade). When an inbound message targets a `[ComputeMethod]` but its
+  `CallTypeId` is `Regular`, the server returns the result immediately and
+  skips invalidation tracking &mdash; no entry is retained in the inbound call
+  registry past completion. Useful for callers that want a one-shot value
+  from a compute method without subscribing to invalidations. Implemented in
+  `RpcInboundContext` (accepts the alternate call type) and
+  `RpcInboundComputeCall` (new `IsRegularCall` path that unregisters after
+  `SendResult`).
+
+
 ## 12.3.74+279ac90c | npm: 12.3.70
 
 Release date: 2026-04-23

@@ -33,7 +33,7 @@ public class RpcStreamBasicTest(ITestOutputHelper @out) : TestBase(@out)
         var stream = new RpcStream<int>();
 
         stream.AckPeriod.Should().Be(30);
-        stream.AckAdvance.Should().Be(61);
+        stream.BufferSize.Should().Be(61);
         stream.Id.Should().Be(default(RpcObjectId));
         stream.Id.IsNone.Should().BeTrue();
         stream.Peer.Should().BeNull();
@@ -42,10 +42,10 @@ public class RpcStreamBasicTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void CustomAckSettings_ShouldBePreserved()
     {
-        var stream = new RpcStream<int> { AckPeriod = 50, AckAdvance = 100 };
+        var stream = new RpcStream<int> { AckPeriod = 50, BufferSize = 100 };
 
         stream.AckPeriod.Should().Be(50);
-        stream.AckAdvance.Should().Be(100);
+        stream.BufferSize.Should().Be(100);
     }
 
     [Fact]

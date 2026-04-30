@@ -116,7 +116,7 @@ export const KEEP_ALIVE_TIMEOUT_MS = 55_000;
 const { debugLog, infoLog, warnLog, errorLog } = getLogs('RpcPeer');
 
 /** Builds the WebSocket connection URL for an RpcClientPeer. */
-export type RpcConnectionUrlResolver = (peer: RpcClientPeer) => string;
+export type RpcConnectionUrlResolver = (peer: RpcClientPeer) => string | Promise<string>;
 
 /** Default connection URL provider — sets `clientId` and `f` query parameters,
  *  replacing any existing values to keep the wire format consistent with the
@@ -132,6 +132,19 @@ export const defaultConnectionUrlResolver: RpcConnectionUrlResolver = peer => {
         // Fallback for non-URL refs (tests/harnesses that pass "ws://test" etc.)
         const sep = peer.ref.includes('?') ? '&' : '?';
         return peer.ref + sep + `clientId=${peer.clientId}&f=${formatKey}`;
+    }
+};
+
+// eslint-disable-next-line prefer-const -- intentionally `let` so consumers can swap the implementation
+export let sanitizeUrl = (url: string): string => {
+    try {
+        const parsed = new URL(url);
+        if (!parsed.searchParams.has('session'))
+            return url;
+        parsed.searchParams.set('session', '<redacted>');
+        return parsed.toString();
+    } catch {
+        return url.replace(/([?&]session=)[^&]*/i, '$1<redacted>');
     }
 };
 
@@ -262,6 +275,12 @@ export abstract class RpcPeer {
 
         conn.messageReceived.add(raw => this._handleMessage(raw));
         conn.closed.add(ev => {
+            // Bail if this conn has already been replaced (e.g. another
+            // setupConnection() call ran in between). Without this guard,
+            // a late-firing close event from the old socket would clobber
+            // the live `_connection` field and force the state machine
+            // back to Disconnected mid-session.
+            if (this._connection !== conn) return;
             this._connection = undefined;
             // A live conn going away always drops us out of "connected",
             // regardless of where the state machine thought we were. The
@@ -720,7 +739,6 @@ export class RpcClientPeer extends RpcPeer {
 
     private async _runImpl(): Promise<void> {
         if (this._disposed) return;
-        const connUrl = this.connectionUrlResolver(this);
         // Mirrors RpcPeer.cs:230 — "Started".
         infoLog?.log(`'${this.ref}': Started (Client)`);
         try {
@@ -752,11 +770,12 @@ export class RpcClientPeer extends RpcPeer {
                 let lastCloseCode = 0;
                 let lastCloseReason = '';
                 try {
-                // Mirrors RpcClientPeer.cs:45 — "Connecting...".
-                    infoLog?.log(`'${this.ref}': Connecting to ${connUrl}`);
+                    const connUrl = await this.connectionUrlResolver(this);
+                    // Mirrors RpcClientPeer.cs:45 — "Connecting...".
+                    infoLog?.log(`'${this.ref}': Connecting to ${sanitizeUrl(connUrl)}`);
                     const ws =
-                    this.webSocketFactory?.(connUrl) ??
-                    (new WebSocket(connUrl) as unknown as WebSocketLike);
+                        this.webSocketFactory?.(connUrl) ??
+                        (new WebSocket(connUrl) as unknown as WebSocketLike);
                     const conn = new RpcWebSocketConnection(
                         ws,
                         this.serializationFormat.isBinary,
@@ -1101,6 +1120,10 @@ export class RpcServerPeer extends RpcPeer {
         // Server peers don't reconnect — once the connection is gone, senders must be
         // terminated so their source iterators release resources promptly.
         conn.closed.add(() => {
+            // Bail if this conn has already been replaced by a subsequent accept().
+            // Without this guard, a late-firing close from the old socket would
+            // disconnect shared objects that belong to the live session.
+            if (this._connection !== conn && this._connection !== undefined) return;
             this.sharedObjects.disconnectAll();
         });
     }

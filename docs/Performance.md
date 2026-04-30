@@ -1,5 +1,8 @@
 # Performance
 
+**Updated:** 2026-04-25<br/>
+**ActualLab.Fusion Version:** 12.3.76
+
 This page summarizes results of Fusion performance benchmarks.
 
 ## Test Environment
@@ -9,7 +12,7 @@ This page summarizes results of Fusion performance benchmarks.
 | **CPU** | AMD Ryzen 9 9950X3D 16-Core Processor |
 | **RAM** | 96 GB DDR5 |
 | **OS** | Windows 11 |
-| **.NET** | 10.0.5 |
+| **.NET** | 10.0.7 |
 
 Note that Ryzen 9 9950X3D has 32 logical cores due to SMT.
 
@@ -73,17 +76,17 @@ The benchmark measures throughput of a simple repository-style user lookup servi
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| Regular Service | 112.07K calls/s | |
-| Fusion Service | 253.12M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,259x</span> |
+| Regular Service | 118.15K calls/s | |
+| Fusion Service | 261.32M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,212x</span> |
 
 ### Remote Services
 
 | Test | Result | Speedup |
 |------|--------|---------|
-| HTTP Client → Regular Service | 76.03K calls/s | |
-| HTTP Client → Fusion Service | 305.22K calls/s | <span style="color: #22c55e; font-weight: bold;">~4.0x</span> |
-| ActualLab.Rpc Client → Fusion Service | 7.58M calls/s | <span style="color: #22c55e; font-weight: bold;">~100x</span> |
-| Fusion Client → Fusion Service | 216.00M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,841x</span> |
+| HTTP Client → Regular Service | 80.43K calls/s | |
+| HTTP Client → Fusion Service | 393.65K calls/s | <span style="color: #22c55e; font-weight: bold;">~4.9x</span> |
+| ActualLab.Rpc Client → Fusion Service | 7.92M calls/s | <span style="color: #22c55e; font-weight: bold;">~98x</span> |
+| Fusion Client → Fusion Service | 215.45M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,679x</span> |
 
 ## RpcBenchmark.cmd from ActualLab.Fusion.Samples
 
@@ -95,20 +98,20 @@ Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so
 
 | Test | ActualLab.Rpc | gRPC | SignalR | Speedup |
 |------|---------------|------|---------|---------|
-| Sum | **9.46M calls/s** | 1.30M calls/s | 5.03M calls/s | <span style="color: #22c55e; font-weight: bold;">1.9..7.3x</span> |
-| GetUser | **8.75M calls/s** | 1.27M calls/s | 4.29M calls/s | <span style="color: #22c55e; font-weight: bold;">2.0..6.9x</span> |
-| SayHello | **5.94M calls/s** | 1.19M calls/s | 2.16M calls/s | <span style="color: #22c55e; font-weight: bold;">2.8..5.0x</span> |
+| Sum | **10.16M calls/s** | 1.29M calls/s | 5.31M calls/s | <span style="color: #22c55e; font-weight: bold;">1.9..7.9x</span> |
+| GetUser | **9.03M calls/s** | 1.26M calls/s | 4.43M calls/s | <span style="color: #22c55e; font-weight: bold;">2.0..7.2x</span> |
+| SayHello | **6.16M calls/s** | 1.18M calls/s | 2.24M calls/s | <span style="color: #22c55e; font-weight: bold;">2.7..5.2x</span> |
 
 <ClientOnly>
   <BarChart
     title="RPC Calls (Million/s)"
     :labels="['Sum', 'GetUser', 'SayHello']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [9.46, 8.75, 5.94], backgroundColor: '#22c55e' },
-      { label: 'SignalR', data: [5.03, 4.29, 2.16], backgroundColor: '#3b82f6' },
-      { label: 'gRPC', data: [1.30, 1.27, 1.19], backgroundColor: '#f59e0b' }
+      { label: 'ActualLab.Rpc', data: [10.16, 9.03, 6.16], backgroundColor: '#22c55e' },
+      { label: 'SignalR', data: [5.31, 4.43, 2.24], backgroundColor: '#3b82f6' },
+      { label: 'gRPC', data: [1.29, 1.26, 1.18], backgroundColor: '#f59e0b' }
     ]"
-    :yMax="10"
+    :yMax="11"
     yLabel="M calls/s"
   />
 </ClientOnly>
@@ -117,17 +120,17 @@ Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so
 
 | Framework | Sum (p50 / p95 / p99) | GetUser (p50 / p95 / p99) | SayHello (p50 / p95 / p99) |
 |-----------|-----------------------|---------------------------|----------------------------|
-| ActualLab.Rpc | **1.2ms** / **1.7ms** / **7.9ms** | **1.4ms** / **1.8ms** / **5.6ms** | **2.0ms** / **2.9ms** / **7.4ms** |
-| gRPC | 2.2ms / 2.9ms / 8.0ms | 2.3ms / 3.2ms / 8.9ms | 2.4ms / 3.3ms / 8.7ms |
-| SignalR | 3.1ms / 4.0ms / 9.5ms | 3.7ms / 5.1ms / 10.2ms | 7.1ms / 10.3ms / 14.5ms |
+| ActualLab.Rpc | **2.0ms** / **2.7ms** / **6.4ms** | **2.2ms** / **3.1ms** / **8.7ms** | **3.2ms** / **4.3ms** / **10.4ms** |
+| gRPC | 3.3ms / 5.1ms / 13.7ms | 3.3ms / 5.9ms / 16.7ms | 3.5ms / 4.7ms / 14.2ms |
+| SignalR | 3.9ms / 8.1ms / 11.1ms | 4.6ms / 5.8ms / 11.1ms | 9.0ms / 12.8ms / 15.0ms |
 
 ### Streams
 
 | Test | ActualLab.Rpc | gRPC | SignalR | Speedup |
 |------|---------------|------|---------|---------|
-| Stream1 | **97.55M items/s** | 42.70M items/s | 16.39M items/s | <span style="color: #22c55e; font-weight: bold;">2.3..6.0x</span> |
-| Stream100 | **43.31M items/s** | 25.14M items/s | 13.12M items/s | <span style="color: #22c55e; font-weight: bold;">1.7..3.3x</span> |
-| Stream10K | **808.56K items/s** | 578.52K items/s | 415.08K items/s | <span style="color: #22c55e; font-weight: bold;">1.4..1.9x</span> |
+| Stream1 | **96.96M items/s** | 43.78M items/s | 18.30M items/s | <span style="color: #22c55e; font-weight: bold;">2.2..5.3x</span> |
+| Stream100 | **43.01M items/s** | 25.87M items/s | 14.25M items/s | <span style="color: #22c55e; font-weight: bold;">1.7..3.0x</span> |
+| Stream10K | **820.08K items/s** | 572.76K items/s | 414.72K items/s | <span style="color: #22c55e; font-weight: bold;">1.4..2.0x</span> |
 
 Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte items, Stream10K = 10KB items.
 
@@ -135,18 +138,18 @@ Test names indicate item size: Stream1 = 1-byte items, Stream100 = 100-byte item
 
 | Test | ActualLab.Rpc | gRPC | SignalR |
 |------|---------------|------|---------|
-| Stream1 | **97.55 MB/s** | 42.70 MB/s | 16.39 MB/s |
-| Stream100 | **4.33 GB/s** | 2.51 GB/s | 1.31 GB/s |
-| Stream10K | **8.28 GB/s** | 5.92 GB/s | 4.25 GB/s |
+| Stream1 | **96.96 MB/s** | 43.78 MB/s | 18.30 MB/s |
+| Stream100 | **4.30 GB/s** | 2.59 GB/s | 1.43 GB/s |
+| Stream10K | **8.40 GB/s** | 5.86 GB/s | 4.25 GB/s |
 
 <ClientOnly>
   <BarChart
     title="RPC Streams Throughput (GB/s)"
     :labels="['Stream100', 'Stream10K']"
     :datasets="[
-      { label: 'ActualLab.Rpc', data: [4.33, 8.28], backgroundColor: '#22c55e' },
-      { label: 'gRPC', data: [2.51, 5.92], backgroundColor: '#f59e0b' },
-      { label: 'SignalR', data: [1.31, 4.25], backgroundColor: '#3b82f6' }
+      { label: 'ActualLab.Rpc', data: [4.30, 8.40], backgroundColor: '#22c55e' },
+      { label: 'gRPC', data: [2.59, 5.86], backgroundColor: '#f59e0b' },
+      { label: 'SignalR', data: [1.43, 4.25], backgroundColor: '#3b82f6' }
     ]"
     :yMax="10"
     yLabel="GB/s"

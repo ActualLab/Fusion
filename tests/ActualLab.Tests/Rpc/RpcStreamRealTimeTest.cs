@@ -14,7 +14,6 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         rpc.AddServerAndClient<IRealTimeStreamTestService, RealTimeStreamTestService>();
     }
 
-
     // -- Properties & serialization --
 
     [Fact]
@@ -54,7 +53,7 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         // but we can test DeserializeFromString round-trip by constructing
         // the serialized format manually.
         var hostId = Guid.NewGuid();
-        var serialized = $"{hostId},1,3,5,1,1"; // ackPeriod=3, ackAdvance=5, allowReconnect=1, isRealTime=1
+        var serialized = $"{hostId},1,3,5,1,1"; // ackPeriod=3, bufferSize=5, allowReconnect=1, isRealTime=1
 
         // DeserializeFromString requires RpcInboundContext, but we can verify
         // the format is accepted without throwing a parse error by using the
@@ -64,15 +63,15 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         parser.ParseNext(); // localId
         parser.ParseNext(); // ackPeriod
         var ackPeriod = int.Parse(parser.Item);
-        parser.ParseNext(); // ackAdvance
-        var ackAdvance = int.Parse(parser.Item);
+        parser.ParseNext(); // bufferSize
+        var bufferSize = int.Parse(parser.Item);
         parser.TryParseNext(); // allowReconnect
         var allowReconnect = parser.Item != "0";
         parser.TryParseNext(); // isRealTime
         var isRealTime = parser.Item == "1";
 
         ackPeriod.Should().Be(3);
-        ackAdvance.Should().Be(5);
+        bufferSize.Should().Be(5);
         allowReconnect.Should().BeTrue();
         isRealTime.Should().BeTrue();
     }
@@ -88,7 +87,7 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         parser.ParseNext(); // hostId
         parser.ParseNext(); // localId
         parser.ParseNext(); // ackPeriod
-        parser.ParseNext(); // ackAdvance
+        parser.ParseNext(); // bufferSize
         parser.TryParseNext(); // allowReconnect
         var hasIsRealTime = parser.TryParseNext(); // isRealTime (should be absent)
 
@@ -108,15 +107,15 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         var client = services.RpcHub().GetClient<IRealTimeStreamTestService>();
 
         // Source produces items at full speed, consumer is slow.
-        // ackAdvance must be > ackPeriod (otherwise deadlock: sender blocks before
+        // bufferSize must be > ackPeriod (otherwise deadlock: sender blocks before
         // enough items are sent to trigger an ACK from the receiver).
         // Note: in-memory channels deliver ACKs near-instantly, so skipping
         // may not always occur for all ackPeriod values on fast machines.
         const int totalItems = 500;
-        var ackAdvance = Math.Max(ackPeriod + 2, 5);
+        var bufferSize = Math.Max(ackPeriod + 2, 5);
         const int consumerDelayMs = 50; // slow consumer
 
-        var stream = await client.GetRealTimeStream(totalItems, ackPeriod, ackAdvance);
+        var stream = await client.GetRealTimeStream(totalItems, ackPeriod, bufferSize);
         var received = new List<int>();
         await foreach (var item in stream) {
             received.Add(item);
@@ -151,9 +150,9 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         // sourceDelayMs must be large enough that ACKs always arrive in time,
         // even on a loaded machine.
         const int totalItems = 20;
-        const int ackAdvance = 10;
+        const int bufferSize = 10;
 
-        var stream = await client.GetRealTimeStreamWithDelay(totalItems, ackPeriod, ackAdvance, sourceDelayMs: 100);
+        var stream = await client.GetRealTimeStreamWithDelay(totalItems, ackPeriod, bufferSize, sourceDelayMs: 100);
         var received = new List<int>();
         await foreach (var item in stream) {
             received.Add(item);
@@ -179,12 +178,12 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         // Source produces 500 items, every 10th is a "keyframe".
         // Slow consumer should cause skipping.
         const int totalItems = 500;
-        var ackAdvance = Math.Max(ackPeriod + 2, 5);
+        var bufferSize = Math.Max(ackPeriod + 2, 5);
         const int keyFrameInterval = 10;
         const int consumerDelayMs = 50;
 
         var stream = await client.GetRealTimeStreamWithKeyFrames(
-            totalItems, ackPeriod, ackAdvance, keyFrameInterval);
+            totalItems, ackPeriod, bufferSize, keyFrameInterval);
         var received = new List<int>();
         await foreach (var item in stream) {
             received.Add(item);
@@ -218,14 +217,14 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         var client = services.RpcHub().GetClient<IRealTimeStreamTestService>();
 
         const int totalItems = 500;
-        var ackAdvance = Math.Max(ackPeriod + 2, 5);
+        var bufferSize = Math.Max(ackPeriod + 2, 5);
         const int keyFrameInterval = 10;
         // Source delay must be small enough that many items are produced
         // during the disconnect window, ensuring a real gap on reconnect.
         const int sourceDelayMs = 2;
 
         var stream = await client.GetRealTimeStreamWithKeyFramesReconnectable(
-            totalItems, ackPeriod, ackAdvance, keyFrameInterval, sourceDelayMs);
+            totalItems, ackPeriod, bufferSize, keyFrameInterval, sourceDelayMs);
 
         var received = new List<int>();
         var enumerator = stream.GetAsyncEnumerator();
@@ -295,61 +294,129 @@ public class RpcStreamRealTimeTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         received.Should().Equal(Enumerable.Range(0, totalItems));
     }
 
+    [Fact]
+    public async Task NonRealTimeStream_StalledConsumer_AppliesBackpressureToSource()
+    {
+        await using var services = CreateServices();
+        var client = services.RpcHub().GetClient<IRealTimeStreamTestService>();
+
+        const int bufferSize = 15;
+        var key = Guid.NewGuid().ToString("N");
+        var stream = await client.GetBackpressureStream(key, false, 100, ackPeriod: 3, bufferSize, keyFrameInterval: 10);
+        await using var enumerator = stream.GetAsyncEnumerator();
+
+        (await enumerator.MoveNextAsync()).Should().BeTrue();
+        await Delay(0.2);
+
+        var producedCount = await client.GetBackpressureProducedCount(key);
+        producedCount.Should().BeLessThanOrEqualTo(bufferSize + 2,
+            "a non-real-time sender may have one buffered item and one in-flight MoveNext beyond the ACK window");
+    }
+
+    [Fact]
+    public async Task RealTimeStream_StalledConsumer_DoesNotPullPastBufferWithoutSkipTarget()
+    {
+        await using var services = CreateServices();
+        var client = services.RpcHub().GetClient<IRealTimeStreamTestService>();
+
+        const int bufferSize = 5;
+        const int keyFrameInterval = 10;
+        var key = Guid.NewGuid().ToString("N");
+        var stream = await client.GetBackpressureStream(key, true, 100, ackPeriod: 3, bufferSize, keyFrameInterval);
+        await using var enumerator = stream.GetAsyncEnumerator();
+
+        (await enumerator.MoveNextAsync()).Should().BeTrue();
+        enumerator.Current.Should().Be(0);
+        await Delay(0.2);
+
+        var producedCount = await client.GetBackpressureProducedCount(key);
+        producedCount.Should().BeLessThanOrEqualTo(bufferSize + 2,
+            "a real-time sender should not pull beyond BufferSize just to discover a future skip target");
+    }
+
+    [Fact]
+    public async Task RealTimeStream_StalledConsumer_StartsFromBufferedSkipTarget()
+    {
+        await using var services = CreateServices();
+        var client = services.RpcHub().GetClient<IRealTimeStreamTestService>();
+
+        const int bufferSize = 15;
+        const int keyFrameInterval = 8;
+        var stream = await client.GetBufferedSkipStream(100, ackPeriod: bufferSize, bufferSize, keyFrameInterval);
+        await using var enumerator = stream.GetAsyncEnumerator();
+
+        var received = new List<int>();
+        for (var i = 0; i < bufferSize + 1 && await enumerator.MoveNextAsync(); i++)
+            received.Add(enumerator.Current);
+
+        received.Take(bufferSize).Should().Equal(Enumerable.Range(0, bufferSize));
+        received[^1].Should().BeGreaterThan(bufferSize,
+            "the sender should compact the already-buffered unsent prefix to a known keyframe");
+        (received[^1] % keyFrameInterval).Should().Be(0);
+        received.Should().NotContain(bufferSize,
+            "the delta frame right after the acknowledged window should be swallowed");
+    }
 }
 
 public interface IRealTimeStreamTestService : IRpcService
 {
-    Task<RpcStream<int>> GetRealTimeStream(int count, int ackPeriod, int ackAdvance);
-    Task<RpcStream<int>> GetRealTimeStreamWithDelay(int count, int ackPeriod, int ackAdvance, int sourceDelayMs);
-    Task<RpcStream<int>> GetRealTimeStreamWithKeyFrames(int count, int ackPeriod, int ackAdvance, int keyFrameInterval);
-    Task<RpcStream<int>> GetRealTimeStreamWithKeyFramesReconnectable(int count, int ackPeriod, int ackAdvance, int keyFrameInterval, int sourceDelayMs);
+    Task<RpcStream<int>> GetRealTimeStream(int count, int ackPeriod, int bufferSize);
+    Task<RpcStream<int>> GetRealTimeStreamWithDelay(int count, int ackPeriod, int bufferSize, int sourceDelayMs);
+    Task<RpcStream<int>> GetRealTimeStreamWithKeyFrames(int count, int ackPeriod, int bufferSize, int keyFrameInterval);
+    Task<RpcStream<int>> GetRealTimeStreamWithKeyFramesReconnectable(int count, int ackPeriod, int bufferSize, int keyFrameInterval, int sourceDelayMs);
     Task<RpcStream<int>> GetNonRealTimeStream(int count);
+    Task<RpcStream<int>> GetBackpressureStream(
+        string key, bool isRealTime, int count, int ackPeriod, int bufferSize, int keyFrameInterval);
+    Task<int> GetBackpressureProducedCount(string key);
+    Task<RpcStream<int>> GetBufferedSkipStream(int count, int ackPeriod, int bufferSize, int keyFrameInterval);
 }
 
 public class RealTimeStreamTestService : IRealTimeStreamTestService
 {
-    public Task<RpcStream<int>> GetRealTimeStream(int count, int ackPeriod, int ackAdvance)
+    private readonly ConcurrentDictionary<string, int> _backpressureProducedCounts = new();
+
+    public Task<RpcStream<int>> GetRealTimeStream(int count, int ackPeriod, int bufferSize)
     {
         var source = EnumerateFast(count);
         return Task.FromResult(new RpcStream<int>(source) {
             IsRealTime = true,
             AckPeriod = ackPeriod,
-            AckAdvance = ackAdvance,
+            BufferSize = bufferSize,
             AllowReconnect = false,
         });
     }
 
-    public Task<RpcStream<int>> GetRealTimeStreamWithDelay(int count, int ackPeriod, int ackAdvance, int sourceDelayMs)
+    public Task<RpcStream<int>> GetRealTimeStreamWithDelay(int count, int ackPeriod, int bufferSize, int sourceDelayMs)
     {
         var source = EnumerateWithDelay(count, sourceDelayMs);
         return Task.FromResult(new RpcStream<int>(source) {
             IsRealTime = true,
             AckPeriod = ackPeriod,
-            AckAdvance = ackAdvance,
+            BufferSize = bufferSize,
             AllowReconnect = false,
         });
     }
 
-    public Task<RpcStream<int>> GetRealTimeStreamWithKeyFrames(int count, int ackPeriod, int ackAdvance, int keyFrameInterval)
+    public Task<RpcStream<int>> GetRealTimeStreamWithKeyFrames(int count, int ackPeriod, int bufferSize, int keyFrameInterval)
     {
         var source = EnumerateFast(count);
         return Task.FromResult(new RpcStream<int>(source) {
             IsRealTime = true,
             AckPeriod = ackPeriod,
-            AckAdvance = ackAdvance,
+            BufferSize = bufferSize,
             AllowReconnect = false,
             CanSkipTo = x => x % keyFrameInterval == 0,
         });
     }
 
     public Task<RpcStream<int>> GetRealTimeStreamWithKeyFramesReconnectable(
-        int count, int ackPeriod, int ackAdvance, int keyFrameInterval, int sourceDelayMs)
+        int count, int ackPeriod, int bufferSize, int keyFrameInterval, int sourceDelayMs)
     {
         var source = EnumerateWithDelay(count, sourceDelayMs);
         return Task.FromResult(new RpcStream<int>(source) {
             IsRealTime = true,
             AckPeriod = ackPeriod,
-            AckAdvance = ackAdvance,
+            BufferSize = bufferSize,
             AllowReconnect = true,
             CanSkipTo = x => x % keyFrameInterval == 0,
         });
@@ -361,7 +428,36 @@ public class RealTimeStreamTestService : IRealTimeStreamTestService
         return Task.FromResult(new RpcStream<int>(source) {
             IsRealTime = false,
             AckPeriod = 3,
-            AckAdvance = 5,
+            BufferSize = 5,
+        });
+    }
+
+    public Task<RpcStream<int>> GetBackpressureStream(
+        string key, bool isRealTime, int count, int ackPeriod, int bufferSize, int keyFrameInterval)
+    {
+        _backpressureProducedCounts[key] = 0;
+        var source = EnumerateTracked(key, count);
+        return Task.FromResult(new RpcStream<int>(source) {
+            IsRealTime = isRealTime,
+            AckPeriod = ackPeriod,
+            BufferSize = bufferSize,
+            AllowReconnect = false,
+            CanSkipTo = x => x % keyFrameInterval == 0,
+        });
+    }
+
+    public Task<int> GetBackpressureProducedCount(string key)
+        => Task.FromResult(_backpressureProducedCounts.GetValueOrDefault(key));
+
+    public Task<RpcStream<int>> GetBufferedSkipStream(int count, int ackPeriod, int bufferSize, int keyFrameInterval)
+    {
+        var source = EnumerateBurst(count);
+        return Task.FromResult(new RpcStream<int>(source) {
+            IsRealTime = true,
+            AckPeriod = ackPeriod,
+            BufferSize = bufferSize,
+            AllowReconnect = false,
+            CanSkipTo = x => x % keyFrameInterval == 0,
         });
     }
 
@@ -381,5 +477,25 @@ public class RealTimeStreamTestService : IRealTimeStreamTestService
             yield return i;
             await Task.Delay(delayMs);
         }
+    }
+
+    private async IAsyncEnumerable<int> EnumerateTracked(
+        string key,
+        int count,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        for (var i = 0; i < count; i++) {
+            _backpressureProducedCounts.AddOrUpdate(key, 1, static (_, x) => x + 1);
+            yield return i;
+            await Task.Yield();
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+    }
+
+    private static async IAsyncEnumerable<int> EnumerateBurst(int count)
+    {
+        for (var i = 0; i < count; i++)
+            yield return i;
+        await Task.CompletedTask;
     }
 }

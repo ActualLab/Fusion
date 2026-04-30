@@ -25,6 +25,7 @@
 //     DI.  TS uses a class with a handle() method.
 
 import { getLogs } from './logging.js';
+import { RpcError } from './rpc-error.js';
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
 import type { RpcPeer } from './rpc-peer.js';
 import type { RpcStream } from './rpc-stream.js';
@@ -79,14 +80,21 @@ export class RpcSystemCallHandler {
                         errorInfo?.message ??
                         'RPC error') as string;
                 const errorType = errorInfo?.TypeRef ?? errorInfo?.typeRef;
-                // Mirrors RpcSystemCalls.cs:102 — surface RpcRerouteException.
-                if (errorType !== null && typeof errorType === 'object') {
+                let typeName: string | undefined;
+                if (typeof errorType === 'string') {
+                    // .NET TypeRef is serialized as the assembly-qualified name string,
+                    // e.g. "System.InvalidOperationException, System.Private.CoreLib".
+                    // Mirrors .NET TypeRef.TypeName: substring before the first ','.
+                    const commaIdx = errorType.indexOf(',');
+                    typeName = commaIdx >= 0 ? errorType.slice(0, commaIdx) : errorType;
+                } else if (errorType !== null && typeof errorType === 'object') {
                     const t = errorType as Record<string, unknown>;
-                    if (t.TypeName === 'RpcRerouteException'
-                        || t.typeName === 'RpcRerouteException')
-                        warnLog?.log('Got RpcRerouteException from remote peer:', msg);
+                    typeName = (t.TypeName ?? t.typeName) as string | undefined;
                 }
-                call.result.reject(new Error(msg));
+                // Mirrors RpcSystemCalls.cs:102 — surface RpcRerouteException.
+                if (typeName === 'ActualLab.Rpc.RpcRerouteException')
+                    warnLog?.log('Got RpcRerouteException from remote peer:', msg);
+                call.result.reject(new RpcError(msg, typeName));
             }
             break;
         }

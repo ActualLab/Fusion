@@ -29,7 +29,27 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected internal RpcTransport? Transport
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _transport ?? _connectionState.Value.Transport; // _transport is set after _connectionState, so can be out of sync
+        get {
+            // Only expose Transport once the handshake has completed: outbound calls
+            // (e.g. stream sends) read Peer.Transport directly, and writing to the new
+            // channel before handshake messages have been exchanged corrupts the
+            // remote peer's handshake (it reads our outbound message instead of our
+            // handshake). _transport is set after _connectionState, so can lag — fall
+            // through to ConnectionState only when it's actually connected.
+
+            // Fast path: most sends happen while connected, so avoid reading
+            // _connectionState unless _transport hasn't caught up yet.
+            var transport = _transport;
+            if (transport is not null)
+                return transport;
+
+            // _transport is set after _connectionState, so after a transition to
+            // Connected there is a tiny window where the new transport is visible
+            // only through ConnectionState. Handshaking states are intentionally
+            // filtered out here: their Connection is exposed for teardown, not sends.
+            var connectionState = _connectionState.Value;
+            return connectionState.Handshake is not null ? connectionState.Transport : null;
+        }
     }
 
     protected internal RpcCallLogger CallLogger
@@ -125,6 +145,13 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         transport = connectionState.Transport;
         return handshake is not null;
     }
+
+    public bool IsConnectedOrHandshaking()
+        // True while an in-flight connection exists - whether handshake is still
+        // in progress or has already completed. Use this (instead of IsConnected)
+        // when deciding whether to disconnect a stale connection before accepting
+        // a new one, so connections that arrive mid-handshake don't pile up.
+        => ConnectionState.Value.Connection is not null;
 
     public Task<RpcPeerConnectionState> WhenConnected(CancellationToken cancellationToken = default)
         => ConnectionState.Value.WhenConnected.WaitAsync(cancellationToken);
@@ -271,6 +298,18 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     var connection =
                         await GetConnection(connectionState.Value, cancellationToken).ConfigureAwait(false);
                     var transport = connection.Transport;
+
+                    // Expose the in-flight connection via _connectionState BEFORE the handshake
+                    // exchange, so an external Disconnect() (e.g. RpcWebSocketServer.Invoke when a
+                    // new connection arrives for the same peerRef) can cancel the handshake reader
+                    // and let this loop iterate to pick up the next queued connection. Without this,
+                    // Disconnect short-circuits while Transport is null and incoming connections pile
+                    // up against a peer stuck waiting for a handshake that never arrives.
+                    // The Transport property still returns null until handshake completes, so
+                    // outbound calls don't try to send through a channel before the handshake.
+                    connectionState = SetConnectionState(
+                        connectionState.Value.NextHandshaking(connection, readerTokenSource),
+                        connectionState).RequireNonFinal();
 
                     // Get inbound message reader from the connection
                     var reader = connection.InboundMessages.GetAsyncEnumerator(readerToken);
@@ -501,7 +540,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             return connectionState;
         }
         finally {
-            _transport = newState.Transport;
+            // Only expose Transport once the handshake has completed: outbound calls (e.g. stream
+            // sends) read Peer.Transport directly, and writing to the new channel before the
+            // handshake messages have been exchanged corrupts the peer's handshake on the
+            // remote side (the remote reads our outbound message instead of our handshake).
+            _transport = newState.IsConnected() ? newState.Transport : null;
             // Order matters: fault first on terminal error so TrySetException wins over
             // any later TrySetResult on the same TCS. Covers both:
             //  - oldState's pending WhenDisconnected (if old was connected): fault, not success.
@@ -511,8 +554,15 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 oldState.MarkTerminated(terminalError);
                 newState.MarkTerminated(terminalError);
             }
-            else if (newState.IsConnected())
+            else if (newState.IsConnected()) {
                 oldState.MarkConnected(newState);
+                // If the previous state was a transient handshaking state, also resolve its
+                // _whenDisconnectedSource. An external Disconnect() that grabbed this state
+                // races with the handshake completing here; without this, the waiter would
+                // hang because MarkConnected only resolves _whenConnectedSource.
+                if (oldState.IsHandshaking())
+                    oldState.MarkDisconnected();
+            }
             else
                 oldState.MarkDisconnected();
 
@@ -531,6 +581,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 Log.LogInformation("'{PeerRef}': Can't (re)connect, will shut down", Ref);
             else if (newState.IsConnected())
                 Log.LogInformation("'{PeerRef}': Connected", Ref);
+            else if (newState.IsHandshaking())
+                DebugLog?.LogDebug("'{PeerRef}': Handshaking", Ref);
             else {
                 var e = newState.Error;
                 if (e is not null)

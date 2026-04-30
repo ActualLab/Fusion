@@ -83,8 +83,8 @@ Our [benchmarks](./docs/Performance.md) show Fusion delivering **over 300 millio
 | Scenario                                       | Without Fusion        | With Fusion     | Speedup     |
 |------------------------------------------------|-----------------------|-----------------|-------------|
 | Local DAL, almost no writes (peak performance) | 38.61K calls/s        | 313.75M calls/s | **>8,000x** |
-| Local repo-like service, non-stop writes       | 112.07K calls/s       | 253.12M calls/s | **~2,259x** |
-| Remote repo-like service, non-stop writes      | 76.03K calls/s (REST) | 216.00M calls/s | **~2,841x** |
+| Local repo-like service, non-stop writes       | 118.15K calls/s       | 261.32M calls/s | **~2,212x** |
+| Remote repo-like service, non-stop writes      | 80.43K calls/s (REST) | 215.45M calls/s | **~2,679x** |
 
 These aren't typos &ndash; Fusion makes your services **thousands of times faster** by eliminating redundant computation, RPC, and database access.
 
@@ -96,9 +96,9 @@ Note that these benchmarks test Fusion method calls with no dependency chains. R
 
 | Framework | Calls/s | Streaming |
 |-----------|---------|-----------|
-| **ActualLab.Rpc** | **9.46M** | **97.55M items/s** |
-| SignalR | 5.03M | 16.39M items/s |
-| gRPC | 1.30M | 42.70M items/s |
+| **ActualLab.Rpc** | **10.16M** | **96.96M items/s** |
+| SignalR | 5.31M | 18.30M items/s |
+| gRPC | 1.29M | 43.78M items/s |
 
 So it's **significantly faster** than gRPC and SignalR, both for calls and for streaming.
 

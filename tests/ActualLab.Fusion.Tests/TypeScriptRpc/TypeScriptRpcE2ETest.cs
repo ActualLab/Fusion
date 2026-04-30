@@ -37,6 +37,17 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
     [InlineData("json5")]
     [InlineData("msgpack6")]
     [InlineData("msgpack6c")]
+    public async Task ErrorPropagation(string format)
+    {
+        SerializationFormat = format;
+        await using var _ = await WebHost.Serve();
+        await RunScenario("error-propagation", format);
+    }
+
+    [Theory]
+    [InlineData("json5")]
+    [InlineData("msgpack6")]
+    [InlineData("msgpack6c")]
     public async Task OverloadResolution(string format)
     {
         SerializationFormat = format;
