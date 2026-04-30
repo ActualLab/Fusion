@@ -11,6 +11,23 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.79+d2bf83a0 | npm: 12.3.85
+
+Release date: 2026-04-30
+
+### Added
+- TypeScript RPC: `RpcConnectionUrlResolver` may now return `string |
+  Promise<string>`, and the connect path `await`s it. This unblocks
+  resolvers that need to fetch a per-connection token (e.g. a session
+  token) before forming the WebSocket URL.
+- TypeScript RPC: `sanitizeUrl(url)` utility exported from
+  `@actuallab/rpc` &mdash; redacts `?session=...` (URL-parsed when
+  possible, regex fallback otherwise) so the connect-attempt log line no
+  longer leaks bearer-style query parameters. Declared as `export let`
+  so library users can swap in a different sanitizer (e.g. one that
+  redacts additional query keys).
+
+
 ## 12.3.79+a7608a16 | npm: 12.3.83
 
 Release date: 2026-04-30
