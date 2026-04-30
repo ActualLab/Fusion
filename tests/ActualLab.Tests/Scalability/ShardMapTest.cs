@@ -77,7 +77,7 @@ public class ShardMapTest(ITestOutputHelper @out) : TestBase(@out)
             var medians = new[] { ("Rendez", rMedian, rMoves), ("Maglev", mMedian, mMoves), ("Greedy", gMedian, gMoves) };
             var sorted = medians.OrderBy(x => x.Item2).ThenBy(x => x.Item3[^1]).ToArray();
             var winners = sorted.TakeWhile(x => x.Item2 == sorted[0].Item2 && x.Item3[^1] == sorted[0].Item3[^1]).ToArray();
-            var winnerNames = winners.Select(x => x.Item1).ToHashSet();
+            var winnerNames = new HashSet<string>(winners.Select(x => x.Item1));
             var label = winners.Length > 1
                 ? "tie: " + string.Join(", ", winnerNames)
                 : "won: " + winners[0].Item1;

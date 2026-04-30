@@ -1,3 +1,4 @@
+#if NET8_0_OR_GREATER
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
@@ -316,3 +317,4 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
         return s.Read(bytes, out _);
     }
 }
+#endif
