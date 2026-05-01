@@ -11,6 +11,47 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.3.79+2fc189f6 | npm: 12.4.6
+
+Release date: 2026-05-01
+
+### Breaking Changes
+- RPC: `RpcStream.AckAdvance` is renamed to `RpcStream.BufferSize` (both
+  .NET and TypeScript). Wire format is unchanged &mdash; only the property
+  name and the corresponding TypeScript option (`ackAdvance` &rarr;
+  `bufferSize`) differ. Update any code that explicitly sets the
+  buffer-ahead limit on `RpcStream<T>`.
+
+### Changed
+- RPC: `RpcStream.IsRealTime` skipping is now reactive instead of
+  speculative. Previously, on hitting the buffer-ahead ceiling the
+  sender drained the source itself looking for the next `CanSkipTo`
+  item; now the sender waits for an ACK and, when one arrives,
+  compacts the already-buffered unsent suffix down to the latest
+  skippable item. The sender no longer pulls ahead from the source
+  just to hunt for a skip target. Reconnect-time skip-ahead also runs
+  only when `IsRealTime` is set; non-realtime streams keep
+  back-pressure semantics unchanged. `RpcSharedStream` is consolidated
+  to a single `OnRun` path covering both modes.
+
+### Documentation
+- Expanded `CODING_STYLE.md` with rules for flow-control spacing,
+  class member ordering, primary constructors, sealed classes,
+  preferred types like `FilePath`, and TypeScript-side conventions
+  mirroring the .NET ones.
+
+### Infrastructure
+- Updated Fusion / OAuth / CliWrap package pins in
+  `Directory.Packages.props`. `CommunityToolkit.HighPerformance`
+  briefly moved to 8.4.2 and was reverted to 8.4.0 (a regression in
+  8.4.x is in flight upstream).
+
+### Tests
+- `NerdbankCrossCompatTest` is now guarded by `NET8_0_OR_GREATER`,
+  and `ShardMapTest` constructs its `HashSet` in a way that compiles
+  on .NET Framework targets.
+
+
 ## 12.3.79+d2bf83a0 | npm: 12.3.85
 
 Release date: 2026-04-30
