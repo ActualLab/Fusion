@@ -73,7 +73,7 @@
     <!-- Build & Samples -->
     <AspireSdkVersion>13.0.0</AspireSdkVersion>
     <BlazoriseVersion>[1.8.9,)</BlazoriseVersion>
-    <FusionVersion>[12.0.74,)</FusionVersion>
+    <FusionVersion>12.4.6</FusionVersion>
   </PropertyGroup>
   <!-- Dependencies -->
   <ItemGroup>
