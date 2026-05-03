@@ -175,6 +175,12 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         return this._whenSent;
     }
 
+    /** Local sender backing this stream after `toRef()` has been called.
+     *  `undefined` for remote streams or before `toRef()`. */
+    get sender(): RpcStreamSender<T> | undefined {
+        return this._sender;
+    }
+
     /**
      * For local streams: bind to a peer, create and register an `RpcStreamSender`,
      * start pumping items from the local source in the background, and return the

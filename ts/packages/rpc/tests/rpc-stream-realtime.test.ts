@@ -620,6 +620,258 @@ describe('RpcStreamSender backpressure modes', () => {
     });
 });
 
+// -- Observability metrics: nextIndex, lastAckIndex, skipCount, onAckProcessed --
+
+describe('RpcStreamSender observability metrics', () => {
+    let setup: RealTimeTestSetup;
+
+    beforeEach(async () => {
+        setup = createRealTimeTestSetup();
+        await delay(10);
+    });
+
+    afterEach(() => {
+        setup.serverHub.close();
+        setup.clientHub.close();
+    });
+
+    it('nextIndex and lastAckIndex track sends and ACKs', async () => {
+        const bufferSize = 5;
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 1, bufferSize, false, false,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+
+        expect(sender.nextIndex).toBe(0);
+        expect(sender.lastAckIndex).toBe(0);
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < 100; i++) yield i;
+        }
+
+        sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+
+        // Initial ACK opens a window of `bufferSize`; sender advances nextIndex
+        // by exactly that many before stalling on the next ACK.
+        for (let i = 0; sender.nextIndex < bufferSize && i < 100; i++)
+            await delay(0);
+        expect(sender.nextIndex).toBe(bufferSize);
+        expect(sender.lastAckIndex).toBe(0);
+
+        // Acknowledge a few items: lastAckIndex follows; the window grows by
+        // the same delta and nextIndex catches up.
+        sender.onAck(3, '');
+        for (let i = 0; sender.lastAckIndex < 3 && i < 100; i++) await delay(0);
+        expect(sender.lastAckIndex).toBe(3);
+        for (let i = 0; sender.nextIndex < 3 + bufferSize && i < 100; i++)
+            await delay(0);
+        expect(sender.nextIndex).toBe(3 + bufferSize);
+
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
+    });
+
+    it('lastAckIndex reflects only the most recent ACK in a coalesced drain', async () => {
+        const bufferSize = 100;
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 1, bufferSize, false, false,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < 1000; i++) yield i;
+        }
+
+        // Queue three ACKs synchronously before the pump starts so they
+        // collapse into a single drain.
+        sender.onAck(0, sender.id.hostId);
+        sender.onAck(5, '');
+        sender.onAck(10, '');
+
+        const writeDone = sender.writeFrom(source());
+        for (let i = 0; sender.lastAckIndex < 10 && i < 100; i++)
+            await delay(0);
+        expect(sender.lastAckIndex).toBe(10);
+
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
+    });
+
+    it('onAckProcessed fires once per ACK drain', async () => {
+        const bufferSize = 5;
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 1, bufferSize, false, false,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+
+        let callbackCount = 0;
+        sender.onAckProcessed = () => { callbackCount++; };
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < 1000; i++) yield i;
+        }
+
+        sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+
+        // Initial ACK(0) drained once writeFrom runs.
+        for (let i = 0; callbackCount < 1 && i < 100; i++) await delay(0);
+        expect(callbackCount).toBe(1);
+
+        // Three subsequent ACKs, each awaited so they each produce a separate
+        // drain and a separate callback.
+        for (let n = 1; n <= 3; n++) {
+            sender.onAck(n * bufferSize, '');
+            for (let i = 0; sender.lastAckIndex < n * bufferSize && i < 100; i++)
+                await delay(0);
+            expect(sender.lastAckIndex).toBe(n * bufferSize);
+        }
+        expect(callbackCount).toBe(4);
+
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
+    });
+
+    it('onAckProcessed fires exactly once when multiple ACKs are coalesced', async () => {
+        const bufferSize = 100;
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 1, bufferSize, false, false,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+
+        let callbackCount = 0;
+        sender.onAckProcessed = () => { callbackCount++; };
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < 1000; i++) yield i;
+        }
+
+        // Three queued ACKs before the pump starts → single drain at startup.
+        sender.onAck(0, sender.id.hostId);
+        sender.onAck(5, '');
+        sender.onAck(10, '');
+
+        const writeDone = sender.writeFrom(source());
+        for (let i = 0; sender.lastAckIndex < 10 && i < 100; i++)
+            await delay(0);
+        expect(sender.lastAckIndex).toBe(10);
+        expect(callbackCount).toBe(1);
+
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
+    });
+
+    it('onAckProcessed swallows listener errors', async () => {
+        const bufferSize = 5;
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 1, bufferSize, false, false,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+
+        let callCount = 0;
+        sender.onAckProcessed = () => {
+            callCount++;
+            throw new Error('listener boom');
+        };
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < 1000; i++) yield i;
+        }
+
+        sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+        for (let i = 0; callCount < 1 && i < 100; i++) await delay(0);
+
+        // A second ACK proves the pump survived the throwing listener.
+        sender.onAck(bufferSize, '');
+        for (let i = 0; sender.lastAckIndex < bufferSize && i < 100; i++)
+            await delay(0);
+        expect(callCount).toBe(2);
+        expect(sender.lastAckIndex).toBe(bufferSize);
+
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
+    });
+
+    it('skipCount stays 0 for non-real-time streams', async () => {
+        const totalItems = 20;
+
+        const { sender, stream } = setup.createSender({
+            ackPeriod: 3,
+            bufferSize: 5,
+            isRealTime: false,
+        });
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < totalItems; i++) yield i;
+        }
+
+        void sender.writeFrom(source());
+
+        const received: number[] = [];
+        for await (const item of stream) {
+            received.push(item);
+            await delay(5);
+        }
+
+        expect(received.length).toBe(totalItems);
+        expect(sender.skipCount).toBe(0);
+    });
+
+    it('skipCount equals the number of items dropped during real-time compaction', async () => {
+        // Same setup as "should start from a buffered real-time skip target":
+        // bufferSize=15, keyframes every 8. After the initial fill of [0..14]
+        // and ACK(1), the pump pulls items 15 and 16, then collapses the
+        // unsent suffix to the latest keyframe (16), dropping the lone
+        // non-keyframe (item 15). Exactly one skip.
+        const bufferSize = 15;
+        const keyFrameInterval = 8;
+        const expectedSkipTarget = keyFrameInterval * 2; // 16
+        const sentItems: number[] = [];
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 3, bufferSize, false, true,
+            (item) => item % keyFrameInterval === 0,
+        );
+        setup.serverPeer.sharedObjects.register(sender);
+        const origSendItem = sender.sendItem.bind(sender);
+        sender.sendItem = (item: number) => {
+            sentItems.push(item);
+            origSendItem(item);
+        };
+
+        // eslint-disable-next-line @typescript-eslint/require-await
+        async function* source(): AsyncGenerator<number> {
+            for (let i = 0; i < 100; i++) yield i;
+        }
+
+        sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+
+        for (let i = 0; sentItems.length < bufferSize && i < 100; i++)
+            await delay(0);
+        expect(sentItems).toEqual(Array.from({ length: bufferSize }, (_, i) => i));
+        expect(sender.skipCount).toBe(0);
+
+        sender.onAck(1, '');
+        for (let i = 0; !sentItems.includes(expectedSkipTarget) && i < 100; i++)
+            await delay(0);
+
+        expect(sentItems).toContain(expectedSkipTarget);
+        expect(sentItems).not.toContain(expectedSkipTarget - 1);
+        expect(sender.skipCount).toBe(1);
+
+        sender.disconnect();
+        await writeDone.catch(() => { /* noop */ });
+    });
+});
+
 // -- .NET-TS E2E wire format compatibility --
 
 describe('RpcStream real-time wire format E2E', () => {

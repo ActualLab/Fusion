@@ -66,6 +66,25 @@ export class RpcStreamSender<T> implements IRpcObject {
     private _abortController = new AbortController();
     private _iterator: AsyncIterator<T> | null = null;
 
+    // -- Recorder-controller metrics (Step 9.1) --
+    /** Total items skipped via real-time `canSkipTo` compaction. */
+    private _skipCount = 0;
+    /** Fires after a $sys.Ack has been processed (post-compaction). The
+     *  recorder's quality controller uses this to bump a "last ACK at"
+     *  watchdog so it can distinguish "stuck" (no ACK > N s) from
+     *  "throttled" (ACKs flowing). */
+    onAckProcessed?: () => void;
+
+    get nextIndex(): number {
+        return this._nextIndex;
+    }
+    get lastAckIndex(): number {
+        return this._lastAckedIndex;
+    }
+    get skipCount(): number {
+        return this._skipCount;
+    }
+
     // -- ACK queue (analog of .NET's Channel<(long, bool)>) --
     private _acks: { nextIndex: number; mustReset: boolean }[] = [];
     private _whenAckReady: PromiseSource<void> | null = null;
@@ -343,8 +362,13 @@ export class RpcStreamSender<T> implements IRpcObject {
                         && this._acks.length === 0) {
                         await bufferNext(false, true);
                     }
-                    if (ack.nextIndex > 0)
-                        bufferIndex = _compactBufferedUnsentSuffix(buffer, bufferIndex, this.canSkipTo);
+                    if (ack.nextIndex > 0) {
+                        const result = _compactBufferedUnsentSuffix(
+                            buffer, bufferIndex, this.canSkipTo);
+                        bufferIndex = result.newIndex;
+                        if (result.skipped > 0)
+                            this._skipCount += result.skipped;
+                    }
 
                     // Bail out so step 1 can process a mustReset ACK immediately.
                     if (this._acks.length > 0) break;
@@ -390,6 +414,9 @@ export class RpcStreamSender<T> implements IRpcObject {
                 this._nextIndex = a.nextIndex;
             }
         }
+        try {
+            this.onAckProcessed?.();
+        } catch { /* listener errors don't break the pump */ }
         return last;
     }
 
@@ -472,7 +499,7 @@ function _compactBufferedUnsentSuffix<T>(
     buffer: RingBuffer<_StreamItem<T>>,
     firstUnsentIndex: number,
     canSkipTo: (item: T) => boolean,
-): number {
+): { newIndex: number; skipped: number } {
     // Keep items that have already been assigned RPC stream indexes, then
     // collapse the unsent suffix to the latest buffered restart point. The
     // surviving suffix is intentionally sent under fresh RPC stream indexes;
@@ -484,13 +511,16 @@ function _compactBufferedUnsentSuffix<T>(
             skipToIndex = i;
     }
     if (skipToIndex <= firstUnsentIndex)
-        return firstUnsentIndex;
+        return { newIndex: firstUnsentIndex, skipped: 0 };
+
+    const cutFrom = firstUnsentIndex;
+    const cutTo = skipToIndex;
 
     const items = buffer.toArray();
     buffer.clear();
-    for (let i = 0; i < firstUnsentIndex; i++)
+    for (let i = 0; i < cutFrom; i++)
         buffer.pushTail(items[i]);
-    for (let i = skipToIndex; i < items.length; i++)
+    for (let i = cutTo; i < items.length; i++)
         buffer.pushTail(items[i]);
-    return firstUnsentIndex;
+    return { newIndex: firstUnsentIndex, skipped: skipToIndex - firstUnsentIndex };
 }
