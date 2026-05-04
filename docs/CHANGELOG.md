@@ -11,6 +11,28 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.4.8+77552387 | npm: 12.4.10
+
+Release date: 2026-05-04
+
+### Added
+- TypeScript RPC: `RpcStreamSender` observability surface &mdash;
+  `nextIndex`, `lastAckIndex`, and `skipCount` getters plus an
+  `onAckProcessed` callback that fires once per ACK drain (coalesced
+  when multiple ACKs are processed together; listener errors are
+  swallowed so they can't break the pump). `RpcStream.sender` accessor
+  exposes the local `RpcStreamSender` for callers that need to read
+  these metrics &mdash; intended for quality controllers that watch a
+  real-time stream's backpressure / skip behaviour without reaching
+  into private state.
+
+### Tests
+- `rpc-stream-realtime.test.ts`: 7 new cases covering the new metrics
+  &mdash; `nextIndex` / `lastAckIndex` accounting, drain coalescing,
+  throwing-listener resilience, and a deterministic `skipCount` during
+  real-time compaction.
+
+
 ## 12.3.79+2fc189f6 | npm: 12.4.6
 
 Release date: 2026-05-01
