@@ -19,8 +19,8 @@
 //     entry 'default' acts as a fallback before Log.defaultMinLevel.
 //
 //   - initLogging() is invoked lazily on the first Log.get() call.  It restores
-//     levels from sessionStorage and installs globalThis.logLevels so devs can
-//     tweak levels at runtime.
+//     persisted levels and installs globalThis.logLevels so devs can tweak
+//     levels at runtime.
 
 import { initLogging } from './logging-init.js';
 
@@ -90,7 +90,7 @@ class LogRefSet {
 export class Log {
     private static isInitialized = false;
     private static logRefs = new LogRefSet(10);
-    /** User-set overrides (persisted to sessionStorage). Empty by default. */
+    /** User-set overrides (persisted by logging-init). Empty by default. */
     public static readonly minLevels = new Map<string, LogLevel>();
     /** Per-scope defaults registered by packages via createLogProvider(). */
     public static readonly scopeDefaults = new Map<string, LogLevel>();
@@ -137,7 +137,7 @@ export class Log {
 
         const minLevels = this.minLevels;
         // Resolution order:
-        //   1. User override for this scope (sessionStorage-persisted)
+        //   1. User override for this scope (persisted by logging-init)
         //   2. User-set global override (minLevels.get('default'))
         //   3. Package default for this scope (registered via createLogProvider)
         //   4. Framework baseline (Log.defaultMinLevel, Warn)

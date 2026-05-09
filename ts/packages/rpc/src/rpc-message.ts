@@ -47,6 +47,7 @@ export const RpcSystemCalls = {
     item: '$sys.I:2',
     batch: '$sys.B:2',
     end: '$sys.End:2',
+    disconnect: '$sys.Disconnect:1',
 } as const;
 
 /** Wire-format RPC message envelope. */

@@ -9,8 +9,8 @@ const { warnLog } = getLogs('RpcSharedStream');
 
 /** Default ack period for server-side streams. */
 const DEFAULT_ACK_PERIOD = 256;
-/** Default send buffer size for server-side streams. */
-const DEFAULT_BUFFER_SIZE = 128;
+/** Default ack advance window for server-side streams. */
+const DEFAULT_ACK_ADVANCE = 128;
 
 /**
  * Server-side RPC stream producer — sends items to a remote consumer via
@@ -24,12 +24,17 @@ const DEFAULT_BUFFER_SIZE = 128;
  * - Server sends End to signal completion (with optional error)
  * - Client sends AckEnd to acknowledge completion
  *
- * The pump is ACK-driven: the main loop blocks on `_whenAckReady` until a
- * client ACK is queued, processes it (updating `_lastAckedIndex`, rewinding
- * `_index` on mustReset, trimming the replay buffer), then sends items up
- * to `ack.nextIndex + bufferSize`. While the peer is disconnected no ACKs
- * arrive, so the source is never pulled — the sender naturally pauses
- * instead of spinning.
+ * The sender uses a single ACK-driven loop:
+ *  - On each ACK, drain the source synchronously into the ring buffer up to
+ *    `effectiveBufferSize` (this lets us pre-buffer past `ackAdvance`).
+ *  - For real-time, optionally compact the unsent suffix to the latest
+ *    buffered `canSkipTo` item.
+ *  - Send items up to the `ackAdvance` flow-control window.
+ *  - Wait for the next ACK.
+ *
+ * Setting `bufferSize > ackAdvance` lets the sender pre-buffer items past
+ * the in-flight window so a fresh ACK can be served from RAM instead of
+ * waiting on the source.
  *
  * Direct port of .NET `RpcSharedStream<T>` at
  * src/ActualLab.Rpc/Infrastructure/RpcSharedStream.cs.
@@ -44,6 +49,18 @@ export class RpcStreamSender<T> implements IRpcObject {
     readonly canSkipTo: (item: T) => boolean;
     readonly peer: RpcPeer;
     readonly ackPeriod: number;
+    /**
+     * Wire-level flow-control window: the maximum index the sender may
+     * advance past the most recently acknowledged index. Mirrors .NET
+     * `RpcStream.AckAdvance`.
+     */
+    readonly ackAdvance: number;
+    /**
+     * Effective local ring buffer capacity used by the pump. Set larger
+     * than `ackAdvance` to pre-buffer items beyond the in-flight window;
+     * values below `ackAdvance` are clamped up (with a warning) at
+     * construction time. Not transmitted on the wire.
+     */
     readonly bufferSize: number;
     /**
      * If true, the source was produced by a factory `(abortSignal) => AsyncIterable<T>`
@@ -74,6 +91,13 @@ export class RpcStreamSender<T> implements IRpcObject {
      *  watchdog so it can distinguish "stuck" (no ACK > N s) from
      *  "throttled" (ACKs flowing). */
     onAckProcessed?: () => void;
+    /** Fires after each item is pushed onto the local ring buffer. The
+     *  argument is the buffer count *after* the push. Together with
+     *  `onAckProcessed` (which is the only place items leave the buffer),
+     *  this gives controllers a complete picture of buffer utilization.
+     *  When `bufferedCount === bufferSize`, the source pull is paused
+     *  until the next ACK frees space. Listener errors are swallowed. */
+    onBuffered?: (bufferedCount: number) => void;
 
     get nextIndex(): number {
         return this._nextIndex;
@@ -92,11 +116,12 @@ export class RpcStreamSender<T> implements IRpcObject {
     constructor(
         peer: RpcPeer,
         ackPeriod = DEFAULT_ACK_PERIOD,
-        bufferSize = DEFAULT_BUFFER_SIZE,
+        ackAdvance = DEFAULT_ACK_ADVANCE,
         allowReconnect = true,
         isRealTime = false,
         canSkipTo: (item: T) => boolean = () => true,
         sourceUsesAbortSignal = false,
+        bufferSize?: number,
     ) {
         const localId = peer.sharedObjects.nextId();
         this.id = { hostId: peer.hub.hubId, localId };
@@ -105,8 +130,14 @@ export class RpcStreamSender<T> implements IRpcObject {
         this.canSkipTo = canSkipTo;
         this.peer = peer;
         this.ackPeriod = ackPeriod;
-        this.bufferSize = bufferSize;
+        this.ackAdvance = ackAdvance;
         this.sourceUsesAbortSignal = sourceUsesAbortSignal;
+
+        if (bufferSize !== undefined && bufferSize !== 0 && bufferSize < ackAdvance)
+            warnLog?.log(
+                `RpcStream bufferSize (${bufferSize}) is below ackAdvance (${ackAdvance}); using ackAdvance as buffer size.`,
+            );
+        this.bufferSize = bufferSize !== undefined && bufferSize >= ackAdvance ? bufferSize : ackAdvance;
     }
 
     /** AbortSignal that is aborted when the sender is disconnected. */
@@ -116,7 +147,7 @@ export class RpcStreamSender<T> implements IRpcObject {
 
     /** Returns the stream reference string for the $sys.Ok response. */
     toRef(): string {
-        return `${this.id.hostId},${this.id.localId},${this.ackPeriod},${this.bufferSize},${this.allowReconnect ? '1' : '0'},${this.isRealTime ? '1' : '0'}`;
+        return `${this.id.hostId},${this.id.localId},${this.ackPeriod},${this.ackAdvance},${this.allowReconnect ? '1' : '0'},${this.isRealTime ? '1' : '0'}`;
     }
 
     /**
@@ -216,8 +247,10 @@ export class RpcStreamSender<T> implements IRpcObject {
 
     /**
      * ACK-driven pump. Non-real-time streams apply normal backpressure at
-     * `bufferSize`; real-time streams may compact the already-buffered unsent
+     * `ackAdvance`; real-time streams may compact the already-buffered unsent
      * suffix to the latest buffered `canSkipTo` item after the consumer ACKs.
+     * With `bufferSize > ackAdvance` the local ring buffer holds more than the
+     * in-flight window — real-time mode uses the extra space to pre-buffer.
      */
     /* eslint-disable @typescript-eslint/no-unnecessary-condition -- _ended changes across awaits */
     private async _run(
@@ -245,6 +278,12 @@ export class RpcStreamSender<T> implements IRpcObject {
             ]);
         };
 
+        const fireBuffered = (): void => {
+            try {
+                this.onBuffered?.(buffer.count);
+            } catch { /* listener errors don't break the pump */ }
+        };
+
         const bufferNext = async (onlyIfReady: boolean, prefetchNext: boolean): Promise<boolean> => {
             let r: IteratorResult<T> | typeof pending;
             try {
@@ -262,6 +301,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                     if (prefetchNext)
                         whenMovedNext = iterator.next();
                 }
+                fireBuffered();
                 return true;
             } catch (e) {
                 whenMovedNext = null;
@@ -271,6 +311,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                     kind: 'error',
                     error: e instanceof Error ? e : new Error(String(e)),
                 });
+                fireBuffered();
                 return true;
             }
         };
@@ -284,7 +325,6 @@ export class RpcStreamSender<T> implements IRpcObject {
                 if (this._ended) return;
                 ack = this._tryProcessAcks();
                 if (!ack) {
-                    // Mirrors RpcSharedStream.cs:252.
                     warnLog?.log("Something is off: couldn't read an acknowledgement");
                     return;
                 }
@@ -296,8 +336,6 @@ export class RpcStreamSender<T> implements IRpcObject {
             if (isRealTime && ack.mustReset && !isFullyBuffered) {
                 buffer.clear();
                 bufferStart = this._nextIndex;
-                // Drain the source until we find an item that canSkipTo accepts,
-                // or the source ends / throws.
                 while (true) {
                     if (this._ended) return;
                     let item: _StreamItem<T>;
@@ -324,6 +362,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                         };
                     }
                     buffer.pushTail(item);
+                    fireBuffered();
                     if (accepted || isFullyBuffered) break;
                 }
             }
@@ -344,14 +383,14 @@ export class RpcStreamSender<T> implements IRpcObject {
             let bufferIndex = this._nextIndex - bufferStart;
 
             // 3. Send as much as the current ACK window allows.
-            const maxIndex = ack.nextIndex + this.bufferSize;
+            const maxIndex = ack.nextIndex + this.ackAdvance;
             while (this._nextIndex < maxIndex) {
                 if (this._ended) return;
 
                 if (isRealTime) {
-                    // Real-time compaction only uses the already-buffered
-                    // unsent suffix; it doesn't pull past the buffer just to
-                    // discover a future skip target.
+                    // Real-time: pre-buffer aggressively up to the ring's
+                    // capacity (which may exceed ackAdvance when bufferSize
+                    // is set), so a freshly arrived ACK is served from RAM.
                     while (buffer.hasRemainingCapacity && !isFullyBuffered && this._acks.length === 0) {
                         if (!await bufferNext(true, true))
                             break;
@@ -389,16 +428,12 @@ export class RpcStreamSender<T> implements IRpcObject {
                 }
                 if (this._nextIndex >= maxIndex)
                     break;
-                if (isFullyBuffered) break;  // goto nextAck
+                if (isFullyBuffered) break;
                 if (!buffer.hasRemainingCapacity) break;
 
                 if (!isRealTime)
                     await bufferNext(false, false);
             }
-
-            // 4. Ceiling hit: wait for ACK. Real-time streams compact only the
-            // already-buffered unsent suffix; they don't pull ahead just to
-            // discover a future skip target.
         }
     }
     /* eslint-enable @typescript-eslint/no-unnecessary-condition */

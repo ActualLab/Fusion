@@ -2,16 +2,18 @@
 //
 // The Log class uses a single Map<string, LogLevel> to determine the minimum
 // level for each scope.  This module is responsible for:
-//   - Persisting the map across page reloads via sessionStorage.
+//   - Persisting the map across page reloads via localStorage on the main
+//     thread, and via IndexedDB for workers.
 //   - Exposing a globally accessible LogLevelController so developers can tweak
 //     levels at runtime from the browser dev console (globalThis.logLevels).
 //
 // initLogging() is idempotent and called automatically on the first Log.get().
 //
 // Runtime override examples (paste into browser dev console):
-//   logLevels.override('rpc.RpcPeer', 1)        // set Debug for one scope
-//   logLevels.overrideAll('rpc.', 1)            // set Debug for all rpc.* scopes
-//   logLevels.overrideAll('fusion.', 2)         // set Info for all fusion.* scopes
+//   logLevels.override('rpc.RpcPeer', 1)        // exact: one scope to Debug
+//   logLevels.override('rpc.*', 1)              // prefix: all rpc.* scopes
+//   logLevels.override('*Video*', 1)            // contains: every scope with 'Video'
+//   logLevels.override('*Decoder', 1)           // suffix: every scope ending in 'Decoder'
 //   logLevels.reset()                           // reset to package defaults
 //   logLevels.clear()                           // clear all overrides
 
@@ -21,10 +23,11 @@ const GlobalThisKey = 'logLevels';
 const StorageKey = 'logLevels';
 const DateStorageKey = `${StorageKey}.date`;
 const MaxStorageAge = 86_400_000 * 3; // 3 days
+const IndexedDbName = 'actuallab-logging';
+const IndexedDbStore = 'settings';
+const IndexedDbKey = 'logLevels';
 
-const sessionStorage: Storage | null = (typeof globalThis !== 'undefined' && 'sessionStorage' in globalThis)
-    ? (globalThis as { sessionStorage: Storage }).sessionStorage
-    : null;
+const localStorage: Storage | null = tryGetLocalStorage();
 
 // Workers, worklets, and service workers run in separate JS realms with
 // their own globalThis.  Within one realm, esbuild can also produce multiple
@@ -63,6 +66,26 @@ export function initLogging(): void {
             console.log('Logging: logLevels are reset');
         reset(minLevels);
     }
+}
+
+/** Worker bootstrap path: await this before dynamically importing any module
+ *  that may call getLogs() at top level. */
+export async function initWorkerLogging(): Promise<void> {
+    Log.defaultMinLevel = LogLevel.Warn;
+    const minLevels = Log.minLevels;
+    const g = globalThis as Record<string, unknown>;
+    const existing = g[GlobalThisKey] as LogLevelController | undefined;
+
+    if (existing !== undefined) {
+        for (const [k, v] of existing.getMinLevels())
+            minLevels.set(k, v);
+        return;
+    }
+
+    g[GlobalThisKey] = new LogLevelController(minLevels);
+    const wasRestored = await restoreFromIndexedDb(minLevels);
+    if (!wasRestored)
+        reset(minLevels, false);
 }
 
 export class LogLevelController {
@@ -134,25 +157,32 @@ export class LogLevelController {
         );
     }
 
-    /** Override the level for a single scope.  Persisted to sessionStorage. */
-    public override(scope: string, newLevel: LogLevel): void {
-        this.minLevels.set(scope, newLevel);
-        persist(this.minLevels);
-    }
-
-    /** Override the level for every scope whose name starts with scopePrefix
-     *  (e.g. 'rpc.' to enable verbose RPC logging).  Persisted. */
-    public overrideAll(scopePrefix: string, newLevel: LogLevel): void {
-        // Capture all currently-known scopes (both user overrides and package
-        // defaults) that match the prefix, then apply.  Package defaults live
-        // in Log.scopeDefaults; this method also accounts for them so calling
-        // overrideAll('rpc.', Debug) flips every scope the rpc package
-        // registered, not only the ones already overridden.
+    /** Override the level for every scope matching a glob-like pattern.
+     *  `*` matches any sequence of characters; everything else is literal.
+     *  Examples:
+     *    override('rpc.RpcPeer', 1)   // exact — one scope to Debug
+     *    override('rpc.*',      1)    // prefix — every scope starting with 'rpc.'
+     *    override('*rpc*',      1)    // contains — every scope with 'rpc' in it
+     *    override('*Peer',      1)    // suffix — every scope ending with 'Peer'
+     *  Matches scopes that are user-overridden, package-registered (defaults),
+     *  or have ever been requested via Log.get().  If the pattern has no `*`
+     *  and nothing known matches, the literal scope is set anyway — so an
+     *  exact-name override placed before its scope is loaded still applies.
+     *  Persisted to localStorage + IndexedDB. */
+    public override(pattern: string, newLevel: LogLevel): void {
         const matched = new Set<string>();
-        for (const [scope] of this.minLevels)
-            if (scope.startsWith(scopePrefix)) matched.add(scope);
-        for (const [scope] of Log.scopeDefaults)
-            if (scope.startsWith(scopePrefix)) matched.add(scope);
+        if (pattern.includes('*')) {
+            const re = patternToRegExp(pattern);
+            for (const [scope] of this.minLevels)
+                if (re.test(scope)) matched.add(scope);
+            for (const [scope] of Log.scopeDefaults)
+                if (re.test(scope)) matched.add(scope);
+            for (const scope of Log.knownScopes)
+                if (re.test(scope)) matched.add(scope);
+        }
+        else {
+            matched.add(pattern);
+        }
         for (const scope of matched)
             this.minLevels.set(scope, newLevel);
         persist(this.minLevels);
@@ -161,7 +191,6 @@ export class LogLevelController {
     /** Reset all overrides; package defaults take effect again.  Persisted. */
     public reset(): void {
         reset(this.minLevels);
-        persist(this.minLevels);
     }
 
     /** Clear all overrides (no global default unless `defaultLevel` is given). */
@@ -173,39 +202,170 @@ export class LogLevelController {
     }
 }
 
+function patternToRegExp(pattern: string): RegExp {
+    // Escape regex metacharacters except `*`, then turn each `*` into `.*`.
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+    return new RegExp(`^${escaped}$`);
+}
+
+interface PersistedLogLevels {
+    date: number;
+    entries: [string, LogLevel][];
+}
+
 function restore(minLevels: Map<string, LogLevel>): boolean {
-    if (!sessionStorage)
+    const snapshot = readFromStorage(localStorage);
+    if (!snapshot)
         return false;
 
-    const dateJson = sessionStorage.getItem(DateStorageKey);
-    if (!dateJson)
-        return false;
-    if (Date.now() - (JSON.parse(dateJson) as number) > MaxStorageAge)
+    return applySnapshot(minLevels, snapshot);
+}
+
+async function restoreFromIndexedDb(minLevels: Map<string, LogLevel>): Promise<boolean> {
+    const snapshot = await readFromIndexedDb();
+    if (!snapshot)
         return false;
 
-    const readJson = sessionStorage.getItem(StorageKey);
-    if (!readJson)
-        return false;
+    return applySnapshot(minLevels, snapshot);
+}
 
-    const readMinLevels = new Map(JSON.parse(readJson) as [string, LogLevel][]);
-    if (typeof readMinLevels.size !== 'number')
+function readFromStorage(storage: Storage | null): PersistedLogLevels | null {
+    if (!storage)
+        return null;
+
+    try {
+        const dateJson = storage.getItem(DateStorageKey);
+        const entriesJson = storage.getItem(StorageKey);
+        if (!dateJson || !entriesJson)
+            return null;
+
+        return {
+            date: JSON.parse(dateJson) as number,
+            entries: JSON.parse(entriesJson) as [string, LogLevel][],
+        };
+    } catch {
+        return null;
+    }
+}
+
+function applySnapshot(minLevels: Map<string, LogLevel>, snapshot: PersistedLogLevels): boolean {
+    if (typeof snapshot.date !== 'number')
+        return false;
+    if (Date.now() - snapshot.date > MaxStorageAge)
+        return false;
+    if (!Array.isArray(snapshot.entries))
         return false;
 
     minLevels.clear();
-    readMinLevels.forEach((value, key) => minLevels.set(key, value));
+    for (const entry of snapshot.entries) {
+        // Runtime guard for JSON-parsed input — types claim it's a tuple, but
+        // localStorage may carry corrupted data. eslint flags the length check
+        // as always-false against the static type; that's the point.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (!Array.isArray(entry) || entry.length !== 2)
+            return false;
+        const [key, value] = entry;
+        if (typeof key !== 'string' || typeof value !== 'number')
+            return false;
+        minLevels.set(key, value);
+    }
+
     return true;
 }
 
 function persist(minLevels: Map<string, LogLevel>): boolean {
-    if (!sessionStorage)
-        return false;
+    const snapshot = createSnapshot(minLevels);
+    let wasPersisted = false;
 
-    sessionStorage.setItem(DateStorageKey, JSON.stringify(Date.now()));
-    sessionStorage.setItem(StorageKey, JSON.stringify(Array.from(minLevels.entries())));
-    return true;
+    if (localStorage) {
+        try {
+            localStorage.setItem(DateStorageKey, JSON.stringify(snapshot.date));
+            localStorage.setItem(StorageKey, JSON.stringify(snapshot.entries));
+            wasPersisted = true;
+        } catch {
+            // Storage may be unavailable in private / sandboxed contexts.
+        }
+    }
+
+    void writeToIndexedDb(snapshot);
+    return wasPersisted;
 }
 
-function reset(minLevels: Map<string, LogLevel>): void {
+function createSnapshot(minLevels: Map<string, LogLevel>): PersistedLogLevels {
+    return {
+        date: Date.now(),
+        entries: Array.from(minLevels.entries()),
+    };
+}
+
+function tryGetLocalStorage(): Storage | null {
+    if (typeof globalThis === 'undefined' || !('localStorage' in globalThis))
+        return null;
+
+    try {
+        return (globalThis as unknown as { localStorage: Storage }).localStorage;
+    } catch {
+        return null;
+    }
+}
+
+async function openLoggingDb(): Promise<IDBDatabase | null> {
+    if (typeof indexedDB === 'undefined')
+        return null;
+
+    return new Promise(resolve => {
+        const request = indexedDB.open(IndexedDbName, 1);
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(IndexedDbStore))
+                db.createObjectStore(IndexedDbStore);
+        };
+        request.onerror = () => resolve(null);
+        request.onblocked = () => resolve(null);
+        request.onsuccess = () => resolve(request.result);
+    });
+}
+
+async function readFromIndexedDb(): Promise<PersistedLogLevels | null> {
+    const db = await openLoggingDb();
+    if (!db)
+        return null;
+
+    return new Promise(resolve => {
+        const tx = db.transaction(IndexedDbStore, 'readonly');
+        const request = tx.objectStore(IndexedDbStore).get(IndexedDbKey);
+        request.onerror = () => resolve(null);
+        request.onsuccess = () => resolve(request.result as PersistedLogLevels | null);
+        tx.oncomplete = () => db.close();
+        tx.onerror = () => db.close();
+        tx.onabort = () => db.close();
+    });
+}
+
+async function writeToIndexedDb(snapshot: PersistedLogLevels): Promise<void> {
+    const db = await openLoggingDb();
+    if (!db)
+        return;
+
+    await new Promise<void>(resolve => {
+        const tx = db.transaction(IndexedDbStore, 'readwrite');
+        tx.objectStore(IndexedDbStore).put(snapshot, IndexedDbKey);
+        tx.oncomplete = () => {
+            db.close();
+            resolve();
+        };
+        tx.onerror = () => {
+            db.close();
+            resolve();
+        };
+        tx.onabort = () => {
+            db.close();
+            resolve();
+        };
+    });
+}
+
+function reset(minLevels: Map<string, LogLevel>, mustPersist = true): void {
     minLevels.clear();
     // Add per-scope defaults here for development.
     // Use prefix conventions: 'rpc.', 'fusion.', 'app.', etc.
@@ -213,5 +373,6 @@ function reset(minLevels: Map<string, LogLevel>): void {
     // minLevels.set('rpc.RpcPeer', LogLevel.Debug);
     // minLevels.set('fusion.Computed', LogLevel.Debug);
 
-    persist(minLevels);
+    if (mustPersist)
+        persist(minLevels);
 }

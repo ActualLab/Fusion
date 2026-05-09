@@ -100,6 +100,16 @@ import { IncreasingSeqCompressor } from './increasing-seq-compressor.js';
 import { base64Decode, base64Encode } from './base64.js';
 
 /** WebSocket close code sent by the server when the client's serialization format is unsupported. */
+// Yields to the event loop. Used by the reconnect path to chunk large
+// reconnect-resend / pending-flush bursts so they don't spike main-thread
+// time post-handshake. setTimeout(0) is a macrotask (queueMicrotask would
+// not yield to other tasks); 0 ms still gets bumped to 4 ms by the browser
+// for nested setTimeouts but the slack is fine — we want a yield, not zero
+// latency.
+function yieldToEventLoop(): Promise<void> {
+    return new Promise<void>(resolve => setTimeout(resolve, 0));
+}
+
 export const RPC_CLOSE_CODE_UNSUPPORTED_FORMAT = 4001;
 
 /** Maximum time to wait for the server's handshake response after opening the socket. */
@@ -207,6 +217,7 @@ export abstract class RpcPeer {
     protected _isConnected = false;
     protected _connectionState: RpcConnectionState = RpcConnectionState.Disconnected;
     protected _pendingSends: RpcOutboundCall[] = [];
+    protected _reconnectFlushInProgress = false;
     private _keepAliveTimer: ReturnType<typeof setInterval> | undefined;
     private _keepAliveWatchdog: ReturnType<typeof setTimeout> | undefined;
     /** Wall-clock time of the last inbound `$sys.KeepAlive`, or 0 if none yet
@@ -342,7 +353,7 @@ export abstract class RpcPeer {
             this._connection?.encoder,
             this.hub.registry
         );
-        if (this._isConnected) {
+        if (this._isConnected && !this._reconnectFlushInProgress) {
             this.outboundCalls.register(outboundCall);
             this._sendWireData(outboundCall.serializedWireData);
         } else {
@@ -427,14 +438,29 @@ export abstract class RpcPeer {
     }
 
     /** Send any messages buffered while disconnected. Call after connection + handshake are ready. */
-    protected _flushPendingSends(): void {
+    protected async _flushPendingSends(): Promise<void> {
         if (this._pendingSends.length === 0 || this._connection === undefined)
             return;
-        for (const call of this._pendingSends) {
-            this.outboundCalls.register(call);
-            this._sendWireData(call.serializedWireData);
-        }
-        this._pendingSends.length = 0;
+        // Yield to the event loop every YIELD_BATCH sends. After a long
+        // disconnect there can be 100+ buffered calls; firing them all in a
+        // tight synchronous loop spikes the main thread right after handshake
+        // — visible as a stretch of `Worker.onmessage`/`DOMWebSocket.onmessage`
+        // entries inside one long-animation frame in the Edge freeze report.
+        const YIELD_BATCH = 20;
+        do {
+            const calls = this._pendingSends;
+            this._pendingSends = [];
+            for (let i = 0; i < calls.length; i++) {
+                this.outboundCalls.register(calls[i]);
+                this._sendWireData(calls[i].serializedWireData);
+                if ((i + 1) % YIELD_BATCH === 0 && i + 1 < calls.length)
+                    await yieldToEventLoop();
+            }
+        } while (
+            this._pendingSends.length > 0
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- _connection can change while awaiting yieldToEventLoop().
+            && this._connection !== undefined
+        );
     }
 
     /** Send pre-serialized wire data through the current connection. */
@@ -953,78 +979,93 @@ export class RpcClientPeer extends RpcPeer {
     private async _reconnect(isPeerChanged: boolean, closedSignal?: AbortSignal): Promise<void> {
         if (this._connection === undefined) return;
 
-        // Handle remote and shared objects on reconnect.
-        // On peer change, the remote server is gone — both remote objects
-        // (proxies registered here for server-owned objects) and shared objects
-        // (e.g. RpcStreamSender instances this peer owns and is pushing to the
-        // server) must be disposed: the new server has no corresponding entries,
-        // so they would hang forever waiting for ACKs that never arrive.
-        // Mirrors .NET RpcPeer.Reset (src/ActualLab.Rpc/RpcPeer.cs:430-440).
-        if (isPeerChanged) {
-            this.remoteObjects.disconnectAll();
-            this.sharedObjects.disconnectAll();
-        } else {
-            this.remoteObjects.reconnectAll();
-        }
-
-        // Filter calls by RemoteExecutionMode (same logic as before).
-        const eligible: RpcOutboundCall[] = [];
-        for (const call of [...this.outboundCalls.values()]) {
-            const mode = call.remoteExecutionMode;
-            if (!(mode & 2)) {
-                if (!call.result.isCompleted)
-                    call.result.reject(new Error(
-                        'Outbound call failed: disconnected and AllowReconnect is not set.'));
-                call.onDisconnect();
-                this.outboundCalls.remove(call.callId);
-                continue;
+        this._reconnectFlushInProgress = true;
+        try {
+            // Handle remote and shared objects on reconnect.
+            // On peer change, the remote server is gone — both remote objects
+            // (proxies registered here for server-owned objects) and shared objects
+            // (e.g. RpcStreamSender instances this peer owns and is pushing to the
+            // server) must be disposed: the new server has no corresponding entries,
+            // so they would hang forever waiting for ACKs that never arrive.
+            // Mirrors .NET RpcPeer.Reset (src/ActualLab.Rpc/RpcPeer.cs:430-440).
+            if (isPeerChanged) {
+                this.remoteObjects.disconnectAll();
+                this.sharedObjects.disconnectAll();
+            } else {
+                this.remoteObjects.reconnectAll();
             }
-            if (isPeerChanged && !(mode & 4)) {
-                if (!call.result.isCompleted)
-                    call.result.reject(new Error(
-                        'Outbound call failed: reconnected to a different peer and AllowResend is not set.'));
-                call.onDisconnect();
-                this.outboundCalls.remove(call.callId);
-                continue;
-            }
-            eligible.push(call);
-        }
 
-        // Reconcile with the server on same-peer reconnects. On peer change
-        // we skip the round-trip (the new peer knows nothing) and blind-resend.
-        //
-        // Wire format: the `completedStages` dict uses plain JS-object shape
-        // with string keys and base64-encoded `Uint8Array` values. This is
-        // JSON-compatible with .NET's `System.Text.Json` serialization of
-        // `Dictionary<int, byte[]>` and also works for TS-to-TS msgpack
-        // (serializes as map<str, str>). Full .NET-msgpack interop for
-        // $sys.Reconnect — which uses `map<int, bin>` — is a future
-        // enhancement; the JSON path covers ActualChat's primary use case.
-        let unknownIds: Set<number> | null = null;
-        if (!isPeerChanged && eligible.length > 0) {
-            unknownIds = await this._reconcileReconnect(eligible, closedSignal);
-        }
-
-        for (const call of eligible) {
-            if (!call.removeOnOk && call.result.isCompleted) {
-                // Stage-3 compute call: always self-invalidate to force a
-                // fresh recompute — TS has no cross-reconnect compute-state
-                // tracking (unlike .NET's Reliable reconnection).
-                call.onDisconnect();
-                this.outboundCalls.remove(call.callId);
-                continue;
+            // Filter calls by RemoteExecutionMode (same logic as before).
+            const eligible: RpcOutboundCall[] = [];
+            for (const call of [...this.outboundCalls.values()]) {
+                const mode = call.remoteExecutionMode;
+                if (!(mode & 2)) {
+                    if (!call.result.isCompleted)
+                        call.result.reject(new Error(
+                            'Outbound call failed: disconnected and AllowReconnect is not set.'));
+                    call.onDisconnect();
+                    this.outboundCalls.remove(call.callId);
+                    continue;
+                }
+                if (isPeerChanged && !(mode & 4)) {
+                    if (!call.result.isCompleted)
+                        call.result.reject(new Error(
+                            'Outbound call failed: reconnected to a different peer and AllowResend is not set.'));
+                    call.onDisconnect();
+                    this.outboundCalls.remove(call.callId);
+                    continue;
+                }
+                eligible.push(call);
             }
-            if (unknownIds !== null && !unknownIds.has(call.callId)) {
-                // Server reports this call is still in flight on its side —
-                // skip the resend. The pending result promise continues to
-                // await the original call's $sys.Ok.
-                continue;
-            }
-            this._sendWireData(call.serializedWireData);
-        }
 
-        // Flush calls buffered while disconnected
-        this._flushPendingSends();
+            // Reconcile with the server on same-peer reconnects. On peer change
+            // we skip the round-trip (the new peer knows nothing) and blind-resend.
+            //
+            // Wire format: the `completedStages` dict uses plain JS-object shape
+            // with string keys and base64-encoded `Uint8Array` values. This is
+            // JSON-compatible with .NET's `System.Text.Json` serialization of
+            // `Dictionary<int, byte[]>` and also works for TS-to-TS msgpack
+            // (serializes as map<str, str>). Full .NET-msgpack interop for
+            // $sys.Reconnect — which uses `map<int, bin>` — is a future
+            // enhancement; the JSON path covers ActualChat's primary use case.
+            let unknownIds: Set<number> | null = null;
+            if (!isPeerChanged && eligible.length > 0) {
+                unknownIds = await this._reconcileReconnect(eligible, closedSignal);
+            }
+
+            // Yield-batched resend — see _flushPendingSends comment. Eligible can
+            // be hundreds after a long disconnect; this prevents a sync spike.
+            const YIELD_BATCH = 20;
+            let resentSinceYield = 0;
+            for (const call of eligible) {
+                if (!call.removeOnOk && call.result.isCompleted) {
+                    // Stage-3 compute call: always self-invalidate to force a
+                    // fresh recompute — TS has no cross-reconnect compute-state
+                    // tracking (unlike .NET's Reliable reconnection).
+                    call.onDisconnect();
+                    this.outboundCalls.remove(call.callId);
+                    continue;
+                }
+                if (unknownIds !== null && !unknownIds.has(call.callId)) {
+                    // Server reports this call is still in flight on its side —
+                    // skip the resend. The pending result promise continues to
+                    // await the original call's $sys.Ok.
+                    continue;
+                }
+                this._sendWireData(call.serializedWireData);
+                resentSinceYield++;
+                if (resentSinceYield >= YIELD_BATCH) {
+                    resentSinceYield = 0;
+                    await yieldToEventLoop();
+                }
+            }
+
+            // Flush calls buffered while disconnected, including calls queued
+            // during the yield-batched resend above.
+            await this._flushPendingSends();
+        } finally {
+            this._reconnectFlushInProgress = false;
+        }
     }
 
     /**

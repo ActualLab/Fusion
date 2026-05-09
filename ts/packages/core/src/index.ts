@@ -7,7 +7,7 @@ export { DisposableBag } from './disposable.js';
 // Logging
 export type { LogRef, LogScopeFns } from './logging.js';
 export { Log, LogLevel, createLogProvider } from './logging.js';
-export { initLogging, LogLevelController } from './logging-init.js';
+export { initLogging, initWorkerLogging, LogLevelController } from './logging-init.js';
 
 // Result & IResult
 export type { IResult } from './result.js';

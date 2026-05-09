@@ -96,7 +96,7 @@ describe('RpcStreamSender abort signal', () => {
     });
 
     it('should unblock _waitForAckBudget on disconnect', async () => {
-        // Create sender with very small bufferSize so it hits the ceiling quickly
+        // Create sender with very small ackAdvance so it hits the ceiling quickly
         const sender = new RpcStreamSender<number>(serverPeer, 2, 2);
         serverPeer.sharedObjects.register(sender);
         const ref = parseStreamRef(sender.toRef())!;
@@ -108,7 +108,7 @@ describe('RpcStreamSender abort signal', () => {
 
         // eslint-disable-next-line @typescript-eslint/require-await
         async function* source() {
-            // Yield enough items to exceed bufferSize
+            // Yield enough items to exceed ackAdvance
             for (let i = 0; i < 100; i++) {
                 yield i;
             }

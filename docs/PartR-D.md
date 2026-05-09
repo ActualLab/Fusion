@@ -74,4 +74,5 @@ Diagrams for the RPC concepts introduced in [Part 2](PartR.md).
 | Property | Default | Description |
 |----------|---------|-------------|
 | `AckPeriod` | 30 | Consumer acks every N items |
-| `BufferSize` | 61 | Producer can buffer N items ahead before waiting |
+| `AckAdvance` | 61 | Wire window: producer may have N items in flight past the last ACK |
+| `BufferSize` | 0 | Local-only sender ring buffer hint (`0` = inherit `AckAdvance`); set larger to pre-buffer past the in-flight window |

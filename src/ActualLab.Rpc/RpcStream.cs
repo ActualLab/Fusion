@@ -30,13 +30,13 @@ public abstract class RpcStream : IRpcObject
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public int AckPeriod { get; init; } = 30;
-    [DataMember(Order = 1), MemoryPackOrder(1), Key("BufferSize")]
-    public int BufferSize { get; init; } = 61;
+    [DataMember(Order = 1), MemoryPackOrder(1), Key("AckAdvance")]
+    public int AckAdvance { get; init; } = 61;
     [DataMember(Order = 3), MemoryPackOrder(3)]
     public bool AllowReconnect { get; init; } = true;
     [DataMember(Order = 4), MemoryPackOrder(4)]
     public bool IsRealTime { get; init; }
-    // See BatchSize below as well
+    // See BufferSize and BatchSize below as well
 
     // Non-serialized members
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
@@ -48,6 +48,8 @@ public abstract class RpcStream : IRpcObject
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public abstract RpcObjectKind Kind { get; }
 
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    public int BufferSize { get; init; }
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 64;
 
@@ -201,7 +203,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         formatter.Append(id.HostId.ToString());
         formatter.Append(id.LocalId.ToString(CultureInfo.InvariantCulture));
         formatter.Append(stream.AckPeriod.ToString(CultureInfo.InvariantCulture));
-        formatter.Append(stream.BufferSize.ToString(CultureInfo.InvariantCulture));
+        formatter.Append(stream.AckAdvance.ToString(CultureInfo.InvariantCulture));
         formatter.Append(stream.AllowReconnect ? "1" : "0");
         formatter.Append(stream.IsRealTime ? "1" : "0");
         formatter.AppendEnd();
@@ -222,13 +224,13 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         parser.ParseNext();
         var ackPeriod = int.Parse(parser.Item, CultureInfo.InvariantCulture);
         parser.ParseNext();
-        var bufferSize = int.Parse(parser.Item, CultureInfo.InvariantCulture);
+        var ackAdvance = int.Parse(parser.Item, CultureInfo.InvariantCulture);
         var allowReconnect = !parser.TryParseNext() || !parser.Item.Equals("0", StringComparison.Ordinal);
         var isRealTime = parser.TryParseNext() && parser.Item.Equals("1", StringComparison.Ordinal);
         return new RpcStream<T>() {
             SerializedId = id,
             AckPeriod = ackPeriod,
-            BufferSize = bufferSize,
+            AckAdvance = ackAdvance,
             AllowReconnect = allowReconnect,
             IsRealTime = isRealTime,
         };

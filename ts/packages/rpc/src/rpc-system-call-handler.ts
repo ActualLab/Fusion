@@ -176,34 +176,29 @@ export class RpcSystemCallHandler {
             sender?.onAckEnd(args[0] as string);
             break;
         }
-        default: {
-            if (
-                method === '$sys.Disconnect' ||
-                    method?.startsWith('$sys.Disconnect')
-            ) {
-                // Server is telling us the listed remote object IDs have been torn down
-                // on its side (e.g. shared stream closed).  Propagate disconnect() to the
-                // matching remote objects so any pending consumers (for-await loops) exit
-                // cleanly instead of hanging.
-                const ids = args[0] as number[] | undefined;
-                if (Array.isArray(ids)) {
-                    for (const id of ids) {
-                        const remoteObj = peer.remoteObjects.get(id);
-                        if (
-                            remoteObj &&
-                                typeof remoteObj.disconnect === 'function'
-                        ) {
-                            remoteObj.disconnect();
-                        }
-                        // Also check shared objects — server may disconnect a client-to-server
-                        // stream sender (e.g. audio stream) after pod restart or timeout.
-                        const sharedObj = peer.sharedObjects.get(id);
-                        if (
-                            sharedObj &&
-                                typeof sharedObj.disconnect === 'function'
-                        ) {
-                            sharedObj.disconnect();
-                        }
+        case RpcSystemCalls.disconnect: {
+            // Server is telling us the listed remote object IDs have been torn down
+            // on its side (e.g. shared stream closed).  Propagate disconnect() to the
+            // matching remote objects so any pending consumers (for-await loops) exit
+            // cleanly instead of hanging.
+            const ids = args[0] as number[] | undefined;
+            if (Array.isArray(ids)) {
+                for (const id of ids) {
+                    const remoteObj = peer.remoteObjects.get(id);
+                    if (
+                        remoteObj &&
+                            typeof remoteObj.disconnect === 'function'
+                    ) {
+                        remoteObj.disconnect();
+                    }
+                    // Also check shared objects — server may disconnect a client-to-server
+                    // stream sender (e.g. audio stream) after pod restart or timeout.
+                    const sharedObj = peer.sharedObjects.get(id);
+                    if (
+                        sharedObj &&
+                            typeof sharedObj.disconnect === 'function'
+                    ) {
+                        sharedObj.disconnect();
                     }
                 }
             }

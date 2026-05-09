@@ -30,7 +30,7 @@ export type RpcLogScope =
 // Per-scope defaults.  All Warn — output goes to the browser console, so the
 // out-of-the-box experience must be quiet.  Users opt in to Info-level
 // connectivity tracing manually:
-//   logLevels.overrideAll('rpc.', LogLevel.Info)
+//   logLevels.override('rpc.*', LogLevel.Info)
 // or for a single scope:
 //   logLevels.override('rpc.RpcPeer', LogLevel.Info)
 const scopeDefaults: Record<RpcLogScope, LogLevel> = {

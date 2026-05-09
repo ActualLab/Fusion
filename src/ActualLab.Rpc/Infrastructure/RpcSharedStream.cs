@@ -56,6 +56,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             SingleWriter = true,
         });
     private readonly Batcher _batcher;
+    private readonly int _bufferSize;
 
     public new RpcStream<T> Stream { get; }
 
@@ -64,6 +65,14 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         Stream = (RpcStream<T>)stream;
         _systemCallSender = stream.Peer!.Hub.SystemCallSender;
         _batcher = new(this);
+
+        var ackAdvance = Stream.AckAdvance;
+        var requested = Stream.BufferSize;
+        _bufferSize = requested >= ackAdvance ? requested : ackAdvance;
+        if (requested != 0 && requested < ackAdvance)
+            Log.LogWarning(
+                "RpcStream BufferSize ({BufferSize}) is below AckAdvance ({AckAdvance}); using AckAdvance as buffer size",
+                requested, ackAdvance);
     }
 
     public override void OnAck(long nextIndex, Guid hostId)
@@ -112,7 +121,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         var canSkipTo = isRealTime ? Stream.CanSkipTo : null;
         var isFullyBuffered = false;
         var ackReader = _acks.Reader;
-        var buffer = new RingBuffer<Result<T>>(Stream.BufferSize + 1);
+        var buffer = new RingBuffer<Result<T>>(_bufferSize + 1);
         var bufferStart = 0L;
         var index = 0L;
         var whenAckReady = ackReader.WaitToReadAsync(cancellationToken).AsTask();
@@ -196,7 +205,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
             var bufferIndex = (int)(index - bufferStart);
 
             // 3. Send as much as we can
-            var maxIndex = ack.NextIndex + Stream.BufferSize;
+            var maxIndex = ack.NextIndex + Stream.AckAdvance;
             while (index < maxIndex) {
                 Result<T> item;
 

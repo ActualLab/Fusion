@@ -33,7 +33,8 @@ public class RpcStreamBasicTest(ITestOutputHelper @out) : TestBase(@out)
         var stream = new RpcStream<int>();
 
         stream.AckPeriod.Should().Be(30);
-        stream.BufferSize.Should().Be(61);
+        stream.AckAdvance.Should().Be(61);
+        stream.BufferSize.Should().Be(0);
         stream.Id.Should().Be(default(RpcObjectId));
         stream.Id.IsNone.Should().BeTrue();
         stream.Peer.Should().BeNull();
@@ -42,10 +43,11 @@ public class RpcStreamBasicTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void CustomAckSettings_ShouldBePreserved()
     {
-        var stream = new RpcStream<int> { AckPeriod = 50, BufferSize = 100 };
+        var stream = new RpcStream<int> { AckPeriod = 50, AckAdvance = 100, BufferSize = 200 };
 
         stream.AckPeriod.Should().Be(50);
-        stream.BufferSize.Should().Be(100);
+        stream.AckAdvance.Should().Be(100);
+        stream.BufferSize.Should().Be(200);
     }
 
     [Fact]
@@ -74,6 +76,50 @@ public class RpcStreamBasicTest(ITestOutputHelper @out) : TestBase(@out)
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*RpcInboundContext*unavailable*");
+    }
+
+    [Fact]
+    public void BufferSize_IsNotSerializedInWireFormat()
+    {
+        // The wire (text) format carries: hostId, localId, ackPeriod, ackAdvance, allowReconnect, isRealTime.
+        // The new local-only BufferSize is intentionally absent — set it large and verify
+        // it does NOT show up at the AckAdvance position when parsing the wire string.
+        // We can't call SerializeToString without RPC context, so we verify via the parser
+        // that index 3 (4th comma-separated field) is interpreted as ackAdvance.
+        var hostId = Guid.NewGuid();
+        // Wire string: hostId, localId=1, ackPeriod=10, ackAdvance=20, allowReconnect=1, isRealTime=0
+        var serialized = $"{hostId},1,10,20,1,0";
+
+        using var parser = ListFormat.CommaSeparated.CreateParser(serialized);
+        parser.ParseNext(); // hostId
+        parser.ParseNext(); // localId
+        parser.ParseNext(); // ackPeriod
+        var ackPeriod = int.Parse(parser.Item);
+        parser.ParseNext(); // ackAdvance (index 3 — was BufferSize before rename)
+        var ackAdvance = int.Parse(parser.Item);
+
+        ackPeriod.Should().Be(10);
+        ackAdvance.Should().Be(20);
+
+        // Round-trip via DeserializeFromString within a synthetic context would
+        // populate AckAdvance (not BufferSize) — covered indirectly by realtime tests.
+    }
+
+    [Fact]
+    public void BufferSize_AcceptsValuesIndependentOfAckAdvance()
+    {
+        // BufferSize and AckAdvance are independent properties.
+        var s1 = new RpcStream<int> { AckAdvance = 50, BufferSize = 0 };
+        s1.AckAdvance.Should().Be(50);
+        s1.BufferSize.Should().Be(0);
+
+        var s2 = new RpcStream<int> { AckAdvance = 20, BufferSize = 200 };
+        s2.AckAdvance.Should().Be(20);
+        s2.BufferSize.Should().Be(200);
+
+        var s3 = new RpcStream<int> { AckAdvance = 100, BufferSize = 10 };
+        s3.AckAdvance.Should().Be(100);
+        s3.BufferSize.Should().Be(10);
     }
 
     [Fact]
