@@ -111,12 +111,9 @@ ENV PATH=/home/claude/.local/bin:$PATH:/usr/local/share/npm-global/bin
 # Pre-download Playwright Chromium browser (~280MB, speeds up first use)
 RUN playwright install chromium
 
-# Install Chrome DevTools MCP server (for browser automation debugging)
-RUN npm install -g chrome-devtools-mcp
-
 # Install Claude Code CLI (native installer, auto-update disabled at runtime)
 ENV DISABLE_AUTOUPDATER=1
-RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.112
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.131
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj

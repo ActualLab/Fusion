@@ -1,5 +1,22 @@
 Before starting any task, read AGENTS.md files in every directory starting from the current one and above, up to the root one (project directory).
 
+**YOU MUST READ [docs/CODING_STYLE.md](docs/CODING_STYLE.md) before writing or
+modifying any C# or TypeScript code.** It's not optional. This project
+**deviates from standard .NET conventions** on several points (notably:
+no `Async` suffix on async methods; no XML docs on members; mixed brace
+style). Default instincts from elsewhere will produce code that gets
+rejected. If you haven't opened that file yet in this session, stop and
+read it now.
+
+**You MUST NOT write a single comment, docstring, or XML doc** — in C#, in
+TypeScript, anywhere — without first reading
+[docs/CODING_STYLE.md → "Regular comments, docstrings, XML documentation
+comments"](docs/CODING_STYLE.md#regular-comments-docstrings-xml-documentation-comments).
+You have a strong tendency to over-comment and to restate what the code
+already says; that section explains exactly when a comment is justified and
+when it isn't. Re-read it any time you're tempted to add a `//`, `///`, or
+JSDoc block.
+
 `pwsh` (cross-platform PowerShell) command is available on any OS you run, so use it.
 
 # Claude Launcher (c.ps1)
@@ -51,17 +68,9 @@ When running in Docker (`AC_OS` = `Linux in Docker`), the following tools are av
 
 Build artifacts are stored in `artifacts/claude-docker/` to avoid permission conflicts with the host.
 
-**Infrastructure services**: When running in Docker, assume that all services defined in `docker-compose.yml` (PostgreSQL, Redis, NATS, nginx, etc.) are already running on the host. Do not attempt to start them yourself - they are managed externally and accessible from the container.
-
 **Host service connectivity**: The Docker container uses `--network host` mode, so `localhost` inside the container directly refers to the host. This means you can connect to host services (Redis, PostgreSQL, NATS, etc.) using `localhost:port` just like on the host. On macOS, `--network host` requires Docker Desktop 4.34+ (Sept 2024).
 
 **macOS / Apple Silicon**: The Docker image supports both amd64 and arm64 architectures. `c.cmd` is a polyglot script that works on both Windows and macOS/Linux.
-
-**Running integration tests**: Tests detect Claude's Docker environment via `AC_OS="Linux in Docker"` and use regular localhost-based configuration (not `testsettings.docker.json`). This works because `--network host` makes localhost = host.
-
-**Running the server (Docker watch mode)**: The host runs `./run-watch.cmd` — it auto-rebuilds and restarts the server when you change files. After editing code, poll `tmp/watch-dotnet.log` until you see `Now listening on:` (ready) or `error` (fix and wait again). Do not use `/server-start` or `/server-restart` — the watch process owns the server. Frontend build output: `tmp/watch-web.log`.
-
-**Running the server (direct)**: Use `/server-start`, `/server-restart`, `/server-stop`. Use `--watch` flag for auto-reload.
 
 **Propagated environment variables**: The following environment variables are automatically propagated from the host to the Docker container:
 - Variables containing `__` in their names (e.g., `ChatSettings__OpenAIApiKey` for .NET configuration)
@@ -82,7 +91,7 @@ Build artifacts are stored in `artifacts/claude-docker/` to avoid permission con
 
 The user starts Chrome with remote debugging via `c chrome` command (port 9222). On Windows, this also creates a firewall rule to allow connections from WSL/Docker.
 
-**chrome-devtools MCP (preferred)**: If the `chrome-devtools` MCP server is available (configured in `.mcp.json`), prefer using it over Playwright for browser inspection, debugging, and interaction. It provides direct access to Chrome DevTools capabilities — taking screenshots/snapshots, clicking elements, filling forms, evaluating scripts, reading console messages, and more. The MCP server connects to host Chrome automatically via `tools/chrome-devtools-mcp-wrapper`.
+**chrome-devtools MCP (preferred over Playwright)**: Up to three `chrome-devtools` MCP servers may be wired up on ports `8765`–`8767`, each bound to its own host Chrome. When they're available (look for `mcp__chrome-devtools-{1,2,3}__*` tools), prefer them over Playwright — and pair them with the `/debug-ui` and `/server-loop` skills if those are available too. Both skills describe the rest.
 
 **Playwright**: Playwright and Chromium are also pre-installed in the Docker image. Use Playwright when you need to write automated test scripts or when the chrome-devtools MCP is not available. When the user asks you to "use host Chrome", connect Playwright to Chrome on the host:
 
@@ -132,35 +141,61 @@ c wt feature1    # Creates ActualLab.Fusion-feature1 if it doesn't exist and run
 
 The worktree is created using `git worktree add` from the main project directory.
 
-# Type Catalog
+# Type Catalog — Reuse Existing Abstractions (CRITICAL)
 
-Use `docs/api-index.md` to discover existing abstractions before writing new code. It lists key public types across all non-test projects, organized by project. For the complete list, see `docs/api-index-full.md`.
+This codebase is large and mature. **Reusing what already exists is far more
+important than writing something new.** A new helper that duplicates an
+existing one is a defect, not a feature: it splinters the codebase, drifts
+out of sync, and makes future changes harder. **Always look first.**
 
-# Architecture Docs
+**Indexes** (read these before writing or planning new code):
+- [`docs/api-index.md`](docs/api-index.md) — condensed, curated overview of
+  the most important .NET types, organized by project.
+- [`docs/api-index-full.md`](docs/api-index-full.md) — complete .NET type list.
+- [`docs/api-index-ts.md`](docs/api-index-ts.md) — TypeScript exports across
+  `src/nodejs/` and `src/dotnet/UI.Blazor*/`.
 
-Consult `docs/architecture/video-system.md` for the video system design — covers video streaming, recording, playback, and server/client components.
+## Planning rule (mandatory)
+
+**Every implementation plan MUST include a "Reuse" section** with two parts:
+
+1. **Existing abstractions to reuse.** Research first. List the concrete
+   types/functions you intend to call from the indexes above (or from the
+   sibling `ActualLab.Fusion` project). If you cannot find a fit, say so
+   explicitly — silence is not acceptable.
+
+2. **Reusability of new components.** For every new component the plan
+   introduces, ask: *is this likely useful elsewhere?* If yes, the plan
+   **must list an option to put it in a shared project** instead of the
+   feature-specific one:
+   - **C#**: `ActualChat.Core` (no server/UI deps) or
+     `ActualChat.Core.Server` (server-side, no UI deps).
+   - **TypeScript**: `src/nodejs/src/` (under `actuallab-core`,
+     `actuallab-rpc`, or a shared subfolder), not buried inside a single
+     component's folder.
+
+   The plan should compare the local-vs-shared placement and recommend
+   one. Default to shared when in doubt — promoting later is harder than
+   placing correctly the first time.
+
+If the work is small enough that you skip a written plan, you still owe
+yourself the "look first" step: search the indexes for keywords related
+to what you're about to write.
 
 # Building
 
-If a `*.CI.slnf` (solution filter) file exists in the project root, use it instead of the main `*.sln` file for building. The CI solution filter excludes projects that require additional workloads (like MAUI) that may not be installed in your environment.
+If a `*.CI.slnf` (solution filter) file exists in the project root, use it
+instead of the main `*.sln` file for building. The CI solution filter
+excludes projects that require additional workloads (like MAUI) that may
+not be installed in your environment.
 
 ```bash
-# Preferred - uses CI solution filter (excludes MAUI projects)
-dotnet build ActualChat.CI.slnf
+# Preferred — uses CI solution filter (excludes workload-heavy projects)
+dotnet build <Project>.CI.slnf
 
 # Only if you have all workloads installed (including maui-android, etc.)
-dotnet build ActualChat.sln
+dotnet build <Project>.sln
 ```
-
-## TypeScript Validation
-
-When modifying TypeScript files under `src/nodejs/` or `src/dotnet/UI.Blazor.App/`, always validate changes by running:
-
-```bash
-npm run build:Verify
-```
-
-This runs `tsc --noEmit`, `eslint`, and the debug build. It catches unused variables, type errors, and lint violations that `tsc --noEmit` alone may miss.
 
 # Testing
 
@@ -208,3 +243,40 @@ If you're missing information in test logs:
 
 If AC_OS environment variable is defined, you're started with Claude Launcher (c.ps1),
 so your actual OS is specified in this environment variable.
+
+# ActualChat-specific
+
+**Everything below applies only to projects in the ActualChat family** —
+folder paths matching `/proj/ActualChat*` or any project folder with
+`ActualChat` in its name (e.g. `ActualChat`, `ActualChat-C1`,
+`ActualChat-C2`, `ActualChat-e2ee`). **Skip this section entirely** if
+you're working in a different project (e.g. `ActualLab.Fusion`,
+`ActualLab.Fusion.Samples`, `MauiNativeAotApp`).
+
+## Architecture Docs
+
+Consult `docs/live-video/` for the live-video pipeline (capture, encoding,
+simulcast, RPC fan-out, playback, quality control, A/V sync) and
+`docs/live-audio/` for the live-audio pipeline (mic capture, VAD, Opus,
+publish/persist/transcribe, fan-out, replay, playback). Both are written
+from current source.
+
+## TypeScript Validation
+
+When modifying TypeScript files under `src/nodejs/` or `src/dotnet/UI.Blazor.App/`, always validate changes by running:
+
+```bash
+npm run build:Verify
+```
+
+This runs `tsc --noEmit`, `eslint`, and the debug build. It catches unused variables, type errors, and lint violations that `tsc --noEmit` alone may miss.
+
+## Infrastructure services and the running server
+
+**Infrastructure services**: When running in Docker, assume that all services defined in `docker-compose.yml` (PostgreSQL, Redis, NATS, nginx, etc.) are already running on the host. Do not attempt to start them yourself - they are managed externally and accessible from the container.
+
+**Running integration tests**: Tests detect Claude's Docker environment via `AC_OS="Linux in Docker"` and use regular localhost-based configuration (not `testsettings.docker.json`). This works because `--network host` makes localhost = host.
+
+**Running the server (Docker watch mode)**: The host runs `./run-watch.cmd` — it auto-rebuilds and restarts the server when you change files. After editing code, poll `tmp/watch-dotnet.log` until you see `Now listening on:` (ready) or `error` (fix and wait again). Do not use `/server-start` or `/server-restart` — the watch process owns the server. Frontend build output: `tmp/watch-web.log`.
+
+**Running the server (direct)**: Use `/server-start`, `/server-restart`, `/server-stop`. Use `--watch` flag for auto-reload.

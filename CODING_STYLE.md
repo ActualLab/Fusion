@@ -17,6 +17,113 @@ This document describes the coding conventions used in ActualLab.Fusion project 
   - etc.
 - When in Doubt, examine existing code in the same area and match its style.
 
+## Regular comments, docstrings, XML documentation comments
+
+This section applies to **C# and TypeScript** equally. Claude has a strong
+tendency to over-comment; read this section before writing a single comment,
+docstring, or XML doc. The rules here are deliberately strict.
+
+### Philosophy — when to write a comment at all
+
+**Default to no comments.** Code is the single source of truth. Names, types,
+and structure should carry the meaning; a comment that merely restates what
+the code already says doesn't add information — it doubles the reading load
+and goes stale the moment the code changes underneath it. Stale comments are
+worse than missing ones, because both Claude and human readers may trust them
+over the code.
+
+**Write a comment only when something is not straightforward** to a reasonably
+experienced developer reading at normal pace (assume "senior, but not
+extremely senior" — competent but skimming, not studying). The mental test:
+imagine that reader going through the file fast. If the comment wastes their
+time because what follows is obvious, drop it. If it saves them time
+understanding a non-obvious invariant, constraint, workaround, or subtlety
+they'd likely miss on a quick read, keep it. A comment roughly doubles the
+text the reader processes for that spot — it has to earn that cost.
+
+**Don't document members by default.** Typically document the *class* (or
+module/file in TypeScript) when its purpose isn't obvious from the name. For
+an individual member, add a note only when its behavior is unusual: a hidden
+side effect, a non-obvious precondition, surprising return semantics, a
+workaround for a specific bug. If you find yourself writing a page of docs on
+a single method, the method is wrong — rename it, split it, or rework its
+parameters until the signature carries the meaning.
+
+**For methods specifically:** the method name plus parameter names should
+explain what it does. Reach for a comment only when they can't, and only for
+the part the signature doesn't already carry.
+
+### Types (class, struct, record, interface, enum, delegate, including nested)
+
+- DO write a `/// <summary>` XML doc when the type's purpose isn't obvious
+  from its name.
+- Keep it short: **5 lines maximum, 3 lines ideal.** If a type doc keeps
+  growing, split the type — don't keep writing.
+- Use `<see cref="..."/>` for cross-references.
+
+### Members (methods, properties, fields, events)
+
+- **Do NOT write `/// <summary>` XML docs on members.** Ever. This is stricter
+  than the default .NET guidance. `///` on members bloats IntelliSense with
+  prose that ages faster than the signature.
+- If a member genuinely needs explanation (per the philosophy above), use a
+  regular `//` comment.
+  - **C#**: put the comment at the **top of the method body** (inside the
+    braces).
+  - **TypeScript**: put the comment **above the method declaration**.
+- If the name already explains what the method does, **omit the comment** —
+  don't restate the signature in English.
+- Keep comments short: a single line is almost always enough. Prefer a useful
+  one-liner over a paragraph.
+
+### Placement order for a type (top to bottom)
+
+1. Regular `//` comment (optional, extra context not suitable for API docs)
+2. Empty line (if regular comment is present)
+3. `/// <summary>` XML documentation
+4. `#pragma` directives (if any)
+5. Attributes
+6. Type declaration
+
+Example — type doc:
+```csharp
+// This type is used as an extra parameter of constructors to indicate newly generated Id required
+
+/// <summary>
+/// A unit-type constructor parameter indicating that a new identifier should be generated.
+/// </summary>
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public readonly struct Generate : IEquatable<Generate>
+```
+
+Example — type doc with `<see cref="..."/>`:
+```csharp
+/// <summary>
+/// A thread-safe object pool backed by a <see cref="ConcurrentQueue{T}"/>
+/// and a <see cref="StochasticCounter"/> for approximate size tracking.
+/// </summary>
+public class ConcurrentPool<T> : IPool<T>
+```
+
+Example — C# method comment (inside the body):
+```csharp
+public Task<bool> SwitchFacing(CancellationToken cancellationToken)
+{
+    // Clears _deviceId so the next state-sync SwitchCamera (which may carry
+    // a stale deviceId from LocalAppSettings) doesn't no-op.
+    _deviceId = "";
+    return _jsRef.InvokeAsync<bool>("switchFacing", cancellationToken).AsTask();
+}
+```
+
+Example — TypeScript method comment (above the declaration):
+```ts
+// Flips front/back by facingMode so the browser picks the primary lens per facing.
+public async switchFacing(): Promise<boolean> {
+    ...
+}
+```
+
 ## Key Differences from Default .NET Conventions
 
 
@@ -43,13 +150,6 @@ This document describes the coding conventions used in ActualLab.Fusion project 
 - Maximum attribute length for the same line: **70 characters** (more restrictive than default)
 - Place field attributes on separate lines
 - Place accessor holder attributes on separate lines (unless the owner is single-line).
-
-#### Comments and XML Documentation:
-- **DO write `/// <summary>` XML documentation comments for every type** (class, struct, record, interface, enum, delegate), including nested types
-- Keep XML summaries short: 1-2 lines describing the type's purpose
-- Use `<see cref="..."/>` to reference related types
-- Prefer regular comments over XML documentation for members (methods, properties, fields)
-- When XML documentation exists on members, maintain its style and completeness.
 
 #### Multi-targeting
 - Follow the project's multi-targeting patterns with conditional compilation.
