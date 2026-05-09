@@ -70,7 +70,7 @@ describe('$sys.Disconnect handling', () => {
         clientPeer.remoteObjects.register(obj1);
         clientPeer.remoteObjects.register(obj2);
 
-        const message: RpcMessage = { Method: '$sys.Disconnect' };
+        const message: RpcMessage = { Method: '$sys.Disconnect:1' };
         handler.handle(message, [[101, 102]], clientPeer);
 
         expect(obj1.disconnected).toBe(true);
@@ -81,7 +81,7 @@ describe('$sys.Disconnect handling', () => {
         const obj = new MockRpcObject(201, RpcObjectKind.Local);
         clientPeer.sharedObjects.register(obj);
 
-        const message: RpcMessage = { Method: '$sys.Disconnect' };
+        const message: RpcMessage = { Method: '$sys.Disconnect:1' };
         handler.handle(message, [[201]], clientPeer);
 
         expect(obj.disconnected).toBe(true);
@@ -93,7 +93,7 @@ describe('$sys.Disconnect handling', () => {
         clientPeer.remoteObjects.register(remoteObj);
         clientPeer.sharedObjects.register(sharedObj);
 
-        const message: RpcMessage = { Method: '$sys.Disconnect' };
+        const message: RpcMessage = { Method: '$sys.Disconnect:1' };
         handler.handle(message, [[301]], clientPeer);
 
         expect(remoteObj.disconnected).toBe(true);
@@ -101,7 +101,7 @@ describe('$sys.Disconnect handling', () => {
     });
 
     it('should not error when object ids do not match any registered object', () => {
-        const message: RpcMessage = { Method: '$sys.Disconnect' };
+        const message: RpcMessage = { Method: '$sys.Disconnect:1' };
         // Should not throw
         handler.handle(message, [[999, 888]], clientPeer);
     });
@@ -112,7 +112,7 @@ describe('$sys.Disconnect handling', () => {
         clientPeer.remoteObjects.register(obj1);
         clientPeer.remoteObjects.register(obj2);
 
-        const message: RpcMessage = { Method: '$sys.Disconnect' };
+        const message: RpcMessage = { Method: '$sys.Disconnect:1' };
         handler.handle(message, [[401]], clientPeer);
 
         expect(obj1.disconnected).toBe(true);
@@ -123,19 +123,10 @@ describe('$sys.Disconnect handling', () => {
         const obj = new MockRpcObject(501, RpcObjectKind.Remote);
         clientPeer.remoteObjects.register(obj);
 
-        const message: RpcMessage = { Method: '$sys.Disconnect' };
+        const message: RpcMessage = { Method: '$sys.Disconnect:1' };
         handler.handle(message, [[]], clientPeer);
 
         expect(obj.disconnected).toBe(false);
     });
 
-    it('should handle $sys.Disconnect with suffix', () => {
-        const obj = new MockRpcObject(601, RpcObjectKind.Remote);
-        clientPeer.remoteObjects.register(obj);
-
-        const message: RpcMessage = { Method: '$sys.Disconnect:1' };
-        handler.handle(message, [[601]], clientPeer);
-
-        expect(obj.disconnected).toBe(true);
-    });
 });

@@ -74,6 +74,7 @@ describe('Log', () => {
         // The controller exposes the public methods used from the dev console
         expect(typeof (ctrl as { override: unknown }).override).toBe('function');
         expect(typeof (ctrl as { dump: unknown }).dump).toBe('function');
-        expect(typeof (ctrl as { overrideAll: unknown }).overrideAll).toBe('function');
+        expect(typeof (ctrl as { reset: unknown }).reset).toBe('function');
+        expect(typeof (ctrl as { clear: unknown }).clear).toBe('function');
     });
 });

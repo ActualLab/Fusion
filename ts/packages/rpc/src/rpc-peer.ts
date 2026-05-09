@@ -99,16 +99,16 @@ import { RpcSerializationFormat, RpcSerializationFormatResolver } from './rpc-se
 import { IncreasingSeqCompressor } from './increasing-seq-compressor.js';
 import { base64Decode, base64Encode } from './base64.js';
 
-/** WebSocket close code sent by the server when the client's serialization format is unsupported. */
-// Yields to the event loop. Used by the reconnect path to chunk large
-// reconnect-resend / pending-flush bursts so they don't spike main-thread
-// time post-handshake. setTimeout(0) is a macrotask (queueMicrotask would
-// not yield to other tasks); 0 ms still gets bumped to 4 ms by the browser
-// for nested setTimeouts but the slack is fine — we want a yield, not zero
-// latency.
+// Yields to the event loop. Used by the reconnect-resend loop to chunk
+// large bursts so they don't spike main-thread time post-handshake.
+// setTimeout(0) is a macrotask (queueMicrotask would not yield to other
+// tasks); 0 ms still gets bumped to 4 ms by the browser for nested
+// setTimeouts but the slack is fine — we want a yield, not zero latency.
 function yieldToEventLoop(): Promise<void> {
     return new Promise<void>(resolve => setTimeout(resolve, 0));
 }
+
+/** WebSocket close code sent by the server when the client's serialization format is unsupported. */
 
 export const RPC_CLOSE_CODE_UNSUPPORTED_FORMAT = 4001;
 
@@ -207,17 +207,14 @@ export abstract class RpcPeer {
     readonly connectionStateChanged = new EventHandlerSet<RpcConnectionState>();
 
     protected _connection: RpcConnection | undefined;
-    /** Mirror of `_connectionState === Connected` — true only after the
-     *  handshake round-trip completes. Kept as its own field (rather than
-     *  derived from `_connection`) so outbound calls can be gated on
-     *  handshake completion, not merely WS-open: previously the run loop
-     *  nulled `_connection` during the handshake window to suppress calls,
-     *  which made `close()` a silent no-op and left a zombie peer when the
-     *  hub removed it mid-handshake. */
+    /** Mirror of `_connectionState === Connected`. True only after the
+     *  handshake round-trip completes; outbound `call()` checks this to
+     *  decide between sending now and deferring until the next `Connected`
+     *  transition. Kept as its own field so it can stay false through the
+     *  Handshaking phase without exposing the run loop's `_connection`
+     *  bookkeeping. */
     protected _isConnected = false;
     protected _connectionState: RpcConnectionState = RpcConnectionState.Disconnected;
-    protected _pendingSends: RpcOutboundCall[] = [];
-    protected _reconnectFlushInProgress = false;
     private _keepAliveTimer: ReturnType<typeof setInterval> | undefined;
     private _keepAliveWatchdog: ReturnType<typeof setTimeout> | undefined;
     /** Wall-clock time of the last inbound `$sys.KeepAlive`, or 0 if none yet
@@ -353,11 +350,29 @@ export abstract class RpcPeer {
             this._connection?.encoder,
             this.hub.registry
         );
-        if (this._isConnected && !this._reconnectFlushInProgress) {
-            this.outboundCalls.register(outboundCall);
+
+        // Mirror .NET `RpcOutboundCall.SendAsync`: register the call up front,
+        // then either send now (fast path) or wait for `Connected` and send.
+        // No central "pending" queue — each call self-manages its wait.
+        this.outboundCalls.register(outboundCall);
+        if (this._isConnected) {
             this._sendWireData(outboundCall.serializedWireData);
         } else {
-            this._pendingSends.push(outboundCall);
+            // Defer: send when the peer transitions to `Connected`. If the
+            // call's result is completed before that (cancel, peer close,
+            // error), the registered handler skips the send.
+            const stateHandler = (state: RpcConnectionState): void => {
+                if (state !== RpcConnectionState.Connected) return;
+                this.connectionStateChanged.remove(stateHandler);
+                if (outboundCall.result.isCompleted) return;
+                this._sendWireData(outboundCall.serializedWireData);
+            };
+            this.connectionStateChanged.add(stateHandler);
+            // Detach the handler if the call is completed before we ever
+            // reach `Connected` — prevents leaking the listener.
+            outboundCall.result.promise
+                .then(() => this.connectionStateChanged.remove(stateHandler))
+                .catch(() => this.connectionStateChanged.remove(stateHandler));
         }
 
         // Wire up caller-initiated cancellation → sends $sys.Cancel to remote peer
@@ -369,17 +384,6 @@ export abstract class RpcPeer {
                     outboundCall.onDisconnect();
                     if (this._connection !== undefined)
                         this.hub.systemCallSender.cancel(this._connection, this.serializationFormat, callId);
-                } else {
-                    const idx = this._pendingSends.findIndex(
-                        c => c.callId === callId
-                    );
-                    if (idx !== -1) {
-                        this._pendingSends.splice(idx, 1);
-                        outboundCall.result.reject(
-                            new Error('Call cancelled.')
-                        );
-                        outboundCall.onDisconnect();
-                    }
                 }
             };
             signal.addEventListener('abort', onAbort, { once: true });
@@ -419,15 +423,10 @@ export abstract class RpcPeer {
         // Mirrors RpcPeer.cs:397 — "Stopping".
         infoLog?.log(`'${this.ref}': Stopping`);
         // `_setConnectionState(Disconnected)` below will tear down the keep-alive
-        // watchdog + send timer.
+        // watchdog + send timer. Calls deferred via `whenConnected` self-detach
+        // when their result rejects (see `call()`).
         this.remoteObjects.disconnectAll();
         this.sharedObjects.disconnectAll();
-        for (const call of this._pendingSends) {
-            if (!call.result.isCompleted)
-                call.result.reject(new Error('Peer closed.'));
-            call.onDisconnect();
-        }
-        this._pendingSends.length = 0;
         this.outboundCalls.rejectAll(new Error('Peer closed.'));
         this.outboundCalls.invalidateAll();
         this._connection?.close();
@@ -435,32 +434,6 @@ export abstract class RpcPeer {
         this._setConnectionState(RpcConnectionState.Disconnected);
         // Mirrors RpcPeer.cs:439 — "Stopped".
         infoLog?.log(`'${this.ref}': Stopped`);
-    }
-
-    /** Send any messages buffered while disconnected. Call after connection + handshake are ready. */
-    protected async _flushPendingSends(): Promise<void> {
-        if (this._pendingSends.length === 0 || this._connection === undefined)
-            return;
-        // Yield to the event loop every YIELD_BATCH sends. After a long
-        // disconnect there can be 100+ buffered calls; firing them all in a
-        // tight synchronous loop spikes the main thread right after handshake
-        // — visible as a stretch of `Worker.onmessage`/`DOMWebSocket.onmessage`
-        // entries inside one long-animation frame in the Edge freeze report.
-        const YIELD_BATCH = 20;
-        do {
-            const calls = this._pendingSends;
-            this._pendingSends = [];
-            for (let i = 0; i < calls.length; i++) {
-                this.outboundCalls.register(calls[i]);
-                this._sendWireData(calls[i].serializedWireData);
-                if ((i + 1) % YIELD_BATCH === 0 && i + 1 < calls.length)
-                    await yieldToEventLoop();
-            }
-        } while (
-            this._pendingSends.length > 0
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- _connection can change while awaiting yieldToEventLoop().
-            && this._connection !== undefined
-        );
     }
 
     /** Send pre-serialized wire data through the current connection. */
@@ -655,11 +628,16 @@ export abstract class RpcPeer {
     }
 }
 
-/** Connection state for RpcClientPeer. */
+/** Connection state for RpcPeer. Mirrors .NET `RpcPeerConnectionState`'s
+ *  observable phases: the transport is `Connecting` until the WebSocket
+ *  opens, `Handshaking` from WS-open until the server's handshake reply
+ *  arrives, and `Connected` once the handshake completes. Outbound calls
+ *  are gated on `Connected`. */
 export const enum RpcConnectionState {
     Disconnected = 0,
     Connecting = 1,
-    Connected = 2,
+    Handshaking = 2,
+    Connected = 3,
 }
 
 /** Client-side RPC peer — initiates WebSocket connection. ref = URL. */
@@ -740,12 +718,15 @@ export class RpcClientPeer extends RpcPeer {
      *  to simulate a same-peer reconnect in tests. */
     connectWith(conn: RpcConnection, isPeerChanged = true): void {
         this.setupConnection(conn);
-        // Test-only: synthesize the "ready for calls" state without running the
-        // handshake. Stays off the state machine on purpose — tests don't drive
-        // the run loop, and going through `_setConnectionState(Connected)` would
-        // arm the keep-alive watchdog against a mock transport that never
-        // replies to keep-alives.
+        // Test-only: synthesize the "ready for calls" state without running
+        // the handshake. Stays off the public state machine on purpose —
+        // tests don't drive the run loop, and entering `Connected` via
+        // `_setConnectionState` would arm the keep-alive watchdog against a
+        // mock transport that never replies to keep-alives. We still need
+        // to release any calls deferred via `whenConnected`, so we trigger
+        // the listener set directly.
         this._isConnected = true;
+        this.connectionStateChanged.trigger(RpcConnectionState.Connected);
         void this._reconnect(isPeerChanged);
     }
 
@@ -839,11 +820,16 @@ export class RpcClientPeer extends RpcPeer {
                     // `_connection` stays set throughout the handshake window so
                     // `close()` can tear down the WS. Outbound calls are gated by
                     // `_isConnected`, which only flips on when we enter `Connected`
-                    // below — before that, `call()` routes to `_pendingSends`.
+                    // below — before that, `call()` defers the send via the
+                    // per-call `whenConnected` listener.
 
                     // Race connection open against close — if WS fails to connect,
                     // whenConnected stays pending forever, so we must also watch for close.
                     await Promise.race([conn.whenConnected, closedRejection]);
+
+                    // WS open, handshake exchange about to start. Mirrors
+                    // .NET's `Handshaking` phase of `RpcPeerConnectionState`.
+                    this._setConnectionState(RpcConnectionState.Handshaking);
 
                     // Send our handshake, then wait for the server's response.
                     try {
@@ -979,92 +965,83 @@ export class RpcClientPeer extends RpcPeer {
     private async _reconnect(isPeerChanged: boolean, closedSignal?: AbortSignal): Promise<void> {
         if (this._connection === undefined) return;
 
-        this._reconnectFlushInProgress = true;
-        try {
-            // Handle remote and shared objects on reconnect.
-            // On peer change, the remote server is gone — both remote objects
-            // (proxies registered here for server-owned objects) and shared objects
-            // (e.g. RpcStreamSender instances this peer owns and is pushing to the
-            // server) must be disposed: the new server has no corresponding entries,
-            // so they would hang forever waiting for ACKs that never arrive.
-            // Mirrors .NET RpcPeer.Reset (src/ActualLab.Rpc/RpcPeer.cs:430-440).
-            if (isPeerChanged) {
-                this.remoteObjects.disconnectAll();
-                this.sharedObjects.disconnectAll();
-            } else {
-                this.remoteObjects.reconnectAll();
-            }
+        // Handle remote and shared objects on reconnect.
+        // On peer change, the remote server is gone — both remote objects
+        // (proxies registered here for server-owned objects) and shared objects
+        // (e.g. RpcStreamSender instances this peer owns and is pushing to the
+        // server) must be disposed: the new server has no corresponding entries,
+        // so they would hang forever waiting for ACKs that never arrive.
+        // Mirrors .NET RpcPeer.Reset (src/ActualLab.Rpc/RpcPeer.cs:430-440).
+        if (isPeerChanged) {
+            this.remoteObjects.disconnectAll();
+            this.sharedObjects.disconnectAll();
+        } else {
+            this.remoteObjects.reconnectAll();
+        }
 
-            // Filter calls by RemoteExecutionMode (same logic as before).
-            const eligible: RpcOutboundCall[] = [];
-            for (const call of [...this.outboundCalls.values()]) {
-                const mode = call.remoteExecutionMode;
-                if (!(mode & 2)) {
-                    if (!call.result.isCompleted)
-                        call.result.reject(new Error(
-                            'Outbound call failed: disconnected and AllowReconnect is not set.'));
-                    call.onDisconnect();
-                    this.outboundCalls.remove(call.callId);
-                    continue;
-                }
-                if (isPeerChanged && !(mode & 4)) {
-                    if (!call.result.isCompleted)
-                        call.result.reject(new Error(
-                            'Outbound call failed: reconnected to a different peer and AllowResend is not set.'));
-                    call.onDisconnect();
-                    this.outboundCalls.remove(call.callId);
-                    continue;
-                }
-                eligible.push(call);
+        // Filter calls by RemoteExecutionMode (same logic as before).
+        const eligible: RpcOutboundCall[] = [];
+        for (const call of [...this.outboundCalls.values()]) {
+            const mode = call.remoteExecutionMode;
+            if (!(mode & 2)) {
+                if (!call.result.isCompleted)
+                    call.result.reject(new Error(
+                        'Outbound call failed: disconnected and AllowReconnect is not set.'));
+                call.onDisconnect();
+                this.outboundCalls.remove(call.callId);
+                continue;
             }
-
-            // Reconcile with the server on same-peer reconnects. On peer change
-            // we skip the round-trip (the new peer knows nothing) and blind-resend.
-            //
-            // Wire format: the `completedStages` dict uses plain JS-object shape
-            // with string keys and base64-encoded `Uint8Array` values. This is
-            // JSON-compatible with .NET's `System.Text.Json` serialization of
-            // `Dictionary<int, byte[]>` and also works for TS-to-TS msgpack
-            // (serializes as map<str, str>). Full .NET-msgpack interop for
-            // $sys.Reconnect — which uses `map<int, bin>` — is a future
-            // enhancement; the JSON path covers ActualChat's primary use case.
-            let unknownIds: Set<number> | null = null;
-            if (!isPeerChanged && eligible.length > 0) {
-                unknownIds = await this._reconcileReconnect(eligible, closedSignal);
+            if (isPeerChanged && !(mode & 4)) {
+                if (!call.result.isCompleted)
+                    call.result.reject(new Error(
+                        'Outbound call failed: reconnected to a different peer and AllowResend is not set.'));
+                call.onDisconnect();
+                this.outboundCalls.remove(call.callId);
+                continue;
             }
+            eligible.push(call);
+        }
 
-            // Yield-batched resend — see _flushPendingSends comment. Eligible can
-            // be hundreds after a long disconnect; this prevents a sync spike.
-            const YIELD_BATCH = 20;
-            let resentSinceYield = 0;
-            for (const call of eligible) {
-                if (!call.removeOnOk && call.result.isCompleted) {
-                    // Stage-3 compute call: always self-invalidate to force a
-                    // fresh recompute — TS has no cross-reconnect compute-state
-                    // tracking (unlike .NET's Reliable reconnection).
-                    call.onDisconnect();
-                    this.outboundCalls.remove(call.callId);
-                    continue;
-                }
-                if (unknownIds !== null && !unknownIds.has(call.callId)) {
-                    // Server reports this call is still in flight on its side —
-                    // skip the resend. The pending result promise continues to
-                    // await the original call's $sys.Ok.
-                    continue;
-                }
-                this._sendWireData(call.serializedWireData);
-                resentSinceYield++;
-                if (resentSinceYield >= YIELD_BATCH) {
-                    resentSinceYield = 0;
-                    await yieldToEventLoop();
-                }
+        // Reconcile with the server on same-peer reconnects. On peer change
+        // we skip the round-trip (the new peer knows nothing) and blind-resend.
+        //
+        // Wire format: the `completedStages` dict uses plain JS-object shape
+        // with string keys and base64-encoded `Uint8Array` values. This is
+        // JSON-compatible with .NET's `System.Text.Json` serialization of
+        // `Dictionary<int, byte[]>` and also works for TS-to-TS msgpack
+        // (serializes as map<str, str>). Full .NET-msgpack interop for
+        // $sys.Reconnect — which uses `map<int, bin>` — is a future
+        // enhancement; the JSON path covers ActualChat's primary use case.
+        let unknownIds: Set<number> | null = null;
+        if (!isPeerChanged && eligible.length > 0) {
+            unknownIds = await this._reconcileReconnect(eligible, closedSignal);
+        }
+
+        // Yield-batched resend. Eligible can be hundreds after a long
+        // disconnect; chunking prevents a sync spike on the main thread.
+        const YIELD_BATCH = 20;
+        let resentSinceYield = 0;
+        for (const call of eligible) {
+            if (!call.removeOnOk && call.result.isCompleted) {
+                // Stage-3 compute call: always self-invalidate to force a
+                // fresh recompute — TS has no cross-reconnect compute-state
+                // tracking (unlike .NET's Reliable reconnection).
+                call.onDisconnect();
+                this.outboundCalls.remove(call.callId);
+                continue;
             }
-
-            // Flush calls buffered while disconnected, including calls queued
-            // during the yield-batched resend above.
-            await this._flushPendingSends();
-        } finally {
-            this._reconnectFlushInProgress = false;
+            if (unknownIds !== null && !unknownIds.has(call.callId)) {
+                // Server reports this call is still in flight on its side —
+                // skip the resend. The pending result promise continues to
+                // await the original call's $sys.Ok.
+                continue;
+            }
+            this._sendWireData(call.serializedWireData);
+            resentSinceYield++;
+            if (resentSinceYield >= YIELD_BATCH) {
+                resentSinceYield = 0;
+                await yieldToEventLoop();
+            }
         }
     }
 
@@ -1157,6 +1134,11 @@ export class RpcServerPeer extends RpcPeer {
     accept(conn: RpcConnection): void {
         this._setConnectionState(RpcConnectionState.Connecting);
         this.setupConnection(conn);
+        // Server starts in Handshaking immediately on accept — there's no
+        // separate "WS open" phase since the WS is already up by the time
+        // we accept. Stay in Handshaking until the client's handshake
+        // arrives in `_onHandshakeReceived` below.
+        this._setConnectionState(RpcConnectionState.Handshaking);
         // When the client connection drops, clean up shared objects (stream senders).
         // Server peers don't reconnect — once the connection is gone, senders must be
         // terminated so their source iterators release resources promptly.
