@@ -11,6 +11,70 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 12.5.2+080e9963 | npm: 12.5.2
+
+Release date: 2026-05-09
+
+### Breaking Changes
+- RPC: `RpcStream.BufferSize` is split into `RpcStream.AckAdvance` (the
+  wire-level flow-control window, formerly named `BufferSize`) and a
+  new local-only `RpcStream.BufferSize` (sender ring buffer capacity
+  hint, default `0` = inherit `AckAdvance`). The MessagePack wire key
+  changes from `BufferSize` to `AckAdvance`; the comma-separated text
+  format keeps the same field position. Update any code that sets
+  `RpcStream.BufferSize` &mdash; rename to `AckAdvance` if you meant
+  the in-flight window, or leave it for the new local-buffering hint
+  (and add `AckAdvance = ...` if you want a non-default window).
+- TypeScript RPC: `RpcStreamRef.bufferSize`, `RpcStream.bufferSize`,
+  and the `bufferSize` option in `RpcStreamOptions<T>` &rarr;
+  `ackAdvance`. New optional `bufferSize` controls the local sender
+  ring buffer (resolved at `RpcStreamSender` construction time and
+  exposed as `sender.bufferSize`).
+
+### Added
+- RPC: `RpcStream.BufferSize` (local-only, .NET) /
+  `RpcStream.bufferSize` (TypeScript, optional) lets real-time senders
+  pre-buffer items past the in-flight ACK window so a freshly arrived
+  ACK is served from RAM rather than waiting on the source. Values
+  smaller than `AckAdvance` are clamped up to `AckAdvance` and log a
+  warning.
+- TypeScript RPC: `RpcStreamSender.onBuffered(count)` callback fires
+  after every push onto the local ring buffer. Combined with the
+  existing `onAckProcessed` (drain side), this gives controllers a
+  complete picture of buffer utilisation &mdash; the source pull is
+  paused when `bufferedCount === sender.bufferSize`.
+- TypeScript RPC: new `RpcConnectionState.Handshaking` state between
+  `Connecting` and `Connected`, mirroring .NET's
+  `RpcPeerConnectionState` phases. The run loop transitions to it on
+  WS open; `RpcServerPeer.accept()` transitions to it immediately.
+
+### Changed
+- TypeScript RPC: outbound calls now self-manage their connection
+  wait, mirroring .NET `RpcOutboundCall.SendAsync`. Each call
+  registers up front and either sends immediately (if `_isConnected`)
+  or attaches a one-shot `connectionStateChanged` listener that fires
+  on the next `Connected` transition. Removes the peer-level
+  `_pendingSends` queue, the `_flushPendingSends` pump, and the
+  `_reconnectFlushInProgress` flag. As a side effect, the
+  `$sys.Reconnect` mid-reconcile deadlock is gone &mdash; the inner
+  reconcile call no longer competes with a peer-level flush gate.
+
+### Documentation
+- Updated `PartR-RpcStream.md`, `PartR-D.md`, and `PartTS-Rpc.md` to
+  describe `AckAdvance` vs `BufferSize` (and when each applies).
+
+### Tests
+- `.NET`: 3 new end-to-end cases in `RpcStreamRealTimeTest`
+  (`BufferSizeAboveAckAdvance_PreBuffersBeyondAckWindow`,
+  `BufferSizeUnset_FallsBackToAckAdvance`,
+  `BufferSizeBelowAckAdvance_ClampsUpToAckAdvance`) backed by a
+  burst-tracked source.
+- `RpcStreamBasicTest`: defaults, independent property setters,
+  `BufferSize` not in wire format.
+- TypeScript: 3 new `onBuffered` cases plus refreshed wire-format
+  tests asserting `AckAdvance` is now the binary key.
+
+
 ## 12.4.8+77552387 | npm: 12.4.10
 
 Release date: 2026-05-04
