@@ -5,10 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "docs:dev": "vitepress dev .",
-    "docs:dev8080": "vitepress dev . --port 8080",
-    "docs:build": "vitepress build .",
-    "docs:preview": "vitepress preview ."
+    "docs:dev": "vitepress dev . --open --port 3030",
+    "docs:dev8080": "vitepress dev . --open --port 8080",
+    "docs:build": "npm run slides:build && vitepress build .",
+    "docs:preview": "vitepress preview .",
+    "slides:build": "node slides/build-all.mjs"
   },
   "author": "",
   "license": "MIT",

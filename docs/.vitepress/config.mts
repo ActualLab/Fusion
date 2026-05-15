@@ -19,6 +19,8 @@ gtag('config', 'G-PX4G7HX4CM');`],
     "mdsource",
     "node-modules",
     "outdated",
+    "public/**",
+    "slides",
     "tasks",
     "to-be-used",
   ],
@@ -26,6 +28,43 @@ gtag('config', 'G-PX4G7HX4CM');`],
   appearance: 'dark',
   sitemap: {
     hostname: 'https://fusion.actuallab.net'
+  },
+  vite: {
+    plugins: [
+      {
+        // In dev, VitePress's SPA fallback intercepts /slides/<deck>/ before
+        // Vite can serve public/slides/<deck>/index.html. Rewrite the URL so
+        // the static file is found. Production builds don't need this — the
+        // built public/ files take precedence over SPA routes.
+        name: "slides-index-rewrite",
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            if (req.url) {
+              // /<root>/<deck> -> /<root>/<deck>/ (redirect for the canonical
+              // form so relative URLs resolve correctly).
+              const bare = req.url.match(/^(\/(?:slides|slides-old)\/[^/?#]+)(\?[^#]*)?(#.*)?$/);
+              if (bare) {
+                res.statusCode = 301;
+                res.setHeader("Location", bare[1] + "/" + (bare[2] ?? "") + (bare[3] ?? ""));
+                res.end();
+                return;
+              }
+              // /<root>/<deck>/<route> -> /<root>/<deck>/index.html when the
+              // last segment has no file extension. Assets such as
+              // /<root>/<deck>/assets/foo.js fall through to static serving.
+              const m = req.url.match(/^(\/(?:slides|slides-old)\/[^/?#]+\/)([^?#]*)(.*)$/);
+              if (m) {
+                const last = m[2].split("/").pop() ?? "";
+                if (last === "" || !last.includes(".")) {
+                  req.url = m[1] + "index.html" + m[3];
+                }
+              }
+            }
+            next();
+          });
+        },
+      },
+    ],
   },
   themeConfig: {
     logo: "/img/Logo128.jpg",
