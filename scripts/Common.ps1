@@ -241,41 +241,49 @@ function Update-HostEntries {
         return $IP
     }
 
-    # Build the update script. ErrorActionPreference=Stop so file-system
-    # errors (e.g. permission denied on /etc/hosts) become terminating
-    # exceptions the outer try/catch can handle.
-    $script = "`$ErrorActionPreference='Stop'; "
+    $existingLines = @(Get-Content $hostsFile -ErrorAction SilentlyContinue)
     if ($needsUpdate) {
         $patterns = ($Hostnames | ForEach-Object { [regex]::Escape($_) }) -join '|'
-        $script += "`$content = Get-Content '$hostsFile' | Where-Object { `$_ -notmatch '(?<=\s)($patterns)(?=\s|$)' }; "
-        $script += "Set-Content '$hostsFile' `$content -Force; "
+        $existingLines = @($existingLines | Where-Object { $_ -notmatch "(?<=\s)($patterns)(?=\s|`$)" })
     }
-    $newEntries = $entriesToAdd -join "`n"
-    $script += "Add-Content '$hostsFile' `"``n$newEntries`""
+    $newContent = ($existingLines + $entriesToAdd) -join "`n"
 
-    # Try a direct write first - it succeeds when the hosts file is
-    # user-writable (e.g. tests redirecting Get-HostsFilePath to a temp file)
-    # and avoids unnecessary elevation prompts. Fall back to OS-appropriate
-    # elevation only on permission failure.
+    # Write content to a temp file so the elevated script never needs to embed or
+    # escape it — avoids all string-quoting and newline issues in the script body.
+    $tempContent = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "update-hosts-content-$(Get-Random).txt")
+    Set-Content $tempContent $newContent -NoNewline -Encoding ASCII
+
+    # $ErrorActionPreference=Stop makes file-system errors terminating so the catch block can elevate.
+    $script = "`$ErrorActionPreference='Stop'; Copy-Item '$tempContent' '$hostsFile' -Force"
+
     try {
         Invoke-Expression $script
         Write-Host "Updated hosts file"
     } catch {
         if ((Get-CurrentOS) -eq "Windows") {
             Write-Host "Requesting elevation to update hosts file..."
+            $tempScript = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "update-hosts-$(Get-Random).ps1")
             try {
-                Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -Command $script" -Wait -ErrorAction Stop
-                Write-Host "Updated hosts file (via UAC)"
+                Set-Content $tempScript $script -NoNewline -Encoding UTF8
+                $proc = Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -File `"$tempScript`"" -Wait -PassThru -ErrorAction Stop
+                if ($proc.ExitCode -eq 0) {
+                    Write-Host "Updated hosts file (via UAC)"
+                } else {
+                    Write-Host "Could not update hosts file. Add manually:" -ForegroundColor Yellow
+                    $entriesToAdd | ForEach-Object { Write-Host $_ }
+                }
             } catch {
                 Write-Host "Could not update hosts file. Add manually:" -ForegroundColor Yellow
                 $entriesToAdd | ForEach-Object { Write-Host $_ }
+            } finally {
+                Remove-Item $tempScript -ErrorAction SilentlyContinue
             }
         } else {
             Write-Host "Updating hosts file (sudo required)..."
-            $tempFile = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "update-hosts-$(Get-Random).ps1")
+            $tempScript = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "update-hosts-$(Get-Random).ps1")
             try {
-                Set-Content $tempFile $script -NoNewline
-                sudo pwsh -NoProfile -File $tempFile
+                Set-Content $tempScript $script -NoNewline
+                sudo pwsh -NoProfile -File $tempScript
                 if ($LASTEXITCODE -eq 0) {
                     Write-Host "Updated hosts file (via sudo)"
                 } else {
@@ -283,9 +291,11 @@ function Update-HostEntries {
                     $entriesToAdd | ForEach-Object { Write-Host $_ }
                 }
             } finally {
-                Remove-Item $tempFile -ErrorAction SilentlyContinue
+                Remove-Item $tempScript -ErrorAction SilentlyContinue
             }
         }
+    } finally {
+        Remove-Item $tempContent -ErrorAction SilentlyContinue
     }
 
     return $IP

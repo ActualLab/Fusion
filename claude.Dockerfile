@@ -20,12 +20,16 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 # Install dev tools, CLI utilities, Python 3, image tools, audio support
 RUN apt-get update && apt-get install -y \
     git git-lfs procps sudo fzf zsh man-db unzip gnupg2 \
-    gh jq wget curl less ca-certificates \
+    gh jq wget curl less ca-certificates openssh-client \
     python3 python3-pip python3-venv \
     imagemagick \
     ripgrep fd-find vim nano \
     pulseaudio-utils libpulse0 alsa-utils libasound2-plugins sox \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Pre-seed github.com SSH host keys so `git push` over SSH doesn't prompt
+RUN mkdir -p /etc/ssh && \
+    ssh-keyscan -t rsa,ecdsa,ed25519 github.com >> /etc/ssh/ssh_known_hosts 2>/dev/null
 
 # PowerShell is pre-installed in .NET SDK image (both amd64 and arm64)
 RUN pwsh -Version
@@ -113,7 +117,7 @@ RUN playwright install chromium
 
 # Install Claude Code CLI (native installer, auto-update disabled at runtime)
 ENV DISABLE_AUTOUPDATER=1
-RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.131
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.143
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj
