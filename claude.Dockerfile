@@ -117,7 +117,7 @@ RUN playwright install chromium
 
 # Install Claude Code CLI (native installer, auto-update disabled at runtime)
 ENV DISABLE_AUTOUPDATER=1
-RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.143
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.146
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj
