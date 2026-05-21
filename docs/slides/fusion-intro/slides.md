@@ -1,778 +1,806 @@
 ---
 theme: default
-title: Fusion Intro
+title: Fusion — End-to-end reactivity
 favicon: /favicon.ico
 info: |
-  Introduction to ActualLab.Fusion.
+  ActualLab.Fusion — the code-first cut.
+  End-to-end reactivity is a silver bullet: here's why, and here's that it exists.
 class: text-center
 transition: slide-left
 mdc: true
-canvasWidth: 735
+colorSchema: dark
+canvasWidth: 980
 routerMode: hash
 ---
 
-# Welcome to Fusion
+# ActualLab.Fusion
 
-<div class="pt-12 opacity-80">
-  Real-time updates and caching for any .NET app — with almost no code changes.
+<div class="text-2xl">
+End-to-end reactivity is a silver bullet.
 </div>
 
-<div class="pt-3 text-sm opacity-60">
-  10⁶ scale headroom · production-proven · MIT license
+<div class="text-2xl opacity-80">
+Let me show you why — and that it actually exists.
+</div>
+
+<div class="pt-10 text-sm opacity-60">
+<a href="https://fusion.actuallab.net">https://fusion.actuallab.net</a> · MIT license
 </div>
 
 ---
+layout: quote
+---
+# Let's get straight to the point
 
-# What we'll cover
-
-1. **How it works** — Computed&lt;T&gt;, compute services, RPC
-2. **Why it wins** — speculative execution, batching, the comparisons
-3. **In production** — patterns from ActualChat
-
-<!--
-~60 min. Stop me with questions.
--->
+## No theory up front. We start with code.
 
 ---
 layout: section
 ---
 
 # Part 1
-## How Fusion works
+## Code first — Example 1: a TODO app
 
 ---
 
-# What is Fusion?
+# Where one render leads
 
-A library that turns ordinary C# methods into **dependency-tracked, auto-invalidating, distributable computations.**
+A Blazor component renders one todo item. Follow the call down to the database:
 
-Three pillars:
+```text
+TodoItemView.ComputeState(ct)            a Blazor component
+  │
+  └─▶ Todos.Get(id)                      a UI-side service
+        ┊
+        ┊  ══ RPC #1 ══▶                 the UI calls the API
+        ┊
+        └─▶ TodoApi.Get(session, id)     the API service
+              │
+              ├─ ══ RPC #2 ══▶ auth.GetUser(session)       the auth service
+              │
+              └─ ══ RPC #3 ══▶ TodoBackend.Get(scope, id)  the backend service
+                               │
+                               └─▶  database
+```
 
-- **Computed&lt;T&gt;** — the cached result with state
-- **Compute Services** — your methods, made reactive
-- **RPC** — the distributed wire
-
----
-
-# Three pillars at a glance
-
-<img src="./svg/01-pillars.svg" class="mx-auto" style="width: 80%" />
-
----
-
-# The mental model
-
-> Like <span style="color: #41d1ff">**MSBuild**</span> — but for application state.
-
-- A method invocation is a build target.
-- Its dependencies form a DAG, captured automatically.
-- When inputs change, dependants are marked dirty — not recomputed eagerly.
+One render, three RPCs, three services. The code for each is next — top to bottom.
 
 ---
 
-# Incremental compute, applied to state
+# The component
 
-<img src="./svg/02-msbuild-graph.svg" class="mx-auto" style="width: 75%" />
+```csharp {7-8}
+// A Blazor component. It shows one todo item — and keeps it live.
+public class TodoItemView : ComputedStateComponent<TodoItem?>
+{
+    [Parameter] public Ulid Id { get; set; }
+    [Inject] Todos Todos { get; set; } = null!;
 
-<div class="text-sm opacity-60 mt-4">
-A change at the root propagates to dependants; recompute happens lazily, only for what you ask for.
+    protected override Task<TodoItem?> ComputeState(CancellationToken ct)
+        => Todos.Get(Id, ct);
+}
+```
+
+`ComputeState` runs to produce `State.Value`; the markup just shows it. That is the whole component.
+
+---
+
+# The UI service
+
+```csharp {6}
+// A UI-side service. On the client, todoApi calls the server over RPC.
+public class Todos(Session session, ITodoApi todoApi) : IComputeService
+{
+    [ComputeMethod]
+    public virtual Task<TodoItem?> Get(Ulid id, CancellationToken ct)
+        => todoApi.Get(session, id, ct);      // !!! the call that crosses the wire
+}
+```
+
+A thin wrapper. That one line — `todoApi.Get` — is where the UI reaches the server.
+
+---
+
+# The API service
+
+```csharp {7,13}
+public class TodoApi(IAuth auth, ITodoBackend backend) : ITodoApi
+{
+    [ComputeMethod]
+    public virtual async Task<TodoItem?> Get(Session session, Ulid id, CancellationToken ct)
+    {
+        var scope = await GetScope(session, ct);  // resolves the user — see below
+        return await backend.Get(scope, id, ct);  // !!! RPC to the backend
+    }
+
+    // Resolve the user, derive the data scope they're allowed to see.
+    async ValueTask<string> GetScope(Session session, CancellationToken ct)
+    {
+        var user = await auth.GetUser(session, ct);  // !!! RPC to the auth service
+        return user != null ? $"user/{user.Id}" : "global";
+    }
+}
+```
+
+`auth.GetUser` and `backend.Get` are separate services — **each call is its own RPC.** One `Get`, two more round-trips.
+
+---
+
+# The backend service
+
+```csharp {7}
+// The backend service. It owns the data; it talks to the DB.
+public class TodoBackend(IDbEntityResolver<string, DbTodo> dbTodos) : ITodoBackend
+{
+    [ComputeMethod]
+    public virtual async Task<TodoItem?> Get(string scope, Ulid id, CancellationToken ct)
+    {
+        var dbTodo = await dbTodos.Get(DbTodo.ComposeKey(scope, id), ct);
+        return dbTodo?.ToModel();
+    }
+}
+```
+
+One DB read, nothing else — the entire backend read path for a todo.
+
+---
+
+# Question 1 — what makes it live?
+
+```csharp
+protected override Task<TodoItem?> ComputeState(CancellationToken ct)
+    => Todos.Get(Id, ct);   // called once
+```
+
+<div class="pt-4"></div>
+
+- It calls `Get` **once**. No polling, no `StateHasChanged`, no event handler.
+- Yet when *another user* edits this todo, this component re-renders.
+- **Why that's hard:** reactivity normally means wiring — events, subscriptions, observers. There is none here.
+- And `Get` is a network round-trip. So how fast is the **first paint** on a cold start?
+
+---
+
+# Render a list of them
+
+```csharp {6-7}
+// TodoPage2 — the list page. It fetches the ids, nothing else.
+public class TodoPage2 : ComputedStateComponent<Ulid[]>
+{
+    [Inject] ITodoApi TodoApi { get; set; } = null!;
+
+    protected override Task<Ulid[]> ComputeState(CancellationToken ct)
+        => TodoApi.ListIds(Session, 200, ct);
+}
+```
+
+The markup loops over the ids — one `<TodoItemView Id="id" />` each.
+The page fetches *ids*; every `TodoItemView` fetches its *own* item.
+
+---
+
+# Question 2 — 200 rows, 200 calls?
+
+A list page renders 200 of the `TodoItemView` component:
+
+```text
+TodoPage2              ──▶  ListIds        1 call  → 200 ids
+  │
+  ├─ TodoItemView #1    ──▶  Get   ┐
+  ├─ TodoItemView #2    ──▶  Get   ├──  200 calls → one item each
+  ├─ ⋮                              │
+  └─ TodoItemView #200  ──▶  Get   ┘
+```
+
+<div class="pt-4"></div>
+
+- Each arrow is a full two-RPC chain — that's **201 round-trips** for one screen.
+- **Why that's hard:** the classic N+1. The usual cure is hand-written batching or a `DataLoader` — neither is here.
+- 201 round-trips to paint one list — or not?
+
+---
+
+# Question 3 — is anything cached?
+
+```csharp
+var scope = await GetScope(session, ct);   // auth.GetUser + ...
+return await backend.Get(scope, id, ct);   // ... + a DB read
+```
+
+<div class="pt-4"></div>
+
+- Every `Get` runs `auth.GetUser` **and** `backend.Get` — three-plus lookups per call.
+- There is **no cache code**: no keys, no TTLs, no `IMemoryCache`. Just `[ComputeMethod]`.
+- **Why that's hard:** under load, three DB hits per request melts the database — unless something quietly caches.
+- Does it? And if so, what could ever **evict** that cache?
+
+---
+
+# Question 4 — how does a cache find out?
+
+- User logs out. `GetScope` now returns a different (shared) scope for unauthenticated users. Will the UI change?
+- A todo's DB row changes. `TodoBackend.Get` cached it once; nobody calls anything.
+- **Why that's hard:** the stale value lives in the UI; the change happens in the DB — on another machine.
+- Something must carry *"this is no longer true"* all the way across. How does the cached `Get` ever learn it?
+
+---
+layout: section
+---
+
+# Example 2
+## The same pattern — in production
+
+---
+
+# The same shape, everywhere
+
+[Voxt](https://voxt.ai) — text, voice, video and AI chat. Built on Fusion, end to end.
+
+<img src="./svg/10-services-map.svg" class="mx-auto" style="width: 66%" />
+
+Every reactive surface is a `ComputedStateComponent` over a few plain-looking services. We'll skim three.
+
+---
+
+# Is this person speaking?
+
+The live "recording" dot on an avatar. Same shape as the TODO app — one layer deeper:
+
+```text
+AuthorPresenceIndicator.ComputeState(ct)         Blazor component
+  │
+  └─▶ LiveStreamUI.IsAuthorStreaming(chat, author)   a UI-side service
+        ┊
+        ┊  ══ RPC #1 ══▶                          client ➜ server
+        ┊
+        └─▶ LiveAudioStreams.List(session, chat)  API: permission check
+              ┊
+              ┊  ══ RPC #2 ══▶                    ➜ the node owning this chat's shard
+              ┊
+              └─▶ LiveAudioBackend.List(chat)     sharded backend service
+                    │
+                    └─▶  audio ingest — we stop here
+```
+
+**Multiple RPCs** — and the one to the backend may not even leave the machine.
+
+---
+
+# The component
+
+```csharp {11-12}
+// The dot on an avatar — green when online, pulsing when the mic is live.
+public class AuthorPresenceIndicator : ComputedStateComponent<Presence>
+{
+    [Parameter] public AuthorId AuthorId { get; set; }
+    [Inject] IAuthors Authors { get; set; } = null!;
+    [Inject] LiveStreamUI LiveStreamUI { get; set; } = null!;
+
+    protected override async Task<Presence> ComputeState(CancellationToken ct)
+    {
+        var chatId = AuthorId.ChatId;
+        var presence = await Authors.GetPresence(Session, chatId, AuthorId, ct);
+        if (await LiveStreamUI.IsAuthorStreaming(chatId, AuthorId, ct))
+            presence = Presence.Recording;   // their mic is open right now
+        return presence;
+    }
+}
+```
+
+Same base class as `TodoItemView`. Two compute calls; re-renders when **either** changes.
+
+---
+
+# The UI service
+
+```csharp {6,11}
+// A UI-side service: who is streaming audio into this chat?
+public class LiveStreamUI(/* ... */) : IComputeService
+{
+    [ComputeMethod]   // <- the component calls this one
+    public virtual async Task<bool> IsAuthorStreaming(ChatId chatId, AuthorId authorId, CancellationToken ct)
+        => (await GetStreamingAuthorIds(chatId, ct)).Contains(authorId);
+
+    [ComputeMethod]
+    public virtual async Task<AuthorId[]> GetStreamingAuthorIds(ChatId chatId, CancellationToken ct)
+    {
+        var streams = await LiveAudioStreams.List(Session, chatId, ct);   // !!! RPC
+        return streams.Select(s => s.AuthorId).Distinct().ToArray();
+    }
+}
+```
+
+100 avatars in a chat → 100 `IsAuthorStreaming` calls → all share **one** `GetStreamingAuthorIds`.
+
+---
+
+# The API service
+
+```csharp {6,10}
+// The API method — itself built from two more compute calls.
+[ComputeMethod]
+public virtual async Task<ApiArray<LiveStreamInfo>> List(
+    Session session, ChatId chatId, CancellationToken ct)
+{
+    var chat = await Chats.Get(session, chatId, ct);   // compute call
+    chat.Require();
+    if (!chat.Rules.Has(ChatPermissions.ReadAudio))    // just a flag test
+        return [];
+    return await LiveAudioBackend.List(chatId, ct);    // compute call
+}
+```
+
+`Chats.Get` and `LiveAudioBackend.List` are compute methods — cached, tracked, invalidated. The check between them is a flag test on data `Chats.Get` already returned.
+
+---
+
+# The sharded backend
+
+```csharp {1-2}
+[BackendService(HostRole.LiveBackend, ServiceMode.Distributed)]   // !!!
+[BackendShardScheme(HostRole.LiveBackend)]
+public interface ILiveAudioBackend : IComputeService, IBackendService
+{
+    [ComputeMethod]
+    Task<ApiArray<LiveStreamInfo>> List(ChatId chatId, CancellationToken ct);
+}
+```
+
+<div class="pt-4"></div>
+
+- `ServiceMode.Distributed` — this backend is **sharded** across the LiveBackend nodes, keyed by `ChatId`.
+- `LiveAudioBackend.List(chatId, …)` runs **locally if this node owns the chat's shard — otherwise it hops** to the one that does.
+- The calling code in `LiveAudioStreams` never changes either way.
+
+---
+
+# The last message in your chat list
+
+```csharp {4,10,12,14}
+// IChats — the method the UI calls. One extra line: a permission check.
+[ComputeMethod]
+public virtual async Task<ChatNews?> GetNews(Session session, ChatId chatId, CancellationToken ct)
+    => await CanRead(session, chatId, ct) ? await Backend.GetNews(chatId, ct) : null;
+
+// IChatsBackend — where the preview line is actually built.
+[ComputeMethod]
+public virtual async Task<ChatNews?> GetNews(ChatId chatId, CancellationToken ct)
+{
+    var chat = await Get(chatId, ct);
+    if (chat is null) return null;
+    var idRange = await GetLidRange(chatId, false, ct);          // entry-id range
+    var idTile = IdTileStack.FirstLayer.GetTile(idRange.End - 1); // its last tile
+    var tile = await GetTile(chatId, idTile.Range, false, ct);
+    return new ChatNews(idRange, tile.Entries.LastOrDefault());
+}
+```
+
+The UI calls the frontend `GetNews`; it forwards to the backend one — which depends on `Get`, `GetLidRange` and `GetTile`. Post a message → `GetTile` changes → `GetNews` changes → the row re-renders.
+
+---
+
+# Even a banner is reactive
+
+```csharp {10-12}
+// The real "You are the only person in this chat!" banner.
+public class AddChatMembersBanner : ComputedStateComponent<bool>
+{
+    [Parameter] public Chat Chat { get; set; } = null!;
+    [Inject] IAuthors Authors { get; set; } = null!;
+
+    // Visible when you are the only author in the chat.
+    protected override async Task<bool> ComputeState(CancellationToken ct)
+    {
+        var own = await Authors.GetOwn(Session, Chat.Id, ct);
+        var authorIds = await Authors.ListAuthorIds(Session, Chat.Id, ct);
+        return authorIds.All(id => id == own?.Id);
+    }
+}
+```
+
+Voxt's `AddChatMembersBanner`, simplified to its gist. The markup is one `<Banner IsVisible="State.Value">` — it appears and vanishes as people join or leave. No events, no subscription.
+
+---
+
+# Two apps, the same questions
+
+<div class="pt-4 text-xl">
+
+A tiny TodoApp sample and a production chat app raise the **identical** list of questions.
+
 </div>
 
----
+<div class="text-xl">
 
-# Why this isn't "just a cache"
+Caching, invalidation, reactivity, RPC call batching and multi-host call routing —<br/>
+**none of it is in the code you saw.**
 
-- A cache stores values; **Fusion tracks the graph** that produced them.
-- Invalidation isn't TTL-based — it follows real dependencies.
-- The same primitive powers caching, change-feeds, and reactive UI.
-
----
-layout: section
----
-
-# Computed&lt;T&gt;
-
----
-
-# Computed&lt;T&gt; in one slide
-
-An immutable record of "one execution of one method call":
-
-- the arguments, the result, and the **dependencies** it touched
-- a **consistency state** (Computing / Consistent / Invalidated)
-- **dependants** — other Computeds that used this one
-
----
-
-# The DAG forms automatically
-
-```csharp
-[ComputeMethod]
-public virtual async Task<int> GetTotal(CartId id, CancellationToken ct) {
-    var items = await ListItems(id, ct); // !!!
-    var subtotal = 0;
-    foreach (var i in items)
-        subtotal += await GetPrice(i.ProductId, ct); // !!!
-    return subtotal;
-}
-```
-
-`GetTotal` now depends on `ListItems` and each `GetPrice`. No annotations.
-
----
-
-# Visualized
-
-<img src="./svg/03-dag-forming.svg" class="mx-auto" style="width: 80%" />
-
----
-
-# Invalidation cascades
-
-When **any** node in the DAG is invalidated, all dependants invalidate too.
-
-- Cascading is immediate (synchronous bookkeeping).
-- Recomputation is lazy — only when somebody asks for the value again.
-- Old invalidated instances stay accessible — UI keeps rendering stale data while fresh data is in flight.
-
----
-
-# Cascade in pictures
-
-<img src="./svg/04-cascade.svg" class="mx-auto" style="width: 80%" />
-
----
-
-# Three consistency states
-
-<img src="./svg/05-state-machine.svg" class="mx-auto" style="width: 70%" />
-
----
-
-# Computing
-
-The method is currently running.
-
-- The Computed instance exists, but the value isn't set yet.
-- It's collecting dependencies as it executes.
-
----
-
-# Consistent
-
-Method finished. Value is current.
-
-- Subsequent calls with the same arguments are resolved to value of this Computed — **no recompute**.
-- This is "the cache hit" in everyday terms.
-
----
-
-# Invalidated
-
-The Computed knows it might be stale.
-
-- Next call recomputes (lazily).
-- UI can still read the last value while the new one is being computed.
-- All dependants get invalidated synchronously — unless they are remote.
-
----
-layout: section
----
-
-# Compute Services
-
----
-
-# The [ComputeMethod] attribute
-
-```csharp
-public class CounterService : ICounterService {
-    [ComputeMethod] // !!!
-    public virtual Task<int> Get(string key, CancellationToken ct)
-        => Task.FromResult(_counters.GetValueOrDefault(key, 0));
-}
-```
-
-- `IComputeService` marks compute services, directly or through your service interface.
-- Class methods must be `virtual` / `override` and return `Task` / `ValueTask`.
-- Calls are intercepted by a Fusion-generated proxy (next slide).
-
----
-
-# ... and a DI registration
-
-```csharp
-// Server:
-services.AddFusion().AddServer<ICounterService, CounterService>();
-
-// Client:
-services.AddFusion().AddClient<ICounterService>();
-```
-
-- `AddClient` / `AddServer` make the role **explicit**.
-- `AddService` is a shortcut — the builder's `RpcServiceMode` decides local / client / server / distributed.
-- DI hands out the **proxy** wherever you inject `ICounterService`.
-
----
-
-# Fusion or plain RPC?
-
-```csharp
-// Pure RPC — typed remote calls, no caching:
-services.AddRpc().AddClient<IFileTransfer>();
-
-// Fusion compute service — same shape, plus caching + invalidation:
-services.AddFusion().AddClient<ICounterService>();
-```
-
-- Same `AddClient` / `AddServer` shape on both builders.
-- The Fusion proxy uses a **different interception chain** — compute calls get wrapped in a `Computed<T>`.
-- Reach for `Rpc` for typed remote calls; reach for `Fusion` to make them cached and reactive.
-
----
-
-# What gets registered
-
-For a class-backed service, Fusion swaps your implementation for a **proxy** that subclasses it.
-
-- `CounterService` → `CounterServiceProxy : CounterService`
-- The proxy **overrides interceptable async-returning virtual methods**.
-- Each override routes through an interceptor before calling `base`.
-
-You inject `ICounterService` — DI hands you the proxy.
-
----
-
-# Inside the proxy
-
-What the source generator emits (simplified):
-
-```csharp
-public override Task<int> Get(string key, CancellationToken ct) {
-    var intercepted = args => base.Get(key, ct);
-    var invocation = new Invocation(
-        this, __cachedMethod, ArgumentList.New(key, ct), intercepted);
-    return __interceptor.Intercept<Task<int>>(invocation); // !!!
-}
-```
-
-- One generated file per service — at compile time, no IL emit.
-- The interceptor owns the caching / dependency tracking / invalidation.
-
----
-
-# Invalidating: the Invalidation block
-
-```csharp
-public void Increment(string key) {
-    _counters.AddOrUpdate(key, 1, (_, v) => v + 1);
-    using (Invalidation.Begin()) // !!!
-        _ = Get(key, default);
-}
-```
-
-- Calls inside the block don't execute — they only mark cached values invalid.
-- Selective: invalidate exactly the calls whose results actually changed.
-
----
-
-# What you got for free
-
-- **Caching** — same `(service, method, args)` → cached `Computed<T>`, no recompute
-- **Change notifications** — `Computed.WhenInvalidated()`
-- **Cross-thread safety** — Computed is immutable
-- **Composition** — call other compute methods, dependencies just work
-
----
-
-# Trying it out
-
-```csharp
-public class Stats : IComputeService {
-    [ComputeMethod]
-    public virtual async Task<bool> IsEven(string key, CancellationToken ct)
-        => (await counter.Get(key, ct)) % 2 == 0;
-}
-
-await stats.IsEven("hits", default);   // true; Get and IsEven both cache
-counter.Increment("hits");              // !!! cascade: Get AND IsEven invalidate
-await stats.IsEven("hits", default);   // false; whole chain recomputes
-```
-
-The dependant recomputes — not because we asked it to, but because `Get` changed.
-
----
-layout: section
----
-
-# State&lt;T&gt;
-
----
-
-# What is State?
-
-A `State<T>` is the **current Computed** for a value.
-
-- `IState<T>` — the base interface; read-side API only.
-- `IMutableState<T>` — wraps a plain value; set `Value` to update.
-- `IComputedState<T>` — auto-runs a compute function; re-runs on dependency invalidation.
-
----
-
-# Quick example
-
-```csharp
-var states = services.StateFactory();
-var name = states.NewMutable("Anonymous");
-
-name.Value = "Alice";   // !!! invalidates old Computed, creates new one
-
-await name.Computed.When(v => v == "Bob");
-```
-
-`When(...)` waits until the predicate matches a fresh Computed.
-
----
-
-# States stay thread-safe
-
-`name.Value = "Alice"` doesn't write to the value in place — it **swaps in a new `Computed<T>`**.
-
-- `state.Computed` always returns an immutable snapshot.
-- Many threads can read concurrently — no locks, no races.
-- The "mutation" is a single atomic reference swap.
-
-The same is true for `ComputedState` — every auto-update produces a fresh Computed.
-
----
-
-# ComputedState for auto-update
-
-```csharp
-var cs = states.NewComputed<int>(async (_, ct) =>
-    await counter.Get("hits", ct));
-
-cs.Updated += (s, _) => Console.WriteLine(s.Value); // !!!
-```
-
-- **Unlike a compute method, this runs its own update loop.**
-- Re-runs whenever a dependency invalidates.
-- Update delay is configurable (debounce, instant-on-action).
-
----
-
-# Auto-update lives in the UI
-
-Most reactive frameworks auto-update **every** piece of state, everywhere.
-
-In Fusion:
-
-- Compute methods stay **lazy** — they recompute only when asked.
-- `ComputedState` — the auto-updater — sits at the **UI edge**.
-- A backend compute refreshes only when something is **observing** it: a rendered UI plus everything in its dependency chain.
-
-Auto-updating everything on a server doesn't scale; Fusion makes that asymmetry the default.
-
----
-
-# In Blazor
-
-`ComputedStateComponent<T>` re-renders when its computed value updates.
-
-```csharp
-public class HitCounter : ComputedStateComponent<int> {
-    [Inject] ICounterService Service { get; set; } = default!;
-    protected override Task<int> ComputeState(CancellationToken ct) // !!!
-        => Service.Get("hits", ct);
-}
-```
-
-The component is reactive — no `StateHasChanged` calls.
-
----
-
-# State recap
-
-- States solve **"what is the latest Computed for X?"**
-- Two concrete flavors: mutable (you set the value) and computed (auto-runs).
-- They bridge Computed&lt;T&gt; and UI / event loops.
-
----
-layout: section
----
-
-# RPC and distribution
-
----
-
-# Same code, now distributed
-
-```csharp
-public interface ICounterService : IComputeService {
-    [ComputeMethod]
-    Task<int> Get(string key, CancellationToken ct);
-}
-```
-
-- Server: a concrete `CounterService : ICounterService`.
-- Client: Fusion generates a proxy that calls over RPC.
-- **Same method signature on both sides.**
-
----
-
-# Where RPC fits
-
-<img src="./svg/06-rpc-stack.svg" class="mx-auto" style="width: 80%" />
-
----
-
-# Wiring it up — server
-
-```csharp
-services.AddFusion()
-    .AddService<ICounterService, CounterService>();
-```
-
----
-
-# Wiring it up — client
-
-```csharp
-services.AddFusion()
-    .Rpc.AddClient<ICounterService>();
-```
-
-The client gets a proxy implementing `ICounterService`. UI code calls it as if it were local.
-
----
-
-# What RPC brings
-
-- **Auto-batching** — many calls → one frame
-- **Formats** — MessagePack, MemoryPack, System.Text.Json, custom
-- **`RpcStream<T>`** — typed streams, backpressure, both ways
-- **Invalidation over the wire** — no polling
-- **Reconnection & state recovery** — built-in
-- **One-way & server-to-client calls** — and way more
-
-> The **fastest** RPC on .NET — by a wide margin.
+</div>
 
 ---
 layout: section
 ---
 
 # Part 2
-## Why Fusion
-
----
-layout: section
----
-
-# How calls fly
+## Why end-to-end reactivity is a silver bullet
 
 ---
 
-# Auto-batching
+# Compute service calls are cached
 
-<img src="./svg/09-batching.svg" class="mx-auto" style="width: 75%" />
+> Every compute method call — keyed by `(service, method, arguments)` — remembers its result.
 
-Many concurrent calls in the same tick → coalesced into **one frame** on the wire.
+- Not *some* calls. **Every** call, at every layer of both chains you saw.
+- The cached result is a `Computed<T>` — the value, plus how to learn it went stale.
+- Ask the same question twice, and the answer is already there.
 
 ---
 
-# Persistent cache on the client
+# Caching eliminates compute
+
+You can view caching as a **decorator** — a higher-order function that wraps
+any original `fn`:
+
+```csharp {4}
+Func<TIn, TOut> ToCaching<TIn, TOut>(Func<TIn, TOut> fn)
+    => input => {
+        var key = Cache.CreateKey(fn, input);
+
+        if (Cache.TryGet(key, out var output)) return output; // hit → fn never runs
+        lock (Cache.Lock(key)) { // double-check locking
+            if (Cache.TryGet(key, out output)) return output;
+
+            output = fn(input); 
+            Cache[key] = output;
+            return output;
+        }
+    };
+
+var cachingFn = ToCaching(OriginalFn);
+```
+
+Proxies and interceptors used by Fusion produce a very similar transform 
+for each `[ComputeMethod]`.
+
+---
+
+# The distributed dependency graph updates itself
+
+> While `[ComputeMethod]` runs, it records **every computed value it accesses**.
+
+<img src="./svg/03-dag-forming.svg" class="mx-auto" style="width: 55%" />
+
+This is how nodes and edges are added to the graph.
+
+---
+
+# Invalidation
+
+> When a cached value becomes stale, it gets **invalidated**.
+
+```csharp {2-3}
+// Inside TodoBackend's write command, once the DB row has changed:
+using (Invalidation.Begin())
+    _ = Get(scope, id, default);   // marks TodoBackend.Get(scope, id) stale
+```
+
+- Calls inside the block don't execute — they **mark** the matching cached result invalid.
+- Not a TTL, not "5 minutes and hope" — a precise signal
+- In-process invalidation is synchronous: a flag flip, not a recompute
+- The stale value stays readable; the *next* reader triggers the refresh.
+
+---
+
+# Invalidation cascades
+
+> Invalidate one value, and **everything that used it** invalidates too, including **remote dependencies**!
+
+<img src="./svg/04-cascade.svg" class="mx-auto" style="width: 55%" />
+
+This is how nodes edges are removed from the graph.
+
+---
+
+# You can watch it happen
+
+A cached result is a `Computed<T>` — capture it, then observe it directly:
+
+```csharp {4,5,6,9}
+// Capture the Computed<T> produced by any compute call:
+var c0 = await Computed.Capture(() => todos.Get(id, ct));
+
+await c0.WhenInvalidated(ct);             // fires the moment it goes stale
+await c0.When(t => t?.IsDone == true);    // waits until the value matches
+await foreach (var c in c0.Changes(ct))   // a stream of every new version
+    Render(c.Value);
+
+var c1 = await c0.Update(ct);             // invalidated? pull the fresh one
+```
+
+`WhenInvalidated`, `When`, `Changes`, `Update` — this one object is the whole engine of reactive UI.
+
+---
+
+# Compute service *clients* eliminate ~~compute~~ RPC
+
+```csharp {3,5}
+Func<TIn, TOut> todosGetRpc = input => Rpc.Call("ITodos.Get", input);
+var cachingTodosGetRpc = ToCaching(todosGetRpc); // Almost like this :)
+```
+It's also invalidation-aware, and that's why Fusion uses its own RPC protocol:
+
+<img src="./svg/18-three-legs.svg" class="mx-auto" style="width: 75%" />
+
+- ① **call** and ② **result** are the familiar request/response — they leave the result **consistent**.
+- ③ **invalidation** is the extra leg: pushed *later,* only if the data changes — it flips the result back to **inconsistent**.
+- Between ② and ③, every repeat call is a cache hit — **the RPC is eliminated** for the whole consistent window.
+
+---
+
+# The *persistent* cache at the client edge
 
 <img src="./svg/13-persistent-cache.svg" class="mx-auto" style="width: 60%" />
 
-- Remote compute-method calls go through a **client-side cache** first.
-- Any `IRemoteComputedCache` — localStorage, IndexedDB, SQLite, …
-- Cached value is returned **immediately**; refresh happens in the background.
+- Compute service client may use **persistent cache**
+- It relies on IndexedDB, SQLite, or your custom `IRemoteComputedCache` implementation
+- It **survives app restarts**, so on startup the client already holds a *likely-correct* value for almost every call it's about to make.
 
 ---
 
-# Cache-match responses
+# Slow network? No network? Your app still works!
 
-```
-Client → Server:  GetUser(42),  header  "#": "8a3f…e91"
-Server → Client:  match.        (no body)
-```
+> The persistent cache keeps serving the last known values.
 
-- The background RPC carries only the **hash** of the cached value.
-- Server replies with a tiny **"match"** when the hash is still current.
-- Only on **mismatch** does a fresh value travel — and the old `Computed` invalidates.
-
----
-layout: section
----
-
-# Speculative execution
+- The UI stays interactive while the network is slow or fully down.
+- "Read path" calls still succeed — from cache — so rendering never stalls.
+- When the connection returns, it automatically reconciles every value.
 
 ---
 
-# Traditional UI on startup
+# What is speculative execution?
 
-<img src="./svg/07-stalled-waterfall.svg" class="mx-auto" style="width: 80%" />
+Don't wait to learn what to do — **guess, do the work now, and verify in parallel.**
+Guess right, and you skipped the wait. Guess wrong, and you discard the work and redo it.
 
-- Each component awaits its data before rendering.
-- UI sits empty until the slowest call finishes.
+<img src="./svg/08-speculative.svg" class="mx-auto" style="width: 80%" />
 
----
-
-# Fusion: the cache is an oracle
-
-For every compute call the client has a **likely answer** already.
-
-- Render the UI from cached values **right now**.
-- The background RPC validates each call as a tiny hash compare.
-- On mismatch: invalidate; the *next* render uses the fresh value.
+- **CPUs** — branch prediction runs instructions past a branch before its condition is known.
+- **LLMs** — speculative decoding: a small draft model proposes tokens; the large model verifies a whole batch in one pass.
+- Always the same deal: spend a little throw-away work to buy a lot of latency.
 
 ---
 
-# N+1 made instantaneous
+# Speculative execution, the Fusion way
 
-"List the members of a chat, with their presence":
+Two ways to paint a screen:
 
-```
-ListMemberIds(chatId)         📱⮂☁️
-  GetMember(m_i)      × 20    📱⮂☁️
-    GetPresence(m_i)  × 20    📱⮂☁️
-```
+<img src="./svg/16-fusion-render.svg" class="mx-auto" style="width: 82%" />
 
-- Cold start: 41 sequential round-trips.
-- With the persistent cache: the dependency chain can unfold immediately — the wire carries tiny hash matches.
+- **GraphQL & friends:** one big query — the screen is blank until the whole payload lands.
+- **Fusion:** your code renders from the persistent cache *now*; each value is validated in the background — a mismatch just re-renders that one spot.
+- And since your code runs *speculatively*, not only your whole UI gets rendered almost instantly, but all RPC requests thrown while it's rendering are **batched**.
 
 ---
 
-# What you get
+# RPC batching, or how N+1 stops being a problem
 
-- **Instant UI** — renders as if everything were local.
-- **Normal-looking code** — no special calls, no manual cache.
-- **Offline-capable** — cached values keep serving while the network is down.
+Rendering 100 rows at once? 100 RPC calls fire at once, batched by ActualLab.Rpc:
 
----
-layout: section
----
+<img src="./svg/17-frames.svg" class="mx-auto" style="width: 78%" />
 
-# Fusion vs the alternatives
+- It happens on RPC message level, so server responses are batched as well
+- *Like errands: ten car trips to the store, or one trip with a loaded trunk.*
 
----
-
-# vs REST
-
-REST is **pull**. Fusion is **sync**.
-
-- REST clients must poll or run a parallel WebSocket layer.
-- Fusion clients do nothing — updates arrive when something invalidates.
-- One mental model for cache, real-time, and remote calls.
-
-> Even the transport: ActualLab.Rpc alone is **~15× faster** than HTTP — 6.16 M vs 0.4 M calls/s.
+> Voxt fires **0.5-2K calls at startup running speculatively** — just a few batches out, a few batches of tiny responses back.
 
 ---
 
-# vs GraphQL
+# RPC call routing
 
-GraphQL: clients **describe** what they want.
-Fusion: each component **calls** what it wants.
+- [RpcOutboundCallOptions.RouterFactory](https://fusion.actuallab.net/PartR-CO.html#example-2) lets you route each call to **local** or **remote host**, use **shard-based routing** with dynamic shard relocation, and more.
+- In-flight calls are **auto-rerouted** when its target dies. With multiple retries.
+- **Even this.SomeMethod(...) calls can be routed** dynamically, so local <-> distributed mode is an external toggle, **your code is identical either way!**
 
-- No [DataLoader](https://github.com/graphql/dataloader) / N+1 boilerplate — caching is automatic.
-- No schema-stitching service — your service interface is the schema.
+<img src="./svg/15-sharding-failover.svg" class="mx-auto" style="width: 100%" />
 
----
-
-# vs Redis / IDistributedCache
-
-Redis: **TTL keys**. Fusion: **dependency invalidation**.
-
-- No string keys to design or namespace.
-- No cache-coherency bugs from forgetting to invalidate a key.
-- Fusion turns *every* compute service into an efficient distributed cache — backed by the same invalidation graph.
-
----
-layout: section
 ---
 
 # Performance
 
----
-
-# Compute services — local
-
-**~20 M calls/s per core**, **~316 M calls/s** across cores (Ryzen 9 9950X3D, 32 logical cores).
-
-- Cache hit cost ≈ a dictionary lookup, in-process.
-- Redis baseline over the network: **~230 K calls/s** — **85× slower per core**.
-
----
-
-# Compute services — over RPC
-
-**~215 M calls/s** when the call hits the client cache.
-
-- The wire only sees mismatches and cold starts.
-- Versus a plain HTTP + DB baseline: **2,679×**.
-
----
-
-# ActualLab.Rpc — raw calls
-
-| | calls/s | vs ActualLab.Rpc |
-|---|---:|---:|
-| **ActualLab.Rpc** | **10.16 M** | 1× |
-| SignalR | 5.31 M | 1.9× slower |
-| gRPC | 1.29 M | **7.9× slower** |
-
-Pure protocol throughput — no Fusion caching layer.
-
----
-
-# ActualLab.Rpc — streams (1-byte items)
-
-| | items/s | throughput |
-|---|---:|---:|
-| **ActualLab.Rpc** | **96.96 M** | 96.96 MB/s |
-| gRPC | 43.78 M | 43.78 MB/s |
-| SignalR | 18.30 M | 18.30 MB/s |
-
-5.3× faster than SignalR; 2.2× faster than gRPC.
-
----
-
-# ActualLab.Rpc — streams (100-byte items)
-
-| | items/s | throughput |
-|---|---:|---:|
-| **ActualLab.Rpc** | **43.01 M** | **4.30 GB/s** |
-| gRPC | 25.87 M | 2.59 GB/s |
-| SignalR | 14.25 M | 1.43 GB/s |
-
-3.0× faster than SignalR; 1.7× faster than gRPC at 100-byte payloads.
-
----
-
-# Fusion vs Redis
-
-| Workload | Fusion | Redis | Ratio |
+| Workload | Fusion | Baseline | Ratio |
 |---|---:|---:|---:|
-| Local cache hit (all cores) | 316 M/s | 0.23 M/s | **1,380×** |
-| Remote, with client cache | 215 M/s | 0.23 M/s | **939×** |
-| Raw RPC | 10 M/s | 0.23 M/s | **44×** |
+| Local cache hit (all cores) | 316 M/s | Redis: 0.23 M/s | **1,380×** |
+| Remote, client cache hit | 215 M/s | HTTP + DB: 80 K/s | **2,679×** |
+| Plain RPC calls | 10.2 M/s | gRPC 1.29 M/s | **7.9×** |
+| Streaming 100-byte items | 4.30 GB/s | gRPC 1.43 GB/s | **3.0×** |
 
-Dependency tracking + in-process cache is fundamentally cheaper than a network hop to a KV store.
+<div class="pt-16 text-sm opacity-60 mt-3">
+Ryzen 9 9950X3D, 32 logical cores.<br/>
+Full benchmarks &amp; methodology: <a href="https://fusion.actuallab.net/Performance.html">fusion.actuallab.net/Performance.html</a>
+</div>
+
+---
+layout: iframe
+url: https://fusion.actuallab.net/Performance.html#local-services
+---
+
+---
+layout: section
+---
+
+<div class="text-2xl opacity-80">
+This is <strong>end-to-end reactivity</strong> for your whole app.
+</div>
+
+<div class="pt-4 text-2xl opacity-80">
+And <strong>one library</strong> is underneath all of it.
+</div>
 
 ---
 layout: section
 ---
 
 # Part 3
-## In production: Voxt
+## How it works
 
 ---
 
-# Voxt at a glance
+# What is Fusion, really?
 
-Voxt (formerly ActualChat) — text + voice + video + AI chat, built on Fusion end-to-end.
+A library that turns ordinary C# methods into
+**dependency-tracked, auto-invalidating, distributable computations.**
 
-- Backend: distributed compute services.
-- Frontend: Blazor with `ComputedStateComponent`.
-- RPC: ActualLab.Rpc for both client↔server and server↔server.
+<img src="./svg/01-pillars.svg" class="mx-auto" style="width: 60%" />
 
----
-
-# Service map
-
-<img src="./svg/10-services-map.svg" class="mx-auto" style="width: 90%" />
-
-Three layers: Blazor UI + RPC client proxies on the client, ActualLab.Rpc on the wire, a mesh of compute services on the backend.
-
----
-layout: section
----
-
-# Call routing
+Three pillars: **Computed&lt;T&gt;**, **Compute Services**, **RPC**.
 
 ---
 
-# Why routing matters
+# Mental model: MSBuild for state
 
-A distributed Fusion service can call **its own methods** — and the proxy decides where each call lands.
+> Like **MSBuild** — but the build targets are your method calls.
 
-- Some calls resolve to a **local** implementation on the same instance.
-- Some get routed over RPC to the **remote** instance that owns the relevant shard.
-- The application code doesn't change either way.
+<img src="./svg/02-msbuild-graph.svg" class="mx-auto" style="width: 56%" />
 
----
-
-# Routing a single call
-
-<img src="./svg/14-call-routing.svg" class="mx-auto" style="width: 85%" />
-
-Each call carries a shard key (from its arguments). The router maps shard → host.
+A change at the root marks dependants dirty; recompute is lazy — only for what someone actually asks for.
 
 ---
 
-# Sharding & failover
+# Computed&lt;T&gt;
 
-<img src="./svg/15-sharding-failover.svg" class="mx-auto" style="width: 92%" />
+An immutable record of **one execution of one method call**:
 
-- N shards per service; Maglev consistent-hash assigns shards to hosts.
-- A host dies → its shards relocate; in-flight calls auto-reroute.
+- the arguments, the result, and the **dependencies** it touched
+- a **consistency state** — Computing / Consistent / Invalidated
+- its **dependants** — the Computeds that used this one
 
----
-layout: section
----
-
-# Patterns in code
+Every cache entry, every cascade edge, every "await invalidation" — it's this one object.
 
 ---
 
-# AddMembersBanner
+# Three consistency states
 
-```csharp
-protected override async Task<bool> ComputeState(CancellationToken ct) {
-    if (!_settings.WhenFirstTimeRead.IsCompleted)
-        await _settings.WhenFirstTimeRead;
-    if (!EditMembersUI.CanAddMembers(Chat)) return false;
+<img src="./svg/05-state-machine.svg" class="mx-auto" style="width: 52%" />
 
-    var dismissedAt = await _settings.Use(ct); // !!!
-    if (dismissedAt.DismissedAt + DismissDuration > Clocks.ServerClock.Now)
-        return false;
+- **Computing** — running, collecting dependencies.
+- **Consistent** — value is current; same args resolve to it, no recompute.
+- **Invalidated** — might be stale; next call recomputes, but the old value stays readable.
 
-    var authorIds = await Authors.ListAuthorIds(Session, Chat.Id, ct);
-    if (authorIds.Length > 1) return false;
-    var ownerIds = await Roles.ListOwnerIds(Session, Chat.Id, ct);
-    return !authorIds.Except(ownerIds).Any();
+---
+
+# Compute services & [ComputeMethod]
+
+```csharp {3}
+public class TodoApi(IAuth auth, ITodoBackend backend) : ITodoApi
+{
+    [ComputeMethod] // !!!
+    public virtual async Task<TodoItem?> Get(
+        Session session, Ulid id, CancellationToken ct)
+        => /* ... */;
 }
 ```
 
+- Methods are `virtual` and return `Task` / `ValueTask`.
+- Fusion's source generator emits a **proxy** that overrides them — at compile time.
+- The override routes through an interceptor that owns caching, dependency tracking, invalidation.
+
 ---
 
-# AddMembersBanner — chain
+# Invalidation: write evicts read
 
-```
-📱 AddChatMembersBanner.ComputeState
-  📱 _settings.Use            ← SyncedState<T>, server-synced
-  📱⮂☁️ Authors.ListAuthorIds
-  📱⮂☁️ Roles.ListOwnerIds
+The DB-row question from Part 1 — the row changes, the cache finds out:
+
+```csharp {2}
+// inside the command that writes the todo:
+using (Invalidation.Begin()) // !!!
+    _ = Get(scope, item.Id, ct);
 ```
 
-`SyncedState<T>` mirrors a server-side value and pushes local changes back — bidirectional sync, baked in.
+- Calls inside the block **don't execute** — they mark cached results invalid.
+- Selective: invalidate exactly the calls whose results actually changed.
+- The cascade does the rest — all the way up to the UI.
+
+---
+
+# State&lt;T&gt; — the bridge to the UI
+
+A `State<T>` tracks **the current Computed** for a value.
+
+- `IComputedState<T>` runs a compute function and **re-runs on invalidation** — the auto-updater.
+- It lives at the **UI edge**; backend compute methods stay lazy.
+- `ComputedStateComponent<T>` — the base class of every component you saw — wraps one and re-renders when it updates.
+
+The loop closes: that "live todo item" is a `ComputedState` reacting to a cascade.
+
+---
+layout: two-cols-header
+---
+# ActualLab.Rpc
+
+- Auto-batching, typed `RpcStream<T>`, reconnection & state recovery built in.
+- For compute services, invalidation travels over the wire — server-to-client, no polling.
+<div class="pt-8"></div>
+
+::left::
+```csharp {2}
+var services = new ServiceCollection();
+var rpc = services.AddRpc();
+
+// Server-side
+rpc.AddServer<IMyRpcService, MyRpcService>();
+// Server-side distributed service (req. call routing setup)
+rpc.AddDistributed<IMyRpcService, MyRpcService>();
+
+// Client-side
+rpc.AddClient<IMyRpcService>();
+
+// Use: 
+var svc = serviceProvider.GetRequiredService<IMyRpcService>();
+```
+
+::right::
+```csharp {2}
+var services = new ServiceCollection();
+var fusion = services.AddFusion();
+
+// Server-side
+fusion.AddServer<IMyComputeService, MyComputeService>();
+// Server-side distributed service (req. call routing setup)
+fusion.AddDistributed<IMyComputeService, MyComputeService>();
+
+// Client-side
+fusion.AddClient<IMyComputeService>();
+
+// Use: 
+var svc = serviceProvider.GetRequiredService<IMyComputeService>();
+```
+
+---
+layout: section
+---
+
+# Extras
+## A Bit More Advanced Patterns
 
 ---
 
 # Self-invalidation
 
-```csharp
+- `Computed.GetCurrent()` reaches the **currently-running** `Computed<T>`.
+- `.Invalidate(delay)` schedules its invalidation after `delay`.
+
+```csharp {7,11}
 protected override async Task<Moment?> ComputeState(CancellationToken ct) {
     var stopAt = await ChatAudioUI.GetStopListeningAt(ChatId, ct);
     if (!stopAt.HasValue) return null;
 
     var remaining = (stopAt.Value - Now).TotalSeconds;
     if (remaining > 30)
-        Computed.GetCurrent().Invalidate(TimeSpan.FromSeconds(remaining - 30)); // !!!
+        Computed.GetCurrent().Invalidate(TimeSpan.FromSeconds(remaining - 30)); 
     else if (remaining > 0) {
         var fractional = remaining - Math.Floor(remaining);
         var delay = fractional > 0.05 ? fractional : fractional + 1.0;
-        Computed.GetCurrent().Invalidate(TimeSpan.FromSeconds(delay)); // !!!
+        Computed.GetCurrent().Invalidate(TimeSpan.FromSeconds(delay));
     }
     return stopAt;
 }
@@ -780,50 +808,44 @@ protected override async Task<Moment?> ComputeState(CancellationToken ct) {
 
 ---
 
-# Self-invalidation — the trick
-
-- `Computed.GetCurrent()` reaches the **currently-running** `Computed<T>`.
-- `.Invalidate(delay)` schedules its invalidation after `delay`.
-- Used here for a smooth countdown — aligned to second boundaries, no timers, no polling.
-
----
-
 # Priming — push values into the cache
 
-```csharp
+The writer **pushes** the new value into the compute cache. The next reader hits the primer — no Redis round-trip, no race.
+
+```csharp {2,6,15}
 // On the backend service:
-private readonly VersionedComputeMethodPrimer<ChatId, long, State> _listRawPrimer
-    = new(ListRaw);
+private readonly VersionedComputeMethodPrimer<ChatId, long, State> _listRawPrimer = new(ListRaw);
 
 [ComputeMethod]
 protected virtual async Task<State> ListRaw(ChatId chatId, CancellationToken ct) {
     if (_listRawPrimer.TryUsePrimed(chatId, out var primed)) // !!!
-        return WithAutoInvalidation(primed);
-    var state = await _redisScope.Get(chatId.Value)
-                ?? await ReconstructFromChats(chatId, ct);
-    return WithAutoInvalidation(state);
+        return primed;
+
+    // Fallback to Redis, then to DB
+    var state = await _redisScope.Get(chatId.Value) ?? await ReconstructFromChats(chatId, ct);
+    return state;
 }
 
 // On every write:
 await _listRawPrimer.Prime(chatId, nextState.Version, nextState, ct); // !!!
 ```
 
-The writer **pushes** the new value into the compute cache. The next reader hits the primer — no Redis round-trip, no race.
-
 ---
 
-# State-sync workers
+# State-sync workers - manually invalidate dependencies on change
 
-```csharp
+A background worker subscribes to a Computed via `.Changes(...)` and translates value transitions 
+into **targeted invalidations**.
+
+```csharp {3,4,8,9,10,11}
 private async Task InvalidateActiveChatDependencies(CancellationToken ct) {
-    var changes = ActiveChatsUI.ActiveChats.Computed
-        .ChangesUntyped(FixedDelayer.NoneUnsafe, ct);
-    await foreach (var c in changes) {
-        var activeChats = ((Computed<ActiveChat[]>)c).Value;
+    var activeChatsState = ActiveChatsUI.ActiveChats;
+    var changes = activeChatsState.Computed.Changes(FixedDelayer.NoneUnsafe, ct);
+    await foreach (var (activeChats, error) in changes) {
         var newRecording = activeChats.FirstOrDefault(x => x.IsRecording);
         var newListening = activeChats.Where(x => x.IsListening).ToHashSet();
         var changed = newListening.SymmetricExcept(_oldListening).ToList();
-        using (Invalidation.Begin()) { // !!!
+        using (Invalidation.Begin()) {
             if (newRecording != _oldRecording) _ = GetRecordingChatId();
             if (changed.Count > 0)             _ = GetListeningChatIds();
             foreach (var ch in changed)        _ = GetState(ch.ChatId);
@@ -832,13 +854,16 @@ private async Task InvalidateActiveChatDependencies(CancellationToken ct) {
 }
 ```
 
-A background worker subscribes to a Computed via `.Changes(...)` and translates value transitions into **targeted invalidations** — without polling.
-
 ---
 
-# Pseudo-methods
+# Pseudo-methods - invalidate unenumerable dependencies
 
-```csharp
+- Want to invalidate "all contacts whose name starts with **A**"?
+- You can't enumerate every cached `GetContact(id)` to find which ones qualify.
+- But invalidating one `PseudoContactStartingFrom('A')` cascades to all of them — 
+  because each `GetContact` calls that pseudo method.
+
+```csharp{2,9}
 [ComputeMethod]
 protected virtual Task<Unit> PseudoContactStartingFrom(char firstChar)
     => TaskExt.UnitTask;
@@ -854,80 +879,42 @@ public virtual async Task<Contact?> GetContact(ContactId id, CancellationToken c
 
 ---
 
-# Pseudo-methods — why
+# ConsolidationDelay — filter "no-op" invalidations
 
-- Want to invalidate "all contacts whose name starts with **A**"?
-- You can't enumerate every cached `GetContact(id)` to find which ones qualify.
-- One `Invalidate(PseudoContactStartingFrom('A'))` cascades to all of them — because each `GetContact` registered its membership on that pseudo node.
-
----
-
-# ConsolidationDelay — a filter, not a debounce
-
-```csharp
+```csharp{1}
 [ComputeMethod(MinCacheDuration = 60, ConsolidationDelay = 0.01)]
 Task<AccountFull> GetOwn(Session session, CancellationToken ct);
 ```
 
-When the source invalidates:
+When such a method invalidates:
 
-1. Wait `ConsolidationDelay`.
-2. Recompute the source.
-3. Compare with the old value.
-4. **Same → swallow the invalidation. Different → propagate.**
+1. Wait `ConsolidationDelay`
+2. Recompute the value
+3. `Equals(newValue, oldValue) ? swallowInvalidation() : cascadeInvalidation();`
 
 Filters out invalidations that don't change the result. Debouncing is the separate `InvalidationDelay`.
 
----
-
-# Patterns at scale
-
-- **SyncedState** — bidirectional client↔server state binding.
-- **Self-invalidation** — methods that schedule their own re-runs.
-- **Priming** — writers push fresh values into the cache.
-- **State-sync workers** — watch computed values, fan out targeted invalidations.
-- **Pseudo-methods** — single fan-out handles for unenumerable cascades.
-- **`ConsolidationDelay`** — suppress no-op invalidations from propagating.
-
-All built on Fusion's primitives. Nothing extra to install.
-
----
-layout: section
----
-
-# Wrap-up
-
----
-
-# What we covered
-
-- **Part 1**: Computed&lt;T&gt;, compute services, RPC.
-- **Part 2**: speculative execution, batching, Fusion vs everything else.
-- **Part 3**: real patterns from a production codebase.
-
-The same primitive — a tracked computation — powers all of it.
+Internally such methods are represented as a pair of methods: one is "inner", and another one is "outer".
 
 ---
 
 # What we didn't cover
 
-- **CommandR** — CQRS-style command pipeline above compute methods.
-- **Operations Framework** — durable commands, event sourcing, distributed locking.
-- **EF Core integration** — `DbContext`-aware compute services, invalidate-on-commit.
-- **Fusion for TypeScript** — the same model on the JS side.
-- **Auth, AOT, computed options, core utilities, …** — and much more.
+- **CommandR** — the CQRS-style command pipeline.
+- **Operations Framework** — distributed invalidation for replicated services.
+- **EF Core integration** — `IDbEntityResolver` batching key -> row lookups, etc.
+- **Fusion for TypeScript** — the same APIs on the JS side.
+- **Auth, AOT, ComputedOptions,** and much more.
 
 ---
+layout: cover
+---
 
-# Resources
+# Questions?
 
 - **Docs**: https://fusion.actuallab.net
 - **Samples**: https://github.com/ActualLab/Fusion.Samples
 - **Source**: https://github.com/ActualLab/Fusion
-- **Fusion Place at Voxt**: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
+- **Chat**: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
 
 ---
-layout: end
----
-
-# Questions
