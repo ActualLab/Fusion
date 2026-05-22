@@ -1,5 +1,7 @@
 import { defineConfig } from "vitepress";
 
+const hostname = "https://fusion.actuallab.net";
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   lang: "en-US",
@@ -27,7 +29,15 @@ gtag('config', 'G-PX4G7HX4CM');`],
   ignoreDeadLinks: false,
   appearance: 'dark',
   sitemap: {
-    hostname: 'https://fusion.actuallab.net'
+    hostname,
+  },
+  // Self-referencing canonical link — GitHub Pages serves every page at both
+  // /Foo and /Foo.html; without this Google reports them as duplicates.
+  transformHead({ pageData }) {
+    const path = pageData.relativePath
+      .replace(/(^|\/)index\.md$/, "$1")
+      .replace(/\.md$/, ".html");
+    return [["link", { rel: "canonical", href: `${hostname}/${path}` }]];
   },
   vite: {
     plugins: [
