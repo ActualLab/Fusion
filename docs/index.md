@@ -1,13 +1,13 @@
 ---
 layout: home
-title: ActualLab.Fusion — Real-Time UI & Caching for .NET
+title: ActualLab.Fusion — The End-to-End Reactivity Framework
 titleTemplate: false
-description: ActualLab.Fusion adds real-time updates and caching to any .NET app with almost no code changes — 10⁶ scale headroom, the fastest RPC on .NET, MIT-licensed.
+description: ActualLab.Fusion brings real-time UI updates and distributed caching to any .NET/TypeScript app — 10⁶ scale headroom, the fastest RPC, MIT-licensed.
 
 hero:
   name: ActualLab.Fusion
-  text: The shortest path to real-time UI.
-  tagline: Add <span style="color:var(--hl-rt);">real-time updates</span> and <span style="color:var(--hl-cache);">caching</span> to any .NET app with <span style="color:var(--hl-nocode);">almost no</span> code <span style="color:var(--hl-nocode);">changes</span>. Get <span style="color:var(--hl-scale);">10⁶ scale</span> headroom. Production-proven. <span style="color:var(--hl-mit);">MIT license.</span>
+  text: <span style="color:var(--hl-rt);">End-to-end reactivity</span> monster.
+  tagline: Bring <span style="color:var(--hl-rt);">real-time UI updates</span> and <span style="color:var(--hl-cache);">distributed caching</span> to any .NET/TypeScript app. Get <span style="color:var(--hl-scale);">10⁶ scale</span> headroom. Production-proven. <span style="color:var(--hl-mit);">MIT license.</span>
   actions:
     - theme: brand
       text: Documentation
@@ -26,8 +26,8 @@ hero:
       link: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
 
 features:
-  - icon: 🪄
-    title: Real-Time Magic
+  - icon: ✨
+    title: End-to-End Reactivity
     details: "Automatic <span style='color:var(--hl-feat);'>state sync</span> across your <span style='color:var(--hl-feat);'>server cluster and every client</span> connected to it. No SignalR hubs. No event handlers. No manual pub/sub."
   - icon: ⚡
     title: Unbeatable Speed
@@ -56,7 +56,6 @@ features:
 :root {
   --hl-rt: #c2410c;
   --hl-cache: #a16207;
-  --hl-nocode: #0e7490;
   --hl-scale: #7c3aed;
   --hl-feat: var(--vp-c-text-1);
   --hl-mit: #15803d;
@@ -64,7 +63,6 @@ features:
 .dark {
   --hl-rt: #fb923c;
   --hl-cache: #fbbf24;
-  --hl-nocode: #22d3ee;
   --hl-scale: #a78bfa;
   --hl-mit: #22c55e;
 }

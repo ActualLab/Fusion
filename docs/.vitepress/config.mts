@@ -4,8 +4,8 @@ import { defineConfig, type HeadConfig } from "vitepress";
 
 const hostname = "https://fusion.actuallab.net";
 const siteDescription =
-  "ActualLab.Fusion is a .NET framework for real-time apps: automatic state " +
-  "sync, caching, and the fastest RPC on .NET. Production-proven, MIT-licensed.";
+  "ActualLab.Fusion is an end-to-end reactivity framework for .NET and TypeScript — " +
+  "real-time UI updates, distributed caching, the fastest RPC, MIT-licensed.";
 
 // Pulls the first real paragraph out of a Markdown source file, trimmed to a
 // meta-description-sized snippet — so every page gets a unique description
