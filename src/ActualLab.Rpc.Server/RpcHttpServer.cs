@@ -1,6 +1,6 @@
-using System.IO.Pipelines;
 using System.Net;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 
@@ -29,6 +29,9 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
             request.QueryString.ToString());
         var requestDescription = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
+        var maxRequestBodySizeFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
+        if (maxRequestBodySizeFeature is { IsReadOnly: false })
+            maxRequestBodySizeFeature.MaxRequestBodySize = null;
 
         // Full-duplex RPC requires HTTP/2 (or higher) - HTTP/1.x can't read the request while writing the response
         if (HttpProtocol.IsHttp10(request.Protocol) || HttpProtocol.IsHttp11(request.Protocol)) {

@@ -310,7 +310,7 @@ public sealed class RpcPipeTransport : RpcTransport
         RpcByteMessageSerializerV5.WriteLittleEndian(span, frame.Length);
         frame.Span.CopyTo(span.Slice(sizeof(int)));
         writer.Advance(totalLength);
-        var flushResult = await writer.FlushAsync(CancellationToken.None).ConfigureAwait(false);
+        var flushResult = await writer.FlushAsync(StopToken).ConfigureAwait(false);
         if (flushResult.IsCompleted || flushResult.IsCanceled)
             throw new ChannelClosedException();
     }
@@ -319,8 +319,6 @@ public sealed class RpcPipeTransport : RpcTransport
     {
         using var commonCts = cancellationToken.LinkWith(StopToken);
         var reader = PipeReader;
-        using var ctr = commonCts.Token.Register(
-            static state => ((PipeReader)state!).CancelPendingRead(), reader);
 
         var tryDeserialize = _codec.TryDeserialize;
         var frameBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Settings.BufferSize, mustClear: false);
@@ -330,7 +328,10 @@ public sealed class RpcPipeTransport : RpcTransport
                 ReadResult result = default;
                 var isDone = false;
                 try {
-                    result = await reader.ReadAsync(CancellationToken.None).ConfigureAwait(false);
+                    result = await reader.ReadAsync(commonCts.Token).ConfigureAwait(false);
+                }
+                catch (Exception e) when (e.IsCancellationOf(commonCts.Token)) {
+                    isDone = true;
                 }
                 catch (Exception e) {
                     Log?.LogWarning(e, "PipeReader.ReadAsync failed");

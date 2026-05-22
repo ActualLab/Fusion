@@ -79,6 +79,5 @@ public record RpcHttpClientOptions
     protected static HttpClient DefaultHttpClientFactory(IServiceProvider services)
         => new(new SocketsHttpHandler {
             EnableMultipleHttp2Connections = true,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(10),
         });
 }

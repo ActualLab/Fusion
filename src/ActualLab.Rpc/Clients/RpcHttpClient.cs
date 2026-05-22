@@ -43,12 +43,13 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
             .ContinueWith(_ => connectTokenSource.CancelAndDisposeSilently(), TaskScheduler.Default);
 
         var content = new DuplexHttpContent();
+        HttpRequestMessage? request = null;
         HttpResponseMessage response;
         try {
             // HTTP/2 over cleartext requires "prior knowledge" (RequestVersionExact);
             // over TLS we allow HTTP/2 or higher, since ALPN negotiates the version.
             var isHttps = string.Equals(uri!.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
-            var request = new HttpRequestMessage(HttpMethod.Post, uri) {
+            request = new HttpRequestMessage(HttpMethod.Post, uri) {
                 Version = HttpVersion.Version20,
                 VersionPolicy = isHttps
                     ? HttpVersionPolicy.RequestVersionOrHigher
@@ -64,6 +65,7 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
         }
         catch (Exception e) {
             content.Complete(); // Unblocks DuplexHttpContent.SerializeToStreamAsync if it has already started
+            request?.Dispose();
             if (e.IsCancellationOf(connectToken) && !cancellationToken.IsCancellationRequested)
                 throw Errors.ConnectTimeout();
 
@@ -92,12 +94,13 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
             var pipeReader = PipeReader.Create(responseStream);
             var pipeWriter = PipeWriter.Create(requestStream);
             var transport = new RpcPipeTransport(transportOptions, clientPeer, pipeReader, pipeWriter) {
-                Owner = new RpcHttpConnectionOwner(content, response),
+                Owner = new RpcHttpConnectionOwner(content, request, response),
             };
             return new RpcConnection(transport, properties);
         }
         catch (Exception e) {
             content.Complete();
+            request.Dispose();
             response.Dispose();
             Log.LogWarning(e, "'{PeerRef}': Failed to connect to {Url}", clientPeer.Ref, uri);
             throw;

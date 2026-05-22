@@ -186,11 +186,6 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
                 FrameDelayerFactory = RpcFrameDelayerFactory,
                 // The test host uses a self-signed certificate, so the client must skip TLS validation.
                 HttpClientFactory = _ => new HttpClient(new SocketsHttpHandler {
-                    EnableMultipleHttp2Connections = true,
-#if NET7_0_OR_GREATER
-                    // Match Kestrel's bumped HTTP/2 receive window so high-throughput RPC doesn't stall on flow control.
-                    InitialHttp2StreamWindowSize = 10 * 1024 * 1024,
-#endif
                     SslOptions = new SslClientAuthenticationOptions {
                         RemoteCertificateValidationCallback = (_, _, _, _) => true,
                     },

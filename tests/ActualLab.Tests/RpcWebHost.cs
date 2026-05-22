@@ -15,7 +15,6 @@ using ActualLab.Fusion.Server;
 #else
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 #endif
 
 namespace ActualLab.Tests;
@@ -67,13 +66,6 @@ public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAss
 #if NETCOREAPP
     protected override void ConfigureWebHost(IWebHostBuilder webHost)
     {
-        // Default HTTP/2 flow-control windows (~64 KB) bottleneck high-throughput RPC -
-        // text formats stall hard (look like hangs), binary formats just slow down.
-        webHost.ConfigureKestrel(kestrel => {
-            var http2 = kestrel.Limits.Http2;
-            http2.InitialConnectionWindowSize = 10 * 1024 * 1024;
-            http2.InitialStreamWindowSize = 10 * 768 * 1024;
-        });
         webHost.Configure((_, app) => {
             app.UseWebSockets();
             app.UseRouting();
