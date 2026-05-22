@@ -1,5 +1,8 @@
 ---
 layout: home
+title: ActualLab.Fusion — Real-Time UI & Caching for .NET
+titleTemplate: false
+description: ActualLab.Fusion adds real-time updates and caching to any .NET app with almost no code changes — 10⁶ scale headroom, the fastest RPC on .NET, MIT-licensed.
 
 hero:
   name: ActualLab.Fusion

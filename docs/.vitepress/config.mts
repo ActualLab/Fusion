@@ -1,13 +1,57 @@
-import { defineConfig } from "vitepress";
+import fs from "node:fs";
+import path from "node:path";
+import { defineConfig, type HeadConfig } from "vitepress";
 
 const hostname = "https://fusion.actuallab.net";
+const siteDescription =
+  "ActualLab.Fusion is a .NET framework for real-time apps: automatic state " +
+  "sync, caching, and the fastest RPC on .NET. Production-proven, MIT-licensed.";
+
+// Pulls the first real paragraph out of a Markdown source file, trimmed to a
+// meta-description-sized snippet — so every page gets a unique description
+// instead of all 100+ pages sharing the site-wide one.
+function deriveDescription(srcDir: string, relativePath: string): string {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(path.join(srcDir, relativePath), "utf-8");
+  } catch {
+    return "";
+  }
+  raw = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "");
+  const paragraph: string[] = [];
+  for (const line of raw.split(/\r?\n/)) {
+    const t = line.trim();
+    if (paragraph.length === 0) {
+      if (t === "" || /^(?:#|<|```|:::|\||[-*]\s|\d+\.\s)/.test(t))
+        continue;
+    } else if (t === "" || /^(?:#|```|:::)/.test(t))
+      break;
+    paragraph.push(t.replace(/^>\s?/, ""));
+  }
+  const entities: Record<string, string> = {
+    amp: "&", lt: "<", gt: ">", quot: "\"", "#39": "'",
+    nbsp: " ", ndash: "–", mdash: "—", hellip: "…",
+  };
+  let text = paragraph.join(" ")
+    .replace(/!\[[^\]]*]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, "$1")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\\([<>&])/g, "$1")
+    .replace(/&(amp|lt|gt|quot|#39|nbsp|ndash|mdash|hellip);/g, (_m, e) => entities[e] ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (text.length > 160)
+    text = text.slice(0, 157).replace(/\s+\S*$/, "") + "…";
+  return text;
+}
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   lang: "en-US",
   title: "ActualLab.Fusion",
-  description:
-    "Fusion is a reactive framework for building scalable, real-time applications. This site hosts Fusion documentation.",
+  description: siteDescription,
   head: [
     ["meta", { name: "msvalidate.01", content: "1CE54B5BA968A223C22D8083ACFF0F67" }],
     ["link", { rel: "icon", href: "/favicon.ico" }],
@@ -18,9 +62,13 @@ gtag('js', new Date());
 gtag('config', 'G-PX4G7HX4CM');`],
   ],
   srcExclude: [
+    "AGENTS.md",
+    "ExternalLinks0.md",
+    "Tasks.md",
     "mdsource",
     "node-modules",
     "outdated",
+    "plans",
     "public/**",
     "slides",
     "tasks",
@@ -31,13 +79,62 @@ gtag('config', 'G-PX4G7HX4CM');`],
   sitemap: {
     hostname,
   },
-  // Self-referencing canonical link — GitHub Pages serves every page at both
-  // /Foo and /Foo.html; without this Google reports them as duplicates.
-  transformHead({ pageData }) {
-    const path = pageData.relativePath
+  transformPageData(pageData, { siteConfig }) {
+    if (!pageData.description) {
+      const derived = deriveDescription(siteConfig.srcDir, pageData.relativePath);
+      if (derived.length >= 40)
+        pageData.description = derived;
+    }
+  },
+  transformHead({ pageData, title, description }) {
+    // Self-referencing canonical link — GitHub Pages serves every page at both
+    // /Foo and /Foo.html; without this Google reports them as duplicates.
+    const pagePath = pageData.relativePath
       .replace(/(^|\/)index\.md$/, "$1")
       .replace(/\.md$/, ".html");
-    return [["link", { rel: "canonical", href: `${hostname}/${path}` }]];
+    const url = `${hostname}/${pagePath}`;
+    const desc = description || siteDescription;
+    const image = `${hostname}/og-image.jpg`;
+    const head: HeadConfig[] = [
+      ["link", { rel: "canonical", href: url }],
+      ["meta", { property: "og:type", content: "website" }],
+      ["meta", { property: "og:site_name", content: "ActualLab.Fusion" }],
+      ["meta", { property: "og:title", content: title }],
+      ["meta", { property: "og:description", content: desc }],
+      ["meta", { property: "og:url", content: url }],
+      ["meta", { property: "og:image", content: image }],
+      ["meta", { property: "og:image:width", content: "1200" }],
+      ["meta", { property: "og:image:height", content: "630" }],
+      ["meta", { property: "og:locale", content: "en_US" }],
+      ["meta", { name: "twitter:card", content: "summary_large_image" }],
+      ["meta", { name: "twitter:title", content: title }],
+      ["meta", { name: "twitter:description", content: desc }],
+      ["meta", { name: "twitter:image", content: image }],
+    ];
+    if (pageData.relativePath === "index.md")
+      head.push(["script", { type: "application/ld+json" }, JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        name: "ActualLab.Fusion",
+        applicationCategory: "DeveloperApplication",
+        operatingSystem: "Windows, macOS, Linux",
+        description: desc,
+        url: `${hostname}/`,
+        image,
+        license: "https://opensource.org/licenses/MIT",
+        isAccessibleForFree: true,
+        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        author: {
+          "@type": "Organization",
+          name: "ActualLab",
+          url: "https://github.com/ActualLab",
+        },
+        sameAs: [
+          "https://github.com/ActualLab/Fusion",
+          "https://www.nuget.org/packages/ActualLab.Core",
+        ],
+      })]);
+    return head;
   },
   vite: {
     plugins: [
