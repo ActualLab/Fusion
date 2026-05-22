@@ -10,6 +10,17 @@
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- System.IO.Pipelines is in Microsoft.NETCore.App on net9+; older targets need the package -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+    <PackageReference Include="System.IO.Pipelines" VersionOverride="$(MicrosoftExtensionsVersion8)" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
+    <PackageReference Include="System.IO.Pipelines" VersionOverride="$(MicrosoftExtensionsVersion7)" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net6')) or $(TargetFramework.StartsWith('net5')) or $(TargetFramework.StartsWith('netcoreapp')) or $(TargetFramework.StartsWith('netstandard'))">
+    <PackageReference Include="System.IO.Pipelines" VersionOverride="$(MicrosoftExtensionsVersion6)" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Core\ActualLab.Core.csproj" />
     <ProjectReference Include="..\ActualLab.Interception\ActualLab.Interception.csproj" />
@@ -17,6 +28,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ActualLab.Generators\ActualLab.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- HTTP/2 RPC client uses HttpVersionPolicy, which exists only on net5+ -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard')) or $(TargetFramework.StartsWith('netcoreapp'))">
+    <Compile Remove="Clients\RpcHttp*.cs" />
+    <Compile Remove="Clients\Internal\RpcHttp*.cs" />
+    <Compile Remove="Clients\Internal\DuplexHttpContent.cs" />
   </ItemGroup>
 
 </Project>

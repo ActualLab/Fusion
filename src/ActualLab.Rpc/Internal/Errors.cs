@@ -42,6 +42,8 @@ public static class Errors
     public static Exception NoMethod(Type serviceType, string methodName)
         => new KeyNotFoundException($"Can't resolve method '{methodName}' (by name) of '{serviceType.GetName()}'.");
 
+    public static Exception Http2ConnectionRequired(Version actualVersion)
+        => new RpcException($"RpcHttpClient requires an HTTP/2 (or higher) connection, but the server responded with HTTP/{actualVersion}.");
     public static Exception UnsupportedSerializationFormat(string? message = null)
         => new RpcSerializationFormatException(message);
     public static Exception HandshakeFailed()

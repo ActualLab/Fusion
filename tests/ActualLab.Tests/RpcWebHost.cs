@@ -15,12 +15,15 @@ using ActualLab.Fusion.Server;
 #else
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 #endif
 
 namespace ActualLab.Tests;
 
-public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAssembly = null)
-    : TestWebHostBase
+// useHttp also drives the host's scheme: the HTTP/2 RPC transport needs HTTPS (HTTP/2 is negotiated
+// via TLS ALPN), while WebSocket-based tests keep using cleartext HTTP.
+public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAssembly = null, bool useHttp = false)
+    : TestWebHostBase(useHttps: useHttp)
 {
     public IServiceCollection BaseServices { get; } = baseServices;
     public Assembly? ControllerAssembly { get; set; } = controllerAssembly;
@@ -35,11 +38,16 @@ public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAss
 
             // Since we copy all services here,
             // only web-related ones must be added to services
-            var webSocketServer = services.AddRpc().AddWebSocketServer();
+            var rpc = services.AddRpc();
+            var webSocketServer = rpc.AddWebSocketServer();
             webSocketServer.Configure(_ => {
                 var defaultOptions = RpcWebSocketServerOptions.Default;
                 return defaultOptions with { ExposeBackend = ExposeBackend };
             });
+#if NET5_0_OR_GREATER
+            var httpServer = rpc.AddHttpServer();
+            httpServer.Configure(_ => RpcHttpServerOptions.Default with { ExposeBackend = ExposeBackend });
+#endif
             if (RpcFrameDelayerFactory is not null)
                 services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
                     FrameDelayerFactory = RpcFrameDelayerFactory,
@@ -59,6 +67,13 @@ public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAss
 #if NETCOREAPP
     protected override void ConfigureWebHost(IWebHostBuilder webHost)
     {
+        // Default HTTP/2 flow-control windows (~64 KB) bottleneck high-throughput RPC -
+        // text formats stall hard (look like hangs), binary formats just slow down.
+        webHost.ConfigureKestrel(kestrel => {
+            var http2 = kestrel.Limits.Http2;
+            http2.InitialConnectionWindowSize = 10 * 1024 * 1024;
+            http2.InitialStreamWindowSize = 10 * 768 * 1024;
+        });
         webHost.Configure((_, app) => {
             app.UseWebSockets();
             app.UseRouting();
@@ -66,6 +81,9 @@ public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAss
                 endpoints.MapControllerRoute(name: "DefaultApi", pattern: "api/{controller}/{action}");
                 endpoints.MapControllers();
                 endpoints.MapRpcWebSocketServer();
+#if NET5_0_OR_GREATER
+                endpoints.MapRpcHttpServer();
+#endif
             });
         });
     }

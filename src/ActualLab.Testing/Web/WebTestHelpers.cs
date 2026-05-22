@@ -20,7 +20,7 @@ public static class WebTestHelpers
         var listener = new TcpListener(IPAddress.Any, 0);
         listener.Start();
         try {
-            return ((IPEndPoint) listener.LocalEndpoint).Port;
+            return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
         finally {
             listener.Stop();

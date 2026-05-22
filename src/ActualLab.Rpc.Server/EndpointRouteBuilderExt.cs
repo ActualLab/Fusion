@@ -27,4 +27,24 @@ public static class EndpointRouteBuilderExt
         RequestDelegate HandleRequest(bool isBackend)
             => httpContext => server.Invoke(httpContext, isBackend);
     }
+
+#if NET5_0_OR_GREATER
+    public static IEndpointRouteBuilder MapRpcHttpServer(this IEndpointRouteBuilder endpoints)
+    {
+        if (endpoints is null)
+            throw new ArgumentNullException(nameof(endpoints));
+
+        var services = endpoints.ServiceProvider;
+        var server = services.GetRequiredService<RpcHttpServer>();
+        var options = server.Options;
+
+        endpoints.MapPost(options.RequestPath, HandleRequest(isBackend: false));
+        if (options.ExposeBackend)
+            endpoints.MapPost(options.BackendRequestPath, HandleRequest(isBackend: true));
+        return endpoints;
+
+        RequestDelegate HandleRequest(bool isBackend)
+            => httpContext => server.Invoke(httpContext, isBackend);
+    }
+#endif
 }

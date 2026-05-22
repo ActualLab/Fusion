@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Hosting;
 using ActualLab.IO;
 #if NETCOREAPP
+using System.Net;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -111,7 +114,7 @@ public abstract class TestWebHostBase : ITestWebHost
                 kestrel.ConfigureEndpointDefaults(listen => {
                     listen.Protocols = HttpProtocols.Http1AndHttp2;
                     if (Equals(ServerUri.Scheme, "https"))
-                        listen.UseHttps();
+                        listen.UseHttps(ServerCertificateLazy.Value);
                 });
             });
         webHost.UseSockets(socket => socket.NoDelay = true);
@@ -144,6 +147,30 @@ public abstract class TestWebHostBase : ITestWebHost
 
 #if NETCOREAPP
     protected virtual void ConfigureWebHost(IWebHostBuilder webHost) { }
+
+    // A self-signed certificate is used instead of the ASP.NET dev certificate, so HTTPS test
+    // hosts work without 'dotnet dev-certs https' being set up (e.g. in CI / containers).
+    private static readonly Lazy<X509Certificate2> ServerCertificateLazy = new(CreateServerCertificate);
+
+    private static X509Certificate2 CreateServerCertificate()
+    {
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest("CN=localhost", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var sanBuilder = new SubjectAlternativeNameBuilder();
+        sanBuilder.AddDnsName("localhost");
+        sanBuilder.AddIpAddress(IPAddress.Loopback);
+        request.CertificateExtensions.Add(sanBuilder.Build());
+        using var certificate = request.CreateSelfSigned(
+            DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(10));
+
+        // Re-importing via PFX makes the private key usable by Kestrel on every OS.
+        var pfx = certificate.Export(X509ContentType.Pfx);
+#if NET9_0_OR_GREATER
+        return X509CertificateLoader.LoadPkcs12(pfx, null);
+#else
+        return new X509Certificate2(pfx);
+#endif
+    }
 #endif
 
 #if NETFRAMEWORK

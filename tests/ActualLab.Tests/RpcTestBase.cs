@@ -1,3 +1,4 @@
+using System.Net.Security;
 using ActualLab.DependencyInjection;
 using ActualLab.Diagnostics;
 using ActualLab.Locking;
@@ -27,6 +28,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     protected Func<RpcFrameDelayer?>? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
     protected string SerializationFormat { get; set; } = DefaultSerializationFormat;
     protected bool ExposeBackend { get; init; } = false;
+    protected bool UseHttp { get; init; } = false;
     protected bool UseTestClock { get; init; }
     protected bool UseLogging { get; init; } = true;
     protected bool UseDebugLog { get; set; } = true;
@@ -159,7 +161,14 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
             });
 
         var rpc = services.AddRpc();
+#if NET5_0_OR_GREATER
+        if (UseHttp)
+            rpc.AddHttpClient(_ => WebHost.ServerUri.ToString());
+        else
+            rpc.AddWebSocketClient(_ => WebHost.ServerUri.ToString());
+#else
         rpc.AddWebSocketClient(_ => WebHost.ServerUri.ToString());
+#endif
         services.AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptions.Default with {
             RouterFactory = methodDef => args => {
                 if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
@@ -170,12 +179,31 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
         });
         services.AddSingleton<RpcSerializationFormatResolver>(
             _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
-        services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
-            HostUrlResolver = _ => WebHost.ServerUri.ToString(),
-            FrameDelayerFactory = RpcFrameDelayerFactory,
-        });
+#if NET5_0_OR_GREATER
+        if (UseHttp)
+            services.AddSingleton<RpcHttpClientOptions>(_ => new RpcHttpClientOptions() {
+                HostUrlResolver = _ => WebHost.ServerUri.ToString(),
+                FrameDelayerFactory = RpcFrameDelayerFactory,
+                // The test host uses a self-signed certificate, so the client must skip TLS validation.
+                HttpClientFactory = _ => new HttpClient(new SocketsHttpHandler {
+                    EnableMultipleHttp2Connections = true,
+#if NET7_0_OR_GREATER
+                    // Match Kestrel's bumped HTTP/2 receive window so high-throughput RPC doesn't stall on flow control.
+                    InitialHttp2StreamWindowSize = 10 * 1024 * 1024,
+#endif
+                    SslOptions = new SslClientAuthenticationOptions {
+                        RemoteCertificateValidationCallback = (_, _, _, _) => true,
+                    },
+                }),
+            });
+        else
+#endif
+            services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {
+                HostUrlResolver = _ => WebHost.ServerUri.ToString(),
+                FrameDelayerFactory = RpcFrameDelayerFactory,
+            });
         if (!isClient) {
-            services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly) {
+            services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly, UseHttp) {
                 ExposeBackend = ExposeBackend,
             });
         }

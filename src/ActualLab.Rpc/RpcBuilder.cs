@@ -60,6 +60,9 @@ public readonly struct RpcBuilder
         services.AddSingleton(_ => RpcInboundCallOptions.Default);
         services.AddSingleton(_ => RpcOutboundCallOptions.Default);
         services.AddSingleton(_ => RpcWebSocketClientOptions.Default);
+#if NET5_0_OR_GREATER
+        services.AddSingleton(_ => RpcHttpClientOptions.Default);
+#endif
         services.AddSingleton(_ => RpcDiagnosticsOptions.Default);
         services.AddSingleton(_ => RpcSerializationFormatResolver.Default);
         services.AddSingleton(_ => RpcInterceptor.Options.Default);
@@ -117,6 +120,35 @@ public readonly struct RpcBuilder
         services.AddAlias<RpcClient, RpcWebSocketClient>();
         return this;
     }
+
+#if NET5_0_OR_GREATER
+
+    // HTTP client
+
+    public RpcBuilder AddHttpClient(Uri hostUri)
+        => AddHttpClient(_ => hostUri.ToString());
+
+    public RpcBuilder AddHttpClient(string hostNameOrUrl)
+        => AddHttpClient(_ => hostNameOrUrl);
+
+    public RpcBuilder AddHttpClient(Func<IServiceProvider, string> hostUrlResolver)
+        => AddHttpClient(c => RpcHttpClientOptions.Default with {
+            HostUrlResolver = _ => hostUrlResolver.Invoke(c),
+        });
+
+    public RpcBuilder AddHttpClient(Func<IServiceProvider, RpcHttpClientOptions>? optionsFactory = null)
+    {
+        var services = Services;
+        services.AddSingleton(optionsFactory, _ => RpcHttpClientOptions.Default);
+        if (services.HasService<RpcHttpClient>())
+            return this;
+
+        services.AddSingleton(c => new RpcHttpClient(c));
+        services.AddAlias<RpcClient, RpcHttpClient>();
+        return this;
+    }
+
+#endif
 
     // AddService & its specific variants
 

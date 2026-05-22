@@ -32,4 +32,9 @@
     <ProjectReference Include="..\ActualLab.Rpc\ActualLab.Rpc.csproj" />
   </ItemGroup>
 
+  <!-- HTTP/2 RPC server depends on RpcHttpClientOptions (net5+) -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('netcoreapp'))">
+    <Compile Remove="RpcHttpServer*.cs" />
+  </ItemGroup>
+
 </Project>

@@ -1,21 +1,23 @@
+using System.Buffers;
 using System.Diagnostics.Metrics;
-using System.Net.WebSockets;
+using System.IO.Pipelines;
 using ActualLab.Channels;
 using ActualLab.Concurrency;
 using ActualLab.Rpc.Diagnostics;
-using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
-namespace ActualLab.Rpc.WebSockets;
+namespace ActualLab.Rpc.Infrastructure;
 
 /// <summary>
-/// An <see cref="RpcTransport"/> implementation that sends and receives RPC messages over a WebSocket connection.
+/// An <see cref="RpcTransport"/> implementation that sends and receives RPC messages over a
+/// <see cref="System.IO.Pipelines.PipeReader"/> / <see cref="System.IO.Pipelines.PipeWriter"/> pair. Unlike a WebSocket, a pipe is a raw
+/// byte stream, so each frame (a batch of messages) is prefixed with its 4-byte little-endian length.
 /// </summary>
-public sealed class RpcWebSocketTransport : RpcTransport
+public sealed class RpcPipeTransport : RpcTransport
 {
     /// <summary>
-    /// Configuration options for <see cref="RpcWebSocketTransport"/>.
+    /// Configuration options for <see cref="RpcPipeTransport"/>.
     /// </summary>
     public record Options
     {
@@ -26,13 +28,10 @@ public sealed class RpcWebSocketTransport : RpcTransport
         public int FrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
         public int BufferSize { get; init; } = 16_000;
         public int MaxBufferSize { get; init; } = 256_000;
-        // High CloseTimeout values "shrink" effective ConnectTimeout,
-        // low values increase abrupt/graceful close ratio, which is a no-op in our case.
-        public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(1);
+        public int MaxFrameSize { get; init; } = 16_000_000; // Inbound frame size guard against corrupt streams
 
         // Use of UnboundedChannelOptions is totally fine here: if the message is enqueued
         public ChannelOptions WriteChannelOptions { get; init; } = new UnboundedChannelOptions() {
-            // FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true, // Must be true
             SingleWriter = false, // Must be false
             AllowSynchronousContinuations = false, // Must be false, setting it to true will kill the throughput!
@@ -54,36 +53,33 @@ public sealed class RpcWebSocketTransport : RpcTransport
     private ArrayPoolBuffer<byte> _flushingBuffer;
     private int _getAsyncEnumeratorCounter;
 
-    public bool OwnsWebSocketOwner { get; set; } = true;
     public Options Settings { get; }
-    public WebSocketOwner WebSocketOwner { get; }
-    public WebSocket WebSocket { get; }
+    public PipeReader PipeReader { get; }
+    public PipeWriter PipeWriter { get; }
     public RpcMessageSerializer MessageSerializer { get; }
-    public bool IsTextSerializer { get; }
-    public WebSocketMessageType MessageType { get; }
+    // Owner is disposed (if it's IAsyncDisposable / IDisposable) once the transport is closed.
+    public object? Owner { get; init; }
+    public bool OwnsOwner { get; init; } = true;
     public ILogger? Log { get; }
     public ILogger? ErrorLog { get; }
 
     public override Task WhenCompleted => _whenCompleted;
     public Task WhenClosed { get; }
 
-    public RpcWebSocketTransport(
+    public RpcPipeTransport(
         Options settings,
         RpcPeer peer,
-        WebSocketOwner webSocketOwner,
+        PipeReader pipeReader,
+        PipeWriter pipeWriter,
         CancellationTokenSource? stopTokenSource = null)
         : base(peer, stopTokenSource)
     {
         Settings = settings;
-        WebSocketOwner = webSocketOwner;
-        WebSocket = webSocketOwner.WebSocket;
+        PipeReader = pipeReader;
+        PipeWriter = pipeWriter;
         MessageSerializer = peer.MessageSerializer;
-        IsTextSerializer = MessageSerializer is RpcTextMessageSerializer;
-        MessageType = IsTextSerializer
-            ? WebSocketMessageType.Text
-            : WebSocketMessageType.Binary;
 
-        Log = webSocketOwner.Services.LogFor(GetType());
+        Log = peer.Hub.Services.LogFor(GetType());
         ErrorLog = Log.IfEnabled(LogLevel.Error);
 
         _whenCompletedSource = AsyncTaskMethodBuilderExt.New();
@@ -121,7 +117,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 while (_writeChannel.Reader.TryRead(out var message))
                     CompleteSend(message, new ChannelClosedException());
 
-                await CloseWebSocket(null).ConfigureAwait(false); // CloseWebSocket never throws
+                ClosePipe(null); // ClosePipe never throws
 
                 // It's safer to dispose the buffers here rather than in 'finally',
                 // coz if something fails and they're somehow still used,
@@ -130,7 +126,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 _writeBuffer.Dispose();
             }
             catch (Exception e) {
-                Log.LogError(e, "Error in WebSocketRpcTransport.WhenClosed, this should never happen");
+                Log.LogError(e, "Error in RpcPipeTransport.WhenClosed, this should never happen");
             }
             finally {
                 Interlocked.Decrement(ref _meters.ChannelCount);
@@ -141,8 +137,17 @@ public sealed class RpcWebSocketTransport : RpcTransport
     protected override async Task DisposeAsyncCore()
     {
         await WhenClosed.ConfigureAwait(false);
-        if (OwnsWebSocketOwner)
-            await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
+        if (!OwnsOwner)
+            return;
+
+        switch (Owner) {
+        case IAsyncDisposable ad:
+            await ad.DisposeAsync().ConfigureAwait(false);
+            break;
+        case IDisposable d:
+            d.Dispose();
+            break;
+        }
     }
 
     public override void Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
@@ -294,88 +299,130 @@ public sealed class RpcWebSocketTransport : RpcTransport
         _writeBuffer.Renew(_maxBufferSize);
 
         _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
-        return WebSocket.SendAsync(frame, MessageType, endOfMessage: true, CancellationToken.None).AsTask();
+        return WriteFrame(frame);
+    }
+
+    private async Task WriteFrame(ReadOnlyMemory<byte> frame)
+    {
+        var writer = PipeWriter;
+        var totalLength = sizeof(int) + frame.Length;
+        var span = writer.GetSpan(totalLength);
+        RpcByteMessageSerializerV5.WriteLittleEndian(span, frame.Length);
+        frame.Span.CopyTo(span.Slice(sizeof(int)));
+        writer.Advance(totalLength);
+        var flushResult = await writer.FlushAsync(CancellationToken.None).ConfigureAwait(false);
+        if (flushResult.IsCompleted || flushResult.IsCanceled)
+            throw new ChannelClosedException();
     }
 
     private async IAsyncEnumerable<RpcInboundMessage> ReadAllImpl([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var bufferSize = Settings.BufferSize;
         using var commonCts = cancellationToken.LinkWith(StopToken);
-        using var commonTokenRegistration = commonCts.Token.Register(() => _ = DisposeAsync());
+        var reader = PipeReader;
+        using var ctr = commonCts.Token.Register(
+            static state => ((PipeReader)state!).CancelPendingRead(), reader);
 
-        // Start with a non-pooled buffer for initial reads
-        var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, bufferSize, mustClear: false);
         var tryDeserialize = _codec.TryDeserialize;
-
+        var frameBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Settings.BufferSize, mustClear: false);
+        var frameLength = -1; // -1 = length header not read yet; >= 0 = bytes still being accumulated into frameBuffer
         try {
             while (true) {
-                var requestedCapacity = Math.Max(bufferSize, buffer.FreeCapacity);
-                var readMemory = buffer.GetMemory(requestedCapacity);
-                var arraySegment = new ArraySegment<byte>(buffer.Array, buffer.WrittenCount, readMemory.Length);
-                WebSocketReceiveResult r;
+                ReadResult result = default;
+                var isDone = false;
                 try {
-                    r = await WebSocket.ReceiveAsync(arraySegment, CancellationToken.None).ConfigureAwait(false);
+                    result = await reader.ReadAsync(CancellationToken.None).ConfigureAwait(false);
                 }
                 catch (Exception e) {
-                    Log?.LogWarning(e, "WebSocket.ReceiveAsync failed");
-                    if (e is WebSocketException { WebSocketErrorCode: WebSocketError.ConnectionClosedPrematurely })
-                        r = new WebSocketReceiveResult(0, WebSocketMessageType.Close, endOfMessage: true);
-                    else
-                        throw;
+                    Log?.LogWarning(e, "PipeReader.ReadAsync failed");
+                    isDone = true;
                 }
-                if (r.MessageType == WebSocketMessageType.Close) {
-                    if (WebSocket.CloseStatus.HasValue
-                        && (int)WebSocket.CloseStatus.Value == RpcWebSocketCloseCode.UnsupportedFormat)
-                        throw Errors.UnsupportedSerializationFormat(WebSocket.CloseStatusDescription.NullIfEmpty());
+                if (isDone || result.IsCanceled)
                     yield break;
+
+                var buffer = result.Buffer;
+                var consumed = buffer.Start;
+
+                // Phase 1: read the 4-byte frame length header (only the first time per frame)
+                if (frameLength < 0) {
+                    if (buffer.Length < sizeof(int)) {
+                        if (result.IsCompleted)
+                            yield break;
+                        reader.AdvanceTo(buffer.Start, buffer.End); // need more data
+                        continue;
+                    }
+                    frameLength = ReadFrameLength(buffer);
+                    if (frameLength <= 0 || frameLength > Settings.MaxFrameSize)
+                        throw Errors.InvalidItemSize();
+                    consumed = buffer.GetPosition(sizeof(int));
+                    buffer = buffer.Slice(consumed);
+                    frameBuffer.Renew(_maxBufferSize);
                 }
-                if (r.MessageType != MessageType)
-                    throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
 
-                buffer.Advance(r.Count);
-                _meters.IncomingFrameSizeHistogram.Record(r.Count);
-                if (!r.EndOfMessage)
-                    continue; // Continue reading into the same buffer
+                // Phase 2: copy as many frame-body bytes as are available into frameBuffer
+                var remaining = frameLength - frameBuffer.WrittenCount;
+                if (remaining > 0 && buffer.Length > 0) {
+                    var toCopy = (int)Math.Min(remaining, buffer.Length);
+                    var span = frameBuffer.GetSpan(toCopy);
+                    buffer.Slice(0, toCopy).CopyTo(span);
+                    frameBuffer.Advance(toCopy);
+                    consumed = buffer.GetPosition(toCopy);
+                }
 
-                var array = buffer.Array;
-                var totalLength = buffer.WrittenCount;
+                reader.AdvanceTo(consumed);
+
+                if (frameBuffer.WrittenCount < frameLength) {
+                    // Need more data to complete the current frame.
+                    if (result.IsCompleted)
+                        yield break;
+                    continue;
+                }
+
+                // Frame is complete - parse it out into messages.
+                _meters.IncomingFrameSizeHistogram.Record(frameLength);
+                var array = frameBuffer.Array;
+                var len = frameLength;
+                frameLength = -1; // next iteration starts a new frame
                 var offset = 0;
-                while (offset < totalLength) { // Zero-length frames are skipped here
-                    var message = tryDeserialize(array, ref offset, totalLength);
+                while (offset < len) { // Zero-length frames are skipped here
+                    var message = tryDeserialize(array, ref offset, len);
                     if (message is not null)
                         yield return message;
                 }
-                // The code that uses frame's data (RpcInboundMessage.ArgumentData) is running synchronously,
-                // so if we're here, the buffer can be reused.
-                buffer.Renew(_maxBufferSize);
+                // RpcInboundMessage.ArgumentData is consumed synchronously by the enumerator's caller,
+                // so frameBuffer can be safely renewed on the next iteration.
             }
         }
         finally {
-            buffer.Dispose();
+            frameBuffer.Dispose();
             _ = DisposeAsync();
         }
     }
 
+    private static int ReadFrameLength(in ReadOnlySequence<byte> buffer)
+    {
+        var firstSpan = buffer.First.Span;
+        if (firstSpan.Length >= sizeof(int))
+            return RpcByteMessageSerializerV5.ReadLittleEndian(firstSpan);
+
+        Span<byte> header = stackalloc byte[sizeof(int)];
+        buffer.Slice(0, sizeof(int)).CopyTo(header);
+        return RpcByteMessageSerializerV5.ReadLittleEndian((ReadOnlySpan<byte>)header);
+    }
+
     // This method should never throw
-    private async Task CloseWebSocket(Exception? error)
+    private void ClosePipe(Exception? error)
     {
         if (error is OperationCanceledException)
             error = null;
 
-        var status = WebSocketCloseStatus.NormalClosure;
-        var message = "Ok.";
-        if (error is not null) {
-            status = WebSocketCloseStatus.InternalServerError;
-            message = "Internal Server Error.";
-            Log?.LogInformation(error, "WebSocket is closing after an error");
-        }
-        if (WebSocket.State is WebSocketState.Closed or WebSocketState.Aborted)
-            return;
-
         try {
-            await WebSocket.CloseAsync(status, message, default)
-                .WaitAsync(Settings.CloseTimeout, CancellationToken.None)
-                .SilentAwait(false);
+            PipeWriter.Complete(error);
+        }
+        catch {
+            // Intended
+        }
+        try {
+            PipeReader.Complete(error);
         }
         catch {
             // Intended
@@ -385,7 +432,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
     // Nested types
 
     /// <summary>
-    /// OpenTelemetry metrics for <see cref="RpcWebSocketTransport"/> operations.
+    /// OpenTelemetry metrics for <see cref="RpcPipeTransport"/> operations.
     /// </summary>
     public class MeterSet
     {
@@ -399,18 +446,18 @@ public sealed class RpcWebSocketTransport : RpcTransport
         public MeterSet()
         {
             var m = RpcInstruments.Meter;
-            var ms = "rpc.ws.transport";
+            var ms = "rpc.pipe.transport";
             ChannelCounter = m.CreateObservableCounter($"{ms}.count",
                 () => InterlockedExt.VolatileRead(ref ChannelCount),
-                null, "Number of WebSocketRpcTransport instances.");
+                null, "Number of RpcPipeTransport instances.");
             IncomingItemCounter = m.CreateCounter<long>($"{ms}.incoming.item.count",
-                null, "Number of items received via WebSocketRpcTransport.");
+                null, "Number of items received via RpcPipeTransport.");
             OutgoingItemCounter = m.CreateCounter<long>($"{ms}.outgoing.item.count",
-                null, "Number of items sent via WebSocketRpcTransport.");
+                null, "Number of items sent via RpcPipeTransport.");
             IncomingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.incoming.frame.size",
-                "By", "WebSocketRpcTransport's incoming frame size in bytes.");
+                "By", "RpcPipeTransport's incoming frame size in bytes.");
             OutgoingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.outgoing.frame.size",
-                "By", "WebSocketRpcTransport's outgoing frame size in bytes.");
+                "By", "RpcPipeTransport's outgoing frame size in bytes.");
         }
     }
 }
