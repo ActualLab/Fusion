@@ -6,7 +6,7 @@ description: ActualLab.Fusion brings real-time UI updates and distributed cachin
 
 hero:
   name: ActualLab.Fusion
-  text: <span style="color:var(--hl-rt);">End-to-end reactivity</span> monster.
+  text: End-to-end reactivity monster.
   tagline: Bring <span style="color:var(--hl-rt);">real-time UI updates</span> and <span style="color:var(--hl-cache);">distributed caching</span> to any .NET/TypeScript app. Get <span style="color:var(--hl-scale);">10⁶ scale</span> headroom. Production-proven. <span style="color:var(--hl-mit);">MIT license.</span>
   actions:
     - theme: brand
@@ -65,6 +65,29 @@ features:
   --hl-cache: #fbbf24;
   --hl-scale: #a78bfa;
   --hl-mit: #22c55e;
+}
+
+/* Hero — dark sun background image, right-aligned. The hero is always
+   dark, so its text is pinned to light colors for both color themes. */
+.VPHome .VPHero {
+  background-color: #050608;
+  background-image:
+    linear-gradient(to bottom, var(--vp-c-bg) 0, var(--vp-c-bg) 64px, transparent 155px, transparent 70%, var(--vp-c-bg) 100%),
+    linear-gradient(to right, #050608 0%, rgba(5, 6, 8, 0.85) 36%, rgba(5, 6, 8, 0.45) 60%, transparent 88%),
+    url("/img/hero-bg.jpg");
+  background-repeat: no-repeat;
+  background-position: center right;
+  background-size: cover;
+  --hl-rt: #fb923c;
+  --hl-cache: #fbbf24;
+  --hl-scale: #a78bfa;
+  --hl-mit: #22c55e;
+}
+.VPHome .VPHero .text {
+  color: #f3f4f6;
+}
+.VPHome .VPHero .tagline {
+  color: #c9ccd4;
 }
 </style>
 
