@@ -257,10 +257,12 @@ function Show-Help {
     Write-Host "  c rwt feature1     Remove feature1 worktree and clean up"
     Write-Host "  c os fwt feature1  Run on host OS in feature worktree"
     Write-Host "  c os bwt issue1    Run on host OS in bugfix worktree"
-    Write-Host "  c chrome           Start Chrome with remote debugging (default profile, port 9222)"
-    Write-Host "  c chrome:50000     Start Chrome on port 50000 (default profile)"
+    Write-Host "  c chrome           Start Chrome with remote debugging (Playwright profile, port 9222)"
+    Write-Host "  c chrome:50000     Start Chrome on port 50000 (Playwright profile)"
     Write-Host "  c chrome*3         Start 3 Chrome instances on 9222..9224 (anonymous profiles)"
     Write-Host "  c chrome*3:50000   Start 3 Chrome instances on 50000..50002 (anonymous profiles)"
+    Write-Host "  c chrome --profile MyDebug"
+    Write-Host "                     Use the 'MyDebug' profile dir (sibling of Playwright); incompatible with *N"
     Write-Host "  c chrome --mute-audio --window-size=1280,720"
     Write-Host "                     Any args after chrome[*N][:PORT] are forwarded to the browser"
     Write-Host "  c chrome --fake-media"
@@ -1255,6 +1257,21 @@ function Test-DebugPort {
     return $LASTEXITCODE -eq 0
 }
 
+function Get-BrowserProcesses {
+    param([string]$ExePath)
+    $exeName = if ($currentOS -eq "Windows") {
+        [System.IO.Path]::GetFileNameWithoutExtension($ExePath)
+    } else {
+        Split-Path -Leaf $ExePath
+    }
+    return @(Get-Process -Name $exeName -ErrorAction SilentlyContinue)
+}
+
+function Test-BrowserRunning {
+    param([string]$ExePath)
+    return (Get-BrowserProcesses -ExePath $ExePath).Count -gt 0
+}
+
 function Ensure-FirewallRule {
     param([int]$Port, [string]$BrowserName)
     if ($currentOS -ne "Windows") { return }
@@ -1294,7 +1311,84 @@ function Start-DebugBrowsers {
         [bool]  $UseAnonymous,
         [string[]]$ExtraArgs = @()
     )
+    # Pull out our own meta-flags before anything is forwarded to the browser:
+    #   --fake-media       synthetic media-stream backend (mjpeg/wav fake cam+mic).
+    #                      Default is REAL devices so screencast/voice testing on
+    #                      actual hardware works without per-launch tweaking; the
+    #                      dev rig opts in by adding this flag.
+    #   --profile <name>   override the "Playwright" leaf in --user-data-dir
+    #                      with <name>. Sibling of the default profile dir if
+    #                      <name> is a bare name, or an absolute path if rooted.
+    #                      Incompatible with multi-instance (*N) — each instance
+    #                      needs its own --user-data-dir.
+    $useFakeMedia = $false
+    $profileName = $null
+    $forwardedArgs = @()
+    $i = 0
+    while ($i -lt $ExtraArgs.Count) {
+        $a = $ExtraArgs[$i]
+        if ($a -eq "--fake-media") {
+            $useFakeMedia = $true
+        } elseif ($a -eq "--profile") {
+            if ($i + 1 -ge $ExtraArgs.Count) {
+                Write-Error "${BrowserName}: --profile requires a name argument (e.g. --profile MyDebug)"
+                exit 1
+            }
+            $profileName = $ExtraArgs[$i + 1]
+            $i++
+        } elseif ($a -like "--profile=*") {
+            $profileName = $a.Substring("--profile=".Length)
+        } else {
+            $forwardedArgs += $a
+        }
+        $i++
+    }
+    if ($profileName -and ($UseAnonymous -or $Count -gt 1)) {
+        Write-Error "${BrowserName}: --profile cannot be combined with multi-instance (*N) — each instance needs its own --user-data-dir"
+        exit 1
+    }
+    if ($profileName) {
+        $DefaultProfileDir = if ([System.IO.Path]::IsPathRooted($profileName)) {
+            $profileName
+        } else {
+            Join-Path (Split-Path -Parent $DefaultProfileDir) $profileName
+        }
+    }
+
     Write-Host "$BrowserName path: $ExePath"
+    $procs = Get-BrowserProcesses -ExePath $ExePath
+    if ($procs.Count -gt 0) {
+        # Different --user-data-dir → independent process and independent debug
+        # port, so the new launch usually works. The failure mode is when any
+        # running instance shares the dir we're about to use: the new chrome.exe
+        # hands off via IPC and --remote-debugging-port is silently dropped.
+        # Chrome 136+ also blocks the flag entirely on the real default profile.
+        Write-Host "$BrowserName is already running ($($procs.Count) process(es))." -ForegroundColor Yellow
+        Write-Host "If any existing instance uses the same profile dir as the new launch, --remote-debugging-port will be silently dropped." -ForegroundColor DarkYellow
+        $reply = Read-Host "[C]ontinue, [k]ill all running $BrowserName, or e[x]it? [C/k/x]"
+        switch -Regex ($reply) {
+            '^(?i:k|kill)$' {
+                Write-Host "Terminating $($procs.Count) $BrowserName process(es)..." -ForegroundColor Cyan
+                $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+                $waited = 0
+                while ((Test-BrowserRunning -ExePath $ExePath) -and $waited -lt 20) {
+                    Start-Sleep -Milliseconds 250
+                    $waited++
+                }
+                if (Test-BrowserRunning -ExePath $ExePath) {
+                    Write-Error "$BrowserName processes did not exit within 5s. Close them manually and re-run."
+                    exit 1
+                }
+            }
+            '^(?i:e|x|exit)$' {
+                Write-Host "Aborted." -ForegroundColor Yellow
+                exit 1
+            }
+            default {
+                # Empty / "c" / anything else → continue
+            }
+        }
+    }
     for ($i = 0; $i -lt $Count; $i++) {
         $port = $StartPort + $i
         $profileDir = if ($UseAnonymous) { "$AnonProfileBase-$port" } else { $DefaultProfileDir }
@@ -1306,24 +1400,8 @@ function Start-DebugBrowsers {
             continue
         }
 
-        $label = if ($UseAnonymous) { "anonymous" } else { "default" }
+        $label = if ($UseAnonymous) { "anonymous" } else { Split-Path -Leaf $profileDir }
         Write-Host "Starting $BrowserName on port $port ($label profile: $profileDir)..." -ForegroundColor Cyan
-        # Pull out our own meta-flag (`--fake-media`) before anything is
-        # forwarded to the browser. If present, Chrome is launched with the
-        # synthetic media-stream backend (mjpeg/wav fake camera + mic);
-        # otherwise Chrome opens the real camera and microphone. Default is
-        # REAL devices so screencast/voice testing on actual hardware works
-        # without per-launch tweaking; the dev rig opts in by adding
-        # `--fake-media`.
-        $useFakeMedia = $false
-        $forwardedArgs = @()
-        foreach ($a in $ExtraArgs) {
-            if ($a -eq "--fake-media") {
-                $useFakeMedia = $true
-            } else {
-                $forwardedArgs += $a
-            }
-        }
 
         # Permission / capture policy for the debug profile:
         #   --disable-notifications              deny Notification API without prompting
@@ -1379,7 +1457,10 @@ function Start-DebugBrowsers {
         } else {
             Write-Host "  media: real devices (pass --fake-media for synthetic)" -ForegroundColor DarkGray
         }
-        $cmdArgs = $cmdArgs + $forwardedArgs + @("https://local.voxt.ai/")
+        $cmdArgs = $cmdArgs + $forwardedArgs
+        if (-not $profileName) {
+            $cmdArgs += "https://local.voxt.ai/"
+        }
         if ($forwardedArgs.Count -gt 0) {
             Write-Host "  extra args: $($forwardedArgs -join ' ')" -ForegroundColor DarkGray
         }
@@ -1536,6 +1617,11 @@ switch ($mode) {
             "AC_ProjectPath"    = $env:AC_ProjectPath
             "AC_OS"             = $env:AC_OS
             "AC_Worktree"       = $env:AC_Worktree
+        }
+
+        if ($currentOS -eq "Windows") {
+            $env:CLAUDE_CODE_USE_POWERSHELL_TOOL = "1"
+            $envVars["CLAUDE_CODE_USE_POWERSHELL_TOOL"] = "1"
         }
 
         if ($dryRun) {
