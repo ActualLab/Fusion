@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -34,7 +35,7 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
             maxRequestBodySizeFeature.MaxRequestBodySize = null;
 
         // Full-duplex RPC requires HTTP/2 (or higher) - HTTP/1.x can't read the request while writing the response
-        if (HttpProtocol.IsHttp10(request.Protocol) || HttpProtocol.IsHttp11(request.Protocol)) {
+        if (Options.MustRequireHttp2 && !IsHttp2OrHigher(request.Protocol)) {
             Log.LogWarning("HTTP/2 request expected, but got {Request} ({Protocol})",
                 requestDescription, request.Protocol);
             context.Response.StatusCode = (int)HttpStatusCode.UpgradeRequired;
@@ -118,5 +119,19 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
                 // Intended
             }
         }
+    }
+
+    private static bool IsHttp2OrHigher(string protocol)
+    {
+        const string prefix = "HTTP/";
+        if (!protocol.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var versionText = protocol.AsSpan(prefix.Length);
+        var dotIndex = versionText.IndexOf('.');
+        if (dotIndex >= 0)
+            versionText = versionText[..dotIndex];
+        return int.TryParse(versionText, NumberStyles.None, CultureInfo.InvariantCulture, out var major)
+            && major >= 2;
     }
 }

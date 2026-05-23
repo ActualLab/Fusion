@@ -15,19 +15,31 @@ using ActualLab.Fusion.Server;
 #else
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 #endif
 
 namespace ActualLab.Tests;
 
-// useHttp also drives the host's scheme: the HTTP/2 RPC transport needs HTTPS (HTTP/2 is negotiated
-// via TLS ALPN), while WebSocket-based tests keep using cleartext HTTP.
-public class RpcWebHost(IServiceCollection baseServices, Assembly? controllerAssembly = null, bool useHttp = false)
-    : TestWebHostBase(useHttps: useHttp)
+public class RpcWebHost(
+    IServiceCollection baseServices,
+    Assembly? controllerAssembly = null,
+    bool useHttpClient = false,
+    bool useHttps = false)
+    : TestWebHostBase(useHttps)
 {
     public IServiceCollection BaseServices { get; } = baseServices;
     public Assembly? ControllerAssembly { get; set; } = controllerAssembly;
     public Func<RpcFrameDelayer?>? RpcFrameDelayerFactory { get; set; }
+    public bool UseHttpClient { get; } = useHttpClient;
+    public bool UseHttps { get; } = useHttps;
     public bool ExposeBackend { get; set; } = false;
+
+#if NETCOREAPP
+    protected override HttpProtocols WebHostProtocols
+        => UseHttpClient && !UseHttps
+            ? HttpProtocols.Http2 // Cannot be Http1AndHttp2, coz protocol negotiation requires HTTPS
+            : base.WebHostProtocols;
+#endif
 
     protected override void ConfigureHost(IHostBuilder builder)
     {

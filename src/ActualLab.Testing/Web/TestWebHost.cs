@@ -112,7 +112,7 @@ public abstract class TestWebHostBase : ITestWebHost
         builder.ConfigureWebHost(webHost => {
             webHost.UseKestrel(kestrel => {
                 kestrel.ConfigureEndpointDefaults(listen => {
-                    listen.Protocols = HttpProtocols.Http1AndHttp2;
+                    listen.Protocols = WebHostProtocols;
                     if (Equals(ServerUri.Scheme, "https"))
                         listen.UseHttps(ServerCertificateLazy.Value);
                 });
@@ -146,6 +146,8 @@ public abstract class TestWebHostBase : ITestWebHost
     protected virtual void ConfigureHost(IHostBuilder builder) { }
 
 #if NETCOREAPP
+    protected virtual HttpProtocols WebHostProtocols => HttpProtocols.Http1AndHttp2;
+
     protected virtual void ConfigureWebHost(IWebHostBuilder webHost) { }
 
     // A self-signed certificate is used instead of the ASP.NET dev certificate, so HTTPS test

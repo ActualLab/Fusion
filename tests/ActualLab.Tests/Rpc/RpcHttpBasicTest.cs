@@ -9,6 +9,6 @@ namespace ActualLab.Tests.Rpc;
 public class RpcHttpBasicTest : RpcWebSocketTest
 {
     public RpcHttpBasicTest(ITestOutputHelper @out) : base(@out)
-        => UseHttp = true;
+        => UseHttpClient = true;
 }
 #endif

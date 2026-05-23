@@ -79,7 +79,7 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
         }
 
         try {
-            if (response.Version.Major < 2)
+            if (Options.MustRequireHttp2 && response.Version.Major < 2)
                 throw Errors.Http2ConnectionRequired(response.Version);
             if (response.StatusCode == HttpStatusCode.UnsupportedMediaType)
                 throw Errors.UnsupportedSerializationFormat(clientPeer.SerializationFormat.Key);

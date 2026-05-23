@@ -16,6 +16,7 @@ public record RpcHttpClientOptions
     public string ClientIdParameterName { get; init; } = "clientId";
     public bool UseAutoFrameDelayerFactory { get; init; } = false;
     public bool UsePipes { get; init; } = true;
+    public bool MustRequireHttp2 { get; init; } = true;
 
     // Delegate options
     public Func<RpcClientPeer, string> HostUrlResolver { get; init; }

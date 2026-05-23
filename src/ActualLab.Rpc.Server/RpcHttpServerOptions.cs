@@ -16,4 +16,5 @@ public record RpcHttpServerOptions
     public string SerializationFormatParameterName { get; init; } = RpcHttpClientOptions.Default.SerializationFormatParameterName;
     public string ClientIdParameterName { get; init; } = RpcHttpClientOptions.Default.ClientIdParameterName;
     public bool UsePipes { get; init; } = true;
+    public bool MustRequireHttp2 { get; init; } = true;
 }

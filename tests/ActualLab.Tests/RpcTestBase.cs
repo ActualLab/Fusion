@@ -28,7 +28,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     protected Func<RpcFrameDelayer?>? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
     protected string SerializationFormat { get; set; } = DefaultSerializationFormat;
     protected bool ExposeBackend { get; init; } = false;
-    protected bool UseHttp { get; init; } = false;
+    protected bool UseHttpClient { get; init; } = false;
+    protected bool UseHttps { get; init; } = false;
     protected bool UseTestClock { get; init; }
     protected bool UseLogging { get; init; } = true;
     protected bool UseDebugLog { get; set; } = true;
@@ -162,7 +163,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 
         var rpc = services.AddRpc();
 #if NET5_0_OR_GREATER
-        if (UseHttp)
+        if (UseHttpClient)
             rpc.AddHttpClient(_ => WebHost.ServerUri.ToString());
         else
             rpc.AddWebSocketClient(_ => WebHost.ServerUri.ToString());
@@ -180,7 +181,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
         services.AddSingleton<RpcSerializationFormatResolver>(
             _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
 #if NET5_0_OR_GREATER
-        if (UseHttp)
+        if (UseHttpClient)
             services.AddSingleton<RpcHttpClientOptions>(_ => new RpcHttpClientOptions() {
                 HostUrlResolver = _ => WebHost.ServerUri.ToString(),
                 FrameDelayerFactory = RpcFrameDelayerFactory,
@@ -198,7 +199,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
                 FrameDelayerFactory = RpcFrameDelayerFactory,
             });
         if (!isClient) {
-            services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly, UseHttp) {
+            services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly, UseHttpClient, UseHttps) {
                 ExposeBackend = ExposeBackend,
             });
         }
