@@ -40,6 +40,16 @@ public ref struct RefArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, 
         }
     }
 
+    public readonly int Capacity {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _array.Length;
+    }
+
+    public readonly int FreeCapacity {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _array.Length - _position;
+    }
+
     public readonly ReadOnlyMemory<T> WrittenMemory {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _array.AsMemory(0, _position);
@@ -55,19 +65,34 @@ public ref struct RefArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, 
         get => new(_array, 0, _position);
     }
 
+    public Memory<T> WritableWrittenMemory {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _array.AsMemory(0, _position);
+    }
+
+    public Span<T> WritableWrittenSpan {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _array.AsSpan(0, _position);
+    }
+
+    public readonly Memory<T> FreeMemory {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _array.AsMemory(_position);
+    }
+
+    public readonly Span<T> FreeSpan {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _array.AsSpan(_position);
+    }
+
+    public readonly ArraySegment<T> FreeArraySegment {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(_array, _position, _array.Length - _position);
+    }
+
     public readonly int WrittenCount {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _position;
-    }
-
-    public readonly int Capacity {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _array.Length;
-    }
-
-    public readonly int FreeCapacity {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _array.Length - _position;
     }
 
     // Constructors

@@ -1,4 +1,5 @@
 using System.Diagnostics.Metrics;
+using ActualLab.Collections;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
@@ -16,6 +17,7 @@ public sealed class RpcFrameCodec
     // Text message delimiters (matches master branch WebSocketChannelImpl)
     private const byte LineFeed = 0x0A; // LF
     private const byte RecordSeparator = 0x1E; // RS
+    private const int Int32Size = sizeof(int);
 
     private readonly RpcMessageSerializerReadFunc _readFunc;
     private readonly RpcMessageSerializerWriteFunc _writeFunc;
@@ -77,7 +79,7 @@ public sealed class RpcFrameCodec
             buffer.Advance(4);
             _writeFunc.Invoke(buffer, message);
             var size = buffer.WrittenCount - startOffset;
-            RpcByteMessageSerializerV5.WriteLittleEndian(buffer.Array.AsSpan(startOffset), size);
+            buffer.Array.AsSpan(startOffset).WriteLittleEndian(size);
         }
         catch (Exception e) {
             buffer.Position = startOffset;
@@ -133,15 +135,15 @@ public sealed class RpcFrameCodec
         var size = 0;
         var isSizeValid = false;
         try {
-            size = RpcByteMessageSerializerV5.ReadLittleEndian(array.AsSpan(offset));
+            size = array.AsSpan(offset).ReadLittleEndian();
             isSizeValid = size > 0 && offset + size <= totalLength;
             if (!isSizeValid)
                 throw Errors.InvalidItemSize();
 
             // Read message - ArgumentData is a projection into our buffer (zero-copy)
-            var messageData = array.AsMemory(offset + sizeof(int), size - sizeof(int));
+            var messageData = array.AsMemory(offset + Int32Size, size - Int32Size);
             var inboundMessage = _readFunc(messageData, out var readSize);
-            if (readSize != size - sizeof(int))
+            if (readSize != size - Int32Size)
                 throw Errors.InvalidItemSize();
 
             offset += size;

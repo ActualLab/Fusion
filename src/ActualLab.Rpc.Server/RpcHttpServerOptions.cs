@@ -15,4 +15,5 @@ public record RpcHttpServerOptions
     public string BackendRequestPath { get; init; } = RpcHttpClientOptions.Default.BackendRequestPath;
     public string SerializationFormatParameterName { get; init; } = RpcHttpClientOptions.Default.SerializationFormatParameterName;
     public string ClientIdParameterName { get; init; } = RpcHttpClientOptions.Default.ClientIdParameterName;
+    public bool UsePipes { get; init; } = true;
 }

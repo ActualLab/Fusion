@@ -71,17 +71,29 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
             var properties = PropertyBag.Empty
                 .KeylessSet((RpcPeer)peer)
                 .KeylessSet(context);
-            var transportOptions = HttpClientOptions.PipeTransportOptionsFactory.Invoke(peer, properties);
             var stopTokenSource = cancellationToken.CreateLinkedTokenSource();
-            var pipeReader = request.BodyReader;
-            var pipeWriter = context.Response.BodyWriter;
-            var transport = new RpcPipeTransport(transportOptions, peer, pipeReader, pipeWriter, stopTokenSource);
+            RpcTransport transport;
+            Task whenClosed;
+            if (Options.UsePipes) {
+                var pipeOptions = HttpClientOptions.PipeTransportOptionsFactory.Invoke(peer, properties);
+                var pipeTransport = new RpcPipeTransport(
+                    pipeOptions, peer, request.BodyReader, context.Response.BodyWriter, stopTokenSource);
+                transport = pipeTransport;
+                whenClosed = pipeTransport.WhenClosed;
+            }
+            else {
+                var streamOptions = HttpClientOptions.StreamTransportOptionsFactory.Invoke(peer, properties);
+                var streamTransport = new RpcStreamTransport(
+                    streamOptions, peer, request.Body, context.Response.Body, stopTokenSource);
+                transport = streamTransport;
+                whenClosed = streamTransport.WhenClosed;
+            }
             connection = await PeerOptions.ServerConnectionFactory
                 .Invoke(peer, transport, properties, cancellationToken)
                 .ConfigureAwait(false);
 
             await peer.SetNextConnection(connection, cancellationToken).ConfigureAwait(false);
-            await transport.WhenClosed.ConfigureAwait(false);
+            await whenClosed.ConfigureAwait(false);
         }
         catch (Exception e) {
             if (e.IsCancellationOf(cancellationToken)) {

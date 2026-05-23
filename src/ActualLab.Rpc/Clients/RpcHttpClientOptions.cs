@@ -15,11 +15,13 @@ public record RpcHttpClientOptions
     public string SerializationFormatParameterName { get; init; } = "f";
     public string ClientIdParameterName { get; init; } = "clientId";
     public bool UseAutoFrameDelayerFactory { get; init; } = false;
+    public bool UsePipes { get; init; } = true;
 
     // Delegate options
     public Func<RpcClientPeer, string> HostUrlResolver { get; init; }
     public Func<RpcClientPeer, Uri?> ConnectionUriResolver { get; init; }
     public Func<RpcPeer, PropertyBag, RpcPipeTransport.Options> PipeTransportOptionsFactory { get; init; }
+    public Func<RpcPeer, PropertyBag, RpcStreamTransport.Options> StreamTransportOptionsFactory { get; init; }
     public Func<IServiceProvider, HttpClient> HttpClientFactory { get; init; }
     public Func<RpcFrameDelayer?>? FrameDelayerFactory { get; init; }
 
@@ -29,6 +31,7 @@ public record RpcHttpClientOptions
         HostUrlResolver = DefaultHostUrlResolver;
         ConnectionUriResolver = DefaultConnectionUriResolver;
         PipeTransportOptionsFactory = DefaultPipeTransportOptionsFactory;
+        StreamTransportOptionsFactory = DefaultStreamTransportOptionsFactory;
         HttpClientFactory = DefaultHttpClientFactory;
         FrameDelayerFactory = RpcFrameDelayerFactories.None;
     }
@@ -72,6 +75,18 @@ public record RpcHttpClientOptions
             ? RpcFrameDelayerFactories.Auto(peer, properties)
             : options.FrameDelayerFactory;
         return RpcPipeTransport.Options.Default with {
+            FrameDelayerFactory = frameDelayerFactory,
+        };
+    }
+
+    protected static RpcStreamTransport.Options DefaultStreamTransportOptionsFactory(
+        RpcPeer peer, PropertyBag properties)
+    {
+        var options = peer.Hub.Services.GetRequiredService<RpcHttpClientOptions>();
+        var frameDelayerFactory = options.UseAutoFrameDelayerFactory
+            ? RpcFrameDelayerFactories.Auto(peer, properties)
+            : options.FrameDelayerFactory;
+        return RpcStreamTransport.Options.Default with {
             FrameDelayerFactory = frameDelayerFactory,
         };
     }

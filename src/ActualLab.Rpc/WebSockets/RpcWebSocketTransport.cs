@@ -1,8 +1,4 @@
-using System.Diagnostics.Metrics;
 using System.Net.WebSockets;
-using ActualLab.Channels;
-using ActualLab.Concurrency;
-using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 using Errors = ActualLab.Rpc.Internal.Errors;
@@ -12,7 +8,7 @@ namespace ActualLab.Rpc.WebSockets;
 /// <summary>
 /// An <see cref="RpcTransport"/> implementation that sends and receives RPC messages over a WebSocket connection.
 /// </summary>
-public sealed class RpcWebSocketTransport : RpcTransport
+public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
 {
     /// <summary>
     /// Configuration options for <see cref="RpcWebSocketTransport"/>.
@@ -41,263 +37,53 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
     private static readonly MeterSet StaticMeters = new();
 
-    private readonly MeterSet _meters = StaticMeters;
-    private readonly int _frameSize;
-    private readonly int _maxBufferSize;
-    private readonly Channel<RpcOutboundMessage> _writeChannel;
-    private readonly ChannelWriter<RpcOutboundMessage> _writeChannelWriter;
-    private readonly AsyncTaskMethodBuilder _whenCompletedSource;
-    private readonly Task _whenCompleted;
-    private readonly RpcFrameDelayer? _frameDelayer;
-    private readonly RpcFrameCodec _codec;
-    private ArrayPoolBuffer<byte> _writeBuffer;
-    private ArrayPoolBuffer<byte> _flushingBuffer;
-    private int _getAsyncEnumeratorCounter;
-
     public bool OwnsWebSocketOwner { get; set; } = true;
     public Options Settings { get; }
     public WebSocketOwner WebSocketOwner { get; }
     public WebSocket WebSocket { get; }
-    public RpcMessageSerializer MessageSerializer { get; }
     public bool IsTextSerializer { get; }
     public WebSocketMessageType MessageType { get; }
-    public ILogger? Log { get; }
-    public ILogger? ErrorLog { get; }
-
-    public override Task WhenCompleted => _whenCompleted;
-    public Task WhenClosed { get; }
 
     public RpcWebSocketTransport(
         Options settings,
         RpcPeer peer,
         WebSocketOwner webSocketOwner,
         CancellationTokenSource? stopTokenSource = null)
-        : base(peer, stopTokenSource)
+        : base(
+            peer,
+            stopTokenSource,
+            settings.FrameSize,
+            settings.BufferSize,
+            settings.MaxBufferSize,
+            settings.FrameDelayerFactory,
+            settings.WriteChannelOptions,
+            StaticMeters,
+            logServices: webSocketOwner.Services)
     {
         Settings = settings;
         WebSocketOwner = webSocketOwner;
         WebSocket = webSocketOwner.WebSocket;
-        MessageSerializer = peer.MessageSerializer;
         IsTextSerializer = MessageSerializer is RpcTextMessageSerializer;
         MessageType = IsTextSerializer
             ? WebSocketMessageType.Text
             : WebSocketMessageType.Binary;
-
-        Log = webSocketOwner.Services.LogFor(GetType());
-        ErrorLog = Log.IfEnabled(LogLevel.Error);
-
-        _whenCompletedSource = AsyncTaskMethodBuilderExt.New();
-        _whenCompleted = _whenCompletedSource.Task;
-
-        _frameSize = settings.FrameSize;
-        if (_frameSize <= 0)
-            throw new ArgumentOutOfRangeException($"{nameof(settings)}.{nameof(settings.FrameSize)} must be positive.");
-        _maxBufferSize = settings.MaxBufferSize;
-
-        _frameDelayer = settings.FrameDelayerFactory?.Invoke();
-        _codec = new RpcFrameCodec(
-            MessageSerializer, _meters.IncomingItemCounter, _meters.OutgoingItemCounter, ErrorLog);
-        _writeBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Settings.BufferSize, mustClear: false);
-        _flushingBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Settings.BufferSize, mustClear: false);
-
-        _writeChannel = ChannelExt.Create<RpcOutboundMessage>(settings.WriteChannelOptions);
-        _writeChannelWriter = _writeChannel.Writer;
-
-        using var __ = ExecutionContextExt.TrySuppressFlow();
-        WhenClosed = Task.Run(async () => {
-            Interlocked.Increment(ref _meters.ChannelCount);
-            try {
-                var whenStopped = TaskExt.NeverEnding(StopToken);
-                var whenWriterCompleted = Task.Run(RunWriter, CancellationToken.None);
-                await Task.WhenAny(whenStopped, _whenCompleted, whenWriterCompleted).SilentAwait(false);
-
-                // Stop everything
-                StopTokenSource.CancelSilently(); // Stops writer loop (and reader loop)
-                TryComplete(); // Stops writes
-                await whenWriterCompleted.ConfigureAwait(false); // RunWriter never throws
-                await _whenCompleted.SilentAwait(false); // Can fail, so we use SilentAwait here
-
-                // Drain remaining pending messages (if any) - RunWriter is stopped at that point
-                while (_writeChannel.Reader.TryRead(out var message))
-                    CompleteSend(message, new ChannelClosedException());
-
-                await CloseWebSocket(null).ConfigureAwait(false); // CloseWebSocket never throws
-
-                // It's safer to dispose the buffers here rather than in 'finally',
-                // coz if something fails and they're somehow still used,
-                // we simply won't return them back to the pool, so GC will take care of them.
-                _flushingBuffer.Dispose();
-                _writeBuffer.Dispose();
-            }
-            catch (Exception e) {
-                Log.LogError(e, "Error in WebSocketRpcTransport.WhenClosed, this should never happen");
-            }
-            finally {
-                Interlocked.Decrement(ref _meters.ChannelCount);
-            }
-        }, default);
+        Start();
     }
 
     protected override async Task DisposeAsyncCore()
     {
-        await WhenClosed.ConfigureAwait(false);
+        await base.DisposeAsyncCore().ConfigureAwait(false);
         if (OwnsWebSocketOwner)
             await WebSocketOwner.DisposeAsync().ConfigureAwait(false);
     }
 
-    public override void Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
-    {
-        // Fast path: since _writeChannel is typically an UnboundedChannel,
-        // TryWrite always completes successfully while the channel is operational.
-        if (_writeChannelWriter.TryWrite(message))
-            return;
+    // Protected/internal methods
 
-        // Slow path
-        _ = _writeChannelWriter.WriteAsync(message, cancellationToken);
-    }
+    protected override Task WriteFrame(ReadOnlyMemory<byte> frame)
+        => WebSocket.SendAsync(frame[Int32Size..], MessageType, endOfMessage: true, CancellationToken.None).AsTask();
 
-    public override bool TryComplete(Exception? error = null)
-    {
-        if (!_writeChannelWriter.TryComplete(error))
-            return false;
-
-        _whenCompletedSource.TrySetFromResult(new Result<Unit>(default, error));
-        return true;
-    }
-
-    public override IAsyncEnumerator<RpcInboundMessage> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-        => Interlocked.Increment(ref _getAsyncEnumeratorCounter) == 1
-            ? ReadAllImpl(cancellationToken).GetAsyncEnumerator(cancellationToken)
-            : throw ActualLab.Internal.Errors.AlreadyInvoked($"{GetType().GetName()}.GetAsyncEnumerator");
-
-    // Private methods
-
-    // This method should never throw
-    private async Task RunWriter()
-    {
-        Exception? error = null;
-        Task lastFlushTask = Task.CompletedTask;
-        try {
-            if (_frameDelayer is { } frameDelayer) {
-                await RunWriterWithFrameDelayer(frameDelayer).ConfigureAwait(false);
-                return;
-            }
-
-            var reader = _writeChannel.Reader;
-            var serialize = _codec.Serialize;
-            while (await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false)) {
-                while (reader.TryRead(out var message)) {
-                    try {
-                        serialize(message, _writeBuffer);
-                        CompleteSend(message);
-                    }
-                    catch (Exception e) {
-                        CompleteSend(message, e);
-                    }
-                    if (_writeBuffer.WrittenCount >= _frameSize) {
-                        await lastFlushTask.ConfigureAwait(false);
-                        lastFlushTask = FlushFrame();
-                    }
-                }
-
-                // Final flush before await
-                if (_writeBuffer.WrittenCount != 0) {
-                    await lastFlushTask.ConfigureAwait(false);
-                    lastFlushTask = FlushFrame();
-                }
-            }
-            // Await the last flush
-            await lastFlushTask.ConfigureAwait(false);
-        }
-        catch (Exception e) {
-            if (!e.IsCancellationOf(StopToken))
-                error = e;
-        }
-        finally {
-            TryComplete(error);
-        }
-    }
-
-    private async Task RunWriterWithFrameDelayer(RpcFrameDelayer frameDelayer)
-    {
-        Task? whenMustFlush = null; // null = no flush required / nothing to flush
-        Task lastFlushTask = Task.CompletedTask;
-        Task<bool>? waitToReadTask = null;
-        var reader = _writeChannel.Reader;
-        var serialize = _codec.Serialize;
-
-        while (true) {
-            // When we are here, the sync read part is completed, so WaitToReadAsync will likely await.
-            if (whenMustFlush is not null) {
-                if (whenMustFlush.IsCompleted) {
-                    // Flush is required right now.
-                    if (_writeBuffer.WrittenCount != 0) {
-                        await lastFlushTask.ConfigureAwait(false);
-                        lastFlushTask = FlushFrame();
-                    }
-                    whenMustFlush = null;
-                }
-                else {
-                    // Flush is pending.
-                    waitToReadTask ??= reader.WaitToReadAsync(CancellationToken.None).AsTask();
-                    await Task.WhenAny(whenMustFlush, waitToReadTask).ConfigureAwait(false);
-                    if (!waitToReadTask.IsCompleted)
-                        continue; // whenMustFlush is completed, waitToReadTask is not
-                }
-            }
-
-            bool canRead;
-            if (waitToReadTask is not null) {
-                canRead = await waitToReadTask.ConfigureAwait(false);
-                waitToReadTask = null;
-            }
-            else
-                canRead = await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false);
-            if (!canRead)
-                break; // Reading is done
-
-            while (reader.TryRead(out var message)) {
-                try {
-                    serialize(message, _writeBuffer);
-                    CompleteSend(message);
-                }
-                catch (Exception e) {
-                    CompleteSend(message, e);
-                    continue;
-                }
-
-                if (_writeBuffer.WrittenCount >= _frameSize) {
-                    await lastFlushTask.ConfigureAwait(false);
-                    lastFlushTask = FlushFrame();
-                    whenMustFlush = null;
-                }
-            }
-            if (whenMustFlush is null && _writeBuffer.WrittenCount > 0)
-                whenMustFlush = frameDelayer.Invoke(_writeBuffer.WrittenCount);
-        }
-
-        // Final flush
-        if (_writeBuffer.WrittenCount != 0) {
-            await lastFlushTask.ConfigureAwait(false);
-            lastFlushTask = FlushFrame();
-        }
-        // Await the last flush
-        await lastFlushTask.ConfigureAwait(false);
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private Task FlushFrame()
-    {
-        // Swap _flushingBuffer and _writeBuffer
-        (_flushingBuffer, _writeBuffer) = (_writeBuffer, _flushingBuffer);
-        var frame = _flushingBuffer.WrittenMemory;
-        _writeBuffer.Renew(_maxBufferSize);
-
-        _meters.OutgoingFrameSizeHistogram.Record(frame.Length);
-        return WebSocket.SendAsync(frame, MessageType, endOfMessage: true, CancellationToken.None).AsTask();
-    }
-
-    private async IAsyncEnumerable<RpcInboundMessage> ReadAllImpl([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    protected override async IAsyncEnumerable<RpcInboundMessage> ReadAll(
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var bufferSize = Settings.BufferSize;
         using var commonCts = cancellationToken.LinkWith(StopToken);
@@ -305,7 +91,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
 
         // Start with a non-pooled buffer for initial reads
         var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, bufferSize, mustClear: false);
-        var tryDeserialize = _codec.TryDeserialize;
+        var tryDeserialize = Codec.TryDeserialize;
 
         try {
             while (true) {
@@ -333,7 +119,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                     throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
 
                 buffer.Advance(r.Count);
-                _meters.IncomingFrameSizeHistogram.Record(r.Count);
+                Meters.IncomingFrameSizeHistogram.Record(r.Count);
                 if (!r.EndOfMessage)
                     continue; // Continue reading into the same buffer
 
@@ -347,7 +133,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
                 }
                 // The code that uses frame's data (RpcInboundMessage.ArgumentData) is running synchronously,
                 // so if we're here, the buffer can be reused.
-                buffer.Renew(_maxBufferSize);
+                buffer.Renew(Settings.MaxBufferSize);
             }
         }
         finally {
@@ -357,7 +143,7 @@ public sealed class RpcWebSocketTransport : RpcTransport
     }
 
     // This method should never throw
-    private async Task CloseWebSocket(Exception? error)
+    protected override async Task CloseTransport(Exception? error)
     {
         if (error is OperationCanceledException)
             error = null;
@@ -387,30 +173,5 @@ public sealed class RpcWebSocketTransport : RpcTransport
     /// <summary>
     /// OpenTelemetry metrics for <see cref="RpcWebSocketTransport"/> operations.
     /// </summary>
-    public class MeterSet
-    {
-        public readonly ObservableCounter<long> ChannelCounter;
-        public readonly Counter<long> IncomingItemCounter;
-        public readonly Counter<long> OutgoingItemCounter;
-        public readonly Histogram<int> IncomingFrameSizeHistogram;
-        public readonly Histogram<int> OutgoingFrameSizeHistogram;
-        public long ChannelCount;
-
-        public MeterSet()
-        {
-            var m = RpcInstruments.Meter;
-            var ms = "rpc.ws.transport";
-            ChannelCounter = m.CreateObservableCounter($"{ms}.count",
-                () => InterlockedExt.VolatileRead(ref ChannelCount),
-                null, "Number of WebSocketRpcTransport instances.");
-            IncomingItemCounter = m.CreateCounter<long>($"{ms}.incoming.item.count",
-                null, "Number of items received via WebSocketRpcTransport.");
-            OutgoingItemCounter = m.CreateCounter<long>($"{ms}.outgoing.item.count",
-                null, "Number of items sent via WebSocketRpcTransport.");
-            IncomingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.incoming.frame.size",
-                "By", "WebSocketRpcTransport's incoming frame size in bytes.");
-            OutgoingFrameSizeHistogram = m.CreateHistogram<int>($"{ms}.outgoing.frame.size",
-                "By", "WebSocketRpcTransport's outgoing frame size in bytes.");
-        }
-    }
+    public class MeterSet() : FrameMeterSet("ws", "WebSocketRpcTransport");
 }

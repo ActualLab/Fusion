@@ -90,12 +90,18 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
                 .KeylessSet((RpcPeer)clientPeer)
                 .KeylessSet(uri)
                 .KeylessSet(response);
-            var transportOptions = Options.PipeTransportOptionsFactory.Invoke(clientPeer, properties);
-            var pipeReader = PipeReader.Create(responseStream);
-            var pipeWriter = PipeWriter.Create(requestStream);
-            var transport = new RpcPipeTransport(transportOptions, clientPeer, pipeReader, pipeWriter) {
-                Owner = new RpcHttpConnectionOwner(content, request, response),
-            };
+            var owner = new RpcHttpConnectionOwner(content, request, response);
+            RpcTransport transport;
+            if (Options.UsePipes) {
+                var pipeOptions = Options.PipeTransportOptionsFactory.Invoke(clientPeer, properties);
+                var pipeReader = PipeReader.Create(responseStream);
+                var pipeWriter = PipeWriter.Create(requestStream);
+                transport = new RpcPipeTransport(pipeOptions, clientPeer, pipeReader, pipeWriter) { Owner = owner };
+            }
+            else {
+                var streamOptions = Options.StreamTransportOptionsFactory.Invoke(clientPeer, properties);
+                transport = new RpcStreamTransport(streamOptions, clientPeer, responseStream, requestStream) { Owner = owner };
+            }
             return new RpcConnection(transport, properties);
         }
         catch (Exception e) {

@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using ActualLab.Collections;
 using ActualLab.IO;
 using ActualLab.IO.Internal;
@@ -14,27 +13,6 @@ namespace ActualLab.Rpc.Serialization;
 /// </summary>
 public class RpcByteMessageSerializerV5(RpcPeer peer) : RpcByteMessageSerializer(peer)
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int ReadLittleEndian(Span<byte> span)
-        => BitConverter.IsLittleEndian
-            ? span.ReadUnchecked<int>()
-            : BinaryPrimitives.ReadInt32LittleEndian(span);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int ReadLittleEndian(ReadOnlySpan<byte> span)
-        => BitConverter.IsLittleEndian
-            ? span.ReadUnchecked<int>()
-            : BinaryPrimitives.ReadInt32LittleEndian(span);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void WriteLittleEndian(Span<byte> span, int value)
-    {
-        if (BitConverter.IsLittleEndian)
-            span.WriteUnchecked(value);
-        else
-            BinaryPrimitives.WriteInt32LittleEndian(span, value);
-    }
-
     public int MaxArgumentDataSize { get; init; } = Defaults.MaxArgumentDataSize;
     public override bool SupportsNativeLittleEndian => BitConverter.IsLittleEndian;
 
@@ -134,7 +112,7 @@ public class RpcByteMessageSerializerV5(RpcPeer peer) : RpcByteMessageSerializer
         }
 
         // Backfill fixed 4-byte length prefix
-        BinaryPrimitives.WriteInt32LittleEndian(buffer.Array.AsSpan(startOffset + argumentDataLengthOffset), argumentDataLength);
+        buffer.Array.AsSpan(startOffset + argumentDataLengthOffset).WriteLittleEndian(argumentDataLength);
 
         WriteHeaders(buffer, message);
     }
@@ -265,7 +243,7 @@ public class RpcByteMessageSerializerV5(RpcPeer peer) : RpcByteMessageSerializer
         }
 
         // Backfill fixed 4-byte length prefix
-        WriteLittleEndian(buffer.Array.AsSpan(startOffset + argumentDataLengthOffset), argumentDataLength);
+        buffer.Array.AsSpan(startOffset + argumentDataLengthOffset).WriteLittleEndian(argumentDataLength);
 
         WriteHeaders(buffer, message);
     }

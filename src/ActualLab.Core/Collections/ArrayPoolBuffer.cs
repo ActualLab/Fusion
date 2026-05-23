@@ -35,6 +35,24 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     }
 
     /// <inheritdoc/>
+    public int Capacity {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _array.Length;
+    }
+
+    /// <inheritdoc/>
+    public int FreeCapacity {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _array.Length - _position;
+    }
+
+    /// <inheritdoc/>
+    public int WrittenCount {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _position;
+    }
+
+    /// <inheritdoc/>
     public ReadOnlyMemory<T> WrittenMemory {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _array.AsMemory(0, _position);
@@ -51,22 +69,29 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         get => new(_array, 0, _position);
     }
 
-    /// <inheritdoc/>
-    public int WrittenCount {
+    public Memory<T> WritableWrittenMemory {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _position;
+        get => _array.AsMemory(0, _position);
     }
 
-    /// <inheritdoc/>
-    public int Capacity {
+    public Span<T> WritableWrittenSpan {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _array.Length;
+        get => _array.AsSpan(0, _position);
     }
 
-    /// <inheritdoc/>
-    public int FreeCapacity {
+    public Memory<T> FreeMemory {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _array.Length - _position;
+        get => _array.AsMemory(_position);
+    }
+
+    public Span<T> FreeSpan {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _array.AsSpan(_position);
+    }
+
+    public ArraySegment<T> FreeArraySegment {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => new(_array, _position, _array.Length - _position);
     }
 
     /// <inheritdoc/>
