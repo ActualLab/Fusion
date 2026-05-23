@@ -84,7 +84,17 @@ public sealed class RpcStreamTransport : RpcFrameBasedTransport
     protected override async Task WriteFrame(ReadOnlyMemory<byte> frame)
     {
         var stream = WriterStream;
+#if NETSTANDARD2_0
+#pragma warning disable CA1835 // Use Memory<byte> overload of WriteAsync
+        if (!MemoryMarshal.TryGetArray(frame, out var frameSegment))
+            frameSegment = new ArraySegment<byte>(frame.ToArray());
+        await stream
+            .WriteAsync(frameSegment.Array!, frameSegment.Offset, frameSegment.Count, StopToken)
+            .ConfigureAwait(false);
+#pragma warning restore CA1835
+#else
         await stream.WriteAsync(frame, StopToken).ConfigureAwait(false);
+#endif
         await stream.FlushAsync(StopToken).ConfigureAwait(false);
     }
 
@@ -103,7 +113,16 @@ public sealed class RpcStreamTransport : RpcFrameBasedTransport
                 buffer.EnsureCapacity(bufferSize); // ensures at least bufferSize free space
                 int read;
                 try {
+#if NETSTANDARD2_0
+#pragma warning disable CA1835 // Use Memory<byte> overload of WriteAsync
+                    var freeSegment = buffer.FreeArraySegment;
+                    read = await stream
+                        .ReadAsync(freeSegment.Array!, freeSegment.Offset, freeSegment.Count, ct)
+                        .ConfigureAwait(false);
+#pragma warning restore CA1835
+#else
                     read = await stream.ReadAsync(buffer.FreeMemory, ct).ConfigureAwait(false);
+#endif
                 }
                 catch (Exception e) when (e.IsCancellationOf(ct)) {
                     yield break;
