@@ -11,6 +11,76 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 13.0.3+26a8a3bd | npm: 13.0.3
+
+Release date: 2026-05-23
+
+This is a **major release** introducing new HTTP/2 transport for ActualLab.Rpc,
+`Stream`-based and `PipeReader + PipeWriter`-based transports, and
+`RpcAlternatingClient` capable of switching between transports on failures. 
+
+### Breaking Changes
+- RPC: `RpcPeer.IsConnected()`, `IsConnected(out handshake, out  transport)`, 
+  and `IsConnectedOrHandshaking()` are gone from `RpcPeer`. 
+  Equivalent checks now live on `RpcPeer.ConnectionState`:
+  - `peer.IsConnected()` &rarr; `peer.ConnectionState.Value.IsConnected()`
+  - `peer.IsConnected(out h, out t)` &rarr; `peer.ConnectionState.Value.IsConnected(out h, out t)`
+  - `peer.IsConnectedOrHandshaking()` &rarr; `peer.ConnectionState.Value.IsConnectingOrConnected()`
+- RPC: `RpcPeerConnectionState.IsHandshaking()` renamed to
+  `IsConnecting()`; `IsConnectedOrHandshaking()` renamed to
+  `IsConnectingOrConnected()`. Two new helpers: `IsDisconnected()`
+  and `IsTerminal()`. State is now also exposed via the new
+  `Kind` property (`RpcPeerConnectionStateKind`: `Disconnected`,
+  `Connecting`, `Connected`, `Terminal`).
+
+### Added
+- RPC: full-duplex **HTTP/2 transport** similar to gRPC's &mdash;
+  `RpcHttpClient` / `RpcHttpClientOptions` on the client and
+  `RpcHttpServer` / `RpcHttpServerBuilder` / `RpcHttpServerOptions`
+  on the server. The client streams requests via `DuplexHttpContent`;
+  the server is wired through `EndpointRouteBuilderExt` with default
+  delegates in `RpcHttpServerDefaultDelegates`. Protocol negotiation
+  in `RpcWebHost` defaults to HTTP/2 when `UseHttpClient` is used.
+- RPC: **`RpcAlternatingClient`** &mdash; a composite client that
+  alternates connection attempts across multiple inner `RpcClient`s,
+  tracking failed endpoints and rotating through them on reconnect.
+  Useful for primary/secondary deployments and multi-region failover.
+- RPC: **`RpcFrameBasedTransport`** &mdash; new base class for
+  batched, frame-oriented transports. `RpcPipeTransport` (PipeReader/
+  PipeWriter), `RpcStreamTransport` (Stream-based framing), and the
+  existing `RpcWebSocketTransport` all derive from it, sharing frame
+  composition, metrics, and buffer renewal logic.
+- RPC: `RpcPeer.Extensions` (`MutablePropertyBag`) &mdash; an
+  extension-point property bag for attaching ad-hoc state to a peer.
+
+### Changed
+- RPC: WebSocket transport updated to share frame composition with
+  the new HTTP/2 / pipe / stream transports via
+  new `RpcFrameBasedTransport` and `RpcFrameCodec`. 
+  The public `RpcWebSocketTransport` surface is preserved, 
+  but the internals are now shared.
+- RPC: connection-state machine reshaped around a single `Kind`
+  discriminator (`Disconnected` / `Connecting` / `Connected` / `Terminal`) 
+  instead of inferring state from `Handshake` / `Connection` fields. 
+  The `RpcClientPeer` path now fires `RpcClient.OnConnectionStateChange` 
+  on every transition to enable error history-based transport changes.
+
+### Documentation
+- Homepage / SEO refresh: per-page meta descriptions, OG/Twitter
+  cards, JSON-LD, self-referencing canonical URLs, refreshed copy,
+  social card, and a sun hero background image.
+- Added [Fusion intro slide deck](https://fusion.actuallab.net/slides/fusion-intro) 
+- Linked "Videos and Slides" to the local slide decks.
+- Clarified the comment and documentation style guidelines in `CODING_STYLE.md`.
+
+### Tests
+- `RpcAlternatingClientTest` covering the alternating logic and
+  reconnection behaviour.
+- `RpcHttpBasicTest` and `RpcHttpPerformanceTest` for the new
+  HTTP/2 transport; obsolete HTTP/2 window-size configuration was
+  removed from the test harness.
+
+
 ## 12.5.2+080e9963 | npm: 12.5.2
 
 Release date: 2026-05-09
