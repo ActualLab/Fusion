@@ -19,7 +19,8 @@ public sealed record RpcPeerConnectionState
     public readonly RpcHandshake? OwnHandshake;
     public readonly Exception? Error;
     public readonly CancellationTokenSource? ReaderTokenSource;
-    public int ConnectionAttemptIndex;
+    public int ConnectionAttemptIndex { get; internal set; }
+    public RpcPeerConnectionStateKind Kind { get; private set; }
     public Task<RpcPeerConnectionState> WhenConnected => _whenConnectedSource.Task;
     public Task WhenDisconnected => _whenDisconnectedSource.Task;
 
@@ -39,12 +40,15 @@ public sealed record RpcPeerConnectionState
         Error = error;
         ConnectionAttemptIndex = connectionAttemptIndex;
         ReaderTokenSource = readerTokenSource;
-        var isConnected = handshake is not null;
-        if (isConnected) {
+        if (handshake is not null) {
+            Kind = RpcPeerConnectionStateKind.Connected;
             _whenConnectedSource = TaskCompletionSourceExt.New<RpcPeerConnectionState>().WithResult(this);
             _whenDisconnectedSource = TaskCompletionSourceExt.New<Unit>();
         }
         else {
+            Kind = connection is not null
+                ? RpcPeerConnectionStateKind.Connecting
+                : RpcPeerConnectionStateKind.Disconnected;
             _whenConnectedSource = whenConnectedSource ?? TaskCompletionSourceExt.New<RpcPeerConnectionState>();
             // Use a real TCS for "handshaking" states (Connection set, Handshake null) so
             // an external Disconnect() can await actual teardown via WhenDisconnected.
@@ -55,17 +59,39 @@ public sealed record RpcPeerConnectionState
         }
     }
 
+    // IsXxx
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsConnected()
-        => Handshake is not null;
+        => Kind is RpcPeerConnectionStateKind.Connected;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsHandshaking()
-        => Connection is not null && Handshake is null;
+    public bool IsConnected(
+        [NotNullWhen(true)] out RpcHandshake? handshake,
+        [NotNullWhen(true)] out RpcTransport? transport)
+    {
+        handshake = Handshake;
+        transport = Transport;
+        return handshake is not null;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsConnectedOrHandshaking()
-        => Connection is not null;
+    public bool IsConnecting()
+        => Kind is RpcPeerConnectionStateKind.Connecting;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsConnectingOrConnected()
+        => ((int)Kind & 3) != 0; // 3 = Connecting | Connected
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsDisconnected()
+        => ((int)Kind & 3) == 0; // 3 = Connecting | Connected
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsTerminal()
+        => Kind is RpcPeerConnectionStateKind.Terminal;
+
+    // MarkXxx
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void MarkConnected(RpcPeerConnectionState connectionState)
@@ -77,6 +103,7 @@ public sealed record RpcPeerConnectionState
 
     public void MarkTerminated(Exception error)
     {
+        Kind = RpcPeerConnectionStateKind.Terminal;
         _whenConnectedSource.TrySetException(error);
         _whenDisconnectedSource.TrySetException(error);
     }

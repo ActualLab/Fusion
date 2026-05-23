@@ -1,4 +1,5 @@
 using System.Globalization;
+using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Testing;
 
@@ -65,7 +66,10 @@ public class RpcTestClient(IServiceProvider services) : RpcClient(services)
 
     // RpcClient implementation
 
-    public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
+    public override async Task<RpcConnection> ConnectRemote(
+        RpcClientPeer clientPeer,
+        RpcPeerConnectionState connectionState,
+        CancellationToken cancellationToken)
     {
         var transport = await this[clientPeer.Ref].PullClientTransport(clientPeer, cancellationToken).ConfigureAwait(false);
         return new RpcConnection(transport);

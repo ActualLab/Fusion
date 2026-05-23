@@ -52,7 +52,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
         // Use IsConnectedOrHandshaking, not IsConnected: a client reconnecting faster than
         // its previous handshake completes would otherwise stack new connections against a
         // peer stuck mid-handshake instead of replacing the stale one.
-        if (peer.IsConnectedOrHandshaking()) {
+        if (peer.ConnectionState.Value.IsConnectingOrConnected()) {
             Log.LogWarning("'{PeerRef}': {Peer} is already connected, disconnecting the old connection first...",
                 peerRef, peer);
             try {

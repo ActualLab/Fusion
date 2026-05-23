@@ -51,7 +51,7 @@ public sealed class RpcInterceptor : Interceptor
                     if (call is not null) {
                         // Direct outbound RPC call
                         if (!rpcMethodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
-                            && !peer.IsConnected())
+                            && !peer.ConnectionState.Value.IsConnected())
                             resultTask = Task.FromException<object?>(Errors.OutboundCallFailedNoConnection());
                         else
                             resultTask = call.Invoke();
@@ -84,7 +84,7 @@ public sealed class RpcInterceptor : Interceptor
                     // RoutingMode is None
                     // Direct outbound RPC call
                     if (!rpcMethodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
-                        && !peer.IsConnected())
+                        && !peer.ConnectionState.Value.IsConnected())
                         resultTask = Task.FromException<object?>(Errors.OutboundCallFailedNoConnection());
                     else
                         resultTask = call.Invoke();
@@ -130,7 +130,7 @@ public sealed class RpcInterceptor : Interceptor
                     }
 
                     if (!methodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
-                        && !peer.IsConnected())
+                        && !peer.ConnectionState.Value.IsConnected())
                         throw Errors.OutboundCallFailedNoConnection();
 
                     return await call.Invoke().ConfigureAwait(false);

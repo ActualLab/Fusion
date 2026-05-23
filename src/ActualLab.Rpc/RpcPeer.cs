@@ -60,6 +60,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     public RpcHub Hub { get; }
     public RpcPeerRef Ref { get; }
+    public MutablePropertyBag Extensions { get; init; }
     public Guid Id { get; } = Guid.NewGuid();
     public Moment CreatedAt { get; } = Moment.Now;
     public Moment LastKeepAliveAt => SharedObjects.LastKeepAliveAt;
@@ -101,6 +102,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         Services = hub.Services;
         Ref = peerRef;
         Options = Hub.PeerOptions;
+        Extensions = new MutablePropertyBag();
         InboundCallOptions = Hub.InboundCallOptions;
         OutboundCallOptions = Hub.OutboundCallOptions;
         ConnectionKind = Options.ConnectionKindDetector.Invoke(peerRef);
@@ -131,27 +133,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public override string ToString()
         => $"{GetType().Name}({Ref}, #{GetHashCode()})";
 
-    // Is/WhenConnected
-
-    public bool IsConnected()
-        => ConnectionState.Value.Handshake is not null;
-
-    public bool IsConnected(
-        [NotNullWhen(true)] out RpcHandshake? handshake,
-        [NotNullWhen(true)] out RpcTransport? transport)
-    {
-        var connectionState = ConnectionState.Value;
-        handshake = connectionState.Handshake;
-        transport = connectionState.Transport;
-        return handshake is not null;
-    }
-
-    public bool IsConnectedOrHandshaking()
-        // True while an in-flight connection exists - whether handshake is still
-        // in progress or has already completed. Use this (instead of IsConnected)
-        // when deciding whether to disconnect a stale connection before accepting
-        // a new one, so connections that arrive mid-handshake don't pile up.
-        => ConnectionState.Value.Connection is not null;
+    // WhenConnected
 
     public Task<RpcPeerConnectionState> WhenConnected(CancellationToken cancellationToken = default)
         => ConnectionState.Value.WhenConnected.WaitAsync(cancellationToken);
@@ -560,7 +542,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 // _whenDisconnectedSource. An external Disconnect() that grabbed this state
                 // races with the handshake completing here; without this, the waiter would
                 // hang because MarkConnected only resolves _whenConnectedSource.
-                if (oldState.IsHandshaking())
+                if (oldState.IsConnecting())
                     oldState.MarkDisconnected();
             }
             else
@@ -575,13 +557,15 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 #else
             Monitor.Exit(Lock);
 #endif
+            if (this is RpcClientPeer clientPeer)
+                Hub.Client.OnConnectionStateChange(clientPeer, connectionState.Value);
 
             // The code below is responsible solely for logging - all important stuff is already done
             if (terminalError is not null)
                 Log.LogInformation("'{PeerRef}': Can't (re)connect, will shut down", Ref);
             else if (newState.IsConnected())
                 Log.LogInformation("'{PeerRef}': Connected", Ref);
-            else if (newState.IsHandshaking())
+            else if (newState.IsConnecting())
                 DebugLog?.LogDebug("'{PeerRef}': Handshaking", Ref);
             else {
                 var e = newState.Error;

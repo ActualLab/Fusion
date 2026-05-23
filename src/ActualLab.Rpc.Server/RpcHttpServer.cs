@@ -57,7 +57,7 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
 
             // Disconnect any stale connection BEFORE starting the response.
             // See RpcWebSocketServer.Invoke for the detailed rationale.
-            if (peer.IsConnectedOrHandshaking()) {
+            if (peer.ConnectionState.Value.IsConnectingOrConnected()) {
                 Log.LogWarning("'{PeerRef}': {Peer} is already connected, disconnecting the old connection first...",
                     peerRef, peer);
                 await peer.Disconnect(cancellationToken).ConfigureAwait(false);

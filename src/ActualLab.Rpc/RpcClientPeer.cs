@@ -43,7 +43,7 @@ public class RpcClientPeer : RpcPeer
         }
 
         Log.LogInformation("'{PeerRef}': Connecting...", Ref);
-        return await Hub.Client.Connect(this, cancellationToken).ConfigureAwait(false);
+        return await Hub.Client.Connect(this, connectionState, cancellationToken).ConfigureAwait(false);
     }
 
     protected void SetReconnectsAt(Moment value)

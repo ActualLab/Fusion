@@ -15,17 +15,26 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
         AllowSynchronousContinuations = true,
     };
 
-    public Task<RpcConnection> Connect(RpcClientPeer clientPeer, CancellationToken cancellationToken)
+    public Task<RpcConnection> Connect(
+        RpcClientPeer clientPeer,
+        RpcPeerConnectionState connectionState,
+        CancellationToken cancellationToken)
         => clientPeer.ConnectionKind switch {
-            RpcPeerConnectionKind.Remote => ConnectRemote(clientPeer, cancellationToken),
-            RpcPeerConnectionKind.Loopback => ConnectLoopback(clientPeer, cancellationToken),
+            RpcPeerConnectionKind.Remote => ConnectRemote(clientPeer, connectionState, cancellationToken),
+            RpcPeerConnectionKind.Loopback => ConnectLoopback(clientPeer, connectionState, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(clientPeer),
                 $"Invalid {nameof(clientPeer)}.{nameof(clientPeer.ConnectionKind)} value: {clientPeer.ConnectionKind}"),
         };
 
-    public abstract Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken);
+    public abstract Task<RpcConnection> ConnectRemote(
+        RpcClientPeer clientPeer,
+        RpcPeerConnectionState connectionState,
+        CancellationToken cancellationToken);
 
-    public virtual async Task<RpcConnection> ConnectLoopback(RpcClientPeer clientPeer, CancellationToken cancellationToken)
+    public virtual async Task<RpcConnection> ConnectLoopback(
+        RpcClientPeer clientPeer,
+        RpcPeerConnectionState connectionState,
+        CancellationToken cancellationToken)
     {
         var serverPeerRef = RpcPeerRef.NewServer(
             clientPeer.ClientId,
@@ -48,4 +57,7 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
         await serverPeer.SetNextConnection(serverConnection, cancellationToken).ConfigureAwait(false);
         return clientConnection;
     }
+
+    public virtual void OnConnectionStateChange(RpcClientPeer clientPeer, RpcPeerConnectionState connectionState)
+    { }
 }

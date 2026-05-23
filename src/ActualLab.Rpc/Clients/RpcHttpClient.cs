@@ -1,6 +1,5 @@
 using System.IO.Pipelines;
 using System.Net;
-using ActualLab.IO;
 using ActualLab.Rpc.Clients.Internal;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Rpc.Internal.Errors;
@@ -15,7 +14,10 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
     public RpcHttpClientOptions Options { get; } = services.GetRequiredService<RpcHttpClientOptions>();
     protected HttpClient HttpClient => field ??= Options.HttpClientFactory.Invoke(Services);
 
-    public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
+    public override Task<RpcConnection> ConnectRemote(
+        RpcClientPeer clientPeer,
+        RpcPeerConnectionState connectionState,
+        CancellationToken cancellationToken)
     {
         var uri = Options.ConnectionUriResolver.Invoke(clientPeer);
         return ConnectRemote(clientPeer, uri, cancellationToken);

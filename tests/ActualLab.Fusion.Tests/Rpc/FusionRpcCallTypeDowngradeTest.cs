@@ -112,7 +112,8 @@ public class FusionRpcCallTypeDowngradeTest(ITestOutputHelper @out) : TestBase(@
             public RpcServerPeer? ServerPeer { get; set; }
         }
 
-        public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
+        public override async Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer,
+            RpcPeerConnectionState connectionState, CancellationToken cancellationToken)
         {
             var serverPeerRef = RpcPeerRef.NewServer(
                 clientPeer.ClientId,

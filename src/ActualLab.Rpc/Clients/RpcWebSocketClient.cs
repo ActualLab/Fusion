@@ -1,3 +1,4 @@
+using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.WebSockets;
 
@@ -10,8 +11,11 @@ public class RpcWebSocketClient(IServiceProvider services) : RpcClient(services)
 {
     public RpcWebSocketClientOptions Options { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
 
-    public override Task<RpcConnection> ConnectRemote(RpcClientPeer clientPeer, CancellationToken cancellationToken)
-{
+    public override Task<RpcConnection> ConnectRemote(
+        RpcClientPeer clientPeer,
+        RpcPeerConnectionState connectionState,
+        CancellationToken cancellationToken)
+    {
         var uri = Options.ConnectionUriResolver.Invoke(clientPeer);
         return ConnectRemote(clientPeer, uri, cancellationToken);
     }

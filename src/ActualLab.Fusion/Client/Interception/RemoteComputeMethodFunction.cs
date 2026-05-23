@@ -170,7 +170,7 @@ public abstract class RemoteComputeMethodFunction(
         var existingCacheEntry = existingRemoteComputed?.CacheEntry;
 
         Task whenConnected;
-        if (!peer.IsConnected(out var handshake, out _)) {
+        if (!peer.ConnectionState.Value.IsConnected(out var handshake, out _)) {
             if (existingCacheEntry is not null) {
                 // Serve-stale-on-disconnect: if the peer isn't connected and we have a usable
                 // cached value from a previous successful call, return it instead of awaiting
@@ -497,7 +497,7 @@ public abstract class RemoteComputeMethodFunction(
     protected Task WhenConnectedChecked(
         ComputeMethodInput input, RpcPeer peer, CancellationToken cancellationToken = default)
     {
-        if (!peer.IsConnected(out var handshake, out _))
+        if (!peer.ConnectionState.Value.IsConnected(out var handshake, out _))
             return WhenConnectedCheckedAsync(input, peer, cancellationToken);
 
         return handshake.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy

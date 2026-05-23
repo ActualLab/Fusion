@@ -51,7 +51,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                 try {
                     if (peer.ConnectionKind is not RpcPeerConnectionKind.Local) {
                         if (!rpcMethodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
-                            && !peer.IsConnected())
+                            && !peer.ConnectionState.Value.IsConnected())
                             throw Errors.OutboundCallFailedNoConnection();
 
                         // Remote call -> send the RPC call by invoking the final handler

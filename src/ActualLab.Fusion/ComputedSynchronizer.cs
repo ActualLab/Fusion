@@ -190,7 +190,7 @@ public abstract class ComputedSynchronizer
                 return true;
             if (AssumeSynchronizedWhenRemoteComputedCacheHasHitToCallDelayer && RemoteComputedCache.HitToCallDelayer is not null)
                 return true;
-            if (AssumeSynchronizedWhenDisconnected && !computed.Input.Function.Hub.RpcHub.DefaultPeer.IsConnected())
+            if (AssumeSynchronizedWhenDisconnected && !computed.Input.Function.Hub.RpcHub.DefaultPeer.ConnectionState.Value.IsConnected())
                 return true;
 
             return false;

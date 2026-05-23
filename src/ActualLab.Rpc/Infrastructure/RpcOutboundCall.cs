@@ -94,7 +94,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         }
 
         Register();
-        if (!Peer.IsConnected())
+        if (!Peer.ConnectionState.Value.IsConnected())
             return CompleteAsync(); // Slow path
 
         SendRegistered(); // Fast path
