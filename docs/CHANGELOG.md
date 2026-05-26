@@ -11,7 +11,7 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 13.0.12+b84663f1 | npm: 13.0.12
+## 13.0.12+f471d693 | npm: 13.0.15
 
 Release date: 2026-05-26
 
@@ -48,6 +48,17 @@ and TS sides, and `RpcLimits` ported to TypeScript.
   from the original), `retry` + `catchErrors`, `abortPromise`,
   `ResolvedPromise.Void/True/False`, `TimedOut` sentinel, and a
   per-package `getLogs` factory. 48 new tests.
+- TS core: `PromiseSource<T>` again `implements Promise<T>` — exposes
+  `then`/`catch`/`finally` delegators and
+  `[Symbol.toStringTag] = 'Promise'`, so it can be awaited or passed
+  anywhere a `Promise<T>` is expected. The initial port had dropped
+  this surface and forced callers through `.promise`; that's reverted.
+  `.promise`, boolean-returning `resolve()`/`reject()`, and
+  `isCompleted` semantics are unchanged; `PromiseSourceWithTimeout<T>`
+  inherits the restored surface. `.promise` is retained at the RPC
+  client proxy (`rpc-client.ts`), which hands the value to user code
+  where exposing the `PromiseSource` would risk accidental
+  `.resolve()`/`.reject()` calls.
 - TS core: `TimeoutError` + `withTimeout(promise, ms, message)`
   helpers, used by the new `connectTimeoutMs` path and the existing
   handshake-timeout block (replaces a string compare on `e.message`).
