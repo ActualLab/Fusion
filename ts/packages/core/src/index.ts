@@ -30,7 +30,17 @@ export { AsyncLock } from './async-lock.js';
 // Event handling, primises
 export { EventHandlerSet } from './events.js';
 export { PromiseSource, resolvedVoidPromise } from './promise-source.js';
+export { PromiseSourceWithTimeout } from './promise-source-with-timeout.js';
+export { ResolvedPromise } from './resolved-promise.js';
+export { TimedOut } from './timed-out.js';
 export { TimeoutError, withTimeout } from './withTimeout.js';
+export { delayAsync, delayAsyncWith } from './delay.js';
+export { abortPromise } from './abort-promise.js';
+
+// Higher-order async operators
+export type { ResettableFunc, ThrottleMode } from './throttle.js';
+export { throttle, debounce } from './throttle.js';
+export { serialize } from './serialize.js';
 
 // Collections
 export { RingBuffer } from './ring-buffer.js';
@@ -43,3 +53,5 @@ export {
     RetryDelayNone,
     RetryDelayLimitExceeded,
 } from './retry-delayer.js';
+export type { RetryDelaySchedule } from './retry.js';
+export { retry, catchErrors } from './retry.js';
