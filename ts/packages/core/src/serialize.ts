@@ -24,8 +24,10 @@ export function serialize<TArgs extends unknown[], TResult>(
         queueSize++;
         const prevCall = lastCall;
         // Capture `this` via the bound caller chain so we don't have to alias
-        // `this` to a local (which the linter flags).
-        const invoke = (): PromiseLike<TResult> | TResult => func.apply(this, args);
+        // `this` to a local (which the linter flags). `Reflect.apply` preserves
+        // the function's typed return value (unlike `Function.prototype.apply`,
+        // which is declared as returning `any`).
+        const invoke = (): PromiseLike<TResult> | TResult => Reflect.apply(func, this, args);
         return lastCall = (async () => {
             try {
                 // Wait for the previous call to settle — but don't inherit its
