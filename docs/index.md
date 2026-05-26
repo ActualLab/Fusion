@@ -12,6 +12,9 @@ hero:
     - theme: brand
       text: Documentation
       link: /PartF
+    - theme: brand
+      text: Slides
+      link: /Videos-and-Slides
     - theme: alt
       text: Changelog
       link: /CHANGELOG
@@ -88,6 +91,24 @@ features:
 }
 .VPHome .VPHero .tagline {
   color: #c9ccd4;
+}
+
+/* Merge the first two brand actions (Documentation | Slides) into a
+   single split button. */
+.VPHome .VPHero .actions .action:nth-child(1) {
+  padding-right: 0;
+}
+.VPHome .VPHero .actions .action:nth-child(2) {
+  padding-left: 0;
+}
+.VPHome .VPHero .actions .action:nth-child(1) .VPButton {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
+}
+.VPHome .VPHero .actions .action:nth-child(2) .VPButton {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 </style>
 

@@ -29,8 +29,8 @@ Defines timeout and periodic limits for RPC connections, keep-alive, and object 
 | `ConnectTimeout` | `TimeSpan` | `10s` | Timeout for establishing a connection; reconnect starts if exceeded |
 | `HandshakeTimeout` | `TimeSpan` | `10s` | Timeout for completing handshake; reconnect starts if exceeded |
 | `PrematureDisconnectTimeout` | `TimeSpan` | `15s` | If a connection was alive for less than this duration, a graceful close is still treated as an error — bumping `ConnectionAttemptIndex` and applying reconnect backoff delay. This prevents rapid connect-disconnect cycles from resetting the backoff. |
-| `KeepAlivePeriod` | `TimeSpan` | `15s` | Interval at which a peer sends keep-alive messages (which also report which remote objects are still alive) |
-| `KeepAliveTimeout` | `TimeSpan` | `55s` | If no keep-alive is received within this period, the connection is dropped and reconnect starts |
+| `KeepAlivePeriod` | `TimeSpan` | `10s` | Interval at which a peer sends keep-alive messages (which also report which remote objects are still alive) |
+| `KeepAliveTimeout` | `TimeSpan` | `25s` | If no keep-alive is received within this period, the connection is dropped and reconnect starts. Sized to tolerate a ~15s server stall plus most of one keepalive cycle — the worst-case age of `LastKeepAliveAt` is `KeepAlivePeriod + stall_duration`. |
 | `ObjectReleasePeriod` | `TimeSpan` | `10s` | Cycle time for checking `KeepAliveTimeout` and `ObjectReleaseTimeout` |
 | `ObjectReleaseTimeout` | `TimeSpan` | `125s` | If an object doesn't receive a keep-alive for this long, it gets released |
 | `ObjectAbortCycleCount` | `int` | `3` | Number of cycles to complete object abort (proceeds to next cycle if at least one object was disposed) |

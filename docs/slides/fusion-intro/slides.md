@@ -1,6 +1,7 @@
 ---
 theme: default
 title: Fusion — End-to-end reactivity
+titleTemplate: '%s'
 favicon: /favicon.ico
 info: |
   ActualLab.Fusion — the code-first cut.

@@ -1,6 +1,7 @@
 ---
 theme: default
 title: Fusion Intro
+titleTemplate: '%s'
 favicon: /favicon.ico
 info: |
   Introduction to ActualLab.Fusion.
