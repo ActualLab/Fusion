@@ -87,7 +87,10 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
     {
         var bufferSize = Settings.BufferSize;
         using var commonCts = cancellationToken.LinkWith(StopToken);
-        using var commonTokenRegistration = commonCts.Token.Register(() => _ = DisposeAsync());
+        // ReSharper disable once UseAwaitUsing
+        using var commonTokenRegistration = commonCts.Token.Register(
+            static x => AbortWebSocket((WebSocket)x!),
+            WebSocket);
 
         // Start with a non-pooled buffer for initial reads
         var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, bufferSize, mustClear: false);
@@ -103,6 +106,15 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
                     r = await WebSocket.ReceiveAsync(arraySegment, CancellationToken.None).ConfigureAwait(false);
                 }
                 catch (Exception e) {
+                    if (commonCts.IsCancellationRequested) {
+                        // We don't pass commonCts.Token to ReceiveAsync to speed it up, so there is no standard
+                        // cancellation. We abort WebSocket on commonCts cancellation instead, which makes
+                        // ReceiveAsync to throw. So any error from it after commonCts cancellation is an expected
+                        // outcome indicating that cancellation happened.
+                        // And we obviously don't want to log this exception as it's expected behavior.
+                        break;
+                    }
+
                     Log?.LogWarning(e, "WebSocket.ReceiveAsync failed");
                     if (e is WebSocketException { WebSocketErrorCode: WebSocketError.ConnectionClosedPrematurely })
                         r = new WebSocketReceiveResult(0, WebSocketMessageType.Close, endOfMessage: true);
@@ -162,6 +174,19 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
             await WebSocket.CloseAsync(status, message, default)
                 .WaitAsync(Settings.CloseTimeout, CancellationToken.None)
                 .SilentAwait(false);
+        }
+        catch {
+            // Intended
+        }
+        if (WebSocket.State is not (WebSocketState.Closed or WebSocketState.Aborted))
+            AbortWebSocket(WebSocket);
+    }
+
+    private static void AbortWebSocket(WebSocket webSocket)
+    {
+        try {
+            if (webSocket.State is not (WebSocketState.Closed or WebSocketState.Aborted))
+                webSocket.Abort();
         }
         catch {
             // Intended
