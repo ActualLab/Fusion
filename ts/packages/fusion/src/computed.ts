@@ -198,7 +198,7 @@ export class Computed<T> implements IResult<T> {
             );
         }
 
-        return ps.promise;
+        return ps;
     }
 
     addDependency(dependency: Computed<unknown>): void {

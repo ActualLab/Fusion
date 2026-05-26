@@ -72,7 +72,7 @@ export abstract class State<T> implements IResult<T> {
     }
 
     whenUpdated(): Promise<void> {
-        return (this._whenUpdatedSource ??= new PromiseSource<void>()).promise;
+        return (this._whenUpdatedSource ??= new PromiseSource<void>());
     }
 
     whenFirstTimeUpdated(): Promise<void> {

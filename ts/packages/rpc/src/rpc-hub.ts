@@ -304,7 +304,7 @@ export class RpcHub {
                     throw new Error('Outbound call failed: not connected and AwaitForConnection is not set.');
                 const callArgs = args.slice(0, methodDef.argCount);
                 const outboundCall = peer.call(wireName, callArgs);
-                const result = await outboundCall.result.promise;
+                const result = await outboundCall.result;
                 const ref = parseStreamRef(result);
                 if (!ref)
                     throw new Error(
@@ -327,7 +327,7 @@ export class RpcHub {
                 throw new Error('Outbound call failed: not connected and AwaitForConnection is not set.');
             const callArgs = args.slice(0, methodDef.argCount);
             const outboundCall = peer.call(wireName, callArgs, callOptions);
-            const result = await outboundCall.result.promise;
+            const result = await outboundCall.result;
             return resolveStreamRefs(result, peer);
         };
     }

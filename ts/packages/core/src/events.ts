@@ -31,6 +31,6 @@ export class EventHandlerSet<T> {
             ps.resolve(arg);
         };
         this._handlers.add(handler);
-        return ps.promise;
+        return ps;
     }
 }

@@ -367,7 +367,7 @@ export abstract class RpcPeer {
             this.connectionStateChanged.add(stateHandler);
             // Detach the handler if the call is completed before we ever
             // reach `Connected` — prevents leaking the listener.
-            outboundCall.result.promise
+            outboundCall.result
                 .then(() => this.connectionStateChanged.remove(stateHandler))
                 .catch(() => this.connectionStateChanged.remove(stateHandler));
         }
@@ -385,7 +385,7 @@ export abstract class RpcPeer {
             };
             signal.addEventListener('abort', onAbort, { once: true });
             // Clean up listener when the call completes normally
-            outboundCall.result.promise
+            outboundCall.result
                 .then(() => signal.removeEventListener('abort', onAbort))
                 .catch(() => signal.removeEventListener('abort', onAbort));
         }
@@ -811,7 +811,7 @@ export class RpcClientPeer extends RpcPeer {
 
                     // Derived rejecting promise — used to unblock awaits that
                     // expect a successful signal (whenConnected, handshake).
-                    const closedRejection = whenClosed.promise.then<never>(() => {
+                    const closedRejection = whenClosed.then<never>(() => {
                         throw new Error('Connection failed');
                     });
                     closedRejection.catch(() => { /* noop — prevent unhandled rejection when conn closes normally */ });
@@ -878,7 +878,7 @@ export class RpcClientPeer extends RpcPeer {
                     let remoteHandshake: RemoteHandshake;
                     try {
                         remoteHandshake = await withTimeout(
-                            Promise.race([this._pendingHandshake.promise, closedRejection]),
+                            Promise.race([this._pendingHandshake, closedRejection]),
                             handshakeTimeoutMs,
                             'Handshake timeout');
                     } catch (e) {
@@ -927,7 +927,7 @@ export class RpcClientPeer extends RpcPeer {
 
                     // Wait until disconnected — use the eager whenClosed promise
                     // so we don't miss an already-fired close event.
-                    await whenClosed.promise;
+                    await whenClosed;
                 } catch (e) {
                 // connection failed or handshake failed
                     debugLog?.log(`'${this.ref}': run() iteration failed:`, e);
@@ -1115,7 +1115,7 @@ export class RpcClientPeer extends RpcPeer {
                     signal: closedSignal,
                 },
             );
-            const result = await reconnectCall.result.promise;
+            const result = await reconnectCall.result;
             const bytes = _toBytes(result);
             if (bytes === null) return new Set(eligible.map(c => c.callId));
             return new Set(IncreasingSeqCompressor.deserialize(bytes));

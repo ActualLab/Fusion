@@ -82,6 +82,9 @@ function createMethod(peer: RpcPeer, methodDef: RpcMethodDef): RpcClientFn {
                 ? { callTypeId: methodDef.callTypeId, remoteExecutionMode: mode }
                 : undefined;
         const outboundCall = peer.call(wireName, callArgs, options);
+        // Keep `.promise` here: this is the proxy returning a Promise to user
+        // code. Returning the PromiseSource directly would expose `resolve()`/
+        // `reject()` to anyone who happens to type the result as PromiseSource.
         return outboundCall.result.promise;
     };
 }

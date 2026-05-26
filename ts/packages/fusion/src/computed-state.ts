@@ -144,7 +144,7 @@ export class ComputedState<T> extends State<T> {
                 // Wait for delay (cancellable by renewer)
                 await Promise.race([
                     this._updateDelayer(disposeSignal),
-                    this._cancelDelaySource.promise,
+                    this._cancelDelaySource,
                 ]);
             }
         } catch (e) {

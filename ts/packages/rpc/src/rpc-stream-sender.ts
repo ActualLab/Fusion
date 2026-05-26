@@ -226,7 +226,7 @@ export class RpcStreamSender<T> implements IRpcObject {
      * src/ActualLab.Rpc/Infrastructure/RpcSharedStream.cs.
      */
     async writeFrom(source: AsyncIterable<T>): Promise<void> {
-        await this._started.promise;
+        await this._started;
         if (this._ended) return;
 
         const iterator = source[Symbol.asyncIterator]();
@@ -459,7 +459,7 @@ export class RpcStreamSender<T> implements IRpcObject {
     private async _waitAckReady(): Promise<void> {
         if (this._acks.length > 0 || this._ended) return;
         this._whenAckReady = new PromiseSource<void>();
-        await this._whenAckReady.promise;
+        await this._whenAckReady;
         this._whenAckReady = null;
     }
 

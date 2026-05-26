@@ -225,7 +225,7 @@ export class RpcWebSocketConnection implements RpcConnection {
     }
 
     get whenConnected(): Promise<void> {
-        return this._connected.promise;
+        return this._connected;
     }
 
     send(serializedMessage: string): void {

@@ -59,4 +59,11 @@ describe('PromiseSourceWithTimeout', () => {
         expect(await ps.promise).toBe('second');
         expect(firstFired).toBe(false);
     });
+
+    it('inherits Promise<T> surface from PromiseSource (awaitable directly)', async () => {
+        const ps = new PromiseSourceWithTimeout<number>();
+        ps.resolve(5);
+        expect(await ps).toBe(5);
+        expect(ps[Symbol.toStringTag]).toBe('Promise');
+    });
 });

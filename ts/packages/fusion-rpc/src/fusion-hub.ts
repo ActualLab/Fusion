@@ -221,10 +221,10 @@ export class FusionHub extends RpcHub {
                 args,
                 callOptions
             ) as RpcOutboundComputeCall;
-            const value = await outboundCall.result.promise;
+            const value = await outboundCall.result;
             // Wire server invalidation → local computed invalidation
             if (computeCtx) {
-                void outboundCall.whenInvalidated.promise.then(() =>
+                void outboundCall.whenInvalidated.then(() =>
                     computeCtx.computed.invalidate()
                 );
             }

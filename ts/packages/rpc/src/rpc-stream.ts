@@ -377,7 +377,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
 
                     // Wait for more data
                     this._consumerWaiting = new PromiseSource<void>();
-                    await this._consumerWaiting.promise;
+                    await this._consumerWaiting;
                 }
             },
 
