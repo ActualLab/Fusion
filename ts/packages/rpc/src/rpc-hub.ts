@@ -26,8 +26,6 @@
 //     TS has no routing layer.
 //   - Middlewares (IRpcMiddleware[]) — ordered middleware pipeline for inbound
 //     calls.  TS dispatches directly to service implementations.
-//   - Limits (RpcLimits) — configurable limits for call timeout, handshake
-//     timeout, max message size, etc.  TS uses hardcoded values.
 //   - RpcConfiguration / Configuration.Freeze() — frozen config snapshot.
 //   - HostId / SystemClock — infrastructure services.
 //   - DefaultPeer / LoopbackPeer / LocalPeer / NonePeer — cached well-known peers.
@@ -39,6 +37,7 @@ import {
     type RpcPeer,
     type RpcCallOptions,
 } from './rpc-peer.js';
+import { RpcLimits } from './rpc-limits.js';
 import { RpcClientPeerReconnectDelayer } from './rpc-client-peer-reconnect-delayer.js';
 import { RpcServiceHost, type RpcServiceImpl } from './rpc-service-host.js';
 import type { RpcServiceDef, RpcMethodDef } from './rpc-service-def.js';
@@ -73,6 +72,14 @@ export class RpcHub {
     /** Shared reconnect delayer used by every client peer in this hub. Swap in
      *  a custom subclass (e.g. app-level signal-gated) before peers start. */
     reconnectDelayer: RpcClientPeerReconnectDelayer = new RpcClientPeerReconnectDelayer();
+
+    /** Connection-lifecycle timing limits. Peers constructed against this hub
+     *  read their initial `*Ms` field values from this instance; later
+     *  mutations affect only peers built afterward (existing peers can be
+     *  retuned by setting their `*Ms` fields directly). Defaults to the
+     *  process-wide {@link RpcLimits.Default} so a single global override
+     *  propagates to every hub that hasn't replaced this. */
+    limits: RpcLimits = RpcLimits.Default;
 
     /** URL used by {@link defaultPeer} to resolve / create the default client
      *  peer. Must be set before the first {@link defaultPeer} access. */

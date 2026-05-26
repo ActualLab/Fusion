@@ -112,22 +112,9 @@ function yieldToEventLoop(): Promise<void> {
 
 export const RPC_CLOSE_CODE_UNSUPPORTED_FORMAT = 4001;
 
-/** Maximum time to wait for the WebSocket to enter the OPEN state, mirrors .NET `RpcLimits.ConnectTimeout`.
- * Without this cap, a hung connect (typical of mobile after a network change or device sleep) blocks
- * the reconnect loop for up to the browser's internal default (~2 min on Chrome), masquerading as "can't reconnect".
- * */
-export const CONNECT_TIMEOUT_MS = 10_000;
-
-/** Maximum time to wait for the server's handshake response after opening the socket. */
-export const HANDSHAKE_TIMEOUT_MS = 10_000;
-
-/** Outbound `$sys.KeepAlive` send period. Mirrors .NET `RpcLimits.KeepAlivePeriod`. */
-export const KEEP_ALIVE_PERIOD_MS = 15_000;
-/** If no inbound `$sys.KeepAlive` has been seen for this long, the peer's
- *  watchdog force-closes the WebSocket (so the reconnect loop can take over
- *  and the UI sees a real `Disconnected` state). Mirrors .NET
- *  `RpcLimits.KeepAliveTimeout` (~3-4 missed keepalives). */
-export const KEEP_ALIVE_TIMEOUT_MS = 55_000;
+// Connect / handshake / keepalive timing limits now live on `RpcLimits`,
+// resolved via `hub.limits` at peer construction. See `rpc-limits.ts` for
+// the override paths (process-wide / per-hub / per-peer).
 
 const { debugLog, infoLog, warnLog, errorLog } = getLogs('RpcPeer');
 
@@ -226,14 +213,18 @@ export abstract class RpcPeer {
     /** Wall-clock time of the last inbound `$sys.KeepAlive`, or 0 if none yet
      *  for the current connection. Useful for diagnostics. */
     private _lastKeepAliveAt = 0;
-    /** Outbound keep-alive send period (per-peer override for tests). */
-    keepAlivePeriodMs: number = KEEP_ALIVE_PERIOD_MS;
-    /** Inbound keep-alive silence tolerance (per-peer override for tests). */
-    keepAliveTimeoutMs: number = KEEP_ALIVE_TIMEOUT_MS;
+    /** Outbound keep-alive send period. Initialized from `hub.limits` at
+     *  construction; set directly to override on a single peer. */
+    keepAlivePeriodMs: number;
+    /** Inbound keep-alive silence tolerance. Initialized from `hub.limits`
+     *  at construction; set directly to override on a single peer. */
+    keepAliveTimeoutMs: number;
 
     protected constructor(hub: RpcHub, ref: string) {
         this.hub = hub;
         this.ref = ref;
+        this.keepAlivePeriodMs = hub.limits.keepAlivePeriodMs;
+        this.keepAliveTimeoutMs = hub.limits.keepAliveTimeoutMs;
     }
 
     get connection(): RpcConnection | undefined {
@@ -673,11 +664,13 @@ export class RpcClientPeer extends RpcPeer {
      *  constructor can't do). Must be set before `start()`. */
     webSocketFactory: ((url: string) => WebSocketLike) | undefined;
     /** Max time to wait for the WebSocket to reach OPEN before aborting the
-     *  connection attempt. Mirrors .NET's `Hub.Limits.ConnectTimeout`. */
-    connectTimeoutMs: number = CONNECT_TIMEOUT_MS;
+     *  connection attempt. Initialized from `hub.limits` at construction;
+     *  set directly to override on a single peer. */
+    connectTimeoutMs: number;
     /** Max time to wait for the server's handshake response before aborting
-     *  the connection attempt. Mirrors .NET's `Hub.Limits.HandshakeTimeout`. */
-    handshakeTimeoutMs: number = HANDSHAKE_TIMEOUT_MS;
+     *  the connection attempt. Initialized from `hub.limits` at construction;
+     *  set directly to override on a single peer. */
+    handshakeTimeoutMs: number;
     readonly peerChanged = new EventHandlerSet<void>();
     /** Fired when the server rejects the connection due to an unsupported serialization format (close code 4010). */
     readonly unsupportedFormat = new EventHandlerSet<{ reason: string }>();
@@ -712,6 +705,8 @@ export class RpcClientPeer extends RpcPeer {
      */
     constructor(hub: RpcHub, url: string, mustStart = true) {
         super(hub, url);
+        this.connectTimeoutMs = hub.limits.connectTimeoutMs;
+        this.handshakeTimeoutMs = hub.limits.handshakeTimeoutMs;
         this.clientId = guidToBase64Url(this.id);
         const resolver = RpcSerializationFormatResolver.Default;
         this.serializationFormat = resolver.get(parseFormatFromUrl(url) ?? resolver.defaultFormatKey);

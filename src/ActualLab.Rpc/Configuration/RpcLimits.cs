@@ -17,9 +17,12 @@ public record RpcLimits
     // If the connection was alive for less than this, graceful close still bumps ConnectionAttemptIndex
     public TimeSpan PrematureDisconnectTimeout { get; init; } = TimeSpan.FromSeconds(15);
     // The period peer sends "keep-alive" message, which also tells which of remote objects are still alive
-    public TimeSpan KeepAlivePeriod { get; init; } = TimeSpan.FromSeconds(15);
-    // When "keep-alive" isn't received during this period, the connection gets dropped -> reconnect starts
-    public TimeSpan KeepAliveTimeout { get; init; } = TimeSpan.FromSeconds(55);
+    public TimeSpan KeepAlivePeriod { get; init; } = TimeSpan.FromSeconds(10);
+    // When "keep-alive" isn't received during this period, the connection gets dropped -> reconnect starts.
+    // Sized to tolerate a complete ~15s server stall plus most of one keepalive cycle on top:
+    //   worst-case age of LastKeepAliveAt = KeepAlivePeriod + stall (a stall that starts right after
+    //   the last successful keepalive delays the next one by Period + stall_duration).
+    public TimeSpan KeepAliveTimeout { get; init; } = TimeSpan.FromSeconds(25);
     // The code that checks KeepAliveTimeout & ObjectReleaseTimeout runs w/ this cycle time
     public TimeSpan ObjectReleasePeriod { get; init; } = TimeSpan.FromSeconds(10);
     // When the object doesn't get a "keep-alive" this long, it gets released
