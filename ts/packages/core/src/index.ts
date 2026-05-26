@@ -30,6 +30,7 @@ export { AsyncLock } from './async-lock.js';
 // Event handling, primises
 export { EventHandlerSet } from './events.js';
 export { PromiseSource, resolvedVoidPromise } from './promise-source.js';
+export { TimeoutError, withTimeout } from './withTimeout.js';
 
 // Collections
 export { RingBuffer } from './ring-buffer.js';

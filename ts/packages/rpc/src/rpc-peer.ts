@@ -75,7 +75,7 @@
 //     yet propagate cancellation to the service handler (would require AbortSignal
 //     threading through RpcServiceHost.dispatch).
 
-import { EventHandlerSet, PromiseSource } from '@actuallab/core';
+import { EventHandlerSet, PromiseSource, TimeoutError, withTimeout } from '@actuallab/core';
 import { getLogs } from './logging.js';
 import {
     RpcWebSocketConnection,
@@ -111,6 +111,12 @@ function yieldToEventLoop(): Promise<void> {
 /** WebSocket close code sent by the server when the client's serialization format is unsupported. */
 
 export const RPC_CLOSE_CODE_UNSUPPORTED_FORMAT = 4001;
+
+/** Maximum time to wait for the WebSocket to enter the OPEN state, mirrors .NET `RpcLimits.ConnectTimeout`.
+ * Without this cap, a hung connect (typical of mobile after a network change or device sleep) blocks
+ * the reconnect loop for up to the browser's internal default (~2 min on Chrome), masquerading as "can't reconnect".
+ * */
+export const CONNECT_TIMEOUT_MS = 10_000;
 
 /** Maximum time to wait for the server's handshake response after opening the socket. */
 export const HANDSHAKE_TIMEOUT_MS = 10_000;
@@ -666,6 +672,9 @@ export class RpcClientPeer extends RpcPeer {
      *  `Cookie` headers to the WS upgrade, which the browser `WebSocket`
      *  constructor can't do). Must be set before `start()`. */
     webSocketFactory: ((url: string) => WebSocketLike) | undefined;
+    /** Max time to wait for the WebSocket to reach OPEN before aborting the
+     *  connection attempt. Mirrors .NET's `Hub.Limits.ConnectTimeout`. */
+    connectTimeoutMs: number = CONNECT_TIMEOUT_MS;
     /** Max time to wait for the server's handshake response before aborting
      *  the connection attempt. Mirrors .NET's `Hub.Limits.HandshakeTimeout`. */
     handshakeTimeoutMs: number = HANDSHAKE_TIMEOUT_MS;
@@ -825,7 +834,26 @@ export class RpcClientPeer extends RpcPeer {
 
                     // Race connection open against close — if WS fails to connect,
                     // whenConnected stays pending forever, so we must also watch for close.
-                    await Promise.race([conn.whenConnected, closedRejection]);
+                    // The connect timeout caps how long we wait for the OPEN state: on a
+                    // hung connect (mobile after network change, half-open after sleep)
+                    // the browser may take ~2 min to emit onerror/onclose, which blocks
+                    // the reconnect loop and surfaces as "can't reconnect" to the user.
+                    const connectTimeoutMs = this.connectTimeoutMs;
+                    try {
+                        await withTimeout(
+                            Promise.race([conn.whenConnected, closedRejection]),
+                            connectTimeoutMs,
+                            'Connect timeout');
+                    } catch (e) {
+                        if (e instanceof TimeoutError) {
+                            warnLog?.log(`'${this.ref}': Connect timed out after ${connectTimeoutMs}ms`);
+                            // Force-close the WS so the run loop iterates to retry-delay
+                            // instead of leaking a half-open socket. The browser onclose
+                            // may still take a moment but the loop no longer waits for it.
+                            conn.close();
+                        }
+                        throw e;
+                    }
 
                     // WS open, handshake exchange about to start. Mirrors
                     // .NET's `Handshaking` phase of `RpcPeerConnectionState`.
@@ -852,23 +880,14 @@ export class RpcClientPeer extends RpcPeer {
                     // (half-open TCP, mid-restart server holding the socket briefly)
                     // would block the run loop indefinitely, preventing reconnect.
                     const handshakeTimeoutMs = this.handshakeTimeoutMs;
-                    let handshakeTimer: ReturnType<typeof setTimeout> | undefined;
-                    const handshakeTimeout = new Promise<never>((_, reject) => {
-                        handshakeTimer = setTimeout(() => {
-                            reject(new Error('Handshake timeout'));
-                        }, handshakeTimeoutMs);
-                    });
-                    handshakeTimeout.catch(() => { /* noop */ });
-
                     let remoteHandshake: RemoteHandshake;
                     try {
-                        remoteHandshake = await Promise.race([
-                            this._pendingHandshake.promise,
-                            closedRejection,
-                            handshakeTimeout,
-                        ]);
+                        remoteHandshake = await withTimeout(
+                            Promise.race([this._pendingHandshake.promise, closedRejection]),
+                            handshakeTimeoutMs,
+                            'Handshake timeout');
                     } catch (e) {
-                        if (e instanceof Error && e.message === 'Handshake timeout') {
+                        if (e instanceof TimeoutError) {
                             warnLog?.log(`'${this.ref}': Handshake timed out after ${handshakeTimeoutMs}ms`);
                             // Force-close the socket so the run loop continues to
                             // the retry-delay branch instead of leaking the WS.
@@ -876,7 +895,6 @@ export class RpcClientPeer extends RpcPeer {
                         }
                         throw e;
                     } finally {
-                        if (handshakeTimer !== undefined) clearTimeout(handshakeTimer);
                         this._pendingHandshake = undefined;
                     }
 
