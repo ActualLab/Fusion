@@ -35,41 +35,37 @@ public class RpcWebSocketClient(IServiceProvider services) : RpcClient(services)
             "'{PeerRef}': Connecting ClientId='{ClientId}' to {Url}",
             clientPeer.Ref, clientPeer.ClientId, uri);
         var hub = clientPeer.Hub;
-        var connectTokenSource = new CancellationTokenSource();
-        var connectToken = connectTokenSource.Token;
+        var connectTokenSource = (CancellationTokenSource?)new CancellationTokenSource();
+        var connectToken = connectTokenSource!.Token;
         _ = hub.SystemClock
             .Delay(hub.Limits.ConnectTimeout, cancellationToken)
             .ContinueWith(_ => connectTokenSource.CancelAndDisposeSilently(), TaskScheduler.Default);
         WebSocketOwner webSocketOwner;
+        WebSocketOwner? pendingWebSocketOwner = null;
+        var mustDisposePendingOwner = true;
         try {
+            // Hold a reference outside Task.Run so we can dispose the WebSocketOwner from
+            // the outer scope if the inner ConnectAsync hangs past connectToken cancellation.
+            // On some platforms (notably Browser/WASM), ConnectAsync may not honor cancellation,
+            // leaving the inner task orphaned with a ClientWebSocket stuck in CONNECTING state.
             webSocketOwner = await Task
                 .Run(async () => {
-                    WebSocketOwner? o = null;
-                    try {
-                        o = Options.WebSocketOwnerFactory.Invoke(clientPeer);
-                        await o.ConnectAsync(uri!, connectToken).ConfigureAwait(false);
-                        return o;
-                    }
-                    catch when (o is not null) {
-                        try {
-                            await o.DisposeAsync().ConfigureAwait(false);
-                        }
-                        catch {
-                            // Intended
-                        }
-
-                        throw;
-                    }
+                    var o = Options.WebSocketOwnerFactory.Invoke(clientPeer);
+                    // ReSharper disable once AccessToModifiedClosure
+                    Volatile.Write(ref pendingWebSocketOwner, o);
+                    await o.ConnectAsync(uri!, connectToken).ConfigureAwait(false);
+                    return o;
                 }, connectToken)
                 .WaitAsync(connectToken) // MAUI sometimes stucks in the sync part of ConnectAsync
                 .ConfigureAwait(false);
 
-            // If we're here, the connection was established successfully.
+            // Success: the owner is now owned by the returned RpcConnection, so the outer finally must not dispose it
+            mustDisposePendingOwner = false;
             // On some platforms / .NET versions, ClientWebSocket.ConnectAsync may retain a CancellationToken
             // registration on the underlying socket; if connectToken fires after connect completes,
             // it can abort the already-established socket, causing SocketError 125 (ECANCELED) on ReceiveAsync.
-            // ReSharper disable once AccessToModifiedClosure
             connectTokenSource.DisposeSilently();
+            connectTokenSource = null;
         }
         catch (Exception e) {
             if (e.IsCancellationOf(connectToken) && !cancellationToken.IsCancellationRequested)
@@ -80,6 +76,20 @@ public class RpcWebSocketClient(IServiceProvider services) : RpcClient(services)
         }
         finally {
             connectTokenSource.CancelAndDisposeSilently();
+            if (mustDisposePendingOwner && Volatile.Read(ref pendingWebSocketOwner) is { } orphanedOwner) {
+                // The inner Task.Run is either still hung in ConnectAsync (and won't reach us) or has produced
+                // an owner we won't return. Disposing the WebSocketOwner releases the underlying WebSocket,
+                // which typically also unblocks the orphaned ConnectAsync.
+                // We fire-and-forget so the outer caller doesn't wait on a potentially-also-hung Dispose.
+                _ = Task.Run(async () => {
+                    try {
+                        await orphanedOwner.DisposeAsync().ConfigureAwait(false);
+                    }
+                    catch {
+                        // Intended
+                    }
+                }, CancellationToken.None);
+            }
         }
 
         var properties = PropertyBag.Empty
