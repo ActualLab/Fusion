@@ -11,6 +11,72 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 13.0.12+b84663f1 | npm: 13.0.12
+
+Release date: 2026-05-26
+
+Follow-up release to v13.0 focused on connection-loss recovery and
+TypeScript catching up to .NET. New HTTP/2 transport guide,
+shorter keep-alive defaults, WebSocket leak / hang fixes on both .NET
+and TS sides, and `RpcLimits` ported to TypeScript.
+
+### Changed
+- RPC: keep-alive defaults tightened from 15 s / 55 s to **10 s / 25 s**
+  (`RpcLimits.KeepAlivePeriod` / `KeepAliveTimeout`). The new timeout
+  still tolerates a full ~15 s server stall on top of one keep-alive
+  cycle while cutting dead-connection detection from ~55 s to ~25 s.
+  Reconnects are cheap; the old budget paid for nothing. Override per
+  process via `RpcLimits.Default` or per peer if your environment needs
+  the old values.
+- RPC: `RpcPeer.SetConnectionState` is now `private` and must be
+  called only from `OnRun`. External callers (rare) should drive state
+  through the transport / connection layer instead.
+
+### Added
+- TS RPC: **`RpcLimits`** class mirroring the .NET shape, plumbed
+  through `RpcHub.limits` (defaults to a process-wide
+  `RpcLimits.Default`). Replaces the loose `CONNECT_TIMEOUT_MS` /
+  `HANDSHAKE_TIMEOUT_MS` / `KEEP_ALIVE_*_MS` consts. Three override
+  paths now match .NET: mutate `RpcLimits.Default`, assign
+  `hub.limits = new RpcLimits({ ... })`, or set the matching `*Ms`
+  field on a peer. Peers snapshot values from `hub.limits` at
+  construction.
+- TS core: ported the remaining `promises.ts` utilities from
+  ActualChat so `@actuallab/core` is self-sufficient — `delayAsync` /
+  `delayAsyncWith`, `PromiseSourceWithTimeout`, `throttle` / `debounce`
+  / `ResettableFunc`, `serialize` (fixes a latent queue-poisoning bug
+  from the original), `retry` + `catchErrors`, `abortPromise`,
+  `ResolvedPromise.Void/True/False`, `TimedOut` sentinel, and a
+  per-package `getLogs` factory. 48 new tests.
+- TS core: `TimeoutError` + `withTimeout(promise, ms, message)`
+  helpers, used by the new `connectTimeoutMs` path and the existing
+  handshake-timeout block (replaces a string compare on `e.message`).
+
+### Fixed
+- RPC: `RpcWebSocketClient` no longer leaks `ClientWebSocket`
+  instances when `ConnectAsync` hangs or doesn't honor cancellation —
+  the socket is now disposed on the cancellation path. Covered by
+  `RpcWebSocketClientConnectLeakTest`.
+- RPC: `RpcWebSocketTransport` aborts the underlying WebSocket on
+  `ReadAll` cancellation instead of relying on transport disposal,
+  preventing hangs in `ReceiveAsync`. New `AbortWebSocket` helper;
+  covered by `RpcWebSocketTransportCancellationTest`.
+- TS RPC: hung WebSocket connect (mobile after network change /
+  device sleep, half-open TCP) no longer blocks the reconnect loop
+  for the browser's ~2 min internal timeout. New
+  `connectTimeoutMs` (default 10 s) force-closes the socket so the
+  loop iterates to the retry-delay branch. Mirrors .NET's
+  `RpcLimits.ConnectTimeout`. Covered by
+  `rpc-connect-timeout.test.ts`.
+
+### Documentation
+- New [HTTP/2 transport guide](PartR-HttpTransport.md) — setup,
+  use cases, performance comparison, and configuration options.
+  Linked from the RPC sidebar and homepage.
+- Videos and Slides page: improved layout, split-button quick-access
+  to local decks.
+
+
 ## 13.0.3+26a8a3bd | npm: 13.0.4
 
 Release date: 2026-05-23
