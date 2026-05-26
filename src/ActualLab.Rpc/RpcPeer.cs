@@ -479,7 +479,26 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    protected AsyncState<RpcPeerConnectionState> SetConnectionState(
+    protected virtual RpcMethodResolver GetServerMethodResolver(RpcHandshake? handshake)
+    {
+        try {
+            return Hub.ServiceRegistry.GetServerMethodResolver(handshake?.RemoteApiVersionSet);
+        }
+        catch (Exception e) {
+            Log.LogError(e, "[LegacyName] conflict");
+            return Hub.ServiceRegistry.ServerMethodResolver;
+        }
+    }
+
+    protected internal virtual RpcPeerStopMode ComputeAutoStopMode()
+        => Ref.IsServer
+            ? RpcPeerStopMode.KeepInboundCallsIncomplete // The client will likely reconnect or pick another server
+            : RpcPeerStopMode.CancelInboundCalls; // When the client dies, server-to-client calls must be cancelled
+
+    // Private methods
+
+    // !!! This method can be called only from RpcPeer.OnRun!
+    private AsyncState<RpcPeerConnectionState> SetConnectionState(
         RpcPeerConnectionState newState,
         AsyncState<RpcPeerConnectionState>? expectedState = null)
     {
@@ -576,20 +595,4 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
         }
     }
-
-    protected virtual RpcMethodResolver GetServerMethodResolver(RpcHandshake? handshake)
-    {
-        try {
-            return Hub.ServiceRegistry.GetServerMethodResolver(handshake?.RemoteApiVersionSet);
-        }
-        catch (Exception e) {
-            Log.LogError(e, "[LegacyName] conflict");
-            return Hub.ServiceRegistry.ServerMethodResolver;
-        }
-    }
-
-    protected internal virtual RpcPeerStopMode ComputeAutoStopMode()
-        => Ref.IsServer
-            ? RpcPeerStopMode.KeepInboundCallsIncomplete // The client will likely reconnect or pick another server
-            : RpcPeerStopMode.CancelInboundCalls; // When the client dies, server-to-client calls must be cancelled
 }
