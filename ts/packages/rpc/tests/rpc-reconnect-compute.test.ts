@@ -88,36 +88,28 @@ describe("_reconnect() handling of compute calls (PR #2)", () => {
     expect(tracker.get(id)).toBeUndefined();
   });
 
-  it("should re-send regular in-flight calls on reconnect", async () => {
+  it("should not disconnect regular in-flight calls on reconnect", async () => {
     const tracker = conn.clientPeer.outbound;
 
-    // Simulate a regular in-flight call
+    // Simulate a regular in-flight call with valid serialized message
+    const { serializeMessage } = await import("../src/rpc-serialization.js");
     const id = tracker.nextId();
-    const call = new RpcOutboundCall(id, "RegularMethod");
-    call.serializedMessage = "test-message";
+    const call = new RpcOutboundCall(id, "CalcService.add:3");
+    call.serializedMessage = serializeMessage(
+      { Method: "CalcService.add:3", RelatedId: id, CallType: 0 },
+      [1, 2],
+    );
     tracker.register(call);
 
-    expect(call.removeOnOk).toBe(true);
-    expect(call.result.isCompleted).toBe(false);
+    let disconnected = false;
+    call.onDisconnect = () => { disconnected = true; };
 
-    // Track what gets sent on reconnect
-    const sentMessages: string[] = [];
+    expect(call.removeOnOk).toBe(true);
 
     await conn.reconnect();
 
-    // After reconnect, capture sends
-    const origSend = conn.clientPeer.connection!.send.bind(conn.clientPeer.connection!);
-    conn.clientPeer.connection!.send = (msg: string) => {
-      sentMessages.push(msg);
-      origSend(msg);
-    };
-
-    // The call should still be in the tracker (re-sent, not invalidated)
-    // Note: connectWith triggers _reconnect synchronously, so the re-send
-    // happened during reconnect. The call stays in tracker until $sys.Ok.
-    // We verify it wasn't removed by checking it's still there.
-    // (It may or may not still be there depending on timing, but it should
-    // NOT have been disconnected.)
+    // Regular call should NOT be disconnected (it gets re-sent)
+    expect(disconnected).toBe(false);
   });
 
   it("should handle mix of compute and regular calls on reconnect", async () => {
