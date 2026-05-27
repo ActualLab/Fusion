@@ -1,5 +1,7 @@
+using ActualLab.Fusion.Tests.Services;
 using ActualLab.Rpc;
 using ActualLab.Tests;
+using ActualLab.Tests.Rpc;
 
 namespace ActualLab.Fusion.Tests.TypeScriptRpc;
 
@@ -17,9 +19,11 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
         var rpc = services.AddRpc();
         rpc.AddServer<ITypeScriptTestService, TypeScriptTestService>();
         rpc.AddServer<IServerControlService, ServerControlService>();
+        rpc.AddServer<IReconnectMatrixRpcTester, ReconnectMatrixRpcTester>();
 
         var fusion = services.AddFusion();
         fusion.AddService<ITypeScriptTestComputeService, TypeScriptTestComputeService>(RpcServiceMode.Server);
+        fusion.AddService<IReconnectMatrixTester, ReconnectMatrixTester>(RpcServiceMode.Server);
     }
 
     [Theory]
@@ -111,6 +115,26 @@ public class TypeScriptRpcE2ETest(ITestOutputHelper @out) : RpcTestBase(@out)
         SerializationFormat = "json5";
         await using var _ = await WebHost.Serve();
         await RunScenario("reconnection-torture", "json5", TimeSpan.FromSeconds(60));
+    }
+
+    // Disconnect/Reconnect lifecycle matrix — TS client ↔ .NET server.
+    // Mirrors FusionRpcReconnectionMatrixTest (F1..F6) and RpcReconnectionMatrixTest (R1..R3)
+    // in pure .NET — see plans/sleepy-purring-porcupine.md for the matrix definition.
+    [Theory]
+    [InlineData("F1")]
+    [InlineData("F2")]
+    [InlineData("F3")]
+    [InlineData("F4")]
+    [InlineData("F5")]
+    [InlineData("F6")]
+    [InlineData("R1")]
+    [InlineData("R2")]
+    [InlineData("R3")]
+    public async Task ReconnectMatrix(string cell)
+    {
+        SerializationFormat = "json5";
+        await using var _ = await WebHost.Serve();
+        await RunScenario($"reconnect-matrix:{cell}", "json5", TimeSpan.FromSeconds(30));
     }
 
     [Fact]

@@ -45,6 +45,7 @@ export class Computed<T> implements IResult<T> {
     private _version: number;
     private _state: ConsistencyState;
     private _output: Result<T> | undefined;
+    private _invalidatePending = false;
     private _dependencies = new Set<Computed<unknown>>();
     private _dependants = new Map<number, WeakRef<Computed<unknown>>>();
     readonly onInvalidated = new EventHandlerSet<void>();
@@ -144,6 +145,12 @@ export class Computed<T> implements IResult<T> {
         this._output = output instanceof Result ? output : result(output);
         this._state = ConsistencyState.Consistent;
         this._register();
+        if (this._invalidatePending) {
+            this._invalidatePending = false;
+            this.invalidate();
+            return;
+        }
+
         if (this._output.hasError && Computed.errorAutoInvalidateDelay > 0)
             setTimeout(
                 () => this.invalidate(),
@@ -160,7 +167,14 @@ export class Computed<T> implements IResult<T> {
     }
 
     invalidate(): void {
-        if (this._state === ConsistencyState.Invalidated) return;
+        if (this._state === ConsistencyState.Invalidated)
+            return;
+        if (this._state === ConsistencyState.Computing) {
+            // Defer until setOutput transitions to Consistent — matches .NET, where
+            // invalidating a still-computing Computed sets a pending flag.
+            this._invalidatePending = true;
+            return;
+        }
         this._state = ConsistencyState.Invalidated;
 
         // Clear forward references

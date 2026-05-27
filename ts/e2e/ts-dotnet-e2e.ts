@@ -24,6 +24,7 @@ import {
     FusionHub,
     defineComputeService,
 } from '@actuallab/fusion-rpc';
+import { RetryDelaySeq } from '@actuallab/core';
 
 // RpcConnectionState.Connected — inlined to avoid `verbatimModuleSyntax`
 // restriction on cross-package `const enum` imports.
@@ -90,6 +91,28 @@ const TestComputeServiceDef = defineComputeService('ITypeScriptTestComputeServic
     GetCounterNonCompute: { args: [''], callTypeId: 0 },
     StreamInt32: { args: [0], wireArgCount: 1, callTypeId: 0, returns: RpcType.stream },
     StreamInt32NoReconnect: { args: [0], wireArgCount: 1, callTypeId: 0, returns: RpcType.stream },
+});
+
+// Disconnect/Reconnect lifecycle matrix services — mirrors .NET pure-process tests
+// (FusionRpcReconnectionMatrixTest, RpcReconnectionMatrixTest).
+interface IReconnectMatrixTester {
+  Compute(callKey: number, delay: number, invalidationDelay: number): Promise<number>;
+  GetComputeInvocationCount(callKey: number): Promise<number>;
+  GetInvalidationCount(callKey: number): Promise<number>;
+}
+interface IReconnectMatrixRpcTester {
+  Rpc(callKey: number, delay: number): Promise<number>;
+  GetInvocationCount(callKey: number): Promise<number>;
+}
+
+const MatrixComputeDef = defineComputeService('IReconnectMatrixTester', {
+    Compute: { args: [0, 0, 0] },
+    GetComputeInvocationCount: { args: [0], callTypeId: 0 },
+    GetInvalidationCount: { args: [0], callTypeId: 0 },
+});
+const MatrixRpcDef = defineRpcService('IReconnectMatrixRpcTester', {
+    Rpc: { args: [0, 0] },
+    GetInvocationCount: { args: [0] },
 });
 
 // ---------------------------------------------------------------------------
@@ -169,6 +192,8 @@ async function run(): Promise<void> {
             await testReconnectionTorture(hub, peer);
         if (scenario === 'server-restart')
             await testServerRestart(hub, peer);
+        if (scenario.startsWith('reconnect-matrix:'))
+            await testReconnectMatrix(hub, peer, scenario.substring('reconnect-matrix:'.length));
 
         console.log('ALL TESTS PASSED');
     } finally {
@@ -613,6 +638,203 @@ async function testServerRestart(hub: FusionHub, peer: RpcClientPeer): Promise<v
 
     state.dispose();
     console.log('  server-restart: PASSED');
+}
+
+// ---------------------------------------------------------------------------
+// Test: reconnect-matrix — Disconnect/Reconnect lifecycle matrix for TS client.
+// Each cell mirrors a [Fact] in FusionRpcReconnectionMatrixTest /
+// RpcReconnectionMatrixTest. See plans/sleepy-purring-porcupine.md.
+//
+// Cells F1..F6 (Fusion compute), R1..R3 (regular RPC).
+// Outage duration is controlled via `hub.reconnectDelayer.delays`.
+// ---------------------------------------------------------------------------
+
+async function testReconnectMatrix(hub: FusionHub, peer: RpcClientPeer, cell: string): Promise<void> {
+    const callKey = 1;
+    switch (cell) {
+    case 'F1': await runF1(hub, peer, callKey); break;
+    case 'F2': await runF2(hub, peer, callKey); break;
+    case 'F3': await runF3(hub, peer, callKey); break;
+    case 'F4': await runF4(hub, peer, callKey); break;
+    case 'F5': await runF5(hub, peer, callKey); break;
+    case 'F6': await runF6(hub, peer, callKey); break;
+    case 'R1': await runR1(hub, peer, callKey); break;
+    case 'R2': await runR2(hub, peer, callKey); break;
+    case 'R3': await runR3(hub, peer, callKey); break;
+    default:
+        throw new Error(`Unknown reconnect-matrix cell: ${cell}`);
+    }
+    console.log(`  reconnect-matrix:${cell}: PASSED`);
+}
+
+// Configure auto-reconnect delay so the outage is approximately `outageMs`.
+function setReconnectDelay(peer: RpcClientPeer, outageMs: number): void {
+    peer.hub.reconnectDelayer.delays = RetryDelaySeq.fixed(outageMs);
+}
+
+// Close the WS and wait for the peer to come back via auto-reconnect.
+async function disconnectAndAwaitReconnect(peer: RpcClientPeer, outageMs: number): Promise<void> {
+    setReconnectDelay(peer, outageMs);
+    const reconnected = whenNextConnected(peer);
+    peer.connection?.close();
+    await Promise.race([reconnected, timeout(15_000, 'Reconnect timeout')]);
+    await delay(200); // wait for handshake + $sys.Reconnect round-trip
+}
+
+async function assertCompute(
+    server: IReconnectMatrixTester, callKey: number, expectedInvocations: number,
+): Promise<void> {
+    const invocations = await server.GetComputeInvocationCount(callKey);
+    assert(invocations === expectedInvocations,
+        `compute invocation count for callKey=${callKey}: expected ${expectedInvocations}, got ${invocations}`);
+}
+
+async function assertRpc(
+    server: IReconnectMatrixRpcTester, callKey: number, expectedInvocations: number,
+): Promise<void> {
+    const invocations = await server.GetInvocationCount(callKey);
+    assert(invocations === expectedInvocations,
+        `rpc invocation count for callKey=${callKey}: expected ${expectedInvocations}, got ${invocations}`);
+}
+
+// F1: DC@stage 0 (peer disconnected first) → RC@stage 1.
+async function runF1(hub: FusionHub, peer: RpcClientPeer, callKey: number): Promise<void> {
+    const svc = hub.addClient<IReconnectMatrixTester>(peer, MatrixComputeDef);
+    setReconnectDelay(peer, 200);
+    const reconnected = whenNextConnected(peer);
+    peer.connection?.close();
+    // Issue the call immediately after close — it queues until the reconnect.
+    const task = svc.Compute(callKey, 200, 200);
+    await Promise.race([reconnected, timeout(15_000, 'Reconnect timeout')]);
+
+    const result = await Promise.race([task, timeout(5_000, 'Compute timeout')]);
+    assert(result === callKey, `F1 result ${result} !== ${callKey}`);
+    await assertCompute(svc, callKey, 1);
+}
+
+// F2: DC@stage 1, body still S-Working → RC.
+async function runF2(hub: FusionHub, peer: RpcClientPeer, callKey: number): Promise<void> {
+    const svc = hub.addClient<IReconnectMatrixTester>(peer, MatrixComputeDef);
+    const task = svc.Compute(callKey, 400, 400);
+    await delay(100);
+    await disconnectAndAwaitReconnect(peer, 50);
+
+    const result = await Promise.race([task, timeout(5_000, 'Compute timeout')]);
+    assert(result === callKey, `F2 result ${result} !== ${callKey}`);
+    await assertCompute(svc, callKey, 1);
+}
+
+// F3: DC@stage 1 → server reaches S-ResultReady during outage → RC.
+async function runF3(hub: FusionHub, peer: RpcClientPeer, callKey: number): Promise<void> {
+    const svc = hub.addClient<IReconnectMatrixTester>(peer, MatrixComputeDef);
+    const task = svc.Compute(callKey, 200, 400);
+    await delay(50);
+    await disconnectAndAwaitReconnect(peer, 300);
+
+    const result = await Promise.race([task, timeout(5_000, 'Compute timeout')]);
+    assert(result === callKey, `F3 result ${result} !== ${callKey}`);
+
+    const computed = await Computed.capture(() => svc.Compute(callKey, 200, 400));
+    assert(computed.isConsistent, 'F3 captured computed should be consistent');
+    await Promise.race([
+        computed.whenInvalidated(),
+        timeout(5_000, 'F3 invalidation timeout'),
+    ]);
+    await assertCompute(svc, callKey, 1);
+}
+
+// F4: DC@stage 1 → server invalidates during outage → RC.
+async function runF4(hub: FusionHub, peer: RpcClientPeer, callKey: number): Promise<void> {
+    const svc = hub.addClient<IReconnectMatrixTester>(peer, MatrixComputeDef);
+    const task = svc.Compute(callKey, 100, 100);
+    await delay(30);
+    await disconnectAndAwaitReconnect(peer, 400);
+
+    const result = await Promise.race([task, timeout(5_000, 'Compute timeout')]);
+    assert(result === callKey, `F4 result ${result} !== ${callKey}`);
+
+    const computed = await Computed.capture(() => svc.Compute(callKey, 100, 100));
+    await Promise.race([
+        computed.whenInvalidated(),
+        timeout(5_000, 'F4 invalidation timeout'),
+    ]);
+    await assertCompute(svc, callKey, 2);
+}
+
+// F5: DC@stage 2 (result received) → RC; server still S-ResultReady.
+async function runF5(hub: FusionHub, peer: RpcClientPeer, callKey: number): Promise<void> {
+    const svc = hub.addClient<IReconnectMatrixTester>(peer, MatrixComputeDef);
+    const result = await Promise.race([
+        svc.Compute(callKey, 200, 400),
+        timeout(5_000, 'Compute timeout'),
+    ]);
+    assert(result === callKey, `F5 result ${result} !== ${callKey}`);
+    const computed = await Computed.capture(() => svc.Compute(callKey, 200, 400));
+    assert(computed.isConsistent, 'F5 captured computed should be consistent');
+
+    await disconnectAndAwaitReconnect(peer, 100);
+
+    await Promise.race([
+        computed.whenInvalidated(),
+        timeout(5_000, 'F5 invalidation timeout'),
+    ]);
+    await assertCompute(svc, callKey, 1);
+}
+
+// F6: DC@stage 2 → server invalidates during outage → RC.
+async function runF6(hub: FusionHub, peer: RpcClientPeer, callKey: number): Promise<void> {
+    const svc = hub.addClient<IReconnectMatrixTester>(peer, MatrixComputeDef);
+    const result = await Promise.race([
+        svc.Compute(callKey, 100, 100),
+        timeout(5_000, 'Compute timeout'),
+    ]);
+    assert(result === callKey, `F6 result ${result} !== ${callKey}`);
+    const computed = await Computed.capture(() => svc.Compute(callKey, 100, 100));
+
+    await disconnectAndAwaitReconnect(peer, 300);
+
+    await Promise.race([
+        computed.whenInvalidated(),
+        timeout(5_000, 'F6 invalidation timeout'),
+    ]);
+}
+
+// R1: DC@stage 0 (peer disconnected first) → RC@stage 1.
+async function runR1(hub: FusionHub, peer: RpcClientPeer, callKey: number): Promise<void> {
+    const svc = hub.addClient<IReconnectMatrixRpcTester>(peer, MatrixRpcDef);
+    setReconnectDelay(peer, 200);
+    const reconnected = whenNextConnected(peer);
+    peer.connection?.close();
+    const task = svc.Rpc(callKey, 200);
+    await Promise.race([reconnected, timeout(15_000, 'Reconnect timeout')]);
+
+    const result = await Promise.race([task, timeout(5_000, 'Rpc timeout')]);
+    assert(result === callKey, `R1 result ${result} !== ${callKey}`);
+    await assertRpc(svc, callKey, 1);
+}
+
+// R2: DC@stage 1, body still S-Working → RC.
+async function runR2(hub: FusionHub, peer: RpcClientPeer, callKey: number): Promise<void> {
+    const svc = hub.addClient<IReconnectMatrixRpcTester>(peer, MatrixRpcDef);
+    const task = svc.Rpc(callKey, 400);
+    await delay(100);
+    await disconnectAndAwaitReconnect(peer, 50);
+
+    const result = await Promise.race([task, timeout(5_000, 'Rpc timeout')]);
+    assert(result === callKey, `R2 result ${result} !== ${callKey}`);
+    await assertRpc(svc, callKey, 1);
+}
+
+// R3: DC@stage 1 → body completes during outage → RC; client should resend.
+async function runR3(hub: FusionHub, peer: RpcClientPeer, callKey: number): Promise<void> {
+    const svc = hub.addClient<IReconnectMatrixRpcTester>(peer, MatrixRpcDef);
+    const task = svc.Rpc(callKey, 100);
+    await delay(30);
+    await disconnectAndAwaitReconnect(peer, 200);
+
+    const result = await Promise.race([task, timeout(5_000, 'Rpc timeout')]);
+    assert(result === callKey, `R3 result ${result} !== ${callKey}`);
+    await assertRpc(svc, callKey, 2);
 }
 
 // ---------------------------------------------------------------------------
