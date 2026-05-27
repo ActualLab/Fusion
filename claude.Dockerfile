@@ -62,6 +62,10 @@ RUN dotnet workload install wasm-tools
 RUN npm install -g playwright && \
     playwright install-deps
 
+# Install ripgrep
+RUN apt-get update && apt-get install -y ripgrep && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Configure ALSA to use PulseAudio (redirects ALSA apps to PulseAudio)
 RUN echo "pcm.!default { type pulse }\nctl.!default { type pulse }" > /etc/asound.conf
 
@@ -117,7 +121,7 @@ RUN playwright install chromium
 
 # Install Claude Code CLI (native installer, auto-update disabled at runtime)
 ENV DISABLE_AUTOUPDATER=1
-RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.146
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.152
 
 # Default working directory (overridden by -w flag in docker run)
 WORKDIR /proj

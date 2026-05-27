@@ -128,6 +128,33 @@ function Convert-WorktreeToRelativePaths {
     }
 }
 
+# Runs $env:AC_POST_WORKTREE_HOOK (if set) to seed a fresh worktree with private, un-versioned
+# config. The repo intentionally knows only that a hook may exist, never what it does.
+function Invoke-PostWorktreeHook {
+    param([string]$WorktreePath)
+
+    $hookPath = $env:AC_POST_WORKTREE_HOOK
+    if (-not $hookPath) { return }
+
+    Write-Host "Running post-worktree hook: $hookPath"
+    Push-Location ([System.IO.Path]::GetDirectoryName((Resolve-Path $hookPath)))
+    try {
+        # The hook is a polyglot .cmd: batch on Windows (run via the call operator), bash elsewhere.
+        if ($currentOS -eq "Windows") {
+            & $hookPath $WorktreePath
+        } else {
+            & bash $hookPath $WorktreePath
+        }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Warning: post-worktree hook exited with code $LASTEXITCODE" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "Warning: post-worktree hook failed: $_" -ForegroundColor Yellow
+    } finally {
+        Pop-Location
+    }
+}
+
 # Find project root via git. Detects worktrees automatically.
 function Find-ProjectRoot {
     param([switch]$Debug)
@@ -228,6 +255,7 @@ function Show-Help {
     Write-Host "Environment variables (optional):"
     Write-Host "  AC_ProjectRoot    Override auto-detected project root directory"
     Write-Host "  AC_CLAUDE_ISOLATE Set to 'true' or '1' to isolate .claude.json per container instance"
+    Write-Host "  AC_POST_WORKTREE_HOOK  Script run after fwt/bwt creates a worktree; receives the worktree path"
     Write-Host ""
     Write-Host "Environment variables set for Claude:"
     Write-Host "  AC_ProjectRoot      Project root path (/proj in Docker)"
@@ -1126,6 +1154,8 @@ if ($featureWorktreeSuffix) {
                 Set-Location $originalLocation
                 exit 1
             }
+
+            Invoke-PostWorktreeHook -WorktreePath $worktreePath
         } finally {
             Set-Location $originalLocation
         }

@@ -2,6 +2,13 @@
 
 Before starting any task, read AGENTS.md files in every directory starting from the current one and above, up to the root one (project directory).
 
+# Tools
+
+If `ripgrep` (`rg`) is available, prefer it over `grep` for content search —
+it's substantially faster on large trees and respects `.gitignore` by
+default. The harness's Grep tool is built on ripgrep, so route searches
+through it when possible.
+
 # Execution policy after plan approval
 
 Once a plan is approved and the open questions in it have been resolved,
