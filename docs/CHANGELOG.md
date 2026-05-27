@@ -11,6 +11,40 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 13.0.12+63e3d65b | npm: 13.0.20
+
+Release date: 2026-05-27
+
+TypeScript-only follow-up. .NET package unchanged from v13.0.12 — fixes
+a Fusion-on-TS race exposed by the new reconnection-matrix tests, and
+ports those tests across all three layers (.NET unit, TS unit, TS↔.NET
+E2E).
+
+### Fixed
+- TS Fusion: invalidating a still-computing `Computed` no longer throws
+  `"Cannot set output on a non-computing Computed."` It now mirrors
+  .NET semantics — `invalidate()` called in `Computing` state sets a
+  `_invalidatePending` flag, and `setOutput` applies the deferred
+  invalidation immediately after transitioning to `Consistent`. This
+  surfaced on reconnect when the server delivered result + invalidation
+  back-to-back: the `fusion-rpc` client's
+  `outboundCall.whenInvalidated.then(...)` microtask fired before
+  `compute-function.ts`'s `setOutput`. Covered by the new
+  invalidate-during-Computing unit test in `computed.test.ts`.
+
+### Tests
+- New **reconnect lifecycle matrix** covering every
+  (disconnect-stage × reconnect-stage) cell for both regular RPC and
+  Fusion compute calls, in three layers:
+  - .NET pure: `RpcReconnectionMatrixTest`,
+    `FusionRpcReconnectionMatrixTest`.
+  - TS unit: `computed.test.ts` invalidate-during-Computing cases.
+  - TS-client ↔ .NET-server E2E: `TypeScriptRpcE2ETest.ReconnectMatrix`
+    (driven by `ts/e2e/ts-dotnet-e2e.ts`).
+  The F4 cell (disconnect mid-exec, server invalidates during outage,
+  reconnect) is exactly the scenario that surfaced the bug above.
+
+
 ## 13.0.12+f471d693 | npm: 13.0.15
 
 Release date: 2026-05-26
