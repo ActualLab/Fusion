@@ -63,7 +63,7 @@
     <!-- Serialization -->
     <NewtonsoftJsonVersion>[13.0.4,)</NewtonsoftJsonVersion>
     <MemoryPackVersion>[1.21.4,)</MemoryPackVersion>
-    <MessagePackVersion>[3.1.4,)</MessagePackVersion>
+    <MessagePackVersion>3.1.6</MessagePackVersion>
     <MessagePackVersion2>[2.5.192,)</MessagePackVersion2>
     <NerdbankMessagePackVersion>[1.0.43,)</NerdbankMessagePackVersion>
     <!-- Other -->
