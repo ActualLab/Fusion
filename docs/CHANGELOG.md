@@ -11,6 +11,39 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 13.0.12+ed8b32fc | npm: 13.0.25
+
+Release date: 2026-05-27
+
+TypeScript-only release. .NET package unchanged from v13.0.12. Fixes the
+TS RPC client's handshake parsing on the text (`json5np`) transport when
+talking to a .NET server, and adds cross-casing E2E coverage for `$sys.*`
+payloads.
+
+### Fixed
+- TS RPC: the client now reads **camelCase** `$sys.Handshake` fields, not
+  just PascalCase. A .NET server serializes `RpcHandshake` through
+  `System.Text.Json` with `JsonSerializerDefaults.Web`, so over the text
+  transport the wire keys are `index` / `remoteHubId` — which previously
+  parsed as `undefined`. The fallout (text transport only):
+  `_remoteHandshakeIndex` defaulted to `0`, so every `$sys.Reconnect` was
+  rejected by the server (`"own handshake index N != 0"`) and forced a
+  resend-all; and peer-change detection (keyed off `RemoteHubId`) never
+  fired across server restarts. The MessagePack transport was unaffected
+  (positional array). The parse now accepts the array, PascalCase, and
+  camelCase shapes.
+
+### Tests
+- New **JSON casing** E2E suite (`rpc-handshake-casing.test.ts`): drives
+  the real client `run()` loop against a mock .NET-style server that emits
+  `$sys.*` payloads in camelCase or PascalCase, asserting the client parses
+  the handshake `Index` (echoed back in `$sys.Reconnect`), `RemoteHubId`
+  (peer-change detection), and `$sys.Error` info identically in both
+  casings. Confirms the audit finding that `$sys.Handshake` was the only
+  affected type — `$sys.Error` / `$sys.End` already read both casings, and
+  all other `$sys.*` arguments are positional or stage-keyed.
+
+
 ## 13.0.12+63e3d65b | npm: 13.0.20
 
 Release date: 2026-05-27
