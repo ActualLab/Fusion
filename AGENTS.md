@@ -200,11 +200,22 @@ What `install` does, by host OS:
   the polyglot `c.cmd`.
 - **Linux / WSL** — same as macOS, but the alias goes into `~/.bashrc`.
 
-After the PATH/alias step, `install` triggers a Docker build of the AgentCli
-image (`claude-agentcli`). Install is idempotent — running it again only
-updates what's stale.
+After the PATH/alias step, `install` also links AgentCli's shared
+`.claude/{commands,skills}` into `~/.claude/{commands,skills}/team/` and
+triggers a Docker build of the AgentCli image (`claude-agentcli`). Install is
+idempotent — running it again only updates what's stale.
 
 Re-open the shell (or `source ~/.zshrc` / `~/.bashrc`) before using `c`.
+
+To undo everything `install` did — unregister `c`, remove the `team` links,
+stop the AgentCli docker-compose stack, and remove the AgentCli Docker image:
+
+```
+./c.ps1 uninstall
+```
+
+Uninstall leaves per-project Docker containers, generated `AGENTS.md` /
+`CLAUDE.md` files, and worktrees alone.
 
 ## Shared docker-compose stack
 
