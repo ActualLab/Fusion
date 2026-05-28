@@ -474,17 +474,29 @@ export abstract class RpcPeer {
         if (method === RpcSystemCalls.handshake) {
             const raw = args[0];
             if (raw !== undefined) {
-                // .NET's RpcHandshake is [MessagePackObject(Key)] — serialized
-                // as a 5-element array in msgpack. In JSON it's an object with
-                // named properties. Normalize both shapes here.
-                const handshake = Array.isArray(raw)
+                // .NET's MessagePack path serializes RpcHandshake as a 5-element
+                // [Key(N)] array; the JSON (text) path emits an object. ASP.NET's
+                // System.Text.Json defaults (JsonSerializerDefaults.Web) lower-case
+                // the first letter, so the JSON keys are camelCase (`index`,
+                // `remoteHubId`) — NOT the PascalCase the property names suggest.
+                // Read both cases so the text format's `Index` survives; without
+                // this it parses as `undefined`, `_remoteHandshakeIndex` falls back
+                // to 0, and every `$sys.Reconnect` is rejected by the server with
+                // "own handshake index N != 0" (and peer-change detection breaks).
+                const obj = (raw ?? {}) as Record<string, unknown>;
+                const handshake: RemoteHandshake = Array.isArray(raw)
                     ? {
                         RemotePeerId: raw[0] as string | undefined,
                         RemoteHubId: raw[2] as string | undefined,
                         ProtocolVersion: raw[3] as number | undefined,
                         Index: raw[4] as number | undefined,
                     }
-                    : raw as RemoteHandshake;
+                    : {
+                        RemotePeerId: (obj.RemotePeerId ?? obj.remotePeerId) as string | undefined,
+                        RemoteHubId: (obj.RemoteHubId ?? obj.remoteHubId) as string | undefined,
+                        ProtocolVersion: (obj.ProtocolVersion ?? obj.protocolVersion) as number | undefined,
+                        Index: (obj.Index ?? obj.index) as number | undefined,
+                    };
                 this._onHandshakeReceived(handshake);
             }
             return;
