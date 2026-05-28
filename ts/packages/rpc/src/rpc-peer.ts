@@ -474,15 +474,9 @@ export abstract class RpcPeer {
         if (method === RpcSystemCalls.handshake) {
             const raw = args[0];
             if (raw !== undefined) {
-                // .NET's MessagePack path serializes RpcHandshake as a 5-element
-                // [Key(N)] array; the JSON (text) path emits an object. ASP.NET's
-                // System.Text.Json defaults (JsonSerializerDefaults.Web) lower-case
-                // the first letter, so the JSON keys are camelCase (`index`,
-                // `remoteHubId`) — NOT the PascalCase the property names suggest.
-                // Read both cases so the text format's `Index` survives; without
-                // this it parses as `undefined`, `_remoteHandshakeIndex` falls back
-                // to 0, and every `$sys.Reconnect` is rejected by the server with
-                // "own handshake index N != 0" (and peer-change detection breaks).
+                // .NET sends a positional array over MessagePack, but a
+                // System.Text.Json object (Web defaults → camelCase keys) over the
+                // text transport. Accept the array, PascalCase, and camelCase.
                 const obj = (raw ?? {}) as Record<string, unknown>;
                 const handshake: RemoteHandshake = Array.isArray(raw)
                     ? {
