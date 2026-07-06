@@ -1,5 +1,7 @@
 using System.Buffers;
+using MessagePack;
 using ActualLab.Generators;
+using ActualLab.Serialization.Internal;
 // ReSharper disable ReturnValueOfPureMethodIsNotUsed
 
 namespace ActualLab.Trimming;
@@ -75,13 +77,21 @@ public static class CodeKeeper
 
         Keep<T>();
         Keep<UniSerialized<T>>();
-        Keep<MemoryPackSerialized<T>>();
-        Keep<MemoryPackByteSerializer<T>>();
+        if (SerializationFeatures.IsMemoryPackByteSerializerEnabled) {
+            Keep<MemoryPackSerialized<T>>();
+            Keep<MemoryPackByteSerializer<T>>();
 #if !NETSTANDARD2_0
-        MemoryPackSerializer.Deserialize<T>(ReadOnlySpan<byte>.Empty);
-        MemoryPackSerializer.Deserialize<T>(ReadOnlySequence<byte>.Empty);
-        MemoryPackSerializer.Serialize<T>(default);
+            MemoryPackSerializer.Deserialize<T>(ReadOnlySpan<byte>.Empty);
+            MemoryPackSerializer.Deserialize<T>(ReadOnlySequence<byte>.Empty);
+            MemoryPackSerializer.Serialize<T>(default);
 #endif
+        }
+        if (SerializationFeatures.IsMessagePackByteSerializerEnabled) {
+            Keep<MessagePackSerialized<T>>();
+            Keep<MessagePackByteSerializer<T>>();
+            MessagePackSerializer.Serialize<T>(default!, MessagePackByteSerializer.DefaultOptions);
+            MessagePackSerializer.Deserialize<T>(default(ReadOnlyMemory<byte>), MessagePackByteSerializer.DefaultOptions);
+        }
         Extension?.KeepSerializable<T>();
     }
 
