@@ -72,6 +72,10 @@ public static class CodeKeeper
 ```
 <!-- endSnippet -->
 
+`KeepSerializable<T>()` preserves the serialization code for `T` in both MemoryPack and MessagePack
+serializers. Each serializer's keep-code is gated by a feature switch (see
+[Feature Switches](#feature-switches)), so an app that uses only one of them can trim the other away.
+
 ### Extension Architecture
 
 All keepers are static classes with nested `IExtension` interfaces and `Extension` properties.
@@ -291,6 +295,39 @@ public static void ProcessType<[DynamicallyAccessedMembers(DynamicallyAccessedMe
 }
 ```
 <!-- endSnippet -->
+
+
+## Feature Switches
+
+ActualLab libraries expose [feature switches](https://learn.microsoft.com/en-us/dotnet/core/deploying/trimming/trimming-options#trimming-framework-library-features)
+that let you trim away optional code paths. All of them are **on by default**; disable the ones your
+app never uses to reduce the published binary size.
+
+| Switch | Default | Effect when disabled |
+|--------|---------|----------------------|
+| `ArgumentList.AllowGenerics` | `true` | `ArgumentList` stops using generic `ArgumentListG*<...>` implementations, so they can be trimmed away |
+| `MemoryPackByteSerializer.IsEnabled` | `true` | `CodeKeeper.KeepSerializable<T>()` stops preserving MemoryPack serialization code |
+| `MessagePackByteSerializer.IsEnabled` | `true` | `CodeKeeper.KeepSerializable<T>()` stops preserving MessagePack serialization code |
+
+The serializer switches matter for RPC: `KeepSerializable<T>()` preserves both MemoryPack and
+MessagePack serialization code for every registered type, since either can be picked via
+`RpcSerializationFormat`. If your app uses only one of them (e.g. only `mempack*` formats),
+disable the other to drop its keep-code.
+
+To disable a switch, add a trimmed `RuntimeHostConfigurationOption` to your `.csproj`:
+
+```xml
+<ItemGroup>
+    <RuntimeHostConfigurationOption
+        Include="MessagePackByteSerializer.IsEnabled"
+        Value="false"
+        Trim="true" />
+</ItemGroup>
+```
+
+`Trim="true"` makes the value a compile-time constant for the trimmer, so the disabled branches are
+removed from the output. You can also flip a switch at runtime (without the trimming benefit) via
+`AppContext.SetSwitch(...)` before any ActualLab code runs.
 
 
 ## ArgumentList Support

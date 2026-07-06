@@ -11,6 +11,38 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 13.0.28+5c8f5ae1 | npm: 13.0.25
+
+Release date: 2026-07-06
+
+.NET-only release; the npm package is unchanged at v13.0.25. Fixes MessagePack
+serialization code being trimmed away in Native AOT / fully trimmed apps, and
+introduces feature switches to control which serializers `CodeKeeper` preserves.
+
+### Added
+- Serialization feature switches (both on by default), mirroring
+  `ArgumentList.AllowGenerics`:
+  - `MemoryPackByteSerializer.IsEnabled`
+  - `MessagePackByteSerializer.IsEnabled`
+
+  An app that uses only one serializer can disable the other via a trimmed
+  `RuntimeHostConfigurationOption` to drop its keep-code from the published
+  binary. See the new "Feature Switches" section in the
+  [Native AOT and Trimming](./PartAOT.md#feature-switches) doc.
+
+### Fixed
+- `CodeKeeper.KeepSerializable<T>()` now preserves **MessagePack** serialization
+  code in addition to MemoryPack. Previously, apps whose RPC uses MessagePack
+  formats (e.g. `msgpack6c`) had that code trimmed under full trimming, so types
+  with runtime-resolved formatters (`ApiMap<,>`, `ImmutableArray<T>`, ...)
+  failed to deserialize with `"Cannot deserialize inbound call arguments"`.
+
+### Tests
+- New RPC **keep-alive** test suites in both .NET (`RpcKeepAliveTest`) and TS
+  (`rpc-keep-alive.test.ts`): connections stay up while keep-alives flow and
+  are dropped when they stop, including half-open link and reconnect scenarios.
+
+
 ## 13.0.12+ed8b32fc | npm: 13.0.25
 
 Release date: 2026-05-27
