@@ -159,6 +159,14 @@ features:
 
 </div>
 
+<p style="text-align: center; margin-top: -0.5rem;">
+Try the live demos:
+<a href="https://blazor-samples.actuallab.net/">Blazor Sample</a> ·
+<a href="https://todoapp.actuallab.net/">TodoApp Sample</a> ·
+<a href="https://boardgames.actuallab.net/">Board Games</a>
+(a standalone Fusion app in its <a href="https://github.com/alexyakunin/BoardGames">own repository</a>)
+</p>
+
 ## The Problem
 
 Building real-time apps is **hard**. Traditional approaches force you into painful trade-offs:
