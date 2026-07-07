@@ -160,11 +160,11 @@ features:
 </div>
 
 <p style="text-align: center; margin-top: -0.5rem;">
-Try the live demos:
-<a href="https://blazor-samples.actuallab.net/">Blazor Sample</a> ·
-<a href="https://todoapp.actuallab.net/">TodoApp Sample</a> ·
-<a href="https://boardgames.actuallab.net/">Board Games</a>
-(a standalone Fusion app in its <a href="https://github.com/alexyakunin/BoardGames">own repository</a>)
+<img src="https://img.shields.io/badge/-Live!-green" valign="middle"> Try the live demos:
+<a href="https://blazor-samples.actuallab.net/" target="_blank" rel="noopener">Blazor Sample</a> ·
+<a href="https://todoapp.actuallab.net/" target="_blank" rel="noopener">TodoApp Sample</a> ·
+<a href="https://boardgames.actuallab.net/" target="_blank" rel="noopener">Board Games</a>
+(a standalone Fusion app in its <a href="https://github.com/alexyakunin/BoardGames" target="_blank" rel="noopener">own repository</a>)
 </p>
 
 ## The Problem

@@ -53,7 +53,7 @@ If you prefer video, check out:
    [README.md](https://github.com/ActualLab/Fusion.Samples/blob/master/README.md)
    to build and run everything.
 
-Or just try the deployed ones live:
+<img src="https://img.shields.io/badge/-Live!-green" valign="middle"> Or just try the deployed ones live:
 [Blazor Sample](https://blazor-samples.actuallab.net/) ·
 [TodoApp Sample](https://todoapp.actuallab.net/) ·
 [Board Games](https://boardgames.actuallab.net/) — a standalone Fusion app
