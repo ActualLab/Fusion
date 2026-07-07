@@ -53,7 +53,7 @@ If you prefer video, check out:
    [README.md](https://github.com/ActualLab/Fusion.Samples/blob/master/README.md)
    to build and run everything.
 
-<img src="https://img.shields.io/badge/-Live%20demo:-green" valign="middle"> [Blazor Sample](https://blazor-samples.actuallab.net/) ·
+<img src="https://img.shields.io/badge/-Live%20demos:-green" valign="middle"> [Blazor Sample](https://blazor-samples.actuallab.net/) ·
 [TodoApp Sample](https://todoapp.actuallab.net/) ·
 [Board Games](https://boardgames.actuallab.net/) — a standalone Fusion app
 (real-time multiplayer board games) in [its own repository](https://github.com/alexyakunin/BoardGames).
