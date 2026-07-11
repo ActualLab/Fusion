@@ -1,3 +1,10 @@
+# Deploys the docs to the Cloudflare Pages project `fusion-actuallab-net` ONLY.
+# It intentionally does NOT deploy to GitHub Pages (no actions/deploy-pages, no
+# `pages: write`), so the GitHub-Pages-served https://fusion.actuallab.net stays
+# frozen on its last build and is unaffected by pushes to master. The Cloudflare
+# deploy serves fusion-actuallab-net.pages.dev (+ any custom domain attached to
+# the project, e.g. the fusion-tmp test domain) — never fusion.actuallab.net,
+# unless that apex is later attached to the project on purpose.
 name: Deploy Docs
 
 on:
@@ -60,5 +67,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '3'
           workingDirectory: docs
-          command: pages deploy .vitepress/dist --project-name=fusion-actuallab-net --branch=master
+          command: pages deploy .vitepress/dist --project-name=fusion-actuallab-net --branch=master --commit-dirty=true
