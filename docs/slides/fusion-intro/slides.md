@@ -598,7 +598,7 @@ Rendering 100 rows at once? 100 RPC calls fire at once, batched by ActualLab.Rpc
 
 # RPC call routing
 
-- [RpcOutboundCallOptions.RouterFactory](https://fusion.actuallab.net/PartR-CO.html#example-2) lets you route each call to **local** or **remote host**, use **shard-based routing** with dynamic shard relocation, and more.
+- [RpcOutboundCallOptions.RouterFactory](https://fusion.actuallab.net/PartR-CO#example-2) lets you route each call to **local** or **remote host**, use **shard-based routing** with dynamic shard relocation, and more.
 - In-flight calls are **auto-rerouted** when its target dies. With multiple retries.
 - **Even this.SomeMethod(...) calls can be routed** dynamically, so local <-> distributed mode is an external toggle, **your code is identical either way!**
 
@@ -617,12 +617,12 @@ Rendering 100 rows at once? 100 RPC calls fire at once, batched by ActualLab.Rpc
 
 <div class="pt-16 text-sm opacity-60 mt-3">
 Ryzen 9 9950X3D, 32 logical cores.<br/>
-Full benchmarks &amp; methodology: <a href="https://fusion.actuallab.net/Performance.html">fusion.actuallab.net/Performance.html</a>
+Full benchmarks &amp; methodology: <a href="https://fusion.actuallab.net/Performance">fusion.actuallab.net/Performance</a>
 </div>
 
 ---
 layout: iframe
-url: https://fusion.actuallab.net/Performance.html#local-services
+url: https://fusion.actuallab.net/Performance#local-services
 ---
 
 ---

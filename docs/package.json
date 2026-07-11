@@ -7,8 +7,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "docs:dev": "vitepress dev . --open --port 3030",
     "docs:dev8080": "vitepress dev . --open --port 8080",
-    "docs:build": "npm run slides:build && vitepress build .",
+    "docs:build": "npm run slides:build && vitepress build . && node scripts/gen-redirects.mjs",
     "docs:preview": "vitepress preview .",
+    "docs:seo-check": "node scripts/seo-check.mjs",
+    "docs:verify-routes": "node scripts/verify-routes.mjs",
+    "docs:verify": "npm run docs:seo-check && npm run docs:verify-routes",
     "slides:build": "node slides/build-all.mjs"
   },
   "author": "",

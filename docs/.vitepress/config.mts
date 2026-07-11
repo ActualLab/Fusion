@@ -76,6 +76,13 @@ gtag('config', 'G-PX4G7HX4CM');`],
   ],
   ignoreDeadLinks: false,
   appearance: 'dark',
+  // Extensionless URLs: /PartF instead of /PartF.html. The host (Cloudflare
+  // Pages) serves PartF.html for /PartF and 301s /PartF.html -> /PartF; see
+  // scripts/gen-redirects.mjs for the generated legacy redirects.
+  cleanUrls: true,
+  // Enables real Git-based <lastmod> in sitemap.xml (getLastmod reads the
+  // file's last commit date); also adds a "Last updated" line in the footer.
+  lastUpdated: true,
   sitemap: {
     hostname,
   },
@@ -87,11 +94,11 @@ gtag('config', 'G-PX4G7HX4CM');`],
     }
   },
   transformHead({ pageData, title, description }) {
-    // Self-referencing canonical link — GitHub Pages serves every page at both
-    // /Foo and /Foo.html; without this Google reports them as duplicates.
+    // Self-referencing canonical link on the extensionless URL, matching
+    // cleanUrls + the sitemap. index.md -> /, Foo.md -> /Foo, a/b.md -> /a/b.
     const pagePath = pageData.relativePath
       .replace(/(^|\/)index\.md$/, "$1")
-      .replace(/\.md$/, ".html");
+      .replace(/\.md$/, "");
     const url = `${hostname}/${pagePath}`;
     const desc = description || siteDescription;
     const image = `${hostname}/og-image.jpg`;

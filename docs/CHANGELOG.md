@@ -245,7 +245,7 @@ This is a **major release** introducing new HTTP/2 transport for ActualLab.Rpc,
 - Homepage / SEO refresh: per-page meta descriptions, OG/Twitter
   cards, JSON-LD, self-referencing canonical URLs, refreshed copy,
   social card, and a sun hero background image.
-- Added [Fusion intro slide deck](https://fusion.actuallab.net/slides/fusion-intro) 
+- Added [Fusion intro slide deck](https://fusion.actuallab.net/slides/fusion-intro/) 
 - Linked "Videos and Slides" to the local slide decks.
 - Clarified the comment and documentation style guidelines in `CODING_STYLE.md`.
 
