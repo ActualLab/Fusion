@@ -50,7 +50,7 @@ features:
     details: "Same code runs on Blazor Server, WebAssembly, and MAUI. <span style='color:var(--hl-feat);'>Fusion works everywhere.</span>"
   - icon: 🛡️
     title: Battle-Tested
-    details: "Powers <a href='https://voxt.ai' style='color:var(--hl-feat); text-decoration: underline;'>Voxt.ai</a>—a real-time voice chat with live transcription, translation, and AI summaries across all platforms."
+    details: "Powers <span style='color:var(--hl-feat); text-decoration: underline;'>Voxt.ai</span>—a real-time voice chat with live transcription, translation, and AI summaries across all platforms."
     link: https://voxt.ai
     linkText: Check it out
 ---

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig, type HeadConfig } from "vitepress";
 
 const hostname = "https://fusion.actuallab.net";
@@ -144,6 +145,17 @@ gtag('config', 'G-PX4G7HX4CM');`],
     return head;
   },
   vite: {
+    resolve: {
+      // Replace VitePress's VPHomeContent with a copy that drops the
+      // window-width-derived --vp-offset inline style (see the component for
+      // why); removes a benign SSR hydration style mismatch on the home page.
+      alias: [
+        {
+          find: /^.*\/VPHomeContent\.vue$/,
+          replacement: fileURLToPath(new URL("./theme/CustomHomeContent.vue", import.meta.url)),
+        },
+      ],
+    },
     plugins: [
       {
         // In dev, VitePress's SPA fallback intercepts /slides/<deck>/ before
