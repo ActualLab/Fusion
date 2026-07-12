@@ -1,4 +1,4 @@
-<!-- AUTO-GENERATED — DO NOT EDIT. Built by `c update-md` from AGENTS-Source.md (this folder) + AGENTS-Suffix.md (AgentCli). To change anything below, edit the source file(s) and re-run `c update-md`. -->
+<!-- AUTO-GENERATED — DO NOT EDIT. Built by `ai update-md` from AGENTS-Source.md (this folder) + AGENTS-Suffix.md (AgentCli). To change anything below, edit the source file(s) and re-run `ai update-md`. -->
 
 # Project-specific Rules for ActualLab.Fusion
 
@@ -143,17 +143,18 @@ If you're missing information in test logs:
 
 **Important:** Do not create temporary files in the project root. Use the `<projectRoot>/tmp` folder instead for any temporary files, test scripts, debug outputs, screenshots, etc. This keeps the project root clean and makes it easier to gitignore temporary artifacts.
 
-If AC_OS environment variable is defined, you're started with the AgentCli launcher (c.ps1),
+If AC_OS environment variable is defined, you're started with the AgentCli launcher (ai.ps1),
 so your actual OS is specified in this environment variable.
 
-# AgentCli Launcher (c.ps1)
+# AgentCli Launcher (ai.ps1)
 
-You may be started via the `c.ps1` launcher script. It can run any of the
-following CLIs in a chosen environment:
+You may be started via the `ai.ps1` launcher script. It can run any of the
+following agents in a chosen environment:
 
 - **Claude Code** (default) — `claude`
 - **OpenAI Codex** — `codex`
 - **xAI Grok** — `grok`
+- **Codename Goose** — `goose` (block/goose)
 
 …in any of the following environments:
 
@@ -165,53 +166,63 @@ When started via the launcher, environment variables are set to help you
 understand your environment. Check these variables to determine where you're
 running and how to access projects.
 
-## CLI Selector
+## Agent Selector
 
-The CLI is the optional first positional arg; if omitted, `claude` is used.
+The agent is the optional first positional arg (or the `--agent:<name>`
+option); if omitted, `claude` is used. `--agent:` accepts the full agent names
+only (`claude`, `codex`, `grok`, `goose`). Entry points:
+
+- `ai` — the launcher itself; Claude by default, or pick the agent explicitly.
+- `ai-codex` / `ai-grok` / `ai-goose` — one-agent shortcuts (`= ai --agent:<name>`).
 
 ```
-c                  → claude, Docker (default)
-c claude           → claude, Docker (explicit)
-c codex            → codex,  Docker
-c grok os          → grok,   host OS
-c claude wsl       → claude, WSL
-c os               → claude, host OS  (default CLI)
-c codex --dry-run  → codex,  Docker (dry run)
+ai                 → claude, Docker (default)
+ai codex           → codex,  Docker (positional form)
+ai-codex           → codex,  Docker (= ai --agent:codex)
+ai-grok os         → grok,   host OS
+ai-goose           → goose,  Docker (= ai --agent:goose)
+ai --agent:goose   → goose,  Docker (explicit)
+ai wsl             → claude, WSL
+ai os              → claude, host OS  (default agent)
+ai codex --dry-run → codex,  Docker (dry run)
 ```
 
-Inside the sandboxed Docker container, each CLI is invoked with its built-in
-"skip-approvals" flag (`claude --dangerously-skip-permissions`, `codex
---full-auto`, `grok` as-is). On the host OS no such flag is added — the CLI
-runs in its normal interactive/approval mode.
+Inside the sandboxed Docker container, each agent is invoked in its
+"skip-approvals" mode (`claude --dangerously-skip-permissions`, `codex
+--full-auto`, `grok` as-is, `goose session` with `GOOSE_MODE=auto`). On the
+host OS no such flag/mode is added — the agent runs in its normal
+interactive/approval mode.
 
 ## Installation
 
-Run once after cloning AgentCli to make the `c` command available everywhere
-and build the Docker image (which contains all three CLIs pre-installed):
+Run once after cloning AgentCli to make the `ai` / `ai-codex` / `ai-grok` /
+`ai-goose` commands available everywhere and build the Docker image (which
+contains all four CLIs pre-installed):
 
 ```
-./c.ps1 install
+./ai.ps1 install
 ```
 
 What `install` does, by host OS:
 - **Windows** — adds the AgentCli folder to the *user* `Path` environment
-  variable so `c` (and `c.cmd`) resolve in any new shell.
-- **macOS** — adds `alias c='<AgentCli>/c.cmd'` to `~/.zshrc` and `chmod +x`'s
-  the polyglot `c.cmd`.
-- **Linux / WSL** — same as macOS, but the alias goes into `~/.bashrc`.
+  variable so the entry-point `.cmd` files resolve in any new shell.
+- **macOS** — adds `alias ai=…`, `alias ai-codex=…`, `alias ai-grok=…`,
+  `alias ai-goose=…` (pointing at the polyglot `.cmd` files) to `~/.zshrc` and
+  `chmod +x`'s them.
+- **Linux / WSL** — same as macOS, but the aliases go into `~/.bashrc`.
 
 After the PATH/alias step, `install` also links AgentCli's shared
 `.claude/{commands,skills}` into `~/.claude/{commands,skills}/team/` and
 triggers a Docker build of the AgentCli image (`claude-agentcli`). Install is
 idempotent — running it again only updates what's stale.
 
-Re-open the shell (or `source ~/.zshrc` / `~/.bashrc`) before using `c`.
+Re-open the shell (or `source ~/.zshrc` / `~/.bashrc`) before using `ai`.
 
-To undo everything `install` did — unregister `c`, remove the `team` links,
-stop the AgentCli docker-compose stack, and remove the AgentCli Docker image:
+To undo everything `install` did — unregister those entry points, remove the
+`team` links, stop the AgentCli docker-compose stack, and remove the AgentCli Docker image:
 
 ```
-./c.ps1 uninstall
+./ai.ps1 uninstall
 ```
 
 Uninstall leaves per-project Docker containers, generated `AGENTS.md` /
@@ -225,11 +236,11 @@ bridge stdio chrome-devtools-mcp to streamable HTTP on host ports `8765`
 and `8766`. To start it explicitly:
 
 ```
-c compose-start
+ai compose-start
 ```
 
-You almost never need to run that yourself. **Any** CLI launch
-(`c`, `c claude`, `c codex os`, `c grok wsl`, …) auto-starts the stack
+You almost never need to run that yourself. **Any** agent launch
+(`ai`, `ai-codex`, `ai-goose`, `ai codex os`, `ai grok wsl`, …) auto-starts the stack
 once per OS boot session. The check is a tiny marker file in the OS temp
 dir that stores the boot timestamp; if it matches the current boot,
 auto-start is a no-op. Reboot invalidates it, so `docker compose up -d`
@@ -263,6 +274,7 @@ When running in Docker (`AC_OS` = `Linux in Docker`), the following tools are av
 
 | Category | Tools |
 |----------|-------|
+| **AI CLIs** | Claude Code, OpenAI Codex, xAI Grok, Codename Goose |
 | **.NET** | .NET 10 SDK, .NET 9 SDK, wasm-tools workload |
 | **Node.js** | Node.js 20, npm |
 | **Shell** | Zsh (default), Bash, PowerShell (`pwsh`) |
@@ -279,7 +291,9 @@ When running in Docker, `/proj/<CurrentProject>/artifacts` path is mapped to `ar
 
 **Host service connectivity**: The Docker container uses `--network host` mode, so `localhost` inside the container directly refers to the host. This means you can connect to host services (Redis, PostgreSQL, NATS, etc.) using `localhost:port` just like on the host. On macOS, `--network host` requires Docker Desktop 4.34+ (Sept 2024).
 
-**macOS / Apple Silicon**: The Docker image supports both amd64 and arm64 architectures. `c.cmd` is a polyglot script that works on both Windows and macOS/Linux.
+**macOS / Apple Silicon**: The Docker image supports both amd64 and arm64 architectures. `ai.cmd` (and the `ai-codex.cmd` / `ai-grok.cmd` / `ai-goose.cmd` shortcuts) are polyglot scripts that work on both Windows and macOS/Linux.
+
+**Goose config**: When you launch the `goose` agent, the launcher passes your host goose config to the sandboxed/WSL goose so its provider setup (e.g. a local LM Studio endpoint) carries over. In Docker the host goose config dir (`%APPDATA%\Block\goose\config` on Windows, `~/.config/goose` elsewhere) is bind-mounted read-only to `/home/claude/.config/goose`; in WSL the `config.yaml` is copied into the WSL user's `~/.config/goose/`. With `--network host`, a `localhost:1234` LM Studio endpoint in that config reaches the host directly.
 
 **Propagated environment variables**: The following environment variables are automatically propagated from the host to the Docker container:
 - Variables containing `__` in their names (e.g., `ChatSettings__OpenAIApiKey` for .NET configuration)
@@ -298,7 +312,7 @@ When running in Docker, `/proj/<CurrentProject>/artifacts` path is mapped to `ar
 
 ## Browser Automation and Chrome Debugging
 
-The user starts Chrome with remote debugging via `c chrome` command (port 9222). On Windows, this also creates a firewall rule to allow connections from WSL/Docker.
+The user starts Chrome with remote debugging via `ai chrome` command (port 9222). On Windows, this also creates a firewall rule to allow connections from WSL/Docker.
 
 **chrome-devtools MCP (preferred over Playwright)**: AgentCli's `docker-compose.yml` ships two `chrome-devtools` MCP services (`chrome-devtools-mcp-1` → host `8765`, `chrome-devtools-mcp-2` → host `8766`), each bridging stdio `chrome-devtools-mcp` to streamable HTTP via `supergateway`. They target the host Chrome ports `CHROME_DEBUG_PORT_1` (default `9222`) and `CHROME_DEBUG_PORT_2` (default `9223`) respectively, and recycle themselves when host Chrome flaps. When the matching MCP server entries are wired up in `.mcp.json` (look for `mcp__chrome-devtools-{1,2}__*` tools), prefer them over Playwright — and pair them with the `/debug-ui` and `/server-loop` skills if those are available too.
 
@@ -361,27 +375,27 @@ The behavior splits along the Docker vs. OS/WSL line:
      `/proj/<sibling>` as usual.
 
 The Docker image (`claude-<AgentCli folder>`) is **shared by every project** —
-there is no per-project `claude.Dockerfile` anymore. The image is built by
-`c install` or `c build` (always against AgentCli's own `claude.Dockerfile`).
+there is no per-project `Dockerfile` anymore. The image is built by
+`ai install` or `ai build` (always against AgentCli's own `Dockerfile`).
 
 ## Editing AGENTS.md / CLAUDE.md
 
 **Do not edit `AGENTS.md` or `CLAUDE.md` directly — they are auto-generated.**
-Both files are byte-identical and produced by `c update-md`, which
+Both files are byte-identical and produced by `ai update-md`, which
 concatenates:
 
-1. `AGENTS-Source.md` from the project where `c.ps1` was launched (the local,
+1. `AGENTS-Source.md` from the project where `ai.ps1` was launched (the local,
    project-specific part — edit this for anything project-specific).
 2. `AGENTS-Suffix.md` from the AgentCli repo (the shared boilerplate —
    edit this only if the change should apply to *every* project).
 
 To change anything in `AGENTS.md` / `CLAUDE.md`, edit `AGENTS-Source.md`
-(or `AGENTS-Suffix.md`) and then run `c update-md` to regenerate.
+(or `AGENTS-Suffix.md`) and then run `ai update-md` to regenerate.
 
 Run after editing either part:
 
 ```
-./c.ps1 update-md
+./ai.ps1 update-md
 ```
 
 ## Worktree Support
@@ -394,7 +408,7 @@ The launcher supports git worktrees, detected automatically via git.
 
 **Creating worktrees**: Use the `wt` command to create and switch to a worktree:
 ```
-c wt feature1    # Creates ActualLab.Fusion-feature1 if it doesn't exist and runs there
+ai wt feature1   # Creates ActualLab.Fusion-feature1 if it doesn't exist and runs there
 ```
 
 The worktree is created using `git worktree add` from the main project directory.
