@@ -1,3 +1,4 @@
 # VitePress files
 cache/
 dist/
+.temp/
