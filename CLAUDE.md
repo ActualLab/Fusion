@@ -155,6 +155,7 @@ following agents in a chosen environment:
 - **OpenAI Codex** — `codex`
 - **xAI Grok** — `grok`
 - **Codename Goose** — `goose` (block/goose)
+- **OpenCode** — `opencode` (sst/opencode)
 
 …in any of the following environments:
 
@@ -170,34 +171,36 @@ running and how to access projects.
 
 The agent is the optional first positional arg (or the `--agent:<name>`
 option); if omitted, `claude` is used. `--agent:` accepts the full agent names
-only (`claude`, `codex`, `grok`, `goose`). Entry points:
+only (`claude`, `codex`, `grok`, `goose`, `opencode`). Entry points:
 
 - `ai` — the launcher itself; Claude by default, or pick the agent explicitly.
-- `ai-codex` / `ai-grok` / `ai-goose` — one-agent shortcuts (`= ai --agent:<name>`).
+- `ai-codex` / `ai-grok` / `ai-goose` / `ai-opencode` — one-agent shortcuts (`= ai --agent:<name>`).
 
 ```
-ai                 → claude, Docker (default)
-ai codex           → codex,  Docker (positional form)
-ai-codex           → codex,  Docker (= ai --agent:codex)
-ai-grok os         → grok,   host OS
-ai-goose           → goose,  Docker (= ai --agent:goose)
-ai --agent:goose   → goose,  Docker (explicit)
-ai wsl             → claude, WSL
-ai os              → claude, host OS  (default agent)
-ai codex --dry-run → codex,  Docker (dry run)
+ai                 → claude,   Docker (default)
+ai codex           → codex,    Docker (positional form)
+ai-codex           → codex,    Docker (= ai --agent:codex)
+ai-grok os         → grok,     host OS
+ai-goose           → goose,    Docker (= ai --agent:goose)
+ai --agent:goose   → goose,    Docker (explicit)
+ai-opencode        → opencode, Docker (= ai --agent:opencode)
+ai opencode wsl    → opencode, WSL
+ai wsl             → claude,   WSL
+ai os              → claude,   host OS  (default agent)
+ai codex --dry-run → codex,    Docker (dry run)
 ```
 
 Inside the sandboxed Docker container, each agent is invoked in its
 "skip-approvals" mode (`claude --dangerously-skip-permissions`, `codex
---full-auto`, `grok` as-is, `goose session` with `GOOSE_MODE=auto`). On the
-host OS no such flag/mode is added — the agent runs in its normal
-interactive/approval mode.
+--full-auto`, `grok` as-is, `goose session` with `GOOSE_MODE=auto`,
+`opencode --auto`). On the host OS no such flag/mode is added — the agent runs
+in its normal interactive/approval mode.
 
 ## Installation
 
 Run once after cloning AgentCli to make the `ai` / `ai-codex` / `ai-grok` /
-`ai-goose` commands available everywhere and build the Docker image (which
-contains all four CLIs pre-installed):
+`ai-goose` / `ai-opencode` commands available everywhere and build the Docker
+image (which contains all five CLIs pre-installed):
 
 ```
 ./ai.ps1 install
@@ -207,8 +210,8 @@ What `install` does, by host OS:
 - **Windows** — adds the AgentCli folder to the *user* `Path` environment
   variable so the entry-point `.cmd` files resolve in any new shell.
 - **macOS** — adds `alias ai=…`, `alias ai-codex=…`, `alias ai-grok=…`,
-  `alias ai-goose=…` (pointing at the polyglot `.cmd` files) to `~/.zshrc` and
-  `chmod +x`'s them.
+  `alias ai-goose=…`, `alias ai-opencode=…` (pointing at the polyglot `.cmd`
+  files) to `~/.zshrc` and `chmod +x`'s them.
 - **Linux / WSL** — same as macOS, but the aliases go into `~/.bashrc`.
 
 After the PATH/alias step, `install` also links AgentCli's shared
@@ -274,7 +277,7 @@ When running in Docker (`AC_OS` = `Linux in Docker`), the following tools are av
 
 | Category | Tools |
 |----------|-------|
-| **AI CLIs** | Claude Code, OpenAI Codex, xAI Grok, Codename Goose |
+| **AI CLIs** | Claude Code, OpenAI Codex, xAI Grok, Codename Goose, OpenCode |
 | **.NET** | .NET 10 SDK, .NET 9 SDK, wasm-tools workload |
 | **Node.js** | Node.js 20, npm |
 | **Shell** | Zsh (default), Bash, PowerShell (`pwsh`) |
@@ -289,11 +292,13 @@ When running in Docker (`AC_OS` = `Linux in Docker`), the following tools are av
 
 When running in Docker, `/proj/<CurrentProject>/artifacts` path is mapped to `artifacts/claude-docker/` path in the OS's file system to avoid permission conflicts with the host.
 
-**Host service connectivity**: The Docker container uses `--network host` mode, so `localhost` inside the container directly refers to the host. This means you can connect to host services (Redis, PostgreSQL, NATS, etc.) using `localhost:port` just like on the host. On macOS, `--network host` requires Docker Desktop 4.34+ (Sept 2024).
+**Host service connectivity**: The Docker container uses `--network host` mode. On **native Linux** this makes `localhost` inside the container refer to the host directly, so you reach host services (Redis, PostgreSQL, NATS, etc.) at `localhost:port`. On **Windows**, Docker Desktop's engine runs inside WSL2, so host reachability depends on WSL networking mode: with **mirrored** mode (`.wslconfig` → `networkingMode=mirrored`) the WSL2 backend shares the Windows loopback, so `--network host` reaches the host's `localhost:port` directly (host service may stay bound to `127.0.0.1`); in the default **NAT** mode it does not, and you'd need `host.docker.internal:port`. On **macOS**, `--network host` attaches to the Linux VM (not the host), so host services are reached via `host.docker.internal:port` (the service must bind `0.0.0.0`); requires Docker Desktop 4.34+ (Sept 2024).
 
-**macOS / Apple Silicon**: The Docker image supports both amd64 and arm64 architectures. `ai.cmd` (and the `ai-codex.cmd` / `ai-grok.cmd` / `ai-goose.cmd` shortcuts) are polyglot scripts that work on both Windows and macOS/Linux.
+**macOS / Apple Silicon**: The Docker image supports both amd64 and arm64 architectures. `ai.cmd` (and the `ai-codex.cmd` / `ai-grok.cmd` / `ai-goose.cmd` / `ai-opencode.cmd` shortcuts) are polyglot scripts that work on both Windows and macOS/Linux.
 
-**Goose config**: When you launch the `goose` agent, the launcher passes your host goose config to the sandboxed/WSL goose so its provider setup (e.g. a local LM Studio endpoint) carries over. In Docker the host goose config dir (`%APPDATA%\Block\goose\config` on Windows, `~/.config/goose` elsewhere) is bind-mounted read-only to `/home/claude/.config/goose`; in WSL the `config.yaml` is copied into the WSL user's `~/.config/goose/`. With `--network host`, a `localhost:1234` LM Studio endpoint in that config reaches the host directly.
+**Goose config**: When you launch the `goose` agent, the launcher passes your host goose config to the sandboxed/WSL goose so its provider setup (e.g. a local LM Studio endpoint) carries over. In Docker the host goose config dir (`%APPDATA%\Block\goose\config` on Windows, `~/.config/goose` elsewhere) is bind-mounted read-only to `/home/claude/.config/goose`; in WSL the `config.yaml` is copied into the WSL user's `~/.config/goose/`. A `localhost:1234` LM Studio endpoint in that config works unchanged: on native-Linux Docker and on **Windows with WSL mirrored networking** `--network host` already reaches the host's `localhost:1234` directly; on **macOS** the launcher starts an in-container `socat` forwarder so `localhost:1234` reaches `host.docker.internal:1234` (override the port with `AC_LMSTUDIO_PORT`; LM Studio must serve on `0.0.0.0`). Windows requires WSL mirrored mode (`.wslconfig` → `networkingMode=mirrored`); the socat proxy is intentionally **not** used there because it would hijack `:1234` on the shared loopback and loop back on itself.
+
+**OpenCode config**: When you launch the `opencode` agent, the launcher passes your host OpenCode config (`~/.config/opencode/opencode.json(c)`) to the sandboxed/WSL opencode so its provider setup carries over. In Docker the host `~/.config/opencode` dir is bind-mounted read-only to `/home/claude/.config/opencode`; in WSL the `opencode.json(c)` is copied into the WSL user's `~/.config/opencode/`. Just like Goose, a `localhost:1234` LM Studio endpoint in that config is reachable via Windows WSL mirrored networking (or the macOS `socat` forwarder) — see the Goose note above. In the sandbox opencode runs with `--auto` (auto-approve).
 
 **Propagated environment variables**: The following environment variables are automatically propagated from the host to the Docker container:
 - Variables containing `__` in their names (e.g., `ChatSettings__OpenAIApiKey` for .NET configuration)
@@ -314,7 +319,7 @@ When running in Docker, `/proj/<CurrentProject>/artifacts` path is mapped to `ar
 
 The user starts Chrome with remote debugging via `ai chrome` command (port 9222). On Windows, this also creates a firewall rule to allow connections from WSL/Docker.
 
-**chrome-devtools MCP (preferred over Playwright)**: AgentCli's `docker-compose.yml` ships two `chrome-devtools` MCP services (`chrome-devtools-mcp-1` → host `8765`, `chrome-devtools-mcp-2` → host `8766`), each bridging stdio `chrome-devtools-mcp` to streamable HTTP via `supergateway`. They target the host Chrome ports `CHROME_DEBUG_PORT_1` (default `9222`) and `CHROME_DEBUG_PORT_2` (default `9223`) respectively, and recycle themselves when host Chrome flaps. When the matching MCP server entries are wired up in `.mcp.json` (look for `mcp__chrome-devtools-{1,2}__*` tools), prefer them over Playwright — and pair them with the `/debug-ui` and `/server-loop` skills if those are available too.
+**chrome-devtools MCP (preferred over Playwright)**: AgentCli's `docker-compose.yml` ships two `chrome-devtools` MCP services (`chrome-devtools-mcp-1` → host `8765`, `chrome-devtools-mcp-2` → host `8766`), each bridging stdio `chrome-devtools-mcp` to streamable HTTP via `supergateway`. They target the host Chrome ports `CHROME_DEBUG_PORT_1` (default `9222`) and `CHROME_DEBUG_PORT_2` (default `9223`) respectively, and recycle themselves when host Chrome flaps. When the matching MCP server entries are wired up in `.mcp.json` (look for `mcp__chrome{1,2}__*` tools — the older `mcp__chrome-devtools-{1,2}__*` names still resolve too), prefer them over Playwright — and pair them with the `/debug-ui` and `/server-loop` skills if those are available too.
 
 **Playwright**: Playwright and Chromium are also pre-installed in the Docker image. Use Playwright when you need to write automated test scripts or when the chrome-devtools MCP is not available. When the user asks you to "use host Chrome", connect Playwright to Chrome on the host:
 
