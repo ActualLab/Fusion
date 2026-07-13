@@ -12,6 +12,7 @@
     "docs:seo-check": "node scripts/seo-check.mjs",
     "docs:verify-routes": "node scripts/verify-routes.mjs",
     "docs:verify": "npm run docs:seo-check && npm run docs:verify-routes",
+    "docs:indexnow": "node scripts/submit-indexnow.mjs",
     "slides:build": "node slides/build-all.mjs"
   },
   "author": "",

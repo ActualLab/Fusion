@@ -70,3 +70,11 @@ jobs:
           wranglerVersion: '3'
           workingDirectory: docs
           command: pages deploy .vitepress/dist --project-name=fusion-actuallab-net --branch=master --commit-dirty=true
+
+      # Best-effort nudge so Bing/Yandex recrawl changed pages within minutes.
+      # Runs after deploy so the freshly published key file validates; a failure
+      # here never fails the deploy (the sitemap remains the source of truth).
+      - name: Notify IndexNow
+        run: npm run docs:indexnow
+        working-directory: docs
+        continue-on-error: true
