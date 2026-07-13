@@ -221,7 +221,7 @@
     <PackageVersion Include="xunit.analyzers" Version="1.27.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.286" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.122" />
     <!-- Generators -->
     <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(CSharpVersion)" />
