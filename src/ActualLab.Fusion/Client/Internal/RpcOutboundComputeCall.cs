@@ -34,6 +34,9 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
     public bool TryConsumeHandOff()
         => Interlocked.Exchange(ref _handOffState, 0) == 1;
 
+    // Read-only peek (no exchange) used only by a Debug.Assert verifying the hand-off was consumed.
+    public bool IsHandOffPending => Volatile.Read(ref _handOffState) != 0;
+
     public override int? GetReconnectStage(bool isPeerChanged)
     {
         lock (Lock) {

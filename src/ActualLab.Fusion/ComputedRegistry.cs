@@ -124,7 +124,11 @@ public sealed class ComputedRegistry
                         return; // Already registered
 
                     if (target is { ConsistencyState: not ConsistencyState.Invalidated })
-                        // This typically triggers Unregister - except for RemoteComputed
+                        // This typically triggers Unregister - except for RemoteComputed.
+                        // This invalidation MUST stay synchronous: RemoteComputed call hand-off
+                        // relies on the displaced predecessor being invalidated (and thus consuming
+                        // the hand-off marker) before the successor's constructor returns - see
+                        // RemoteComputedExt.BindToCallFromOnInvalidated.
                         target.Invalidate(immediately: true, InvalidationSource.ComputedRegistryRegister);
 
                     if (_storage.TryRemove(key, weakRef))

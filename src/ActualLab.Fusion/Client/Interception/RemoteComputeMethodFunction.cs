@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Interception;
@@ -391,6 +392,10 @@ public abstract class RemoteComputeMethodFunction(
         // (which shares the same call) won't poison the call & the new computed (audit item 16).
         call.MarkHandedOff();
         var computed = NewRemoteComputed(input, result, cacheEntry, call);
+        // The successor's constructor synchronously displaces & invalidates cachedComputed (or, in the
+        // predecessor-already-invalidated race, is itself born invalidated), which consumes the marker.
+        Debug.Assert(!call.IsHandOffPending,
+            "Hand-off marker must be consumed by the time the successor's constructor returns.");
         computed.RenewTimeouts(true);
         remoteCachedComputed.SynchronizedSource.TrySetResult();
     }
