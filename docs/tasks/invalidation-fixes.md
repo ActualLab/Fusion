@@ -2,7 +2,9 @@
 
 Companion to [invalidation-audit.md](invalidation-audit.md). This document records the **agreed** approach for each audit item, along with the alternatives that were considered and explicitly rejected or deferred. Implementing agents: the choices below are deliberate decisions, not defaults — do not substitute a rejected alternative without raising it first. Item numbers reference the audit document.
 
-Status legend: **decided** — approach agreed, ready to implement; **pending** — options on the table, decision not made yet.
+Status legend: **decided** — approach agreed, ready to implement; **pending** — options on the table, decision not made yet; **✅ shipped** — implemented and merged, with the fixing commit hash noted inline.
+
+Shipped so far (all on `master`, 2026-07-14): `78bdb0dd` item 16, `376ea552` item 17, `72eb4c83` docs-only batch, `fab0f349` item-19 residuals + `IState.Invalidated`, `64979788` `KeyConflictStrategy` #4049. Everything not marked ✅ below remains pending implementation.
 
 ## Item 11: In-doubt commit verification (`DbOperationScope.Commit`)
 
@@ -76,7 +78,7 @@ Entries that are present but fail processing (in practice: `ToModel()` deseriali
 
 ## Item 4: Deployment compatibility of serialized commands
 
-Status: **decided** — documentation only; no code change.
+Status: **✅ shipped** in `72eb4c83` — documentation only; no code change.
 
 Document the compatibility contract explicitly: command types (including nested-operation and operation-item types) must remain deserializable for the operation trimmer's `MaxEntryAge` (30 min by default) past their last producer — i.e., do not rename/remove a command type and deploy within that window; stage such changes across releases. Violations become immediately visible through item 3's Error-level abandonment logging rather than manifesting as silently stale caches.
 
@@ -127,7 +129,7 @@ Status: **decided**.
 
 ## Item 17: Serve-stale never completes predecessor's `SynchronizedSource`
 
-Status: **decided** — confirmed by failing tests (2026-07-14).
+Status: **✅ shipped** in `376ea552` — confirmed by failing tests (2026-07-14), then fixed (approach A + the `Safe` routed-peer fix; optional defense-in-depth B not added).
 
 ### Confirmation
 
@@ -151,7 +153,7 @@ Also included: fix `ComputedSynchronizer.Safe` to consult the computed's actual 
 
 ## Item 16: Cache-update path double-binds the RPC call
 
-Status: **decided** — confirmed by failing test (2026-07-14).
+Status: **✅ shipped** in `78bdb0dd` — confirmed by failing test (2026-07-14), then fixed via approach A (explicit call hand-off marker).
 
 ### Confirmation
 
@@ -189,16 +191,16 @@ Status: **decided**.
 
 ## Cheap wins batch (items 14, 15, 19)
 
-Status: **decided**:
+Status: **decided** (item 19 ✅ shipped in `fab0f349`; items 14 & 15 still pending):
 
-- Item 14: `NpgsqlDbLogWatcher.NotifyChanged`: log + rethrow so `DbOperationCompletionListener.NotifyRetryPolicy` actually applies.
-- Item 14: `RedisDbLogWatcher`: publish `NotifyPayload = hostId.Id` so the self-notification skip works, mirroring the Npgsql watcher.
-- Item 15: one-time **Information-level** log (explicitly not Warning) when a compute service's final handler shape disqualifies invalidation replay (`InvalidatingCommandCompletionHandler.IsRequired`).
-- Item 19: observe/log the faulted `_whenConsolidated` task in `ConsolidatingComputed.Consolidate`.
+- Item 14 (**pending**): `NpgsqlDbLogWatcher.NotifyChanged`: log + rethrow so `DbOperationCompletionListener.NotifyRetryPolicy` actually applies.
+- Item 14 (**pending**): `RedisDbLogWatcher`: publish `NotifyPayload = hostId.Id` so the self-notification skip works, mirroring the Npgsql watcher.
+- Item 15 (**pending**): one-time **Information-level** log (explicitly not Warning) when a compute service's final handler shape disqualifies invalidation replay (`InvalidatingCommandCompletionHandler.IsRequired`).
+- Item 19 (**✅ shipped** in `fab0f349`): observe/log the faulted `_whenConsolidated` task in `ConsolidatingComputed.Consolidate`.
 
 ## Item 19 residuals: RPC/local hardening
 
-Status: **decided**.
+Status: **✅ shipped** — residual #1 (docs) in `72eb4c83`; residuals #2 and #3 in `fab0f349`. Note: #3 was implemented as a new dedicated `NonTransientErrorInvalidationDelay` option (default 30 s; `TimeSpan.MaxValue` for `MutableState` to preserve its manual-error semantics) rather than repurposing `AutoInvalidationDelay`; `ComputedState` inherits it via `StateOptions.ComputedOptions` (no `ComputedState.cs` change). Test-suite compatibility for the 30 s default was verified — no test encodes an "errors cache forever" assumption that breaks.
 
 ### Agreed course of action
 
@@ -223,13 +225,13 @@ Status: **decided**. (Verification-pass finding adjacent to audit items 2/3; not
 
 ## `IState.Invalidated` event can skip a generation
 
-Status: **decided**.
+Status: **✅ shipped** in `fab0f349` (with a regression test that fails without the fix).
 
 Fire on publish: in `SetComputed` (or immediately after the snapshot is published), if the just-published computed is already invalidated, raise the `Invalidated` event for it — restoring per-generation event delivery when a dependency invalidates the state's computed while it is still computing. Alternatives (docs note; leave as-is since `UpdateCycle` self-corrects) rejected in favor of the small code fix.
 
 ## `ComputedSource.Computed` transiently exposes a `Computing` instance
 
-Status: **decided** — docs note, plus a verification task.
+Status: **partially shipped** — docs note shipped in `72eb4c83`; the verification task (audit every registry/published-slot fetch for a `Computing`-state assumption) remains **pending**.
 
 Document that direct `.Computed` access may observe a `Computing` instance whose `Output`/`Value` accessors throw while an update is in flight; use `Use`/`Update` (or check `ConsistencyState`) instead. Publish-after-compute was rejected: the early publish exists so the in-flight instance is reachable for invalidate-while-computing.
 
@@ -237,11 +239,11 @@ Document that direct `.Computed` access may observe a `Computing` instance whose
 
 ## `MutableState` semantic nits
 
-Status: **decided** — docs only. Document both behaviors next to `MutableState`/`InvalidationDelay`: (a) `Set` with the same reference no-ops — in-place mutation followed by re-`Set` produces no invalidation (value-equality semantics); (b) a nonzero `InvalidationDelay` makes `Set` effectively eventual — the old value remains `Consistent` for the delay after `Set` returns. Debug-time same-reference guard rejected as noise-prone.
+Status: **✅ shipped** in `72eb4c83` — docs only. Document both behaviors next to `MutableState`/`InvalidationDelay`: (a) `Set` with the same reference no-ops — in-place mutation followed by re-`Set` produces no invalidation (value-equality semantics); (b) a nonzero `InvalidationDelay` makes `Set` effectively eventual — the old value remains `Consistent` for the delay after `Set` returns. Debug-time same-reference guard rejected as noise-prone.
 
 ## Synchronous invalidation propagation recursion depth
 
-Status: **decided** — docs note only. Document that invalidation propagates by synchronous recursion, so dependency chains are expected to stay shallow (depth on the order of 10^3 risks stack overflow). No code change: dependency graphs are supposed to be shallow, and the propagation loop is the hottest path in the library — heap-based fallback reserved for a real report, full iterative traversal rejected.
+Status: **✅ shipped** in `72eb4c83` — docs note only. Document that invalidation propagates by synchronous recursion, so dependency chains are expected to stay shallow (depth on the order of 10^3 risks stack overflow). No code change: dependency graphs are supposed to be shallow, and the propagation loop is the hottest path in the library — heap-based fallback reserved for a real report, full iterative traversal rejected.
 
 ## `OperationCompletionNotifier` assertion log enrichment
 
@@ -257,7 +259,7 @@ Status: **decided** — no action on any of these; recorded so they are not re-r
 
 ## `KeyConflictStrategy` race on `_events` inserts (external report: Actual-Chat/actual-chat#4049)
 
-Status: **decided**.
+Status: **✅ shipped** in `64979788` — with a `ConcurrentSkipStrategyTest` regression test (8 racing producers). Implemented exactly as agreed; the events flush now goes through `FlushEvents` with EF auto-savepoints kept enabled on the master context. Refinement vs. the raw plan: a batch carrying any `Fail` event bypasses the retry entirely so a `Fail` conflict surfaces immediately (original exception/semantics), rather than being retried first. Verified all event tests (SQLite + InMemory: Fail/Skip/Update/ConcurrentSkip) pass in isolation.
 
 Deterministic-UUID operation events (e.g. delay-quantized `FlowResumeEvent` with `KeyConflictStrategy.Skip`) race concurrent producers on the `_events` PK: `DbOperationScope.Commit` resolves `Skip`/`Update` via check-then-insert (`FindAsync` → `Add`), so two concurrent transactions both find nothing, both insert, one hits a unique violation — failing the entire command transaction, which is then retried by `OperationReprocessor` (re-executing all handler side effects) and logging errors for what is a normal race.
 
@@ -280,7 +282,7 @@ This removes the command-level retry (no double side effects), the error noise, 
 
 ## Enforcement & docs batch (audit items 1, 2, 5, 6, 7)
 
-Status: **decided**.
+Status: **partially shipped** in `72eb4c83` — the documentation deliverables are done: the no-fail contract (items 1+2), the command-to-query invalidation test pattern **with a real compiling `.cs` snippet** (item 5), the `StartOffset` assumptions (item 6), and the completion-vs-cluster-freshness note (item 7). Still **pending**: the code deliverables — the "must-not-throw" test-support harness for `IOperationCompletionListener` / the invalidation pass (items 1+2), and the per-command invalidation test convention (item 5).
 
 ### Agreed course of action
 
@@ -291,4 +293,4 @@ Status: **decided**.
 
 ## Item 18: `Invalidation.Begin` ExecutionContext capture in user code
 
-Status: **decided** — documentation only; no code change. The ambient-context flow is intended `AsyncLocal` behavior, not a defect. Add a short note to the invalidation docs covering the user-code trap: work spawned inside an invalidation scope (or an `Invalidated` handler) captures `CallOptions.Invalidate`, so compute methods it calls later silently return `default(T)` and spuriously invalidate instead of computing; the guardrail is `Computed.BeginIsolation()`.
+Status: **✅ shipped** in `72eb4c83` — documentation only; no code change. The ambient-context flow is intended `AsyncLocal` behavior, not a defect. Add a short note to the invalidation docs covering the user-code trap: work spawned inside an invalidation scope (or an `Invalidated` handler) captures `CallOptions.Invalidate`, so compute methods it calls later silently return `default(T)` and spuriously invalidate instead of computing; the guardrail is `Computed.BeginIsolation()`.
