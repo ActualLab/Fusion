@@ -127,38 +127,48 @@ Status: **decided**.
 
 ## Item 17: Serve-stale never completes predecessor's `SynchronizedSource`
 
-Status: **confirm first** — write failing tests reproducing the scenario before deciding on the fix.
+Status: **decided** — confirmed by failing tests (2026-07-14).
 
-### Agreed first step
+### Confirmation
 
-Add tests that confirm the defect as described in the audit:
+`FusionRpcServeStaleTest` (channel-pair transport + `InMemoryRemoteComputedCache`; `RpcInboundCallDelayer` holds calls open for the mid-call race) reproduces both serve-stale branches:
 
-- A client computed superseded through a serve-stale branch (peer disconnected, cached value exists) whose `WhenSynchronized` never completes — a `ComputedSynchronizer.Precise` waiter must be shown to hang past reconnect and successful resync of the successor (asserted with a bounded wait, not an actual hang).
-- Coverage for both serve-stale branches: not-connected-at-entry and disconnect-racing-`SendRpcCall`.
+- `SupersededStaleComputedMustSynchronizeTest` (not-connected-at-entry branch): two serve-stale generations while disconnected, then reconnect + resync. The direct predecessor of the final recompute synchronizes (the normal-exit completion works), but the superseded stale computed's `WhenSynchronized` **times out even after reconnect and successful resync** — the permanent `ComputedSynchronizer.Precise` hang.
+- `MidCallDisconnectStaleComputedMustSynchronizeTest` (disconnect-racing-`SendRpcCall` branch): same outcome.
 
-Once confirmed, the fix decision is made among (recommendation: A, possibly + B):
+Note from writing the tests: a delay configured on the DI-resolved service proxy does not reach the instance serving inbound calls — server-side delays in such tests must use `RpcInboundCallDelayer`.
 
-- **A. Chain the source to the successor.** Serve-stale computeds share (or complete-on-completion-of) the predecessor's `SynchronizedSource`, so whichever successor finally confirms against the server completes the whole chain. Preserves the "completed = confirmed against server" meaning for every waiter.
-- **B. Fix the consumer.** `ComputedSynchronizer.Precise` re-resolves the current computed from the registry instead of waiting on a superseded instance's source. Defense-in-depth; leaves the `RemoteComputed` invariant broken for other consumers if done alone.
-- **C. Complete the predecessor's source in the serve-stale branch.** Rejected: it would make "synchronized" no longer mean "confirmed against server".
+### Agreed course of action
 
-Regardless of choice: fix `ComputedSynchronizer.Safe` to consult the computed's actual routed peer rather than `RpcHub.DefaultPeer`.
+**A. Chain the source to the successor.** Serve-stale computeds share (or complete-on-completion-of) the predecessor's `SynchronizedSource`, so whichever successor finally confirms against the server completes the whole chain. Preserves the "completed = confirmed against server" meaning for every waiter. Optionally add **B** as defense-in-depth: `ComputedSynchronizer.Precise` re-resolves the current computed from the registry instead of waiting on a superseded instance's source.
+
+Also included: fix `ComputedSynchronizer.Safe` to consult the computed's actual routed peer rather than `RpcHub.DefaultPeer`.
+
+### Rejected alternatives
+
+- **B alone** (fix only the consumer): leaves the `RemoteComputed` invariant broken for every other `WhenSynchronized` consumer.
+- **C. Complete the predecessor's source in the serve-stale branch**: it would make "synchronized" no longer mean "confirmed against server".
 
 ## Item 16: Cache-update path double-binds the RPC call
 
-Status: **confirm first** — write failing tests reproducing the scenario before deciding on the fix.
+Status: **decided** — confirmed by failing test (2026-07-14).
 
-### Agreed first step
+### Confirmation
 
-Add tests that confirm the defect as described in the audit:
+`KeyValueServiceWithCacheTest.CacheHitUpdateWithChangedValueTest` (two client service providers sharing one cache; server value changed between them; a server-side `RpcInboundCallCounter` middleware counts wire-level `Get` calls) surfaces all three symptoms in one run:
 
-- After `ApplyRpcUpdate` completes with a server value that differs from the cached one, assert the refreshed computed is **consistent** (today it should be observed born-invalidated) and that no extra RPC round trip / spurious server-side `Cancel` follows. The existing `ScreenshotServiceClientWithCacheTest` provably does not catch this (the follow-up computed is call-bound and reports `WhenSynchronized.IsCompleted == true`), so the test must assert consistency of the computed produced by the update path itself, or count calls server-side.
+- the computed produced by the update pass is **born invalidated** (`IsConsistent()` is false);
+- a follow-up capture returns a **different instance** instead of a registry hit;
+- the server receives **3 wire-level calls instead of 2** — the extra RPC round trip. A body-level counter cannot observe it: the server-side compute cache still holds the consistent value, so the method body never re-executes; counting must happen at the RPC middleware level.
 
-Once confirmed, the fix decision is made among (recommendation: A):
+### Agreed course of action
 
-- **A. Explicit call hand-off marker.** Before step 8 registers the successor, mark the call as handed off (flag or successor reference on `RpcOutboundComputeCall`); `BindToCallFromOnInvalidated` skips `SetInvalidated` for handed-off calls. The displaced cached computed is still invalidated, but no longer poisons the shared call.
-- **B. Invalidate the cached computed explicitly before `Register`** with an `InvalidationSource` that `RemoteComputed.OnInvalidated` recognizes as "superseded, don't touch the call". Same idea via invalidation source instead of call state; makes `InvalidationSource` load-bearing control flow.
-- **C. Give the successor its own call.** Rejected: reintroduces the extra RPC round trip by design.
+**A. Explicit call hand-off marker.** Before step 8 registers the successor, mark the call as handed off (flag or successor reference on `RpcOutboundComputeCall`); `BindToCallFromOnInvalidated` skips `SetInvalidated` for handed-off calls. The displaced cached computed is still invalidated, but no longer poisons the shared call.
+
+### Rejected alternatives
+
+- **B. Invalidate the cached computed explicitly before `Register`** with an `InvalidationSource` that `RemoteComputed.OnInvalidated` recognizes as "superseded, don't touch the call": same idea via invalidation source instead of call state; makes `InvalidationSource` load-bearing control flow.
+- **C. Give the successor its own call**: reintroduces the extra RPC round trip by design.
 
 ## Item 10: Reader outage longer than trim age
 

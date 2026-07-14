@@ -1,11 +1,18 @@
 using ActualLab.Fusion.Client;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Tests.Services;
+using ActualLab.Rpc;
+using AwesomeAssertions.Execution;
 
 namespace ActualLab.Fusion.Tests;
 
 public class KeyValueServiceWithCacheTest : FusionTestBase
 {
+    private readonly RpcInboundCallCounter _getCallCounter = new() {
+        Filter = methodDef => methodDef.Service.Type == typeof(IKeyValueService<string>)
+            && methodDef.Name.StartsWith("Get:", StringComparison.Ordinal),
+    };
+
     public KeyValueServiceWithCacheTest(ITestOutputHelper @out) : base(@out)
         => UseRemoteComputedCache = true;
 
@@ -13,8 +20,10 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
     {
         base.ConfigureTestServices(services, isClient);
         var fusion = services.AddFusion();
-        if (!isClient)
+        if (!isClient) {
             fusion.AddService<IKeyValueService<string>, KeyValueService<string>>();
+            services.AddRpc().AddMiddleware(_ => _getCallCounter);
+        }
         else
             fusion.AddClient<IKeyValueService<string>>();
     }
@@ -56,6 +65,49 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         await kv.Set("1", "a");
         await c1.WhenInvalidated().WaitAsync(timeout);
         await c2.WhenInvalidated().WaitAsync(timeout);
+    }
+
+    [Fact]
+    public async Task CacheHitUpdateWithChangedValueTest()
+    {
+        await ResetClientServices();
+        await using var serving = await WebHost.Serve();
+        await Delay(0.25);
+        var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
+        await cache.WhenInitialized;
+
+        var clientServices2 = CreateServices(true);
+        await using var _ = clientServices2 as IAsyncDisposable;
+
+        var kv = WebServices.GetRequiredService<IKeyValueService<string>>();
+        var kv1 = ClientServices.GetRequiredService<IKeyValueService<string>>();
+        var kv2 = clientServices2.GetRequiredService<IKeyValueService<string>>();
+        var timeout = TimeSpan.FromSeconds(5);
+
+        await kv.Set("1", "a");
+        var c1 = await GetComputed(kv1, "1"); // Nothing is cached yet -> RPC call, cache gets "a"
+        c1.Value.Should().Be("a");
+        c1.WhenSynchronized.IsCompleted.Should().BeTrue();
+
+        await kv.Set("1", "b"); // The server value changes, the cache entry still holds "a"
+
+        var c2 = await GetComputed(kv2, "1"); // Cached version fetched
+        c2.Value.Should().Be("a");
+        c2.WhenSynchronized.IsCompleted.Should().BeFalse();
+        await c2.WhenSynchronized.WaitAsync(timeout); // The background update (-> "b") is applied
+
+        // The computed produced by the update pass must be consistent - otherwise
+        // every changed-value cache hit costs an extra RPC call to recompute it
+        var c3 = Computed.GetExisting(() => kv2.Get("1"));
+        c3.Should().NotBeNull();
+        c3!.Value.Should().Be("b");
+        var c4 = await GetComputed(kv2, "1"); // Must be a registry hit, not a recompute
+        await c4.WhenSynchronized.WaitAsync(timeout); // Ensures c4's own update (if any) is applied
+        using (new AssertionScope()) {
+            c3.IsConsistent().Should().BeTrue();
+            c4.Should().BeSameAs(c3);
+            _getCallCounter.CallCount.Should().Be(2, "only c1's initial call and c2's update call are expected");
+        }
     }
 
     [Theory]
