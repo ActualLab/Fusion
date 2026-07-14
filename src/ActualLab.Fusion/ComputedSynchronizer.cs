@@ -1,6 +1,9 @@
 using ActualLab.Fusion.Client;
 using ActualLab.Fusion.Client.Caching;
+using ActualLab.Fusion.Client.Interception;
+using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
+using ActualLab.Rpc;
 
 namespace ActualLab.Fusion;
 
@@ -190,7 +193,7 @@ public abstract class ComputedSynchronizer
                 return true;
             if (AssumeSynchronizedWhenRemoteComputedCacheHasHitToCallDelayer && RemoteComputedCache.HitToCallDelayer is not null)
                 return true;
-            if (AssumeSynchronizedWhenDisconnected && !computed.Input.Function.Hub.RpcHub.DefaultPeer.ConnectionState.Value.IsConnected())
+            if (AssumeSynchronizedWhenDisconnected && !GetPeer(computed).ConnectionState.Value.IsConnected())
                 return true;
 
             return false;
@@ -222,6 +225,15 @@ public abstract class ComputedSynchronizer
                     cts.CancelAndDisposeSilently();
                 }
             }
+        }
+
+        // Private methods
+
+        private static RpcPeer GetPeer(IRemoteComputed computed)
+        {
+            var input = (ComputeMethodInput)computed.Input;
+            var function = (RemoteComputeMethodFunction)input.Function;
+            return function.RpcMethodDef.RouteOutboundCall(input.Invocation.Arguments);
         }
     }
 }

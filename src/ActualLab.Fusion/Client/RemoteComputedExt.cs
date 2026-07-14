@@ -41,6 +41,25 @@ public static class RemoteComputedExt
         return false;
     }
 
+    public static void ChainSynchronizedSourceTo(this IRemoteComputed predecessor, IRemoteComputed successor)
+    {
+        // Completes predecessor's SynchronizedSource once successor synchronizes, so a computed
+        // superseded via a serve-stale branch still ends up "synchronized" once any of its
+        // successors confirms against the server (audit item 17).
+        if (predecessor.WhenSynchronized.IsCompleted)
+            return;
+
+        var whenSynchronized = successor.WhenSynchronized;
+        if (whenSynchronized.IsCompleted) {
+            predecessor.SynchronizedSource.TrySetResult();
+            return;
+        }
+
+        _ = whenSynchronized.ContinueWith(
+            _ => predecessor.SynchronizedSource.TrySetResult(),
+            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
+
     public static void BindWhenInvalidatedToCall(this IRemoteComputed computed, RpcOutboundComputeCall call)
     {
         var whenInvalidated = call.WhenInvalidated;

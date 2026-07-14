@@ -179,6 +179,7 @@ public abstract class RemoteComputeMethodFunction(
                 // ComputedState refreshes naturally on recovery.
                 var staleResult = Result.NewUntyped(existingCacheEntry.DeserializedValue);
                 var staleComputed = NewRemoteComputed(input, staleResult, existingCacheEntry);
+                existingRemoteComputed!.ChainSynchronizedSourceTo((IRemoteComputed)staleComputed);
                 _ = InvalidateWhenReconnected(staleComputed, peer);
                 return staleComputed;
             }
@@ -213,6 +214,7 @@ public abstract class RemoteComputeMethodFunction(
                     }
                     var staleResult = Result.NewUntyped(existingCacheEntry.DeserializedValue);
                     var staleComputed = NewRemoteComputed(input, staleResult, existingCacheEntry);
+                    existingRemoteComputed!.ChainSynchronizedSourceTo((IRemoteComputed)staleComputed);
                     _ = InvalidateWhenReconnected(staleComputed, peer);
                     return staleComputed;
                 }
