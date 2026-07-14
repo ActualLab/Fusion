@@ -239,24 +239,19 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                         "{Method}[{Shard}]: failed entry #{Index} outlived the retention horizon, abandoning it",
                         nameof(ProcessGaps), shard, index);
                 }
-            if (entries.Count == 0) {
-                shardGaps.SizeLimitWarned = false;
+            if (IsDrained(shardGaps))
                 return Moment.MaxValue;
-            }
+
             // NextAttemptAt gates all re-queries: a wake-up with nothing due issues zero queries
             List<long>? due = null;
             foreach (var (index, gap) in entries)
                 if (gap.NextAttemptAt <= now)
                     (due ??= []).Add(index);
-            indexesToCheck = due is null ? [] : [..due];
+            indexesToCheck = due?.ToArray() ?? [];
         }
 
         // Batched existence re-check via chunked Index-Contains queries
-        var chunkSize = Settings.GapCheckChunkSize;
-        for (var offset = 0; offset < indexesToCheck.Length; offset += chunkSize) {
-            var count = Math.Min(chunkSize, indexesToCheck.Length - offset);
-            var chunk = new long[count];
-            Array.Copy(indexesToCheck, offset, chunk, 0, count);
+        foreach (var chunk in indexesToCheck.Chunk(Settings.GapCheckChunkSize)) {
             var found = await GetGapEntries(shard, chunk, cancellationToken).ConfigureAwait(false);
             foreach (var entry in found)
                 await ProcessGapEntry(shard, shardGaps, entry, cancellationToken).ConfigureAwait(false);
@@ -264,10 +259,8 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
 
         lock (shardGaps) {
             var entries = shardGaps.Entries;
-            if (entries.Count == 0) {
-                shardGaps.SizeLimitWarned = false;
+            if (IsDrained(shardGaps))
                 return Moment.MaxValue;
-            }
             // Advance the cadence of checked-but-still-missing entries: young pure gaps poll fast,
             // everything else at ~CheckPeriod. Found entries were removed or advanced in ProcessGapEntry.
             var fastCheckAge = Settings.GapFastCheckAge;
@@ -282,6 +275,15 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
             foreach (var gap in entries.Values)
                 nextCheckAt = Moment.Min(nextCheckAt, gap.NextAttemptAt);
             return nextCheckAt;
+        }
+
+        static bool IsDrained(ShardGapSet shardGaps)
+        {
+            if (shardGaps.Entries.Count != 0)
+                return false;
+
+            shardGaps.SizeLimitWarned = false;
+            return true;
         }
     }
 
