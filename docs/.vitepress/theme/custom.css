@@ -103,6 +103,30 @@ img[src*="github.com"][src*="badge"] {
   line-height: 1.2;
 }
 
+/* Searchable glossary and API definitions */
+.vp-doc h6 {
+  display: inline;
+  margin: 0;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+}
+
+.vp-doc h6 + p {
+  display: inline;
+  margin: 0;
+}
+
+.vp-doc h6 + p::before {
+  content: " — ";
+}
+
+.vp-doc h6 + p::after {
+  content: "";
+  display: block;
+  margin-bottom: 16px;
+}
+
 /* Accordion */
 .vp-doc details,
 details {

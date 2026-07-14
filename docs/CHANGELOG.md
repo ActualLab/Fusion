@@ -1297,7 +1297,7 @@ Release date: 2026-02-07
   `MessagePackFormatter` instead of conditionally using `MessagePackObject(true)` on .NET 8+
 
 ### Documentation
-- Added [api-index.md](api-index.md) &ndash; condensed type reference (~300 lines) alongside [api-index-full.md](api-index-full.md) (full API index)
+- Added [api-index.md](https://github.com/ActualLab/Fusion/blob/master/docs/api-index.md) &ndash; condensed type reference (~300 lines) alongside [api-index-full.md](api-index-full.md) (full API index)
 
 
 ## 12.0.85+53469221
