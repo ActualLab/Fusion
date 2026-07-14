@@ -45,6 +45,9 @@ public class CompletionProducer(CompletionProducer.Options settings, IServicePro
                         operationType, operation.HostId, command);
             }
             catch (Exception e) {
+                if (!isLocal)
+                    throw; // External completion failure must surface, so the reader can redeliver & retry it
+
                 Log.LogError(e,
                     "{OperationType} operation completion failed! Host: {HostId}, Command: {Command}",
                     operationType, operation.HostId, command);

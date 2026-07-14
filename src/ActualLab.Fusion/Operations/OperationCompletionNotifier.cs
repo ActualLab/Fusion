@@ -90,8 +90,14 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
             try {
                 await Task.WhenAll(tasks).ConfigureAwait(false);
             }
-            catch (Exception e) {
+            catch (Exception e) when (isLocal) {
                 Log.LogError(e, "One of operation completion listeners failed");
+            }
+            catch (Exception) {
+                // External operation: unmark the UUID so the reader can redeliver & retry the completion
+                lock (Lock)
+                    RecentlySeenUuids.TryRemove(operation.Uuid);
+                throw;
             }
             return true;
         });
