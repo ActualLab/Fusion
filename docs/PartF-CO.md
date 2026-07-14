@@ -110,8 +110,9 @@ Task<Report> BuildReport(string id);
 
 **How it works:**
 - A non-transient error is otherwise cached until something invalidates it.
-- After this delay the computed value auto-invalidates, so a *non-deterministic* error that was classified non-transient (e.g. a race-induced `NullReferenceException`) can't stay cached indefinitely.
-- Set it to `double.PositiveInfinity` to keep non-transient errors cached until an explicit invalidation.
+- The effective delay for `NonTransient`/`Unknown` errors is `min(AutoInvalidationDelay, NonTransientErrorInvalidationDelay)` — so a service that lowers `AutoInvalidationDelay` to cap the value's lifetime also caps its error lifetime, while this 30-second default keeps a *non-deterministic* error that was classified non-transient (e.g. a race-induced `NullReferenceException`) from staying cached indefinitely.
+- `Terminal` errors use `AutoInvalidationDelay` alone (ignoring this delay), since re-executing them can never help — retrying a `Terminal` error is pointless.
+- Set it to `double.PositiveInfinity` to keep non-transient errors cached until an explicit invalidation (or until `AutoInvalidationDelay`, if set).
 - **MutableState is an exception:** `ComputedOptions.MutableStateDefault` overrides both this delay and `TransientErrorInvalidationDelay` to `TimeSpan.MaxValue`, so a value (or error) you set on a `MutableState` stays put until you explicitly change it — the error horizon doesn't apply.
 
 **When to use:**

@@ -156,6 +156,79 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     }
 
     [Fact]
+    public async Task TerminalErrorIgnoresNonTransientHorizonTest()
+    {
+        var services = CreateServices(services => {
+            services.AddTransiencyResolver<Computed>(_ => e =>
+                (e is InvalidOperationException ? Transiency.Terminal : Transiency.Unknown)
+                    .Or(e, TransiencyResolvers.PreferNonTransient));
+        });
+        var stateFactory = services.StateFactory();
+
+        var count = 0;
+        var horizon = TimeSpan.FromSeconds(0.5);
+        var state = stateFactory.NewComputed(
+            new ComputedState<int>.Options() {
+                UpdateDelayer = FixedDelayer.NextTick,
+                InitialValue = -1,
+                ComputedOptions = ComputedOptions.Default with {
+                    NonTransientErrorInvalidationDelay = horizon,
+                },
+            },
+            _ => {
+                Interlocked.Increment(ref count);
+                throw new InvalidOperationException("boom");
+            });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => state.Use());
+        var c = state.Computed;
+        c.HasError.Should().BeTrue();
+        c.IsConsistent().Should().BeTrue();
+
+        // A Terminal error uses AutoInvalidationDelay (MaxValue here), so the NonTransientErrorInvalidationDelay
+        // horizon must NOT invalidate it - retrying a Terminal error can never help.
+        await Task.Delay(horizon.MultiplyBy(4));
+        c.IsConsistent().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task NonTransientErrorHonorsAutoInvalidationDelayTest()
+    {
+        var services = CreateServices(services => {
+            services.AddTransiencyResolver<Computed>(_ => e =>
+                (e is InvalidOperationException ? Transiency.NonTransient : Transiency.Unknown)
+                    .Or(e, TransiencyResolvers.PreferNonTransient));
+        });
+        var stateFactory = services.StateFactory();
+
+        var count = 0;
+        var horizon = TimeSpan.FromSeconds(0.5);
+        var state = stateFactory.NewComputed(
+            new ComputedState<int>.Options() {
+                UpdateDelayer = FixedDelayer.NextTick,
+                InitialValue = -1,
+                ComputedOptions = ComputedOptions.Default with {
+                    AutoInvalidationDelay = horizon,
+                    NonTransientErrorInvalidationDelay = TimeSpan.MaxValue,
+                },
+            },
+            _ => {
+                Interlocked.Increment(ref count);
+                throw new InvalidOperationException("boom");
+            });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => state.Use());
+        var c = state.Computed;
+        c.HasError.Should().BeTrue();
+        c.IsConsistent().Should().BeTrue();
+
+        // min(AutoInvalidationDelay, NonTransientErrorInvalidationDelay) applies, so a short AutoInvalidationDelay
+        // still caps the error lifetime even when NonTransientErrorInvalidationDelay is infinite (legacy contract).
+        await c.WhenInvalidated().WaitAsync(horizon + TimeSpan.FromSeconds(3));
+        c.IsInvalidated().Should().BeTrue();
+    }
+
+    [Fact]
     public async Task InvalidatedEventFiresForBornInvalidatedGenerationTest()
     {
         // A dependency that invalidates the state's computed while it is still computing makes

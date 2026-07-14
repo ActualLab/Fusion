@@ -391,9 +391,15 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
             return;
         }
 
-        timeout = IsTransientError(error)
-            ? Options.TransientErrorInvalidationDelay
-            : Options.NonTransientErrorInvalidationDelay;
+        // Terminal errors will never succeed on retry, so they're treated exactly like success values
+        // (AutoInvalidationDelay). Non-transient/unknown errors also honor AutoInvalidationDelay, but the
+        // NonTransientErrorInvalidationDelay safety net still caps how long a (possibly non-deterministic)
+        // error can stay cached.
+        timeout = GetErrorTransiency(error) switch {
+            Transiency.Transient or Transiency.SuperTransient => Options.TransientErrorInvalidationDelay,
+            Transiency.Terminal => Options.AutoInvalidationDelay,
+            _ => TimeSpanExt.Min(Options.AutoInvalidationDelay, Options.NonTransientErrorInvalidationDelay),
+        };
         if (timeout != TimeSpan.MaxValue)
             this.Invalidate(timeout);
     }
@@ -529,19 +535,22 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
     }
 
     protected internal bool IsTransientError(Exception error)
+        => GetErrorTransiency(error).IsAnyTransient();
+
+    protected internal Transiency GetErrorTransiency(Exception error)
     {
         if (error is OperationCanceledException) // Also handles RpcRerouteException
-            return true; // Must be transient under any circumstances in IComputed
+            return Transiency.Transient; // Must be transient under any circumstances in IComputed
 
         try {
             var services = Input.Function.Services;
             var transiencyResolver = services.GetService<TransiencyResolver<Computed>>();
-            return transiencyResolver?.Invoke(error).IsAnyTransient()
-                ?? TransiencyResolvers.PreferTransient.Invoke(error).IsAnyTransient();
+            return transiencyResolver?.Invoke(error)
+                ?? TransiencyResolvers.PreferTransient.Invoke(error);
         }
         catch (ObjectDisposedException) {
             // We want to handle IServiceProvider disposal gracefully
-            return TransiencyResolvers.PreferTransient.Invoke(error).IsAnyTransient();
+            return TransiencyResolvers.PreferTransient.Invoke(error);
         }
         catch (Exception e) {
             // A broken user TransiencyResolver must not suppress auto-invalidation scheduling
@@ -551,9 +560,9 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
                     "TransiencyResolver failed for {Category}, treating the error as transient", Input.Category);
             }
             catch {
-                // Intended: IsTransientError must not throw
+                // Intended: GetErrorTransiency must not throw
             }
-            return true;
+            return Transiency.Transient;
         }
     }
 }
