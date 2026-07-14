@@ -20,6 +20,10 @@ public abstract class DbLogWatcher<TDbContext, TDbEntry>(IServiceProvider servic
             return Task.CompletedTask;
 
         var shardWatcher = GetShardWatcher(shard);
+        // Wake this host's own readers directly - provider-specific NotifyChanged notifies
+        // other hosts but filters out the publisher's own message, so without this a locally
+        // produced log entry would wait up to the reader's CheckPeriod to be picked up here.
+        shardWatcher.MarkChanged();
         return shardWatcher.NotifyChanged(cancellationToken);
     }
 

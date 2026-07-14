@@ -13,7 +13,7 @@ public abstract class DbShardWatcher(string shard) : ProcessorBase
 
     public abstract Task NotifyChanged(CancellationToken cancellationToken);
 
-    protected void MarkChanged()
+    public void MarkChanged()
     {
         lock (Lock)
             _state = _state.SetNext(default);
