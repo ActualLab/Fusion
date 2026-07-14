@@ -9,7 +9,7 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
     {
         base.ConfigureTestServices(services, isClient);
         var fusion = services.AddFusion();
-        fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped);
+        fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped, hasCommandHandlers: false);
     }
 
     [Fact]
@@ -150,16 +150,13 @@ public class SimplestProviderTest(ITestOutputHelper @out) : FusionTestBase(@out)
     }
 
     [Fact]
-    public async Task CommandTest()
+    public void ScopedRegistrationWithCommandHandlersIsRejected()
     {
-        var p = Services.GetRequiredService<ISimplestProvider>();
-        var pImpl = (ISimpleProviderImpl)p;
-        pImpl.SetValue("");
-
-        (await p.GetValue()).Should().Be("");
-        await Services.Commander().Run(new SetValueCommand() { Value = "1" });
-        (await p.GetValue()).Should().Be("");
-        await Services.Commander().Run(new SetValueCommand() { Value = "2" });
-        (await p.GetValue()).Should().Be("");
+        // ISimplestProvider declares a [CommandHandler], so its non-singleton registration
+        // must fail unless command handlers are explicitly turned off (see ConfigureTestServices)
+        var fusion = new ServiceCollection().AddFusion();
+        var act = () => fusion.AddService<ISimplestProvider, SimplestProvider>(ServiceLifetime.Scoped);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*must be registered as a singleton*");
     }
 }

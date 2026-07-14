@@ -38,6 +38,11 @@ public static class Errors
         => new InvalidOperationException($"{nameof(ComputeMethodAttribute)} is applied to a method " +
             $"returning {nameof(RpcNoWait)}: '{method}'.");
 
+    public static Exception ComputeServiceWithCommandHandlersMustBeSingleton(Type serviceType)
+        => new InvalidOperationException(
+            $"Compute service '{serviceType.GetName()}' has command handlers and must be registered as a singleton: " +
+            "invalidation replay cannot resolve scoped services.");
+
     public static Exception InvalidContextCallOptions(CallOptions callOptions)
         => new InvalidOperationException(
             $"{nameof(ComputeContext)} with {nameof(CallOptions)} = {callOptions} cannot be used here.");

@@ -107,9 +107,7 @@ public class InvalidatingCommandCompletionHandler(
             return false;
         }
 
-        var handlerServiceType = finalHandler.GetHandlerServiceType();
-        var service = Services.GetService(handlerServiceType);
-        return service is IComputeService;
+        return TryGetService(finalHandler.GetHandlerServiceType()) is IComputeService;
     }
 
     protected virtual async ValueTask<int> TryInvalidate(
@@ -165,7 +163,11 @@ public class InvalidatingCommandCompletionHandler(
     {
         if (handler is null)
             return;
-        if (Services.GetService(handler.GetHandlerServiceType()) is not IComputeService)
+
+        var commandType = command.GetType();
+        if (ReplayDisqualifiedCommandTypes.ContainsKey(commandType))
+            return;
+        if (TryGetService(handler.GetHandlerServiceType()) is not IComputeService)
             return;
 
         // TryAdd must run only when the log level is enabled - otherwise the one-shot is
@@ -173,8 +175,6 @@ public class InvalidatingCommandCompletionHandler(
         var log = Log.IfEnabled(LogLevel.Information);
         if (log is null)
             return;
-
-        var commandType = command.GetType();
         if (!ReplayDisqualifiedCommandTypes.TryAdd(commandType, true))
             return;
 
@@ -182,5 +182,21 @@ public class InvalidatingCommandCompletionHandler(
             "Invalidation replay is unsupported for {CommandType}: its final handler on {ServiceType} " +
             "isn't a 2-parameter method handler",
             commandType.GetName(), handler.GetHandlerServiceType().GetName());
+    }
+
+    private object? TryGetService(Type serviceType)
+    {
+        // The compute-service check resolves the service from the root provider, which throws
+        // for scoped services under ValidateScopes. Registration-time checks make a scoped
+        // compute service with command handlers unregistrable, so a failing resolution here
+        // can only be a legal scoped non-compute service - i.e. no replay is needed for it.
+        try {
+            return Services.GetService(serviceType);
+        }
+        catch (Exception e) {
+            Log.IfEnabled(LogLevel.Debug)?.LogDebug(e,
+                "Cannot resolve '{ServiceType}' from the root service provider", serviceType.GetName());
+            return null;
+        }
     }
 }

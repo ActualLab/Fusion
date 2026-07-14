@@ -210,7 +210,7 @@ public readonly struct FusionBuilder
             if (scopedServiceMode is not RpcServiceMode.Local)
                 throw new ArgumentOutOfRangeException(nameof(mode));
 
-            return AddComputeService(serviceType, implementationType, lifetime);
+            return AddComputeService(serviceType, implementationType, lifetime, hasCommandHandlers);
         }
 
         mode = mode.Or(DefaultServiceMode);
@@ -304,15 +304,21 @@ public readonly struct FusionBuilder
             throw Errors.MustBeClass(implementationType, nameof(implementationType));
         if (!typeof(IHasDisposeStatus).IsAssignableFrom(implementationType))
             throw Errors.MustImplement<IHasDisposeStatus>(implementationType, nameof(implementationType));
+        if (hasCommandHandlers) {
+            // Piggybacks on AddHandlers' discovery pass (no extra scan): any handler found here
+            // is a handler the invalidation replay couldn't resolve on a non-singleton service
+            var handlers = Commander.Handlers;
+            var oldHandlerCount = handlers.Count;
+            Commander.AddHandlers(serviceType, implementationType);
+            if (handlers.Count != oldHandlerCount)
+                throw ActualLab.Fusion.Internal.Errors.ComputeServiceWithCommandHandlersMustBeSingleton(implementationType);
+        }
 
         object CreateComputeService(IServiceProvider c)
             => c.FusionHub().NewComputeServiceProxy(c, implementationType);
 
         Services.Add(new ServiceDescriptor(serviceType, CreateComputeService, lifetime));
-        if (hasCommandHandlers)
-            Commander.AddHandlers(serviceType, implementationType);
         return this;
-
     }
 
     public FusionBuilder AddServer<
