@@ -13,6 +13,8 @@ public class FusionBuilderTest(ITestOutputHelper @out) : TestBase(@out)
         var act = () => fusion.AddComputeService<MethodHandlerService>(lifetime);
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*must be registered as a singleton*");
+        fusion.Commander.Handlers
+            .Should().NotContain(h => h.GetHandlerServiceType() == typeof(MethodHandlerService));
     }
 
     [Theory]
@@ -24,6 +26,8 @@ public class FusionBuilderTest(ITestOutputHelper @out) : TestBase(@out)
         var act = () => fusion.AddComputeService<InterfaceHandlerService>(lifetime);
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*must be registered as a singleton*");
+        fusion.Commander.Handlers
+            .Should().NotContain(h => h.GetHandlerServiceType() == typeof(InterfaceHandlerService));
     }
 
     [Fact]
