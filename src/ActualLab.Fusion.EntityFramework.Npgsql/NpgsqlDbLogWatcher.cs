@@ -106,6 +106,8 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
                     DbContext = null;
                     await dbContext.DisposeAsync().ConfigureAwait(false);
                 }
+                Owner.Log.LogError(e, "NotifyChanged failed for shard '{Shard}'", Shard);
+                throw;
             }
             finally {
                 releaser.Dispose();

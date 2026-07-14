@@ -43,7 +43,7 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
             var hostId = owner.DbHub.HostId;
             Key = owner.Settings.PubSubKeyFormatter.Invoke(Shard, typeof(TDbEntry));
             RedisPub = owner.RedisDb.GetPub(Key);
-            NotifyPayload = "";
+            NotifyPayload = hostId.Id;
             Owner.Log.IfEnabled(LogLevel.Debug)
                 ?.LogDebug("Watch[{Shard}]: pub/sub key = '{Key}'", shard, RedisPub.FullKey);
 

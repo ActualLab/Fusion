@@ -23,6 +23,8 @@ public class InvalidatingCommandCompletionHandler(
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
+    private static readonly ConcurrentDictionary<Type, bool> ReplayDisqualifiedCommandTypes = new();
+
     protected IServiceProvider Services { get; } = services;
     protected Options Settings { get; } = settings;
     protected CommandHandlerResolver CommandHandlerResolver
@@ -88,9 +90,12 @@ public class InvalidatingCommandCompletionHandler(
             return false;
         }
 
-        finalHandler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler as IMethodCommandHandler;
-        if (finalHandler is null || finalHandler.ParameterTypes.Length != 2)
+        var handler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler;
+        finalHandler = handler as IMethodCommandHandler;
+        if (finalHandler is null || finalHandler.ParameterTypes.Length != 2) {
+            WarnIfReplayDisqualified(command, handler);
             return false;
+        }
 
         rpcServiceDef = RpcHub.ServiceRegistry.Get(finalHandler.ServiceType);
         if (rpcServiceDef is { Mode: RpcServiceMode.Client }) {
@@ -152,5 +157,24 @@ public class InvalidatingCommandCompletionHandler(
             activity.AddEvent(activityEvent);
         }
         return activity;
+    }
+
+    // Private methods
+
+    private void WarnIfReplayDisqualified(ICommand command, CommandHandler? handler)
+    {
+        if (handler is null)
+            return;
+        if (Services.GetService(handler.GetHandlerServiceType()) is not IComputeService)
+            return;
+
+        var commandType = command.GetType();
+        if (!ReplayDisqualifiedCommandTypes.TryAdd(commandType, true))
+            return;
+
+        Log.IfEnabled(LogLevel.Information)?.LogInformation(
+            "Invalidation replay is unsupported for {CommandType}: its final handler on {ServiceType} " +
+            "isn't a 2-parameter method handler",
+            commandType.GetName(), handler.GetHandlerServiceType().GetName());
     }
 }
