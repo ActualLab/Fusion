@@ -111,6 +111,33 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
     }
 
     [Fact]
+    public async Task ConcurrentSkipStrategyTest()
+    {
+        // Regression test for the KeyConflictStrategy race on _events inserts
+        // (Actual-Chat/actual-chat#4049): concurrent producers inserting the same
+        // deterministic-UUID event with KeyConflictStrategy.Skip must not fail the command.
+        if (DbType == FusionTestDbType.InMemory) {
+            // The InMemory provider has no transactions/savepoints, so conflict recovery is
+            // disabled there - concurrent same-UUID inserts can't be recovered from.
+            WriteLine("Skipped: InMemory provider doesn't support _events conflict recovery.");
+            return;
+        }
+
+        var c = Services.GetRequiredService<EventCatcher>();
+
+        const int producerCount = 8;
+        var enqueues = Enumerable.Range(0, producerCount)
+            .Select(i => Enqueue(ES($"x.{i}")))
+            .ToArray();
+        await Task.WhenAll(enqueues); // None of the racing commands may fail
+
+        await ComputedTest.When(async ct => {
+            var events = await c.Events.Use(ct);
+            events.Count.Should().Be(1);
+        }, TimeSpan.FromSeconds(15));
+    }
+
+    [Fact]
     public async Task UpdateStrategyTest()
     {
         var c = Services.GetRequiredService<EventCatcher>();

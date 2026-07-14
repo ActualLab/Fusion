@@ -71,6 +71,8 @@ public class DbOperationScope<TDbContext> : DbOperationScope
     /// </summary>
     public new record Options : DbOperationScope.Options;
 
+    private const int MaxEventFlushRetryCount = 3;
+
     protected DbHub<TDbContext> DbHub { get; }
     protected HostId HostId { get; }
     protected IDbShardRegistry<TDbContext> ShardRegistry
@@ -232,28 +234,9 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                     events[e.Uuid] = e;
                 }
                 HasStoredEvents = events.Count != 0;
-                var orderedEvents = events.Values.OrderBy(x => x.Uuid, StringComparer.Ordinal);
-                var dbEvents = dbContext.Set<DbEvent>();
-                foreach (var e in orderedEvents) {
-                    var dbEvent = new DbEvent(e, versionGenerator);
-                    var conflictStrategy = e.UuidConflictStrategy;
-                    if (conflictStrategy == KeyConflictStrategy.Fail)
-                        dbEvents.Add(dbEvent);
-                    else {
-                        var existingDbEvent = await dbEvents
-                            .FindAsync(DbKey.Compose(dbEvent.Uuid), cancellationToken)
-                            .ConfigureAwait(false);
-                        if (existingDbEvent is null)
-                            dbEvents.Add(dbEvent);
-                        else if (conflictStrategy == KeyConflictStrategy.Update) {
-                            if (existingDbEvent.State != LogEntryState.New)
-                                throw KeyConflictResolver.Error<DbEvent>();
-
-                            dbEvents.Attach(existingDbEvent);
-                            existingDbEvent.UpdateFrom(e, versionGenerator);
-                            dbEvents.Update(existingDbEvent);
-                        }
-                    }
+                if (HasStoredEvents) {
+                    var orderedEvents = events.Values.OrderBy(x => x.Uuid, StringComparer.Ordinal).ToList();
+                    await FlushEvents(dbContext, orderedEvents, versionGenerator, cancellationToken).ConfigureAwait(false);
                 }
             }
 
@@ -356,12 +339,95 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
     // Protected methods
 
+    protected virtual async Task FlushEvents(
+        TDbContext dbContext,
+        List<OperationEvent> events,
+        VersionGenerator<long> versionGenerator,
+        CancellationToken cancellationToken)
+    {
+        // Deterministic-UUID events (e.g. delay-quantized ones with KeyConflictStrategy.Skip/Update)
+        // race concurrent producers on the _events PK. EF Core creates a savepoint before each
+        // SaveChanges inside our explicit transaction and rolls back to it on failure, so a unique
+        // violation here doesn't doom the transaction (true even on PostgreSQL). On conflict we
+        // re-read the committed rows and re-apply the per-event strategy, then retry.
+        // The InMemory provider is excluded: it has no transaction/savepoint, so retrying its
+        // non-atomic SaveChanges could leak partially applied rows. A batch carrying any Fail
+        // event is excluded too: a Fail conflict must surface immediately rather than be retried.
+        var hasFailEvents = false;
+        foreach (var e in events)
+            hasFailEvents |= e.UuidConflictStrategy == KeyConflictStrategy.Fail;
+        var canRetry = !hasFailEvents && !dbContext.Database.IsInMemory();
+        var dbEvents = dbContext.Set<DbEvent>();
+        for (var attempt = 0;; attempt++) {
+            if (attempt != 0) {
+                // Detach the events staged by the failed attempt so FindAsync re-reads the DB
+                // (a tracked Added entity would otherwise shadow the now-committed conflicting row).
+                foreach (var entry in dbContext.ChangeTracker.Entries<DbEvent>().ToList())
+                    entry.State = EntityState.Detached;
+            }
+
+            var mustSave = false;
+            foreach (var e in events) {
+                var dbEvent = new DbEvent(e, versionGenerator);
+                var conflictStrategy = e.UuidConflictStrategy;
+                if (conflictStrategy == KeyConflictStrategy.Fail) {
+                    dbEvents.Add(dbEvent);
+                    mustSave = true;
+                    continue;
+                }
+
+                var existingDbEvent = await dbEvents
+                    .FindAsync(DbKey.Compose(dbEvent.Uuid), cancellationToken)
+                    .ConfigureAwait(false);
+                if (existingDbEvent is null) {
+                    dbEvents.Add(dbEvent);
+                    mustSave = true;
+                }
+                else if (conflictStrategy == KeyConflictStrategy.Update) {
+                    if (existingDbEvent.State != LogEntryState.New)
+                        throw KeyConflictResolver.Error<DbEvent>();
+
+                    dbEvents.Attach(existingDbEvent);
+                    existingDbEvent.UpdateFrom(e, versionGenerator);
+                    dbEvents.Update(existingDbEvent);
+                    mustSave = true;
+                }
+                // KeyConflictStrategy.Skip with an existing row: nothing to store
+            }
+            if (!mustSave)
+                return;
+
+            try {
+                await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception error) when (
+                canRetry
+                && error is DbUpdateException or DbUpdateConcurrencyException
+                && attempt < MaxEventFlushRetryCount) {
+                DebugLog?.LogDebug(error,
+                    "Transaction #{TransactionId} @ shard '{Shard}': resolving _events key conflict, attempt {Attempt}",
+                    TransactionId, Shard, attempt + 1);
+            }
+        }
+    }
+
     protected virtual async ValueTask CreateMasterDbContext(string shard, CancellationToken cancellationToken)
     {
         var dbContext = await ContextFactory.CreateDbContextAsync(shard, cancellationToken).ConfigureAwait(false);
         try {
             var database = dbContext.ReadWrite().Database;
-            database.DisableAutoTransactionsAndSavepoints();
+            // Auto-transactions are disabled (we own the transaction), but auto-savepoints stay ON:
+            // FlushEvents relies on the per-SaveChanges savepoint EF creates so a unique-constraint
+            // conflict on the _events flush can be recovered from without dooming the transaction.
+#if NET7_0_OR_GREATER
+            database.AutoTransactionBehavior = AutoTransactionBehavior.Never;
+#else
+            database.AutoTransactionsEnabled = false;
+#endif
+#if NET6_0_OR_GREATER
+            database.AutoSavepointsEnabled = true;
+#endif
             // ExecutionStrategy is "attached" here mostly for compatibility/safety reasons -
             // it works even if the next line is commented out.
             AttachExecutionStrategy(dbContext.Database);
