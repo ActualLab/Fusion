@@ -104,7 +104,7 @@ Uses Redis Pub/Sub for instant notifications. Works with any database type.
 ```cs
 services.AddDbContextServices<AppDbContext>(db => {
     // First, configure Redis connection
-    db.AddRedisDb("localhost:6379", "MyApp");
+    db.AddRedisDb("127.0.0.1:6379", "MyApp");
 
     db.AddOperations(operations => {
         operations.AddRedisOperationLogWatcher();

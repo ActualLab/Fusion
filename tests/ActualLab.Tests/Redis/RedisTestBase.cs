@@ -43,7 +43,7 @@ public class RedisTestBase(ITestOutputHelper @out) : TestBase(@out)
                         LogFilter));
 #pragma warning restore CS0618
             });
-        services.AddRedisDb("localhost", GetTestRedisKeyPrefix());
+        services.AddRedisDb("127.0.0.1", GetTestRedisKeyPrefix());
 
         var c = services.BuildServiceProvider();
         var redisDb = c.GetRequiredService<RedisDb>();

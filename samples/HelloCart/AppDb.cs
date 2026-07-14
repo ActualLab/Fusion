@@ -36,7 +36,7 @@ public static class AppDb
                     return;
 
                 if (AppSettings.Db.UseRedisOperationLogWatchers) {
-                    db.AddRedisDb("localhost", "Fusion.Samples.HelloCart");
+                    db.AddRedisDb("127.0.0.1", "Fusion.Samples.HelloCart");
                     operations.AddRedisOperationLogWatcher();
                 }
                 else if (AppSettings.Db.UsePostgreSql)

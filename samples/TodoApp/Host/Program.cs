@@ -120,7 +120,7 @@ void ConfigureServices()
     if (hostKind != HostKind.ApiServer) // ApiServer doesn't need DB
         services.AddDbContextServices<AppDbContext>(db => {
             // Uncomment if you'll be using AddRedisOperationLogWatcher
-            // db.AddRedisDb("localhost", "Fusion.Samples.TodoApp");
+            // db.AddRedisDb("127.0.0.1", "Fusion.Samples.TodoApp");
             db.AddOperations(operations => {
                 operations.ConfigureOperationLogReader(_ => new() {
                     // We use AddFileSystemOperationLogWatcher, so unconditional check period
