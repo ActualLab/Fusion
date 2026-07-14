@@ -47,3 +47,13 @@ abstractions before writing new code. For the complete list, see
 If the work is small enough that you skip a written plan, you still owe
 yourself the "look first" step: search the indexes for keywords related
 to what you're about to write.
+
+# Fusion documentation & source MCP
+
+This repo backs a public, read-only MCP server at
+`https://fusion.actuallab.net/mcp` (see [`docs/mcp-server.md`](docs/mcp-server.md)).
+When it's connected, prefer it over guessing: it can search and read the Fusion
+**docs** (mental model, glossary, API index) and the Fusion **source** — find
+files or declarations by regex and read exact line ranges, or ripgrep across
+`src` / `samples` / `tests`. The individual tools are self-describing once the
+MCP is enabled, so they are not enumerated here.

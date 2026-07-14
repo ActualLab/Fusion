@@ -1,25 +1,40 @@
 ---
-title: Fusion Documentation MCP Server
-description: Connect Claude Code or ChatGPT to the public ActualLab.Fusion documentation MCP server.
+title: Fusion Documentation & Source MCP Server
+description: Connect Claude Code or ChatGPT to the public ActualLab.Fusion documentation and source-code MCP server.
 ---
 
-# Fusion Documentation MCP Server
+# Fusion Documentation & Source MCP Server
 
 The Fusion documentation site exposes a public, read-only Model Context Protocol server. It gives AI coding assistants
-focused access to the same Markdown documentation and anchors used by this website.
+focused access to the Fusion **documentation** (the same Markdown and anchors used by this website) and to the Fusion
+**source code** (the `.cs` / `.razor` files under `src`, `samples`, and `tests`).
 
 **Endpoint:** `https://fusion.actuallab.net/mcp`
 
-No authentication or API key is required. All tools return Markdown and perform no write operations.
+No authentication or API key is required. All tools are read-only and return Markdown or plain text.
 
-## Available Tools
+## Documentation tools
 
 | Tool | Inputs | Result |
 | --- | --- | --- |
 | `intro` | None | A compact explanation of Fusion's mental model and documentation coverage. |
 | `search` | `query`, optional `limit` (default 10, maximum 20) | Ranked documentation titles, URLs, and exact anchors. |
-| `get` | `anchor` | Immediate Markdown below that heading, stopping before the next heading. |
+| `get` | `anchor` | The Markdown for one anchor. Small sections are returned in full (including sub-headings); large sections return the immediate text plus links to their sub-headings. |
 | `search_expanded` | `query`, optional `limit` (default 5, maximum 10) | Ranked matches expanded through the next heading at the same or a higher level. |
+
+## Source-code tools
+
+Two entry points, mirroring how you would navigate a checkout: locate a file (or a declaration) first, then read it.
+
+| Tool | Inputs | Result |
+| --- | --- | --- |
+| `source_index` | `pattern`, optional `limit` | Files whose path or top-level type names match a regex — use it to find the file(s) you need. |
+| `symbol_search` | `pattern`, optional `limit` | Declarations (types, methods, properties, fields — any accessibility) matching a regex, each with its file and line range to fetch. |
+| `source_search` | `query`, optional `context`, `fixedStrings`, `ignoreCase` | `ripgrep` over the source, bounded to 64 KB of output and ~1 s. |
+| `source_read` | `file`, optional `startLine`, `endLine` | A whole source file (capped at 64 KB) or a specific line range of it. |
+
+For heavy source navigation, cloning [github.com/ActualLab/Fusion](https://github.com/ActualLab/Fusion) and using your
+own tools is usually faster; this MCP is best for conceptual documentation and quick source lookups.
 
 The introduction is also available as a normal page at [ActualLab.Fusion in Brief](mcp-intro.md), but it is intentionally
 not included in the documentation sidebar.
@@ -79,6 +94,7 @@ cannot connect directly to a server running only on your development machine.
 
 ## Suggested Workflow
 
-For an unfamiliar Fusion task, call `intro` once, use `search` to locate likely sections, and then use `get` or
-`search_expanded` only for the most relevant anchors. This keeps the model context focused while retaining direct links
-to the complete website documentation.
+For an unfamiliar Fusion task, call `intro` once, use `search` to locate likely sections, and then `get` or
+`search_expanded` for the most relevant anchors. To work with the implementation, use `source_index` or `symbol_search`
+to locate files or declarations, `source_read` to read the exact region, and `source_search` to grep across the source.
+This keeps the model context focused while retaining direct links to the complete website documentation and source.
