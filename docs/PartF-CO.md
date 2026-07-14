@@ -96,6 +96,27 @@ Task<Data> FetchFromExternalApi();
 - Database operations that might hit connection limits
 - Any operation where retry after a delay makes sense
 
+### NonTransientErrorInvalidationDelay
+
+**Type:** `double` (seconds)
+**Default:** `30`
+
+Auto-invalidation delay for computed values that store a **non-transient** error — one your `TransiencyResolver` did *not* classify as transient.
+
+```cs
+[ComputeMethod(NonTransientErrorInvalidationDelay = 300)] // Clear a stuck error after 5 minutes
+Task<Report> BuildReport(string id);
+```
+
+**How it works:**
+- A non-transient error is otherwise cached until something invalidates it.
+- After this delay the computed value auto-invalidates, so a *non-deterministic* error that was classified non-transient (e.g. a race-induced `NullReferenceException`) can't stay cached indefinitely.
+- Set it to `double.PositiveInfinity` to keep non-transient errors cached until an explicit invalidation.
+
+**When to use:**
+- Rarely needs changing — the 30-second default is a safety net for errors that are classified non-transient but are actually non-deterministic.
+- Raise it for genuinely permanent errors you want cached longer; lower it to retry sooner.
+
 ### AutoInvalidationDelay
 
 **Type:** `double` (seconds)
@@ -221,6 +242,7 @@ Fusion provides different defaults for server-side and client-side (remote) comp
 |--------|---------------|----------------|
 | MinCacheDuration | 0 | 60 seconds |
 | TransientErrorInvalidationDelay | 1 second | 1 second |
+| NonTransientErrorInvalidationDelay | 30 seconds | 30 seconds |
 | AutoInvalidationDelay | ∞ (none) | ∞ (none) |
 | InvalidationDelay | 0 | 0 |
 | ConsolidationDelay | -1 (none) | -1 (none) |

@@ -200,7 +200,7 @@ Status: **decided** (item 19 ✅ shipped in `fab0f349`; items 14 & 15 still pend
 
 ## Item 19 residuals: RPC/local hardening
 
-Status: **✅ shipped** — residual #1 (docs) in `72eb4c83`; residuals #2 and #3 in `fab0f349`. Note: #3 was implemented as a new dedicated `NonTransientErrorInvalidationDelay` option (default 30 s; `TimeSpan.MaxValue` for `MutableState` to preserve its manual-error semantics) rather than repurposing `AutoInvalidationDelay`; `ComputedState` inherits it via `StateOptions.ComputedOptions` (no `ComputedState.cs` change). Test-suite compatibility for the 30 s default was verified — no test encodes an "errors cache forever" assumption that breaks.
+Status: **✅ shipped** — residual #1 (docs) in `72eb4c83`; residuals #2 and #3 in `fab0f349`. Note: #3 was implemented as a new dedicated `NonTransientErrorInvalidationDelay` option (default 30 s; `TimeSpan.MaxValue` for `MutableState` to preserve its manual-error semantics) rather than repurposing `AutoInvalidationDelay`; `ComputedState` inherits it via `StateOptions.ComputedOptions` (no `ComputedState.cs` change). Test-suite compatibility for the 30 s default was verified — no test encodes an "errors cache forever" assumption that breaks. Follow-up in `c6e23027`: `NonTransientErrorInvalidationDelay` is also settable per method via `[ComputeMethod(NonTransientErrorInvalidationDelay = …)]` (mapped in `ComputedOptions.Get` like the other delays, inherited by `RemoteComputeMethodAttribute`), documented in `docs/PartF-CO.md`.
 
 ### Agreed course of action
 
