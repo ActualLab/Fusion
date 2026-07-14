@@ -5,14 +5,14 @@ namespace ActualLab.Fusion.EntityFramework.Internal;
 
 /// <summary>
 /// Extension methods for <see cref="DatabaseFacade"/> providing helpers to detect
-/// in-memory providers and disable auto-transactions and savepoints.
+/// in-memory providers and disable EF's auto-transactions (optionally keeping auto-savepoints).
 /// </summary>
 public static class DatabaseFacadeExt
 {
     public static bool IsInMemory(this DatabaseFacade database)
         => database.ProviderName?.EndsWith(".InMemory", StringComparison.Ordinal) ?? false;
 
-    public static void DisableAutoTransactionsAndSavepoints(this DatabaseFacade database)
+    public static void DisableAutoTransactions(this DatabaseFacade database, bool allowSavepoints = true)
     {
 #if NET7_0_OR_GREATER
         database.AutoTransactionBehavior = AutoTransactionBehavior.Never;
@@ -20,7 +20,7 @@ public static class DatabaseFacadeExt
         database.AutoTransactionsEnabled = false;
 #endif
 #if NET6_0_OR_GREATER
-        database.AutoSavepointsEnabled = false;
+        database.AutoSavepointsEnabled = allowSavepoints;
 #endif
     }
 }

@@ -193,7 +193,9 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             throw Errors.WrongDbOperationScopeShard(GetType(), Shard, shard);
 
         var database = dbContext.Database;
-        database.DisableAutoTransactionsAndSavepoints();
+        // Enrolled contexts share the master transaction and don't run the FlushEvents retry,
+        // so they don't need auto-savepoints - only the master context does.
+        database.DisableAutoTransactions(allowSavepoints: false);
         if (Connection is not null) {
             var oldConnection = database.GetDbConnection();
             dbContext.SuppressDispose();
@@ -463,17 +465,10 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         var dbContext = await ContextFactory.CreateDbContextAsync(shard, cancellationToken).ConfigureAwait(false);
         try {
             var database = dbContext.ReadWrite().Database;
-            // Auto-transactions are disabled (we own the transaction), but auto-savepoints stay ON:
-            // FlushEvents relies on the per-SaveChanges savepoint EF creates so a unique-constraint
-            // conflict on the _events flush can be recovered from without dooming the transaction.
-#if NET7_0_OR_GREATER
-            database.AutoTransactionBehavior = AutoTransactionBehavior.Never;
-#else
-            database.AutoTransactionsEnabled = false;
-#endif
-#if NET6_0_OR_GREATER
-            database.AutoSavepointsEnabled = true;
-#endif
+            // We own the transaction, so auto-transactions are off; auto-savepoints stay ON because
+            // FlushEvents relies on the per-SaveChanges savepoint EF creates to recover from a
+            // unique-constraint conflict on the _events flush without dooming the transaction.
+            database.DisableAutoTransactions(allowSavepoints: true);
             // ExecutionStrategy is "attached" here mostly for compatibility/safety reasons -
             // it works even if the next line is commented out.
             AttachExecutionStrategy(dbContext.Database);
