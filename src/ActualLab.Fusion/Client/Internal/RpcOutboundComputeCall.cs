@@ -12,6 +12,7 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
 {
     protected readonly AsyncTaskMethodBuilder<string> WhenInvalidatedSource
         = AsyncTaskMethodBuilderExt.New<string>(); // Must not allow synchronous continuations!
+    private volatile bool _isHandedOff;
 
     public override string DebugTypeName => "=>";
     public override int CompletedStage
@@ -23,9 +24,13 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
 
     // ReSharper disable once InconsistentlySynchronizedField
     public Task<string> WhenInvalidated => WhenInvalidatedSource.Task;
+    public bool IsHandedOff => _isHandedOff;
 
     protected RpcOutboundComputeCall(RpcOutboundContext context) : base(context)
         => IsLongLiving = true;
+
+    public void MarkHandedOff()
+        => _isHandedOff = true;
 
     public override int? GetReconnectStage(bool isPeerChanged)
     {

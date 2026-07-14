@@ -29,6 +29,12 @@ public static class RemoteComputedExt
             return true;
 
         var boundCall = computed.WhenCallBound.GetAwaiter().GetResult();
+        if (boundCall is { IsHandedOff: true })
+            // The call was handed off to a successor computed, so invalidating this displaced
+            // predecessor must not invalidate the shared call - otherwise the successor would be
+            // born invalidated (audit item 16).
+            return false;
+
         const string reason =
             $"<FusionRpc>.{nameof(BindToCall)}: associated {nameof(IRemoteComputed)} is already invalidated";
         boundCall?.SetInvalidated(true, reason);

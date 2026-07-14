@@ -384,7 +384,10 @@ public abstract class RemoteComputeMethodFunction(
             cacheEntry = UpdateCache(cache, cacheKey, cacheValue, value, cachedComputed);
         }
 
-        // 8. Create the new computed - it invalidates the cached one upon registering
+        // 8. Create the new computed - it invalidates the cached one upon registering.
+        // The call is handed off to it here, so invalidating the displaced cachedComputed
+        // (which shares the same call) won't poison the call & the new computed (audit item 16).
+        call.MarkHandedOff();
         var computed = NewRemoteComputed(input, result, cacheEntry, call);
         computed.RenewTimeouts(true);
         remoteCachedComputed.SynchronizedSource.TrySetResult();
