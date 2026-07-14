@@ -141,6 +141,7 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
     public async Task UpdateStrategyTest()
     {
         var c = Services.GetRequiredService<EventCatcher>();
+        await WarmUp(c);
 
         var clock = SystemClock.Instance;
         for (var round = 0; round < 3; round++) {
@@ -174,6 +175,8 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
     public async Task DelayedEventsTimingTest()
     {
         var c = Services.GetRequiredService<EventCatcher>();
+        await WarmUp(c);
+
         var clock = SystemClock.Instance;
         var now = clock.Now;
         var eventCount = 5;
@@ -211,6 +214,19 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
     }
 
     // Private methods
+
+    // The first command on a freshly created DB pays several seconds of cold start
+    // (proxy generation, EF model build, connection pool), which would otherwise eat
+    // the delay budgets the timing-sensitive tests rely on
+    private async Task WarmUp(EventCatcher c)
+    {
+        await Enqueue(E("warmup"));
+        await ComputedTest.When(async ct => {
+            var events = await c.Events.Use(ct);
+            events.Should().Contain("warmup");
+        }, TimeSpan.FromSeconds(30));
+        c.Events.Set(ImmutableList<string>.Empty);
+    }
 
     private OperationEvent ES(string id)
         => E(id, KeyConflictStrategy.Skip);
