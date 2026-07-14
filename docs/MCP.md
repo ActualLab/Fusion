@@ -26,11 +26,19 @@ not included in the documentation sidebar.
 
 ## Claude Code
 
-Add the remote server from a terminal:
+Add the remote server for the current project using Claude Code's default local scope:
 
 ```powershell
 claude mcp add --transport http fusion-docs https://fusion.actuallab.net/mcp
 ```
+
+Or add it once at user scope to make it available in every project:
+
+```powershell
+claude mcp add --transport http --scope user fusion-docs https://fusion.actuallab.net/mcp
+```
+
+Local configuration takes precedence if a server with the same name also exists at user scope.
 
 Verify the configuration:
 
