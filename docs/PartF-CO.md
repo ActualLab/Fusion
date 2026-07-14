@@ -112,6 +112,7 @@ Task<Report> BuildReport(string id);
 - A non-transient error is otherwise cached until something invalidates it.
 - After this delay the computed value auto-invalidates, so a *non-deterministic* error that was classified non-transient (e.g. a race-induced `NullReferenceException`) can't stay cached indefinitely.
 - Set it to `double.PositiveInfinity` to keep non-transient errors cached until an explicit invalidation.
+- **MutableState is an exception:** `ComputedOptions.MutableStateDefault` overrides both this delay and `TransientErrorInvalidationDelay` to `TimeSpan.MaxValue`, so a value (or error) you set on a `MutableState` stays put until you explicitly change it — the error horizon doesn't apply.
 
 **When to use:**
 - Rarely needs changing — the 30-second default is a safety net for errors that are classified non-transient but are actually non-deterministic.
@@ -246,6 +247,8 @@ Fusion provides different defaults for server-side and client-side (remote) comp
 | AutoInvalidationDelay | ∞ (none) | ∞ (none) |
 | InvalidationDelay | 0 | 0 |
 | ConsolidationDelay | -1 (none) | -1 (none) |
+
+`MutableState` uses its own defaults (`ComputedOptions.MutableStateDefault`): both `TransientErrorInvalidationDelay` and `NonTransientErrorInvalidationDelay` are `∞`, so its value or error is never auto-invalidated and stays until you change it explicitly.
 
 You can change global defaults by modifying `ComputedOptions.Default` and `ComputedOptions.ClientDefault` at startup:
 
