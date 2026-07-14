@@ -4,11 +4,16 @@ Companion to [invalidation-audit.md](invalidation-audit.md). This document recor
 
 Status legend: **decided** — approach agreed, ready to implement; **pending** — options on the table, decision not made yet; **✅ shipped** — implemented and merged, with the fixing commit hash noted inline.
 
-Shipped so far (all on `master`, 2026-07-14): `78bdb0dd` item 16, `376ea552` item 17, `72eb4c83` docs-only batch, `fab0f349` item-19 residuals + `IState.Invalidated`, `64979788` `KeyConflictStrategy` #4049. Everything not marked ✅ below remains pending implementation.
+Shipped so far (all on `master`, 2026-07-14):
+- `78bdb0dd` item 16 · `376ea552` item 17 · `72eb4c83` docs-only batch · `fab0f349` item-19 residuals + `IState.Invalidated` · `64979788` `KeyConflictStrategy` #4049 · `c6e23027`+`50b28286` `NonTransientErrorInvalidationDelay` attribute + docs.
+- `79be95db` reader cluster (items 3-residual, 8+9, 10) · `16e0c08b`+`b4725f19` items 11 / 11-follow-up / 12 · `a9a6f389`+`31a04f78` completion-terminal + notifier log · `fb6d4686` items 14+15 · `adb5a232` item-5 convention tests · `d170d61f` items 1+2 no-throw harness · `d810e3a7` `DisableAutoTransactions` refactor.
+- ComputedSource verification task: audited, no defect (see that section).
+
+Remaining after this wave: only the explicit **won't-fix** items and item 11's **deferred** cleanups. One newly-surfaced finding (Unit-command reprocessing re-throw) is recorded under Item 11.
 
 ## Item 11: In-doubt commit verification (`DbOperationScope.Commit`)
 
-Status: **decided**.
+Status: **✅ shipped** in `16e0c08b` (verification via `VerifyCommit` + `CommitVerificationPolicy` `IRetryPolicy` option on `CancellationToken.None`, Error log on final failure; `DbEvent` `DelayUntil` fix) with tests in `b4725f19`. The savepoint plumbing this touched was later folded into `DisableAutoTransactions(allowSavepoints)` in `d810e3a7`.
 
 ### Agreed course of action
 
@@ -33,9 +38,11 @@ Status: **decided**.
 - ~~Stable operation UUID across `OperationReprocessor` retries~~ — decided separately, see "Item 11 follow-up" below.
 - Cleanups noted in the audit: `Operation.Index` is not set on the verified-commit path; `DbOperationFailedException` is dead code (unless repurposed above).
 
+**Newly surfaced during implementation (not yet addressed):** a reprocessable `ICommand<Unit>` whose handler returns non-generic `Task` re-throws the *first* attempt's exception on a *successful* retry, because `CommandContext.InvokeRemainingHandlers` only resets `context.Result` on the `Task<TResult>` branch, leaving the stale `Result.Error` to be rethrown. `Task<TResult>`-returning handlers (the common case) reset it and work fine. Worth a separate fix if Unit-command reprocessing must be robust.
+
 ## Item 11 follow-up: stable operation UUID across `OperationReprocessor` retries
 
-Status: **decided**.
+Status: **✅ shipped** in `16e0c08b` (`IOperationReprocessor.OperationUuid` captured before `ChangeOperation(null)`; scope reuses it; a unique-Uuid violation on retry is verified as "already committed" instead of double-committing). Tests in `b4725f19` (`UuidIsPreservedAcrossRetriesTest`).
 
 ### Agreed course of action
 
@@ -54,7 +61,7 @@ Implementation caveats to address:
 
 ## Item 12: `OperationReprocessor.WillRetry` ignores `IsCommitted`
 
-Status: **decided**.
+Status: **✅ shipped** in `16e0c08b` (`WillRetry` returns false when `operation.Scope is { IsCommitted: true }`, with a dedicated Warning). Test `NoRetryAfterManualCommitTest` in `b4725f19`.
 
 ### Agreed course of action
 
@@ -64,7 +71,7 @@ Rejected alternative: docs-only guidance ("don't call `scope.Commit()` manually 
 
 ## Item 3 (residual): failed-entry abandonment in the operation log
 
-Status: **decided**.
+Status: **✅ shipped** in `79be95db` (`OnReprocessExhausted` hook → pending set with a bounded `FailedEntryRetryLimit` budget, single Error log on abandonment; per-attempt failures at Debug). This is also the path the completion-terminal change feeds into.
 
 ### Agreed course of action
 
@@ -105,7 +112,7 @@ Make the `Operation.NestedOperations` read-modify-write in `NestedOperationLogge
 
 ## Item 8 (+9): Index-gap retry horizon / gap-reprocess storms
 
-Status: **decided**.
+Status: **✅ shipped** in `79be95db` (per-shard `ShardGapSet` replacing per-index fire-and-forget tasks; chunked `Contains` re-check via `GapCheckChunkSize`; adaptive cadence through the reader's existing early-wake via `GapCheckPeriod`/`GapFastCheckAge`; `GapRetentionPeriod` horizon; `GapSetSizeLimit` with one-shot Error on drop). Verified: builds + forward path unchanged; the real multi-host gap-race convergence is reasoned-only (not locally reproducible).
 
 ### Agreed course of action
 
@@ -174,7 +181,7 @@ Status: **✅ shipped** in `78bdb0dd` — confirmed by failing test (2026-07-14)
 
 ## Item 10: Reader outage longer than trim age
 
-Status: **decided**.
+Status: **✅ shipped** in `79be95db` (`ResolveFrontGap` detects a front gap with no surviving entry below the cursor → `ComputedRegistry.InvalidateEverything()` sweep, Error log, adopt new cursor). The "no older entry" discriminator separates coverage-loss from an identity jump and from fresh startup. Real trim-age outage recovery is reasoned-only (not locally reproducible).
 
 ### Agreed course of action
 
@@ -191,12 +198,12 @@ Status: **decided**.
 
 ## Cheap wins batch (items 14, 15, 19)
 
-Status: **decided** (item 19 ✅ shipped in `fab0f349`; items 14 & 15 still pending):
+Status: **✅ shipped** (item 19 in `fab0f349`; items 14 & 15 in `fb6d4686`):
 
-- Item 14 (**pending**): `NpgsqlDbLogWatcher.NotifyChanged`: log + rethrow so `DbOperationCompletionListener.NotifyRetryPolicy` actually applies.
-- Item 14 (**pending**): `RedisDbLogWatcher`: publish `NotifyPayload = hostId.Id` so the self-notification skip works, mirroring the Npgsql watcher.
-- Item 15 (**pending**): one-time **Information-level** log (explicitly not Warning) when a compute service's final handler shape disqualifies invalidation replay (`InvalidatingCommandCompletionHandler.IsRequired`).
-- Item 19 (**✅ shipped** in `fab0f349`): observe/log the faulted `_whenConsolidated` task in `ConsolidatingComputed.Consolidate`.
+- Item 14 (**✅ `fb6d4686`**): `NpgsqlDbLogWatcher.NotifyChanged`: log + rethrow so `DbOperationCompletionListener.NotifyRetryPolicy` actually applies. (Build-verified only — no live Postgres locally.)
+- Item 14 (**✅ `fb6d4686`**): `RedisDbLogWatcher`: publish `NotifyPayload = hostId.Id` so the self-notification skip works, mirroring the Npgsql watcher. (Build-verified only — no live Redis locally.)
+- Item 15 (**✅ `fb6d4686`**): one-time **Information-level** log (per command type) when a compute service's final handler shape disqualifies invalidation replay (`InvalidatingCommandCompletionHandler.IsRequired`), with a regression test. Note: `AddComputeService`'s proxy validation already rejects interface-style handlers on proxied services, so this fires only for directly-registered services.
+- Item 19 (**✅ `fab0f349`**): observe/log the faulted `_whenConsolidated` task in `ConsolidatingComputed.Consolidate`.
 
 ## Item 19 residuals: RPC/local hardening
 
@@ -212,7 +219,7 @@ Status: **✅ shipped** — residual #1 (docs) in `72eb4c83`; residuals #2 and #
 
 ## Completion-command failure is terminal for external operations
 
-Status: **decided**. (Verification-pass finding adjacent to audit items 2/3; not in the audit doc's numbered list.)
+Status: **✅ shipped** in `a9a6f389` (`CompletionProducer` rethrows for external ops; `OperationCompletionNotifier` unmarks `RecentlySeenUuids` + rethrows so `Process` faults into the reader's reprocess path; local completions keep log-and-swallow). Unit tests included. (Verification-pass finding adjacent to audit items 2/3; not in the audit doc's numbered list.)
 
 ### Agreed course of action
 
@@ -231,7 +238,7 @@ Fire on publish: in `SetComputed` (or immediately after the snapshot is publishe
 
 ## `ComputedSource.Computed` transiently exposes a `Computing` instance
 
-Status: **partially shipped** — docs note shipped in `72eb4c83`; the verification task (audit every registry/published-slot fetch for a `Computing`-state assumption) remains **pending**.
+Status: **✅ complete** — docs note shipped in `72eb4c83`; the verification task is **done (audit only, no code change needed)**. Audited 20 internal fetch sites across `ComputeFunction`, `ComputedInput`, `ComputedImpl.Helpers`, `Computed.Invalidate`/`PruneDependants`, `ComputedRegistry`, `ConsolidatingComputed`, `ComputedSynchronizer`, `RpcInboundComputeCall`, `MutableState`, `State`/`ComputedState`, Blazor `ComputedStateComponent`, and the `*Ext` helpers. Every internal path either guards on `IsConsistent()`/`ConsistencyState` before touching `Output`/`Value`, reads only identity/`Version`/state or calls `Invalidate`/`RenewTimeouts` (all Computing-safe), or on the `GetExisting` call-option path returns the instance/`default` without reading its output. `State`/`StateSnapshot` never hold a `Computing` instance (`SetComputed` asserts non-Computing). The only way to read a `Computing` instance's `Output`/`Value` is user code dereferencing an early-published/`GetExisting` computed directly — exactly the documented caveat. Early-publish design confirmed safe.
 
 Document that direct `.Computed` access may observe a `Computing` instance whose `Output`/`Value` accessors throw while an update is in flight; use `Use`/`Update` (or check `ConsistencyState`) instead. Publish-after-compute was rejected: the early publish exists so the in-flight instance is reachable for invalidate-while-computing.
 
@@ -247,7 +254,7 @@ Status: **✅ shipped** in `72eb4c83` — docs note only. Document that invalida
 
 ## `OperationCompletionNotifier` assertion log enrichment
 
-Status: **decided**. The `isLocal != isFromLocalAgent` assertion-failure log gets context: `operation.Uuid`, `operation.HostId`, the local `HostId.Id`, and the command type — so the (already-abnormal) condition is diagnosable when it fires.
+Status: **✅ shipped** in `31a04f78` (the `isLocal != isFromLocalAgent` Error log now includes `operation.Uuid`, `operation.HostId`, local `HostId.Id`, and the command type). The `isLocal != isFromLocalAgent` assertion-failure log gets context: `operation.Uuid`, `operation.HostId`, the local `HostId.Id`, and the command type — so the (already-abnormal) condition is diagnosable when it fires.
 
 ## Won't-fix (recorded deliberately)
 
@@ -259,7 +266,7 @@ Status: **decided** — no action on any of these; recorded so they are not re-r
 
 ## `KeyConflictStrategy` race on `_events` inserts (external report: Actual-Chat/actual-chat#4049)
 
-Status: **✅ shipped** in `64979788` — with a `ConcurrentSkipStrategyTest` regression test (8 racing producers). Implemented exactly as agreed; the events flush now goes through `FlushEvents` with EF auto-savepoints kept enabled on the master context. Refinement vs. the raw plan: a batch carrying any `Fail` event bypasses the retry entirely so a `Fail` conflict surfaces immediately (original exception/semantics), rather than being retried first. Verified all event tests (SQLite + InMemory: Fail/Skip/Update/ConcurrentSkip) pass in isolation.
+Status: **✅ shipped** in `64979788` — with a `ConcurrentSkipStrategyTest` regression test (8 racing producers). Implemented exactly as agreed; the events flush now goes through `FlushEvents` with EF auto-savepoints kept enabled on the master context. Refinement vs. the raw plan: a batch carrying any `Fail` event bypasses the retry entirely so a `Fail` conflict surfaces immediately (original exception/semantics), rather than being retried first. Verified all event tests (SQLite + InMemory: Fail/Skip/Update/ConcurrentSkip) pass in isolation. Follow-up `d810e3a7`: the raw savepoint code this inlined was folded back into the `DatabaseFacadeExt.DisableAutoTransactions(bool allowSavepoints = true)` helper — the master context passes the default (savepoints on, for the retry), enrolled contexts pass `allowSavepoints: false`.
 
 Deterministic-UUID operation events (e.g. delay-quantized `FlowResumeEvent` with `KeyConflictStrategy.Skip`) race concurrent producers on the `_events` PK: `DbOperationScope.Commit` resolves `Skip`/`Update` via check-then-insert (`FindAsync` → `Add`), so two concurrent transactions both find nothing, both insert, one hits a unique violation — failing the entire command transaction, which is then retried by `OperationReprocessor` (re-executing all handler side effects) and logging errors for what is a normal race.
 
@@ -282,7 +289,7 @@ This removes the command-level retry (no double side effects), the error noise, 
 
 ## Enforcement & docs batch (audit items 1, 2, 5, 6, 7)
 
-Status: **partially shipped** in `72eb4c83` — the documentation deliverables are done: the no-fail contract (items 1+2), the command-to-query invalidation test pattern **with a real compiling `.cs` snippet** (item 5), the `StartOffset` assumptions (item 6), and the completion-vs-cluster-freshness note (item 7). Still **pending**: the code deliverables — the "must-not-throw" test-support harness for `IOperationCompletionListener` / the invalidation pass (items 1+2), and the per-command invalidation test convention (item 5).
+Status: **✅ shipped** — docs deliverables in `72eb4c83` (no-fail contract for items 1+2; command-to-query invalidation test pattern with a real compiling `.cs` snippet for item 5; `StartOffset` assumptions for item 6; completion-vs-cluster-freshness note for item 7). Code deliverables: **items 1+2** "must-not-throw" harness (`OperationCompletionNoThrowTester` + test) in `d170d61f`; **item 5** per-command invalidation test convention (`InvalidationConventionService`/`InvalidationConventionTest`, including a deliberately-broken sibling proving the pattern catches omissions) in `adb5a232`.
 
 ### Agreed course of action
 
