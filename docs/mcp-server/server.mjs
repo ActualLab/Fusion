@@ -103,6 +103,9 @@ function createMcpServer() {
 }
 
 const app = express();
+// Match routes case-sensitively so the /mcp endpoint doesn't shadow doc routes
+// like /mcp-server (Express is case-insensitive by default).
+app.set("case sensitive routing", true);
 app.use(express.json({ limit: "4mb" }));
 
 app.all("/mcp", async (req, res) => {

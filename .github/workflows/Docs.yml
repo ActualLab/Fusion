@@ -1,0 +1,59 @@
+# Docs CI. The docs site + MCP server are deployed by the VM's poll-based
+# fusion-deploy timer (it builds docs/mcp-server/Dockerfile on the host), so this
+# workflow only validates the docs build and SEO — it does not deploy.
+name: Docs
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore local tools
+        run: dotnet tool restore
+
+      - name: Build Docs Project
+        run: dotnet build docs/Docs.csproj -c Debug
+
+      - name: Update snippets
+        run: dotnet mdsnippets
+        working-directory: docs
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: docs
+
+      - name: Build with VitePress
+        run: npm run docs:build
+        working-directory: docs
+
+      - name: Verify SEO (canonical / sitemap / redirects / routes)
+        run: npm run docs:verify
+        working-directory: docs

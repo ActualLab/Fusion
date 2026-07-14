@@ -14,7 +14,6 @@
     "docs:verify": "npm run docs:seo-check && npm run docs:verify-routes",
     "docs:indexnow": "node scripts/submit-indexnow.mjs",
     "mcp:index": "node scripts/build-mcp-index.mjs",
-    "mcp:test": "npm run mcp:index && node scripts/test-mcp.mjs",
     "slides:build": "node slides/build-all.mjs"
   },
   "author": "",
