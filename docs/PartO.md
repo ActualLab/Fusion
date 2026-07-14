@@ -422,6 +422,16 @@ invalidation (or completion notification) is simply lost for that operation. Whe
 code, test it explicitly against failure scenarios you'd otherwise rely on retry semantics to paper over
 &ndash; retries are not coming.
 
+### Completion listener delivery is at-least-once
+
+For operations delivered by the log reader (i.e. everything except the originating host's in-process
+notification), `IOperationCompletionListener` dispatch is **at-least-once**, not exactly-once. When a
+listener fails, the reader redelivers the whole operation; on a crash&ndash;restart it also re-reads
+every operation still within `StartOffset`. Redelivery re-runs **all** listeners registered for that
+operation &ndash; including the ones that already succeeded on the previous attempt, since the reader
+tracks progress per operation, not per listener. **Listeners with external side effects must therefore
+be idempotent**, keyed off `Operation.Uuid` (or an equivalent per-event key) so a re-run is a no-op.
+
 ### Command completion isn't a cluster-wide freshness boundary
 
 After a command's transaction commits, invalidation still has to pass through local completion handling,
