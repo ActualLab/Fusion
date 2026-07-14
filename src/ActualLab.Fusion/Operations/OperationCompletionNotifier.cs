@@ -85,9 +85,9 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
                     tasks[i] = listener.OnOperationCompleted(operation, commandContext);
                 }
                 catch (Exception e) {
-                    tasks[i] = Task.CompletedTask;
-                    Log.LogError(e, "Operation completion listener of type '{HandlerType}' failed",
-                        listener.GetType());
+                    // Route a synchronous throw through the same faulted-task aggregation as async failures,
+                    // so it flows through the isLocal split below (swallow local / unmark + rethrow external)
+                    tasks[i] = Task.FromException(e);
                 }
             }
             try {
