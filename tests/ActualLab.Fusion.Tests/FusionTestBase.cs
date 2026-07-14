@@ -189,7 +189,7 @@ public abstract class FusionTestBase : RpcTestBase
             services.AddDbContextServices<TestDbContext>(db => {
                 var useRedis = UseOperationLogChangeTracking && UseRedisOperationLogChangeTracking;
                 if (useRedis)
-                    db.AddRedisDb("localhost", RedisKeyPrefix);
+                    db.AddRedisDb("127.0.0.1", RedisKeyPrefix);
                 db.AddOperations(operations => {
                     if (!UseOperationLogChangeTracking)
                         return;
