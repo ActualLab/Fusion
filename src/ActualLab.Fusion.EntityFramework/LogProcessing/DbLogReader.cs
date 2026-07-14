@@ -111,7 +111,9 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
             var mustReprocess = Settings.ReprocessPolicy.MustRetry(e);
             var suffix = mustReprocess
                 ? ", will reprocess it"
-                : ", will discard it";
+                : LogKind == DbLogKind.Operations
+                    ? ", moving it to the bounded retry set"
+                    : ", will discard it";
             // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
             Log.LogError(e,
                 $"{nameof(Process)}[{{Shard}}]: failed for entry #{{Key}}{suffix}",
@@ -146,7 +148,9 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
     {
         for (var i = mustDiscard ? 1 : 0; i < 2; i++) {
             var (mustDiscard1, sProcess, sProcessed, sErrorExtra) = i switch {
-                0 => (false, "process", "processed", ", will try to discard it"),
+                0 => (false, "process", "processed", LogKind == DbLogKind.Operations
+                    ? ", moving it to the bounded retry set"
+                    : ", will try to discard it"),
                 _ => (true, "discard", "discarded", ""),
             };
             if (mustDiscard1 && LogKind == DbLogKind.Operations) {
