@@ -5,10 +5,12 @@ namespace ActualLab.Fusion.Tests;
 
 public class OperationCompletionNotifierTest(ITestOutputHelper @out) : TestBase(@out)
 {
-    [Fact]
-    public async Task ExternalCompletionFailureUnmarksAndPropagates()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExternalCompletionFailureUnmarksAndPropagates(bool syncThrow)
     {
-        var listener = new FailingListener();
+        var listener = new FailingListener(syncThrow);
         var services = BuildServices(listener);
         var notifier = new OperationCompletionNotifier(
             new OperationCompletionNotifier.Options { Clock = SystemClock.Instance },
@@ -18,7 +20,8 @@ public class OperationCompletionNotifierTest(ITestOutputHelper @out) : TestBase(
             Command = LocalCommand.New(() => Task.CompletedTask),
         };
 
-        // External op (null CommandContext): the completion failure must surface to the caller
+        // External op (null CommandContext): the completion failure - async or synchronous -
+        // must surface to the caller through the external-terminal path
         await Assert.ThrowsAnyAsync<Exception>(
             () => notifier.NotifyCompleted(operation, null));
         listener.CallCount.Should().Be(1);
@@ -32,7 +35,7 @@ public class OperationCompletionNotifierTest(ITestOutputHelper @out) : TestBase(
     [Fact]
     public async Task LocalCompletionFailureIsSwallowedAndKeepsUuidMarked()
     {
-        var listener = new FailingListener();
+        var listener = new FailingListener(syncThrow: false);
         var services = BuildServices(listener);
         var notifier = new OperationCompletionNotifier(
             new OperationCompletionNotifier.Options { Clock = SystemClock.Instance },
@@ -55,30 +58,6 @@ public class OperationCompletionNotifierTest(ITestOutputHelper @out) : TestBase(
         var result2 = await notifier.NotifyCompleted(operation, context);
         result2.Should().BeFalse();
         listener.CallCount.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task SynchronousListenerThrowUnmarksAndPropagatesForExternalOperation()
-    {
-        var listener = new SyncThrowingListener();
-        var services = BuildServices(listener);
-        var notifier = new OperationCompletionNotifier(
-            new OperationCompletionNotifier.Options { Clock = SystemClock.Instance },
-            services);
-        var operation = new Operation("ext-sync-uuid-1", "another-host") {
-            LoggedAt = SystemClock.Instance.Now,
-            Command = LocalCommand.New(() => Task.CompletedTask),
-        };
-
-        // A synchronous throw on an external op must flow through the external-terminal path
-        await Assert.ThrowsAnyAsync<Exception>(
-            () => notifier.NotifyCompleted(operation, null));
-        listener.CallCount.Should().Be(1);
-
-        // ...and unmark the UUID, so a redelivery actually re-dispatches instead of being deduped
-        await Assert.ThrowsAnyAsync<Exception>(
-            () => notifier.NotifyCompleted(operation, null));
-        listener.CallCount.Should().Be(2);
     }
 
     [Fact]
@@ -130,7 +109,7 @@ public class OperationCompletionNotifierTest(ITestOutputHelper @out) : TestBase(
 
     // Nested types
 
-    private sealed class FailingListener : IOperationCompletionListener
+    private sealed class FailingListener(bool syncThrow) : IOperationCompletionListener
     {
         private int _callCount;
         public int CallCount => Volatile.Read(ref _callCount);
@@ -138,19 +117,13 @@ public class OperationCompletionNotifierTest(ITestOutputHelper @out) : TestBase(
         public Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
         {
             Interlocked.Increment(ref _callCount);
-            return Task.FromException(new InvalidOperationException("Completion failed (test)"));
-        }
-    }
+            var error = new InvalidOperationException(syncThrow
+                ? "Completion failed synchronously (test)"
+                : "Completion failed (test)");
+            if (syncThrow)
+                throw error;
 
-    private sealed class SyncThrowingListener : IOperationCompletionListener
-    {
-        private int _callCount;
-        public int CallCount => Volatile.Read(ref _callCount);
-
-        public Task OnOperationCompleted(Operation operation, CommandContext? commandContext)
-        {
-            Interlocked.Increment(ref _callCount);
-            throw new InvalidOperationException("Completion failed synchronously (test)");
+            return Task.FromException(error);
         }
     }
 

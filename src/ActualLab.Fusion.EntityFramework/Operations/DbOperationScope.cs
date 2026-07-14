@@ -401,9 +401,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         // The InMemory provider is excluded: it has no transaction/savepoint, so retrying its
         // non-atomic SaveChanges could leak partially applied rows. A batch carrying any Fail
         // event is excluded too: a Fail conflict must surface immediately rather than be retried.
-        var hasFailEvents = false;
-        foreach (var e in events)
-            hasFailEvents |= e.UuidConflictStrategy == KeyConflictStrategy.Fail;
+        var hasFailEvents = events.Any(e => e.UuidConflictStrategy == KeyConflictStrategy.Fail);
         var canRetry = !hasFailEvents && !dbContext.Database.IsInMemory();
         var dbEvents = dbContext.Set<DbEvent>();
         for (var attempt = 0;; attempt++) {
@@ -451,7 +449,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             }
             catch (Exception error) when (
                 canRetry
-                && error is DbUpdateException or DbUpdateConcurrencyException
+                && error is DbUpdateException
                 && attempt < MaxEventFlushRetryCount) {
                 DebugLog?.LogDebug(error,
                     "Transaction #{TransactionId} @ shard '{Shard}': resolving _events key conflict, attempt {Attempt}",

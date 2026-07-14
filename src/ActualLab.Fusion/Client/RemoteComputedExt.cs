@@ -51,14 +51,9 @@ public static class RemoteComputedExt
         if (predecessor.WhenSynchronized.IsCompleted)
             return;
 
-        var whenSynchronized = successor.WhenSynchronized;
-        if (whenSynchronized.IsCompleted) {
-            predecessor.SynchronizedSource.TrySetResult();
-            return;
-        }
-
-        _ = whenSynchronized.ContinueWith(
-            _ => predecessor.SynchronizedSource.TrySetResult(),
+        var source = predecessor.SynchronizedSource;
+        _ = successor.WhenSynchronized.ContinueWith(
+            _ => source.TrySetResult(),
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 

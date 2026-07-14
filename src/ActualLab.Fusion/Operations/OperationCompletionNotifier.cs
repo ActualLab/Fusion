@@ -93,16 +93,25 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
             try {
                 await Task.WhenAll(tasks).ConfigureAwait(false);
             }
-            catch (Exception e) when (isLocal) {
-                Log.LogError(e, "One of operation completion listeners failed");
+            catch (Exception) when (isLocal) {
+                LogListenerFailures();
             }
             catch (Exception) {
+                LogListenerFailures();
                 // External operation: unmark the UUID so the reader can redeliver & retry the completion
                 lock (Lock)
                     RecentlySeenUuids.TryRemove(operation.Uuid);
                 throw;
             }
             return true;
+
+            void LogListenerFailures() {
+                for (var i = 0; i < tasks.Length; i++)
+                    if (tasks[i].Exception is { } error)
+                        Log.LogError(error.GetBaseException(),
+                            "Operation completion listener of type '{HandlerType}' failed",
+                            listeners[i].GetType());
+            }
         });
 #pragma warning restore MA0100
     }
