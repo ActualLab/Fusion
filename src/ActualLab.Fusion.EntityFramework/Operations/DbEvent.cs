@@ -52,6 +52,10 @@ public sealed class DbEvent : IDbEventLogEntry
         if (versionGenerator is not null)
             Version = versionGenerator.NextVersion(Version);
         LoggedAt = model.LoggedAt;
+        // DelayUntil mirrors LoggedAt so this fake commit-verifier row survives the event trimmer's
+        // MaxEntryAge (it trims "DelayUntil <= minDelayUntil && State != New") instead of being
+        // trimmable from the moment it's committed.
+        DelayUntil = model.LoggedAt;
         State = LogEntryState.Processed;
     }
 

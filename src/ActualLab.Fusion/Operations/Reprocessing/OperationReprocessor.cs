@@ -11,6 +11,10 @@ namespace ActualLab.Fusion.Operations.Reprocessing;
 /// </summary>
 public interface IOperationReprocessor : ICommandHandler<ICommand>
 {
+    // The Uuid of the operation being (re)processed, preserved across retries so a retry
+    // that re-executes an already-committed operation is detected via its unique-Uuid violation.
+    public string? OperationUuid { get; }
+
     public void MarkTransient(Exception error, Transiency transiency);
     public Transiency GetTransiency(IReadOnlyList<Exception> allErrors);
     public bool WillRetry(IReadOnlyList<Exception> allErrors, out Transiency transiency);
@@ -53,6 +57,8 @@ public class OperationReprocessor : IOperationReprocessor
     protected CommandContext CommandContext { get; set; } = null!;
     protected int TryIndex { get; set; }
     protected Exception? LastError { get; set; }
+
+    public string? OperationUuid { get; protected set; }
 
     protected IServiceProvider Services { get; }
     protected TransiencyResolver<IOperationReprocessor> TransiencyResolver
@@ -109,7 +115,16 @@ public class OperationReprocessor : IOperationReprocessor
             return false;
 
         var operation = CommandContext.TryGetOperation();
-        return operation is { Scope: not InMemoryOperationScope };
+        if (operation is not { Scope: not InMemoryOperationScope })
+            return false;
+
+        if (operation.Scope is { IsCommitted: true }) {
+            Log.LogWarning(
+                "No retry: operation '{OperationUuid}' is already committed - retry suppressed to avoid double execution",
+                operation.Uuid);
+            return false;
+        }
+        return true;
     }
 
     [CommandFilter(Priority = FusionOperationsCommandHandlerPriority.OperationReprocessor)]
@@ -142,13 +157,15 @@ public class OperationReprocessor : IOperationReprocessor
             }
             catch (Exception error) when (!error.IsCancellationOf(cancellationToken)) {
                 LastError = error;
-                if (context.TryGetOperation() is null)
+                var operation = context.TryGetOperation();
+                if (operation is null)
                     throw; // No Operation -> no retry
                 if (!this.WillRetry(error, out var transiency))
                     throw; // The error can't be reprocessed -> no retry
 
                 if (transiency is not Transiency.SuperTransient)
                     TryIndex++;
+                OperationUuid = operation.Uuid; // Preserve it so the next attempt reuses the same Uuid
                 context.ChangeOperation(null);
                 context.Items.Snapshot = itemsBackup;
                 context.ExecutionState = executionStateBackup;

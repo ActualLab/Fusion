@@ -3,6 +3,7 @@ using System.Data.Common;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework.Internal;
 using ActualLab.Fusion.EntityFramework.LogProcessing;
+using ActualLab.Fusion.Operations.Reprocessing;
 using ActualLab.Locking;
 using ActualLab.Resilience;
 using ActualLab.Versioning;
@@ -26,6 +27,13 @@ public abstract class DbOperationScope : IOperationScope
         public static IsolationLevel DefaultIsolationLevel { get; set; } = IsolationLevel.Unspecified;
 
         public IsolationLevel IsolationLevel { get; init; } = DefaultIsolationLevel;
+        // Used only on the in-doubt commit path: a bounded, cancellation-immune read that verifies
+        // whether the commit actually landed. TryTimeout bounds each attempt; the caller's token
+        // is intentionally not used (see Commit).
+        public IRetryPolicy CommitVerificationPolicy { get; init; } = new RetryPolicy(
+            3, // Try count
+            TimeSpan.FromSeconds(3), // Per-try timeout
+            RetryDelaySeq.Exp(0.25, 1, 0.1, 2)); // Up to 1 second, 2x longer on each iteration
     }
 
     protected TaskCompletionSource<Unit>? StrategyOperationTaskSource { get; set; }
@@ -80,6 +88,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
     protected IShardDbContextFactory<TDbContext> ContextFactory
         => field ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
     protected MomentClockSet Clocks { get; }
+    protected Options Settings => field ??= Services.GetRequiredService<Options>();
     protected ILogger Log { get; }
     protected ILogger? DebugLog => Log.IfEnabled(LogLevel.Debug);
 
@@ -127,7 +136,11 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         HostId = DbHub.HostId;
         Clocks = DbHub.Clocks;
         AsyncLock = new AsyncLock();
-        Operation = Operation.New(this);
+        // Preserve the operation Uuid across OperationReprocessor retries: a retry that re-executes
+        // an operation which actually committed will then hit a unique-Uuid violation on commit,
+        // which Commit turns into a "already committed" signal instead of double-executing.
+        var operationUuid = outermostContext.Items.KeylessGet<IOperationReprocessor>()?.OperationUuid ?? "";
+        Operation = Operation.New(this, operationUuid);
         Operation.Command = outermostContext.UntypedCommand;
         outermostContext.ChangeOperation(Operation);
     }
@@ -248,7 +261,29 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             dbContext.Add(dbCommitVerifier);
 
             // Saving changes
-            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            try {
+                await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateException updateError) {
+                // A unique-Uuid violation here means a prior OperationReprocessor attempt (same
+                // preserved Uuid) already committed this operation. Report success instead of
+                // re-committing its DB effects - this attempt's transaction rolls back on dispose.
+                bool alreadyCommitted;
+                try {
+                    alreadyCommitted = await VerifyCommit(dbCommitVerifier).ConfigureAwait(false);
+                }
+                catch {
+                    throw updateError; // Can't verify -> surface the original error, let the reprocessor retry
+                }
+                if (!alreadyCommitted)
+                    throw;
+
+                Log.LogWarning(
+                    "Transaction #{TransactionId} @ shard '{Shard}': operation already committed by a prior attempt",
+                    TransactionId, Shard);
+                IsCommitted = true;
+                return;
+            }
             if (dbCommitVerifier is DbOperation { HasIndex: false })
                 throw Errors.DbOperationIndexWasNotAssigned();
 
@@ -260,43 +295,25 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 IsCommitted = true;
                 DebugLog?.LogDebug("Transaction #{TransactionId} @ shard '{Shard}': committed", TransactionId, Shard);
             }
-            catch (Exception) {
+            catch (Exception commitError) {
                 // See https://docs.microsoft.com/en-us/ef/ef6/fundamentals/connection-resiliency/commit-failures
+                // The commit outcome is in doubt: verify whether the row landed. This read decides
+                // correctness and must not be aborted by the caller's cancellation, so VerifyCommit runs
+                // on CancellationToken.None with each attempt bounded by CommitVerificationPolicy.TryTimeout.
+                bool verified;
                 try {
-                    // We need a new connection here, since the old one might be broken
-                    var verifierDbContext = await ContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
-                    await using var _1 = verifierDbContext.ConfigureAwait(false);
-#if NET7_0_OR_GREATER
-                    verifierDbContext.Database.AutoTransactionBehavior = AutoTransactionBehavior.WhenNeeded;
-#else
-                    verifierDbContext.Database.AutoTransactionsEnabled = true;
-#endif
-                    switch (dbCommitVerifier) {
-                    case DbOperation dbo: {
-                        var dbEntry = await verifierDbContext
-                            .FindAsync<DbOperation>(DbKey.Compose(dbo.Index), cancellationToken)
-                            .ConfigureAwait(false);
-                        if (dbEntry is not null)
-                            IsCommitted = true;
-                        break;
-                    }
-                    case DbEvent dbe: {
-                        var dbEntry = await verifierDbContext
-                            .FindAsync<DbEvent>(DbKey.Compose(dbe.Uuid), cancellationToken)
-                            .ConfigureAwait(false);
-                        if (dbEntry is not null)
-                            IsCommitted = true;
-                        break;
-                    }
-                    default:
-                        throw;
-                    }
+                    verified = await VerifyCommit(dbCommitVerifier).ConfigureAwait(false);
                 }
-                catch {
-                    // Intended
+                catch (Exception verifyError) {
+                    Log.LogError(verifyError,
+                        "Transaction #{TransactionId} @ shard '{Shard}': commit verification failed",
+                        TransactionId, Shard);
+                    throw commitError;
                 }
-                if (IsCommitted != true)
+                if (!verified)
                     throw;
+
+                IsCommitted = true;
             }
         }
         finally {
@@ -338,6 +355,35 @@ public class DbOperationScope<TDbContext> : DbOperationScope
     }
 
     // Protected methods
+
+    protected virtual Task<bool> VerifyCommit(object dbCommitVerifier)
+    {
+        var uuid = dbCommitVerifier switch {
+            DbOperation dbo => dbo.Uuid,
+            DbEvent dbe => dbe.Uuid,
+            _ => throw ActualLab.Internal.Errors.InternalError(
+                $"Unexpected commit verifier type: {dbCommitVerifier.GetType().GetName()}."),
+        };
+        return Settings.CommitVerificationPolicy.Apply(Verify, CancellationToken.None);
+
+        async Task<bool> Verify(CancellationToken cancellationToken) {
+            // A fresh context/connection: the scope's own connection may be broken after an in-doubt commit.
+            var dbContext = await ContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
+            await using var _1 = dbContext.ConfigureAwait(false);
+#if NET7_0_OR_GREATER
+            dbContext.Database.AutoTransactionBehavior = AutoTransactionBehavior.WhenNeeded;
+#else
+            dbContext.Database.AutoTransactionsEnabled = true;
+#endif
+            return dbCommitVerifier is DbOperation
+                ? await dbContext.Set<DbOperation>()
+                    .FirstOrDefaultAsync(x => x.Uuid == uuid, cancellationToken)
+                    .ConfigureAwait(false) is not null
+                : await dbContext
+                    .FindAsync<DbEvent>(DbKey.Compose(uuid), cancellationToken)
+                    .ConfigureAwait(false) is not null;
+        }
+    }
 
     protected virtual async Task FlushEvents(
         TDbContext dbContext,
