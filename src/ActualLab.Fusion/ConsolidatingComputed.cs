@@ -66,29 +66,37 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
         async Task Consolidate() {
             Computed<T>? nextSource = null; // null means to Invalidate(), which is the default if this method fails
             try {
-                if (Options.ConsolidationDelay != TimeSpan.MaxValue)
-                    await Task.Delay(Options.ConsolidationDelay, CancellationToken.None).ConfigureAwait(false);
+                try {
+                    if (Options.ConsolidationDelay != TimeSpan.MaxValue)
+                        await Task.Delay(Options.ConsolidationDelay, CancellationToken.None).ConfigureAwait(false);
 
-                var updatedSource = (Computed<T>)await _source.UpdateUntyped(CancellationToken.None).ConfigureAwait(false);
-                var outputEqualityComparer = Input.Function.Hub.ComputedOutputEqualityComparer;
-                nextSource = outputEqualityComparer.Invoke(UntypedOutput, updatedSource.UntypedOutput)
-                    ? updatedSource
-                    : null; // Invalidate
-            }
-            finally {
-                if (nextSource is null) {
-                    // No next source -> we're invalidating ourselves
-                    Invalidate(immediately: true, new InvalidationSource(_source));
+                    var updatedSource = (Computed<T>)await _source.UpdateUntyped(CancellationToken.None).ConfigureAwait(false);
+                    var outputEqualityComparer = Input.Function.Hub.ComputedOutputEqualityComparer;
+                    nextSource = outputEqualityComparer.Invoke(UntypedOutput, updatedSource.UntypedOutput)
+                        ? updatedSource
+                        : null; // Invalidate
                 }
-                else {
-                    // 1. Re-enable the consolidation
-                    lock (Lock) {
-                        _source = nextSource;
-                        _whenConsolidated = null;
+                finally {
+                    if (nextSource is null) {
+                        // No next source -> we're invalidating ourselves
+                        Invalidate(immediately: true, new InvalidationSource(_source));
                     }
-                    // 2. Subscribe to the next source's invalidation'
-                    nextSource.Invalidated += OnSourceInvalidated;
+                    else {
+                        // 1. Re-enable the consolidation
+                        lock (Lock) {
+                            _source = nextSource;
+                            _whenConsolidated = null;
+                        }
+                        // 2. Subscribe to the next source's invalidation'
+                        nextSource.Invalidated += OnSourceInvalidated;
+                    }
                 }
+            }
+            catch (Exception e) {
+                // The finally above already applied the fallback, so we just observe & log the
+                // fault here instead of leaving the _whenConsolidated task unobserved.
+                var log = Input.Function.Services.LogFor(GetType());
+                log.LogError(e, "Consolidation failed for {Category}", Input.Category);
             }
         }
 

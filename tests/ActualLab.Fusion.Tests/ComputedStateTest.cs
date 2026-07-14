@@ -78,6 +78,95 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     }
 
     [Fact]
+    public void NonTransientErrorInvalidationDelayDefaultsTest()
+    {
+        ComputedOptions.Default.NonTransientErrorInvalidationDelay.Should().Be(TimeSpan.FromSeconds(30));
+        ComputedOptions.ClientDefault.NonTransientErrorInvalidationDelay.Should().Be(TimeSpan.FromSeconds(30));
+        ComputedOptions.MutableStateDefault.NonTransientErrorInvalidationDelay.Should().Be(TimeSpan.MaxValue);
+    }
+
+    [Fact]
+    public async Task NonTransientErrorHorizonAutoInvalidatesTest()
+    {
+        var services = CreateServices(services => {
+            services.AddTransiencyResolver<Computed>(_ => e =>
+                (e is InvalidOperationException ? Transiency.NonTransient : Transiency.Unknown)
+                    .Or(e, TransiencyResolvers.PreferNonTransient));
+        });
+        var stateFactory = services.StateFactory();
+
+        var count = 0;
+        var horizon = TimeSpan.FromSeconds(0.5);
+        var state = stateFactory.NewComputed(
+            new ComputedState<int>.Options() {
+                UpdateDelayer = FixedDelayer.NextTick,
+                InitialValue = -1,
+                ComputedOptions = ComputedOptions.Default with {
+                    NonTransientErrorInvalidationDelay = horizon,
+                },
+            },
+            _ => {
+                Interlocked.Increment(ref count);
+                throw new InvalidOperationException("boom");
+            });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => state.Use());
+        var c = state.Computed;
+        c.HasError.Should().BeTrue();
+        c.IsConsistent().Should().BeTrue();
+
+        // A non-transient error must auto-invalidate once the configured error horizon elapses
+        await c.WhenInvalidated().WaitAsync(horizon + TimeSpan.FromSeconds(3));
+        c.IsInvalidated().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task InvalidatedEventFiresForBornInvalidatedGenerationTest()
+    {
+        // A dependency that invalidates the state's computed while it is still computing makes
+        // the published generation "born invalidated". The per-generation Invalidated event must
+        // still fire for it (previously it was skipped because the snapshot didn't yet point to
+        // the just-invalidated computed when its invalidation ran).
+        var services = CreateServices();
+        var stateFactory = services.StateFactory();
+        var dep = stateFactory.NewMutable(0);
+
+        var computeGate = TaskCompletionSourceExt.New<Unit>();
+        var computeCount = 0;
+        var state = stateFactory.NewComputed(
+            new ComputedState<int>.Options() {
+                UpdateDelayer = FixedDelayer.NextTick,
+                InitialValue = -1,
+            },
+            async ct => {
+                var value = await dep.Use(ct).ConfigureAwait(false); // Establishes the dependency edge
+                var index = Interlocked.Increment(ref computeCount);
+                WriteLine($"Compute #{index}: read {value}, waiting on gate...");
+                await computeGate.Task.ConfigureAwait(false);
+                return value;
+            });
+
+        var invalidatedCount = 0;
+        state.Invalidated += (_, _) => Interlocked.Increment(ref invalidatedCount);
+
+        // Wait for the first real computation to reach the gate
+        await Task.Delay(300);
+        computeCount.Should().Be(1);
+
+        // Invalidate the dependency while the state is computing -> the in-flight computed is
+        // flagged for invalidation and is published already invalidated.
+        dep.Value = 1;
+        await Task.Delay(100);
+
+        // Let the born-invalidated generation complete & get published
+        computeGate.SetResult(default);
+        await Task.Delay(300);
+
+        invalidatedCount.Should().BeGreaterThanOrEqualTo(1,
+            "the Invalidated event must fire for a generation that was invalidated while computing");
+    }
+
+    [Fact]
     public async Task RecomputeDuringComputationTest()
     {
         // This test reproduces the MixedStateComponent bug:

@@ -261,6 +261,13 @@ public abstract class State : ComputedInput, IState
             else
                 _snapshot = new StateSnapshot(this, null, computed);
             OnSetSnapshot(_snapshot, prevSnapshot);
+
+            // If the computed was invalidated while still computing (e.g. a dependency changed
+            // mid-computation), its StateBoundComputed.OnInvalidated already fired, but back then
+            // this snapshot didn't point to it yet, so the state-level Invalidated event was skipped.
+            // Re-raise it here so every published generation gets its invalidation event.
+            if (computed.IsInvalidated())
+                OnInvalidated(computed);
         }
     }
 

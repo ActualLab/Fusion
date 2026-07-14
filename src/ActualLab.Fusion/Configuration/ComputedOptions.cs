@@ -20,12 +20,15 @@ public sealed record ComputedOptions
     };
     public static ComputedOptions MutableStateDefault { get; set; } = new() {
         TransientErrorInvalidationDelay = TimeSpan.MaxValue,
+        NonTransientErrorInvalidationDelay = TimeSpan.MaxValue,
     };
 
     public TimeSpan MinCacheDuration { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
         = default; // No min. cache duration = don't add newly produced instances to Timeouts.KeepAlive
     public TimeSpan TransientErrorInvalidationDelay { get; init; }
         = TimeSpan.FromSeconds(1); // Should be positive
+    public TimeSpan NonTransientErrorInvalidationDelay { get; init; }
+        = TimeSpan.FromSeconds(30); // Error horizon: a stuck non-transient error clears after this delay
     public TimeSpan AutoInvalidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
         = TimeSpan.MaxValue; // No auto invalidation
     public TimeSpan InvalidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
@@ -101,6 +104,10 @@ public sealed record ComputedOptions
         t = TransientErrorInvalidationDelay;
         if (t != TimeSpan.MaxValue)
             sb.Append(nameof(TransientErrorInvalidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
+
+        t = NonTransientErrorInvalidationDelay;
+        if (t != TimeSpan.MaxValue)
+            sb.Append(nameof(NonTransientErrorInvalidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
 
         t = AutoInvalidationDelay;
         if (t != TimeSpan.MaxValue)

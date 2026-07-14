@@ -393,7 +393,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
         timeout = IsTransientError(error)
             ? Options.TransientErrorInvalidationDelay
-            : Options.AutoInvalidationDelay;
+            : Options.NonTransientErrorInvalidationDelay;
         if (timeout != TimeSpan.MaxValue)
             this.Invalidate(timeout);
     }
@@ -533,15 +533,27 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         if (error is OperationCanceledException) // Also handles RpcRerouteException
             return true; // Must be transient under any circumstances in IComputed
 
-        TransiencyResolver<Computed>? transiencyResolver = null;
         try {
             var services = Input.Function.Services;
-            transiencyResolver = services.GetService<TransiencyResolver<Computed>>();
+            var transiencyResolver = services.GetService<TransiencyResolver<Computed>>();
+            return transiencyResolver?.Invoke(error).IsAnyTransient()
+                ?? TransiencyResolvers.PreferTransient.Invoke(error).IsAnyTransient();
         }
         catch (ObjectDisposedException) {
             // We want to handle IServiceProvider disposal gracefully
+            return TransiencyResolvers.PreferTransient.Invoke(error).IsAnyTransient();
         }
-        return transiencyResolver?.Invoke(error).IsAnyTransient()
-            ?? TransiencyResolvers.PreferTransient.Invoke(error).IsAnyTransient();
+        catch (Exception e) {
+            // A broken user TransiencyResolver must not suppress auto-invalidation scheduling
+            // and permanently cache the error, so we classify its failure as transient.
+            try {
+                Input.Function.Services.LogFor(GetType()).LogError(e,
+                    "TransiencyResolver failed for {Category}, treating the error as transient", Input.Category);
+            }
+            catch {
+                // Intended: IsTransientError must not throw
+            }
+            return true;
+        }
     }
 }
