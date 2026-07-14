@@ -70,7 +70,10 @@ public class OperationCompletionNotifier : IOperationCompletionNotifier
                     ? "Assertion failed: operation w/o CommandContext originates from local agent"
                     : "Assertion failed: operation with CommandContext originates from another agent";
                 // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-                Log.LogError(message);
+                Log.LogError(
+                    message + " (Operation.Uuid: {Uuid}, Operation.HostId: {OperationHostId}, "
+                    + "local HostId: {LocalHostId}, Command: {CommandType})",
+                    operation.Uuid, operation.HostId, HostId.Id, operation.Command?.GetType());
             }
 
             // Notification
