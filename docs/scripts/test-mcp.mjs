@@ -13,8 +13,6 @@ const server = spawn(process.execPath, [
   fileURLToPath(wranglerPath),
   "pages", "dev", ".vitepress/dist",
   "--port", String(port),
-  "--compatibility-date", "2026-07-14",
-  "--compatibility-flags", "nodejs_compat",
 ], {
   cwd: docsDirectory,
   env: {

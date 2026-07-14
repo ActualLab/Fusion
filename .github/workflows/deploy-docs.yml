@@ -73,7 +73,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4'
           workingDirectory: docs
-          command: pages deploy .vitepress/dist --project-name=fusion-actuallab-net --branch=master --commit-dirty=true --compatibility-date=2026-07-14 --compatibility-flags=nodejs_compat
+          command: pages deploy .vitepress/dist --project-name=fusion-actuallab-net --branch=master --commit-dirty=true
 
       # Best-effort nudge so Bing/Yandex recrawl changed pages within minutes.
       # Runs after deploy so the freshly published key file validates; a failure
