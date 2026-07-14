@@ -11,7 +11,8 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `ICanBeNone<out TSelf>`, `CanBeNoneExt` - Strongly typed version of `ICanBeNone` that exposes a static `None` value.
 - `IHasId<out TId>` - An interface that indicates its implementor has an identifier of type `TId`.
 - `IHasUuid` - Similar to `IHasId<TId>`, but indicates the `Id` is universally unique.
-- `IMutableResult<T>` - Describes strongly typed `Result` of a computation that can be changed.
+- `IResult`, `IResult<T>` - Untyped and strongly typed contracts for a computation result that contains either a value or an error.
+- `IMutableResult`, `IMutableResult<T>` - Untyped and strongly typed computation-result contracts whose value or error can be changed.
 - `INotLogged` - A tagging interface for commands and other objects that shouldn't be logged on use / execution.
 - `IRequirementTarget` - A tagging interface that tags types supported by `RequireExt` type.
 - `AssumeValid` (struct) - A unit-type constructor parameter indicating that no validation is required.
@@ -22,8 +23,9 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `LazySlim<TValue>` - A lightweight alternative to `Lazy<T>` with double-check locking.
 - `ParseOrNone` (struct) - A unit-type constructor parameter indicating a parse-or-return-none semantic.
 - `Requirement` (record) - Base class for `Requirement<T>` that validate values and produce errors on failure.
-- `Result` (struct), `ResultExt` - Untyped result of a computation and some helper methods related to `Result<T>` type.
+- `Result` (struct), `Result<T>` (struct), `ResultExt` - Untyped and strongly typed value-or-error results and their helper methods.
 - `ServiceException` - A base exception type for service-level errors.
+- `IOption`, `Option<T>` (struct) - Represents an optional value that can be either `Some` or `None`.
 - `Option` - Helper methods related to `Option<T>` type.
 - `StaticLog` - Provides globally accessible `ILogger` instances via a shared `ILoggerFactory`.
 - `ExceptionExt` - Extension methods for `Exception` type and its descendants.
@@ -223,15 +225,11 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 
 ### ActualLab.Mathematics
 
-- `Arithmetics<T>`, `ArithmeticsProvider` - Provides basic arithmetic operations for type `T`.
 - `PrimeSieve` - A sieve of Eratosthenes implementation for computing and querying prime numbers.
-- `TileLayer<T>` - A single layer of uniformly-sized tiles within a `TileStack<T>`.
-- `TileStack<T>` - A hierarchical stack of `TileLayer<T>` instances with increasing tile sizes.
 - `Bits` - Provides bit manipulation utilities such as population count, leading/trailing zero count, and power-of-2 operations.
 - `Combinatorics` - Provides combinatorial utilities including subset enumeration and combinations.
 - `GuidExt` - Extension methods for `Guid` providing formatting and conversion utilities.
 - `MathExt` - Extended math utilities including clamping, GCD/LCM, factorial, and arbitrary-radix number formatting/parsing.
-- `RangeExt` - Extension methods for `Range<T>` providing size, containment, intersection, and other range operations.
 
 ### ActualLab.Net
 
@@ -301,7 +299,8 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 ### ActualLab.Scalability
 
 - `HashRing<T>` - A consistent hash ring that maps hash values to a sorted ring of nodes.
-- `ShardMap<TNode>` - Maps a fixed number of shards to a set of nodes using consistent hashing.
+- `ShardMap<TNode>` - Maps a fixed number of shards to a set of nodes using a configurable `ShardMapBuilder`.
+- `ShardMapBuilder` (abstract record) - Builds shard-to-node index maps using a selectable sharding strategy.
 
 ### ActualLab.Serialization
 
@@ -309,7 +308,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `IProjectingByteSerializer<T>` - A serializer that allows projection of parts from source on reads.
 - `DataFormat` (enum) - Defines whether data is stored as raw bytes or as text.
 - `SerializerKind` (enum), `SerializerKindExt` - Defines the available serializer implementations.
-- `Box<T>` (record) - A serializable immutable box that wraps a single value of type `T`.
+- `IBox`, `Box<T>` (record), `Box` - A read-only boxed value, its serializable immutable implementation, and factory methods.
 - `ByteSerialized<T>` - A wrapper that auto-serializes its `Value` to a byte array on access via `IByteSerializer`.
 - `JsonString` - A string wrapper representing a raw JSON value with proper serialization support.
 - `LegacyTypeDecoratingTextSerializer` - A legacy variant of `TypeDecoratingTextSerializer` that uses list-format type decoration.
@@ -317,7 +316,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `MemoryPackSerialized<T>` - A `ByteSerialized<T>` variant that uses `MemoryPackByteSerializer` for serialization.
 - `MessagePackByteSerializer<T>` - A typed `MessagePackByteSerializer` that serializes values of type `T`.
 - `MessagePackSerialized<T>` - A `ByteSerialized<T>` variant that uses `MessagePackByteSerializer` for serialization.
-- `MutableBox<T>` - A serializable mutable box that wraps a single value of type `T`.
+- `IMutableBox`, `MutableBox<T>`, `MutableBox` - A mutable boxed value, its serializable implementation, and factory methods.
 - `NewtonsoftJsonSerialized<T>` - A `TextSerialized<T>` variant that uses `NewtonsoftJsonSerializer` for serialization.
 - `NewtonsoftJsonSerializer` - An `ITextSerializer` implementation backed by Newtonsoft.Json (JSON.NET).
 - `RemoteException` - Represents an exception that was serialized from a remote service and reconstructed from `ExceptionInfo`.
@@ -394,10 +393,12 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `VersionChecker` - Provides helpers to check whether a version matches an expected version.
 - `LongExt` - Extension methods for formatting `long` and `ulong` values as compact base-32 version strings.
 - `ServiceProviderExt` - Extension methods for `IServiceProvider` to resolve versioning services.
+- `ClockBasedVersionGenerator` - A `VersionGenerator<long>` that generates monotonically increasing `long` versions based on `MomentClock` ticks.
+- `CpuTimestampBasedVersionGenerator` - A `VersionGenerator<long>` that generates monotonically increasing `long` versions based on `CpuTimestamp` ticks.
 
-### ActualLab.Versioning.Providers
+### ActualLab.Trimming
 
-- `ClockBasedVersionGenerator` - A `VersionGenerator<TVersion>` that generates monotonically increasing `long` versions based on `MomentClock` ticks.
+- `CodeKeeper` - Static utility that preserves types, metadata, and generic native code needed through reflection or dynamic dispatch in trimmed and NativeAOT applications.
 
 ## ActualLab.Interception
 
@@ -427,6 +428,11 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `ScopedServiceInterceptor` - An interceptor that resolves a scoped service for each method call and invokes the method on that scoped instance.
 - `TypedFactoryInterceptor` - An interceptor that resolves service instances via dependency injection, enabling typed factory interfaces to create objects through `ActivatorUtilities`.
 
+### ActualLab.Interception.Trimming
+
+- `ArgumentListCodeKeeper` - Retains `ArgumentList`-related code needed for .NET trimming scenarios.
+- `ProxyCodeKeeper` - Retains proxy-related code and metadata needed for .NET trimming scenarios.
+
 ## ActualLab.Rpc
 
 ### ActualLab.Rpc
@@ -438,29 +444,35 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `RpcMethodKind` (enum) - Defines the kind of an RPC method (system, query, command, or other).
 - `RpcPeerConnectionKind` (enum), `RpcPeerConnectionKindExt` - Defines the kind of connection used by an RPC peer (remote, loopback, local, or none).
 - `RpcPeerStopMode` (enum), `RpcPeerStopModeExt` - Defines how inbound calls are handled when an RPC peer is stopping.
+- `RpcDelayedCallAction` (enum) - Flags controlling how delayed outbound RPC calls are handled.
+- `RpcRemoteExecutionMode` (enum) - Controls outbound RPC call behavior for connection waiting, reconnection, and resending.
 - `RpcServiceMode` (enum), `RpcServiceModeExt` - Defines how an RPC service is registered and accessed (local, server, client, or distributed).
 - `RpcSystemMethodKind` (enum), `RpcSystemMethodKindExt` - Defines the kind of a system RPC method (Ok, Error, Cancel, streaming, etc.).
 - `RpcClient` - Abstract base class responsible for establishing RPC connections to remote peers.
 - `RpcPeer`, `RpcPeerOptions` (record) - Abstract base class representing one side of an RPC communication channel, managing connection state, message serialization, and call tracking.
 - `LegacyName` (record), `LegacyNameAttribute` - Represents a legacy name mapping with a maximum version, used for backward-compatible RPC resolution.
 - `LegacyNames` - An ordered collection of `LegacyName` entries, indexed by version for backward compatibility.
-- `RpcCallTimeouts` (record) - Defines connect, run, and log timeouts for outbound RPC calls.
+- `RpcCallTimeouts` (record) - Defines connect, run, and delay timeouts for outbound RPC calls.
 - `RpcCallType` (record) - Identifies an RPC call type and its corresponding inbound/outbound call implementation types.
+- `RpcCallTypeIds` - Defines well-known numeric identifiers for regular and compute RPC call types.
 - `RpcClientPeer` - Represents the client side of an RPC peer connection, handling reconnection logic.
 - `RpcClientPeerReconnectDelayer` - Controls reconnection delay strategy for `RpcClientPeer` instances.
 - `RpcConfiguration` - Holds the set of registered RPC service builders and default service mode. Frozen after `RpcHub` construction to prevent further modification.
 - `RpcConnection` - Wraps an `RpcTransport` and associated properties for a single RPC connection.
 - `RpcException` - Base exception type for RPC-related errors.
+- `RpcSerializationFormatException` - Thrown when a client requests an RPC serialization format that the server does not support.
 - `RpcHub` - Central hub that manages RPC peers, services, and configuration for the RPC infrastructure.
 - `RpcLimits` (record) - Defines timeout and periodic limits for RPC connections, keep-alive, and object lifecycle.
-- `RpcMethodAttribute`, `RpcMethodResolver` - Configures RPC method properties such as name, timeouts, and local execution mode.
+- `RpcMethodAttribute`, `RpcMethodResolver` - Configures RPC method properties such as name, timeouts, delayed-call handling, and local and remote execution modes.
 - `RpcMethodDef` - Describes a single RPC method, including its name, kind, serialization, timeouts, and call pipeline.
+- `RpcMethodRef` (struct) - A serializable RPC method reference identified by its UTF-8 full name and hash code.
 - `RpcOptionDefaults` - The only purpose of this class struct is to offer extension point for extensions in other parts of Fusion applying overrides to different `RpcXxxOptions.Default`.
 - `RpcPeerRef`, `RpcPeerRefExt` - Reference to an RPC peer, encapsulating its address, connection kind, and versioning info.
 - `RpcReconnectFailedException` - Thrown when an RPC peer permanently fails to reconnect to the remote host.
 - `RpcRerouteException` - Exception indicating that an RPC call must be re-routed to a different peer.
 - `RpcRouteState`, `RpcRouteStateExt` - Tracks the routing state of an RPC peer, signaling when a route change (reroute) occurs.
 - `RpcSerializationFormat`, `RpcSerializationFormatResolver` (record) - Defines a named RPC serialization format with its argument and message serializer factories.
+- `RpcSerializableAttribute` - Configures RPC-specific serialization behavior, including treating annotated abstract types and interfaces as non-polymorphic.
 - `RpcServerPeer` - Represents the server side of an RPC peer connection, waiting for incoming connections.
 - `RpcServiceDef` - Describes a registered RPC service, including its type, mode, methods, and server/client instances.
 - `RpcServiceRegistry` - Registry of all RPC service definitions, supporting lookup by type, name, and method resolution.
@@ -468,7 +480,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `RpcStreamNotFoundException` - Thrown when an RPC stream cannot be found or has been disconnected.
 - `RpcDiagnosticsOptions` (record) - Configuration options for RPC diagnostics, including call tracing and logging factories.
 - `RpcInboundCallOptions` (record) - Configuration options for processing inbound RPC calls on a peer.
-- `RpcOutboundCallOptions` (record) - Configuration options for outbound RPC calls, including timeouts, routing, and hashing.
+- `RpcOutboundCallOptions` (record) - Configuration options for outbound RPC calls, including timeouts, routing, hashing, and delayed-call handling.
 - `RpcRegistryOptions` (record) - Configuration options for the `RpcServiceRegistry`, including service and method factories.
 - `RpcServiceBuilderSettings` (record) - Base settings class for customizing `RpcServiceBuilder` behavior.
 - `RpcBuilder` (struct) - Fluent builder for registering and configuring RPC services in a DI container.
@@ -491,6 +503,8 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 
 ### ActualLab.Rpc.Clients
 
+- `RpcAlternatingClient` - An `RpcClient` that alternates remote connection attempts between its inner clients.
+- `RpcHttpClient`, `RpcHttpClientOptions` (record) - An `RpcClient` implementation that establishes full-duplex HTTP/2 connections, with options for URL resolution and transport setup.
 - `RpcWebSocketClient`, `RpcWebSocketClientOptions` (record) - An `RpcClient` implementation that establishes connections via WebSockets.
 
 ### ActualLab.Rpc.Diagnostics
@@ -513,6 +527,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `IRpcSharedObject` - An `IRpcObject` that is shared with a remote peer and supports keep-alive tracking.
 - `IRpcSystemService` - Marker interface for system-level RPC services used internally by the RPC framework.
 - `RpcObjectKind` (enum) - Defines whether an RPC object is local or remote.
+- `RpcObjectId` (record struct) - Uniquely identifies a shared or remote RPC object by host ID and local ID.
 - `RpcPeerChangeKind` (enum) - Defines the kind of change detected in a remote peer during handshake comparison.
 - `RpcRoutingMode` (enum) - Defines how an RPC call is routed to a peer (outbound, inbound, or pre-routed).
 - `RpcCall`, `RpcCallHandler` - Base class for all RPC call instances, holding the method definition and call identifier.
@@ -520,6 +535,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `RpcObjectTracker` - Base class for tracking RPC objects (shared or remote) associated with a peer.
 - `RpcServiceBase` - Base class for RPC services that provides access to the DI container and `RpcHub`.
 - `RpcTransport` - Base class for RPC transports that handle message serialization and sending.
+- `RpcFrameBasedTransport` - Base class for transports that batch outbound RPC messages into frames.
 - `RpcHandshake` (record) - Serializable handshake data exchanged between RPC peers during connection establishment.
 - `RpcInboundCall<TResult>` - Typed `RpcInboundCall` that sends the result as `TResult`.
 - `RpcInboundCallTracker` - Tracks active inbound RPC calls on a peer.
@@ -533,11 +549,14 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `RpcOutboundCallTracker` - Tracks active outbound RPC calls on a peer, handling timeouts, reconnection, and abort.
 - `RpcOutboundContext` - Encapsulates the context for sending an outbound RPC call, including headers, routing, and caching.
 - `RpcOutboundMessage` - An outbound RPC message ready for serialization, containing method, arguments, and headers.
-- `RpcPeerConnectionState` (record), `RpcPeerConnectionStateExt` - Immutable snapshot of an RPC peer's connection state, including handshake, transport, and error info.
+- `RpcPeerConnectionStateKind` (enum) - Identifies disconnected, connecting, connected, and terminal RPC peer connection states.
+- `RpcPeerConnectionState` (record) - Snapshot of an RPC peer's lifecycle state, handshake, transport, error, and connection-transition tasks.
 - `RpcRemoteObjectTracker` - Tracks remote `IRpcObject` instances using weak references, with periodic keep-alive signaling.
 - `RpcSharedObjectTracker` - Tracks locally shared `IRpcSharedObject` instances with keep-alive timeout and automatic disposal.
 - `RpcSharedStream<T>` - Typed server-side shared stream that reads from a local source and delivers items to the remote consumer.
 - `RpcSimpleChannelTransport` - An `RpcTransport` backed by simple in-memory channels, used for loopback connections.
+- `RpcPipeTransport` - An `RpcFrameBasedTransport` that sends and receives length-prefixed RPC frames over a `PipeReader` and `PipeWriter`.
+- `RpcStreamTransport` - An `RpcFrameBasedTransport` that sends and receives length-prefixed RPC frames over a pair of streams.
 - `RpcSystemCallSender` - Sends system-level RPC calls (handshake, ok, error, stream control) to a peer's transport.
 - `RpcSystemCalls` - Implements `IRpcSystemCalls` to handle system-level RPC messages on the receiving side.
 - `RpcPolymorphicArgumentHandlerIsValidCallFunc` (delegate) - Delegate for validating inbound calls with polymorphic arguments.
@@ -563,11 +582,13 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `RpcMessageSerializer` - Base class for serializers that read and write complete RPC messages including headers and arguments.
 - `RpcTextMessageSerializer` - Base class for text-based `RpcMessageSerializer` implementations with shared size limits.
 - `NullValue` - This type is used to serialize null values for polymorphic arguments. You shouldn't use it anywhere directly.
+- `RpcFrameCodec` - Serializes batches of RPC messages into frame buffers and parses messages back out of them.
 - `RpcByteArgumentSerializerV4` - V4 binary `RpcArgumentSerializer` that supports polymorphic argument serialization.
 - `RpcByteMessageSerializerV4`, `RpcByteMessageSerializerV5` - V4 binary message serializer using LVar-encoded argument data length prefix.
 - `RpcByteMessageSerializerV4Compact` - Compact variant of `RpcByteMessageSerializerV4` that transmits method references as hash codes only.
 - `RpcByteMessageSerializerV5Compact` - Compact variant of `RpcByteMessageSerializerV5` that transmits method references as hash codes only.
 - `RpcTextArgumentSerializerV4` - V4 text-based `RpcArgumentSerializer` that uses a unit-separator delimiter between arguments.
+- `RpcTextArgumentSerializerV4NP` - A non-polymorphic variant of `RpcTextArgumentSerializerV4` that rejects polymorphic serialization.
 - `RpcTextMessageSerializerV3` - V3 JSON-based text message serializer that uses `JsonRpcMessage` for the message envelope.
 - `RpcMessageSerializerReadFunc` (delegate) - Delegate that reads an `RpcInboundMessage` from serialized byte data.
 - `RpcMessageSerializerWriteFunc` (delegate) - Delegate that writes an `RpcOutboundMessage` into a byte buffer.
@@ -581,20 +602,30 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 ### ActualLab.Rpc.WebSockets
 
 - `RpcWebSocketTransport` - An `RpcTransport` implementation that sends and receives RPC messages over a `WebSocket` connection.
+- `RpcWebSocketCloseCode` - Defines well-known application-specific WebSocket close codes used by the RPC framework.
 - `WebSocketOwner` - Owns a `WebSocket` and its associated `HttpMessageHandler`, disposing both on cleanup.
 - `WebSocketExt` - Extension methods for `WebSocket` providing cross-platform send and receive overloads.
+
+### ActualLab.Rpc.Trimming
+
+- `RpcProxyCodeKeeperExtension` - Retains RPC proxy and serialization code that would otherwise be trimmed by the .NET IL linker.
 
 ## ActualLab.Rpc.Server
 
 ### ActualLab.Rpc.Server
 
+- `RpcHttpServer` - Server-side handler that accepts incoming full-duplex HTTP/2 connections and establishes RPC peer connections for ASP.NET Core hosts.
+- `RpcHttpServerOptions` (record) - Configuration options for `RpcHttpServer`, including request paths, backend exposure, and connection parameters.
+- `RpcHttpServerBuilder` (struct) - Builder for configuring `RpcHttpServer` and its options.
+- `RpcHttpServerPeerRefFactory` (delegate) - Creates an `RpcPeerRef` for an HTTP server connection from its HTTP context and backend flag.
+- `RpcHttpServerDefaultDelegates` - Provides default delegate implementations for `RpcHttpServer`.
 - `RpcWebSocketServer`, `RpcWebSocketServerOptions` (record), `RpcWebSocketServerBuilder` (struct) - Server-side handler that accepts incoming `WebSocket` connections and establishes RPC peer connections for ASP.NET Core hosts.
 - `RpcWebSocketServerPeerRefFactory` (delegate) - Delegate that creates an `RpcPeerRef` for a `WebSocket` server connection based on the `HttpContext` and backend flag.
 - `RpcWebSocketServerDefaultDelegates` - Provides default delegate implementations for `RpcWebSocketServer`, including the peer reference factory.
 - `AssemblyExt` - Extension methods for `Assembly` to discover Web API controller types.
-- `EndpointRouteBuilderExt` - Extension methods for `IEndpointRouteBuilder` to map RPC `WebSocket` server endpoints.
+- `EndpointRouteBuilderExt` - Extension methods for `IEndpointRouteBuilder` to map RPC WebSocket and full-duplex HTTP endpoints.
 - `HttpConfigurationExt` - Extension methods for `HttpConfiguration` to configure dependency resolution using `IServiceCollection`.
-- `RpcBuilderExt` - Extension methods for `RpcBuilder` to add RPC `WebSocket` server support.
+- `RpcBuilderExt` - Extension methods for `RpcBuilder` to add RPC WebSocket and full-duplex HTTP support.
 - `ServiceCollectionExt` - Extension methods for `IServiceCollection` to register Web API controllers as transient services.
 - `ServiceProviderExt` - Extension methods for `IServiceProvider` to create `IDependencyResolver` instances for Web API.
 
@@ -657,15 +688,23 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `RpcCommandHandler` - A command filter that routes commands to remote `RpcPeer` instances or executes them locally, with automatic rerouting on topology changes.
 - `RpcInboundCommandHandler` (record) - An RPC middleware that routes inbound RPC calls for commands through the `ICommander` pipeline instead of direct method invocation.
 
+### ActualLab.CommandR.Trimming
+
+- `CommanderProxyCodeKeeperExtension` - Retains commander proxy-related code needed for .NET trimming scenarios.
+
 ## ActualLab.Fusion
 
 ### ActualLab.Fusion
 
 - `IComputeService`, `ComputeServiceExt` - A tagging interface for Fusion compute service proxy types.
-- `IComputedStateOptions`, `ComputedState<T>` - Configuration options for `IComputedState`.
-- `IMutableStateOptions`, `MutableState<T>` - Configuration options for `IMutableState`.
+- `IComputedStateOptions` - Configuration options for `IComputedState`.
+- `IComputedState`, `IComputedState<T>`, `ComputedState`, `ComputedState<T>` - A state that automatically recomputes its value on invalidation using a configurable update delay.
+- `IMutableStateOptions` - Configuration options for `IMutableState`.
+- `IMutableState`, `IMutableState<T>`, `MutableState`, `MutableState<T>` - A state that supports explicit value mutation, synchronously updating and invalidating its computed value on each change.
 - `ISessionCommand<TResult>`, `SessionCommandExt` - A strongly-typed `ISessionCommand` that returns a result of type `TResult`.
-- `IStateOptions<T>`, `State`, `StateFactory`, `StateOptions<T>` (record), `StateExt` - Strongly-typed `IStateOptions` with initial output of type `T`.
+- `IStateOptions<T>`, `StateOptions<T>` (record) - Strongly typed state options with an initial output of type `T`.
+- `IState`, `IState<T>`, `State` - A reactive state backed by a `Computed` value that raises events on invalidation and update.
+- `StateFactory`, `StateExt` - Factory and extension methods for Fusion state objects.
 - `CallOptions` (enum) - Defines flags controlling how a compute method call is performed.
 - `ConsistencyState` (enum), `ConsistencyStateExt` - Defines the consistency state of a `Computed` instance.
 - `InvalidationSourceFormat` (enum) - Defines formatting options for displaying `InvalidationSource` values.
@@ -673,14 +712,15 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `RemoteComputedCacheMode` (enum) - Defines caching behavior for remote computed values.
 - `StateEventKind` (enum) - Defines the kinds of lifecycle events raised by a `State`.
 - `ComputeFunction`, `ComputeFunctionExt` - Base class for functions that produce `Computed` instances with lock-based concurrency control.
-- `Computed<T>`, `ComputedOptions` (record), `ComputedExt` - A strongly-typed `Computed` that holds a `Result<T>` output value.
+- `IComputed`, `Computed`, `Computed<T>`, `ComputedExt` - The core Fusion abstraction: a cached computation result with consistency tracking, dependencies, and automatic invalidation propagation.
+- `ComputedOptions` (record) - Configuration options controlling computed-value caching, invalidation delays, and consolidation.
 - `ComputedInput` - Represents the input (arguments) of a compute function, serving as the key for looking up `Computed` instances in the `ComputedRegistry`.
 - `ComputedSynchronizer` - Provides synchronization logic for `Computed` instances, ensuring remote computed values are synchronized before use.
 - `ComputeContext` - Tracks the current compute call context, including call options and captured computed instances.
 - `ComputeMethodAttribute` - Marks a method as a Fusion compute method, enabling automatic caching and invalidation of its `Computed` output.
 - `ComputedRegistry` - A global registry that stores and manages all `Computed` instances using weak references, with automatic pruning of collected entries.
 - `ComputedSource<T>`, `ComputedSourceExt` - A strongly-typed `ComputedSource` that produces `Computed<T>` values.
-- `ConsolidatingComputed<T>` - A `Computed` that implements `IsConsolidating` behavior.
+- `IConsolidatingComputed`, `ConsolidatingComputed<T>` - A `Computed` that implements `IsConsolidating` behavior.
 - `DefaultSessionFactory` - Provides factory methods that create `SessionFactory` delegates producing `Session` instances with random string identifiers.
 - `FixedDelayer` (record) - An `IUpdateDelayer` with a fixed update delay and configurable retry delays.
 - `InvalidationSource` (struct) - Describes the source (origin) of a `Computed` invalidation, which can be a code location, a string label, or a reference to another `Computed`.
@@ -736,7 +776,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 
 ### ActualLab.Fusion.Client
 
-- `RemoteComputed<T>`, `RemoteComputedExt` - A `Computed<T>` that is populated from a remote RPC compute call and tracks synchronization state with the server.
+- `IRemoteComputed`, `RemoteComputed<T>`, `RemoteComputedExt` - A computed value produced by a remote RPC call that tracks synchronization state with the server.
 
 ### ActualLab.Fusion.Client.Caching
 
@@ -747,7 +787,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 
 ### ActualLab.Fusion.Client.Interception
 
-- `RemoteComputeMethodFunction<T>` - A strongly-typed `RemoteComputeMethodFunction` that creates `RemoteComputed<T>` instances for remote compute method calls.
+- `RemoteComputeMethodFunction`, `RemoteComputeMethodFunction<T>` - Handles remote RPC compute method calls with caching, synchronization, and rerouting support.
 - `RemoteComputeServiceInterceptor` - An interceptor for remote compute services that delegates calls to either the local compute method handler or the RPC interceptor.
 
 ### ActualLab.Fusion.Diagnostics
@@ -791,11 +831,11 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 
 - `IOperationCompletionListener` - A listener that is notified when an operation completes, enabling side-effect processing such as invalidation.
 - `Completion<TCommand>` (record) - Default implementation of `ICompletion<TCommand>` carrying the completed operation.
-- `OperationCompletionNotifier` - Default `IOperationCompletionNotifier` that deduplicates operations by UUID and dispatches to all `IOperationCompletionListener` instances.
+- `IOperationCompletionNotifier`, `OperationCompletionNotifier` - Notifies registered operation-completion listeners, deduplicating operations by UUID before dispatch.
 
 ### ActualLab.Fusion.Operations.Reprocessing
 
-- `OperationReprocessor`, `OperationReprocessorExt` - Tries to reprocess commands that failed with a reprocessable (transient) error. Must be a transient service.
+- `IOperationReprocessor`, `OperationReprocessor`, `OperationReprocessorExt` - Reprocesses commands that failed with a reprocessable transient error. The implementation must be a transient service.
 
 ### ActualLab.Fusion.Rpc
 
@@ -808,6 +848,10 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 ### ActualLab.Fusion.Testing
 
 - `ComputedTest` - Test helpers that repeatedly evaluate an assertion inside a `ComputedSource<T>` until it passes or a timeout is reached.
+
+### ActualLab.Fusion.Trimming
+
+- `FusionProxyCodeKeeperExtension` - A code keeper extension that prevents the .NET trimmer from removing Fusion-specific proxy types, computed functions, and RPC call types.
 
 ### ActualLab.Fusion.UI
 
@@ -891,6 +935,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 
 ### ActualLab.Fusion.EntityFramework.LogProcessing
 
+- `IDbLogReader` - Defines the contract for a service that reads and processes database log entries.
 - `IDbEventLogEntry` - Extends `IDbLogEntry` with a `DelayUntil` timestamp for timed event log entries.
 - `IDbIndexedLogEntry` - Extends `IDbLogEntry` with a sequential index for ordered log entries such as operation logs.
 - `IDbLogEntry` - Defines the contract for a database log entry with UUID, version, state, and timestamp.
@@ -916,7 +961,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `DbOperation` - Entity Framework entity representing a persisted operation in the "_Operations" table, used for cross-host operation log replication and invalidation.
 - `DbOperationCompletionListener<TDbContext>` - Listens for locally completed operations and notifies log watchers to trigger remote invalidation and event processing.
 - `DbOperationFailedException` - The exception thrown when a database operation fails during commit or processing.
-- `DbOperationScope<TDbContext>`, `DbOperationScopeProvider` - A typed `DbOperationScope` bound to a specific `DbContext`, managing the transaction lifecycle, operation/event persistence, and commit verification.
+- `DbOperationScope`, `DbOperationScope<TDbContext>`, `DbOperationScopeProvider` - Database-backed operation scopes that manage transactions, operation/event persistence, and commit verification.
 
 ### ActualLab.Fusion.EntityFramework.Operations.LogProcessing
 
@@ -976,7 +1021,7 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 - `SessionInfo` (record) - Stores detailed information about a user session, including version, timestamps, IP address, user agent, and additional options.
 - `User` (record), `UserExt` - Represents an authenticated or guest user with claims, identities, and version tracking.
 - `AuthBackend_SetSessionOptions` (record) - Backend command to set session options for the specified session.
-- `DbAuthServiceBuilder` (struct) - Builder for configuring database-backed authentication services, including repositories, entity converters, and session trimmer.
+- `DbAuthServiceBuilder<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>` (struct) - Builder for configuring database-backed authentication services, including repositories, entity converters, and session trimmer.
 - `EndpointRouteBuilderAuthExt` - Extension methods for `IEndpointRouteBuilder` to map Fusion authentication endpoints.
 - `FusionBuilderExt` - Extension methods for `FusionBuilder` to register authentication client services.
 - `FusionMvcWebServerBuilderExt` - Extension methods for `FusionMvcWebServerBuilder` to register MVC-based authentication controllers.
@@ -996,10 +1041,10 @@ See also: [Condensed API Index](api-index.md) (~300 lines).
 ### ActualLab.Fusion.Authentication.Services
 
 - `DbAuthService<TDbContext>` - Abstract base class for database-backed authentication services, defining the `IAuth` and `IAuthBackend` contract methods.
-- `DbSessionInfoTrimmer<TDbContext>` - Abstract base class for a background worker that trims expired session records.
+- `DbSessionInfoTrimmer<TDbContext>`, `DbSessionInfoTrimmer<TDbContext, TDbSessionInfo, TDbUserId>` - Background workers that periodically trim expired session records.
 - `DbSessionInfo<TDbUserId>` - Entity Framework entity representing a session record in the database, including authentication state and metadata.
 - `DbSessionInfoConverter<TDbContext, TDbSessionInfo, TDbUserId>` - Converts between `DbSessionInfo<TDbUserId>` entities and `SessionInfo` models.
-- `DbSessionInfoRepo` - Default database repository for session info entities, supporting CRUD operations and trimming of expired sessions.
+- `IDbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>`, `DbSessionInfoRepo<TDbContext, TDbSessionInfo, TDbUserId>` - Repository contract and default implementation for session-info CRUD and expired-session trimming.
 - `DbUser<TDbUserId>` - Entity Framework entity representing a user record in the database, with claims and identity associations.
 - `DbUserConverter<TDbContext, TDbUser, TDbUserId>` - Converts between `DbUser<TDbUserId>` entities and `User` models.
 - `DbUserIdHandler<TDbUserId>` - Default implementation of `IDbUserIdHandler<TDbUserId>` using converters for parsing and formatting user IDs.

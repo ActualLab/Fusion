@@ -83,12 +83,14 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `HostId` (record) — unique host identifier
 - `VersionGenerator<T>` — abstract version generator
 - `ClockBasedVersionGenerator` — monotonic `long` versions from clock ticks
+- `CpuTimestampBasedVersionGenerator` — monotonic `long` versions from CPU timestamp ticks
 
 ### Reflection & Codegen
 - `MemberwiseCopier` — reflection-based property/field copier
 
 ### Hashing & Sharding Helpers
-- `ShardMap<TNode>` — maps shards to nodes via consistent hashing
+- `ShardMap<TNode>` — maps shards to nodes using a configurable builder
+- `ShardMapBuilder` — selects the strategy used to build shard-to-node maps
 - `HashRing<T>` — consistent hash ring
 
 
@@ -101,6 +103,8 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RpcClientPeer` / `RpcServerPeer` — client/server peer specializations
 - `RpcConnection` — wraps transport + properties for a single connection
 - `RpcClient` — establishes RPC connections to remote peers
+- `RpcAlternatingClient` — alternates connection attempts between multiple RPC clients
+- `RpcHttpClient` — client establishing full-duplex HTTP/2 connections
 - `RpcWebSocketClient` — client establishing connections via WebSocket
 
 ### Service & Method Descriptors
@@ -109,17 +113,24 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RpcMethodDef` — describes an RPC method (name, kind, serialization, timeouts)
 
 ### Attributes
-- `RpcMethodAttribute` — configures RPC method properties (name, timeouts, local execution mode)
+- `RpcMethodAttribute` — configures RPC method properties (name, timeouts, delayed calls, execution modes)
+- `RpcSerializableAttribute` — controls RPC-specific polymorphic serialization behavior
 - `LegacyNameAttribute` — backward-compatible RPC name mapping with max version
 
 ### Configuration
 - `RpcBuilder` (struct) — fluent builder for registering RPC services in DI
 - `RpcConfiguration` — registered service builders + default service mode
 - `RpcLimits` (record) — timeout/periodic limits for connections, keep-alive
-- `RpcCallTimeouts` (record) — connect/run/log timeouts for outbound calls
+- `RpcCallTimeouts` (record) — connect/run/delay timeouts for outbound calls
 - `RpcServiceMode` (enum) — local, server, client, or distributed
 
+### Transports
+- `RpcFrameBasedTransport` — batches outbound RPC messages into frames
+- `RpcPipeTransport` / `RpcStreamTransport` — length-prefixed framed transports over pipes or streams
+- `RpcPeerConnectionStateKind` (enum) — disconnected, connecting, connected, or terminal peer state
+
 ## RPC Server — [`ActualLab.Rpc.Server`]
+- `RpcHttpServer` — accepts full-duplex HTTP/2 connections for ASP.NET Core
 - `RpcWebSocketServer` — accepts WebSocket connections for ASP.NET Core
 
 
@@ -154,7 +165,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ## Fusion (`ActualLab.Fusion`) — [PartF.md](PartF.md)
 
 - `IComputeService` — tagging interface for compute service proxies
-- `Computed<T>` — cached computation result with invalidation support
+- `IComputed` / `Computed<T>` — cached computation result with dependency tracking and invalidation support
 - `ComputedOptions` (record) — configuration for compute method behavior
 - `ComputedRegistry` — global registry of all `Computed` instances (weak refs, auto-prune)
 - `ComputeContext` — tracks current compute call context
@@ -165,8 +176,8 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 
 ### States — [PartF-ST.md](PartF-ST.md)
 - `IState<T>` / `State` — reactive state with computed value
-- `ComputedState<T>` — state backed by a compute method
-- `MutableState<T>` — manually settable reactive state
+- `IComputedState<T>` / `ComputedState<T>` — state backed by a computation and automatic update loop
+- `IMutableState<T>` / `MutableState<T>` — manually settable reactive state
 - `StateFactory` — creates state instances
 - `StateSnapshot` — immutable snapshot of state lifecycle
 
@@ -183,7 +194,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `ISessionCommand<T>` — command scoped to a session
 
 ### Remote/Client
-- `RemoteComputed<T>` — `Computed` populated from remote RPC call
+- `IRemoteComputed` / `RemoteComputed<T>` — computed value populated by a remote RPC call
 - `RemoteComputedCache` — abstract base for remote computed caches
 
 ### Builder
@@ -224,7 +235,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `DbEntityConverter<TDbContext, TDbEntity, TModel>` — entity-to-model conversion
 
 ### Operations — [PartO.md](PartO.md)
-- `DbOperationScope<TDbContext>` — manages transaction, operation/event persistence, commit
+- `DbOperationScope` / `DbOperationScope<TDbContext>` — manages transaction, operation/event persistence, commit
 - `DbOperation` — persisted operation entity for cross-host replication
 - `DbEvent` — persisted operation event entity with delayed processing
 
