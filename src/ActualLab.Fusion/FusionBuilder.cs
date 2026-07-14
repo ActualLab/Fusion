@@ -308,15 +308,10 @@ public readonly struct FusionBuilder
             // Piggybacks on AddHandlers' discovery pass (no extra scan): any handler found here
             // is a handler the invalidation replay couldn't resolve on a non-singleton service
             var handlers = Commander.Handlers;
-            var oldHandlers = handlers.ToHashSet();
-            try {
-                Commander.AddHandlers(serviceType, implementationType);
-                if (handlers.Count != oldHandlers.Count)
-                    throw ActualLab.Fusion.Internal.Errors.ComputeServiceWithCommandHandlersMustBeSingleton(implementationType);
-            }
-            finally {
-                handlers.IntersectWith(oldHandlers);
-            }
+            var oldHandlerCount = handlers.Count;
+            Commander.AddHandlers(serviceType, implementationType);
+            if (handlers.Count != oldHandlerCount)
+                throw ActualLab.Fusion.Internal.Errors.ComputeServiceWithCommandHandlersMustBeSingleton(implementationType);
         }
 
         object CreateComputeService(IServiceProvider c)
