@@ -45,6 +45,14 @@ public abstract record DbLogReaderOptions
 public abstract record DbOperationLogReaderOptions : DbLogReaderOptions
 {
     public TimeSpan StartOffset { get; init; } = TimeSpan.FromSeconds(3);
+    // Pending-gap set settings (see DbOperationLogReader)
+    public RandomTimeSpan GapCheckPeriod { get; init; } = TimeSpan.FromSeconds(1).ToRandom(0.1);
+    public TimeSpan GapFastCheckAge { get; init; } = TimeSpan.FromMinutes(1);
+    // Should match DbOperationLogTrimmer.MaxEntryAge - past it a gap's entry is trimmed anyway
+    public TimeSpan GapRetentionPeriod { get; init; } = TimeSpan.FromMinutes(30);
+    public int GapSetSizeLimit { get; init; } = 16384;
+    public int GapCheckChunkSize { get; init; } = 256;
+    public int FailedEntryRetryLimit { get; init; } = 10;
 
     protected DbOperationLogReaderOptions()
     {

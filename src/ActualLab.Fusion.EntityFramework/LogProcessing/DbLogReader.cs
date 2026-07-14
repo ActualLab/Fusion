@@ -149,8 +149,12 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
                 0 => (false, "process", "processed", ", will try to discard it"),
                 _ => (true, "discard", "discarded", ""),
             };
-            if (mustDiscard1 && LogKind == DbLogKind.Operations)
-                return; // No need for discard in operation log
+            if (mustDiscard1 && LogKind == DbLogKind.Operations) {
+                // Operations are never discarded; reaching this point means the quick reprocess
+                // policy is exhausted. Let subclasses hand the entry to a longer-lived retry path.
+                OnReprocessExhausted(shard, key, cancellationToken);
+                return;
+            }
 
             try {
                 await Task.Delay(Settings.ReprocessDelay.Next(), cancellationToken).ConfigureAwait(false);
@@ -180,6 +184,9 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
             }
         }
     }
+
+    protected virtual void OnReprocessExhausted(string shard, TDbKey key, CancellationToken cancellationToken)
+    { }
 
     protected void SetEntryState(DbSet<TDbEntry> dbEntries, TDbEntry entry, LogEntryState state)
     {
