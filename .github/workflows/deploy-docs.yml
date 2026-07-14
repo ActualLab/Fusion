@@ -46,7 +46,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: docs/package-lock.json
 
@@ -58,6 +58,10 @@ jobs:
         run: npm run docs:build
         working-directory: docs
 
+      - name: Test documentation MCP server
+        run: npm run mcp:test
+        working-directory: docs
+
       - name: Verify SEO (canonical / sitemap / redirects / routes)
         run: npm run docs:verify
         working-directory: docs
@@ -67,9 +71,9 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '3'
+          wranglerVersion: '4'
           workingDirectory: docs
-          command: pages deploy .vitepress/dist --project-name=fusion-actuallab-net --branch=master --commit-dirty=true
+          command: pages deploy .vitepress/dist --project-name=fusion-actuallab-net --branch=master --commit-dirty=true --compatibility-date=2026-07-14 --compatibility-flags=nodejs_compat
 
       # Best-effort nudge so Bing/Yandex recrawl changed pages within minutes.
       # Runs after deploy so the freshly published key file validates; a failure

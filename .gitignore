@@ -65,6 +65,10 @@ samples/**/Host/wwwroot/js/
 *.log
 *.binlog
 
+# Documentation build state
+docs/.generated/
+docs/.wrangler/
+
 # Visual Studio Profiler & Trace files
 *.psess
 *.vsp

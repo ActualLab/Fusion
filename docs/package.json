@@ -7,21 +7,27 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "docs:dev": "vitepress dev . --open --port 3030",
     "docs:dev8080": "vitepress dev . --open --port 8080",
-    "docs:build": "npm run slides:build && vitepress build . && node scripts/gen-redirects.mjs",
+    "docs:build": "npm run mcp:index && npm run slides:build && vitepress build . && node scripts/gen-redirects.mjs",
     "docs:preview": "vitepress preview .",
     "docs:seo-check": "node scripts/seo-check.mjs",
     "docs:verify-routes": "node scripts/verify-routes.mjs",
     "docs:verify": "npm run docs:seo-check && npm run docs:verify-routes",
     "docs:indexnow": "node scripts/submit-indexnow.mjs",
+    "mcp:index": "node scripts/build-mcp-index.mjs",
+    "mcp:test": "npm run mcp:index && node scripts/test-mcp.mjs",
     "slides:build": "node slides/build-all.mjs"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "vitepress": "^1.6.4"
+    "vitepress": "^1.6.4",
+    "wrangler": "^4.110.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "agents": "^0.17.4",
     "chart.js": "^4.5.1",
-    "vue-chartjs": "^5.3.3"
+    "vue-chartjs": "^5.3.3",
+    "zod": "^4.4.3"
   }
 }
