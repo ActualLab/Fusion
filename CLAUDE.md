@@ -417,3 +417,38 @@ ai wt feature1   # Creates ActualLab.Fusion-feature1 if it doesn't exist and run
 ```
 
 The worktree is created using `git worktree add` from the main project directory.
+
+# Fusion documentation and source code
+
+Several projects here build on **ActualLab.Fusion** — an end-to-end
+reactivity framework for .NET and TypeScript (automatic caching, dependency
+tracking, precise invalidation, RPC, and reactive client state). When you
+work with Fusion, two complementary resources may be available; use them.
+
+## `fusion-docs` MCP
+
+A documentation MCP server named **`fusion-docs`** may be wired up (look for
+`mcp__fusion-docs__*` tools). When present, it's the fastest way to get
+Fusion right — prefer it over guessing. Its tools:
+
+- `mcp__fusion-docs__intro` — a concise intro to Fusion, its mental model,
+  and what documentation exists. Start here if you're unsure.
+- `mcp__fusion-docs__search` — find candidate documentation anchors.
+- `mcp__fusion-docs__get` — fetch the text at a known anchor.
+- `mcp__fusion-docs__search_expanded` — return complete matched sections
+  including their nested subsections.
+
+The MCP is powered by the Markdown (`.md`) docs that live in the
+**ActualLab.Fusion** repository, so its content and the repo's docs stay in
+sync.
+
+## ActualLab.Fusion source, samples, and tests
+
+The **ActualLab.Fusion** project — a clone of the Fusion GitHub repository —
+is available as a sibling project (e.g. `/proj/ActualLab.Fusion` in Docker,
+`D:\Projects\ActualLab.Fusion` on Windows; see **Accessing Sibling
+Projects**). It contains the full framework source, plus **samples** and
+**tests** that demonstrate correct, idiomatic Fusion usage. When the docs
+don't fully answer a question, read the actual source, the sample apps, or
+the tests to see how a feature is meant to be used. Fusion samples may also
+live in a separate **ActualLab.Fusion.Samples** sibling project.
