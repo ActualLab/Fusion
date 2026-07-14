@@ -8,6 +8,7 @@ public sealed class StateSnapshot
 {
     private AsyncTaskMethodBuilder _whenUpdatingSource = AsyncTaskMethodBuilderExt.New();
     private AsyncTaskMethodBuilder _whenUpdatedSource = AsyncTaskMethodBuilderExt.New();
+    private int _invalidatedRaised;
 
     public readonly State State;
     public readonly Computed Computed;
@@ -59,6 +60,9 @@ public sealed class StateSnapshot
         => Computed.WhenInvalidated(cancellationToken);
     public Task WhenUpdating() => _whenUpdatingSource.Task;
     public Task WhenUpdated() => _whenUpdatedSource.Task;
+
+    internal bool TryClaimInvalidatedRaise()
+        => Interlocked.Exchange(ref _invalidatedRaised, 1) == 0;
 
     internal void OnUpdating()
         => _whenUpdatingSource.TrySetResult();

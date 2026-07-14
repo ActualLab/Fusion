@@ -270,8 +270,57 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         computeGate.SetResult(default);
         await Task.Delay(300);
 
-        invalidatedCount.Should().BeGreaterThanOrEqualTo(1,
-            "the Invalidated event must fire for a generation that was invalidated while computing");
+        invalidatedCount.Should().Be(1,
+            "the Invalidated event must fire exactly once for a generation that was invalidated while computing");
+    }
+
+    [Fact]
+    public async Task InvalidatedEventIsExactlyOncePerGenerationTest()
+    {
+        // Double-fire repro: an Updated handler that synchronously invalidates the just-published
+        // computed makes the callback path (StateBoundComputed.OnInvalidated -> State.OnInvalidated)
+        // raise the state-level Invalidated event while SetComputed is still inside its lock (the
+        // snapshot already points to the new computed); SetComputed's re-raise
+        // (computed.IsInvalidated()) then fired it a second time for the same generation.
+        // Delivery must be exactly-once per generation.
+        var services = CreateServices();
+        var stateFactory = services.StateFactory();
+        var dep = stateFactory.NewMutable(0);
+
+        var state = stateFactory.NewComputed(
+            new ComputedState<int>.Options() {
+                UpdateDelayer = FixedDelayer.NextTick,
+                InitialValue = -1,
+            },
+            async ct => await dep.Use(ct).ConfigureAwait(false));
+
+        // Let the initial generation settle before we start observing.
+        await state.Update();
+        await Task.Delay(200);
+
+        Computed? targetComputed = null;
+        var targetInvalidations = 0;
+        var armed = false;
+        state.Invalidated += (s, _) => {
+            if (ReferenceEquals(s.Computed, targetComputed))
+                Interlocked.Increment(ref targetInvalidations);
+        };
+        state.Updated += (s, _) => {
+            if (armed)
+                return;
+
+            armed = true;
+            targetComputed = s.Computed;
+            s.Computed.Invalidate(); // Synchronous: InvalidationDelay is 0 for a ComputedState
+        };
+
+        // Force a fresh generation whose Updated handler runs the invalidation above.
+        dep.Value = 1;
+        await Task.Delay(300);
+
+        targetInvalidations.Should().Be(1,
+            "the Invalidated event must fire exactly once even when the generation is invalidated "
+            + "from within its own Updated handler");
     }
 
     [Fact]

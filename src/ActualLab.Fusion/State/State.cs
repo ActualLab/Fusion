@@ -277,6 +277,12 @@ public abstract class State : ComputedInput, IState
         if (computed != snapshot.Computed)
             return;
 
+        // Both invalidation paths (StateBoundComputed.OnInvalidated and the SetComputed re-raise)
+        // can race here for a generation invalidated around publish time; claim ensures the
+        // per-generation Invalidated event fires exactly once.
+        if (!snapshot.TryClaimInvalidatedRaise())
+            return;
+
         try {
             Invalidated?.Invoke(this, StateEventKind.Invalidated);
         }
