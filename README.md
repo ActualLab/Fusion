@@ -55,6 +55,8 @@ If you prefer video, check out:
 
 <img src="https://img.shields.io/badge/-Live%20demos:-green" valign="middle"> [Blazor Sample](https://blazor-samples.actuallab.net/) ·
 [TodoApp Sample](https://todoapp.actuallab.net/) ·
+[TownHall](https://townhall.actuallab.net/) — a live audience Q&A app
+("Slido-lite") in [its own repository](https://github.com/ActualLab/Fusion.TownHall) ·
 [Board Games](https://boardgames.actuallab.net/) — a standalone Fusion app
 (real-time multiplayer board games) in [its own repository](https://github.com/alexyakunin/BoardGames).
 
