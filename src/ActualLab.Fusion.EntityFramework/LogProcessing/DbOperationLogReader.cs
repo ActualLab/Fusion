@@ -119,11 +119,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     // Present-but-failing entries (in practice: ToModel() deserialization failures) that outlived the
     // quick ReprocessPolicy join the pending-gap set with a bounded retry budget - see item 3 (residual).
     protected override void OnReprocessExhausted(string shard, long key, CancellationToken cancellationToken)
-    {
-        var shardGaps = Gaps.GetOrAdd(shard, static _ => new ShardGapSet());
-        lock (shardGaps)
-            shardGaps.Entries[key] = new GapEntry(SystemClock.Now, Settings.FailedEntryRetryLimit);
-    }
+        => AddGap(shard, key, SystemClock.Now, Settings.FailedEntryRetryLimit);
 
     // Protected/internal methods
 
@@ -182,7 +178,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         return firstIndex;
     }
 
-    protected void AddGap(string shard, long index, Moment now)
+    protected void AddGap(string shard, long index, Moment now, int retriesLeft = -1)
     {
         var shardGaps = Gaps.GetOrAdd(shard, static _ => new ShardGapSet());
         lock (shardGaps) {
@@ -198,7 +194,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 }
                 return;
             }
-            entries[index] = new GapEntry(now, -1);
+            entries[index] = new GapEntry(now, retriesLeft);
         }
     }
 
@@ -228,7 +224,13 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 shardGaps.SizeLimitWarned = false;
                 return Moment.MaxValue;
             }
-            indexesToCheck = [..entries.Keys];
+            // Budgeted (failed) entries are rate-limited to ~1 attempt per CheckPeriod,
+            // so watcher wake-ups can't burn their retry budget faster
+            List<long>? due = null;
+            foreach (var (index, gap) in entries)
+                if (gap.NextAttemptAt <= now)
+                    (due ??= []).Add(index);
+            indexesToCheck = due is null ? [] : [..due];
         }
 
         // Batched existence re-check via chunked Index-Contains queries
@@ -250,11 +252,12 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
             }
             var fastCheckAge = Settings.GapFastCheckAge;
             foreach (var gap in entries.Values)
-                if (now - gap.AddedAt < fastCheckAge)
-                    // At least one young gap - poll on the fast cadence
+                if (gap.RetriesLeft < 0 && now - gap.AddedAt < fastCheckAge)
+                    // At least one young pure gap - poll on the fast cadence.
+                    // Budgeted (failed) entries retry on the normal CheckPeriod cadence.
                     return now + Settings.GapCheckPeriod.Next();
 
-            return Moment.MaxValue; // All gaps are old - fall back to the normal CheckPeriod
+            return Moment.MaxValue; // No young pure gaps - fall back to the normal CheckPeriod
         }
     }
 
@@ -302,6 +305,8 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 abandon = retriesLeft <= 0;
                 if (abandon)
                     shardGaps.Entries.Remove(index);
+                else
+                    gap.NextAttemptAt = SystemClock.Now + Settings.CheckPeriod.Next();
             }
             if (abandon)
                 Log.LogError(e,
@@ -321,6 +326,8 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         public Moment AddedAt { get; } = addedAt;
         // -1 = pure gap (waits for the retention horizon); >= 0 = present-but-failing (bounded budget)
         public int RetriesLeft { get; set; } = retriesLeft;
+        // Pure gaps are always due; failed attempts push it forward by ~CheckPeriod
+        public Moment NextAttemptAt { get; set; } = addedAt;
     }
 
     protected sealed class ShardGapSet
