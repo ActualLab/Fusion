@@ -11,6 +11,84 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 13.0.101+4292afe9 | npm: 13.0.25
+
+Release date: 2026-07-14
+
+.NET-focused release; the npm package is unchanged at v13.0.25. The bulk of this
+release is a distributed-invalidation audit and the correctness wave it produced:
+Fusion's compute-call sharing, `IState.Invalidated` semantics, the operation-log
+reader, and operation-completion listeners were all hardened against races,
+duplicate delivery, and silent loss under load and reconnects.
+
+### Breaking Changes
+- Compute services that also expose command handlers must now be registered as
+  **singletons**. `AddComputeService` rejects a scoped/transient registration of
+  such a service at DI-build time instead of silently breaking invalidation
+  replay (the handler was resolved from the root provider, faulting every
+  completion). Migration: register these services as singletons. Scoped/transient
+  compute services **without** command handlers (e.g. UI-scoped services) are
+  unaffected.
+- `DatabaseFacadeExt.DisableAutoTransactionsAndSavepoints()` (in the
+  `...Internal` namespace) was renamed to
+  `DisableAutoTransactions(bool allowSavepoints = true)`. Call
+  `DisableAutoTransactions(allowSavepoints: false)` for the old behavior.
+
+### Added
+- `NonTransientErrorInvalidationDelay` is now a settable `[ComputeMethod]` option,
+  letting you tune how long a non-transient error result is cached before
+  auto-invalidation on a per-method basis (documented alongside the other compute
+  method options).
+
+### Changed
+- Error auto-invalidation is now routed by error transiency: **Terminal** errors
+  use `AutoInvalidationDelay`, while **NonTransient** errors use the minimum of
+  the relevant delays. A throwing `TransiencyResolver` is treated as transient.
+- Reworked the operation-log gap-set cadence: due-gated queries, no reader
+  starvation, and horizon expiry applied to all pending entries.
+- `MutableState` is documented as an exception to
+  `NonTransientErrorInvalidationDelay`.
+
+### Fixed
+- `IState.Invalidated` now fires **exactly once per generation** (no duplicate or
+  skipped invalidation events across generations).
+- Serve-stale no longer leaves a predecessor's `SynchronizedSource` uncompleted,
+  and the cache-update path no longer double-binds the shared RPC call; the
+  hand-off marker was fixed so successor invalidation still cleans up the shared
+  RPC call.
+- Fixed a `KeyConflictStrategy` race on `_events` inserts (actual-chat#4049), and
+  restored flush-and-retry recovery for version-checked event updates while
+  avoiding unnecessary event-conflict flushes.
+- Hardened the operation-log reader: gap pending-set tracking, bounded retry with
+  a corrected failed-entry retry cadence, and a coverage-loss sweep so entries
+  can't be silently dropped.
+- Operation-completion listeners are now reliable under failure: synchronous
+  listener throws are routed through the external-terminal path, an external
+  completion-command failure is terminal (propagated and unmarked), and
+  at-least-once delivery is documented and asserted.
+- Fixed a misleading discard log on the operations-log reprocess path and
+  enriched `OperationCompletionNotifier` assertion-failure logs with context.
+- Fixed the multitargeted build by disambiguating `FirstOrDefaultAsync` in
+  `DbOperationScope`.
+
+### Documentation
+- Added a distributed-invalidation audit report and course-of-action plan.
+- Docs site moved to Cloudflare Pages with extensionless canonical URLs and
+  IndexNow submission on deploy; improved documentation search indexing;
+  fixed homepage hydration mismatches and compressed GIF assets.
+- Linked the live sample demos (incl. Board Games, TownHall) from the docs and
+  README.
+
+### Tests
+- Added a must-not-throw test harness for operation-completion listeners, plus
+  operation-log reader gap/budget tests and reprocessor tests (Uuid preservation
+  across retries, no-retry-after-commit).
+
+### Infrastructure
+- Dependency bumps: ActualLab.Core → 13.0.12, MessagePack → 3.1.6,
+  AwesomeAssertions → 9.4.0, and several dev/CI tool updates.
+
+
 ## 13.0.28+5c8f5ae1 | npm: 13.0.25
 
 Release date: 2026-07-06
