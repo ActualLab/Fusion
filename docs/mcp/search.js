@@ -1,4 +1,5 @@
 const DEFAULT_SITE_URL = "https://fusion.actuallab.net";
+const EXPANDED_INLINE_LIMIT = 4000;
 
 function markdownText(text) {
   const codeSpans = [];
@@ -35,6 +36,10 @@ function normalizedAnchor(value) {
 
 function sourceUrl(section, siteUrl = DEFAULT_SITE_URL) {
   return `${siteUrl.replace(/\/$/, "")}/${section.anchor}`;
+}
+
+function baseUrl(siteUrl = DEFAULT_SITE_URL) {
+  return `${siteUrl.replace(/\/$/, "")}/`;
 }
 
 function scoreSection(section, phrase, words) {
@@ -101,11 +106,18 @@ export function renderSection(index, anchor, siteUrl) {
   if (!section)
     return `# Documentation section not found\n\nNo section has the anchor \`${normalized}\`. Use \`search\` to find a valid anchor.`;
 
-  const source = sourceUrl(section, siteUrl);
+  const header = `Source: [\`${section.anchor}\`](${sourceUrl(section, siteUrl)})\nBase URL: ${baseUrl(siteUrl)}`;
+  const children = section.children ?? [];
+  if (children.length === 0 || section.expanded.length <= EXPANDED_INLINE_LIMIT)
+    return `${header}\n\n${section.expanded}`;
+
   const content = [`###### ${section.markdownTitle}`];
   if (section.body)
     content.push("", section.body);
-  return `Source: [\`${section.anchor}\`](${source})\n\n${content.join("\n")}`;
+  content.push("", "Content below is truncated to sub-headers only, use the `get` tool to fetch any of them.", "");
+  for (const child of children)
+    content.push(`${"#".repeat(child.level)} [${child.title}](${sourceUrl(child, siteUrl)})`);
+  return `${header}\n\n${content.join("\n")}`;
 }
 
 export function renderExpandedSearch(index, query, limit, siteUrl) {
@@ -113,7 +125,7 @@ export function renderExpandedSearch(index, query, limit, siteUrl) {
   if (matches.length === 0)
     return `# Expanded search results\n\nNo documentation anchors matched **${query.trim()}**.`;
 
-  const blocks = [`# Expanded search results for “${query.trim()}”`];
+  const blocks = [`# Expanded search results for “${query.trim()}”`, `Base URL: ${baseUrl(siteUrl)}`];
   for (const section of matches) {
     blocks.push(`Source: [\`${section.anchor}\`](${sourceUrl(section, siteUrl)})`, section.expanded);
   }

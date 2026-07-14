@@ -74,6 +74,17 @@ function parsePage(renderer, relativePath, markdown) {
   }
 
   const route = routeFor(relativePath);
+  const anchorFor = heading => route ? `${route}#${heading.slug}` : `#${heading.slug}`;
+
+  const parents = headings.map(() => -1);
+  const openHeadings = [];
+  for (let index = 0; index < headings.length; index++) {
+    while (openHeadings.length && headings[openHeadings.at(-1)].level >= headings[index].level)
+      openHeadings.pop();
+    parents[index] = openHeadings.at(-1) ?? -1;
+    openHeadings.push(index);
+  }
+
   const hierarchy = [];
   return headings.map((heading, index) => {
     hierarchy.length = heading.level - 1;
@@ -90,13 +101,23 @@ function parsePage(renderer, relativePath, markdown) {
       }
     }
 
+    const children = headings
+      .map((child, childIndex) => ({ child, childIndex }))
+      .filter(item => parents[item.childIndex] === index)
+      .map(item => ({
+        anchor: anchorFor(item.child),
+        level: item.child.level,
+        markdownTitle: item.child.markdownTitle,
+        title: item.child.title,
+      }));
+
     const body = lines.slice(heading.line + 1, bodyEnd).join("\n").trim();
     const expanded = lines.slice(heading.line, expandedEnd).join("\n").trim();
-    const anchor = route ? `${route}#${heading.slug}` : `#${heading.slug}`;
     return {
-      anchor,
+      anchor: anchorFor(heading),
       body,
       breadcrumbs,
+      children,
       expanded,
       level: heading.level,
       markdownTitle: heading.markdownTitle,

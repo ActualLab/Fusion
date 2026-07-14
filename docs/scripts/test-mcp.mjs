@@ -78,12 +78,25 @@ try {
   if (!genericSection.includes("This document covers `Computed<T>`"))
     throw new Error("The get tool did not resolve a full URL with a generic-type heading.");
 
+  if (!section.includes("Base URL: https://fusion.actuallab.net/"))
+    throw new Error("The get tool did not include the Base URL line.");
+
+  const truncated = textOf(await client.callTool({
+    name: "get",
+    arguments: { anchor: "ActualLab.Fusion-vs/AkkaNET#actuallab-fusion-vs-akka-net" },
+  }));
+  if (!truncated.includes("truncated to sub-headers only")
+    || !truncated.includes("](https://fusion.actuallab.net/ActualLab.Fusion-vs/AkkaNET#"))
+    throw new Error("The get tool did not truncate a large section to sub-heading links.");
+
   const expanded = textOf(await client.callTool({
     name: "search_expanded",
     arguments: { query: "Cascading invalidation", limit: 2 },
   }));
   if (!expanded.includes("glossary#cascading-invalidation") || !expanded.includes("Automatic propagation"))
     throw new Error("The expanded search tool did not return the expected glossary section.");
+  if (!expanded.includes("Base URL: https://fusion.actuallab.net/"))
+    throw new Error("The expanded search tool did not include the Base URL line.");
 
   await client.close();
   console.log(`MCP integration test passed: ${names.join(", ")}.`);

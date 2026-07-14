@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll for new Fusion commits and redeploy the docs site + MCP
+
+[Timer]
+# First run 2 min after boot, then every 2 minutes (the docs build is heavier
+# than the other apps, so poll a little less aggressively).
+OnBootSec=2min
+OnUnitActiveSec=120s
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

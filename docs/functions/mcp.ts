@@ -41,7 +41,7 @@ function createServer() {
   server.registerTool(
     "get",
     {
-      description: "Get the immediate Markdown text under one exact documentation anchor, stopping at the next heading of any level.",
+      description: "Get the Markdown for one exact documentation anchor. Sections up to ~4000 characters are returned in full including every sub-heading; larger sections return the immediate text plus links to their sub-headings to fetch individually.",
       inputSchema: {
         anchor: z.string().min(1).describe("An anchor returned by search, such as PartF#invalidation or a full documentation URL."),
       },

@@ -1,0 +1,12 @@
+[Unit]
+Description=Fusion docs + MCP poll-based auto-deploy
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Environment=REPO_DIR=/opt/apps/fusion
+Environment=BRANCH=master
+# Invoke via bash so it runs regardless of the file's executable bit
+ExecStart=/bin/bash /opt/apps/fusion/deploy/deploy.sh

@@ -1,0 +1,52 @@
+# Production stack for hosting the Fusion documentation site + MCP server as a
+# website on the shared VM:
+#   fusion-app -> fusion.actuallab.net  (static VitePress docs + /mcp endpoint)
+#
+# TLS + routing are handled by the shared edge Caddy (from the BoardGames
+# deployment), which owns ports 80/443 on this host. The container publishes no
+# ports; it joins that Caddy's network ("boardgames_default") as the external
+# "edge" network and is reached by its container name (see BoardGames'
+# deploy/Caddyfile: `fusion.actuallab.net -> fusion-app:8080`).
+#
+# There is no database. The MCP source tools (source_search / symbol_search /
+# source_read) run ripgrep over the Fusion source baked into the image; CPU and
+# memory are capped so a search can never starve the other apps on this host.
+#
+# Usage on the host:
+#   cd deploy && docker compose -f docker-compose.prod.yml up -d --build
+name: fusion
+
+services:
+  fusion-app:
+    build:
+      context: ..
+      dockerfile: docs/mcp-server/Dockerfile
+      target: runtime
+    container_name: fusion-app
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      NODE_ENV: "production"
+      PORT: "8080"
+      SITE_URL: "https://fusion.actuallab.net"
+    # Fairness on the shared host: cap CPU/memory so an MCP search cannot starve
+    # TownHall / BoardGames / Fusion.Samples.
+    cpus: 1.5
+    mem_limit: 640m
+    pids_limit: 512
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - edge
+
+networks:
+  # The shared edge network (created on the host; the edge Caddy from
+  # ActualLab/DeployConfigs routes fusion.actuallab.net to fusion-app).
+  edge:
+    external: true
+    name: edge

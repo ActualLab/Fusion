@@ -40,5 +40,6 @@ and replay their invalidation phase on every backend host.
 - **TypeScript packages** — ports of the core, Fusion, RPC, Fusion RPC, and React integration layers.
 - **API and terminology references** — the full public-type index and Fusion glossary.
 
-Use `search` when you need candidate documentation anchors, `get` for the immediate text at a known anchor, and
-`search_expanded` when you need complete matched sections including their nested subsections.
+Use `search` when you need candidate documentation anchors, `get` for the text at a known anchor (small sections are
+returned in full including their sub-sections; large ones return the immediate text plus links to their sub-headings),
+and `search_expanded` when you need complete matched sections including their nested subsections.

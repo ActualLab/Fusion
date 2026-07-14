@@ -1,0 +1,17 @@
+# Keep the docker build context small. The image is built from the repo by
+# deploy/docker-compose.prod.yml (docs/mcp-server/Dockerfile).
+.git/
+**/node_modules/
+**/bin/
+**/obj/
+**/artifacts/
+artifacts/
+tmp/
+**/tmp/
+**/.vs/
+**/.vscode/
+**/.idea/
+# Built site + caches are produced inside the image, never copied from the host.
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+docs/.generated/
