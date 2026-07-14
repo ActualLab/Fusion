@@ -71,9 +71,12 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 .Collect(Settings.ConcurrencyLevel, useCurrentScheduler: false, cancellationToken)
                 .ConfigureAwait(false);
             NextIndexes[shard] = entries[^1].Index + 1;
+            // The gap check runs on full batches too - the due-filter makes it cheap,
+            // so gap processing can't starve while the shard is busy
+            var nextGapCheckAt = await ProcessGaps(shard, cancellationToken).ConfigureAwait(false);
             return entries.Count >= batchSize
-                ? default // Full batch = there might be more entries
-                : await ProcessGaps(shard, cancellationToken).ConfigureAwait(false); // No more entries
+                ? default // Full batch = there might be more entries, read again immediately
+                : nextGapCheckAt;
         }
         catch (Exception e) {
             activity?.Finalize(e, cancellationToken);
@@ -207,25 +210,40 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         long[] indexesToCheck;
         lock (shardGaps) {
             var entries = shardGaps.Entries;
-            // Drop pure gaps that outlived the retention horizon (aborted tx / identity jump / trimmed)
+            // Every entry expires at the retention horizon - past it its row is trimmed anyway.
+            // Pure gaps (aborted tx / identity jump) go silently; a budgeted entry is a real loss,
+            // so it goes with an error - same principle as budget-exhaustion abandonment.
             var horizon = now - Settings.GapRetentionPeriod;
-            List<long>? expired = null;
-            foreach (var (index, gap) in entries)
-                if (gap.RetriesLeft < 0 && gap.AddedAt < horizon)
-                    (expired ??= []).Add(index);
-            if (expired != null) {
-                foreach (var index in expired)
+            List<long>? expiredGaps = null;
+            List<long>? expiredFailed = null;
+            foreach (var (index, gap) in entries) {
+                if (gap.AddedAt >= horizon)
+                    continue;
+
+                if (gap.RetriesLeft < 0)
+                    (expiredGaps ??= []).Add(index);
+                else
+                    (expiredFailed ??= []).Add(index);
+            }
+            if (expiredGaps != null) {
+                foreach (var index in expiredGaps)
                     entries.Remove(index);
                 DefaultLog?.Log(Settings.LogLevel,
                     $"{nameof(ProcessGaps)}[{{Shard}}]: dropped {{Count}} gap(s) past the retention horizon",
-                    shard, expired.Count);
+                    shard, expiredGaps.Count);
             }
+            if (expiredFailed != null)
+                foreach (var index in expiredFailed) {
+                    entries.Remove(index);
+                    Log.LogError(
+                        "{Method}[{Shard}]: failed entry #{Index} outlived the retention horizon, abandoning it",
+                        nameof(ProcessGaps), shard, index);
+                }
             if (entries.Count == 0) {
                 shardGaps.SizeLimitWarned = false;
                 return Moment.MaxValue;
             }
-            // Budgeted (failed) entries are rate-limited to ~1 attempt per CheckPeriod,
-            // so watcher wake-ups can't burn their retry budget faster
+            // NextAttemptAt gates all re-queries: a wake-up with nothing due issues zero queries
             List<long>? due = null;
             foreach (var (index, gap) in entries)
                 if (gap.NextAttemptAt <= now)
@@ -250,14 +268,20 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 shardGaps.SizeLimitWarned = false;
                 return Moment.MaxValue;
             }
+            // Advance the cadence of checked-but-still-missing entries: young pure gaps poll fast,
+            // everything else at ~CheckPeriod. Found entries were removed or advanced in ProcessGapEntry.
             var fastCheckAge = Settings.GapFastCheckAge;
-            foreach (var gap in entries.Values)
-                if (gap.RetriesLeft < 0 && now - gap.AddedAt < fastCheckAge)
-                    // At least one young pure gap - poll on the fast cadence.
-                    // Budgeted (failed) entries retry on the normal CheckPeriod cadence.
-                    return now + Settings.GapCheckPeriod.Next();
+            foreach (var index in indexesToCheck) {
+                if (!entries.TryGetValue(index, out var gap) || gap.NextAttemptAt > now)
+                    continue;
 
-            return Moment.MaxValue; // No young pure gaps - fall back to the normal CheckPeriod
+                var isYoungGap = gap.RetriesLeft < 0 && now - gap.AddedAt < fastCheckAge;
+                gap.NextAttemptAt = now + (isYoungGap ? Settings.GapCheckPeriod : Settings.CheckPeriod).Next();
+            }
+            var nextCheckAt = Moment.MaxValue;
+            foreach (var gap in entries.Values)
+                nextCheckAt = Moment.Min(nextCheckAt, gap.NextAttemptAt);
+            return nextCheckAt;
         }
     }
 
@@ -326,7 +350,8 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         public Moment AddedAt { get; } = addedAt;
         // -1 = pure gap (waits for the retention horizon); >= 0 = present-but-failing (bounded budget)
         public int RetriesLeft { get; set; } = retriesLeft;
-        // Pure gaps are always due; failed attempts push it forward by ~CheckPeriod
+        // The single cadence authority for all entries: due when <= now,
+        // advanced after every miss or failed attempt
         public Moment NextAttemptAt { get; set; } = addedAt;
     }
 

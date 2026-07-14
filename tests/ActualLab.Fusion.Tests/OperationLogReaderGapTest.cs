@@ -54,6 +54,7 @@ public class OperationLogReaderGapTest(ITestOutputHelper @out) : FusionTestBase(
     {
         var reader = CreateReader(new() {
             CheckPeriod = TimeSpan.FromSeconds(1), // No jitter - the retry gate is exactly 1 s
+            GapCheckPeriod = TimeSpan.FromMilliseconds(100),
             FailedEntryRetryLimit = 10,
         });
         reader.KnownEntries[7] = NewDbOperation(7);
@@ -61,10 +62,10 @@ public class OperationLogReaderGapTest(ITestOutputHelper @out) : FusionTestBase(
         reader.RunOnReprocessExhausted(7);
 
         // Rapid wake-ups must burn at most one attempt per CheckPeriod,
-        // and a budgeted entry must not trigger the fast gap-poll cadence
+        // and a budgeted entry must not ride the fast gap-poll cadence
         for (var i = 0; i < 20; i++) {
             var nextCheckAt = await reader.RunProcessGaps();
-            nextCheckAt.Should().Be(Moment.MaxValue);
+            (nextCheckAt - reader.Now).Should().BeGreaterThan(TimeSpan.FromMilliseconds(500));
         }
         reader.ProcessAttempts[7].Should().Be(1);
         reader.HasGap(7).Should().BeTrue();
@@ -78,20 +79,79 @@ public class OperationLogReaderGapTest(ITestOutputHelper @out) : FusionTestBase(
     [Fact]
     public async Task PureGapCadenceTest()
     {
-        var reader = CreateReader(new());
+        var reader = CreateReader(new() { GapCheckPeriod = TimeSpan.FromMilliseconds(200) });
         reader.RunAddGap(5);
 
         var nextCheckAt = await reader.RunProcessGaps();
         nextCheckAt.Should().NotBe(Moment.MaxValue); // A young pure gap polls on the fast cadence
         (nextCheckAt - reader.Now).Should().BeLessThan(TimeSpan.FromSeconds(2));
         reader.HasGap(5).Should().BeTrue();
+        reader.QueryCounts[5].Should().Be(1);
 
-        // Pure gaps aren't rate-limited: the entry is picked up on the very next check
+        // The miss advanced NextAttemptAt, so a back-to-back check doesn't re-query the gap
         reader.KnownEntries[5] = NewDbOperation(5);
+        await reader.RunProcessGaps();
+        reader.HasGap(5).Should().BeTrue();
+        reader.QueryCounts[5].Should().Be(1);
+
+        // Once due, the gap is re-queried and resolved
+        await Task.Delay(400);
         nextCheckAt = await reader.RunProcessGaps();
         nextCheckAt.Should().Be(Moment.MaxValue);
         reader.HasGap(5).Should().BeFalse();
         reader.ProcessAttempts[5].Should().Be(1);
+        reader.QueryCounts[5].Should().Be(2);
+    }
+
+    [Fact]
+    public async Task BudgetedEntryHorizonExpiryTest()
+    {
+        var reader = CreateReader(new() {
+            CheckPeriod = TimeSpan.FromMilliseconds(50).ToRandom(0.1),
+            GapRetentionPeriod = TimeSpan.FromMilliseconds(200),
+            FailedEntryRetryLimit = 10,
+        });
+        // The entry's row never appears, so its retry budget is never touched
+        reader.RunOnReprocessExhausted(7);
+        await reader.RunProcessGaps();
+        reader.HasGap(7).Should().BeTrue();
+        reader.QueryCounts[7].Should().Be(1);
+
+        await Task.Delay(400);
+        var nextCheckAt = await reader.RunProcessGaps();
+        nextCheckAt.Should().Be(Moment.MaxValue);
+        reader.HasGap(7).Should().BeFalse();
+        reader.ProcessAttempts.Should().BeEmpty();
+
+        var content = _loggerProvider.Content;
+        content.Should().Contain("outlived the retention horizon");
+        (content.Split("outlived the retention horizon").Length - 1).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task FullBatchGapCheckTest()
+    {
+        var reader = CreateReader(new());
+        var realHostId = Services.GetRequiredService<DbHub<TestDbContext>>().HostId.Id;
+        var dbContext = await CreateDbContext();
+        await using var _ = dbContext;
+        for (var i = 1; i <= 2; i++) {
+            var op = NewDbOperation(i);
+            op.LoggedAt = DateTime.UtcNow;
+            op.HostId = realHostId; // The hosted reader replays these as local no-ops
+            dbContext.Operations.Add(op);
+        }
+        await dbContext.SaveChangesAsync();
+
+        reader.KnownEntries[100] = NewDbOperation(100);
+        reader.RunAddGap(100);
+
+        // A full batch must still run the gap check while returning default = "read again immediately"
+        var nextCheckAt = await reader.RunProcessBatch(batchSize: 2);
+        nextCheckAt.Should().Be(default(Moment));
+        reader.GetNextIndex().Should().Be(3);
+        reader.HasGap(100).Should().BeFalse();
+        reader.ProcessAttempts[100].Should().Be(1);
     }
 
     [Fact]
@@ -175,10 +235,14 @@ public class GapTestLogReader(
     public ConcurrentDictionary<long, DbOperation> KnownEntries { get; } = new();
     public ConcurrentDictionary<long, Unit> FailingIndexes { get; } = new();
     public ConcurrentDictionary<long, int> ProcessAttempts { get; } = new();
+    public ConcurrentDictionary<long, int> QueryCounts { get; } = new();
     public Moment Now => SystemClock.Now;
 
     public Task<Moment> RunProcessGaps(CancellationToken cancellationToken = default)
         => ProcessGaps(Shard, cancellationToken);
+
+    public Task<Moment> RunProcessBatch(int batchSize, CancellationToken cancellationToken = default)
+        => ProcessBatch(Shard, batchSize, cancellationToken);
 
     public void RunAddGap(long index)
         => AddGap(Shard, index, SystemClock.Now);
@@ -223,9 +287,11 @@ public class GapTestLogReader(
         string shard, long[] indexes, CancellationToken cancellationToken)
     {
         var result = new List<DbOperation>();
-        foreach (var index in indexes)
+        foreach (var index in indexes) {
+            QueryCounts.AddOrUpdate(index, 1, static (_, count) => count + 1);
             if (KnownEntries.TryGetValue(index, out var entry))
                 result.Add(entry);
+        }
         return Task.FromResult(result);
     }
 }
