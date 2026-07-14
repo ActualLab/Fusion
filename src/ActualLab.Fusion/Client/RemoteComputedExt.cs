@@ -29,10 +29,12 @@ public static class RemoteComputedExt
             return true;
 
         var boundCall = computed.WhenCallBound.GetAwaiter().GetResult();
-        if (boundCall is { IsHandedOff: true })
-            // The call was handed off to a successor computed, so invalidating this displaced
-            // predecessor must not invalidate the shared call - otherwise the successor would be
-            // born invalidated (audit item 16).
+        if (boundCall is not null && boundCall.TryConsumeHandOff())
+            // The call was handed off to a successor computed, and the first invalidation
+            // after the hand-off is the displaced predecessor's - it must not invalidate the
+            // shared call, otherwise the successor would be born invalidated. Consuming the
+            // marker keeps later invalidations (the successor's own) cleaning up the call
+            // (audit item 16).
             return false;
 
         const string reason =

@@ -110,6 +110,45 @@ public class KeyValueServiceWithCacheTest : FusionTestBase
         }
     }
 
+    [Fact]
+    public async Task CacheHitUpdateHandOffInvalidationTest()
+    {
+        await ResetClientServices();
+        await using var serving = await WebHost.Serve();
+        await Delay(0.25);
+        var cache = ClientServices.GetRequiredService<IRemoteComputedCache>();
+        await cache.WhenInitialized;
+
+        var clientServices2 = CreateServices(true);
+        await using var _ = clientServices2 as IAsyncDisposable;
+
+        var kv = WebServices.GetRequiredService<IKeyValueService<string>>();
+        var kv1 = ClientServices.GetRequiredService<IKeyValueService<string>>();
+        var kv2 = clientServices2.GetRequiredService<IKeyValueService<string>>();
+        var timeout = TimeSpan.FromSeconds(5);
+
+        await kv.Set("1", "a");
+        var c1 = await GetComputed(kv1, "1"); // Nothing is cached yet -> RPC call, cache gets "a"
+        c1.Value.Should().Be("a");
+
+        await kv.Set("1", "b"); // The server value changes, the cache entry still holds "a"
+
+        var c2 = await GetComputed(kv2, "1"); // Cached version fetched
+        c2.Value.Should().Be("a");
+        await c2.WhenSynchronized.WaitAsync(timeout); // The background update (-> "b") is applied
+
+        var c3 = await GetComputed(kv2, "1"); // The successor produced by the cache-hit update
+        c3.Should().NotBeSameAs(c2);
+        c3.Value.Should().Be("b");
+        c3.IsConsistent().Should().BeTrue();
+        var call = await c3.WhenCallBound.WaitAsync(timeout);
+        call.Should().NotBeNull();
+
+        // The successor's own invalidation must clean up the call it inherited via hand-off
+        c3.Invalidate();
+        await call!.WhenInvalidated.WaitAsync(timeout);
+    }
+
     [Theory]
     [InlineData(false, false, 0d)]
     [InlineData(false, true, 0d)]
