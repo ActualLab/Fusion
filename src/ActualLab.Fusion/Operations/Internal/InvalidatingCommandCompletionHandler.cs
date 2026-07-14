@@ -93,7 +93,7 @@ public class InvalidatingCommandCompletionHandler(
         var handler = CommandHandlerResolver.GetCommandHandlerChain(command).FinalHandler;
         finalHandler = handler as IMethodCommandHandler;
         if (finalHandler is null || finalHandler.ParameterTypes.Length != 2) {
-            WarnIfReplayDisqualified(command, handler);
+            LogIfReplayDisqualified(command, handler);
             return false;
         }
 
@@ -161,18 +161,24 @@ public class InvalidatingCommandCompletionHandler(
 
     // Private methods
 
-    private void WarnIfReplayDisqualified(ICommand command, CommandHandler? handler)
+    private void LogIfReplayDisqualified(ICommand command, CommandHandler? handler)
     {
         if (handler is null)
             return;
         if (Services.GetService(handler.GetHandlerServiceType()) is not IComputeService)
             return;
 
+        // TryAdd must run only when the log level is enabled - otherwise the one-shot is
+        // consumed while logging is off and the message never appears once it's re-enabled.
+        var log = Log.IfEnabled(LogLevel.Information);
+        if (log is null)
+            return;
+
         var commandType = command.GetType();
         if (!ReplayDisqualifiedCommandTypes.TryAdd(commandType, true))
             return;
 
-        Log.IfEnabled(LogLevel.Information)?.LogInformation(
+        log.LogInformation(
             "Invalidation replay is unsupported for {CommandType}: its final handler on {ServiceType} " +
             "isn't a 2-parameter method handler",
             commandType.GetName(), handler.GetHandlerServiceType().GetName());
