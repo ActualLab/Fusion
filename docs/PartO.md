@@ -210,6 +210,14 @@ public virtual async Task<TResult> HandleCommand(
 3. **`Invalidation.IsActive` check** &ndash; First thing in the method
 4. **`CreateOperationDbContext`** &ndash; Creates a DbContext that participates in the operation scope
 
+::: warning Don't spawn background work from inside an invalidation block
+The invalidation block (and any synchronous `Invalidated` event handler) runs inside an
+`Invalidation.Begin()` scope. That scope is `AsyncLocal`-based, so if you start a `Task.Run` or similar
+background work from within it, the spawned work inherits the same ambient invalidation context even
+after the block exits. Any compute method it calls will silently skip computation and invalidate instead
+&ndash; see [`Computed.BeginIsolation()`](./PartF-C.md#context-scopes) for the guardrail.
+:::
+
 ## Passing Data to Invalidation Block
 
 The invalidation block runs on all hosts, but the main logic only runs on the originating host.
@@ -257,6 +265,97 @@ public virtual async Task SignOut(
 > - `CommandContext.Items` exists only during command execution on the originating host
 > - `Operation.Items` is persisted and available on all hosts during invalidation
 
+## Testing Invalidation
+
+Dependency propagation invalidates every *transitive* dependant of a call automatically, but it can't
+invent an invalidation for a *directly affected* call that a handler's invalidation block forgot to
+enumerate. Nothing catches that at compile time &ndash; a query added later, a changed data dependency,
+or a broad aggregate query that isn't obviously "related" to the command can silently fall out of sync
+with reality.
+
+The mitigation isn't an analyzer (the design space is too broad for one to pay off yet) &ndash; it's a
+test convention: **for every mutating command, write a test that proves it invalidates both the
+entity-specific query it targets and any aggregate query whose result depends on the same data.**
+
+<!-- snippet: PartO_TestInvalidation_Command -->
+```cs
+public record KeyValueService_Set(string Key, string Value) : ICommand<Unit>;
+```
+<!-- endSnippet -->
+
+<!-- snippet: PartO_TestInvalidation_Service -->
+```cs
+public class KeyValueService : IComputeService
+{
+    private readonly ConcurrentDictionary<string, string> _values = new();
+
+    // Entity-specific query
+    [ComputeMethod]
+    public virtual Task<string?> Get(string key, CancellationToken cancellationToken = default)
+        => Task.FromResult(_values.GetValueOrDefault(key));
+
+    // Aggregate query
+    [ComputeMethod]
+    public virtual Task<int> Count(CancellationToken cancellationToken = default)
+        => Task.FromResult(_values.Count);
+
+    [CommandHandler]
+    public virtual Task<Unit> Set(KeyValueService_Set command, CancellationToken cancellationToken = default)
+    {
+        if (Invalidation.IsActive) {
+            // Every mutating command handler must invalidate BOTH the entity-specific
+            // query it directly affects AND every aggregate query whose result may change --
+            // dependency tracking alone won't discover an omitted root call.
+            _ = Get(command.Key, default);
+            _ = Count(default);
+            return Task.FromResult(Unit.Default);
+        }
+
+        // Requests an operation scope so this in-memory command gets completion
+        // notifications (and therefore an invalidation replay) -- see InMemoryOperationScopeProvider
+        InMemoryOperationScope.Require();
+        _values[command.Key] = command.Value;
+        return Task.FromResult(Unit.Default);
+    }
+}
+```
+<!-- endSnippet -->
+
+Capture both computed values *before* calling the command, then assert both got invalidated:
+
+<!-- snippet: PartO_TestInvalidation_Demo -->
+```cs
+var services = new ServiceCollection();
+services.AddFusion().AddComputeService<KeyValueService>();
+var sp = services.BuildServiceProvider();
+var commander = sp.Commander();
+var kv = sp.GetRequiredService<KeyValueService>();
+
+// Capture both queries BEFORE the mutating command runs
+var cGet = await Computed.Capture(() => kv.Get("a"));
+var cCount = await Computed.Capture(() => kv.Count());
+WriteLine($"Before Set: Get.IsConsistent={cGet.IsConsistent()}, Count.IsConsistent={cCount.IsConsistent()}");
+
+await commander.Call(new KeyValueService_Set("a", "1"));
+
+// A test would assert both are False here -- if Set() only invalidated
+// Get(), this would (correctly) fail and catch the missing Count() invalidation
+WriteLine($"After Set:  Get.IsConsistent={cGet.IsConsistent()}, Count.IsConsistent={cCount.IsConsistent()}");
+```
+<!-- endSnippet -->
+
+The output:
+
+```text
+Before Set: Get.IsConsistent=True, Count.IsConsistent=True
+After Set:  Get.IsConsistent=False, Count.IsConsistent=False
+```
+
+If `Set`'s invalidation block only called `Get(command.Key, default)` and forgot `Count(default)`, this
+test would catch it immediately: `Count.IsConsistent` would stay `True` after the command completes.
+Without the test, that gap would surface later as a UI aggregate (a count, a list, a total) that never
+updates, with nothing in the logs pointing at the cause.
+
 ## Nested Commands
 
 When one command calls another, the nested command is automatically logged and its invalidation
@@ -299,6 +398,43 @@ Operations Framework adds several filtering handlers to the command pipeline:
 | 10,000 | `InMemoryOperationScopeProvider` | Provides transient scope, runs completion |
 | 1,000 | `DbOperationScopeProvider` | Provides database scope for each DbContext type |
 | 100 | `InvalidatingCommandCompletionHandler` | Runs invalidation for completed operations |
+
+## Invariants and Guarantees
+
+### Invalidation replay and completion listeners must not fail
+
+`InvalidatingCommandCompletionHandler.TryInvalidate` and `OperationCompletionNotifier`'s dispatch to
+`IOperationCompletionListener`s both catch every exception, log it, and otherwise treat the operation as
+fully processed &ndash; a failed invalidation replay or a failed listener is **not** retried, and (on the
+originating host) it's never revisited within the same process lifetime.
+
+This is a deliberate design trade-off, but it rests on a hard, mostly-unenforced contract: **invalidation
+logic and completion listeners must not fail.** Concretely, that means:
+
+- Invalidation blocks (the `if (Invalidation.IsActive) { ... }` branch) and any compute method they
+  transitively call must be synchronous or otherwise guaranteed to complete, side-effect-free, and
+  independent of failure-prone infrastructure (no I/O that can legitimately fail).
+- Custom `IOperationCompletionListener` implementations must not throw under any input they can
+  reasonably observe.
+
+If this contract is violated, the swallowed exception is your only signal, and the corresponding
+invalidation (or completion notification) is simply lost for that operation. When writing either kind of
+code, test it explicitly against failure scenarios you'd otherwise rely on retry semantics to paper over
+&ndash; retries are not coming.
+
+### Command completion isn't a cluster-wide freshness boundary
+
+After a command's transaction commits, invalidation still has to pass through local completion handling,
+watcher notification (or the poll fallback), operation replay on every other host, and &ndash; for
+RPC clients &ndash; a further `Invalidate` message. During that interval, another host or a connected
+client can legitimately observe a cached pre-command value. This is intentional eventual consistency, not
+a bug: **`Commander.Call` returning does not mean every dependent cache cluster-wide has been
+invalidated.**
+
+If a caller needs cross-host read-your-write semantics (e.g., "the very next read on any host must see
+this write"), command completion alone doesn't provide it &ndash; that requires an explicit version or
+synchronization mechanism layered on top (e.g., threading a version/timestamp through the response and
+having the reader wait for a computed at least that fresh).
 
 ## Backend Commands
 

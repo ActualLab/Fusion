@@ -89,10 +89,74 @@ public class ChatService(IServiceProvider services) : DbServiceBase<AppDbContext
         => Task.FromResult(new ChatMessage(0, command.Text));
 }
 
+// Example: testing that a mutating command invalidates both an entity-specific
+// and an aggregate query -- see "Testing Invalidation" in PartO.md
+#region PartO_TestInvalidation_Command
+public record KeyValueService_Set(string Key, string Value) : ICommand<Unit>;
+#endregion
+
+#region PartO_TestInvalidation_Service
+public class KeyValueService : IComputeService
+{
+    private readonly ConcurrentDictionary<string, string> _values = new();
+
+    // Entity-specific query
+    [ComputeMethod]
+    public virtual Task<string?> Get(string key, CancellationToken cancellationToken = default)
+        => Task.FromResult(_values.GetValueOrDefault(key));
+
+    // Aggregate query
+    [ComputeMethod]
+    public virtual Task<int> Count(CancellationToken cancellationToken = default)
+        => Task.FromResult(_values.Count);
+
+    [CommandHandler]
+    public virtual Task<Unit> Set(KeyValueService_Set command, CancellationToken cancellationToken = default)
+    {
+        if (Invalidation.IsActive) {
+            // Every mutating command handler must invalidate BOTH the entity-specific
+            // query it directly affects AND every aggregate query whose result may change --
+            // dependency tracking alone won't discover an omitted root call.
+            _ = Get(command.Key, default);
+            _ = Count(default);
+            return Task.FromResult(Unit.Default);
+        }
+
+        // Requests an operation scope so this in-memory command gets completion
+        // notifications (and therefore an invalidation replay) -- see InMemoryOperationScopeProvider
+        InMemoryOperationScope.Require();
+        _values[command.Key] = command.Value;
+        return Task.FromResult(Unit.Default);
+    }
+}
+#endregion
+
 public class PartO : DocPart
 {
     public override async Task Run()
     {
+        {
+            StartSnippetOutput("Testing Invalidation");
+            #region PartO_TestInvalidation_Demo
+            var services = new ServiceCollection();
+            services.AddFusion().AddComputeService<KeyValueService>();
+            var sp = services.BuildServiceProvider();
+            var commander = sp.Commander();
+            var kv = sp.GetRequiredService<KeyValueService>();
+
+            // Capture both queries BEFORE the mutating command runs
+            var cGet = await Computed.Capture(() => kv.Get("a"));
+            var cCount = await Computed.Capture(() => kv.Count());
+            WriteLine($"Before Set: Get.IsConsistent={cGet.IsConsistent()}, Count.IsConsistent={cCount.IsConsistent()}");
+
+            await commander.Call(new KeyValueService_Set("a", "1"));
+
+            // A test would assert both are False here -- if Set() only invalidated
+            // Get(), this would (correctly) fail and catch the missing Count() invalidation
+            WriteLine($"After Set:  Get.IsConsistent={cGet.IsConsistent()}, Count.IsConsistent={cCount.IsConsistent()}");
+            #endregion
+        }
+
         StartSnippetOutput("Reference verification");
 
         // 1. DbOperation - entity for operation log

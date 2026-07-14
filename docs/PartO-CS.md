@@ -176,6 +176,23 @@ operations.ConfigureOperationLogReader(_ => new() {
 ```
 <!-- endSnippet -->
 
+`StartOffset` positions a fresh reader at the earliest log entry logged within that window of "now" —
+it deliberately skips older operations, which is fine because a fresh process has no old in-memory
+computed values to invalidate. This relies on a few assumptions:
+
+- Clock drift between hosts must stay well below `StartOffset` &ndash; a host whose clock is ahead can
+  cause the reader to skip entries a slower-clocked host is still about to commit.
+- A reader must establish its starting position within `StartOffset` of the moment the host starts
+  serving compute calls; a slow startup path that serves calls before the reader is positioned can leave
+  a gap.
+- Dynamically introducing a shard into an already-running host, or a persistent remote-computed cache
+  participating across restarts, are edge cases outside the "fresh process" assumption and deserve extra
+  care.
+
+None of this is a durable per-host/per-shard cursor &ndash; that would give stronger ordering and
+recovery guarantees, at the cost of checkpoint lifecycle and host-identity management, and remains a
+possible future enhancement rather than something implemented today.
+
 ### Operation Log Trimmer
 
 <!-- snippet: PartOCS_OperationLogTrimmerConfig -->

@@ -151,6 +151,17 @@ var existing = scope.Context.TryGetCaptured<Data>(); // null if not cached
 - Breaking potential dependency cycles
 - Implementing "fire and forget" patterns where you don't want invalidation to propagate
 
+::: warning `Invalidation.Begin()` leaks into spawned work via `ExecutionContext`
+`Invalidation.Begin()` (and `Invalidation.IsActive`) is `AsyncLocal`-based, so it flows through
+`ExecutionContext` the same way any other ambient async state does. If code inside the `using` block
+(or a synchronous `Invalidated` event handler, which itself runs inside the invalidation pass) starts
+background work with `Task.Run` or a similar continuation, that work captures the current
+`ExecutionContext` snapshot — disposing the `using` block afterwards doesn't undo it. A compute method
+called later from that spawned work "runs" in invalidation mode: it skips its body, silently returns
+`default(T)`, and invalidates the corresponding cached value instead of computing it. Guard such
+spawned work with `Computed.BeginIsolation()`, the same way framework code protects itself.
+:::
+
 ## Extension Methods
 
 ### Update & Use
@@ -228,6 +239,14 @@ computed.Invalidated += c => {
 
 // If already invalidated, handler fires immediately
 ```
+
+::: warning Keep dependency chains shallow
+Invalidation propagates from a dependency to its dependants by **synchronous recursion** — it's the
+hottest path in the library, so it isn't implemented as an iterative, heap-based traversal. A
+dependency chain depth on the order of 10^3 risks a stack overflow. Dependency graphs are expected to
+stay shallow in practice; if you find yourself building deliberately deep chains (e.g. a linked list of
+computed values), restructure it instead of relying on deep recursive invalidation.
+:::
 
 ## ComputedRegistry
 
@@ -371,6 +390,21 @@ InvalidationSource.Cancellation   // Cancellation-triggered
 InvalidationSource.InitialState   // Initial state invalidation
 // ... and others for specific internal operations
 ```
+
+## ComputedSource
+
+`ComputedSource` (and its typed counterpart `ComputedSource<T>`) is a self-contained producer of
+`Computed<T>` values driven by a delegate you provide, rather than by a `[ComputeMethod]` call —
+`ComputedState` is built on top of it.
+
+::: warning `.Computed` can transiently return a `Computing` instance
+`ComputedSource.Computed` (and `ComputedSource<T>.Computed`) publish the next `Computed<T>` instance
+*before* it starts computing, so that the in-flight instance is reachable and can be invalidated while
+it's still computing. This means a direct read of `.Computed` may observe an instance whose
+`ConsistencyState` is `Computing` — and `Output`/`Value` throw on such an instance. Prefer `Use()` or
+`Update()` (which await completion of the current computation), or check `ConsistencyState` explicitly
+before reading `Output`/`Value` off `.Computed` directly.
+:::
 
 ## ComputedImpl (Advanced)
 

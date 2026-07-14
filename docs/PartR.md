@@ -425,6 +425,21 @@ Notice the state lifecycle:
 
 This is exactly the mechanism that powers real-time UI in Fusion's Blazor components.
 
+## RemoteComputed Lifetime
+
+Every `RemoteComputed<T>` your client observes (directly, or as the computed backing a Compute Service
+Client call) is registered with the server for the duration it stays consistent, so the server can push
+an `Invalidate` message when its server-side counterpart changes.
+
+::: warning Don't `Dispose()` a live, consistent `RemoteComputed`
+`RemoteComputed<T>.Dispose()` is public (it's also called from the finalizer, so it can't be made
+internal), but calling it explicitly on a computed that's still `Consistent` unregisters the underlying
+RPC call **without invalidating the computed**: the server stops tracking it and will never send an
+`Invalidate` for it, while the client keeps serving the (now permanently stale) cached value. If you
+need to stop observing a `RemoteComputed`, just drop the reference and let it get garbage-collected (or
+let it become invalidated first) &ndash; don't call `Dispose()` on it directly while it's still in use.
+:::
+
 ## Real-Time UI Updates
 
 As you might guess, this is exactly the logic our Blazor samples use to update

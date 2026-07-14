@@ -169,6 +169,23 @@ public record CreateUserCommandV2(
 ```
 <!-- endSnippet -->
 
+### Deployment Compatibility Contract
+
+`DbOperation` persists the concrete command (including nested-operation and operation-item types) as
+polymorphic JSON, and other hosts deserialize it to replay the invalidation pass. This ties command
+serialization to your deployment process:
+
+- A command type (or any nested-operation/operation-item type it carries) **must remain deserializable
+  for at least `MaxEntryAge`** (30 minutes by default &ndash; see [Operation Log Trimmer](./PartO-CS.md))
+  **past its last producer**. In practice: don't rename or remove a command type and deploy that change
+  within the same window; stage such changes across releases instead (e.g. keep the old type around,
+  deprecated, for one extra release).
+- If this contract is violated, deserialization fails on the reading host, and the operation eventually
+  gets abandoned with a single **Error-level** log once its bounded retry budget is exhausted &ndash;
+  it does *not* fail silently, but it also doesn't self-heal. Losing the invalidation for that operation
+  means dependent caches on that host go stale until something else invalidates them.
+- There's no built-in type-alias/rename mapping in the serialization binder today; if a specific rename
+  can't be staged across releases, add one on demand rather than up front.
 
 ## Troubleshooting
 

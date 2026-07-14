@@ -170,6 +170,19 @@ public record Options : StateOptions<T>
 
 Note: `MutableState` uses `ComputedOptions.MutableStateDefault` by default, which has `TransientErrorInvalidationDelay = TimeSpan.MaxValue` (errors don't auto-clear).
 
+::: warning Two semantic nits worth knowing
+- **Same-reference `Set` is a no-op.** `Set` compares the new `Result` to the currently pending one and
+  returns immediately if they're equal. For a reference-typed `T`, that comparison is (by default)
+  reference equality — so mutating an object in place and then calling `Set` with the *same reference*
+  produces no invalidation at all, even though the contents changed. Construct (or clone) a new instance
+  for `Set` instead of mutating in place.
+- **A nonzero `InvalidationDelay` makes `Set` effectively eventual.** `Set` invalidates the current
+  computed through the normal `Computed.Invalidate` path, which honors `ComputedOptions.InvalidationDelay`
+  when it's nonzero. In that case, the old value stays `Consistent` (and keeps being served by
+  `.Value`/`.Computed`) for the delay's duration after `Set` returns — the change doesn't take effect
+  synchronously.
+:::
+
 ## ComputedState&lt;T&gt;
 
 A state that automatically recomputes when invalidated, with configurable update delays.
