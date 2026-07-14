@@ -36,6 +36,13 @@ public class ComputeMethodAttribute : Attribute
     public double TransientErrorInvalidationDelay { get; set; } = double.NaN;
 
     /// <summary>
+    /// Auto-invalidation delay (in seconds) for any produced <see cref="Computed"/> instance
+    /// which stores an error, and it's a non-transient error.
+    /// <code>double.NaN</code> means "use default", which is 30 seconds.
+    /// </summary>
+    public double NonTransientErrorInvalidationDelay { get; set; } = double.NaN;
+
+    /// <summary>
     /// Auto-invalidation delay (in seconds) for any produced <see cref="Computed"/> instance.
     /// <code>double.NaN</code> means "use default", which is <see cref="TimeSpan.MaxValue"/> (no auto invalidation).
     /// </summary>

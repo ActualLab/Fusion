@@ -82,6 +82,7 @@ public sealed record ComputedOptions
             var options = defaultOptions with {
                 MinCacheDuration = ToTimeSpan(a.MinCacheDuration) ?? defaultOptions.MinCacheDuration,
                 TransientErrorInvalidationDelay = ToTimeSpan(a.TransientErrorInvalidationDelay) ?? defaultOptions.TransientErrorInvalidationDelay,
+                NonTransientErrorInvalidationDelay = ToTimeSpan(a.NonTransientErrorInvalidationDelay) ?? defaultOptions.NonTransientErrorInvalidationDelay,
                 AutoInvalidationDelay = ToTimeSpan(autoInvalidationDelay) ?? defaultOptions.AutoInvalidationDelay,
                 InvalidationDelay = ToTimeSpan(invalidationDelay) ?? defaultOptions.InvalidationDelay,
                 ConsolidationDelay = ToTimeSpan(consolidationDelay) ?? defaultOptions.ConsolidationDelay,
