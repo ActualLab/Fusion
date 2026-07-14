@@ -439,6 +439,9 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                     existingDbEvent.UpdateFrom(e, versionGenerator);
                     dbEvents.Update(existingDbEvent);
                     mustSave = true;
+                    // The update is version-checked, so a concurrent Version bump fails it
+                    // just like a PK conflict fails an insert - it needs the same recovery
+                    mustFlush |= canRetry;
                 }
                 // KeyConflictStrategy.Skip with an existing row: nothing to store
             }
