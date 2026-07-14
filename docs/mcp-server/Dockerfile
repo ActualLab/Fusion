@@ -13,8 +13,10 @@ WORKDIR /repo
 COPY global.json ./
 COPY .config/ ./.config/
 COPY docs/ ./docs/
+# Pass the target dir explicitly so mdsnippets doesn't require a .git repo
+# (the build context excludes .git to stay small).
 RUN dotnet tool restore \
-    && cd docs && dotnet mdsnippets
+    && dotnet mdsnippets docs
 
 # 2) Build the VitePress site + docs MCP index (mcp-index.json). Node only.
 FROM node:22-bookworm AS site
