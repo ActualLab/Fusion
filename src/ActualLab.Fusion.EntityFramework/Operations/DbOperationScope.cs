@@ -378,7 +378,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             dbContext.Database.AutoTransactionsEnabled = true;
 #endif
             return dbCommitVerifier is DbOperation
-                ? await dbContext.Set<DbOperation>()
+                ? await dbContext.Set<DbOperation>().AsQueryable()
                     .FirstOrDefaultAsync(x => x.Uuid == uuid, cancellationToken)
                     .ConfigureAwait(false) is not null
                 : await dbContext
