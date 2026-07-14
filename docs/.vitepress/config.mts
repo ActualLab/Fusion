@@ -361,7 +361,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
           { text: "Glossary", link: "/glossary" },
           { text: "API Index", link: "/api-index-full" },
           { text: "NuGet Packages", link: "/NuGet-Packages" },
-          { text: "🤖 MCP Server", link: "/MCP" },
+          { text: "MCP Server 🤖", link: "/MCP" },
           {
             text: "Fusion vs...",
             link: "/ActualLab.Fusion-vs/",
