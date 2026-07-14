@@ -8,8 +8,9 @@ Shipped so far (all on `master`, 2026-07-14):
 - `78bdb0dd` item 16 · `376ea552` item 17 · `72eb4c83` docs-only batch · `fab0f349` item-19 residuals + `IState.Invalidated` · `64979788` `KeyConflictStrategy` #4049 · `c6e23027`+`50b28286` `NonTransientErrorInvalidationDelay` attribute + docs.
 - `79be95db` reader cluster (items 3-residual, 8+9, 10) · `16e0c08b`+`b4725f19` items 11 / 11-follow-up / 12 · `a9a6f389`+`31a04f78` completion-terminal + notifier log · `fb6d4686` items 14+15 · `adb5a232` item-5 convention tests · `d170d61f` items 1+2 no-throw harness · `d810e3a7` `DisableAutoTransactions` refactor.
 - ComputedSource verification task: audited, no defect (see that section).
+- **Fable 5 follow-up** (post-ship audit of the two waves, 2026-07-13): `97aa0f85` no-throw harness actually detects invalidation-pass violations · `a3fe99b6` failed-entry retry cadence fix + reader gap/budget/front-gap tests · `1ef15de7` synchronous completion-listener throws routed through the external-terminal path · `09de0485` one-shot hand-off marker (successor invalidation cleans up the shared call) · `6320e988` throwing-`TransiencyResolver` test · `5b52fd51` `MutableState` exception documented in `PartF-CO.md` · `ee0e6105` replay-disqualified log nits. Details are noted in the affected sections below.
 
-Remaining after this wave: only the explicit **won't-fix** items and item 11's **deferred** cleanups. One newly-surfaced finding (Unit-command reprocessing re-throw) is recorded under Item 11.
+Remaining after this wave: only the explicit **won't-fix** items and item 11's **deferred** cleanups. Two newly-surfaced findings (Unit-command reprocessing re-throw; `Fail`-event vs. already-committed detection on the retry path) are recorded under Item 11, deliberately unfixed — as is item 11's core verification path remaining test-free.
 
 ## Item 11: In-doubt commit verification (`DbOperationScope.Commit`)
 
@@ -39,6 +40,8 @@ Status: **✅ shipped** in `16e0c08b` (verification via `VerifyCommit` + `Commit
 - Cleanups noted in the audit: `Operation.Index` is not set on the verified-commit path; `DbOperationFailedException` is dead code (unless repurposed above).
 
 **Newly surfaced during implementation (not yet addressed):** a reprocessable `ICommand<Unit>` whose handler returns non-generic `Task` re-throws the *first* attempt's exception on a *successful* retry, because `CommandContext.InvokeRemainingHandlers` only resets `context.Result` on the `Task<TResult>` branch, leaving the stale `Result.Error` to be rethrown. `Task<TResult>`-returning handlers (the common case) reset it and work fine. Worth a separate fix if Unit-command reprocessing must be robust.
+
+**Newly surfaced during the Fable 5 follow-up audit (recorded, deliberately not fixed):** on a reprocessor retry of an already-committed operation that carries a `KeyConflictStrategy.Fail` event, `FlushEvents` throws its `DbUpdateException` *before* the verifier `SaveChangesAsync`, so the already-committed detection (Uuid lookup) never runs — the retry surfaces an error instead of success. Narrow edge (manual `Fail`-strategy events + in-doubt commit + retry); the item-11 core verification path is also test-free (reasoned-correct only), including the `RecentlySeenUuids` dedup caveat above that was meant to be test-verified.
 
 ## Item 11 follow-up: stable operation UUID across `OperationReprocessor` retries
 
@@ -72,6 +75,8 @@ Rejected alternative: docs-only guidance ("don't call `scope.Commit()` manually 
 ## Item 3 (residual): failed-entry abandonment in the operation log
 
 Status: **✅ shipped** in `79be95db` (`OnReprocessExhausted` hook → pending set with a bounded `FailedEntryRetryLimit` budget, single Error log on abandonment; per-attempt failures at Debug). This is also the path the completion-terminal change feeds into.
+
+**Fable 5 follow-up `a3fe99b6`:** the original implementation burned the budget on the 1 s fast gap poll (and on watcher wake-ups), exhausting it in ~10 s instead of the "regular cadence" this section mandates. Fixed: budgeted entries no longer trigger the fast cadence, and their attempts are gated to ~1 per `CheckPeriod` via `GapEntry.NextAttemptAt`; `OnReprocessExhausted` now respects `GapSetSizeLimit`. The same commit adds the previously-missing tests (budget exhaustion + single Error, cadence gating, size cap, retention expiry, `ResolveFrontGap` discrimination) — all verified red→green.
 
 ### Agreed course of action
 
@@ -162,6 +167,8 @@ Also included: fix `ComputedSynchronizer.Safe` to consult the computed's actual 
 
 Status: **✅ shipped** in `78bdb0dd` — confirmed by failing test (2026-07-14), then fixed via approach A (explicit call hand-off marker).
 
+**Fable 5 follow-up `09de0485`:** the boolean hand-off flag was permanent, so the *successor's* own later local invalidation also skipped `SetInvalidated` — the shared call stayed registered (client and server side) until server-sent invalidation or the finalizer. Replaced with one-shot `TryConsumeHandOff()`: the displaced predecessor (invalidated synchronously during successor registration) consumes the marker; later invalidations clean up the call normally. In the predecessor-invalidated-before-hand-off race the successor is born invalidated and consumes the stale marker itself. New regression test verified red→green; a successor-reference variant was rejected (a strong call→computed edge would defeat the finalizer-based call cleanup, and the reference can't exist at displacement time anyway).
+
 ### Confirmation
 
 `KeyValueServiceWithCacheTest.CacheHitUpdateWithChangedValueTest` (two client service providers sharing one cache; server value changed between them; a server-side `RpcInboundCallCounter` middleware counts wire-level `Get` calls) surfaces all three symptoms in one run:
@@ -181,7 +188,9 @@ Status: **✅ shipped** in `78bdb0dd` — confirmed by failing test (2026-07-14)
 
 ## Item 10: Reader outage longer than trim age
 
-Status: **✅ shipped** in `79be95db` (`ResolveFrontGap` detects a front gap with no surviving entry below the cursor → `ComputedRegistry.InvalidateEverything()` sweep, Error log, adopt new cursor). The "no older entry" discriminator separates coverage-loss from an identity jump and from fresh startup. Real trim-age outage recovery is reasoned-only (not locally reproducible).
+Status: **✅ shipped** in `79be95db` (`ResolveFrontGap` detects a front gap with no surviving entry below the cursor → `ComputedRegistry.InvalidateEverything()` sweep, Error log, adopt new cursor). The "no older entry" discriminator separates coverage-loss from an identity jump and from fresh startup. Real trim-age outage recovery is reasoned-only (not locally reproducible). Both discriminator arms are unit-tested since the Fable 5 follow-up (`a3fe99b6`).
+
+Known false-positive (accepted): the discriminator only holds while older entries survive — a shard idle longer than `MaxEntryAge` followed by any front gap (an identity jump, or even a single aborted transaction) triggers a spurious sweep. Fails in the safe direction (over-invalidation, one recompute stampede).
 
 ### Agreed course of action
 
@@ -202,12 +211,12 @@ Status: **✅ shipped** (item 19 in `fab0f349`; items 14 & 15 in `fb6d4686`):
 
 - Item 14 (**✅ `fb6d4686`**): `NpgsqlDbLogWatcher.NotifyChanged`: log + rethrow so `DbOperationCompletionListener.NotifyRetryPolicy` actually applies. (Build-verified only — no live Postgres locally.)
 - Item 14 (**✅ `fb6d4686`**): `RedisDbLogWatcher`: publish `NotifyPayload = hostId.Id` so the self-notification skip works, mirroring the Npgsql watcher. (Build-verified only — no live Redis locally.)
-- Item 15 (**✅ `fb6d4686`**): one-time **Information-level** log (per command type) when a compute service's final handler shape disqualifies invalidation replay (`InvalidatingCommandCompletionHandler.IsRequired`), with a regression test. Note: `AddComputeService`'s proxy validation already rejects interface-style handlers on proxied services, so this fires only for directly-registered services.
+- Item 15 (**✅ `fb6d4686`**): one-time **Information-level** log (per command type) when a compute service's final handler shape disqualifies invalidation replay (`InvalidatingCommandCompletionHandler.IsRequired`), with a regression test. Note: `AddComputeService`'s proxy validation already rejects interface-style handlers on proxied services, so this fires only for directly-registered services. Fable 5 follow-up `ee0e6105`: helper renamed to match its Information level, and the one-shot is no longer consumed while the log level is disabled.
 - Item 19 (**✅ `fab0f349`**): observe/log the faulted `_whenConsolidated` task in `ConsolidatingComputed.Consolidate`.
 
 ## Item 19 residuals: RPC/local hardening
 
-Status: **✅ shipped** — residual #1 (docs) in `72eb4c83`; residuals #2 and #3 in `fab0f349`. Note: #3 was implemented as a new dedicated `NonTransientErrorInvalidationDelay` option (default 30 s; `TimeSpan.MaxValue` for `MutableState` to preserve its manual-error semantics) rather than repurposing `AutoInvalidationDelay`; `ComputedState` inherits it via `StateOptions.ComputedOptions` (no `ComputedState.cs` change). Test-suite compatibility for the 30 s default was verified — no test encodes an "errors cache forever" assumption that breaks. Follow-up in `c6e23027`: `NonTransientErrorInvalidationDelay` is also settable per method via `[ComputeMethod(NonTransientErrorInvalidationDelay = …)]` (mapped in `ComputedOptions.Get` like the other delays, inherited by `RemoteComputeMethodAttribute`), documented in `docs/PartF-CO.md`.
+Status: **✅ shipped** — residual #1 (docs) in `72eb4c83`; residuals #2 and #3 in `fab0f349`. Fable 5 follow-up: residual #2 got its previously-missing test in `6320e988` (throwing resolver → transient classification → auto-invalidation, verified red→green), and the `MutableStateDefault = TimeSpan.MaxValue` exception is now documented in `PartF-CO.md` (`5b52fd51`). Note: #3 was implemented as a new dedicated `NonTransientErrorInvalidationDelay` option (default 30 s; `TimeSpan.MaxValue` for `MutableState` to preserve its manual-error semantics) rather than repurposing `AutoInvalidationDelay`; `ComputedState` inherits it via `StateOptions.ComputedOptions` (no `ComputedState.cs` change). Test-suite compatibility for the 30 s default was verified — no test encodes an "errors cache forever" assumption that breaks. Follow-up in `c6e23027`: `NonTransientErrorInvalidationDelay` is also settable per method via `[ComputeMethod(NonTransientErrorInvalidationDelay = …)]` (mapped in `ComputedOptions.Get` like the other delays, inherited by `RemoteComputeMethodAttribute`), documented in `docs/PartF-CO.md`.
 
 ### Agreed course of action
 
@@ -220,6 +229,8 @@ Status: **✅ shipped** — residual #1 (docs) in `72eb4c83`; residuals #2 and #
 ## Completion-command failure is terminal for external operations
 
 Status: **✅ shipped** in `a9a6f389` (`CompletionProducer` rethrows for external ops; `OperationCompletionNotifier` unmarks `RecentlySeenUuids` + rethrows so `Process` faults into the reader's reprocess path; local completions keep log-and-swallow). Unit tests included. (Verification-pass finding adjacent to audit items 2/3; not in the audit doc's numbered list.)
+
+**Fable 5 follow-up `1ef15de7`:** the per-listener catch swallowed *synchronous* listener throws regardless of locality, so the terminal-failure invariant only held for async failures. Fixed by converting a sync throw into a faulted task that joins the same aggregation (identical `isLocal` split, all listeners still invoked). Also adds the previously-missing direct test driving a failing completion command through the real `CompletionProducer`, plus a sync-throw unmark test — both verified red→green.
 
 ### Agreed course of action
 
@@ -266,7 +277,7 @@ Status: **decided** — no action on any of these; recorded so they are not re-r
 
 ## `KeyConflictStrategy` race on `_events` inserts (external report: Actual-Chat/actual-chat#4049)
 
-Status: **✅ shipped** in `64979788` — with a `ConcurrentSkipStrategyTest` regression test (8 racing producers). Implemented exactly as agreed; the events flush now goes through `FlushEvents` with EF auto-savepoints kept enabled on the master context. Refinement vs. the raw plan: a batch carrying any `Fail` event bypasses the retry entirely so a `Fail` conflict surfaces immediately (original exception/semantics), rather than being retried first. Verified all event tests (SQLite + InMemory: Fail/Skip/Update/ConcurrentSkip) pass in isolation. Follow-up `d810e3a7`: the raw savepoint code this inlined was folded back into the `DatabaseFacadeExt.DisableAutoTransactions(bool allowSavepoints = true)` helper — the master context passes the default (savepoints on, for the retry), enrolled contexts pass `allowSavepoints: false`.
+Status: **✅ shipped** in `64979788` — with a `ConcurrentSkipStrategyTest` regression test (8 racing producers). Note (Fable 5 follow-up audit): the race test has teeth only on real-server providers — SQLite's `BEGIN IMMEDIATE` serializes scope transactions so the race can't manifest there, and CI forces InMemory where the test self-skips; coverage comes from the pre-release local runs against PostgreSQL. Implemented exactly as agreed; the events flush now goes through `FlushEvents` with EF auto-savepoints kept enabled on the master context. Refinement vs. the raw plan: a batch carrying any `Fail` event bypasses the retry entirely so a `Fail` conflict surfaces immediately (original exception/semantics), rather than being retried first. Verified all event tests (SQLite + InMemory: Fail/Skip/Update/ConcurrentSkip) pass in isolation. Follow-up `d810e3a7`: the raw savepoint code this inlined was folded back into the `DatabaseFacadeExt.DisableAutoTransactions(bool allowSavepoints = true)` helper — the master context passes the default (savepoints on, for the retry), enrolled contexts pass `allowSavepoints: false`.
 
 Deterministic-UUID operation events (e.g. delay-quantized `FlowResumeEvent` with `KeyConflictStrategy.Skip`) race concurrent producers on the `_events` PK: `DbOperationScope.Commit` resolves `Skip`/`Update` via check-then-insert (`FindAsync` → `Add`), so two concurrent transactions both find nothing, both insert, one hits a unique violation — failing the entire command transaction, which is then retried by `OperationReprocessor` (re-executing all handler side effects) and logging errors for what is a normal race.
 
@@ -290,6 +301,8 @@ This removes the command-level retry (no double side effects), the error noise, 
 ## Enforcement & docs batch (audit items 1, 2, 5, 6, 7)
 
 Status: **✅ shipped** — docs deliverables in `72eb4c83` (no-fail contract for items 1+2; command-to-query invalidation test pattern with a real compiling `.cs` snippet for item 5; `StartOffset` assumptions for item 6; completion-vs-cluster-freshness note for item 7). Code deliverables: **items 1+2** "must-not-throw" harness (`OperationCompletionNoThrowTester` + test) in `d170d61f`; **item 5** per-command invalidation test convention (`InvalidationConventionService`/`InvalidationConventionTest`, including a deliberately-broken sibling proving the pattern catches omissions) in `adb5a232`.
+
+**Fable 5 follow-up `97aa0f85`:** the harness's invalidation-pass half in `d170d61f` was a no-op — it dispatched through the completion pipeline, where `InvalidatingCommandCompletionHandler.TryInvalidate` swallows every replay exception, so a throwing `Invalidation.IsActive` branch passed (proven empirically). The harness now replays the invalidation itself, mirroring `OnCommand`/`TryInvalidate` (nested operations, `Invalidation.Begin` scope, distributed local-routing, the handler's real `IsRequired` gate) minus the swallow, and a new negative-path test proves a throwing invalidation branch is detected. Trade-off: the replay logic is mirrored in the harness, not shared — a production replay change needs a harness update.
 
 ### Agreed course of action
 
