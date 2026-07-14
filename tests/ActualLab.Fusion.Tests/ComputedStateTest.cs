@@ -121,6 +121,41 @@ public class ComputedStateTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     }
 
     [Fact]
+    public async Task ThrowingTransiencyResolverIsTreatedAsTransientTest()
+    {
+        var services = CreateServices(services => {
+            services.AddTransiencyResolver<Computed>(_ => _ => throw new InvalidOperationException("resolver is broken"));
+        });
+        var stateFactory = services.StateFactory();
+
+        var count = 0;
+        var delay = TimeSpan.FromSeconds(0.5);
+        var state = stateFactory.NewComputed(
+            new ComputedState<int>.Options() {
+                UpdateDelayer = FixedDelayer.NextTick,
+                InitialValue = -1,
+                ComputedOptions = ComputedOptions.Default with {
+                    TransientErrorInvalidationDelay = delay,
+                    NonTransientErrorInvalidationDelay = TimeSpan.MaxValue,
+                },
+            },
+            _ => {
+                Interlocked.Increment(ref count);
+                throw new InvalidOperationException("boom");
+            });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => state.Use());
+        var c = state.Computed;
+        c.HasError.Should().BeTrue();
+        c.IsConsistent().Should().BeTrue();
+
+        // A throwing TransiencyResolver is classified as transient, so the error auto-invalidates
+        // via TransientErrorInvalidationDelay instead of being cached until the horizon (here disabled).
+        await c.WhenInvalidated().WaitAsync(delay + TimeSpan.FromSeconds(3));
+        c.IsInvalidated().Should().BeTrue();
+    }
+
+    [Fact]
     public async Task InvalidatedEventFiresForBornInvalidatedGenerationTest()
     {
         // A dependency that invalidates the state's computed while it is still computing makes
