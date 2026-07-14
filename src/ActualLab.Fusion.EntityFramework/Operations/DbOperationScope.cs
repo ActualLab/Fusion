@@ -413,6 +413,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             }
 
             var mustSave = false;
+            var mustFlush = false;
             foreach (var e in events) {
                 var dbEvent = new DbEvent(e, versionGenerator);
                 var conflictStrategy = e.UuidConflictStrategy;
@@ -428,6 +429,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 if (existingDbEvent is null) {
                     dbEvents.Add(dbEvent);
                     mustSave = true;
+                    mustFlush |= canRetry;
                 }
                 else if (conflictStrategy == KeyConflictStrategy.Update) {
                     if (existingDbEvent.State != LogEntryState.New)
@@ -440,7 +442,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 }
                 // KeyConflictStrategy.Skip with an existing row: nothing to store
             }
-            if (!mustSave)
+            if (!mustSave || !mustFlush)
                 return;
 
             try {
