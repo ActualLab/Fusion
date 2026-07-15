@@ -31,6 +31,21 @@ export class RpcLimits {
     /** Max time to wait for the server's handshake response after WS opens. */
     handshakeTimeoutMs = 10_000;
 
+    /** If a connection lived less than this before dropping, a graceful close
+     *  still counts as a failed attempt — the client keeps its growing
+     *  `_tryIndex` instead of resetting it, so a crash-looping server sees
+     *  increasing reconnect delays via `RetryDelaySeq`. Mirrors .NET
+     *  `RpcLimits.PrematureDisconnectTimeout` (RpcLimits.cs:18). */
+    prematureDisconnectTimeoutMs = 15_000;
+
+    /** Max completed inbound calls retained for duplicate-frame dedup
+     *  (a resent call id re-sends the computed result instead of
+     *  re-executing the handler). Deviation from .NET, which unregisters a
+     *  call once its result is sent: TS clients blind-resend on reconnect,
+     *  so completed calls are retained — bounded by this limit (oldest
+     *  evicted first) to cap memory on long-lived connections. */
+    completedInboundCallsLimit = 1000;
+
     /** Outbound `$sys.KeepAlive` send period. */
     keepAlivePeriodMs = 10_000;
 

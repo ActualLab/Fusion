@@ -34,6 +34,7 @@ type Casing = 'PascalCase' | 'camelCase';
 
 interface ServerState {
     hubId: string;
+    peerId: string;
     handshakeIndex: number;
     lastReconnectIndex: number | null;
 }
@@ -54,7 +55,6 @@ const EXC_TYPE_REF = 'System.InvalidOperationException, System.Private.CoreLib';
 
 /** Wires a mock .NET-style server onto a MessagePort, replying in `casing`. */
 function attachMockServer(port: MessagePort, casing: Casing, state: ServerState): void {
-    const serverPeerId = crypto.randomUUID();
     const send = (envelope: { Method: string; RelatedId?: number }, args: unknown[]): void =>
         port.postMessage(serializeMessage(envelope, args));
 
@@ -69,7 +69,7 @@ function attachMockServer(port: MessagePort, casing: Casing, state: ServerState)
             if (method === RpcSystemCalls.handshake) {
                 const index = ++state.handshakeIndex;
                 send({ Method: RpcSystemCalls.handshake },
-                    [makeHandshakeArg(casing, serverPeerId, state.hubId, index)]);
+                    [makeHandshakeArg(casing, state.peerId, state.hubId, index)]);
             } else if (method === RpcSystemCalls.reconnect) {
                 state.lastReconnectIndex = args[0] as number;
                 send({ Method: RpcSystemCalls.ok, RelatedId: relatedId },
@@ -172,7 +172,7 @@ describe.each<Casing>(['PascalCase', 'camelCase'])('handshake JSON casing [%s]',
     }
 
     function newState(hubId = 'server-hub-1'): ServerState {
-        return { hubId, handshakeIndex: 0, lastReconnectIndex: null };
+        return { hubId, peerId: crypto.randomUUID(), handshakeIndex: 0, lastReconnectIndex: null };
     }
 
     it('connects and round-trips a regular call', async () => {
@@ -205,7 +205,7 @@ describe.each<Casing>(['PascalCase', 'camelCase'])('handshake JSON casing [%s]',
         expect(state.lastReconnectIndex).toBe(2);
     });
 
-    it('detects peer change when RemoteHubId changes', async () => {
+    it('detects peer change when RemotePeerId changes', async () => {
         const state = newState();
         const { peer, closeWs } = setupClient(state);
         await peer.whenConnected();
@@ -214,13 +214,15 @@ describe.each<Casing>(['PascalCase', 'camelCase'])('handshake JSON casing [%s]',
         let peerChanged = false;
         peer.peerChanged.add(() => { peerChanged = true; });
 
-        // Server "restarts" with a new identity.
+        // Server "restarts" with a new identity — new RemotePeerId (a real
+        // restart also gets a new hub id, but R8 keys the change off the peer id).
+        state.peerId = crypto.randomUUID();
         state.hubId = 'server-hub-2';
         closeWs();
         await waitFor(() => state.handshakeIndex === 2);
         await delay(10);
 
-        // Keyed off RemoteHubId — undefined under the bug, so it never fires.
+        // Keyed off RemotePeerId (C# GetPeerChangeKind parity).
         expect(peerChanged).toBe(true);
     });
 

@@ -19,7 +19,7 @@
 //   - Handshake exchange — run() sends $sys.Handshake on connect, waits for the
 //     server's response.  RpcServerPeer._onHandshakeReceived() auto-replies.
 //     Like .NET's OnRun() handshake sequence.
-//   - Peer change detection — run() compares RemoteHubId from successive
+//   - Peer change detection — run() compares RemotePeerId from successive
 //     handshakes to detect server restarts, triggering peerChanged + inbound.clear().
 //     Like .NET's RpcHandshake.GetPeerChangeKind().
 //   - Outbound call cancellation via AbortSignal — call(signal) registers an
@@ -199,6 +199,10 @@ export abstract class RpcPeer {
      *  entered only after the handshake has succeeded. */
     readonly connectionStateChanged = new EventHandlerSet<RpcConnectionState>();
 
+    /** Index of the handshake THIS peer most recently sent. Used to reject a
+     *  stale `$sys.Reconnect` that references an older connection generation
+     *  (C# `RpcSystemCalls.Reconnect`'s `ownHandshake.Index` check). */
+    protected _ownHandshakeIndex = 0;
     protected _connection: RpcConnection | undefined;
     /** Mirror of `_connectionState === Connected`. True only after the
      *  handshake round-trip completes; outbound `call()` checks this to
@@ -225,6 +229,7 @@ export abstract class RpcPeer {
         this.ref = ref;
         this.keepAlivePeriodMs = hub.limits.keepAlivePeriodMs;
         this.keepAliveTimeoutMs = hub.limits.keepAliveTimeoutMs;
+        this.inboundCalls.completedCallsLimit = hub.limits.completedInboundCallsLimit;
     }
 
     get connection(): RpcConnection | undefined {
@@ -237,6 +242,10 @@ export abstract class RpcPeer {
 
     get isConnected(): boolean {
         return this._isConnected;
+    }
+
+    get ownHandshakeIndex(): number {
+        return this._ownHandshakeIndex;
     }
 
     protected _setConnectionState(value: RpcConnectionState): void {
@@ -379,7 +388,12 @@ export abstract class RpcPeer {
                 if (this.outboundCalls.remove(callId) !== undefined) {
                     outboundCall.result.reject(new Error('Call cancelled.'));
                     outboundCall.onDisconnect();
-                    if (this._connection !== undefined)
+                    // Only send $sys.Cancel once the handshake has completed
+                    // (`_isConnected`). Sends are gated on `_isConnected`, so a
+                    // call aborted before then was never put on the wire — a
+                    // pre-handshake Cancel would corrupt the remote handshake
+                    // (C#'s null-Transport-until-handshake, RpcPeer.cs:29-52).
+                    if (this._isConnected && this._connection !== undefined)
                         this.hub.systemCallSender.cancel(this._connection, this.serializationFormat, callId);
                 }
             };
@@ -426,6 +440,7 @@ export abstract class RpcPeer {
         this.sharedObjects.disconnectAll();
         this.outboundCalls.rejectAll(new Error('Peer closed.'));
         this.outboundCalls.invalidateAll();
+        this.inboundCalls.clear();
         this._connection?.close();
         this.hub.peers.delete(this.ref);
         this._setConnectionState(RpcConnectionState.Disconnected);
@@ -509,19 +524,11 @@ export abstract class RpcPeer {
     private _handleInbound(message: RpcMessage, args: unknown[]): void {
         const method = message.Method ?? '';
         const relatedId = message.RelatedId ?? 0;
-
-        const call = new RpcInboundCall(relatedId, method, args);
         const methodDef = this.hub.serviceHost.getMethodDef(method);
-
-        // For noWait calls: don't register in tracker, don't send response
         const isNoWait = methodDef?.noWait === true;
-        if (!isNoWait) {
-            this.inboundCalls.register(call);
-        }
-
-        // Dispatch to the hub's service host
         const serviceHost = this.hub.serviceHost;
-        void (async () => {
+
+        const dispatch = async (call: RpcInboundCall | undefined): Promise<void> => {
             try {
                 const context =
                     this._connection !== undefined
@@ -531,50 +538,67 @@ export abstract class RpcPeer {
                             connection: this._connection,
                         }
                         : undefined;
-                const result = await serviceHost.dispatch(
-                    method,
-                    args,
-                    context
-                );
-                if (
-                    methodDef?.stream === true &&
-                    this._connection !== undefined
-                ) {
-                    // Stream method — wrap result in RpcStream if needed,
-                    // then let toRef() create the sender, register it, and start pumping.
-                    const stream = result instanceof RpcStream
-                        ? result as RpcStream<unknown>
-                        : new RpcStream<unknown>(result as AsyncIterable<unknown>);
-                    this.hub.systemCallSender.ok(
-                        this._connection,
-                        this.serializationFormat,
-                        relatedId,
-                        stream.toRef(this)
-                    );
-                } else if (!isNoWait && this._connection !== undefined) {
-                    this.hub.systemCallSender.ok(
-                        this._connection,
-                        this.serializationFormat,
-                        relatedId,
-                        result
-                    );
+                const result = await serviceHost.dispatch(method, args, context);
+                if (methodDef?.stream === true) {
+                    if (this._connection !== undefined) {
+                        // Stream method — wrap result in RpcStream if needed, then let
+                        // toRef() create the sender, register it, and start pumping.
+                        const stream = result instanceof RpcStream
+                            ? result as RpcStream<unknown>
+                            : new RpcStream<unknown>(result as AsyncIterable<unknown>);
+                        const ref = stream.toRef(this);
+                        const send = (): void => {
+                            if (this._connection !== undefined)
+                                this.hub.systemCallSender.ok(
+                                    this._connection, this.serializationFormat, relatedId, ref);
+                        };
+                        if (call !== undefined) {
+                            call.setResult(send);
+                            this.inboundCalls.markCompleted(call);
+                        }
+                        send();
+                    }
+                } else if (call !== undefined) {
+                    const send = (): void => {
+                        if (this._connection !== undefined)
+                            this.hub.systemCallSender.ok(
+                                this._connection, this.serializationFormat, relatedId, result);
+                    };
+                    call.setResult(send);
+                    this.inboundCalls.markCompleted(call);
+                    send();
                 }
             } catch (e) {
-                if (!isNoWait && this._connection !== undefined) {
-                    this.hub.systemCallSender.error(
-                        this._connection,
-                        this.serializationFormat,
-                        relatedId,
-                        e
-                    );
+                if (call !== undefined) {
+                    const send = (): void => {
+                        if (this._connection !== undefined)
+                            this.hub.systemCallSender.error(
+                                this._connection, this.serializationFormat, relatedId, e);
+                    };
+                    call.setResult(send);
+                    this.inboundCalls.markCompleted(call);
+                    send();
                 }
                 debugLog?.log(`'${this.ref}': Inbound call failed: ${method}#${relatedId}`, e);
-            } finally {
-                if (!isNoWait) {
-                    this.inboundCalls.remove(relatedId);
-                }
             }
-        })();
+        };
+
+        // For noWait calls: don't track, don't respond.
+        if (isNoWait) {
+            void dispatch(undefined);
+            return;
+        }
+
+        // Dedup resent frames: a known call id attaches to the existing dispatch
+        // and re-sends its result once computed, instead of re-invoking the
+        // handler. Mirrors .NET GetOrRegister + RpcInboundCall.TryReprocess.
+        const call = new RpcInboundCall(relatedId, method, args);
+        const existing = this.inboundCalls.getOrRegister(call);
+        if (existing !== call) {
+            existing.resendResult();
+            return;
+        }
+        void dispatch(call);
     }
 
     /** Start sending `$sys.KeepAlive` pings and arm the silence watchdog.
@@ -647,14 +671,13 @@ export const enum RpcConnectionState {
 export class RpcClientPeer extends RpcPeer {
     private _disposed = false;
     private _tryIndex = 0;
-    private _handshakeIndex = 0;
     /** Index from the MOST RECENTLY RECEIVED server handshake — sent back
      *  to the server in `$sys.Reconnect:3` so the server can verify we're
      *  talking about the current connection. Mirrors .NET's
      *  `connectionState.Handshake.Index` path in
      *  `RpcOutboundCallTracker.TryReconnect`. */
     private _remoteHandshakeIndex = 0;
-    private _lastRemoteHubId: string | undefined;
+    private _lastRemotePeerId: string | undefined;
     private _pendingHandshake: PromiseSource<RemoteHandshake> | undefined;
     private _reconnectsAt = 0;
 
@@ -677,6 +700,10 @@ export class RpcClientPeer extends RpcPeer {
      *  the connection attempt. Initialized from `hub.limits` at construction;
      *  set directly to override on a single peer. */
     handshakeTimeoutMs: number;
+    /** A connection that lived less than this before dropping does NOT reset
+     *  `_tryIndex`, so a crash-looping server sees growing reconnect delays.
+     *  Initialized from `hub.limits` at construction; override per peer. */
+    prematureDisconnectTimeoutMs: number;
     readonly peerChanged = new EventHandlerSet<void>();
     /** Fired when the server rejects the connection due to an unsupported serialization format (close code 4010). */
     readonly unsupportedFormat = new EventHandlerSet<{ reason: string }>();
@@ -713,6 +740,7 @@ export class RpcClientPeer extends RpcPeer {
         super(hub, url);
         this.connectTimeoutMs = hub.limits.connectTimeoutMs;
         this.handshakeTimeoutMs = hub.limits.handshakeTimeoutMs;
+        this.prematureDisconnectTimeoutMs = hub.limits.prematureDisconnectTimeoutMs;
         this.clientId = guidToBase64Url(this.id);
         const resolver = RpcSerializationFormatResolver.Default;
         this.serializationFormat = resolver.get(parseFormatFromUrl(url) ?? resolver.defaultFormatKey);
@@ -786,6 +814,9 @@ export class RpcClientPeer extends RpcPeer {
 
                 let lastCloseCode = 0;
                 let lastCloseReason = '';
+                // 0 until this iteration reaches `Connected`; used by the R13
+                // premature-disconnect check below.
+                let connectedAt = 0;
                 try {
                     const connUrl = await this.connectionUrlResolver(this);
                     // Mirrors RpcClientPeer.cs:45 — "Connecting...".
@@ -867,7 +898,7 @@ export class RpcClientPeer extends RpcPeer {
                             this.serializationFormat,
                             this.id,
                             this.hub.hubId,
-                            ++this._handshakeIndex
+                            ++this._ownHandshakeIndex
                         );
                     }
                     catch (e) {
@@ -903,28 +934,14 @@ export class RpcClientPeer extends RpcPeer {
                     this._remoteHandshakeIndex = remoteHandshake.Index ?? 0;
 
                     // Peer change detection (like .NET's RpcHandshake.GetPeerChangeKind)
-                    const remoteHubId = remoteHandshake.RemoteHubId;
-                    let isPeerChanged = false;
-                    if (remoteHubId !== undefined) {
-                        isPeerChanged =
-                        this._lastRemoteHubId !== undefined &&
-                        this._lastRemoteHubId !== remoteHubId;
-                        if (isPeerChanged) {
-                        // Server identity changed — clear inbound state
-                            this.inboundCalls.clear();
-                            // Mirrors RpcPeer.cs:439 (Peer changed branch).
-                            infoLog?.log(`'${this.ref}': Peer changed`);
-                            this.peerChanged.trigger();
-                        }
-                        this._lastRemoteHubId = remoteHubId;
-                    }
+                    const isPeerChanged = this._detectPeerChange(remoteHandshake);
                     // Mirrors RpcPeer.cs:316 — "Handshake succeeded".
                     infoLog?.log(`'${this.ref}': Handshake succeeded, peerChanged=${isPeerChanged}`);
 
                     // Activate the connection and re-send outbound calls.
                     // All of this happens AFTER the handshake, so the server is ready to process calls.
                     this._setConnectionState(RpcConnectionState.Connected);
-                    this._tryIndex = 0;
+                    connectedAt = Date.now();
                     // Pass the close signal so `_reconcileReconnect`'s inner
                     // `$sys.Reconnect` call cancels cleanly if the socket dies
                     // mid-reconcile — otherwise its pending result.promise would
@@ -954,6 +971,15 @@ export class RpcClientPeer extends RpcPeer {
                     this._disposed = true;
                     break;
                 }
+
+                // R13: reset the reconnect backoff only when the connection
+                // lived at least `prematureDisconnectTimeoutMs`. A premature
+                // disconnect (e.g. a crash-looping server) leaves `_tryIndex`
+                // growing so `RetryDelaySeq` backs off. Mirrors .NET's
+                // PrematureDisconnect handling (RpcPeer.cs:402-405).
+                if (connectedAt !== 0
+                    && Date.now() - connectedAt >= this.prematureDisconnectTimeoutMs)
+                    this._tryIndex = 0;
 
                 this._tryIndex++;
             }
@@ -1131,6 +1157,30 @@ export class RpcClientPeer extends RpcPeer {
         }
     }
 
+    /** Detects a server-peer identity change by comparing the incoming
+     *  handshake's `RemotePeerId` with the last one — C#
+     *  `RpcHandshake.GetPeerChangeKind` keys off `RemotePeerId`, not
+     *  `RemoteHubId` (an idle server peer can be replaced while keeping the
+     *  same hub id). On a change it clears the inbound tracker and fires
+     *  `peerChanged`; the very first handshake is never a change. */
+    private _detectPeerChange(handshake: RemoteHandshake): boolean {
+        const remotePeerId = handshake.RemotePeerId;
+        if (remotePeerId === undefined)
+            return false;
+
+        const isPeerChanged =
+            this._lastRemotePeerId !== undefined &&
+            this._lastRemotePeerId !== remotePeerId;
+        this._lastRemotePeerId = remotePeerId;
+        if (isPeerChanged) {
+            this.inboundCalls.clear();
+            // Mirrors RpcPeer.cs:439 (Peer changed branch).
+            infoLog?.log(`'${this.ref}': Peer changed`);
+            this.peerChanged.trigger();
+        }
+        return isPeerChanged;
+    }
+
     protected override _onHandshakeReceived(handshake: RemoteHandshake): void {
         this._pendingHandshake?.resolve(handshake);
     }
@@ -1173,12 +1223,14 @@ export class RpcServerPeer extends RpcPeer {
     protected override _onHandshakeReceived(_handshake: RemoteHandshake): void {
         // Client sent its handshake → respond with our own and transition to Connected.
         if (this._connection !== undefined) {
+            // Bump our own handshake index each generation so a stale
+            // $sys.Reconnect referencing an older one is rejected (R16).
             this.hub.systemCallSender.handshake(
                 this._connection,
                 this.serializationFormat,
                 this.id,
                 this.hub.hubId,
-                0
+                ++this._ownHandshakeIndex
             );
             this._setConnectionState(RpcConnectionState.Connected);
         }

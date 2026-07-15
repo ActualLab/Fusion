@@ -473,6 +473,8 @@ Confidence: confirmed.
 
 ### R5. System messages can be flushed onto the wire *before* the handshake
 
+Status: **closed** — fixed 2026-07-15 (batch rpcpeer; `$sys.Cancel` gated on handshake completion, and stream ack/ackEnd sends gated on `peer.isConnected` — a dropped pre-handshake ack is recovered by the post-connect reset-ack).
+
 Confidence: confirmed (code path; failure against .NET verified by its handshake contract).
 
 - TS: `rpc-connection.ts:265-286` — `_sendRaw` buffers writes while the WS is `CONNECTING` and flushes them in `onopen`, i.e. **before** the peer's run loop sends `$sys.Handshake` (`rpc-peer.ts:859-877`). The abort handler sends `$sys.Cancel` whenever `_connection !== undefined` (`rpc-peer.ts:377-386`), which is true throughout connect/handshake.
@@ -507,6 +509,8 @@ Confidence: confirmed in code; triggers only for polymorphic types.
 
 ### R8. Peer-change detection keyed on `RemoteHubId` instead of `RemotePeerId`
 
+Status: **closed** — fixed 2026-07-15 (batch rpcpeer).
+
 Confidence: confirmed.
 
 - TS: `rpc-peer.ts:905-920` compares successive `RemoteHubId`s.
@@ -516,6 +520,8 @@ Confidence: confirmed.
 - **Alternative:** compare both ids (peerId decides, hubId mismatch logged as an extra signal). Marginal value over the recommended one-liner.
 
 ### R9. Inbound call tracker has no dedup (`GetOrRegister`/`TryReprocess`) — duplicate execution on a TS callee
+
+Status: **closed** — fixed 2026-07-15 (batch rpcpeer). Documented deviation from C#: completed inbound calls are retained for result re-send (C# unregisters on completion), bounded by `RpcLimits.completedInboundCallsLimit` (1000, FIFO eviction) and cleared on peer-change/close.
 
 Confidence: confirmed.
 
@@ -557,6 +563,8 @@ Confidence: confirmed (documented omission, but callers of the implemented API a
 
 ### R13. No reconnect backoff and no premature-disconnect penalty
 
+Status: **closed** — fixed 2026-07-15 (batch rpcpeer). Premature-disconnect threshold (15 s) added; the reconnect delayer became `RetryDelaySeq.exp(100 ms, 10 s)` so the preserved try-index actually grows delays (first retry stays ~100 ms).
+
 Confidence: confirmed (partly intentional).
 
 - TS: fixed 100 ms delay (`rpc-client-peer-reconnect-delayer.ts:8-12`); `_tryIndex` reset on every successful handshake (`rpc-peer.ts:927`).
@@ -585,6 +593,8 @@ Confidence: confirmed. TS: `rpc-system-call-handler.ts:146-163` — `error = msg
 - **Alternative:** none meaningful beyond the fidelity refinement — the discriminator must match the .NET contract.
 
 ### R16. `$sys.Reconnect` handler skips handshake-index validation
+
+Status: **closed** — fixed 2026-07-15 (batch rpcpeer).
 
 Confidence: confirmed (acknowledged in a comment, `rpc-system-call-handler.ts:65-69`). TS `_handleReconnect` ignores `args[0]`; C# throws `TooLateToReconnect` when `ownHandshake.Index != handshakeIndex` (`RpcSystemCalls.cs:57-70`). A TS callee can reconcile against the wrong connection generation after a rapid double-reconnect; bounded damage (worst case duplicate execution — R9).
 

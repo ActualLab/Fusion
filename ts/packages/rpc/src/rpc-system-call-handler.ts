@@ -67,11 +67,11 @@ export class RpcSystemCallHandler {
             // byte[] result via $sys.Ok. Mirrors .NET `RpcSystemCalls.Reconnect`
             // at src/ActualLab.Rpc/Infrastructure/RpcSystemCalls.cs:51-85.
             //
-            // Limitations vs .NET: does not validate `handshakeIndex` against
-            // this peer's own handshake, and does not perform per-stage
-            // re-processing of compute calls (TS has no compute-invalidation
-            // tracking on the inbound side). A call ID is reported as
-            // "known" iff it is still in the inbound tracker.
+            // Validates `handshakeIndex` against this peer's own handshake
+            // (stale generation → TooLateToReconnect error). Does not perform
+            // per-stage re-processing of compute calls (TS has no compute-
+            // invalidation tracking on the inbound side); a known call id is
+            // re-sent its result if already computed, else reported "unknown".
             this._handleReconnect(relatedId, args, peer);
             break;
         }
@@ -226,7 +226,20 @@ export class RpcSystemCallHandler {
     private _handleReconnect(relatedId: number, args: unknown[], peer: RpcPeer): void {
         if (peer.connection === undefined) return;
 
-        // args[0]: handshakeIndex (number) — not validated in TS, see class comment.
+        // args[0]: handshakeIndex — the server's OWN handshake index as the
+        // client last saw it. If it no longer matches, this $sys.Reconnect
+        // targets a stale connection generation; reject it so the caller falls
+        // back to blind resend (absorbed by the inbound-call dedup). Mirrors
+        // C# RpcSystemCalls.Reconnect's ownHandshake check (RpcSystemCalls.cs:59-62).
+        const handshakeIndex = args[0];
+        if (typeof handshakeIndex === 'number' && handshakeIndex !== peer.ownHandshakeIndex) {
+            peer.hub.systemCallSender.error(
+                peer.connection, peer.serializationFormat, relatedId,
+                new Error(
+                    `TooLateToReconnect: own handshake index ${peer.ownHandshakeIndex} != ${handshakeIndex}`));
+            return;
+        }
+
         // args[1]: completedStagesData — shape depends on wire format.
         //    JSON:    { [stage: string]: base64-string }
         //    msgpack: Map-like with int keys and Uint8Array values (unsupported in TS).
@@ -235,14 +248,22 @@ export class RpcSystemCallHandler {
             const stagesRaw = args[1];
             if (stagesRaw && typeof stagesRaw === 'object' && !Array.isArray(stagesRaw)) {
                 const unknownSet = new Set<number>();
-                for (const [, rawValue] of Object.entries(stagesRaw as Record<string, unknown>)) {
+                for (const [stageKey, rawValue] of Object.entries(stagesRaw as Record<string, unknown>)) {
                     const bytes = _toBytes(rawValue);
                     if (bytes === null) continue;
+                    const completedStage = parseInt(stageKey, 10) || 0;
                     const callIds = IncreasingSeqCompressor.deserialize(bytes);
                     for (const callId of callIds) {
-                        if (peer.inboundCalls.get(callId) === undefined) {
+                        const call = peer.inboundCalls.get(callId);
+                        if (call === undefined)
                             unknownSet.add(callId);
-                        }
+                        else if (completedStage < 1)
+                            // Known call the client has no result for — re-send it
+                            // if already computed (an in-flight call sends on
+                            // completion). At stage >= 1 the client already has
+                            // the result, so nothing is re-sent. Mirrors C#
+                            // RpcInboundCall.TryReprocess.
+                            call.resendResult();
                     }
                 }
                 unknownIds = [...unknownSet].sort((a, b) => a - b);

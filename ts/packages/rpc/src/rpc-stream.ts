@@ -453,7 +453,12 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
 
     private _sendAck(nextIndex: number, mustReset: boolean): void {
         this._ackSentUpTo = nextIndex;
-        const conn = this.peer.connection;
+        // Gated on `isConnected`, not just `connection` — during connect and
+        // handshake `connection` is already set, and a buffered ack would hit
+        // the wire before $sys.Handshake, corrupting the remote handshake
+        // (R5; C#'s null-Transport-until-handshake). A dropped ack is
+        // recovered by the reset-ack `reconnect()` sends once connected.
+        const conn = this.peer.isConnected ? this.peer.connection : undefined;
         if (conn) {
             const hostId = mustReset ? this.id.hostId : RpcStream._emptyGuid;
             this.peer.hub.systemCallSender.ack(
@@ -467,7 +472,9 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     }
 
     private _sendAckEnd(): void {
-        const conn = this.peer.connection;
+        // Same pre-handshake gate as `_sendAck`; a dropped AckEnd just means
+        // the sender terminates via disconnect/keep-alive instead.
+        const conn = this.peer.isConnected ? this.peer.connection : undefined;
         if (conn) {
             this.peer.hub.systemCallSender.ackEnd(
                 conn,
