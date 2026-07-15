@@ -270,6 +270,8 @@ Confidence: confirmed.
 
 ### S2. `ComputedState.value` silently masks errors by falling back to `lastNonErrorValue`
 
+Status: **closed** — fixed 2026-07-15 (batch s2fix — the one item the campaign's batching initially missed): `value`/`valueOrUndefined`/`output` inherit the base-class behavior (throw / undefined / error result); stale access only via the explicit `lastNonErrorValue` (C# `Value` vs `ValueOrDefault` vs `LastNonErrorValue` parity). The React hook was already reading `valueOrUndefined`, so its `value` is now `undefined` on error, matching its documented shape.
+
 Confidence: confirmed.
 
 - TS: `computed-state.ts:72-79` — when `_computed.hasError`, `value` returns `_lastNonErrorValue` instead of throwing; `valueOrUndefined` (`computed-state.ts:86-89`) likewise. Base `State.value` and `MutableState` *do* throw on error (`state.ts:33-35`) — the port is internally inconsistent too.

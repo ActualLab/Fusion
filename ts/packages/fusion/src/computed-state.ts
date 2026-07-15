@@ -54,18 +54,6 @@ export class ComputedState<T> extends State<T> {
         void this._updateCycle();
     }
 
-    override get value(): T {
-        if (this._computed.hasValue) return this._computed.value;
-        if (this._lastNonErrorComputed !== undefined)
-            return this._lastNonErrorComputed.value;
-        throw new Error('ComputedState has no value yet.');
-    }
-
-    override get valueOrUndefined(): T | undefined {
-        if (this._computed.hasValue) return this._computed.value;
-        return this._lastNonErrorComputed?.value;
-    }
-
     dispose(): void {
         if (this.isDisposed)
             return;

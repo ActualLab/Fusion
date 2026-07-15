@@ -232,4 +232,65 @@ describe('ComputedState audit fixes', () => {
         const computed = await updated;
         expect(computed.value).toBe(5);
     });
+
+    it('S2: an error output rethrows through value / reflects in output, no masking', async () => {
+        const boom = new Error('transient');
+        let counter = 0;
+        const state = new ComputedState<number>(
+            () => {
+                counter++;
+                if (counter === 2) throw boom;
+                return counter;
+            },
+            { updateDelayer: FixedDelayer.zero }
+        );
+
+        await state.whenFirstTimeUpdated();
+        expect(state.value).toBe(1);
+
+        state.computed.invalidate();
+        await delay(20);
+
+        expect(state.hasValue).toBe(false);
+        expect(state.hasError).toBe(true);
+        // value rethrows the stored error instead of masking it with the stale value.
+        expect(() => state.value).toThrow(boom);
+        // valueOrUndefined stays base-consistent (error -> undefined, C# ValueOrDefault).
+        expect(state.valueOrUndefined).toBeUndefined();
+        expect(state.output.hasError).toBe(true);
+        expect(state.output.error).toBe(boom);
+        // The stale value is reachable only through the explicit getter.
+        expect(state.lastNonErrorValue).toBe(1);
+    });
+
+    it('S2: a first computation that errors has no masking source', async () => {
+        const boom = new Error('boom');
+        const state = new ComputedState<number>(
+            () => {
+                throw boom;
+            },
+            { updateDelayer: FixedDelayer.zero }
+        );
+
+        await state.whenFirstTimeUpdated();
+        expect(state.hasValue).toBe(false);
+        expect(state.hasError).toBe(true);
+        expect(() => state.value).toThrow(boom);
+        expect(state.valueOrUndefined).toBeUndefined();
+        // The pre-invalidated initial computed is the last non-error computed,
+        // so lastNonErrorValue is the placeholder — C# default(T) / initialValue parity.
+        expect(state.lastNonErrorValue).toBeUndefined();
+
+        const withInitial = new ComputedState<number>(
+            () => {
+                throw boom;
+            },
+            { initialValue: 7, updateDelayer: FixedDelayer.zero }
+        );
+
+        await withInitial.whenFirstTimeUpdated();
+        expect(() => withInitial.value).toThrow(boom);
+        expect(withInitial.valueOrUndefined).toBeUndefined();
+        expect(withInitial.lastNonErrorValue).toBe(7);
+    });
 });

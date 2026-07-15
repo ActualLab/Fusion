@@ -36,9 +36,10 @@ describe('lastNonErrorValue with undefined values (S12)', () => {
         await delay(20);
         expect(state.hasError).toBe(true);
 
-        // Raw-value storage read this as "no value yet" and threw; the computed
-        // reference distinguishes an actual `undefined` from an absent value.
-        expect(state.value).toBeUndefined();
+        // value rethrows the stored error (base-class parity, S2); the last non-error
+        // value stays reachable only through the explicit lastNonErrorValue getter, and
+        // here it is a legitimate `undefined` distinguished from "no non-error value yet".
+        expect(() => state.value).toThrow('boom');
         expect(state.valueOrUndefined).toBeUndefined();
         expect(state.lastNonErrorValue).toBeUndefined();
     });
