@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { MutableState } from '@actuallab/fusion';
 import type { Result } from '@actuallab/core';
 
@@ -10,44 +10,51 @@ export interface UseMutableStateResult<T> {
 }
 
 /**
- * React hook wrapping Fusion's MutableState.
- * Returns { value, error, set, state } so an error result renders instead of throwing.
+ * React hook wrapping Fusion's MutableState, built on useSyncExternalStore so a
+ * `set` landing between render and subscription is never lost. `value` is
+ * `state.valueOrUndefined` and never throws on an error result; the error is
+ * exposed separately.
  */
 export function useMutableState<T>(initial: T): UseMutableStateResult<T> {
-    const [, forceRender] = useReducer(c => c + 1, 0);
     const stateRef = useRef<MutableState<T> | null>(null);
-
     stateRef.current ??= new MutableState<T>(initial);
-
     const state = stateRef.current;
 
-    useEffect(() => {
-        let cancelled = false;
-
-        const subscribe = async () => {
-            while (!cancelled) {
-                const sinceIndex = state.updateIndex;
-                try {
-                    await state.whenUpdated(sinceIndex);
-                } catch {
-                    return;
-                }
+    const subscribe = useCallback(
+        (onStoreChange: () => void) => {
+            let cancelled = false;
+            void (async () => {
                 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                if (!cancelled) forceRender();
-            }
-        };
+                while (!cancelled) {
+                    const sinceIndex = state.updateIndex;
+                    try {
+                        await state.whenUpdated(sinceIndex);
+                    } catch {
+                        return;
+                    }
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                    if (!cancelled)
+                        onStoreChange();
+                }
+            })();
 
-        void subscribe();
+            return () => {
+                cancelled = true;
+            };
+        },
+        [state]
+    );
 
-        return () => {
-            cancelled = true;
-        };
-    }, [state]);
+    useSyncExternalStore(
+        subscribe,
+        () => state.updateIndex,
+        () => state.updateIndex
+    );
 
     return {
         value: state.valueOrUndefined,
         error: state.error,
-        set: v => state.set(v),
+        set: (value: Result<T> | T) => state.set(value),
         state,
     };
 }

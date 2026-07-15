@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import {
     ComputedState,
     type ComputedStateOptions,
@@ -9,77 +9,78 @@ export interface UseComputedStateResult<T> {
     value: T | undefined;
     error: unknown;
     isInitial: boolean;
-    state: ComputedState<T>;
+    state: ComputedState<T> | undefined;
 }
 
 /**
- * React hook wrapping Fusion's ComputedState.
- * Creates a ComputedState keyed on deps, subscribes to updates, and triggers re-renders.
+ * React hook wrapping Fusion's ComputedState, built on useSyncExternalStore so
+ * updates between render and subscription are never lost and rendering is tear-free.
+ * The ComputedState is created and disposed exclusively inside `subscribe` (keyed on
+ * deps), so a discarded concurrent render leaks nothing and a StrictMode
+ * mount→cleanup→remount rebuilds a live state instead of freezing on a disposed one.
  */
 export function useComputedState<T>(
     computer: StateComputer<T>,
     deps: readonly unknown[],
     options?: ComputedStateOptions<T>
 ): UseComputedStateResult<T> {
-    const [, forceRender] = useReducer(c => c + 1, 0);
     const stateRef = useRef<ComputedState<T> | null>(null);
-    const depsRef = useRef<readonly unknown[]>(deps);
+    const generationRef = useRef(0);
 
-    // Check if deps changed
-    const depsChanged =
-        deps.length !== depsRef.current.length ||
-        deps.some((d, i) => d !== depsRef.current[i]);
-
-    if (depsChanged || stateRef.current === null) {
-        // Dispose old state
-        stateRef.current?.dispose();
-        depsRef.current = deps;
-        stateRef.current = new ComputedState<T>(computer, options);
-    }
-
-    const state = stateRef.current;
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const subscribe = async () => {
-            // Wait for first update
-            try {
-                await state.whenFirstTimeUpdated();
-            } catch {
-                return;
-            }
-            if (cancelled || state.isDisposed) return;
-            forceRender();
-
-            // Subscribe to subsequent updates — versioned so an update landing
-            // between forceRender and re-subscription is never missed (S11).
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            while (!cancelled && !state.isDisposed) {
-                const sinceIndex = state.updateIndex;
-                try {
-                    await state.whenUpdated(sinceIndex);
-                } catch {
-                    return;
-                }
+    const subscribe = useCallback(
+        (onStoreChange: () => void) => {
+            const state = new ComputedState<T>(computer, options);
+            generationRef.current++;
+            stateRef.current = state;
+            onStoreChange();
+            let cancelled = false;
+            void (async () => {
                 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                if (!cancelled && !state.isDisposed) forceRender();
-            }
-        };
+                while (!cancelled && !state.isDisposed) {
+                    const sinceIndex = state.updateIndex;
+                    try {
+                        await state.whenUpdated(sinceIndex);
+                    } catch {
+                        return;
+                    }
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                    if (!cancelled && !state.isDisposed)
+                        onStoreChange();
+                }
+            })();
 
-        void subscribe();
+            return () => {
+                cancelled = true;
+                state.dispose();
+                if (stateRef.current === state)
+                    stateRef.current = null;
+            };
+        },
+        deps
+    );
 
-        return () => {
-            cancelled = true;
-            state.dispose();
-        };
-    }, [state]);
+    // Snapshot is `generation:updateIndex` — the generation makes a rebuilt state
+    // distinct even at the same updateIndex (a sync computer reaches index 1 inside
+    // the constructor, so a deps-change replacement would otherwise collide with the
+    // rendered snapshot and never re-render). '' marks "no state yet" (the pre-effect
+    // first render), which the built-in re-check upgrades once `subscribe` creates one.
+    useSyncExternalStore(
+        subscribe,
+        () =>
+            stateRef.current === null
+                ? ''
+                : `${generationRef.current}:${stateRef.current.updateIndex}`,
+        () => ''
+    );
 
-    const isInitial = state.updateIndex === 0;
+    const state = stateRef.current ?? undefined;
+    if (state === undefined || state.updateIndex === 0)
+        return { value: undefined, error: undefined, isInitial: true, state };
+
     return {
-        value: isInitial ? undefined : state.valueOrUndefined,
-        error: isInitial ? undefined : state.error,
-        isInitial,
+        value: state.valueOrUndefined,
+        error: state.error,
+        isInitial: false,
         state,
     };
 }

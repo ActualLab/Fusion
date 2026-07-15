@@ -316,6 +316,8 @@ Confidence: confirmed.
 
 ### S6. React hooks miss updates between render and effect subscription — classic external-store race
 
+Status: **closed** — fixed 2026-07-15 (batch hooks; both hooks rebuilt on `useSyncExternalStore` with a generation-qualified snapshot — a fresh state at a coinciding `updateIndex` can't be mistaken for "unchanged").
+
 Confidence: confirmed.
 
 - TS: both hooks are hand-rolled (no `useSyncExternalStore`). `use-computed-state.ts:42-74` and `use-mutable-state.ts:19-39` read the value during render, then subscribe inside `useEffect` via `state.whenUpdated()` — a fresh `PromiseSource` (`state.ts:74-76`) resolving only on the *next* `_update`. An update landing between render and effect execution is invisible.
@@ -325,6 +327,8 @@ Confidence: confirmed.
 - **Alternative:** keep the hand-rolled effect but compare `state.updateIndex` against the index captured at render and force a re-render before entering the await loop. Closes the missed-update window only; StrictMode/concurrent issues (S7) still need their own fix.
 
 ### S7. `useComputedState` is permanently broken under React StrictMode (and unsafe under concurrent rendering)
+
+Status: **closed** — fixed 2026-07-15 (batch hooks; `ComputedState` created/disposed exclusively in the subscribe lifecycle). Real StrictMode tests landed with it (react 19 + jsdom + testing-library as workspace devDependencies), closing D5's deferred S7 test gap.
 
 Confidence: confirmed.
 
@@ -383,6 +387,8 @@ Confidence: confirmed.
 - **Alternative:** port `StateSnapshot` (per-generation immutable snapshot with `WhenUpdated`/`WhenInvalidated`) — the full C# shape, which S12's events and counters would also need. Bigger; the index-based wait is the pragmatic subset and doesn't preclude it.
 
 ### S12. State events (`Invalidated`/`Updating`/`Updated`) and `StateSnapshot` counters are absent
+
+Status: **closed** — per the Recommended split, 2026-07-15 (batch hooks): `lastNonErrorValue` now stores the last non-error *computed* (no `undefined` ambiguity); the event trio stays a documented out-of-scope gap.
 
 Confidence: confirmed (absent in TS).
 

@@ -11,7 +11,9 @@ import { type Computed, StateBoundComputed } from './computed.js';
 export abstract class State<T> implements IResult<T> {
     protected _computed!: Computed<T>;
     protected _updateIndex = 0;
-    protected _lastNonErrorValue: T | undefined;
+    // Reference to the last non-error computed, not its raw value, so an actual
+    // `undefined` value is distinguishable from "no non-error value yet" (S12).
+    protected _lastNonErrorComputed: Computed<T> | undefined;
     private _whenUpdatedSource: PromiseSource<void> | null = null;
     private _isDisposed = false;
 
@@ -24,7 +26,7 @@ export abstract class State<T> implements IResult<T> {
     }
 
     get lastNonErrorValue(): T | undefined {
-        return this._lastNonErrorValue;
+        return this._lastNonErrorComputed?.value;
     }
 
     get hasValue(): boolean {
@@ -97,7 +99,7 @@ export abstract class State<T> implements IResult<T> {
     ): void {
         this._computed = this._createComputed(renewer);
         this._computed.setOutput(output);
-        this._lastNonErrorValue = this._computed.valueOrUndefined;
+        if (this._computed.hasValue) this._lastNonErrorComputed = this._computed;
     }
 
     protected _createComputed(
@@ -111,7 +113,7 @@ export abstract class State<T> implements IResult<T> {
         computed.setOutput(output);
         this._computed = computed;
         if (replaced?.isConsistent) replaced.invalidate();
-        if (computed.hasValue) this._lastNonErrorValue = computed.value;
+        if (computed.hasValue) this._lastNonErrorComputed = computed;
         this._updateIndex++;
         this._whenUpdatedSource?.resolve(undefined);
         this._whenUpdatedSource = null;

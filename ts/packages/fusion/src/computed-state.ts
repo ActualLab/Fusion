@@ -56,13 +56,14 @@ export class ComputedState<T> extends State<T> {
 
     override get value(): T {
         if (this._computed.hasValue) return this._computed.value;
-        if (this._lastNonErrorValue !== undefined)
-            return this._lastNonErrorValue;
+        if (this._lastNonErrorComputed !== undefined)
+            return this._lastNonErrorComputed.value;
         throw new Error('ComputedState has no value yet.');
     }
 
     override get valueOrUndefined(): T | undefined {
-        return this._computed.valueOrUndefined ?? this._lastNonErrorValue;
+        if (this._computed.hasValue) return this._computed.value;
+        return this._lastNonErrorComputed?.value;
     }
 
     dispose(): void {
