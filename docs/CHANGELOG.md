@@ -11,6 +11,25 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 13.0.167+7e1e746a | npm: 13.0.167
+
+Release date: 2026-07-15
+
+TypeScript-only follow-up to the 13.0.163 hardening release. Promotes two
+primitives that until now lived only in ActualChat's synced copy into the
+shared Fusion TS packages so both repos stay in lockstep, and fixes the TS
+typecheck script to read current source instead of a stale build. No .NET
+framework source changes.
+
+### Added (TypeScript)
+- [`AsyncSignal` (`actuallab-core`) — auto-reset, edge-triggered async wakeup](https://github.com/ActualLab/Fusion/commit/3ada9207)
+- [`RpcStreamSender.minRttMs` (`actuallab-rpc`) — windowed minimum of send→ack round-trip times](https://github.com/ActualLab/Fusion/commit/3ada9207)
+
+### Fixed (Tooling)
+- [Typecheck against source, not stale `dist` — a dedicated src-only `tsconfig.typecheck.json` clears 14 phantom `tsc -b` errors](https://github.com/ActualLab/Fusion/commit/7e1e746a)
+- [Make `decorators.ts` type-safe under strict no-unsafe-* lint (`fn.toString()`)](https://github.com/ActualLab/Fusion/commit/3ada9207)
+
+
 ## 13.0.163+ab89147d | npm: 13.0.163
 
 Release date: 2026-07-15
