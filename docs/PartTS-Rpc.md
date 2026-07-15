@@ -14,8 +14,8 @@ See [ActualLab.Rpc in .NET](./PartR.md) for the full conceptual overview.
 | **Service definition** | Reflection on C# interfaces | Explicit `defineRpcService()` or `@rpcService`/`@rpcMethod` decorators |
 | **Client creation** | DI: `fusion.AddClient<T>()` | `hub.addClient<T>(peer, def)` |
 | **Transport** | Pluggable (WebSocket, WebTransport) | WebSocket only (browser + Node.js) |
-| **Serialization** | MemoryPack, MessagePack, System.Text.Json | JSON only (`json5np` &mdash; no polymorphism) |
-| **Reconnection** | `RpcClientPeerReconnectDelayer` profiles | Exponential backoff: 1s &rarr; 60s max |
+| **Serialization** | MemoryPack, MessagePack, System.Text.Json | JSON (`json5np`) or MessagePack (`msgpack6`/`msgpack6c`); no MemoryPack, no polymorphism |
+| **Reconnection** | `RpcClientPeerReconnectDelayer` profiles | Exponential backoff: 100 ms &rarr; 10 s max |
 | **Middleware** | `IRpcMiddleware[]` pipeline | Direct dispatch (no middleware) |
 | **Versioning** | API version sets in handshake | No versioning |
 
@@ -163,7 +163,8 @@ peer.whenRunning;          // Promise<void> — resolves when the reconnect loop
 1. `peer.start()` (or auto-start via `mustStart = true`) kicks off the reconnect loop
 2. Opens a WebSocket to the URL + query params (`clientId`, `f=json5np`)
 3. Exchanges handshakes with the server; state flips to `Connected` **after** the handshake
-4. Detects server restarts via `RemoteHubId` comparison (`peerChanged` event)
+4. Detects server restarts via `RemotePeerId` comparison (`peerChanged` event) &mdash; a new
+   server-side peer with the same hub still counts as a change
 5. On disconnect, waits (via `hub.reconnectDelayer`), then reconnects
 6. Outbound calls made while disconnected are buffered and sent on reconnect
 
@@ -173,7 +174,7 @@ The reconnect delayer lives on the hub and is shared by all client peers &mdash;
 set it once to apply everywhere.
 
 ```ts
-// Default exponential backoff: 1s → 60s
+// Default exponential backoff: 100 ms → 10 s
 hub.reconnectDelayer;
 
 // Force immediate reconnection for every client peer on the hub
@@ -183,6 +184,11 @@ hub.reconnectDelayer.cancelDelays();
 peer.reconnectsAt;  // timestamp (ms) or 0
 peer.reconnectsAtChanged.add(() => { /* update UI */ });
 ```
+
+A successful handshake normally resets the backoff. The exception is a **premature disconnect**:
+if a connection lives less than `prematureDisconnectTimeoutMs` (15 s) before dropping, the growing
+try-index is *kept* rather than reset, so a server that crash-loops right after each handshake sees
+increasing reconnect delays instead of a ~10×/s reconnect storm.
 
 
 ## RpcServerPeer
@@ -301,6 +307,40 @@ The `JustConnected` and `JustDisconnected` states provide grace periods
 so the UI can avoid flashing connection status changes during brief network blips.
 
 
+## Call Timeouts and Limits
+
+A per-peer maintenance loop enforces outbound call timeouts (`RpcCallTimeouts`) so a
+connected-but-stuck server can't hang a caller forever.
+
+```ts
+import { RpcCallTimeouts } from "@actuallab/rpc";
+
+RpcCallTimeouts.None;     // both timeouts Infinity — the query default
+RpcCallTimeouts.Command;  // 1.5 s connect / 10 s run — the command default
+```
+
+The port has no query/command classification (no `RpcMethodKind`), so the **default is unbounded**
+(the .NET query default); apply `RpcCallTimeouts.Command` per call or per method def where you want
+the command-style bounds. `connectTimeoutMs` bounds how long a call waits for a live connection
+before it's sent; `runTimeoutMs` bounds how long a sent call may stay unanswered.
+
+Connection-lifecycle timing lives on `RpcLimits`, overridable process-wide (`RpcLimits.Default`),
+per-hub (`hub.limits`), or per-peer (the matching `*Ms` field before `start()`):
+
+```ts
+import { RpcLimits } from "@actuallab/rpc";
+
+// Relax the keep-alive watchdog to 5 min so a debugger-paused .NET server
+// isn't force-closed every 25 s (opt in explicitly — decision D4).
+RpcLimits.Default = RpcLimits.Debug;
+```
+
+Notable fields: `keepAliveTimeoutMs` (25 s dead-link watchdog; 5 min in the `Debug` preset),
+`prematureDisconnectTimeoutMs` (15 s), `connectTimeoutMs`/`handshakeTimeoutMs` (10 s each),
+`serverPeerCloseTimeoutMs` (180 s before an idle server peer is removed), and
+`completedInboundCallsLimit` (1000 retained completed inbound calls for duplicate-frame dedup).
+
+
 ## Wire Protocol
 
 The TypeScript port uses the same wire format as .NET `ActualLab.Rpc`:
@@ -308,7 +348,13 @@ The TypeScript port uses the same wire format as .NET `ActualLab.Rpc`:
 - Messages are JSON objects with `Method`, `RelatedId`, `CallType`, and `Headers` fields
 - Arguments follow the envelope, separated by `\x02` (ARG_DELIMITER)
 - Multiple messages per frame, separated by `\x03` (FRAME_DELIMITER)
-- Serialization format: `json5np` (System.Text.Json without polymorphic type wrapping)
+- Default serialization format: `json5np` (System.Text.Json without polymorphic type wrapping);
+  the binary MessagePack formats `msgpack6`/`msgpack6c` are also supported (select via the `?f=`
+  URL key). MemoryPack (`mempack*`) is **not** supported &mdash; the resolver throws for it.
+  Polymorphic payloads are not decoded either; they fail loudly rather than corrupting a frame.
 
 System calls use `$sys.*` method names (`$sys.Ok`, `$sys.Error`, `$sys.Cancel`,
-`$sys.KeepAlive`, `$sys.I`, `$sys.B`, `$sys.End`, `$sys.Ack`, `$sys.AckEnd`).
+`$sys.KeepAlive`, `$sys.Disconnect`, `$sys.I`, `$sys.B`, `$sys.End`, `$sys.Ack`, `$sys.AckEnd`).
+An inbound `$sys.Cancel` now aborts the running handler via an `AbortSignal` and suppresses its
+response; the TS peer also sends `$sys.Disconnect` when it's acked about an object it no longer
+tracks, so the counterpart fails fast instead of hanging.

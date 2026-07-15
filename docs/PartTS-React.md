@@ -53,19 +53,28 @@ function useComputedState<T>(
 
 ```ts
 interface UseComputedStateResult<T> {
-  value: T | undefined;       // undefined until first computation
-  error: unknown;             // error from the last computation
-  isInitial: boolean;         // true before first computation completes
-  state: ComputedState<T>;    // the underlying state (for advanced use)
+  value: T | undefined;              // undefined until first computation
+  error: unknown;                    // error from the last computation
+  isInitial: boolean;                // true before first computation completes
+  state: ComputedState<T> | undefined; // the underlying state; undefined on the pre-effect first render
 }
 ```
 
 ### Lifecycle
 
-1. On mount (or deps change): creates a new `ComputedState<T>` with the provided `computer`
-2. Subscribes to `state.whenFirstTimeUpdated()` and subsequent `state.whenUpdated()` calls
-3. Triggers React re-render on each update
-4. On unmount (or deps change): disposes the `ComputedState` (stops the update loop)
+The hook is built on React's `useSyncExternalStore`, so updates that land between render and
+subscription are never lost and rendering stays tear-free under concurrent React.
+
+1. The `ComputedState<T>` is created and disposed **exclusively inside the store's `subscribe`
+   callback** (keyed on `deps`) &mdash; never during render. This is what makes it StrictMode-safe:
+   a dev mount &rarr; cleanup &rarr; remount rebuilds a live state instead of freezing on a
+   disposed one, and a discarded concurrent render leaks nothing.
+2. `subscribe` drives React re-renders from a versioned `state.whenUpdated(sinceIndex)` loop, so no
+   generation is missed.
+3. On unmount (or when `deps` change) the state is disposed and the update loop stops.
+
+Because the state is created in `subscribe`, `state` is `undefined` on the very first (pre-effect)
+render &mdash; `isInitial` is `true` there, so guard on `isInitial` before reaching for `state`.
 
 ### Passing AsyncContext
 
@@ -96,11 +105,12 @@ const { value } = useComputedState(
   { updateDelayer: FixedDelayer.get(500) },
 );
 
-// Recompute after 500ms, but immediately during uiActions.run()
+// Recompute after 500ms, but right away while UI-action instant updates
+// are enabled (a uiActions command is running, or just completed)
 const { value } = useComputedState(
   () => api.GetSummary("~"),
   [api],
-  { updateDelayer: new UIUpdateDelayer(500) },
+  { updateDelayer: UIUpdateDelayer.get(500) },
 );
 ```
 
@@ -114,12 +124,12 @@ that re-renders the component on change.
 import { useMutableState } from "@actuallab/fusion-react";
 
 function Counter() {
-  const [count, setCount, state] = useMutableState(0);
+  const { value: count, set } = useMutableState(0);
 
   return (
     <div>
       <p>Count: {count}</p>
-      <button onClick={() => setCount(count + 1)}>+1</button>
+      <button onClick={() => set(count! + 1)}>+1</button>
     </div>
   );
 }
@@ -130,23 +140,34 @@ function Counter() {
 ```ts
 function useMutableState<T>(
   initial: T,
-): [T, (value: Result<T> | T) => void, MutableState<T>];
+): UseMutableStateResult<T>;
+
+interface UseMutableStateResult<T> {
+  value: T | undefined;              // never throws, even on an error result
+  error: unknown;                    // the error, when the state holds one
+  set: (value: Result<T> | T) => void;
+  state: MutableState<T>;
+}
 ```
 
 ### Return Value
 
-| Index | Type | Description |
+| Field | Type | Description |
 |-------|------|-------------|
-| `[0]` | `T` | Current value |
-| `[1]` | `(v) => void` | Setter (accepts `T` or `Result<T>`) |
-| `[2]` | `MutableState<T>` | The underlying state (for use in compute methods via `.use()`) |
+| `value` | `T \| undefined` | Current value. Reads via `valueOrUndefined`, so it **never throws** even when the state holds an error result |
+| `error` | `unknown` | The stored error, if any |
+| `set` | `(v) => void` | Setter (accepts `T` or `Result<T>`) |
+| `state` | `MutableState<T>` | The underlying state (for use in compute methods via `.use()`) |
 
-The third element is useful when you need the `MutableState` to participate
+Returning `value`/`error` separately (rather than a throwing `value`) means storing an error via
+`set(errorResult(e))` re-renders normally instead of throwing during render and unmounting the tree.
+
+The `state` field is useful when you need the `MutableState` to participate
 in the Fusion dependency graph &mdash; e.g., as an input to a `@computeMethod` or `useComputedState`:
 
 ```ts
 function SearchResults({ api }: { api: ISearchApi }) {
-  const [query, setQuery, queryState] = useMutableState("");
+  const { value: query, set: setQuery, state: queryState } = useMutableState("");
 
   const { value: results } = useComputedState(
     () => {
@@ -158,7 +179,7 @@ function SearchResults({ api }: { api: ISearchApi }) {
 
   return (
     <>
-      <input value={query} onChange={e => setQuery(e.target.value)} />
+      <input value={query ?? ""} onChange={e => setQuery(e.target.value)} />
       <ul>
         {results?.map(r => <li key={r.id}>{r.title}</li>)}
       </ul>

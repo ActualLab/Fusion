@@ -107,8 +107,8 @@ const items = await api.ListIds("~", 10);
 | **Invalidation** | `Invalidation.Begin()` block | `boundMethod.invalidate(...args)` |
 | **Service interface** | C# interface + proxy generation | `defineComputeService()` or `@rpcService` / `@rpcMethod` decorators |
 | **Cancellation** | `CancellationToken` | `AbortSignal` (via `AsyncContext`) |
-| **Async context** | `ExecutionContext` / `AsyncLocal<T>` | `AsyncContext` (explicit, thread-local-like) |
-| **Serialization** | MemoryPack / MessagePack / System.Text.Json | JSON (`json5np` format, no polymorphism) |
+| **Async context** | `ExecutionContext` / `AsyncLocal<T>` | `AsyncContext` &mdash; backed by `AsyncLocalStorage` on Node ≥ 20.16 (flows across `await`), explicit threading in browsers |
+| **Serialization** | MemoryPack / MessagePack / System.Text.Json | JSON (`json5np`) or MessagePack (`msgpack6`/`msgpack6c`); no MemoryPack, no polymorphism |
 | **UI integration** | `ComputedStateComponent<T>` (Blazor) | `useComputedState` hook (React) |
 | **State factory** | `IServiceProvider.StateFactory()` | `new ComputedState(computer, options)` / `new MutableState(initial)` |
 | **Streaming** | `RpcStream<T>` + `IAsyncEnumerable<T>` | `RpcStream<T>` + `AsyncIterable<T>` (`for await...of`) |
@@ -118,16 +118,21 @@ const items = await api.ListIds("~", 10);
 ## AsyncContext: Why It Matters
 
 JavaScript is single-threaded but runs asynchronous operations via the event loop.
-Unlike .NET's `ExecutionContext` that automatically flows through `await` boundaries,
-JavaScript has no built-in async context propagation (the TC39 `AsyncContext` proposal is still Stage 2).
+Fusion's `@computeMethod` machinery needs to know which `Computed<T>` is currently being
+computed so it can record dependencies; it tracks this through `AsyncContext.current`.
 
-Fusion's `@computeMethod` decorator needs to track which `Computed<T>` is currently being computed,
-so it uses `AsyncContext.current` &mdash; a thread-local-like static field.
-This works perfectly for synchronous code, but across `await` boundaries
-the context can be lost if another microtask runs in between.
+Unlike .NET's `AsyncLocal<T>`, a plain static field does **not** survive `await` boundaries.
+The port closes this gap in two ways, depending on where it runs:
 
-**In practice**, you may need to pass `AsyncContext` explicitly as the last argument
-when calling compute methods from within other compute methods that cross `await` points:
+- **Node ≥ 20.16 (server, SSR, tests)** &mdash; `AsyncContext` is automatically backed by
+  `AsyncLocalStorage` (loaded via `process.getBuiltinModule('node:async_hooks')`), so
+  `AsyncContext.current` flows across every `await` exactly like C#'s `AsyncLocal`.
+  Dependency capture "just works" &mdash; you don't need to do anything.
+  `AsyncContext.isAsyncLocalStorageActive` is `true` here.
+- **Browsers** &mdash; there is no `AsyncLocalStorage`, so after the first `await` the ambient
+  `AsyncContext.current` is gone. To keep dependency tracking working, `ComputeFunction`
+  threads the child `AsyncContext` into your compute method **as a trailing argument**.
+  Accept it and pass it into nested compute calls (or `computed.use(ctx)`) made after an `await`:
 
 ```ts
 class Todos {
@@ -135,21 +140,22 @@ class Todos {
   async list(count: number, ctx?: AsyncContext): Promise<TodoItem[]> {
     ctx ??= AsyncContext.current;
     const ids = await this.api.ListIds("~", count, ctx);
-    // ctx ensures dependency tracking survives the await above
+    // Passing ctx keeps dependency tracking alive across the awaits, even in a browser.
     const items: TodoItem[] = [];
     for (const id of ids) {
       const item = await this.api.Get("~", id, ctx);
       if (item) items.push(item);
     }
-    return { items };
+    return items;
   }
 }
 ```
 
 ::: tip
-`AsyncContext` is only needed when you call compute methods across `await` boundaries
-inside other compute methods. If you only call compute methods from React hooks
-or non-compute code, you don't need to worry about it.
+On Node the trailing `ctx` argument is harmless (the ambient context already flows), so writing
+compute methods to accept and forward it is the portable pattern that works everywhere.
+If you only call compute methods from React hooks or non-compute code, you don't need to worry
+about `AsyncContext` at all.
 :::
 
 

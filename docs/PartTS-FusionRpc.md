@@ -38,6 +38,10 @@ const items = await api.ListIds("~", 10);
 // ^ subsequent calls return cached value until server invalidates
 ```
 
+`addClient` is idempotent per `(peer, service)`: calling it repeatedly returns the **same cached
+proxy**, so all consumers share one local `Computed`, one RPC call, and one invalidation stream per
+logical value &mdash; no duplicate traffic across components.
+
 
 ## defineComputeService
 
@@ -85,6 +89,20 @@ The invalidation flow between .NET server and TypeScript client:
 7. **Cascading invalidation** propagates to any dependent `ComputedState<T>` or `@computeMethod`
 8. **React re-renders** via `useComputedState`
 
+A computed invalidated **mid-computation** on the server is still reported: the server sends
+`$sys-c.Invalidate` (through the peer's current connection and serialization format) as soon as the
+result is ready, so a mutation racing a slow compute method never leaves the client stale. If the
+client happens to receive the `Invalidate` **before** the result, the call is transparently retried
+(up to 3 attempts while connected) rather than hanging. Regular (non-compute) calls to compute
+methods skip invalidation tracking entirely.
+
+### Cancellation
+
+The caller's `AbortSignal` travels through `AsyncContext` (the `abortSignalKey`): when a compute call
+is made inside a context that carries a signal, `FusionHub` forwards it to the RPC call. Aborting
+unregisters the outbound call and sends `$sys.Cancel` so the server stops tracking it, and the
+resulting cancellation-shaped error is **never cached** as a computed value.
+
 ### Reconnection Behavior
 
 On disconnect, compute call replicas are **self-invalidated** rather than re-sent.
@@ -126,6 +144,11 @@ hub.acceptConnection(ws);  // creates RpcServerPeer + accepts
 |--------|-------------|
 | `hub.acceptConnection(ws)` | Accept a `WebSocketLike` and create a server peer |
 | `hub.acceptRpcConnection(conn)` | Accept an `RpcConnection` and create a server peer |
+
+Each accepted connection creates an `RpcServerPeer`. When its connection closes, the peer is
+stopped and removed from `hub.peers` after `serverPeerCloseTimeoutMs` (180 s) &mdash; a same-peer
+reconnect within that window cancels the removal &mdash; so a long-running server doesn't leak one
+peer per client that ever connected.
 
 
 ## Complete Setup Example
