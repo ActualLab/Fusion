@@ -18,9 +18,7 @@ public abstract class SafeAsyncDisposableBase : IAsyncDisposable, IDisposable, I
         if (Interlocked.CompareExchange(ref _isDisposing, 1, 0) != 0)
             return;
 
-        var disposeTask = DisposeAsync(true);
-        _disposeTask = disposeTask;
-        GC.SuppressFinalize(this);
+        _ = StartDispose();
     }
 
     public ValueTask DisposeAsync()
@@ -36,13 +34,25 @@ public abstract class SafeAsyncDisposableBase : IAsyncDisposable, IDisposable, I
             }
         }
 
-        disposeTask = DisposeAsync(true);
-        _disposeTask = disposeTask;
-        GC.SuppressFinalize(this);
+        disposeTask = StartDispose();
         return disposeTask.ToValueTask();
     }
 
     protected abstract Task DisposeAsync(bool disposing);
+
+    private Task StartDispose()
+    {
+        Task disposeTask;
+        try {
+            disposeTask = DisposeAsync(true);
+        }
+        catch (Exception e) {
+            disposeTask = Task.FromException(e);
+        }
+        _disposeTask = disposeTask;
+        GC.SuppressFinalize(this);
+        return disposeTask;
+    }
 
     protected bool MarkDisposed()
     {

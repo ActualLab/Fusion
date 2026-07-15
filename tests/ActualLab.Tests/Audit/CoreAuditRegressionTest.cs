@@ -4,6 +4,7 @@ using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Channels;
 using ActualLab.Api;
+using ActualLab.Async;
 using ActualLab.Collections;
 using ActualLab.Conversion;
 using ActualLab.DependencyInjection;
@@ -18,6 +19,35 @@ namespace ActualLab.Tests.Audit;
 
 public class CoreAuditRegressionTest
 {
+    [Fact]
+    public async Task SafeAsyncDisposableMustPublishSynchronousFailure()
+    {
+        var disposable = new SynchronouslyThrowingAsyncDisposable();
+
+        var firstTask = disposable.DisposeAsync().AsTask();
+        var secondTask = disposable.DisposeAsync().AsTask();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => firstTask).ConfigureAwait(false);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => secondTask).ConfigureAwait(false);
+        secondTask.Should().BeSameAs(firstTask);
+        disposable.WhenDisposed.Should().BeSameAs(firstTask);
+        disposable.DisposeCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SynchronousDisposeMustPublishAsynchronousDisposalFailure()
+    {
+        var disposable = new SynchronouslyThrowingAsyncDisposable();
+
+        disposable.Dispose();
+
+        var disposeTask = disposable.WhenDisposed;
+        disposeTask.Should().NotBeNull();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => disposeTask!).ConfigureAwait(false);
+        disposable.Dispose();
+        disposable.DisposeCount.Should().Be(1);
+    }
+
     [Fact]
     public void ArrayBufferCopyToMustCopyLogicalItemsOnly()
     {
@@ -58,11 +88,45 @@ public class CoreAuditRegressionTest
     }
 
     [Fact]
+    public void RefPoolBufferResizeMustHonorMustClear()
+    {
+        var pool = new RecordingPool<string>();
+        var buffer = new RefArrayPoolBuffer<string>(pool, 16, mustClear: true);
+        try {
+            for (var i = 0; i < 17; i++)
+                buffer.Add(i.ToString(CultureInfo.InvariantCulture));
+        }
+        finally {
+            buffer.Release();
+        }
+
+        pool.ClearFlags.Should().Equal(true, true);
+    }
+
+    [Fact]
     public void PoolBufferMustRejectUnsatisfiedSizeHint()
     {
         using var buffer = new ArrayPoolBuffer<byte>(16, mustClear: false);
+        buffer.Position = 1;
 
         Assert.Throws<ArgumentOutOfRangeException>(() => buffer.GetSpan(int.MaxValue));
+    }
+
+    [Fact]
+    public void RefPoolBufferMustRejectUnsatisfiedSizeHint()
+    {
+        var buffer = new RefArrayPoolBuffer<byte>(16, mustClear: false);
+        try {
+            buffer.Position = 1;
+            try {
+                buffer.GetSpan(int.MaxValue);
+                Assert.Fail("Expected an oversized hint to be rejected.");
+            }
+            catch (ArgumentOutOfRangeException) { }
+        }
+        finally {
+            buffer.Release();
+        }
     }
 
     [Fact]
@@ -150,6 +214,24 @@ public class CoreAuditRegressionTest
     }
 
     [Fact]
+    public async Task ConcurrentAsyncTransformMustHandlePreCancellationInsideCopyPolicy()
+    {
+        var source = Channel.CreateUnbounded<int>();
+        var target = Channel.CreateUnbounded<int>();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await source.Reader.ConcurrentTransform(
+            target.Writer,
+            static value => new ValueTask<int>(value),
+            2,
+            ChannelCopyMode.CopyAllSilently,
+            cts.Token).ConfigureAwait(false);
+
+        target.Reader.Completion.IsCompleted.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task EnumerableIntervalMustBeColdPerSubscription()
     {
         var interval = SystemClock.Instance.Interval([TimeSpan.Zero, TimeSpan.Zero]);
@@ -185,6 +267,17 @@ public class CoreAuditRegressionTest
     private sealed class ArgumentService(int value)
     {
         public int Value { get; } = value;
+    }
+
+    private sealed class SynchronouslyThrowingAsyncDisposable : SafeAsyncDisposableBase
+    {
+        public int DisposeCount { get; private set; }
+
+        protected override Task DisposeAsync(bool disposing)
+        {
+            DisposeCount++;
+            throw new InvalidOperationException();
+        }
     }
 
     private sealed class RecordingPool<T> : ArrayPool<T>

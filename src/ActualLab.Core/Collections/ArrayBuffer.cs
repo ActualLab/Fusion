@@ -151,7 +151,7 @@ public struct ArrayBuffer<T>
     }
 
     public void CopyTo(T[] array, int arrayIndex)
-        => Buffer.CopyTo(array.AsSpan(arrayIndex));
+        => Span.CopyTo(array.AsSpan(arrayIndex));
 
     public void EnsureCapacity(int capacity)
     {

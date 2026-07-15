@@ -87,7 +87,7 @@ Maintainer implementation approval: the recommended action is approved for every
 
 ### CORE1. `SafeAsyncDisposableBase` spins forever after a synchronous disposal-override failure
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe.
 
@@ -96,12 +96,13 @@ Confidence: **Confirmed** by executable probe.
 - Reproduction: a minimal subclass whose override throws synchronously produced `dispose: first call threw` followed by `dispose: second call completed=False` after a 500 ms deadline. The probe is under ignored `tmp/fusion-audit-probes` and is not production code.
 - Reachability: the type is public and designed for subclassing. Current in-repo overrides are mostly `async` methods or return already-created tasks, which normally convert failures into faulted tasks; this lowers immediate in-repo frequency but does not satisfy the base-class contract for external or future subclasses.
 - Impact: shutdown or cleanup can hang permanently after the original disposal error, obscuring that error and potentially blocking host termination.
-- **Recommended:** publish a terminal task on every path. Wrap the override invocation in `try/catch`, convert a synchronous exception to `Task.FromException`, assign `_disposeTask`, and then either return/await that same task. Keep the single-invocation guarantee.
+- **Resolution:** `StartDispose` now converts a synchronously thrown override exception into a faulted task, publishes it to `_disposeTask`, and returns that same task while preserving the single-invocation protocol. Both `Dispose()` and `DisposeAsync()` therefore leave a terminal task for later callers instead of poisoning the instance.
+- **Validation:** focused tests cover both entry points, require the faulted task to be published and reused, and verify the override runs once; both pass without invoking the former infinite-spin path.
 - **Alternative:** replace the two-field spin protocol with a single atomically published `TaskCompletionSource`/task representing ownership and completion. This makes publication ordering explicit but is a larger change for a small base class.
 
 ### CORE2. Pre-cancellation escapes `ConcurrentTransform` and leaves the destination channel open
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe; present in both overloads.
 
@@ -110,12 +111,13 @@ Confidence: **Confirmed** by executable probe; present in both overloads.
 - Reproduction: with a pre-canceled token, both a source and destination unbounded channel, concurrency 2, and `CopyAllSilently`, the probe produced `transform: cancellation escaped` and `transform: target completed=False`.
 - Tests: `tests/ActualLab.Tests/Channels/TransformTest.cs` covers successful synchronous and asynchronous transformations and concurrency timing, but no cancellation or error path exposes this boundary.
 - Impact: callers relying on the advertised silent/copy flags see an unexpected exception, while downstream readers receive neither cancellation nor completion.
-- **Recommended:** schedule workers with `CancellationToken.None`/`default` and let the existing in-worker waits observe `cancellationToken`, matching `ChannelExt.Connect`. This preserves the copy-mode handler on pre-cancellation.
+- **Resolution:** both overloads now schedule workers with `CancellationToken.None`; the existing in-worker waits and copy-mode-aware handlers remain the sole cancellation boundary, including when the supplied token is already canceled.
+- **Validation:** focused pre-cancellation tests for the synchronous and asynchronous transformer overloads pass with `CopyAllSilently` and confirm that the destination channel reaches completion without cancellation escaping.
 - **Alternative:** keep cancellation-aware scheduling but wrap worker creation/`Task.WhenAll` in the same copy-mode-aware cancellation handling and complete the writer there. This duplicates the worker policy and is easier for the two overloads to drift.
 
 ### CORE3. `ArrayBuffer<T>.CopyTo` copies capacity rather than `Count`
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and executable probe.
 
@@ -123,12 +125,13 @@ Confidence: **Confirmed** by source and executable probe.
 - Failure: a buffer containing two items with a 16-element lease throws `ArgumentException` when copied to a correctly sized two-element destination because it attempts to copy all 16 elements. If the destination is large enough, it copies unused pooled slots as well, including stale values not belonging to the logical buffer.
 - Tests: `ArrayBufferTest` exercises `ToArray`, `ToList`, mutation, growth, and clearing, but never calls `CopyTo`.
 - Impact: the method violates collection copy semantics, can unexpectedly throw, and can expose stale pooled values to the destination.
-- **Recommended:** replace `Buffer.CopyTo(...)` with `Span.CopyTo(...)`, preserving the existing destination-offset behavior.
+- **Resolution:** `CopyTo` now copies `Span`, limiting the operation to the logical `Count` while preserving the destination offset.
+- **Validation:** the regression copies a two-item buffer into a correctly sized destination and passes with exactly those two values.
 - **Alternative:** use `Buffer.AsSpan(0, Count).CopyTo(...)`; equivalent but duplicates the `Span` property.
 
 ### CORE4. Pool-buffer resize ignores `MustClear`
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by dependency contract and recording-pool probe; duplicated in both implementations.
 
@@ -136,12 +139,13 @@ Confidence: **Confirmed** by dependency contract and recording-pool probe; dupli
 - Failure: when a `mustClear: true` buffer grows, the old array is returned to the pool uncleared. A recording pool observed `False` for the resize return and `True` only for final disposal.
 - Scope: the default constructor enables `MustClear` for reference-containing types, so this is not limited to callers explicitly opting in.
 - Impact: old references remain retained by the pool and potentially visible to another renter in the same process; sensitive payloads are not scrubbed as the API promises. It also increases object-lifetime and memory-retention pressure.
-- **Recommended:** pass `MustClear` as the fourth argument in both `ResizeBuffer` methods.
+- **Resolution:** both `ResizeBuffer` implementations now pass `MustClear` to CommunityToolkit's pool resize operation, so a growth return follows the same clearing policy as final release.
+- **Validation:** recording-pool regressions pass for both `ArrayPoolBuffer<T>` and `RefArrayPoolBuffer<T>`, observing `clearArray=true` on resize and final release.
 - **Alternative:** replace the extension call with explicit rent/copy/return using `MustClear`; more code with no clear benefit unless custom capacity behavior is also needed.
 
 ### CORE5. Oversized pool-buffer size hints wrap to a 16-element span
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe; duplicated in `ArrayPoolBuffer<T>` and `RefArrayPoolBuffer<T>`.
 
@@ -149,7 +153,8 @@ Confidence: **Confirmed** by executable probe; duplicated in `ArrayPoolBuffer<T>
 - Failure: `GetSpan(int.MaxValue)` requests a next power of two of 2^31; the cast becomes `int.MinValue`, and `Math.Max` converts that to 16. The probe returned a 16-element span for a 2,147,483,647-element size hint. A nonzero position can also overflow earlier in `_position + sizeHint` and skip resizing entirely.
 - Contract: `IBufferWriter<T>.GetSpan/GetMemory` require a nonzero size hint to be satisfied with at least that much writable space or rejected; returning a smaller buffer is invalid.
 - Impact: large or attacker-influenced lengths produce late, confusing failures in serializers/writers instead of a deterministic range/capacity exception. Span bounds preserve memory safety, but consumers can fail after partial work.
-- **Recommended:** perform checked capacity arithmetic and reject requests above the supported maximum before rounding. Share the same bounded helper between the class and ref-struct implementations to prevent drift.
+- **Resolution:** both implementations now share `ArrayPoolBufferCapacity`, which validates nonnegative hints, computes required capacity without integer wraparound, rejects capacities above the supported `1 << 30` limit, and only then rounds with `Bits.GreaterOrEqualPowerOf2`.
+- **Validation:** focused regressions pass for both buffer types with a nonzero position and `int.MaxValue` size hint, producing deterministic `ArgumentOutOfRangeException` results instead of undersized spans.
 - **Alternative:** use `Array.MaxLength` plus `ArrayPool<T>.Rent` validation as the bound. This follows runtime array limits but still needs checked addition.
 
 ### CORE6. `BinaryHeap` source constructor ignores its comparer while building the heap

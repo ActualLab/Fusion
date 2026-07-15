@@ -14,10 +14,9 @@ namespace ActualLab.Collections;
 [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
 public ref struct RefArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, bool mustClear)
 {
-    private const int MinCapacity = 16;
     private const int DefaultInitialCapacity = 256;
 
-    private T[] _array = pool.Rent(RoundCapacity(initialCapacity));
+    private T[] _array = pool.Rent(ArrayPoolBufferCapacity.Round(initialCapacity));
     private int _position = 0;
 
     public readonly ArrayPool<T> Pool = pool;
@@ -183,7 +182,7 @@ public ref struct RefArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, 
     public void Renew(int maxCapacity)
     {
         _position = 0;
-        maxCapacity = RoundCapacity(maxCapacity);
+        maxCapacity = ArrayPoolBufferCapacity.Round(maxCapacity);
         if (_array.Length <= maxCapacity)
             return;
 
@@ -194,7 +193,7 @@ public ref struct RefArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void EnsureCapacity(int sizeHint = 0)
     {
-        var capacity = _position + Math.Max(1, sizeHint);
+        var capacity = ArrayPoolBufferCapacity.GetRequired(_position, sizeHint);
         if (capacity > _array.Length)
             ResizeBuffer(capacity);
     }
@@ -289,9 +288,5 @@ public ref struct RefArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, 
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ResizeBuffer(int capacity)
-        => Pool.Resize(ref _array, RoundCapacity(capacity));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int RoundCapacity(int capacity)
-        => Math.Max(MinCapacity, (int)Bits.GreaterOrEqualPowerOf2((ulong)capacity));
+        => Pool.Resize(ref _array, ArrayPoolBufferCapacity.Round(capacity), MustClear);
 }

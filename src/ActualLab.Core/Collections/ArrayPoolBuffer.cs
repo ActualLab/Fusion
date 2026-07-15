@@ -12,10 +12,9 @@ namespace ActualLab.Collections;
 public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, bool mustClear)
     : IBuffer<T>, IMemoryOwner<T>
 {
-    private const int MinCapacity = 16;
     private const int DefaultInitialCapacity = 256;
 
-    private T[] _array = pool.Rent(RoundCapacity(initialCapacity));
+    private T[] _array = pool.Rent(ArrayPoolBufferCapacity.Round(initialCapacity));
     private int _position;
 
     public readonly ArrayPool<T> Pool = pool;
@@ -198,7 +197,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     public void Renew(int maxCapacity)
     {
         _position = 0;
-        maxCapacity = RoundCapacity(maxCapacity);
+        maxCapacity = ArrayPoolBufferCapacity.Round(maxCapacity);
         if (_array.Length <= maxCapacity)
             return;
 
@@ -209,7 +208,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void EnsureCapacity(int sizeHint = 0)
     {
-        var capacity = _position + Math.Max(1, sizeHint);
+        var capacity = ArrayPoolBufferCapacity.GetRequired(_position, sizeHint);
         if (capacity > _array.Length)
             ResizeBuffer(capacity);
     }
@@ -304,20 +303,20 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ResizeBuffer(int capacity)
-        => Pool.Resize(ref _array, RoundCapacity(capacity));
+        => Pool.Resize(ref _array, ArrayPoolBufferCapacity.Round(capacity), MustClear);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ReplaceBuffer(int capacity)
     {
         Pool.Return(_array, MustClear);
-        _array = Pool.Rent(RoundCapacity(capacity));
+        _array = Pool.Rent(ArrayPoolBufferCapacity.Round(capacity));
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public ArrayOwner<T> ToArrayOwnerAndReset(int capacity)
     {
         var result = ArrayOwner.New(Pool, _array, _position, MustClear);
-        _array = Pool.Rent(RoundCapacity(capacity));
+        _array = Pool.Rent(ArrayPoolBufferCapacity.Round(capacity));
         _position = 0;
         return result;
     }
@@ -329,8 +328,4 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         Volatile.Write(ref _array, null!);
         return result;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int RoundCapacity(int capacity)
-        => Math.Max(MinCapacity, (int)Bits.GreaterOrEqualPowerOf2((ulong)capacity));
 }

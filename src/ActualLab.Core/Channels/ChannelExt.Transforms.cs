@@ -115,7 +115,7 @@ public static partial class ChannelExt
 
         var workers = new Task[concurrencyLevel];
         for (var i = 0; i < concurrencyLevel; i++)
-            workers[i] = Task.Run(Worker, cancellationToken);
+            workers[i] = Task.Run(Worker, CancellationToken.None);
         await Task.WhenAll(workers).ConfigureAwait(false);
         if ((copyMode & ChannelCopyMode.CopyCompletion) != 0)
             writer.TryComplete(error);
@@ -168,7 +168,7 @@ public static partial class ChannelExt
 
         var workers = new Task[concurrencyLevel];
         for (var i = 0; i < concurrencyLevel; i++)
-            workers[i] = Task.Run(Worker, cancellationToken);
+            workers[i] = Task.Run(Worker, CancellationToken.None);
         await Task.WhenAll(workers).ConfigureAwait(false);
         if ((copyMode & ChannelCopyMode.CopyCompletion) != 0)
             writer.TryComplete(error);
