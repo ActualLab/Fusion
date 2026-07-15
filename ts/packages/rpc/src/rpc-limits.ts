@@ -22,6 +22,13 @@ export class RpcLimits {
      *  unless caller assigns a custom instance to `hub.limits`. */
     static Default: RpcLimits = new RpcLimits();
 
+    /** Dev preset with a relaxed keep-alive timeout (5 min), matching .NET's
+     *  debugger-attached `KeepAlivePeriod` (RpcLimits.cs:46-54). Activate
+     *  explicitly — e.g. `RpcLimits.Default = RpcLimits.Debug` or per-hub
+     *  `hub.limits = RpcLimits.Debug`. Never switched on automatically: the
+     *  TS side can't detect a debugger on the server (decision D4). */
+    static readonly Debug: RpcLimits = new RpcLimits({ keepAliveTimeoutMs: 300_000 });
+
     /** Max time to wait for the WebSocket to enter the OPEN state. On a
      *  hung connect (mobile after network change, half-open after sleep)
      *  the browser can take ~2 min to emit `onerror`/`onclose`; without
@@ -45,6 +52,10 @@ export class RpcLimits {
      *  so completed calls are retained — bounded by this limit (oldest
      *  evicted first) to cap memory on long-lived connections. */
     completedInboundCallsLimit = 1000;
+
+    /** How often each peer's maintenance loop scans outbound calls for
+     *  timeouts (R12). Mirrors .NET `RpcLimits.CallTimeoutCheckPeriod`. */
+    callTimeoutCheckPeriodMs = 1_000;
 
     /** Outbound `$sys.KeepAlive` send period. */
     keepAlivePeriodMs = 10_000;

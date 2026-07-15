@@ -11,7 +11,7 @@ import {
     defineRpcService,
     createMessageChannelPair,
 } from '../src/index.js';
-import type { RpcServerPeer } from '../src/index.js';
+import type { RpcServerPeer, IRpcObject } from '../src/index.js';
 import { createTestHubPair, FORMATS, delay } from './rpc-test-helpers.js';
 import type { TestHubPair } from './rpc-test-helpers.js';
 
@@ -693,6 +693,19 @@ describe('RpcStream $sys.End index gate (R3/R4)', () => {
         };
         const stream = new RpcStream<string>(ref, pair.clientPeer);
         pair.clientPeer.remoteObjects.register(stream);
+        // A live server-side sender would still be present in real usage, so
+        // register a stub for `localId`; otherwise the client's reset-ack hits
+        // an unknown shared object and the server disconnects it (R10).
+        const stub: IRpcObject & { onAck(): void; onAckEnd(): void } = {
+            id: { hostId: 'h', localId },
+            kind: RpcObjectKind.Local,
+            allowReconnect: true,
+            reconnect() { /* no-op */ },
+            disconnect() { /* no-op */ },
+            onAck() { /* no-op */ },
+            onAckEnd() { /* no-op */ },
+        };
+        pair.serverPeer.sharedObjects.register(stub);
         return stream;
     }
 

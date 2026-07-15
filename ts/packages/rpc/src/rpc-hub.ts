@@ -319,8 +319,8 @@ export class RpcHub {
 
         // Regular methods (including non-zero callTypeId — subclass can override for custom behavior)
         const callOptions: RpcCallOptions | undefined =
-            (methodDef.callTypeId !== 0 || mode !== RpcRemoteExecutionMode.Default)
-                ? { callTypeId: methodDef.callTypeId, remoteExecutionMode: mode }
+            (methodDef.callTypeId !== 0 || mode !== RpcRemoteExecutionMode.Default || methodDef.timeouts !== undefined)
+                ? { callTypeId: methodDef.callTypeId, remoteExecutionMode: mode, timeouts: methodDef.timeouts }
                 : undefined;
 
         return async (...args: unknown[]) => {

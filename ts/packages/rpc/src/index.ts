@@ -57,6 +57,7 @@ export {
 } from './rpc-call-tracker.js';
 
 export { RpcCallStage } from './rpc-call-stage.js';
+export { RpcCallTimeouts } from './rpc-call-timeouts.js';
 export { RpcError, REMOTE_EXCEPTION_TYPE_REF, toExceptionInfo } from './rpc-error.js';
 export { IncreasingSeqCompressor } from './increasing-seq-compressor.js';
 

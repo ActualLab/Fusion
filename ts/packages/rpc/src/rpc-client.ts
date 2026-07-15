@@ -78,8 +78,8 @@ function createMethod(peer: RpcPeer, methodDef: RpcMethodDef): RpcClientFn {
         const callArgs = args.slice(0, methodDef.argCount);
         const wireName = wireMethodName(methodDef);
         const options =
-            (methodDef.callTypeId !== 0 || mode !== RpcRemoteExecutionMode.Default)
-                ? { callTypeId: methodDef.callTypeId, remoteExecutionMode: mode }
+            (methodDef.callTypeId !== 0 || mode !== RpcRemoteExecutionMode.Default || methodDef.timeouts !== undefined)
+                ? { callTypeId: methodDef.callTypeId, remoteExecutionMode: mode, timeouts: methodDef.timeouts }
                 : undefined;
         const outboundCall = peer.call(wireName, callArgs, options);
         // Keep `.promise` here: this is the proxy returning a Promise to user

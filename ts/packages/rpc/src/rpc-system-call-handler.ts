@@ -93,11 +93,14 @@ export class RpcSystemCallHandler {
             break;
         }
         case RpcSystemCalls.cancel: {
-            // Remote peer is cancelling a call it asked us to process — remove
-            // from the inbound tracker.  Full cancellation propagation (aborting
-            // the running service handler) is not yet implemented; this just
-            // unregisters the call so we don't send a response for it.
-            peer.inboundCalls.remove(relatedId);
+            // Remote peer is cancelling a call it asked us to process. Abort the
+            // call's signal (so the running handler can bail) and unregister it;
+            // the dispatch's result send is gated on `isCancelled`, so no
+            // response goes out. Mirrors RpcInboundCall.Cancel + the
+            // "!CallCancelToken.IsCancellationRequested" guard on SendResult
+            // (RpcInboundCall.cs:209-210, 246-247).
+            const call = peer.inboundCalls.remove(relatedId);
+            call?.cancel();
             break;
         }
         case RpcSystemCalls.keepAlive: {
@@ -105,6 +108,20 @@ export class RpcSystemCallHandler {
             // watchdog doesn't force-close the connection. Mirrors .NET
             // `RpcObjectTrackers.KeepAlive` which sets `LastKeepAliveAt`.
             peer.notifyKeepAliveReceived();
+            // The id list advertises the remote peer's remote objects, which
+            // map to our shared objects. Any id we no longer track is stale on
+            // its side — reply with $sys.Disconnect so it stops advertising it.
+            // Mirrors RpcObjectTrackers.KeepAlive (RpcObjectTrackers.cs:300-317).
+            const keepAliveIds = args[0] as number[] | undefined;
+            if (Array.isArray(keepAliveIds) && keepAliveIds.length > 0 && peer.connection !== undefined) {
+                const unknownIds: number[] = [];
+                for (const id of keepAliveIds)
+                    if (peer.sharedObjects.get(id) === undefined)
+                        unknownIds.push(id);
+
+                if (unknownIds.length > 0)
+                    peer.hub.systemCallSender.disconnect(peer.connection, peer.serializationFormat, unknownIds);
+            }
             break;
         }
         case RpcSystemCalls.item: {
@@ -171,14 +188,23 @@ export class RpcSystemCallHandler {
             const sender = peer.sharedObjects.get(relatedId) as
                     | RpcStreamSender<unknown>
                     | undefined;
-            sender?.onAck(args[0] as number, args[1] as string);
+            // Unknown shared object — reply with $sys.Disconnect so the remote
+            // stream fails fast (RpcStreamNotFoundException analog) instead of
+            // hanging. Mirrors RpcSystemCalls.Ack (RpcSystemCalls.cs:149-159).
+            if (sender)
+                sender.onAck(args[0] as number, args[1] as string);
+            else if (peer.connection !== undefined)
+                peer.hub.systemCallSender.disconnect(peer.connection, peer.serializationFormat, [relatedId]);
             break;
         }
         case RpcSystemCalls.ackEnd: {
             const sender = peer.sharedObjects.get(relatedId) as
                     | RpcStreamSender<unknown>
                     | undefined;
-            sender?.onAckEnd(args[0] as string);
+            if (sender)
+                sender.onAckEnd(args[0] as string);
+            else if (peer.connection !== undefined)
+                peer.hub.systemCallSender.disconnect(peer.connection, peer.serializationFormat, [relatedId]);
             break;
         }
         case RpcSystemCalls.disconnect: {

@@ -42,6 +42,8 @@ export interface RpcDispatchContext {
     __rpcDispatch: true;
     callId: number;
     connection: RpcConnection;
+    /** Aborted when the inbound call is cancelled via `$sys.Cancel` (R17). */
+    signal?: AbortSignal;
 }
 
 /** Dispatches inbound RPC calls to registered service implementations. */

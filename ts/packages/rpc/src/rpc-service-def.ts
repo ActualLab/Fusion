@@ -33,6 +33,8 @@
 //   - PropertyBag — extensible metadata on service/method def.  Not needed.
 //   - Mode (ServiceMode) / Scope / ServerResolver / ClientType — DI wiring.
 
+import type { RpcCallTimeouts } from './rpc-call-timeouts.js';
+
 /** Controls outbound RPC call behavior regarding connection waiting, reconnection, and resending. */
 export const RpcRemoteExecutionMode = {
     /** Wait for connection if disconnected when the call is made. */
@@ -57,6 +59,8 @@ export interface RpcMethodDef {
     readonly stream: boolean;
     readonly noWait: boolean;
     readonly remoteExecutionMode: RpcRemoteExecutionMode;
+    /** Per-method connect/run timeouts (R12). `undefined` means unbounded. */
+    readonly timeouts?: RpcCallTimeouts;
 }
 
 /** Describes an RPC service — its name and method definitions. */
@@ -73,6 +77,8 @@ export interface RpcMethodDefInput {
     wireArgCount?: number;
     /** Override for remoteExecutionMode. Default: RpcRemoteExecutionMode.Default (7). NoWait methods always use 0. */
     remoteExecutionMode?: RpcRemoteExecutionMode;
+    /** Per-method connect/run timeouts (R12). Default: unbounded. */
+    timeouts?: RpcCallTimeouts;
 }
 
 export const RpcType = {
@@ -112,6 +118,7 @@ export function defineRpcService(
             remoteExecutionMode: isNoWait
                 ? 0
                 : (input.remoteExecutionMode ?? RpcRemoteExecutionMode.Default),
+            timeouts: input.timeouts,
         });
     }
     return { name, methods: map };

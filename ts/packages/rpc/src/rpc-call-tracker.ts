@@ -49,6 +49,7 @@
 import { PromiseSource } from '@actuallab/core';
 import { RpcCallStage } from './rpc-call-stage.js';
 import { RpcRemoteExecutionMode } from './rpc-service-def.js';
+import type { RpcCallTimeouts } from './rpc-call-timeouts.js';
 
 /** Tracks a pending outbound RPC call. */
 export class RpcOutboundCall {
@@ -64,6 +65,17 @@ export class RpcOutboundCall {
 
     /** The serialized wire data — stored for re-sending on reconnect. */
     serializedWireData: string | Uint8Array = '';
+
+    /** Per-call connect/run timeouts enforced by the peer's maintenance loop
+     *  (R12). `undefined` means unbounded (the query default). */
+    timeouts: RpcCallTimeouts | undefined;
+
+    /** `Date.now()` when this call was created (used for the connect timeout). */
+    readonly startedAt = Date.now();
+
+    /** `Date.now()` when this call was last put on the wire, or 0 if it hasn't
+     *  been sent yet (used for the run timeout). */
+    sentAt = 0;
 
     /**
      * Bitfield of {@link RpcCallStage} flags indicating how far this call
@@ -176,11 +188,28 @@ export class RpcInboundCall {
     /** 0 = still processing, 1 = result computed and sent at least once. */
     completedStage = 0;
     private _resend: (() => void) | undefined;
+    private readonly _abortController = new AbortController();
 
     constructor(callId: number, method: string, args: unknown[]) {
         this.callId = callId;
         this.method = method;
         this.args = args;
+    }
+
+    /** Aborted when the remote peer cancels this call via `$sys.Cancel` (R17).
+     *  Threaded into the service handler so it can abort in-flight work. */
+    get signal(): AbortSignal {
+        return this._abortController.signal;
+    }
+
+    /** True once the remote peer cancelled this call — the response is then
+     *  suppressed even though the call may still be registered (R9 dedup). */
+    get isCancelled(): boolean {
+        return this._abortController.signal.aborted;
+    }
+
+    cancel(): void {
+        this._abortController.abort();
     }
 
     // Records the closure that re-sends this call's already-computed result;

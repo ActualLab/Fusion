@@ -559,6 +559,8 @@ Confidence: confirmed.
 
 ### R10. TS never sends `$sys.Disconnect`
 
+Status: **closed** — fixed 2026-07-15 (batch rpclife; unknown-object acks and keep-alive id scans now reply with `$sys.Disconnect`).
+
 Confidence: confirmed.
 
 - TS: no `disconnect` sender exists in `rpc-system-call-sender.ts`; TS only *handles* it (`rpc-system-call-handler.ts:179-206`). The keep-alive handler also ignores the id list entirely (`rpc-system-call-handler.ts:109-115`), so per-object keep-alive/`ObjectReleaseTimeout` semantics are absent.
@@ -569,6 +571,8 @@ Confidence: confirmed.
 
 ### R11. `RpcStreamSender.onAck` skips C#'s validation
 
+Status: **closed** — fixed 2026-07-15 (batch rpclife; all three `OnAck` guards ported).
+
 Confidence: confirmed.
 
 - TS: `rpc-stream-sender.ts:159-167` — any ack starts the pump; `mustReset` is just "hostId non-empty"; no host equality check; no rejection of resets on `allowReconnect === false`.
@@ -578,6 +582,8 @@ Confidence: confirmed.
 - **Alternative:** the host-equality check alone (the load-balancer case). Cheapest meaningful subset; the other two guards close smaller correctness holes.
 
 ### R12. No outbound call timeouts of any kind
+
+Status: **closed** — fixed 2026-07-15 (batch rpclife; `RpcCallTimeouts` with C# defaults — commands ≈1.5 s connect / 10 s run, queries unbounded; run timeouts gated on connection + keep-alive freshness and restarted on reconnect, per C# Maintain semantics).
 
 Confidence: confirmed (documented omission, but callers of the implemented API assume liveness).
 
@@ -628,6 +634,8 @@ Confidence: confirmed (acknowledged in a comment, `rpc-system-call-handler.ts:65
 - **Alternative:** accept-but-log the mismatch. Keeps behavior, adds observability; rejected-leaning once R9 lands, since validation is a few lines.
 
 ### R17. `$sys.Cancel` doesn't abort the running handler and the result is still sent
+
+Status: **closed** — fixed 2026-07-15 (batch rpclife; per-inbound-call `AbortSignal`, response suppression keyed on cancellation so R9's result re-send stays intact).
 
 Confidence: confirmed (documented omission). TS removes the tracker entry only (`rpc-system-call-handler.ts:101-107`); the dispatch continues and still sends the result (`rpc-peer.ts:554-570` — the send is not gated on the call still being registered). C# cancels the linked CTS and suppresses the result (`RpcInboundCall.cs:209-210, 246-247`).
 
@@ -760,7 +768,8 @@ Confidence: confirmed by full source trace. (Second-pass finding.)
 
 - `readVarUint` truncates values to 32 bits (`rpc-serialization.ts:151-167`: max 5 bytes, `value >>> 0`) vs C#'s 64-bit VarUInt; an id ≥ 2^35 would desync the frame. Practically unreachable with per-peer counters — note only.
 - `msgpack-map-patch.ts` is needed and byte-correct (JS `Map` → msgpack map with typed keys, matching .NET `Dictionary<int, byte[]>` for `$sys.Reconnect`), but it patches `Encoder.prototype` **globally** on module load — worth documenting for host apps.
-- Debugger-attached .NET peers use `KeepAlivePeriod = 300 s` (`RpcLimits.cs:46-54`); TS's 25 s watchdog (`rpc-limits.ts:43`) force-closes every 25 s against such a server — dev-environment churn. **Resolved (per D4):** add a `RpcLimits.Debug` preset (`keepAliveTimeoutMs = 300_000`), opted into explicitly via the existing override paths.
+- Debugger-attached .NET peers use `KeepAlivePeriod = 300 s` (`RpcLimits.cs:46-54`); TS's 25 s watchdog (`rpc-limits.ts:43`) force-closes every 25 s against such a server — dev-environment churn. **Resolved (per D4):** `RpcLimits.Debug` preset (`keepAliveTimeoutMs = 300_000`) landed 2026-07-15 (batch rpclife), opted into explicitly.
+- Pre-existing (surfaced during R10 verification): TS's `$sys.Disconnect` *handler* checks `sharedObjects` in addition to `remoteObjects` (C# touches remote objects only) — a numeric id collision across the two id spaces could kill an unrelated local sender; Disconnects are more frequent post-R10, worth a follow-up.
 - Second-pass candidates reviewed and excluded: stream-reference numeric range validation (C# parsing also accepts negative timing values — a hardening opportunity, not a TS/C# contract gap); hash-collision handling in `RpcMethodRegistry` (poor failure mode, but a 32-bit method-hash collision is too remote to prioritize without a concrete case).
 - Post-R3 residual (found during verification): `RpcStream.disconnect()` / non-reconnectable gap completion completes the stream without AckEnd and defers unregistration to the consumer's next `next()`; C#'s `Disconnect` → `CloseFromLock` unregisters (and attempts AckEnd) immediately. Minor divergence, revisit if it shows up in practice.
 

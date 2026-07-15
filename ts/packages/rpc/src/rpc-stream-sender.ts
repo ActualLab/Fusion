@@ -159,12 +159,47 @@ export class RpcStreamSender<T> implements IRpcObject {
      */
     onAck(nextIndex: number, hostId: string): void {
         const mustReset = hostId !== '' && hostId !== RpcStreamSender._emptyGuid;
-        if (!this._started.isCompleted) this._started.resolve();
+
+        // Host mismatch — the consumer reconnected to a different server
+        // instance, so our stream can never satisfy its acks (RpcSharedStream.cs:82-86).
+        if (mustReset && hostId !== this.id.hostId) {
+            this._sendDisconnect();
+            return;
+        }
+
+        if (!this._started.isCompleted) {
+            // A not-yet-started stream only accepts the initial connect ack.
+            if (mustReset && nextIndex === 0)
+                this._started.resolve();
+            else {
+                this._sendDisconnect();
+                return;
+            }
+        } else if (this._ended) {
+            // Ack for an already-completed stream — nothing left to serve.
+            this._sendDisconnect();
+            return;
+        } else if (mustReset && !this.allowReconnect) {
+            // Reset (reconnect) ack on a non-reconnectable stream — reject.
+            this._sendDisconnect();
+            return;
+        }
+
         this._acks.push({ nextIndex, mustReset });
         if (this._whenAckReady) {
             this._whenAckReady.resolve();
             this._whenAckReady = null;
         }
+    }
+
+    // Tells the consumer this shared stream is gone, then disposes it —
+    // mirrors RpcSharedStream.SendDisconnect (RpcSharedStream.cs:284-289).
+    private _sendDisconnect(): void {
+        const conn = this.peer.connection;
+        if (conn)
+            this.peer.hub.systemCallSender.disconnect(conn, this.peer.serializationFormat, [this.id.localId]);
+
+        this.disconnect();
     }
 
     /** Called by system call handler when $sys.AckEnd is received from the client. */
