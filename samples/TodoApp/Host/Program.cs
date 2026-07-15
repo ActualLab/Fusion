@@ -279,7 +279,7 @@ void ConfigureShardDbContext(IServiceProvider services, string shard, DbContextO
         db.UseNpgsqlHintFormatter();
     }
     else {
-        var appTempDir = FilePath.GetApplicationTempDirectory("", true);
+        var appTempDir = FilePath.GetApplicationTempDirectory();
         var dbPath = (appTempDir & "TodoApp_v1_{0:StorageId}.db").Value.Interpolate(shard);
         db.UseSqlite($"Data Source={dbPath}");
     }

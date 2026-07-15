@@ -10,7 +10,7 @@ public abstract class TestBase(ITestOutputHelper @out) : IAsyncLifetime
     protected static readonly string DotNetVersionHash = Convert.ToBase64String(BitConverter.GetBytes(DotNetVersion.GetDjb2HashCode()))[..4];
     protected static readonly FilePath TempDir = TestRunnerInfo.IsGitHubAction()
         ? (FilePath)Environment.GetEnvironmentVariable("RUNNER_TEMP")
-        : FilePath.GetApplicationTempDirectory("", true);
+        : FilePath.GetApplicationTempDirectory();
 
     [field: AllowNull, MaybeNull]
     protected string LongTestNameHash {

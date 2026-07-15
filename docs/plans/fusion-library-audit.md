@@ -460,24 +460,26 @@ Confidence: **Confirmed** by focused test and source analysis.
 
 ### CORE28. `GetApplicationTempDirectory` exposes a redundant `createIfAbsents` option
 
-Status: **open — remove the parameter and always create**.
+Status: **completed**.
 
 Confidence: **Direction confirmed by maintainer decision**.
 
-- Source: `src/ActualLab.Core/IO/FilePath.Extras.cs:52-63` creates the derived directory whenever it is absent without checking the method's `createIfAbsents` argument.
+- Source before the fix: `src/ActualLab.Core/IO/FilePath.Extras.cs:52-63` created the derived directory whenever it was absent without checking the method's `createIfAbsents` argument.
 - Decision: remove `createIfAbsents` from the API and always create the application temp directory when it is missing. The existing always-create behavior is the intended contract; the defect is the misleading unused parameter.
-- **Recommended:** remove the parameter, update all callers, and keep the unconditional `Directory.CreateDirectory` path. Update API documentation to state that the returned directory is guaranteed to exist when the method succeeds.
+- **Implemented:** removed `createIfAbsents`, updated every C# caller, retained unconditional directory creation, and documented that the returned application directory exists whenever the method succeeds.
+- **Validation:** the API-shape regression failed while reflection exposed `{ string, bool }` and now passes with the single optional `string appId` parameter. All nine `ActualLab.Core` target frameworks and the HelloCart caller build pass; Todo Host's full C# compile graph passes independently of its unavailable `npm` build step.
 
 ### CORE29. Pre-.NET 7 `StreamReader` cancellation overloads ignore their token
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by compatibility-source inspection and conditional net6 regression test.
 
-- Source: `src/ActualLab.Core/Compatibility/StreamReaderExt.cs:8-20` provides token overloads for older targets but delegates to tokenless `ReadToEndAsync`/`ReadLineAsync` without a pre-cancellation check or cancellable wait.
+- Source before the fix: `src/ActualLab.Core/Compatibility/StreamReaderExt.cs:8-20` provided token overloads for older targets but delegated to tokenless `ReadToEndAsync`/`ReadLineAsync` without a pre-cancellation check.
 - Failure: a token canceled before the call is silently ignored on supported legacy targets, unlike the same API shape on modern targets.
 - Impact: multi-target consumers get framework-dependent cancellation behavior and may continue blocking/reading after cancellation.
-- **Recommended:** return a canceled task only when the token is already canceled before the read starts.
+- **Implemented:** both overloads return `Task.FromCanceled<T>` only when cancellation predates the call; otherwise they return the underlying tokenless read task unchanged.
+- **Validation:** the conditional net6 regression failed before the fix and now passes for both `ReadLineAsync` and `ReadToEndAsync`; the complete nine-target `ActualLab.Core` build passes.
 - Constraint: do not wrap the non-cancellable underlying read with a cancellation-aware wait helper. Such a wrapper would report cancellation while the I/O task continues, falsely implying that the operation itself was canceled. Once the read starts, preserve its actual completion and document that legacy targets cannot interrupt the underlying I/O.
 
 ## B. ActualLab.Fusion

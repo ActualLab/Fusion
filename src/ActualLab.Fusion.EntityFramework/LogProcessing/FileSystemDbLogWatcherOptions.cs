@@ -19,7 +19,7 @@ public record FileSystemDbLogWatcherOptions<TDbContext>
         var dbContextName = typeof(TDbContext).Name;
         var dbEntryName = dbEntryType.Name;
         var shardSuffix = DbShard.IsSingle(shard) ? "" : $"_{shard}";
-        var appTempDir = FilePath.GetApplicationTempDirectory("", true);
+        var appTempDir = FilePath.GetApplicationTempDirectory();
         return appTempDir & (FilePath.GetHashedName($"{dbContextName}_{dbEntryName}{shardSuffix}") + ".tracker");
     }
 }

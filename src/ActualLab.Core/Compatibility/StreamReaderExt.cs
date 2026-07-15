@@ -9,10 +9,14 @@ namespace System.IO;
 public static class StreamReaderExt
 {
     public static Task<string?> ReadLineAsync(this StreamReader streamReader, CancellationToken cancellationToken)
-        => streamReader.ReadLineAsync();
+        => cancellationToken.IsCancellationRequested
+            ? Task.FromCanceled<string?>(cancellationToken)
+            : streamReader.ReadLineAsync();
 
     public static Task<string> ReadToEndAsync(this StreamReader streamReader, CancellationToken cancellationToken)
-        => streamReader.ReadToEndAsync();
+        => cancellationToken.IsCancellationRequested
+            ? Task.FromCanceled<string>(cancellationToken)
+            : streamReader.ReadToEndAsync();
 }
 
 #endif

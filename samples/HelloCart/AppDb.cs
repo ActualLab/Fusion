@@ -22,7 +22,7 @@ public static class AppDb
                 db.UseNpgsqlHintFormatter();
             }
             else {
-                var appTempDir = FilePath.GetApplicationTempDirectory("", true);
+                var appTempDir = FilePath.GetApplicationTempDirectory();
                 var dbPath = appTempDir & "HelloCart_v1.db";
                 db.UseSqlite($"Data Source={dbPath}");
             }

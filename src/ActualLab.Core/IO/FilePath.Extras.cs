@@ -56,8 +56,9 @@ public readonly partial struct FilePath
         return Path.GetDirectoryName(assembly?.Location) ?? Environment.CurrentDirectory;
     }
 
-    public static FilePath GetApplicationTempDirectory(string appId = "", bool createIfAbsents = false)
+    public static FilePath GetApplicationTempDirectory(string appId = "")
     {
+        // The application-specific directory is guaranteed to exist when this method succeeds.
         if (appId.IsNullOrEmpty())
             appId = Assembly.GetEntryAssembly()?.GetName()?.Name ?? "unknown";
         var subdirectory = GetHashedName($"{appId}_{GetApplicationDirectory()}");

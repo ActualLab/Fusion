@@ -1,5 +1,6 @@
 using System.Text;
 using ActualLab.Diagnostics;
+using ActualLab.IO;
 using ActualLab.Reflection;
 
 namespace ActualLab.Tests.CoreAudit;
@@ -98,6 +99,15 @@ public class CoreRemainingAuditRegressionTest
         => Sampler.Always.ToConcurrent(1).Next().Should().BeTrue();
 
     [Fact]
+    public void ApplicationTempDirectoryShouldExposeAlwaysCreateApi()
+    {
+        var method = typeof(FilePath).GetMethods()
+            .Single(x => x.Name == nameof(FilePath.GetApplicationTempDirectory));
+
+        method.GetParameters().Select(x => x.ParameterType).Should().Equal(typeof(string));
+    }
+
+    [Fact]
     public void NewtonsoftByteReaderShouldReportOnlyConsumedValueLength()
     {
         var data = Encoding.UTF8.GetBytes("1\n2").AsMemory();
@@ -111,11 +121,15 @@ public class CoreRemainingAuditRegressionTest
     [Fact]
     public async Task LegacyStreamReaderOverloadsShouldHonorPreCancellation()
     {
+        using var lineStream = new MemoryStream(Encoding.UTF8.GetBytes("text"));
+        using var lineReader = new StreamReader(lineStream);
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("text"));
         using var reader = new StreamReader(stream);
         using var cancellationSource = new CancellationTokenSource();
         cancellationSource.Cancel();
 
+        await lineReader.Invoking(x => x.ReadLineAsync(cancellationSource.Token))
+            .Should().ThrowAsync<OperationCanceledException>();
         await reader.Invoking(x => x.ReadToEndAsync(cancellationSource.Token))
             .Should().ThrowAsync<OperationCanceledException>();
     }
