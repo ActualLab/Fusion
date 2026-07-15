@@ -45,7 +45,7 @@ function hasAmbiguousArity(fn: (...args: never[]) => unknown): boolean {
 }
 
 function parameterListText(fn: (...args: never[]) => unknown): string | undefined {
-    const src = Function.prototype.toString.call(fn);
+    const src = fn.toString();
     const open = src.indexOf('(');
     const arrow = src.indexOf('=>');
     // A parenless single-identifier arrow (`x => ...`) has no default/rest parameters.
