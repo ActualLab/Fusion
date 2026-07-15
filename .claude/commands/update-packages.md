@@ -82,6 +82,15 @@ individual `PackageVersion` lines that reference it.
 - **`FusionVersion`** and the `ActualLab.*` self-references it feeds — that's Fusion's own
   published version (samples reference the released packages). It's managed by the release
   process, not a routine package update. Leave it unless you're explicitly doing a release bump.
+- **Roslyn — `RoslynVersion` (`Microsoft.CodeAnalysis.CSharp`) and `Microsoft.CodeAnalysis.Analyzers`.**
+  Deliberately kept at a **low boundary** (`[4.3.0,)`). A source generator (`ActualLab.Generators`)
+  only loads in a Roslyn host whose version is ≥ the Roslyn it was compiled against, and some
+  users build Fusion for **Unity**, whose stack ships an older Roslyn. Raising this would lock
+  those users out. Keep low; revisit only with a deliberate reason.
+- **Test runner / SDK held low** — `Microsoft.NET.Test.Sdk` (`[17.13.0,)`) and
+  `xunit.runner.visualstudio` (`[2.8.2,)`). Used only by ActualLab's own tests; newer majors
+  have caused issues. They're expressed as lower-boundary floors and should **not** be upgraded
+  for now (see their inline comment). Revisit later.
 
 ### Always respect inline rationale comments
 
