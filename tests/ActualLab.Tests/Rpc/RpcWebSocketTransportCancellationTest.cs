@@ -83,6 +83,7 @@ public class RpcWebSocketTransportCancellationTest(ITestOutputHelper @out) : Tes
             throw new ObjectDisposedException(nameof(AbortableReceiveWebSocket));
         }
 
+#if !NETSTANDARD2_0 && !NETFRAMEWORK
         public override async ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(
             Memory<byte> buffer,
             CancellationToken cancellationToken)
@@ -91,6 +92,7 @@ public class RpcWebSocketTransportCancellationTest(ITestOutputHelper @out) : Tes
             await _whenAborted.Task.ConfigureAwait(false);
             throw new ObjectDisposedException(nameof(AbortableReceiveWebSocket));
         }
+#endif
 
         public override Task SendAsync(
             ArraySegment<byte> buffer,
@@ -99,11 +101,13 @@ public class RpcWebSocketTransportCancellationTest(ITestOutputHelper @out) : Tes
             CancellationToken cancellationToken)
             => Task.CompletedTask;
 
+#if !NETSTANDARD2_0 && !NETFRAMEWORK
         public override ValueTask SendAsync(
             ReadOnlyMemory<byte> buffer,
             WebSocketMessageType messageType,
             bool endOfMessage,
             CancellationToken cancellationToken)
-            => ValueTask.CompletedTask;
+            => default;
+#endif
     }
 }
