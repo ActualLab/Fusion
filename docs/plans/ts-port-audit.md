@@ -10,6 +10,8 @@ The port is deliberately partial. The standard applied here is: **every feature 
 
 **Every item carries a Recommended / Alternative course-of-action pair** as input to the resolution stage; final decisions per item (including won't-fixes) will be recorded in a companion `ts-port-fixes.md`. The pairs for the five test-confirmed items were written first and are the most scrutinized; the rest follow the same pattern but haven't been through the verification pass yet.
 
+**Second pass (2026-07-14):** [`ts-port-audit-addendum.md`](ts-port-audit-addendum.md) adds five more findings — **R18** (regular dispatch loses the implementation receiver), **R19** (decorator metadata shared/mutated across base and derived classes), **R20** (decorator wire arity wrong with default/rest parameters), **R21** (tracker identity invariants violated on replace/unregister), **R22** (streams registered and kept alive before enumeration). All five were independently validated against TS and C# sources and carry Recommended/Alternative pairs there.
+
 Item numbering: **K** = Fusion kernel, **S** = State layer + React, **R** = RPC layer, **F** = Fusion-over-RPC glue, **C** = core utilities.
 
 ## Decisions
