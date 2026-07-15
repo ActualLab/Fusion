@@ -113,7 +113,7 @@ public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
         sb.Append(">{");
         if (Count == 0) {
             sb.Append('}');
-            return sb.ToString();
+            return sb.ToStringAndRelease();
         }
         var i = 0;
         foreach (var item in this) {

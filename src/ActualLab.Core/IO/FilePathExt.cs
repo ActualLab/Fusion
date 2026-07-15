@@ -114,7 +114,7 @@ public static class FilePathExt
         CancellationToken cancellationToken = default)
     {
         encoding ??= FileExt.DefaultWriteEncoding;
-        using var writer = File.OpenWrite(path);
+        using var writer = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
         using var textWriter = new StreamWriter(writer, encoding);
         await foreach (var line in lines.WithCancellation(cancellationToken).ConfigureAwait(false)) {
             // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract

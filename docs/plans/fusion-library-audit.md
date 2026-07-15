@@ -234,66 +234,71 @@ Confidence: **Confirmed** by compiler diagnostic and overload signatures.
 
 ### CORE12. `FilePath.WriteLines` leaves stale bytes when replacing a longer file
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe.
 
-- Source: `src/ActualLab.Core/IO/FilePathExt.cs:110-128` opens the target with `File.OpenWrite`, which uses `FileMode.OpenOrCreate`, writes from position zero, and never truncates the stream after the new content.
+- Source before the fix: `src/ActualLab.Core/IO/FilePathExt.cs:110-128` opened the target with `File.OpenWrite`, which uses `FileMode.OpenOrCreate`, writes from position zero, and never truncates the stream after the new content.
 - Failure: replacing the text `this is much longer` with one line containing `x` produced `x` followed by the untouched suffix `s is much longer`. The result is neither the old nor requested line sequence.
-- Tests: there are no direct `FilePathExt.WriteLines` tests or in-repo production callers. This lack of reachability does not change the public file-replacement contract.
+- Tests before the fix: there were no direct `FilePathExt.WriteLines` tests or in-repo production callers. This lack of reachability does not change the public file-replacement contract.
 - Impact: configuration, manifests, generated source, or other line-oriented files become silently corrupted whenever new output is shorter than their prior contents.
-- **Recommended:** open with `FileMode.Create`, `FileAccess.Write`, and an intentional share mode so the old length is truncated before writing.
+- **Implemented:** `WriteLines` now opens the output through `FileStream` with `FileMode.Create`, `FileAccess.Write`, and `FileShare.Read`, truncating stale content while preserving concurrent readers.
+- **Validation:** `WriteLinesMustTruncateExistingFile` failed against the old implementation and now passes; the complete nine-target `ActualLab.Core` build also passes.
 - **Alternative:** retain `OpenWrite` and call `SetLength(writer.Position)` after flushing the text writer. This is more fragile on exceptions and duplicates the approach already avoided by `File.WriteAllTextAsync`.
 
 ### CORE13. Generic `GetServiceOrCreateInstance<T>` drops activation arguments
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and executable probe.
 
-- Source: `src/ActualLab.Core/DependencyInjection/ServiceProviderExt.cs:66-76`. The generic overload accepts `params object[] arguments` but delegates to `GetServiceOrCreateInstance(typeof(T))` without forwarding them. The non-generic overload correctly passes its own arguments to `CreateInstance`.
-- Failure: resolving an unregistered class whose only constructor takes an integer through `GetServiceOrCreateInstance<ArgumentService>(123)` threw `InvalidOperationException` because activation saw no applicable constructor. The corresponding non-generic call can use the argument.
+- Source before the fix: `src/ActualLab.Core/DependencyInjection/ServiceProviderExt.cs:66-76`. Both overloads accepted `params object[] arguments`, but the generic overload omitted them when calling the non-generic overload and the non-generic overload omitted them when calling `CreateInstance`.
+- Failure: resolving an unregistered class whose only constructor takes an integer through either overload threw `InvalidOperationException` because activation saw no applicable constructor argument.
 - Reachability: current in-repo callers use no explicit arguments, so they are unaffected. The public generic API advertises argument-aware activation but cannot perform it.
 - Impact: consumer activation fails at runtime for types requiring caller-supplied constructor values; optional or alternate constructors may instead be selected with unintended values, making the defect less obvious.
-- **Recommended:** forward `arguments` to the non-generic overload.
+- **Implemented:** the generic overload now forwards `arguments` to the non-generic overload, which forwards them to `CreateInstance`; registered-service resolution remains unchanged.
+- **Validation:** `GenericActivationMustForwardExplicitArguments` failed through the generic API before the fix and now verifies both generic and non-generic activation; the surrounding `ServiceProviderExtTest` suite passes.
 - **Alternative:** remove the generic overload's params parameter. That makes the actual contract honest but is a source/API break and leaves the useful operation available only through the non-generic method.
 
 ### CORE14. `ApiArray<T>.Empty.WithMany` throws instead of adding items
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe.
 
-- Source: `src/ActualLab.Core/Api/ApiArray.cs:40-48, 173-188`. Empty arrays are intentionally represented by the default struct value, and the `Items` property normalizes its null backing field to a shared empty array. `WithMany`, unlike the other mutation-style helpers, reads the primary-constructor parameter/backing field `items` directly.
+- Source before the fix: `src/ActualLab.Core/Api/ApiArray.cs:40-48, 173-188`. Empty arrays are intentionally represented by the default struct value, and the `Items` property normalizes its null backing field to a shared empty array. `WithMany`, unlike the other mutation-style helpers, read the primary-constructor parameter/backing field `items` directly.
 - Failure: `ApiArray<int>.Empty.WithMany(1, 2)` throws `NullReferenceException` while evaluating `items.Length`. The same occurs for the default value and for the `addInFront` overload.
 - Tests: `ApiArrayTest.WithManyTest` starts from a five-item instance and covers front/back order, but never starts from `ApiArray<T>.Empty`, even though default-as-empty is a central type contract.
 - Impact: ordinary collection-building code fails specifically at its empty base case, including reducers that append batches to a default-initialized API value.
-- **Recommended:** capture `var items = Items` at the start of `WithMany` and operate on that normalized array, matching the rest of the type.
+- **Implemented:** `WithMany` now captures the normalized `Items` array and uses it for sizing and both front/back copy paths.
+- **Validation:** `EmptyApiArrayMustSupportWithMany` failed against the default backing field and now passes for both append and prepend operations; the full `ApiArrayTest` suite passes.
 - **Alternative:** special-case `IsEmpty` and construct directly from `newItems`. This avoids the null access but duplicates front/back logic unnecessarily.
 
 ### CORE15. Empty `ApiMap` and `ApiSet` formatting leaks acquired builders from the thread-local pool
 
-Status: **open**.
+Status: **completed**.
 
-Confidence: **Confirmed** by source inspection.
+Confidence: **Confirmed** by source inspection and executable regression.
 
-- Source: `src/ActualLab.Core/Api/ApiMap.cs:108-118` and `ApiSet.cs:108-116` acquire a `StringBuilder` through `StringBuilderExt.Acquire`, but their empty-collection fast paths return `sb.ToString()` rather than `sb.ToStringAndRelease()`. Non-empty paths release correctly. `StringBuilderExt` documents an acquire/release thread-local cache with up to 16 builders per thread.
+- Source before the fix: `src/ActualLab.Core/Api/ApiMap.cs:108-118` and `ApiSet.cs:108-116` acquired a `StringBuilder` through `StringBuilderExt.Acquire`, but their empty-collection fast paths returned `sb.ToString()` rather than `sb.ToStringAndRelease()`. Non-empty paths released correctly. `StringBuilderExt` documents an acquire/release thread-local cache with up to 16 builders per thread.
 - Failure: every empty collection `ToString` removes a reusable builder from the current thread's cache (or allocates a fresh one) and lets it become garbage instead of returning it. Repeated logging/diagnostics of empty API collections therefore defeats the intended allocation optimization.
 - Impact: unnecessary allocation and GC pressure on a potentially common diagnostics path. This is a performance/resource-management defect, not retained-memory growth because abandoned builders remain collectible.
-- **Recommended:** use `ToStringAndRelease()` in both empty fast paths.
+- **Implemented:** both empty fast paths now return through `ToStringAndRelease()`.
+- **Validation:** deterministic fresh-thread pool-identity tests independently failed for `ApiMap` and `ApiSet` before the fix and now pass, without relying on timing or sampled allocation counts; `StringBuilderExtTest.BasicTest` also passes.
 - **Alternative:** wrap each method in `try/finally` and release in the `finally`, which also protects against item `ToString` exceptions but is a broader hot-path change.
 
 ### CORE16. `HashRing` misroutes hashes when comparer subtraction overflows
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe.
 
-- Source: `src/ActualLab.Core/Scalability/HashRing.cs:61-72` implements the binary-search comparer as `x.Hash - y.Hash`, then maps the sign to -1 or 1. Signed subtraction can overflow and reverse the ordering for hashes on opposite sides of the integer range.
+- Source before the fix: `src/ActualLab.Core/Scalability/HashRing.cs:61-72` implemented the binary-search comparer as `x.Hash - y.Hash`, then mapped the sign to -1 or 1. Signed subtraction can overflow and reverse the ordering for hashes on opposite sides of the integer range.
 - Failure: a ring containing nodes hashed to `int.MinValue` and `int.MaxValue` routed both a query for `int.MaxValue` itself and a query for -1 to the `int.MinValue` node. Both should select `int.MaxValue` under the ring's documented higher-or-equal search behavior.
 - Tests: `HashRingTest` uses three ordinary xxHash outputs and tests `hash ± 1`; it does not force the signed-overflow boundary.
 - Impact: a small subset of the 32-bit hash space is deterministically routed to the wrong node. That breaks consistent ownership and can create avoidable cache misses, duplicate work, or cross-node disagreement when peers use a correct comparison.
-- **Recommended:** compare relationally (`x.Hash >= y.Hash ? 1 : -1`) without subtraction, preserving the intentional nonzero equality result used to compute the lower-bound insertion point.
+- **Implemented:** `ItemComparer` now compares hashes relationally, avoiding overflow while preserving the intentional nonzero equality result used by the lower-bound insertion search.
+- **Validation:** `HashRingMustHandleExtremeSignedHashes` failed for the signed range extremes before the fix and now passes; the full `HashRingTest` suite passes.
 - **Alternative:** replace `Array.BinarySearch` plus its intentionally nonconforming comparer with a small explicit lower-bound search. This is easier to specify and handles duplicate hashes clearly, at the cost of custom search code.
 
 ### CORE17. Maglev shard-map construction divides by zero for one shard

@@ -175,14 +175,15 @@ public readonly partial struct ApiArray<T>(T[] items)
 
     public ApiArray<T> WithMany(bool addInFront, params ReadOnlySpan<T> newItems)
     {
-        var result = new T[items.Length + newItems.Length];
+        var existingItems = Items;
+        var result = new T[existingItems.Length + newItems.Length];
         if (addInFront) {
             newItems.CopyTo(result);
-            items.CopyTo(result.AsSpan(newItems.Length));
+            existingItems.CopyTo(result.AsSpan(newItems.Length));
         }
         else {
-            items.CopyTo(result.AsSpan());
-            newItems.CopyTo(result.AsSpan(items.Length));
+            existingItems.CopyTo(result.AsSpan());
+            newItems.CopyTo(result.AsSpan(existingItems.Length));
         }
         return new(result);
     }

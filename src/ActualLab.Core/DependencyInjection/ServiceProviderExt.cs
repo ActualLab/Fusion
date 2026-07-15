@@ -66,14 +66,14 @@ public static class ServiceProviderExt
     public static T GetServiceOrCreateInstance<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(
         this IServiceProvider services, params object[] arguments)
-        => (T)services.GetServiceOrCreateInstance(typeof(T));
+        => (T)services.GetServiceOrCreateInstance(typeof(T), arguments);
 
     public static object GetServiceOrCreateInstance(
         this IServiceProvider services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
         Type type,
         params object[] arguments)
-        => services.GetService(type) ?? services.CreateInstance(type);
+        => services.GetService(type) ?? services.CreateInstance(type, arguments);
 
     // Nested types
 

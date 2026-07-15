@@ -13,6 +13,7 @@ using ActualLab.Mathematics;
 using ActualLab.Scalability;
 using ActualLab.Scalability.Internal;
 using ActualLab.Channels;
+using ActualLab.Text;
 using ActualLab.Time;
 
 namespace ActualLab.Tests.Audit;
@@ -145,10 +146,20 @@ public class CoreAuditRegressionTest
     [Fact]
     public void EmptyApiArrayMustSupportWithMany()
     {
-        var array = ApiArray<int>.Empty.WithMany(1, 2);
+        var appended = ApiArray<int>.Empty.WithMany(1, 2);
+        var prepended = default(ApiArray<int>).WithMany(true, 1, 2);
 
-        array.Should().Equal(1, 2);
+        appended.Should().Equal(1, 2);
+        prepended.Should().Equal(1, 2);
     }
+
+    [Fact]
+    public void EmptyApiMapMustReleaseStringBuilder()
+        => MustReleaseStringBuilder(static () => new ApiMap<int, int>().ToString()).Should().BeTrue();
+
+    [Fact]
+    public void EmptyApiSetMustReleaseStringBuilder()
+        => MustReleaseStringBuilder(static () => new ApiSet<int>().ToString()).Should().BeTrue();
 
     [Fact]
     public void HashRingMustHandleExtremeSignedHashes()
@@ -189,10 +200,13 @@ public class CoreAuditRegressionTest
     [Fact]
     public void GenericActivationMustForwardExplicitArguments()
     {
-        var value = ActualLab.DependencyInjection.ServiceProviderExt.Empty
+        var genericValue = ActualLab.DependencyInjection.ServiceProviderExt.Empty
             .GetServiceOrCreateInstance<ArgumentService>(123);
+        var nonGenericValue = (ArgumentService)ActualLab.DependencyInjection.ServiceProviderExt.Empty
+            .GetServiceOrCreateInstance(typeof(ArgumentService), 456);
 
-        value.Value.Should().Be(123);
+        genericValue.Value.Should().Be(123);
+        nonGenericValue.Value.Should().Be(456);
     }
 
     [Fact]
@@ -262,6 +276,22 @@ public class CoreAuditRegressionTest
             await Task.Yield();
             yield return "x";
         }
+    }
+
+    private static bool MustReleaseStringBuilder(Func<string> format)
+    {
+        var isReleased = false;
+        var thread = new Thread(() => {
+            var builder = StringBuilderExt.Acquire();
+            builder.Release();
+            _ = format.Invoke();
+            var reusedBuilder = StringBuilderExt.Acquire();
+            isReleased = ReferenceEquals(builder, reusedBuilder);
+            reusedBuilder.Release();
+        });
+        thread.Start();
+        thread.Join();
+        return isReleased;
     }
 
     private sealed class ArgumentService(int value)

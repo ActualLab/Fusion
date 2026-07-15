@@ -72,9 +72,8 @@ public class HashRing<T>
     {
         public int Compare((T Value, int Hash) x, (T Value, int Hash) y)
         {
-            var d = x.Hash - y.Hash;
             // We map "equals" here to 1 to make sure we find the item with higher or equal Hash
-            return d >= 0 ? 1 : -1;
+            return x.Hash >= y.Hash ? 1 : -1;
         }
     }
 }

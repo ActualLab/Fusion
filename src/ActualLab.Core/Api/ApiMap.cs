@@ -115,7 +115,7 @@ public sealed partial class ApiMap<TKey, TValue>
         sb.Append(">{");
         if (Count == 0) {
             sb.Append('}');
-            return sb.ToString();
+            return sb.ToStringAndRelease();
         }
         var i = 0;
         foreach (var (key, value) in this) {
