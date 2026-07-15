@@ -11,6 +11,57 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 13.0.163+ab89147d | npm: 13.0.163
+
+Release date: 2026-07-15
+
+TypeScript-port hardening release. This is the payload of a full audit of the
+TS port against C# Fusion (contracts + robustness): 70+ findings across Core,
+RPC, the compute/state kernel, and the React bindings were triaged and fixed,
+bringing the TS runtime to behavioral parity with .NET on invalidation,
+cancellation, reconnect, and error propagation. The npm package advances to
+**13.0.163** to match NuGet. No .NET framework source changes.
+
+### Fixed (TypeScript)
+
+**Core (`actuallab-core`)**
+- [Abortable `delayAsync`, `retry`, `RetryDelayer.getDelay`, and `AsyncLock` waiters](https://github.com/ActualLab/Fusion/commit/7267af92) — [`7267af92`](https://github.com/ActualLab/Fusion/commit/7267af92)
+- [Robustness fixes for TS-port audit items C1, C2, C4, C7, C9](https://github.com/ActualLab/Fusion/commit/0f4c4cc1) — [`0f4c4cc1`](https://github.com/ActualLab/Fusion/commit/0f4c4cc1)
+
+**RPC (`actuallab-rpc`)**
+- [`addClient` extends the shared proxy instead of dropping methods (F8)](https://github.com/ActualLab/Fusion/commit/ab89147d) — [`ab89147d`](https://github.com/ActualLab/Fusion/commit/ab89147d)
+- [RPC lifecycle hardening — R10, R11, R12, R17, D4](https://github.com/ActualLab/Fusion/commit/ab121bb3) — [`ab121bb3`](https://github.com/ActualLab/Fusion/commit/ab121bb3)
+- [Harden `RpcPeer` handshake/reconnect/dedup (R5, R8, R9, R13, R16)](https://github.com/ActualLab/Fusion/commit/c11c7e19) — [`c11c7e19`](https://github.com/ActualLab/Fusion/commit/c11c7e19)
+- [Align the RPC wire layer with .NET V5/`ExceptionInfo` contracts](https://github.com/ActualLab/Fusion/commit/636ef089) — [`636ef089`](https://github.com/ActualLab/Fusion/commit/636ef089)
+- [Stream lifecycle + tracker identity invariants (R3, R4, R21, R22)](https://github.com/ActualLab/Fusion/commit/8adf5579) — [`8adf5579`](https://github.com/ActualLab/Fusion/commit/8adf5579)
+- [Correct dispatch receiver, decorator metadata isolation, and wire arity](https://github.com/ActualLab/Fusion/commit/a389c015) — [`a389c015`](https://github.com/ActualLab/Fusion/commit/a389c015)
+
+**Fusion compute/state kernel (`actuallab-fusion`)**
+- [`ComputedState.value` rethrows the stored error instead of masking it (S2)](https://github.com/ActualLab/Fusion/commit/fb665799) — [`fb665799`](https://github.com/ActualLab/Fusion/commit/fb665799)
+- [Reconnect reporting, client-proxy dedup, server-peer auto-dispose (F6, F8, F11)](https://github.com/ActualLab/Fusion/commit/5576fcf8) — [`5576fcf8`](https://github.com/ActualLab/Fusion/commit/5576fcf8)
+- [Settle/retry pre-result invalidations, propagate cancellation (F2, F3, F4, F5)](https://github.com/ActualLab/Fusion/commit/3634f6b0) — [`3634f6b0`](https://github.com/ActualLab/Fusion/commit/3634f6b0)
+- [State + UI robustness parity (S8, S9, S10, S17, S18)](https://github.com/ActualLab/Fusion/commit/af9be82a) — [`af9be82a`](https://github.com/ActualLab/Fusion/commit/af9be82a)
+- [Thread compute `AsyncContext` + ALS backing, capture rework, reentrancy guard (K3, K11, K14)](https://github.com/ActualLab/Fusion/commit/4b3072f8) — [`4b3072f8`](https://github.com/ActualLab/Fusion/commit/4b3072f8)
+- [Server-side invalidation parity (F1, F9, F7, F10)](https://github.com/ActualLab/Fusion/commit/05244f28) — [`05244f28`](https://github.com/ActualLab/Fusion/commit/05244f28)
+- [Versioned `whenUpdated` + prompt dispose + abort-safe delayers (S11, S5, S14, S4)](https://github.com/ActualLab/Fusion/commit/1addf4bf) — [`1addf4bf`](https://github.com/ActualLab/Fusion/commit/1addf4bf)
+- [`ComputedOptions` + cancellation caching, keying, renewer (K5, K6, K13, K15)](https://github.com/ActualLab/Fusion/commit/c6c1d307) — [`c6c1d307`](https://github.com/ActualLab/Fusion/commit/c6c1d307)
+- [State-layer C# parity for `MutableState`/`ComputedState` (S1, S13, S3, S16, S15)](https://github.com/ActualLab/Fusion/commit/0a3e1530) — [`0a3e1530`](https://github.com/ActualLab/Fusion/commit/0a3e1530)
+- [Kernel invalidation-path robustness (K4, K17, K12, K10, K9)](https://github.com/ActualLab/Fusion/commit/ba2be741) — [`ba2be741`](https://github.com/ActualLab/Fusion/commit/ba2be741)
+- [Kernel graph/registration parity (K1, K2, K7, K8, K16)](https://github.com/ActualLab/Fusion/commit/877178f8) — [`877178f8`](https://github.com/ActualLab/Fusion/commit/877178f8)
+
+**React bindings (`actuallab-fusion-react`)**
+- [Rebuild hooks on `useSyncExternalStore`; last-non-error computed (S6, S7, S12)](https://github.com/ActualLab/Fusion/commit/ab8410c9) — [`ab8410c9`](https://github.com/ActualLab/Fusion/commit/ab8410c9)
+
+### Fixed (Samples & tooling)
+- [Update the TodoApp TS UI for the current Fusion TS-port APIs](https://github.com/ActualLab/Fusion/commit/8a8c5ed9) — [`8a8c5ed9`](https://github.com/ActualLab/Fusion/commit/8a8c5ed9)
+- [Make ESLint deterministic from a clean checkout; fix tooling globs](https://github.com/ActualLab/Fusion/commit/1da36a8d) — [`1da36a8d`](https://github.com/ActualLab/Fusion/commit/1da36a8d)
+
+### Documentation
+- [Updated TS-port docs for the fix-campaign behavior/API changes](https://github.com/ActualLab/Fusion/commit/fcff8c3c) — [`fcff8c3c`](https://github.com/ActualLab/Fusion/commit/fcff8c3c)
+- [Fixed the Server-Side Usage sample — compose compute methods via a `@computeMethod` class](https://github.com/ActualLab/Fusion/commit/d9f6acdb) — [`d9f6acdb`](https://github.com/ActualLab/Fusion/commit/d9f6acdb)
+- Added the TypeScript port gap audit (contracts & robustness vs C# Fusion) and its
+  per-item decisions under `docs/plans`.
+
 ## 13.0.126+c30df2eb | npm: 13.0.25
 
 Release date: 2026-07-14
