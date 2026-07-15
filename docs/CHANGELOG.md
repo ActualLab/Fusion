@@ -11,6 +11,34 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 13.0.126+c30df2eb | npm: 13.0.25
+
+Release date: 2026-07-14
+
+Maintenance release: dependency floor bumps and build fixes; no framework source
+changes. The npm package is unchanged at v13.0.25.
+
+### Changed
+- Bumped crucial dependency floors: **MessagePack** `[3.1.8,)` (was 3.1.6) and
+  **StackExchange.Redis** `[3.0.17,)` (was 2.9.32 — a major-version bump that
+  affects `ActualLab.Redis` consumers).
+- Pinned Roslyn (`Microsoft.CodeAnalysis.CSharp`) to the `[4.3.0,)` lower
+  boundary and decoupled it from the C# runtime-binder version. A source
+  generator only loads in a Roslyn host at least as new as the one it was
+  compiled against, so this keeps `ActualLab.Generators` loadable under Unity's
+  older build stack. `Microsoft.CodeAnalysis.Analyzers` held at 3.3.4 to match.
+- Pinned the test SDK/runner (`Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`)
+  to their low floors — used only by Fusion's own tests; newer majors caused
+  issues.
+
+### Fixed
+- Repaired the `-p:UseMultitargeting=true` build. `System.Memory` was pinned to
+  4.6.0, but the `Microsoft.Extensions.Logging.Abstractions` floor now resolves
+  to 10.0.5 (via `ILogger.Moq`), which requires `System.Memory >= 4.6.3` →
+  NU1605 downgrade error on the netstandard2.0/net472/net48 target frameworks.
+  Bumped to 4.6.3. Also guarded a test's fake `WebSocket` `Memory<byte>`
+  overrides for those older TFMs.
+
 ## 13.0.101+4292afe9 | npm: 13.0.25
 
 Release date: 2026-07-14
