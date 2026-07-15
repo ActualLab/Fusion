@@ -414,6 +414,8 @@ Confidence: confirmed. Every failure is pushed to a plain array; only manual `di
 
 ### R1. V5/V5C binary format: header block parsed at the wrong position
 
+Status: **closed** — fixed 2026-07-15 (batch rpcwire; byte-level parity re-verified against the .NET writer, incl. multi-header and multi-message frames).
+
 Confidence: confirmed (byte-level; re-verified).
 
 - TS: `rpc-serialization.ts:293-321` (`deserializeBinaryMessage`) reads the 4-byte argLen, then skips headers, then reads argData. Same in the compact variant at `:473-495`.
@@ -424,6 +426,8 @@ Confidence: confirmed (byte-level; re-verified).
 - **Alternative:** additionally surface parsed headers on `RpcMessage` (needed eventually for tracing/activity propagation) — more scope, can follow later. Rejecting header-bearing frames loudly is *not* an option: .NET sends them legitimately (Activity injection), and dropping them must not break the call.
 
 ### R2. `$sys.Error` sent without `TypeRef` permanently hangs .NET callers
+
+Status: **closed** — fixed 2026-07-15 (batch rpcwire, per D3).
 
 Confidence: confirmed.
 
@@ -469,6 +473,8 @@ Confidence: confirmed (code path; failure against .NET verified by its handshake
 
 ### R6. `mempack6` / `mempack6c` registered as MessagePack formats
 
+Status: **closed** — fixed 2026-07-15 (batch rpcwire).
+
 Confidence: confirmed.
 
 - TS: `rpc-serialization-format.ts:239-242, 249-252` — `MemoryPackV6`/`MemoryPackV6C` are constructed as msgpack formats and resolvable via `f=` URL keys.
@@ -478,6 +484,8 @@ Confidence: confirmed.
 - **Alternative:** implement MemoryPack. Not justified — msgpack covers the same wire role and the .NET side offers both.
 
 ### R7. Binary polymorphism markers (`msgpack6`) not implemented
+
+Status: **closed (partial)** — 2026-07-15 (batch rpcwire). Polymorphic payloads now fail loudly ("polymorphic payloads are not supported") via an arity guard on `$sys.Ok`/`I`/`B` value counts, and `readPolymorphismMarker` ships as a verified building block. Actual decoding of polymorphic payloads stays unsupported until TS method metadata gains a polymorphism flag — there is no wire signal to key on (`needsPolymorphism` is .NET-side method metadata).
 
 Confidence: confirmed in code; triggers only for polymorphic types.
 
@@ -558,6 +566,8 @@ Confidence: confirmed code; failure plausible.
 - **Alternative:** keep the sniff but require `hostId` to parse as a GUID — one line, kills virtually all false positives; acceptable stopgap if the type-driven plumbing is deferred.
 
 ### R15. `$sys.End` error detection keyed on `Message` truthiness, not `TypeRef`
+
+Status: **closed** — fixed 2026-07-15 (batch rpcwire).
 
 Confidence: confirmed. TS: `rpc-system-call-handler.ts:146-163` — `error = msg ? new Error(msg) : null`. C#: `error.IsNone` = empty `TypeRef` (`RpcSystemCalls.cs:180-187`, `ExceptionInfo.cs:32`). A stream terminated by an exception with an empty `Message` looks like clean completion.
 

@@ -1,5 +1,6 @@
 import { PromiseSource, RingBuffer } from '@actuallab/core';
 import { getLogs } from './logging.js';
+import { toExceptionInfo } from './rpc-error.js';
 import type { RpcObjectId, IRpcObject } from './rpc-object.js';
 import { RpcObjectKind } from './rpc-object.js';
 import type { RpcPeer } from './rpc-peer.js';
@@ -212,7 +213,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         // .NET ExceptionInfo is a non-nullable value type, so we must always
         // emit a valid map shape (empty TypeRef+Message for the "no error" case).
         const errorInfo = error
-            ? { TypeRef: 'System.Exception', Message: error.message }
+            ? toExceptionInfo(error)
             : { TypeRef: '', Message: '' };
         this.peer.hub.systemCallSender.end(
             conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, errorInfo,

@@ -25,6 +25,7 @@
 //     mode concept.
 
 import { getLogs } from './logging.js';
+import { toExceptionInfo } from './rpc-error.js';
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
 import type { RpcConnection } from './rpc-connection.js';
 import type { RpcSerializationFormat } from './rpc-serialization-format.js';
@@ -155,12 +156,14 @@ export class RpcSystemCallSender {
         relatedId: number,
         error: unknown
     ): void {
-        const message = error instanceof Error ? error.message : String(error);
+        // A TypeRef-less ExceptionInfo makes .NET's ExceptionInfo.ToException()
+        // return null → the caller's task hangs. Send RemoteException instead
+        // (decision D3).
         this._send(
             conn,
             format,
             { Method: RpcSystemCalls.error, RelatedId: relatedId },
-            [{ Message: message }]
+            [toExceptionInfo(error)]
         );
     }
 

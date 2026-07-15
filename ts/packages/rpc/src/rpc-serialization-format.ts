@@ -75,9 +75,7 @@ export abstract class RpcSerializationFormat {
     static NewtonsoftJsonV5: RpcSerializationFormat;
     static NewtonsoftJsonV5NP: RpcSerializationFormat;
     static MessagePackV6: RpcSerializationFormat;
-    static MemoryPackV6: RpcSerializationFormat;
     static MessagePackV6C: RpcSerializationFormat;
-    static MemoryPackV6C: RpcSerializationFormat;
     static All: readonly RpcSerializationFormat[];
 
     /** Convenience shortcut for RpcSerializationFormatResolver.Default.get(key). */
@@ -126,7 +124,7 @@ export class RpcJsonSerializationFormat extends RpcSerializationFormat {
 }
 
 /**
- * MessagePack binary format — "msgpack6" / "mempack6" (V5 wire format).
+ * MessagePack binary format — "msgpack6" (V5 wire format).
  */
 export class RpcMessagePackSerializationFormat extends RpcSerializationFormat {
     readonly key: string;
@@ -171,7 +169,7 @@ export class RpcMessagePackSerializationFormat extends RpcSerializationFormat {
 }
 
 /**
- * MessagePack compact binary format — "msgpack6c" / "mempack6c" (V5Compact).
+ * MessagePack compact binary format — "msgpack6c" (V5Compact).
  * Uses 4-byte method hash instead of full method name.
  * Registry is passed via parameters — format instance is immutable.
  */
@@ -236,20 +234,19 @@ RpcSerializationFormat.NewtonsoftJsonV5 = new RpcJsonSerializationFormat('njson5
 RpcSerializationFormat.NewtonsoftJsonV5NP = new RpcJsonSerializationFormat('njson5np');
 // Binary: MessagePack (non-compact)
 RpcSerializationFormat.MessagePackV6 = new RpcMessagePackSerializationFormat('msgpack6');
-RpcSerializationFormat.MemoryPackV6 = new RpcMessagePackSerializationFormat('mempack6');
 // Binary: MessagePack (compact)
 RpcSerializationFormat.MessagePackV6C = new RpcMessagePackCompactSerializationFormat('msgpack6c');
-RpcSerializationFormat.MemoryPackV6C = new RpcMessagePackCompactSerializationFormat('mempack6c');
 
+// The mempack6* formats are intentionally NOT registered: .NET's mempack6 uses
+// MemoryPack argument serialization (a different byte format), which the TS
+// client does not implement. Resolving one throws via isMemoryPackKey below.
 RpcSerializationFormat.All = [
     RpcSerializationFormat.SystemJsonV5,
     RpcSerializationFormat.SystemJsonV5NP,
     RpcSerializationFormat.NewtonsoftJsonV5,
     RpcSerializationFormat.NewtonsoftJsonV5NP,
     RpcSerializationFormat.MessagePackV6,
-    RpcSerializationFormat.MemoryPackV6,
     RpcSerializationFormat.MessagePackV6C,
-    RpcSerializationFormat.MemoryPackV6C,
 ];
 
 // ============================================================
@@ -284,6 +281,9 @@ export class RpcSerializationFormatResolver {
     }
 
     get(key: string): RpcSerializationFormat {
+        if (isMemoryPackKey(key))
+            throw new Error(`Serialization format '${key}': MemoryPack formats are not supported by the TS client.`);
+
         const format = this.tryGet(key);
         if (!format)
             throw new Error(`No format with key '${key}'.`);
@@ -292,6 +292,13 @@ export class RpcSerializationFormatResolver {
 
     tryGet(key: string): RpcSerializationFormat | undefined {
         if (!key) key = this.defaultFormatKey;
+        if (isMemoryPackKey(key))
+            throw new Error(`Serialization format '${key}': MemoryPack formats are not supported by the TS client.`);
         return this.formats.get(key);
     }
+}
+
+/** True for .NET MemoryPack format keys (mempack5, mempack6, mempack6c, …). */
+function isMemoryPackKey(key: string): boolean {
+    return key.startsWith('mempack');
 }

@@ -48,6 +48,11 @@ export class RpcSystemCallHandler {
         case RpcSystemCalls.ok: {
             const call = peer.outboundCalls.get(relatedId);
             if (call !== undefined) {
+                if (args.length > 1) {
+                    peer.outboundCalls.remove(relatedId);
+                    call.result.reject(polymorphicPayloadError(method, args.length, 1));
+                    break;
+                }
                 call.completedStage |= RpcCallStage.ResultReady;
                 if (call.removeOnOk) {
                     peer.outboundCalls.remove(relatedId);
@@ -79,18 +84,7 @@ export class RpcSystemCallHandler {
                 const msg = (errorInfo?.Message ??
                         errorInfo?.message ??
                         'RPC error') as string;
-                const errorType = errorInfo?.TypeRef ?? errorInfo?.typeRef;
-                let typeName: string | undefined;
-                if (typeof errorType === 'string') {
-                    // .NET TypeRef is serialized as the assembly-qualified name string,
-                    // e.g. "System.InvalidOperationException, System.Private.CoreLib".
-                    // Mirrors .NET TypeRef.TypeName: substring before the first ','.
-                    const commaIdx = errorType.indexOf(',');
-                    typeName = commaIdx >= 0 ? errorType.slice(0, commaIdx) : errorType;
-                } else if (errorType !== null && typeof errorType === 'object') {
-                    const t = errorType as Record<string, unknown>;
-                    typeName = (t.TypeName ?? t.typeName) as string | undefined;
-                }
+                const typeName = extractTypeName(errorInfo?.TypeRef ?? errorInfo?.typeRef);
                 // Mirrors RpcSystemCalls.cs:102 — surface RpcRerouteException.
                 if (typeName === 'ActualLab.Rpc.RpcRerouteException')
                     warnLog?.log('Got RpcRerouteException from remote peer:', msg);
@@ -122,6 +116,8 @@ export class RpcSystemCallHandler {
             // streams the client has already disposed.
             if (!stream)
                 debugLog?.log(`$sys.I: no stream for relatedId=${relatedId}`);
+            else if (args.length > 2)
+                stream.onEnd(args[0] as number, polymorphicPayloadError(method, args.length, 2));
             else
                 stream.onItem(
                         args[0] as number,
@@ -135,6 +131,8 @@ export class RpcSystemCallHandler {
                     | undefined;
             if (!stream)
                 debugLog?.log(`$sys.B: no stream for relatedId=${relatedId}`);
+            else if (args.length > 2)
+                stream.onEnd(args[0] as number, polymorphicPayloadError(method, args.length, 2));
             else if (Array.isArray(args[1])) {
                 const items = args[1] as unknown[];
                 for (let i = 0; i < items.length; i++)
@@ -150,14 +148,21 @@ export class RpcSystemCallHandler {
             if (!stream) {
                 debugLog?.log(`$sys.End: no stream for relatedId=${relatedId}`);
             } else {
-                // .NET ExceptionInfo is a struct — even for normal completion, it serializes
-                // as a non-null object with empty fields (e.g. { "message": "", "typeRef": {...} }).
-                // Check both PascalCase and camelCase, and treat empty messages as no error.
+                // .NET ExceptionInfo is a struct — even for normal completion it serializes
+                // as a non-null object with empty fields. C# keys "is this an error?" on
+                // TypeRef presence (ExceptionInfo.IsNone); we mirror that and fall back to a
+                // non-empty Message. The TypeRef's type name becomes the Error's name.
                 const errorInfo = args[1] as Record<string, unknown> | null;
+                const typeName = extractTypeName(errorInfo?.TypeRef ?? errorInfo?.typeRef);
                 const msg = (errorInfo?.Message ?? errorInfo?.message) as
                         | string
                         | undefined;
-                const error = msg ? new Error(msg) : null;
+                let error: Error | null = null;
+                if (typeName || msg) {
+                    error = new Error(msg ?? typeName ?? 'RPC stream error');
+                    if (typeName)
+                        error.name = typeName;
+                }
                 stream.onEnd(args[0] as number, error);
             }
             break;
@@ -252,6 +257,39 @@ export class RpcSystemCallHandler {
         const responseValue = peer.serializationFormat.isBinary ? responseBytes : base64Encode(responseBytes);
         peer.hub.systemCallSender.ok(peer.connection, peer.serializationFormat, relatedId, responseValue);
     }
+}
+
+// A polymorphic .NET payload ($sys.Ok/I/B with needsPolymorphism) prefixes the
+// value with a type marker whose bytes decode as extra msgpack values — see
+// readPolymorphismMarker. Detected by arity: these calls carry a fixed value count.
+function polymorphicPayloadError(method: string, got: number, expected: number): Error {
+    return new Error(
+        `${method}: expected ${expected} value(s), got ${got} — ` +
+        'polymorphic payloads are not supported by the TS client');
+}
+
+// Extracts the .NET type name from a serialized TypeRef. TypeRef is serialized
+// as its assembly-qualified name string (e.g.
+// "System.InvalidOperationException, System.Private.CoreLib"); the type name is
+// the substring before the first ','. Some binary shapes send it as an object.
+function extractTypeName(typeRef: unknown): string | undefined {
+    if (typeof typeRef === 'string') {
+        if (typeRef.length === 0)
+            return undefined;
+
+        const commaIdx = typeRef.indexOf(',');
+        return commaIdx >= 0 ? typeRef.slice(0, commaIdx) : typeRef;
+    }
+    if (typeRef !== null && typeof typeRef === 'object') {
+        const t = typeRef as Record<string, unknown>;
+        const aqn = (t.AssemblyQualifiedName ?? t.assemblyQualifiedName) as string | undefined;
+        if (typeof aqn === 'string' && aqn.length > 0) {
+            const commaIdx = aqn.indexOf(',');
+            return commaIdx >= 0 ? aqn.slice(0, commaIdx) : aqn;
+        }
+        return (t.TypeName ?? t.typeName) as string | undefined;
+    }
+    return undefined;
 }
 
 /**

@@ -2,10 +2,35 @@ import { describe, it, expect } from 'vitest';
 import {
     serializeBinaryMessage,
     deserializeBinaryMessage,
+    serializeCompactBinaryMessage,
+    deserializeCompactBinaryMessage,
     splitBinaryFrame,
     serializeBinaryFrame,
     createBinaryEncoder,
+    readPolymorphismMarker,
+    RpcMethodRegistry,
 } from '../src/index.js';
+
+// Appends one V5 header (key as L1Memory, value as LVarSpan) after `base` — the
+// way .NET writes headers: AFTER the argument data — and increments headerCount.
+function withOneHeader(base: Uint8Array, key: string, value: string): Uint8Array {
+    const enc = new TextEncoder();
+    const k = enc.encode(key);
+    const v = enc.encode(value); // value length assumed < 128 → single VarUint byte
+    const header = new Uint8Array(1 + k.length + 1 + v.length);
+    let p = 0;
+    header[p++] = k.length;
+    header.set(k, p);
+    p += k.length;
+    header[p++] = v.length;
+    header.set(v, p);
+
+    const frame = new Uint8Array(base.length + header.length);
+    frame.set(base, 0);
+    frame.set(header, base.length);
+    frame[0] = (frame[0] & 0xe0) | ((base[0] & 0x1f) + 1);
+    return frame;
+}
 
 describe('RPC Binary Serialization', () => {
     describe('serializeBinaryMessage / deserializeBinaryMessage round-trip', () => {
@@ -180,6 +205,101 @@ describe('RPC Binary Serialization', () => {
             const results = splitBinaryFrame(frame);
 
             expect(results.length).toBe(0);
+        });
+    });
+
+    describe('R1: header block is parsed after the argument data (V5 layout)', () => {
+        it('should decode a header-bearing V5 message and count the header bytes', () => {
+            const base = serializeBinaryMessage(
+                { Method: 'Svc.get', RelatedId: 7 },
+                ['hello', 42]
+            );
+            const frame = withOneHeader(base, '@t', '00-0123456789abcdef-01');
+
+            const { message, args, bytesRead } = deserializeBinaryMessage(frame, 0);
+            expect(message.Method).toBe('Svc.get');
+            expect(message.RelatedId).toBe(7);
+            expect(args).toEqual(['hello', 42]);
+            expect(bytesRead).toBe(frame.length);
+        });
+
+        it('should decode a header-bearing V5Compact message', () => {
+            const registry = new RpcMethodRegistry();
+            registry.register('Svc.get:2');
+            const base = serializeCompactBinaryMessage(
+                { Method: 'Svc.get:2', RelatedId: 9 },
+                ['world', 7],
+                registry
+            );
+            const frame = withOneHeader(base, '@t', '00-0123456789abcdef-01');
+
+            const { message, args, bytesRead } = deserializeCompactBinaryMessage(
+                frame, 0, registry);
+            expect(message.Method).toBe('Svc.get:2');
+            expect(message.RelatedId).toBe(9);
+            expect(args).toEqual(['world', 7]);
+            expect(bytesRead).toBe(frame.length);
+        });
+
+        it('should decode two headers and trailing messages in a multi-message frame', () => {
+            const m1 = withOneHeader(
+                withOneHeader(
+                    serializeBinaryMessage({ Method: 'Svc.a', RelatedId: 1 }, ['x']),
+                    '@t', '00-0123456789abcdef-01'),
+                '@k2', 'v2');
+            const m2 = serializeBinaryMessage({ Method: 'Svc.b', RelatedId: 2 }, [99]);
+            const frame = serializeBinaryFrame([m1, m2]);
+
+            const r1 = deserializeBinaryMessage(frame, 0);
+            expect(r1.message.Method).toBe('Svc.a');
+            expect(r1.args).toEqual(['x']);
+            expect(r1.bytesRead).toBe(m1.length);
+
+            const results = splitBinaryFrame(frame);
+            expect(results.map(r => r.message.Method)).toEqual(['Svc.a', 'Svc.b']);
+            expect(results[1].args).toEqual([99]);
+        });
+
+        it('should round-trip a headerless frame with exact bytesRead (both variants)', () => {
+            const v5 = serializeBinaryMessage(
+                { Method: 'Svc.a', RelatedId: 3 }, ['x', 1]);
+            const r5 = deserializeBinaryMessage(v5, 0);
+            expect(r5.args).toEqual(['x', 1]);
+            expect(r5.bytesRead).toBe(v5.length);
+
+            const registry = new RpcMethodRegistry();
+            registry.register('Svc.a:2');
+            const v5c = serializeCompactBinaryMessage(
+                { Method: 'Svc.a:2', RelatedId: 3 }, ['x', 1], registry);
+            const r5c = deserializeCompactBinaryMessage(v5c, 0, registry);
+            expect(r5c.args).toEqual(['x', 1]);
+            expect(r5c.bytesRead).toBe(v5c.length);
+        });
+    });
+
+    describe('R7: polymorphism marker parsing (msgpack6)', () => {
+        it('should handle the \\0\\0 non-polymorphic fast path', () => {
+            const marker = new Uint8Array([0x00, 0x00]);
+            expect(readPolymorphismMarker(marker, 0)).toEqual({
+                bytesRead: 2,
+                isNull: false,
+            });
+        });
+
+        it('should decode the NullValue marker', () => {
+            const marker = new Uint8Array([0x01, 0x00]);
+            expect(readPolymorphismMarker(marker, 0)).toEqual({
+                bytesRead: 2,
+                isNull: true,
+            });
+        });
+
+        it('should throw a clear error on a derived-type marker', () => {
+            // length = 5 (>= 2) → a real derived-type marker
+            const marker = new Uint8Array([0x05, 0x00, 0, 0, 65, 66, 67, 68, 69]);
+            expect(() => readPolymorphismMarker(marker, 0)).toThrow(
+                /polymorphic payloads are not supported/i
+            );
         });
     });
 

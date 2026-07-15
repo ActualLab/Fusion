@@ -168,6 +168,46 @@ function readVarUint(
 
 // --- Binary helpers ---
 
+// Skips `headerCount` V5 headers (key: L1Memory, value: LVarSpan) starting at
+// `pos`, returning the position past them. The TS client never emits headers,
+// but .NET does (e.g. Activity injection), and per the V5 layout they follow
+// the argument data — so they must be accounted for in `bytesRead`.
+function skipHeaders(data: Uint8Array, pos: number, headerCount: number): number {
+    for (let h = 0; h < headerCount; h++) {
+        const keyLen = data[pos++];
+        pos += keyLen;
+        const valLen = readVarUint(data, pos);
+        pos += valLen.bytesRead + valLen.value;
+    }
+    return pos;
+}
+
+/**
+ * Parses a polymorphism marker (as written by .NET `ByteTypeSerializer`) at
+ * `offset`. The msgpack6 format prefixes every *polymorphic* argument/result
+ * with a 2-byte little-endian length:
+ *   - 0        → expected (non-polymorphic) type — the `\0\0` fast path
+ *   - 1        → NullValue (the value itself is absent)
+ *   - >= 2     → a derived type (2-byte length + 2-byte hash + UTF-8 name)
+ *
+ * Returns how many bytes the marker occupies and whether the value is a
+ * NullValue. Derived-type markers are unsupported by the TS client and throw a
+ * clear error instead of letting the marker bytes corrupt the msgpack frame.
+ */
+export function readPolymorphismMarker(
+    data: Uint8Array,
+    offset: number
+): { bytesRead: number; isNull: boolean } {
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const length = view.getUint16(offset, true);
+    if (length === 0)
+        return { bytesRead: 2, isNull: false };
+    if (length === 1)
+        return { bytesRead: 2, isNull: true };
+
+    throw new Error('polymorphic payloads are not supported by the TS client');
+}
+
 function concatUint8Arrays(arrays: Uint8Array[]): Uint8Array {
     let totalLength = 0;
     for (const arr of arrays) totalLength += arr.length;
@@ -290,21 +330,10 @@ export function deserializeBinaryMessage(
     const method = textDecoder.decode(methodBytes);
     pos += methodLen.value;
 
-    // ArgData length as fixed 4-byte LE
+    // ArgData length as fixed 4-byte LE, immediately followed by argData (V5
+    // writes headers AFTER the argument data — see RpcByteMessageSerializerV5).
     const argDataLen = view.getInt32(pos, true);
     pos += 4;
-
-    // Skip headers (if any — TS client doesn't use them)
-    if (headerCount > 0) {
-        for (let h = 0; h < headerCount; h++) {
-            // L1Memory: 1-byte length prefix + key bytes
-            const keyLen = data[pos++];
-            pos += keyLen;
-            // LVarSpan: VarUint length + value bytes
-            const valLen = readVarUint(data, pos);
-            pos += valLen.bytesRead + valLen.value;
-        }
-    }
 
     // Deserialize arguments from argData — multiple concatenated MessagePack values
     const args: unknown[] = [];
@@ -317,8 +346,13 @@ export function deserializeBinaryMessage(
         for (const decoded of decoder.decodeMulti(argSlice)) {
             args.push(decoded);
         }
-        pos = argEnd;
     }
+    pos = argEnd;
+
+    // Headers (if any) follow the argument data. The TS client ignores their
+    // content but must skip them so `bytesRead` covers the whole message.
+    if (headerCount > 0)
+        pos = skipHeaders(data, pos, headerCount);
 
     const message: RpcMessage = {
         Method: method,
@@ -470,19 +504,10 @@ export function deserializeCompactBinaryMessage(
         registry?.getName(methodHash | 0) ??
         `<hash:0x${methodHash.toString(16).padStart(8, '0')}>`;
 
-    // ArgData length as fixed 4-byte LE
+    // ArgData length as fixed 4-byte LE, immediately followed by argData
+    // (V5Compact writes headers AFTER the argument data, same as V5).
     const argDataLen = view.getInt32(pos, true);
     pos += 4;
-
-    // Skip headers (if any)
-    if (headerCount > 0) {
-        for (let h = 0; h < headerCount; h++) {
-            const keyLen = data[pos++];
-            pos += keyLen;
-            const valLen = readVarUint(data, pos);
-            pos += valLen.bytesRead + valLen.value;
-        }
-    }
 
     // Deserialize arguments
     const args: unknown[] = [];
@@ -492,8 +517,12 @@ export function deserializeCompactBinaryMessage(
         for (const decoded of decoder.decodeMulti(argSlice)) {
             args.push(decoded);
         }
-        pos = argEnd;
     }
+    pos = argEnd;
+
+    // Headers (if any) follow the argument data.
+    if (headerCount > 0)
+        pos = skipHeaders(data, pos, headerCount);
 
     const message: RpcMessage = {
         Method: method,

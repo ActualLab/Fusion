@@ -27,10 +27,16 @@ describe('RpcSerializationFormat registry', () => {
         expect(fmt.isBinary).toBe(true);
     });
 
-    it('should resolve mempack6 format', () => {
-        const fmt = RpcSerializationFormat.get('mempack6');
-        expect(fmt).toBeInstanceOf(RpcMessagePackSerializationFormat);
-        expect(fmt.isBinary).toBe(true);
+    it('should throw a clear error for MemoryPack formats (R6)', () => {
+        expect(() => RpcSerializationFormat.get('mempack6')).toThrow(
+            /MemoryPack formats are not supported/i
+        );
+        expect(() => RpcSerializationFormat.get('mempack6c')).toThrow(
+            /MemoryPack formats are not supported/i
+        );
+        expect(() => RpcSerializationFormat.tryGet('mempack6')).toThrow(
+            /MemoryPack formats are not supported/i
+        );
     });
 
     it('should throw for unknown format', () => {
