@@ -32,8 +32,8 @@ public class BinaryHeap<TPriority, TValue> : IEnumerable<(TPriority Priority, TV
 
     public BinaryHeap(IEnumerable<(TPriority, TValue)> source, IComparer<TPriority>? comparer = null)
     {
-        _heap = source.OrderBy(i => i.Item1, _comparer).ToList();
         _comparer = comparer ?? Comparer<TPriority>.Default;
+        _heap = source.OrderBy(i => i.Item1, _comparer).ToList();
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

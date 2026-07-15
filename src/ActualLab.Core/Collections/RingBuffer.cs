@@ -45,7 +45,7 @@ public struct RingBuffer<T> : IReadOnlyList<T>
     {
         var end = _end;
         if (end < _start)
-            end += Capacity;
+            end += _buffer.Length;
         for (var i = _start; i < end; i++)
             yield return _buffer[i & Capacity];
     }

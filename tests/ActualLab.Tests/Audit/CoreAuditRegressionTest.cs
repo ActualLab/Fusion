@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Globalization;
+using System.Reflection;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Channels;
@@ -255,6 +256,39 @@ public class CoreAuditRegressionTest
 
         first.Should().Equal(0, 1);
         second.Should().Equal(0, 1);
+    }
+
+    [Fact]
+    public async Task TimerSetPriorityCursorMustCrossInt32Boundary()
+    {
+        var clock = MomentClockSet.Default.CpuClock;
+        var options = new TimerSetOptions {
+            Clock = clock,
+            TickSource = new TickSource(TimerSetOptions.MinQuanta),
+        };
+        await using var timerSet = new TimerSet<string>(options, start: clock.Now + TimeSpan.FromDays(1));
+        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var minPriorityField = typeof(TimerSet<string>).GetField("_minPriority", flags)!;
+        var timersField = typeof(TimerSet<string>).GetField("_timers", flags)!;
+        var timers = (RadixHeapSet<string>)timersField.GetValue(timerSet)!;
+
+        minPriorityField.SetValue(timerSet, (long)int.MaxValue);
+        timerSet.AddOrUpdate("before", 0);
+        timers.ExtractMinSet(int.MaxValue).Should().ContainKey("before");
+
+        minPriorityField.SetValue(timerSet, (long)int.MaxValue + 1);
+        timerSet.AddOrUpdate("after", 0);
+        timers.ExtractMinSet((long)int.MaxValue + 1).Should().ContainKey("after");
+    }
+
+    [Fact]
+    public void TimerSetOptionsMustRejectUnsupportedQuanta()
+    {
+        var createOptions = () => new TimerSetOptions {
+            TickSource = new TickSource(TimerSetOptions.MinQuanta - TimeSpan.FromTicks(1)),
+        };
+
+        createOptions.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]

@@ -159,7 +159,7 @@ Confidence: **Confirmed** by executable probe; duplicated in `ArrayPoolBuffer<T>
 
 ### CORE6. `BinaryHeap` source constructor ignores its comparer while building the heap
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe.
 
@@ -169,10 +169,13 @@ Confidence: **Confirmed** by executable probe.
 - Impact: `PeekMin`, `ExtractMin`, enumeration, and later additions can return the wrong order for every non-default comparer.
 - **Recommended:** assign `_comparer` first and order the source with that assigned comparer. The current O(n log n) sort is otherwise a valid heap representation.
 - **Alternative:** materialize and heapify bottom-up with the comparer. This improves construction complexity but is a broader algorithm change.
+- Implementation: the source constructor now initializes `_comparer` before using it to order the source.
+- Validation: `BinaryHeapSourceConstructorMustUseCustomComparer` failed with priority 1 before the fix and passes with
+  priority 3 after it; the surrounding `BinaryHeapTest` suite also passes.
 
 ### CORE7. Wrapped `RingBuffer<T>` enumeration drops items
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe.
 
@@ -182,6 +185,9 @@ Confidence: **Confirmed** by executable probe.
 - Impact: LINQ and `foreach` silently omit elements while indexed access and `ToArray` disagree, producing data loss in consumers with no exception.
 - **Recommended:** add `_buffer.Length` (equivalently `Capacity + 1`) when linearizing `_end`.
 - **Alternative:** implement enumeration over `Count` and use `(_start + index) & Capacity`; slightly simpler to reason about and naturally matches the indexer, with one mask operation per item.
+- Implementation: wrapped enumeration now advances `_end` by the full backing-array length.
+- Validation: `RingBufferMustEnumerateEveryWrappedItem` failed with `2,3` before the fix and passes with `2,3,4`
+  after it; the surrounding `RingBufferTest` suite also passes.
 
 ### CORE8. `VersionSet` caches data derived from a caller-mutable dictionary
 
@@ -194,7 +200,7 @@ Confidence: **Confirmed by maintainer clarification**.
 
 ### CORE9. `TimerSet<T>` priority cursor overflows while heap priorities remain monotone
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **High**; the overflow and post-overflow failure are established directly from the state transition, but the natural-duration boundary has not been waited out in a test.
 
@@ -205,10 +211,15 @@ Confidence: **High**; the overflow and post-overflow failure are established dir
 - Impact: existing timers stop firing and new timer registration begins throwing after the boundary, potentially disabling keep-alive, cache expiry, or application timeouts.
 - **Recommended:** make `_minPriority` a `long` and enforce a supported quanta/range invariant in `TimerSetOptions` construction. The existing `MinQuanta` should either be enforced or removed in favor of an explicit documented bound; ensure the radix heap's 45 buckets cover the chosen lifetime.
 - **Alternative:** retain an `int` rolling cursor and periodically rebase the heap/start epoch before overflow. This is substantially more complex and riskier than matching the existing long-priority API.
+- Implementation: `_minPriority` is now a `long`, and `TimerSetOptions.TickSource` rejects periods shorter than the
+  existing 10 ms `MinQuanta`. At that minimum, the 45-bucket heap covers more than five millennia of priorities.
+- Validation: a deterministic test seam advances the cursor and radix heap across `int.MaxValue`; it failed against
+  the old `int` field and passes after the fix. A second regression confirms sub-minimum quanta are rejected, and the
+  surrounding `ConcurrentTimerSetTest` suite passes.
 
 ### CORE10. `ClockExt.Interval(IEnumerable<TimeSpan>)` shares one enumerator across subscribers
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe.
 
@@ -218,10 +229,13 @@ Confidence: **Confirmed** by executable probe.
 - Impact: an API that otherwise behaves like a cold Rx interval becomes single-use, causing silently missing ticks or concurrency failures in independent consumers.
 - **Recommended:** create and dispose the interval enumerator inside the `Observable.Create` subscription delegate so each subscriber gets independent state.
 - **Alternative:** explicitly publish/share the observable and document it as hot/single-sequence. This would be a surprising contract change and still requires synchronization for concurrent subscribers.
+- Implementation: each `Interval(IEnumerable<TimeSpan>)` subscription now creates and disposes its own enumerator.
+- Validation: `EnumerableIntervalMustBeColdPerSubscription` failed because the second subscription was empty before
+  the fix and passes with `0,1` from both subscriptions after it; the surrounding `ClockTest` suite also passes.
 
 ### CORE11. Optional-parameter overloads make convenience calls ambiguous
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by compiler diagnostic and overload signatures.
 
@@ -231,6 +245,11 @@ Confidence: **Confirmed** by compiler diagnostic and overload signatures.
 - Impact: source consumers get a compile-time error for the advertised convenience API and must discover a non-obvious named or positional argument to disambiguate it.
 - **Recommended:** make the extra `encoding`/`retryIntervals` argument non-optional on the longer overloads, leaving the short overloads as the unique default entry points. Existing calls that explicitly pass the extra argument remain source-compatible.
 - **Alternative:** remove the short overloads and retain optional encoding. This makes the natural call compile, but is a binary compatibility break and removes the explicit cancellation-token position.
+- Implementation: the longer `FilePathExt`, `FileLock`, and generic `RetryPolicyExt` overloads now require their
+  encoding, retry-interval, or retry-logger argument while retaining the same binary signatures.
+- Validation: the compile-contract consumer produced five CS0121 diagnostics before the fix and now lives in the
+  standard `ActualLab.Tests` build graph, which compiles successfully using all five natural convenience calls. All
+  nine `ActualLab.Core` target frameworks build.
 
 ### CORE12. `FilePath.WriteLines` leaves stale bytes when replacing a longer file
 

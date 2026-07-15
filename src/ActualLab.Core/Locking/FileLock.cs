@@ -23,7 +23,10 @@ public class FileLock(FilePath path, IEnumerable<TimeSpan>? retryIntervals = nul
 
     public static ValueTask<Releaser> Lock(FilePath path, CancellationToken cancellationToken = default)
         => Lock(path, null, cancellationToken);
-    public static ValueTask<Releaser> Lock(FilePath path, IEnumerable<TimeSpan>? retryIntervals = null, CancellationToken cancellationToken = default)
+    public static ValueTask<Releaser> Lock(
+        FilePath path,
+        IEnumerable<TimeSpan>? retryIntervals,
+        CancellationToken cancellationToken = default)
     {
         var fileLock = new FileLock(path, retryIntervals);
         return fileLock.Lock(cancellationToken);

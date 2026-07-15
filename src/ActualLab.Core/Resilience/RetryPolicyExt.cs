@@ -64,7 +64,7 @@ public static class RetryPolicyExt
     public static Task<T> Run<T>(
         this IRetryPolicy policy,
         Func<CancellationToken, Task<T>> taskFactory,
-        RetryLogger? retryLogger = null,
+        RetryLogger? retryLogger,
         CancellationToken cancellationToken = default)
         => Task.Run(() => policy.Apply(taskFactory, retryLogger, cancellationToken), cancellationToken);
 
@@ -95,7 +95,7 @@ public static class RetryPolicyExt
     public static Task<T> RunIsolated<T>(
         this IRetryPolicy policy,
         Func<CancellationToken, Task<T>> taskFactory,
-        RetryLogger? retryLogger = null,
+        RetryLogger? retryLogger,
         CancellationToken cancellationToken = default)
     {
         using var _ = ExecutionContextExt.TrySuppressFlow();

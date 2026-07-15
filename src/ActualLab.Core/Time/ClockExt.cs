@@ -53,14 +53,13 @@ public static class ClockExt
             ? Observable.Interval(interval) // Perf. optimization
             : clock.Interval(Intervals.Fixed(interval));
     public static IObservable<long> Interval(this MomentClock clock, IEnumerable<TimeSpan> intervals)
-    {
-        var e = intervals.GetEnumerator();
-        return Observable.Create<long>(async (observer, ct) => {
+        => Observable.Create<long>(async (observer, ct) => {
             var completed = false;
             try {
+                using var enumerator = intervals.GetEnumerator();
                 var index = 0L;
-                while (e.MoveNext()) {
-                    var dueAt = clock.Now + e.Current;
+                while (enumerator.MoveNext()) {
+                    var dueAt = clock.Now + enumerator.Current;
                     await clock.Delay(dueAt, ct).SuppressCancellationAwait();
                     if (ct.IsCancellationRequested)
                         break;
@@ -73,9 +72,5 @@ public static class ClockExt
                 if (!completed)
                     observer.OnError(e);
             }
-            finally {
-                e.Dispose();
-            }
         });
-    }
 }

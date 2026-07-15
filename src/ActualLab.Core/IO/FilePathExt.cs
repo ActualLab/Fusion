@@ -97,7 +97,7 @@ public static class FilePathExt
     public static Task WriteText(
         this FilePath path,
         string contents,
-        Encoding? encoding = null,
+        Encoding? encoding,
         CancellationToken cancellationToken = default)
         => FileExt.WriteText(path, contents, encoding, cancellationToken);
 
@@ -110,7 +110,7 @@ public static class FilePathExt
     public static async Task WriteLines(
         this FilePath path,
         IAsyncEnumerable<string> lines,
-        Encoding? encoding = null,
+        Encoding? encoding,
         CancellationToken cancellationToken = default)
     {
         encoding ??= FileExt.DefaultWriteEncoding;

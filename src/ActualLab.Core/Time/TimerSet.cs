@@ -6,11 +6,16 @@ namespace ActualLab.Time;
 public record TimerSetOptions
 {
     public static readonly TickSource DefaultTickSource = new(TimeSpan.FromSeconds(1));
-    public static readonly TimerSetOptions Default = new();
     public static readonly TimeSpan MinQuanta = TimeSpan.FromMilliseconds(10);
+    public static readonly TimerSetOptions Default = new();
 
     public MomentClock Clock { get; init; } = MomentClockSet.Default.CpuClock;
-    public TickSource TickSource { get; init; } = DefaultTickSource;
+    public TickSource TickSource {
+        get;
+        init => field = value.Period >= MinQuanta
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(TickSource));
+    } = DefaultTickSource;
     public TimeSpan Quanta => TickSource.Period;
 }
 
@@ -29,7 +34,7 @@ public sealed class TimerSet<TTimer> : WorkerBase
     private readonly Action<TTimer>? _fireHandler;
     private readonly RadixHeapSet<TTimer> _timers = new(45);
     private readonly Moment _start;
-    private int _minPriority;
+    private long _minPriority;
 
     public MomentClock Clock { get; }
     public TickSource TickSource { get; }
