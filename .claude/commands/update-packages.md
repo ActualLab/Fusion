@@ -99,8 +99,10 @@ longer applies. When you skip a package for this reason, say so in your summary.
    dotnet restore ActualLab.Fusion.sln
    dotnet list ActualLab.Fusion.sln package --outdated
    ```
-   (If offline, check each candidate's latest stable on nuget.org via WebFetch:
-   `https://api.nuget.org/v3-flatcontainer/{lowercase-id}/index.json`.)
+   Note: `--outdated` can abort with a "No assets file" error on `build/Build.csproj`
+   (it's not in the sln). If that happens — or you're offline — query each candidate's
+   latest stable directly and pick the highest non-prerelease:
+   `https://api.nuget.org/v3-flatcontainer/{lowercase-id}/index.json` (via WebFetch or curl).
 2. **Filter by the rules above.** Only the "DO update" categories are in scope. Read the
    section comment each package sits under before touching it.
 3. **Edit `Directory.Packages.props`.** Prefer editing the shared `...Version` property when
