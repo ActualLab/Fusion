@@ -12,6 +12,12 @@ The port is deliberately partial. The standard applied here is: **every feature 
 
 Item numbering: **K** = Fusion kernel, **S** = State layer + React, **R** = RPC layer, **F** = Fusion-over-RPC glue, **C** = core utilities.
 
+## Decisions
+
+Directives from Alex that override or refine the per-item proposals below; the impacted items were updated in place.
+
+- **D1 (2026-07-14) — introduce a `ComputedOptions` analog.** The TS port gets a real (initially minimal) `ComputedOptions` rather than point fixes like the global `Computed.errorAutoInvalidateDelay`: an options object carried per `ComputeFunction` / compute method (overridable at declaration — decorator argument / registration input), with static per-kind defaults mirroring C# (`ComputedOptions.Default` for compute methods, a `MutableStateDefault` analog for state-bound computeds). First field: **`errorAutoInvalidateDelay`** (the K5 fix; `Infinity` = disabled, the state-bound default). The structure is the designated home for later per-method knobs — `autoInvalidationDelay`, `minCacheDuration`, transiency-aware error delays, cancellation-reprocessing policy — so each lands as a field, not a new mechanism. Impacted items reworked: K5, K6, F3; the kernel and Fusion-over-RPC out-of-scope notes are narrowed accordingly.
+
 ## Severity overview
 
 The items most likely to produce user-visible wrong behavior in an app that uses only what the port already ships:
@@ -76,8 +82,8 @@ Confidence: confirmed.
 - TS: `computed.ts:24-25, 154-158` — `setOutput` schedules `setTimeout(() => this.invalidate(), 1000)` for **any** error on **any** Computed, including `StateBoundComputed` (states call `setOutput` at `state.ts:87, 92`). `MutableState`'s renewer recreates the computed with the same error output (`mutable-state.ts:7-11`), scheduling the next 1 s invalidation.
 - C#: error auto-invalidation is per-`ComputedOptions` with transiency classification (`Computed.cs:374-405, 540-567`); `MutableState` uses `ComputedOptions.MutableStateDefault` — a MutableState holding an error **never** auto-invalidates (`ComputedOptions.cs:21-24`).
 - Failure: `state.set(errorResult(e))` → every dependant is invalidated and recomputed every second, forever. Non-transient/terminal errors in compute methods retry at 1 s forever (C# differentiates via `NonTransientErrorInvalidationDelay` = 30 s and `Transiency.Terminal`). Bonus defects: the timer strongly retains the computed for 1 s (defeats WeakRef eviction) and an un-`unref`'d `setTimeout` keeps a Node process alive.
-- **Recommended:** introduce a minimal per-computed `errorAutoInvalidateDelay` (a field/option, not a full `ComputedOptions` port): `StateBoundComputed` disables it (C# `MutableStateDefault` parity — states never auto-invalidate errors; `ComputedState` retries via its update loop, see S8), compute methods keep a default. Cancel the timer when the computed is invalidated by other means, and `unref()` it in Node.
-- **Alternative:** keep the global delay but exclude `StateBoundComputed` only — smaller, fixes the 1 Hz state loops but leaves terminal errors in compute methods retrying at 1 s forever. Full transiency classification is out of scope either way.
+- **Recommended (per D1):** introduce the `ComputedOptions` analog and move error auto-invalidation onto `options.errorAutoInvalidateDelay`: each `Computed` takes its options from its `ComputeFunction` (declaration-time override) or its kind's static default — compute methods keep a finite default, `StateBoundComputed` uses the `MutableStateDefault` analog (`Infinity` — states never auto-invalidate errors; `ComputedState` retries via its update loop, see S8). Cancel the timer when the computed is invalidated by other means, and `unref()` it in Node. The global `Computed.errorAutoInvalidateDelay` becomes the default-options seed or is removed.
+- **Alternative (superseded by D1):** a lone per-computed `errorAutoInvalidateDelay` field, or keeping the global delay with a `StateBoundComputed` exclusion — smaller, but every next per-method knob would need its own mechanism.
 
 ### K6. Cancellation errors are cached as values — C# contract: OCE must never be cached
 
@@ -86,7 +92,7 @@ Confidence: confirmed (absence verified).
 - TS: `compute-function.ts:98-110` — every throw, including `AbortError` from an aborted fetch, becomes `errorResult(e)` and is cached via `setOutput` (until K5's 1 s timer). No AbortSignal exists anywhere in the compute pipeline.
 - C#: `ComputedImpl.Helpers.cs:116-159` — an `OperationCanceledException` never becomes a cached consistent output: the computed is invalidated immediately and the error rethrown to the canceled caller only; internal cancellations are reprocessed with retries. `StartAutoInvalidation` instant-invalidates OCE outputs as a second line of defense (`Computed.cs:388-391`).
 - Failure: caller A's fetch is aborted (user navigated away); for up to 1 s, callers B/C of the same compute key receive A's `AbortError` from cache — cancellation of one consumer poisons all consumers. See also F3 for the remote-call variant.
-- **Recommended:** introduce a cancellation-detection helper in `@actuallab/core` (recognizes `DOMException`/`Error` named `AbortError` plus a dedicated `OperationCancelledError`); in `ComputeFunction.invoke`, when the caught error is cancellation-shaped, still `setOutput` (keeps the single-flight lock protocol intact) but invalidate the computed immediately — C#'s `StartAutoInvalidation` OCE path — so it is never served from cache.
+- **Recommended:** introduce a cancellation-detection helper in `@actuallab/core` (recognizes `DOMException`/`Error` named `AbortError` plus a dedicated `OperationCancelledError`); in `ComputeFunction.invoke`, when the caught error is cancellation-shaped, still `setOutput` (keeps the single-flight lock protocol intact) but invalidate the computed immediately — C#'s `StartAutoInvalidation` OCE path — so it is never served from cache. With D1's `ComputedOptions` in place, a future cancellation-reprocessing policy (C# `ComputedCancellationReprocessingOptions`) has its natural home there.
 - **Alternative:** bypass caching entirely and rethrow to the cancelled caller. Closer to C#'s primary path but leaves the `Computed` stuck in `Computing` and complicates the lock/renewer flow; the invalidate-immediately variant gets the same observable behavior with less surgery.
 
 ### K7. Invalidated dependants never unlink from their dependencies; no graph pruner
@@ -192,7 +198,7 @@ Confidence: confirmed. TS notifies dependants before the computed's own `onInval
 
 ### Out of scope (kernel)
 
-- Per-input `ComputedOptions` — `MinCacheDuration`/keep-alive timeouts, `AutoInvalidationDelay`, `InvalidationDelay`, `ConsolidationDelay`; TS has only the global `Computed.errorAutoInvalidateDelay`.
+- ~~Per-input `ComputedOptions`~~ — **in scope in minimal form per D1** (`errorAutoInvalidateDelay` first). Still out of scope: `MinCacheDuration`/keep-alive timeouts, `AutoInvalidationDelay`, `InvalidationDelay`, `ConsolidationDelay` — each becomes a future field on the D1 structure.
 - Error transiency classification (`TransiencyResolver`, transient/super-transient/terminal).
 - `CallOptions` context machinery (`GetExisting`, `Capture`, `Invalidate` via context; `Invalidation.Begin()` blocks) — TS substitutes bound `.invalidate()` on methods.
 - `InvalidationSource` diagnostics.
@@ -604,7 +610,7 @@ Confidence: confirmed. The remote-call variant of K6.
 - TS: any rejection of `outboundCall.result` propagates out of `rpcImpl` (`fusion-hub.ts:224`) and is cached via `errorResult(e)` → `setOutput` — including abort-driven `'Call cancelled.'` (`rpc-peer.ts:377-391`) and `'Peer closed.'` from `rejectAll` (`rpc-call-tracker.ts:146-156`). On the error path the `whenInvalidated → computed.invalidate()` wiring is never established (only wired after a successful await, `fusion-hub.ts:226-230`), so error computeds rely solely on the 1 s timer (K5).
 - C#: `ComputeRpc` rethrows OCE instead of producing a computed (`RemoteComputeMethodFunction.cs:227-231`); server-side cancellations are retried with backoff; genuine error computeds still track server invalidation (`RpcOutboundComputeCall.SetError`, `:119-146`).
 - Failure: one caller cancels (or a peer closes mid-flight); for the next second every other consumer of the same compute key observes a cancellation error as if it were the value.
-- **Recommended:** ride on K6's kernel fix (cancellation-shaped errors are never served from cache) and make peer-lifecycle rejections (`'Call cancelled.'`, `'Peer closed.'`) cancellation-shaped; additionally, wire `whenInvalidated → computed.invalidate()` on the *error* path too, so genuine error computeds still track server invalidation (C# `SetError` parity).
+- **Recommended:** ride on K6's kernel fix (cancellation-shaped errors are never served from cache) and make peer-lifecycle rejections (`'Call cancelled.'`, `'Peer closed.'`) cancellation-shaped; additionally, wire `whenInvalidated → computed.invalidate()` on the *error* path too, so genuine error computeds still track server invalidation (C# `SetError` parity). Genuine remote errors then cache for the client method's `options.errorAutoInvalidateDelay` (D1) instead of the blanket 1 s — remote compute methods get their own per-declaration default, the C# client-options analog.
 - **Alternative:** invalidate every error computed immediately in the RPC glue (skip classification). Simpler; loses the distinction between a genuine remote error (worth briefly caching) and a cancellation, effectively reintroducing K5's retry churn for remote errors.
 
 ### F4. Local invalidation of a client computed never releases the outbound call — no computed→call binding, no `$sys.Cancel`, strong-ref leak
@@ -689,7 +695,7 @@ Confidence: confirmed. Each accepted connection creates a UUID-ref `RpcServerPee
 
 - `RemoteComputedCache` / cache-and-swap + `$sys.M` hash validation.
 - Serve-stale-on-disconnect + `InvalidateWhenReconnected`.
-- Per-method `ComputedOptions` (min cache duration, auto-invalidation, `CancellationReprocessing` retry policy).
+- Per-method `ComputedOptions` beyond D1's minimal form — min cache duration, auto-invalidation, `CancellationReprocessing` retry policy (the D1 structure is where they'd land; client methods do get `errorAutoInvalidateDelay`, see F3).
 - `WhenSynchronized` / `ComputedSynchronizer`.
 - Rerouting and Distributed/local-execution mode.
 - Server-side stage-based inbound reprocessing (`RpcInboundComputeCall.TryReprocess`) — the TS server reconnect handler is membership-only.
