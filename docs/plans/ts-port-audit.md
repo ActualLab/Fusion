@@ -78,6 +78,8 @@ Confidence: confirmed (mechanism fully traced; a by-design JS limitation, but si
 
 ### K4. `invalidate()` can throw and aborts the invalidation cascade midway
 
+Status: **closed** — fixed 2026-07-15 (batch kernel2).
+
 Confidence: confirmed.
 
 - TS: `computed.ts:184-193` — dependant propagation and `onInvalidated.trigger()` run with no try/catch (`events.ts:19-21` doesn't isolate handlers either). A throwing handler propagates up: remaining dependants are never invalidated, `_unregister` is skipped (an Invalidated computed stays registered), and the exception surfaces to whoever called `invalidate()` — e.g. out of `MutableState.set()`, or inside `ComputedState._updateCycle`, whose outer catch (`computed-state.ts:150-154`) logs "UpdateCycle failed and stopped" and **exits the loop permanently**.
@@ -132,6 +134,8 @@ Confidence: confirmed.
 
 ### K9. `update()` is not isolated — renewal registers a dependency in the ambient compute context
 
+Status: **closed** — fixed 2026-07-15 (batch kernel2).
+
 Confidence: confirmed.
 
 - TS: `Computed.update()` → `_renewer()` (`computed.ts:106-114`) → `ComputeFunction.invoke`, which falls back to `AsyncContext.current` (`compute-function.ts:55-58`) and captures the produced computed into that ambient context (`compute-function.ts:116`).
@@ -141,6 +145,8 @@ Confidence: confirmed.
 - **Alternative:** strip the context at each caller of `update()`. Rejected-leaning: multiple sites, and direct `computed.update()` calls would still capture.
 
 ### K10. `whenInvalidated(abortSignal)` leaks one abort listener per call on long-lived signals; never settles on an already-aborted signal
+
+Status: **closed** — fixed 2026-07-15 (batch kernel2).
 
 Confidence: confirmed.
 
@@ -161,6 +167,8 @@ Confidence: confirmed.
 - **Alternative:** document the deviations (first-wins, throws on error). Rejected-leaning: `capture` is the primary API for building reactive wrappers; C# samples and docs rely on the last-wins + errored-computed behavior.
 
 ### K12. `onInvalidated` is a public raw handler set — a handler added after invalidation never fires (C#: fires immediately)
+
+Status: **closed** — fixed 2026-07-15 (batch kernel2; `onInvalidated(handler)` is now a method with immediate fire on already-invalidated computeds).
 
 Confidence: confirmed.
 
@@ -207,6 +215,8 @@ Confidence: confirmed. `computed-registry.ts:25-29` vs C# `ComputedRegistry.cs:1
 - **Alternative:** none meaningful — throwing on displacement would break K2's registration-while-computing flow.
 
 ### K17. Invalidation ordering differs (low)
+
+Status: **closed** — fixed 2026-07-15 (batch kernel2, folded into the K4 rework as planned).
 
 Confidence: confirmed. TS notifies dependants before the computed's own `onInvalidated` handlers (`computed.ts:184-191`); C# fires own handlers first, dependants in `finally` (`Computed.cs:303-318`). Observable to handlers that inspect dependants' state.
 

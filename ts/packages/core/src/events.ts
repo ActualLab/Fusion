@@ -25,6 +25,17 @@ export class EventHandlerSet<T> {
             handler(arg);
     }
 
+    // Fires every handler once, isolating each so one that throws can't stop the rest.
+    triggerSafe(arg: T, onError: (error: unknown) => void): void {
+        for (const handler of [...this._handlers]) {
+            try {
+                handler(arg);
+            } catch (error) {
+                onError(error);
+            }
+        }
+    }
+
     clear(): void {
         this._handlers.clear();
     }

@@ -183,7 +183,7 @@ export class FusionHub extends RpcHub {
 
             // Wire invalidation → send $sys-c.Invalidate to the client
             if (context !== undefined) {
-                computed.onInvalidated.add(() => {
+                computed.onInvalidated(() => {
                     const msg = serializeMessage({
                         Method: FUSION_INVALIDATE_METHOD,
                         RelatedId: context.callId,

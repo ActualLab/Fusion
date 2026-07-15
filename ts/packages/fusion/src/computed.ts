@@ -9,7 +9,10 @@ import {
 import type { ComputedInput } from './computed-input.js';
 import { ComputedRegistry } from './computed-registry.js';
 import { ComputeContext, computeContextKey } from './compute-context.js';
+import { getLogs } from './logging.js';
 import type { State } from './state.js';
+
+const { errorLog } = getLogs('Computed');
 
 let _nextVersion = 0;
 
@@ -48,7 +51,7 @@ export class Computed<T> implements IResult<T> {
     private _invalidatePending = false;
     private _dependencies = new Set<Computed<unknown>>();
     private _dependants = new Map<number, WeakRef<Computed<unknown>>>();
-    readonly onInvalidated = new EventHandlerSet<void>();
+    private _onInvalidated = new EventHandlerSet<void>();
     readonly _renewer: (() => Computed<T> | Promise<Computed<T>>) | undefined;
 
     constructor(
@@ -107,7 +110,17 @@ export class Computed<T> implements IResult<T> {
         if (this._state === ConsistencyState.Consistent) return this;
         const latest = this._latest();
         if (latest?.isConsistent) return latest;
-        if (this._renewer !== undefined) return this._renewer();
+        if (this._renewer !== undefined) {
+            const renewer = this._renewer;
+            // Run the renewer with the compute context cleared so renewal never
+            // records a dependency edge in the ambient computation — TS analog of
+            // C# Computed.UpdateUntyped's BeginIsolation.
+            const isolated = (AsyncContext.current ?? AsyncContext.empty).with(
+                computeContextKey,
+                undefined
+            );
+            return isolated.run(renewer);
+        }
         throw new Error(
             'Cannot recompute: Computed is invalidated and has no renewer.'
         );
@@ -166,6 +179,8 @@ export class Computed<T> implements IResult<T> {
         ComputedRegistry.unregister(this as Computed<unknown>);
     }
 
+    // Never throws — mirrors .NET Computed.Invalidate: own handlers fire first
+    // (each isolated), then dependants propagate unconditionally, then unregister.
     invalidate(): void {
         if (this._state === ConsistencyState.Invalidated)
             return;
@@ -176,42 +191,65 @@ export class Computed<T> implements IResult<T> {
             return;
         }
         this._state = ConsistencyState.Invalidated;
+        try {
+            this._onInvalidated.triggerSafe(undefined, e =>
+                errorLog?.log('onInvalidated handler failed', e)
+            );
+            this._onInvalidated.clear();
+        } finally {
+            for (const dependency of this._dependencies)
+                dependency._dependants.delete(this._version);
+            this._dependencies.clear();
 
-        // Unlink from each dependency's dependants map, then clear forward references
-        for (const dependency of this._dependencies)
-            dependency._dependants.delete(this._version);
-        this._dependencies.clear();
+            for (const [, ref] of this._dependants) {
+                const dependant = ref.deref();
+                if (dependant != null) {
+                    try {
+                        dependant.invalidate();
+                    } catch (e) {
+                        errorLog?.log('Error while invalidating dependant', e);
+                    }
+                }
+            }
+            this._dependants.clear();
 
-        // Notify dependants via WeakRef backward references
-        for (const [, ref] of this._dependants) {
-            const dependant = ref.deref();
-            if (dependant != null) dependant.invalidate();
+            this._unregister();
         }
-        this._dependants.clear();
+    }
 
-        this.onInvalidated.trigger();
-        this.onInvalidated.clear();
-
-        this._unregister();
+    onInvalidated(handler: () => void): void {
+        if (this._state === ConsistencyState.Invalidated) {
+            handler();
+            return;
+        }
+        this._onInvalidated.add(handler);
     }
 
     whenInvalidated(abortSignal?: AbortSignal): Promise<void> {
         if (this._state === ConsistencyState.Invalidated)
             return Promise.resolve();
+        if (abortSignal?.aborted)
+            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- reason falls back to an Error; abortSignal.reason mirrors throwIfAborted()
+            return Promise.reject(
+                abortSignal.reason ?? new Error('Operation cancelled.')
+            );
 
         const ps = new PromiseSource<void>();
-        const handler = () => ps.resolve(undefined);
-        this.onInvalidated.add(handler);
-
-        if (abortSignal !== undefined && !abortSignal.aborted) {
-            abortSignal.addEventListener(
-                'abort',
-                () => {
-                    this.onInvalidated.remove(handler);
-                    ps.reject(abortSignal.reason);
-                },
-                { once: true }
-            );
+        let onAbort: (() => void) | undefined;
+        const onInvalidated = () => {
+            if (onAbort !== undefined)
+                abortSignal!.removeEventListener('abort', onAbort);
+            ps.resolve(undefined);
+        };
+        this._onInvalidated.add(onInvalidated);
+        if (abortSignal !== undefined) {
+            onAbort = () => {
+                this._onInvalidated.remove(onInvalidated);
+                ps.reject(
+                    abortSignal.reason ?? new Error('Operation cancelled.')
+                );
+            };
+            abortSignal.addEventListener('abort', onAbort, { once: true });
         }
 
         return ps;

@@ -60,7 +60,7 @@ describe('Computed', () => {
         const c = new Computed<number>(makeKey('get', 1));
         c.setOutput(42);
         let count = 0;
-        c.onInvalidated.add(() => count++);
+        c.onInvalidated(() => count++);
         c.invalidate();
         c.invalidate();
         expect(count).toBe(1);
@@ -71,7 +71,7 @@ describe('Computed', () => {
         expect(c.state).toBe(ConsistencyState.Computing);
 
         let invalidatedCount = 0;
-        c.onInvalidated.add(() => invalidatedCount++);
+        c.onInvalidated(() => invalidatedCount++);
 
         // Invalidate while still Computing — should defer, not throw, not transition yet.
         c.invalidate();
@@ -88,7 +88,7 @@ describe('Computed', () => {
     it('should not double-invalidate when pending plus a later invalidate', () => {
         const c = new Computed<number>(makeKey('get', 1));
         let invalidatedCount = 0;
-        c.onInvalidated.add(() => invalidatedCount++);
+        c.onInvalidated(() => invalidatedCount++);
         c.invalidate(); // deferred
         c.setOutput(42); // applies pending invalidate
         c.invalidate(); // already invalidated — no-op
@@ -100,7 +100,7 @@ describe('Computed', () => {
         const c = new Computed<number>(makeKey('get', 1));
         c.setOutput(42);
         let fired = false;
-        c.onInvalidated.add(() => {
+        c.onInvalidated(() => {
             fired = true;
         });
         c.invalidate();
