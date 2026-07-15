@@ -1,0 +1,29 @@
+// ESLint-only config: resolves cross-package @actuallab/* imports to source
+// (see paths below) so typed linting never collapses to `any` on a stale/absent
+// dist. The package tsconfig.json files intentionally omit these paths — adding
+// them there breaks the tsup DTS build (source pulled across rootDir).
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@actuallab/core": ["./packages/core/src/index.ts"],
+      "@actuallab/rpc": ["./packages/rpc/src/index.ts"],
+      "@actuallab/fusion": ["./packages/fusion/src/index.ts"],
+      "@actuallab/fusion-react": ["./packages/fusion-react/src/index.ts"],
+      "@actuallab/fusion-rpc": ["./packages/fusion-rpc/src/index.ts"]
+    },
+    "jsx": "react-jsx",
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.tsx",
+    "packages/*/tests/**/*.ts",
+    "e2e/**/*.ts",
+    "*.ts"
+  ]
+}

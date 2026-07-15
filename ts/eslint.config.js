@@ -51,8 +51,9 @@ export default tseslint.config(
       sourceType: "module",
       parserOptions: {
         tsconfigRootDir: import.meta.dirname,
-        projectService: true,
-        allowDefaultProject: ["*.ts"],
+        // Lint-only tsconfig maps @actuallab/* to package src (not dist), so
+        // typed lint results don't depend on a prior build being fresh.
+        project: "./tsconfig.eslint.json",
       },
     },
     plugins: {

@@ -5,11 +5,11 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
+    "build": "npm run build -w @actuallab/core -w @actuallab/rpc -w @actuallab/fusion -w @actuallab/fusion-rpc -w @actuallab/fusion-react",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint packages/*/src/**/*.ts packages/*/tests/**/*.ts",
-    "typecheck": "tsc -b packages/*/tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -b packages/core/tsconfig.json packages/rpc/tsconfig.json packages/fusion/tsconfig.json packages/fusion-rpc/tsconfig.json packages/fusion-react/tsconfig.json",
     "clean": "npm run clean --workspaces"
   },
   "devDependencies": {

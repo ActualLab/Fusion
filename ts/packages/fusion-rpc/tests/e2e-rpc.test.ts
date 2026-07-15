@@ -620,7 +620,7 @@ describe('End-to-end Fusion over RPC', () => {
     it('F3: a genuine remote error computed still tracks server invalidation', async () => {
         serverHub.addService(ISlowCounterService, {
             getCount(key: unknown): number {
-                const value = getState(key as string).use() as number;
+                const value = getState(key as string).use();
                 if (value === 0)
                     throw new Error('Not ready.');
 
