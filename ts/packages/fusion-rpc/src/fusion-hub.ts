@@ -41,12 +41,11 @@ import {
     RpcServerPeer,
     RpcWebSocketConnection,
     RpcSystemCallHandler,
-    serializeMessage,
+    RpcSystemCallSender,
     defineRpcService,
     wireMethodName,
-    RpcType,
-    RpcRemoteExecutionMode,
     type RpcConnection,
+    type RpcSerializationFormat,
     type WebSocketLike,
     type RpcServiceDef,
     type RpcMethodDef,
@@ -55,7 +54,6 @@ import {
     type RpcPeer,
     type RpcMessage,
     type RpcCallOptions,
-    getServiceMeta,
     getMethodsMeta,
 } from '@actuallab/rpc';
 import {
@@ -90,6 +88,20 @@ class FusionSystemCallHandler extends RpcSystemCallHandler {
     }
 }
 
+/** Sends the Fusion $sys-c.Invalidate system call — mirrors .NET's RpcComputeSystemCallSender. */
+class FusionSystemCallSender extends RpcSystemCallSender {
+    invalidate(
+        conn: RpcConnection,
+        format: RpcSerializationFormat,
+        relatedId: number
+    ): void {
+        this._send(conn, format, {
+            Method: FUSION_INVALIDATE_METHOD,
+            RelatedId: relatedId,
+        });
+    }
+}
+
 /** Creates a compute service definition — all methods default to FUSION_CALL_TYPE_ID. */
 export function defineComputeService(
     name: string,
@@ -107,11 +119,17 @@ export function defineComputeService(
 
 /** Central coordinator for Fusion + RPC — manages compute services, invalidation wiring. */
 export class FusionHub extends RpcHub {
+    declare readonly systemCallSender: FusionSystemCallSender;
+
     constructor(hubId?: string) {
         super(hubId);
         this.systemCallHandler = new FusionSystemCallHandler();
         // Register Fusion-specific system call for compact format hash resolution
         this.registry.register(FUSION_INVALIDATE_METHOD);
+    }
+
+    protected override _createSystemCallSender(): FusionSystemCallSender {
+        return new FusionSystemCallSender();
     }
 
     /** Accept an incoming WebSocket and create a server peer. */
@@ -131,36 +149,28 @@ export class FusionHub extends RpcHub {
         return peer;
     }
 
-    /** Override to apply FUSION_CALL_TYPE_ID for compute methods. */
+    /** Delegate to the base builder, then patch callTypeId for compute methods —
+     *  keeps the base's noWait / remoteExecutionMode handling instead of drifting. */
     protected override _buildServiceDef(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cls: abstract new (...args: any[]) => any
     ): RpcServiceDef {
-        const svcMeta = getServiceMeta(cls);
-        if (svcMeta === undefined)
-            throw new Error('Contract class missing @rpcService metadata');
-
+        const def = super._buildServiceDef(cls);
         const methodsMeta = getMethodsMeta(cls) ?? {};
         const methods = new Map<string, RpcMethodDef>();
-
-        for (const [name, meta] of Object.entries(methodsMeta)) {
-            const wireArgCount = meta.argCount + 1;
-            const mapKey = `${name}:${wireArgCount}`;
-            methods.set(mapKey, {
-                name,
-                serviceName: svcMeta.name,
-                argCount: meta.argCount,
-                wireArgCount,
-                callTypeId:
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-                    (meta as any).compute === true ? FUSION_CALL_TYPE_ID : 0,
-                stream: meta.returns === RpcType.stream,
-                noWait: meta.returns === RpcType.noWait,
-                remoteExecutionMode: RpcRemoteExecutionMode.Default,
-            });
+        for (const [mapKey, methodDef] of def.methods) {
+            const isCompute =
+                (methodsMeta[methodDef.name] as { compute?: boolean } | undefined)
+                    ?.compute === true;
+            methods.set(
+                mapKey,
+                isCompute
+                    ? { ...methodDef, callTypeId: FUSION_CALL_TYPE_ID }
+                    : methodDef
+            );
         }
 
-        return { name: svcMeta.name, methods };
+        return { name: def.name, methods };
     }
 
     protected override _wrapServerMethod(
@@ -181,14 +191,27 @@ export class FusionHub extends RpcHub {
 
             const computed = await cf.invoke(impl, cleanArgs);
 
-            // Wire invalidation → send $sys-c.Invalidate to the client
-            if (context !== undefined) {
-                computed.onInvalidated(() => {
-                    const msg = serializeMessage({
-                        Method: FUSION_INVALIDATE_METHOD,
-                        RelatedId: context.callId,
-                    });
-                    context.connection.send(msg);
+            // IsRegularCall parity (F7): a Regular call to a compute method returns
+            // the result immediately, with no invalidation tracking.
+            if (context?.callType === FUSION_CALL_TYPE_ID) {
+                const { peer, callId } = context;
+                // ProcessStage2 parity (F1): whenInvalidated() resolves immediately
+                // for an already-invalidated computed, so an invalidation landing
+                // during computation still produces the send.
+                void computed.whenInvalidated().then(() => {
+                    // C# sends the result (ProcessStage1Plus) before the
+                    // invalidation (ProcessStage2). Here the dispatch loop sends
+                    // $sys.Ok after this wrapper returns, so defer past that turn —
+                    // a client drops an Invalidate that precedes its result.
+                    setTimeout(() => {
+                        const conn = peer.connection;
+                        if (conn !== undefined)
+                            this.systemCallSender.invalidate(
+                                conn,
+                                peer.serializationFormat,
+                                callId
+                            );
+                    }, 0);
                 });
             }
 

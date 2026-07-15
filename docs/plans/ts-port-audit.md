@@ -796,6 +796,8 @@ Confidence: confirmed by full source trace. (Second-pass finding.)
 
 ### F1. Server→client invalidation is wired with a one-shot `onInvalidated.add()` that misses already-invalidated computeds → client stays stale forever
 
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc1; `whenInvalidated().then(send)` with the send deferred one macrotask to preserve C#'s result-before-invalidation ordering — verified against the synchronous send path).
+
 Confidence: confirmed (re-verified).
 
 - TS: `FusionHub._wrapServerMethod` awaits `cf.invoke(...)`, and only *then* subscribes: `computed.onInvalidated.add(() => ... send($sys-c.Invalidate))` (`fusion-hub.ts:182-193`). `EventHandlerSet` has no replay, and `invalidate()` clears its handlers (K12). If the computed is invalidated *during* computation (mutation while a slow async server method runs), the pending-invalidate path re-invalidates **inside** `cf.invoke` before it resolves — the handler is added to a dead event set and **`$sys-c.Invalidate` is never sent**. The same hole exists for the microtask gap between `cf.invoke` resolving and `.add()` executing.
@@ -857,6 +859,8 @@ Confidence: confirmed (deliberate, test-codified deviation — but with a wastef
 
 ### F7. TS server ignores the message's `CallType` — regular calls to compute methods still get invalidation tracking
 
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc1).
+
 Confidence: confirmed.
 
 - TS: `_wrapServerMethod` decides by the server-side `methodDef.callTypeId` only (`fusion-hub.ts:171`); `createRpcClient` produces exactly such regular calls (plain `RpcOutboundCall`, `removeOnOk = true` — `rpc-client.ts:72-90`).
@@ -877,12 +881,16 @@ Confidence: confirmed.
 
 ### F9. Server-side invalidation send bypasses the peer's serialization format and `systemCallSender` (low)
 
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc1; `FusionSystemCallSender.invalidate()` resolving connection + format at fire time).
+
 Confidence: confirmed code path; impact plausible-low. `_wrapServerMethod` hand-rolls `serializeMessage(...)` — JSON-only (`rpc-serialization.ts:31-41`) — and writes to the captured `context.connection` (`fusion-hub.ts:186-192`), while all other responses go through `hub.systemCallSender` with `peer.serializationFormat`. On a msgpack connection the invalidation goes out as a JSON text frame; TS clients tolerate mixed frames, a .NET client would not. Also uses a possibly-dead captured connection.
 
 - **Recommended:** add an `invalidate()` to the (Fusion-extended) system-call sender, sending via the peer's *current* connection and serialization format — `RpcComputeSystemCallSender.Invalidate` parity. Natural companion to F1's fix, same code.
 - **Alternative:** keep the inline send but resolve the connection at send time and use the peer's format. Same effect, less structure; fine if F1 is fixed the minimal way.
 
 ### F10. `FusionHub._buildServiceDef` drifted from the base implementation (low)
+
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc1; delegates to the base, patches only `callTypeId`).
 
 Confidence: confirmed. The override hardcodes `remoteExecutionMode: Default` and skips the base's `noWait → mode 0` and `meta.remoteExecutionMode` honoring (`fusion-hub.ts:146-160` vs `rpc-hub.ts:244-259`). A decorator-declared custom `remoteExecutionMode` is silently ignored when registered through a `FusionHub`.
 

@@ -62,7 +62,7 @@ export class RpcHub {
     readonly hubId: string;
     readonly peers = new Map<string, RpcPeer>();
     readonly serviceHost: RpcServiceHost;
-    readonly systemCallSender = new RpcSystemCallSender();
+    readonly systemCallSender: RpcSystemCallSender;
     systemCallHandler: RpcSystemCallHandler = new RpcSystemCallHandler();
 
     /** Method registry for compact format hash ↔ name resolution.
@@ -92,6 +92,7 @@ export class RpcHub {
     constructor(hubId?: string) {
         this.hubId = hubId ?? crypto.randomUUID();
         this.serviceHost = new RpcServiceHost();
+        this.systemCallSender = this._createSystemCallSender();
         this.systemCallSender.registry = this.registry;
         // Pre-register system call method names for compact format hash resolution
         for (const methodName of Object.values(RpcSystemCalls)) {
@@ -228,6 +229,12 @@ export class RpcHub {
     close(): void {
         for (const peer of this.peers.values()) peer.close();
         this.peers.clear();
+    }
+
+    /** Create the hub's system-call sender. Override in FusionHub to add
+     *  Fusion-specific system calls (e.g. $sys-c.Invalidate). */
+    protected _createSystemCallSender(): RpcSystemCallSender {
+        return new RpcSystemCallSender();
     }
 
     /** Build an RpcServiceDef from decorator metadata on a contract class. Override in FusionHub for compute support. */

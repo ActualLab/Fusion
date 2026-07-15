@@ -587,8 +587,10 @@ export abstract class RpcPeer {
                         ? {
                             __rpcDispatch: true as const,
                             callId: relatedId,
+                            callType: message.CallType ?? 0,
                             connection: this._connection,
                             signal: call?.signal,
+                            peer: this,
                         }
                         : undefined;
                 const result = await serviceHost.dispatch(method, args, context);

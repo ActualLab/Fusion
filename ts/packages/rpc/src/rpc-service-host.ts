@@ -32,18 +32,22 @@ import type { RpcMethodDef } from './rpc-service-def.js';
 import { wireMethodName } from './rpc-service-def.js';
 import type { RpcServiceDef } from './rpc-service-def.js';
 import type { RpcConnection } from './rpc-connection.js';
+import type { RpcPeer } from './rpc-peer.js';
 
 const { warnLog } = getLogs('RpcServiceHost');
 
 export type RpcServiceImpl = Record<string, ((...args: unknown[]) => unknown) | undefined>;
 
-/** Context passed to service dispatch — carries callId and connection for compute tracking. */
+/** Context passed to service dispatch — carries callId, the inbound CallType,
+ *  the connection, and the peer for compute-call invalidation tracking. */
 export interface RpcDispatchContext {
     __rpcDispatch: true;
     callId: number;
+    callType: number;
     connection: RpcConnection;
     /** Aborted when the inbound call is cancelled via `$sys.Cancel` (R17). */
     signal?: AbortSignal;
+    peer: RpcPeer;
 }
 
 /** Dispatches inbound RPC calls to registered service implementations. */

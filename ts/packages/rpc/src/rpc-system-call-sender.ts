@@ -86,7 +86,7 @@ export class RpcSystemCallSender {
 
     registry?: RpcMethodRegistry;
 
-    private _send(
+    protected _send(
         conn: RpcConnection,
         format: RpcSerializationFormat,
         envelope: RpcMessage,
