@@ -35,7 +35,8 @@ public record MemberwiseCopier<[
         }
         var properties = Type.GetProperties(PropertyBindingFlags & PropertyOrFieldBindingFlagsMask);
         foreach (var property in properties) {
-            if (!(Filter?.Invoke(property) ?? true))
+            if (!(Filter?.Invoke(property)
+                ?? (property.CanRead && property.CanWrite && property.GetIndexParameters().Length == 0)))
                 continue;
             property.SetValue(oTarget, property.GetValue(oSource));
         }

@@ -393,7 +393,7 @@ Confidence: **Confirmed** by source inspection.
 
 ### CORE22. `Base64UrlEncoder` uses the wrong RFC alphabet and accepts truncated Unicode input
 
-Status: **open — safe to implement the recommended fix**.
+Status: **completed**.
 
 Confidence: **Confirmed** by focused regression tests.
 
@@ -402,30 +402,33 @@ Confidence: **Confirmed** by focused regression tests.
 - Impact: tokens are incompatible with standard Base64URL implementations, and noncanonical Unicode spellings can bypass string-level allowlists, cache keys, or validation while decoding to accepted bytes.
 - Usage scan: all non-test C# projects were searched. Direct calls exist only in `GuidExt` and `ByteString`. The sole in-repository runtime consumer is `RpcClientPeer.ClientId`, which is passed through HTTP/WebSocket query strings or the loopback connection and used as an opaque server-peer identifier without decoding. `GuidExt.FromBase64Url` and both `ByteString` Base64URL wrappers have no non-test in-repository callers, so the decoder has no current internal production path.
 - Safety verdict: implementing the recommended standards-correct fix is safe based on actual usage across the C# projects. The RPC client-ID text will change for affected GUIDs, but each ID is generated for a new peer and all server paths treat it opaquely; no persisted or decoded in-repository contract depends on the current swapped alphabet.
+- Resolution: corrected both alphabet mappings and made decoding reject non-ASCII and standard-Base64 alphabet characters. Regression tests cover the RFC 4648 spelling, the inverse decode, non-ASCII input, and `+`/`/` rejection.
 - **Recommended:** swap the two alphabet mappings in both directions and reject every input character outside the allowed ASCII Base64URL alphabet (plus only explicitly supported padding).
 - **Alternative:** delegate to a runtime Base64URL implementation on supported targets and retain a corrected compatibility implementation for older targets.
 
 ### CORE23. `TypeRef.TypeName` throws for `None` and unqualified type names
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by focused regression test.
 
 - Source: `src/ActualLab.Core/Reflection/TypeRef.cs:38-41` slices `AssemblyQualifiedName` at the first comma without handling `IndexOf` returning -1.
 - Failure: `TypeRef.None.TypeName` throws `ArgumentOutOfRangeException`; the same happens for a caller-created `TypeRef` containing a type name without an assembly suffix.
 - Impact: default-value-safe metadata code fails during logging, diagnostics, or optional type decoration.
+- Resolution: `TypeName` now returns the full stored name when it has no assembly separator. Regression tests cover both `TypeRef.None` and an unqualified name.
 - **Recommended:** return the whole value when no comma exists, naturally producing an empty name for `None`.
 - **Alternative:** reject non-assembly-qualified constructor input and special-case only `None`; narrower but less tolerant than the current public string conversion suggests.
 
 ### CORE24. `MemberwiseCopier` attempts to write readonly properties and invoke indexers without arguments
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by two focused regression tests.
 
 - Source: `src/ActualLab.Core/Reflection/MemberwiseCopier.cs:35-41` enumerates all selected properties and blindly calls parameterless `GetValue`/`SetValue`.
 - Failure: an ordinary get-only property throws `ArgumentException` because no setter exists; an indexer throws `TargetParameterCountException`. Either aborts copying before later valid members are processed.
 - Impact: the default public copier fails on common .NET object shapes and can leave targets partially updated.
+- Resolution: the default policy now requires readable, writable, non-indexed properties while preserving an explicit filter's ability to opt into another policy. Regression tests cover readonly and indexed properties.
 - **Recommended:** include only non-indexed properties with both readable and writable accessors unless a caller's explicit filter opts into a different policy.
 - **Alternative:** expose separate configurable read/write/index policies; more flexible but unnecessary for restoring safe default behavior.
 
@@ -440,7 +443,7 @@ Confidence: **Ignored by maintainer direction**.
 
 ### CORE26. Newtonsoft byte deserialization always claims the entire buffer
 
-Status: **open — implementation trial requires maintainer review**.
+Status: **implemented — awaiting maintainer review**.
 
 Confidence: **Confirmed** by focused concatenated-value test.
 
@@ -448,18 +451,22 @@ Confidence: **Confirmed** by focused concatenated-value test.
 - Failure: reading the first value from `1\n2` reports all three bytes consumed, so the second serialized value becomes unreachable through the `IByteSerializer` framing contract.
 - Impact: composed/framed serializers skip trailing values or frames and cannot safely use the reported advancement.
 - Maintainer constraint: first try the consumed-length fix, but the implementation must remain efficient and must be reviewed by the maintainer before acceptance. Avoid copying, per-byte rescanning, and allocation-heavy position tracking; benchmark the chosen path when its cost is not self-evident.
+- Trial implementation: a private UTF-8 `TextReader` decodes the input memory directly into the buffer supplied by `JsonTextReader`. It retains only the latest refill's byte and line origin, then maps `JsonTextReader.LineNumber`/`LinePosition` back to the exact byte offset. It does not copy the input, rescan input bytes, or allocate a position map. Newline-free chunks and final-position lookups use vectorized `IndexOfAny` fast paths; only the latest bounded character chunk is inspected when line breaks require it.
+- Measurement: a local Release-mode, warmed microcheck on .NET 10 compared the trial with the previous `StreamReader` path. A small object measured about 1.46 us and 2,752 B per call versus 1.51 us and 6,000 B; a 5 KB JSON string measured about 7.27 us and 41,176 B versus 7.64 us and 44,424 B. These are directional local measurements rather than a committed BenchmarkDotNet suite, but they show no observed throughput or allocation regression.
+- Tests: focused regressions cover `1\n2`, UTF-8 content followed by CRLF and another value, and a 5,000-character first value spanning multiple reader refills. The implementation remains subject to the requested maintainer efficiency review.
 - **Recommended:** track the actual UTF-8 byte position consumed by the JSON reader, accounting for `StreamReader` buffering, or implement an efficient span/sequence-aware reader.
 - **Fallback if the implementation is rejected:** preserve `readLength = data.Length` and explicitly document that this overload consumes one complete buffer rather than supporting concatenated/framed values. Rejecting trailing non-whitespace data remains an optional stricter variant of that documented contract.
 
 ### CORE27. `Sampler.ToConcurrent` divides by zero at one shard and wastes the last shard otherwise
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by focused test and source analysis.
 
 - Source: `src/ActualLab.Core/Diagnostics/Samplers.cs:35-51` rounds concurrency to a power of two, sets `concurrencyMask = concurrencyLevel - 1`, then indexes with `threadId % concurrencyMask`.
 - Failure: level 1 performs modulo zero. At every larger level, indices range only from zero through `concurrencyLevel - 2`, so the final duplicated sampler is never selected; negative managed thread IDs would also be unsafe if the runtime ever supplied one.
 - Impact: the minimum explicit configuration crashes, and larger configurations provide less concurrency isolation than requested.
+- Resolution: indexing now uses `Environment.CurrentManagedThreadId & concurrencyMask`, matching the power-of-two array and supporting one shard. The focused one-shard regression now passes.
 - **Recommended:** use `threadId & concurrencyMask` for the power-of-two array.
 - **Alternative:** use positive modulo by `concurrencyLevel`; clearer for arbitrary sizes but gives up the existing power-of-two optimization.
 

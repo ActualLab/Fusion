@@ -37,8 +37,13 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
     public string AssemblyQualifiedName => field ?? "";
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public string TypeName
-        => AssemblyQualifiedName[..AssemblyQualifiedName.IndexOf(',', StringComparison.Ordinal)];
+    public string TypeName {
+        get {
+            var name = AssemblyQualifiedName;
+            var separatorIndex = name.IndexOf(',', StringComparison.Ordinal);
+            return separatorIndex < 0 ? name : name[..separatorIndex];
+        }
+    }
 
     public TypeRef(Type type)
         : this(type.AssemblyQualifiedName!) { }

@@ -30,10 +30,10 @@ public static class Base64UrlEncoder
             var c = (char)bytes[i];
             switch (c) {
             case ForwardSlashChar:
-                c = DashChar;
+                c = UnderscoreChar;
                 break;
             case PlusChar:
-                c = UnderscoreChar;
+                c = DashChar;
                 break;
             }
             chars[i] = c;
@@ -60,11 +60,18 @@ public static class Base64UrlEncoder
             var c = source[i];
             switch (c) {
             case DashChar:
-                c = ForwardSlashChar;
-                break;
-            case UnderscoreChar:
                 c = PlusChar;
                 break;
+            case UnderscoreChar:
+                c = ForwardSlashChar;
+                break;
+            case >= 'A' and <= 'Z':
+            case >= 'a' and <= 'z':
+            case >= '0' and <= '9':
+            case EqualsChar:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(source));
             }
             utf8[i] = (byte)c;
         }

@@ -45,7 +45,7 @@ public sealed record Sampler(
         var concurrencyMask = concurrencyLevel - 1;
         var name = $"{ToString()}.{nameof(ToConcurrent)}({concurrencyLevel})";
         var sampler = new Sampler(name, Probability, () => {
-            var sampler = samplers[Environment.CurrentManagedThreadId % concurrencyMask];
+            var sampler = samplers[Environment.CurrentManagedThreadId & concurrencyMask];
             return sampler.Next();
         }, () => ToConcurrent());
 

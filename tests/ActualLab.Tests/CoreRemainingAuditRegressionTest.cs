@@ -49,8 +49,20 @@ public class CoreRemainingAuditRegressionTest
     }
 
     [Fact]
+    public void Base64UrlDecoderShouldRejectStandardBase64Alphabet()
+    {
+        Func<byte[]> action = () => Base64UrlEncoder.Decode("+/8").ToArray();
+
+        action.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
     public void EmptyTypeRefShouldHaveAnEmptyTypeName()
         => TypeRef.None.TypeName.Should().BeEmpty();
+
+    [Fact]
+    public void UnqualifiedTypeRefShouldKeepItsWholeTypeName()
+        => new TypeRef("Namespace.Type").TypeName.Should().Be("Namespace.Type");
 
     [Fact]
     public void MemberwiseCopierShouldSkipReadOnlyProperties()
@@ -115,6 +127,30 @@ public class CoreRemainingAuditRegressionTest
         NewtonsoftJsonSerializer.Default.Read(data, typeof(int), out var readLength).Should().Be(1);
         data = data[readLength..];
         NewtonsoftJsonSerializer.Default.Read(data, typeof(int), out _).Should().Be(2);
+    }
+
+    [Fact]
+    public void NewtonsoftByteReaderShouldTrackUtf8AndLineBreaks()
+    {
+        const string json = "{\"text\":\"é\"}";
+        var data = Encoding.UTF8.GetBytes(json + "\r\n2").AsMemory();
+
+        NewtonsoftJsonSerializer.Default.Read(data, typeof(Dictionary<string, string>), out var readLength);
+
+        readLength.Should().Be(Encoding.UTF8.GetByteCount(json));
+        NewtonsoftJsonSerializer.Default.Read(data[readLength..], typeof(int), out _).Should().Be(2);
+    }
+
+    [Fact]
+    public void NewtonsoftByteReaderShouldTrackValuesLargerThanItsBuffer()
+    {
+        var json = $"\"{new string('a', 5_000)}\"";
+        var data = Encoding.UTF8.GetBytes(json + "\n2").AsMemory();
+
+        NewtonsoftJsonSerializer.Default.Read(data, typeof(string), out var readLength);
+
+        readLength.Should().Be(Encoding.UTF8.GetByteCount(json));
+        NewtonsoftJsonSerializer.Default.Read(data[readLength..], typeof(int), out _).Should().Be(2);
     }
 
 #if !NET7_0_OR_GREATER
