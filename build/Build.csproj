@@ -15,6 +15,7 @@
     <PackageReference Include="Bullseye" />
     <PackageReference Include="CliWrap" />
     <PackageReference Include="ActualLab.Core" PrivateAssets="all" />
+    <PackageReference Include="MessagePack" VersionOverride="3.1.8" />
     <PackageReference Include="System.CommandLine.DragonFruit" />
   </ItemGroup>
 
