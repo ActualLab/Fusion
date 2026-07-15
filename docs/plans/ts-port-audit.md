@@ -336,6 +336,8 @@ Confidence: confirmed.
 
 ### S8. No retry backoff: `UpdateDelayer` has no `retryCount`, no `RetryDelays`, no transient-error tracking
 
+Status: **closed** — fixed 2026-07-15 (batch stateui; delayer signature `(retryCount, abortSignal?)`, `RetryDelaySeq.exp(1 s, 60 s)` backoff, 32 ms min-delay floor incl. `FixedDelayer.get(0)`; all errors treated as transient — TS has no transiency classification).
+
 Confidence: confirmed.
 
 - TS: `UpdateDelayer` is `(abortSignal?) => Promise<void>` (`update-delayer.ts:2`) — the delay cannot depend on failure history. No `StateSnapshot`, so no `RetryCount`/`ErrorCount`. Error recovery relies solely on the global 1 s auto-invalidation (K5) — a constant ~1 s retry loop forever.
@@ -346,6 +348,8 @@ Confidence: confirmed.
 
 ### S9. `UIActionTracker` has no post-action instant-update window; the 50 ms buffer is ineffective and adds latency
 
+Status: **closed** — fixed 2026-07-15 (batch stateui; 300 ms `instantUpdatePeriod`, the 50 ms sleep removed).
+
 Confidence: confirmed.
 
 - TS: `ui-action-tracker.ts:12-14` — `isActive` is true only while `_activeCount > 0`. In `run`/`call` (`ui-action-tracker.ts:27-31, 45-49`) the `finally` decrements first, then waits 50 ms, then triggers `changed`: (a) during the 50 ms "buffer", `isActive` is already false, so a `UIUpdateDelayer` consulted when the post-command invalidation arrives waits the full delay — the buffer buys nothing; (b) `await uiActions.call(fn)` returns 50 ms late.
@@ -355,6 +359,8 @@ Confidence: confirmed.
 - **Alternative:** keep the `isActive`-only model but move the 50 ms wait *before* the decrement, restoring the buffer's intent. Inferior: still adds latency to every command caller and 50 ms is far tighter than the C# window.
 
 ### S10. `UIUpdateDelayer` skips the delay entirely (no `MinDelay` floor) while a UI action is active — hot-loop risk
+
+Status: **closed** — fixed 2026-07-15 (batch stateui; minDelay measured from delay start on every path).
 
 Confidence: confirmed.
 
@@ -430,12 +436,16 @@ Confidence: confirmed. TS leaves `_computed` invalidated until the next `update(
 
 ### S17. `useMutableState` render throws if the state holds an error result
 
+Status: **closed** — fixed 2026-07-15 (batch stateui; returns `{ value, error, set, state }`).
+
 Confidence: confirmed. `use-mutable-state.ts:41` returns `state.value`, whose getter throws on error output — and the setter accepts `Result<T>`, so `setter(errorResult(e))` is a supported call. Next render of every component using the state throws, unmounting the tree absent an error boundary.
 
 - **Recommended:** return `{ value, error, set }` (the shape `useComputedState` already uses) so error results render instead of throwing.
 - **Alternative:** narrow the setter to plain values (no `Result`) and document that errors can't be stored via this hook. Smaller, but loses parity with `MutableState.set`'s contract.
 
 ### S18. `UIActionTracker.errors` grows unbounded with no dedup
+
+Status: **closed** — fixed 2026-07-15 (batch stateui; 1 s name+message recency dedup + 100-entry cap).
 
 Confidence: confirmed. Every failure is pushed to a plain array; only manual `dismissError` removes entries (`ui-action-tracker.ts:10, 26, 43`). C# dedups same-type/same-message failures within `MaxDuplicateRecency` (1 s) (`UIActionFailureTracker.cs:64-98`). Combined with S8's fixed 1 s retry, an error-toast UI floods and memory grows for the session's lifetime.
 

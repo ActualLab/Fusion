@@ -75,6 +75,7 @@ export class ComputedState<T> extends State<T> {
 
     private async _updateCycle(): Promise<void> {
         const disposeSignal = this._disposeController.signal;
+        let retryCount = 0;
         try {
             while (!disposeSignal.aborted) {
                 // Compute
@@ -99,6 +100,7 @@ export class ComputedState<T> extends State<T> {
                     return; // Disposed mid-computation — publish nothing, terminate the cycle.
 
                 this._update(computed, output);
+                retryCount = output.hasError ? retryCount + 1 : 0;
                 if (this._cancelDelaySource.isCompleted)
                     this._cancelDelaySource = new PromiseSource<void>();
 
@@ -109,9 +111,9 @@ export class ComputedState<T> extends State<T> {
                     return; // Cancelled via dispose
                 }
 
-                // Wait for delay (cancellable by renewer)
+                // Wait for delay (cancellable by renewer); retryCount grows the backoff (S8).
                 await Promise.race([
-                    this._updateDelayer(disposeSignal),
+                    this._updateDelayer(retryCount, disposeSignal),
                     this._cancelDelaySource,
                 ]);
             }

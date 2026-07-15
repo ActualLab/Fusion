@@ -2,13 +2,18 @@ import { useEffect, useReducer, useRef } from 'react';
 import { MutableState } from '@actuallab/fusion';
 import type { Result } from '@actuallab/core';
 
+export interface UseMutableStateResult<T> {
+    value: T | undefined;
+    error: unknown;
+    set: (value: Result<T> | T) => void;
+    state: MutableState<T>;
+}
+
 /**
  * React hook wrapping Fusion's MutableState.
- * Returns [value, setter, state] — re-renders on updates.
+ * Returns { value, error, set, state } so an error result renders instead of throwing.
  */
-export function useMutableState<T>(
-    initial: T
-): [T, (value: Result<T> | T) => void, MutableState<T>] {
+export function useMutableState<T>(initial: T): UseMutableStateResult<T> {
     const [, forceRender] = useReducer(c => c + 1, 0);
     const stateRef = useRef<MutableState<T> | null>(null);
 
@@ -39,5 +44,10 @@ export function useMutableState<T>(
         };
     }, [state]);
 
-    return [state.value, v => state.set(v), state];
+    return {
+        value: state.valueOrUndefined,
+        error: state.error,
+        set: v => state.set(v),
+        state,
+    };
 }
