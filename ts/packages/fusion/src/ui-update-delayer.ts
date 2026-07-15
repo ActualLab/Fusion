@@ -1,3 +1,4 @@
+import { awaitWithCleanup } from '@actuallab/core';
 import { uiActions } from './ui-action-tracker.js';
 import { FixedDelayer, type UpdateDelayer } from './update-delayer.js';
 
@@ -14,36 +15,16 @@ export class UIUpdateDelayer {
         delayer = (abortSignal?: AbortSignal) => {
             if (t.isActive) return Promise.resolve();
 
-            return new Promise<void>((resolve, reject) => {
-                const timer = setTimeout(resolve, ms);
+            return awaitWithCleanup(abortSignal, 'resolve', (complete, addCleanup) => {
+                const timer = setTimeout(complete, ms);
+                addCleanup(() => clearTimeout(timer));
 
-                // Cancel delay when tracker becomes active
+                // Cancel the delay when the tracker becomes active
                 const onChanged = () => {
-                    if (t.isActive) {
-                        clearTimeout(timer);
-                        t.changed.remove(onChanged);
-                        resolve();
-                    }
+                    if (t.isActive) complete();
                 };
                 t.changed.add(onChanged);
-
-                if (abortSignal !== undefined) {
-                    if (abortSignal.aborted) {
-                        clearTimeout(timer);
-                        t.changed.remove(onChanged);
-                        reject(abortSignal.reason instanceof Error ? abortSignal.reason : new Error(String(abortSignal.reason)));
-                        return;
-                    }
-                    abortSignal.addEventListener(
-                        'abort',
-                        () => {
-                            clearTimeout(timer);
-                            t.changed.remove(onChanged);
-                            reject(abortSignal.reason instanceof Error ? abortSignal.reason : new Error(String(abortSignal.reason)));
-                        },
-                        { once: true }
-                    );
-                }
+                addCleanup(() => t.changed.remove(onChanged));
             });
         };
         UIUpdateDelayer._cache.set(ms, delayer);

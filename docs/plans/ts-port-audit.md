@@ -286,6 +286,8 @@ Confidence: confirmed.
 
 ### S4. Unbounded listener/handler accumulation in update-delayer waits
 
+Status: **closed** — fixed 2026-07-15 (batch statelife; `awaitWithCleanup` helper in `@actuallab/core`, both delayers rewritten on it). K10's `whenInvalidated` was fixed separately (kernel2) and could be refactored onto the helper later.
+
 Confidence: confirmed. (The `whenInvalidated` half of this leak is K10.)
 
 - TS: `ui-update-delayer.ts:20-28` — when the delay timer fires normally, `t.changed.remove(onChanged)` is never called; the handler is removed only the next time a UI action becomes active. In an app with frequent invalidations and rare UI actions, `uiActions.changed` grows without bound. Same for its abort listener (`ui-update-delayer.ts:37-45`) and the >10 s branch of `FixedDelayer` (`update-delayer.ts:27-44`).
@@ -295,6 +297,8 @@ Confidence: confirmed. (The `whenInvalidated` half of this leak is K10.)
 - **Alternative:** per-site manual cleanup (remove `changed` handlers and abort listeners on the success path of each wait). Same end state, three copies of the same fiddly pattern.
 
 ### S5. Disposal mid-computation: one post-dispose update is published, then the update cycle hangs; `update()`/`use()` callers hang forever
+
+Status: **closed** — fixed 2026-07-15 (batch statelife).
 
 Confidence: confirmed.
 
@@ -356,6 +360,8 @@ Confidence: confirmed.
 
 ### S11. `whenUpdated()` is state-level and lossy; never settles on dispose
 
+Status: **closed** — fixed 2026-07-15 (batch statelife; `whenUpdated(sinceIndex = updateIndex)` versioned wait, rejects on dispose).
+
 Confidence: confirmed.
 
 - TS: `state.ts:74-76, 96-97` — one shared `PromiseSource` resolved-and-nulled per update. A consumer looping `await state.whenUpdated()` misses updates landing between resolution and re-subscription. After `dispose()`, pending/future `whenUpdated()`/`whenFirstTimeUpdated()` promises never settle.
@@ -387,6 +393,8 @@ Confidence: confirmed.
 - **Alternative:** null-guard every inherited member (`use`, `update`, `recompute`, `whenInvalidated`, …). Spreads special-casing through the base class; rejected-leaning.
 
 ### S14. `Promise.race` losers in `_updateCycle` produce unhandled promise rejections
+
+Status: **closed** — fixed 2026-07-15 (batch statelife; delayers resolve on abort).
 
 Confidence: confirmed.
 

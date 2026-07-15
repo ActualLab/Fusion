@@ -36,9 +36,9 @@ export class ComputedState<T> extends State<T> {
         this._updateDelayer = options?.updateDelayer ?? defaultUpdateDelayer;
         this._disposeController = new AbortController();
         this._renewer = async () => {
-            const whenUpdated = this.whenUpdated();
+            const sinceIndex = this._updateIndex;
             this._cancelDelaySource.resolve(undefined);
-            await whenUpdated;
+            await this.whenUpdated(sinceIndex);
             return this._computed;
         };
 
@@ -65,12 +65,12 @@ export class ComputedState<T> extends State<T> {
         return this._computed.valueOrUndefined ?? this._lastNonErrorValue;
     }
 
-    get isDisposed(): boolean {
-        return this._disposeController.signal.aborted;
-    }
-
     dispose(): void {
-        if (!this.isDisposed) this._disposeController.abort();
+        if (this.isDisposed)
+            return;
+
+        this._onDisposed();
+        this._disposeController.abort();
     }
 
     private async _updateCycle(): Promise<void> {
@@ -95,6 +95,9 @@ export class ComputedState<T> extends State<T> {
                 } catch (e) {
                     output = errorResult(e);
                 }
+                if (this.isDisposed)
+                    return; // Disposed mid-computation — publish nothing, terminate the cycle.
+
                 this._update(computed, output);
                 if (this._cancelDelaySource.isCompleted)
                     this._cancelDelaySource = new PromiseSource<void>();

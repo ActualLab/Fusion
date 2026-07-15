@@ -21,8 +21,9 @@ export function useMutableState<T>(
 
         const subscribe = async () => {
             while (!cancelled) {
+                const sinceIndex = state.updateIndex;
                 try {
-                    await state.whenUpdated();
+                    await state.whenUpdated(sinceIndex);
                 } catch {
                     return;
                 }

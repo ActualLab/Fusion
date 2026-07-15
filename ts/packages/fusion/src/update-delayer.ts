@@ -1,3 +1,5 @@
+import { awaitWithCleanup } from '@actuallab/core';
+
 /** Controls when state re-computation happens after invalidation. */
 export type UpdateDelayer = (abortSignal?: AbortSignal) => Promise<void>;
 
@@ -22,30 +24,14 @@ export class FixedDelayer {
 
     constructor(ms: number) {
         this.ms = ms;
-        this.delay =
-            ms > 10_000
-                ? (abortSignal?: AbortSignal) =>
-                    new Promise<void>((resolve, reject) => {
-                        const timer = setTimeout(resolve, this.ms);
-                        if (abortSignal === undefined) return;
-                        if (abortSignal.aborted) {
-                            clearTimeout(timer);
-                            reject(abortSignal.reason instanceof Error ? abortSignal.reason : new Error(String(abortSignal.reason)));
-                            return;
-                        }
-                        abortSignal.addEventListener(
-                            'abort',
-                            () => {
-                                clearTimeout(timer);
-                                reject(abortSignal.reason instanceof Error ? abortSignal.reason : new Error(String(abortSignal.reason)));
-                            },
-                            { once: true }
-                        );
-                    })
-                : () =>
-                    new Promise<void>(resolve =>
-                        setTimeout(resolve, this.ms)
-                    );
+        // Abort stops the wait early (resolves, never rejects) so a disposed
+        // ComputedState's update loop terminates promptly and the race loser
+        // carries no unhandled rejection (C# SuppressCancellationAwait spirit).
+        this.delay = (abortSignal?: AbortSignal) =>
+            awaitWithCleanup(abortSignal, 'resolve', (complete, addCleanup) => {
+                const timer = setTimeout(complete, this.ms);
+                addCleanup(() => clearTimeout(timer));
+            });
     }
 }
 

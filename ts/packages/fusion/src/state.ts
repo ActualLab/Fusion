@@ -13,9 +13,14 @@ export abstract class State<T> implements IResult<T> {
     protected _updateIndex = 0;
     protected _lastNonErrorValue: T | undefined;
     private _whenUpdatedSource: PromiseSource<void> | null = null;
+    private _isDisposed = false;
 
     get updateIndex(): number {
         return this._updateIndex;
+    }
+
+    get isDisposed(): boolean {
+        return this._isDisposed;
     }
 
     get lastNonErrorValue(): T | undefined {
@@ -71,12 +76,19 @@ export abstract class State<T> implements IResult<T> {
         return this._computed.whenInvalidated();
     }
 
-    whenUpdated(): Promise<void> {
+    // Versioned wait: resolves at once when a newer generation than sinceIndex
+    // already landed (no lost wakeup), rejects once disposed (C# StateSnapshot.WhenUpdated).
+    whenUpdated(sinceIndex: number = this._updateIndex): Promise<void> {
+        if (this._isDisposed)
+            return Promise.reject(State._disposedError());
+        if (this._updateIndex > sinceIndex)
+            return resolvedVoidPromise;
+
         return (this._whenUpdatedSource ??= new PromiseSource<void>());
     }
 
     whenFirstTimeUpdated(): Promise<void> {
-        return this._updateIndex > 0 ? resolvedVoidPromise : this.whenUpdated();
+        return this.whenUpdated(0);
     }
 
     protected _initialize(
@@ -103,5 +115,18 @@ export abstract class State<T> implements IResult<T> {
         this._updateIndex++;
         this._whenUpdatedSource?.resolve(undefined);
         this._whenUpdatedSource = null;
+    }
+
+    protected _onDisposed(): void {
+        if (this._isDisposed)
+            return;
+
+        this._isDisposed = true;
+        this._whenUpdatedSource?.reject(State._disposedError());
+        this._whenUpdatedSource = null;
+    }
+
+    private static _disposedError(): Error {
+        return new Error('State is disposed.');
     }
 }

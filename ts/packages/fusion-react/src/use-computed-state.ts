@@ -52,11 +52,13 @@ export function useComputedState<T>(
             if (cancelled || state.isDisposed) return;
             forceRender();
 
-            // Subscribe to subsequent updates
+            // Subscribe to subsequent updates — versioned so an update landing
+            // between forceRender and re-subscription is never missed (S11).
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             while (!cancelled && !state.isDisposed) {
+                const sinceIndex = state.updateIndex;
                 try {
-                    await state.whenUpdated();
+                    await state.whenUpdated(sinceIndex);
                 } catch {
                     return;
                 }
