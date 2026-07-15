@@ -905,7 +905,7 @@ Confidence: confirmed.
 
 ### F8. No deduplication of remote computeds across proxies — each `addClient` mints a fresh key space
 
-Status: **closed** — fixed 2026-07-15 (batch fusionrpc3; proxy cached per `(peer, service name)` in the base `RpcHub.addClient`).
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc3; proxy cached per `(peer, service name)` in the base `RpcHub.addClient`). Refined same day (batch e2efix) after the .NET-driven e2e caught a regression: the cache silently dropped methods when a second, different def used the same service name (`ts-dotnet-perf.ts` registers disjoint defs) — `addClient` now merges defs into one shared proxy (existing methods and their `ComputeFunction`s preserved; different arities coexist as overloads, wire-name parity) and throws on genuinely conflicting signatures, validate-first so a rejected def changes nothing.
 
 Confidence: confirmed.
 

@@ -176,6 +176,64 @@ describe('Fusion-over-RPC glue fixes', () => {
         clientConn.close();
     });
 
+    // F8 — a later def registered under the same service name must extend the
+    // shared proxy, not silently return the first (method-less-for-the-caller)
+    // one. Mirrors ts-dotnet-perf.ts splitting ITypeScriptTestComputeService
+    // into a call-methods def and a stream def.
+    it('extends the shared proxy when a later def adds methods under the same service name', () => {
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
+        clientHub.addPeer(clientPeer);
+
+        const callsDef = defineComputeService('SplitService', {
+            Add: { args: [0, 0], callTypeId: 0 },
+            GetValue: { args: [0] },
+        });
+        const streamDef = defineRpcService('SplitService', {
+            StreamInt32: { args: [0], returns: RpcType.stream, wireArgCount: 1 },
+        });
+
+        const svc = clientHub.addClient<Record<string, unknown>>(clientPeer, callsDef);
+        const streamSvc = clientHub.addClient<Record<string, unknown>>(clientPeer, streamDef);
+
+        expect(streamSvc).toBe(svc);
+        expect(typeof svc['Add']).toBe('function');
+        expect(typeof svc['GetValue']).toBe('function');
+        expect(typeof svc['StreamInt32']).toBe('function');
+        expect(typeof streamSvc['StreamInt32']).toBe('function');
+    });
+
+    it('throws on a conflicting re-registration of a method under the same service name', () => {
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
+        clientHub.addPeer(clientPeer);
+
+        const computeDef = defineComputeService('ConflictService', { Value: { args: [0] } });
+        const rpcDef = defineRpcService('ConflictService', { Value: { args: [0] } });
+
+        clientHub.addClient(clientPeer, computeDef);
+        expect(() => clientHub.addClient(clientPeer, rpcDef)).toThrow(/conflicting definition/);
+    });
+
+    it('leaves the shared proxy unchanged when a partially conflicting def is rejected', () => {
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
+        clientHub.addPeer(clientPeer);
+
+        const baseDef = defineComputeService('PartialService', { Value: { args: [0] } });
+        const badDef = defineRpcService('PartialService', {
+            Extra: { args: [0] },
+            Value: { args: [0] },
+        });
+        const goodDef = defineRpcService('PartialService', { Extra: { args: [0] } });
+
+        const svc = clientHub.addClient<Record<string, unknown>>(clientPeer, baseDef);
+        expect(() => clientHub.addClient(clientPeer, badDef)).toThrow(/conflicting definition/);
+        expect(svc['Extra']).toBeUndefined();
+
+        const extended = clientHub.addClient<Record<string, unknown>>(clientPeer, goodDef);
+        expect(extended).toBe(svc);
+        expect(typeof svc['Extra']).toBe('function');
+        expect(typeof svc['Value']).toBe('function');
+    });
+
     it('mints distinct proxies for different peers', async () => {
         const [clientConnA, serverConnA] = createMessageChannelPair();
         const [clientConnB, serverConnB] = createMessageChannelPair();

@@ -57,6 +57,18 @@ const { warnLog } = getLogs('RpcHub');
  *  `getServerPeer` cast the result, so the factory returns RpcPeer. */
 export type RpcPeerFactory = (hub: RpcHub, ref: string) => RpcPeer;
 
+type RpcClientFn = (...args: unknown[]) => unknown;
+
+/** A live client proxy plus the mutable maps it reads from, so a later def can
+ *  add methods to the already-handed-out proxy. `methods` is the map the Proxy's
+ *  get-trap resolves against; `overloads` tracks each method's per-argCount defs
+ *  and functions for overload resolution and conflict detection. */
+interface RpcClientProxy {
+    readonly proxy: object;
+    readonly methods: Map<string, RpcClientFn>;
+    readonly overloads: Map<string, Map<number, { def: RpcMethodDef; fn: RpcClientFn }>>;
+}
+
 /** Central RPC coordinator — manages peers, services, and configuration. */
 export class RpcHub {
     readonly hubId: string;
@@ -76,8 +88,11 @@ export class RpcHub {
     /** Cache of client proxies keyed by peer, then by service name — so
      *  repeated {@link addClient} calls for the same service+peer return one
      *  proxy. All consumers then share a single computed/call/invalidation
-     *  stream per logical value, matching .NET's singleton client proxies (F8). */
-    private readonly _clientProxies = new WeakMap<RpcPeer, Map<string, object>>();
+     *  stream per logical value, matching .NET's singleton client proxies (F8).
+     *  A later def registered under the same name extends the existing proxy
+     *  with its extra methods (superset), so no consumer ever receives a proxy
+     *  missing methods the def declares. */
+    private readonly _clientProxies = new WeakMap<RpcPeer, Map<string, RpcClientProxy>>();
 
     /** Connection-lifecycle timing limits. Peers constructed against this hub
      *  read their initial `*Ms` field values from this instance; later
@@ -183,65 +198,29 @@ export class RpcHub {
         this.registry.registerService(def.name, def.methods);
     }
 
-    /** Create a typed client proxy for a service on a remote peer. */
+    /** Create a typed client proxy for a service on a remote peer. Repeated calls
+     *  for the same (peer, service name) return one shared proxy; a def carrying
+     *  extra methods extends it (F8). */
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- T is used for caller-specified proxy type
     addClient<T extends object>(
         peer: RpcPeer,
         defOrContract: RpcServiceDef | (AnyConstructor)
     ): T {
         const def = this._resolveServiceDef(defOrContract);
+        this.registry.registerService(def.name, def.methods);
 
         let byService = this._clientProxies.get(peer);
         if (byService === undefined) {
-            byService = new Map<string, object>();
+            byService = new Map<string, RpcClientProxy>();
             this._clientProxies.set(peer, byService);
         }
-        const cached = byService.get(def.name);
-        if (cached !== undefined)
-            return cached as T;
-
-        this.registry.registerService(def.name, def.methods);
-
-        type RpcClientFn = (...args: unknown[]) => unknown;
-
-        // Group methods by clean name, indexed by argCount for overload resolution
-        const overloads = new Map<string, Map<number, RpcClientFn>>();
-        for (const methodDef of def.methods.values()) {
-            let byArgCount = overloads.get(methodDef.name);
-            if (!byArgCount) {
-                byArgCount = new Map<number, RpcClientFn>();
-                overloads.set(methodDef.name, byArgCount);
-            }
-            byArgCount.set(
-                methodDef.argCount,
-                this._createClientMethod(peer, methodDef)
-            );
+        let entry = byService.get(def.name);
+        if (entry === undefined) {
+            entry = this._createClientProxy();
+            byService.set(def.name, entry);
         }
-
-        // Build final proxy methods — single overload: use directly; multiple: resolve by args.length
-        const methods = new Map<string, RpcClientFn>();
-        for (const [name, byArgCount] of overloads) {
-            if (byArgCount.size === 1) {
-                const [[, singleFn]] = byArgCount;
-                methods.set(name, singleFn);
-            } else {
-                methods.set(name, (...args: unknown[]) => {
-                    const fn = byArgCount.get(args.length);
-                    if (!fn)
-                        throw new Error(
-                            `No overload of ${name} accepts ${args.length} arguments`
-                        );
-                    return fn(...args);
-                });
-            }
-        }
-
-        const proxy = new Proxy({} as T, {
-            get: (_target, prop) =>
-                typeof prop === 'string' ? methods.get(prop) : undefined,
-        });
-        byService.set(def.name, proxy);
-        return proxy;
+        this._extendClientProxy(peer, entry, def);
+        return entry.proxy as T;
     }
 
     close(): void {
@@ -357,4 +336,72 @@ export class RpcHub {
             return resolveStreamRefs(result, peer);
         };
     }
+
+    // Private methods
+
+    private _createClientProxy(): RpcClientProxy {
+        const methods = new Map<string, RpcClientFn>();
+        const proxy = new Proxy({}, {
+            get: (_target, prop) =>
+                typeof prop === 'string' ? methods.get(prop) : undefined,
+        });
+        return { proxy, methods, overloads: new Map() };
+    }
+
+    private _extendClientProxy(peer: RpcPeer, entry: RpcClientProxy, def: RpcServiceDef): void {
+        // Validate the whole def before mutating anything, so a conflict
+        // leaves the shared proxy exactly as it was.
+        for (const methodDef of def.methods.values()) {
+            const existing = entry.overloads.get(methodDef.name)?.get(methodDef.argCount);
+            if (existing !== undefined && !isSameWireMethod(existing.def, methodDef))
+                throw new Error(
+                    `RpcHub.addClient: conflicting definition of '${wireMethodName(methodDef)}' ` +
+                    `under service '${def.name}' — a different signature is already registered.`);
+        }
+
+        const changed = new Set<string>();
+        for (const methodDef of def.methods.values()) {
+            let byArgCount = entry.overloads.get(methodDef.name);
+            if (byArgCount === undefined) {
+                byArgCount = new Map();
+                entry.overloads.set(methodDef.name, byArgCount);
+            }
+            if (byArgCount.has(methodDef.argCount))
+                continue;
+
+            byArgCount.set(methodDef.argCount, {
+                def: methodDef,
+                fn: this._createClientMethod(peer, methodDef),
+            });
+            changed.add(methodDef.name);
+        }
+        for (const name of changed) {
+            const byArgCount = entry.overloads.get(name)!;
+            entry.methods.set(name, buildOverloadFn(name, byArgCount));
+        }
+    }
+}
+
+function buildOverloadFn(
+    name: string,
+    byArgCount: Map<number, { def: RpcMethodDef; fn: RpcClientFn }>
+): RpcClientFn {
+    if (byArgCount.size === 1) {
+        const [[, only]] = byArgCount;
+        return only.fn;
+    }
+    return (...args: unknown[]) => {
+        const overload = byArgCount.get(args.length);
+        if (overload === undefined)
+            throw new Error(`No overload of ${name} accepts ${args.length} arguments`);
+        return overload.fn(...args);
+    };
+}
+
+function isSameWireMethod(a: RpcMethodDef, b: RpcMethodDef): boolean {
+    return a.wireArgCount === b.wireArgCount
+        && a.callTypeId === b.callTypeId
+        && a.stream === b.stream
+        && a.noWait === b.noWait
+        && a.remoteExecutionMode === b.remoteExecutionMode;
 }
