@@ -78,6 +78,41 @@ To share the server through a repository instead, add this entry to `.mcp.json`:
 }
 ```
 
+## Codex
+
+Codex CLI stores MCP server definitions in `~/.codex/config.toml`. On recent versions you can add the remote server
+with a single command:
+
+```powershell
+codex mcp add fusion-docs --transport http https://fusion.actuallab.net/mcp
+```
+
+Or add the entry to `~/.codex/config.toml` yourself:
+
+```toml
+[mcp_servers.fusion-docs]
+url = "https://fusion.actuallab.net/mcp"
+```
+
+If your Codex build predates native streamable-HTTP support, bridge the remote endpoint through `mcp-remote` as a
+stdio server instead:
+
+```toml
+[mcp_servers.fusion-docs]
+command = "npx"
+args = ["-y", "mcp-remote", "https://fusion.actuallab.net/mcp"]
+```
+
+List the configured servers to verify:
+
+```powershell
+codex mcp list
+```
+
+Start Codex and ask, for example:
+
+> Use the Fusion documentation MCP server to explain computed-state update delays and show the relevant API types.
+
 ## ChatGPT
 
 ChatGPT currently connects to custom remote MCP servers through developer mode on supported Business, Enterprise, and
