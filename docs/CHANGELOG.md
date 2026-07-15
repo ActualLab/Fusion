@@ -18,8 +18,12 @@ Release date: 2026-07-15
 TypeScript-only follow-up to the 13.0.163 hardening release. Promotes two
 primitives that until now lived only in ActualChat's synced copy into the
 shared Fusion TS packages so both repos stay in lockstep, and fixes the TS
-typecheck script to read current source instead of a stale build. No .NET
-framework source changes.
+typecheck script to read current source instead of a stale build.
+
+**npm-only release.** There are no .NET framework source changes, so the NuGet
+packages were not republished — the latest on nuget.org remains **13.0.163**.
+The `13.0.167` version reflects the npm package and the Nerdbank git-height
+version of this commit.
 
 ### Added (TypeScript)
 - [`AsyncSignal` (`actuallab-core`) — auto-reset, edge-triggered async wakeup](https://github.com/ActualLab/Fusion/commit/3ada9207)
