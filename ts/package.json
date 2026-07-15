@@ -9,7 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "typecheck": "tsc -b packages/core/tsconfig.json packages/rpc/tsconfig.json packages/fusion/tsconfig.json packages/fusion-rpc/tsconfig.json packages/fusion-react/tsconfig.json",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
     "clean": "npm run clean --workspaces"
   },
   "devDependencies": {

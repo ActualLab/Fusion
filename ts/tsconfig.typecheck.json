@@ -1,0 +1,28 @@
+// Typecheck-only config: resolves cross-package @actuallab/* imports to source
+// (see paths below), so `npm run typecheck` never reports phantom errors against
+// a stale/absent dist — the failure mode of the old `tsc -b` script, which
+// checked each package against the previously built dist d.ts instead of the
+// current source. Mirrors tsconfig.eslint.json; the package tsconfig.json files
+// intentionally omit these paths (adding them there breaks the tsup DTS build).
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@actuallab/core": ["./packages/core/src/index.ts"],
+      "@actuallab/rpc": ["./packages/rpc/src/index.ts"],
+      "@actuallab/fusion": ["./packages/fusion/src/index.ts"],
+      "@actuallab/fusion-react": ["./packages/fusion-react/src/index.ts"],
+      "@actuallab/fusion-rpc": ["./packages/fusion-rpc/src/index.ts"]
+    },
+    "jsx": "react-jsx",
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.tsx"
+  ]
+}
