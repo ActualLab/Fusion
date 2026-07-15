@@ -2,6 +2,7 @@ import {
     AsyncContext,
     EventHandlerSet,
     type IResult,
+    isCancellation,
     PromiseSource,
     Result,
     result,
@@ -27,19 +28,31 @@ export const enum ConsistencyState {
 export class Computed<T> implements IResult<T> {
     /** Capture the Computed backing a computation — works with both local and RPC compute methods. */
     static async capture<T>(fn: () => T | Promise<T>): Promise<Computed<T>> {
-        const captureComputed = new Computed<unknown>('__capture__');
-        const captureCtx = new ComputeContext(captureComputed);
-        const asyncCtx = AsyncContext.getOrCreate().with(
-            computeContextKey,
-            captureCtx
+        // A capture context (no computed) records the last captured Computed without adding
+        // dependant edges — mirrors C# ComputeContext(CallOptions.Capture) + Computed.Capture.
+        // The parent link keeps reentrancy detection working through capture — in C# lock
+        // reentry flows through ExecutionContext regardless of BeginCapture.
+        const currentCtx = AsyncContext.getOrCreate();
+        const captureCtx = new ComputeContext(
+            undefined,
+            currentCtx.get(computeContextKey)
         );
-        await asyncCtx.run(fn);
-        const deps = captureComputed.dependencies;
-        if (deps.size === 0)
+        const asyncCtx = currentCtx.with(computeContextKey, captureCtx);
+        try {
+            await asyncCtx.run(fn);
+        } catch (e) {
+            if (isCancellation(e)) throw e;
+            const captured = captureCtx.captured;
+            if (captured?.hasError) return captured as Computed<T>;
+
+            throw e;
+        }
+        const captured = captureCtx.captured;
+        if (captured === undefined)
             throw new Error(
                 'No Computed was captured — fn must call a compute function.'
             );
-        return deps.values().next().value! as Computed<T>;
+        return captured as Computed<T>;
     }
 
     readonly input: ComputedInput;
@@ -102,6 +115,10 @@ export class Computed<T> implements IResult<T> {
 
     get isConsistent(): boolean {
         return this._state === ConsistencyState.Consistent;
+    }
+
+    get isComputing(): boolean {
+        return this._state === ConsistencyState.Computing;
     }
 
     get dependencies(): ReadonlySet<Computed<unknown>> {

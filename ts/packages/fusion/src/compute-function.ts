@@ -79,6 +79,11 @@ export class ComputeFunction {
             return existing;
         }
 
+        // C# AsyncLockSet(CheckedFail) analog: a compute call that (indirectly) awaits itself
+        // with the same key would await its own non-reentrant lock forever — fail fast instead.
+        if (callerComputeCtx?.hasKeyInChain(key))
+            throw new Error(`Reentrant compute call detected for key "${key}".`);
+
         // 5. Lock per key to prevent duplicate computations
         let lock = this._locks.get(key);
         if (lock === undefined) {
@@ -103,17 +108,22 @@ export class ComputeFunction {
             // ComputeMethodComputed registers in its constructor.
             ComputedRegistry.register(newComputed);
 
-            const childComputeCtx = new ComputeContext(newComputed);
+            const childComputeCtx = new ComputeContext(
+                newComputed,
+                callerComputeCtx
+            );
             const childAsyncCtx = (asyncCtx ?? AsyncContext.empty).with(
                 computeContextKey,
                 childComputeCtx
             );
 
-            // 7. Run with clean args — no stale AsyncContext to override .run()
+            // 7. Run with clean args, threading childAsyncCtx as a trailing argument so a compute
+            // body can pass it into nested calls / use(ctx) after awaits — the portable floor for
+            // dependency capture when AsyncLocalStorage isn't backing AsyncContext.current (browsers).
             let fnResult: Result<unknown>;
             try {
                 const value = childAsyncCtx.run(() =>
-                    this._impl.call(instance, ...argsWithoutCtx)
+                    this._impl.call(instance, ...argsWithoutCtx, childAsyncCtx)
                 );
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 const resolved = value instanceof Promise ? await value : value;

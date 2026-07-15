@@ -67,6 +67,8 @@ Confidence: confirmed.
 
 ### K3. Dependency capture is silently lost after the first `await` inside a compute method body
 
+Status: **closed** — fixed 2026-07-15 (batch kernel4): both layers landed — the child `AsyncContext` is threaded to the impl as a trailing argument (portable floor; the RPC client strips it before the wire), and on Node ≥ 20.16 `AsyncContext` is backed by `AsyncLocalStorage` (via `process.getBuiltinModule` — no top-level await, bundler-safe), restoring full C# `AsyncLocal` semantics; browsers fall back to explicit threading, documented on `AsyncContext`.
+
 Confidence: confirmed (mechanism fully traced; a by-design JS limitation, but silent).
 
 - TS: `AsyncContext.run` sets the global `AsyncContext.current` only for the **synchronous prefix** of the callback (`async-context.ts:57-65`). `ComputeFunction.invoke` runs the impl via `childAsyncCtx.run(...)` (`compute-function.ts:100-102`) and does not pass `childAsyncCtx` to the impl. A nested compute call made after the impl's first `await` resolves no context (`compute-function.ts:55-58`, `async-context.ts:78-81`) — no dependency is recorded.
@@ -162,6 +164,8 @@ Confidence: confirmed.
 
 ### K11. `Computed.capture` deviates: returns the *first* captured computed (C#: last), throws on failed computations (C#: returns the errored computed), and pollutes real dependants with a stub
 
+Status: **closed** — fixed 2026-07-15 (batch kernel4; dedicated capture context, last-wins, errored-computed return, no stub pollution — also fixes capture of a just-invalidated computed).
+
 Confidence: confirmed.
 
 - TS: `computed.ts:28-42` — returns `deps.values().next().value` (first inserted); if `fn` rejects, `capture` rejects; the fake Computing stub is registered in real computeds' `_dependants` (via K1's unchecked `addDependency`) and never cleaned.
@@ -195,6 +199,8 @@ Confidence: confirmed.
 - **Rejected alternatives:** throwing/warning on non-representable args (runtime cost + breaks legitimate "I know what I'm doing" cases); a stable type-tagged stringifier (slower, still can't key functions meaningfully).
 
 ### K14. Same-key reentrant computation deadlocks silently (C#: fails fast)
+
+Status: **closed** — fixed 2026-07-15 (batch kernel4; parent-chain walk restricted to still-Computing ancestors, capture contexts chained so recursion through `Computed.capture` is detected too).
 
 Confidence: confirmed (mechanism; not runtime-tested).
 

@@ -231,9 +231,15 @@ export class FusionHub extends RpcHub {
         const rpcImpl: ComputeFunctionImpl = async function (
             ...args: unknown[]
         ) {
-            // Capture ComputeContext synchronously — AsyncContext.current is the child
-            // context set by ComputeFunction.invoke() and won't survive the await below.
-            const computeCtx = ComputeContext.from(AsyncContext.current);
+            // ComputeFunction.invoke threads its child AsyncContext as a trailing argument —
+            // strip it before the wire call so it's never serialized, and use it to resolve the
+            // ComputeContext (AsyncContext.current won't survive the await below without ALS).
+            const last = args[args.length - 1];
+            const threadedCtx = last instanceof AsyncContext ? last : undefined;
+            const callArgs = threadedCtx ? args.slice(0, -1) : args;
+            const computeCtx = ComputeContext.from(
+                threadedCtx ?? AsyncContext.current
+            );
             const callOptions: RpcCallOptions = {
                 callTypeId: FUSION_CALL_TYPE_ID,
                 outboundCallFactory: (id, m) =>
@@ -241,14 +247,14 @@ export class FusionHub extends RpcHub {
             };
             const outboundCall = peer.call(
                 wireName,
-                args,
+                callArgs,
                 callOptions
             ) as RpcOutboundComputeCall;
             const value = await outboundCall.result;
             // Wire server invalidation → local computed invalidation
-            if (computeCtx) {
+            if (computeCtx?.computed) {
                 void outboundCall.whenInvalidated.then(() =>
-                    computeCtx.computed.invalidate()
+                    computeCtx.computed!.invalidate()
                 );
             }
             return value;
