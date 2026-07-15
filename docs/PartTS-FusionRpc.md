@@ -121,24 +121,41 @@ Regular (non-compute) in-flight calls are re-sent transparently on reconnect.
 or for in-process testing):
 
 ```ts
+import { computeMethod } from "@actuallab/fusion";
+
 const hub = new FusionHub();
 
-// Register a compute service — methods are wrapped in ComputeFunction
-// and invalidation callbacks are wired to send $sys-c.Invalidate
-hub.addService(CounterServiceDef, {
-  async Get(key: string) {
+// Implement composing compute services as classes: @computeMethod replaces
+// each method with its ComputeFunction-backed version, so `this.Get(...)`
+// below is the cached, dependency-tracked call — invalidating Get('a')
+// invalidates Sum('a', ...) too, and the server notifies subscribed clients.
+class CounterService {
+  @computeMethod
+  async Get(key: string): Promise<number> {
     return counters.get(key) ?? 0;
-  },
-  async Sum(key1: string, key2: string) {
+  }
+
+  @computeMethod
+  async Sum(key1: string, key2: string): Promise<number> {
     const a = await this.Get(key1);
     const b = await this.Get(key2);
     return a + b;
-  },
-});
+  }
+}
+
+// Registration wraps each def method to wire invalidation → $sys-c.Invalidate
+hub.addService(CounterServiceDef, new CounterService());
 
 // Accept WebSocket connections
 hub.acceptConnection(ws);  // creates RpcServerPeer + accepts
 ```
+
+A plain-object impl also works for *independent* methods, but its methods call each other as raw
+functions — `this.Get(key1)` inside such an impl would bypass caching and dependency tracking (no
+Sum → Get invalidation edge). Use a `@computeMethod` class whenever service methods compose. On
+Node ≥ 20.16 the dependency context flows across `await` automatically (AsyncLocalStorage); in
+other runtimes, thread the trailing `AsyncContext` argument into nested calls (see
+[the AsyncContext notes](PartTS.md)).
 
 | Member | Description |
 |--------|-------------|
