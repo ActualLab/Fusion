@@ -47,4 +47,47 @@ describe('EventHandlerSet', () => {
         await promise;
         expect(events.count).toBe(0);
     });
+
+    it('a handler added during dispatch does not run in the same dispatch (C4)', () => {
+        const events = new EventHandlerSet<number>();
+        const calls: string[] = [];
+        events.add(() => {
+            calls.push('a');
+            events.add(() => calls.push('b'));
+        });
+        events.trigger(1);
+        expect(calls).toEqual(['a']);
+    });
+
+    it('a handler removed during dispatch still runs in the same dispatch (C4)', () => {
+        const events = new EventHandlerSet<number>();
+        const calls: string[] = [];
+        const b = () => calls.push('b');
+        events.add(() => {
+            calls.push('a');
+            events.remove(b);
+        });
+        events.add(b);
+        events.trigger(1);
+        expect(calls).toEqual(['a', 'b']);
+
+        events.trigger(2);
+        expect(calls).toEqual(['a', 'b', 'a']);
+    });
+
+    it('whenNext() from inside a handler resolves with the NEXT event (C4)', async () => {
+        const events = new EventHandlerSet<number>();
+        let seen: number | undefined;
+        events.add(() => {
+            void events.whenNext().then(v => { seen = v; });
+        });
+
+        events.trigger(1);
+        await new Promise(r => setTimeout(r, 10));
+        expect(seen).toBeUndefined();
+
+        events.trigger(2);
+        await new Promise(r => setTimeout(r, 10));
+        expect(seen).toBe(2);
+    });
 });

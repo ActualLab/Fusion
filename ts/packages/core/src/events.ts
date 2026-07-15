@@ -1,6 +1,9 @@
 import { PromiseSource } from './promise-source.js';
 
-/** Typed pub/sub event handler set — similar to .NET's EventHandler<T> multicast delegate. */
+/**
+ * Typed pub/sub event handler set — similar to .NET's EventHandler<T> multicast delegate.
+ * Deviation: Set-backed, so adding the same handler twice fires it once (a C# delegate fires it twice).
+ */
 export class EventHandlerSet<T> {
     private _handlers = new Set<(arg: T) => void>();
 
@@ -17,7 +20,9 @@ export class EventHandlerSet<T> {
     }
 
     trigger(arg: T): void {
-        for (const handler of this._handlers) handler(arg);
+        // Snapshot so handlers added during dispatch aren't invoked by it (multicast-delegate parity).
+        for (const handler of [...this._handlers])
+            handler(arg);
     }
 
     clear(): void {

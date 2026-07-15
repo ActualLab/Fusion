@@ -71,4 +71,18 @@ describe('PromiseSource', () => {
         expect(await ps.promise).toBe(99);
         expect(await ps).toBe(await ps.promise);
     });
+
+    it('rejecting a source nobody awaits does not raise unhandledRejection (C1)', async () => {
+        let unhandled = 0;
+        const onUnhandled = () => { unhandled++; };
+        process.on('unhandledRejection', onUnhandled);
+        try {
+            const ps = new PromiseSource<void>();
+            ps.reject(new Error('nobody is listening'));
+            await new Promise(r => setTimeout(r, 20));
+            expect(unhandled).toBe(0);
+        } finally {
+            process.removeListener('unhandledRejection', onUnhandled);
+        }
+    });
 });

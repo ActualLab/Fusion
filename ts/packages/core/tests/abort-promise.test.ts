@@ -45,4 +45,29 @@ describe('abortPromise', () => {
         const winner = await Promise.race([upstream, abortPromise(ac.signal).catch(() => 'aborted')]);
         expect(winner).toBe('aborted');
     });
+
+    it('returns the same cached promise for an already-aborted signal (C7)', () => {
+        const ac = new AbortController();
+        ac.abort(new Error('already gone'));
+        const p1 = abortPromise(ac.signal);
+        const p2 = abortPromise(ac.signal);
+        expect(p1).toBe(p2);
+    });
+
+    it('an already-aborted promise grabbed then raced later does not raise unhandledRejection (C7)', async () => {
+        let unhandled = 0;
+        const onUnhandled = () => { unhandled++; };
+        process.on('unhandledRejection', onUnhandled);
+        try {
+            const ac = new AbortController();
+            ac.abort(new Error('already gone'));
+            const p = abortPromise(ac.signal);
+            await new Promise(r => setTimeout(r, 20));
+            const winner = await Promise.race([Promise.resolve('done'), p.catch(() => 'aborted')]);
+            expect(winner).toBe('done');
+            expect(unhandled).toBe(0);
+        } finally {
+            process.removeListener('unhandledRejection', onUnhandled);
+        }
+    });
 });

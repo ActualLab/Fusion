@@ -22,11 +22,15 @@
 const abortPromiseCache = new WeakMap<AbortSignal, Promise<never>>();
 
 export function abortPromise(signal: AbortSignal): Promise<never> {
-    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- mirroring `signal.throwIfAborted()`: the rejection value IS the signal's reason, which by Web spec is a `DOMException` by default but can be any value the caller passed to `abort(reason)`.
-    if (signal.aborted) return Promise.reject(signal.reason);
     let cached = abortPromiseCache.get(signal);
     if (!cached) {
         cached = new Promise<never>((_, reject) => {
+            if (signal.aborted) {
+                // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- mirroring `signal.throwIfAborted()`: the rejection value IS the signal's reason, which by Web spec is a `DOMException` by default but can be any value the caller passed to `abort(reason)`.
+                reject(signal.reason);
+                return;
+            }
+
             // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- see comment above; signal.reason is the canonical thrown value.
             signal.addEventListener('abort', () => reject(signal.reason), { once: true });
         });

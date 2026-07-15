@@ -14,9 +14,9 @@ export class Result<T> implements IResult<T> {
     private readonly _value: T | undefined;
     private readonly _error: unknown;
 
-    public constructor(value: T | undefined, error?: unknown) {
-        this.hasValue = error === undefined;
-        this.hasError = !this.hasValue;
+    public constructor(value: T | undefined, error?: unknown, hasError = error !== undefined) {
+        this.hasError = hasError;
+        this.hasValue = !hasError;
         this._value = value;
         this._error = error;
     }
@@ -34,12 +34,20 @@ export class Result<T> implements IResult<T> {
         return this.hasValue ? this._value : undefined;
     }
 
+    // Values compared with valueComparer (Object.is by default); errors by reference — mirrors C# Result<T>.Equals.
+    equals(other: Result<T>, valueComparer: (a: T, b: T) => boolean = Object.is): boolean {
+        if (this.hasError !== other.hasError || this._error !== other._error)
+            return false;
+
+        return valueComparer(this._value as T, other._value as T);
+    }
+
     static ok<T>(value: T): Result<T> {
-        return new Result<T>(value);
+        return new Result<T>(value, undefined, false);
     }
 
     static error<T>(error: unknown): Result<T> {
-        return new Result<T>(undefined, error);
+        return new Result<T>(undefined, error ?? new Error('Unspecified error'), true);
     }
 }
 

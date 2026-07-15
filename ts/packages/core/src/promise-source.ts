@@ -11,6 +11,9 @@ export class PromiseSource<T> implements Promise<T> {
             this._resolve = resolve;
             this._reject = reject;
         });
+        // Keep an unobserved rejection benign, like .NET's faulted Task: RPC code
+        // rejects tracked calls nobody may be awaiting (peer disconnect/error).
+        this.promise.catch(() => { /* swallow for unobserved consumers */ });
     }
 
     get isCompleted(): boolean {

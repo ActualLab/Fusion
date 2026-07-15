@@ -826,6 +826,8 @@ Confidence: confirmed. Each accepted connection creates a UUID-ref `RpcServerPee
 
 ### C1. `PromiseSource` rejection with no attached consumer fires `unhandledrejection` (Node: process crash by default)
 
+Status: **closed** — fixed 2026-07-15 (batch core1).
+
 Confidence: confirmed.
 
 - TS: `promise-source.ts:27-32` — `reject()` rejects `this.promise` with no pre-attached rejection observer. Same for the timer-driven reject in `promise-source-with-timeout.ts:38-42`.
@@ -835,6 +837,8 @@ Confidence: confirmed.
 - **Alternative:** attach the observer inside `reject()` just before rejecting. Equivalent semantics, marginally lazier; no reason to prefer it over the one-line constructor fix.
 
 ### C2. `Result` misclassifies `undefined` errors as success
+
+Status: **closed** — fixed 2026-07-15 (batch core1).
 
 Confidence: confirmed (re-verified).
 
@@ -855,6 +859,8 @@ Confidence: confirmed.
 - **Alternative:** patch in place: pre-check `signal.aborted` → reject with `signal.reason`; reject with `signal.reason` on live abort. Fine if C6 is deferred.
 
 ### C4. `EventHandlerSet.trigger` live-iterates the `Set` — handlers added during dispatch run in the *same* dispatch
+
+Status: **closed** — fixed 2026-07-15 (batch core1).
 
 Confidence: confirmed.
 
@@ -886,6 +892,8 @@ Confidence: confirmed absent.
 
 ### C7. `abortPromise` fast path for already-aborted signals contradicts its own caching/observation contract
 
+Status: **closed** — fixed 2026-07-15 (batch core1).
+
 Confidence: confirmed. `abort-promise.ts:26` returns a *fresh, unobserved* rejected promise per call for an already-aborted signal, while the pending path caches per signal and pre-attaches `.catch()` precisely to avoid unhandled rejections — and the doc promises "same promise per signal". Code that grabs the promise and only races it on a later iteration gets an `unhandledrejection` (Node crash).
 
 - **Recommended:** route the already-aborted case through the same WeakMap cache (create once, pre-attach the no-op `.catch()`, store) — 3 lines, restores the documented contract.
@@ -899,6 +907,8 @@ Confidence: confirmed absent. TS has `pushTail`/`pushTailAndMoveHeadIfFull`/`pul
 - **Alternative:** port the full C# API now. No consumer; speculative surface area.
 
 ### C9. `Result` — no equality, no untyped variant (low)
+
+Status: **closed** — `equals` added 2026-07-15 (batch core1); untyped variant stays deferred.
 
 Confidence: confirmed absent. No `equals` (C# `Result<T>.Equals` + operators, `Result.cs:380-388`), no untyped `Result`. C# paths that skip work when `oldResult == newResult` can't be ported faithfully — this is what blocks S15.
 
