@@ -170,3 +170,66 @@ describe('ComputedState', () => {
         expect(state.updateIndex).toBe(2);
     });
 });
+
+describe('ComputedState audit fixes', () => {
+    beforeEach(() => {
+        AsyncContext.current = undefined;
+    });
+
+    it('S1: an initial-value ComputedState is pre-invalidated; use() awaits the real value', async () => {
+        let resolveComputer!: (v: number) => void;
+        const state = new ComputedState<number>(
+            () =>
+                new Promise<number>(r => {
+                    resolveComputer = r;
+                }),
+            { initialValue: 99, updateDelayer: FixedDelayer.zero }
+        );
+
+        // C# State.cs:246 parity — the initial computed is created pre-invalidated,
+        // so a dependant captures an invalidated computed, not the consistent placeholder.
+        expect(state.computed.isConsistent).toBe(false);
+        expect(state.value).toBe(99); // placeholder still readable directly
+
+        const p = state.use() as Promise<number>;
+        expect(p).toBeInstanceOf(Promise);
+        resolveComputer(42);
+        expect(await p).toBe(42); // the real value, never the placeholder
+    });
+
+    it('S13: use() on a fresh async ComputedState awaits instead of crashing', async () => {
+        let resolveComputer!: (v: number) => void;
+        const state = new ComputedState<number>(
+            () =>
+                new Promise<number>(r => {
+                    resolveComputer = r;
+                }),
+            { updateDelayer: FixedDelayer.zero }
+        );
+
+        // Previously a TypeError (inherited use() dereferenced an unset _computed).
+        const p = state.use();
+        expect(p).toBeInstanceOf(Promise);
+
+        resolveComputer(7);
+        expect(await (p as Promise<number>)).toBe(7);
+    });
+
+    it('S13: update() on a fresh async ComputedState awaits the first computation', async () => {
+        let resolveComputer!: (v: number) => void;
+        const state = new ComputedState<number>(
+            () =>
+                new Promise<number>(r => {
+                    resolveComputer = r;
+                }),
+            { updateDelayer: FixedDelayer.zero }
+        );
+
+        const updated = state.update();
+        expect(updated).toBeInstanceOf(Promise);
+
+        resolveComputer(5);
+        const computed = await updated;
+        expect(computed.value).toBe(5);
+    });
+});

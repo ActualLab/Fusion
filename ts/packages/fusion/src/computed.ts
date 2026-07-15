@@ -164,11 +164,13 @@ export class Computed<T> implements IResult<T> {
             return;
         }
 
-        if (this._output.hasError && Computed.errorAutoInvalidateDelay > 0)
-            setTimeout(
-                () => this.invalidate(),
-                Computed.errorAutoInvalidateDelay
-            );
+        const errorAutoInvalidateDelay = this._errorAutoInvalidateDelay;
+        if (this._output.hasError && errorAutoInvalidateDelay > 0)
+            setTimeout(() => this.invalidate(), errorAutoInvalidateDelay);
+    }
+
+    protected get _errorAutoInvalidateDelay(): number {
+        return Computed.errorAutoInvalidateDelay;
     }
 
     protected _register(): void {

@@ -1,5 +1,5 @@
  
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { AsyncContext, errorResult } from '@actuallab/core';
 import { ConsistencyState, MutableState } from '../src/index.js';
 
@@ -62,22 +62,22 @@ describe('MutableState.update()', () => {
         expect(result).toBe(state.computed);
     });
 
-    it('should renew computed after invalidation', () => {
+    it('should renew computed synchronously on invalidation (S16)', () => {
         const state = new MutableState(42);
         const oldComputed = state.computed;
         state.computed.invalidate();
 
-        const renewed = state.update();
-        // Renewer is synchronous, so result is a Computed, not a Promise
-        expect(renewed).not.toBeInstanceOf(Promise);
-        // New computed is consistent with the same value
-        expect(renewed).toBe(state.computed);
+        // Sync renewal (C# MutableState.OnInvalidated) — a MutableState is never
+        // observed invalidated, so the computed is already renewed here, before update().
         expect(state.computed.isConsistent).toBe(true);
-        expect(state.value).toBe(42);
-        // Old computed stays invalidated
-        expect(oldComputed.isConsistent).toBe(false);
-        // A new computed was created
         expect(state.computed).not.toBe(oldComputed);
+        expect(state.value).toBe(42);
+        expect(oldComputed.isConsistent).toBe(false);
+
+        // update() is now idempotent — it returns the already-renewed computed.
+        const renewed = state.update();
+        expect(renewed).not.toBeInstanceOf(Promise);
+        expect(renewed).toBe(state.computed);
     });
 
     it('should increment updateIndex on renew', () => {
@@ -204,5 +204,76 @@ describe('MutableState renewer integration', () => {
         expect(renewed).not.toBeInstanceOf(Promise);
         expect(state.value).toBe('b');
         expect(state.computed.state).toBe(ConsistencyState.Consistent);
+    });
+});
+
+describe('MutableState audit fixes', () => {
+    beforeEach(() => {
+        AsyncContext.current = undefined;
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('S3: an onInvalidated handler calling use() during set(2) observes the new value', () => {
+        const s = new MutableState<number>(1);
+        let observed = -1;
+        s.computed.onInvalidated(() => {
+            observed = s.use();
+        });
+
+        s.set(2);
+
+        // C# MutableState.Set stages NextOutput before invalidating, so any read
+        // triggered by the cascade renews to the NEW value.
+        expect(observed).toBe(2);
+        expect(s.value).toBe(2);
+    });
+
+    it('S15: set(sameValue) is a no-op — no cascade, no re-render trigger', () => {
+        const s = new MutableState(1);
+        const c0 = s.computed;
+        let invalidated = 0;
+        s.computed.onInvalidated(() => invalidated++);
+
+        s.set(1);
+
+        expect(invalidated).toBe(0);
+        expect(s.updateIndex).toBe(0);
+        expect(s.computed).toBe(c0);
+        expect(s.computed.isConsistent).toBe(true);
+    });
+
+    it('S15: set(sameError) short-circuits by error reference', () => {
+        const err = new Error('boom');
+        const s = new MutableState(errorResult<number>(err));
+        const c0 = s.computed;
+
+        s.set(errorResult<number>(err));
+
+        expect(s.computed).toBe(c0);
+        expect(s.updateIndex).toBe(0);
+    });
+
+    it('S16: computed is consistent right after an external invalidate()', () => {
+        const s = new MutableState(42);
+
+        s.computed.invalidate();
+
+        expect(s.computed.isConsistent).toBe(true);
+        expect(s.value).toBe(42);
+    });
+
+    it('S16: an error-holding MutableState does not renew in a timer loop', () => {
+        vi.useFakeTimers();
+        const s = new MutableState<number>(errorResult(new Error('boom')));
+
+        vi.advanceTimersByTime(3500);
+
+        // C# ComputedOptions.MutableStateDefault — errors never auto-invalidate,
+        // so sync renewal must not turn the error timer into an endless renew loop.
+        expect(s.updateIndex).toBe(0);
+        expect(s.computed.isConsistent).toBe(true);
     });
 });

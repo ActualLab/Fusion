@@ -83,14 +83,22 @@ export abstract class State<T> implements IResult<T> {
         output: Result<T> | T,
         renewer?: () => Computed<T> | Promise<Computed<T>>
     ): void {
-        this._computed = new StateBoundComputed<T>(this, renewer);
+        this._computed = this._createComputed(renewer);
         this._computed.setOutput(output);
         this._lastNonErrorValue = this._computed.valueOrUndefined;
     }
 
+    protected _createComputed(
+        renewer?: () => Computed<T> | Promise<Computed<T>>
+    ): Computed<T> {
+        return new StateBoundComputed<T>(this, renewer);
+    }
+
     protected _update(computed: Computed<T>, output: Result<T> | T): void {
+        const replaced = this._computed as Computed<T> | undefined;
         computed.setOutput(output);
         this._computed = computed;
+        if (replaced?.isConsistent) replaced.invalidate();
         if (computed.hasValue) this._lastNonErrorValue = computed.value;
         this._updateIndex++;
         this._whenUpdatedSource?.resolve(undefined);

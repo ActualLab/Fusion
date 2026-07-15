@@ -244,6 +244,8 @@ Registry residuals surfaced during kernel1 verification (low, unassigned): the F
 
 ### S1. `State._update` publishes a new computed without invalidating the one it replaces — dependants of the initial-value computed go stale forever
 
+Status: **closed** — fixed 2026-07-15 (batch statecore; pre-invalidated initial computed + `_update` invalidates a still-consistent replaced computed).
+
 Confidence: confirmed.
 
 - TS: `state.ts:91-98` — `_update()` just assigns `this._computed = computed`. For `ComputedState` constructed with `initialValue`/`initialOutput`, `_initialize` (`computed-state.ts:47-56`) creates a *consistent* initial computed; the first `_updateCycle` iteration replaces it via `_update` (`computed-state.ts:133`) while the initial computed remains Consistent.
@@ -263,6 +265,8 @@ Confidence: confirmed.
 - **Alternative:** keep the masking behavior under an honest name (`valueOrLastNonError`) and make `value` throw — preserves the convenience for UI code that wants it, without lying through the primary getter.
 
 ### S3. `MutableState.set` invalidates *before* staging the new output — synchronous readers during the cascade observe (and can permanently publish) the old value
+
+Status: **closed** — fixed 2026-07-15 (batch statecore; staged `_nextOutput`, C# Set/OnInvalidated ordering).
 
 Confidence: confirmed.
 
@@ -364,6 +368,8 @@ Confidence: confirmed (absent in TS).
 
 ### S13. Base `State` members crash with `TypeError` on a `ComputedState` before its first computation
 
+Status: **closed** — fixed 2026-07-15 (batch statecore, via S1's pre-invalidated initial computed).
+
 Confidence: confirmed.
 
 - TS: `computed-state.ts:57` — `_computed` stays unset until the first `_update()`. `ComputedState` guards its own getters with `_hasOutput`, but inherited members dereference `this._computed` directly: `use` (`state.ts:53-55`), `useInconsistent`, `update`, `recompute`, `whenInvalidated` → `TypeError`.
@@ -384,12 +390,16 @@ Confidence: confirmed.
 
 ### S15. `MutableState.set` lacks the equality short-circuit
 
+Status: **closed** — fixed 2026-07-15 (batch statecore, via C9's `Result.equals`).
+
 Confidence: confirmed. TS always invalidates + republishes (`mutable-state.ts:22-25`); C# returns early on `NextOutput == result` (`MutableState.cs:114-116`). `set(sameValue)` per keystroke triggers full cascades and re-renders where C# is a no-op.
 
 - **Recommended:** add `Result.equals` (C9) and early-return in `set` when the staged output equals the current one (value via `Object.is`, error by reference) — C# parity.
 - **Alternative:** additionally accept a custom value comparer as a `MutableState` option for structural-equality use cases. Only if a real consumer needs it.
 
 ### S16. External invalidation of a `MutableState` is not eagerly renewed
+
+Status: **closed** — fixed 2026-07-15 (batch statecore; synchronous renewal). The verification pass also disabled error auto-invalidation for MutableState-bound computeds (C# `MutableStateDefault` parity) — sync renewal would otherwise loop an error-holding state at 1 Hz; K5's `ComputedOptions` (kernel3) absorbs this override.
 
 Confidence: confirmed. TS leaves `_computed` invalidated until the next `update()`/`use()` (renewal is lazy, `mutable-state.ts:7-11`); C#'s `OnInvalidated` renews synchronously — a `MutableState` is *never* observed invalidated (`MutableState.cs:152-162`). Mostly benign, but code checking `state.computed.isConsistent` behaves differently, and TS tests codify the lazy behavior (`mutable-state.test.ts:65-81`).
 
