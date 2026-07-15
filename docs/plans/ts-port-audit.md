@@ -6,7 +6,9 @@ The port is deliberately partial. The standard applied here is: **every feature 
 
 **Audit status (2026-07-14):** produced by five parallel per-area reviews (Fusion kernel, State + React, RPC, Fusion-over-RPC glue, core utilities), each comparing TS and C# sources file-by-file. Every item carries a confidence label from its auditor (*confirmed* = the full failure chain was read in code on both sides; *plausible* = mechanism confirmed, trigger conditions not fully traced). A sample of the highest-severity items (K1, K2, K4, K5, K12, S3, R1, F1, F2, C2) was independently re-verified against current sources. A full adversarial verification pass — the step the invalidation audit got before its fixes — has not been done yet and is the natural next step.
 
-**Test confirmation (2026-07-14):** the five highest-severity items — **K1, K2, K3, F1, R1** — are additionally confirmed by executable reproduction tests that assert the C# contract and fail against the current code (5/5 red): `ts/packages/{fusion,fusion-rpc,rpc}/tests/ts-port-audit-repro.test.ts`. The tests are deliberately left red (uncommitted until the fixes land) and become the regression tests for these items. Those five items carry a **Recommended / Alternative** course-of-action pair instead of a one-line direction; resolutions for all items will be recorded in a companion `ts-port-fixes.md`.
+**Test confirmation (2026-07-14):** the five highest-severity items — **K1, K2, K3, F1, R1** — are additionally confirmed by executable reproduction tests that assert the C# contract and fail against the current code (5/5 red): `ts/packages/{fusion,fusion-rpc,rpc}/tests/ts-port-audit-repro.test.ts`. The tests are deliberately left red (uncommitted until the fixes land) and become the regression tests for these items.
+
+**Every item carries a Recommended / Alternative course-of-action pair** as input to the resolution stage; final decisions per item (including won't-fixes) will be recorded in a companion `ts-port-fixes.md`. The pairs for the five test-confirmed items were written first and are the most scrutinized; the rest follow the same pattern but haven't been through the verification pass yet.
 
 Item numbering: **K** = Fusion kernel, **S** = State layer + React, **R** = RPC layer, **F** = Fusion-over-RPC glue, **C** = core utilities.
 
@@ -64,7 +66,8 @@ Confidence: confirmed.
 - TS: `computed.ts:184-193` — dependant propagation and `onInvalidated.trigger()` run with no try/catch (`events.ts:19-21` doesn't isolate handlers either). A throwing handler propagates up: remaining dependants are never invalidated, `_unregister` is skipped (an Invalidated computed stays registered), and the exception surfaces to whoever called `invalidate()` — e.g. out of `MutableState.set()`, or inside `ComputedState._updateCycle`, whose outer catch (`computed-state.ts:150-154`) logs "UpdateCycle failed and stopped" and **exits the loop permanently**.
 - C#: "Invalidate doesn't throw — ever": the whole cascade is wrapped in try/finally/try-catch with logging (`Computed.cs:300-329`); dependants are invalidated in a `finally`. State event handler exceptions are similarly isolated (`State.cs:287-321`).
 - Failure: one buggy `onInvalidated` subscriber throws once → half the dependency graph stays consistent-but-stale, and that `ComputedState` silently stops auto-updating for the app's lifetime; UI freezes on the last value.
-- Direction: wrap handler invocation and per-dependant propagation in try/catch (log, continue); make dependant propagation + unregister unconditional; match C# ordering (own handlers first, then dependants — TS currently also reverses that order, see K17).
+- **Recommended:** make `invalidate()` never throw, mirroring `Computed.cs:300-329`: fire own handlers first (each wrapped in try/catch + error log), then propagate to dependants unconditionally (per-dependant try/catch), then unregister — all guaranteed to complete. Fixes K17's ordering in the same rework.
+- **Alternative:** isolate exceptions inside `EventHandlerSet.trigger` for *all* events. Rejected-leaning: C# general events do propagate handler exceptions; only invalidation carries the never-throws contract, so the isolation belongs in `Computed.invalidate`.
 
 ### K5. Every error auto-invalidates after a global 1 s — states included → perpetual 1 Hz invalidate/recompute loops
 
@@ -73,7 +76,8 @@ Confidence: confirmed.
 - TS: `computed.ts:24-25, 154-158` — `setOutput` schedules `setTimeout(() => this.invalidate(), 1000)` for **any** error on **any** Computed, including `StateBoundComputed` (states call `setOutput` at `state.ts:87, 92`). `MutableState`'s renewer recreates the computed with the same error output (`mutable-state.ts:7-11`), scheduling the next 1 s invalidation.
 - C#: error auto-invalidation is per-`ComputedOptions` with transiency classification (`Computed.cs:374-405, 540-567`); `MutableState` uses `ComputedOptions.MutableStateDefault` — a MutableState holding an error **never** auto-invalidates (`ComputedOptions.cs:21-24`).
 - Failure: `state.set(errorResult(e))` → every dependant is invalidated and recomputed every second, forever. Non-transient/terminal errors in compute methods retry at 1 s forever (C# differentiates via `NonTransientErrorInvalidationDelay` = 30 s and `Transiency.Terminal`). Bonus defects: the timer strongly retains the computed for 1 s (defeats WeakRef eviction) and an un-`unref`'d `setTimeout` keeps a Node process alive.
-- Direction: suppress error auto-invalidation for `StateBoundComputed` (or introduce a minimal per-computed options object with `errorInvalidationDelay`); cancel the timer when the computed is invalidated by other means.
+- **Recommended:** introduce a minimal per-computed `errorAutoInvalidateDelay` (a field/option, not a full `ComputedOptions` port): `StateBoundComputed` disables it (C# `MutableStateDefault` parity — states never auto-invalidate errors; `ComputedState` retries via its update loop, see S8), compute methods keep a default. Cancel the timer when the computed is invalidated by other means, and `unref()` it in Node.
+- **Alternative:** keep the global delay but exclude `StateBoundComputed` only — smaller, fixes the 1 Hz state loops but leaves terminal errors in compute methods retrying at 1 s forever. Full transiency classification is out of scope either way.
 
 ### K6. Cancellation errors are cached as values — C# contract: OCE must never be cached
 
@@ -82,7 +86,8 @@ Confidence: confirmed (absence verified).
 - TS: `compute-function.ts:98-110` — every throw, including `AbortError` from an aborted fetch, becomes `errorResult(e)` and is cached via `setOutput` (until K5's 1 s timer). No AbortSignal exists anywhere in the compute pipeline.
 - C#: `ComputedImpl.Helpers.cs:116-159` — an `OperationCanceledException` never becomes a cached consistent output: the computed is invalidated immediately and the error rethrown to the canceled caller only; internal cancellations are reprocessed with retries. `StartAutoInvalidation` instant-invalidates OCE outputs as a second line of defense (`Computed.cs:388-391`).
 - Failure: caller A's fetch is aborted (user navigated away); for up to 1 s, callers B/C of the same compute key receive A's `AbortError` from cache — cancellation of one consumer poisons all consumers. See also F3 for the remote-call variant.
-- Direction: detect cancellation-shaped errors (`DOMException` name `AbortError`, or a dedicated `OperationCancelledError` in `@actuallab/core`) and either invalidate immediately after `setOutput` or bypass caching and rethrow.
+- **Recommended:** introduce a cancellation-detection helper in `@actuallab/core` (recognizes `DOMException`/`Error` named `AbortError` plus a dedicated `OperationCancelledError`); in `ComputeFunction.invoke`, when the caught error is cancellation-shaped, still `setOutput` (keeps the single-flight lock protocol intact) but invalidate the computed immediately — C#'s `StartAutoInvalidation` OCE path — so it is never served from cache.
+- **Alternative:** bypass caching entirely and rethrow to the cancelled caller. Closer to C#'s primary path but leaves the `Computed` stuck in `Computing` and complicates the lock/renewer flow; the invalidate-immediately variant gets the same observable behavior with less surgery.
 
 ### K7. Invalidated dependants never unlink from their dependencies; no graph pruner
 
@@ -91,7 +96,8 @@ Confidence: confirmed.
 - TS: `invalidate()` clears only its own `_dependencies` and `_dependants` (`computed.ts:180-188`); it never removes itself from its dependencies' `_dependants` maps. Entries are `version → WeakRef`; the WeakRef target can be GC'd but the Map entry lives until the *dependency* itself is invalidated.
 - C#: on invalidation, each dependency gets `RemoveDependant(this)` (`Computed.cs:309`); plus `PruneDependants` (`Computed.cs:507-526`) driven by `ComputedGraphPruner`.
 - Failure: a rarely-changing computed (config, session) used by a frequently recomputing `ComputedState` accumulates one dead `(number, WeakRef)` entry per recompute — tens of thousands over a long SPA session.
-- Direction: in `invalidate()`, delete `this._version` from each dependency's `_dependants` before clearing (cheap in JS, no lock concerns).
+- **Recommended:** in `invalidate()`, delete `this._version` from each dependency's `_dependants` before clearing `_dependencies` (C# `RemoveDependant` parity; cheap in JS, no lock concerns).
+- **Alternative:** a periodic pruner sweeping `_dependants` maps for dead WeakRefs (`ComputedGraphPruner` analog). Heavier and only complements — eager unlink is the correct fix; a pruner can follow if profiling still shows growth.
 
 ### K8. `ComputeFunction._locks` is never cleaned — one `AsyncLock` leaked per distinct key, forever
 
@@ -100,7 +106,8 @@ Confidence: confirmed.
 - TS: `compute-function.ts:32, 71-77` — locks are created on demand and never deleted.
 - C#: shared `AsyncLockSet<ComputedInput>` (`ComputedRegistry.cs:77-81`) releases per-key entries when unused.
 - Failure: a compute method keyed by user/entity id in a long-running app → unbounded Map of idle AsyncLocks.
-- Direction: after `lock.run` resolves, delete the map entry when the lock has no queued waiters; or implement a small `AsyncLockSet` in `@actuallab/core`.
+- **Recommended:** after `lock.run` resolves, delete the map entry when the lock has no queued waiters — a few lines in `ComputeFunction.invoke`.
+- **Alternative:** implement a small `AsyncLockSet` in `@actuallab/core` (C# analog, release-on-idle built in) and use it here. Cleaner shared abstraction — promote to this if a second per-key-lock consumer appears.
 
 ### K9. `update()` is not isolated — renewal registers a dependency in the ambient compute context
 
@@ -109,7 +116,8 @@ Confidence: confirmed.
 - TS: `Computed.update()` → `_renewer()` (`computed.ts:106-114`) → `ComputeFunction.invoke`, which falls back to `AsyncContext.current` (`compute-function.ts:55-58`) and captures the produced computed into that ambient context (`compute-function.ts:116`).
 - C#: `UpdateUntyped` wraps production in `BeginIsolation()` (`Computed.cs:207-215`) — updating a computed must not create a dependency edge; only `Use` does.
 - Failure: inside a computing method, `someComputed.update()` (or `state.update()/recompute()`) intended as "refresh without depending" silently records a dependency — spurious recomputation storms. This inverts the documented Update/Use distinction.
-- Direction: in the renewer path, run `invoke` with a context explicitly cleared of `computeContextKey` (the TS analog of `BeginIsolation`).
+- **Recommended:** in the renewer path, run `invoke` with a context explicitly cleared of `computeContextKey` (the TS analog of `BeginIsolation`) — one place, covers `update()`, `state.update()`, and `recompute()`.
+- **Alternative:** strip the context at each caller of `update()`. Rejected-leaning: multiple sites, and direct `computed.update()` calls would still capture.
 
 ### K10. `whenInvalidated(abortSignal)` leaks one abort listener per call on long-lived signals; never settles on an already-aborted signal
 
@@ -118,7 +126,8 @@ Confidence: confirmed.
 - TS: `computed.ts:196-216` — the `'abort'` listener (added `{ once: true }`) is never removed when the promise resolves via invalidation. `ComputedState._updateCycle` passes the same `disposeSignal` every iteration (`computed-state.ts:139`), so listeners accumulate one per update. Also: when the signal is *already aborted*, the listener is skipped and the returned promise may never settle (feeds S5); and `ps.reject(abortSignal.reason)` can reject with `undefined`.
 - C#: `WhenInvalidatedClosure.OnInvalidated` disposes the CancellationTokenRegistration as soon as invalidation fires (`Internal/WhenInvalidatedClosure.cs:27-31`); already-cancelled tokens throw immediately (`ComputedExt.cs:120-122`).
 - Failure: a `ComputedState` updating every few seconds in a day-long session accumulates tens of thousands of listeners on its dispose signal — memory growth plus O(n) abort dispatch.
-- Direction: remove the abort listener in the invalidation handler; reject immediately when `abortSignal.aborted`.
+- **Recommended:** store the abort listener in a variable so both sides clean each other up: the invalidation handler removes the abort listener, the abort listener removes the invalidation handler; pre-check `abortSignal.aborted` and reject immediately (with `signal.reason ?? OperationCancelledError`).
+- **Alternative:** build the shared "await with signal" core helper first (see S4) and rewrite this on top of it — same end state, better if done together with the delayer-leak fixes.
 
 ### K11. `Computed.capture` deviates: returns the *first* captured computed (C#: last), throws on failed computations (C#: returns the errored computed), and pollutes real dependants with a stub
 
@@ -127,7 +136,8 @@ Confidence: confirmed.
 - TS: `computed.ts:28-42` — returns `deps.values().next().value` (first inserted); if `fn` rejects, `capture` rejects; the fake Computing stub is registered in real computeds' `_dependants` (via K1's unchecked `addDependency`) and never cleaned.
 - C#: `ComputeContext.TryCapture` deliberately overwrites → last capture wins (`ComputeContext.cs:70-84`); `Computed.Capture` catches non-cancellation exceptions and returns the captured computed if it `HasError` (`Computed.Static.cs:153-169`).
 - Failure: `Computed.capture(() => svc.failingMethod())` throws instead of yielding a `Computed` with `hasError` — reactive wrappers (the primary use of capture) can't observe invalidation of the failed computation; with two top-level calls in `fn`, TS returns the wrong one relative to C# docs/samples.
-- Direction: track "last captured" explicitly on the capture context; on `fn` rejection, return the captured computed if it has an error, else rethrow.
+- **Recommended:** track "last captured" explicitly on the capture context (a dedicated capture mode, not a fake Computing stub — so no dependant edges pollute real computeds); on `fn` rejection, return the captured computed if it has an error, else rethrow — full `Computed.Capture` parity.
+- **Alternative:** document the deviations (first-wins, throws on error). Rejected-leaning: `capture` is the primary API for building reactive wrappers; C# samples and docs rely on the last-wins + errored-computed behavior.
 
 ### K12. `onInvalidated` is a public raw handler set — a handler added after invalidation never fires (C#: fires immediately)
 
@@ -136,7 +146,8 @@ Confidence: confirmed.
 - TS: `computed.ts:51, 190-191` — after `trigger()` the set is cleared; `EventHandlerSet.add` on an already-invalidated computed stores a handler that can never fire. Only `whenInvalidated` has the state pre-check.
 - C#: the `Invalidated` event's `add` invokes the handler immediately when state is already Invalidated (`Computed.cs:105-117`) — exactly-once regardless of subscription timing.
 - Failure: `computed.onInvalidated.add(h)` after an async gap → `h` never runs → a UI subscription never refreshes. This is the exact race the C# `add` accessor exists to close, and the root cause of F1.
-- Direction: replace the public field with an `onInvalidated(handler)` method that invokes immediately when already invalidated; keep the set private.
+- **Recommended:** replace the public field with an `onInvalidated(handler)` method that invokes the handler immediately when the computed is already invalidated (C# `add`-accessor parity); keep the handler set private.
+- **Alternative:** keep the field but give `EventHandlerSet` an optional "completed with replay" mode (promise-like: once triggered, late `add`s fire immediately). More general, but changes a core primitive's semantics for one consumer; the method API is the closer C# mirror.
 
 ### K13. Default argument keying via `JSON.stringify` produces key collisions
 
@@ -145,7 +156,8 @@ Confidence: confirmed.
 - TS: `compute-function.ts:19-22, 41-47` — `JSON.stringify(arg) ?? 'undefined'`: any function, `undefined`, or `Symbol` arg → `'undefined'`; objects without serializable props → `'{}'`; `NaN` → `null`; `Map`/`Set` → `'{}'`. Semantically different arguments collide onto the same cache key.
 - C#: `ComputeMethodInput.Equals` compares proxy identity and actual argument values (`ComputeMethodInput.cs:25-27, 48-56`).
 - Failure: `getWidget(selectorFn1)` and `getWidget(selectorFn2)` (or two different `Map` args) return each other's cached results — silent wrong answers, not just cache misses.
-- Direction: throw (or warn) in `defaultArgToString` for non-JSON-representable args instead of silently colliding; document `argToString` as the escape hatch.
+- **Recommended:** make `defaultArgToString` throw for args whose `JSON.stringify` returns `undefined` (functions, symbols) and for `undefined` itself; document `argToString` as the escape hatch for `Map`/`Set`/custom types. Silent collision becomes a loud error at the call site.
+- **Alternative:** a stable, type-tagged stringifier (handles `Map`/`Set`/`NaN`/`undefined` distinctly). Heavier and still can't key functions meaningfully; can layer on later if real DTO arguments demand it.
 
 ### K14. Same-key reentrant computation deadlocks silently (C#: fails fast)
 
@@ -154,19 +166,29 @@ Confidence: confirmed (mechanism; not runtime-tested).
 - TS: `AsyncLock` is non-reentrant with no reentry detection (see C5); a compute function that (indirectly) awaits itself with the same key awaits its own lock forever (`compute-function.ts:72-78`).
 - C#: `AsyncLockSet` is created with `LockReentryMode.CheckedFail` (`ComputedRegistry.cs:77-81`) — reentry throws immediately.
 - Failure: accidental self-recursion hangs the app with no diagnostics instead of a clear error.
-- Direction: track keys currently being computed and throw on same-key reentry (full async-chain detection is impossible without `AsyncLocalStorage`, but the sync-prefix case is detectable).
+- **Recommended:** give `ComputeContext` a parent link (each nested `invoke` already knows its caller context); before awaiting the per-key lock, walk the parent chain and throw a clear "reentrant compute call" error when the same key is found — the C# `CheckedFail` analog for every ctx-threaded call.
+- **Alternative:** dev-mode diagnostics only — log a warning when a lock acquisition waits longer than a few seconds. Doesn't prevent the deadlock, but catches cases the parent-chain walk can't see (calls made without a threaded context, see K3).
 
 ### K15. Renewer chain permanently retains the generation-1 computed and the original argument objects (low)
 
 Confidence: confirmed. Every later generation reuses gen-1's `_renewer`, whose closure strongly captures the gen-1 computed and the first call's `argsWithoutCtx` (`compute-function.ts:85-89`). Small fixed leak per key; renewals also re-run the impl against the *first* call's argument object identities. C# reconstructs from `ComputeMethodInput` each time.
 
+- **Recommended:** drop the `prevComputed?._renewer` reuse; build the renewer from `(instance, argsWithoutCtx)` only — one small closure per generation, no computed captured.
+- **Alternative:** keep the shared renewer but capture the args in a per-key record instead of the gen-1 computed. Same effect, more state to manage.
+
 ### K16. `registry.register` overwrites without invalidating a displaced still-consistent computed (low)
 
 Confidence: confirmed. `computed-registry.ts:25-29` vs C# `ComputedRegistry.cs:126-132` (invalidates the displaced target). Unreachable through the single-flight path today, but the invariant is unenforced — and the K2 fix will make this path live.
 
+- **Recommended:** in `register`, invalidate a displaced computed that is not already invalidated (C# parity). Prerequisite for K2's recommended fix.
+- **Alternative:** none meaningful — throwing on displacement would break K2's registration-while-computing flow.
+
 ### K17. Invalidation ordering differs (low)
 
-Confidence: confirmed. TS notifies dependants before the computed's own `onInvalidated` handlers (`computed.ts:184-191`); C# fires own handlers first, dependants in `finally` (`Computed.cs:303-318`). Observable to handlers that inspect dependants' state; fold into the K4 rework.
+Confidence: confirmed. TS notifies dependants before the computed's own `onInvalidated` handlers (`computed.ts:184-191`); C# fires own handlers first, dependants in `finally` (`Computed.cs:303-318`). Observable to handlers that inspect dependants' state.
+
+- **Recommended:** fold into the K4 rework (its recommended shape already fires own handlers first, dependants after, both exception-isolated).
+- **Alternative:** document the TS ordering as a deviation. Rejected-leaning: K4 touches the same lines anyway, so parity is free.
 
 ### Out of scope (kernel)
 
@@ -192,7 +214,8 @@ Confidence: confirmed.
 - TS: `state.ts:91-98` — `_update()` just assigns `this._computed = computed`. For `ComputedState` constructed with `initialValue`/`initialOutput`, `_initialize` (`computed-state.ts:47-56`) creates a *consistent* initial computed; the first `_updateCycle` iteration replaces it via `_update` (`computed-state.ts:133`) while the initial computed remains Consistent.
 - C#: the initial computed is created **already invalidated** (`State.cs:246`), and `SetComputed` always invalidates `prevSnapshot.Computed` when publishing a successor (`State.cs:258`).
 - Failure: a compute function calls `state.use()` before the first real computation finishes → captures a dependency on the consistent initial computed → gets `initialValue`. When the real value arrives, the initial computed is never invalidated, so the dependant is never invalidated — the parent shows the placeholder value forever.
-- Direction: make `_update` invalidate the previous `_computed` if still consistent (mirroring `SetComputed`), or create the initial computed pre-invalidated like C# — which also fixes S13 and removes the `_hasOutput` guards.
+- **Recommended:** both halves of C# parity: create the initial computed **pre-invalidated** (which also fixes S13 and removes the `_hasOutput` guards), and make `_update` invalidate the replaced computed when it is still consistent (defense in depth — `SetComputed` parity covers any other path that publishes a successor).
+- **Alternative:** only the `_update`-invalidates half. Smaller, closes the staleness, but keeps the consistent-initial-computed semantics (an `initialValue` reads as authoritative until the first computation) and keeps S13's guards.
 
 ### S2. `ComputedState.value` silently masks errors by falling back to `lastNonErrorValue`
 
@@ -201,7 +224,8 @@ Confidence: confirmed.
 - TS: `computed-state.ts:72-79` — when `_computed.hasError`, `value` returns `_lastNonErrorValue` instead of throwing; `valueOrUndefined` (`computed-state.ts:86-89`) likewise. Base `State.value` and `MutableState` *do* throw on error (`state.ts:33-35`) — the port is internally inconsistent too.
 - C#: `State.Value` throws the stored error (`State.cs:99-102`); the stale-value fallback is a separate, explicit API — `LastNonErrorValue` (`State.cs:104-107`, `StateSnapshot.cs:15`).
 - Failure: a computer starts failing (server down). C# callers of `state.Value` see the exception; TS callers keep receiving the last good value with no indication anything is wrong. `hasValue` is `false` while `value` returns a value — contradictory.
-- Direction: `value`/`output` should rethrow like C#; keep stale-value access on `lastNonErrorValue` only.
+- **Recommended:** `value`/`output`/`valueOrUndefined` behave like the base class (rethrow / reflect the error); stale-value access stays on `lastNonErrorValue` only — C# `State.Value` vs `LastNonErrorValue` split.
+- **Alternative:** keep the masking behavior under an honest name (`valueOrLastNonError`) and make `value` throw — preserves the convenience for UI code that wants it, without lying through the primary getter.
 
 ### S3. `MutableState.set` invalidates *before* staging the new output — synchronous readers during the cascade observe (and can permanently publish) the old value
 
@@ -210,7 +234,8 @@ Confidence: confirmed.
 - TS: `mutable-state.ts:22-25` — `set()` first calls `this._computed.invalidate()` (synchronous cascade to dependants and handlers), then `_update(..., output)`. During the cascade, `this._computed` is still the old computed. If any handler synchronously calls `state.use()`/`update()`, the renewer (`mutable-state.ts:7-11`) publishes a new consistent computed **carrying the OLD output**; `set()`'s own `_update` then replaces that computed without invalidating it (S1), so anything that captured it is stale forever.
 - C#: `MutableState.Set` stages `NextOutput = result` **before** invalidating, inside the lock (`MutableState.cs:112-131`); `OnInvalidated` synchronously renews from `NextOutput` (`MutableState.cs:152-162`) — any read during/after invalidation observes the new value.
 - Failure: `computed.onInvalidated.add(() => render(state.use()))` — a legitimate C# pattern — renders the old value in TS and detaches the renderer from future updates.
-- Direction: introduce a `_nextOutput` field set before `invalidate()`; have `_renewer` build from `_nextOutput` (set = stage + invalidate, renewal path shared), matching C# ordering.
+- **Recommended:** introduce a `_nextOutput` field staged before `invalidate()`; `_renewer` builds the new computed from `_nextOutput`, so `set` = stage + invalidate with the renewal path shared — exact C# ordering (`MutableState.Set` / `OnInvalidated`).
+- **Alternative:** publish-then-invalidate — call `_update` with the new computed first, then invalidate the old one. Simpler; readers during the cascade see the new value. Diverges from C#'s internal shape (no staged `NextOutput`), which matters if S16's synchronous renewal is adopted — the renewer needs a staged output to renew *from*.
 
 ### S4. Unbounded listener/handler accumulation in update-delayer waits
 
@@ -219,7 +244,8 @@ Confidence: confirmed. (The `whenInvalidated` half of this leak is K10.)
 - TS: `ui-update-delayer.ts:20-28` — when the delay timer fires normally, `t.changed.remove(onChanged)` is never called; the handler is removed only the next time a UI action becomes active. In an app with frequent invalidations and rare UI actions, `uiActions.changed` grows without bound. Same for its abort listener (`ui-update-delayer.ts:37-45`) and the >10 s branch of `FixedDelayer` (`update-delayer.ts:27-44`).
 - C#: `UpdateDelayer` uses a linked CTS cancelled/disposed in `finally` (`UpdateDelayer.cs:46-54`).
 - Failure: a dashboard updating once per second leaks ~86k closures/day; long sessions degrade in memory and `changed.trigger()` cost.
-- Direction: remove listeners/handlers on the success path of every wait; a shared "await with signal" helper in `@actuallab/core` would centralize this.
+- **Recommended:** add a shared "await with signal" helper to `@actuallab/core` (resolve/reject + guaranteed removal of the abort listener and any event handler on *every* exit path) and rewrite the delayer waits — and K10's `whenInvalidated` — on top of it.
+- **Alternative:** per-site manual cleanup (remove `changed` handlers and abort listeners on the success path of each wait). Same end state, three copies of the same fiddly pattern.
 
 ### S5. Disposal mid-computation: one post-dispose update is published, then the update cycle hangs; `update()`/`use()` callers hang forever
 
@@ -228,7 +254,8 @@ Confidence: confirmed.
 - TS: `computed-state.ts:111-149` — the dispose check happens only at the loop top. If `dispose()` fires while `await this._computer()` is in flight, the cycle still calls `_update` (an observable post-dispose update), then `computed.whenInvalidated(disposeSignal)` with an already-aborted signal — which never settles (K10) → the cycle stays pending indefinitely. `FixedDelayer` with `ms <= 10_000` ignores `abortSignal` entirely (`update-delayer.ts:45-48`), and `_renewer` (`computed-state.ts:39-44`) awaits `whenUpdated()`, which never resolves after disposal — so `state.update()`/`state.use()` on a disposed-mid-cycle state hangs the caller forever.
 - C#: `DisposeToken` cancels `WhenInvalidated` and the delay promptly; update-after-dispose is explicitly managed via `GracefulDisposeToken` (`ComputedState.cs:167-193`), and the cycle always terminates.
 - Failure: React unmount during an in-flight fetch: the state publishes one more update, and any code awaiting `state.update()` never resolves — silent deadlock of that dependency chain.
-- Direction: reject `whenInvalidated` immediately on an aborted signal; check `disposeSignal.aborted` after compute before `_update`; make `whenUpdated`-based waits reject on dispose so `update()`/`use()` fail fast.
+- **Recommended:** terminate promptly and fail waiters fast: check `disposeSignal.aborted` after the compute returns (skip `_update`, exit the loop); make `whenInvalidated` reject immediately on an already-aborted signal (K10); reject outstanding and future `whenUpdated()` waits on dispose (S11); make `FixedDelayer`'s ≤10 s branch honor the abort signal.
+- **Alternative:** port C#'s `GracefulDisposeToken` semantics (allow one final graceful update within a configurable delay before hard-cancelling). Fuller parity, meaningfully more machinery; the prompt-termination shape is the correct floor and doesn't preclude it.
 
 ### S6. React hooks miss updates between render and effect subscription — classic external-store race
 
@@ -237,7 +264,8 @@ Confidence: confirmed.
 - TS: both hooks are hand-rolled (no `useSyncExternalStore`). `use-computed-state.ts:42-74` and `use-mutable-state.ts:19-39` read the value during render, then subscribe inside `useEffect` via `state.whenUpdated()` — a fresh `PromiseSource` (`state.ts:74-76`) resolving only on the *next* `_update`. An update landing between render and effect execution is invisible.
 - C#: waits are per-generation — capture `state.Snapshot`, await `snapshot.WhenUpdated()` (`StateSnapshot.cs:62`), already completed if the update happened in the meantime. No lost-wakeup window.
 - Failure: `useMutableState` mounts; another component calls `state.set(v1)` in the same tick after render but before effects flush → the UI shows the initial value while `state.value === v1`, until some future `set` — potentially forever.
-- Direction: move to `useSyncExternalStore` with event-based subscribe, or compare `state.updateIndex` in the effect against the render-captured index and force-render if they differ. Making `whenUpdated(sinceIndex)` index-based (S11) fixes all non-React consumers too.
+- **Recommended:** rewrite both hooks on `useSyncExternalStore` — React's purpose-built answer to exactly this race (and to tearing under concurrent rendering); `getSnapshot` reads `updateIndex`, `subscribe` builds on S11's versioned wait. Naturally absorbs S7's lifecycle fix.
+- **Alternative:** keep the hand-rolled effect but compare `state.updateIndex` against the index captured at render and force a re-render before entering the await loop. Closes the missed-update window only; StrictMode/concurrent issues (S7) still need their own fix.
 
 ### S7. `useComputedState` is permanently broken under React StrictMode (and unsafe under concurrent rendering)
 
@@ -246,7 +274,8 @@ Confidence: confirmed.
 - TS: `use-computed-state.ts:33-37` creates/disposes `ComputedState` **during render** (a side effect); effect cleanup disposes the state but leaves it in `stateRef`. StrictMode dev (mount → cleanup → re-mount): the same **disposed** state is re-subscribed — `subscribe()` bails on `state.isDisposed` (`use-computed-state.ts:52,57`) and the component never re-renders; the value freezes. Under concurrent React, a discarded render leaks a running `ComputedState`.
 - C#: n/a mechanically; the Blazor counterpart ties state lifetime to component lifecycle callbacks, never render.
 - Failure: any app running `<StrictMode>` in development shows `useComputedState` values stuck at the initial value; production behaves differently — hard to diagnose.
-- Direction: recreate the state if `stateRef.current.isDisposed` at effect time (or move creation/disposal fully into the effect keyed on deps); never dispose during render.
+- **Recommended:** fold into S6's `useSyncExternalStore` rewrite: create/dispose the `ComputedState` exclusively inside `useEffect` keyed on deps (render never mutates), matching how the Blazor counterpart ties state lifetime to lifecycle callbacks.
+- **Alternative (if S6's rewrite is deferred):** minimal patch — never dispose during render, and at effect time recreate the state when `stateRef.current.isDisposed`. Fixes StrictMode; concurrent-render leaks remain possible.
 
 ### S8. No retry backoff: `UpdateDelayer` has no `retryCount`, no `RetryDelays`, no transient-error tracking
 
@@ -255,7 +284,8 @@ Confidence: confirmed.
 - TS: `UpdateDelayer` is `(abortSignal?) => Promise<void>` (`update-delayer.ts:2`) — the delay cannot depend on failure history. No `StateSnapshot`, so no `RetryCount`/`ErrorCount`. Error recovery relies solely on the global 1 s auto-invalidation (K5) — a constant ~1 s retry loop forever.
 - C#: `UpdateDelayer.Delay(retryCount, ct)` uses `RetryDelays[retryCount]` growing 1 s → 1 min (`UpdateDelayer.cs:30-35, 67-68`); `RetryCount` is computed per snapshot from transient-error classification (`StateSnapshot.cs:40-53`).
 - Failure: backend down → every `ComputedState` in the app hammers it once per second indefinitely; C# backs off to one attempt per minute.
-- Direction: extend the delayer signature to `(retryCount, abortSignal)` and track a consecutive-error counter in `_updateCycle`; reuse `RetryDelaySeq` from `@actuallab/core`.
+- **Recommended:** extend the delayer signature to `(retryCount, abortSignal)`; `_updateCycle` tracks a consecutive-error counter (reset on success); the default delayers use `RetryDelaySeq` (1 s → 1 min, C# `RetryDelays` parity). Pairs with K5 (states stop relying on the blanket 1 s error auto-invalidation).
+- **Alternative:** keep the delayer signature and implement backoff inside `ComputedState` only (multiply the delay by a factor per consecutive error). Smaller, but custom delayers can't participate and the backoff isn't configurable per state.
 
 ### S9. `UIActionTracker` has no post-action instant-update window; the 50 ms buffer is ineffective and adds latency
 
@@ -264,7 +294,8 @@ Confidence: confirmed.
 - TS: `ui-action-tracker.ts:12-14` — `isActive` is true only while `_activeCount > 0`. In `run`/`call` (`ui-action-tracker.ts:27-31, 45-49`) the `finally` decrements first, then waits 50 ms, then triggers `changed`: (a) during the 50 ms "buffer", `isActive` is already false, so a `UIUpdateDelayer` consulted when the post-command invalidation arrives waits the full delay — the buffer buys nothing; (b) `await uiActions.call(fn)` returns 50 ms late.
 - C#: `AreInstantUpdatesEnabled()` is true while actions run **or** within `InstantUpdatePeriod` (300 ms) after the last result (`UIActionTracker.cs:16, 82-91`); `UpdateDelayer` races `WhenInstantUpdatesEnabled()` against the delay (`UpdateDelayer.cs:42-55`).
 - Failure: user clicks "Save"; the server invalidates the dependent query right after the command completes. C#: instant refresh. TS: full configured update delay (plus the 50 ms handler latency).
-- Direction: track `lastResultAt`, honor a ~300 ms instant-update window after completion (decrement + timestamp + trigger immediately, no artificial sleep); make `UIUpdateDelayer` consult it.
+- **Recommended:** track `lastResultAt`; add `areInstantUpdatesEnabled()` = active **or** within a ~300 ms `instantUpdatePeriod` after the last completion (C# parity); in `run`/`call`, decrement + timestamp + trigger `changed` immediately — no artificial 50 ms sleep; `UIUpdateDelayer` consults the new predicate.
+- **Alternative:** keep the `isActive`-only model but move the 50 ms wait *before* the decrement, restoring the buffer's intent. Inferior: still adds latency to every command caller and 50 ms is far tighter than the C# window.
 
 ### S10. `UIUpdateDelayer` skips the delay entirely (no `MinDelay` floor) while a UI action is active — hot-loop risk
 
@@ -273,7 +304,8 @@ Confidence: confirmed.
 - TS: `ui-update-delayer.ts:15` — `if (t.isActive) return Promise.resolve();` and the `onChanged` cancel path also resolves with zero residual delay.
 - C#: `UpdateDelayer.Delay` enforces `minDelay` (default 32 ms) even when instant updates kick in, with an explicit comment that otherwise updates can consume 100% CPU (`UpdateDelayer.cs:32-35, 58-64`).
 - Failure: a long-running UI action while a dependency invalidates on every recompute → microtask-tight recompute loop for the action's duration; frozen tab.
-- Direction: still await a small `minDelay` after the instant-update short-circuit.
+- **Recommended:** enforce a small `minDelay` (~32 ms, C# default) in `UIUpdateDelayer`'s short-circuit paths, measured from delay start — `UpdateDelayer.Delay` parity.
+- **Alternative:** enforce the floor inside `ComputedState._updateCycle` instead, guarding against *any* zero-delay delayer (including user-supplied ones). Both is belt-and-braces; delayer-side is where C# puts it.
 
 ### S11. `whenUpdated()` is state-level and lossy; never settles on dispose
 
@@ -282,7 +314,8 @@ Confidence: confirmed.
 - TS: `state.ts:74-76, 96-97` — one shared `PromiseSource` resolved-and-nulled per update. A consumer looping `await state.whenUpdated()` misses updates landing between resolution and re-subscription. After `dispose()`, pending/future `whenUpdated()`/`whenFirstTimeUpdated()` promises never settle.
 - C#: waits are per-snapshot (`StateSnapshot.cs:61-62`) — no missed generation.
 - Failure: `await state.whenUpdated(); assert(...)` intermittently misses generations; teardown code awaiting `whenFirstTimeUpdated()` after dispose deadlocks (see also S5).
-- Direction: monotonically-versioned wait — `whenUpdated(sinceIndex = updateIndex)` resolving immediately if already past; reject/resolve outstanding waits on dispose.
+- **Recommended:** a monotonically-versioned wait — `whenUpdated(sinceIndex = this.updateIndex)` resolving immediately when `updateIndex > sinceIndex`; reject outstanding and future waits on dispose. Fixes the lost-wakeup class for React hooks (S6) and every other consumer.
+- **Alternative:** port `StateSnapshot` (per-generation immutable snapshot with `WhenUpdated`/`WhenInvalidated`) — the full C# shape, which S12's events and counters would also need. Bigger; the index-based wait is the pragmatic subset and doesn't preclude it.
 
 ### S12. State events (`Invalidated`/`Updating`/`Updated`) and `StateSnapshot` counters are absent
 
@@ -291,7 +324,8 @@ Confidence: confirmed (absent in TS).
 - TS: no equivalent of the three events or `StateEventKind`; no `UpdateCount`/`ErrorCount`/`RetryCount`/`IsInitial` (only `updateIndex`); `lastNonErrorValue` is stored as a raw value — ambiguous when `T` includes `undefined` (`state.ts:14, 21-23, 94`).
 - C#: `State.cs:124-126` — events with exactly-once-per-generation semantics via `StateSnapshot.TryClaimInvalidatedRaise`; counters in `StateSnapshot.cs:16-19`.
 - Failure: C# patterns like `state.Invalidated += ...` (used pervasively in Fusion UIs for eager recompute) have no counterpart; `whenInvalidated()` covers one generation with none of the exactly-once machinery.
-- Direction: if events stay out of scope, document it; at minimum replace `lastNonErrorValue` with a reference to the last non-error *computed* to remove the `undefined` ambiguity.
+- **Recommended:** keep the event trio out of scope for now (document it), but replace `lastNonErrorValue`'s raw-value storage with a reference to the last non-error *computed* — removes the `undefined` ambiguity cheaply.
+- **Alternative:** port the events with exactly-once semantics — requires the `StateSnapshot` concept (S11's alternative) to carry the claim flags; do it only together with that port.
 
 ### S13. Base `State` members crash with `TypeError` on a `ComputedState` before its first computation
 
@@ -300,7 +334,8 @@ Confidence: confirmed.
 - TS: `computed-state.ts:57` — `_computed` stays unset until the first `_update()`. `ComputedState` guards its own getters with `_hasOutput`, but inherited members dereference `this._computed` directly: `use` (`state.ts:53-55`), `useInconsistent`, `update`, `recompute`, `whenInvalidated` → `TypeError`.
 - C#: a state always has a computed from construction — an invalidated initial one (`State.cs:240-246`) — so `Use`/`Update` before the first computation just await it.
 - Failure: `parentComputer = () => childState.use()` on a freshly created async `ComputedState` → hard crash instead of awaiting the first value.
-- Direction: always create the initial computed in the constructor, pre-invalidated (same fix as S1).
+- **Recommended:** always create the initial computed in the constructor, pre-invalidated — same fix as S1's recommended path; `use`/`update` before the first computation then await it like C#.
+- **Alternative:** null-guard every inherited member (`use`, `update`, `recompute`, `whenInvalidated`, …). Spreads special-casing through the base class; rejected-leaning.
 
 ### S14. `Promise.race` losers in `_updateCycle` produce unhandled promise rejections
 
@@ -309,23 +344,36 @@ Confidence: confirmed.
 - TS: `computed-state.ts:145-148` races `updateDelayer(disposeSignal)` against `_cancelDelaySource`. If the cancel source wins and the state is later disposed, the still-pending delayer promise rejects on abort with nobody attached → `unhandledRejection` (crashes Node by default).
 - C#: `UpdateDelayer` awaits with `SuppressCancellationAwait`/`SilentAwait` (`UpdateDelayer.cs:38, 48-50`).
 - Failure: SSR/Node test process exits with `ERR_UNHANDLED_REJECTION` when a delayer-driven state is disposed shortly after a user action cancelled its delay.
-- Direction: attach a no-op `.catch()` before racing, or make delayers resolve rather than reject on abort (the loop re-checks `disposeSignal` anyway).
+- **Recommended:** make delayers **resolve** (not reject) on abort — the update loop re-checks `disposeSignal` right after, so rejection carries no information; this removes the whole unhandled-rejection class at the source (C#'s `SuppressCancellationAwait` spirit).
+- **Alternative:** attach a no-op `.catch()` to the delayer promise before racing. Local and safe, but every future race site must remember the same trick.
 
 ### S15. `MutableState.set` lacks the equality short-circuit
 
-Confidence: confirmed. TS always invalidates + republishes (`mutable-state.ts:22-25`); C# returns early on `NextOutput == result` (`MutableState.cs:114-116`). `set(sameValue)` per keystroke triggers full cascades and re-renders where C# is a no-op. Needs `Result.equals` (C9). Direction: compare against current output and return early.
+Confidence: confirmed. TS always invalidates + republishes (`mutable-state.ts:22-25`); C# returns early on `NextOutput == result` (`MutableState.cs:114-116`). `set(sameValue)` per keystroke triggers full cascades and re-renders where C# is a no-op.
+
+- **Recommended:** add `Result.equals` (C9) and early-return in `set` when the staged output equals the current one (value via `Object.is`, error by reference) — C# parity.
+- **Alternative:** additionally accept a custom value comparer as a `MutableState` option for structural-equality use cases. Only if a real consumer needs it.
 
 ### S16. External invalidation of a `MutableState` is not eagerly renewed
 
-Confidence: confirmed. TS leaves `_computed` invalidated until the next `update()`/`use()` (renewal is lazy, `mutable-state.ts:7-11`); C#'s `OnInvalidated` renews synchronously — a `MutableState` is *never* observed invalidated (`MutableState.cs:152-162`). Mostly benign, but code checking `state.computed.isConsistent` behaves differently, and TS tests codify the lazy behavior (`mutable-state.test.ts:65-81`). Direction: renew synchronously on invalidation, or explicitly document the divergence.
+Confidence: confirmed. TS leaves `_computed` invalidated until the next `update()`/`use()` (renewal is lazy, `mutable-state.ts:7-11`); C#'s `OnInvalidated` renews synchronously — a `MutableState` is *never* observed invalidated (`MutableState.cs:152-162`). Mostly benign, but code checking `state.computed.isConsistent` behaves differently, and TS tests codify the lazy behavior (`mutable-state.test.ts:65-81`).
+
+- **Recommended:** renew synchronously on invalidation (cheap — the renewer is sync), restoring the "a MutableState is always consistent" invariant; update the test that codifies laziness. Builds naturally on S3's staged `_nextOutput`.
+- **Alternative:** keep lazy renewal and document the divergence explicitly. Acceptable if the S3 fix lands without staging.
 
 ### S17. `useMutableState` render throws if the state holds an error result
 
-Confidence: confirmed. `use-mutable-state.ts:41` returns `state.value`, whose getter throws on error output — and the setter accepts `Result<T>`, so `setter(errorResult(e))` is a supported call. Next render of every component using the state throws, unmounting the tree absent an error boundary. Direction: return `{ value, error }` (as `useComputedState` does) or document the restriction.
+Confidence: confirmed. `use-mutable-state.ts:41` returns `state.value`, whose getter throws on error output — and the setter accepts `Result<T>`, so `setter(errorResult(e))` is a supported call. Next render of every component using the state throws, unmounting the tree absent an error boundary.
+
+- **Recommended:** return `{ value, error, set }` (the shape `useComputedState` already uses) so error results render instead of throwing.
+- **Alternative:** narrow the setter to plain values (no `Result`) and document that errors can't be stored via this hook. Smaller, but loses parity with `MutableState.set`'s contract.
 
 ### S18. `UIActionTracker.errors` grows unbounded with no dedup
 
-Confidence: confirmed. Every failure is pushed to a plain array; only manual `dismissError` removes entries (`ui-action-tracker.ts:10, 26, 43`). C# dedups same-type/same-message failures within `MaxDuplicateRecency` (1 s) (`UIActionFailureTracker.cs:64-98`). Combined with S8's fixed 1 s retry, an error-toast UI floods and memory grows for the session's lifetime. Direction: port the recency-based dedup; consider a cap.
+Confidence: confirmed. Every failure is pushed to a plain array; only manual `dismissError` removes entries (`ui-action-tracker.ts:10, 26, 43`). C# dedups same-type/same-message failures within `MaxDuplicateRecency` (1 s) (`UIActionFailureTracker.cs:64-98`). Combined with S8's fixed 1 s retry, an error-toast UI floods and memory grows for the session's lifetime.
+
+- **Recommended:** port the recency-based dedup (same error name + message within ~1 s is dropped) plus a size cap as a backstop.
+- **Alternative:** cap-only (bounded ring of recent errors). Stops the memory growth but a retry loop still floods the toast UI within the cap.
 
 ### Out of scope (state + UI)
 
@@ -357,7 +405,8 @@ Confidence: confirmed.
 - TS: `rpc-system-call-sender.ts:152-165` — `error()` sends `[{ Message }]`, no `TypeRef`.
 - C#: `Infrastructure/RpcSystemCalls.cs:95-104` — `Error` does `error.ToException()!`; `ExceptionInfo.ToException()` returns **null** when `TypeRef` is empty (`ExceptionInfo.cs:32, 57-68`), so `SetError(null!)` throws inside the handler and the `$sys.Error` is effectively swallowed.
 - Failure: a .NET peer calls into a TS callee; the TS handler throws → the .NET caller's task hangs (queries: forever; commands: until the 10 s `RunTimeout`). TS's own `sendEnd` already knows this contract — it sends `TypeRef: 'System.Exception'` (`rpc-stream-sender.ts:214-216`).
-- Direction: send `{ TypeRef: 'System.Exception', Message }` (or the actual error name) from `RpcSystemCallSender.error`.
+- **Recommended:** send `{ TypeRef: 'System.Exception', Message }` from `RpcSystemCallSender.error` — the exact contract `sendEnd` already follows (`rpc-stream-sender.ts:214-216`).
+- **Alternative:** additionally map well-known TS error names to richer type refs (a small name → TypeRef registry) for better typed handling on .NET callers. Refinement, not required for correctness.
 
 ### R3. Normally-completed remote streams never send `AckEnd` and never unregister → unbounded leaks on both peers
 
@@ -366,7 +415,8 @@ Confidence: confirmed.
 - TS: `rpc-stream.ts:307-313` — `onEnd` only flips `_completed`; the iterator's done-path (`:373-376`) returns without `dispose()`, and JS `for await` does not invoke `return()` on natural exhaustion. The stream stays in `peer.remoteObjects` (a **strong** `Map`, `rpc-remote-object-tracker.ts:3-27`) and no `$sys.AckEnd` is ever sent. Same for the gap-error completion path (`:258-267`).
 - C#: `RpcStream.cs:296-313` — `OnEnd` → `CloseFromLock` → sends `$sys.AckEnd` and unregisters (`:334-358`); the tracker uses weak refs (`Infrastructure/RpcObjectTrackers.cs:41-48`).
 - Failure: every completed server→client stream (a) leaks an `RpcStream` in the TS client for the peer's lifetime and (b) keeps its id in the keep-alive list (`rpc-peer.ts:595-597`), making the .NET server's `RpcSharedStream` immortal — parked awaiting an ack after `End` (`RpcSharedStream.cs:130-152, 239-253`) and refreshed by `KeepAlive` every 10 s, so the 125 s `ObjectReleaseTimeout` reaper never fires. Memory grows on **both** ends.
-- Direction: in `onEnd` (and gap-error completion) mirror C#: send `AckEnd` and unregister/dispose immediately.
+- **Recommended:** mirror C#'s `CloseFromLock`: on `onEnd` (and the gap-error completion path) send `$sys.AckEnd` and unregister/dispose immediately; also dispose from the iterator's natural-exhaustion done-path.
+- **Alternative (complementary):** make `remoteObjects` a weak tracker (WeakRef + FinalizationRegistry, C# parity) as a safety net for *abandoned* streams. Doesn't replace the eager close — the .NET-side `RpcSharedStream` still needs the `AckEnd`.
 
 ### R4. `$sys.End` index is ignored — silent loss of tail items
 
@@ -375,7 +425,8 @@ Confidence: confirmed.
 - TS: `rpc-stream.ts:307-313` — `onEnd(index, error)` completes the stream regardless of `index` vs `_nextExpectedIndex`.
 - C#: `RpcStream.cs:296-313` — `OnEnd` applies the same ordering rules as items: gap → `SendResetFromLock(_nextIndex)` (re-request the missing range); duplicate → duplicate-ack.
 - Failure: after a reconnect, replayed traffic can deliver `End(N)` while items `k..N-1` were dropped with the old connection; TS completes the stream *successfully* with the tail missing — silent data loss where C# recovers via reset-ack.
-- Direction: apply the same index gate to `onEnd`.
+- **Recommended:** apply the same index gate to `onEnd` as to items: gap → send reset-ack and keep waiting; duplicate → duplicate-ack/ignore — C# `OnEnd` parity.
+- **Alternative:** treat a gapped `End` as an error completion. Fails loudly instead of silently, but loses C#'s recovery (the sender can replay the missing range); rejected-leaning.
 
 ### R5. System messages can be flushed onto the wire *before* the handshake
 
@@ -384,7 +435,8 @@ Confidence: confirmed (code path; failure against .NET verified by its handshake
 - TS: `rpc-connection.ts:265-286` — `_sendRaw` buffers writes while the WS is `CONNECTING` and flushes them in `onopen`, i.e. **before** the peer's run loop sends `$sys.Handshake` (`rpc-peer.ts:859-877`). The abort handler sends `$sys.Cancel` whenever `_connection !== undefined` (`rpc-peer.ts:377-386`), which is true throughout connect/handshake.
 - C#: `RpcPeer.Transport` returns null until the handshake completes, with a comment explaining that early writes corrupt the remote handshake (`RpcPeer.cs:29-52`); the server treats the **first** inbound message as the handshake and fails otherwise (`RpcPeer.cs:306-324`).
 - Failure: user aborts a deferred call while the socket is still connecting → the buffered `$sys.Cancel` is the first message the .NET server reads → handshake fails → connection drops → reconnect; repeatable under cancellation churn.
-- Direction: gate all peer sends on handshake completion (drop or queue system calls until `Connected`), or remove the CONNECTING-buffer in favor of peer-level deferral.
+- **Recommended:** gate at the peer level, like C#'s null-`Transport`-until-handshake: hold non-handshake sends in the peer until the handshake completes (queue calls, drop pre-handshake system calls like `Cancel` — the call they'd cancel hasn't been sent either).
+- **Alternative:** keep the connection-level CONNECTING buffer but guarantee the handshake is written first (front-insert / two-phase flush). Fragile ordering contract spread across two layers; rejected-leaning.
 
 ### R6. `mempack6` / `mempack6c` registered as MessagePack formats
 
@@ -393,7 +445,8 @@ Confidence: confirmed.
 - TS: `rpc-serialization-format.ts:239-242, 249-252` — `MemoryPackV6`/`MemoryPackV6C` are constructed as msgpack formats and resolvable via `f=` URL keys.
 - C#: `Configuration/RpcSerializationFormat.cs:51-57` — `mempack6*` uses **MemoryPack** argument serialization, a completely different byte format.
 - Failure: a peer configured with `f=mempack6` connects; the .NET server speaks MemoryPack, TS speaks msgpack — every payload is garbage, surfacing as confusing deserialization errors rather than a clear "unsupported format".
-- Direction: don't register mempack keys in TS (let the resolver throw), or map them to an explicit "unsupported" error.
+- **Recommended:** unregister the mempack keys and make the resolver throw a clear "MemoryPack formats are not supported by the TS client" error at connection setup.
+- **Alternative:** implement MemoryPack. Not justified — msgpack covers the same wire role and the .NET side offers both.
 
 ### R7. Binary polymorphism markers (`msgpack6`) not implemented
 
@@ -402,7 +455,8 @@ Confidence: confirmed in code; triggers only for polymorphic types.
 - TS: args are encoded/decoded as bare concatenated msgpack values (`rpc-serialization.ts:209-257, 309-321`), no type-marker handling.
 - C#: `msgpack6` prefixes every *polymorphic* argument/result with a derived-type marker (`Serialization/RpcByteArgumentSerializerV4.cs:54-98`, `ByteTypeSerializer.cs:65-112`); `$sys.Ok`/`I`/`B` are sent with `needsPolymorphism: true` when the return/item type is abstract/interface/object.
 - Failure: any TS-facing method or stream whose declared result/item type is polymorphic in .NET terms → TS decodes marker bytes as msgpack → frame decode error or corrupt values. Works today only because ActualChat's TS-facing APIs avoid polymorphic types — nothing enforces that.
-- Direction: implement marker parsing (the `\0\0` ExpectedTypeSpan fast path is trivial) or document/enforce "no polymorphic types on TS-facing methods" and fail loudly.
+- **Recommended:** implement marker *parsing*: handle the `\0\0` non-polymorphic fast path (trivial), and on an actual derived-type marker fail with a clear "polymorphic payloads are not supported" error instead of corrupting the frame. Full type resolution can follow if ever needed.
+- **Alternative:** document/enforce "no polymorphic types on TS-facing methods" only. Zero code, but the failure mode stays a confusing decode error the first time someone breaks the rule.
 
 ### R8. Peer-change detection keyed on `RemoteHubId` instead of `RemotePeerId`
 
@@ -411,7 +465,8 @@ Confidence: confirmed.
 - TS: `rpc-peer.ts:905-920` compares successive `RemoteHubId`s.
 - C#: `Infrastructure/RpcHandshake.cs:24-32` — `GetPeerChangeKind` compares `RemotePeerId`.
 - Failure: the .NET server removes an idle `RpcServerPeer` while the client is offline; on reconnect a *new* server peer (new `Id`, same `HubId`) is created. C# clients treat this as `Changed` and reset shared/remote objects; TS treats it as same-peer — `peerChanged` doesn't fire and client-owned `RpcStreamSender`s wait forever for acks the new peer will never send.
-- Direction: compare `RemotePeerId` (already parsed into `RemoteHandshake`, `rpc-peer.ts:481-493`).
+- **Recommended:** compare `RemotePeerId` (already parsed into `RemoteHandshake`, `rpc-peer.ts:481-493`) — C# `GetPeerChangeKind` parity.
+- **Alternative:** compare both ids (peerId decides, hubId mismatch logged as an extra signal). Marginal value over the recommended one-liner.
 
 ### R9. Inbound call tracker has no dedup (`GetOrRegister`/`TryReprocess`) — duplicate execution on a TS callee
 
@@ -420,7 +475,8 @@ Confidence: confirmed.
 - TS: `rpc-peer.ts:509-521` — `inboundCalls.register(call)` unconditionally overwrites (`rpc-call-tracker.ts:192-194`) and dispatch always runs.
 - C#: `Infrastructure/RpcCallTrackers.cs:48-56` + `RpcInboundCall.cs:114-158` — a resent call id reuses the existing call and just re-sends its result.
 - Failure: reconnect resends are by design — and TS even double-sends locally: a call issued while disconnected is sent by its deferred `Connected` listener (`rpc-peer.ts:361-367`, triggered synchronously at `:926`) **and** again by the blind resend in `_reconnect` (`:1043-1058`). Against a .NET server this is absorbed; against a TS server the method body executes twice (double side effects for commands).
-- Direction: port `GetOrRegister` semantics — attach to the existing dispatch, re-send the result if already computed.
+- **Recommended:** port `GetOrRegister` semantics to the inbound tracker: a resent call id attaches to the existing dispatch instead of re-invoking, and re-sends the result if already computed — protects against every resend source, local or remote.
+- **Alternative:** only fix the local double-send (the deferred-`Connected` listener and `_reconnect`'s blind resend overlap). Narrower; a .NET client resending to a TS server still double-executes.
 
 ### R10. TS never sends `$sys.Disconnect`
 
@@ -429,7 +485,8 @@ Confidence: confirmed.
 - TS: no `disconnect` sender exists in `rpc-system-call-sender.ts`; TS only *handles* it (`rpc-system-call-handler.ts:179-206`). The keep-alive handler also ignores the id list entirely (`rpc-system-call-handler.ts:109-115`), so per-object keep-alive/`ObjectReleaseTimeout` semantics are absent.
 - C#: sends it in three places — unknown shared object acked (`RpcSystemCalls.cs:149-159`), unknown ids in keep-alive (`RpcObjectTrackers.cs:300-317`), and `RpcSharedStream.SendDisconnect` for host-mismatch/late/rejected acks (`RpcSharedStream.cs:78-111, 284-289`).
 - Failure: a consumer acks a stream whose sender the TS callee no longer tracks → gets nothing back → the remote stream hangs instead of failing fast with `RpcStreamNotFoundException`.
-- Direction: add `disconnect()` to the sender; reply with it from the `$sys.Ack` handler when the shared object is unknown; process keep-alive id lists.
+- **Recommended:** add `disconnect()` to the system-call sender and reply with it from the `$sys.Ack` handler when the shared object is unknown — streams then fail fast (`RpcStreamNotFoundException` analog) instead of hanging. Process keep-alive id lists (unknown ids → disconnect) in the same change.
+- **Alternative:** the Ack-handler path only, deferring keep-alive list processing. Covers the user-visible hang; per-object release timeouts remain absent.
 
 ### R11. `RpcStreamSender.onAck` skips C#'s validation
 
@@ -438,7 +495,8 @@ Confidence: confirmed.
 - TS: `rpc-stream-sender.ts:159-167` — any ack starts the pump; `mustReset` is just "hostId non-empty"; no host equality check; no rejection of resets on `allowReconnect === false`.
 - C#: `RpcSharedStream.OnAck` (`RpcSharedStream.cs:78-111`): host mismatch → `SendDisconnect`; a not-yet-started stream only accepts `mustReset && nextIndex == 0`; reset on a non-reconnectable stream → `SendDisconnect`.
 - Failure: a consumer that reconnected through a different host keeps a TS sender streaming into the void; a stray/duplicate ack starts a sender C# would refuse to start.
-- Direction: port the three OnAck guards (needs R10's `$sys.Disconnect`).
+- **Recommended:** port the three `OnAck` guards — host mismatch → disconnect; a not-yet-started stream accepts only `mustReset && nextIndex === 0`; reset on a non-reconnectable sender → disconnect. Depends on R10's `disconnect()`.
+- **Alternative:** the host-equality check alone (the load-balancer case). Cheapest meaningful subset; the other two guards close smaller correctness holes.
 
 ### R12. No outbound call timeouts of any kind
 
@@ -447,7 +505,8 @@ Confidence: confirmed (documented omission, but callers of the implemented API a
 - TS: no equivalent of the Maintain loop; `rpc-call-tracker.ts:25-28` documents it away. Deferred (`AwaitForConnection`) calls also wait indefinitely (`rpc-peer.ts:355-373`).
 - C#: `RpcCallTrackers.cs:108-207` — RunTimeout/DelayTimeout enforcement; commands default to connect 1.5 s / run 10 s (`RpcCallTimeouts.Default.cs:16`); plus `ConnectTimeout` (`RpcOutboundCall.cs:103-115`).
 - Failure: connected-but-stuck server (handler deadlock, lost `Ok`) → TS promise pending forever; UI awaits hang. The keep-alive watchdog only covers dead links, not stuck calls.
-- Direction: a per-peer interval scanning `outboundCalls` against a coarse run-timeout (even opt-in per method).
+- **Recommended:** a per-peer maintain interval scanning `outboundCalls` against `RpcCallTimeouts` with C#'s defaults — commands bounded (≈1.5 s connect / 10 s run), queries unbounded — overridable per call/method.
+- **Alternative:** opt-in per-call timeout option only, no defaults. Smaller, but leaves C#'s "commands never hang forever" guarantee unmet by default.
 
 ### R13. No reconnect backoff and no premature-disconnect penalty
 
@@ -456,7 +515,8 @@ Confidence: confirmed (partly intentional).
 - TS: fixed 100 ms delay (`rpc-client-peer-reconnect-delayer.ts:8-12`); `_tryIndex` reset on every successful handshake (`rpc-peer.ts:927`).
 - C#: exponential backoff 1→60 s (`RpcClientPeerReconnectDelayer.cs:21-25`) plus `PrematureDisconnectTimeout` — a graceful close within 15 s still bumps the attempt index (`RpcPeer.cs:404-405`, `RpcLimits.cs:18`).
 - Failure: a server crash-looping *after* handshake gets re-connected by every TS client ~5-10×/s indefinitely (thundering herd).
-- Direction: keep the fixed delay, but don't reset `_tryIndex` when the connection lived less than a premature-disconnect threshold.
+- **Recommended:** keep the deliberately-simple fixed base delay, but stop resetting `_tryIndex` when the connection lived less than a premature-disconnect threshold (~15 s, C# `PrematureDisconnectTimeout`) — crash-looping servers then see growing delays via the existing `RetryDelaySeq` plumbing.
+- **Alternative:** full exponential-backoff port (1 → 60 s defaults). More C#-faithful, but changes reconnect UX for the common brief-blip case; the premature-disconnect guard alone fixes the herd problem.
 
 ### R14. `parseStreamRef` pattern-sniffs every string in every result
 
@@ -465,19 +525,29 @@ Confidence: confirmed code; failure plausible.
 - TS: `rpc-stream.ts:58-72` accepts *any* 4-6 part comma string whose parts 2-4 `parseInt` (`hostId` unconstrained); `resolveStreamRefs` (`:465-499`) rewrites such strings into registered `RpcStream`s inside arbitrary result graphs (`rpc-hub.ts:325-332`).
 - C#: stream refs are only materialized where the static type says so (`RpcStreamJsonConverter`).
 - Failure: JSON transport; a legit user-data string like `"a,1,30,61"` in a DTO silently becomes a broken `RpcStream` (and registers a phantom remote object that keep-alive then advertises).
-- Direction: at minimum require `hostId` to parse as a GUID; better, only resolve refs at positions the method def declares as streams.
+- **Recommended:** resolve stream refs only at positions the method def declares as streams (C#'s type-driven materialization); keep the pattern-sniff nowhere.
+- **Alternative:** keep the sniff but require `hostId` to parse as a GUID — one line, kills virtually all false positives; acceptable stopgap if the type-driven plumbing is deferred.
 
 ### R15. `$sys.End` error detection keyed on `Message` truthiness, not `TypeRef`
 
-Confidence: confirmed. TS: `rpc-system-call-handler.ts:146-163` — `error = msg ? new Error(msg) : null`. C#: `error.IsNone` = empty `TypeRef` (`RpcSystemCalls.cs:180-187`, `ExceptionInfo.cs:32`). A stream terminated by an exception with an empty `Message` looks like clean completion. Direction: check TypeRef presence first.
+Confidence: confirmed. TS: `rpc-system-call-handler.ts:146-163` — `error = msg ? new Error(msg) : null`. C#: `error.IsNone` = empty `TypeRef` (`RpcSystemCalls.cs:180-187`, `ExceptionInfo.cs:32`). A stream terminated by an exception with an empty `Message` looks like clean completion.
+
+- **Recommended:** key error detection on `TypeRef` presence (fall back to `Message`), and carry the `TypeRef` into the constructed `Error`'s name for fidelity.
+- **Alternative:** none meaningful beyond the fidelity refinement — the discriminator must match the .NET contract.
 
 ### R16. `$sys.Reconnect` handler skips handshake-index validation
 
-Confidence: confirmed (acknowledged in a comment, `rpc-system-call-handler.ts:65-69`). TS `_handleReconnect` ignores `args[0]`; C# throws `TooLateToReconnect` when `ownHandshake.Index != handshakeIndex` (`RpcSystemCalls.cs:57-70`). A TS callee can reconcile against the wrong connection generation after a rapid double-reconnect; bounded damage (worst case duplicate execution — R9). Direction: TS server peers should track their handshake index and validate.
+Confidence: confirmed (acknowledged in a comment, `rpc-system-call-handler.ts:65-69`). TS `_handleReconnect` ignores `args[0]`; C# throws `TooLateToReconnect` when `ownHandshake.Index != handshakeIndex` (`RpcSystemCalls.cs:57-70`). A TS callee can reconcile against the wrong connection generation after a rapid double-reconnect; bounded damage (worst case duplicate execution — R9).
+
+- **Recommended:** track the peer's own handshake index and reject a stale `$sys.Reconnect` with the `TooLateToReconnect` equivalent — the caller then falls back to blind resend, which R9's dedup absorbs.
+- **Alternative:** accept-but-log the mismatch. Keeps behavior, adds observability; rejected-leaning once R9 lands, since validation is a few lines.
 
 ### R17. `$sys.Cancel` doesn't abort the running handler and the result is still sent
 
-Confidence: confirmed (documented omission). TS removes the tracker entry only (`rpc-system-call-handler.ts:101-107`); the dispatch continues and still sends the result (`rpc-peer.ts:554-570` — the send is not gated on the call still being registered). C# cancels the linked CTS and suppresses the result (`RpcInboundCall.cs:209-210, 246-247`). Direction: thread an `AbortSignal` through `RpcServiceHost.dispatch`; skip the response when the call was removed.
+Confidence: confirmed (documented omission). TS removes the tracker entry only (`rpc-system-call-handler.ts:101-107`); the dispatch continues and still sends the result (`rpc-peer.ts:554-570` — the send is not gated on the call still being registered). C# cancels the linked CTS and suppresses the result (`RpcInboundCall.cs:209-210, 246-247`).
+
+- **Recommended:** thread an `AbortSignal` per inbound call through `RpcServiceHost.dispatch` (aborted by `$sys.Cancel`), and skip the response when the call is no longer registered. Also the transport half of F5.
+- **Alternative:** response-suppression only (no handler abort). Cheap, stops the wasted send; server-side work still runs to completion.
 
 ### RPC notes (low)
 
@@ -524,7 +594,8 @@ Confidence: confirmed (missing defense); trigger paths plausible rather than eve
 - TS: the handler does `peer.outboundCalls.remove(relatedId)` and `call.whenInvalidated.resolve()` — nothing else (`fusion-hub.ts:81-87`). If the result hasn't arrived, `outboundCall.result` stays pending forever: a later `$sys.Ok` is dropped (call untracked), reconnect resend never happens, and `rpcImpl`'s `await outboundCall.result` (`fusion-hub.ts:224`) never settles. `ComputeFunction.invoke` holds a per-key `AsyncLock` around the impl, so **every subsequent call of that compute method with those args queues behind the hang forever**. The handler also removes the call *before* the `instanceof RpcOutboundComputeCall` check — a non-compute call with that id would be silently evicted.
 - C#: `RpcComputeSystemCalls.Invalidate` uses `Get` (not remove) + type check (`RpcComputeSystemCalls.cs:28-32`); `SetInvalidated` does `ResultSource.TrySetCanceled(...)` so a pre-result invalidation surfaces as OCE (`RpcOutboundComputeCall.cs:162-175`), which the caller retries (`RemoteComputeMethodFunction.cs:483-505`). "Invalidated before bound" is a deliberately handled state.
 - Failure: any reordering anomaly (or future TS-server change) that delivers Invalidate first bricks that compute method for the rest of the session — UI queries spin forever with no error.
-- Direction: on pre-result invalidation, reject/cancel `call.result` (a dedicated error type), mirroring `TrySetCanceled`; use `get` + type-check before `remove`.
+- **Recommended:** use `get` + `instanceof` check before any removal (C# parity); on pre-result invalidation, reject `call.result` with a dedicated cancellation-shaped error and have the compute client path treat it as retryable — the `TrySetCanceled` + `TryReprocessServerSideCancellation` analog. Requires F3/K6 so the rejection isn't cached.
+- **Alternative:** minimal — reject `call.result` without the retry semantics. Prevents the hang and the poisoned lock; the caller sees an error instead of a transparent retry.
 
 ### F3. Rejected remote calls (including cancellation/disconnect errors) are cached as error computeds
 
@@ -533,7 +604,8 @@ Confidence: confirmed. The remote-call variant of K6.
 - TS: any rejection of `outboundCall.result` propagates out of `rpcImpl` (`fusion-hub.ts:224`) and is cached via `errorResult(e)` → `setOutput` — including abort-driven `'Call cancelled.'` (`rpc-peer.ts:377-391`) and `'Peer closed.'` from `rejectAll` (`rpc-call-tracker.ts:146-156`). On the error path the `whenInvalidated → computed.invalidate()` wiring is never established (only wired after a successful await, `fusion-hub.ts:226-230`), so error computeds rely solely on the 1 s timer (K5).
 - C#: `ComputeRpc` rethrows OCE instead of producing a computed (`RemoteComputeMethodFunction.cs:227-231`); server-side cancellations are retried with backoff; genuine error computeds still track server invalidation (`RpcOutboundComputeCall.SetError`, `:119-146`).
 - Failure: one caller cancels (or a peer closes mid-flight); for the next second every other consumer of the same compute key observes a cancellation error as if it were the value.
-- Direction: treat cancellation-type rejections as non-cacheable (rethrow without `setOutput`, or invalidate immediately), per C#'s OCE handling.
+- **Recommended:** ride on K6's kernel fix (cancellation-shaped errors are never served from cache) and make peer-lifecycle rejections (`'Call cancelled.'`, `'Peer closed.'`) cancellation-shaped; additionally, wire `whenInvalidated → computed.invalidate()` on the *error* path too, so genuine error computeds still track server invalidation (C# `SetError` parity).
+- **Alternative:** invalidate every error computed immediately in the RPC glue (skip classification). Simpler; loses the distinction between a genuine remote error (worth briefly caching) and a cancellation, effectively reintroducing K5's retry churn for remote errors.
 
 ### F4. Local invalidation of a client computed never releases the outbound call — no computed→call binding, no `$sys.Cancel`, strong-ref leak
 
@@ -542,7 +614,8 @@ Confidence: confirmed.
 - TS: only the call→computed direction exists (`fusion-hub.ts:226-230`). Nothing observes the client computed's invalidation. A locally-invalidated computed's stage-3 `RpcOutboundComputeCall` stays registered until server invalidation or reconnect; the server is never told to stop tracking. The tracker's strong ref chain (call → `whenInvalidated.then` closure → `Computed`) also defeats `ComputedRegistry`'s WeakRef/GC design for the old computed.
 - C#: `RemoteComputed.OnInvalidated` → `BindToCallFromOnInvalidated` → `CompleteAndUnregister(notifyCancelled: true)` which sends `$sys.Cancel`, letting the server stop waiting (`RemoteComputedExt.cs:26-44`, `RpcOutboundComputeCall.cs:179-186`, `RpcInboundComputeCall.cs:95-99`). Plus a `Dispose`/finalizer escape hatch.
 - Failure: an app that locally invalidates (or rapidly re-keys) remote computeds accumulates tracker entries and pinned computeds per peer; the server keeps invalidation-notification state alive for clients that no longer care.
-- Direction: after binding, subscribe once to the local computed's invalidation and, if `whenInvalidated` isn't completed, remove the call from the tracker (optionally sending `$sys.Cancel`).
+- **Recommended:** after binding, observe the local computed's invalidation (via `whenInvalidated()`, not the K12-broken `add`); if the server hasn't invalidated yet, unregister the call and send `$sys.Cancel` — `BindToCallFromOnInvalidated` parity, releasing both peers' state.
+- **Alternative:** a periodic sweep of completed calls whose bound computed is invalidated/collected. GC-ish safety net, laggy and weaker; could complement but not replace.
 
 ### F5. Cancellation propagation is absent end-to-end in the compute-call glue
 
@@ -551,7 +624,8 @@ Confidence: confirmed (absent in TS).
 - TS: `rpcImpl` builds `RpcCallOptions` without a `signal` (`fusion-hub.ts:214-223`) even though `RpcPeer.call` supports one; the compute client surface offers no cancellation input at all. Inbound `$sys.Cancel` also doesn't abort a running TS server handler (R17).
 - C#: the caller's `CancellationToken` is threaded through `SendRpcCall` (`RemoteComputeMethodFunction.cs:405-451`); the server links `CallCancelToken` into its invalidation wait (`RpcInboundComputeCall.cs:86-88`).
 - Failure: a client can't abandon a slow remote compute call; the call, its lock queue, and the server's work all run to completion regardless.
-- Direction: accept an `AbortSignal` (via `AsyncContext` or options) in the compute client path and pass it to `peer.call`; keep the C# semantic that a cancelled compute call is unregistered and its computed not cached (ties into F3).
+- **Recommended:** accept an `AbortSignal` in the compute client path (options arg or via `AsyncContext`) and pass it to `peer.call`; on abort, unregister the call and don't cache the computed (K6/F3 semantics). Server-side abort of running handlers is R17.
+- **Alternative:** defer until cancellation is threaded kernel-wide (K6 + K3's ctx threading) and document the absence. Acceptable sequencing — F3 must land first anyway so aborts aren't cached.
 
 ### F6. Every reconnect (including transient same-peer) invalidates all stage-3 compute calls — refetch storm
 
@@ -560,7 +634,8 @@ Confidence: confirmed (deliberate, test-codified deviation — but with a wastef
 - TS: `_reconnect` unconditionally self-invalidates any compute call with a completed result (`rpc-peer.ts:1043-1050`), after first *including those same calls* in the `$sys.Reconnect` reconciliation (`rpc-peer.ts:1035-1036`; `getReconnectStage` reports `ResultReady`, `rpc-call-tracker.ts:93-98`). Tests codify this (`fusion-rpc-reconnection.test.ts:121-156`).
 - C#: same-peer reconnect reports the stage and the server resumes stage-2 tracking without re-execution (`RpcOutboundComputeCall.GetReconnectStage`, `RpcInboundComputeCall.TryReprocess`); only a *peer change* invalidates completed calls.
 - Failure: a 2-second WiFi blip invalidates every remote computed on the client → full refetch burst (C# clients refetch nothing). Against a .NET server, the client also first claims "these calls are alive" via `$sys.Reconnect` and then drops them, leaving the server holding re-armed invalidation tracking for discarded computeds.
-- Direction: acceptable as a documented simplification, but at minimum stop reporting soon-to-be-dropped compute calls in `_reconcileReconnect`; longer term, adopt stage-based keep-alive for same-peer reconnects.
+- **Recommended:** keep invalidate-on-reconnect as a documented simplification, but stop reporting the soon-to-be-dropped compute calls in `_reconcileReconnect` (report `null`, like C#'s invalidate-on-peer-change branch) — removes the wasteful server-side re-arm.
+- **Alternative:** full stage-based same-peer keep-alive (C# parity — computeds survive brief blips, no refetch burst). The right long-term shape; substantially more machinery, fine as a follow-up item.
 
 ### F7. TS server ignores the message's `CallType` — regular calls to compute methods still get invalidation tracking
 
@@ -569,7 +644,8 @@ Confidence: confirmed.
 - TS: `_wrapServerMethod` decides by the server-side `methodDef.callTypeId` only (`fusion-hub.ts:171`); `createRpcClient` produces exactly such regular calls (plain `RpcOutboundCall`, `removeOnOk = true` — `rpc-client.ts:72-90`).
 - C#: `RpcInboundComputeCall.IsRegularCall` (`RpcInboundComputeCall.cs:19-25`) returns the result immediately and skips invalidation tracking when the caller didn't request a compute call.
 - Failure: regular callers cause the server to send invalidation notifications to clients that dropped the call on `$sys.Ok` — wasted messages and bookkeeping per call.
-- Direction: pass the inbound `CallType` through the dispatch context; skip invalidation wiring when it isn't `FUSION_CALL_TYPE_ID`.
+- **Recommended:** pass the inbound message's `CallType` through the dispatch context; when it isn't `FUSION_CALL_TYPE_ID`, return the result directly and skip the invalidation wiring — `IsRegularCall` parity.
+- **Alternative:** document that regular calls to compute methods carry tracking overhead. Zero code, leaves the waste; rejected-leaning given the fix is small.
 
 ### F8. No deduplication of remote computeds across proxies — each `addClient` mints a fresh key space
 
@@ -578,19 +654,29 @@ Confidence: confirmed.
 - TS: `_createClientMethod` creates a new `ComputeFunction` (unique id — `compute-function.ts:36`) and a new `syntheticInstance` per `addClient` call (`fusion-hub.ts:233-234`); the key embeds both. Two proxies for the same service+peer maintain independent computeds, RPC calls, and invalidation streams for the same logical value.
 - C#: client proxies are DI singletons; `ComputeMethodInput` keys by service/method/args so all consumers share one `RemoteComputed`.
 - Failure: an app calling `hub.addClient` per component doubles/triples RPC traffic and can show inconsistent values across components between invalidation deliveries.
-- Direction: cache the proxy (or the per-method `ComputeFunction`s) per `(peer, serviceDef)` inside `FusionHub.addClient`.
+- **Recommended:** cache the proxy per `(peer, serviceDef)` inside `FusionHub.addClient` — all consumers share one computed/call/invalidation stream per logical value, matching C#'s singleton client proxies.
+- **Alternative:** document `addClient` as a create-once API and warn at runtime on a duplicate registration. Leaves the footgun armed; rejected-leaning.
 
 ### F9. Server-side invalidation send bypasses the peer's serialization format and `systemCallSender` (low)
 
-Confidence: confirmed code path; impact plausible-low. `_wrapServerMethod` hand-rolls `serializeMessage(...)` — JSON-only (`rpc-serialization.ts:31-41`) — and writes to the captured `context.connection` (`fusion-hub.ts:186-192`), while all other responses go through `hub.systemCallSender` with `peer.serializationFormat`. On a msgpack connection the invalidation goes out as a JSON text frame; TS clients tolerate mixed frames, a .NET client would not. Also uses a possibly-dead captured connection. Direction: add `invalidate()` to `RpcSystemCallSender` (mirroring `RpcComputeSystemCallSender.Invalidate`) and send via the peer's current connection/format.
+Confidence: confirmed code path; impact plausible-low. `_wrapServerMethod` hand-rolls `serializeMessage(...)` — JSON-only (`rpc-serialization.ts:31-41`) — and writes to the captured `context.connection` (`fusion-hub.ts:186-192`), while all other responses go through `hub.systemCallSender` with `peer.serializationFormat`. On a msgpack connection the invalidation goes out as a JSON text frame; TS clients tolerate mixed frames, a .NET client would not. Also uses a possibly-dead captured connection.
+
+- **Recommended:** add an `invalidate()` to the (Fusion-extended) system-call sender, sending via the peer's *current* connection and serialization format — `RpcComputeSystemCallSender.Invalidate` parity. Natural companion to F1's fix, same code.
+- **Alternative:** keep the inline send but resolve the connection at send time and use the peer's format. Same effect, less structure; fine if F1 is fixed the minimal way.
 
 ### F10. `FusionHub._buildServiceDef` drifted from the base implementation (low)
 
-Confidence: confirmed. The override hardcodes `remoteExecutionMode: Default` and skips the base's `noWait → mode 0` and `meta.remoteExecutionMode` honoring (`fusion-hub.ts:146-160` vs `rpc-hub.ts:244-259`). A decorator-declared custom `remoteExecutionMode` is silently ignored when registered through a `FusionHub`. Direction: delegate to `super._buildServiceDef` and only patch `callTypeId` for compute methods.
+Confidence: confirmed. The override hardcodes `remoteExecutionMode: Default` and skips the base's `noWait → mode 0` and `meta.remoteExecutionMode` honoring (`fusion-hub.ts:146-160` vs `rpc-hub.ts:244-259`). A decorator-declared custom `remoteExecutionMode` is silently ignored when registered through a `FusionHub`.
+
+- **Recommended:** delegate to `super._buildServiceDef` and only patch `callTypeId` for compute methods — removes the duplicated logic and the drift with it.
+- **Alternative:** re-duplicate the `noWait`/`meta` handling in the override. Fixes today's drift, invites tomorrow's; rejected-leaning.
 
 ### F11. Server peers created by `acceptConnection` are never removed from `hub.peers` (low)
 
 Confidence: confirmed. Each accepted connection creates a UUID-ref `RpcServerPeer` (`fusion-hub.ts:118-132`) that stays in `hub.peers` after the connection closes; cleanup only happens on hub `close()`. A long-running TS server leaks one peer (plus trackers) per client connection. C# server peers auto-dispose after a close timeout.
+
+- **Recommended:** remove the server peer from `hub.peers` (and stop it) when its connection closes and isn't re-accepted within a close timeout — C#'s server-peer auto-dispose shape, which still allows same-peer reconnects within the window.
+- **Alternative:** immediate removal on close. Simplest, but breaks `$sys.Reconnect` reconciliation against TS servers (the peer's trackers vanish with it).
 
 ### Parity confirmed (Fusion-over-RPC)
 
@@ -619,7 +705,8 @@ Confidence: confirmed.
 - TS: `promise-source.ts:27-32` — `reject()` rejects `this.promise` with no pre-attached rejection observer. Same for the timer-driven reject in `promise-source-with-timeout.ts:38-42`.
 - C#: an unobserved faulted `Task` is benign in .NET; C# code freely does `TrySetException` on sources nobody may await.
 - Failure: `rpc-peer.ts:1007/1015` and `rpc-call-tracker.ts:152` reject `call.result` for every tracked call on disconnect/error. Any tracked call whose caller isn't (yet or anymore) awaiting `result` raises `unhandledrejection`; in Node ≥15 that terminates the process by default. The port pattern assumes "reject is always safe".
-- Direction: attach a no-op observer in the constructor (`this.promise.catch(() => {})`); consumer chains still see the rejection normally. This exactly reproduces the .NET observed-exception contract.
+- **Recommended:** attach a no-op observer in the constructor (`this.promise.catch(() => {})`) of both `PromiseSource` variants; consumer chains still see the rejection normally. Exactly reproduces the .NET "unobserved faulted task is benign" contract for every current and future use site.
+- **Alternative:** attach the observer inside `reject()` just before rejecting. Equivalent semantics, marginally lazier; no reason to prefer it over the one-line constructor fix.
 
 ### C2. `Result` misclassifies `undefined` errors as success
 
@@ -628,7 +715,8 @@ Confidence: confirmed (re-verified).
 - TS: `result.ts:17-22` — `hasValue = error === undefined`. So `errorResult(undefined)` yields `hasValue === true`; `resultFrom`/`resultFromAsync` (`result.ts:54-70`) pass a caught `undefined` straight through — `throw undefined` or `reject()` with no reason becomes a *successful* result with value `undefined`. Asymmetric, too: `error: null` IS treated as an error.
 - C#: `Result.cs:329-335` — `Error is null` is the discriminator, and the type system guarantees a caught exception is never null; the state is unrepresentable.
 - Failure: `compute-function.ts:106-107` wraps the user's compute body in `errorResult(e)`. A dependency that does `throw undefined` (legal JS) gets cached as a valid computed value `undefined` — consumers see a wrong value instead of an error.
-- Direction: keep a private `_hasError` flag set explicitly by the error-constructing paths, or normalize nullish errors (`error ?? new Error(...)`) in `errorResult`/`resultFrom*`.
+- **Recommended:** store an explicit `_hasError` flag set by the constructing path (`ok`/`errorResult`/`resultFrom*` decide, not the error value) — makes "error result with a nullish error" representable-but-normalized and the discriminator unforgeable, matching C#'s type-level guarantee. Normalize nullish errors to `new Error('Unspecified error')` at the error-constructing entry points.
+- **Alternative:** normalization only (`error ?? new Error(...)` in `errorResult`/`resultFrom*`). Two lines, closes the `throw undefined` hole; the two-arg constructor remains a footgun for direct callers.
 
 ### C3. `RetryDelayer.getDelay` ignores an already-aborted `cancellationSignal`
 
@@ -637,7 +725,8 @@ Confidence: confirmed.
 - TS: `retry-delayer.ts:43-70` — no `signal.aborted` pre-check; `addEventListener('abort', ...)` on an already-aborted signal never fires, so the delay runs to completion and *resolves normally* despite cancellation. On a live abort it also rejects with a generic `Error` rather than `signal.reason`.
 - C#: `RetryDelayer.cs:46-56` — linked CTS; an already-canceled token throws OCE immediately; only the `cancelDelaysToken` branch completes normally (that half TS gets right).
 - Failure: currently latent (`rpc-peer.ts:772` passes no signal), but any future caller passing its stop signal will "successfully" wait out the delay after being stopped, then reconnect a stopped peer.
-- Direction: pre-check `signal.aborted` (reject with `signal.reason`); reject with `signal.reason` on abort; thread the peer's stop signal into `rpc-peer.ts:772`.
+- **Recommended:** rebuild `getDelay`'s wait on C6's abortable `delayAsync(ms, signal)` — the pre-check and `signal.reason` rejection come for free — and thread the peer's stop signal into `rpc-peer.ts:772`.
+- **Alternative:** patch in place: pre-check `signal.aborted` → reject with `signal.reason`; reject with `signal.reason` on live abort. Fine if C6 is deferred.
 
 ### C4. `EventHandlerSet.trigger` live-iterates the `Set` — handlers added during dispatch run in the *same* dispatch
 
@@ -646,7 +735,8 @@ Confidence: confirmed.
 - TS: `events.ts:19-21` — `for (const handler of this._handlers) handler(arg);` — no snapshot. Consequences: (a) `whenNext()` (`events.ts:27-35`) called from inside a handler of the same set resolves *immediately* with the current event instead of the next; (b) a handler that re-adds handlers can extend the loop; (c) a handler removed by an earlier handler is silently skipped. Also: `Set` dedupes — adding the same function twice invokes once; a C# delegate invokes twice.
 - C#: multicast delegates invoke an immutable snapshot — subscribers added during raise are not invoked, removed ones still are. (The TS doc comment at `events.ts:3` itself claims delegate parity.)
 - Failure: `EventHandlerSet` is the backbone of RPC state plumbing (`rpc-peer.ts`, `rpc-connection.ts`, `rpc-peer-state-monitor.ts`) and Fusion (`computed.ts`). "In my `stateChanged` handler, await the next state via `whenNext()`" self-resolves with the event being dispatched — a subtle off-by-one in reconnect/state logic.
-- Direction: iterate a snapshot (`[...this._handlers]`) — one line; also makes remove-during-dispatch match C#.
+- **Recommended:** iterate a snapshot (`[...this._handlers]`) in `trigger` — one line; add-during-dispatch no longer fires in the same dispatch (fixes `whenNext()` self-resolution) and remove-during-dispatch matches C#. Document the remaining Set-dedup deviation (same handler added twice fires once).
+- **Alternative:** full C# multicast semantics (array-backed, duplicates allowed). Changes `add`/`remove` contracts for no known consumer need.
 
 ### C5. `AsyncLock` has no reentry detection (`LockReentryMode`) and no abort-while-queued
 
@@ -655,7 +745,8 @@ Confidence: confirmed absent.
 - TS: `async-lock.ts:10-18` — `acquire()` takes no `AbortSignal`; a queued waiter cannot be cancelled; no reentry tracking. (Fairness and release-on-throw are correct.)
 - C#: `Locking/AsyncLock.cs:8-43` — `Lock(CancellationToken)` plus `LockReentryMode.CheckedFail`. Fusion C# uses `CheckedFail` in the exact places the TS port mirrors (`State.cs:59`, `ComputedRegistry.cs:78`).
 - Failure: same-key compute recursion deadlocks silently (K14); nothing can time out or abort a queued waiter.
-- Direction: add an optional reentry-check mode and an optional `AbortSignal` on `acquire()/run()` that removes the queued resolver on abort.
+- **Recommended:** add an optional `AbortSignal` to `acquire()`/`run()` that removes the queued resolver on abort (rejecting with `signal.reason`). Reentry *detection* stays at the fusion layer (K14's parent-chain walk) — without an ambient execution context, the lock itself can't know the caller's chain.
+- **Alternative:** an owner-token reentry API (callers pass an explicit token the lock compares). C#-shaped, but plumbing-heavy in JS and redundant once K14 lands.
 
 ### C6. No cancellable delay: `delayAsync` takes no `AbortSignal`, so `retry()` can't be aborted
 
@@ -664,19 +755,29 @@ Confidence: confirmed absent.
 - TS: `delay.ts:2-6` — bare `setTimeout`; `retry.ts:22-43` accepts no signal.
 - C#: every delay in a retry path is cancellable (`Task.Delay(delay, ct)` / `Clock.Delay`).
 - Failure: teardown during a `retry()` inter-attempt delay: the timer keeps the Node event loop alive and the next attempt executes against disposed state. `RetryDelayer` had to reimplement abortable delay inline instead of reusing a shared primitive.
-- Direction: `delayAsync(ms, signal?)` that clears the timer and rejects with `signal.reason`; thread an optional signal through `retry()`; reuse in `RetryDelayer`.
+- **Recommended:** `delayAsync(ms, signal?)` that pre-checks `signal.aborted`, clears the timer on abort, and rejects with `signal.reason`; thread an optional signal through `retry()`; rebuild `RetryDelayer.getDelay` on it (C3).
+- **Alternative:** leave `retry()` as-is and only add the primitive. Half measure — the known non-cancellable retry path stays.
 
 ### C7. `abortPromise` fast path for already-aborted signals contradicts its own caching/observation contract
 
-Confidence: confirmed. `abort-promise.ts:26` returns a *fresh, unobserved* rejected promise per call for an already-aborted signal, while the pending path caches per signal and pre-attaches `.catch()` precisely to avoid unhandled rejections — and the doc promises "same promise per signal". Code that grabs the promise and only races it on a later iteration gets an `unhandledrejection` (Node crash). Direction: route the aborted case through the same cache — 3 lines.
+Confidence: confirmed. `abort-promise.ts:26` returns a *fresh, unobserved* rejected promise per call for an already-aborted signal, while the pending path caches per signal and pre-attaches `.catch()` precisely to avoid unhandled rejections — and the doc promises "same promise per signal". Code that grabs the promise and only races it on a later iteration gets an `unhandledrejection` (Node crash).
+
+- **Recommended:** route the already-aborted case through the same WeakMap cache (create once, pre-attach the no-op `.catch()`, store) — 3 lines, restores the documented contract.
+- **Alternative:** pre-attach a no-op `.catch()` to the fresh per-call rejection. Fixes the crash but still allocates per call and violates the same-promise doc; rejected-leaning.
 
 ### C8. `RingBuffer` — head-side/tail-side API half missing; constructor semantics differ (low)
 
-Confidence: confirmed absent. TS has `pushTail`/`pushTailAndMoveHeadIfFull`/`pullHead`/`moveHead`/`get` only; C# also has `TryPullHead`, `PullTail`/`TryPullTail`, `PushHead`, indexer setter, `GetSpans` (`RingBuffer.cs:98-146`), and `RingBuffer(minCapacity)` rounds capacity *up* while TS treats it as exact. No caller needs the missing half today (`rpc-stream-sender.ts:260` uses the implemented subset). Direction: add operations when a caller appears; document "exact capacity" as a deliberate deviation.
+Confidence: confirmed absent. TS has `pushTail`/`pushTailAndMoveHeadIfFull`/`pullHead`/`moveHead`/`get` only; C# also has `TryPullHead`, `PullTail`/`TryPullTail`, `PushHead`, indexer setter, `GetSpans` (`RingBuffer.cs:98-146`), and `RingBuffer(minCapacity)` rounds capacity *up* while TS treats it as exact. No caller needs the missing half today (`rpc-stream-sender.ts:260` uses the implemented subset).
+
+- **Recommended:** document "exact capacity" as a deliberate deviation in the header comment; add the missing operations only when a caller appears.
+- **Alternative:** port the full C# API now. No consumer; speculative surface area.
 
 ### C9. `Result` — no equality, no untyped variant (low)
 
-Confidence: confirmed absent. No `equals` (C# `Result<T>.Equals` + operators, `Result.cs:380-388`), no untyped `Result`. C# paths that skip work when `oldResult == newResult` can't be ported faithfully — this is what blocks S15. Direction: add `equals(other, valueComparer?)`; skip the untyped variant until needed.
+Confidence: confirmed absent. No `equals` (C# `Result<T>.Equals` + operators, `Result.cs:380-388`), no untyped `Result`. C# paths that skip work when `oldResult == newResult` can't be ported faithfully — this is what blocks S15.
+
+- **Recommended:** add `equals(other, valueComparer?)` (default `Object.is` for values, reference equality for errors) together with S15, its first consumer.
+- **Alternative:** also port the untyped `Result` variant. Defer until something (likely RPC serialization) actually needs it.
 
 ### Parity confirmed (core)
 
