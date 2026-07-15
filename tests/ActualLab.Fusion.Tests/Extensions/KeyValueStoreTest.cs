@@ -114,4 +114,20 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
         (await kvs.Get(shard, "3")).Should().Be("3v");
         (await kvs.Get(shard, "4")).Should().Be(null);
     }
+
+    [Fact]
+    public async Task ExpiredItemsShouldNotAppearInQueries()
+    {
+        var kvs = Services.GetRequiredService<IKeyValueStore>();
+        var clock = (TestClock)Services.Clocks().SystemClock;
+        var shard = DbShard.Single;
+
+        await kvs.Set(shard, "expired", "value", clock.Now + TimeSpan.FromSeconds(5));
+        clock.Settings = new TestClockSettings(TimeSpan.FromSeconds(6));
+        ComputedRegistry.InvalidateEverything();
+
+        (await kvs.Get(shard, "expired")).Should().BeNull();
+        (await kvs.Count(shard, "expired")).Should().Be(0);
+        (await kvs.ListKeySuffixes(shard, "expired", 10)).Should().BeEmpty();
+    }
 }
