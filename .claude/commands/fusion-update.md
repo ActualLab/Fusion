@@ -27,7 +27,7 @@ Fusion itself — Fusion is the source of the new version, not a consumer of it.
 ## Reuse
 
 - **Existing abstractions to reuse.** Version-bump mechanics mirror
-  [`update-packages`](update-packages.md) (central package management via
+  [`packages-update`](packages-update.md) (central package management via
   `Directory.Packages.props`, editing a shared `...Version` property rather than each
   `PackageVersion` line). Fusion's own **npm** package names are the ones under
   `ts/packages/*` (`@actuallab/core`, `@actuallab/rpc`, `@actuallab/fusion`,
