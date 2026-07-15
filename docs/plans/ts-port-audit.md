@@ -8,7 +8,7 @@ The port is deliberately partial. The standard applied here is: **every feature 
 
 **Test confirmation (2026-07-14):** the five highest-severity items — **K1, K2, K3, F1, R1** — are additionally confirmed by executable reproduction tests that assert the C# contract and fail against the current code (5/5 red): `ts/packages/{fusion,fusion-rpc,rpc}/tests/ts-port-audit-repro.test.ts`. The tests are deliberately left red (uncommitted until the fixes land) and become the regression tests for these items.
 
-**Every item carries a Recommended / Alternative course-of-action pair** as input to the resolution stage; final decisions per item (including won't-fixes) will be recorded in a companion `ts-port-fixes.md`. The pairs for the five test-confirmed items were written first and are the most scrutinized; the rest follow the same pattern but haven't been through the verification pass yet.
+**Every item carries a Recommended / Alternative course-of-action pair** and, as of 2026-07-15, a **Status line recording its resolution** — the fix stage is complete (see "Fix stage" at the end of this document). The companion-fixes-doc step was folded into these in-place Status lines.
 
 **Second pass (2026-07-14):** a second review pass added five more findings — **R18** (regular dispatch loses the implementation receiver), **R19** (decorator metadata shared/mutated across base and derived classes), **R20** (decorator wire arity wrong with default/rest parameters), **R21** (tracker identity invariants violated on replace/unregister), **R22** (streams registered and kept alive before enumeration). All five were independently validated against TS and C# sources (and four reproduced with short executable probes, removed after verification); they are merged into the RPC section below with Recommended/Alternative pairs.
 
@@ -879,6 +879,8 @@ Confidence: confirmed (absent in TS).
 
 ### F6. Every reconnect (including transient same-peer) invalidates all stage-3 compute calls — refetch storm
 
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc3; completed compute calls are excluded from `$sys.Reconnect` reporting; invalidate-on-reconnect stays as the documented simplification, full stage-based keep-alive remains a possible follow-up).
+
 Confidence: confirmed (deliberate, test-codified deviation — but with a wasteful protocol interaction).
 
 - TS: `_reconnect` unconditionally self-invalidates any compute call with a completed result (`rpc-peer.ts:1043-1050`), after first *including those same calls* in the `$sys.Reconnect` reconciliation (`rpc-peer.ts:1035-1036`; `getReconnectStage` reports `ResultReady`, `rpc-call-tracker.ts:93-98`). Tests codify this (`fusion-rpc-reconnection.test.ts:121-156`).
@@ -900,6 +902,8 @@ Confidence: confirmed.
 - **Alternative:** document that regular calls to compute methods carry tracking overhead. Zero code, leaves the waste; rejected-leaning given the fix is small.
 
 ### F8. No deduplication of remote computeds across proxies — each `addClient` mints a fresh key space
+
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc3; proxy cached per `(peer, service name)` in the base `RpcHub.addClient`).
 
 Confidence: confirmed.
 
@@ -928,6 +932,8 @@ Confidence: confirmed. The override hardcodes `remoteExecutionMode: Default` and
 - **Alternative:** re-duplicate the `noWait`/`meta` handling in the override. Fixes today's drift, invites tomorrow's; rejected-leaning.
 
 ### F11. Server peers created by `acceptConnection` are never removed from `hub.peers` (low)
+
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc3; `RpcLimits.serverPeerCloseTimeoutMs` = 180 s — C#'s clamp floor — with re-accept cancelling the timer).
 
 Confidence: confirmed. Each accepted connection creates a UUID-ref `RpcServerPeer` (`fusion-hub.ts:118-132`) that stays in `hub.peers` after the connection closes; cleanup only happens on hub `close()`. A long-running TS server leaks one peer (plus trackers) per client connection. C# server peers auto-dispose after a close timeout.
 
@@ -1079,10 +1085,18 @@ Note: `AsyncContext` not flowing across `await` is a real deviation from C# `Exe
 - Fusion-over-RPC: server-side invalidation for a computed invalidated mid-computation (F1); `Invalidate`-before-result (F2).
 - Core: unobserved `PromiseSource` rejection (C1); `retry-delayer` has no test file at all; mutation-during-dispatch in `events.test.ts`.
 
-## Next step
+## Fix stage — completed 2026-07-15
 
-Mirror the invalidation-audit flow:
+All 77 items are resolved; each carries a `Status:` line above. The process: items were grouped into
+19 batches of 3–5; per batch, an implementation agent worked in an isolated worktree (fix + tests +
+one commit), an independent verification agent adversarially reviewed and amended the commit against
+the C# contracts, and the verified commit was cherry-picked onto master together with the doc closure
+marks. Every red reproduction test was promoted into a committed, green regression test alongside its
+fix (D5); the React StrictMode gap got real render tests (react 19 + jsdom devDependencies).
 
-1. **Adversarial verification pass** over the items above (each was produced by a single reviewer; the spot-checked sample and the five test-confirmed items held, but the rest deserves the same treatment before implementation). This pass may also surface additional findings — add them here with the same numbering scheme.
-2. **Companion `ts-port-fixes.md`** recording the agreed course of action per item — the five test-confirmed items already carry Recommended/Alternative pairs above as input to that decision — including explicit won't-fix decisions for the deliberate deviations (F6's reconnect simplification, K3's AsyncContext limitation, S16's lazy renewal).
-3. **Fix stage**, flipping the red reproduction tests green as each of the five confirmed items lands (commit the tests together with their fixes).
+Deliberate deviations and residuals that remain (all recorded in place): F6's invalidate-on-reconnect
+simplification (reporting fixed, stage-based keep-alive deferred); R7's polymorphic payloads fail
+loudly but aren't decoded (no wire signal exists); R9's bounded completed-call retention (vs C#'s
+unregister-on-completion); K13's JSON.stringify keying (D2 won't-fix); the S12 event trio; the
+registry/`$sys.Disconnect` identity notes in the kernel and RPC notes sections; F4's one-spurious-
+Invalidate server residual.

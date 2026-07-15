@@ -73,6 +73,12 @@ export class RpcHub {
      *  a custom subclass (e.g. app-level signal-gated) before peers start. */
     reconnectDelayer: RpcClientPeerReconnectDelayer = new RpcClientPeerReconnectDelayer();
 
+    /** Cache of client proxies keyed by peer, then by service name — so
+     *  repeated {@link addClient} calls for the same service+peer return one
+     *  proxy. All consumers then share a single computed/call/invalidation
+     *  stream per logical value, matching .NET's singleton client proxies (F8). */
+    private readonly _clientProxies = new WeakMap<RpcPeer, Map<string, object>>();
+
     /** Connection-lifecycle timing limits. Peers constructed against this hub
      *  read their initial `*Ms` field values from this instance; later
      *  mutations affect only peers built afterward (existing peers can be
@@ -184,6 +190,16 @@ export class RpcHub {
         defOrContract: RpcServiceDef | (AnyConstructor)
     ): T {
         const def = this._resolveServiceDef(defOrContract);
+
+        let byService = this._clientProxies.get(peer);
+        if (byService === undefined) {
+            byService = new Map<string, object>();
+            this._clientProxies.set(peer, byService);
+        }
+        const cached = byService.get(def.name);
+        if (cached !== undefined)
+            return cached as T;
+
         this.registry.registerService(def.name, def.methods);
 
         type RpcClientFn = (...args: unknown[]) => unknown;
@@ -220,10 +236,12 @@ export class RpcHub {
             }
         }
 
-        return new Proxy({} as T, {
+        const proxy = new Proxy({} as T, {
             get: (_target, prop) =>
                 typeof prop === 'string' ? methods.get(prop) : undefined,
         });
+        byService.set(def.name, proxy);
+        return proxy;
     }
 
     close(): void {

@@ -1267,14 +1267,23 @@ export class RpcClientPeer extends RpcPeer {
 
 /** Server-side RPC peer — wraps an accepted connection. ref = "server://{uuid}". */
 export class RpcServerPeer extends RpcPeer {
-    // Needed to widen the base `protected constructor` to public.
-    // eslint-disable-next-line @typescript-eslint/no-useless-constructor
+    /** Grace period before an idle (disconnected) server peer is stopped and
+     *  removed from `hub.peers`; a re-`accept()` within it cancels removal.
+     *  Snapshotted from `hub.limits` at construction (F11). */
+    serverPeerCloseTimeoutMs: number;
+    private _closeTimer: ReturnType<typeof setTimeout> | undefined;
+    private _isClosed = false;
+
     constructor(hub: RpcHub, ref: string) {
         super(hub, ref);
+        this.serverPeerCloseTimeoutMs = hub.limits.serverPeerCloseTimeoutMs;
     }
 
     /** Accept an incoming connection — sets up message handling and handshake response. */
     accept(conn: RpcConnection): void {
+        // A re-accept within the close window keeps this peer (and its trackers)
+        // alive for a same-peer reconnect — cancel any pending auto-removal.
+        this._clearCloseTimer();
         this._setConnectionState(RpcConnectionState.Connecting);
         this.setupConnection(conn);
         // Server starts in Handshaking immediately on accept — there's no
@@ -1291,7 +1300,39 @@ export class RpcServerPeer extends RpcPeer {
             // disconnect shared objects that belong to the live session.
             if (this._connection !== conn && this._connection !== undefined) return;
             this.sharedObjects.disconnectAll();
+            this._armCloseTimer();
         });
+    }
+
+    override close(): void {
+        this._isClosed = true;
+        this._clearCloseTimer();
+        super.close();
+    }
+
+    private _armCloseTimer(): void {
+        this._clearCloseTimer();
+        // `close()` on a connected peer triggers `conn.closed` (possibly after
+        // `close()` returns on async transports), which lands here — never
+        // re-arm on a closed peer, or the stale timer's `close()` would later
+        // evict a successor peer registered under the same ref from `hub.peers`.
+        if (this._isClosed) return;
+        const timeout = this.serverPeerCloseTimeoutMs;
+        if (!(timeout > 0) || !Number.isFinite(timeout)) return;
+        this._closeTimer = setTimeout(() => {
+            this._closeTimer = undefined;
+            // Not re-accepted within the window — stop and remove from hub.peers.
+            if (this._connection === undefined)
+                this.close();
+        }, timeout);
+        (this._closeTimer as { unref?: () => void }).unref?.();
+    }
+
+    private _clearCloseTimer(): void {
+        if (this._closeTimer !== undefined) {
+            clearTimeout(this._closeTimer);
+            this._closeTimer = undefined;
+        }
     }
 
     protected override _onHandshakeReceived(_handshake: RemoteHandshake): void {

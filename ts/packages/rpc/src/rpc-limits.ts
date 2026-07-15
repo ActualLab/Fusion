@@ -68,6 +68,14 @@ export class RpcLimits {
      *  tolerated stall is ~15 s. */
     keepAliveTimeoutMs = 25_000;
 
+    /** How long a server peer stays in `hub.peers` after its connection closes
+     *  before it's stopped and removed. A same-peer reconnect (`accept()`)
+     *  within this window cancels the pending removal, so brief drops don't
+     *  discard the peer's trackers. Mirrors .NET's server-peer shutdown timeout
+     *  (`RpcPeerOptions.ServerPeerShutdownTimeoutProvider`, 3-15 min); the TS
+     *  port uses a fixed floor-matching default. */
+    serverPeerCloseTimeoutMs = 180_000;
+
     constructor(overrides?: Partial<RpcLimits>) {
         if (overrides) Object.assign(this, overrides);
     }
