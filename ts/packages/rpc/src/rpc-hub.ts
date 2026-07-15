@@ -310,9 +310,10 @@ export class RpcHub {
                     throw new Error(
                         `Expected stream reference, got: ${JSON.stringify(result)}`
                     );
-                const stream = new RpcStream(ref, peer);
-                peer.remoteObjects.register(stream);
-                return stream;
+                // Registration is deferred to the first iteration (see
+                // RpcStream's lazy-start) so a never-enumerated stream leases
+                // nothing on either peer — RpcStream.GetAsyncEnumerator parity.
+                return new RpcStream(ref, peer);
             };
         }
 

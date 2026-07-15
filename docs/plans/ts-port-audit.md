@@ -423,6 +423,8 @@ Confidence: confirmed.
 
 ### R3. Normally-completed remote streams never send `AckEnd` and never unregister → unbounded leaks on both peers
 
+Status: **closed** — fixed 2026-07-15 (batch rpcstreams). Residual note: `disconnect()`/non-reconnectable completion still defers unregistration to the consumer's next `next()` and skips AckEnd, unlike C#'s immediate `CloseFromLock` — minor, tracked in RPC notes.
+
 Confidence: confirmed.
 
 - TS: `rpc-stream.ts:307-313` — `onEnd` only flips `_completed`; the iterator's done-path (`:373-376`) returns without `dispose()`, and JS `for await` does not invoke `return()` on natural exhaustion. The stream stays in `peer.remoteObjects` (a **strong** `Map`, `rpc-remote-object-tracker.ts:3-27`) and no `$sys.AckEnd` is ever sent. Same for the gap-error completion path (`:258-267`).
@@ -432,6 +434,8 @@ Confidence: confirmed.
 - **Alternative (complementary):** make `remoteObjects` a weak tracker (WeakRef + FinalizationRegistry, C# parity) as a safety net for *abandoned* streams. Doesn't replace the eager close — the .NET-side `RpcSharedStream` still needs the `AckEnd`.
 
 ### R4. `$sys.End` index is ignored — silent loss of tail items
+
+Status: **closed** — fixed 2026-07-15 (batch rpcstreams).
 
 Confidence: confirmed.
 
@@ -635,6 +639,8 @@ Confidence: confirmed and executable-probe verified. (Second-pass finding.)
 
 ### R21. Remote-object replacement and unregister violate tracker identity invariants
 
+Status: **closed** — fixed 2026-07-15 (batch rpcstreams).
+
 Confidence: confirmed and executable-probe verified. (Second-pass finding.)
 
 - TS `RpcRemoteObjectTracker.register` blindly overwrites by `localId`, while `unregister` blindly deletes by
@@ -659,6 +665,8 @@ Confidence: confirmed and executable-probe verified. (Second-pass finding.)
   checks.
 
 ### R22. Remote streams are registered and kept alive before enumeration starts
+
+Status: **closed** — fixed 2026-07-15 (batch rpcstreams; registration moved to the lazy-start boundary, disposal before enumeration is a local no-op).
 
 Confidence: confirmed by full source trace. (Second-pass finding.)
 
@@ -686,6 +694,7 @@ Confidence: confirmed by full source trace. (Second-pass finding.)
 - `msgpack-map-patch.ts` is needed and byte-correct (JS `Map` → msgpack map with typed keys, matching .NET `Dictionary<int, byte[]>` for `$sys.Reconnect`), but it patches `Encoder.prototype` **globally** on module load — worth documenting for host apps.
 - Debugger-attached .NET peers use `KeepAlivePeriod = 300 s` (`RpcLimits.cs:46-54`); TS's 25 s watchdog (`rpc-limits.ts:43`) force-closes every 25 s against such a server — dev-environment churn. **Resolved (per D4):** add a `RpcLimits.Debug` preset (`keepAliveTimeoutMs = 300_000`), opted into explicitly via the existing override paths.
 - Second-pass candidates reviewed and excluded: stream-reference numeric range validation (C# parsing also accepts negative timing values — a hardening opportunity, not a TS/C# contract gap); hash-collision handling in `RpcMethodRegistry` (poor failure mode, but a 32-bit method-hash collision is too remote to prioritize without a concrete case).
+- Post-R3 residual (found during verification): `RpcStream.disconnect()` / non-reconnectable gap completion completes the stream without AckEnd and defers unregistration to the consumer's next `next()`; C#'s `Disconnect` → `CloseFromLock` unregisters (and attempts AckEnd) immediately. Minor divergence, revisit if it shows up in practice.
 
 ### Parity confirmed (RPC)
 

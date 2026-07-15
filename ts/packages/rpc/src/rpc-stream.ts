@@ -256,11 +256,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         if (index > this._nextExpectedIndex) {
             warnLog?.log(`item index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`);
             if (!this.allowReconnect) {
-                this._completed = true;
-                this._completionError = new Error(
-                    `Stream gap at index ${index} (expected ${this._nextExpectedIndex}); reconnect not allowed`
-                );
-                this._notifyConsumer();
+                this._complete(this._gapError(index));
                 return;
             }
             this._sendAck(this._nextExpectedIndex, true);
@@ -284,11 +280,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         if (index > this._nextExpectedIndex) {
             warnLog?.log(`batch index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`);
             if (!this.allowReconnect) {
-                this._completed = true;
-                this._completionError = new Error(
-                    `Stream gap at index ${index} (expected ${this._nextExpectedIndex}); reconnect not allowed`
-                );
-                this._notifyConsumer();
+                this._complete(this._gapError(index));
                 return;
             }
             this._sendAck(this._nextExpectedIndex, true);
@@ -307,9 +299,23 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     /** Called by system call handler when the stream ends ($sys.End). */
     onEnd(index: number, error: Error | null): void {
         if (this._disposed || this._completed) return;
-        this._completed = true;
-        this._completionError = error;
-        this._notifyConsumer();
+
+        if (index > this._nextExpectedIndex) {
+            warnLog?.log(`end index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`);
+            if (!this.allowReconnect) {
+                this._complete(this._gapError(index));
+                return;
+            }
+            this._sendAck(this._nextExpectedIndex, true);
+            return;
+        }
+        if (index < this._nextExpectedIndex) {
+            // Stale/duplicate End — ack and ignore
+            this._maybeSendAck(Math.min(index, this._nextConsumedIndex));
+            return;
+        }
+
+        this._complete(error);
     }
 
     // -- IRpcObject --
@@ -353,9 +359,12 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
 
         return {
             next: async (): Promise<IteratorResult<T>> => {
-                // Lazy start: send initial ack on first next() call
+                // Lazy start: register with the peer and send the initial ack on
+                // the first next() call — a never-enumerated remote stream must
+                // create no lease on either peer (RpcStream.GetAsyncEnumerator parity).
                 if (!this._started) {
                     this._started = true;
+                    this.peer.remoteObjects.register(this);
                     this._sendAck(0, true);
                 }
                 this._maybeSendAck(this._nextConsumedIndex);
@@ -371,6 +380,7 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
                     }
 
                     if (this._completed) {
+                        this.dispose();
                         if (this._completionError) throw this._completionError;
                         return { value: undefined as T, done: true };
                     }
@@ -382,7 +392,12 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             },
 
             return: (): Promise<IteratorResult<T>> => {
-                this._sendAckEnd();
+                // Before the lazy start nothing was sent or registered, so
+                // disposal must stay a local no-op (C#: CloseFromLock sends
+                // nothing when the remote channel was never created).
+                if (this._started && !this._completed)
+                    this._sendAckEnd();
+
                 this.dispose();
                 return Promise.resolve({ value: undefined as T, done: true });
             },
@@ -400,6 +415,24 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     }
 
     // -- Private --
+
+    // Mirrors .NET RpcStream.CloseFromLock: acknowledge the end to the sender
+    // (so its RpcSharedStream is released) and unregister immediately.
+    private _complete(error: Error | null): void {
+        if (this._completed) return;
+        this._completed = true;
+        this._completionError = error;
+        this._sendAckEnd();
+        if (this.kind === RpcObjectKind.Remote)
+            this.peer.remoteObjects.unregister(this);
+        this._notifyConsumer();
+    }
+
+    private _gapError(index: number): Error {
+        return new Error(
+            `Stream gap at index ${index} (expected ${this._nextExpectedIndex}); reconnect not allowed`
+        );
+    }
 
     private _notifyConsumer(): void {
         if (this._consumerWaiting !== null) {
@@ -468,9 +501,10 @@ export function resolveStreamRefs(value: unknown, peer: RpcPeer): unknown {
     if (typeof value === 'string') {
         const ref = parseStreamRef(value);
         if (ref !== null) {
-            const stream = new RpcStream(ref, peer);
-            peer.remoteObjects.register(stream);
-            return stream;
+            // Registration is deferred to the first iteration (see RpcStream's
+            // lazy-start), so nested stream refs that are never enumerated
+            // create no remote-object lease.
+            return new RpcStream(ref, peer);
         }
         return value;
     }

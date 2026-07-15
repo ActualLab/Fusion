@@ -4,7 +4,17 @@ export class RpcRemoteObjectTracker {
     private _objects = new Map<number, IRpcObject>();
 
     register(obj: IRpcObject): void {
-        this._objects.set(obj.id.localId, obj);
+        const localId = obj.id.localId;
+        const existing = this._objects.get(localId);
+        if (existing === obj)
+            return;
+
+        // A different live object shares this localId — happens after switching
+        // to another peer instance (e.g. via LB). Disconnect the stale one first.
+        if (existing !== undefined)
+            existing.disconnect();
+
+        this._objects.set(localId, obj);
     }
 
     get(localId: number): IRpcObject | undefined {
@@ -16,7 +26,9 @@ export class RpcRemoteObjectTracker {
     }
 
     unregister(obj: IRpcObject): void {
-        this._objects.delete(obj.id.localId);
+        const localId = obj.id.localId;
+        if (this._objects.get(localId) === obj)
+            this._objects.delete(localId);
     }
 
     disconnectAll(): void {

@@ -7,6 +7,7 @@ import {
     RpcObjectKind,
     RpcType,
     parseStreamRef,
+    resolveStreamRefs,
     defineRpcService,
     createMessageChannelPair,
 } from '../src/index.js';
@@ -414,6 +415,85 @@ describe.each(FORMATS)('RpcStream end-to-end [%s]', (formatKey) => {
         expect(items1).toEqual([0, 1, 2]);
         expect(items2).toEqual([0, 1]);
     });
+
+    it('should unregister a fully-consumed stream from the remote-object tracker (R3)', async () => {
+        pair.serverHub.addService(StreamServiceDef, {
+            // eslint-disable-next-line @typescript-eslint/require-await
+            getNumbers: async function* (count: unknown) {
+                for (let i = 0; i < (count as number); i++) yield i;
+            },
+        });
+
+        const client = pair.clientHub.addClient<{
+            getNumbers(count: number): Promise<AsyncIterable<number>>;
+                }>(pair.clientPeer, StreamServiceDef);
+
+        const stream = await client.getNumbers(3);
+        const items: number[] = [];
+        for await (const item of stream) items.push(item);
+        expect(items).toEqual([0, 1, 2]);
+        await delay(20);
+
+        // C# contract: OnEnd → CloseFromLock sends $sys.AckEnd and unregisters;
+        // a completed stream must not stay tracked (and kept alive) forever.
+        expect([...pair.clientPeer.remoteObjects.keys()]).toEqual([]);
+    });
+
+    it('should not register a returned-but-never-enumerated stream (R22)', async () => {
+        pair.serverHub.addService(StreamServiceDef, {
+            // eslint-disable-next-line @typescript-eslint/require-await
+            getNumbers: async function* (count: unknown) {
+                for (let i = 0; i < (count as number); i++) yield i;
+            },
+        });
+
+        const client = pair.clientHub.addClient<{
+            getNumbers(count: number): Promise<AsyncIterable<number>>;
+                }>(pair.clientPeer, StreamServiceDef);
+
+        const stream = await client.getNumbers(3);
+        // Never enumerated → no remote-object lease on either peer.
+        expect([...pair.clientPeer.remoteObjects.keys()]).toEqual([]);
+
+        // Enumeration is the registration boundary (GetAsyncEnumerator parity).
+        const iter = stream[Symbol.asyncIterator]();
+        await iter.next();
+        expect([...pair.clientPeer.remoteObjects.keys()].length).toBe(1);
+
+        await iter.return?.();
+        await delay(10);
+        expect([...pair.clientPeer.remoteObjects.keys()]).toEqual([]);
+    });
+
+    it('iterator return() before the first next() stays a local no-op (R22)', async () => {
+        pair.serverHub.addService(StreamServiceDef, {
+            // eslint-disable-next-line @typescript-eslint/require-await
+            getNumbers: async function* (count: unknown) {
+                for (let i = 0; i < (count as number); i++) yield i;
+            },
+        });
+
+        const client = pair.clientHub.addClient<{
+            getNumbers(count: number): Promise<AsyncIterable<number>>;
+                }>(pair.clientPeer, StreamServiceDef);
+
+        let ackEndCount = 0;
+        const sender = pair.clientHub.systemCallSender;
+        const origAckEnd = sender.ackEnd.bind(sender);
+        sender.ackEnd = ((conn, format, localId, hostId) => {
+            ackEndCount++;
+            origAckEnd(conn, format, localId, hostId);
+        }) as typeof sender.ackEnd;
+
+        const stream = await client.getNumbers(3);
+        const iter = stream[Symbol.asyncIterator]();
+        await iter.return?.();
+        await delay(10);
+
+        // C# parity: CloseFromLock sends nothing when enumeration never started.
+        expect(ackEndCount).toBe(0);
+        expect([...pair.clientPeer.remoteObjects.keys()]).toEqual([]);
+    });
 });
 
 describe('RpcStream allowReconnect', () => {
@@ -590,6 +670,140 @@ describe('RpcStream allowReconnect', () => {
 
         serverHub.close();
         clientHub.close();
+    });
+});
+
+describe('RpcStream $sys.End index gate (R3/R4)', () => {
+    let pair: TestHubPair;
+
+    beforeEach(async () => {
+        pair = createTestHubPair('json5np');
+        await delay(10);
+    });
+
+    afterEach(() => {
+        pair.serverHub.close();
+        pair.clientHub.close();
+    });
+
+    function makeRemoteStream(localId: number): RpcStream<string> {
+        const ref = {
+            hostId: 'h', localId, ackPeriod: 10, ackAdvance: 5,
+            allowReconnect: true, isRealTime: false,
+        };
+        const stream = new RpcStream<string>(ref, pair.clientPeer);
+        pair.clientPeer.remoteObjects.register(stream);
+        return stream;
+    }
+
+    it('an in-order End completes the stream, sends $sys.AckEnd, and unregisters (R3)', async () => {
+        let ackEndCount = 0;
+        const sender = pair.clientHub.systemCallSender;
+        const origAckEnd = sender.ackEnd.bind(sender);
+        sender.ackEnd = ((conn, format, localId, hostId) => {
+            ackEndCount++;
+            origAckEnd(conn, format, localId, hostId);
+        }) as typeof sender.ackEnd;
+
+        const stream = makeRemoteStream(93);
+        stream.onItem(0, 'a');
+        stream.onItem(1, 'b');
+        stream.onEnd(2, null);
+
+        const items: string[] = [];
+        for await (const item of stream) items.push(item);
+        expect(items).toEqual(['a', 'b']);
+        expect(ackEndCount).toBeGreaterThanOrEqual(1);
+        expect(pair.clientPeer.remoteObjects.get(93)).toBeUndefined();
+    });
+
+    it('a gapped End sends a reset-ack and keeps waiting (does not complete) (R4)', async () => {
+        const resetAcks: number[] = [];
+        const sender = pair.clientHub.systemCallSender;
+        const origAck = sender.ack.bind(sender);
+        sender.ack = ((conn, format, localId, nextIndex, hostId) => {
+            if (hostId && hostId !== '00000000-0000-0000-0000-000000000000')
+                resetAcks.push(nextIndex);
+            origAck(conn, format, localId, nextIndex, hostId);
+        }) as typeof sender.ack;
+
+        const stream = makeRemoteStream(91);
+        stream.onItem(0, 'a');
+        stream.onItem(1, 'b');
+        stream.onEnd(5, null); // items 2..4 were lost (e.g. reconnect replay)
+
+        const iter = stream[Symbol.asyncIterator]();
+        expect((await iter.next()).value).toBe('a');
+        expect((await iter.next()).value).toBe('b');
+
+        // A gapped End must NOT complete the stream — it re-requests the tail.
+        const third = await Promise.race([
+            iter.next().then(r => (r.done ? 'completed' : 'item')),
+            delay(200).then(() => 'pending'),
+        ]);
+        expect(third).toBe('pending');
+        expect(resetAcks).toContain(2); // reset-ack for the missing tail
+
+        await iter.return?.();
+    });
+
+    it('a stale End (index < expected) is ignored (R4)', async () => {
+        const stream = makeRemoteStream(92);
+        stream.onItem(0, 'a');
+        stream.onItem(1, 'b');
+        stream.onEnd(1, null); // stale: expected index is 2
+
+        const iter = stream[Symbol.asyncIterator]();
+        expect((await iter.next()).value).toBe('a');
+        expect((await iter.next()).value).toBe('b');
+
+        const third = await Promise.race([
+            iter.next().then(() => 'settled'),
+            delay(100).then(() => 'pending'),
+        ]);
+        expect(third).toBe('pending');
+
+        await iter.return?.();
+    });
+});
+
+describe('RpcRemoteObjectTracker with shared stream ids (R21)', () => {
+    it('two RpcStreams sharing one remote id keep the tracker consistent', () => {
+        const pair = createTestHubPair('json5np');
+        try {
+            const ref = {
+                hostId: 'h', localId: 7, ackPeriod: 10, ackAdvance: 5,
+                allowReconnect: true, isRealTime: false,
+            };
+            // The same serialized stream ref appearing in two result fields
+            // produces two distinct RpcStream instances for one remote id.
+            const s1 = new RpcStream<number>(ref, pair.clientPeer);
+            const s2 = new RpcStream<number>(ref, pair.clientPeer);
+
+            pair.clientPeer.remoteObjects.register(s1);
+            pair.clientPeer.remoteObjects.register(s2); // displaces s1
+            expect(pair.clientPeer.remoteObjects.get(7)).toBe(s2);
+
+            // ABA: disposing the displaced s1 must NOT unregister the current s2.
+            s1.dispose();
+            expect(pair.clientPeer.remoteObjects.get(7)).toBe(s2);
+        } finally {
+            pair.serverHub.close();
+            pair.clientHub.close();
+        }
+    });
+
+    it('resolveStreamRefs does not register nested streams until enumeration (R22)', () => {
+        const pair = createTestHubPair('json5np');
+        try {
+            const resolved = resolveStreamRefs(
+                { s: 'h,7,10,5,1,0' }, pair.clientPeer) as { s: RpcStream<unknown> };
+            expect(resolved.s).toBeInstanceOf(RpcStream);
+            expect([...pair.clientPeer.remoteObjects.keys()]).toEqual([]);
+        } finally {
+            pair.serverHub.close();
+            pair.clientHub.close();
+        }
     });
 });
 

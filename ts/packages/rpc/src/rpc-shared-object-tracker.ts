@@ -9,7 +9,11 @@ export class RpcSharedObjectTracker {
     }
 
     register(obj: IRpcObject): void {
-        this._objects.set(obj.id.localId, obj);
+        const localId = obj.id.localId;
+        if (this._objects.has(localId))
+            throw new Error(`RPC shared object with localId ${localId} is already registered.`);
+
+        this._objects.set(localId, obj);
     }
 
     get(localId: number): IRpcObject | undefined {
@@ -21,7 +25,9 @@ export class RpcSharedObjectTracker {
     }
 
     unregister(obj: IRpcObject): void {
-        this._objects.delete(obj.id.localId);
+        const localId = obj.id.localId;
+        if (this._objects.get(localId) === obj)
+            this._objects.delete(localId);
     }
 
     disconnectAll(): void {
