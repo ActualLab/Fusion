@@ -151,7 +151,10 @@ function applyRedirects(application, dir) {
   const byPath = new Map(rules.map(rule => [rule.from.replace(/\/$/, ""), rule]));
   application.use((req, res, next) => {
     const rule = byPath.get(req.path.replace(/\/$/, ""));
-    if (rule)
+    // Skip rules whose target is the current path: matching keys are compared
+    // trailing-slash-insensitively, so a "/deck -> /deck/" slash-adding rule
+    // would otherwise redirect "/deck/" to itself forever.
+    if (rule && req.path !== rule.to)
       res.redirect(rule.code, rule.to);
     else
       next();

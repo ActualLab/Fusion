@@ -15,6 +15,9 @@ hero:
     - theme: brand
       text: Slides
       link: /Videos-and-Slides
+    - theme: brand
+      text: MCP
+      link: /mcp-server
     - theme: alt
       text: Changelog
       link: /CHANGELOG
@@ -93,12 +96,16 @@ features:
   color: #c9ccd4;
 }
 
-/* Merge the first two brand actions (Documentation | Slides) into a
+/* Merge the first three brand actions (Documentation | Slides | MCP) into a
    single split button. */
 .VPHome .VPHero .actions .action:nth-child(1) {
   padding-right: 0;
 }
 .VPHome .VPHero .actions .action:nth-child(2) {
+  padding-left: 0;
+  padding-right: 0;
+}
+.VPHome .VPHero .actions .action:nth-child(3) {
   padding-left: 0;
 }
 .VPHome .VPHero .actions .action:nth-child(1) .VPButton {
@@ -107,6 +114,10 @@ features:
   border-right: 1px solid rgba(255, 255, 255, 0.25);
 }
 .VPHome .VPHero .actions .action:nth-child(2) .VPButton {
+  border-radius: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
+}
+.VPHome .VPHero .actions .action:nth-child(3) .VPButton {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }

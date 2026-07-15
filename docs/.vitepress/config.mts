@@ -201,6 +201,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
     nav: [
       { text: "Samples", link: "https://github.com/ActualLab/Fusion.Samples" },
       { text: "GitHub", link: "https://github.com/ActualLab/Fusion" },
+      { text: "MCP", link: "/mcp-server" },
       { text: "Chat", link: "https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo" },
     ],
     sidebar: [
