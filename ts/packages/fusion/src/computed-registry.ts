@@ -1,4 +1,4 @@
-import type { Computed } from './computed.js';
+import { type Computed, ConsistencyState } from './computed.js';
 
 /** WeakRef-based global cache of Computed instances — allows GC of unused computed values. */
 export class ComputedRegistry {
@@ -24,6 +24,13 @@ export class ComputedRegistry {
 
     static register(computed: Computed<unknown>): void {
         const key = computed.input as string;
+        const displaced = ComputedRegistry._entries.get(key)?.deref();
+        // Already registered — setOutput re-registers the instance registered at creation
+        if (displaced === computed)
+            return;
+
+        if (displaced !== undefined && displaced.state !== ConsistencyState.Invalidated)
+            displaced.invalidate();
         ComputedRegistry._entries.set(key, new WeakRef(computed));
         ComputedRegistry._finalization.register(computed, key, computed);
     }

@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/await-thenable -- @computeMethod decorator wraps methods to return Promise at runtime */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { AsyncContext } from '@actuallab/core';
+import { AsyncContext, PromiseSource } from '@actuallab/core';
 import {
     computeMethod,
     wrapComputeMethod,
     getMethodsMeta,
+    MutableState,
 } from '../src/index.js';
 
 describe('@computeMethod decorator', () => {
@@ -161,5 +162,63 @@ describe('wrapComputeMethod', () => {
         computeValue.invalidate('x');
 
         expect(await computeValue('x')).toBe(2);
+    });
+});
+
+describe('compute method invalidation vs. in-flight computation', () => {
+    beforeEach(() => {
+        AsyncContext.current = undefined;
+    });
+
+    // K2: a Computed is registered while still Computing, so invalidate() during
+    // the computation lands as pending and the next call recomputes.
+    it('should not lose invalidate() called during an in-flight computation', async () => {
+        let store = 1;
+        const gate = new PromiseSource<void>();
+        const started = new PromiseSource<void>();
+        const getValue = wrapComputeMethod(async function getValue() {
+            const v = store;
+            started.resolve(undefined);
+            await gate;
+            return v;
+        });
+
+        const p = getValue();
+        await started;
+
+        store = 2;
+        getValue.invalidate();
+        gate.resolve(undefined);
+
+        expect(await p).toBe(1);
+        expect(await getValue()).toBe(2);
+    });
+
+    // K1: addDependency on an already-invalidated dependency invalidates the
+    // (still Computing) dependant instead of adding a dead edge.
+    it('should invalidate a dependant that captures an already-invalidated dependency', async () => {
+        const s = new MutableState(1);
+        const gate = new PromiseSource<void>();
+        const started = new PromiseSource<void>();
+        const child = wrapComputeMethod(async function child() {
+            const v = s.use();
+            started.resolve(undefined);
+            await gate;
+            return v;
+        });
+        const parent = wrapComputeMethod(function parent() {
+            return child();
+        });
+
+        const p = parent();
+        await started;
+
+        // Invalidate the child (via its dependency) while it is still computing;
+        // it self-invalidates right after setOutput, before the parent captures it
+        s.set(2);
+        gate.resolve(undefined);
+
+        expect(await p).toBe(1);
+        expect(await parent()).toBe(2);
     });
 });

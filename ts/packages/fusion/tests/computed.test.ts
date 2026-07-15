@@ -124,12 +124,11 @@ describe('Computed dependency tracking', () => {
 
     it('should cascade invalidation from child to parent', () => {
         const parent = new Computed<number>(makeKey('parent', 1));
-        parent.setOutput(100);
-
         const child = new Computed<number>(makeKey('child', 1));
         child.setOutput(10);
 
-        parent.addDependency(child);
+        parent.addDependency(child); // parent still Computing — edge added
+        parent.setOutput(100);
 
         child.invalidate();
         expect(child.state).toBe(ConsistencyState.Invalidated);
@@ -138,17 +137,15 @@ describe('Computed dependency tracking', () => {
 
     it('should cascade invalidation through multiple levels', () => {
         const a = new Computed<number>(makeKey('a', 1));
-        a.setOutput(1);
-
         const b = new Computed<number>(makeKey('b', 1));
-        b.setOutput(2);
-
         const c = new Computed<number>(makeKey('c', 1));
         c.setOutput(3);
 
-        // a depends on b, b depends on c
-        a.addDependency(b);
+        // b depends on c, a depends on b — edges added while each is Computing
         b.addDependency(c);
+        b.setOutput(2);
+        a.addDependency(b);
+        a.setOutput(1);
 
         c.invalidate();
         expect(c.state).toBe(ConsistencyState.Invalidated);
@@ -156,24 +153,39 @@ describe('Computed dependency tracking', () => {
         expect(a.state).toBe(ConsistencyState.Invalidated);
     });
 
-    it('should not cascade to replaced dependant (different version)', () => {
-        const parentKey = makeKey('parent', 1);
-        const parent1 = new Computed<number>(parentKey);
-        parent1.setOutput(100);
-
+    it('should unlink itself from its dependencies dependants map on invalidation', () => {
+        const parent = new Computed<number>(makeKey('parent', 1));
         const child = new Computed<number>(makeKey('child', 1));
         child.setOutput(10);
 
-        parent1.addDependency(child);
+        parent.addDependency(child);
+        parent.setOutput(100);
 
-        // Replace parent with a new version (different Computed, same key)
+        const dependants = (
+            child as unknown as { _dependants: Map<number, unknown> }
+        )._dependants;
+        expect(dependants.size).toBe(1);
+
+        parent.invalidate();
+        expect(dependants.size).toBe(0);
+    });
+
+    it('should invalidate a displaced same-key predecessor, not its successor', () => {
+        const parentKey = makeKey('parent', 1);
+        const parent1 = new Computed<number>(parentKey);
+        const child = new Computed<number>(makeKey('child', 1));
+        child.setOutput(10);
+
+        parent1.addDependency(child); // parent1 still Computing — edge added
+        parent1.setOutput(100);
+
+        // A same-key successor displaces parent1 in the registry (K16) — which
+        // invalidates parent1 and (K7) unlinks it from child's dependants
         const parent2 = new Computed<number>(parentKey);
         parent2.setOutput(200);
-
-        // Invalidate child — parent1 gets invalidated (it added the dependency),
-        // but parent2 is unrelated and stays consistent
-        child.invalidate();
         expect(parent1.state).toBe(ConsistencyState.Invalidated);
+
+        child.invalidate();
         expect(parent2.state).toBe(ConsistencyState.Consistent);
     });
 });

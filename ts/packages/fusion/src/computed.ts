@@ -177,7 +177,9 @@ export class Computed<T> implements IResult<T> {
         }
         this._state = ConsistencyState.Invalidated;
 
-        // Clear forward references
+        // Unlink from each dependency's dependants map, then clear forward references
+        for (const dependency of this._dependencies)
+            dependency._dependants.delete(this._version);
         this._dependencies.clear();
 
         // Notify dependants via WeakRef backward references
@@ -216,6 +218,12 @@ export class Computed<T> implements IResult<T> {
     }
 
     addDependency(dependency: Computed<unknown>): void {
+        if (this._state !== ConsistencyState.Computing)
+            return;
+        if (dependency._state === ConsistencyState.Invalidated) {
+            this.invalidate();
+            return;
+        }
         this._dependencies.add(dependency);
         dependency._dependants.set(
             this._version,

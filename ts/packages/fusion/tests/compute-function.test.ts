@@ -118,6 +118,35 @@ describe('ComputeFunction', () => {
         expect(computed.value).toBe(11);
     });
 
+    it('should drop the per-key lock entry once no computation is in flight', async () => {
+        const fn = new ComputeFunction('locked', function () {
+            return 1;
+        });
+        await fn.invoke(testInstance, [1]);
+        await fn.invoke(testInstance, [2]);
+
+        const locks = (fn as unknown as { _locks: Map<string, unknown> })
+            ._locks;
+        expect(locks.size).toBe(0);
+    });
+
+    it('should not leak lock entries under concurrent same-key computations', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fn = new ComputeFunction('slow', async function (this: any) {
+            await new Promise(r => setTimeout(r, 5));
+            return 1;
+        });
+        await Promise.all([
+            fn.invoke(testInstance, [1]),
+            fn.invoke(testInstance, [1]),
+            fn.invoke(testInstance, [1]),
+        ]);
+
+        const locks = (fn as unknown as { _locks: Map<string, unknown> })
+            ._locks;
+        expect(locks.size).toBe(0);
+    });
+
     it('should capture dependencies between compute functions', async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const innerFn = new ComputeFunction('inner', function (this: any, x: unknown) {

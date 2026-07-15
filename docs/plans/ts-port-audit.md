@@ -41,6 +41,8 @@ The items most likely to produce user-visible wrong behavior in an app that uses
 
 ### K1. `addDependency` has no state checks — an edge added to an already-invalidated Computed is silently dead
 
+Status: **closed** — fixed 2026-07-15 (batch kernel1).
+
 Confidence: confirmed.
 
 - TS: `ts/packages/fusion/src/computed.ts:218-224` — `addDependency` unconditionally adds the edge. No check that `this` is still Computing, and no check that `dependency` is not Invalidated. Since `invalidate()` early-returns for Invalidated (`computed.ts:170-171`) and its `_dependants` were already cleared (`computed.ts:188`), an edge added to an invalidated dependency never fires.
@@ -51,6 +53,8 @@ Confidence: confirmed.
 - **Alternative:** guard at each capture site individually (`ComputeContext.captureDependency`, `use()`'s `.then`, `invoke`'s post-lock capture). Rejected-leaning: several sites today, more tomorrow; the invariant belongs to the graph-mutation primitive, exactly where C# enforces it.
 
 ### K2. In-flight computations are invisible to key-based invalidation — `invalidate()` during computation is lost
+
+Status: **closed** — fixed 2026-07-15 (batch kernel1; creation-time registration + "already registered" early exit).
 
 Confidence: confirmed.
 
@@ -104,6 +108,8 @@ Confidence: confirmed (absence verified).
 
 ### K7. Invalidated dependants never unlink from their dependencies; no graph pruner
 
+Status: **closed** — eager unlink fixed 2026-07-15 (batch kernel1); a pruner remains a possible follow-up if profiling shows growth.
+
 Confidence: confirmed.
 
 - TS: `invalidate()` clears only its own `_dependencies` and `_dependants` (`computed.ts:180-188`); it never removes itself from its dependencies' `_dependants` maps. Entries are `version → WeakRef`; the WeakRef target can be GC'd but the Map entry lives until the *dependency* itself is invalidated.
@@ -113,6 +119,8 @@ Confidence: confirmed.
 - **Alternative:** a periodic pruner sweeping `_dependants` maps for dead WeakRefs (`ComputedGraphPruner` analog). Heavier and only complements — eager unlink is the correct fix; a pruner can follow if profiling still shows growth.
 
 ### K8. `ComputeFunction._locks` is never cleaned — one `AsyncLock` leaked per distinct key, forever
+
+Status: **closed** — fixed 2026-07-15 (batch kernel1). Residual: the delete is skipped when `lock.run` rejects (only possible when an invalidation handler throws) — K4's root cause, resolved with K4.
 
 Confidence: confirmed.
 
@@ -191,6 +199,8 @@ Confidence: confirmed. Every later generation reuses gen-1's `_renewer`, whose c
 
 ### K16. `registry.register` overwrites without invalidating a displaced still-consistent computed (low)
 
+Status: **closed** — fixed 2026-07-15 (batch kernel1).
+
 Confidence: confirmed. `computed-registry.ts:25-29` vs C# `ComputedRegistry.cs:126-132` (invalidates the displaced target). Unreachable through the single-flight path today, but the invariant is unenforced — and the K2 fix will make this path live.
 
 - **Recommended:** in `register`, invalidate a displaced computed that is not already invalidated (C# parity). Prerequisite for K2's recommended fix.
@@ -215,6 +225,8 @@ Confidence: confirmed. TS notifies dependants before the computed's own `onInval
 - Registry instrumentation (`OnRegister/OnUnregister/OnAccess`, metrics, `InvalidateEverything`).
 
 Note: the TS registry's WeakRef + FinalizationRegistry approach (`computed-registry.ts`) is a sound equivalent of C#'s weak-ref + pruning for *key* storage; the gaps are in graph edges (K1, K7) and registration timing (K2), not key eviction.
+
+Registry residuals surfaced during kernel1 verification (low, unassigned): the FinalizationRegistry callback deletes `_entries` by key without a WeakRef identity check — a GC'd predecessor's late callback can drop a live successor's entry (C# uses identity `TryRemove`); `ComputedRegistry.unregister` similarly lacks C#'s entry-identity check (currently unreachable while the per-key lock serializes same-key computation); `Computed.capture` of a just-invalidated computed now throws "No Computed was captured" — to be addressed by K11's capture rework.
 
 ---
 

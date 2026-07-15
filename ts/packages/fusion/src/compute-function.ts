@@ -87,6 +87,10 @@ export class ComputeFunction {
                 prevComputed?._renewer ??
                 (() => this.invoke(instance, argsWithoutCtx, newComputed));
             newComputed = new Computed<unknown>(key, renewer);
+            // Register while still Computing so ComputedRegistry.get(key) resolves the
+            // in-flight instance and a racing invalidate() is captured as pending — C#
+            // ComputeMethodComputed registers in its constructor.
+            ComputedRegistry.register(newComputed);
 
             const childComputeCtx = new ComputeContext(newComputed);
             const childAsyncCtx = (asyncCtx ?? AsyncContext.empty).with(
@@ -111,6 +115,9 @@ export class ComputeFunction {
 
             return newComputed;
         });
+
+        if (!lock.isLocked && this._locks.get(key) === lock)
+            this._locks.delete(key);
 
         // Register dependency from caller to the produced computed
         callerComputeCtx?.captureDependency(computed);

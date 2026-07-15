@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Computed, ComputedRegistry } from '../src/index.js';
+import { Computed, ComputedRegistry, ConsistencyState } from '../src/index.js';
 
 let _testKeyCounter = 0;
 function makeKey(method: string, ...args: unknown[]): string {
@@ -41,6 +41,30 @@ describe('ComputedRegistry', () => {
 
         computed.invalidate();
         expect(ComputedRegistry.get(key)).toBeUndefined();
+    });
+
+    it('should invalidate a displaced still-consistent computed on re-register', () => {
+        const key = makeKey('get', 1);
+        const c1 = new Computed<number>(key);
+        c1.setOutput(1);
+        expect(c1.state).toBe(ConsistencyState.Consistent);
+
+        const c2 = new Computed<number>(key);
+        c2.setOutput(2);
+
+        expect(c1.state).toBe(ConsistencyState.Invalidated);
+        expect(ComputedRegistry.get(key)).toBe(c2);
+    });
+
+    it('should keep an already-registered computed intact on self re-register', () => {
+        const key = makeKey('get', 1);
+        const c1 = new Computed<number>(key);
+        c1.setOutput(1);
+
+        ComputedRegistry.register(c1 as Computed<unknown>);
+
+        expect(c1.state).toBe(ConsistencyState.Consistent);
+        expect(ComputedRegistry.get(key)).toBe(c1);
     });
 
     it('should track size', () => {
