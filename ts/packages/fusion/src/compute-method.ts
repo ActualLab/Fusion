@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-this-alias */
 import { ownMetadata, resolveArgCount } from '@actuallab/core';
 import { ComputeFunction } from './compute-function.js';
+import { ComputedOptions } from './computed-options.js';
 import { ComputedRegistry } from './computed-registry.js';
 
 const METHODS_META = Symbol.for('actuallab.methods');
@@ -18,7 +19,7 @@ export function getMethodsMeta(
     return (cls as any)[Symbol.metadata]?.[METHODS_META];
 }
 
-export interface ComputeMethodOptions {
+export interface ComputeMethodOptions extends Partial<ComputedOptions> {
     argCount?: number;
 }
 
@@ -68,7 +69,7 @@ function computeMethodImpl<This, Args extends unknown[], Return>(
     };
 
     // ONE ComputeFunction per class×method — created at decoration time
-    const cf = new ComputeFunction(methodName, target as any);
+    const cf = new ComputeFunction(methodName, target as any, new ComputedOptions(options));
 
     // Prototype-level replacement — unwraps Computed to return the value directly
     const replacement = function (this: This, ...allArgs: Args): Return {

@@ -9,6 +9,7 @@ import {
 import type { ComputedInput } from './computed-input.js';
 import { ComputedRegistry } from './computed-registry.js';
 import { ComputeContext, computeContextKey } from './compute-context.js';
+import { ComputedOptions } from './computed-options.js';
 import { getLogs } from './logging.js';
 import type { State } from './state.js';
 
@@ -24,9 +25,6 @@ export const enum ConsistencyState {
 
 /** Core Fusion abstraction — a cached computation with dependency tracking and invalidation. */
 export class Computed<T> implements IResult<T> {
-    /** Delay before auto-invalidating a Computed that holds an error result. 0 = disabled. */
-    static errorAutoInvalidateDelay = 1000;
-
     /** Capture the Computed backing a computation — works with both local and RPC compute methods. */
     static async capture<T>(fn: () => T | Promise<T>): Promise<Computed<T>> {
         const captureComputed = new Computed<unknown>('__capture__');
@@ -45,10 +43,12 @@ export class Computed<T> implements IResult<T> {
     }
 
     readonly input: ComputedInput;
+    readonly options: ComputedOptions;
     private _version: number;
     private _state: ConsistencyState;
     private _output: Result<T> | undefined;
     private _invalidatePending = false;
+    private _errorTimer: ReturnType<typeof setTimeout> | undefined;
     private _dependencies = new Set<Computed<unknown>>();
     private _dependants = new Map<number, WeakRef<Computed<unknown>>>();
     private _onInvalidated = new EventHandlerSet<void>();
@@ -56,9 +56,11 @@ export class Computed<T> implements IResult<T> {
 
     constructor(
         input: ComputedInput,
-        renewer?: () => Computed<T> | Promise<Computed<T>>
+        renewer?: () => Computed<T> | Promise<Computed<T>>,
+        options: ComputedOptions = ComputedOptions.default
     ) {
         this.input = input;
+        this.options = options;
         this._renewer = renewer;
         this._version = ++_nextVersion;
         this._state = ConsistencyState.Computing;
@@ -164,13 +166,11 @@ export class Computed<T> implements IResult<T> {
             return;
         }
 
-        const errorAutoInvalidateDelay = this._errorAutoInvalidateDelay;
-        if (this._output.hasError && errorAutoInvalidateDelay > 0)
-            setTimeout(() => this.invalidate(), errorAutoInvalidateDelay);
-    }
-
-    protected get _errorAutoInvalidateDelay(): number {
-        return Computed.errorAutoInvalidateDelay;
+        const delay = this.options.errorAutoInvalidateDelay;
+        if (this._output.hasError && delay !== Infinity && delay > 0) {
+            this._errorTimer = setTimeout(() => this.invalidate(), delay);
+            (this._errorTimer as { unref?: () => void }).unref?.();
+        }
     }
 
     protected _register(): void {
@@ -193,6 +193,10 @@ export class Computed<T> implements IResult<T> {
             return;
         }
         this._state = ConsistencyState.Invalidated;
+        if (this._errorTimer !== undefined) {
+            clearTimeout(this._errorTimer);
+            this._errorTimer = undefined;
+        }
         try {
             this._onInvalidated.triggerSafe(undefined, e =>
                 errorLog?.log('onInvalidated handler failed', e)
@@ -274,6 +278,14 @@ export class Computed<T> implements IResult<T> {
 
 /** Computed variant for State types — skips registry registration since the State holds a direct reference. */
 export class StateBoundComputed<T> extends Computed<T> {
+    constructor(
+        input: ComputedInput,
+        renewer?: () => Computed<T> | Promise<Computed<T>>,
+        options: ComputedOptions = ComputedOptions.mutableStateDefault
+    ) {
+        super(input, renewer, options);
+    }
+
     protected override _latest(): Computed<T> | undefined {
         return (this.input as State<T>).computed;
     }

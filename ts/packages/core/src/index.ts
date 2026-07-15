@@ -36,6 +36,7 @@ export { TimedOut } from './timed-out.js';
 export { TimeoutError, withTimeout } from './withTimeout.js';
 export { delayAsync, delayAsyncWith } from './delay.js';
 export { abortPromise } from './abort-promise.js';
+export { isCancellation } from './cancellation.js';
 
 // Higher-order async operators
 export type { ResettableFunc, ThrottleMode } from './throttle.js';

@@ -90,6 +90,8 @@ Confidence: confirmed.
 
 ### K5. Every error auto-invalidates after a global 1 s — states included → perpetual 1 Hz invalidate/recompute loops
 
+Status: **closed** — fixed 2026-07-15 (batch kernel3, per D1): `ComputedOptions` introduced (`default` = 1 s, `mutableStateDefault` = Infinity for all state-bound computeds), per-declaration override via `@computeMethod({ errorAutoInvalidateDelay })`, timer cleared on invalidation and `unref()`'d; the global `Computed.errorAutoInvalidateDelay` was removed. Statecore's interim per-class delay override was dissolved into the options at merge.
+
 Confidence: confirmed.
 
 - TS: `computed.ts:24-25, 154-158` — `setOutput` schedules `setTimeout(() => this.invalidate(), 1000)` for **any** error on **any** Computed, including `StateBoundComputed` (states call `setOutput` at `state.ts:87, 92`). `MutableState`'s renewer recreates the computed with the same error output (`mutable-state.ts:7-11`), scheduling the next 1 s invalidation.
@@ -99,6 +101,8 @@ Confidence: confirmed.
 - **Alternative (superseded by D1):** a lone per-computed `errorAutoInvalidateDelay` field, or keeping the global delay with a `StateBoundComputed` exclusion — smaller, but every next per-method knob would need its own mechanism.
 
 ### K6. Cancellation errors are cached as values — C# contract: OCE must never be cached
+
+Status: **closed** — fixed 2026-07-15 (batch kernel3; `isCancellation` helper in `@actuallab/core` recognizing `AbortError`-shaped reasons — `TimeoutError` deliberately excluded as a deadline outcome, not caller cancellation).
 
 Confidence: confirmed (absence verified).
 
@@ -180,6 +184,8 @@ Confidence: confirmed.
 
 ### K13. Default argument keying via `JSON.stringify` produces key collisions
 
+Status: **closed (won't-fix per D2)** — the `?? ''` tweak and the collision-rules doc comment landed 2026-07-15 (batch kernel3).
+
 Confidence: confirmed.
 
 - TS: `compute-function.ts:19-22, 41-47` — `JSON.stringify(arg) ?? 'undefined'`: any function, `undefined`, or `Symbol` arg → `'undefined'`; objects without serializable props → `'{}'`; `NaN` → `null`; `Map`/`Set` → `'{}'`. Semantically different arguments collide onto the same cache key.
@@ -199,6 +205,8 @@ Confidence: confirmed (mechanism; not runtime-tested).
 - **Alternative:** dev-mode diagnostics only — log a warning when a lock acquisition waits longer than a few seconds. Doesn't prevent the deadlock, but catches cases the parent-chain walk can't see (calls made without a threaded context, see K3).
 
 ### K15. Renewer chain permanently retains the generation-1 computed and the original argument objects (low)
+
+Status: **closed** — fixed 2026-07-15 (batch kernel3).
 
 Confidence: confirmed. Every later generation reuses gen-1's `_renewer`, whose closure strongly captures the gen-1 computed and the first call's `argsWithoutCtx` (`compute-function.ts:85-89`). Small fixed leak per key; renewals also re-run the impl against the *first* call's argument object identities. C# reconstructs from `ComputeMethodInput` each time.
 

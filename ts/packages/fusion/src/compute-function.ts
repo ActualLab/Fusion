@@ -1,11 +1,13 @@
 import {
     AsyncContext,
     AsyncLock,
+    isCancellation,
     type Result,
     result,
     errorResult,
 } from '@actuallab/core';
 import { Computed } from './computed.js';
+import { ComputedOptions } from './computed-options.js';
 import { getInstanceId } from './computed-input.js';
 import { ComputeContext, computeContextKey } from './compute-context.js';
 import { ComputedRegistry } from './computed-registry.js';
@@ -16,9 +18,13 @@ export type ComputeFunctionImpl = (this: any, ...args: unknown[]) => unknown;
 /** Record Separator — delimiter between key components. */
 const RS = '\x1E';
 
+// Keying is by JSON.stringify per argument, joined with RS delimiters. Collisions are
+// possible and by design (D2): functions, undefined, and symbols all map to '', objects
+// without serializable props to '{}', NaN to 'null', Map/Set to '{}'. The compute method's
+// author owns keyability — use JSON-representable argument types or supply a custom argToString.
 function defaultArgToString(arg: unknown): string {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- JSON.stringify returns undefined for undefined input
-    return JSON.stringify(arg) ?? 'undefined';
+    return JSON.stringify(arg) ?? '';
 }
 
 let _nextFunctionId = 0;
@@ -27,14 +33,20 @@ let _nextFunctionId = 0;
 export class ComputeFunction {
     readonly methodName: string;
     readonly id: string;
+    readonly options: ComputedOptions;
     argToString: (arg: unknown) => string = defaultArgToString;
     private _impl: ComputeFunctionImpl;
     private _locks = new Map<string, AsyncLock>();
 
-    constructor(methodName: string, impl: ComputeFunctionImpl) {
+    constructor(
+        methodName: string,
+        impl: ComputeFunctionImpl,
+        options: ComputedOptions = ComputedOptions.default
+    ) {
         this.methodName = methodName;
         this.id = `${methodName}[${++_nextFunctionId}]`;
         this._impl = impl;
+        this.options = options;
     }
 
     /** Build a string key for the given instance and arguments. */
@@ -48,8 +60,7 @@ export class ComputeFunction {
 
     async invoke(
         instance: object,
-        args: unknown[],
-        prevComputed?: Computed<unknown>
+        args: unknown[]
     ): Promise<Computed<unknown>> {
         // 1. Resolve AsyncContext ONCE via DRY helper
         const asyncCtx = AsyncContext.fromArgs(args);
@@ -81,12 +92,12 @@ export class ComputeFunction {
             if (cached?.isConsistent) return cached;
 
             // 6. Create new Computed + ComputeContext
-            // eslint-disable-next-line prefer-const
-            let newComputed: Computed<unknown>;
-            const renewer =
-                prevComputed?._renewer ??
-                (() => this.invoke(instance, argsWithoutCtx, newComputed));
-            newComputed = new Computed<unknown>(key, renewer);
+            const renewer = () => this.invoke(instance, argsWithoutCtx);
+            const newComputed = new Computed<unknown>(
+                key,
+                renewer,
+                this.options
+            );
             // Register while still Computing so ComputedRegistry.get(key) resolves the
             // in-flight instance and a racing invalidate() is captured as pending — C#
             // ComputeMethodComputed registers in its constructor.
@@ -112,6 +123,10 @@ export class ComputeFunction {
             }
 
             newComputed.setOutput(fnResult);
+            // C# StartAutoInvalidation OCE parity: a cancellation error is registered to keep the
+            // single-flight lock protocol intact, then invalidated at once so it's never cached.
+            if (fnResult.hasError && isCancellation(fnResult.error))
+                newComputed.invalidate();
 
             return newComputed;
         });
