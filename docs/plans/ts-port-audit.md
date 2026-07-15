@@ -10,7 +10,7 @@ The port is deliberately partial. The standard applied here is: **every feature 
 
 **Every item carries a Recommended / Alternative course-of-action pair** as input to the resolution stage; final decisions per item (including won't-fixes) will be recorded in a companion `ts-port-fixes.md`. The pairs for the five test-confirmed items were written first and are the most scrutinized; the rest follow the same pattern but haven't been through the verification pass yet.
 
-**Second pass (2026-07-14):** [`ts-port-audit-addendum.md`](ts-port-audit-addendum.md) adds five more findings — **R18** (regular dispatch loses the implementation receiver), **R19** (decorator metadata shared/mutated across base and derived classes), **R20** (decorator wire arity wrong with default/rest parameters), **R21** (tracker identity invariants violated on replace/unregister), **R22** (streams registered and kept alive before enumeration). All five were independently validated against TS and C# sources and carry Recommended/Alternative pairs there.
+**Second pass (2026-07-14):** a second review pass added five more findings — **R18** (regular dispatch loses the implementation receiver), **R19** (decorator metadata shared/mutated across base and derived classes), **R20** (decorator wire arity wrong with default/rest parameters), **R21** (tracker identity invariants violated on replace/unregister), **R22** (streams registered and kept alive before enumeration). All five were independently validated against TS and C# sources (and four reproduced with short executable probes, removed after verification); they are merged into the RPC section below with Recommended/Alternative pairs.
 
 Item numbering: **K** = Fusion kernel, **S** = State layer + React, **R** = RPC layer, **F** = Fusion-over-RPC glue, **C** = core utilities.
 
@@ -32,7 +32,8 @@ The items most likely to produce user-visible wrong behavior in an app that uses
 - **Hangs** — F2 (pre-result `Invalidate` permanently poisons a compute key's lock), S5 (dispose mid-computation deadlocks `update()` callers), R2 (TypeRef-less `$sys.Error` hangs .NET callers), R12 (no outbound call timeouts).
 - **Wire-protocol breaks vs .NET peers** — R1 (V5/V5C header position), R6 (`mempack6` registered as msgpack), R7 (no polymorphism markers), R5 (pre-handshake sends).
 - **Process-level failures** — C1/C7/S14 (unhandled promise rejections; crash Node by default), K4 (a throwing invalidation handler halts the cascade and kills `ComputedState` update loops).
-- **Resource leaks** — R3 (completed streams never unregister on either peer), K7/K8/K10/S4/F4/F11 (graph edges, locks, listeners, calls, server peers).
+- **Resource leaks** — R3 (completed streams never unregister on either peer), R22 (never-enumerated streams leased forever on both peers), K7/K8/K10/S4/F4/F11 (graph edges, locks, listeners, calls, server peers).
+- **Registration/dispatch correctness** — R18 (server dispatch loses the implementation receiver), R19 (decorator metadata contaminates base/derived contracts), R20 (wrong wire arity with default/rest parameters), R21 (tracker replace/unregister violate identity invariants).
 
 ---
 
@@ -561,11 +562,124 @@ Confidence: confirmed (documented omission). TS removes the tracker entry only (
 - **Recommended:** thread an `AbortSignal` per inbound call through `RpcServiceHost.dispatch` (aborted by `$sys.Cancel`), and skip the response when the call is no longer registered. Also the transport half of F5.
 - **Alternative:** response-suppression only (no handler abort). Cheap, stops the wasted send; server-side work still runs to completion.
 
+### R18. Regular service dispatch loses the implementation receiver
+
+Confidence: confirmed and executable-probe verified. (Second-pass finding.)
+
+- TS stores only the extracted function (`rpc-service-host.ts:54-61`), then calls `entry.fn(...args)`
+  (`rpc-service-host.ts:65-82`). The receiver is the internal `entry` record, not the registered implementation.
+- C# invokes the method against `methodDef.Service.Server` (`RpcMethodDef.NestedTypes.cs:45-68`).
+- A probe registered `{ prefix: 'v=', getValue(n) { return this.prefix + n; } }`. Dispatch returned `NaN` because
+  `this.prefix` was read from the host's internal entry. A class instance has the same failure.
+- Fusion compute methods escape this specific bug because `FusionHub._wrapServerMethod` passes `impl` into
+  `ComputeFunction.invoke`; regular, no-wait, and stream methods do not.
+- Failure: any idiomatic stateful service method reads the wrong receiver. Private fields fail more loudly with
+  `TypeError: Cannot read private member ...`.
+- **Recommended:** store the implementation receiver beside the function in the method entry and dispatch via
+  `entry.fn.call(entry.impl, ...args)` (`Reflect.apply` equivalent). Keeping the unbound function composes with
+  wrappers that re-target the receiver (`FusionHub._wrapServerMethod` already invokes with an explicit `impl`).
+  Add end-to-end tests for regular, no-wait, and stream methods using both ordinary and `#private` instance state.
+- **Alternative:** bind once at registration (`impl[name].bind(impl)`). Same observable behavior, marginally
+  faster dispatch; loses the unbound function for any future wrapper/middleware that needs to control the receiver.
+
+### R19. Decorator metadata is shared and mutated across base and derived classes
+
+Confidence: confirmed and executable-probe verified. (Second-pass finding.)
+
+- Stage-3 decorator metadata for a derived class inherits from the base metadata object. Both `rpcService` and
+  `rpcMethod` read through that prototype chain and use `??=` (`rpc-decorators.ts:63-71, 75-95`). If a metadata
+  record is inherited, `??=` reuses it instead of creating an own copy.
+- The same pattern exists in Fusion's `computeMethod` (`compute-method.ts:30-38`), so the defect crosses packages.
+- A probe declared `Base.base()` and `Derived.derived()`. After decorating `Derived`, `getMethodsMeta(Base)` returned
+  both `base` and `derived`. Decorating the derived service as `"Derived"` also changed the base service name from
+  `"Base"` to `"Derived"`.
+- C# builds service and method definitions from a concrete `Type`; derived declarations cannot mutate the metadata
+  already associated with a base service type.
+- Failure: merely loading a derived contract can change an already registered or later-built base contract's wire
+  name and method set. Sibling derived contracts contaminate one another through their base.
+- **Recommended:** write only to *own* metadata records: when the record is inherited
+  (`!Object.hasOwn(context.metadata, KEY)`), create an own copy first — clone the inherited methods map (so base
+  methods stay visible on the derived contract) and create a fresh service record before setting its name.
+  Implement as one small shared helper in `@actuallab/core` (own-record-or-clone semantics) used by `rpcService`,
+  `rpcMethod`, and `computeMethod` — one fix for both packages. Test base/derived/sibling contracts in both
+  decorator packages.
+- **Alternative:** duplicate the helper locally in each package (risks the two copies diverging — the exact bug
+  shape being fixed), or forbid contract inheritance outright (throw on inherited metadata) — simpler, but removes
+  a pattern the C# side supports.
+
+### R20. Decorator wire arity is wrong after a default parameter and for rest parameters
+
+Confidence: confirmed and executable-probe verified. (Second-pass finding.)
+
+- `rpcMethod` records `target.length` (`rpc-decorators.ts:90-95`); `computeMethod` does the same
+  (`compute-method.ts:34-38`). JavaScript `Function.length` stops before the first parameter with a default and does
+  not count a rest parameter.
+- A three-parameter probe `method(a, b = 1, c?)` produced `argCount === 1`. The hub then derives a wire name using
+  that count (`rpc-hub.ts:244-253`), while callers passing all three arguments select/send a different arity.
+- C# uses the full reflected parameter list (`RpcMethodDef.cs:62-70`, `RpcServiceDef.cs:136-149`), including optional
+  parameters.
+- Failure: a valid decorated method may be published under the wrong `Service.Method:N` name; overload selection and
+  interop with .NET fail even though direct local calls work.
+- **Recommended:** add an explicit `argCount` option to `rpcMethod` and `computeMethod`; when absent, detect
+  ambiguity by scanning the parameter list of `Function.prototype.toString()` for `=` / `...` and throw a clear
+  declaration-time error demanding the explicit count (TypeScript cannot recover the erased count reliably at
+  runtime). Document that rest parameters are unsuitable for fixed-arity RPC without an explicit wire contract.
+- **Alternative:** fully parse `toString()` output to *infer* the true count — fragile against destructuring,
+  comments, and minification; or document-only — leaves the wire-name mismatch silent until interop fails.
+
+### R21. Remote-object replacement and unregister violate tracker identity invariants
+
+Confidence: confirmed and executable-probe verified. (Second-pass finding.)
+
+- TS `RpcRemoteObjectTracker.register` blindly overwrites by `localId`, while `unregister` blindly deletes by
+  `localId` (`rpc-remote-object-tracker.ts:3-20`). The shared tracker has the same unregister shape
+  (`rpc-shared-object-tracker.ts:11-24`). Neither verifies that the map still points to the supplied object.
+- A probe registered object A and then B with the same ID. A was not disconnected. Calling `unregister(A)` afterward
+  removed B, even though B was the current entry.
+- C# remote registration disconnects a displaced live object before replacement, and unregister succeeds only if the
+  stored target is the same object (`RpcObjectTrackers.cs:73-141`). Shared registration rejects duplicate IDs and
+  shared unregister also compares the stored object (`RpcObjectTrackers.cs:255-269`).
+- This is reachable without ID wraparound: a result containing the same serialized stream reference twice makes
+  `resolveStreamRefs` construct and register two `RpcStream` instances for one remote ID (`rpc-stream.ts:465-473`).
+- Failure: the displaced stream remains user-visible but is no longer reconnected or kept alive. Its later disposal
+  can unregister the replacement, so frames for the replacement become unrouteable too.
+- **Recommended:** port the C# invariants into both trackers: `unregister(obj)` removes the entry only when it
+  still points to `obj`; remote `register` no-ops for the same object and disconnects a displaced *live* object
+  before replacing it; shared `register` rejects duplicate ids. Add the ABA regression test and a
+  same-stream-reference-in-two-fields result test.
+- **Alternative (complementary, not substitute):** dedupe stream refs in `resolveStreamRefs` (same ref within one
+  result graph → one `RpcStream` instance) — closes today's concrete trigger but leaves the tracker invariant
+  unenforced. Weak-ref tracking (R3's alternative) can layer on afterwards; it presumes exactly these identity
+  checks.
+
+### R22. Remote streams are registered and kept alive before enumeration starts
+
+Confidence: confirmed by full source trace. (Second-pass finding.)
+
+- TS registers a returned stream immediately in both the declared-stream path (`rpc-hub.ts:300-315`) and nested-ref
+  path (`rpc-stream.ts:465-473`). Registration happens before the first `next()`; the initial ACK is correctly deferred
+  until then (`rpc-stream.ts:340-360`).
+- The keep-alive sender includes every registered remote ID (`rpc-peer.ts:588-597`), so an application that receives
+  but never enumerates a stream continually renews its server-side sender.
+- C# waits until `GetAsyncEnumerator` to register the remote stream and send reset/ACK (`RpcStream.cs:166-193`). A
+  never-enumerated stream therefore creates no remote-object lease.
+- Combined with TS's strong tracker map and R10's missing per-object reaper, simply ignoring a stream-valued result
+  leaks both ends for the lifetime of the connection. This is broader than R3, which requires natural completion after
+  enumeration.
+- **Recommended:** move remote-stream registration (both the declared-stream path in `rpc-hub.ts` and the
+  nested-ref path in `resolveStreamRefs`) to the first-iteration lazy-start boundary where the initial ACK is
+  already sent — `RpcStream.GetAsyncEnumerator` parity. Disposal before enumeration stays a local no-op; reconnect
+  and keep-alive then see only started streams, so a never-enumerated stream creates no lease on either peer.
+- **Alternative:** keep eager registration but exclude never-started streams from keep-alive/reconnect and rely on
+  a per-object release timeout (R10) to reap them. Keeps client-side tracker growth and diverges from C#'s lease
+  model; rejected-leaning.
+
 ### RPC notes (low)
 
 - `readVarUint` truncates values to 32 bits (`rpc-serialization.ts:151-167`: max 5 bytes, `value >>> 0`) vs C#'s 64-bit VarUInt; an id ≥ 2^35 would desync the frame. Practically unreachable with per-peer counters — note only.
 - `msgpack-map-patch.ts` is needed and byte-correct (JS `Map` → msgpack map with typed keys, matching .NET `Dictionary<int, byte[]>` for `$sys.Reconnect`), but it patches `Encoder.prototype` **globally** on module load — worth documenting for host apps.
 - Debugger-attached .NET peers use `KeepAlivePeriod = 300 s` (`RpcLimits.cs:46-54`); TS's 25 s watchdog (`rpc-limits.ts:43`) force-closes every 25 s against such a server — dev-environment churn. **Resolved (per D4):** add a `RpcLimits.Debug` preset (`keepAliveTimeoutMs = 300_000`), opted into explicitly via the existing override paths.
+- Second-pass candidates reviewed and excluded: stream-reference numeric range validation (C# parsing also accepts negative timing values — a hardening opportunity, not a TS/C# contract gap); hash-collision handling in `RpcMethodRegistry` (poor failure mode, but a 32-bit method-hash collision is too remote to prioritize without a concrete case).
 
 ### Parity confirmed (RPC)
 
