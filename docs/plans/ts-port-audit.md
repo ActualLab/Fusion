@@ -16,6 +16,7 @@ Item numbering: **K** = Fusion kernel, **S** = State layer + React, **R** = RPC 
 
 Directives from Alex that override or refine the per-item proposals below; the impacted items were updated in place.
 
+- **D2 (2026-07-14) — K13 is a won't-fix: keep `JSON.stringify` keying.** Speed wins here — `JSON.stringify` is likely the fastest keying option available, so the default stays as-is; the compute method's author is responsible for using properly-keyable argument types (or supplying `argToString`) and documenting the method's behavior. No throw/warn on non-representable args. The one tweak worth taking: the `?? 'undefined'` fallback can become `?? ''` — the result is only a key component between RS delimiters, and the empty string is just as collision-safe (only `undefined`/functions/symbols hit the fallback, and they already collide with each other today) while being shorter.
 - **D1 (2026-07-14) — introduce a `ComputedOptions` analog.** The TS port gets a real (initially minimal) `ComputedOptions` rather than point fixes like the global `Computed.errorAutoInvalidateDelay`: an options object carried per `ComputeFunction` / compute method (overridable at declaration — decorator argument / registration input), with static per-kind defaults mirroring C# (`ComputedOptions.Default` for compute methods, a `MutableStateDefault` analog for state-bound computeds). First field: **`errorAutoInvalidateDelay`** (the K5 fix; `Infinity` = disabled, the state-bound default). The structure is the designated home for later per-method knobs — `autoInvalidationDelay`, `minCacheDuration`, transiency-aware error delays, cancellation-reprocessing policy — so each lands as a field, not a new mechanism. Impacted items reworked: K5, K6, F3; the kernel and Fusion-over-RPC out-of-scope notes are narrowed accordingly.
 
 ## Severity overview
@@ -162,8 +163,8 @@ Confidence: confirmed.
 - TS: `compute-function.ts:19-22, 41-47` — `JSON.stringify(arg) ?? 'undefined'`: any function, `undefined`, or `Symbol` arg → `'undefined'`; objects without serializable props → `'{}'`; `NaN` → `null`; `Map`/`Set` → `'{}'`. Semantically different arguments collide onto the same cache key.
 - C#: `ComputeMethodInput.Equals` compares proxy identity and actual argument values (`ComputeMethodInput.cs:25-27, 48-56`).
 - Failure: `getWidget(selectorFn1)` and `getWidget(selectorFn2)` (or two different `Map` args) return each other's cached results — silent wrong answers, not just cache misses.
-- **Recommended:** make `defaultArgToString` throw for args whose `JSON.stringify` returns `undefined` (functions, symbols) and for `undefined` itself; document `argToString` as the escape hatch for `Map`/`Set`/custom types. Silent collision becomes a loud error at the call site.
-- **Alternative:** a stable, type-tagged stringifier (handles `Map`/`Set`/`NaN`/`undefined` distinctly). Heavier and still can't key functions meaningfully; can layer on later if real DTO arguments demand it.
+- **Resolved — won't-fix (per D2):** keep `JSON.stringify` keying as-is; it is the fastest option, and the compute method author owns the contract — use properly-keyable argument types or supply a custom `argToString`, and document the method accordingly. Add a doc comment on `defaultArgToString`/`argToString` stating the collision rules. Only code tweak: the `?? 'undefined'` fallback becomes `?? ''` (equally collision-safe for a delimiter-separated key component, shorter).
+- **Rejected alternatives:** throwing/warning on non-representable args (runtime cost + breaks legitimate "I know what I'm doing" cases); a stable type-tagged stringifier (slower, still can't key functions meaningfully).
 
 ### K14. Same-key reentrant computation deadlocks silently (C#: fails fast)
 
