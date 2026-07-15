@@ -161,11 +161,9 @@ features:
 
 <p style="text-align: center; margin-top: -0.5rem;">
 <img src="https://img.shields.io/badge/-Live%20demos:-green" valign="middle"> <a href="https://blazor-samples.actuallab.net/" target="_blank" rel="noopener">Blazor Sample</a> ·
-<a href="https://todoapp.actuallab.net/" target="_blank" rel="noopener">TodoApp Sample</a> ·
-<a href="https://townhall.actuallab.net/" target="_blank" rel="noopener">TownHall</a>
-(a live audience Q&A app in its <a href="https://github.com/ActualLab/Fusion.TownHall" target="_blank" rel="noopener">own repository</a>) ·
-<a href="https://boardgames.actuallab.net/" target="_blank" rel="noopener">Board Games</a>
-(a standalone Fusion app in its <a href="https://github.com/alexyakunin/BoardGames" target="_blank" rel="noopener">own repository</a>)
+<a href="https://todoapp.actuallab.net/" target="_blank" rel="noopener">TodoApp</a> ·
+<a href="https://townhall.actuallab.net/" target="_blank" rel="noopener">TownHall</a> ·
+<a href="https://boardgames.actuallab.net/" target="_blank" rel="noopener">BoardGames</a>
 </p>
 
 ## The Problem
