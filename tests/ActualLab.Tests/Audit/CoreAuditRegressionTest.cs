@@ -1,14 +1,17 @@
 using System.Buffers;
 using System.Globalization;
+using System.Numerics;
 using System.Reflection;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+using System.Security.Cryptography;
 using System.Threading.Channels;
 using ActualLab.Api;
 using ActualLab.Async;
 using ActualLab.Collections;
 using ActualLab.Conversion;
 using ActualLab.DependencyInjection;
+using ActualLab.Generators;
 using ActualLab.IO;
 using ActualLab.Mathematics;
 using ActualLab.Scalability;
@@ -182,20 +185,101 @@ public class CoreAuditRegressionTest
     [Fact]
     public void RadixConversionMustHandleInt64Boundaries()
     {
-        var formatted = MathExt.Format(long.MinValue, 10);
+        foreach (var radix in new[] { 2, 10, 64 }) {
+            var minFormatted = MathExt.Format(long.MinValue, radix);
+            var maxFormatted = MathExt.Format(long.MaxValue, radix);
 
-        formatted.Should().Be(long.MinValue.ToString(CultureInfo.InvariantCulture));
-        MathExt.TryParseInt64(formatted, 10, out var parsed).Should().BeTrue();
-        parsed.Should().Be(long.MinValue);
+            MathExt.TryParseInt64(minFormatted, radix, out var minParsed).Should().BeTrue();
+            MathExt.TryParseInt64(maxFormatted, radix, out var maxParsed).Should().BeTrue();
+            minParsed.Should().Be(long.MinValue);
+            maxParsed.Should().Be(long.MaxValue);
+        }
+
+        MathExt.Format(long.MinValue, 10).Should().Be(long.MinValue.ToString(CultureInfo.InvariantCulture));
         MathExt.TryParseInt64("9223372036854775808", 10, out _).Should().BeFalse();
+        MathExt.TryParseInt64("-9223372036854775809", 10, out _).Should().BeFalse();
+        MathExt.TryParseInt64("-", 10, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void FactorialMustResumeFromNearestCachedPrefix()
+    {
+        const int prefixIndex = 24;
+        var cacheField = typeof(MathExt).GetField("Factorials", BindingFlags.Static | BindingFlags.NonPublic)!;
+        var cache = (Dictionary<int, BigInteger>)cacheField.GetValue(null)!;
+        var prefix = Enumerable.Range(2, prefixIndex - 1).Aggregate(
+            BigInteger.One,
+            static (factorial, value) => factorial * value);
+
+        lock (cache) {
+            var saved = cache.ToArray();
+            try {
+                cache.Clear();
+                cache.Add(prefixIndex, prefix);
+
+                MathExt.Factorial(prefixIndex + 1).Should().Be(prefix * (prefixIndex + 1));
+                cache.Keys.Should().BeEquivalentTo([prefixIndex, prefixIndex + 1]);
+            }
+            finally {
+                cache.Clear();
+                foreach (var (key, value) in saved)
+                    cache.Add(key, value);
+            }
+        }
+    }
+
+    [Fact]
+    public void RandomStringGeneratorMustUseEveryByteValueWithoutModuloBias()
+    {
+        using var rng = new SequenceRandomNumberGenerator(Enumerable.Range(0, 256).Select(static x => (byte)x).ToArray());
+        using var generator = new RandomStringGenerator(rng: rng);
+
+        var value = generator.Next(510, "abc");
+
+        value.Count(static c => c == 'a').Should().Be(170);
+        value.Count(static c => c == 'b').Should().Be(170);
+        value.Count(static c => c == 'c').Should().Be(170);
+        rng.CallCount.Should().BeLessThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public void RandomStringGeneratorMustReachWideAlphabet()
+    {
+        var alphabet = new string(Enumerable.Range(0, 257).Select(static x => (char)x).ToArray());
+        using var rng = new SequenceRandomNumberGenerator([0, 1, 0, 0]);
+        using var generator = new RandomStringGenerator(rng: rng);
+
+        generator.Next(1, alphabet).Should().Be(alphabet[256].ToString());
+    }
+
+    [Fact]
+    public void RandomStringPowerOfTwoPathMustRemainBatchedAndAllocationBounded()
+    {
+        const int length = 512;
+        using var rng = new SequenceRandomNumberGenerator([0x5A]);
+        using var generator = new RandomStringGenerator(rng: rng);
+        _ = generator.Next(length);
+        rng.ResetCallCount();
+
+        var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        var value = generator.Next(length);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+
+        value.Length.Should().Be(length);
+        rng.CallCount.Should().Be(1);
+        allocated.Should().BeLessThanOrEqualTo(2048);
     }
 
     [Fact]
     public void DescendantTryConvertMustReturnNoneOnMismatch()
     {
-        var converter = ConverterProvider.Default.From<object>().To<string>();
+        var descendantConverter = ConverterProvider.Default.From<object>().To<string>();
+        var baseConverter = ConverterProvider.Default.From<int>().To<object>();
 
-        converter.TryConvert(new object()).Should().Be(Option.None<string>());
+        descendantConverter.TryConvert(new object()).Should().Be(Option.None<string>());
+        descendantConverter.TryConvertUntyped(new object()).Should().Be(Option.None<object?>());
+        baseConverter.TryConvertUntyped("not an int").Should().Be(Option.None<object?>());
+        Assert.Throws<InvalidCastException>(() => baseConverter.ConvertUntyped("not an int"));
     }
 
     [Fact]
@@ -353,5 +437,41 @@ public class CoreAuditRegressionTest
 
         public override void Return(T[] array, bool clearArray = false)
             => ClearFlags.Add(clearArray);
+    }
+
+    private sealed class SequenceRandomNumberGenerator(byte[] sequence) : RandomNumberGenerator
+    {
+        private int _position;
+
+        public int CallCount { get; private set; }
+
+        public void ResetCallCount()
+            => CallCount = 0;
+
+        public override void GetBytes(byte[] data)
+            => FillData(data);
+
+        public override void GetBytes(byte[] data, int offset, int count)
+            => FillData(data.AsSpan(offset, count));
+
+        public override void GetBytes(Span<byte> data)
+            => FillData(data);
+
+        public override void GetNonZeroBytes(byte[] data)
+        {
+            FillData(data);
+            for (var i = 0; i < data.Length; i++)
+                if (data[i] == 0)
+                    data[i] = 1;
+        }
+
+        private void FillData(Span<byte> data)
+        {
+            CallCount++;
+            foreach (ref var item in data) {
+                item = sequence[_position];
+                _position = (_position + 1) % sequence.Length;
+            }
+        }
     }
 }

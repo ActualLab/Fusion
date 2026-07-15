@@ -11,10 +11,10 @@ public class CastToBaseConverter<TSource, TTarget> : Converter<TSource, TTarget>
     public override TTarget Convert(TSource source)
         => source;
     public override object? ConvertUntyped(object? source)
-        => source;
+        => (TSource) source!;
 
     public override Option<TTarget> TryConvert(TSource source)
         => source;
     public override Option<object?> TryConvertUntyped(object? source)
-        => (object?) (TTarget?) source;
+        => source is TSource typedSource ? Option.Some<object?>(typedSource) : Option.None<object?>();
 }

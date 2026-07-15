@@ -52,7 +52,7 @@ public static class MathExt
         var i = n;
         var f = BigInteger.One;
         lock (Factorials) {
-            while (i >= 1 && !Factorials.TryGetValue(n, out f)) i--;
+            while (i >= 1 && !Factorials.TryGetValue(i, out f)) i--;
             if (i <= 1)
                 f = BigInteger.One;
             for (i++; i <= n; i++) {
@@ -150,11 +150,13 @@ public static class MathExt
             return buffer[..1];
         }
         var index = buffer.Length;
-        var n = Math.Abs(number);
+        var n = number < 0
+            ? unchecked((ulong)(-(number + 1))) + 1
+            : (ulong)number;
         while (n != 0)  {
-            var digit = unchecked((int)(n % radix));
+            var digit = unchecked((int)(n % (ulong)radix));
             buffer[--index] = digits[digit];
-            n /= radix;
+            n /= (ulong)radix;
         }
         if (number < 0)
             buffer[--index] = '-';
@@ -207,22 +209,25 @@ public static class MathExt
         if (number.IsEmpty)
             return false;
 
-        var sign = 1L;
-        if (number[0] == '-') {
-            sign = -1;
+        var isNegative = number[0] == '-';
+        if (isNegative) {
             number = number[1..];
+            if (number.IsEmpty)
+                return false;
         }
-        var multiplier = 1L;
-        for (var i = number.Length - 1; i >= 0; i--) {
-            var c = number[i];
+        var limit = isNegative ? 1UL << 63 : long.MaxValue;
+        var magnitude = 0UL;
+        foreach (var c in number) {
             var digit = digits.IndexOf(c);
             if (digit == -1)
                 return false;
-
-            result += digit * multiplier;
-            multiplier *= radix;
+            if (magnitude > (limit - (uint)digit) / (uint)radix)
+                return false;
+            magnitude = magnitude * (uint)radix + (uint)digit;
         }
-        result *= sign;
+        result = isNegative
+            ? magnitude == 1UL << 63 ? long.MinValue : -(long)magnitude
+            : (long)magnitude;
         return true;
     }
 }

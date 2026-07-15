@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using ActualLab.IO;
 
@@ -42,18 +43,65 @@ public class RandomStringGenerator : Generator<string>, IDisposable
 
     public override string Next() => Next(Length);
 
-    private static void FillInCharSpan(Span<char> charSpan, string alphabet, ReadOnlySpan<byte> bufferSpan)
+    private static void FillPowerOfTwoCharSpan(Span<char> charSpan, string alphabet, ReadOnlySpan<byte> bufferSpan)
+    {
+        var alphabetSpan = alphabet.AsSpan();
+        var alphabetMask = alphabetSpan.Length - 1;
+        for (var i = 0; i < charSpan.Length; i++)
+            charSpan[i] = alphabetSpan[bufferSpan[i] & alphabetMask];
+    }
+
+    private static void FillUnbiasedCharSpan(
+        Span<char> charSpan,
+        string alphabet,
+        RandomNumberGenerator rng,
+        byte[] buffer)
     {
         var alphabetSpan = alphabet.AsSpan();
         var alphabetLength = alphabetSpan.Length;
-        if (Bits.IsPowerOf2((ulong)alphabetLength)) {
-            var alphabetMask = alphabetLength - 1;
-            for (var i = 0; i<charSpan.Length; i++)
-                charSpan[i] = alphabetSpan[bufferSpan[i] & alphabetMask];
+        var outputIndex = 0;
+        if (alphabetLength <= 256) {
+            var threshold = 256 % alphabetLength;
+            while (outputIndex < charSpan.Length) {
+                FillRandomBytes(rng, buffer);
+                foreach (var sample in buffer) {
+                    if (sample < threshold)
+                        continue;
+                    charSpan[outputIndex++] = alphabetSpan[sample % alphabetLength];
+                    if (outputIndex == charSpan.Length)
+                        return;
+                }
+            }
+            return;
         }
-        else {
-            for (var i = 0; i<charSpan.Length; i++)
-                charSpan[i] = alphabetSpan[bufferSpan[i] % alphabetLength];
+
+        var uintAlphabetLength = (uint)alphabetLength;
+        var isPowerOfTwo = Bits.IsPowerOf2(uintAlphabetLength);
+        var alphabetMask = uintAlphabetLength - 1;
+        var threshold32 = isPowerOfTwo ? 0 : unchecked(0U - uintAlphabetLength) % uintAlphabetLength;
+        while (outputIndex < charSpan.Length) {
+            FillRandomBytes(rng, buffer);
+            var bufferSpan = buffer.AsSpan();
+            for (var offset = 0; offset <= bufferSpan.Length - sizeof(uint); offset += sizeof(uint)) {
+                var sample = BinaryPrimitives.ReadUInt32LittleEndian(bufferSpan[offset..]);
+                if (sample < threshold32)
+                    continue;
+                var alphabetIndex = isPowerOfTwo ? sample & alphabetMask : sample % uintAlphabetLength;
+                charSpan[outputIndex++] = alphabetSpan[(int)alphabetIndex];
+                if (outputIndex == charSpan.Length)
+                    return;
+            }
+        }
+    }
+
+    private static void FillRandomBytes(RandomNumberGenerator rng, byte[] buffer)
+    {
+        lock (rng) {
+#if !NETSTANDARD2_0
+            rng.GetBytes(buffer.AsSpan());
+#else
+            rng.GetBytes(buffer, 0, buffer.Length);
+#endif
         }
     }
 
@@ -64,28 +112,41 @@ public class RandomStringGenerator : Generator<string>, IDisposable
         else if (alphabet.Length < 1)
             throw new ArgumentOutOfRangeException(nameof(alphabet));
 #if !NETSTANDARD2_0
-        var buffer = new RefArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, length, mustClear: false);
+        var alphabetLength = alphabet.Length;
+        var useByteMask = alphabetLength <= 256 && Bits.IsPowerOf2((ulong)alphabetLength);
+        var buffer = new RefArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Math.Max(length, sizeof(uint)), mustClear: false);
         try {
-            var span = buffer.GetSpan(length);
-            lock (Lock)
-                Rng.GetBytes(span);
-            return string.Create(length, (buffer.Array, length, alphabet), static (charSpan, arg) => {
-                var (array, len, alphabet1) = arg;
-                FillInCharSpan(charSpan, alphabet1!, array.AsSpan(0, len));
+            if (useByteMask) {
+                var span = buffer.Array.AsSpan(0, length);
+                lock (Lock)
+                    Rng.GetBytes(span);
+                return string.Create(length, (buffer.Array, length, alphabet), static (charSpan, arg) => {
+                    var (array, len, alphabet1) = arg;
+                    FillPowerOfTwoCharSpan(charSpan, alphabet1!, array.AsSpan(0, len));
+                });
+            }
+            return string.Create(length, (buffer.Array, alphabet, Rng), static (charSpan, arg) => {
+                var (array, alphabet1, rng) = arg;
+                FillUnbiasedCharSpan(charSpan, alphabet1, rng, array);
             });
         }
         finally {
             buffer.Release();
         }
 #else
-        var byteBuffer = ArrayPools.SharedBytePool.Rent(length);
+        var alphabetLength = alphabet.Length;
+        var useByteMask = alphabetLength <= 256 && Bits.IsPowerOf2((ulong)alphabetLength);
+        var byteBuffer = ArrayPools.SharedBytePool.Rent(Math.Max(length, sizeof(uint)));
         var charBuffer = ArrayPools.SharedCharPool.Rent(length);
         try {
-            lock (Lock) {
-                Rng.GetBytes(byteBuffer, 0, length);
-            }
             var charSpan = charBuffer.AsSpan(0, length);
-            FillInCharSpan(charSpan, alphabet, byteBuffer.AsSpan());
+            if (useByteMask) {
+                lock (Lock)
+                    Rng.GetBytes(byteBuffer, 0, length);
+                FillPowerOfTwoCharSpan(charSpan, alphabet, byteBuffer.AsSpan(0, length));
+            }
+            else
+                FillUnbiasedCharSpan(charSpan, alphabet, Rng, byteBuffer);
             return new string(charBuffer, 0, length);
         }
         finally {

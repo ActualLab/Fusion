@@ -11,10 +11,10 @@ public class CastToDescendantConverter<TSource, TTarget> : Converter<TSource, TT
     public override TTarget Convert(TSource source)
         => (TTarget) source!;
     public override object? ConvertUntyped(object? source)
-        => (TTarget) source!;
+        => (TTarget) (TSource) source!;
 
     public override Option<TTarget> TryConvert(TSource source)
-        => (TTarget) source!;
+        => source is TTarget target ? Option.Some(target) : Option.None<TTarget>();
     public override Option<object?> TryConvertUntyped(object? source)
-        => (object?) (TTarget?) source;
+        => source is TTarget target ? Option.Some<object?>(target) : Option.None<object?>();
 }

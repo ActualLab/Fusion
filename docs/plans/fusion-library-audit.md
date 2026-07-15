@@ -322,7 +322,7 @@ Confidence: **Confirmed** by executable probe.
 
 ### CORE17. Maglev shard-map construction divides by zero for one shard
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by executable probe.
 
@@ -330,12 +330,13 @@ Confidence: **Confirmed** by executable probe.
 - Failure: `Build(1, ["node"])` throws `DivideByZeroException` instead of assigning the sole shard to node zero.
 - Tests: shard-map tests exercise larger maps and balance/disruption properties; the minimal nonempty map is not covered.
 - Impact: callers cannot use the Maglev strategy for a valid single-shard configuration, which is a common development, migration, or scale-down state.
-- **Recommended:** special-case one shard after the existing empty checks and assign it to the first node.
+- **Resolution:** the builder now returns `[0]` immediately for a nonempty one-shard map, before permutation skip calculation.
+- **Validation:** the focused one-shard regression failed with `DivideByZeroException` before the fix and now passes; the broader shard-map balance, reallocation, and stress suite also passes.
 - **Alternative:** define a general permutation helper that returns `[0]` for size one and use it for every node. This centralizes the mathematical boundary but is more machinery than the fix requires.
 
 ### CORE18. Signed arbitrary-radix conversion mishandles `long` boundaries
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** for formatting by executable probe and for parsing by checked-range analysis.
 
@@ -343,12 +344,13 @@ Confidence: **Confirmed** for formatting by executable probe and for parsing by 
 - Failure: `MathExt.Format(long.MinValue, 10)` throws `OverflowException`. Conversely, representations above `long.MaxValue` can wrap while `TryParseInt64` still returns `true`, violating the meaning of a try-parse API.
 - Tests: `ParseFormatTest` covers small positive/negative integers and random values but omits `long.MinValue`, `long.MaxValue`, and out-of-range text.
 - Impact: IDs or counters spanning the signed 64-bit domain cannot reliably round-trip, and malformed/oversized input can be accepted as a different valid number.
-- **Recommended:** format the magnitude through unsigned arithmetic that handles `long.MinValue`, and parse with checked bounds accumulated as an unsigned magnitude with separate positive/negative limits.
+- **Resolution:** signed formatting now derives an unsigned magnitude without negating `long.MinValue`; parsing accumulates left-to-right into `ulong` against separate `long.MaxValue` and `2^63` limits, rejecting overflow and a bare sign.
+- **Validation:** the boundary regression round-trips both signed extremes in radices 2, 10, and 64 and rejects values immediately outside the signed range; the existing randomized radix suite also passes.
 - **Alternative:** delegate base-10 conversion to the runtime and retain custom checked logic only for other radices. This reduces one boundary but leaves two implementations to keep consistent.
 
 ### CORE19. `Factorial` fails to reuse cached lower factorials
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source inspection.
 
@@ -356,12 +358,13 @@ Confidence: **Confirmed** by source inspection.
 - Failure: if the exact requested factorial is absent, the loop performs `n` identical failed dictionary lookups and then recomputes every multiplication from 1 through `n`, even when `Factorials[n - 1]` and all smaller results are cached. A sequence of increasing requests repeats increasingly expensive `BigInteger` work.
 - Tests: `MathExtTest` verifies values and one call at 1000, but does not exercise incremental cache reuse or performance.
 - Impact: workloads using `Cnk` or increasing factorials can turn the intended memoized computation into quadratic-scale large-integer multiplication and lock occupancy, blocking all concurrent callers on the static cache lock.
-- **Recommended:** change the lookup key inside the downward search from `n` to `i`, then continue multiplication from the first cached prefix.
+- **Resolution:** the downward search now probes the decreasing index `i` and resumes multiplication at the first cached prefix.
+- **Validation:** a deterministic cache-work regression seeds only `24!`, requests `25!`, and confirms the operation adds only key 25; before the fix it repopulated every key from 1 through 23. The full factorial suite passes.
 - **Alternative:** keep only the largest cached `(n, value)` pair and extend it monotonically. This uses less dictionary memory but no longer accelerates requests below the maximum unless separately handled.
 
 ### CORE20. `RandomStringGenerator` is biased and cannot select alphabet entries beyond byte range
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source analysis.
 
@@ -370,12 +373,13 @@ Confidence: **Confirmed** by source analysis.
 - Reachability: `DefaultAlphabet` has 64 characters and is unbiased, but `Base32Alphabet`, `Base16Alphabet`, and arbitrary custom alphabets are public options; a 62-character token alphabet is conventional.
 - Impact: custom token/key generation has less entropy than its length implies, and large alphabets silently produce an incomplete character set. This matters for security-sensitive identifiers because the type explicitly uses cryptographic randomness.
 - Maintainer constraint: the fix is required, but this is a frequently used hot path. Preserve the current power-of-two fast path, avoid per-character random-number calls and allocations, fill randomness in batches, and benchmark throughput plus allocations against the current implementation.
-- **Recommended:** retain masking for power-of-two alphabets and use batched rejection sampling for other lengths so every alphabet index has equal probability; use a wider random integer path when the alphabet exceeds 256 entries. Validate the largest supported alphabet explicitly if a bounded implementation is chosen.
+- **Resolution:** alphabets of power-of-two length up to 256 retain the original one-byte mask path. Other byte-sized alphabets use batched rejection sampling, while larger alphabets consume batched little-endian `uint` samples with masking for powers of two and rejection sampling otherwise. All paths reuse the existing pooled byte buffer and avoid per-character RNG calls or managed helper allocations.
+- **Validation:** deterministic RNG tests distribute two complete byte cycles evenly across a three-character alphabet, reach index 256 in a 257-character alphabet, and confirm the default 512-character fast path uses one RNG fill with no more than 2 KiB total allocation. A release microbenchmark of the common 32-character default-alphabet path measured a 194.0 ns/op baseline and 193.5 ns/op after the fix (five 200,000-operation samples, medians), with allocations unchanged at 88 B/op. The existing generator suite passes.
 - **Alternative:** restrict alphabets to power-of-two lengths no greater than 256. This preserves the fast byte mapping but is a significant and unnecessarily narrow public-contract change.
 
 ### CORE21. Inheritance cast converters violate `TryConvert` and untyped source contracts
 
-Status: **open**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source inspection.
 
@@ -383,7 +387,8 @@ Confidence: **Confirmed** by source inspection.
 - Failure: `Converter<object, string>.TryConvert(new object())` throws `InvalidCastException` rather than returning `Option.None<string>()`. Conversely, `Converter<int, object>.TryConvertUntyped("not an int")` reports the unrelated string as a successful conversion, and `ConvertUntyped` does the same despite declaring `int` as its source type.
 - Tests: `ConverterProviderTest.CastTest` covers only inputs that already satisfy the target/source runtime types. Other converter tests establish that failed `TryConvert` should return `None`, making the cast behavior inconsistent with the same public abstraction.
 - Impact: generic conversion pipelines cannot safely probe convertibility, and callers using the untyped API may receive a value that never matched the converter's declared source type.
-- **Recommended:** use pattern matching in both try methods and return `None` on mismatch; make untyped `Convert` paths perform the same explicit source/target casts as other converter implementations.
+- **Resolution:** cast converters now pattern-match their declared runtime source/target types for try operations and return `None` on mismatch; untyped throwing conversion explicitly validates the declared source type.
+- **Validation:** the regression now covers typed and untyped descendant mismatch plus untyped base-converter source mismatch, including the throwing `ConvertUntyped` contract; the full converter-provider suite passes.
 - **Alternative:** document cast converters as throwing and make all `TryConvert` callers catch cast exceptions. This contradicts the established converter contract and spreads exception-based control flow.
 
 ### CORE22. `Base64UrlEncoder` uses the wrong RFC alphabet and accepts truncated Unicode input

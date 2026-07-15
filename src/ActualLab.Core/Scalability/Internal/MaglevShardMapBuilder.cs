@@ -15,6 +15,10 @@ public sealed record MaglevShardMapBuilder : ShardMapBuilder
 
         if (nodeCount == 0 || shardCount == 0)
             return nodeIndexes;
+        if (shardCount == 1) {
+            nodeIndexes[0] = 0;
+            return nodeIndexes;
+        }
 
         // Build permutation for each node: a full permutation of [0..shardCount)
         // using offset/skip with skip coprime to shardCount (guarantees full coverage)
