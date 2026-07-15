@@ -55,3 +55,6 @@ export {
 } from './retry-delayer.js';
 export type { RetryDelaySchedule } from './retry.js';
 export { retry, catchErrors } from './retry.js';
+
+// Decorator helpers
+export { ownMetadata, resolveArgCount } from './decorators.js';

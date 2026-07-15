@@ -564,6 +564,8 @@ Confidence: confirmed (documented omission). TS removes the tracker entry only (
 
 ### R18. Regular service dispatch loses the implementation receiver
 
+Status: **closed** — fixed 2026-07-15 (batch rpcdeco).
+
 Confidence: confirmed and executable-probe verified. (Second-pass finding.)
 
 - TS stores only the extracted function (`rpc-service-host.ts:54-61`), then calls `entry.fn(...args)`
@@ -583,6 +585,8 @@ Confidence: confirmed and executable-probe verified. (Second-pass finding.)
   faster dispatch; loses the unbound function for any future wrapper/middleware that needs to control the receiver.
 
 ### R19. Decorator metadata is shared and mutated across base and derived classes
+
+Status: **closed** — fixed 2026-07-15 (batch rpcdeco; shared `ownMetadata` helper in `@actuallab/core`).
 
 Confidence: confirmed and executable-probe verified. (Second-pass finding.)
 
@@ -608,6 +612,8 @@ Confidence: confirmed and executable-probe verified. (Second-pass finding.)
   a pattern the C# side supports.
 
 ### R20. Decorator wire arity is wrong after a default parameter and for rest parameters
+
+Status: **closed** — fixed 2026-07-15 (batch rpcdeco; explicit `argCount` option, ambiguity throws at declaration time; `computeMethod` became dual-mode — bare or `@computeMethod({ argCount })`).
 
 Confidence: confirmed and executable-probe verified. (Second-pass finding.)
 

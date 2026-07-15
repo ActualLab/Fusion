@@ -25,6 +25,8 @@
 //     RpcServiceDef.  .NET determines this via the service interface hierarchy
 //     (IComputeService marker interface).
 
+import { ownMetadata, resolveArgCount } from '@actuallab/core';
+
 const METHODS_META = Symbol.for('actuallab.methods');
 const SERVICE_META = Symbol.for('actuallab.service');
 
@@ -65,15 +67,17 @@ export function rpcService(serviceName: string) {
         _target: T,
         context: ClassDecoratorContext<T>,
     ): void {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any -- decorator metadata requires untyped access
-        const meta: ServiceMeta = ((context.metadata as any)[SERVICE_META] ??=
-            {} as ServiceMeta);
+        const meta = ownMetadata<ServiceMeta>(context.metadata, SERVICE_META);
         meta.name = serviceName;
     };
 }
 
 /** Method decorator — stores RPC method metadata (argCount, returns, remoteExecutionMode). Does NOT wrap the method. */
-export function rpcMethod(options?: { returns?: symbol; remoteExecutionMode?: number }) {
+export function rpcMethod(options?: {
+    returns?: symbol;
+    remoteExecutionMode?: number;
+    argCount?: number;
+}) {
     return function <This, Args extends unknown[], Return>(
         target: (this: This, ...args: Args) => Return,
         context: ClassMethodDecoratorContext<
@@ -82,14 +86,10 @@ export function rpcMethod(options?: { returns?: symbol; remoteExecutionMode?: nu
         >,
     ): (this: This, ...args: Args) => Return {
         const methodName = String(context.name);
-        /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any -- decorator metadata requires untyped access */
-        const methods: Record<string, MethodMeta> = ((context.metadata as any)[
-            METHODS_META
-        ] ??= {});
-        /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+        const methods = ownMetadata<Record<string, MethodMeta>>(context.metadata, METHODS_META);
         methods[methodName] = {
             ...methods[methodName],
-            argCount: target.length,
+            argCount: resolveArgCount(target, options?.argCount, methodName),
             returns: options?.returns,
             remoteExecutionMode: options?.remoteExecutionMode,
         };

@@ -48,16 +48,17 @@ export interface RpcDispatchContext {
 export class RpcServiceHost {
     private _methods = new Map<
         string,
-        { def: RpcMethodDef; fn: (...args: unknown[]) => unknown }
+        { def: RpcMethodDef; fn: (...args: unknown[]) => unknown; receiver: object }
     >();
 
-    register(def: RpcServiceDef, impl: RpcServiceImpl): void {
+    register(def: RpcServiceDef, impl: RpcServiceImpl, receiver: object = impl): void {
         for (const methodDef of def.methods.values()) {
             const fn = impl[methodDef.name];
             if (!fn) continue;
             this._methods.set(wireMethodName(methodDef), {
                 def: methodDef,
                 fn,
+                receiver,
             });
         }
     }
@@ -77,9 +78,9 @@ export class RpcServiceHost {
         // Pass context as the last arg only for custom call types (e.g., compute) — their
         // wrapped functions use it; regular methods should not see it to avoid polluting ...args.
         if (context !== undefined && entry.def.callTypeId !== 0) {
-            return await entry.fn(...args, context);
+            return await entry.fn.call(entry.receiver, ...args, context);
         }
-        return await entry.fn(...args);
+        return await entry.fn.call(entry.receiver, ...args);
     }
 
     getMethodDef(wireMethod: string): RpcMethodDef | undefined {

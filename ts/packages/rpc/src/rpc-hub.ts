@@ -172,7 +172,7 @@ export class RpcHub {
                     ? this._wrapServerMethod(methodDef, fn, impl as object)
                     : fn;
         }
-        this.serviceHost.register(def, wrappedImpl);
+        this.serviceHost.register(def, wrappedImpl, impl as object);
         this.registry.registerService(def.name, def.methods);
     }
 
