@@ -14,3 +14,15 @@ export function isCancellation(error: unknown): boolean {
         (error as { name?: unknown }).name === 'AbortError'
     );
 }
+
+/**
+ * Builds a cancellation-shaped error recognized by {@link isCancellation}.
+ * Named `'AbortError'` so it rides the same never-cache path as an aborted
+ * `fetch`: the compute kernel invalidates such computeds instead of caching
+ * the error (K6), and RPC callers treat it as a retryable cancellation.
+ */
+export function cancellationError(message = 'The operation was cancelled.'): Error {
+    const error = new Error(message);
+    error.name = 'AbortError';
+    return error;
+}

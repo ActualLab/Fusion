@@ -75,7 +75,7 @@
 //     yet propagate cancellation to the service handler (would require AbortSignal
 //     threading through RpcServiceHost.dispatch).
 
-import { EventHandlerSet, PromiseSource, TimeoutError, withTimeout } from '@actuallab/core';
+import { EventHandlerSet, PromiseSource, TimeoutError, cancellationError, withTimeout } from '@actuallab/core';
 import type { RpcCallTimeouts } from './rpc-call-timeouts.js';
 import { getLogs } from './logging.js';
 import {
@@ -434,7 +434,7 @@ export abstract class RpcPeer {
         if (signal !== undefined) {
             const onAbort = () => {
                 if (this.outboundCalls.remove(callId) !== undefined) {
-                    outboundCall.result.reject(new Error('Call cancelled.'));
+                    outboundCall.result.reject(cancellationError('Call cancelled.'));
                     outboundCall.onDisconnect();
                     // Only send $sys.Cancel once the handshake has completed
                     // (`_isConnected`). Sends are gated on `_isConnected`, so a
@@ -490,7 +490,7 @@ export abstract class RpcPeer {
         }
         this.remoteObjects.disconnectAll();
         this.sharedObjects.disconnectAll();
-        this.outboundCalls.rejectAll(new Error('Peer closed.'));
+        this.outboundCalls.rejectAll(cancellationError('Peer closed.'));
         this.outboundCalls.invalidateAll();
         this.inboundCalls.clear();
         this._connection?.close();

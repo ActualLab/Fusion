@@ -825,6 +825,8 @@ Confidence: confirmed (re-verified).
 
 ### F2. Client receiving `$sys-c.Invalidate` before the result leaves `result` unsettled → permanent hang + poisoned per-key lock
 
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc2; `get` + `instanceof` before removal, pre-result invalidation rejects with a cancellation-shaped error, transparently retried up to 3 attempts while connected — C# `TrySetCanceled` + reprocessing parity, slightly more conservative than C#'s 4 tries/no-delay).
+
 Confidence: confirmed (missing defense); trigger paths plausible rather than everyday.
 
 - TS: the handler does `peer.outboundCalls.remove(relatedId)` and `call.whenInvalidated.resolve()` — nothing else (`fusion-hub.ts:81-87`). If the result hasn't arrived, `outboundCall.result` stays pending forever: a later `$sys.Ok` is dropped (call untracked), reconnect resend never happens, and `rpcImpl`'s `await outboundCall.result` (`fusion-hub.ts:224`) never settles. `ComputeFunction.invoke` holds a per-key `AsyncLock` around the impl, so **every subsequent call of that compute method with those args queues behind the hang forever**. The handler also removes the call *before* the `instanceof RpcOutboundComputeCall` check — a non-compute call with that id would be silently evicted.
@@ -834,6 +836,8 @@ Confidence: confirmed (missing defense); trigger paths plausible rather than eve
 - **Alternative:** minimal — reject `call.result` without the retry semantics. Prevents the hang and the poisoned lock; the caller sees an error instead of a transparent retry.
 
 ### F3. Rejected remote calls (including cancellation/disconnect errors) are cached as error computeds
+
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc2; shared `cancellationError` factory for peer-lifecycle rejections + K6 kernel path; errored compute calls stay registered (`removeOnOk` honored in `$sys.Error`) so genuine error computeds track server invalidation, caching per `ComputedOptions.errorAutoInvalidateDelay`).
 
 Confidence: confirmed. The remote-call variant of K6.
 
@@ -845,6 +849,8 @@ Confidence: confirmed. The remote-call variant of K6.
 
 ### F4. Local invalidation of a client computed never releases the outbound call — no computed→call binding, no `$sys.Cancel`, strong-ref leak
 
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc2). Residual (server side, low): `_wrapServerMethod`'s subscription isn't torn down by an incoming `$sys.Cancel`, so one spurious Invalidate may be sent for a dropped call — the client ignores it.
+
 Confidence: confirmed.
 
 - TS: only the call→computed direction exists (`fusion-hub.ts:226-230`). Nothing observes the client computed's invalidation. A locally-invalidated computed's stage-3 `RpcOutboundComputeCall` stays registered until server invalidation or reconnect; the server is never told to stop tracking. The tracker's strong ref chain (call → `whenInvalidated.then` closure → `Computed`) also defeats `ComputedRegistry`'s WeakRef/GC design for the old computed.
@@ -854,6 +860,8 @@ Confidence: confirmed.
 - **Alternative:** a periodic sweep of completed calls whose bound computed is invalidated/collected. GC-ish safety net, laggy and weaker; could complement but not replace.
 
 ### F5. Cancellation propagation is absent end-to-end in the compute-call glue
+
+Status: **closed** — fixed 2026-07-15 (batch fusionrpc2; caller `AbortSignal` read from `abortSignalKey` in the compute client path, passed to `peer.call`; server-side handler abort landed with R17).
 
 Confidence: confirmed (absent in TS).
 

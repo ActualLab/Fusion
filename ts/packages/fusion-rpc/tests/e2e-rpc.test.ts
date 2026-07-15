@@ -1,6 +1,11 @@
  
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { AsyncContext, PromiseSource } from '@actuallab/core';
+import {
+    AsyncContext,
+    PromiseSource,
+    abortSignalKey,
+    isCancellation,
+} from '@actuallab/core';
 import { Computed, MutableState, computeMethod } from '@actuallab/fusion';
 import {
     RpcClientPeer,
@@ -445,5 +450,298 @@ describe('End-to-end Fusion over RPC', () => {
         );
         expect(specialDef?.callTypeId).toBe(0);
         expect(specialDef?.noWait).toBe(false);
+    });
+
+    it('F2: $sys-c.Invalidate arriving before the result settles the call (cancellation-shaped), never hangs', async () => {
+        const gate = new PromiseSource<void>();
+        const started = new PromiseSource<void>();
+        serverHub.addService(ISlowCounterService, {
+            async getCount(_key: unknown): Promise<number> {
+                started.resolve(undefined);
+                await gate;
+                return 1;
+            },
+        });
+
+        const [clientConn, serverConn] = createMessageChannelPair();
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test', false);
+        clientPeer.connectWith(clientConn);
+        clientHub.addPeer(clientPeer);
+        serverHub.acceptRpcConnection(serverConn);
+        await delay(10);
+
+        let callId = -1;
+        const outboundCall = clientPeer.call(
+            'SlowCounterService.getCount:2',
+            ['x'],
+            {
+                callTypeId: 1,
+                outboundCallFactory: (id, m) => {
+                    callId = id;
+                    return new RpcOutboundComputeCall(id, m);
+                },
+            }
+        ) as RpcOutboundComputeCall;
+
+        await started;
+        clientHub.systemCallHandler.handle(
+            { Method: '$sys-c.Invalidate:0', RelatedId: callId },
+            [],
+            clientPeer
+        );
+
+        let rejection: unknown;
+        const outcome = await Promise.race([
+            outboundCall.result.promise.then(
+                () => 'resolved',
+                (e: unknown) => {
+                    rejection = e;
+                    return 'rejected';
+                }
+            ),
+            delay(500).then(() => 'timeout'),
+        ]);
+        expect(outcome).toBe('rejected');
+        expect(isCancellation(rejection)).toBe(true);
+        expect(outboundCall.whenInvalidated.isCompleted).toBe(true);
+
+        gate.resolve(undefined);
+    });
+
+    it('F2: a non-compute call with the same id survives a stray $sys-c.Invalidate', async () => {
+        const gate = new PromiseSource<void>();
+        const started = new PromiseSource<void>();
+        serverHub.addService(ISlowCounterService, {
+            async getCount(_key: unknown): Promise<number> {
+                started.resolve(undefined);
+                await gate;
+                return 7;
+            },
+        });
+
+        const [clientConn, serverConn] = createMessageChannelPair();
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test', false);
+        clientPeer.connectWith(clientConn);
+        clientHub.addPeer(clientPeer);
+        serverHub.acceptRpcConnection(serverConn);
+        await delay(10);
+
+        // A regular (non-compute) outbound call.
+        const call = clientPeer.call('SlowCounterService.getCount:2', ['x']);
+        const id = call.callId;
+
+        await started;
+        clientHub.systemCallHandler.handle(
+            { Method: '$sys-c.Invalidate:0', RelatedId: id },
+            [],
+            clientPeer
+        );
+
+        // The stray Invalidate must not evict a non-compute call.
+        expect(clientPeer.outboundCalls.get(id)).toBe(call);
+        expect(call.result.isCompleted).toBe(false);
+
+        gate.resolve(undefined);
+        expect(await call.result.promise).toBe(7);
+    });
+
+    it('F3: a cancelled call is never served from the compute cache to the next caller', async () => {
+        const gate = new PromiseSource<void>();
+        serverHub.addService(ISlowCounterService, {
+            async getCount(_key: unknown): Promise<number> {
+                await gate;
+                return 1;
+            },
+        });
+
+        const [clientConn, serverConn] = createMessageChannelPair();
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test', false);
+        clientPeer.connectWith(clientConn);
+        clientHub.addPeer(clientPeer);
+        serverHub.acceptRpcConnection(serverConn);
+        await delay(10);
+
+        const counterDef = defineComputeService('SlowCounterService', {
+            getCount: { args: [''] },
+        });
+        const counter = clientHub.addClient<{
+            getCount(key: string, ctx?: AsyncContext): Promise<number>;
+                }>(clientPeer, counterDef);
+
+        const ac = new AbortController();
+        const ctx = new AsyncContext().with(abortSignalKey, ac.signal);
+        const outcomeA = counter
+            .getCount('x', ctx)
+            .then(() => 'resolved', (e: unknown) => (isCancellation(e) ? 'cancelled' : 'error'));
+        await delay(20);
+        ac.abort();
+        expect(await outcomeA).toBe('cancelled');
+
+        // The next caller must recompute a fresh value, not receive A's cancellation.
+        gate.resolve(undefined);
+        const valueB = await counter.getCount('x');
+        expect(valueB).toBe(1);
+    });
+
+    it('F3: peer-closed rejections are cancellation-shaped (never cached by K6)', async () => {
+        const gate = new PromiseSource<void>();
+        const started = new PromiseSource<void>();
+        serverHub.addService(ISlowCounterService, {
+            async getCount(_key: unknown): Promise<number> {
+                started.resolve(undefined);
+                await gate;
+                return 1;
+            },
+        });
+
+        const [clientConn, serverConn] = createMessageChannelPair();
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test', false);
+        clientPeer.connectWith(clientConn);
+        clientHub.addPeer(clientPeer);
+        serverHub.acceptRpcConnection(serverConn);
+        await delay(10);
+
+        const call = clientPeer.call('SlowCounterService.getCount:2', ['x'], {
+            callTypeId: 1,
+            outboundCallFactory: (id, m) => new RpcOutboundComputeCall(id, m),
+        }) as RpcOutboundComputeCall;
+        const caught = call.result.promise.then(
+            () => 'resolved',
+            (e: unknown) => (isCancellation(e) ? 'cancelled' : 'error')
+        );
+
+        await started;
+        clientPeer.close();
+        expect(await caught).toBe('cancelled');
+
+        gate.resolve(undefined);
+    });
+
+    it('F3: a genuine remote error computed still tracks server invalidation', async () => {
+        serverHub.addService(ISlowCounterService, {
+            getCount(key: unknown): number {
+                const value = getState(key as string).use() as number;
+                if (value === 0)
+                    throw new Error('Not ready.');
+
+                return value;
+            },
+        });
+
+        const [clientConn, serverConn] = createMessageChannelPair();
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test', false);
+        clientPeer.connectWith(clientConn);
+        clientHub.addPeer(clientPeer);
+        serverHub.acceptRpcConnection(serverConn);
+        await delay(10);
+
+        const counterDef = defineComputeService('SlowCounterService', {
+            getCount: { args: [''] },
+        });
+        const counter = clientHub.addClient<{
+            getCount(key: string): Promise<number>;
+                }>(clientPeer, counterDef);
+
+        await expect(counter.getCount('x')).rejects.toThrow('Not ready.');
+
+        // C# SetError parity: the errored compute call must stay tracked.
+        const computeCalls = [
+            ...clientPeer.outboundCalls.values(),
+        ].filter(c => c instanceof RpcOutboundComputeCall);
+        expect(computeCalls.length).toBe(1);
+
+        // Server-side invalidation must reach the error computed well before
+        // its 1 s error-cache expiry, so the next call recomputes.
+        getState('x').set(5);
+        await delay(50);
+        expect(await counter.getCount('x')).toBe(5);
+    });
+
+    it('F4: local invalidation of a bound client computed sends $sys.Cancel and unregisters the call', async () => {
+        const [clientConn, serverConn] = createMessageChannelPair();
+        const clientFrames: string[] = [];
+        const origSend = clientConn.send.bind(clientConn);
+        clientConn.send = (m: string) => {
+            clientFrames.push(m);
+            origSend(m);
+        };
+
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test', false);
+        clientPeer.connectWith(clientConn);
+        clientHub.addPeer(clientPeer);
+        serverHub.acceptRpcConnection(serverConn);
+        await delay(10);
+
+        const counterDef = defineComputeService('CounterService', {
+            getCount: { args: [''] },
+        });
+        const counter = clientHub.addClient<{
+            getCount(key: string): Promise<number>;
+                }>(clientPeer, counterDef);
+
+        const captured = await Computed.capture(() => counter.getCount('x'));
+        expect(captured.value).toBe(0);
+
+        const computeCallsBefore = [
+            ...clientPeer.outboundCalls.values(),
+        ].filter(c => c instanceof RpcOutboundComputeCall);
+        expect(computeCallsBefore.length).toBe(1);
+
+        captured.invalidate();
+        await delay(20);
+
+        expect(clientFrames.some(f => f.includes('$sys.Cancel'))).toBe(true);
+        const computeCallsAfter = [
+            ...clientPeer.outboundCalls.values(),
+        ].filter(c => c instanceof RpcOutboundComputeCall);
+        expect(computeCallsAfter.length).toBe(0);
+    });
+
+    it('F5: an aborted compute client call rejects promptly and is not cached', async () => {
+        const gate = new PromiseSource<void>();
+        serverHub.addService(ISlowCounterService, {
+            async getCount(_key: unknown): Promise<number> {
+                await gate;
+                return 1;
+            },
+        });
+
+        const [clientConn, serverConn] = createMessageChannelPair();
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test', false);
+        clientPeer.connectWith(clientConn);
+        clientHub.addPeer(clientPeer);
+        serverHub.acceptRpcConnection(serverConn);
+        await delay(10);
+
+        const counterDef = defineComputeService('SlowCounterService', {
+            getCount: { args: [''] },
+        });
+        const counter = clientHub.addClient<{
+            getCount(key: string, ctx?: AsyncContext): Promise<number>;
+                }>(clientPeer, counterDef);
+
+        const ac = new AbortController();
+        const ctx = new AsyncContext().with(abortSignalKey, ac.signal);
+        const p = counter.getCount('x', ctx);
+        await delay(20);
+        ac.abort();
+
+        let rejection: unknown;
+        const outcome = await Promise.race([
+            p.then(
+                () => 'resolved',
+                (e: unknown) => {
+                    rejection = e;
+                    return 'rejected';
+                }
+            ),
+            delay(500).then(() => 'timeout'),
+        ]);
+        expect(outcome).toBe('rejected');
+        expect(isCancellation(rejection)).toBe(true);
+
+        // The abort must not be cached: a fresh call recomputes a real value.
+        gate.resolve(undefined);
+        expect(await counter.getCount('x')).toBe(1);
     });
 });

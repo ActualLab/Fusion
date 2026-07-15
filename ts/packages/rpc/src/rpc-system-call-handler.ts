@@ -76,8 +76,17 @@ export class RpcSystemCallHandler {
             break;
         }
         case RpcSystemCalls.error: {
-            const call = peer.outboundCalls.remove(relatedId);
+            const call = peer.outboundCalls.get(relatedId);
             if (call !== undefined) {
+                // Honor removeOnOk like the Ok case: an errored compute call
+                // stays tracked so its error computed still observes
+                // $sys-c.Invalidate — C# RpcOutboundComputeCall.SetError
+                // (CompleteKeepRegistered). Local invalidation or reconnect
+                // cleans it up.
+                call.completedStage |= RpcCallStage.ResultReady;
+                if (call.removeOnOk) {
+                    peer.outboundCalls.remove(relatedId);
+                }
                 const errorInfo = args[0] as
                         | Record<string, unknown>
                         | undefined;

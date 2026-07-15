@@ -61,7 +61,12 @@ import {
     ComputeContext,
     type ComputeFunctionImpl,
 } from '@actuallab/fusion';
-import { AsyncContext } from '@actuallab/core';
+import {
+    AsyncContext,
+    abortSignalKey,
+    cancellationError,
+    isCancellation,
+} from '@actuallab/core';
 import { RpcOutboundComputeCall } from './rpc-outbound-compute-call.js';
 
 /** Call type ID for Fusion compute calls — matches .NET's RpcComputeCallType.Id. */
@@ -70,6 +75,10 @@ export const FUSION_CALL_TYPE_ID = 1;
 /** Wire method name for invalidation system call. */
 const FUSION_INVALIDATE_METHOD = '$sys-c.Invalidate:0';
 
+/** Max attempts for a compute call cancelled server-side before the result —
+ *  mirrors .NET ComputedCancellationReprocessingOptions.ClientDefault.MaxTryCount. */
+const COMPUTE_CALL_MAX_TRY_COUNT = 3;
+
 /** Handles Fusion-specific system calls ($sys-c.Invalidate), delegating the rest to base. */
 class FusionSystemCallHandler extends RpcSystemCallHandler {
     override handle(message: RpcMessage, args: unknown[], peer: RpcPeer): void {
@@ -77,8 +86,16 @@ class FusionSystemCallHandler extends RpcSystemCallHandler {
         const relatedId = message.RelatedId ?? 0;
 
         if (method === FUSION_INVALIDATE_METHOD) {
-            const call = peer.outboundCalls.remove(relatedId);
+            // C# RpcComputeSystemCalls.Invalidate: Get + type check BEFORE any
+            // removal — a non-compute call with this id must not be evicted.
+            const call = peer.outboundCalls.get(relatedId);
             if (call instanceof RpcOutboundComputeCall) {
+                peer.outboundCalls.remove(relatedId);
+                // A pre-result invalidation settles the call as cancelled
+                // (SetInvalidated → ResultSource.TrySetCanceled): the compute
+                // client path treats the cancellation as a transparent retry.
+                if (!call.result.isCompleted)
+                    call.result.reject(cancellationError('Compute call invalidated before result.'));
                 call.whenInvalidated.resolve();
             }
             return;
@@ -232,32 +249,53 @@ export class FusionHub extends RpcHub {
             ...args: unknown[]
         ) {
             // ComputeFunction.invoke threads its child AsyncContext as a trailing argument —
-            // strip it before the wire call so it's never serialized, and use it to resolve the
-            // ComputeContext (AsyncContext.current won't survive the await below without ALS).
+            // strip it before the wire call so it's never serialized, and use it to resolve
+            // the ComputeContext + caller AbortSignal synchronously (AsyncContext.current
+            // won't survive the await below without ALS, K3).
             const last = args[args.length - 1];
             const threadedCtx = last instanceof AsyncContext ? last : undefined;
             const callArgs = threadedCtx ? args.slice(0, -1) : args;
-            const computeCtx = ComputeContext.from(
-                threadedCtx ?? AsyncContext.current
-            );
+            const current = threadedCtx ?? AsyncContext.current;
+            const computeCtx = ComputeContext.from(current);
+            const signal = current?.get(abortSignalKey);
             const callOptions: RpcCallOptions = {
                 callTypeId: FUSION_CALL_TYPE_ID,
                 outboundCallFactory: (id, m) =>
                     new RpcOutboundComputeCall(id, m),
+                signal,
             };
-            const outboundCall = peer.call(
-                wireName,
-                callArgs,
-                callOptions
-            ) as RpcOutboundComputeCall;
-            const value = await outboundCall.result;
-            // Wire server invalidation → local computed invalidation
-            if (computeCtx?.computed) {
-                void outboundCall.whenInvalidated.then(() =>
-                    computeCtx.computed!.invalidate()
-                );
+
+            // C# RemoteComputeMethodFunction: a server-side (pre-result)
+            // cancellation is retried transparently, bounded by MaxTryCount.
+            let tryIndex = 0;
+            for (;;) {
+                const outboundCall = peer.call(
+                    wireName,
+                    callArgs,
+                    callOptions
+                ) as RpcOutboundComputeCall;
+                try {
+                    const value = await outboundCall.result;
+                    bindComputeCall(peer, computeCtx, outboundCall);
+                    return value;
+                } catch (e) {
+                    // Caller-initiated abort: never retry, never cache (K6).
+                    if (signal?.aborted)
+                        throw e;
+                    // Server-side pre-result invalidation: retry while connected.
+                    if (
+                        isCancellation(e) &&
+                        peer.isConnected &&
+                        ++tryIndex < COMPUTE_CALL_MAX_TRY_COUNT
+                    )
+                        continue;
+
+                    // Genuine remote error: still track server invalidation so
+                    // the error computed is refreshed (C# SetError parity, F3).
+                    bindComputeCall(peer, computeCtx, outboundCall);
+                    throw e;
+                }
             }
-            return value;
         };
         const cf = new ComputeFunction(methodDef.name, rpcImpl);
         const syntheticInstance = {};
@@ -269,6 +307,32 @@ export class FusionHub extends RpcHub {
             return cf.invoke(syntheticInstance, invokeArgs).then(c => c.value);
         };
     }
+}
+
+// Wires both directions of the client computed ↔ outbound compute call binding:
+//   - server invalidation → local computed invalidation (BindWhenInvalidatedToCall)
+//   - local computed invalidation → release the call + $sys.Cancel, unless the
+//     server already invalidated it (BindToCallFromOnInvalidated parity, F4).
+function bindComputeCall(
+    peer: RpcPeer,
+    computeCtx: ComputeContext | undefined,
+    call: RpcOutboundComputeCall
+): void {
+    const computed = computeCtx?.computed;
+    if (computed === undefined)
+        return;
+
+    void call.whenInvalidated.then(() => computed.invalidate());
+    void computed.whenInvalidated().then(() => {
+        if (call.whenInvalidated.isCompleted)
+            return;
+        if (peer.outboundCalls.remove(call.callId) === undefined)
+            return;
+        call.whenInvalidated.resolve();
+        const conn = peer.connection;
+        if (conn !== undefined)
+            peer.hub.systemCallSender.cancel(conn, peer.serializationFormat, call.callId);
+    });
 }
 
 function extractDispatchContext(

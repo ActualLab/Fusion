@@ -36,7 +36,7 @@ export { TimedOut } from './timed-out.js';
 export { TimeoutError, withTimeout } from './withTimeout.js';
 export { delayAsync, delayAsyncWith } from './delay.js';
 export { abortPromise } from './abort-promise.js';
-export { isCancellation } from './cancellation.js';
+export { isCancellation, cancellationError } from './cancellation.js';
 export type { AbortOutcome } from './await-with-cleanup.js';
 export { awaitWithCleanup } from './await-with-cleanup.js';
 
