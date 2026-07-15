@@ -15,6 +15,13 @@ You have a strong tendency to over-comment and to restate what the code
 already says; that section explains exactly when a comment is justified
 and when it isn't. Re-read it any time you're tempted to add a `//` or `///`.
 
+# Git workflow — don't branch unless asked
+
+Commit your changes directly to the default branch (`master`). **You typically
+should NOT create a feature branch in this repo unless the user explicitly asks
+for one.** Small, self-contained changes (docs, fixes, tweaks) belong on
+`master`; a needless branch only adds a merge step later.
+
 # Type Catalog — Reuse Existing Abstractions (CRITICAL)
 
 This codebase is mature. **Reusing what already exists is more important
