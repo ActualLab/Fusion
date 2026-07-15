@@ -7,13 +7,29 @@ export class AsyncLock {
         return this._locked;
     }
 
-    async acquire(): Promise<void> {
+    async acquire(signal?: AbortSignal): Promise<void> {
+        if (signal?.aborted)
+            throw signal.reason;
+
         if (!this._locked) {
             this._locked = true;
             return;
         }
-        return new Promise<void>(resolve => {
-            this._queue.push(resolve);
+        return new Promise<void>((resolve, reject) => {
+            const onAbort = () => {
+                const i = this._queue.indexOf(waiter);
+                if (i >= 0)
+                    this._queue.splice(i, 1);
+
+                // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the rejection value IS signal.reason.
+                reject(signal!.reason);
+            };
+            const waiter = () => {
+                signal?.removeEventListener('abort', onAbort);
+                resolve();
+            };
+            this._queue.push(waiter);
+            signal?.addEventListener('abort', onAbort, { once: true });
         });
     }
 
@@ -29,8 +45,8 @@ export class AsyncLock {
         }
     }
 
-    async run<T>(fn: () => T | Promise<T>): Promise<T> {
-        await this.acquire();
+    async run<T>(fn: () => T | Promise<T>, signal?: AbortSignal): Promise<T> {
+        await this.acquire(signal);
         try {
             return await fn();
         } finally {

@@ -850,6 +850,8 @@ Confidence: confirmed (re-verified).
 
 ### C3. `RetryDelayer.getDelay` ignores an already-aborted `cancellationSignal`
 
+Status: **closed** — fixed 2026-07-15 (batch core2). The optional stop-signal threading into `rpc-peer.ts` was deferred (RpcPeer has no stop `AbortSignal` yet) — folded into the R10/R12 peer-lifecycle batch.
+
 Confidence: confirmed.
 
 - TS: `retry-delayer.ts:43-70` — no `signal.aborted` pre-check; `addEventListener('abort', ...)` on an already-aborted signal never fires, so the delay runs to completion and *resolves normally* despite cancellation. On a live abort it also rejects with a generic `Error` rather than `signal.reason`.
@@ -872,6 +874,8 @@ Confidence: confirmed.
 
 ### C5. `AsyncLock` has no reentry detection (`LockReentryMode`) and no abort-while-queued
 
+Status: **closed** — abort-while-queued fixed 2026-07-15 (batch core2); reentry detection stays with K14 as planned.
+
 Confidence: confirmed absent.
 
 - TS: `async-lock.ts:10-18` — `acquire()` takes no `AbortSignal`; a queued waiter cannot be cancelled; no reentry tracking. (Fairness and release-on-throw are correct.)
@@ -881,6 +885,8 @@ Confidence: confirmed absent.
 - **Alternative:** an owner-token reentry API (callers pass an explicit token the lock compares). C#-shaped, but plumbing-heavy in JS and redundant once K14 lands.
 
 ### C6. No cancellable delay: `delayAsync` takes no `AbortSignal`, so `retry()` can't be aborted
+
+Status: **closed** — fixed 2026-07-15 (batch core2).
 
 Confidence: confirmed absent.
 

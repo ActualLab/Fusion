@@ -15,6 +15,26 @@ describe('delayAsync', () => {
         // delayAsync returns Promise<void>; awaiting it should just complete.
         await delayAsync(0);
     });
+
+    it('rejects immediately with the reason for an already-aborted signal', async () => {
+        const ac = new AbortController();
+        const reason = new Error('nope');
+        ac.abort(reason);
+        await expect(delayAsync(1000, ac.signal)).rejects.toBe(reason);
+    });
+
+    it('rejects with the reason on a live abort before the delay elapses', async () => {
+        const ac = new AbortController();
+        const promise = delayAsync(1000, ac.signal);
+        const reason = new Error('aborted');
+        ac.abort(reason);
+        await expect(promise).rejects.toBe(reason);
+    });
+
+    it('resolves normally when the signal never aborts', async () => {
+        const ac = new AbortController();
+        await delayAsync(5, ac.signal);
+    });
 });
 
 describe('delayAsyncWith', () => {

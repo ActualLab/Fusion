@@ -1,5 +1,6 @@
 // .NET counterparts: ActualLab.Net.RetryDelayer, ActualLab.Net.RetryDelay
 
+import { delayAsync } from './delay.js';
 import { EventHandlerSet } from './events.js';
 import { RetryDelaySeq } from './retry-delay-seq.js';
 
@@ -40,33 +41,15 @@ export class RetryDelayer {
         const endsAt = Date.now() + actualDelayMs;
 
         const cancelSignal = this._cancelController.signal;
-        const promise = new Promise<void>((resolve, reject) => {
-            const timer = setTimeout(() => {
-                cleanup();
-                resolve();
-            }, actualDelayMs);
-
-            const onCancel = () => {
-                clearTimeout(timer);
-                cleanup();
-                resolve(); // cancelDelays resolves, does NOT reject
-            };
-
-            const onAbort = () => {
-                clearTimeout(timer);
-                cleanup();
-                reject(new Error('Retry delay aborted.'));
-            };
-
-            const cleanup = () => {
-                cancelSignal.removeEventListener('abort', onCancel);
-                cancellationSignal?.removeEventListener('abort', onAbort);
-            };
-
-            cancelSignal.addEventListener('abort', onCancel, { once: true });
-            cancellationSignal?.addEventListener('abort', onAbort, {
-                once: true,
-            });
+        const combinedSignal = cancellationSignal
+            ? AbortSignal.any([cancellationSignal, cancelSignal])
+            : cancelSignal;
+        const promise = delayAsync(actualDelayMs, combinedSignal).catch((e: unknown) => {
+            // cancelDelays() completes normally (even on a tie with external
+            // cancellation, matching the C# catch filter); external cancellation
+            // rejects with cancellationSignal.reason (via AbortSignal.any).
+            if (!cancelSignal.aborted)
+                throw e;
         });
 
         return { promise, endsAt, isLimitExceeded: false };

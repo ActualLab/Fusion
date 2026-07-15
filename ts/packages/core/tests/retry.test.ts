@@ -50,6 +50,20 @@ describe('retry', () => {
         // Schedule is invoked with the *upcoming* retry index (1, 2)
         expect(sleeps).toEqual([5, 10]);
     });
+
+    it('aborts the inter-attempt delay via the signal', async () => {
+        const ac = new AbortController();
+        const reason = new Error('stop retrying');
+        let attempts = 0;
+        const promise = retry(5, () => {
+            attempts++;
+            ac.abort(reason);
+            throw new Error('keep trying');
+        }, () => 10_000, ac.signal);
+
+        await expect(promise).rejects.toBe(reason);
+        expect(attempts).toBe(1);
+    });
 });
 
 describe('catchErrors', () => {

@@ -1,6 +1,5 @@
-// Regression tests guarding the verified C# parity of RetryDelaySeq /
-// RetryDelayer (see docs/plans/ts-port-audit.md, "Parity confirmed (core)").
-// The abort-handling gap is item C3, covered by ts-port-audit-repro.test.ts.
+// Regression tests guarding the C# parity of RetryDelaySeq / RetryDelayer,
+// including the C3 abort-handling fix (see docs/plans/ts-port-audit.md).
 import { describe, it, expect } from 'vitest';
 import {
     RetryDelayer,
@@ -82,6 +81,80 @@ describe('RetryDelayer', () => {
         const outcome = await Promise.race([
             retryDelay.promise.then(() => 'resolved'),
             delay(500).then(() => 'timeout'),
+        ]);
+        expect(outcome).toBe('resolved');
+    });
+
+    // C3: getDelay must honor an already-aborted cancellationSignal.
+    it('rejects promptly with the reason for an already-aborted signal', async () => {
+        const d = new RetryDelayer();
+        d.delays = RetryDelaySeq.fixed(1000, 0);
+        const ac = new AbortController();
+        const reason = new Error('stopped');
+        ac.abort(reason);
+
+        const retryDelay = d.getDelay(1, ac.signal);
+
+        const outcome = await Promise.race([
+            retryDelay.promise.then(
+                () => 'resolved',
+                (e: unknown) => e
+            ),
+            delay(300).then(() => 'timeout'),
+        ]);
+        expect(outcome).toBe(reason);
+    });
+
+    // C3: a live abort rejects with signal.reason (not a generic Error).
+    it('rejects with the reason on a live abort', async () => {
+        const d = new RetryDelayer();
+        d.delays = RetryDelaySeq.fixed(30_000, 0);
+        const ac = new AbortController();
+        const retryDelay = d.getDelay(1, ac.signal);
+
+        const reason = new Error('aborted mid-delay');
+        ac.abort(reason);
+
+        const outcome = await Promise.race([
+            retryDelay.promise.then(
+                () => 'resolved',
+                (e: unknown) => e
+            ),
+            delay(300).then(() => 'timeout'),
+        ]);
+        expect(outcome).toBe(reason);
+    });
+
+    // C3: cancelDelays() must still resolve even when a cancellationSignal is supplied.
+    it('resolves on cancelDelays() with a cancellationSignal present', async () => {
+        const d = new RetryDelayer();
+        d.delays = RetryDelaySeq.fixed(30_000, 0);
+        const ac = new AbortController();
+        const retryDelay = d.getDelay(1, ac.signal);
+
+        d.cancelDelays();
+
+        const outcome = await Promise.race([
+            retryDelay.promise.then(() => 'resolved', () => 'rejected'),
+            delay(300).then(() => 'timeout'),
+        ]);
+        expect(outcome).toBe('resolved');
+    });
+
+    // C3: on an abort/cancelDelays() tie, cancelDelays() wins and the delay
+    // resolves — mirroring the C# catch filter on cancelDelaysToken.
+    it('resolves when cancelDelays() ties with an aborting cancellationSignal', async () => {
+        const d = new RetryDelayer();
+        d.delays = RetryDelaySeq.fixed(30_000, 0);
+        const ac = new AbortController();
+        const retryDelay = d.getDelay(1, ac.signal);
+
+        ac.abort(new Error('stopping'));
+        d.cancelDelays();
+
+        const outcome = await Promise.race([
+            retryDelay.promise.then(() => 'resolved', () => 'rejected'),
+            delay(300).then(() => 'timeout'),
         ]);
         expect(outcome).toBe('resolved');
     });

@@ -18,11 +18,15 @@ const defaultRetryDelays: RetryDelaySchedule = () => 50;
  * `fn` is passed the 0-based attempt index and the last error (or
  * `undefined` for the first attempt) — useful for adapting behavior per
  * try (e.g. switching endpoints, escalating timeouts).
+ *
+ * Aborting `signal` during an inter-attempt delay rejects with
+ * `signal.reason` instead of waiting the delay out.
  */
 export async function retry<TResult>(
     tryCount: number,
     fn: (tryIndex: number, lastError: unknown) => PromiseLike<TResult> | TResult,
     retryDelays: RetryDelaySchedule = defaultRetryDelays,
+    signal?: AbortSignal,
 ): Promise<TResult> {
     if (tryCount <= 0)
         throw new Error('retry: tryCount must be positive.');
@@ -38,7 +42,7 @@ export async function retry<TResult>(
         ++tryIndex;
         if (tryIndex >= tryCount) throw lastError;
         warnLog?.log(`retry(${tryIndex}/${tryCount}): error:`, lastError);
-        await delayAsync(retryDelays(tryIndex));
+        await delayAsync(retryDelays(tryIndex), signal);
     }
 }
 
