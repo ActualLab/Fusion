@@ -496,6 +496,21 @@ Confidence: **Confirmed** by compatibility-source inspection and conditional net
 
 ## B. ActualLab.Fusion
 
+### Maintainer implementation decisions
+
+Every FUS finding uses its **Recommended** action unless an item below records an explicit override. FUS24, FUS25, FUS26, and FUS31 require explicit maintainer review of the implementation before acceptance; FUS27 and FUS32 are intentionally ignored.
+
+- **FUS15 and FUS16:** use one shared, replaceable DI service for redirect validation in the render-mode and authentication endpoints. Prefer a `RedirectUrlChecker` delegate if checking is the only operation; use a `RedirectUrlHandler` class only if multiple operations or state are useful. The default only needs to support the repository samples and may accept every URL. A stricter policy or normalization API is optional only when it does not complicate registration or sample behavior.
+- **FUS19:** use non-throwing extraction. More than one `session` query value is treated as no query session, after which the existing ambient-session fallback may apply; do not select the first duplicate.
+- **FUS24 and FUS25:** preserve state integrity and allow later subscribers to run after an earlier subscriber throws. Keep the normal non-throwing path highly efficient, without unnecessary allocation or synchronization overhead.
+- **FUS26:** keep `Computed.GetDependants` highly efficient and avoid unnecessary allocations, retries, and lock contention.
+- **FUS27:** ignore; the current feature-builder wiring is intended.
+- **FUS28:** use separate caches for computed-state and mutable-state categories.
+- **FUS30:** remove `UseInitializedAsyncRenderPoint` instead of implementing the unused render point.
+- **FUS31:** apply the recommended handler-unsubscription fix, subject to explicit maintainer review.
+- **FUS32:** ignore; do not change the dispatcher execution-context policy.
+- **FUS33:** seal `DefaultParameterComparer`.
+
 ### Audit coverage
 
 - Computed registry, graph pruning, and global lifecycle: complete.
@@ -505,7 +520,7 @@ Confidence: **Confirmed** by compatibility-source inspection and conditional net
 
 ### FUS1. `ComputedRegistry.ChangeGraphPruner` can never change the graph pruner
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and focused regression test.
 
@@ -518,7 +533,7 @@ Confidence: **Confirmed** by source and focused regression test.
 
 ### FUS2. `FlushingRemoteComputedCache.Flush` completes before the persistent flush
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and gated regression test.
 
@@ -531,7 +546,7 @@ Confidence: **Confirmed** by source and gated regression test.
 
 ### FUS3. `ByValueParameterComparer.Instance` is an instance of the UUID comparer
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and focused regression test.
 
@@ -542,7 +557,7 @@ Confidence: **Confirmed** by source and focused regression test.
 
 ### FUS4. `Session.WithTags` discards the session identifier
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and focused regression test.
 
@@ -553,7 +568,7 @@ Confidence: **Confirmed** by source and focused regression test.
 
 ### FUS5. `Session.WithTag` throws when the replaced tag is followed by another tag
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and focused regression test.
 
@@ -564,7 +579,7 @@ Confidence: **Confirmed** by source and focused regression test.
 
 ### FUS6. In-memory command completion returns before asynchronous scope handlers finish
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and a gated ordering regression test.
 
@@ -575,7 +590,7 @@ Confidence: **Confirmed** by source and a gated ordering regression test.
 
 ### FUS7. The just-disconnected state is invalidated using the just-connected period
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and focused state regression test.
 
@@ -586,7 +601,7 @@ Confidence: **Confirmed** by source and focused state regression test.
 
 ### FUS8. `FusionMonitor` drops the first unregistration in every category
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and focused metrics regression test.
 
@@ -597,7 +612,7 @@ Confidence: **Confirmed** by source and focused metrics regression test.
 
 ### FUS9. `SessionMiddleware` ignores the invalid-session handler's short-circuit result
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and focused middleware regression test.
 
@@ -608,7 +623,7 @@ Confidence: **Confirmed** by source and focused middleware regression test.
 
 ### FUS10. A malformed session cookie turns an anonymous request into a server error
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and focused middleware regression test.
 
@@ -619,7 +634,7 @@ Confidence: **Confirmed** by source and focused middleware regression test.
 
 ### FUS11. The subdomain extractor accepts a configured suffix in the middle of an unrelated host
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source and focused host regression test.
 
@@ -630,7 +645,7 @@ Confidence: **Confirmed** by source and focused host regression test.
 
 ### FUS12. Expired key-value entries remain visible to `Count` and `ListKeySuffixes`
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** in both in-memory and database implementations by a shared regression test.
 
@@ -641,7 +656,7 @@ Confidence: **Confirmed** in both in-memory and database implementations by a sh
 
 ### FUS13. Sandboxed key prefixes are vulnerable to prefix confusion
 
-Status: **open**. Confidence: **Confirmed by source and focused isolation regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused isolation regression test**.
 
 - Source: `SandboxedKeyValueStore.KeyChecker.cs:19-24,34,43` authorizes raw ordinal `StartsWith`; default prefixes in `SandboxedKeyValueStore.cs:24-27` have no terminating delimiter.
 - Failure: user ID `12` is authorized for `@user/123/private`, escaping into the namespace of a longer matching ID. The same class of collision applies to session IDs/configured prefix formats.
@@ -650,7 +665,7 @@ Status: **open**. Confidence: **Confirmed by source and focused isolation regres
 
 ### FUS14. `AddWebServer(false)` still exposes the backend WebSocket endpoint
 
-Status: **open**. Confidence: **Confirmed by source and registration regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and registration regression test**.
 
 - Source: `src/ActualLab.Fusion.Server/FusionBuilderExt.cs:17-21` always calls `fusion.Rpc.AddWebSocketServer(true)` instead of forwarding `exposeBackend`; the underlying RPC builder correctly honors its argument.
 - Failure: applications explicitly disabling backend exposure still register it.
@@ -659,7 +674,7 @@ Status: **open**. Confidence: **Confirmed by source and registration regression 
 
 ### FUS15. Render-mode switching accepts an external redirect target
 
-Status: **open**. Confidence: **Confirmed by source and endpoint regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and endpoint regression test**.
 
 - Source: `RenderModeEndpoint.cs:27-37,53-56` returns caller-controlled `redirectTo` unchanged; the MVC controller also redirects to it.
 - Failure: the public endpoint can be used as an open redirect for phishing/token-flow chaining.
@@ -668,7 +683,7 @@ Status: **open**. Confidence: **Confirmed by source and endpoint regression test
 
 ### FUS16. Authentication endpoints also accept external return URLs
 
-Status: **open**. Confidence: **Confirmed by source; endpoint integration test needed**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source; endpoint integration test needed**.
 
 - Source: `AuthEndpoints.cs:29-38,41-53` copies caller `returnUrl` directly into `AuthenticationProperties.RedirectUri` for sign-in and sign-out.
 - Failure: supported authentication handlers can redirect a completed flow to an attacker-controlled origin.
@@ -676,7 +691,7 @@ Status: **open**. Confidence: **Confirmed by source; endpoint integration test n
 
 ### FUS17. A database key-value batch with duplicate new keys creates duplicate entities
 
-Status: **open**. Confidence: **Confirmed by source; provider regression test needed**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source; provider regression test needed**.
 
 - Source: `DbKeyValueStore.cs:36-54` loads existing keys once, then creates/adds a new entity for every absent item without adding it to the lookup.
 - Failure: duplicate new keys in one command generate duplicate primary-key inserts, while the in-memory provider uses last-write-wins semantics.
@@ -684,7 +699,7 @@ Status: **open**. Confidence: **Confirmed by source; provider regression test ne
 
 ### FUS18. A malformed explicit session binding falls back to the ambient session
 
-Status: **open**. Confidence: **Confirmed by source; model-binding integration test needed**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source; model-binding integration test needed**.
 
 - Source: `SessionModelBinder.cs:29-37` catches construction/value-provider errors and invokes its default-session fallback rather than marking binding failed.
 - Failure: a request that explicitly supplies an invalid target session can silently operate on the caller's ambient session, changing the meaning of the request.
@@ -692,7 +707,7 @@ Status: **open**. Confidence: **Confirmed by source; model-binding integration t
 
 ### FUS19. Duplicate session query parameters crash RPC peer setup
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `RpcPeerOptionsExt.cs:28-31` reads `query["session"].SingleOrDefault()`.
 - Failure: a request with duplicate session query values throws during handshake instead of producing a controlled rejection.
@@ -700,7 +715,7 @@ Status: **open**. Confidence: **Confirmed by source**.
 
 ### FUS20. Untyped `State.LastNonErrorValue` returns a `Computed`, not its value
 
-Status: **open**. Confidence: **Confirmed by source and contract regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and contract regression test**.
 
 - Source: `State/State.cs:104-107` returns `_snapshot.LastNonErrorComputed`; typed implementations return `.Value`.
 - Failure: casting the same state to `IState` changes the property from the payload to an implementation object.
@@ -708,7 +723,7 @@ Status: **open**. Confidence: **Confirmed by source and contract regression test
 
 ### FUS21. Nonempty `InvalidationSource` enumeration never terminates
 
-Status: **open**. Confidence: **Confirmed by source and bounded enumeration test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and bounded enumeration test**.
 
 - Source: `InvalidationSource.cs:115-121` tests constant `this.IsNone` instead of the advancing local `source.IsNone`.
 - Failure: every nonempty chain yields endless `None` values after its end.
@@ -716,14 +731,14 @@ Status: **open**. Confidence: **Confirmed by source and bounded enumeration test
 
 ### FUS22. Tracker-free `UpdateDelayer` swallows cancellation
 
-Status: **open**. Confidence: **Confirmed by source and pre-cancellation regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and pre-cancellation regression test**.
 
 - Source: `State/UpdateDelayer.cs:36-39` uses `SilentAwait` and returns in the null-tracker branch, while the tracker branch propagates cancellation.
 - **Recommended:** await normally or explicitly rethrow caller cancellation after the silent wait.
 
 ### FUS23. `ComputedSynchronizer.Synchronize` treats cancellation as timeout
 
-Status: **open**. Confidence: **Confirmed by source and focused regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `ComputedSynchronizer.cs:100-102,116-118` silently awaits synchronization and returns the computed for any fault/cancellation.
 - Failure: caller cancellation is reported as a successful synchronization result.
@@ -731,7 +746,7 @@ Status: **open**. Confidence: **Confirmed by source and focused regression test*
 
 ### FUS24. One throwing invalidation subscriber blocks and permanently retains later subscribers
 
-Status: **open**. Confidence: **Confirmed by source and focused event regression test**.
+Status: **approved — pending maintainer review**. Confidence: **Confirmed by source and focused event regression test**.
 
 - Source: `Computed.cs:300-305` invokes the compact handler set as one operation; a throw skips remaining callbacks and the subsequent `_invalidated = default`. Already-invalidated computeds refuse handler removal at lines 119-125.
 - Failure: infrastructure observers can miss invalidation, and the complete subscriber set remains retained.
@@ -739,7 +754,7 @@ Status: **open**. Confidence: **Confirmed by source and focused event regression
 
 ### FUS25. A throwing `ComputedSource.Updated` subscriber breaks computation while the source lock is held
 
-Status: **open**. Confidence: **Confirmed by source and focused update regression test**.
+Status: **approved — pending maintainer review**. Confidence: **Confirmed by source and focused update regression test**.
 
 - Source: `ComputedSource.cs:133-141` invokes public handlers directly under the lock; this occurs before the producer's protected computation try block.
 - Failure: an observer exception escapes, leaving the newly published computed in `Computing` state and failing the update.
@@ -747,7 +762,7 @@ Status: **open**. Confidence: **Confirmed by source and focused update regressio
 
 ### FUS26. `Computed.GetDependants` allocates from an unlocked stale count
 
-Status: **open**. Confidence: **Confirmed by source; concurrency stress test needed**.
+Status: **approved — pending maintainer review**. Confidence: **Confirmed by source; concurrency stress test needed**.
 
 - Source: `Computed.cs:416-422` reads count and allocates outside the lock, then copies under the lock.
 - Failure: a concurrent add can grow the set between those steps and make `CopyTo` target too small.
@@ -755,7 +770,7 @@ Status: **open**. Confidence: **Confirmed by source; concurrency stress test nee
 
 ### FUS27. Feature builders leave pre-registered implementations incompletely wired
 
-Status: **open**. Confidence: **Confirmed by source and two DI registration tests**.
+Status: **ignored — maintainer direction**. Confidence: **Ignored by maintainer direction**.
 
 - Source: `FusionBuilder.cs:420-447,456-464` returns when a concrete operation reprocessor/cache is already registered, before adding its interface alias, handlers, transiency resolver, or shared wrapper.
 - Failure: users following normal DI override patterns get a partially enabled feature.
@@ -764,7 +779,7 @@ Status: **open**. Confidence: **Confirmed by source and two DI registration test
 
 ### FUS28. Computed and mutable component state categories share one cache slot
 
-Status: **open**. Confidence: **Confirmed by source and focused category regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused category regression test**.
 
 - Source: `ActualLab.Fusion.Blazor/Components/ComputedStateComponent.Static.cs:8-9,30-34` uses one component-type-keyed cache for two distinct category functions.
 - Failure: the first call wins; `MixedStateComponent` can label both states `.MutableState`, degrading diagnostics and category-based behavior.
@@ -772,7 +787,7 @@ Status: **open**. Confidence: **Confirmed by source and focused category regress
 
 ### FUS29. Two net8+ Blazor unsafe accessors target the wrong runtime fields
 
-Status: **open**. Confidence: **Confirmed by source metadata and two regression cases**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source metadata and two regression cases**.
 
 - Source: `ComponentExt.cs:24-29` maps `HasPendingQueuedRenderGetter` to `_initialized` and `RendererGetter` to `_hasPendingQueuedRender`; unsafe accessors are enabled for net8-net10.
 - Failure: render suspension mutates initialization state, while disposal detection reaches a field of the wrong owner/type.
@@ -780,7 +795,7 @@ Status: **open**. Confidence: **Confirmed by source metadata and two regression 
 
 ### FUS30. `UseInitializedAsyncRenderPoint` is declared and enabled but never used
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: the flag is defined/included in `UseAllRenderPoints`, but `ComputedStateComponent.cs:48-72` awaits incomplete initialization before entering the parameter flow and first render point.
 - Failure: default options cannot produce the advertised intermediate render during asynchronous initialization.
@@ -788,7 +803,7 @@ Status: **open**. Confidence: **Confirmed by source**.
 
 ### FUS31. `MixedStateComponent` retains disposed components through anonymous mutable-state handlers
 
-Status: **open**. Confidence: **Confirmed by source; lifecycle test needed**.
+Status: **approved — pending maintainer review**. Confidence: **Confirmed by source; lifecycle test needed**.
 
 - Source: `MixedStateComponent.cs:21-28` installs a capturing anonymous `Updated` handler; `StatefulComponent` disposal releases only the computed state.
 - Failure: a supplied/shared mutable state retains disposed components and continues triggering recomputation.
@@ -796,7 +811,7 @@ Status: **open**. Confidence: **Confirmed by source; lifecycle test needed**.
 
 ### FUS32. Dispatcher execution-context policy is cached globally from the first renderer
 
-Status: **open, low severity**. Confidence: **Confirmed by source**.
+Status: **ignored — maintainer direction**. Confidence: **Ignored by maintainer direction**.
 
 - Source: `DispatcherInfo.cs:14-35` caches one verdict based only on the first dispatcher's type name; computed component dispatch selection consumes it globally.
 - Failure: mixed renderer/dispatcher types in one process can inherit the wrong execution-context behavior.
@@ -804,7 +819,7 @@ Status: **open, low severity**. Confidence: **Confirmed by source**.
 
 ### FUS33. Custom parameter comparers derived from `DefaultParameterComparer` are ignored
 
-Status: **open, low severity**. Confidence: **Confirmed by source, documented custom-comparer contract, and focused regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source, documented custom-comparer contract, and focused regression test**.
 
 - Source: `ComponentInfo.cs:57-58,78-81` classifies any `DefaultParameterComparer` subtype as non-custom and can take the standard path without invoking it. The parameter-comparison documentation advertises arbitrary per-parameter comparer types in custom mode, and both the public non-sealed base type and provider accept derived types.
 - Test: `FusionBlazorCoreAuditRegressionTest.DerivedDefaultParameterComparerShouldBeApplied` supplies an always-equal comparer derived from `DefaultParameterComparer`; `ShouldSetParameters` returns `true` instead of invoking its custom comparison path.
