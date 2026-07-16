@@ -123,8 +123,9 @@ public class AsyncLockSet<TKey>(
     {
         private int _useCount;
 
-        public SemaphoreSlim Semaphore = null!;
-        public AsyncLocal<object?>? LockedLocallyTag;
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+        public AsyncLocal<object?>? LockedLocallyTag { get; }
+            = owner.ReentryMode == LockReentryMode.Unchecked ? null : new AsyncLocal<object?>();
 
         public bool IsLockedLocally {
             get => LockedLocallyTag?.Value is not null;
@@ -133,55 +134,50 @@ public class AsyncLockSet<TKey>(
 
         public bool TryBeginUse()
         {
-            lock (this) {
-                if (_useCount < 0)
+            while (true) {
+                var useCount = Volatile.Read(ref _useCount);
+                if (useCount < 0)
                     return false; // Already closed
-                if (_useCount++ != 0)
-                    return true; // Already initialized
-
-                Semaphore = new SemaphoreSlim(1, 1);
-                if (owner.ReentryMode != LockReentryMode.Unchecked)
-                    LockedLocallyTag = new AsyncLocal<object?>();
+                if (Interlocked.CompareExchange(ref _useCount, useCount + 1, useCount) == useCount)
+                    return true;
             }
-            return true;
         }
 
         public void EndUse()
         {
-            lock (this) {
-                if (_useCount <= 0) {
-                    if (_useCount == 0)
+            while (true) {
+                var useCount = Volatile.Read(ref _useCount);
+                if (useCount <= 0) {
+                    if (useCount == 0)
                         throw Errors.InternalError("AsyncLockSet.Entry is in a broken state.");
                     return; // Already closed
                 }
-                if (--_useCount != 0)
+                var nextUseCount = useCount == 1 ? -1 : useCount - 1;
+                if (Interlocked.CompareExchange(ref _useCount, nextUseCount, useCount) != useCount)
+                    continue;
+                if (nextUseCount >= 0)
                     return;
 
-                // Closing
-                _useCount = -1;
+                Close();
+                return;
             }
-            if (owner._entries.TryRemove(key, this))
-                Semaphore.Dispose();
         }
 
         public void Release()
         {
-            var mustClose = true;
-            lock (this) {
-                if (_useCount <= 0) {
-                    if (_useCount == 0)
+            while (true) {
+                var useCount = Volatile.Read(ref _useCount);
+                if (useCount <= 0) {
+                    if (useCount == 0)
                         throw Errors.InternalError("AsyncLockSet.Entry is in a broken state.");
                     return; // Already closed
                 }
-                if (_useCount == 1)
-                    _useCount = -1;
-                else
-                    mustClose = false;
-            }
-            if (mustClose) {
-                if (owner._entries.TryRemove(key, this))
-                    Semaphore.Dispose();
-                return;
+                if (useCount > 1)
+                    break;
+                if (Interlocked.CompareExchange(ref _useCount, -1, 1) == 1) {
+                    Close();
+                    return;
+                }
             }
 
             try {
@@ -190,6 +186,12 @@ public class AsyncLockSet<TKey>(
             finally {
                 EndUse();
             }
+        }
+
+        private void Close()
+        {
+            if (owner._entries.TryRemove(key, this))
+                Semaphore.Dispose();
         }
     }
 }

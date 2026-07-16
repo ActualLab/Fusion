@@ -353,6 +353,17 @@ Contended percentages apply only to the software handoff interval after release.
    open/refcount/closed state while preserving retry and conditional removal.
    Expected improvement: **8-18%** uncontended and **1-5%** handoff, medium
    confidence.
+
+   Status: **Closed — retained.**
+
+   Remarks: relative to the cancellation-safe fused-release baseline, two .NET 10
+   runs improved same-key acquisition from 62.53 ns to 52.57-54.41 ns and mixed
+   keys from 60.54 ns to 53.04-54.25 ns. The latest stable handoff result improved
+   from 545.76 ns to 384.49-386.93 ns. Allocation remained 192 B uncontended and
+   425 B for handoff. The entry now uses atomic open/use-count/closed transitions,
+   while contended release preserves `Semaphore.Release` followed by `EndUse`.
+   All 14 focused lock and lock-set tests pass.
+
 3. Avoid redundant `ExecutionContext` capture in the internal incomplete-wait
    helper. Expected improvement: **5-12%** of handoff overhead, medium-low
    confidence.
