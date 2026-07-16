@@ -315,13 +315,17 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                                         throw new ChannelClosedException(); // Mimicking channel behavior here
 
                                     var message = reader.Current;
-                                    var handshakeContext = ProcessMessage(message, handshakeToken, handshakeToken);
-                                    var remoteHandshake =
-                                        handshakeContext?.Call.Arguments?.GetUntyped(0) as RpcHandshake;
-                                    return (remoteHandshake ?? throw Errors.HandshakeFailed(), ownHandshake1);
+                                    var remoteHandshake = ProcessHandshake(message, handshakeToken);
+                                    return (remoteHandshake, ownHandshake1);
                                 }, handshakeToken)
                             .WaitAsync(handshakeToken)
                             .ConfigureAwait(false);
+                        if (handshake.ProtocolVersion is < RpcHandshake.MinimumProtocolVersion
+                            or > RpcHandshake.CurrentProtocolVersion)
+                            throw Errors.UnsupportedProtocolVersion(
+                                handshake.ProtocolVersion,
+                                RpcHandshake.MinimumProtocolVersion,
+                                RpcHandshake.CurrentProtocolVersion);
                         if (handshake.RemoteApiVersionSet is null)
                             handshake = handshake with { RemoteApiVersionSet = new() };
                     }
@@ -477,6 +481,23 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             Log.LogError(e, "Failed to process inbound message: {Message}", message);
             return null;
         }
+    }
+
+    private RpcHandshake ProcessHandshake(RpcInboundMessage message, CancellationToken cancellationToken)
+    {
+        var methodDef = Hub.SystemCallSender.HandshakeMethodDef;
+        if (message.MethodRef != methodDef.Ref
+            || message.CallTypeId != methodDef.CallType.Id
+            || message.RelatedId != 0)
+            throw Errors.HandshakeFailed();
+
+        var context = InboundCallOptions.ContextFactory.Invoke(this, message, cancellationToken);
+        if (!ReferenceEquals(context.MethodDef, methodDef))
+            throw Errors.HandshakeFailed();
+
+        _ = context.Call.Process(cancellationToken);
+        return context.Call.Arguments?.GetUntyped(0) as RpcHandshake
+            ?? throw Errors.HandshakeFailed();
     }
 
     protected virtual RpcMethodResolver GetServerMethodResolver(RpcHandshake? handshake)

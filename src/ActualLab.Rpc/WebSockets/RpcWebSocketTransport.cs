@@ -22,6 +22,10 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
         public int FrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
         public int BufferSize { get; init; } = 16_000;
         public int MaxBufferSize { get; init; } = 256_000;
+        public int MaxMessageSize { get; init; } = RpcTextMessageSerializerV3.GetMaxMessageSize(
+            Math.Max(
+                RpcTextMessageSerializer.Defaults.MaxArgumentDataSize,
+                RpcByteMessageSerializer.Defaults.MaxArgumentDataSize));
         // High CloseTimeout values "shrink" effective ConnectTimeout,
         // low values increase abrupt/graceful close ratio, which is a no-op in our case.
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(1);
@@ -60,6 +64,9 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
             StaticMeters,
             logServices: webSocketOwner.Services)
     {
+        if (settings.MaxMessageSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(settings), "settings.MaxMessageSize must be positive.");
+
         Settings = settings;
         WebSocketOwner = webSocketOwner;
         WebSocket = webSocketOwner.WebSocket;
@@ -86,6 +93,8 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var bufferSize = Settings.BufferSize;
+        var maxMessageSize = Settings.MaxMessageSize;
+        var overflowBuffer = new byte[1];
         using var commonCts = cancellationToken.LinkWith(StopToken);
         // ReSharper disable once UseAwaitUsing
         using var commonTokenRegistration = commonCts.Token.Register(
@@ -98,9 +107,18 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
 
         try {
             while (true) {
-                var requestedCapacity = Math.Max(bufferSize, buffer.FreeCapacity);
-                var readMemory = buffer.GetMemory(requestedCapacity);
-                var arraySegment = new ArraySegment<byte>(buffer.Array, buffer.WrittenCount, readMemory.Length);
+                var remainingCapacity = maxMessageSize - buffer.WrittenCount;
+                var isOverflowProbe = remainingCapacity == 0;
+                ArraySegment<byte> arraySegment;
+                if (isOverflowProbe)
+                    arraySegment = new ArraySegment<byte>(overflowBuffer);
+                else {
+                    var requestedCapacity = Math.Min(
+                        Math.Max(bufferSize, buffer.FreeCapacity),
+                        remainingCapacity);
+                    _ = buffer.GetMemory(requestedCapacity);
+                    arraySegment = new ArraySegment<byte>(buffer.Array, buffer.WrittenCount, requestedCapacity);
+                }
                 WebSocketReceiveResult r;
                 try {
                     r = await WebSocket.ReceiveAsync(arraySegment, CancellationToken.None).ConfigureAwait(false);
@@ -130,6 +148,11 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
                 if (r.MessageType != MessageType)
                     throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
 
+                if (isOverflowProbe && r.Count != 0) {
+                    Meters.IncomingFrameSizeHistogram.Record(r.Count);
+                    await CloseMessageTooLarge().ConfigureAwait(false);
+                    yield break;
+                }
                 buffer.Advance(r.Count);
                 Meters.IncomingFrameSizeHistogram.Record(r.Count);
                 if (!r.EndOfMessage)
@@ -151,6 +174,21 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
         finally {
             buffer.Dispose();
             _ = DisposeAsync();
+        }
+    }
+
+    private async Task CloseMessageTooLarge()
+    {
+        if (WebSocket.State is WebSocketState.Closed or WebSocketState.Aborted)
+            return;
+
+        try {
+            await WebSocket.CloseAsync(WebSocketCloseStatus.MessageTooBig, "Message too large.", default)
+                .WaitAsync(Settings.CloseTimeout, CancellationToken.None)
+                .SilentAwait(false);
+        }
+        catch {
+            // Intended
         }
     }
 

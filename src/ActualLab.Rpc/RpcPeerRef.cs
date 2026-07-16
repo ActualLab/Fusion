@@ -123,11 +123,11 @@ public partial class RpcPeerRef : IEquatable<RpcPeerRef>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(RpcPeerRef? left, RpcPeerRef? right)
-        => left is not null && left.Equals(right);
+        => ReferenceEquals(left, right) || left is not null && left.Equals(right);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator !=(RpcPeerRef? left, RpcPeerRef? right)
-        => !(left is not null && left.Equals(right));
+        => !(left == right);
 
 #pragma warning restore MA0001
 

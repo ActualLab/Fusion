@@ -14,13 +14,29 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
 {
     private static readonly byte Delimiter = (byte)'\n';
 
+    public const int MaxMethodRefSize = RpcMethodRef.MaxUtf8NameLength;
+    public const int MaxHeaderCount = 31;
+    public const int MaxHeaderKeySize = byte.MaxValue;
+    public const int MaxHeaderValueSize = RpcByteMessageSerializer.MaxHeaderSize;
+    public const int MaxJsonEncodedByteExpansion = 6;
+    public const int MaxEnvelopeSyntaxSize = 259;
+    public const int MaxEnvelopeSize = MaxEnvelopeSyntaxSize
+        + MaxJsonEncodedByteExpansion
+        * (MaxMethodRefSize + MaxHeaderCount * (MaxHeaderKeySize + MaxHeaderValueSize));
+
     public int MaxArgumentDataSize { get; init; } = Defaults.MaxArgumentDataSize;
+
+    public static int GetMaxMessageSize(int maxArgumentDataSize)
+        => checked(MaxEnvelopeSize + 1 + maxArgumentDataSize);
 
     public override RpcInboundMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
 
         var reader = new Utf8JsonReader(data.Span);
         var m = (JsonRpcMessage)JsonSerializer.Deserialize(ref reader, typeof(JsonRpcMessage), JsonRpcMessageContext.Default)!;
+        if (reader.BytesConsumed > MaxEnvelopeSize)
+            throw Errors.SizeLimitExceeded();
+        ValidateEnvelope(m);
         var methodRef = ServerMethodResolver[m.Method ?? ""]?.Ref ?? new RpcMethodRef(m.Method ?? "");
 
         var tail = data.Slice((int)reader.BytesConsumed).Span;
@@ -41,10 +57,18 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
 
     public override void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
     {
+        var envelope = new JsonRpcMessage(message);
+        ValidateEnvelope(envelope);
+        var messageStartOffset = buffer.WrittenCount;
+
         // ArrayPoolBuffer<byte> implements IBufferWriter<byte>
         var writer = new Utf8JsonWriter(buffer);
-        JsonSerializer.Serialize(writer, new JsonRpcMessage(message), typeof(JsonRpcMessage), JsonRpcMessageContext.Default);
+        JsonSerializer.Serialize(writer, envelope, typeof(JsonRpcMessage), JsonRpcMessageContext.Default);
         writer.Flush();
+        if (buffer.WrittenCount - messageStartOffset > MaxEnvelopeSize) {
+            buffer.Position = messageStartOffset;
+            throw Errors.SizeLimitExceeded();
+        }
 
         // Write delimiter + arguments (zero-copy into the provided buffer)
         var startOffset = buffer.WrittenCount;
@@ -74,6 +98,23 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
                 buffer.Position = startOffset;
                 throw Errors.SizeLimitExceeded();
             }
+        }
+    }
+
+    private static void ValidateEnvelope(JsonRpcMessage message)
+    {
+        if (EncodingExt.Utf8NoBom.GetByteCount(message.Method ?? "") > MaxMethodRefSize)
+            throw Errors.SizeLimitExceeded();
+
+        var headers = message.Headers;
+        if (headers is null)
+            return;
+        if ((headers.Count & 1) != 0 || headers.Count > 2 * MaxHeaderCount)
+            throw Errors.SizeLimitExceeded();
+        for (var i = 0; i < headers.Count; i += 2) {
+            if (EncodingExt.Utf8NoBom.GetByteCount(headers[i]) > MaxHeaderKeySize
+                || EncodingExt.Utf8NoBom.GetByteCount(headers[i + 1]) > MaxHeaderValueSize)
+                throw Errors.SizeLimitExceeded();
         }
     }
 }

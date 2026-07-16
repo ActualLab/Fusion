@@ -1263,37 +1263,43 @@ Status: **open**. Confidence: **Confirmed by source**.
 
 ### Audit coverage
 
-All production C# files in `ActualLab.Rpc`, `ActualLab.Rpc.Server`, and `ActualLab.Rpc.Server.NetFx` were inspected. Eleven runtime/API gaps are represented by twelve focused correct-contract test cases; WebSocket size and legacy-server lifecycle findings remain source-confirmed.
+All production C# files in `ActualLab.Rpc`, `ActualLab.Rpc.Server`, and `ActualLab.Rpc.Server.NetFx` were inspected. Eleven runtime/API gaps are represented by focused correct-contract test cases; the legacy-server lifecycle findings remain source-confirmed.
 
 ### RPC1. An arbitrary RPC method is dispatched before the handshake is validated
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and end-to-end regression test**.
+Status: **completed**. Confidence: **Confirmed by source and end-to-end regression test**.
 
 - Source: `src/ActualLab.Rpc/RpcPeer.cs:306-324` sends the local handshake, then passes the first inbound message to `ProcessMessage` before casting the result to the handshake call. `RpcInboundCall.Process` at `Calls/RpcInboundCall.cs:89-142` deserializes and invokes the resolved method synchronously.
 - Failure: a peer can make any registered ordinary method its first message; the handler runs before the cast fails and the connection is rejected.
 - Test: `RpcHandshakeAuditTest.FirstNonHandshakeMessageMustNotBeDispatched` sends a state-mutating method first and observes the mutation.
 - **Maintainer decision:** implement the recommended handshake-only first-message path.
 - **Recommended:** resolve and validate the exact system-handshake method/call shape before ordinary dispatch, and deserialize it through a handshake-only path.
+- **Resolution:** the first inbound message now passes an exact handshake method, call-type, related-ID, and resolved-method check before its call is processed. Ordinary dispatch remains unavailable until this handshake-only path has produced an `RpcHandshake`.
+- **Validation:** `FirstNonHandshakeMessageMustNotBeDispatched` failed by observing the state mutation before the fix and now passes without invoking the ordinary method.
 
 ### RPC2. Frontend peers can invoke backend-only RPC services
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and end-to-end authorization regression test**.
+Status: **completed**. Confidence: **Confirmed by source and end-to-end authorization regression test**.
 
 - Source: `RpcServiceRegistry.cs:41-57` builds one server resolver containing all server methods; `RpcInboundContext.cs:36-61` resolves inbound references against it. No inbound check compares `context.Peer.Ref.IsBackend` with `MethodDef.IsBackend`.
 - Failure: a connection on the public frontend path can dispatch an `IBackendService`, bypassing `ExposeBackend`/`BackendRequestPath` isolation and the documented guarantee that backend services are not public RPC endpoints.
 - Test: `RpcHandshakeAuditTest.FrontendPeerMustNotDispatchBackendMethod` invokes a backend service through a frontend peer and increments its call counter.
 - **Maintainer decision:** implement the recommended frontend/backend dispatch isolation.
 - **Recommended:** use separate frontend/backend resolvers or reject backend method definitions before deserialization/invocation on non-backend peers.
+- **Resolution:** `RpcInboundContext` now maps backend method definitions to the existing not-found call before argument deserialization whenever the receiving peer is not a backend peer.
+- **Validation:** `FrontendPeerMustNotDispatchBackendMethod` failed with one backend invocation before the fix and now passes with zero invocations.
 
 ### RPC3. Received handshake protocol versions are never validated
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and handshake regression test**.
+Status: **completed**. Confidence: **Confirmed by source and handshake regression test**.
 
 - Source: `RpcHandshake.CurrentProtocolVersion` is written by `RpcPeer`, but no receive path compares the remote value.
 - Failure: an unsupported/incompatible peer is marked connected and fails later in less diagnosable ways.
 - Test: `UnsupportedHandshakeProtocolVersionMustBeRejected` completes a version-mismatched handshake without an error.
 - **Maintainer decision:** add separate minimum-supported and current protocol-version constants, initially both version 2, and accept only the inclusive range between them before publishing the peer as connected.
 - **Recommended:** reject unsupported versions during the handshake before publishing a connected state.
+- **Resolution:** `RpcHandshake` now exposes distinct minimum and current protocol-version constants, both initially version 2, and `RpcPeer` rejects values outside their inclusive range before normalizing handshake metadata or publishing a connected state.
+- **Validation:** `UnsupportedHandshakeProtocolVersionMustBeRejected` accepted `int.MaxValue` before the fix and now observes the handshake error; the surrounding 71-case in-memory RPC suite passes.
 
 ### RPC4. Frame-transport enqueue failures never reach the send handler
 
@@ -1321,11 +1327,13 @@ Status: **completed**. Confidence: **Confirmed by source and bounded-channel reg
 
 ### RPC6. `RpcPeerRef` null equality operators violate the equality contract
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and API regression test**.
+Status: **completed**. Confidence: **Confirmed by source and API regression test**.
 
 - Source: `RpcPeerRef.cs:125-130` makes `null == null` false and `null != null` true.
 - **Maintainer decision:** implement the recommended standard null/equality pattern.
 - **Recommended:** implement the standard reference/null operator pattern before delegating to value equality.
+- **Resolution:** equality now handles reference equality first, including two null operands, and inequality delegates to equality's inverse.
+- **Validation:** `RpcPeerRefNullOperatorsFollowEqualityContract` failed on `null == null` before the fix and now passes across null, same-instance, and one-null cases.
 
 ### RPC7. `RequireBackend` is inverted
 
@@ -1391,12 +1399,14 @@ Status: **completed**. Confidence: **Confirmed by source and focused behavior te
 
 ### RPC12. Fragmented WebSocket messages can force unbounded allocation
 
-Status: **approved — pending implementation and boundary tests**. Confidence: **Confirmed by source; adversarial transport test needed**.
+Status: **completed**. Confidence: **Confirmed by source and adversarial transport tests**.
 
 - Source: `RpcWebSocketTransport.cs:96-149` grows an `ArrayPoolBuffer` for every fragment until `EndOfMessage`; unlike pipe/stream transports, no inbound maximum frame size is enforced. `MaxBufferSize` controls retained capacity, not accepted message size.
 - Failure: a remote peer can stream an arbitrarily large fragmented message and exhaust process memory.
 - **Maintainer decision:** add a configurable complete-message limit derived from the maximum serialized RPC message: slightly above the maximum argument-data size, with the exact envelope/serializer margin established from supported serializers. Enforce the limit across fragments before buffer growth, close violations with the appropriate message-too-large status, and cover fragmented overflow, the exact boundary, and a valid maximum payload plus serialization overhead. Do not reuse the retained-capacity `MaxBufferSize` or unrelated outbound limits.
 - **Recommended:** configure and enforce a hard inbound message limit while accumulating fragments, closing the socket with an appropriate status on violation.
+- **Resolution:** WebSocket options now expose an independent `MaxMessageSize` whose default is derived from the larger supported serializer argument limit plus the text serializer's exact worst-case canonical JSON envelope bound. Text envelopes now align with binary-valid method/header bounds; the receive loop caps every read to remaining capacity, uses a one-byte overflow probe instead of growing at the boundary, and closes overflow with WebSocket status 1009 (`MessageTooBig`).
+- **Validation:** the three adversarial regressions cover a fragmented crossing and 1009 close, a fragmented message ending at the exact limit, and the exact worst canonical text envelope plus a custom serializer's maximum configured argument payload. All pass together with the existing WebSocket receive-cancellation test; the nine-target `ActualLab.Rpc` build passes. The full WebSocket integration class could not start in this sandbox because Windows denied its Event Log writer, independently of transport execution.
 
 ### RPC13. The .NET Framework server resolves the peer reference twice
 

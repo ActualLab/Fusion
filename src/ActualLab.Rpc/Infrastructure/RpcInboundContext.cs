@@ -44,6 +44,14 @@ public sealed class RpcInboundContext
             };
             return;
         }
+        if (!Peer.Ref.IsBackend && MethodDef.IsBackend) {
+            MethodDef = Peer.Hub.SystemCallSender.NotFoundMethodDef;
+            var (service, method) = message.MethodRef.GetServiceAndMethodName();
+            Call = new RpcInboundNotFoundCall<Unit>(this) {
+                Arguments = ArgumentList.New(service, method)
+            };
+            return;
+        }
 
         // The method's required call type is always built; downgrade is signaled via Message.CallTypeId.
         // Currently the only supported downgrade is "Compute method invoked as Regular call".
