@@ -149,7 +149,7 @@ public struct InvalidatedHandlerSet
         }
     }
 
-    private static void LogHandlerError(Computed computed, Exception error)
+    public static void LogHandlerError(Computed computed, Exception error)
     {
         try {
             computed.Input.Function.Services.LogFor(computed.GetType())
