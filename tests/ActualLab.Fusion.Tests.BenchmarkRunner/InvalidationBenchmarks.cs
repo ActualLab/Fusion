@@ -71,6 +71,44 @@ public class InvalidationCascadeBenchmarks : FusionBenchmarkBase
     }
 }
 
+[MemoryDiagnoser, WarmupCount(8), IterationCount(10)]
+public class DirectInvalidationCascadeBenchmarks
+{
+    private const int TreeCount = 1024;
+
+    private Computed[] _roots = [];
+
+    public static IEnumerable<TreeShape> TreeShapes => InvalidationCascadeBenchmarks.TreeShapes;
+
+    [ParamsSource(nameof(TreeShapes))]
+    public TreeShape Shape { get; set; } = null!;
+
+    [IterationSetup]
+    public void Prepare()
+    {
+        _roots = new Computed[TreeCount];
+        for (var treeIndex = 0; treeIndex < _roots.Length; treeIndex++) {
+            var nodes = new Computed[Shape.NodeCount];
+            nodes[0] = Computed.New(_ => TaskExt.UnitTask).Update().AssertCompleted().Result;
+            for (var nodeIndex = 1; nodeIndex < nodes.Length; nodeIndex++) {
+                var parent = nodes[(nodeIndex - 1) / Shape.BranchingFactor];
+                nodes[nodeIndex] = Computed.New(async ct => {
+                    await parent.UseUntyped(ct).ConfigureAwait(false);
+                    return default(Unit);
+                }).Update().AssertCompleted().Result;
+            }
+            _roots[treeIndex] = nodes[0];
+        }
+    }
+
+    [Benchmark(OperationsPerInvoke = TreeCount)]
+    public void InvalidateRoot()
+    {
+        foreach (var root in _roots)
+            root.Invalidate(immediately: true, InvalidationSource.Unknown);
+    }
+}
+
 public sealed record TreeShape(int BranchingFactor, int NodeCount)
 {
     public static TreeShape New(int branchingFactor)

@@ -275,6 +275,16 @@ origin-only propagation can collapse the public source to the origin.
 
 Expected cascade improvement: **8-20%**, with negligible raw-invalidation impact.
 
+Status: **Closed — retained with a smaller implementation.**
+
+Remarks: instead of adding parent/source plumbing, `RemoveDependant` now checks the
+monotonic invalidated state before taking the already-invalidated parent's monitor
+and retains the locked recheck for stale or concurrent reads. For K=4/N=85, the
+7.970 us baseline improved to 7.581, 7.373, and 7.729 us across repeated runs, or
+3.0-7.5%; K=2 improved by 16.1-26.6%. The direct cascade benchmark allocates 0 B.
+A 100-round concurrent two-parent/shared-dependant test verifies that every graph
+edge is cleared.
+
 ## AsyncLock
 
 ### Benchmark shapes

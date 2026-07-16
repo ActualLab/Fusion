@@ -142,6 +142,35 @@ public class FusionStateContractAuditTest
     }
 
     [Fact]
+    public async Task ConcurrentDependencyInvalidationCleansEveryGraphEdge()
+    {
+        for (var i = 0; i < 100; i++) {
+            var left = await Computed.New(_ => Task.FromResult(1)).Update();
+            var right = await Computed.New(_ => Task.FromResult(2)).Update();
+            var dependant = await Computed.New(async ct => {
+                var leftValue = await left.Use(ct);
+                var rightValue = await right.Use(ct);
+                return leftValue + rightValue;
+            }).Update();
+
+            ComputedImpl.GetDependants(left).Should().ContainSingle();
+            ComputedImpl.GetDependants(right).Should().ContainSingle();
+            ComputedImpl.GetDependencies(dependant).Should().HaveCount(2);
+
+            await Task.WhenAll(
+                Task.Run(() => left.Invalidate(immediately: true)),
+                Task.Run(() => right.Invalidate(immediately: true)));
+
+            left.ConsistencyState.Should().Be(ConsistencyState.Invalidated);
+            right.ConsistencyState.Should().Be(ConsistencyState.Invalidated);
+            dependant.ConsistencyState.Should().Be(ConsistencyState.Invalidated);
+            ComputedImpl.GetDependants(left).Should().BeEmpty();
+            ComputedImpl.GetDependants(right).Should().BeEmpty();
+            ComputedImpl.GetDependencies(dependant).Should().BeEmpty();
+        }
+    }
+
+    [Fact]
     public void RemoteCacheBuilderCompletesWiringForPreRegisteredImplementation()
     {
         var services = new ServiceCollection();

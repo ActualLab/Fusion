@@ -502,6 +502,9 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
     protected internal void RemoveDependant(Computed usedBy)
     {
+        if (ConsistencyState == ConsistencyState.Invalidated)
+            return;
+
         lock (Lock) {
             if (ConsistencyState == ConsistencyState.Invalidated)
                 // _usedBy is already empty or going to be empty soon;
