@@ -63,6 +63,9 @@ public class FusionWebAuditRegressionTest
         var extractor = HttpContextExtractors.Subdomain(".example.com");
 
         extractor(context).Should().BeEmpty();
+        context.Request.Host = new HostString("tenant.example.com");
+        extractor(context).Should().Be("tenant");
+        HttpContextExtractors.Subdomain()(context).Should().Be("tenant");
     }
 
     private static DefaultHttpContext NewHttpContext(IServiceProvider services, string cookie)

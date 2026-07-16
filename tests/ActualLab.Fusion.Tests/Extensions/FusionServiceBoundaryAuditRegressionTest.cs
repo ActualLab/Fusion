@@ -1,4 +1,5 @@
 #if !NETFRAMEWORK
+using System.Globalization;
 using ActualLab.Fusion.Extensions.Services;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Endpoints;
@@ -12,14 +13,22 @@ public class FusionServiceBoundaryAuditRegressionTest
     [Fact]
     public void SandboxedStoreShouldRejectKeysFromUsersWithLongerMatchingIds()
     {
+        var settings = new SandboxedKeyValueStore<Unit>.Options();
+        var sessionPrefix = string.Format(
+            CultureInfo.InvariantCulture, settings.SessionKeyPrefixFormat, "session-id");
+        var userPrefix = string.Format(CultureInfo.InvariantCulture, settings.UserKeyPrefixFormat, "12");
         var keyChecker = new SandboxedKeyValueStore<Unit>.KeyChecker {
-            Prefix = "@session/session-id",
-            SecondaryPrefix = "@user/12",
+            Prefix = sessionPrefix,
+            SecondaryPrefix = userPrefix,
         };
 
         var action = () => keyChecker.CheckKey("@user/123/private");
 
         action.Should().Throw<InvalidOperationException>();
+        keyChecker.Invoking(x => x.CheckKey(userPrefix)).Should().NotThrow();
+        keyChecker.Invoking(x => x.CheckKey(userPrefix + "/private")).Should().NotThrow();
+        keyChecker.Invoking(x => x.CheckKey(sessionPrefix)).Should().NotThrow();
+        keyChecker.Invoking(x => x.CheckKey(sessionPrefix + "/private")).Should().NotThrow();
     }
 
     [Fact]

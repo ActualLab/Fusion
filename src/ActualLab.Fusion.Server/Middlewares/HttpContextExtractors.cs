@@ -48,7 +48,14 @@ public static class HttpContextExtractors
     public static Func<HttpContext, string> Subdomain(string subdomainSuffix = ".")
         => httpContext => {
             var host = httpContext.Request.Host.Host;
-            var suffixIndex = host.IndexOf(subdomainSuffix, StringComparison.Ordinal);
+            if (string.Equals(subdomainSuffix, ".", StringComparison.Ordinal)) {
+                var firstDotIndex = host.IndexOf('.', StringComparison.Ordinal);
+                return firstDotIndex <= 0 ? "" : host[..firstDotIndex];
+            }
+            if (!host.EndsWith(subdomainSuffix, StringComparison.Ordinal))
+                return "";
+
+            var suffixIndex = host.Length - subdomainSuffix.Length;
             return suffixIndex <= 0 ? "" : host[..suffixIndex];
         };
 

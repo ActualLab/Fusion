@@ -33,14 +33,19 @@ public class DbKeyValueStore<TDbContext,
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false); // Just to speed up things a bit
 
-        var keys = items.Select(i => i.Key).ToList();
+        var itemMap = new Dictionary<string, (string Key, string Value, Moment? ExpiresAt)>(
+            items.Length, StringComparer.Ordinal);
+        foreach (var item in items)
+            itemMap[item.Key] = item;
+
+        var keys = itemMap.Keys.ToList();
         var dbKeyValues = await dbContext.Set<TDbKeyValue>().AsQueryable()
 #pragma warning disable CA1307, CA1309 // string.Equals is ok in LINQ query
             .Where(e => keys.Any(k => k.Equals(e.Key)))
 #pragma warning restore CA1307, CA1309
             .ToDictionaryAsync(e => e.Key, cancellationToken)
             .ConfigureAwait(false);
-        foreach (var item in items) {
+        foreach (var item in itemMap.Values) {
             var dbKeyValue = dbKeyValues.GetValueOrDefault(item.Key);
             if (dbKeyValue is null) {
                 dbKeyValue = CreateDbKeyValue(item.Key, item.Value, item.ExpiresAt);
@@ -103,9 +108,11 @@ public class DbKeyValueStore<TDbContext,
 
         var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
+        var now = Clocks.SystemClock.Now.ToDateTime();
 
         var count = await dbContext.Set<TDbKeyValue>().AsQueryable()
-            .CountAsync(e => e.Key.StartsWith(prefix), cancellationToken)
+            .CountAsync(e => e.Key.StartsWith(prefix)
+                && (!e.ExpiresAt.HasValue || e.ExpiresAt >= now), cancellationToken)
             .ConfigureAwait(false);
         return count;
     }
@@ -121,9 +128,11 @@ public class DbKeyValueStore<TDbContext,
 
         var dbContext = await DbHub.CreateDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
+        var now = Clocks.SystemClock.Now.ToDateTime();
 
         var query = dbContext.Set<TDbKeyValue>().AsQueryable()
-            .Where(e => e.Key.StartsWith(prefix));
+            .Where(e => e.Key.StartsWith(prefix)
+                && (!e.ExpiresAt.HasValue || e.ExpiresAt >= now));
         query = query.OrderByAndTakePage(e => e.Key, pageRef, sortDirection);
         /*
         if (pager.After.IsSome(out var after)) {

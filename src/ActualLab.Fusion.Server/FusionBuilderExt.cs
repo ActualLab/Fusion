@@ -17,7 +17,7 @@ public static class FusionBuilderExt
     public static FusionWebServerBuilder AddWebServer(this FusionBuilder fusion, bool exposeBackend)
     {
         var webServer = new FusionWebServerBuilder(fusion, null);
-        fusion.Rpc.AddWebSocketServer(true);
+        fusion.Rpc.AddWebSocketServer(exposeBackend);
         return webServer;
     }
 

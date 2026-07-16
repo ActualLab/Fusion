@@ -18,9 +18,9 @@ public partial class SandboxedKeyValueStore<TContext>
 
         public virtual void CheckKeyPrefix(string keyPrefix)
         {
-            if (keyPrefix.StartsWith(Prefix, StringComparison.Ordinal))
+            if (MatchesPrefix(keyPrefix, Prefix))
                 return;
-            if (SecondaryPrefix is not null && keyPrefix.StartsWith(SecondaryPrefix, StringComparison.Ordinal))
+            if (SecondaryPrefix is not null && MatchesPrefix(keyPrefix, SecondaryPrefix))
                 return;
 
             throw Errors.KeyViolatesSandboxedKeyValueStoreConstraints();
@@ -31,7 +31,7 @@ public partial class SandboxedKeyValueStore<TContext>
 
         public virtual void CheckKey(string key, ref Moment? expiresAt)
         {
-            if (key.StartsWith(Prefix, StringComparison.Ordinal)) {
+            if (MatchesPrefix(key, Prefix)) {
                 if (!ExpirationTime.HasValue)
                     return;
                 var maxExpiresAt = Clock.Now + ExpirationTime.GetValueOrDefault();
@@ -40,7 +40,7 @@ public partial class SandboxedKeyValueStore<TContext>
                     : maxExpiresAt;
                 return;
             }
-            if (SecondaryPrefix is not null && key.StartsWith(SecondaryPrefix, StringComparison.Ordinal)) {
+            if (SecondaryPrefix is not null && MatchesPrefix(key, SecondaryPrefix)) {
                 if (!SecondaryExpirationTime.HasValue)
                     return;
                 var maxExpiresAt = Clock.Now + SecondaryExpirationTime.GetValueOrDefault();
@@ -50,6 +50,18 @@ public partial class SandboxedKeyValueStore<TContext>
                 return;
             }
             throw Errors.KeyViolatesSandboxedKeyValueStoreConstraints();
+        }
+
+        private static bool MatchesPrefix(string key, string prefix)
+        {
+            if (!key.StartsWith(prefix, StringComparison.Ordinal))
+                return false;
+            if (prefix.Length == 0
+                || key.Length == prefix.Length
+                || prefix[prefix.Length - 1] == KeyValueStoreExt.Delimiter)
+                return true;
+
+            return key[prefix.Length] == KeyValueStoreExt.Delimiter;
         }
     }
 }

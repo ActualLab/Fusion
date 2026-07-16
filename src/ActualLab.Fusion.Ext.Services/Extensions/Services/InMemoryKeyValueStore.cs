@@ -85,9 +85,11 @@ public class InMemoryKeyValueStore(
         // O(Store.Count) cost - definitely not for prod,
         // but fine for client-side use cases & testing.
         _ = PseudoGet(shard, prefix);
-        var count = Store.Keys
-            .Count(k => string.Equals(k.Shard, shard, StringComparison.Ordinal)
-                && k.Key.StartsWith(prefix, StringComparison.Ordinal));
+        var now = Clock.Now;
+        var count = Store
+            .Count(p => string.Equals(p.Key.Shard, shard, StringComparison.Ordinal)
+                && p.Key.Key.StartsWith(prefix, StringComparison.Ordinal)
+                && (!p.Value.ExpiresAt.HasValue || p.Value.ExpiresAt.GetValueOrDefault() >= now));
         return Task.FromResult(count);
     }
 
@@ -101,12 +103,14 @@ public class InMemoryKeyValueStore(
         // O(Store.Count) cost - definitely not for prod,
         // but fine for client-side use cases & testing.
         _ = PseudoGet(shard, prefix);
-        var query = Store.Keys
-            .Where(k => string.Equals(k.Shard, shard, StringComparison.Ordinal)
-                && k.Key.StartsWith(prefix, StringComparison.Ordinal));
-        query = query.OrderByAndTakePage(k => k.Key, pageRef, sortDirection);
+        var now = Clock.Now;
+        var query = Store
+            .Where(p => string.Equals(p.Key.Shard, shard, StringComparison.Ordinal)
+                && p.Key.Key.StartsWith(prefix, StringComparison.Ordinal)
+                && (!p.Value.ExpiresAt.HasValue || p.Value.ExpiresAt.GetValueOrDefault() >= now));
+        query = query.OrderByAndTakePage(p => p.Key.Key, pageRef, sortDirection);
         var result = query
-            .Select(k => k.Key.Substring(prefix.Length))
+            .Select(p => p.Key.Key.Substring(prefix.Length))
             .ToArray();
         return Task.FromResult(result);
     }

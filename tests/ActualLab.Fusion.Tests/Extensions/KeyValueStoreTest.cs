@@ -122,12 +122,27 @@ public abstract class KeyValueStoreTestBase : FusionTestBase
         var clock = (TestClock)Services.Clocks().SystemClock;
         var shard = DbShard.Single;
 
-        await kvs.Set(shard, "expired", "value", clock.Now + TimeSpan.FromSeconds(5));
+        await kvs.Set(shard, "expiry/a", "expired", clock.Now + TimeSpan.FromSeconds(5));
+        await kvs.Set(shard, "expiry/b", "visible");
         clock.Settings = new TestClockSettings(TimeSpan.FromSeconds(6));
         ComputedRegistry.InvalidateEverything();
 
-        (await kvs.Get(shard, "expired")).Should().BeNull();
-        (await kvs.Count(shard, "expired")).Should().Be(0);
-        (await kvs.ListKeySuffixes(shard, "expired", 10)).Should().BeEmpty();
+        (await kvs.Get(shard, "expiry/a")).Should().BeNull();
+        (await kvs.Count(shard, "expiry/")).Should().Be(1);
+        (await kvs.ListKeySuffixes(shard, "expiry/", 1)).Should().Equal("b");
+    }
+
+    [Fact]
+    public async Task DuplicateNewKeysShouldUseTheLastValue()
+    {
+        var kvs = Services.GetRequiredService<IKeyValueStore>();
+        var shard = DbShard.Single;
+
+        await kvs.Set(shard, [
+            ("duplicate", "first", default),
+            ("duplicate", "last", default),
+        ]);
+
+        (await kvs.Get(shard, "duplicate")).Should().Be("last");
     }
 }

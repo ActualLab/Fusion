@@ -644,43 +644,47 @@ Confidence: **Confirmed** by source and focused middleware regression test.
 
 ### FUS11. The subdomain extractor accepts a configured suffix in the middle of an unrelated host
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and focused host regression test.
 
 - Source: `src/ActualLab.Fusion.Server/Middlewares/HttpContextExtractors.cs:48-53` uses the first `IndexOf(subdomainSuffix)` and returns the preceding text without verifying that the suffix reaches the end of the host.
 - Failure: `tenant.example.com.attacker.test` is accepted as subdomain `tenant` for suffix `.example.com`. If this extractor feeds session tags, shard selection, or tenant isolation, an attacker-controlled host can be classified as a trusted tenant host.
 - Test: `FusionWebAuditRegressionTest.SubdomainExtractorShouldRequireTheConfiguredSuffixAtTheEnd` expected no match and received `tenant`.
-- **Recommended:** require an ordinal suffix match at the host boundary and slice from `host.Length - suffix.Length`; separately preserve the default `"."` behavior if first-label extraction is intended.
+- **Resolution:** configured suffixes now require an ordinal end-of-host match and are sliced from the verified boundary; the default `"."` mode retains first-label extraction.
+- **Validation:** the focused regression rejects the attacker-controlled trailing host, accepts a legitimate configured-suffix host, and preserves default first-label extraction.
 
 ### FUS12. Expired key-value entries remain visible to `Count` and `ListKeySuffixes`
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** in both in-memory and database implementations by a shared regression test.
 
 - Source: `src/ActualLab.Fusion.Ext.Services/Extensions/Services/InMemoryKeyValueStore.cs:83-113` enumerates dictionary keys without inspecting `ExpiresAt`. `DbKeyValueStore.cs:100-140` filters only by prefix, while its `Get` path at lines 86-97 correctly treats expired values as absent.
 - Failure: the same expired key is absent from `Get` but counted and listed until a background cleanup physically removes it. Callers observe mutually inconsistent views, and pagination slots can be consumed by invisible entries.
 - Test: `KeyValueStoreTestBase.ExpiredItemsShouldNotAppearInQueries` advances the test clock beyond expiry; both derived implementations return `Count == 1` after `Get` has returned null.
-- **Recommended:** apply the same `ExpiresAt is null || ExpiresAt >= now` predicate to count/list queries and filter in-memory items by their stored metadata. Cleanup remains an optimization, not a semantic requirement.
+- **Resolution:** both providers now filter expired entries before counting, ordering, and paging, using the same expiry boundary as `Get`; physical cleanup remains an optimization.
+- **Validation:** the shared provider regression advances the clock, confirms the expired value is absent, and verifies that a one-item page still returns the live entry; it passes for both in-memory and database stores.
 
 ### FUS13. Sandboxed key prefixes are vulnerable to prefix confusion
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused isolation regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused isolation regression test**.
 
 - Source: `SandboxedKeyValueStore.KeyChecker.cs:19-24,34,43` authorizes raw ordinal `StartsWith`; default prefixes in `SandboxedKeyValueStore.cs:24-27` have no terminating delimiter.
 - Failure: user ID `12` is authorized for `@user/123/private`, escaping into the namespace of a longer matching ID. The same class of collision applies to session IDs/configured prefix formats.
 - Test: `FusionServiceBoundaryAuditRegressionTest.SandboxedStoreShouldRejectKeysFromUsersWithLongerMatchingIds` observes no rejection.
-- **Recommended:** format authorization roots with an unambiguous delimiter and require either exact root equality or `root + delimiter` prefix matching.
+- **Resolution:** `KeyChecker` now treats the formatted session and user prefixes as authorization roots and accepts only the exact root or a delimiter-separated descendant, preserving the public default formats.
+- **Validation:** the focused regression derives both roots from the default formats, rejects `@user/123/private` for user `12`, and retains exact-root and child access for both scopes.
 
 ### FUS14. `AddWebServer(false)` still exposes the backend WebSocket endpoint
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and registration regression test**.
+Status: **completed**. Confidence: **Confirmed by source and registration regression test**.
 
 - Source: `src/ActualLab.Fusion.Server/FusionBuilderExt.cs:17-21` always calls `fusion.Rpc.AddWebSocketServer(true)` instead of forwarding `exposeBackend`; the underlying RPC builder correctly honors its argument.
 - Failure: applications explicitly disabling backend exposure still register it.
 - Test: `FusionServiceBoundaryAuditRegressionTest.AddWebServerShouldHonorDisabledBackendExposure` resolves options with `ExposeBackend == true`.
-- **Recommended:** forward the caller's `exposeBackend` value.
+- **Resolution:** `AddWebServer(bool)` now forwards `exposeBackend` to `AddWebSocketServer`.
+- **Validation:** the focused service-registration regression passes with backend exposure disabled.
 
 ### FUS15. Render-mode switching accepts an external redirect target
 
@@ -701,11 +705,12 @@ Status: **approved — pending implementation**. Confidence: **Confirmed by sour
 
 ### FUS17. A database key-value batch with duplicate new keys creates duplicate entities
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source; provider regression test needed**.
+Status: **completed**. Confidence: **Confirmed by source and shared provider regression test**.
 
 - Source: `DbKeyValueStore.cs:36-54` loads existing keys once, then creates/adds a new entity for every absent item without adding it to the lookup.
 - Failure: duplicate new keys in one command generate duplicate primary-key inserts, while the in-memory provider uses last-write-wins semantics.
-- **Recommended:** coalesce the batch by key before querying/updating, with an explicitly documented first/last-wins rule.
+- **Resolution:** the database provider coalesces items into an ordinal key map before querying or attaching entities; later batch items replace earlier ones, matching the in-memory provider's last-write-wins behavior.
+- **Validation:** the shared provider regression writes a duplicate new key and observes the final value in both providers; before the fix, the database provider failed while attaching the second entity.
 
 ### FUS18. A malformed explicit session binding falls back to the ambient session
 
