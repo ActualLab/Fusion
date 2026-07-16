@@ -103,7 +103,7 @@ public abstract class State : ComputedInput, IState
 
     public object? LastNonErrorValue {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _snapshot!.LastNonErrorComputed;
+        get => _snapshot!.LastNonErrorComputed.Value;
     }
 
     public Exception? Error {

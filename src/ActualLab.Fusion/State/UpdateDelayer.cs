@@ -35,7 +35,7 @@ public sealed record UpdateDelayer(
             return; // This may only happen if MinDelay == 0 - e.g. for UpdateDelayer.ZeroUnsafe
 
         if (UIActionTracker is null) {
-            await Task.Delay(delay, cancellationToken).SilentAwait(false);
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             return;
         }
 

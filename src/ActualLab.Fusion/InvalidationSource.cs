@@ -115,7 +115,7 @@ public readonly struct InvalidationSource :
     public IEnumerator<InvalidationSource> GetEnumerator()
     {
         var source = this;
-        while (!IsNone) {
+        while (!source.IsNone) {
             yield return source;
             source = source.Source;
         }

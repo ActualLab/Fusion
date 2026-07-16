@@ -110,7 +110,12 @@ public struct InvalidatedHandlerSet
                 return;
 
             case Action<Computed> item:
-                item.Invoke(computed);
+                try {
+                    item.Invoke(computed);
+                }
+                catch (Exception e) {
+                    computed.LogInvalidatedHandlerError(e);
+                }
                 return;
 
             case Action<Computed>[] list:
@@ -118,13 +123,24 @@ public struct InvalidatedHandlerSet
                     if (ReferenceEquals(item, null))
                         return;
 
-                    item.Invoke(computed);
+                    try {
+                        item.Invoke(computed);
+                    }
+                    catch (Exception e) {
+                        computed.LogInvalidatedHandlerError(e);
+                    }
                 }
                 return;
 
             case HashSet<Action<Computed>> set:
-                foreach (var item in set)
-                    item.Invoke(computed);
+                foreach (var item in set) {
+                    try {
+                        item.Invoke(computed);
+                    }
+                    catch (Exception e) {
+                        computed.LogInvalidatedHandlerError(e);
+                    }
+                }
                 return;
 
             default:

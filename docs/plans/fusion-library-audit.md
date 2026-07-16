@@ -730,42 +730,48 @@ Status: **approved — pending implementation**. Confidence: **Confirmed by sour
 
 ### FUS20. Untyped `State.LastNonErrorValue` returns a `Computed`, not its value
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and contract regression test**.
+Status: **completed**. Confidence: **Confirmed by source and contract regression test**.
 
 - Source: `State/State.cs:104-107` returns `_snapshot.LastNonErrorComputed`; typed implementations return `.Value`.
 - Failure: casting the same state to `IState` changes the property from the payload to an implementation object.
-- **Recommended:** return `LastNonErrorComputed.Value`.
+- **Resolution:** the untyped property now returns `LastNonErrorComputed.Value`, matching the typed state contract.
+- **Validation:** the contract regression failed with a `StateBoundComputed<int>` and now returns the `int` payload; the surrounding state tests pass.
 
 ### FUS21. Nonempty `InvalidationSource` enumeration never terminates
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and bounded enumeration test**.
+Status: **completed**. Confidence: **Confirmed by source and bounded enumeration test**.
 
 - Source: `InvalidationSource.cs:115-121` tests constant `this.IsNone` instead of the advancing local `source.IsNone`.
 - Failure: every nonempty chain yields endless `None` values after its end.
-- **Recommended:** test the loop variable.
+- **Resolution:** enumeration now tests the advancing `source` local and stops when the chain reaches `None`.
+- **Validation:** the bounded single-entry regression failed by yielding a second item and now reports exactly one.
 
 ### FUS22. Tracker-free `UpdateDelayer` swallows cancellation
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and pre-cancellation regression test**.
+Status: **completed**. Confidence: **Confirmed by source and pre-cancellation regression test**.
 
 - Source: `State/UpdateDelayer.cs:36-39` uses `SilentAwait` and returns in the null-tracker branch, while the tracker branch propagates cancellation.
-- **Recommended:** await normally or explicitly rethrow caller cancellation after the silent wait.
+- **Resolution:** the tracker-free branch now awaits `Task.Delay` normally, preserving its cancellation result without adding another check or task wrapper.
+- **Validation:** the pre-cancellation regression failed without an exception and now propagates `OperationCanceledException`.
 
 ### FUS23. `ComputedSynchronizer.Synchronize` treats cancellation as timeout
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `ComputedSynchronizer.cs:100-102,116-118` silently awaits synchronization and returns the computed for any fault/cancellation.
 - Failure: caller cancellation is reported as a successful synchronization result.
-- **Recommended:** suppress only the intended timeout signal and propagate cancellation/faults.
+- **Resolution:** both overloads now await `WhenSynchronized` normally. The safe synchronizer's intended timeout remains a successful completion of its delay path, while cancellation and arbitrary faults retain their exceptional results.
+- **Validation:** focused cancellation and fault regressions both failed by returning a computed and now propagate their original exceptions through both synchronization overloads; all nine `ActualLab.Fusion` target frameworks build.
 
 ### FUS24. One throwing invalidation subscriber blocks and permanently retains later subscribers
 
-Status: **approved — pending maintainer review**. Confidence: **Confirmed by source and focused event regression test**.
+Status: **implemented — awaiting maintainer review**. Confidence: **Confirmed by source and focused event regression test**.
 
 - Source: `Computed.cs:300-305` invokes the compact handler set as one operation; a throw skips remaining callbacks and the subsequent `_invalidated = default`. Already-invalidated computeds refuse handler removal at lines 119-125.
 - Failure: infrastructure observers can miss invalidation, and the complete subscriber set remains retained.
-- **Recommended:** isolate/log each subscriber failure and clear the handler set in `finally`.
+- **Resolution:** `InvalidatedHandlerSet` now isolates and logs each subscriber failure inside its existing single, inline-array, and hash-set storage branches, allowing every later subscriber to run. `Computed.Invalidate` clears the complete handler set in `finally`, including exceptional lifecycle paths.
+- **Performance rationale:** the compact zero/one/many representation is unchanged. The non-throwing path adds only zero-cost exception regions around direct delegate calls: it performs no collection copy, wrapper-delegate creation, allocation, lock, or additional synchronization. Logger resolution and error formatting occur only after a subscriber throws.
+- **Validation:** the event regression failed after calls `{1, 2}` and now observes `{1, 2, 3}` plus empty retained storage. Dedicated tests exercise single-delegate, inline-array, and hash-set failure isolation, and repeated non-throwing invocations of all three representations report zero allocated bytes. The focused contract run passes 6/6 and the surrounding state/invalidation run passes 25/25.
 
 ### FUS25. A throwing `ComputedSource.Updated` subscriber breaks computation while the source lock is held
 

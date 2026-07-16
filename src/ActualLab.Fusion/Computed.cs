@@ -299,10 +299,14 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         // so we don't need a lock here.
         try {
             try {
-                // StaticLog.For<IComputed>().LogWarning("Invalidating: {Computed}", this);
-                OnInvalidated();
-                _invalidated.Invoke(this);
-                _invalidated = default;
+                try {
+                    // StaticLog.For<IComputed>().LogWarning("Invalidating: {Computed}", this);
+                    OnInvalidated();
+                    _invalidated.Invoke(this);
+                }
+                finally {
+                    _invalidated.Clear();
+                }
             }
             finally {
                 // Any code called here may not throw
@@ -447,6 +451,17 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         if (options.MinCacheDuration != default) {
             Volatile.Write(ref _lastKeepAliveSlot, 0);
             Timeouts.KeepAlive.Remove(this);
+        }
+    }
+
+    internal void LogInvalidatedHandlerError(Exception error)
+    {
+        try {
+            Input.Function.Services.LogFor(GetType())
+                .LogError(error, "Invalidated handler failed for {Category}", Input.Category);
+        }
+        catch {
+            // Intended: Invalidate doesn't throw!
         }
     }
 

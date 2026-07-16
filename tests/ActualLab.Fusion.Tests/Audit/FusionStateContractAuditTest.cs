@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace ActualLab.Fusion.Tests.Audit;
 
 public class FusionStateContractAuditTest
@@ -39,19 +41,44 @@ public class FusionStateContractAuditTest
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => synchronizer.Synchronize(computed, cancellationSource.Token).AsTask());
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => synchronizer.Synchronize(Task.FromResult<Computed>(computed), cancellationSource.Token));
+    }
+
+    [Fact]
+    public async Task SynchronizePropagatesFaults()
+    {
+        var computed = Computed.New(_ => Task.FromResult(1));
+        var synchronizer = new FaultingSynchronizer();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => synchronizer.Synchronize(computed, CancellationToken.None).AsTask());
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => synchronizer.Synchronize(Task.FromResult<Computed>(computed), CancellationToken.None));
     }
 
     [Fact]
     public async Task InvalidatingInvokesEverySubscriberWhenOneThrows()
     {
         var computed = await Computed.New(_ => Task.FromResult(1)).Update();
-        var callCount = 0;
-        computed.Invalidated += _ => throw new InvalidOperationException("failure");
-        computed.Invalidated += _ => callCount++;
+        var calls = new List<int>();
+        computed.Invalidated += _ => calls.Add(1);
+        computed.Invalidated += _ => {
+            calls.Add(2);
+            throw new InvalidOperationException("failure");
+        };
+        computed.Invalidated += _ => calls.Add(3);
 
         computed.Invalidate(immediately: true);
 
-        callCount.Should().Be(1);
+        calls.Should().Equal(1, 2, 3);
+        var handlerSet = typeof(Computed)
+            .GetField("_invalidated", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(computed)!;
+        handlerSet.GetType()
+            .GetField("_storage", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(handlerSet)
+            .Should().BeNull();
     }
 
     [Fact]
@@ -99,5 +126,17 @@ public class FusionStateContractAuditTest
 
         public override Task WhenSynchronized(Computed computed, CancellationToken cancellationToken)
             => Task.FromCanceled(cancellationToken);
+    }
+
+    private sealed class FaultingSynchronizer : ComputedSynchronizer
+    {
+        public override bool IsSynchronized(Client.IRemoteComputed computed)
+            => false;
+
+        public override Task WhenSynchronized(Client.IRemoteComputed computed, CancellationToken cancellationToken)
+            => Task.FromException(new InvalidOperationException("failure"));
+
+        public override Task WhenSynchronized(Computed computed, CancellationToken cancellationToken)
+            => Task.FromException(new InvalidOperationException("failure"));
     }
 }

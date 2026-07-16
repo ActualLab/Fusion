@@ -15,6 +15,50 @@ public class InvalidatedHandlerSetTest(ITestOutputHelper @out) : TestBase(@out)
                 RunTest(size, (iteration + 1.0) / iterationCount);
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    [InlineData(7)]
+    public async Task InvokeIsolatesHandlerFailures(int size)
+    {
+        var computed = await Computed.New(_ => Task.FromResult(1)).Update();
+        var calledIndexes = new HashSet<int>();
+        var actions = Enumerable.Range(0, size)
+            .Select<int, Action<Computed>>(index => _ => {
+                calledIndexes.Add(index);
+                if (index == 0)
+                    throw new InvalidOperationException("failure");
+            });
+        var handlerSet = new InvalidatedHandlerSet(actions);
+
+        handlerSet.Invoke(computed);
+
+        calledIndexes.Should().BeEquivalentTo(Enumerable.Range(0, size));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    [InlineData(7)]
+    public async Task InvokeDoesNotAllocate(int size)
+    {
+        var computed = await Computed.New(_ => Task.FromResult(1)).Update();
+        var actions = Enumerable.Range(0, size)
+            .Select<int, Action<Computed>>(index => _ => {
+                if (index < 0)
+                    throw new InvalidOperationException();
+            });
+        var handlerSet = new InvalidatedHandlerSet(actions);
+        handlerSet.Invoke(computed);
+
+        var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 100; i++)
+            handlerSet.Invoke(computed);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+
+        allocated.Should().Be(0);
+    }
+
     private void RunTest(int size, double removalProbability)
     {
         var usedIndexes = new HashSet<int>();
