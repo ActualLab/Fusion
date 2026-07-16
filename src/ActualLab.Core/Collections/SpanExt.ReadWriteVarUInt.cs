@@ -13,8 +13,28 @@ public static partial class SpanExt
     private const byte LowBits = 0x7F;
     private const byte HighBit = 0x80;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int WriteVarUInt32(this Span<byte> span, uint source, int offset = 0)
     {
+        if (source < 1u << 7) {
+            span[offset] = (byte)source;
+            return offset + 1;
+        }
+
+        span[offset++] = (byte)(HighBit | source);
+        source >>= 7;
+        if (source < 1u << 7) {
+            span[offset] = (byte)source;
+            return offset + 1;
+        }
+
+        span[offset++] = (byte)(HighBit | source);
+        source >>= 7;
+        if (source < 1u << 7) {
+            span[offset] = (byte)source;
+            return offset + 1;
+        }
+
         while (source >= HighBit) {
             span[offset++] = (byte)(HighBit | source);
             source >>= 7;
@@ -23,8 +43,28 @@ public static partial class SpanExt
         return offset;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int WriteVarUInt64(this Span<byte> span, ulong source, int offset = 0)
     {
+        if (source < 1ul << 7) {
+            span[offset] = (byte)source;
+            return offset + 1;
+        }
+
+        span[offset++] = (byte)(HighBit | source);
+        source >>= 7;
+        if (source < 1ul << 7) {
+            span[offset] = (byte)source;
+            return offset + 1;
+        }
+
+        span[offset++] = (byte)(HighBit | source);
+        source >>= 7;
+        if (source < 1ul << 7) {
+            span[offset] = (byte)source;
+            return offset + 1;
+        }
+
         while (source >= HighBit) {
             span[offset++] = (byte)(HighBit | source);
             source >>= 7;
