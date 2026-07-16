@@ -24,11 +24,6 @@
     <DefineConstants Condition="$(UseDynamicMethods)">$(DefineConstants);USE_DYNAMIC_METHODS</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <UseWeakReferenceSlim>false</UseWeakReferenceSlim>
-    <DefineConstants Condition="$(UseWeakReferenceSlim)">$(DefineConstants);USE_WEAK_REFERENCE_SLIM</DefineConstants>
-  </PropertyGroup>
-
   <!-- Suppressed warnings -->
   <PropertyGroup>
     <!-- [MA0009] Regular expressions should not be vulnerable to Denial of Service attacks -->

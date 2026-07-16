@@ -28,7 +28,7 @@ public static class RpcPeerRefExt
                 : throw Errors.ServerRpcPeerRefExpected(nameof(peerRef));
 
         public TPeerRef RequireBackend()
-            => !peerRef.IsBackend
+            => peerRef.IsBackend
                 ? peerRef
                 : throw Errors.BackendRpcPeerRefExpected(nameof(peerRef));
     }

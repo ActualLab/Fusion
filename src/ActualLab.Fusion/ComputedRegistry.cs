@@ -6,12 +6,7 @@ using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 using ActualLab.OS;
 using Errors = ActualLab.Fusion.Internal.Errors;
-#if USE_WEAK_REFERENCE_SLIM
-using WeakRefAlias = ActualLab.Internal.WeakReferenceSlim<ActualLab.Fusion.Computed>;
-#else
-using WeakRefAlias = System.WeakReference<ActualLab.Fusion.Computed>;
 using ActualLab.Internal;
-#endif
 
 namespace ActualLab.Fusion;
 
@@ -51,7 +46,7 @@ public sealed class ComputedRegistry
 #endif
     private static StochasticCounter _opCounter;
     // ReSharper disable once InconsistentNaming
-    private static readonly ConcurrentDictionary<ComputedInput, WeakRefAlias> _storage;
+    private static readonly ConcurrentDictionary<ComputedInput, WeakReference<Computed>> _storage;
     private static ComputedGraphPruner? _graphPruner;
     private static int _pruneOpCounterThreshold;
     private static Task? _pruneTask;
@@ -70,7 +65,7 @@ public sealed class ComputedRegistry
     {
         Metrics = new();
         _opCounter = new StochasticCounter(HardwareInfo.GetProcessorCountPo2Factor(4));
-        _storage = new ConcurrentDictionary<ComputedInput, WeakRefAlias>(
+        _storage = new ConcurrentDictionary<ComputedInput, WeakReference<Computed>>(
             Settings.ConcurrencyLevel,
             Settings.InitialCapacity,
             ComputedInput.EqualityComparer);
@@ -93,8 +88,7 @@ public sealed class ComputedRegistry
         if (weakRef.TryGetTarget(out var target))
             return target;
 
-        if (_storage.TryRemove(key, weakRef))
-            Free(weakRef);
+        _storage.TryRemove(key, weakRef);
         return null;
     }
 
@@ -115,39 +109,30 @@ public sealed class ComputedRegistry
         OnOperation(random);
 
         var spinWait = new SpinWait();
-        var newWeakRef = (WeakRefAlias?)null;
-        try {
-            while (computed.ConsistencyState != ConsistencyState.Invalidated) {
-                if (_storage.TryGetValue(key, out var weakRef)) {
-                    weakRef.TryGetTarget(out var target);
-                    if (ReferenceEquals(target, computed))
-                        return; // Already registered
+        var newWeakRef = (WeakReference<Computed>?)null;
+        while (computed.ConsistencyState != ConsistencyState.Invalidated) {
+            if (_storage.TryGetValue(key, out var weakRef)) {
+                weakRef.TryGetTarget(out var target);
+                if (ReferenceEquals(target, computed))
+                    return; // Already registered
 
-                    if (target is { ConsistencyState: not ConsistencyState.Invalidated })
-                        // This typically triggers Unregister - except for RemoteComputed.
-                        // This invalidation MUST stay synchronous: RemoteComputed call hand-off
-                        // relies on the displaced predecessor being invalidated (and thus consuming
-                        // the hand-off marker) before the successor's constructor returns - see
-                        // RemoteComputedExt.BindToCallFromOnInvalidated.
-                        target.Invalidate(immediately: true, InvalidationSource.ComputedRegistryRegister);
+                if (target is { ConsistencyState: not ConsistencyState.Invalidated })
+                    // This typically triggers Unregister - except for RemoteComputed.
+                    // This invalidation MUST stay synchronous: RemoteComputed call hand-off
+                    // relies on the displaced predecessor being invalidated (and thus consuming
+                    // the hand-off marker) before the successor's constructor returns - see
+                    // RemoteComputedExt.BindToCallFromOnInvalidated.
+                    target.Invalidate(immediately: true, InvalidationSource.ComputedRegistryRegister);
 
-                    if (_storage.TryRemove(key, weakRef))
-                        Free(weakRef);
-                }
-                else {
-                    newWeakRef ??= new WeakRefAlias(computed);
-                    if (_storage.TryAdd(key, newWeakRef)) {
-                        newWeakRef = null;
-                        return;
-                    }
-                }
-
-                spinWait.SpinOnce(); // Safe for WASM
+                _storage.TryRemove(key, weakRef);
             }
-        }
-        finally {
-            if (newWeakRef is not null)
-                Free(newWeakRef);
+            else {
+                newWeakRef ??= new WeakReference<Computed>(computed);
+                if (_storage.TryAdd(key, newWeakRef))
+                    return;
+            }
+
+            spinWait.SpinOnce(); // Safe for WASM
         }
     }
 
@@ -178,8 +163,7 @@ public sealed class ComputedRegistry
 
         // weakRef.Target is null (is gone, i.e. to be pruned)
         // or pointing to the right computed
-        if (_storage.TryRemove(key, weakRef))
-            Free(weakRef);
+        _storage.TryRemove(key, weakRef);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -254,10 +238,8 @@ public sealed class ComputedRegistry
             if (weakRef.TryGetTarget(out _))
                 continue; // Still alive
 
-            if (_storage.TryRemove(key, weakRef)) {
-                Free(weakRef);
+            if (_storage.TryRemove(key, weakRef))
                 prunedKeyCount++;
-            }
         }
 
         int keyCount;
@@ -291,15 +273,6 @@ public sealed class ComputedRegistry
         catch {
             // Intended: logging must not throw
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    // ReSharper disable once UnusedParameter.Local
-    private static void Free(WeakRefAlias weakRef)
-    {
-#if USE_WEAK_REFERENCE_SLIM
-        weakRef.Free();
-#endif
     }
 
     // Nested types

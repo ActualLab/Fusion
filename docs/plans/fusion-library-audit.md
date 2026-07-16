@@ -1325,21 +1325,32 @@ Status: **approved — pending implementation**. Confidence: **Confirmed by sour
 
 ### RPC7. `RequireBackend` is inverted
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and API regression test**.
+Status: **completed**. Confidence: **Confirmed by source and API regression test**.
 
 - Source: `RpcPeerRefExt.cs:30-33` returns non-backend references and throws `BackendRpcPeerRefExpected` for backend references.
 - **Maintainer decision:** implement the recommended condition correction.
 - **Recommended:** negate the current condition.
+- **Resolution:** `RequireBackend` now returns backend references and rejects frontend references.
+- **Validation:** `RequireBackendAcceptsOnlyBackendReferences` failed because the backend reference was rejected before
+  the correction and passes afterward.
 
 ### RPC8. `RpcCacheKey` caches a hash over caller-mutable bytes
 
-Status: **approved — pending documentation**. Confidence: **Confirmed by source and dictionary regression test**.
+Status: **completed — zero-copy contract documented**. Confidence: **Confirmed by source and producer audit**.
 
 - Source: `RpcCacheKey.cs:26-42` retains caller `ReadOnlyMemory<byte>`, caches its initial hash, and rereads current bytes for equality.
 - Failure: mutating the backing array after insertion makes the key unreachable and can corrupt remote-computed cache dictionaries.
-- Test: `RpcCacheKeyMustSnapshotMutableArgumentData` demonstrates divergent hash/equality behavior.
+- Test: the original defensive-copy regression demonstrated divergent hash/equality behavior for a caller that
+  violated the accepted immutable-backing contract.
 - **Maintainer decision:** retain the zero-copy API and document that backing bytes must remain immutable for the key's lifetime. Built-in small- and large-payload producers satisfy this audited ownership contract; custom callers are responsible for immutable storage. Add focused API remarks and code comments identifying the deliberate hot-path performance tradeoff, and remove or replace the defensive-copy regression.
 - **Recommended:** copy argument bytes at the ownership boundary or use an immutable owned representation.
+- **Resolution:** `RpcCacheKey` now documents that it retains its backing memory without copying and requires that
+  storage to remain immutable for the key's lifetime. `RpcCacheInfoCapture` documents why its hot path safely retains
+  outbound argument data. The producer audit found only this capture path and the Nerdbank converter: small outbound
+  payloads are copied, large thread-local buffers are detached from reuse, and the converter materializes its input
+  with `ToArray`.
+- **Validation:** replacement regressions confirm that `RpcCacheKey` retains caller-owned memory and that built-in
+  outbound serialization copies small payloads while detaching large backing arrays from later buffer reuse.
 
 ### RPC9. Frozen RPC configuration still reflects mutations through the original dictionary
 
@@ -1379,30 +1390,45 @@ Status: **approved — pending implementation and boundary tests**. Confidence: 
 
 ### RPC13. The .NET Framework server resolves the peer reference twice
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and focused NetFx regression test**.
 
 - Source: `ActualLab.Rpc.Server.NetFx/RpcWebSocketServer.cs` invokes `PeerRefFactory` during request validation and again in the accepted WebSocket callback; the second result is not passed through the same `RequireServer` validation.
 - Failure: a stateful/custom factory can validate and disconnect peer A but establish peer B, bypassing the checked identity.
 - **Maintainer decision:** implement the recommended single validated peer-reference flow.
 - **Recommended:** capture the single validated peer reference and pass it into the callback.
+- **Resolution:** the accepted WebSocket callback now receives the peer reference that was created, server-validated,
+  and serialization-format-validated before the upgrade; it no longer invokes the factory a second time.
+- **Validation:** the NetFx regression drives the accepted callback with a stateful factory and observes exactly one
+  factory invocation. The NetFx server project builds successfully for `net472`.
 
 ### RPC14. The .NET Framework server has no clear WebSocket disposal owner
 
-Status: **approved — pending implementation**. Confidence: **High-confidence source finding; OWIN ownership should be verified**.
+Status: **completed**. Confidence: **Confirmed by source and focused NetFx regression test**.
 
 - Source: the NetFx handler never disposes `wsContext.WebSocket`/its owner while constructing a transport with `OwnsWebSocketOwner = false`; the ASP.NET Core counterpart explicitly disposes the socket in `finally`.
 - Failure: accepted sockets may retain resources after peer termination.
 - **Maintainer decision:** implement the recommended explicit ownership/disposal path unless verification shows that the OWIN host contract owns disposal.
 - **Recommended:** establish one explicit owner and dispose in the server callback unless the OWIN host contract demonstrably owns it.
+- **Resolution:** no host contract guaranteeing per-connection socket disposal was found. The callback is now the
+  explicit owner: it disposes `WebSocketOwner` in `finally` while the transport remains configured not to dispose it,
+  with a direct socket fallback if owner construction fails.
+- **Validation:** the NetFx callback regression forces connection creation to fail after ownership is established and
+  observes disposal of the accepted socket. The NetFx server project builds successfully for `net472`.
 
 ### RPC15. Conditional weak-reference tracker abort can leak a `GCHandle`
 
-Status: **approved — pending removal**. Confidence: **Confirmed for the affected conditional implementation by source**.
+Status: **completed**. Confidence: **Confirmed for the affected conditional implementation by source**.
 
 - Source: the conditional `WeakReferenceSlim` tracker path allocates a handle that is not released when object tracking aborts before normal teardown.
 - Failure: repeated failed/aborted tracking leaks unmanaged handle-table entries.
 - **Maintainer decision:** remove generic and non-generic `WeakReferenceSlim` and use `System.WeakReference<T>` everywhere. Remove the conditional aliases/manual cleanup in `RpcRemoteObjectTracker` and `ComputedRegistry`, the `UseWeakReferenceSlim`/`USE_WEAK_REFERENCE_SLIM` switch, its tests and benchmark, and finalizers/`Free` helpers that existed only for the slim handle. Historical changelog entries may remain.
 - **Recommended:** release the handle on every abort/removal path and add a target-framework-specific allocation regression.
+- **Resolution:** generic and non-generic `WeakReferenceSlim`, its build switch, tests, and benchmark were removed.
+  `RpcRemoteObjectTracker` and `ComputedRegistry` now use `System.WeakReference<T>` directly, with all slim-only
+  aliases, finalizer, `GCHandle` cleanup, and `Free` helpers removed. Historical changelog entries remain unchanged.
+- **Validation:** repository scans find no remaining production/test/build reference to `WeakReferenceSlim`,
+  `UseWeakReferenceSlim`, or `USE_WEAK_REFERENCE_SLIM`; `ActualLab.Fusion` builds for `netstandard2.0`, and the NetFx
+  RPC server plus its `ActualLab.Rpc` dependency build for `net472`.
 
 ### Investigation notes
 
@@ -1559,6 +1585,13 @@ The remaining audit regression tests intentionally assert the correct contract a
 - 2026-07-15: ran `FusionBlazorCoreAuditRegressionTest` — the original slice produced 0 passes and 3 failures, confirming FUS28 and both incorrect unsafe-accessor mappings in FUS29. A focused FUS33 test was then added and failed because `ShouldSetParameters` returned `true` without honoring a comparer derived from `DefaultParameterComparer`.
 - 2026-07-15: built `build`, `docs`, every standalone RPC/sample project, and every Todo C# project serially with `--no-restore` — all completed with zero errors. Todo UI/Aspire transitively built the Host and WebAssembly output; NU1900 and generated Blazor trimming warnings remained environmental/generated.
 - 2026-07-15: final `dotnet build ActualLab.Fusion.sln --no-restore -m:1` — passed for the default target graph with 0 errors and 20 warnings. Warnings were unavailable NuGet vulnerability metadata (NU1900), the existing Pomelo/EF Core version constraint (NU1608), and one existing test exception-constructor analyzer warning (RCS1194).
+- 2026-07-15: RPC7/RPC8 remediation slice — the RPC7 API regression failed before the condition correction; after
+  remediation, the backend guard and the two zero-copy/producer-ownership regressions passed 3/3 on `net10.0`.
+- 2026-07-15: RPC13/RPC14/RPC15 cross-target validation — `ActualLab.Fusion` built successfully for
+  `netstandard2.0`, and `ActualLab.Rpc.Server.NetFx` plus its dependencies built successfully for `net472`. The
+  full `net472` test project remains blocked by unrelated pre-existing cross-target compilation errors in other audit
+  tests; the added conditional NetFx regression produced no compiler error after its framework-specific override was
+  corrected.
 
 ## Recommended remediation order
 

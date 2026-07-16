@@ -9,6 +9,9 @@ namespace ActualLab.Rpc.Caching;
 /// Wire-format note: any change to the [Key(N)]/[MessagePackOrder] layout below MUST be mirrored
 /// in <c>RpcCacheKeyNerdbankConverter</c> (ActualLab.Serialization.NerdbankMessagePack) so the
 /// Nerdbank wire stays byte-compatible with MessagePack-CSharp and the TS RPC client.
+/// The argument data is retained without copying. Its backing storage must remain immutable for
+/// the entire lifetime of the key, including while the key is used in a hash-based collection.
+/// Built-in key producers satisfy this ownership contract; custom callers are responsible for it.
 /// </remarks>
 [DataContract, MemoryPackable, MessagePackObject]
 public sealed partial class RpcCacheKey : IEquatable<RpcCacheKey>

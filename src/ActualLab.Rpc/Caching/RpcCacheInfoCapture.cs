@@ -66,6 +66,8 @@ public sealed class RpcCacheInfoCapture
         var call = context.Call;
         lock (call!) {
             Call = call;
+            // Outbound serialization copies small payloads and detaches large buffers from reuse,
+            // so the retained memory stays immutable without another copy here.
             // ReSharper disable once NonAtomicCompoundOperator
             Key ??= new RpcCacheKey(context.MethodDef!.FullName, message.ArgumentData);
         }

@@ -76,32 +76,19 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
 
         acceptToken(acceptOptions, wsEnv => {
             var wsContext = (WebSocketContext)wsEnv["System.Net.WebSockets.WebSocketContext"];
-            return HandleWebSocket(context, wsContext, isBackend);
+            return HandleWebSocket(context, wsContext, peerRef);
         });
 
         return HttpStatusCode.SwitchingProtocols;
     }
 
-    private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, bool isBackend)
+    private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, RpcPeerRef peerRef)
     {
         var cancellationToken = context.Request.CallCancelled;
         WebSocket? webSocket = null;
+        WebSocketOwner? webSocketOwner = null;
         RpcConnection? connection = null;
         try {
-            var peerRef = PeerRefFactory.Invoke(this, context, isBackend);
-
-            // Validate serialization format and close with specific code if unsupported.
-            // Empty format is also rejected — clients must specify one explicitly.
-            if (!Hub.SerializationFormats.TryGet(peerRef.SerializationFormat, out _)) {
-                webSocket = wsContext.WebSocket;
-                await webSocket.CloseAsync(
-                    (WebSocketCloseStatus)RpcWebSocketCloseCode.UnsupportedFormat,
-                    $"Unsupported RPC serialization format: '{peerRef.SerializationFormat}'",
-                    cancellationToken
-                    ).ConfigureAwait(false);
-                return;
-            }
-
             var peer = Hub.GetServerPeer(peerRef);
 
             webSocket = wsContext.WebSocket;
@@ -109,7 +96,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
                 .KeylessSet((RpcPeer)peer)
                 .KeylessSet(context)
                 .KeylessSet(webSocket);
-            var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
+            webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
             var transportOptions = WebSocketClientOptions.WebSocketTransportOptionsFactory.Invoke(peer, properties);
             var stopTokenSource = cancellationToken.CreateLinkedTokenSource();
             var transport = new RpcWebSocketTransport(transportOptions, peer, webSocketOwner, stopTokenSource) {
@@ -137,6 +124,12 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
             catch {
                 // Intended
             }
+        }
+        finally {
+            if (webSocketOwner is not null)
+                await webSocketOwner.DisposeAsync().ConfigureAwait(false);
+            else
+                webSocket?.Dispose();
         }
     }
 
