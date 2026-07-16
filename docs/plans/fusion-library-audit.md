@@ -1267,126 +1267,141 @@ All production C# files in `ActualLab.Rpc`, `ActualLab.Rpc.Server`, and `ActualL
 
 ### RPC1. An arbitrary RPC method is dispatched before the handshake is validated
 
-Status: **open**. Confidence: **Confirmed by source and end-to-end regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and end-to-end regression test**.
 
 - Source: `src/ActualLab.Rpc/RpcPeer.cs:306-324` sends the local handshake, then passes the first inbound message to `ProcessMessage` before casting the result to the handshake call. `RpcInboundCall.Process` at `Calls/RpcInboundCall.cs:89-142` deserializes and invokes the resolved method synchronously.
 - Failure: a peer can make any registered ordinary method its first message; the handler runs before the cast fails and the connection is rejected.
 - Test: `RpcHandshakeAuditTest.FirstNonHandshakeMessageMustNotBeDispatched` sends a state-mutating method first and observes the mutation.
+- **Maintainer decision:** implement the recommended handshake-only first-message path.
 - **Recommended:** resolve and validate the exact system-handshake method/call shape before ordinary dispatch, and deserialize it through a handshake-only path.
 
 ### RPC2. Frontend peers can invoke backend-only RPC services
 
-Status: **open**. Confidence: **Confirmed by source and end-to-end authorization regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and end-to-end authorization regression test**.
 
 - Source: `RpcServiceRegistry.cs:41-57` builds one server resolver containing all server methods; `RpcInboundContext.cs:36-61` resolves inbound references against it. No inbound check compares `context.Peer.Ref.IsBackend` with `MethodDef.IsBackend`.
 - Failure: a connection on the public frontend path can dispatch an `IBackendService`, bypassing `ExposeBackend`/`BackendRequestPath` isolation and the documented guarantee that backend services are not public RPC endpoints.
 - Test: `RpcHandshakeAuditTest.FrontendPeerMustNotDispatchBackendMethod` invokes a backend service through a frontend peer and increments its call counter.
+- **Maintainer decision:** implement the recommended frontend/backend dispatch isolation.
 - **Recommended:** use separate frontend/backend resolvers or reject backend method definitions before deserialization/invocation on non-backend peers.
 
 ### RPC3. Received handshake protocol versions are never validated
 
-Status: **open**. Confidence: **Confirmed by source and handshake regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and handshake regression test**.
 
 - Source: `RpcHandshake.CurrentProtocolVersion` is written by `RpcPeer`, but no receive path compares the remote value.
 - Failure: an unsupported/incompatible peer is marked connected and fails later in less diagnosable ways.
 - Test: `UnsupportedHandshakeProtocolVersionMustBeRejected` completes a version-mismatched handshake without an error.
+- **Maintainer decision:** add separate minimum-supported and current protocol-version constants, initially both version 2, and accept only the inclusive range between them before publishing the peer as connected.
 - **Recommended:** reject unsupported versions during the handshake before publishing a connected state.
 
 ### RPC4. Frame-transport enqueue failures never reach the send handler
 
-Status: **open**. Confidence: **Confirmed by source and focused transport regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused transport regression test**.
 
 - Source: `RpcFrameBasedTransport.cs:78-84` discards `ChannelWriter.WriteAsync` whenever `TryWrite` fails.
 - Failure: completed/full/canceled channels fault an unobserved `ValueTask`; `message.SendHandler` is never invoked, leaving calls without completion notification.
 - Test: `SendAfterCompletionReportsFailureToHandler` observes a null handler error after sending to a completed channel.
+- **Maintainer decision:** implement the recommended awaited slow path and exact-once completion.
 - **Recommended:** await the slow path and call the send handler exactly once with success or the enqueue exception.
 
 ### RPC5. Simple-channel transport reports success before enqueue succeeds
 
-Status: **open**. Confidence: **Confirmed by source and bounded-channel regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and bounded-channel regression test**.
 
 - Source: `RpcSimpleChannelTransport.cs:40-55` serializes into a pooled owner, calls `CompleteSend(success)`, and then discards `WriteAsync`.
 - Failure: a canceled/full bounded channel reports false success and leaks the never-enqueued pooled frame owner.
 - Test: `SimpleChannelSendReportsCanceledEnqueue` receives no cancellation error.
+- **Maintainer decision:** implement the recommended enqueue-before-completion ownership flow.
 - **Recommended:** complete the send only after a successful enqueue; dispose the frame and report the exception otherwise.
 
 ### RPC6. `RpcPeerRef` null equality operators violate the equality contract
 
-Status: **open**. Confidence: **Confirmed by source and API regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and API regression test**.
 
 - Source: `RpcPeerRef.cs:125-130` makes `null == null` false and `null != null` true.
+- **Maintainer decision:** implement the recommended standard null/equality pattern.
 - **Recommended:** implement the standard reference/null operator pattern before delegating to value equality.
 
 ### RPC7. `RequireBackend` is inverted
 
-Status: **open**. Confidence: **Confirmed by source and API regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and API regression test**.
 
 - Source: `RpcPeerRefExt.cs:30-33` returns non-backend references and throws `BackendRpcPeerRefExpected` for backend references.
+- **Maintainer decision:** implement the recommended condition correction.
 - **Recommended:** negate the current condition.
 
 ### RPC8. `RpcCacheKey` caches a hash over caller-mutable bytes
 
-Status: **open**. Confidence: **Confirmed by source and dictionary regression test**.
+Status: **approved — pending documentation**. Confidence: **Confirmed by source and dictionary regression test**.
 
 - Source: `RpcCacheKey.cs:26-42` retains caller `ReadOnlyMemory<byte>`, caches its initial hash, and rereads current bytes for equality.
 - Failure: mutating the backing array after insertion makes the key unreachable and can corrupt remote-computed cache dictionaries.
 - Test: `RpcCacheKeyMustSnapshotMutableArgumentData` demonstrates divergent hash/equality behavior.
+- **Maintainer decision:** retain the zero-copy API and document that backing bytes must remain immutable for the key's lifetime. Built-in small- and large-payload producers satisfy this audited ownership contract; custom callers are responsible for immutable storage. Add focused API remarks and code comments identifying the deliberate hot-path performance tradeoff, and remove or replace the defensive-copy regression.
 - **Recommended:** copy argument bytes at the ownership boundary or use an immutable owned representation.
 
 ### RPC9. Frozen RPC configuration still reflects mutations through the original dictionary
 
-Status: **open**. Confidence: **Confirmed by source and focused regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `RpcConfiguration.cs:37-48` wraps the existing mutable services dictionary in `ReadOnlyDictionary` without copying it.
 - Failure: a retained pre-freeze reference can race or falsify registry construction after configuration is advertised as immutable.
+- **Maintainer decision:** implement the recommended locked snapshot.
 - **Recommended:** snapshot into a new dictionary under the freeze lock before wrapping it.
 
 ### RPC10. Non-positive stream flow-control values cause division by zero or permanent stalls
 
-Status: **open**. Confidence: **Confirmed by source and construction-contract theory**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and construction-contract theory**.
 
 - Source: `RpcStream.cs:31-34` exposes unvalidated `AckPeriod`/`AckAdvance`; `MaybeSendAck` at lines 363-366 uses modulo by `AckPeriod`, while shared-stream advancement depends on positive `AckAdvance`.
 - Failure: zero period divides by zero; zero advance prevents any item from becoming sendable and waits forever. Values cross the wire.
+- **Maintainer decision:** implement the recommended validation and overflow guards.
 - **Recommended:** reject non-positive values at construction/deserialization and guard buffer arithmetic overflow.
 
 ### RPC11. `RpcFrameDelayers.Yield` ignores its handshake-frame parameter
 
-Status: **open**. Confidence: **Confirmed by source and focused behavior test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused behavior test**.
 
 - Source: `RpcFrameDelayers.cs:13-26,55-56` accepts `handshakeFrameCount` but uses a hard-coded static threshold of two.
 - Failure: callers cannot configure the advertised exemption from yielding.
+- **Maintainer decision:** implement the recommended validated, captured threshold.
 - **Recommended:** validate and capture the supplied threshold in the returned delegate.
 
 ### RPC12. Fragmented WebSocket messages can force unbounded allocation
 
-Status: **open**. Confidence: **Confirmed by source; adversarial transport test needed**.
+Status: **approved — pending implementation and boundary tests**. Confidence: **Confirmed by source; adversarial transport test needed**.
 
 - Source: `RpcWebSocketTransport.cs:96-149` grows an `ArrayPoolBuffer` for every fragment until `EndOfMessage`; unlike pipe/stream transports, no inbound maximum frame size is enforced. `MaxBufferSize` controls retained capacity, not accepted message size.
 - Failure: a remote peer can stream an arbitrarily large fragmented message and exhaust process memory.
+- **Maintainer decision:** add a configurable complete-message limit derived from the maximum serialized RPC message: slightly above the maximum argument-data size, with the exact envelope/serializer margin established from supported serializers. Enforce the limit across fragments before buffer growth, close violations with the appropriate message-too-large status, and cover fragmented overflow, the exact boundary, and a valid maximum payload plus serialization overhead. Do not reuse the retained-capacity `MaxBufferSize` or unrelated outbound limits.
 - **Recommended:** configure and enforce a hard inbound message limit while accumulating fragments, closing the socket with an appropriate status on violation.
 
 ### RPC13. The .NET Framework server resolves the peer reference twice
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `ActualLab.Rpc.Server.NetFx/RpcWebSocketServer.cs` invokes `PeerRefFactory` during request validation and again in the accepted WebSocket callback; the second result is not passed through the same `RequireServer` validation.
 - Failure: a stateful/custom factory can validate and disconnect peer A but establish peer B, bypassing the checked identity.
+- **Maintainer decision:** implement the recommended single validated peer-reference flow.
 - **Recommended:** capture the single validated peer reference and pass it into the callback.
 
 ### RPC14. The .NET Framework server has no clear WebSocket disposal owner
 
-Status: **open**. Confidence: **High-confidence source finding; OWIN ownership should be verified**.
+Status: **approved — pending implementation**. Confidence: **High-confidence source finding; OWIN ownership should be verified**.
 
 - Source: the NetFx handler never disposes `wsContext.WebSocket`/its owner while constructing a transport with `OwnsWebSocketOwner = false`; the ASP.NET Core counterpart explicitly disposes the socket in `finally`.
 - Failure: accepted sockets may retain resources after peer termination.
+- **Maintainer decision:** implement the recommended explicit ownership/disposal path unless verification shows that the OWIN host contract owns disposal.
 - **Recommended:** establish one explicit owner and dispose in the server callback unless the OWIN host contract demonstrably owns it.
 
 ### RPC15. Conditional weak-reference tracker abort can leak a `GCHandle`
 
-Status: **open**. Confidence: **Confirmed for the affected conditional implementation by source**.
+Status: **approved — pending removal**. Confidence: **Confirmed for the affected conditional implementation by source**.
 
 - Source: the conditional `WeakReferenceSlim` tracker path allocates a handle that is not released when object tracking aborts before normal teardown.
 - Failure: repeated failed/aborted tracking leaks unmanaged handle-table entries.
+- **Maintainer decision:** remove generic and non-generic `WeakReferenceSlim` and use `System.WeakReference<T>` everywhere. Remove the conditional aliases/manual cleanup in `RpcRemoteObjectTracker` and `ComputedRegistry`, the `UseWeakReferenceSlim`/`USE_WEAK_REFERENCE_SLIM` switch, its tests and benchmark, and finalizers/`Free` helpers that existed only for the slim handle. Historical changelog entries may remain.
 - **Recommended:** release the handle on every abort/removal path and add a target-framework-specific allocation regression.
 
 ### Investigation notes
