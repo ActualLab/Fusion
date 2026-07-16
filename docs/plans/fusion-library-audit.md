@@ -1529,7 +1529,8 @@ Status: **completed**. Confidence: **Confirmed for the affected conditional impl
 - **RPC-I1 — WebSocket client timeout-owner race.** Timeout and normal completion appear able to compete for WebSocket ownership. The path needs a deterministic gated socket test before promotion.
 - **Post-fix performance review.** The completed RPC changes were re-audited for server hot-path cost. Successful
   transport enqueue remains allocation-free and synchronous; handshake/configuration validation remains connection-
-  or startup-scoped; backend dispatch and stream overflow protection add only predictable scalar branches. Outbound
+  or startup-scoped; backend dispatch short-circuits ordinary methods before reading the peer kind, and stream
+  overflow protection adds only predictable scalar branches. Outbound
   text-envelope validation now reuses cached UTF-8 method/header-key lengths, skips exact encoding scans for strings
   too short to approach their byte limit, pre-sizes the header list, and keeps exact untrusted inbound bounds. Successful
   simple-channel sends also transfer their pooled array without a redundant atomic disposal. The RPC project build,

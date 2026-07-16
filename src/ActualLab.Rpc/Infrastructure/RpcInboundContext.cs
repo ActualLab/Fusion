@@ -44,7 +44,7 @@ public sealed class RpcInboundContext
             };
             return;
         }
-        if (!Peer.Ref.IsBackend && MethodDef.IsBackend) {
+        if (MethodDef.IsBackend && !Peer.Ref.IsBackend) {
             MethodDef = Peer.Hub.SystemCallSender.NotFoundMethodDef;
             var (service, method) = message.MethodRef.GetServiceAndMethodName();
             Call = new RpcInboundNotFoundCall<Unit>(this) {
