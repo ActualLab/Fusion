@@ -32,6 +32,8 @@ public class RpcWebSocketTransportCancellationTest(ITestOutputHelper @out) : Tes
 
         (await moveNextTask.WaitAsync(TimeSpan.FromSeconds(1))).Should().BeFalse();
         webSocket.AbortCount.Should().BeGreaterThan(0);
+        webSocket.ArraySegmentReceiveCount.Should().Be(0);
+        webSocket.MemoryReceiveCount.Should().Be(1);
     }
 
     private sealed class AbortableReceiveWebSocket : WebSocket
@@ -40,9 +42,13 @@ public class RpcWebSocketTransportCancellationTest(ITestOutputHelper @out) : Tes
         private readonly TaskCompletionSource<Unit> _whenAborted = TaskCompletionSourceExt.New<Unit>();
         private volatile WebSocketState _state = WebSocketState.Open;
         private int _abortCount;
+        private int _arraySegmentReceiveCount;
+        private int _memoryReceiveCount;
 
         public Task WhenReceiveStarted => _whenReceiveStarted.Task;
         public int AbortCount => Volatile.Read(ref _abortCount);
+        public int ArraySegmentReceiveCount => Volatile.Read(ref _arraySegmentReceiveCount);
+        public int MemoryReceiveCount => Volatile.Read(ref _memoryReceiveCount);
         public override WebSocketCloseStatus? CloseStatus => null;
         public override string? CloseStatusDescription => null;
         public override WebSocketState State => _state;
@@ -78,6 +84,7 @@ public class RpcWebSocketTransportCancellationTest(ITestOutputHelper @out) : Tes
             ArraySegment<byte> buffer,
             CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref _arraySegmentReceiveCount);
             _whenReceiveStarted.TrySetResult(default);
             await _whenAborted.Task.ConfigureAwait(false);
             throw new ObjectDisposedException(nameof(AbortableReceiveWebSocket));
@@ -88,6 +95,7 @@ public class RpcWebSocketTransportCancellationTest(ITestOutputHelper @out) : Tes
             Memory<byte> buffer,
             CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref _memoryReceiveCount);
             _whenReceiveStarted.TrySetResult(default);
             await _whenAborted.Task.ConfigureAwait(false);
             throw new ObjectDisposedException(nameof(AbortableReceiveWebSocket));
