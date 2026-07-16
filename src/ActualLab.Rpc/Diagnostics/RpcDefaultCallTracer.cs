@@ -75,7 +75,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
         var activity = ActivitySource.StartActivity(OutboundCallName, ActivityKind.Client);
         if (lastActivity != activity)
             Activity.Current = lastActivity;
-        return new RpcDefaultOutboundCallTrace(activity);
+        return activity is null ? null : new RpcDefaultOutboundCallTrace(activity);
     }
 
     public void RegisterInboundCall(in RpcCallSummary callSummary)
