@@ -109,19 +109,37 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
             while (true) {
                 var remainingCapacity = maxMessageSize - buffer.WrittenCount;
                 var isOverflowProbe = remainingCapacity == 0;
-                ArraySegment<byte> arraySegment;
-                if (isOverflowProbe)
-                    arraySegment = new ArraySegment<byte>(overflowBuffer);
+#if NETSTANDARD2_0
+                ArraySegment<byte> receiveBuffer;
+#else
+                Memory<byte> receiveBuffer;
+#endif
+                if (isOverflowProbe) {
+#if NETSTANDARD2_0
+                    receiveBuffer = new ArraySegment<byte>(overflowBuffer);
+#else
+                    receiveBuffer = overflowBuffer;
+#endif
+                }
                 else {
                     var requestedCapacity = Math.Min(
                         Math.Max(bufferSize, buffer.FreeCapacity),
                         remainingCapacity);
                     _ = buffer.GetMemory(requestedCapacity);
-                    arraySegment = new ArraySegment<byte>(buffer.Array, buffer.WrittenCount, requestedCapacity);
+#if NETSTANDARD2_0
+                    receiveBuffer = new ArraySegment<byte>(buffer.Array, buffer.WrittenCount, requestedCapacity);
+#else
+                    receiveBuffer = buffer.Array.AsMemory(buffer.WrittenCount, requestedCapacity);
+#endif
                 }
-                WebSocketReceiveResult r;
+                int count;
+                WebSocketMessageType messageType;
+                bool endOfMessage;
                 try {
-                    r = await WebSocket.ReceiveAsync(arraySegment, CancellationToken.None).ConfigureAwait(false);
+                    var r = await WebSocket.ReceiveAsync(receiveBuffer, CancellationToken.None).ConfigureAwait(false);
+                    count = r.Count;
+                    messageType = r.MessageType;
+                    endOfMessage = r.EndOfMessage;
                 }
                 catch (Exception e) {
                     if (commonCts.IsCancellationRequested) {
@@ -134,28 +152,30 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
                     }
 
                     Log?.LogWarning(e, "WebSocket.ReceiveAsync failed");
-                    if (e is WebSocketException { WebSocketErrorCode: WebSocketError.ConnectionClosedPrematurely })
-                        r = new WebSocketReceiveResult(0, WebSocketMessageType.Close, endOfMessage: true);
-                    else
+                    if (e is not WebSocketException { WebSocketErrorCode: WebSocketError.ConnectionClosedPrematurely })
                         throw;
+
+                    count = 0;
+                    messageType = WebSocketMessageType.Close;
+                    endOfMessage = true;
                 }
-                if (r.MessageType == WebSocketMessageType.Close) {
+                if (messageType == WebSocketMessageType.Close) {
                     if (WebSocket.CloseStatus.HasValue
                         && (int)WebSocket.CloseStatus.Value == RpcWebSocketCloseCode.UnsupportedFormat)
                         throw Errors.UnsupportedSerializationFormat(WebSocket.CloseStatusDescription.NullIfEmpty());
                     yield break;
                 }
-                if (r.MessageType != MessageType)
-                    throw Errors.InvalidWebSocketMessageType(r.MessageType, MessageType);
+                if (messageType != MessageType)
+                    throw Errors.InvalidWebSocketMessageType(messageType, MessageType);
 
-                if (isOverflowProbe && r.Count != 0) {
-                    Meters.IncomingFrameSizeHistogram.Record(r.Count);
+                if (isOverflowProbe && count != 0) {
+                    Meters.IncomingFrameSizeHistogram.Record(count);
                     await CloseMessageTooLarge().ConfigureAwait(false);
                     yield break;
                 }
-                buffer.Advance(r.Count);
-                Meters.IncomingFrameSizeHistogram.Record(r.Count);
-                if (!r.EndOfMessage)
+                buffer.Advance(count);
+                Meters.IncomingFrameSizeHistogram.Record(count);
+                if (!endOfMessage)
                     continue; // Continue reading into the same buffer
 
                 var array = buffer.Array;
