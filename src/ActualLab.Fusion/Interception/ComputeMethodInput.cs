@@ -21,12 +21,17 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
         MethodDef = methodDef;
         Invocation = invocation;
 
-        var arguments = invocation.Arguments;
-        var hashCode = methodDef.Id
-            + invocation.Proxy.GetHashCode()
-            + arguments.GetHashCode(methodDef.CancellationTokenIndex);
-        Initialize(function, hashCode);
+        Initialize(function, ComputeHashCode(methodDef, invocation));
     }
+
+#if NET9_0_OR_GREATER
+    private ComputeMethodInput(in Lookup lookup)
+    {
+        MethodDef = lookup.MethodDef;
+        Invocation = lookup.Invocation;
+        Initialize(lookup.Function, lookup.HashCode);
+    }
+#endif
 
     public override string ToString()
         => string.Concat(
@@ -81,4 +86,49 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
         }
         return resultTask;
     }
+
+    // Private methods
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ComputeHashCode(ComputeMethodDef methodDef, Invocation invocation)
+        => methodDef.Id
+            + invocation.Proxy.GetHashCode()
+            + invocation.Arguments.GetHashCode(methodDef.CancellationTokenIndex);
+
+#if NET9_0_OR_GREATER
+    // Nested types
+
+    internal readonly struct Lookup
+    {
+        public readonly IComputeFunction Function;
+        public readonly ComputeMethodDef MethodDef;
+        public readonly Invocation Invocation;
+        public readonly int HashCode;
+
+        public Lookup(IComputeFunction function, ComputeMethodDef methodDef, Invocation invocation)
+        {
+            Function = function;
+            MethodDef = methodDef;
+            Invocation = invocation;
+
+            HashCode = ComputeHashCode(methodDef, invocation);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool EqualsInput(ComputeMethodInput other)
+        {
+            if (HashCode != other.HashCode || !ReferenceEquals(MethodDef, other.MethodDef))
+                return false;
+
+            var invocation = Invocation;
+            var otherInvocation = other.Invocation;
+            return ReferenceEquals(invocation.Proxy, otherInvocation.Proxy)
+                && invocation.Arguments.Equals(otherInvocation.Arguments, MethodDef.CancellationTokenIndex);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ComputeMethodInput ToInput()
+            => new(in this);
+    }
+#endif
 }

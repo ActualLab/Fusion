@@ -132,6 +132,16 @@ reference, cached hash/padding, method and proxy references, and four argument-l
 references. The current 104 B/hit should fall to roughly 32 B/hit if no replacement
 allocation appears.
 
+Status: **Closed — retained.**
+
+Remarks: repeated .NET 10 post-change runs measured 25.53-26.02 ns and
+32 B for the `long` case, compared with 35.98 ns and 104 B in the same run and
+29.6 ns and 104 B in the historical baseline. The allocation reduction is exactly
+72 B per hit; the result is about 12.8% faster even against the historical timing.
+Focused tests cover argument differences, cancellation-token exclusion, and proxy
+identity. The alternate key preserves the current reference identity of
+`MethodDef` and may require mechanical adaptation after proxy method slots land.
+
 ### 2. Split leaf fast paths from cold operation handling
 
 Keep `Computed.GetValuePromise` and the cache-hit portion of

@@ -35,10 +35,22 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
 
     public object? ComputeServiceInterceptorHandler(Invocation invocation)
     {
+#if NET9_0_OR_GREATER
+        var lookup = new ComputeMethodInput.Lookup(this, MethodDef, invocation);
+#else
         var input = new ComputeMethodInput(this, MethodDef, invocation);
+#endif
         var cancellationToken = invocation.Arguments.GetCancellationToken(CancellationTokenIndex); // Auto-handles -1 index
         try {
+#if NET9_0_OR_GREATER
+            var context = ComputeContext.Current;
+            var computed = ComputedRegistry.Get(lookup);
+            var task = ComputedImpl.TryUseExisting(computed, context)
+                ? ComputedImpl.GetValueOrDefaultAsTask(computed, context, OutputType)
+                : this.ProduceValuePromise(lookup.ToInput(), context, cancellationToken);
+#else
             var task = input.GetOrProduceValuePromise(ComputeContext.Current, cancellationToken);
+#endif
             return MethodDef.WrapAsyncInvokerResultOfAsyncMethodUntyped(task);
         }
         finally {

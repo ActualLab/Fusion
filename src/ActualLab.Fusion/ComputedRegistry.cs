@@ -47,6 +47,10 @@ public sealed class ComputedRegistry
     private static StochasticCounter _opCounter;
     // ReSharper disable once InconsistentNaming
     private static readonly ConcurrentDictionary<ComputedInput, WeakReference<Computed>> _storage;
+#if NET9_0_OR_GREATER
+    private static readonly ConcurrentDictionary<ComputedInput, WeakReference<Computed>>
+        .AlternateLookup<ComputeMethodInput.Lookup> _computeMethodStorage;
+#endif
     private static ComputedGraphPruner? _graphPruner;
     private static int _pruneOpCounterThreshold;
     private static Task? _pruneTask;
@@ -68,7 +72,10 @@ public sealed class ComputedRegistry
         _storage = new ConcurrentDictionary<ComputedInput, WeakReference<Computed>>(
             Settings.ConcurrencyLevel,
             Settings.InitialCapacity,
-            ComputedInput.EqualityComparer);
+            StorageEqualityComparer.Instance);
+#if NET9_0_OR_GREATER
+        _computeMethodStorage = _storage.GetAlternateLookup<ComputeMethodInput.Lookup>();
+#endif
         InputLocks = Settings.LocksFactory?.Invoke() ?? new AsyncLockSet<ComputedInput>(
             LockReentryMode.CheckedFail,
             Settings.ConcurrencyLevel,
@@ -91,6 +98,22 @@ public sealed class ComputedRegistry
         _storage.TryRemove(key, weakRef);
         return null;
     }
+
+#if NET9_0_OR_GREATER
+    internal static Computed? Get(in ComputeMethodInput.Lookup key)
+    {
+        var random = key.HashCode + Environment.CurrentManagedThreadId;
+        OnOperation(random);
+        if (!_computeMethodStorage.TryGetValue(key, out var weakRef))
+            return null;
+
+        if (weakRef.TryGetTarget(out var target))
+            return target;
+
+        _storage.TryRemove(key.ToInput(), weakRef);
+        return null;
+    }
+#endif
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Register(Computed computed)
@@ -276,6 +299,35 @@ public sealed class ComputedRegistry
     }
 
     // Nested types
+
+    private sealed class StorageEqualityComparer : IEqualityComparer<ComputedInput>
+#if NET9_0_OR_GREATER
+        , IAlternateEqualityComparer<ComputeMethodInput.Lookup, ComputedInput>
+#endif
+    {
+        public static readonly StorageEqualityComparer Instance = new();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(ComputedInput? x, ComputedInput? y)
+            => ComputedInput.EqualityComparer.Equals(x, y);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(ComputedInput obj)
+            => obj.HashCode;
+
+#if NET9_0_OR_GREATER
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(ComputeMethodInput.Lookup alternate, ComputedInput other)
+            => other is ComputeMethodInput input && alternate.EqualsInput(input);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(ComputeMethodInput.Lookup alternate)
+            => alternate.HashCode;
+
+        public ComputedInput Create(ComputeMethodInput.Lookup alternate)
+            => alternate.ToInput();
+#endif
+    }
 
     /// <summary>
     /// Diagnostic meters and counters for monitoring <see cref="ComputedRegistry"/> performance.
