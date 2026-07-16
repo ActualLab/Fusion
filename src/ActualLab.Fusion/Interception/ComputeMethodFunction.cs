@@ -44,6 +44,7 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
         try {
             var context = ComputeContext.Current;
 #if NET9_0_OR_GREATER
+            // ComputeMethodInput is sealed, and its GetExistingComputed() performs the same registry lookup.
             var computed = ComputedRegistry.Get(lookup);
 #else
             var computed = input.GetExistingComputed();
