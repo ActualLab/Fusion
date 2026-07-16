@@ -119,8 +119,14 @@ public readonly struct ShardDbContextBuilder<TDbContext>
             var services = new ServiceCollection();
             dbContextServiceCollectionBuilder.Invoke(c, shard, services);
             var serviceProvider = services.BuildServiceProvider();
-            var dbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<TDbContext>>();
-            return dbContextFactory;
+            try {
+                var dbContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<TDbContext>>();
+                return new ShardDbContextFactoryEntry<TDbContext>(dbContextFactory, serviceProvider);
+            }
+            catch {
+                serviceProvider.Dispose();
+                throw;
+            }
         });
         return this;
     }

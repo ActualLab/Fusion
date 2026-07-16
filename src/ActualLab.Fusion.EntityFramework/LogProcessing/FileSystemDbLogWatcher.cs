@@ -47,6 +47,8 @@ public class FileSystemDbLogWatcher<TDbContext, TDbEntry>(
         protected override Task DisposeAsyncCore()
         {
             Subscription.Dispose();
+            Watcher.EnableRaisingEvents = false;
+            Watcher.Dispose();
             return Task.CompletedTask;
         }
 

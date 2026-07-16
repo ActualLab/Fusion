@@ -31,8 +31,8 @@ public record DbLockingHint(string Value) : DbHint(Value)
 /// </summary>
 public record DbWaitHint(string Value) : DbHint(Value)
 {
-    public static readonly DbLockingHint NoWait = new(nameof(NoWait));
-    public static readonly DbLockingHint SkipLocked = new(nameof(SkipLocked));
+    public static readonly DbWaitHint NoWait = new(nameof(NoWait));
+    public static readonly DbWaitHint SkipLocked = new(nameof(SkipLocked));
 }
 
 /// <summary>

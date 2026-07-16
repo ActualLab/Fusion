@@ -1126,40 +1126,44 @@ Status: **completed**. Confidence: **Confirmed by source and focused parser regr
 
 ### PERS9. `RedisStreamer` can hot-spin on its start marker
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source; Redis integration test needed**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `src/ActualLab.Redis/RedisStreamer.cs:45-80`. Encountering `StartedStatus` continues without advancing `position`.
 - Failure: while the marker is the only entry, the reader repeatedly fetches that same row rather than waiting for append notification.
 - **Maintainer decision:** advance the stream position for every consumed control entry before continuing.
-- **Recommended:** advance the stream position for every consumed control entry before continuing.
+- **Resolution:** `Read` now advances `position` as soon as each stream entry is consumed, before handling start, end, error, or data payloads.
+- **Validation:** a mocked Redis stream returning only a start marker failed because every read reused `0-0`; it now observes the marker ID on the next read and waits instead of spinning.
 
 ### PERS10. File-system log watchers leak their `FileSystemWatcher`
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/LogProcessing/FileSystemDbLogWatcher.cs:37-51`. Disposal releases only the observable subscription, not the underlying enabled watcher.
 - Failure: OS handles and event machinery remain alive after shard watcher disposal.
 - **Maintainer decision:** after disposing the subscription, disable and dispose the underlying `FileSystemWatcher` during asynchronous disposal.
-- **Recommended:** disable and dispose `Watcher` in `DisposeAsyncCore`, after disposing the subscription.
+- **Resolution:** shard-watcher disposal now releases the observable subscription, disables native events, and disposes the underlying `FileSystemWatcher`.
+- **Validation:** the focused lifecycle test failed because the native watcher remained usable after owner disposal; it now throws `ObjectDisposedException` as expected.
 
 ### PERS11. Per-shard service providers have no disposal owner
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/Sharding/ShardDbContextBuilder.cs:115-124` builds a provider per shard and returns only its `IDbContextFactory`.
 - Failure: provider-owned pooled factories and disposable dependencies live indefinitely, even when shard factories are no longer used.
 - **Maintainer decision:** retain provider ownership in a disposable shard-factory entry and dispose it when the entry is evicted or the root factory stops.
-- **Recommended:** retain provider ownership in a disposable shard-factory entry and dispose it when the factory is evicted or the root factory stops.
+- **Resolution:** action-configured shard factories now return an internal provider-owning factory entry and dispose the new provider if factory resolution fails. The root shard factory uses lifecycle-aware cache entries so initialization racing shard eviction or root shutdown cannot leak a newly created provider, and implements synchronous and asynchronous disposal; container-owned custom factories remain untouched.
+- **Validation:** focused lifecycle tests failed with per-shard dependencies alive, including a deterministically gated creation-versus-eviction race and a provider whose factory resolution failed after creating a disposable singleton. They now observe cleanup on resolution failure, immediate disposal for removed shards, exact owned-provider cleanup across eviction and root-shutdown races, and no disposal of externally supplied factories.
 
 ### PERS12. `DbWaitHint` singletons have the wrong runtime type
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused API regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused API regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/DbHints.cs:32-35` declares `NoWait` and `SkipLocked` as `DbLockingHint` instances.
 - Failure: the public API type and record equality semantics do not match their declared wait-hint role.
 - Test: `PersistenceAuditRegressionTest.WaitHintsShouldHaveTheWaitHintRuntimeType` receives `DbLockingHint`.
 - **Maintainer decision:** construct `NoWait` and `SkipLocked` as `DbWaitHint` instances.
-- **Recommended:** construct `DbWaitHint` instances.
+- **Resolution:** `NoWait` and `SkipLocked` are now constructed and exposed as `DbWaitHint` instances.
+- **Validation:** the existing runtime-type regression failed for both singletons before the fix and now passes.
 
 ## F. Supporting libraries
 

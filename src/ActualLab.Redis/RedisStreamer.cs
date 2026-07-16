@@ -61,6 +61,7 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
             }
 
             foreach (var entry in entries) {
+                position = entry.Id;
                 var status = (string?)entry[Settings.StatusKey];
                 if (!status.IsNullOrEmpty()) {
                     if (string.Equals(status, Settings.StartedStatus, StringComparison.Ordinal))
@@ -75,8 +76,6 @@ public sealed class RedisStreamer<T>(RedisDb redisDb, string key, RedisStreamer<
                 var data = (ReadOnlyMemory<byte>)entry[Settings.ItemKey];
                 var item = serializer.Read(data, out _);
                 yield return item;
-
-                position = entry.Id;
             }
         }
     }

@@ -36,13 +36,11 @@ public delegate IDbContextFactory<TDbContext> ShardDbContextFactoryBuilder<TDbCo
 /// per-shard <see cref="IDbContextFactory{TDbContext}"/> instances built by a
 /// <see cref="ShardDbContextFactoryBuilder{TDbContext}"/>.
 /// </summary>
-public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbContext>
+public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbContext>, IDisposable, IAsyncDisposable
     where TDbContext : DbContext
 {
-    private readonly ConcurrentDictionary<
-        string,
-        LazySlim<string, ShardDbContextFactory<TDbContext>, IDbContextFactory<TDbContext>>> _factories
-        = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CacheEntry> _factories = new(StringComparer.Ordinal);
+    private int _isDisposed;
 
     protected IServiceProvider Services { get; }
     protected IDbShardRegistry<TDbContext> ShardRegistry { get; }
@@ -55,6 +53,29 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
         Services = services;
         ShardRegistry = services.GetRequiredService<IDbShardRegistry<TDbContext>>();
         HasSingleShard = ShardRegistry.HasSingleShard;
+        ShardRegistry.Shards.Updated += OnShardsUpdated;
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            return;
+
+        ShardRegistry.Shards.Updated -= OnShardsUpdated;
+        foreach (var pair in _factories)
+            if (_factories.TryRemove(pair.Key, pair.Value))
+                pair.Value.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            return;
+
+        ShardRegistry.Shards.Updated -= OnShardsUpdated;
+        foreach (var pair in _factories)
+            if (_factories.TryRemove(pair.Key, pair.Value))
+                await pair.Value.DisposeAsync().ConfigureAwait(false);
     }
 
     public TDbContext CreateDbContext(string shard)
@@ -81,12 +102,164 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
     // Protected methods
 
     protected virtual IDbContextFactory<TDbContext> GetDbContextFactory(string shard)
-        => _factories.GetOrAdd(shard, static (shard1, self) => {
-            if (!self.ShardRegistry.CanUse(shard1))
-                throw Internal.Errors.NoShard(shard1);
+    {
+        if (Volatile.Read(ref _isDisposed) != 0)
+            throw ActualLab.Internal.Errors.AlreadyDisposed<ShardDbContextFactory<TDbContext>>();
 
-            var factory = self.ShardDbContextFactoryBuilder.Invoke(self.Services, shard1);
-            self.ShardRegistry.Use(shard1);
+        return _factories.TryGetValue(shard, out var entry)
+            ? entry.Value
+            : GetDbContextFactorySlow(shard);
+    }
+
+    // Private methods
+
+    private IDbContextFactory<TDbContext> GetDbContextFactorySlow(string shard)
+    {
+        if (Volatile.Read(ref _isDisposed) != 0)
+            throw ActualLab.Internal.Errors.AlreadyDisposed<ShardDbContextFactory<TDbContext>>();
+
+        var entry = _factories.GetOrAdd(
+            shard,
+            static (shard1, self) => new CacheEntry(shard1, self),
+            this);
+        if (Volatile.Read(ref _isDisposed) == 0)
+            return entry.Value;
+
+        Remove(shard, entry);
+        throw ActualLab.Internal.Errors.AlreadyDisposed<ShardDbContextFactory<TDbContext>>();
+    }
+
+    private IDbContextFactory<TDbContext> CreateDbContextFactory(string shard)
+    {
+        if (!ShardRegistry.CanUse(shard))
+            throw Internal.Errors.NoShard(shard);
+
+        var factory = ShardDbContextFactoryBuilder.Invoke(Services, shard);
+        try {
+            ShardRegistry.Use(shard);
             return factory;
-        }, this);
+        }
+        catch {
+            Dispose(factory);
+            throw;
+        }
+    }
+
+    private void OnShardsUpdated(State state, StateEventKind eventKind)
+    {
+        var shards = ShardRegistry.Shards.Value;
+        foreach (var pair in _factories) {
+            if (shards.Contains(pair.Key)
+                || !_factories.TryRemove(pair.Key, pair.Value))
+                continue;
+            pair.Value.Dispose();
+        }
+    }
+
+    private void Remove(string shard, CacheEntry entry)
+    {
+        if (_factories.TryRemove(shard, entry))
+            entry.Dispose();
+    }
+
+    private static void Dispose(IDbContextFactory<TDbContext> factory)
+    {
+        if (factory is ShardDbContextFactoryEntry<TDbContext> entry)
+            entry.Dispose();
+    }
+
+    private static ValueTask DisposeAsync(IDbContextFactory<TDbContext> factory)
+        => factory is ShardDbContextFactoryEntry<TDbContext> entry
+            ? entry.DisposeAsync()
+            : default;
+
+    // Nested types
+
+    private sealed class CacheEntry(string shard, ShardDbContextFactory<TDbContext> owner)
+        : IDisposable, IAsyncDisposable
+    {
+#if NET9_0_OR_GREATER
+        private readonly Lock _lock = new();
+#else
+        private readonly object _lock = new();
+#endif
+        private IDbContextFactory<TDbContext>? _value;
+        private int _isDisposed;
+
+        public IDbContextFactory<TDbContext> Value {
+            get {
+                if (Volatile.Read(ref _isDisposed) != 0)
+                    throw ActualLab.Internal.Errors.AlreadyDisposed<CacheEntry>();
+
+                return Volatile.Read(ref _value) ?? Initialize();
+            }
+        }
+
+        public void Dispose()
+        {
+            IDbContextFactory<TDbContext>? value;
+            lock (_lock) {
+                if (_isDisposed != 0)
+                    return;
+
+                _isDisposed = 1;
+                value = _value;
+            }
+            if (value is not null)
+                ShardDbContextFactory<TDbContext>.Dispose(value);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            IDbContextFactory<TDbContext>? value;
+            lock (_lock) {
+                if (_isDisposed != 0)
+                    return default;
+
+                _isDisposed = 1;
+                value = _value;
+            }
+            return value is not null
+                ? ShardDbContextFactory<TDbContext>.DisposeAsync(value)
+                : default;
+        }
+
+        private IDbContextFactory<TDbContext> Initialize()
+        {
+            lock (_lock) {
+                if (_isDisposed != 0)
+                    throw ActualLab.Internal.Errors.AlreadyDisposed<CacheEntry>();
+
+                return _value ??= owner.CreateDbContextFactory(shard);
+            }
+        }
+    }
+}
+
+internal sealed class ShardDbContextFactoryEntry<TDbContext>(
+    IDbContextFactory<TDbContext> factory,
+    ServiceProvider serviceProvider)
+    : IDbContextFactory<TDbContext>, IDisposable, IAsyncDisposable
+    where TDbContext : DbContext
+{
+    private int _isDisposed;
+
+    public TDbContext CreateDbContext()
+        => factory.CreateDbContext();
+
+#if NET6_0_OR_GREATER
+    public Task<TDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        => factory.CreateDbContextAsync(cancellationToken);
+#endif
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+            serviceProvider.Dispose();
+    }
+
+    public ValueTask DisposeAsync()
+        => Interlocked.Exchange(ref _isDisposed, 1) == 0
+            ? serviceProvider.DisposeAsync()
+            : default;
 }
