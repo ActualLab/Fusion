@@ -133,3 +133,22 @@ public class RedisConnector
         Reconnect(multiplexer);
     }
 }
+
+/// <summary>
+/// A <see cref="RedisConnector"/> scoped by <typeparamref name="TContext"/>
+/// for multi-context dependency injection.
+/// </summary>
+public sealed class RedisConnector<TContext> : RedisConnector
+{
+    public RedisConnector(string configuration, bool mustStart = true)
+        : base(configuration, mustStart)
+    { }
+
+    public RedisConnector(ConfigurationOptions configuration, bool mustStart = true)
+        : base(configuration, mustStart)
+    { }
+
+    public RedisConnector(Func<Task<IConnectionMultiplexer>> multiplexerFactory, bool mustStart = true)
+        : base(multiplexerFactory, mustStart)
+    { }
+}

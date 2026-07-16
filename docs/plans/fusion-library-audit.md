@@ -1032,41 +1032,49 @@ All production C# files in `ActualLab.Fusion.EntityFramework`, `ActualLab.Fusion
 
 ### PERS1. Operation-log trimming can delete entries younger than the retention cutoff
 
-Status: **accepted — pending documentation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/LogProcessing/DbOperationLogTrimmer.cs:93-130`. The trimmer finds the newest expired row by `LoggedAt`, then deletes solely on `Index <= lastCandidate.Index` without retaining the age predicate.
 - Failure: index and timestamp order can diverge through concurrent commits, delayed event flushes, or clock skew. A young row with a lower index is then deleted, which can make other hosts miss its invalidations.
 - **Maintainer decision:** retain the intentional index-only deletion behavior for performance and add a focused source remark explaining why the `LoggedAt` predicate is deliberately omitted.
 - **Recommended:** retain `LoggedAt < minLoggedAt` in both delete paths and use index only for deterministic batching.
+- **Resolution:** retained the index-only deletion path and documented that omitting `LoggedAt` keeps batched deletion on the efficient index path.
+- **Validation:** source review confirms both deletion paths share the documented index-only boundary.
 
 ### PERS2. Typed Redis registrations all resolve the last untyped connector
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused DI regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused DI regression test**.
 
 - Source: `src/ActualLab.Redis/ServiceCollectionExt.cs:64-123`. Every typed registration also registers the same untyped `RedisConnector`, and each `RedisDb<TContext>` resolves that untyped service.
 - Failure: multiple typed Redis contexts share the last connector/configuration rather than their own endpoints.
 - Test: `PersistenceAuditRegressionTest.TypedRedisDatabasesShouldRetainTheirOwnConnectors` resolves two typed databases and finds the same connector instance.
 - **Maintainer decision:** associate each connector with its context type and inject `RedisConnector<TContext>` or an equivalent typed holder.
 - **Recommended:** key the connector by context type and inject `RedisConnector<TContext>` or an equivalent typed holder.
+- **Resolution:** typed Redis registrations now create and resolve `RedisConnector<TContext>`, isolating each context's connector while preserving the untyped single-database API.
+- **Validation:** the focused DI regression now resolves two typed databases with distinct connector instances.
 
 ### PERS3. `RedisSequenceSet.Next` reset is not atomic
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source; stress/integration test needed**.
+Status: **completed**. Confidence: **Confirmed by source and focused Redis concurrency regression test**.
 
 - Source: `src/ActualLab.Redis/RedisSequenceSet.cs:12-25`. Increment, range check, unconditional reset, and second increment are separate Redis operations.
 - Failure: concurrent callers can interleave two resets and return the same sequence number, violating the advertised atomic sequence contract.
 - **Maintainer decision:** make the complete conditional reset and increment atomic with one Redis Lua script or an equivalent compare transaction.
 - **Recommended:** perform the complete conditional reset/increment in one Redis Lua script or transaction with a compare condition.
+- **Resolution:** `Next` now performs increment, range validation, conditional reset, and the post-reset increment in one Redis Lua script.
+- **Validation:** the Redis concurrency regression reproduces duplicate values with the former multi-command reset and now returns a unique contiguous range for 100 simultaneous callers; the existing sequence test also passes.
 
 ### PERS4. The `DbEvent` resolver is registered with the wrong key type
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused DI regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused DI regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/DbOperationsBuilder.cs:62-64` registers `IDbEntityResolver<long, DbEvent>`, while `DbEvent.Uuid` is the string primary key.
 - Failure: the intended string resolver is absent; constructing the long resolver attempts to build an incompatible key expression.
 - Test: `PersistenceAuditRegressionTest.OperationsShouldRegisterTheEventResolverWithItsStringKey` cannot resolve `IDbEntityResolver<string, DbEvent>`.
 - **Maintainer decision:** register the `DbEvent` resolver with its actual `string` primary-key type.
 - **Recommended:** register the resolver with `string`.
+- **Resolution:** database operation setup now registers `IDbEntityResolver<string, DbEvent>`.
+- **Validation:** the focused DI regression resolves the string-keyed event resolver successfully.
 
 ### PERS5. Repeated save disabling leaves a context read-only after re-enabling
 

@@ -111,6 +111,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
             if (lastCandidate is null)
                 return 0;
 
+            // LoggedAt is deliberately omitted below to keep the batched deletion on its efficient index-only path.
 #if NET7_0_OR_GREATER
             if (Settings.AllowExecuteDeleteAsync)
                 return await dbContext.Set<TDbEntry>()

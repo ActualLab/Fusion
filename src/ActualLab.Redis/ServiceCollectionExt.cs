@@ -67,12 +67,12 @@ public static class ServiceCollectionExt
         string? keyPrefix = null,
         string? keyDelimiter = null)
     {
-        services.AddSingleton(c => new RedisConnector(configurationFactory.Invoke(c)) {
-            Log = c.LogFor<RedisConnector>(),
+        services.AddSingleton(c => new RedisConnector<TContext>(configurationFactory.Invoke(c)) {
+            Log = c.LogFor<RedisConnector<TContext>>(),
         });
         services.AddSingleton(c => {
             keyPrefix ??= typeof(TContext).GetName();
-            return new RedisDb<TContext>(c.GetRequiredService<RedisConnector>(), keyPrefix, keyDelimiter);
+            return new RedisDb<TContext>(c.GetRequiredService<RedisConnector<TContext>>(), keyPrefix, keyDelimiter);
         });
         return services;
     }
@@ -83,12 +83,12 @@ public static class ServiceCollectionExt
         string? keyPrefix = null,
         string? keyDelimiter = null)
     {
-        services.AddSingleton(c => new RedisConnector(configuration) {
-            Log = c.LogFor<RedisConnector>(),
+        services.AddSingleton(c => new RedisConnector<TContext>(configuration) {
+            Log = c.LogFor<RedisConnector<TContext>>(),
         });
         services.AddSingleton(c => {
             keyPrefix ??= typeof(TContext).GetName();
-            return new RedisDb<TContext>(c.GetRequiredService<RedisConnector>(), keyPrefix, keyDelimiter);
+            return new RedisDb<TContext>(c.GetRequiredService<RedisConnector<TContext>>(), keyPrefix, keyDelimiter);
         });
         return services;
     }
@@ -99,12 +99,12 @@ public static class ServiceCollectionExt
         string? keyPrefix = null,
         string? keyDelimiter = null)
     {
-        services.AddSingleton(c => new RedisConnector(configuration) {
-            Log = c.LogFor<RedisConnector>(),
+        services.AddSingleton(c => new RedisConnector<TContext>(configuration) {
+            Log = c.LogFor<RedisConnector<TContext>>(),
         });
         services.AddSingleton(c => {
             keyPrefix ??= typeof(TContext).GetName();
-            return new RedisDb<TContext>(c.GetRequiredService<RedisConnector>(), keyPrefix, keyDelimiter);
+            return new RedisDb<TContext>(c.GetRequiredService<RedisConnector<TContext>>(), keyPrefix, keyDelimiter);
         });
         return services;
     }
@@ -115,12 +115,12 @@ public static class ServiceCollectionExt
         string? keyPrefix = null,
         string? keyDelimiter = null)
     {
-        services.AddSingleton(c => new RedisConnector(multiplexerFactory) {
-            Log = c.LogFor<RedisConnector>(),
+        services.AddSingleton(c => new RedisConnector<TContext>(multiplexerFactory) {
+            Log = c.LogFor<RedisConnector<TContext>>(),
         });
         services.AddSingleton(c => {
             keyPrefix ??= typeof(TContext).GetName();
-            return new RedisDb<TContext>(c.GetRequiredService<RedisConnector>(), keyPrefix, keyDelimiter);
+            return new RedisDb<TContext>(c.GetRequiredService<RedisConnector<TContext>>(), keyPrefix, keyDelimiter);
         });
         return services;
     }

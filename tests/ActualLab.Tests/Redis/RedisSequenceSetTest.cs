@@ -7,6 +7,19 @@ namespace ActualLab.Tests.Redis;
 public class RedisSequenceSetTest(ITestOutputHelper @out) : RedisTestBase(@out)
 {
     [SkipOnGitHubFact]
+    public async Task ConcurrentResetTest()
+    {
+        var set = GetRedisDb().GetSequenceSet("concurrent-reset", 1_000);
+        await set.Clear();
+        await set.Reset("a", 1_000_000);
+
+        var values = await Task.WhenAll(Enumerable.Range(0, 100).Select(_ => set.Next("a", 100)));
+
+        values.Should().OnlyHaveUniqueItems();
+        values.Should().BeEquivalentTo(Enumerable.Range(101, 100).Select(x => (long)x));
+    }
+
+    [SkipOnGitHubFact]
     public async Task BasicTest()
     {
         var set = GetRedisDb().GetSequenceSet("seq", 250);
@@ -24,5 +37,9 @@ public class RedisSequenceSetTest(ITestOutputHelper @out) : RedisTestBase(@out)
 
         await set.Reset("a", 10);
         (await set.Next("a", 5)).Should().Be(11);
+
+        const long largeValue = 9_007_199_254_740_992;
+        await set.Reset("large", largeValue);
+        (await set.Next("large", largeValue)).Should().Be(largeValue + 1);
     }
 }

@@ -60,7 +60,7 @@ public readonly struct DbOperationsBuilder<TDbContext>
         services.AddHostedService(c => c.GetRequiredService<DbOperationLogTrimmer<TDbContext>>());
 
         // DbEventLogReader & trimmer - hosted services!
-        DbContext.TryAddEntityResolver<long, DbEvent>();
+        DbContext.TryAddEntityResolver<string, DbEvent>();
         services.TryAddSingleton(_ => DbEventLogReader<TDbContext>.Options.Default);
         services.TryAddSingleton<DbEventLogReader<TDbContext>>();
         services.TryAddSingleton(_ => DbEventLogTrimmer<TDbContext>.Options.Default);
