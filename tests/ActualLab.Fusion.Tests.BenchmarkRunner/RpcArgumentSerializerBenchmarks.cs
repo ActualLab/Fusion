@@ -4,7 +4,7 @@ using BenchmarkDotNet.Attributes;
 
 namespace ActualLab.Fusion.Tests.BenchmarkRunner;
 
-public class RpcIntegerCodecBenchmarks : RpcBenchmarkBase
+public class RpcArgumentSerializerBenchmarks : RpcBenchmarkBase
 {
     private ArgumentList _longArguments = null!;
     private ArgumentList _stringArguments = null!;
