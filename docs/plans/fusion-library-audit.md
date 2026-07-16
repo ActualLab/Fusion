@@ -1032,105 +1032,117 @@ All production C# files in `ActualLab.Fusion.EntityFramework`, `ActualLab.Fusion
 
 ### PERS1. Operation-log trimming can delete entries younger than the retention cutoff
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **accepted — pending documentation**. Confidence: **Confirmed by source**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/LogProcessing/DbOperationLogTrimmer.cs:93-130`. The trimmer finds the newest expired row by `LoggedAt`, then deletes solely on `Index <= lastCandidate.Index` without retaining the age predicate.
 - Failure: index and timestamp order can diverge through concurrent commits, delayed event flushes, or clock skew. A young row with a lower index is then deleted, which can make other hosts miss its invalidations.
+- **Maintainer decision:** retain the intentional index-only deletion behavior for performance and add a focused source remark explaining why the `LoggedAt` predicate is deliberately omitted.
 - **Recommended:** retain `LoggedAt < minLoggedAt` in both delete paths and use index only for deterministic batching.
 
 ### PERS2. Typed Redis registrations all resolve the last untyped connector
 
-Status: **open**. Confidence: **Confirmed by source and focused DI regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused DI regression test**.
 
 - Source: `src/ActualLab.Redis/ServiceCollectionExt.cs:64-123`. Every typed registration also registers the same untyped `RedisConnector`, and each `RedisDb<TContext>` resolves that untyped service.
 - Failure: multiple typed Redis contexts share the last connector/configuration rather than their own endpoints.
 - Test: `PersistenceAuditRegressionTest.TypedRedisDatabasesShouldRetainTheirOwnConnectors` resolves two typed databases and finds the same connector instance.
+- **Maintainer decision:** associate each connector with its context type and inject `RedisConnector<TContext>` or an equivalent typed holder.
 - **Recommended:** key the connector by context type and inject `RedisConnector<TContext>` or an equivalent typed holder.
 
 ### PERS3. `RedisSequenceSet.Next` reset is not atomic
 
-Status: **open**. Confidence: **Confirmed by source; stress/integration test needed**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source; stress/integration test needed**.
 
 - Source: `src/ActualLab.Redis/RedisSequenceSet.cs:12-25`. Increment, range check, unconditional reset, and second increment are separate Redis operations.
 - Failure: concurrent callers can interleave two resets and return the same sequence number, violating the advertised atomic sequence contract.
+- **Maintainer decision:** make the complete conditional reset and increment atomic with one Redis Lua script or an equivalent compare transaction.
 - **Recommended:** perform the complete conditional reset/increment in one Redis Lua script or transaction with a compare condition.
 
 ### PERS4. The `DbEvent` resolver is registered with the wrong key type
 
-Status: **open**. Confidence: **Confirmed by source and focused DI regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused DI regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/DbOperationsBuilder.cs:62-64` registers `IDbEntityResolver<long, DbEvent>`, while `DbEvent.Uuid` is the string primary key.
 - Failure: the intended string resolver is absent; constructing the long resolver attempts to build an incompatible key expression.
 - Test: `PersistenceAuditRegressionTest.OperationsShouldRegisterTheEventResolverWithItsStringKey` cannot resolve `IDbEntityResolver<string, DbEvent>`.
+- **Maintainer decision:** register the `DbEvent` resolver with its actual `string` primary-key type.
 - **Recommended:** register the resolver with `string`.
 
 ### PERS5. Repeated save disabling leaves a context read-only after re-enabling
 
-Status: **open**. Confidence: **Confirmed by source and focused regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/DbContextExt.cs:64-71`. Every disable adds the same `SavingChanges` handler; enable removes only one subscription.
 - Failure: disable/disable/enable still throws on `SaveChanges`, which is especially hazardous for pooled contexts.
 - Test: `PersistenceAuditRegressionTest.SaveChangesGuardShouldBeIdempotent` reproduces the remaining guard.
+- **Maintainer decision:** track the disabled state explicitly so disabling and enabling are idempotent; irreversible disabling is acceptable only if a safe reversible implementation proves infeasible.
 - **Recommended:** make state idempotent, using a tracked flag rather than event-subscription count.
 
 ### PERS6. Npgsql locking clauses are emitted in caller order
 
-Status: **open**. Confidence: **Confirmed by source and focused SQL-generation regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused SQL-generation regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework.Npgsql/Internal/NpgsqlHintQuerySqlGenerator.cs:57-73` groups by the clause prefix without sorting the groups.
 - Failure: wait-then-lock input emits invalid `FOR SKIP LOCKED UPDATE` rather than `FOR UPDATE SKIP LOCKED`.
 - Test: `PersistenceProviderAuditRegressionTest.NpgsqlHintsShouldBeOrderedByClauseKind` observes the invalid order.
+- **Maintainer decision:** sort parsed hint groups by numeric clause kind before concatenation.
 - **Recommended:** sort parsed groups by their numeric clause kind before concatenation.
 
 ### PERS7. Default Npgsql notification channels are unsafe unquoted identifiers
 
-Status: **open**. Confidence: **Confirmed by source and focused formatter regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused formatter regression test**.
 
 - Source: `NpgsqlDbLogWatcherOptions.cs:16-23` incorporates arbitrary shard text, while `NpgsqlDbLogWatcher.cs:56-57` interpolates it directly into `LISTEN`/`NOTIFY`.
 - Failure: valid shard names such as `us-west` produce invalid SQL; quotes and overlength names also lack escaping/normalization.
 - Test: `PersistenceProviderAuditRegressionTest.DefaultNpgsqlChannelNamesShouldBeValidUnquotedIdentifiers` produces `AuditDbContext_String_us-west`.
+- **Maintainer decision:** quote identifiers through the provider helper or map arbitrary inputs to bounded safe identifiers.
 - **Recommended:** quote through the provider's identifier helper or map inputs to a bounded safe identifier.
 
 ### PERS8. An empty custom Npgsql hint crashes SQL generation
 
-Status: **open**. Confidence: **Confirmed by source and focused parser regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused parser regression test**.
 
 - Source: `NpgsqlHintQuerySqlGenerator.cs:50-61` accepts the empty token following `HINTS:` and indexes `x[0]`.
 - Failure: an empty hint throws `IndexOutOfRangeException` during query generation.
 - Test: `PersistenceProviderAuditRegressionTest.EmptyNpgsqlCustomHintShouldBeIgnored` reproduces the exception.
+- **Maintainer decision:** reject or remove empty hint tokens before grouping.
 - **Recommended:** reject or remove empty tokens before grouping.
 
 ### PERS9. `RedisStreamer` can hot-spin on its start marker
 
-Status: **open**. Confidence: **Confirmed by source; Redis integration test needed**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source; Redis integration test needed**.
 
 - Source: `src/ActualLab.Redis/RedisStreamer.cs:45-80`. Encountering `StartedStatus` continues without advancing `position`.
 - Failure: while the marker is the only entry, the reader repeatedly fetches that same row rather than waiting for append notification.
+- **Maintainer decision:** advance the stream position for every consumed control entry before continuing.
 - **Recommended:** advance the stream position for every consumed control entry before continuing.
 
 ### PERS10. File-system log watchers leak their `FileSystemWatcher`
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/LogProcessing/FileSystemDbLogWatcher.cs:37-51`. Disposal releases only the observable subscription, not the underlying enabled watcher.
 - Failure: OS handles and event machinery remain alive after shard watcher disposal.
+- **Maintainer decision:** after disposing the subscription, disable and dispose the underlying `FileSystemWatcher` during asynchronous disposal.
 - **Recommended:** disable and dispose `Watcher` in `DisposeAsyncCore`, after disposing the subscription.
 
 ### PERS11. Per-shard service providers have no disposal owner
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/Sharding/ShardDbContextBuilder.cs:115-124` builds a provider per shard and returns only its `IDbContextFactory`.
 - Failure: provider-owned pooled factories and disposable dependencies live indefinitely, even when shard factories are no longer used.
+- **Maintainer decision:** retain provider ownership in a disposable shard-factory entry and dispose it when the entry is evicted or the root factory stops.
 - **Recommended:** retain provider ownership in a disposable shard-factory entry and dispose it when the factory is evicted or the root factory stops.
 
 ### PERS12. `DbWaitHint` singletons have the wrong runtime type
 
-Status: **open**. Confidence: **Confirmed by source and focused API regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused API regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/DbHints.cs:32-35` declares `NoWait` and `SkipLocked` as `DbLockingHint` instances.
 - Failure: the public API type and record equality semantics do not match their declared wait-hint role.
 - Test: `PersistenceAuditRegressionTest.WaitHintsShouldHaveTheWaitHintRuntimeType` receives `DbLockingHint`.
+- **Maintainer decision:** construct `NoWait` and `SkipLocked` as `DbWaitHint` instances.
 - **Recommended:** construct `DbWaitHint` instances.
 
 ## F. Supporting libraries
@@ -1141,123 +1153,137 @@ All 84 production C# files in `ActualLab.Plugins`, `ActualLab.RestEase`, `Actual
 
 ### SUP1. `TestIdFormatter` collapses formatted IDs to the empty string
 
-Status: **open**. Confidence: **Confirmed by source and focused regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `src/ActualLab.Testing/TestIdFormatter.cs:32-46` calls `ToStringAndRelease()` and then reads the released builder's now-zero `Length` to slice the result.
 - Failure: selected ID parts are removed, causing supposedly unique external-resource/test IDs to collide.
 - Test: `SupportingProjectsAuditRegressionTest.TestIdFormatterShouldIncludeSelectedParts` expected `alpha` and received an empty string.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** capture the relevant length before release, or trim the returned string directly.
 
 ### SUP2. Finite polling sequences silently succeed after every assertion fails
 
-Status: **open**. Confidence: **Confirmed by source and focused regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `src/ActualLab.Testing/TestExt.cs:39-54,72-87`. Both sync and async `When` variants discard assertion failures while intervals remain, then return normally if a finite sequence ends before cancellation.
 - Failure: a test can report success although its condition was never satisfied.
 - Test: `SupportingProjectsAuditRegressionTest.FinitePollingSequenceShouldNotHideLastAssertion` observes no final error.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** retain the last assertion exception and throw it when the interval sequence ends.
 
 ### REST1. Scalar query serialization ignores the supplied format provider
 
-Status: **open**. Confidence: **Confirmed by source and culture regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and culture regression test**.
 
 - Source: `src/ActualLab.RestEase/Internal/RestEaseRequestQueryParamSerializer.cs:36-46` uses parameterless `ToString()` for non-date value types despite `RequestQueryParamSerializerInfo.FormatProvider`.
 - Failure: decimal/floating query values change with process culture and can be rejected or misinterpreted by servers.
 - Test: the invariant serializer emits `1,5` under `fr-FR` rather than `1.5`.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** use `IFormattable.ToString(null, info.FormatProvider)` with the existing scalar special cases.
 
 ### REST2. Complex query objects with indexers throw during serialization
 
-Status: **open**. Confidence: **Confirmed by source and focused regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: the same serializer at lines 78-84 invokes every public property's getter without checking index parameters.
 - Failure: common types exposing indexers throw `TargetParameterCountException` instead of serializing their ordinary properties.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** exclude indexed and unreadable properties.
 
 ### REST3. Rejected HTTP 500 responses are not disposed
 
-Status: **open**. Confidence: **Confirmed by source and disposal regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and disposal regression test**.
 
 - Source: `src/ActualLab.RestEase/Internal/RestEaseHttpMessageHandler.cs:17-22` translates the response to an exception and throws without disposing it.
 - Failure: content streams/connections are leaked because the caller never receives the response to dispose it.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** dispose the response before throwing, after extracting all error information.
 
 ### NERD1. `Option<T>` and `ApiOption<T>` readers leave declared array elements unread
 
-Status: **open**. Confidence: **Confirmed by source and representative alignment regression test**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source and representative alignment regression test**.
 
 - Source: `OptionNerdbankConverter.cs:10-18` and `ApiOptionNerdbankConverter.cs:10-18` accept any positive array length but consume only one item.
 - Failure: an extended/malformed option corrupts the containing reader's alignment, so following values are read from inside the option.
 - Test: `SupportingProjectsAuditRegressionTest.OptionConverterShouldConsumeItsWholeDeclaredArray` reports two consumed bytes for a three-byte declared array.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** require exactly one item for `Some`, or explicitly skip extension fields before returning.
 
 ### NERD2. Embedded `RpcObjectId` parsing has the same alignment defect
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `RpcStreamNerdbankConverter.cs:67-76` neither validates its required two fields nor skips fields after index one.
 - Failure: extended object IDs leave the outer map reader positioned inside the ID, corrupting the remainder of the RPC stream value.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** validate the minimum shape and consume/skip the complete declared array.
 
 ### PLUGIN1. File-system plugin cache identity omits a result-changing option
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `FileSystemPluginFinder.cs:31-33,61-68,109-111`. `DetectIndirectAssemblyDependencies` changes generated metadata but is absent from the file/timestamp cache key.
 - Failure: finders sharing a cache directory can retrieve metadata produced under the opposite dependency-detection policy.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** include all result-affecting settings and an algorithm/schema version in the cache identity.
 
 ### PLUGIN2. Failed plugin-host construction leaks its service provider
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `PluginHostBuilder.cs:46-53` builds the provider without a cleanup path if finder resolution or host startup throws.
 - Failure: singleton disposables created before the failure remain alive.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** wrap construction in try/catch and dispose the provider on failure before rethrowing.
 
 ### PLUGIN3. `ReflectionTypeLoadException` aborts plugin discovery
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `FileSystemPluginFinder.cs:93-105` enumerates `Assembly.ExportedTypes` but catches `TypeLoadException`, `FileNotFoundException`, and `FileLoadException`, not the common aggregate `ReflectionTypeLoadException`.
 - Failure: one partially unloadable assembly aborts the complete scan rather than yielding its loadable exported types or a controlled exclusion.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** handle `ReflectionTypeLoadException`, record loader errors, and use its non-null `Types` where policy permits.
 
 ### PLUGIN4. Missing declared dependencies surface as incidental dictionary errors
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `PluginSetInfo.cs:66-69` indexes every declared dependency through `dPlugins[t]` without validation.
 - Failure: inconsistent metadata produces a context-free `KeyNotFoundException` rather than a plugin-resolution diagnostic.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** validate dependency closure and report the plugin and missing `TypeRef` explicitly.
 
 ### TESTING1. One “all serializers” overload omits two serializers
 
-Status: **open test-infrastructure gap**. Confidence: **Confirmed by source comparison**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source comparison**.
 
 - Source: `SerializationTestExt.cs:31-48` omits `UniSerialized` and `TypeDecoratingUniSerialized`; assertion overloads at lines 51-96 include them.
 - Failure: equality-based tests can claim all-serializer coverage while silently skipping two wire formats.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** share one serializer matrix across overloads.
 
 ### TESTING2. .NET Framework OWIN dependency scopes resolve from the root
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `src/ActualLab.Testing/Compatibility/OwinWebApiServer.cs:146-174` returns the root resolver from `BeginScope`; `Web/TestWebHost.cs:101-105` expects scope validation.
 - Failure: scoped services are effectively root singletons and are not disposed per request.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** create and own a real DI scope in `BeginScope`.
 
 ### TESTING3. Serving cleanup completes before host disposal
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `src/ActualLab.Testing/Web/TestWebHost.cs:70-87` schedules `host.Dispose()` in an unobserved `Task.Run`, publishes a fresh host, and returns from async cleanup.
 - Failure: cleanup exceptions are lost and subsequent tests can overlap still-live resources.
+- **Maintainer decision:** implement the recommended fix.
 - **Recommended:** await asynchronous/synchronous host disposal within the cleanup callback before publishing completion.
 
 ### Investigation notes
 
-- **NERD-I1 — custom serializer isolation.** `TypeDecoratingUniSerializedNerdbankConverter.cs:20-39` hardcodes the global `DefaultTypeDecorating` serializer for nested values. This may bypass an owning serializer's custom converters, but it remains an investigation until a custom-context regression demonstrates divergence.
+- **NERD-I1 — custom serializer isolation.** Status: **approved for validation**. `TypeDecoratingUniSerializedNerdbankConverter.cs:20-39` hardcodes the global `DefaultTypeDecorating` serializer for nested values. Add a custom-context regression test and implement the owning-serializer fix if the test confirms divergence; retain a useful test only when it covers a supported contract.
 
 ## G. RPC
 
@@ -1466,92 +1492,104 @@ Status: **invalid — intentional sample configuration**. Confidence: **Confirme
 
 - Source: `samples/TodoApp/Host/HostSettings.cs:24-32` contains Microsoft and GitHub client IDs and client secrets consumed by the sample's enabled OAuth providers.
 - Verdict: this is a runnable sample, and the shared OAuth credentials are intentionally checked in so users can run it without provisioning their own provider applications. This is not an actionable audit finding.
+- **Maintainer decision:** confirmed acceptable for this runnable sample; no change is required.
 
 ### INTG2. The build driver returns a success exit code after target failure
 
-Status: **open**. Confidence: **Confirmed by source; subprocess smoke test needed**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source; subprocess smoke test needed**.
 
 - Source: `build/Program.cs:203-218` catches `TargetFailedException` and all other exceptions without rethrowing or setting a nonzero process exit code.
 - Failure: failed build, test, pack, or publish targets can appear successful to CI and release automation.
+- **Maintainer decision:** implement the recommended nonzero failure result and subprocess coverage.
 - **Recommended:** preserve friendly logging but return a nonzero exit code or rethrow after logging; add an invalid/failing-target subprocess test.
 
 ### INTG3. The optional in-memory Todo API ignores session isolation
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **accepted for the sample — pending documentation**. Confidence: **Confirmed by source**.
 
 - Source: `samples/TodoApp/Services/InMemoryTodoApi.cs:9,13-20,34-38,51-64` stores one global item list and ignores every `Session`; `Host/Program.cs:211` presents it as a registration alternative.
 - Failure: users can read, update, and delete each other's todos when the alternative is enabled. Non-atomic immutable-list replacement also lets concurrent commands overwrite one another.
+- **Maintainer decision:** keep the simple shared in-memory behavior for this sample, but add a focused source remark that it intentionally does not provide per-session isolation or production-grade concurrent storage semantics.
 - **Recommended:** partition by authenticated session/user/folder using existing session and command abstractions, and serialize or atomically update each partition.
 
 ### INTG4. MultiServerRpc mutates previously published computed results
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `samples/MultiServerRpc/Service.cs:36-40,52-62` returns its internal list, then modifies that same list in place. `samples/MiniRpc/Program.cs:124-132` demonstrates the correct copy-on-write pattern.
 - Failure: cached callers and serializers can observe a value change before invalidation and race list mutation, undermining Fusion's immutable-result expectation.
+- **Maintainer decision:** fix MultiServerRpc by publishing immutable snapshots or using the demonstrated copy-on-write pattern.
 - **Recommended:** store/publish immutable snapshots or replace the list on every mutation.
 
 ### INTG5. Clearing the local-storage computed cache erases unrelated browser data
 
-Status: **design/documentation review — hardening recommendation, not a confirmed defect**. Confidence: **Implementation and documentation confirmed; intended storage ownership is unclear**.
+Status: **accepted for the sample — no action**. Confidence: **Implementation and documentation confirmed; intended storage ownership is clarified for this sample**.
 
 - Source: `samples/TodoApp/UI/Services/LocalStorageRemoteComputedCache.cs:52-55` calls `_storage.Clear()` despite maintaining a cache-specific `_keyPrefix`.
 - Concern: clearing Fusion's cache wipes all local-storage entries owned by the application or other components. However, the current local-storage cache documentation presents this exact `_storage.Clear()` implementation as the complete example.
+- **Maintainer decision:** the whole-storage clear is acceptable for this sample; do not change it.
 - **Recommended:** decide whether the cache owns the entire local-storage namespace. If it does, close this item; otherwise enumerate and remove only keys under the cache prefix and update the documentation example with the same behavior.
 
 ### INTG6. Corrupt local cache entries turn cache misses into application failures
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: the same cache at lines 30-38 lets invalid Base64 or incompatible MemoryPack data escape.
 - Failure: one stale/corrupt browser entry repeatedly breaks reads instead of self-healing as a miss.
+- **Maintainer decision:** report/log corrupt or incompatible entries, remove the bad scoped entry, and otherwise handle them exactly like missing cache entries by returning null.
 - **Recommended:** catch data-format/deserialization errors, remove the bad scoped key, log at an appropriate level, and return null.
 
 ### INTG7. Build cleanup can silently reuse stale artifacts
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `build/Program.cs:87-95,323-336` suppresses directory-deletion failures and proceeds when the directory still exists.
 - Failure: pack/publish can consume stale outputs after a failed clean, producing non-reproducible artifacts.
+- **Maintainer decision:** implement the recommended post-clean verification and fail when stale artifacts remain.
 - **Recommended:** verify the directory is absent/empty after cleanup and fail the target if stale artifacts remain.
 
 ### INTG8. Blank docs selection runs nothing instead of all parts
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `docs/Program.cs:57-68` splits blank input into an array containing `""`, so the documented Enter/default interaction matches no part. Unknown names also exit successfully.
+- **Maintainer decision:** implement the recommended blank/default selection and unknown-name failure behavior.
 - **Recommended:** treat empty/whitespace input as the complete part list and fail clearly on unknown names.
 
 ### INTG9. MiniRpc and MultiServerRpc spin forever after stdin closes
 
-Status: **open**. Confidence: **Confirmed by source; subprocess smoke test needed**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source; subprocess smoke test needed**.
 
 - Source: MiniRpc `Program.cs:62-70` and MultiServerRpc `Program.cs:81-89` convert EOF/null to an empty command and continue.
 - Failure: redirected/headless execution hot-spins after input closes; observer tasks are also fire-and-forget.
+- **Maintainer decision:** implement the recommended EOF shutdown and observer coordination.
 - **Recommended:** treat EOF as shutdown and await/coordinate observer termination.
 
 ### INTG10. MiniRpc and MultiServerRpc suppress server failures
 
-Status: **open**. Confidence: **Confirmed by source**.
+Status: **ignored — intentional sample behavior**. Confidence: **Confirmed by source**.
 
 - Source: MiniRpc `Program.cs:36-41` and MultiServerRpc `Program.cs:41-46` log startup/runtime exceptions and return normally.
 - Failure: automated smoke runs cannot detect bind failures or server crashes from the process status.
+- **Maintainer decision:** ignore this finding; the behavior is acceptable for these samples.
 - **Recommended:** return a nonzero exit or rethrow after logging unexpected server failures.
 
 ### INTG11. MeshRpc retains process-lifetime peer/provider state
 
-Status: **open, low severity for a short stress sample**. Confidence: **Confirmed by source**.
+Status: **accepted for the sample — no action**. Confidence: **Confirmed by source**.
 
 - Source: `samples/MeshRpc/RpcHostPeerRef.cs:7-19` uses an unbounded static cache for unique host IDs; `Host.cs:34-43` loses the provider that owns the shared cache.
 - Failure: sustained/repeated runs retain peer references and provider-owned resources indefinitely.
+- **Maintainer decision:** the process-lifetime state is acceptable for this short stress sample; no change is required.
 - **Recommended:** bound/remove cache entries when hosts leave and give providers an explicit owner/disposal path.
 
 ### INTG12. Todo console client dereferences EOF
 
-Status: **open, low severity**. Confidence: **Confirmed by source**.
+Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
 
 - Source: `samples/TodoApp/ConsoleClient/Program.cs:8` dereferences the nullable result of `Console.ReadLine()`.
 - Failure: redirected or closed stdin terminates with a null-reference error rather than clean shutdown.
+- **Maintainer decision:** implement the recommended clean EOF shutdown.
 - **Recommended:** break on null.
 
 ### Contextual observations not promoted to defects
