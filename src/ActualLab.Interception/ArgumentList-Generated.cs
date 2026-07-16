@@ -1,4 +1,4 @@
-﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
+// ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable ArrangeConstructorOrDestructorBody
 using System.Linq.Expressions;
@@ -339,14 +339,14 @@ public sealed record ArgumentListG1<T0> : ArgumentList1
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item0")!.GetGetMethod()!);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -632,7 +632,7 @@ public sealed record ArgumentListS1 : ArgumentList1
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -641,7 +641,7 @@ public sealed record ArgumentListS1 : ArgumentList1
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -977,7 +977,7 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -986,7 +986,7 @@ public sealed record ArgumentListG2<T0, T1> : ArgumentList2
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item1")!.GetGetMethod()!);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -1340,7 +1340,7 @@ public sealed record ArgumentListS2 : ArgumentList2
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -1353,7 +1353,7 @@ public sealed record ArgumentListS2 : ArgumentList2
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -1749,7 +1749,7 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -1760,7 +1760,7 @@ public sealed record ArgumentListG3<T0, T1, T2> : ArgumentList3
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item2")!.GetGetMethod()!);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -2181,7 +2181,7 @@ public sealed record ArgumentListS3 : ArgumentList3
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -2198,7 +2198,7 @@ public sealed record ArgumentListS3 : ArgumentList3
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -2654,7 +2654,7 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -2667,7 +2667,7 @@ public sealed record ArgumentListG4<T0, T1, T2, T3> : ArgumentList4
                 il.Emit(OpCodes.Call, type.ListType.GetProperty("Item3")!.GetGetMethod()!);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -3155,7 +3155,7 @@ public sealed record ArgumentListS4 : ArgumentList4
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -3176,7 +3176,7 @@ public sealed record ArgumentListS4 : ArgumentList4
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -3695,7 +3695,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -3712,7 +3712,7 @@ public sealed record ArgumentListG5<T0, T1, T2, T3> : ArgumentList5
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -4264,7 +4264,7 @@ public sealed record ArgumentListS5 : ArgumentList5
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -4289,7 +4289,7 @@ public sealed record ArgumentListS5 : ArgumentList5
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -4869,7 +4869,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -4890,7 +4890,7 @@ public sealed record ArgumentListG6<T0, T1, T2, T3> : ArgumentList6
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -5503,7 +5503,7 @@ public sealed record ArgumentListS6 : ArgumentList6
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -5532,7 +5532,7 @@ public sealed record ArgumentListS6 : ArgumentList6
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -6173,7 +6173,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -6198,7 +6198,7 @@ public sealed record ArgumentListG7<T0, T1, T2, T3> : ArgumentList7
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -6872,7 +6872,7 @@ public sealed record ArgumentListS7 : ArgumentList7
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -6905,7 +6905,7 @@ public sealed record ArgumentListS7 : ArgumentList7
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -7607,7 +7607,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -7636,7 +7636,7 @@ public sealed record ArgumentListG8<T0, T1, T2, T3> : ArgumentList8
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -8371,7 +8371,7 @@ public sealed record ArgumentListS8 : ArgumentList8
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -8408,7 +8408,7 @@ public sealed record ArgumentListS8 : ArgumentList8
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -9171,7 +9171,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -9204,7 +9204,7 @@ public sealed record ArgumentListG9<T0, T1, T2, T3> : ArgumentList9
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -10000,7 +10000,7 @@ public sealed record ArgumentListS9 : ArgumentList9
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -10041,7 +10041,7 @@ public sealed record ArgumentListS9 : ArgumentList9
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -10865,7 +10865,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -10902,7 +10902,7 @@ public sealed record ArgumentListG10<T0, T1, T2, T3> : ArgumentList10
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
@@ -11759,7 +11759,7 @@ public sealed record ArgumentListS10 : ArgumentList10
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 il.Emit(OpCodes.Ldloc_0);
@@ -11804,7 +11804,7 @@ public sealed record ArgumentListS10 : ArgumentList10
                 il.Emit(itemType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, itemType);
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))

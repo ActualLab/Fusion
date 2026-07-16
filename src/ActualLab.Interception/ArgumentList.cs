@@ -115,11 +115,11 @@ public sealed record ArgumentList0 : ArgumentList
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))

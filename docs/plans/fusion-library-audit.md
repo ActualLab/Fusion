@@ -912,20 +912,21 @@ Confidence: **Confirmed** by focused regression test and source inspection.
 
 ### Audit coverage
 
-The Interception runtime and proxy generator were reviewed across method definitions and converters, invoker factories, interceptor selection/binding, proxy lookup/activation, built-in interceptors, invocation dispatch, generated argument-list operations, trimming keepers, generator syntax filtering, proxy method emission, diagnostics, and source hint production. `InterceptionAuditRegressionTest` contains a failing nested-type contract test and a skipped process-crash test; isolated generator compile cases live under ignored `tmp/interception-generator-audit` and are recorded in validation.
+The Interception runtime and proxy generator were reviewed across method definitions and converters, invoker factories, interceptor selection/binding, proxy lookup/activation, built-in interceptors, invocation dispatch, generated argument-list operations, trimming keepers, generator syntax filtering, proxy method emission, diagnostics, and source hint production. `InterceptionAuditRegressionTest` contains a failing nested-type contract test and a subprocess-isolated struct-invocation regression; isolated generator compile cases live under ignored `tmp/interception-generator-audit` and are recorded in validation.
 
 ### INT1. Dynamic invocation of a struct instance method can crash the process
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by isolated test-host crash (`0xC0000005`).
 
 - Source: `src/ActualLab.Interception/ArgumentList.cs:94-130` and the generated argument-list template emit `Unbox_Any` for a value-type target, then `Callvirt` for an instance method. `Unbox_Any` leaves a value, while a struct instance call requires a managed address.
 - Failure: creating/invoking the dynamic delegate for a zero-argument struct instance method aborted the .NET test host with access violation `0xC0000005`; it did not produce a catchable managed exception.
-- Test: `InterceptionAuditRegressionTest.ArgumentListInvokerMustSupportValueTypeTargets` preserves the correct contract but is skipped because activating it destabilizes the entire suite. The crash was confirmed before the skip was added.
+- Test: `InterceptionAuditRegressionTest.ArgumentListInvokerMustSupportValueTypeTargets` runs each dangerous invocation in a child VSTest process, covering the zero-argument list plus generic/hybrid and simple factories for arities 1 through 10 without exposing the parent test host to native failure.
 - Impact: reflected value-type targets can terminate the process, making this a denial-of-service boundary rather than a normal invocation error.
 - **Maintainer decision:** implement the recommended address-preserving struct invocation fix.
-- **Recommended:** emit address-preserving struct invocation IL and use `Call` where required; add a subprocess-isolated regression for all generated argument-list arities.
+- **Resolution:** shared IL helpers now preserve boxed value-type addresses with `Unbox` and select `Call` for static and value-type methods while retaining `Callvirt` for reference-type instance methods. Both `ArgumentList0` and the generated argument-list template use the helpers, and the generated output was refreshed with the repository's T4 tool.
+- **Validation:** before the fix, the subprocess regression kept its parent alive while the child host aborted with fatal `0xC0000005`. After the fix, all 21 argument-list shapes invoke and mutate a boxed struct correctly. The focused regression passes, all 8 `ArgumentListTest` cases pass, the surrounding non-benchmark Interception set passes (13 tests), and the nine-target `ActualLab.Interception` build succeeds.
 - **Alternative:** reject value-type instance methods before dynamic code generation with a clear exception. Safer than a crash but narrower than the public invoker contract.
 
 ### GEN1. Proxy parameters lose passing modifiers and identifier escaping

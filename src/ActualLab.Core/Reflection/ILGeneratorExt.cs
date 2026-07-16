@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Reflection.Emit;
 using ActualLab.Internal;
 
@@ -9,6 +10,12 @@ namespace ActualLab.Reflection;
 // ReSharper disable once InconsistentNaming
 public static class ILGeneratorExt
 {
+    public static void EmitCall(this ILGenerator il, MethodInfo method)
+        => il.Emit(method.IsStatic || method.DeclaringType!.IsValueType ? OpCodes.Call : OpCodes.Callvirt, method);
+
+    public static void EmitLoadInstance(this ILGenerator il, Type instanceType)
+        => il.Emit(instanceType.IsValueType ? OpCodes.Unbox : OpCodes.Castclass, instanceType);
+
     public static void MaybeEmitCast(this ILGenerator il, Type fromType, Type toType)
     {
         if (fromType == toType)

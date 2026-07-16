@@ -115,6 +115,9 @@ public abstract partial record ArgumentList
 
 <# for (var itemCount = 1; itemCount <= maxItemCount; itemCount++) {
 #>
+/// <summary>
+/// Abstract base for <see cref="ArgumentList"/> variants with <#=itemCount#> argument<#=itemCount == 1 ? "" : "s"#>.
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -150,7 +153,19 @@ public abstract record ArgumentList<#=itemCount#> : ArgumentList
            : constructorName;
 
        string TypeOf(int i) => i < genericItemCount ? $"T{i}" : "object?";
+       var argumentSuffix = itemCount == 1 ? "" : "s";
+       var typeDescription = useGenerics && simpleItemCount == 0
+           ? $"A generic <see cref=\"ArgumentList\"/> with {itemCount} "
+               + $"strongly-typed argument{argumentSuffix}."
+           : useGenerics
+               ? $"A generic <see cref=\"ArgumentList\"/> with {itemCount} arguments "
+                   + $"({genericItemCount} generic + {simpleItemCount} simple)."
+               : $"A non-generic (simple) <see cref=\"ArgumentList\"/> with {itemCount} "
+                   + $"argument{argumentSuffix} stored as objects.";
 #>
+/// <summary>
+/// <#=typeDescription#>
+/// </summary>
 [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2046", Justification = "We assume ArgumentList code is preserved")]
 [UnconditionalSuppressMessage("Trimming", "IL2080", Justification = "We assume ArgumentList code is preserved")]
@@ -450,7 +465,7 @@ public sealed record <#=className#> : ArgumentList<#=itemCount#>
                 // Unbox target
                 if (!method1.IsStatic) {
                     il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(declaringType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, declaringType);
+                    il.EmitLoadInstance(declaringType);
                 }
 
 <# for (var t = 0; t < itemCount; t++) { #>
@@ -463,7 +478,7 @@ public sealed record <#=className#> : ArgumentList<#=itemCount#>
 <# } #>
 
                 // Call method
-                il.Emit(method1.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method1);
+                il.EmitCall(method1);
 
                 // Box return type
                 if (method1.ReturnType == typeof(void))
