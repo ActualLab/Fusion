@@ -931,7 +931,7 @@ Confidence: **Confirmed** by isolated test-host crash (`0xC0000005`).
 
 ### GEN1. Proxy parameters lose passing modifiers and identifier escaping
 
-Status: **approved — pending diagnostic implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by isolated compile repros.
 
@@ -941,10 +941,12 @@ Confidence: **Confirmed** by isolated compile repros.
 - **Maintainer decision:** emit a purpose-built diagnostic rejecting unsupported parameter shapes.
 - **Recommended:** render parameters from symbol semantics, preserving `ref`/`out`/`in` and using Roslyn-safe escaped identifiers in declarations and arguments.
 - **Alternative:** emit a purpose-built diagnostic rejecting unsupported shapes; clearer than broken source but needlessly excludes ordinary C# signatures.
+- **Resolution:** proxy generation now reports `ALG0002` for passing modifiers and parameter identifiers that the current syntax emitter cannot safely represent, and suppresses source generation for the affected proxy type.
+- **Validation:** GeneratorDriver regressions cover `ref`/`out`/`in` and an escaped keyword identifier, assert the targeted diagnostics, and confirm the unchanged input compilation has no broken generated-source diagnostics.
 
 ### GEN2. Diamond interface methods are emitted twice
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by isolated compile repro (CS0111).
 
@@ -954,6 +956,8 @@ Confidence: **Confirmed** by isolated compile repro (CS0111).
 - **Maintainer decision:** implement the recommended effective-signature deduplication.
 - **Recommended:** deduplicate by effective callable signature, including name, generic arity, parameter types/ref kinds, and return compatibility.
 - **Alternative:** explicitly implement colliding base-interface members when distinct metadata must be preserved.
+- **Resolution:** inherited methods are now deduplicated by normalized callable signature, including method type-parameter positions, parameter types and ref kinds, and exact implicit-interface-compatible return contracts. Interface proxy metadata lookup and target calls use the selected declaring interface so a deduplicated diamond member is unambiguous.
+- **Validation:** the compile regression emits one shared diamond method while retaining distinct overloads, verifies generic method type parameters from separate base declarations normalize by ordinal, and confirms covariant return contracts remain distinct because one cannot implicitly implement the other (`CS0738`).
 
 ### GEN3. Proxy source hint names collide across generic arity
 
@@ -970,7 +974,7 @@ Confidence: **Confirmed** by isolated compile repro (CS8785).
 
 ### GEN4. Proxy methods with more than ten parameters generate uncompilable code
 
-Status: **approved — pending diagnostic implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by central isolated build (CS1501 plus a follow-on lambda error).
 
@@ -980,6 +984,8 @@ Confidence: **Confirmed** by central isolated build (CS1501 plus a follow-on lam
 - **Maintainer decision:** report a targeted generator diagnostic for arity above ten.
 - **Recommended:** extend runtime and generator together, or generate a general array-backed representation above specialized arities.
 - **Alternative:** report a targeted generator diagnostic for arity above ten.
+- **Resolution:** proxy generation now reports `ALG0003` when a selected method exceeds the ten-item `ArgumentList` runtime limit and suppresses source generation for the affected proxy type.
+- **Validation:** the eleven-parameter GeneratorDriver regression receives only the targeted generator error, emits no proxy source, and has no follow-on C# compilation errors.
 
 ### GEN5. Nested proxy types are silently ignored
 

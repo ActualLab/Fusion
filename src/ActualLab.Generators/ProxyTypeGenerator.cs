@@ -130,11 +130,15 @@ public class ProxyTypeGenerator
                     CodeKeeperKeepProxyGenericMethodName.WithTypeArgumentList(
                         TypeArgumentList(CommaSeparatedList(TypeRef, ProxyRef)))))));
 
+        var proxyMethods = GetProxyMethods().ToArray();
+        if (!ValidateProxyMembers(proxyMethods.Select(x => x.Method)))
+            return;
+
         if (!AddClassConstructors()) {
             WriteDebug?.Invoke($"[- Type] No constructors: {typeSymbol}");
             return; // No public constructors
         }
-        AddProxyMethods();
+        AddProxyMethods(proxyMethods);
         AddProxyInterfaceImplementation(); // Must be the last one
         AddModuleInitializer();
 
@@ -225,11 +229,13 @@ public class ProxyTypeGenerator
         return true;
     }
 
-    private void AddProxyMethods()
+    private void AddProxyMethods(
+        IReadOnlyCollection<(IMethodSymbol Method, IdentifierNameSyntax? UnwrappedReturnType)> proxyMethods)
     {
         var typeRef = TypeDef.ToTypeRef();
         var methodIndex = 0;
-        foreach (var (method, unwrappedReturnType) in GetProxyMethods()) {
+        foreach (var (method, unwrappedReturnType) in proxyMethods) {
+            var methodTypeRef = IsInterfaceProxy ? method.ContainingType.ToTypeRef() : typeRef;
             var modifiers = TokenList(
                 method.DeclaredAccessibility.HasFlag(Accessibility.Protected)
                     ? Token(SyntaxKind.ProtectedKeyword)
@@ -253,7 +259,7 @@ public class ProxyTypeGenerator
                     AssignmentExpression(
                         SyntaxKind.SimpleAssignmentExpression,
                         IdentifierName(cachedMethodFieldName),
-                        GetMethodInfoExpression(typeRef, method, parameters))));
+                        GetMethodInfoExpression(methodTypeRef, method, parameters))));
 
             // __cachedInterceptedN field
             var cachedInterceptedFieldName = "__cachedIntercepted" + methodIndex;
@@ -382,18 +388,21 @@ public class ProxyTypeGenerator
             : TypeSymbol.GetAllBaseTypes(true);
         WriteDebug?.Invoke($"Hierarchy: {string.Join(", ", hierarchy.Select(t => t.ToFullName()))}");
         var processedMethods = new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default);
+        var effectiveMethods = new List<IMethodSymbol>();
         foreach (var type in hierarchy) {
             if (type.ToTypeRef().IsObject())
                 continue;
 
             foreach (var (method, unwrappedReturnType) in GetDeclaredProxyMethods(type)) {
-                if (!processedMethods.Add(method)) {
+                if (processedMethods.Contains(method)
+                    || effectiveMethods.Any(m => HaveCompatibleCallableSignatures(m, method))) {
                     WriteDebug?.Invoke("  [-] Already processed");
                     continue;
                 }
 
                 WriteDebug?.Invoke("  [+]");
                 processedMethods.Add(method);
+                effectiveMethods.Add(method);
                 var overriddenMethod = method.OverriddenMethod;
                 while (overriddenMethod is not null) {
                     processedMethods.Add(overriddenMethod);
@@ -402,6 +411,36 @@ public class ProxyTypeGenerator
                 yield return (method, unwrappedReturnType);
             }
         }
+    }
+
+    private bool ValidateProxyMembers(IEnumerable<IMethodSymbol> proxyMethods)
+    {
+        var constructors = TypeSymbol.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(m => m.MethodKind == MethodKind.Constructor && m.DeclaredAccessibility == Accessibility.Public);
+        var isValid = true;
+        foreach (var method in constructors.Concat(proxyMethods)) {
+            if (method.MethodKind == MethodKind.Ordinary && method.Parameters.Length > MaxArgumentListItemCount) {
+                Context.ReportDiagnostic(ExcessiveProxyMethodArity(method, MaxArgumentListItemCount));
+                isValid = false;
+            }
+            foreach (var parameter in method.Parameters) {
+                if (parameter.RefKind != RefKind.None) {
+                    Context.ReportDiagnostic(UnsupportedProxyParameter(
+                        parameter,
+                        $"passing modifier '{parameter.RefKind}' is not supported"));
+                    isValid = false;
+                }
+                if (!SyntaxFacts.IsValidIdentifier(parameter.Name)
+                    || SyntaxFacts.GetKeywordKind(parameter.Name) != SyntaxKind.None) {
+                    Context.ReportDiagnostic(UnsupportedProxyParameter(
+                        parameter,
+                        "the identifier requires escaping"));
+                    isValid = false;
+                }
+            }
+        }
+        return isValid;
     }
 
     private IEnumerable<(IMethodSymbol Method, IdentifierNameSyntax? UnwrappedReturnType)> GetDeclaredProxyMethods(ITypeSymbol type)
@@ -562,7 +601,7 @@ public class ProxyTypeGenerator
             var callTarget = IsInterfaceProxy
                 ? (ExpressionSyntax)ParenthesizedExpression(
                     SuppressNullWarning(
-                        CastExpression(TypeDef.ToTypeRef(), ProxyTargetPropertyName)))
+                        CastExpression(method.ContainingType.ToTypeRef(), ProxyTargetPropertyName)))
                 : BaseExpression();
             var call = InvocationExpression(
                 MemberAccessExpression(

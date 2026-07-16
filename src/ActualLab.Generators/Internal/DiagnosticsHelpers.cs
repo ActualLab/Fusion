@@ -31,6 +31,22 @@ public static class DiagnosticsHelpers
         DiagnosticSeverity.Info,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UnsupportedProxyParameterDescriptor = new(
+        id: "ALG0002",
+        title: "Unsupported proxy parameter",
+        messageFormat: "Proxy member '{0}' has unsupported parameter '{1}': {2}",
+        category: nameof(ProxyGenerator),
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ExcessiveProxyMethodArityDescriptor = new(
+        id: "ALG0003",
+        title: "Proxy method has too many parameters",
+        messageFormat: "Proxy method '{0}' has {1} parameters; at most {2} are supported",
+        category: nameof(ProxyGenerator),
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     // Diagnostics
 
     public static readonly Action<string>? WriteDebug = IsDebugOutputEnabled
@@ -64,6 +80,22 @@ public static class DiagnosticsHelpers
 
     public static Diagnostic GenerateProxyTypeProcessedInfo(TypeDeclarationSyntax typeDef)
         => Diagnostic.Create(GenerateProxyTypeProcessedDescriptor, typeDef.GetLocation(), typeDef.Identifier.Text);
+
+    public static Diagnostic UnsupportedProxyParameter(IParameterSymbol parameter, string reason)
+        => Diagnostic.Create(
+            UnsupportedProxyParameterDescriptor,
+            parameter.Locations.FirstOrDefault() ?? Location.None,
+            parameter.ContainingSymbol.ToDisplayString(),
+            parameter.Name,
+            reason);
+
+    public static Diagnostic ExcessiveProxyMethodArity(IMethodSymbol method, int maxArity)
+        => Diagnostic.Create(
+            ExcessiveProxyMethodArityDescriptor,
+            method.Locations.FirstOrDefault() ?? Location.None,
+            method.ToDisplayString(),
+            method.Parameters.Length,
+            maxArity);
 
     // Private methods
 

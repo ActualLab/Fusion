@@ -26,7 +26,8 @@ public static class GenerationHelpers
     public const string ProxyIgnoreAttributeName = $"{InterceptionNs}.ProxyIgnoreAttribute";
     public const string ProxyClassSuffix = "Proxy";
     public const string ProxyNamespaceSuffix = "ActualLabProxies";
-    public const int MaxGenericArgumentListItemCount = 4; // Must match MaxGenericItemCount in ArgumentList-Generated.t4
+    public const int MaxArgumentListItemCount = 10; // Must match MaxItemCount in ArgumentList-Generated.tt
+    public const int MaxGenericArgumentListItemCount = 4; // Must match MaxGenericItemCount in ArgumentList-Generated.tt
 
     // System types
     public static readonly IdentifierNameSyntax UnitTypeName = IdentifierName($"{SystemReactiveGns}.Unit");
@@ -80,6 +81,26 @@ public static class GenerationHelpers
         var genericArgTypes = itemTypes.Take(MaxGenericArgumentListItemCount);
         return GenericName($"{InterceptionGns}.ArgumentListG{itemTypes.Length}")
             .WithTypeArgumentList(TypeArgumentList(CommaSeparatedList(genericArgTypes)));
+    }
+
+    public static bool HaveCompatibleCallableSignatures(IMethodSymbol x, IMethodSymbol y)
+    {
+        if (!string.Equals(x.Name, y.Name, StringComparison.Ordinal)
+            || x.Arity != y.Arity
+            || x.Parameters.Length != y.Parameters.Length
+            || x.ReturnsByRef != y.ReturnsByRef
+            || x.ReturnsByRefReadonly != y.ReturnsByRefReadonly
+            || !HaveCompatibleSignatureTypes(x.ReturnType, y.ReturnType))
+            return false;
+
+        for (var i = 0; i < x.Parameters.Length; i++) {
+            var xp = x.Parameters[i];
+            var yp = y.Parameters[i];
+            if (xp.RefKind != yp.RefKind
+                || !HaveCompatibleSignatureTypes(xp.Type, yp.Type))
+                return false;
+        }
+        return true;
     }
 
     public static ObjectCreationExpressionSyntax NewExpression(TypeSyntax type, params ExpressionSyntax[] arguments)
@@ -214,4 +235,33 @@ public static class GenerationHelpers
                 "var",
                 "var",
                 TriviaList()));
+
+    // Private methods
+
+    private static bool HaveCompatibleSignatureTypes(ITypeSymbol x, ITypeSymbol y)
+    {
+        if (SymbolEqualityComparer.Default.Equals(x, y))
+            return true;
+        if (x is ITypeParameterSymbol xtp && y is ITypeParameterSymbol ytp)
+            return xtp.TypeParameterKind == TypeParameterKind.Method
+                && ytp.TypeParameterKind == TypeParameterKind.Method
+                && xtp.Ordinal == ytp.Ordinal;
+        if (x is IArrayTypeSymbol xa && y is IArrayTypeSymbol ya)
+            return xa.Rank == ya.Rank
+                && HaveCompatibleSignatureTypes(xa.ElementType, ya.ElementType);
+        if (x is IPointerTypeSymbol xp && y is IPointerTypeSymbol yp)
+            return HaveCompatibleSignatureTypes(xp.PointedAtType, yp.PointedAtType);
+        if (x is IFunctionPointerTypeSymbol xf && y is IFunctionPointerTypeSymbol yf)
+            return HaveCompatibleCallableSignatures(xf.Signature, yf.Signature);
+        if (x is not INamedTypeSymbol xn || y is not INamedTypeSymbol yn
+            || !SymbolEqualityComparer.Default.Equals(xn.OriginalDefinition, yn.OriginalDefinition)
+            || xn.TypeArguments.Length != yn.TypeArguments.Length)
+            return false;
+
+        for (var i = 0; i < xn.TypeArguments.Length; i++) {
+            if (!HaveCompatibleSignatureTypes(xn.TypeArguments[i], yn.TypeArguments[i]))
+                return false;
+        }
+        return true;
+    }
 }
