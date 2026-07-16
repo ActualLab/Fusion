@@ -155,6 +155,15 @@ retain the existing asynchronous continuation path for incomplete tasks.
 Expected whole-recompute improvement: **5-10%**, high confidence, with an expected
 reduction of roughly 70-100 B per operation.
 
+Status: **Closed — retained.**
+
+Remarks: the focused completed-`Task<Unit>` adapter improved from 51.53 ns and
+144 B to 3.674 ns and 24 B per call, a 92.9% component improvement with 120 B
+removed. The end-to-end recompute benchmark changed from 1.683 us and 1,144 B to
+1.480 us and 944 B; its short timing sample was noisy, but the 200 B allocation
+reduction was deterministic. Eight focused tests cover completed, incomplete,
+faulted, and canceled generic and non-generic tasks.
+
 ### 2. Use a synchronous `ValueTask<Computed>` production core
 
 Retain the public `Task<Computed>` contract but allow the internal production path

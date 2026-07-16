@@ -255,6 +255,9 @@ public partial class MethodDef
                     return (Func<Invocation, ValueTask<object?>>)(methodDef.IsAsyncVoidMethod
                         ? invocation => {
                             var task = invocation.InvokeIntercepted<Task>();
+                            if (task.IsCompletedSuccessfully)
+                                return default;
+
                             var resultTask = task.ContinueWith(
                                 static t => {
                                     t.GetAwaiter().GetResult();
@@ -265,6 +268,9 @@ public partial class MethodDef
                         }
                         : invocation => {
                             var task = invocation.InvokeIntercepted<Task<T>>();
+                            if (task.IsCompletedSuccessfully)
+                                return new ValueTask<object?>(task.Result);
+
                             var resultTask = task.ContinueWith(
                                 static t => (object?)t.GetAwaiter().GetResult(),
                                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
