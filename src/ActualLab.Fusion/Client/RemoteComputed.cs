@@ -52,7 +52,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         else
             SynchronizedSource = AsyncTaskMethodBuilderExt.New();
         CacheEntry = cacheEntry;
-        ComputedRegistry.Register(this);
+        ComputedRegistry.Register(this, RegistrySlot);
 
         // This should go after .Register(this)
         if (call is not null)
@@ -90,7 +90,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         if (Options.RemoteComputedCacheMode == RemoteComputedCacheMode.Cache) // && !SynchronizedSource.Task.IsCompleted)
             ComputedRegistry.PseudoUnregister(this);
         else
-            ComputedRegistry.Unregister(this);
+            ComputedRegistry.Unregister(this, RegistrySlot);
         CancelTimeouts();
     }
 }

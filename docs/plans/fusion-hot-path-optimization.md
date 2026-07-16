@@ -235,6 +235,17 @@ conditional remove only after the computed value is invalidated.
 
 Expected raw-invalidation improvement: **3-7%**, medium confidence.
 
+Status: **Closed — retained.**
+
+Remarks: the focused registered-leaf invalidation benchmark measured 81.27 ns at
+baseline and 77.11 ns across optimized repeats, a 5.1% mean improvement. Aggregate
+median improved from 84.64 ns to 78.63 ns, or 7.1%; both versions allocated 0 B.
+The exact published weak-reference token is removed conditionally only after the
+computed reaches the invalidated state. A 100-round, 16-way invalidate/recompute
+race test verifies that the newest consistent generation remains registered. A
+pre-existing handoff test could not run in this environment because Windows Event
+Log access was denied; its companion concurrency coverage passed.
+
 ### 3. Add an empty-leaf finalization path
 
 When invalidation handlers, dependencies, and dependants are all empty, skip their

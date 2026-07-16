@@ -117,6 +117,10 @@ public sealed class ComputedRegistry
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Register(Computed computed)
+        => Register(computed, new WeakReference<Computed>(computed));
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static void Register(Computed computed, WeakReference<Computed> newWeakRef)
     {
         // Debug.WriteLine($"{nameof(Register)}: {computed}");
 
@@ -134,7 +138,6 @@ public sealed class ComputedRegistry
         if (computed.ConsistencyState == ConsistencyState.Invalidated)
             return;
 
-        var newWeakRef = new WeakReference<Computed>(computed);
         if (_storage.TryAdd(key, newWeakRef))
             return;
 
@@ -166,6 +169,10 @@ public sealed class ComputedRegistry
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Unregister(Computed computed)
+        => Unregister(computed, null);
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static void Unregister(Computed computed, WeakReference<Computed>? weakRef)
     {
         // We can't remove what still could be invalidated,
         // since "usedBy" links are resolved via this registry
@@ -182,7 +189,12 @@ public sealed class ComputedRegistry
         }
         OnOperation(random);
 
-        if (!_storage.TryGetValue(key, out var weakRef))
+        if (weakRef is not null) {
+            _storage.TryRemove(key, weakRef);
+            return;
+        }
+
+        if (!_storage.TryGetValue(key, out weakRef))
             return;
 
         weakRef.TryGetTarget(out var target);

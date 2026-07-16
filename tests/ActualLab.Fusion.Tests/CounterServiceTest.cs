@@ -92,6 +92,33 @@ public class CounterServiceTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         ComputedImpl.GetDependencies(c).Length.Should().Be(1);
     }
 
+    [Fact(Timeout = 30_000)]
+    public async Task ConcurrentInvalidationAndRecomputeKeepsLatestGenerationRegistered()
+    {
+        var services = CreateServices();
+        var counters = services.GetRequiredService<CounterService>();
+        const string key = "registry-race";
+
+        for (var round = 0; round < 100; round++) {
+            var previous = await Computed.Capture(() => counters.Get(key));
+            var operations = Enumerable.Range(0, 16).Select(worker => Task.Run(async () => {
+                if ((worker & 1) == 0) {
+                    using var invalidationScope = Invalidation.Begin();
+                    _ = counters.Get(key).AssertCompleted();
+                }
+                else
+                    _ = await counters.Get(key).ConfigureAwait(false);
+            }));
+
+            await Task.WhenAll(operations);
+            var current = await Computed.Capture(() => counters.Get(key));
+
+            current.IsConsistent().Should().BeTrue();
+            ComputedRegistry.Get(previous.Input).Should().BeSameAs(current);
+            ComputedRegistry.Get(current.Input).Should().BeSameAs(current);
+        }
+    }
+
     protected override void ConfigureServices(ServiceCollection services)
     {
         base.ConfigureServices(services);

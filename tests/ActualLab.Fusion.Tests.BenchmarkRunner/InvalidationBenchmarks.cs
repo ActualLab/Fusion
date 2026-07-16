@@ -27,6 +27,27 @@ public class RawInvalidationBenchmarks : FusionBenchmarkBase
     }
 }
 
+[WarmupCount(8), IterationCount(10)]
+public class RegisteredComputedInvalidationBenchmarks : FusionBenchmarkBase
+{
+    private Computed[] _computeds = [];
+
+    [IterationSetup]
+    public void Prepare()
+    {
+        _computeds = new Computed[BenchmarkSettings.OperationCount * BenchmarkSettings.InvalidationBatchCount];
+        for (var i = 0; i < _computeds.Length; i++)
+            _computeds[i] = Computed.Capture(() => Service.Get(i, default)).AssertCompleted().Result;
+    }
+
+    [Benchmark(OperationsPerInvoke = BenchmarkSettings.OperationCount * BenchmarkSettings.InvalidationBatchCount)]
+    public void Invalidate()
+    {
+        foreach (var computed in _computeds)
+            computed.Invalidate(immediately: true, InvalidationSource.Unknown);
+    }
+}
+
 public class InvalidationCascadeBenchmarks : FusionBenchmarkBase
 {
     public static IEnumerable<TreeShape> TreeShapes

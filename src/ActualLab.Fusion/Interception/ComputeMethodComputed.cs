@@ -15,17 +15,23 @@ public interface IComputedMethodComputed : IComputed;
 /// </summary>
 public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
 {
+    private protected WeakReference<Computed> RegistrySlot { get; }
+
     public ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input)
         : base(options, input)
-        => ComputedRegistry.Register(this);
+    {
+        RegistrySlot = new(this);
+        ComputedRegistry.Register(this, RegistrySlot);
+    }
 
     protected ComputeMethodComputed(ComputedOptions options, ComputeMethodInput input, Result output, bool isConsistent = true)
         : base(options, input, output, isConsistent)
     {
+        RegistrySlot = new(this);
         if (!isConsistent)
             return;
 
-        ComputedRegistry.Register(this);
+        ComputedRegistry.Register(this, RegistrySlot);
     }
 
     protected ComputeMethodComputed(
@@ -35,11 +41,11 @@ public class ComputeMethodComputed<T> : Computed<T>, IComputedMethodComputed
         bool isConsistent,
         SkipComputedRegistration _
         ) : base(options, input, output, isConsistent)
-    { }
+        => RegistrySlot = new(this);
 
     protected override void OnInvalidated()
     {
-        ComputedRegistry.Unregister(this);
+        ComputedRegistry.Unregister(this, RegistrySlot);
         CancelTimeouts();
     }
 }
