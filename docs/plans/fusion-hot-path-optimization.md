@@ -254,6 +254,15 @@ structure for every non-empty case.
 
 Expected raw-invalidation improvement: **2-5%**, medium confidence.
 
+Status: **Closed — retained.**
+
+Remarks: after the registry-slot change, repeated focused runs improved aggregate
+mean from 77.11 ns to 63.90 ns and aggregate median from 78.63 ns to 64.10 ns,
+with 0 B allocated throughout. This is a 17.1% mean and 18.5% median improvement.
+The fast path applies only when handlers, dependencies, and dependants are all
+empty; `OnInvalidated` and outer exception logging remain intact. Existing tests
+cover throwing subscribers, dependency cleanup, and concurrent registry turnover.
+
 Combined raw-invalidation target: **8-16%**, approximately 584-639 ns from the
 current 695 ns.
 

@@ -10,6 +10,11 @@ public struct InvalidatedHandlerSet
 
     private object? _storage;
 
+    public readonly bool IsEmpty {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _storage is null;
+    }
+
     public InvalidatedHandlerSet(Action<Computed> item)
         => _storage = item;
 

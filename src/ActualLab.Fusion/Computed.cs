@@ -298,6 +298,11 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         // Instant invalidation - it may happen just once,
         // so we don't need a lock here.
         try {
+            if (_invalidated.IsEmpty && _dependencies.Count == 0 && _dependants.Count == 0) {
+                OnInvalidated();
+                return;
+            }
+
             try {
                 try {
                     // StaticLog.For<IComputed>().LogWarning("Invalidating: {Computed}", this);
