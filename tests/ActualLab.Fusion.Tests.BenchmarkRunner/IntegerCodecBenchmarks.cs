@@ -65,7 +65,6 @@ public class IntegerCodecBenchmarks
         _messagePackWriteBuffer.Clear();
     }
 
-    [Benchmark(Baseline = true, OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public uint VarUInt32ReadLegacy()
     {
         ReadOnlySpan<byte> data = _varUInt32Data;
@@ -79,7 +78,6 @@ public class IntegerCodecBenchmarks
         return checksum;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public uint VarUInt32Read()
     {
         ReadOnlySpan<byte> data = _varUInt32Data;
@@ -93,7 +91,6 @@ public class IntegerCodecBenchmarks
         return checksum;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public int VarUInt32WriteLegacy()
     {
         var data = _varUInt32WriteBuffer.AsSpan();
@@ -103,7 +100,6 @@ public class IntegerCodecBenchmarks
         return offset;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public int VarUInt32Write()
     {
         var data = _varUInt32WriteBuffer.AsSpan();
@@ -113,7 +109,6 @@ public class IntegerCodecBenchmarks
         return offset;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public ulong VarUInt64ReadLegacy()
     {
         ReadOnlySpan<byte> data = _varIntData;
@@ -127,7 +122,6 @@ public class IntegerCodecBenchmarks
         return checksum;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public ulong VarUInt64Read()
     {
         ReadOnlySpan<byte> data = _varIntData;
@@ -141,7 +135,6 @@ public class IntegerCodecBenchmarks
         return checksum;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public ulong VarUInt64ReadBranchless()
     {
         ReadOnlySpan<byte> data = _varIntData;
@@ -155,7 +148,6 @@ public class IntegerCodecBenchmarks
         return checksum;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public ulong VarUInt64ReadHybrid()
     {
         ReadOnlySpan<byte> data = _varIntData;
@@ -169,7 +161,6 @@ public class IntegerCodecBenchmarks
         return checksum;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public int VarUInt64WriteLegacy()
     {
         var data = _varIntWriteBuffer.AsSpan();
@@ -179,7 +170,6 @@ public class IntegerCodecBenchmarks
         return offset;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public int VarUInt64Write()
     {
         var data = _varIntWriteBuffer.AsSpan();
@@ -189,7 +179,6 @@ public class IntegerCodecBenchmarks
         return offset;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public long MessagePackInt64Read()
     {
         var reader = new MessagePackReader(_messagePackData);
@@ -199,7 +188,6 @@ public class IntegerCodecBenchmarks
         return checksum;
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public int MessagePackInt64Write()
     {
         _messagePackWriteBuffer.Clear();
