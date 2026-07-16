@@ -81,7 +81,7 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
 
             lock (Lock) {
                 _updated += value;
-                _updatedHandlers = GetUpdatedHandlers(_updated);
+                _updatedHandlers = DelegateExt.GetInvocationList(_updated);
             }
         }
         remove {
@@ -90,7 +90,7 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
 
             lock (Lock) {
                 _updated -= value;
-                _updatedHandlers = GetUpdatedHandlers(_updated);
+                _updatedHandlers = DelegateExt.GetInvocationList(_updated);
             }
         }
     }
@@ -162,18 +162,6 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
             _computed = computed;
             return _updatedHandlers;
         }
-    }
-
-    private static Action<Computed>[] GetUpdatedHandlers(Action<Computed>? handlers)
-    {
-        if (handlers is null)
-            return [];
-
-        var invocationList = handlers.GetInvocationList();
-        var result = new Action<Computed>[invocationList.Length];
-        for (var i = 0; i < result.Length; i++)
-            result[i] = (Action<Computed>)invocationList[i];
-        return result;
     }
 
     private void InvokeUpdated(Computed computed, Action<Computed>[] handlers)

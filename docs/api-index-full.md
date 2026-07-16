@@ -815,6 +815,10 @@ Helpers for parsing and formatting assembly-qualified type names.
 
 Extension methods for creating instances via cached constructor delegates, supporting both dynamic methods and expression tree codegen.
 
+###### `DelegateExt`
+
+Provides typed invocation-list helpers for delegates.
+
 ###### `ExpressionExt`
 
 Extension methods for `Expression` providing conversion and member access helpers.

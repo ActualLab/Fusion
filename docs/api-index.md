@@ -86,6 +86,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `CpuTimestampBasedVersionGenerator` — monotonic `long` versions from CPU timestamp ticks
 
 ### Reflection & Codegen
+- `DelegateExt` — converts delegates into typed invocation-list arrays
 - `MemberwiseCopier` — reflection-based property/field copier
 
 ### Hashing & Sharding Helpers

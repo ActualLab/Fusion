@@ -783,9 +783,9 @@ Status: **implemented — awaiting maintainer review**. Confidence: **Confirmed 
 
 - Source: `ComputedSource.cs:133-141` invokes public handlers directly under the lock; this occurs before the producer's protected computation try block.
 - Failure: an observer exception escapes, leaving the newly published computed in `Computing` state and failing the update.
-- **Resolution:** subscriptions now maintain a copy-on-write invocation array; `SetComputed` publishes and snapshots it under the source lock, then each subscriber is invoked and failure-isolated after leaving that lock. Logging failure is isolated as well, so observer infrastructure cannot corrupt the producer.
+- **Resolution:** subscriptions now maintain a copy-on-write invocation array produced by the generic Core `DelegateExt.GetInvocationList` helper; `SetComputed` publishes and snapshots it under the source lock, then each subscriber is invoked and failure-isolated after leaving that lock. Logging failure is isolated as well, so observer infrastructure cannot corrupt the producer.
 - **Efficiency:** subscription changes pay the invocation-list copy cost; the update path performs no handler-list allocation, retry, or extra lock acquisition and loops directly over the stable snapshot. With no subscribers it reads the shared empty array and performs no dispatch work.
-- **Validation:** the focused regression confirms the throwing handler runs outside the monitor, a later handler still runs, the computed reaches `Consistent`, and a subsequent generation updates normally.
+- **Validation:** the focused regression confirms the throwing handler runs outside the monitor, a later handler still runs, the computed reaches `Consistent`, and a subsequent generation updates normally. Core coverage verifies null, typed multicast order, and invocation behavior for the extracted helper.
 
 ### FUS26. `Computed.GetDependants` allocates from an unlocked stale count
 
