@@ -31,12 +31,11 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
 
     public override RpcInboundMessage Read(ReadOnlyMemory<byte> data, out int readLength)
     {
-
         var reader = new Utf8JsonReader(data.Span);
         var m = (JsonRpcMessage)JsonSerializer.Deserialize(ref reader, typeof(JsonRpcMessage), JsonRpcMessageContext.Default)!;
         if (reader.BytesConsumed > MaxEnvelopeSize)
             throw Errors.SizeLimitExceeded();
-        ValidateEnvelope(m);
+        ValidateInboundEnvelope(m);
         var methodRef = ServerMethodResolver[m.Method ?? ""]?.Ref ?? new RpcMethodRef(m.Method ?? "");
 
         var tail = data.Slice((int)reader.BytesConsumed).Span;
@@ -57,8 +56,8 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
 
     public override void Write(ArrayPoolBuffer<byte> buffer, RpcOutboundMessage message)
     {
+        ValidateOutboundEnvelope(message);
         var envelope = new JsonRpcMessage(message);
-        ValidateEnvelope(envelope);
         var messageStartOffset = buffer.WrittenCount;
 
         // ArrayPoolBuffer<byte> implements IBufferWriter<byte>
@@ -101,7 +100,7 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
         }
     }
 
-    private static void ValidateEnvelope(JsonRpcMessage message)
+    private static void ValidateInboundEnvelope(JsonRpcMessage message)
     {
         if (EncodingExt.Utf8NoBom.GetByteCount(message.Method ?? "") > MaxMethodRefSize)
             throw Errors.SizeLimitExceeded();
@@ -114,6 +113,23 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
         for (var i = 0; i < headers.Count; i += 2) {
             if (EncodingExt.Utf8NoBom.GetByteCount(headers[i]) > MaxHeaderKeySize
                 || EncodingExt.Utf8NoBom.GetByteCount(headers[i + 1]) > MaxHeaderValueSize)
+                throw Errors.SizeLimitExceeded();
+        }
+    }
+
+    private static void ValidateOutboundEnvelope(RpcOutboundMessage message)
+    {
+        if (message.MethodDef.Ref.Utf8Name.Length > MaxMethodRefSize)
+            throw Errors.SizeLimitExceeded();
+
+        var headers = message.Headers;
+        if (headers is null)
+            return;
+        if (headers.Length > MaxHeaderCount)
+            throw Errors.SizeLimitExceeded();
+        foreach (var header in headers) {
+            if (header.Key.Utf8Name.Length > MaxHeaderKeySize
+                || EncodingExt.Utf8NoBom.GetByteCount(header.Value) > MaxHeaderValueSize)
                 throw Errors.SizeLimitExceeded();
         }
     }

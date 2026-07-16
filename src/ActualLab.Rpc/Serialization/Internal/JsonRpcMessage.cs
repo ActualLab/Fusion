@@ -30,7 +30,7 @@ public sealed record JsonRpcMessage(
         if (headers is null || headers.Length == 0)
             return null;
 
-        var result = new List<string>();
+        var result = new List<string>(2 * headers.Length);
         foreach (var header in headers) {
             result.Add(header.Key.Name);
             result.Add(header.Value);

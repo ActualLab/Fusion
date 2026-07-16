@@ -295,6 +295,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
     private void SendInvalidPosition(long index)
         => Send(index, Result.NewError<T>(Errors.RpcStreamInvalidPosition()));
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long GetMaxIndex(long nextIndex, int ackAdvance)
         => nextIndex >= long.MaxValue - ackAdvance
             ? long.MaxValue
