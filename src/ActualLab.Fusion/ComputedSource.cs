@@ -38,6 +38,8 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
 {
     private volatile Func<ComputedSource, CancellationToken, Task> _computer;
     private volatile Computed _computed;
+    private Action<Computed>? _updated;
+    private Action<Computed>[] _updatedHandlers = [];
 
     protected Func<Task, object?> GetTaskResultAsObjectSynchronously
         => field ??= GenericInstanceCache.GetUnsafe<Func<Task, object?>>(
@@ -72,7 +74,26 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
     }
 
     public event Action<Computed>? Invalidated;
-    public event Action<Computed>? Updated;
+    public event Action<Computed>? Updated {
+        add {
+            if (value is null)
+                return;
+
+            lock (Lock) {
+                _updated += value;
+                _updatedHandlers = GetUpdatedHandlers(_updated);
+            }
+        }
+        remove {
+            if (value is null)
+                return;
+
+            lock (Lock) {
+                _updated -= value;
+                _updatedHandlers = GetUpdatedHandlers(_updated);
+            }
+        }
+    }
 
     protected ComputedSource(
         IServiceProvider services,
@@ -130,16 +151,45 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
 
     protected abstract Computed CreateComputed(Result? initialOutput = null);
 
-    private void SetComputed(Computed computed, InvalidationSource source)
+    private Action<Computed>[] SetComputed(Computed computed, InvalidationSource source)
     {
         lock (Lock) {
             var oldComputed = _computed;
             if (oldComputed == computed)
-                return;
+                return [];
 
             oldComputed.Invalidate(immediately: true, source);
             _computed = computed;
-            Updated?.Invoke(computed);
+            return _updatedHandlers;
+        }
+    }
+
+    private static Action<Computed>[] GetUpdatedHandlers(Action<Computed>? handlers)
+    {
+        if (handlers is null)
+            return [];
+
+        var invocationList = handlers.GetInvocationList();
+        var result = new Action<Computed>[invocationList.Length];
+        for (var i = 0; i < result.Length; i++)
+            result[i] = (Action<Computed>)invocationList[i];
+        return result;
+    }
+
+    private void InvokeUpdated(Computed computed, Action<Computed>[] handlers)
+    {
+        foreach (var handler in handlers) {
+            try {
+                handler.Invoke(computed);
+            }
+            catch (Exception e) {
+                try {
+                    Log.LogError(e, "Updated handler failed for {Category}", Category);
+                }
+                catch {
+                    // Updated observers must not affect computation even when logging is unavailable.
+                }
+            }
         }
     }
 
@@ -165,7 +215,9 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
         var tryIndex = 0;
         var startedAt = CpuTimestamp.Now;
         while (true) {
-            SetComputed(computed = CreateComputed(), InvalidationSource.ComputedSourceProduce);
+            var updatedHandlers = SetComputed(
+                computed = CreateComputed(), InvalidationSource.ComputedSourceProduce);
+            InvokeUpdated(computed, updatedHandlers);
             try {
                 using var _ = Computed.BeginCompute(computed);
                 var computeTask = Computer.Invoke(this, cancellationToken);

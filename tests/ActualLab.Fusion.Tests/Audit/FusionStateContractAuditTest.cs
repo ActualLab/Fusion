@@ -1,4 +1,5 @@
 using System.Reflection;
+using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion.Tests.Audit;
 
@@ -87,11 +88,57 @@ public class FusionStateContractAuditTest
         var source = new ComputedSource<int>(
             Computed.DefaultServices,
             (_, _) => Task.FromResult(1));
-        source.Updated += _ => throw new InvalidOperationException("failure");
+        var sourceLock = typeof(ComputedSource)
+            .GetProperty("Lock", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(source)!;
+        var wasLockHeld = false;
+        var laterSubscriberCallCount = 0;
+        Action<Computed> throwingSubscriber = _ => {
+            wasLockHeld = Monitor.IsEntered(sourceLock);
+            throw new InvalidOperationException("failure");
+        };
+        Action<Computed> laterSubscriber = _ => laterSubscriberCallCount++;
+        source.Updated += throwingSubscriber + laterSubscriber;
 
         await source.Update();
 
+        wasLockHeld.Should().BeFalse();
+        laterSubscriberCallCount.Should().Be(1);
+        source.Computed.ConsistencyState.Should().Be(ConsistencyState.Consistent);
         source.Computed.Value.Should().Be(1);
+
+        source.Updated -= throwingSubscriber;
+        source.Computed.Invalidate(immediately: true);
+        await source.Update();
+        laterSubscriberCallCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetDependantsUsesOneAtomicSnapshot()
+    {
+        var dependency = await Computed.New(_ => Task.FromResult(1)).Update();
+        var dependantSource = new ComputedSource<int>(
+            Computed.DefaultServices,
+            (_, _) => Task.FromResult(2));
+        var dependant = new ComputedSourceComputed<int>(ComputedOptions.Default, dependantSource);
+        const int readerCount = 8;
+        using var readersStarted = new CountdownEvent(readerCount);
+        var readers = new Task<(ComputedInput Input, ulong Version)[]>[readerCount];
+
+        lock (dependency) {
+            for (var i = 0; i < readers.Length; i++)
+                readers[i] = Task.Run(() => {
+                    readersStarted.Signal();
+                    return ComputedImpl.GetDependants(dependency);
+                });
+            readersStarted.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
+            Thread.Sleep(50);
+            ComputedImpl.AddDependency(dependant, dependency);
+            ComputedImpl.GetDependants(dependency).Should().ContainSingle();
+        }
+
+        var snapshots = await Task.WhenAll(readers);
+        snapshots.Should().OnlyContain(x => x.Length == 1);
     }
 
     [Fact]

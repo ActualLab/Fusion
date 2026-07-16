@@ -779,19 +779,23 @@ Status: **implemented — awaiting maintainer review**. Confidence: **Confirmed 
 
 ### FUS25. A throwing `ComputedSource.Updated` subscriber breaks computation while the source lock is held
 
-Status: **approved — pending maintainer review**. Confidence: **Confirmed by source and focused update regression test**.
+Status: **implemented — awaiting maintainer review**. Confidence: **Confirmed by source and focused update regression test**.
 
 - Source: `ComputedSource.cs:133-141` invokes public handlers directly under the lock; this occurs before the producer's protected computation try block.
 - Failure: an observer exception escapes, leaving the newly published computed in `Computing` state and failing the update.
-- **Recommended:** publish under the lock, invoke isolated handlers outside it, and prevent observer failures from corrupting producer state.
+- **Resolution:** subscriptions now maintain a copy-on-write invocation array; `SetComputed` publishes and snapshots it under the source lock, then each subscriber is invoked and failure-isolated after leaving that lock. Logging failure is isolated as well, so observer infrastructure cannot corrupt the producer.
+- **Efficiency:** subscription changes pay the invocation-list copy cost; the update path performs no handler-list allocation, retry, or extra lock acquisition and loops directly over the stable snapshot. With no subscribers it reads the shared empty array and performs no dispatch work.
+- **Validation:** the focused regression confirms the throwing handler runs outside the monitor, a later handler still runs, the computed reaches `Consistent`, and a subsequent generation updates normally.
 
 ### FUS26. `Computed.GetDependants` allocates from an unlocked stale count
 
-Status: **approved — pending maintainer review**. Confidence: **Confirmed by source; concurrency stress test needed**.
+Status: **implemented — awaiting maintainer review**. Confidence: **Confirmed by source and deterministic concurrency regression test**.
 
 - Source: `Computed.cs:416-422` reads count and allocates outside the lock, then copies under the lock.
 - Failure: a concurrent add can grow the set between those steps and make `CopyTo` target too small.
-- **Recommended:** read count, allocate, and copy within one lock, or retry on size change.
+- **Resolution:** `GetDependants` now reads the count, allocates the exact result array, and copies the set while holding the existing computed lock once.
+- **Efficiency:** the method takes one existing lock, makes one exact-size allocation, and performs one copy; it has no retries, excess capacity, secondary synchronization, or extra contention beyond extending the original copy critical section across count/allocation.
+- **Validation:** eight readers queued behind the computed lock while a dependant is added now receive the same one-entry snapshot; the old placement deterministically threw `IndexOutOfRangeException` from `HashSetSlim3.CopyTo`.
 
 ### FUS27. Feature builders leave pre-registered implementations incompletely wired
 
@@ -804,11 +808,12 @@ Status: **ignored — maintainer direction**. Confidence: **Ignored by maintaine
 
 ### FUS28. Computed and mutable component state categories share one cache slot
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused category regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused category regression test**.
 
 - Source: `ActualLab.Fusion.Blazor/Components/ComputedStateComponent.Static.cs:8-9,30-34` uses one component-type-keyed cache for two distinct category functions.
 - Failure: the first call wins; `MixedStateComponent` can label both states `.MutableState`, degrading diagnostics and category-based behavior.
-- **Recommended:** use separate caches or a composite key including category kind.
+- **Resolution:** computed and mutable state categories now use separate component-type caches while retaining the existing concurrent cache configuration.
+- **Validation:** the focused regression requests the mutable category first and then confirms the computed category remains distinct with its expected suffix.
 
 ### FUS29. Two net8+ Blazor unsafe accessors target the wrong runtime fields
 
@@ -844,11 +849,12 @@ Status: **ignored — maintainer direction**. Confidence: **Ignored by maintaine
 
 ### FUS33. Custom parameter comparers derived from `DefaultParameterComparer` are ignored
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source, documented custom-comparer contract, and focused regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused API-shape regression test**.
 
 - Source: `ComponentInfo.cs:57-58,78-81` classifies any `DefaultParameterComparer` subtype as non-custom and can take the standard path without invoking it. The parameter-comparison documentation advertises arbitrary per-parameter comparer types in custom mode, and both the public non-sealed base type and provider accept derived types.
-- Test: `FusionBlazorCoreAuditRegressionTest.DerivedDefaultParameterComparerShouldBeApplied` supplies an always-equal comparer derived from `DefaultParameterComparer`; `ShouldSetParameters` returns `true` instead of invoking its custom comparison path.
-- **Recommended:** identify only the exact built-in singleton/type as default, not every subtype.
+- Test: the former derived-class regression demonstrated the ambiguity; the replacement contract verifies that the built-in type is sealed and retains its immutable/value comparison behavior.
+- **Resolution:** `DefaultParameterComparer` is now sealed, making every externally supplied comparer necessarily distinct from the built-in `is not DefaultParameterComparer` fast-path marker.
+- **Validation:** the API-shape regression confirms the type is sealed and its singleton still accepts equal immutable values while rejecting distinct mutable references.
 
 ## C. ActualLab.CommandR
 

@@ -20,15 +20,11 @@ public class FusionBlazorCoreAuditRegressionTest
     }
 
     [Fact]
-    public void DerivedDefaultParameterComparerShouldBeApplied()
+    public void DefaultParameterComparerShouldBeASealedBuiltInComparer()
     {
-        var component = new ComparerProbeComponent();
-        var componentInfo = ComponentInfo.Get(component.GetType());
-        var parameterView = ParameterView.FromDictionary(new Dictionary<string, object?> {
-            [nameof(ComparerProbeComponent.Value)] = "new",
-        });
-
-        componentInfo.ShouldSetParameters(component, parameterView).Should().BeFalse();
+        typeof(DefaultParameterComparer).IsSealed.Should().BeTrue();
+        DefaultParameterComparer.Instance.AreEqual(1, 1).Should().BeTrue();
+        DefaultParameterComparer.Instance.AreEqual(new object(), new object()).Should().BeFalse();
     }
 
 #if NET8_0_OR_GREATER
@@ -46,16 +42,4 @@ public class FusionBlazorCoreAuditRegressionTest
 #endif
 
     private sealed class CategoryProbeComponent : ComponentBase;
-
-    private sealed class ComparerProbeComponent : ComponentBase
-    {
-        [Parameter]
-        [ParameterComparer(typeof(AlwaysEqualParameterComparer))]
-        public string Value { get; set; } = "old";
-    }
-
-    private sealed class AlwaysEqualParameterComparer : DefaultParameterComparer
-    {
-        public override bool AreEqual(object? oldValue, object? newValue) => true;
-    }
 }

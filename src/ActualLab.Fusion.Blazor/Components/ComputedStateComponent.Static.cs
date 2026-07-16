@@ -5,6 +5,8 @@ namespace ActualLab.Fusion.Blazor;
 
 public abstract partial class ComputedStateComponent
 {
+    private static readonly ConcurrentDictionary<Type, string> MutableStateCategoryCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<Type, string> StateCategoryCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<Type, IComputedStateOptions> StateOptionsCache
@@ -31,7 +33,7 @@ public abstract partial class ComputedStateComponent
         => StateCategoryCache.GetOrAdd(componentType, static t => $"{t.GetName()}.State");
 
     public static string GetMutableStateCategory(Type componentType)
-        => StateCategoryCache.GetOrAdd(componentType, static t => $"{t.GetName()}.MutableState");
+        => MutableStateCategoryCache.GetOrAdd(componentType, static t => $"{t.GetName()}.MutableState");
 
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume GetDefaultOptions method is preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume GetDefaultOptions method is preserved")]

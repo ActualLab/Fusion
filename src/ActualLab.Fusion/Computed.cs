@@ -419,8 +419,8 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
     protected internal (ComputedInput Input, ulong Version)[] GetDependants()
     {
-        var result = new (ComputedInput Input, ulong Version)[_dependants.Count];
         lock (Lock) {
+            var result = new (ComputedInput Input, ulong Version)[_dependants.Count];
             _dependants.CopyTo(result);
             return result;
         }
