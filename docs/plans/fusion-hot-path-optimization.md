@@ -260,22 +260,27 @@ race test verifies that the newest consistent generation remains registered. A
 pre-existing handoff test could not run in this environment because Windows Event
 Log access was denied; its companion concurrency coverage passed.
 
-### 3. Add an empty-leaf finalization path
+### 3. Add a leaf finalization path
 
-When invalidation handlers, dependencies, and dependants are all empty, skip their
-enumeration and clearing machinery. Retain the current nested `try/finally`
-structure for every non-empty case.
+When invalidation handlers and dependants are empty, detach dependencies directly
+without entering the handler and downstream-cascade machinery. Keep dependency
+cleanup in a `finally` block, and retain the smaller path for a completely isolated
+computed.
 
 Expected raw-invalidation improvement: **2-5%**, medium confidence.
 
 Status: **Closed — retained.**
 
-Remarks: after the registry-slot change, repeated focused runs improved aggregate
-mean from 77.11 ns to 63.90 ns and aggregate median from 78.63 ns to 64.10 ns,
-with 0 B allocated throughout. This is a 17.1% mean and 18.5% median improvement.
-The fast path applies only when handlers, dependencies, and dependants are all
-empty; `OnInvalidated` and outer exception logging remain intact. Existing tests
-cover throwing subscribers, dependency cleanup, and concurrent registry turnover.
+Remarks: the original isolated-computed path improved aggregate mean from 77.11 ns
+to 63.90 ns and aggregate median from 78.63 ns to 64.10 ns, with 0 B allocated
+throughout. The benchmark was then corrected to capture a compute method that
+depends on another compute method but has no dependants. Two baseline and two
+optimized runs moved pooled mean from 90.16 ns to 80.47 ns and pooled median from
+90.04 ns to 80.72 ns, or about 10.8% and 10.3%, respectively, with 0 B allocated.
+The final integrated run measured 80.10 ns mean and 80.03 ns median.
+`OnInvalidated`, dependency detachment, and outer exception logging remain intact.
+Existing tests cover throwing subscribers, dependency cleanup, concurrent cascades,
+and concurrent registry turnover.
 
 Combined raw-invalidation target: **8-16%**, approximately 584-639 ns from the
 current 695 ns.

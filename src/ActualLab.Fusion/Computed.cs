@@ -298,8 +298,18 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         // Instant invalidation - it may happen just once,
         // so we don't need a lock here.
         try {
-            if (_invalidated.IsEmpty && _dependencies.Count == 0 && _dependants.Count == 0) {
-                OnInvalidated();
+            if (_invalidated.IsEmpty && _dependants.Count == 0) {
+                if (_dependencies.Count == 0) {
+                    OnInvalidated();
+                    return;
+                }
+                try {
+                    OnInvalidated();
+                }
+                finally {
+                    _dependencies.Apply(this, (self, c) => c.RemoveDependant(self));
+                    _dependencies.Clear();
+                }
                 return;
             }
 
