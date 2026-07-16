@@ -10,7 +10,7 @@
   <!-- Constants -->
   <PropertyGroup>
     <!-- Core packages -->
-    <AspNetCoreVersion>[10.0.0,)</AspNetCoreVersion>
+    <AspNetCoreVersion>10.0.10</AspNetCoreVersion>
     <AspNetCoreVersion9>[9.0.0,)</AspNetCoreVersion9>
     <AspNetCoreVersion8>[8.0.4,)</AspNetCoreVersion8>
     <AspNetCoreVersion7>[7.0.0,)</AspNetCoreVersion7>
