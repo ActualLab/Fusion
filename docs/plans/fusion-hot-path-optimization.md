@@ -208,6 +208,16 @@ already-cached `MethodDef.DefaultResult`. Avoid the general compute-option routi
 
 Expected raw-invalidation improvement: **4-8%**, medium-high confidence.
 
+Status: **Closed — retained.**
+
+Remarks: after increasing the end-to-end fixture to 1,024 disjoint 100-call
+batches, two baseline and two optimized runs produced aggregate means of 68.86 ns
+and 61.78 ns and aggregate medians of 66.49 ns and 63.61 ns, respectively. That is
+a 10.3% mean and 4.3% median improvement; allocation was unchanged in the isolated
+run. The fast path remains inside the resolved `ComputeMethodFunction` handler, so
+it does not duplicate proxy-slot routing. Tests cover `Task<T>`, `ValueTask<T>`,
+canceled call tokens, completed default results, and actual invalidation.
+
 ### 2. Carry the registry slot through unregistration
 
 Carry the registry's weak-reference token from lookup to unregistration so the

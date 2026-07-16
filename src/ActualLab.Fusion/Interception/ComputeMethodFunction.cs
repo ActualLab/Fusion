@@ -42,14 +42,23 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
 #endif
         var cancellationToken = invocation.Arguments.GetCancellationToken(CancellationTokenIndex); // Auto-handles -1 index
         try {
-#if NET9_0_OR_GREATER
             var context = ComputeContext.Current;
+#if NET9_0_OR_GREATER
             var computed = ComputedRegistry.Get(lookup);
+#else
+            var computed = input.GetExistingComputed();
+#endif
+            if ((context.CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate) {
+                _ = ComputedImpl.TryUseExisting(computed, context);
+                return MethodDef.DefaultResult;
+            }
+
             var task = ComputedImpl.TryUseExisting(computed, context)
                 ? ComputedImpl.GetValueOrDefaultAsTask(computed, context, OutputType)
+#if NET9_0_OR_GREATER
                 : this.ProduceValuePromise(lookup.ToInput(), context, cancellationToken);
 #else
-            var task = input.GetOrProduceValuePromise(ComputeContext.Current, cancellationToken);
+                : this.ProduceValuePromise(input, context, cancellationToken);
 #endif
             return MethodDef.WrapAsyncInvokerResultOfAsyncMethodUntyped(task);
         }

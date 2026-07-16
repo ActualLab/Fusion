@@ -103,4 +103,27 @@ public class ComputedInterceptorTest(ITestOutputHelper @out) : FusionTestBase(@o
         c1.Should().NotBeSameAs(c1a);
         c2.Should().NotBeSameAs(c2a);
     }
+
+    [Fact]
+    public async Task InvalidationReturnsCompletedDefaultsForEveryAsyncShape()
+    {
+        var time = Services.GetRequiredService<ITimeService>();
+        var taskComputed = await Computed.Capture(() => time.GetTime());
+        var valueTaskComputed = await Computed.Capture(() => time.GetTimeAsValueTask());
+        using var cancellationSource = new CancellationTokenSource();
+        cancellationSource.Cancel();
+
+        using (Invalidation.Begin()) {
+            var task = time.GetTime(cancellationSource.Token);
+            task.IsCompletedSuccessfully.Should().BeTrue();
+            task.Result.Should().Be(default);
+
+            var valueTask = time.GetTimeAsValueTask(cancellationSource.Token);
+            valueTask.IsCompletedSuccessfully.Should().BeTrue();
+            valueTask.Result.Should().Be(default);
+        }
+
+        await taskComputed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1));
+        await valueTaskComputed.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(1));
+    }
 }

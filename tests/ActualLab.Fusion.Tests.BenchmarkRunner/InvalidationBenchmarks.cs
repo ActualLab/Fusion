@@ -2,21 +2,28 @@ using BenchmarkDotNet.Attributes;
 
 namespace ActualLab.Fusion.Tests.BenchmarkRunner;
 
+[WarmupCount(8), IterationCount(10)]
 public class RawInvalidationBenchmarks : FusionBenchmarkBase
 {
     [IterationSetup]
     public void Prepare()
     {
-        for (var i = 0L; i < BenchmarkSettings.OperationCount; i++)
-            _ = Service.Get(i, default).AssertCompleted();
+        for (var batch = 0; batch < BenchmarkSettings.InvalidationBatchCount; batch++) {
+            var keyOffset = (long)batch * BenchmarkSettings.OperationCount;
+            for (var i = 0L; i < BenchmarkSettings.OperationCount; i++)
+                _ = Service.Get(keyOffset + i, default).AssertCompleted();
+        }
     }
 
-    [Benchmark(OperationsPerInvoke = BenchmarkSettings.OperationCount)]
+    [Benchmark(OperationsPerInvoke = BenchmarkSettings.OperationCount * BenchmarkSettings.InvalidationBatchCount)]
     public void Invalidate()
     {
         using var invalidationScope = Invalidation.Begin();
-        for (var i = 0L; i < BenchmarkSettings.OperationCount; i++)
-            _ = Service.Get(i, default).AssertCompleted();
+        for (var batch = 0; batch < BenchmarkSettings.InvalidationBatchCount; batch++) {
+            var keyOffset = (long)batch * BenchmarkSettings.OperationCount;
+            for (var i = 0L; i < BenchmarkSettings.OperationCount; i++)
+                _ = Service.Get(keyOffset + i, default).AssertCompleted();
+        }
     }
 }
 
