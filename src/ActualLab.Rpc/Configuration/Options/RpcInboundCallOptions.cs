@@ -1,4 +1,3 @@
-using ActualLab.OS;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc;
