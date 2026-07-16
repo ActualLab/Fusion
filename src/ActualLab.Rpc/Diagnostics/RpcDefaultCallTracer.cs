@@ -60,6 +60,8 @@ public class RpcDefaultCallTracer : RpcCallTracer
                 parentContext: activityContext,
                 links: [new ActivityLink(activityContext)])
             : ActivitySource.StartActivity(InboundCallName, ActivityKind.Server);
+        if (activity is null && !IsEnabled && !RpcInstruments.IsEnabled)
+            return null;
         return new RpcDefaultInboundCallTrace(this, activity);
     }
 
