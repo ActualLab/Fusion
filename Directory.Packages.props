@@ -35,7 +35,7 @@
          KEEP AT THIS LOWER BOUNDARY. A source generator only loads in a Roslyn host
          whose version is >= the Roslyn it's compiled against; 4.3.0 is the version
          expected by Unity's older build stack. Do NOT upgrade for now - revisit later. -->
-    <RoslynVersion>[4.3.0,)</RoslynVersion>
+    <RoslynVersion>5.6.0</RoslynVersion>
     <!-- EF Core -->
     <EntityFrameworkCoreVersion>[10.0.0,)</EntityFrameworkCoreVersion>
     <EntityFrameworkCoreVersion9>[9.0.0,)</EntityFrameworkCoreVersion9>
@@ -239,6 +239,6 @@
          (see RoslynVersion) so ActualLab.Generators loads in Unity's older stack.
          Do NOT upgrade for now - revisit later. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynVersion)" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0" />
   </ItemGroup>
 </Project>
