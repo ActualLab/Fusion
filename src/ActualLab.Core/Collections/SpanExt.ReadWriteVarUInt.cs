@@ -1,3 +1,7 @@
+#if NETCOREAPP3_1_OR_GREATER
+using System.Numerics;
+using System.Runtime.Intrinsics.X86;
+#endif
 using ActualLab.Internal;
 
 namespace ActualLab.Collections;
@@ -68,6 +72,49 @@ public static partial class SpanExt
 
     public static (ulong Value, int Offset) ReadVarUInt64(this ReadOnlySpan<byte> span, int offset = 0)
     {
+#if NETCOREAPP3_1_OR_GREATER
+        if (BitConverter.IsLittleEndian) {
+            var first = span[offset];
+            if (first <= LowBits)
+                return (first, offset + 1);
+
+            var remainingLength = span.Length - offset;
+            if (remainingLength >= 4) {
+                var data = span.ReadUnchecked<uint>(offset);
+                var stopBits = ~data & 0x00808080;
+                if (stopBits != 0) {
+                    var length = (BitOperations.TrailingZeroCount(stopBits) >> 3) + 1;
+                    var fastValue = (data & 0x7F)
+                        | ((data & 0x7F00) >> 1)
+                        | ((data & 0x7F0000) >> 2);
+                    fastValue &= (1u << (length * 7)) - 1;
+                    return (fastValue, offset + length);
+                }
+            }
+
+            if (remainingLength >= 10 && Bmi2.X64.IsSupported) {
+                var data = span.ReadUnchecked<ulong>(offset);
+                var tail = span.ReadUnchecked<ushort>(offset + 8);
+                var stopBits = Bmi2.X64.ParallelBitExtract(~data, 0x8080808080808080)
+                    | ((uint)(~tail & 0x80) << 1)
+                    | ((uint)(~tail & 0x8000) >> 6);
+                if (stopBits == 0)
+                    throw Errors.InvalidVarLengthEncodedValue();
+
+                var length = BitOperations.TrailingZeroCount(stopBits) + 1;
+                if (length == 10 && (tail >> 8) > 1)
+                    throw Errors.InvalidVarLengthEncodedValue();
+
+                var fastValue = Bmi2.X64.ParallelBitExtract(data, 0x7F7F7F7F7F7F7F7F)
+                    | ((ulong)(tail & 0x7F) << 56)
+                    | ((ulong)(tail & 0x0100) << 55);
+                if (length < 10)
+                    fastValue &= (1ul << (length * 7)) - 1;
+                return (fastValue, offset + length);
+            }
+        }
+#endif
+
         byte b;
         var value = 0ul;
         var shift = 0;
