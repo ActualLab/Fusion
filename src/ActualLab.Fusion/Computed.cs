@@ -454,17 +454,6 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         }
     }
 
-    internal void LogInvalidatedHandlerError(Exception error)
-    {
-        try {
-            Input.Function.Services.LogFor(GetType())
-                .LogError(error, "Invalidated handler failed for {Category}", Input.Category);
-        }
-        catch {
-            // Intended: Invalidate doesn't throw!
-        }
-    }
-
     protected internal void AddDependency(Computed dependency)
     {
         // Debug.WriteLine($"{nameof(AddUsed)}: {this} <- {used}");

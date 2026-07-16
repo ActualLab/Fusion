@@ -114,7 +114,7 @@ public struct InvalidatedHandlerSet
                     item.Invoke(computed);
                 }
                 catch (Exception e) {
-                    computed.LogInvalidatedHandlerError(e);
+                    LogHandlerError(computed, e);
                 }
                 return;
 
@@ -127,7 +127,7 @@ public struct InvalidatedHandlerSet
                         item.Invoke(computed);
                     }
                     catch (Exception e) {
-                        computed.LogInvalidatedHandlerError(e);
+                        LogHandlerError(computed, e);
                     }
                 }
                 return;
@@ -138,7 +138,7 @@ public struct InvalidatedHandlerSet
                         item.Invoke(computed);
                     }
                     catch (Exception e) {
-                        computed.LogInvalidatedHandlerError(e);
+                        LogHandlerError(computed, e);
                     }
                 }
                 return;
@@ -146,6 +146,17 @@ public struct InvalidatedHandlerSet
             default:
                 throw ActualLab.Internal.Errors.InternalError(
                     $"{nameof(InvalidatedHandlerSet)} structure is corrupted.");
+        }
+    }
+
+    private static void LogHandlerError(Computed computed, Exception error)
+    {
+        try {
+            computed.Input.Function.Services.LogFor(computed.GetType())
+                .LogError(error, "Invalidated handler failed for {Category}", computed.Input.Category);
+        }
+        catch {
+            // Intended: Invalidate doesn't throw!
         }
     }
 }
