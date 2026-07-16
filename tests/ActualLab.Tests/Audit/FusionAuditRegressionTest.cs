@@ -45,6 +45,26 @@ public class FusionAuditRegressionTest
         completedEarly.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task FlushMustPropagatePersistentWriteFailure()
+    {
+        var services = new ServiceCollection();
+        services.AddFusion();
+        await using var serviceProvider = services.BuildServiceProvider();
+        var error = new InvalidOperationException("Failed to persist.");
+        var cache = new GatedFlushingCache(serviceProvider) {
+            FlushError = error,
+        };
+        cache.Set(new RpcCacheKey("method", default), new RpcCacheValue(new byte[] { 1 }, ""));
+
+        var flushTask = cache.Flush();
+        await cache.WhenFlushStarted.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        cache.AllowFlush.TrySetResult();
+
+        var action = () => flushTask;
+        (await action.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(error);
+    }
+
     private static (bool IsChanged, ComputedGraphPruner? Previous) ChangeGraphPruner(ComputedGraphPruner? value)
     {
         var method = typeof(ComputedRegistry).GetMethod(
@@ -61,6 +81,7 @@ public class FusionAuditRegressionTest
         public TaskCompletionSource WhenFlushStarted { get; } = TaskCompletionSourceExt.New();
         public TaskCompletionSource AllowFlush { get; } = TaskCompletionSourceExt.New();
         public TaskCompletionSource WhenFlushCompleted { get; } = TaskCompletionSourceExt.New();
+        public Exception? FlushError { get; init; }
 
         protected override ValueTask<RpcCacheValue?> Fetch(RpcCacheKey key, CancellationToken cancellationToken)
             => default;
@@ -74,6 +95,8 @@ public class FusionAuditRegressionTest
             finally {
                 WhenFlushCompleted.TrySetResult();
             }
+            if (FlushError is { } error)
+                throw error;
         }
 
         public override Task Clear(CancellationToken cancellationToken = default)

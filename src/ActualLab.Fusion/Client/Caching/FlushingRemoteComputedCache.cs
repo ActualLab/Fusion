@@ -102,6 +102,7 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
             }
         }
 
+        Task selectedFlushingTask;
 #if NET9_0_OR_GREATER
         Lock.Enter();
 #else
@@ -130,7 +131,9 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
                 }
             }
             var flushingQueue = FlushingQueue = FlushQueue;
-            FlushingTask = flushingQueue.Count == 0 ? Task.CompletedTask : Task.Run(() => Flush(flushingQueue), CancellationToken.None);
+            selectedFlushingTask = FlushingTask = flushingQueue.Count == 0
+                ? Task.CompletedTask
+                : Task.Run(() => Flush(flushingQueue), CancellationToken.None);
             FlushQueue = new();
             FlushTask = null;
         }
@@ -141,5 +144,6 @@ public abstract class FlushingRemoteComputedCache : RemoteComputedCache
             Monitor.Exit(Lock);
 #endif
         }
+        await selectedFlushingTask.ConfigureAwait(false);
     }
 }

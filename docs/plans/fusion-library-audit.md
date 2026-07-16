@@ -520,7 +520,7 @@ Every FUS finding uses its **Recommended** action unless an item below records a
 
 ### FUS1. `ComputedRegistry.ChangeGraphPruner` can never change the graph pruner
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and focused regression test.
 
@@ -528,12 +528,13 @@ Confidence: **Confirmed** by source and focused regression test.
 - Failure: the assignment `_graphPruner = graphPruner` is unreachable. `ComputedGraphPruner.OnRun` therefore cannot replace and dispose a prior worker, and callers cannot disable or swap the global pruner through the only internal change method.
 - Test: `tests/ActualLab.Tests/Audit/FusionAuditRegressionTest.cs` constructs a non-autoactivated replacement, expects the change to succeed and the prior instance to be returned, then restores the original in `finally`. The central run reached the method and failed because it returned `false`.
 - Impact: creating a replacement pruner silently leaves the original registered, defeating configuration/lifecycle control and potentially leaving the new worker running without registry ownership.
-- **Recommended:** compare `prevGraphPruner` with the `graphPruner` argument, returning false only when the requested instance is already installed; otherwise assign the new value.
+- **Resolution:** `ChangeGraphPruner` now compares the installed pruner with the requested argument, returning false only when no change is needed and otherwise publishing the replacement under the existing static lock.
+- **Validation:** the focused regression first failed because the replacement was rejected, then passed while verifying the replacement, previous-value result, and restoration of the original pruner.
 - **Alternative:** remove the helper and manage the singleton solely through DI/hosted-service ownership. This is a broader lifecycle redesign and does not address current callers directly.
 
 ### FUS2. `FlushingRemoteComputedCache.Flush` completes before the persistent flush
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and gated regression test.
 
@@ -541,41 +542,45 @@ Confidence: **Confirmed** by source and gated regression test.
 - Failure: callers awaiting `Flush()` are released as soon as the write is scheduled, not when `Flush(Dictionary<...>)` completes. `InMemoryRemoteComputedCache.Clear` awaits this incomplete barrier and then clears `_cache`; the scheduled flush can run afterward and repopulate entries that `Clear` promised to remove.
 - Test: `FusionAuditRegressionTest.FlushMustWaitForPersistentWrite` uses a gated derived cache, waits until the protected flush starts, and asserts the public task remains incomplete until the gate opens.
 - Impact: shutdown/durability barriers can lose queued writes, and `Clear` can leave stale cache entries through a deterministic race. Persistent derived caches can report success before I/O failure is observable.
-- **Recommended:** make the public flush task encompass the selected `FlushingTask`, including its failure, before completing; ensure queue swapping remains serialized.
+- **Resolution:** `DelayedFlush` now captures the persistence task selected while swapping queues under the existing lock and awaits that exact task after releasing the lock. Public flush completion therefore includes persistence completion and propagates its failure without extending the critical section.
+- **Validation:** the gated regression first observed `Flush()` completing before persistence, then passed with the public task pending until the gate opened. A second regression verifies that the same public task propagates the exact persistence exception.
 - **Alternative:** have `Flush()` await both the scheduling task and the current `FlushingTask` in a loop until no queued work remains. This gives a stronger drain guarantee but needs care with writes arriving concurrently.
 
 ### FUS3. `ByValueParameterComparer.Instance` is an instance of the UUID comparer
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and focused regression test.
 
 - Source: `src/ActualLab.Fusion/Blazor/ByValueParameterComparer.cs:6-11`. The singleton property is declared as `ByUuidParameterComparer` and initialized with `new()`, rather than being self-typed.
 - Failure: consumers selecting the by-value comparer through its public singleton receive UUID-specific comparison behavior and cannot treat the singleton as `ByValueParameterComparer`, contradicting the documented by-value comparer semantics. The documentation describes the comparer behavior but does not separately document the singleton property.
 - Test: `FusionServicesAuditRegressionTest.ByValueComparerInstanceShouldCompareByValue` fails its runtime-type assertion with `ByUuidParameterComparer`.
-- **Recommended:** declare `public static ByValueParameterComparer Instance { get; } = new();`.
+- **Resolution:** `Instance` is now self-typed and initialized with `ByValueParameterComparer`, restoring the advertised by-value semantics.
+- **Validation:** the focused regression first received `ByUuidParameterComparer`, then passed its runtime-type and equal-distinct-string assertions.
 
 ### FUS4. `Session.WithTags` discards the session identifier
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and focused regression test.
 
 - Source: `src/ActualLab.Fusion/Session/Session.cs:67-75`. When an existing tag delimiter is found, the method keeps `id[startIndex..]`, which is precisely the tag suffix, rather than the base identifier before it.
 - Failure: replacing tags on `session-id&a=1` produces `&a=1&b=2`; clearing tags attempts to construct a session from only the old tag suffix. The result no longer identifies the original session and can violate the session-ID invariant.
 - Test: `FusionServicesAuditRegressionTest.WithTagsShouldReplaceExistingTags` expected `session-id&b=2` and received `&a=1&b=2`.
-- **Recommended:** retain `id[..startIndex]` and append only the requested replacement tags.
+- **Resolution:** `WithTags` now retains the identifier prefix before the first tag delimiter and appends only the requested replacement tags; clearing tags likewise returns the base session identifier.
+- **Validation:** the focused regression first produced `&a=1&b=2`, then passed with `session-id&b=2` and with the base `session-id` when clearing tags.
 
 ### FUS5. `Session.WithTag` throws when the replaced tag is followed by another tag
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and focused regression test.
 
 - Source: `src/ActualLab.Fusion/Session/Session.cs:77-93`. The multi-tag branch slices the suffix from `startIndex + id.Length`, an index necessarily beyond the string whenever the matched tag does not start at zero.
 - Failure: updating a non-final tag throws `ArgumentOutOfRangeException` instead of preserving following tags.
 - Test: `FusionServicesAuditRegressionTest.WithTagShouldReplaceATagWithoutDroppingFollowingTags` reproduces the exception with `session-id&a=1&b=2`.
-- **Recommended:** concatenate the prefix before `startIndex` with the suffix beginning at the located `endIndex`, then append the replacement tag once.
+- **Resolution:** `WithTag` now replaces a non-final tag in place by concatenating the prefix, replacement tag/value, and suffix beginning at the located `endIndex`; the final-tag and absent-tag paths retain their existing append behavior.
+- **Validation:** the focused regression first threw `ArgumentOutOfRangeException`, then passed with `session-id&a=3&b=2` while preserving the following tag.
 
 ### FUS6. In-memory command completion returns before asynchronous scope handlers finish
 

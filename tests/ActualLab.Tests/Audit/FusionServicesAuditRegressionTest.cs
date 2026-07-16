@@ -25,6 +25,7 @@ public class FusionServicesAuditRegressionTest
         var session = new Session("session-id&a=1");
 
         session.WithTags("b=2").Id.Should().Be("session-id&b=2");
+        session.WithTags("").Id.Should().Be("session-id");
     }
 
     [Fact]

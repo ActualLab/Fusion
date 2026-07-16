@@ -5,7 +5,7 @@ namespace ActualLab.Fusion.Blazor;
 /// </summary>
 public sealed class ByValueParameterComparer : ParameterComparer
 {
-    public static ByUuidParameterComparer Instance { get; } = new();
+    public static ByValueParameterComparer Instance { get; } = new();
 
     public override bool AreEqual(object? oldValue, object? newValue)
         => Equals(oldValue, newValue);

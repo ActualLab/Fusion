@@ -222,7 +222,7 @@ public sealed class ComputedRegistry
     {
         lock (StaticLock) {
             prevGraphPruner = _graphPruner;
-            if (prevGraphPruner == _graphPruner)
+            if (prevGraphPruner == graphPruner)
                 return false;
 
             _graphPruner = graphPruner;

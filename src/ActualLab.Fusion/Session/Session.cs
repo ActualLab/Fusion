@@ -68,7 +68,7 @@ public sealed partial class Session : IHasId<string>,
     {
         var id = Id;
         var startIndex = id.IndexOf('&', StringComparison.Ordinal);
-        id = startIndex < 0 ? id : id[startIndex..];
+        id = startIndex < 0 ? id : id[..startIndex];
         if (tags.IsNullOrEmpty())
             return startIndex < 0 ? this : new Session(id);
         return new Session(string.Concat(id, "&", tags));
@@ -81,12 +81,21 @@ public sealed partial class Session : IHasId<string>,
         var startIndex = id.IndexOf(tagPrefix, StringComparison.Ordinal);
         if (startIndex > 0) {
             var endIndex = id.IndexOf('&', startIndex + tagPrefix.Length);
-            id = endIndex < 0
-                ? id[..startIndex]
+            if (endIndex < 0)
+                id = id[..startIndex];
+            else
 #if NETCOREAPP3_1_OR_GREATER
-                : string.Concat(id.AsSpan(0, startIndex), id.AsSpan(startIndex + id.Length));
+                return new Session(string.Concat(
+                    id.AsSpan(0, startIndex),
+                    tagPrefix.AsSpan(),
+                    value.AsSpan(),
+                    id.AsSpan(endIndex)));
 #else
-                : string.Concat(id.Substring(0, startIndex), id.Substring(startIndex + id.Length));
+                return new Session(string.Concat(
+                    id.Substring(0, startIndex),
+                    tagPrefix,
+                    value,
+                    id.Substring(endIndex)));
 #endif
         }
         return new Session(string.Concat(id, tagPrefix, value));
