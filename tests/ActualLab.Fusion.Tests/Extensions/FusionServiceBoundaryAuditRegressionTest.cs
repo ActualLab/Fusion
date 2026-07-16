@@ -92,8 +92,8 @@ public class FusionServiceBoundaryAuditRegressionTest
         };
         var services = new ServiceCollection();
         services.AddSingleton<IAuthenticationService>(authentication);
-        services.AddSingleton(urlChecker);
         services.AddFusion().AddWebServer().AddAuthEndpoints();
+        services.AddSingleton(urlChecker);
         using var serviceProvider = services.BuildServiceProvider();
         var context = new DefaultHttpContext { RequestServices = serviceProvider };
         const string externalUrl = "https://allowed.example/path";
@@ -106,6 +106,21 @@ public class FusionServiceBoundaryAuditRegressionTest
         renderModeResult.Url.Should().Be(externalUrl);
         authentication.ChallengeProperties!.RedirectUri.Should().Be(externalUrl);
         callCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task DefaultRedirectUrlCheckerFactoryShouldReplaceEarlierRegistration()
+    {
+        RedirectUrlChecker urlChecker = _ => true;
+        var services = new ServiceCollection();
+        services.AddSingleton(urlChecker);
+        services.AddFusion().AddWebServer();
+        using var serviceProvider = services.BuildServiceProvider();
+
+        var result = await serviceProvider.GetRequiredService<RenderModeEndpoint>()
+            .Invoke(new DefaultHttpContext(), null, "https://attacker.example/path");
+
+        result.Url.Should().Be("~/");
     }
 
     // Nested types

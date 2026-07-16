@@ -20,7 +20,8 @@ public class RenderModeEndpoint(RedirectUrlChecker redirectUrlChecker)
     protected RedirectUrlChecker RedirectUrlChecker { get; } = redirectUrlChecker;
 
     public RenderModeEndpoint()
-        : this(FusionWebServerBuilder.DefaultRedirectUrlChecker)
+        : this(FusionWebServerBuilder.DefaultRedirectUrlCheckerFactory.Invoke(
+            ActualLab.DependencyInjection.ServiceProviderExt.Empty))
     { }
 
     public static RenderModeDef GetRenderMode(HttpContext context)

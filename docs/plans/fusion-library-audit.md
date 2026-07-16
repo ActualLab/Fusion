@@ -693,8 +693,8 @@ Status: **completed**. Confidence: **Confirmed by source and endpoint regression
 - Source: `RenderModeEndpoint.cs:27-37,53-56` returns caller-controlled `redirectTo` unchanged; the MVC controller also redirects to it.
 - Failure: the public endpoint can be used as an open redirect for phishing/token-flow chaining.
 - Test: `FusionServiceBoundaryAuditRegressionTest.RenderModeEndpointShouldNotRedirectToExternalUrls` receives `https://attacker.example/path` unchanged.
-- **Resolution:** render-mode redirects now pass through the shared `RedirectUrlChecker` DI delegate, whose default uses ASP.NET Core's local-URL check; rejected and missing targets fall back to `~/`. The endpoint's parameterless constructor retains the same default policy for direct callers.
-- **Validation:** the endpoint regression first returned the external attacker URL, then passed with `~/`; the shared-policy replacement regression also verifies that the render-mode endpoint uses the registered delegate.
+- **Resolution:** render-mode redirects now pass through the shared `RedirectUrlChecker` DI delegate, whose default uses ASP.NET Core's local-URL check; rejected and missing targets fall back to `~/`. `DefaultRedirectUrlCheckerFactory` accepts the service provider and is registered with `AddSingleton`, so the framework default replaces earlier registrations while a later application registration can override it. The endpoint's parameterless constructor invokes the factory with the empty service provider.
+- **Validation:** the endpoint regression first returned the external attacker URL, then passed with `~/`; the registration regressions verify both default-factory precedence over an earlier checker and shared-policy replacement by a later checker.
 
 ### FUS16. Authentication endpoints also accept external return URLs
 
@@ -702,8 +702,8 @@ Status: **completed**. Confidence: **Confirmed by source and endpoint integratio
 
 - Source: `AuthEndpoints.cs:29-38,41-53` copies caller `returnUrl` directly into `AuthenticationProperties.RedirectUri` for sign-in and sign-out.
 - Failure: supported authentication handlers can redirect a completed flow to an attacker-controlled origin.
-- **Resolution:** sign-in and sign-out now use the same `RedirectUrlChecker` delegate as render-mode switching, with `/` as their fixed fallback. `AddAuthEndpoints` injects the existing Fusion.Server registration, while the original direct constructor uses the same default delegate.
-- **Validation:** a recording authentication service first received external redirect URIs, then received `/` for both sign-in and sign-out. A replacement delegate was resolved by both endpoint families and observed one call from each while preserving its allowed URL.
+- **Resolution:** sign-in and sign-out now use the same `RedirectUrlChecker` delegate as render-mode switching, with `/` as their fixed fallback. `AddAuthEndpoints` injects the existing Fusion.Server registration, while the original direct constructor invokes `DefaultRedirectUrlCheckerFactory` with the empty service provider.
+- **Validation:** a recording authentication service first received external redirect URIs, then received `/` for both sign-in and sign-out. A delegate registered after the default factory was resolved by both endpoint families and observed one call from each while preserving its allowed URL.
 
 ### FUS17. A database key-value batch with duplicate new keys creates duplicate entities
 

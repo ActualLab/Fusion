@@ -2,7 +2,6 @@ using ActualLab.Fusion.Server.Endpoints;
 using ActualLab.Fusion.Server.Middlewares;
 using ActualLab.Fusion.Server.Rpc;
 using ActualLab.Rpc.Server;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ActualLab.Fusion.Server;
 
@@ -13,7 +12,8 @@ namespace ActualLab.Fusion.Server;
 [StructLayout(LayoutKind.Auto)]
 public readonly struct FusionWebServerBuilder
 {
-    public static RedirectUrlChecker DefaultRedirectUrlChecker { get; set; } = RedirectUrlCheckerExt.IsLocal;
+    public static Func<IServiceProvider, RedirectUrlChecker> DefaultRedirectUrlCheckerFactory { get; set; } =
+        _ => RedirectUrlCheckerExt.IsLocal;
 
     private sealed class AddedTag;
     private static readonly ServiceDescriptor AddedTagDescriptor = new(typeof(AddedTag), new AddedTag());
@@ -43,7 +43,7 @@ public readonly struct FusionWebServerBuilder
         // Add other services
         services.AddSingleton(_ => SessionMiddleware.Options.Default);
         services.AddScoped(c => new SessionMiddleware(c.GetRequiredService<SessionMiddleware.Options>(), c));
-        services.TryAddSingleton(_ => DefaultRedirectUrlChecker);
+        services.AddSingleton(DefaultRedirectUrlCheckerFactory);
         services.AddSingleton(c => new RenderModeEndpoint(c.GetRequiredService<RedirectUrlChecker>()));
 
         configure?.Invoke(this);

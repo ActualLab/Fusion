@@ -30,7 +30,8 @@ public class AuthEndpoints(AuthEndpoints.Options settings, RedirectUrlChecker re
     protected RedirectUrlChecker RedirectUrlChecker { get; } = redirectUrlChecker;
 
     public AuthEndpoints(Options settings)
-        : this(settings, FusionWebServerBuilder.DefaultRedirectUrlChecker)
+        : this(settings, FusionWebServerBuilder.DefaultRedirectUrlCheckerFactory.Invoke(
+            ActualLab.DependencyInjection.ServiceProviderExt.Empty))
     { }
 
     public virtual Task SignIn(
