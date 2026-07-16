@@ -102,7 +102,7 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
 
     private static void ValidateInboundEnvelope(JsonRpcMessage message)
     {
-        if (EncodingExt.Utf8NoBom.GetByteCount(message.Method ?? "") > MaxMethodRefSize)
+        if (IsUtf8SizeExceeded(message.Method ?? "", MaxMethodRefSize))
             throw Errors.SizeLimitExceeded();
 
         var headers = message.Headers;
@@ -111,8 +111,8 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
         if ((headers.Count & 1) != 0 || headers.Count > 2 * MaxHeaderCount)
             throw Errors.SizeLimitExceeded();
         for (var i = 0; i < headers.Count; i += 2) {
-            if (EncodingExt.Utf8NoBom.GetByteCount(headers[i]) > MaxHeaderKeySize
-                || EncodingExt.Utf8NoBom.GetByteCount(headers[i + 1]) > MaxHeaderValueSize)
+            if (IsUtf8SizeExceeded(headers[i], MaxHeaderKeySize)
+                || IsUtf8SizeExceeded(headers[i + 1], MaxHeaderValueSize))
                 throw Errors.SizeLimitExceeded();
         }
     }
@@ -129,8 +129,13 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
             throw Errors.SizeLimitExceeded();
         foreach (var header in headers) {
             if (header.Key.Utf8Name.Length > MaxHeaderKeySize
-                || EncodingExt.Utf8NoBom.GetByteCount(header.Value) > MaxHeaderValueSize)
+                || IsUtf8SizeExceeded(header.Value, MaxHeaderValueSize))
                 throw Errors.SizeLimitExceeded();
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsUtf8SizeExceeded(string value, int maxSize)
+        => value.Length > maxSize / 3
+            && (value.Length > maxSize || EncodingExt.Utf8NoBom.GetByteCount(value) > maxSize);
 }
