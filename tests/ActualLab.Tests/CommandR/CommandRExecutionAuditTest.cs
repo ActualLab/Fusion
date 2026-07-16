@@ -50,19 +50,6 @@ public class CommandRExecutionAuditTest
         invocationCount.Should().Be(1);
     }
 
-    [Fact]
-    public void CommandHandlerChainMustOwnItsHandlerStorage()
-    {
-        var finalHandler = InterfaceCommandHandler.New<FinalHandler, StorageCommand>();
-        var filter = InterfaceCommandHandler.New<FilterHandler, StorageCommand>(isFilter: true);
-        var handlers = new CommandHandler[] { finalHandler };
-        var chain = new CommandHandlerChain(handlers);
-
-        handlers[0] = filter;
-
-        chain.FinalHandler.Should().BeSameAs(finalHandler);
-    }
-
     private sealed class DisposalTracker : IDisposable, IAsyncDisposable
     {
         public static DisposalTracker? LastResolved { get; private set; }
@@ -86,8 +73,4 @@ public class CommandRExecutionAuditTest
             return default;
         }
     }
-
-    private sealed record StorageCommand : ICommand<Unit>;
-    private sealed class FinalHandler;
-    private sealed class FilterHandler;
 }

@@ -870,19 +870,20 @@ All 54 production C# files were reviewed across builder/DI and trimming setup; c
 
 ### CMDR1. `CommandHandlerChain` exposes mutable storage while caching an index into it
 
-Status: **open**.
+Status: **ignored — maintainer direction**.
 
-Confidence: **Confirmed** by source; correct-contract regression test added.
+Confidence: **Ignored by maintainer direction**.
 
 - Source: `src/ActualLab.CommandR/Configuration/CommandHandlerChain.cs:9-35`. The constructor retains the caller's `CommandHandler[]`, `Items` returns that same array publicly, and `_finalHandlerIndex` is computed only once.
 - Failure: mutating the constructor array or the array returned by `Items` can replace/reorder handlers without updating `_finalHandlerIndex`. The focused test replaces the sole final handler with a filter after construction; `FinalHandler` then resolves through stale pipeline metadata.
 - Impact: cached command execution chains can call the wrong handler, treat a filter as final, or otherwise diverge from the validation/order computed at construction. External mutation can affect all later commands sharing the cached chain.
+- **Verdict:** the mutable-storage behavior is accepted and requires no implementation change.
 - **Recommended:** own immutable storage by cloning into a private array and expose `IReadOnlyList<CommandHandler>`/`ReadOnlySpan` or an immutable array.
 - **Alternative:** recompute final-handler metadata on every access. This tolerates mutation but preserves a surprising mutable configuration contract and adds hot-path work.
 
 ### CMDR2. Inbound RPC command middleware evaluates its filter twice
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by focused regression test (observed two calls, expected one).
 
@@ -895,7 +896,7 @@ Confidence: **Confirmed** by focused regression test (observed two calls, expect
 
 ### CMDR3. Malformed RPC command diagnostics log an array as the parameter count
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by source inspection.
 
