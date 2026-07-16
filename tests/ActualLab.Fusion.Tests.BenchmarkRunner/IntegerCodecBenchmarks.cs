@@ -26,8 +26,10 @@ public class IntegerCodecBenchmarks
 
     private readonly ArrayBufferWriter<byte> _messagePackWriteBuffer = new(BenchmarkSettings.CodecOperationCount * 9);
     private byte[] _messagePackData = null!;
+    private byte[] _varUInt32Data = null!;
     private byte[] _varIntData = null!;
     private byte[] _varIntWriteBuffer = null!;
+    private uint[] _uintValues = null!;
     private long[] _values = null!;
 
     [ParamsAllValues]
@@ -37,6 +39,14 @@ public class IntegerCodecBenchmarks
     public void Setup()
     {
         _values = CreateValues(Distribution);
+        _uintValues = CreateUInt32Values(Distribution);
+        _varUInt32Data = new byte[BenchmarkSettings.CodecOperationCount * 5 + 4];
+        var uintOffset = 0;
+        foreach (var value in _uintValues)
+            uintOffset = _varUInt32Data.AsSpan().WriteVarUInt32(value, uintOffset);
+        Array.Resize(ref _varUInt32Data, uintOffset + 4);
+        ValidateVarUInt32Readers();
+
         _varIntData = new byte[BenchmarkSettings.CodecOperationCount * 10 + 16];
         var offset = 0;
         foreach (var value in _values)
@@ -54,6 +64,34 @@ public class IntegerCodecBenchmarks
     }
 
     [Benchmark(Baseline = true, OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
+    public uint VarUInt32ReadLegacy()
+    {
+        ReadOnlySpan<byte> data = _varUInt32Data;
+        var offset = 0;
+        var checksum = 0u;
+        for (var i = 0; i < BenchmarkSettings.CodecOperationCount; i++) {
+            var (value, nextOffset) = ReadVarUInt32Legacy(data, offset);
+            checksum ^= value;
+            offset = nextOffset;
+        }
+        return checksum;
+    }
+
+    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
+    public uint VarUInt32Read()
+    {
+        ReadOnlySpan<byte> data = _varUInt32Data;
+        var offset = 0;
+        var checksum = 0u;
+        for (var i = 0; i < BenchmarkSettings.CodecOperationCount; i++) {
+            var (value, nextOffset) = data.ReadVarUInt32(offset);
+            checksum ^= value;
+            offset = nextOffset;
+        }
+        return checksum;
+    }
+
+    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public ulong VarUInt64ReadLegacy()
     {
         ReadOnlySpan<byte> data = _varIntData;
@@ -141,6 +179,20 @@ public class IntegerCodecBenchmarks
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static (uint Value, int Offset) ReadVarUInt32Legacy(ReadOnlySpan<byte> span, int offset)
+    {
+        var value = 0u;
+        for (var shift = 0; shift < 28; shift += 7) {
+            var b = span[offset++];
+            value |= (uint)(b & 0x7F) << shift;
+            if (b <= 0x7F)
+                return (value, offset);
+        }
+        var last = span[offset++];
+        return (value | ((uint)last << 28), offset);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static (ulong Value, int Offset) ReadVarUInt64Hybrid(ReadOnlySpan<byte> span, int offset)
     {
         var first = span[offset];
@@ -198,6 +250,30 @@ public class IntegerCodecBenchmarks
         return values;
     }
 
+    private static uint[] CreateUInt32Values(IntegerDistribution distribution)
+    {
+        var values = new uint[BenchmarkSettings.CodecOperationCount];
+        var random = new Random(42);
+        for (var i = 0; i < values.Length; i++)
+            values[i] = distribution switch {
+                IntegerDistribution.RpcCallId => (uint)CreateRpcCallId(random),
+                IntegerDistribution.Small => (uint)random.Next(0, 128),
+                IntegerDistribution.Mixed => CreateMixedUInt32Value(random),
+                IntegerDistribution.Large => (uint)random.NextInt64(1L << 28, 1L << 32),
+                _ => throw new ArgumentOutOfRangeException(nameof(distribution)),
+            };
+        return values;
+    }
+
+    private static uint CreateMixedUInt32Value(Random random)
+        => random.Next(5) switch {
+            0 => (uint)random.Next(0, 1 << 7),
+            1 => (uint)random.Next(1 << 7, 1 << 14),
+            2 => (uint)random.Next(1 << 14, 1 << 21),
+            3 => (uint)random.Next(1 << 21, 1 << 28),
+            _ => (uint)random.NextInt64(1L << 28, 1L << 32),
+        };
+
     private static long CreateMixedValue(Random random)
         => random.Next(9) switch {
             0 => random.Next(0, 1 << 7),
@@ -218,6 +294,19 @@ public class IntegerCodecBenchmarks
             < 95 => random.Next(1 << 14, 1 << 21),
             _ => random.NextInt64(1L << 21, long.MaxValue),
         };
+
+    private void ValidateVarUInt32Readers()
+    {
+        ReadOnlySpan<byte> data = _varUInt32Data;
+        var offset = 0;
+        foreach (var expected in _uintValues) {
+            var (legacyValue, legacyOffset) = ReadVarUInt32Legacy(data, offset);
+            var (value, valueOffset) = data.ReadVarUInt32(offset);
+            if (legacyValue != expected || value != expected || legacyOffset != valueOffset)
+                throw new InvalidOperationException("VarUInt32 reader validation failed.");
+            offset = valueOffset;
+        }
+    }
 
     private void ValidateVarUInt64Readers()
     {

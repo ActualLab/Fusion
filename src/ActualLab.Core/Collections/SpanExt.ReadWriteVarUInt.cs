@@ -48,6 +48,27 @@ public static partial class SpanExt
 
     public static (uint Value, int Offset) ReadVarUInt32(this ReadOnlySpan<byte> span, int offset = 0)
     {
+#if NETCOREAPP3_1_OR_GREATER
+        if (BitConverter.IsLittleEndian) {
+            var first = span[offset];
+            if (first <= LowBits)
+                return (first, offset + 1);
+
+            if (span.Length - offset >= 4) {
+                var data = span.ReadUnchecked<uint>(offset);
+                var stopBits = ~data & 0x00808080;
+                if (stopBits != 0) {
+                    var length = (BitOperations.TrailingZeroCount(stopBits) >> 3) + 1;
+                    var fastValue = (data & 0x7F)
+                        | ((data & 0x7F00) >> 1)
+                        | ((data & 0x7F0000) >> 2);
+                    fastValue &= (1u << (length * 7)) - 1;
+                    return (fastValue, offset + length);
+                }
+            }
+        }
+#endif
+
         byte b;
         var value = 0u;
         var shift = 0;
