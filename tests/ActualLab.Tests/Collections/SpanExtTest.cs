@@ -13,6 +13,9 @@ public class SpanExtTest(ITestOutputHelper @out) : TestBase(@out)
         ((ReadOnlySpan<byte>)new byte[] { 0x7F }).ReadVarUInt32().Should().Be((0x7Fu, 1));
         ((ReadOnlySpan<byte>)new byte[] { 0x80, 0x01 }).ReadVarUInt32().Should().Be((0x80u, 2));
         ((ReadOnlySpan<byte>)new byte[] { 0x80, 0x80, 0x01 }).ReadVarUInt32().Should().Be((0x4000u, 3));
+        AssertEncoding(0x7Fu, [0x7F]);
+        AssertEncoding(0x80u, [0x80, 0x01]);
+        AssertEncoding(0x4000u, [0x80, 0x80, 0x01]);
 
         // Invalid: 5th byte must be <= 15 and must not have the high bit set
         Assert.Throws<FormatException>(() => new byte[] { 0x80, 0x80, 0x80, 0x80, 0x10 }.ReadVarUInt32());
@@ -49,6 +52,13 @@ public class SpanExtTest(ITestOutputHelper @out) : TestBase(@out)
             };
             size.Should().Be(expectedSize);
         }
+
+        static void AssertEncoding(uint value, byte[] expected)
+        {
+            Span<byte> data = stackalloc byte[5];
+            var endOffset = data.WriteVarUInt32(value);
+            data[..endOffset].ToArray().Should().Equal(expected);
+        }
     }
 
     [Fact]
@@ -58,6 +68,10 @@ public class SpanExtTest(ITestOutputHelper @out) : TestBase(@out)
 
         foreach (var value in UInt64Values())
             TestRoundtrip(value, buffer);
+
+        AssertEncoding(0x7Ful, [0x7F]);
+        AssertEncoding(0x80ul, [0x80, 0x01]);
+        AssertEncoding(0x4000ul, [0x80, 0x80, 0x01]);
 
         // Invalid: 10th byte must be <= 1 and must not have the high bit set
         Assert.Throws<FormatException>(() => new byte[] { 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x02 }.ReadVarUInt64());
@@ -98,6 +112,13 @@ public class SpanExtTest(ITestOutputHelper @out) : TestBase(@out)
                 _ => 10,
             };
             size.Should().Be(expectedSize);
+        }
+
+        static void AssertEncoding(ulong value, byte[] expected)
+        {
+            Span<byte> data = stackalloc byte[10];
+            var endOffset = data.WriteVarUInt64(value);
+            data[..endOffset].ToArray().Should().Equal(expected);
         }
     }
 

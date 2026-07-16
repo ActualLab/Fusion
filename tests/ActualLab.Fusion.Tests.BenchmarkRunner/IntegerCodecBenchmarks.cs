@@ -27,6 +27,7 @@ public class IntegerCodecBenchmarks
     private readonly ArrayBufferWriter<byte> _messagePackWriteBuffer = new(BenchmarkSettings.CodecOperationCount * 9);
     private byte[] _messagePackData = null!;
     private byte[] _varUInt32Data = null!;
+    private byte[] _varUInt32WriteBuffer = null!;
     private byte[] _varIntData = null!;
     private byte[] _varIntWriteBuffer = null!;
     private uint[] _uintValues = null!;
@@ -46,6 +47,7 @@ public class IntegerCodecBenchmarks
             uintOffset = _varUInt32Data.AsSpan().WriteVarUInt32(value, uintOffset);
         Array.Resize(ref _varUInt32Data, uintOffset + 4);
         ValidateVarUInt32Readers();
+        _varUInt32WriteBuffer = new byte[BenchmarkSettings.CodecOperationCount * 5];
 
         _varIntData = new byte[BenchmarkSettings.CodecOperationCount * 10 + 16];
         var offset = 0;
@@ -89,6 +91,26 @@ public class IntegerCodecBenchmarks
             offset = nextOffset;
         }
         return checksum;
+    }
+
+    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
+    public int VarUInt32WriteLegacy()
+    {
+        var data = _varUInt32WriteBuffer.AsSpan();
+        var offset = 0;
+        foreach (var value in _uintValues)
+            offset = WriteVarUInt32Legacy(data, value, offset);
+        return offset;
+    }
+
+    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
+    public int VarUInt32Write()
+    {
+        var data = _varUInt32WriteBuffer.AsSpan();
+        var offset = 0;
+        foreach (var value in _uintValues)
+            offset = data.WriteVarUInt32(value, offset);
+        return offset;
     }
 
     [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
@@ -148,6 +170,16 @@ public class IntegerCodecBenchmarks
     }
 
     [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
+    public int VarUInt64WriteLegacy()
+    {
+        var data = _varIntWriteBuffer.AsSpan();
+        var offset = 0;
+        foreach (var value in _values)
+            offset = WriteVarUInt64Legacy(data, (ulong)value, offset);
+        return offset;
+    }
+
+    [Benchmark(OperationsPerInvoke = BenchmarkSettings.CodecOperationCount)]
     public int VarUInt64Write()
     {
         var data = _varIntWriteBuffer.AsSpan();
@@ -176,6 +208,28 @@ public class IntegerCodecBenchmarks
             writer.Write(value);
         writer.Flush();
         return _messagePackWriteBuffer.WrittenCount;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int WriteVarUInt32Legacy(Span<byte> span, uint source, int offset)
+    {
+        while (source >= 0x80) {
+            span[offset++] = (byte)(source | 0x80);
+            source >>= 7;
+        }
+        span[offset] = (byte)source;
+        return offset + 1;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int WriteVarUInt64Legacy(Span<byte> span, ulong source, int offset)
+    {
+        while (source >= 0x80) {
+            span[offset++] = (byte)(source | 0x80);
+            source >>= 7;
+        }
+        span[offset] = (byte)source;
+        return offset + 1;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
