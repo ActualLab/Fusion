@@ -28,7 +28,7 @@ public class RawInvalidationBenchmarks : FusionBenchmarkBase
 }
 
 [WarmupCount(8), IterationCount(10)]
-public class RegisteredComputedInvalidationBenchmarks : FusionBenchmarkBase
+public class ComputeMethodLeafInvalidationBenchmarks : FusionBenchmarkBase
 {
     private Computed[] _computeds = [];
 
@@ -37,7 +37,7 @@ public class RegisteredComputedInvalidationBenchmarks : FusionBenchmarkBase
     {
         _computeds = new Computed[BenchmarkSettings.OperationCount * BenchmarkSettings.InvalidationBatchCount];
         for (var i = 0; i < _computeds.Length; i++)
-            _computeds[i] = Computed.Capture(() => Service.Get(i, default)).AssertCompleted().Result;
+            _computeds[i] = Computed.Capture(() => Service.GetLeaf(i, default)).AssertCompleted().Result;
     }
 
     [Benchmark(OperationsPerInvoke = BenchmarkSettings.OperationCount * BenchmarkSettings.InvalidationBatchCount)]

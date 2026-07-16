@@ -9,6 +9,8 @@ public interface IBenchmarkComputeService : IComputeService
     [ComputeMethod]
     Task<Unit> Get(Session session, string key, CancellationToken cancellationToken);
     [ComputeMethod]
+    Task<Unit> GetLeaf(long key, CancellationToken cancellationToken);
+    [ComputeMethod]
     Task<Unit> GetNode(int branchingFactor, long nodeId, CancellationToken cancellationToken);
 }
 
@@ -25,6 +27,13 @@ public class BenchmarkComputeService : IBenchmarkComputeService
     [ComputeMethod]
     public virtual Task<Unit> Get(Session session, string key, CancellationToken cancellationToken)
         => TaskExt.UnitTask;
+
+    [ComputeMethod]
+    public virtual async Task<Unit> GetLeaf(long key, CancellationToken cancellationToken)
+    {
+        await Get(key, cancellationToken).ConfigureAwait(false);
+        return default;
+    }
 
     [ComputeMethod]
     public virtual async Task<Unit> GetNode(
