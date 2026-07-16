@@ -86,6 +86,31 @@ baselines still need dedicated benchmarks.
   helpers should be shared within that project unless a production caller also
   needs the same abstraction.
 
+## Relationship to Proxy Method Slots
+
+The separate [proxy method slots](proxy-method-slots.md) task changes generated
+proxy dispatch, interceptor binding, and the association between proxy methods and
+`MethodDef` instances. Its relevant dependencies are:
+
+- The alternate computed-registry lookup **may depend on the final method-slot
+  design**. `ComputeMethodInput` currently hashes and compares `MethodDef` by
+  reference, while slot bindings may change where method definitions are created
+  or shared. Finalize its lookup key only after the binding's `MethodDef` identity
+  contract is stable.
+- The invalidation-specialized interceptor result path **may depend on the final
+  method-slot design**. Slot resolution is likely the right place to select the
+  final compute/invalidation handler, so implementing both independently could
+  duplicate or immediately replace interceptor routing work.
+- The completed-`Task<T>` invoker fast path touches `MethodDef` invoker factories,
+  but does not depend on method indexing. It only requires merge coordination if
+  both tasks edit the same files.
+- Registry state transitions, computed leaf paths, invalidation graph traversal,
+  `AsyncLock`, and `AsyncLockSet` are independent of proxy method slots.
+
+Cached-call, recompute, and invalidation percentage estimates use the current proxy
+dispatch cost. Rebaseline them after method-slot dispatch lands; an unchanged
+absolute saving will represent a different percentage of a faster total operation.
+
 ## Cached Compute-Method Hit
 
 ### 1. Use an alternate registry lookup without allocating the persistent key
@@ -274,6 +299,10 @@ reentry, disposal, and waiter-scheduling semantics already supplied by
 Each item should be a separate, revertible commit after benchmark validation.
 Registry changes from different workstreams must be serialized to avoid agents
 editing the same state machine concurrently.
+
+The invalidation-specialized result path and alternate registry lookup may depend
+on proxy method slots and should follow its binding and `MethodDef` identity
+decisions when that work is active in parallel.
 
 ## Parallel Workstreams
 
