@@ -1509,7 +1509,8 @@ Status: **completed**. Confidence: **Confirmed for the affected conditional impl
   transport enqueue remains allocation-free and synchronous; handshake/configuration validation remains connection-
   or startup-scoped; backend dispatch and stream overflow protection add only predictable scalar branches. Outbound
   text-envelope validation now reuses cached UTF-8 method/header-key lengths, skips exact encoding scans for strings
-  too short to approach their byte limit, pre-sizes the header list, and keeps exact untrusted inbound bounds. The RPC project build,
+  too short to approach their byte limit, pre-sizes the header list, and keeps exact untrusted inbound bounds. Successful
+  simple-channel sends also transfer their pooled array without a redundant atomic disposal. The RPC project build,
   WebSocket size suite (3/3), and `RpcBasicTest` suite (71/71) pass after this optimization.
 
 ## H. Build, docs executable, and C# samples

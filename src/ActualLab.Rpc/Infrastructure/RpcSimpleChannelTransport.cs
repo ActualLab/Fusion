@@ -39,17 +39,21 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
 
     public override void Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
+        if (_whenCompleted.IsCompleted) {
+            CompleteSend(message, new ChannelClosedException());
+            return;
+        }
+
+        ArrayPoolBuffer<byte>? buffer = null;
         ArrayOwner<byte> frame;
         try {
-            if (_whenCompleted.IsCompleted)
-                throw new ChannelClosedException();
-
-            using var buffer = new ArrayPoolBuffer<byte>(
+            buffer = new ArrayPoolBuffer<byte>(
                 ArrayPools.SharedBytePool, InitialBufferCapacity, mustClear: false);
             MessageSerializer.WriteFunc(buffer, message);
             frame = buffer.ToArrayOwnerAndDispose();
         }
         catch (Exception e) {
+            buffer?.Dispose();
             CompleteSend(message, e);
             return;
         }
