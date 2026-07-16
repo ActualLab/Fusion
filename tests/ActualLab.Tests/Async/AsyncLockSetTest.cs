@@ -79,4 +79,36 @@ public class AsyncLockSetTest(ITestOutputHelper @out) : AsyncLockTestBase(@out)
         AssertIsEmpty(CheckedFailSet);
         AssertIsEmpty(CheckedPassSet);
     }
+
+    [Fact]
+    public async Task SameKeyReleaseCancellationRaceTest()
+    {
+        const int IterationCount = 1_000;
+        var lockSet = new AsyncLockSet<int>(LockReentryMode.CheckedFail);
+        for (var i = 0; i < IterationCount; i++) {
+            var owner = await lockSet.Lock(0).ConfigureAwait(false);
+            using var cancellationSource = new CancellationTokenSource();
+            var cancelledWaiter = lockSet.Lock(0, cancellationSource.Token).AsTask();
+            var start = TaskCompletionSourceExt.New();
+            var cancelTask = Task.Run(async () => {
+                await start.Task.ConfigureAwait(false);
+                cancellationSource.Cancel();
+            });
+            var releaseTask = Task.Run(async () => {
+                await start.Task.ConfigureAwait(false);
+                owner.Dispose();
+            });
+
+            start.SetResult();
+            await Task.WhenAll(cancelTask, releaseTask).ConfigureAwait(false);
+
+            try {
+                using var cancelledReleaser = await cancelledWaiter.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationSource.IsCancellationRequested) {
+                // Cancellation and release intentionally race here.
+            }
+        }
+        lockSet.Count.Should().Be(0);
+    }
 }

@@ -104,14 +104,12 @@ public class AsyncLockSet<TKey>(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
-            try {
-                if (_isLocked) {
-                    if (_unmarkOnRelease)
-                        _entry.LockedLocallyTag?.Value = null;
-                    _entry.Semaphore.Release();
-                }
+            if (_isLocked) {
+                if (_unmarkOnRelease)
+                    _entry.LockedLocallyTag?.Value = null;
+                _entry.Release();
             }
-            finally {
+            else {
                 _entry?.EndUse();
             }
         }
@@ -164,6 +162,34 @@ public class AsyncLockSet<TKey>(
             }
             if (owner._entries.TryRemove(key, this))
                 Semaphore.Dispose();
+        }
+
+        public void Release()
+        {
+            var mustClose = true;
+            lock (this) {
+                if (_useCount <= 0) {
+                    if (_useCount == 0)
+                        throw Errors.InternalError("AsyncLockSet.Entry is in a broken state.");
+                    return; // Already closed
+                }
+                if (_useCount == 1)
+                    _useCount = -1;
+                else
+                    mustClose = false;
+            }
+            if (mustClose) {
+                if (owner._entries.TryRemove(key, this))
+                    Semaphore.Dispose();
+                return;
+            }
+
+            try {
+                Semaphore.Release();
+            }
+            finally {
+                EndUse();
+            }
         }
     }
 }

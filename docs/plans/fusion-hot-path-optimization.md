@@ -318,6 +318,18 @@ Contended percentages apply only to the software handoff interval after release.
    releasing a semaphore that is immediately disposed. Racing users must either
    increment before close or observe closed state and retry. Expected improvement:
    **8-15%** uncontended, medium-high confidence.
+
+   Status: **Closed — retained.**
+
+   Remarks: fresh .NET 10 runs measured absent-key acquisition at 82.86 ns before
+   and 62.62 ns after, same-key acquisition at 74.18-80.54 ns before and 62.53 ns
+   after, and mixed-key acquisition at 82.19 ns before and 60.54 ns after.
+   Allocation remained 192 B. Only the sole-owner path skips `Semaphore.Release`;
+   the contended path preserves the original release-then-`EndUse` order in a
+   `finally`. No handoff improvement is claimed. Thirteen focused tests cover
+   cancellation, reentry context, multiple waiters, handoff, and 1,000 direct
+   cancellation/release races.
+
 2. Replace the monitor-protected entry lifecycle with one interlocked
    open/refcount/closed state while preserving retry and conditional removal.
    Expected improvement: **8-18%** uncontended and **1-5%** handoff, medium

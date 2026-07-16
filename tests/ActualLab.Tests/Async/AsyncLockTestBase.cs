@@ -116,6 +116,70 @@ public abstract class AsyncLockTestBase(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
+    public async Task CancellationBeforeAndDuringWaitTest()
+    {
+        var asyncLock = CreateAsyncLock(LockReentryMode.CheckedFail);
+        var owner = await asyncLock.Lock().ConfigureAwait(false);
+
+        using (var cancellationSource = new CancellationTokenSource()) {
+            cancellationSource.Cancel();
+            await asyncLock.Lock(cancellationSource.Token).AsTask().AsAsyncFunc()
+                .Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        using (var cancellationSource = new CancellationTokenSource()) {
+            var waiterTask = asyncLock.Lock(cancellationSource.Token).AsTask();
+            waiterTask.IsCompleted.Should().BeFalse();
+            cancellationSource.Cancel();
+            await waiterTask.AsAsyncFunc().Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        owner.Dispose();
+        var nextOwner = await asyncLock.Lock().ConfigureAwait(false);
+        nextOwner.Dispose();
+        AssertResourcesReleased();
+    }
+
+    [Fact]
+    public async Task MultipleWaiterHandoffTest()
+    {
+        var asyncLock = CreateAsyncLock(LockReentryMode.CheckedFail);
+        var owner = await asyncLock.Lock().ConfigureAwait(false);
+        var insideCount = 0;
+        var waiterTasks = Enumerable.Range(0, 8).Select(async _ => {
+            using var waiter = await asyncLock.Lock().ConfigureAwait(false);
+            var currentCount = Interlocked.Increment(ref insideCount);
+            currentCount.Should().Be(1);
+            await Task.Yield();
+            Interlocked.Decrement(ref insideCount);
+        }).ToArray();
+
+        owner.Dispose();
+        await Task.WhenAll(waiterTasks).WaitAsync(TimeSpan.FromSeconds(5));
+
+        insideCount.Should().Be(0);
+        AssertResourcesReleased();
+    }
+
+    [Fact]
+    public async Task LockedLocallyTagFlowsAndClearsTest()
+    {
+        var asyncLock = CreateAsyncLock(LockReentryMode.CheckedFail);
+        var owner = await asyncLock.Lock().ConfigureAwait(false);
+        owner.MarkLockedLocally();
+
+        await Task.Run(async () => {
+                await asyncLock.Lock().AsTask().ConfigureAwait(false);
+            }).AsAsyncFunc()
+            .Should().ThrowAsync<InvalidOperationException>();
+
+        owner.Dispose();
+        var nextOwner = await asyncLock.Lock().ConfigureAwait(false);
+        nextOwner.Dispose();
+        AssertResourcesReleased();
+    }
+
+    [Fact]
     public async Task ConcurrentTest()
     {
         var r = new Resource(null, CreateAsyncLock(LockReentryMode.CheckedPass));
