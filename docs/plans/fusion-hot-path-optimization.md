@@ -2,7 +2,7 @@
 
 Date: 2026-07-16
 
-Status: source review complete; implementation pending
+Status: first implementation and measurement pass complete
 
 ## Goal
 
@@ -150,6 +150,13 @@ diagnostic, and unusual-state work into no-inline slow helpers.
 
 Expected whole-hit improvement: **4-9%**, medium-low confidence.
 
+Status: **Closed — rejected.**
+
+Remarks: the retained cached-hit baseline measured 22.565 ns and 32 B. Outlining
+and aggressively inlining `ComputedRegistry.OnOperation` measured 23.087 ns, about
+2.3% slower, with allocation unchanged. Combining it with forced inlining of
+`GetValuePromise` was slower still. Both experiments were fully reverted.
+
 Combined cache-hit target: **10-22%**, approximately 23-27 ns from the current
 29.6 ns. This is a target range, not the sum of individual estimates.
 
@@ -184,6 +191,13 @@ of the locking protocol.
 
 Expected whole-recompute improvement: **2-5%**, medium confidence, potentially
 avoiding one task-sized allocation.
+
+Status: **Closed — rejected.**
+
+Remarks: the safe internal `ValueTask` core preserved completed, incomplete,
+faulted, canceled, and `AsyncLocal` boundary semantics and removed another 72 B,
+but repeated end-to-end results were 1.516-1.623 us versus the retained 1.480 us
+baseline. It failed the timing threshold and was fully reverted.
 
 ### 3. Try the normal registry insertion before entering collision handling
 
@@ -300,11 +314,35 @@ edge is cleared.
 
 1. Use existing `SimpleAsyncLock` at proven unchecked call sites: **5-12%**
    uncontended, medium confidence.
+
+   Status: **Closed — rejected.**
+
+   Remarks: side-by-side uncontended gains fell from 1.7% to 0.8% on repeat, and
+   handoff changed from 3.3% faster to about 23% slower under scheduler noise. The
+   only unchecked production call sites found were `DbOperationScope` and the
+   Npgsql shard-watcher notification lock, neither of which is in the measured
+   compute or invalidation paths. No caller was changed.
+
 2. Outline reentry and incomplete-wait paths so the concrete uncontended path can
    inline: **3-8%** uncontended, medium-low confidence.
+
+   Status: **Closed — rejected.**
+
+   Remarks: forcing typed-lock inlining measured 17.50 ns once and 18.73 ns on
+   repeat against a 17.8-18.0 ns baseline. The non-repeatable experiment was fully
+   reverted.
+
 3. Avoid redundant `ExecutionContext` capture in the incomplete-wait helper while
    preserving caller-context restoration and reentry state: **5-15%** of software
    handoff overhead, medium-low confidence.
+
+   Status: **Closed — rejected.**
+
+   Remarks: `AsyncLock` handoff measured 355 ns at baseline versus 348 and 367 ns
+   with suppression. `AsyncLockSet` measured 386-384 ns at baseline versus 401 and
+   380 ns. Allocation was unchanged, semantics tests passed, and all experimental
+   code was reverted.
+
 4. If interface acquisition is important, replace its always-async adapter with a
    completed bridge: **15-30%** interface-based uncontended improvement, with no
    expected effect on concrete calls.
@@ -368,11 +406,22 @@ Contended percentages apply only to the software handoff interval after release.
    helper. Expected improvement: **5-12%** of handoff overhead, medium-low
    confidence.
 
+   Status: **Closed — rejected.**
+
+   Remarks: the shared suppression experiment was neutral to slightly worse for
+   lock-set handoff, at 401 and 380 ns versus 386 and 384 ns baseline, with
+   allocation unchanged. It was fully reverted.
+
 The first two changes overlap; their combined target is **15-25%**, not their sum.
 A custom inline async gate could potentially improve uncontended acquisition by
 25-40%, but it is not a first-line change because it recreates cancellation,
 reentry, disposal, and waiter-scheduling semantics already supplied by
 `SemaphoreSlim`.
+
+Status: **Not attempted.** The atomic entry lifecycle already produced substantial
+uncontended and handoff gains while retaining `SemaphoreSlim` cancellation and
+scheduling semantics; custom waiter machinery was not justified by the remaining
+risk/reward ratio.
 
 ## Changes Not Recommended
 
