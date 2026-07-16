@@ -131,8 +131,14 @@ public sealed class ComputedRegistry
         }
         OnOperation(random);
 
+        if (computed.ConsistencyState == ConsistencyState.Invalidated)
+            return;
+
+        var newWeakRef = new WeakReference<Computed>(computed);
+        if (_storage.TryAdd(key, newWeakRef))
+            return;
+
         var spinWait = new SpinWait();
-        var newWeakRef = (WeakReference<Computed>?)null;
         while (computed.ConsistencyState != ConsistencyState.Invalidated) {
             if (_storage.TryGetValue(key, out var weakRef)) {
                 weakRef.TryGetTarget(out var target);
@@ -150,7 +156,6 @@ public sealed class ComputedRegistry
                 _storage.TryRemove(key, weakRef);
             }
             else {
-                newWeakRef ??= new WeakReference<Computed>(computed);
                 if (_storage.TryAdd(key, newWeakRef))
                     return;
             }

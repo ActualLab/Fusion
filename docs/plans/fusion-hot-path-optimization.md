@@ -194,6 +194,15 @@ predecessor invalidation.
 
 Expected whole-recompute improvement: **1-2%**, medium-low confidence.
 
+Status: **Closed — retained.**
+
+Remarks: an immediate interleaved .NET 10 comparison measured 1.682 us before and
+1.606 us after the optimistic insertion, a 4.5% improvement with allocation
+unchanged at 944 B. Other optimized runs confirmed the direction but also confirmed
+that the end-to-end fixture remains noisy. Focused tests cover synchronous
+predecessor displacement and 32 concurrent registrations, asserting that exactly
+one consistent computed value remains registered.
+
 Combined recompute target: **8-15%**, approximately 2.45-2.65 us from the current
 2.876 us. Lock-set improvements may contribute another **2-6%** to the whole
 recompute path.
