@@ -185,7 +185,6 @@ By default, `ComputeState` runs on the Blazor dispatcher. Set `ComputeStateOnThr
 | `RecomputeStateOnParameterChange` | Triggers `State.Recompute()` when parameters change |
 | `RenderInconsistentState` | Allows rendering even when state is invalidated |
 | `UseParametersSetRenderPoint` | Render after `OnParametersSet` |
-| `UseInitializedAsyncRenderPoint` | Render after `OnInitializedAsync` |
 | `UseParametersSetAsyncRenderPoint` | Render after `OnParametersSetAsync` |
 | `UseAllRenderPoints` | Combination of all render point flags |
 | `ComputeStateOnThreadPool` | Run `ComputeState` on thread pool instead of Blazor's sync context |

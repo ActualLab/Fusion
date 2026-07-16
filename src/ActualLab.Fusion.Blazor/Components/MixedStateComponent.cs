@@ -9,7 +9,19 @@ namespace ActualLab.Fusion.Blazor;
 /// </summary>
 public abstract class MixedStateComponent<T, TMutableState> : ComputedStateComponent<T>
 {
+    private Action<State, StateEventKind>? _mutableStateChanged;
+
     protected MutableState<TMutableState> MutableState { get; private set; } = null!;
+
+    public override ValueTask DisposeAsync()
+    {
+        var mutableStateChanged = _mutableStateChanged;
+        if (mutableStateChanged is not null) {
+            MutableState.Updated -= mutableStateChanged;
+            _mutableStateChanged = null;
+        }
+        return base.DisposeAsync();
+    }
 
     public override Task SetParametersAsync(ParameterView parameters)
     {
@@ -24,7 +36,8 @@ public abstract class MixedStateComponent<T, TMutableState> : ComputedStateCompo
             throw Errors.AlreadyInitialized(nameof(MutableState));
 
         MutableState = mutableState ?? throw new ArgumentNullException(nameof(mutableState));
-        mutableState.Updated += (_, _) => _ = UntypedState.Recompute();
+        var mutableStateChanged = _mutableStateChanged = (_, _) => _ = UntypedState.Recompute();
+        mutableState.Updated += mutableStateChanged;
     }
 
     protected virtual string GetMutableStateCategory()

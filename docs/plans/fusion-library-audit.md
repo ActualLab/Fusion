@@ -817,27 +817,33 @@ Status: **completed**. Confidence: **Confirmed by source and focused category re
 
 ### FUS29. Two net8+ Blazor unsafe accessors target the wrong runtime fields
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source metadata and two regression cases**.
+Status: **completed**. Confidence: **Confirmed by source metadata and practical runtime regression coverage**.
 
 - Source: `ComponentExt.cs:24-29` maps `HasPendingQueuedRenderGetter` to `_initialized` and `RendererGetter` to `_hasPendingQueuedRender`; unsafe accessors are enabled for net8-net10.
 - Failure: render suspension mutates initialization state, while disposal detection reaches a field of the wrong owner/type.
 - **Recommended:** target `_hasPendingQueuedRender` and RenderHandle's `_renderer` respectively, with metadata/runtime smoke tests per supported framework.
+- **Resolution:** the net8+ unsafe accessors now target `ComponentBase._hasPendingQueuedRender` and `RenderHandle._renderer`, matching the established reflection fallback.
+- **Validation:** focused tests verify both accessor attributes and exercise render-suspension field restoration plus unassigned-render-handle disposal detection on supported runtimes.
 
 ### FUS30. `UseInitializedAsyncRenderPoint` is declared and enabled but never used
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and API-shape regression test**.
 
 - Source: the flag is defined/included in `UseAllRenderPoints`, but `ComputedStateComponent.cs:48-72` awaits incomplete initialization before entering the parameter flow and first render point.
 - Failure: default options cannot produce the advertised intermediate render during asynchronous initialization.
 - **Recommended:** implement the render point or remove/rename the option to avoid a false contract.
+- **Resolution:** removed `UseInitializedAsyncRenderPoint` and its inclusion in `UseAllRenderPoints`, leaving only render points implemented by the component lifecycle flow.
+- **Validation:** the API-shape regression confirms the unused flag is absent and `UseAllRenderPoints` is exactly the union of the two remaining render-point flags.
 
 ### FUS31. `MixedStateComponent` retains disposed components through anonymous mutable-state handlers
 
-Status: **approved — pending maintainer review**. Confidence: **Confirmed by source; lifecycle test needed**.
+Status: **implemented — awaiting maintainer review**. Confidence: **Confirmed by source and lifecycle/retention regression test**.
 
 - Source: `MixedStateComponent.cs:21-28` installs a capturing anonymous `Updated` handler; `StatefulComponent` disposal releases only the computed state.
 - Failure: a supplied/shared mutable state retains disposed components and continues triggering recomputation.
 - **Recommended:** retain the delegate and unsubscribe during component disposal.
+- **Resolution:** `MixedStateComponent` now retains its mutable-state handler, unsubscribes it before delegating to the existing computed-state disposal path, and clears the retained delegate.
+- **Validation:** the lifecycle regression disposes a component backed by a shared mutable state, verifies the subscriber is removed, and confirms the component is no longer retained.
 
 ### FUS32. Dispatcher execution-context policy is cached globally from the first renderer
 

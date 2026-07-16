@@ -21,9 +21,9 @@ public static class ComponentExt
     private static extern ref RenderHandle RenderHandleGetter(ComponentBase @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_initialized")]
     private static extern ref bool IsInitializedGetter(ComponentBase @this);
-    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_initialized")]
-    private static extern ref bool HasPendingQueuedRenderGetter(ComponentBase @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_hasPendingQueuedRender")]
+    private static extern ref bool HasPendingQueuedRenderGetter(ComponentBase @this);
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_renderer")]
     private static extern ref Renderer? RendererGetter(ref RenderHandle @this);
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_componentId")]
     private static extern ref int ComponentIdGetter(ref RenderHandle @this);
