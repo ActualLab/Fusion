@@ -1,10 +1,8 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
 
 namespace ActualLab.Fusion.Tests.BenchmarkRunner;
 
 [MemoryDiagnoser]
-[ShortRunJob(RuntimeMoniker.Net10_0)]
 public abstract class FusionBenchmarkBase
 {
     private ServiceProvider? _services;

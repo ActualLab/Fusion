@@ -3,12 +3,10 @@ using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
 
 namespace ActualLab.Fusion.Tests.BenchmarkRunner;
 
 [MemoryDiagnoser]
-[ShortRunJob(RuntimeMoniker.Net10_0)]
 public abstract class RpcBenchmarkBase
 {
     private ServiceProvider? _services;
