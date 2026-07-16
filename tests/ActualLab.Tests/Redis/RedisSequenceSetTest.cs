@@ -41,5 +41,13 @@ public class RedisSequenceSetTest(ITestOutputHelper @out) : RedisTestBase(@out)
         const long largeValue = 9_007_199_254_740_992;
         await set.Reset("large", largeValue);
         (await set.Next("large", largeValue)).Should().Be(largeValue + 1);
+
+        const long nearMaxValue = long.MaxValue - 2;
+        await set.Reset("near-max", nearMaxValue);
+        (await set.Next("near-max", nearMaxValue)).Should().Be(nearMaxValue + 1);
+        (await set.Next("near-max", nearMaxValue)).Should().Be(long.MaxValue);
+
+        var create = () => GetRedisDb().GetSequenceSet("invalid", -1);
+        create.Should().Throw<ArgumentOutOfRangeException>();
     }
 }

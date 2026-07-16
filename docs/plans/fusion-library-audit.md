@@ -1050,8 +1050,8 @@ Status: **completed**. Confidence: **Confirmed by source and focused DI regressi
 - Test: `PersistenceAuditRegressionTest.TypedRedisDatabasesShouldRetainTheirOwnConnectors` resolves two typed databases and finds the same connector instance.
 - **Maintainer decision:** associate each connector with its context type and inject `RedisConnector<TContext>` or an equivalent typed holder.
 - **Recommended:** key the connector by context type and inject `RedisConnector<TContext>` or an equivalent typed holder.
-- **Resolution:** typed Redis registrations now create and resolve `RedisConnector<TContext>`, isolating each context's connector while preserving the untyped single-database API.
-- **Validation:** the focused DI regression now resolves two typed databases with distinct connector instances.
+- **Resolution:** typed Redis registrations now create and resolve `RedisConnector<TContext>`, isolating each context's connector. Each registration also exposes its typed connector through the legacy base `RedisConnector` service, preserving the former last-registration-wins compatibility without using that ambiguous base service to construct typed databases.
+- **Validation:** focused DI regressions resolve two typed databases with distinct connector instances, resolve the typed connector through the base service for a single context, and retain the last typed registration as the base connector when multiple contexts are registered.
 
 ### PERS3. `RedisSequenceSet.Next` reset is not atomic
 
@@ -1061,8 +1061,8 @@ Status: **completed**. Confidence: **Confirmed by source and focused Redis concu
 - Failure: concurrent callers can interleave two resets and return the same sequence number, violating the advertised atomic sequence contract.
 - **Maintainer decision:** make the complete conditional reset and increment atomic with one Redis Lua script or an equivalent compare transaction.
 - **Recommended:** perform the complete conditional reset/increment in one Redis Lua script or transaction with a compare condition.
-- **Resolution:** `Next` now performs increment, range validation, conditional reset, and the post-reset increment in one Redis Lua script.
-- **Validation:** the Redis concurrency regression reproduces duplicate values with the former multi-command reset and now returns a unique contiguous range for 100 simultaneous callers; the existing sequence test also passes.
+- **Resolution:** `Next` now performs increment, range validation, conditional reset, and the post-reset increment in one Redis Lua script. Negative reset ranges are rejected, and the upper reset boundary saturates at `Int64.MaxValue` instead of wrapping.
+- **Validation:** the Redis concurrency regression reproduces duplicate values with the former multi-command reset and now returns a unique contiguous range for 100 simultaneous callers. The sequence regression also preserves integer precision above `2^53`, advances through the final two valid `Int64` values without a duplicate, and rejects a negative reset range.
 
 ### PERS4. The `DbEvent` resolver is registered with the wrong key type
 
@@ -1084,8 +1084,8 @@ Status: **completed**. Confidence: **Confirmed by source and focused regression 
 - Failure: disable/disable/enable still throws on `SaveChanges`, which is especially hazardous for pooled contexts.
 - Test: `PersistenceAuditRegressionTest.SaveChangesGuardShouldBeIdempotent` reproduces the remaining guard.
 - **Maintainer decision:** track the disabled state explicitly so disabling and enabling are idempotent; irreversible disabling is acceptable only if a safe reversible implementation proves infeasible.
-- **Resolution:** `EnableSaveChanges` now tracks each context's enabled state in a weak table and normalizes the private `SavingChanges` subscription on every call, keeping repeated disable and enable calls reversible and idempotent without retaining contexts or trusting event state cleared by pooling.
-- **Validation:** the original focused regression failed 0/1 before the change and passes after exercising both disable and enable twice. A second regression reproduced EF's pooled-context event reset against the first state-only implementation and now passes; the EntityFramework/Npgsql graph builds for all nine supported target frameworks.
+- **Resolution:** `EnableSaveChanges` normalizes the private `SavingChanges` subscription on every call, keeping repeated disable and enable calls reversible and idempotent. EF pooling clears event subscriptions independently, so the reviewed implementation deliberately avoids a redundant weak-table state lookup and lock that cannot reliably describe the pooled context's current event state.
+- **Validation:** the original focused regression failed 0/1 before the change and passes after exercising both disable and enable twice. A second regression reproduced EF's pooled-context event reset against the first state-only implementation and now passes with direct subscription normalization; the EntityFramework/Npgsql graph builds for all nine supported target frameworks.
 - **Recommended:** make state idempotent, using a tracked flag rather than event-subscription count.
 
 ### PERS6. Npgsql locking clauses are emitted in caller order
@@ -1108,8 +1108,8 @@ Status: **completed**. Confidence: **Confirmed by source and focused formatter r
 - Failure: valid shard names such as `us-west` produce invalid SQL; quotes and overlength names also lack escaping/normalization.
 - Test: `PersistenceProviderAuditRegressionTest.DefaultNpgsqlChannelNamesShouldBeValidUnquotedIdentifiers` produces `AuditDbContext_String_us-west`.
 - **Maintainer decision:** quote identifiers through the provider helper or map arbitrary inputs to bounded safe identifiers.
-- **Resolution:** the default formatter now reuses `FilePath.GetHashedName` to normalize the complete channel name to a distinct ASCII identifier bounded to PostgreSQL's 63-character limit, adding a stable hash when sanitization or truncation is required.
-- **Validation:** the original formatter regression failed before the change and now passes for hyphenated, quote-containing, and overlength shard names while checking syntax, uniqueness, and length; the Npgsql project builds for all nine supported target frameworks.
+- **Resolution:** the default formatter reuses `FilePath.GetHashedName` to normalize the complete channel name to a bounded ASCII identifier, adding a stable hash when sanitization or truncation is required. `LISTEN` and `NOTIFY` now quote every formatted channel through `NpgsqlCommandBuilder`, preserving case-sensitive shard distinctions and safely handling custom formatter output.
+- **Validation:** formatter regressions pass for hyphenated, quote-containing, and overlength shard names while checking syntax, uniqueness, and length. A SQL-emission regression verifies provider quoting for case-distinct names and embedded quotes; the Npgsql project builds for all nine supported target frameworks.
 - **Recommended:** quote through the provider's identifier helper or map inputs to a bounded safe identifier.
 
 ### PERS8. An empty custom Npgsql hint crashes SQL generation
@@ -1151,8 +1151,8 @@ Status: **completed**. Confidence: **Confirmed by source and focused regression 
 - Source: `src/ActualLab.Fusion.EntityFramework/Sharding/ShardDbContextBuilder.cs:115-124` builds a provider per shard and returns only its `IDbContextFactory`.
 - Failure: provider-owned pooled factories and disposable dependencies live indefinitely, even when shard factories are no longer used.
 - **Maintainer decision:** retain provider ownership in a disposable shard-factory entry and dispose it when the entry is evicted or the root factory stops.
-- **Resolution:** action-configured shard factories now return an internal provider-owning factory entry and dispose the new provider if factory resolution fails. The root shard factory uses lifecycle-aware cache entries so initialization racing shard eviction or root shutdown cannot leak a newly created provider, and implements synchronous and asynchronous disposal; container-owned custom factories remain untouched.
-- **Validation:** focused lifecycle tests failed with per-shard dependencies alive, including a deterministically gated creation-versus-eviction race and a provider whose factory resolution failed after creating a disposable singleton. They now observe cleanup on resolution failure, immediate disposal for removed shards, exact owned-provider cleanup across eviction and root-shutdown races, and no disposal of externally supplied factories.
+- **Resolution:** action-configured shard factories return an internal provider-owning factory entry and use async-capable cleanup even from synchronous resolution-failure paths. Cache entries retain lock-free reads after initialization, but no longer hold their entry lock while building a factory or marking its shard used; eviction starts tracked asynchronous disposal without holding the shard-registry callback, and every later asynchronous disposal observes the shared completion. The initializer disposes any provider produced after eviction. The root factory supports synchronous and asynchronous disposal, while container-owned custom factories remain untouched.
+- **Validation:** focused lifecycle tests observe cleanup on resolution failure, prompt tracked disposal for removed shards, exact owned-provider cleanup across eviction and root-shutdown races, and no disposal of externally supplied factories. Review regressions also force removal to finish while the shard builder is still active, invoke a shard-update callback captured before root shutdown only after shutdown completes, and verify async-only dependency cleanup on eviction, root disposal, and factory-resolution failure.
 
 ### PERS12. `DbWaitHint` singletons have the wrong runtime type
 

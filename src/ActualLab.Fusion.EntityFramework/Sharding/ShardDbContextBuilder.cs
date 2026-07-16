@@ -124,7 +124,7 @@ public readonly struct ShardDbContextBuilder<TDbContext>
                 return new ShardDbContextFactoryEntry<TDbContext>(dbContextFactory, serviceProvider);
             }
             catch {
-                serviceProvider.Dispose();
+                serviceProvider.DisposeAsync().AsTask().GetAwaiter().GetResult();
                 throw;
             }
         });

@@ -25,6 +25,11 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
     protected override DbShardWatcher CreateShardWatcher(string shard)
         => new ShardWatcher(this, shard);
 
+    // Private methods
+
+    private static string QuoteChannelName(string channelName)
+        => new NpgsqlCommandBuilder().QuoteIdentifier(channelName);
+
     // Nested types
 
     /// <summary>
@@ -47,14 +52,15 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
             Owner = owner;
             var hostId = DbHub.HostId;
             var channelName = owner.Settings.ChannelNameFormatter.Invoke(shard, typeof(TDbEntry));
+            var quotedChannelName = QuoteChannelName(channelName);
             QuotedNotifyPayload = hostId.Id
 #if NETSTANDARD2_0
                 .Replace("'", "''");
 #else
                 .Replace("'", "''", StringComparison.Ordinal);
 #endif
-            ListenSql = $"LISTEN {channelName}";
-            NotifySql = $"NOTIFY {channelName}, '{QuotedNotifyPayload}'";
+            ListenSql = $"LISTEN {quotedChannelName}";
+            NotifySql = $"NOTIFY {quotedChannelName}, '{QuotedNotifyPayload}'";
 
             var watchChain = new AsyncChain($"Watch({shard})", async cancellationToken => {
                 var dbContext = await DbHub.CreateDbContext(Shard, cancellationToken).ConfigureAwait(false);

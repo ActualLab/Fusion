@@ -53,5 +53,18 @@ public class PersistenceProviderAuditRegressionTest
         channelNames.Should().OnlyHaveUniqueItems();
     }
 
+    [Fact]
+    public void NpgsqlChannelNamesShouldBeQuotedAtSqlEmission()
+    {
+        var quote = typeof(NpgsqlDbLogWatcher<AuditDbContext, string>).GetMethod(
+            "QuoteChannelName",
+            BindingFlags.Static | BindingFlags.NonPublic);
+
+        quote.Should().NotBeNull();
+        quote!.Invoke(null, ["a"]).Should().Be("\"a\"");
+        quote.Invoke(null, ["A"]).Should().Be("\"A\"");
+        quote.Invoke(null, ["a\"b"]).Should().Be("\"a\"\"b\"");
+    }
+
     private sealed class AuditDbContext : DbContext;
 }

@@ -85,6 +85,35 @@ public class PersistenceAuditRegressionTest : CommandRTestBase
         first.Connector.Should().NotBeSameAs(second.Connector);
     }
 
+    [Fact]
+    public void TypedRedisDatabaseShouldExposeItsConnectorThroughTheBaseService()
+    {
+        var services = new ServiceCollection();
+        var multiplexerSource = TaskCompletionSourceExt.New<IConnectionMultiplexer>();
+        services.AddRedisDb<FirstRedisScope>(() => multiplexerSource.Task);
+        using var serviceProvider = services.BuildServiceProvider();
+
+        var redisDb = serviceProvider.GetRequiredService<RedisDb<FirstRedisScope>>();
+        var connector = serviceProvider.GetRequiredService<RedisConnector>();
+
+        connector.Should().BeSameAs(redisDb.Connector);
+    }
+
+    [Fact]
+    public void LastTypedRedisDatabaseShouldRemainTheBaseConnector()
+    {
+        var services = new ServiceCollection();
+        var multiplexerSource = TaskCompletionSourceExt.New<IConnectionMultiplexer>();
+        services.AddRedisDb<FirstRedisScope>(() => multiplexerSource.Task);
+        services.AddRedisDb<SecondRedisScope>(() => multiplexerSource.Task);
+        using var serviceProvider = services.BuildServiceProvider();
+
+        var redisDb = serviceProvider.GetRequiredService<RedisDb<SecondRedisScope>>();
+        var connector = serviceProvider.GetRequiredService<RedisConnector>();
+
+        connector.Should().BeSameAs(redisDb.Connector);
+    }
+
     private sealed class FirstRedisScope;
     private sealed class SecondRedisScope;
 }

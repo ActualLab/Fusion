@@ -79,7 +79,7 @@ public class PersistenceLifecycleAuditRegressionTest
     }
 
     [Fact]
-    public void ShardDbContextFactoryShouldDisposePerShardProviders()
+    public async Task ShardDbContextFactoryShouldDisposePerShardProviders()
     {
         var trackers = new ConcurrentDictionary<string, DisposalTracker>();
         var services = new ServiceCollection();
@@ -102,7 +102,7 @@ public class PersistenceLifecycleAuditRegressionTest
         factory.CreateDbContext("b").Dispose();
 
         registry.Remove("a").Should().BeTrue();
-        trackers["a"].IsDisposed.Should().BeTrue();
+        await TestExt.When(() => trackers["a"].IsDisposed.Should().BeTrue(), TimeSpan.FromSeconds(5));
         trackers["b"].IsDisposed.Should().BeFalse();
 
         serviceProvider.Dispose();
@@ -150,6 +150,98 @@ public class PersistenceLifecycleAuditRegressionTest
     }
 
     [Fact]
+    public async Task ShardDbContextFactoryShouldNotBlockRemovalDuringFactoryCreation()
+    {
+        var whenCreating = TaskCompletionSourceExt.New();
+        var testRemoval = TaskCompletionSourceExt.New();
+        var removalCompleted = TaskCompletionSourceExt.New();
+        var services = new ServiceCollection();
+        services.AddFusion();
+        services.AddDbContextServices<TestDbContext>(db => db.AddSharding(sharding => {
+            sharding.AddShardRegistry("a");
+            sharding.AddShardDbContextFactory((_, _, shardServices) => {
+                whenCreating.TrySetResult();
+                testRemoval.Task.GetAwaiter().GetResult();
+                var completedInTime = removalCompleted.Task.Wait(TimeSpan.FromSeconds(5));
+                completedInTime.Should().BeTrue();
+                shardServices.AddSingleton<IDbContextFactory<TestDbContext>, PlainDbContextFactory>();
+            });
+        }));
+        await using var serviceProvider = services.BuildServiceProvider();
+        var factory = serviceProvider.GetRequiredService<IShardDbContextFactory<TestDbContext>>();
+        var registry = serviceProvider.GetRequiredService<IDbShardRegistry<TestDbContext>>();
+        var createTask = Task.Run(() => factory.CreateDbContext("a").Dispose());
+        await whenCreating.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var removeTask = Task.Run(() => {
+            try {
+                return registry.Remove("a");
+            }
+            finally {
+                removalCompleted.TrySetResult();
+            }
+        });
+        await TestExt.When(
+            () => registry.Shards.Value.Should().NotContain("a"),
+            TimeSpan.FromSeconds(5));
+        testRemoval.TrySetResult();
+
+        (await removeTask.WaitAsync(TimeSpan.FromSeconds(5))).Should().BeTrue();
+        var create = async () => await createTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await create.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task ShardDbContextFactoryShouldDisposeAsyncOnlyServicesOnEviction()
+    {
+        var trackers = new ConcurrentDictionary<string, AsyncDisposalTracker>();
+        var services = new ServiceCollection();
+        services.AddFusion();
+        services.AddDbContextServices<TestDbContext>(db => db.AddSharding(sharding => {
+            sharding.AddShardRegistry("a");
+            sharding.AddShardDbContextFactory((_, shard, shardServices) => {
+                shardServices.AddSingleton(_ => {
+                    var tracker = new AsyncDisposalTracker();
+                    trackers[shard] = tracker;
+                    return tracker;
+                });
+                shardServices.AddSingleton<IDbContextFactory<TestDbContext>, AsyncTrackingDbContextFactory>();
+            });
+        }));
+        await using var serviceProvider = services.BuildServiceProvider();
+        var factory = serviceProvider.GetRequiredService<IShardDbContextFactory<TestDbContext>>();
+        var registry = serviceProvider.GetRequiredService<IDbShardRegistry<TestDbContext>>();
+        factory.CreateDbContext("a").Dispose();
+
+        registry.Remove("a").Should().BeTrue();
+
+        await TestExt.When(() => trackers["a"].IsDisposed.Should().BeTrue(), TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task ShardDbContextFactoryShouldDisposeAsyncOnlyServicesOnRootDisposal()
+    {
+        AsyncDisposalTracker? tracker = null;
+        var services = new ServiceCollection();
+        services.AddFusion();
+        services.AddDbContextServices<TestDbContext>(db => db.AddSharding(sharding => {
+            sharding.AddShardRegistry("a");
+            sharding.AddShardDbContextFactory((_, _, shardServices) => {
+                shardServices.AddSingleton(_ => tracker = new AsyncDisposalTracker());
+                shardServices.AddSingleton<IDbContextFactory<TestDbContext>, AsyncTrackingDbContextFactory>();
+            });
+        }));
+        var serviceProvider = services.BuildServiceProvider();
+        var factory = serviceProvider.GetRequiredService<IShardDbContextFactory<TestDbContext>>();
+        factory.CreateDbContext("a").Dispose();
+
+        await serviceProvider.DisposeAsync();
+
+        tracker.Should().NotBeNull();
+        tracker!.IsDisposed.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task ShardDbContextFactoryShouldDisposeProviderWhenCreationRacesRootDisposal()
     {
         var whenCreating = TaskCompletionSourceExt.New();
@@ -182,11 +274,53 @@ public class PersistenceLifecycleAuditRegressionTest
             var create = () => factory.CreateDbContext("b").Dispose();
             create.Should().Throw<ObjectDisposedException>();
         }, TimeSpan.FromSeconds(5));
+        var disposeAsyncTask = ((IAsyncDisposable)factory).DisposeAsync().AsTask();
+        disposeAsyncTask.IsCompleted.Should().BeFalse();
         allowCreation.TrySetResult();
         await disposeTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await disposeAsyncTask.WaitAsync(TimeSpan.FromSeconds(5));
         await createTask.SilentAwait(false);
 
         trackers["a"].IsDisposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ShardDbContextFactoryShouldIgnoreCapturedShardUpdateAfterRootDisposal()
+    {
+        var whenUpdating = TaskCompletionSourceExt.New();
+        var allowUpdate = TaskCompletionSourceExt.New();
+        DisposalTracker? tracker = null;
+        var services = new ServiceCollection();
+        services.AddFusion();
+        services.AddDbContextServices<TestDbContext>(db => db.AddSharding(sharding => {
+            sharding.AddShardRegistry("a");
+            sharding.AddShardDbContextFactory((_, _, shardServices) => {
+                shardServices.AddSingleton(_ => tracker = new DisposalTracker());
+                shardServices.AddSingleton<IDbContextFactory<TestDbContext>, TrackingDbContextFactory>();
+            });
+        }));
+        await using var serviceProvider = services.BuildServiceProvider();
+        var registry = serviceProvider.GetRequiredService<IDbShardRegistry<TestDbContext>>();
+        registry.Shards.Updated += DelayShardUpdate;
+        var factory = serviceProvider.GetRequiredService<IShardDbContextFactory<TestDbContext>>();
+        factory.CreateDbContext("a").Dispose();
+
+        var removeTask = Task.Run(() => registry.Remove("a"));
+        await whenUpdating.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await ((IAsyncDisposable)factory).DisposeAsync();
+
+        tracker.Should().NotBeNull();
+        tracker!.IsDisposed.Should().BeTrue();
+        allowUpdate.TrySetResult();
+        (await removeTask.WaitAsync(TimeSpan.FromSeconds(5))).Should().BeTrue();
+        registry.Shards.Updated -= DelayShardUpdate;
+        return;
+
+        void DelayShardUpdate(State state, StateEventKind eventKind)
+        {
+            whenUpdating.TrySetResult();
+            allowUpdate.Task.GetAwaiter().GetResult();
+        }
     }
 
     [Fact]
@@ -237,6 +371,33 @@ public class PersistenceLifecycleAuditRegressionTest
         tracker!.IsDisposed.Should().BeTrue();
     }
 
+    [Fact]
+    public void ShardDbContextFactoryShouldDisposeAsyncOnlyServiceWhenFactoryResolutionFails()
+    {
+        AsyncDisposalTracker? tracker = null;
+        var services = new ServiceCollection();
+        services.AddFusion();
+        services.AddDbContextServices<TestDbContext>(db => db.AddSharding(sharding => {
+            sharding.AddShardRegistry("a");
+            sharding.AddShardDbContextFactory((_, _, shardServices) => {
+                shardServices.AddSingleton<AsyncDisposalTracker>();
+                shardServices.AddSingleton<IDbContextFactory<TestDbContext>>(c => {
+                    tracker = c.GetRequiredService<AsyncDisposalTracker>();
+                    throw new InvalidOperationException("Factory resolution failed.");
+                });
+            });
+        }));
+        using var serviceProvider = services.BuildServiceProvider();
+        var factory = serviceProvider.GetRequiredService<IShardDbContextFactory<TestDbContext>>();
+
+        var create = () => factory.CreateDbContext("a").Dispose();
+        create.Should().Throw<InvalidOperationException>()
+            .WithMessage("Factory resolution failed.");
+
+        tracker.Should().NotBeNull();
+        tracker!.IsDisposed.Should().BeTrue();
+    }
+
     private sealed class TestFileSystemDbLogWatcher(
         FileSystemDbLogWatcherOptions<TestDbContext> settings,
         IServiceProvider services)
@@ -249,6 +410,24 @@ public class PersistenceLifecycleAuditRegressionTest
     private sealed class TrackingDbContextFactory(DisposalTracker tracker) : IDbContextFactory<TestDbContext>
     {
         private DisposalTracker Tracker { get; } = tracker;
+
+        public TestDbContext CreateDbContext()
+        {
+            Tracker.IsDisposed.Should().BeFalse();
+            return new TestDbContext(new DbContextOptions<TestDbContext>());
+        }
+    }
+
+    private sealed class PlainDbContextFactory : IDbContextFactory<TestDbContext>
+    {
+        public TestDbContext CreateDbContext()
+            => new(new DbContextOptions<TestDbContext>());
+    }
+
+    private sealed class AsyncTrackingDbContextFactory(AsyncDisposalTracker tracker)
+        : IDbContextFactory<TestDbContext>
+    {
+        private AsyncDisposalTracker Tracker { get; } = tracker;
 
         public TestDbContext CreateDbContext()
         {
@@ -274,5 +453,16 @@ public class PersistenceLifecycleAuditRegressionTest
 
         public void Dispose()
             => IsDisposed = true;
+    }
+
+    private sealed class AsyncDisposalTracker : IAsyncDisposable
+    {
+        public bool IsDisposed { get; private set; }
+
+        public ValueTask DisposeAsync()
+        {
+            IsDisposed = true;
+            return default;
+        }
     }
 }

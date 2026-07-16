@@ -41,14 +41,20 @@ public class RedisSequenceSet(RedisHash hash)
         """;
 
     public RedisHash Hash { get; } = hash;
-    public long ResetRange { get; init; } = 1024;
+    public long ResetRange {
+        get;
+        init => field = value >= 0 ? value : throw new ArgumentOutOfRangeException(nameof(ResetRange));
+    } = 1024;
 
     public async Task<long> Next(string key, long maxUsedValue = -1, long increment = 1)
     {
         if (maxUsedValue < 0)
             return await Hash.Increment(key, increment).ConfigureAwait(false);
 
-        var resetLimit = unchecked(maxUsedValue + ResetRange);
+        var resetRange = ResetRange;
+        var resetLimit = maxUsedValue > long.MaxValue - resetRange
+            ? long.MaxValue
+            : maxUsedValue + resetRange;
         var database = await Hash.RedisDb.Database.Get().ConfigureAwait(false);
         var result = await database.ScriptEvaluateAsync(
                 NextScript,
