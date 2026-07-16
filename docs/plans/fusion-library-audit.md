@@ -1078,42 +1078,50 @@ Status: **completed**. Confidence: **Confirmed by source and focused DI regressi
 
 ### PERS5. Repeated save disabling leaves a context read-only after re-enabling
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework/DbContextExt.cs:64-71`. Every disable adds the same `SavingChanges` handler; enable removes only one subscription.
 - Failure: disable/disable/enable still throws on `SaveChanges`, which is especially hazardous for pooled contexts.
 - Test: `PersistenceAuditRegressionTest.SaveChangesGuardShouldBeIdempotent` reproduces the remaining guard.
 - **Maintainer decision:** track the disabled state explicitly so disabling and enabling are idempotent; irreversible disabling is acceptable only if a safe reversible implementation proves infeasible.
+- **Resolution:** `EnableSaveChanges` now tracks each context's enabled state in a weak table and normalizes the private `SavingChanges` subscription on every call, keeping repeated disable and enable calls reversible and idempotent without retaining contexts or trusting event state cleared by pooling.
+- **Validation:** the original focused regression failed 0/1 before the change and passes after exercising both disable and enable twice. A second regression reproduced EF's pooled-context event reset against the first state-only implementation and now passes; the EntityFramework/Npgsql graph builds for all nine supported target frameworks.
 - **Recommended:** make state idempotent, using a tracked flag rather than event-subscription count.
 
 ### PERS6. Npgsql locking clauses are emitted in caller order
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused SQL-generation regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused SQL-generation regression test**.
 
 - Source: `src/ActualLab.Fusion.EntityFramework.Npgsql/Internal/NpgsqlHintQuerySqlGenerator.cs:57-73` groups by the clause prefix without sorting the groups.
 - Failure: wait-then-lock input emits invalid `FOR SKIP LOCKED UPDATE` rather than `FOR UPDATE SKIP LOCKED`.
 - Test: `PersistenceProviderAuditRegressionTest.NpgsqlHintsShouldBeOrderedByClauseKind` observes the invalid order.
 - **Maintainer decision:** sort parsed hint groups by numeric clause kind before concatenation.
+- **Resolution:** Npgsql hint groups are now ordered by their numeric clause prefix before their SQL fragments are appended, preserving the existing provider tag and clause-generation protocol.
+- **Validation:** the provider regression failed with `FOR SKIP LOCKED UPDATE` before the change and passes with `FOR UPDATE SKIP LOCKED`; the Npgsql project builds for all nine supported target frameworks.
 - **Recommended:** sort parsed groups by their numeric clause kind before concatenation.
 
 ### PERS7. Default Npgsql notification channels are unsafe unquoted identifiers
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused formatter regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused formatter regression test**.
 
 - Source: `NpgsqlDbLogWatcherOptions.cs:16-23` incorporates arbitrary shard text, while `NpgsqlDbLogWatcher.cs:56-57` interpolates it directly into `LISTEN`/`NOTIFY`.
 - Failure: valid shard names such as `us-west` produce invalid SQL; quotes and overlength names also lack escaping/normalization.
 - Test: `PersistenceProviderAuditRegressionTest.DefaultNpgsqlChannelNamesShouldBeValidUnquotedIdentifiers` produces `AuditDbContext_String_us-west`.
 - **Maintainer decision:** quote identifiers through the provider helper or map arbitrary inputs to bounded safe identifiers.
+- **Resolution:** the default formatter now reuses `FilePath.GetHashedName` to normalize the complete channel name to a distinct ASCII identifier bounded to PostgreSQL's 63-character limit, adding a stable hash when sanitization or truncation is required.
+- **Validation:** the original formatter regression failed before the change and now passes for hyphenated, quote-containing, and overlength shard names while checking syntax, uniqueness, and length; the Npgsql project builds for all nine supported target frameworks.
 - **Recommended:** quote through the provider's identifier helper or map inputs to a bounded safe identifier.
 
 ### PERS8. An empty custom Npgsql hint crashes SQL generation
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused parser regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused parser regression test**.
 
 - Source: `NpgsqlHintQuerySqlGenerator.cs:50-61` accepts the empty token following `HINTS:` and indexes `x[0]`.
 - Failure: an empty hint throws `IndexOutOfRangeException` during query generation.
 - Test: `PersistenceProviderAuditRegressionTest.EmptyNpgsqlCustomHintShouldBeIgnored` reproduces the exception.
 - **Maintainer decision:** reject or remove empty hint tokens before grouping.
+- **Resolution:** the Npgsql tag parser now removes empty tokens, returns no clause when none remain, and rejects undersized or malformed prefixed tokens before slicing their SQL fragments.
+- **Validation:** the focused parser regression failed with `IndexOutOfRangeException` before the change and passes with an empty result; the combined PERS6-PERS8 provider slice passes 3/3 and the Npgsql project builds for all nine supported target frameworks.
 - **Recommended:** reject or remove empty tokens before grouping.
 
 ### PERS9. `RedisStreamer` can hot-spin on its start marker

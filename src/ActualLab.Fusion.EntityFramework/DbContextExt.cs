@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using ActualLab.Fusion.EntityFramework.Internal;
@@ -13,6 +14,7 @@ namespace ActualLab.Fusion.EntityFramework;
 public static class DbContextExt
 {
 #if !NETSTANDARD2_0
+    private static readonly ConditionalWeakTable<DbContext, SaveChangesGuardState> SaveChangesGuardStates = new();
     private static readonly EventHandler<SavingChangesEventArgs> FailOnSaveChanges =
         (sender, args) => throw Errors.DbContextIsReadOnly();
 #endif
@@ -65,10 +67,13 @@ public static class DbContextExt
         where TDbContext : DbContext
     {
 #if !NETSTANDARD2_0
-        if (mustEnable)
+        var state = SaveChangesGuardStates.GetValue(dbContext, static _ => new SaveChangesGuardState());
+        lock (state) {
+            state.IsEnabled = mustEnable;
             dbContext.SavingChanges -= FailOnSaveChanges;
-        else
-            dbContext.SavingChanges += FailOnSaveChanges;
+            if (!state.IsEnabled)
+                dbContext.SavingChanges += FailOnSaveChanges;
+        }
 #else
         // Do nothing. DbContext has no SavingChanges event in NETSTANDARD2_0
 #endif
@@ -88,4 +93,11 @@ public static class DbContextExt
 #endif
         return dbContext;
     }
+
+#if !NETSTANDARD2_0
+    private sealed class SaveChangesGuardState
+    {
+        public bool IsEnabled { get; set; } = true;
+    }
+#endif
 }

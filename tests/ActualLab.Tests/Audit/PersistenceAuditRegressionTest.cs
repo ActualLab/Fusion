@@ -21,10 +21,37 @@ public class PersistenceAuditRegressionTest : CommandRTestBase
         using var dbContext = factory.CreateDbContext();
         dbContext.EnableSaveChanges(false);
         dbContext.EnableSaveChanges(false);
-        dbContext.EnableSaveChanges(true);
-
         var save = () => dbContext.SaveChanges();
 
+        save.Should().Throw<InvalidOperationException>();
+
+        dbContext.EnableSaveChanges(true);
+        dbContext.EnableSaveChanges(true);
+
+        save.Should().NotThrow();
+    }
+
+    [Fact]
+    public void SaveChangesGuardShouldSurviveContextPooling()
+    {
+        var services = new ServiceCollection();
+        services.AddPooledDbContextFactory<TestDbContext>(
+            options => options.UseInMemoryDatabase(nameof(SaveChangesGuardShouldSurviveContextPooling)),
+            poolSize: 1);
+        using var serviceProvider = services.BuildServiceProvider();
+        var factory = serviceProvider.GetRequiredService<IDbContextFactory<TestDbContext>>();
+        var firstDbContext = factory.CreateDbContext();
+        firstDbContext.EnableSaveChanges(false);
+        firstDbContext.Dispose();
+
+        using var secondDbContext = factory.CreateDbContext();
+        secondDbContext.Should().BeSameAs(firstDbContext);
+        secondDbContext.EnableSaveChanges(false);
+        var save = () => secondDbContext.SaveChanges();
+
+        save.Should().Throw<InvalidOperationException>();
+
+        secondDbContext.EnableSaveChanges(true);
         save.Should().NotThrow();
     }
 

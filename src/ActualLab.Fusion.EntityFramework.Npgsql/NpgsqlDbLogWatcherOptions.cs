@@ -1,3 +1,4 @@
+using ActualLab.IO;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.Npgsql;
@@ -19,6 +20,6 @@ public record NpgsqlDbLogWatcherOptions<TDbContext>
         var dbContextName = typeof(TDbContext).Name;
         var dbEntryName = dbEntryType.Name;
         var shardSuffix = DbShard.IsSingle(shard) ? "" : $"_{shard}";
-        return $"{dbContextName}_{dbEntryName}{shardSuffix}";
+        return FilePath.GetHashedName($"{dbContextName}_{dbEntryName}{shardSuffix}", maxLength: 63);
     }
 }

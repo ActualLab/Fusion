@@ -40,11 +40,17 @@ public class PersistenceProviderAuditRegressionTest
     [Fact]
     public void DefaultNpgsqlChannelNamesShouldBeValidUnquotedIdentifiers()
     {
-        var channelName = NpgsqlDbLogWatcherOptions<AuditDbContext>.DefaultChannelNameFormatter(
-            "us-west",
-            typeof(string));
+        var format = NpgsqlDbLogWatcherOptions<AuditDbContext>.DefaultChannelNameFormatter;
+        var channelNames = new[] {
+            format("us-west", typeof(string)),
+            format("us'west", typeof(string)),
+            format(new string('x', 100), typeof(string)),
+        };
 
-        channelName.Should().MatchRegex("^[A-Za-z_][A-Za-z0-9_$]*$");
+        channelNames.Should().OnlyContain(x => x.Length <= 63);
+        foreach (var channelName in channelNames)
+            channelName.Should().MatchRegex("^[A-Za-z_][A-Za-z0-9_$]*$");
+        channelNames.Should().OnlyHaveUniqueItems();
     }
 
     private sealed class AuditDbContext : DbContext;

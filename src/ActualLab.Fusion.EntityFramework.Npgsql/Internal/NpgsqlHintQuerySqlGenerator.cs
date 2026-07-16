@@ -48,21 +48,25 @@ public class NpgsqlHintQuerySqlGenerator : NpgsqlQuerySqlGenerator
                 continue;
 
             hints ??= new HashSet<string>(StringComparer.Ordinal);
-            foreach (var hint in tag[6..].Split(','))
-                hints.Add(hint);
+            foreach (var hint in tag[6..].Split(',')) {
+                if (!hint.IsNullOrEmpty())
+                    hints.Add(hint);
+            }
         }
-        if (hints is null)
+        if (hints is null || hints.Count == 0)
             return "";
 
         var sb = StringBuilderExt.Acquire();
         try {
             sb.Append("FOR");
-            foreach (var g in hints.GroupBy(static x => x[0])) {
+            foreach (var g in hints.GroupBy(static x => x[0]).OrderBy(static g => g.Key)) {
                 if (!char.IsDigit(g.Key))
                     return ""; // Invalid hints
 
                 var hint = (string?)null;
                 foreach (var h in g) {
+                    if (h.Length < 3 || h[1] != ':')
+                        return ""; // Invalid hints
                     if (hint is not null && !string.Equals(hint, h, StringComparison.Ordinal))
                         return ""; // Invalid hints
 
