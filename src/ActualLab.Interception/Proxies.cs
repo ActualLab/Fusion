@@ -77,24 +77,24 @@ public static class Proxies
                 return genericProxyType?.MakeGenericType(type.GenericTypeArguments);
             }
 
-            var name = type.Name;
-            var namePrefix = name;
-            var nameSuffix = "";
-            if (type.IsGenericTypeDefinition) {
-                var backTrickIndex = name.IndexOf('`', StringComparison.Ordinal);
-                if (backTrickIndex < 0)
-                    return null; // Weird case, shouldn't happen
-
-                namePrefix = name[..backTrickIndex];
-                nameSuffix = name[backTrickIndex..];
+            var typeNames = new Stack<string>();
+            var isProxyType = true;
+            for (var currentType = type; currentType is not null; currentType = currentType.DeclaringType) {
+                var name = currentType.Name;
+                if (isProxyType) {
+                    var backtickIndex = name.IndexOf('`', StringComparison.Ordinal);
+                    name = backtickIndex < 0
+                        ? name + "Proxy"
+                        : name[..backtickIndex] + "Proxy" + name[backtickIndex..];
+                    isProxyType = false;
+                }
+                typeNames.Push(name);
             }
             var proxyTypeName = string.Concat(
                 type.Namespace,
                 type.Namespace.IsNullOrEmpty() ? "" : ".",
                 "ActualLabProxies.",
-                namePrefix,
-                "Proxy",
-                nameSuffix);
+                string.Join("+", typeNames));
             var proxyType = type.Assembly.GetType(proxyTypeName);
             return proxyType;
         });

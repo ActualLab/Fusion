@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace ActualLab.Generators;
 using static DiagnosticsHelpers;
 using static GenerationHelpers;
@@ -11,31 +9,19 @@ using static GenerationHelpers;
 [Generator]
 public class ProxyGenerator : IIncrementalGenerator
 {
-    private readonly ConcurrentDictionary<ITypeSymbol, bool> _processedTypes = new(SymbolEqualityComparer.Default);
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        _processedTypes.Clear();
         var items = context.SyntaxProvider
             .CreateSyntaxProvider(CouldBeAugmented, MustAugment)
             .Where(i => i.TypeDef is not null)
             .Collect();
         context.RegisterSourceOutput(items, Generate);
-        _processedTypes.Clear();
     }
 
-    private bool CouldBeAugmented(SyntaxNode node, CancellationToken cancellationToken)
-    {
-        if (node is not (ClassDeclarationSyntax or InterfaceDeclarationSyntax))
-            return false;
+    private static bool CouldBeAugmented(SyntaxNode node, CancellationToken cancellationToken)
+        => node is ClassDeclarationSyntax or InterfaceDeclarationSyntax;
 
-        return node.Parent
-            is NamespaceDeclarationSyntax
-            or FileScopedNamespaceDeclarationSyntax
-            or CompilationUnitSyntax;
-    }
-
-    private (SemanticModel SemanticModel, TypeDeclarationSyntax? TypeDef)
+    private static (SemanticModel SemanticModel, TypeDeclarationSyntax? TypeDef)
         MustAugment(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
         var semanticModel = context.SemanticModel;
@@ -52,39 +38,44 @@ public class ProxyGenerator : IIncrementalGenerator
         var declaredAccessibility = typeSymbol.DeclaredAccessibility;
         if (declaredAccessibility != Accessibility.Public && declaredAccessibility != Accessibility.Internal)
             return default;
+        for (var containingType = typeSymbol.ContainingType;
+             containingType is not null;
+             containingType = containingType.ContainingType) {
+            declaredAccessibility = containingType.DeclaredAccessibility;
+            if (declaredAccessibility != Accessibility.Public && declaredAccessibility != Accessibility.Internal)
+                return default;
+        }
 
         var requiresProxy = typeSymbol.AllInterfaces.Any(t => Equals(t.ToFullName(), RequireAsyncProxyInterfaceName));
         if (!requiresProxy)
             return default;
 
-        // It might be a partial class w/o generic constraint clauses (even though the type has ones),
-        // so we might need to "wait" for the one with generic constraint clauses
-        var hasConstraints = typeSymbol.TypeParameters.Any(p => p.HasConstraints());
-        if (hasConstraints && !typeDef.ConstraintClauses.Any()) {
-            WriteDebug?.Invoke($"[- Type] No constraints: {typeSymbol}");
-            return default;
-        }
-
-        // There might be a few parts of the same class
-        if (typeDef.Modifiers.Any(SyntaxKind.PartialKeyword) && !_processedTypes.TryAdd(typeSymbol, true)) {
-            WriteDebug?.Invoke($"[- Type] Already processed: {typeSymbol}");
-            return default;
-        }
-
         return (semanticModel, typeDef);
     }
 
-    private void Generate(
+    private static void Generate(
         SourceProductionContext context,
         ImmutableArray<(SemanticModel SemanticModel, TypeDeclarationSyntax? TypeDef)> items)
     {
         if (items.Length == 0)
             return;
         try {
-            WriteDebug?.Invoke($"Found {items.Length} type(s) to generate proxies.");
+            var uniqueItems = new List<(SemanticModel SemanticModel, TypeDeclarationSyntax TypeDef)>();
+            var itemIndexes = new Dictionary<ITypeSymbol, int>(SymbolEqualityComparer.Default);
             foreach (var (semanticModel, typeDef) in items) {
-                if (typeDef is null)
+                if (typeDef is null || semanticModel.GetDeclaredSymbol(typeDef) is not { } typeSymbol)
                     continue;
+                if (!itemIndexes.TryGetValue(typeSymbol, out var itemIndex)) {
+                    itemIndexes.Add(typeSymbol, uniqueItems.Count);
+                    uniqueItems.Add((semanticModel, typeDef));
+                    continue;
+                }
+                if (typeDef.ConstraintClauses.Count > uniqueItems[itemIndex].TypeDef.ConstraintClauses.Count)
+                    uniqueItems[itemIndex] = (semanticModel, typeDef);
+            }
+
+            WriteDebug?.Invoke($"Found {uniqueItems.Count} type(s) to generate proxies.");
+            foreach (var (semanticModel, typeDef) in uniqueItems) {
 
                 var typeGenerator = new ProxyTypeGenerator(context, semanticModel, typeDef);
                 var code = typeGenerator.GeneratedCode;
@@ -94,10 +85,8 @@ public class ProxyGenerator : IIncrementalGenerator
                 }
 
                 WriteDebug?.Invoke($"Codegen: {typeDef.Identifier.ToFullString()} -> {code.Length} chars.");
-                var typeType = (ITypeSymbol)semanticModel.GetDeclaredSymbol(typeDef)!;
-                var fileName = typeType.ContainingNamespace.IsGlobalNamespace
-                    ? $"{typeType.Name}{ProxyClassSuffix}.g.cs"
-                    : $"{typeType.ContainingNamespace}.{typeType.Name}{ProxyClassSuffix}.g.cs";
+                var typeSymbol = (INamedTypeSymbol)semanticModel.GetDeclaredSymbol(typeDef)!;
+                var fileName = GetSourceHintName(typeSymbol);
                 context.AddSource(fileName, code);
 #if DEBUG
                 context.ReportDiagnostic(GenerateProxyTypeProcessedInfo(typeDef));
@@ -108,5 +97,16 @@ public class ProxyGenerator : IIncrementalGenerator
             context.ReportDebug(e);
             throw;
         }
+    }
+
+    private static string GetSourceHintName(INamedTypeSymbol typeSymbol)
+    {
+        var typeNames = new Stack<string>();
+        for (var type = typeSymbol; type is not null; type = type.ContainingType)
+            typeNames.Push(type.MetadataName);
+        var namespacePrefix = typeSymbol.ContainingNamespace.IsGlobalNamespace
+            ? ""
+            : typeSymbol.ContainingNamespace + ".";
+        return $"{namespacePrefix}{string.Join("+", typeNames)}{ProxyClassSuffix}.g.cs";
     }
 }

@@ -961,14 +961,16 @@ Confidence: **Confirmed** by isolated compile repro (CS0111).
 
 ### GEN3. Proxy source hint names collide across generic arity
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by isolated compile repro (CS8785).
 
-- Source: `src/ActualLab.Generators/ProxyGenerator.cs:97-101` builds the hint from namespace and simple type name, omitting generic arity and containing-type identity.
+- Source before the fix: `src/ActualLab.Generators/ProxyGenerator.cs` built the hint from namespace and simple type name, omitting generic arity and containing-type identity.
 - Failure: `IArityProxy` and `IArityProxy<T>` request the same hint. Roslyn reports generator failure; the build can still exit zero while required proxies are missing.
 - Impact: consumers can receive runtime missing-proxy failures after an apparently successful build.
 - **Maintainer decision:** implement the recommended deterministic full-identity hint name.
+- **Resolution:** source hints now combine the namespace with every containing type's Roslyn `MetadataName`, using `+` for nesting. Generic arity is therefore included, and a nested type cannot alias a namespace-qualified top-level type.
+- **Validation:** direct `GeneratorDriver` regressions compile generic-arity siblings, verify their exact unique hints, and distinguish `Demo.Container+INestedProxy` from `Demo.Container.INestedProxy`.
 - **Recommended:** derive a deterministic unique hint from full metadata identity, including containing types and generic arity.
 - **Alternative:** append a stable hash of the fully qualified symbol identity.
 
@@ -989,34 +991,38 @@ Confidence: **Confirmed** by central isolated build (CS1501 plus a follow-on lam
 
 ### GEN5. Nested proxy types are silently ignored
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by focused regression test.
 
-- Source: `src/ActualLab.Generators/ProxyGenerator.cs:27-35` accepts declarations only directly under namespaces or the compilation unit.
+- Source before the fix: `src/ActualLab.Generators/ProxyGenerator.cs` accepted declarations only directly under namespaces or the compilation unit.
 - Failure: a nested interface implementing `IRequiresAsyncProxy` compiles, but `Proxies.TryGetProxyType` returns null. The active regression test fails at that lookup.
 - Impact: consumers get a late runtime proxy failure for a declaration the generator silently skipped.
 - **Maintainer decision:** implement the recommended nested-proxy generation with containing-type handling.
+- **Resolution:** nested proxies are emitted inside static partial mirror containers under the proxy namespace. The generator uses fully qualified source-symbol references, preserves containing generic constraints, suppresses module initializers in generic containing contexts, and the runtime lookup reconstructs the same declaring-type metadata path.
+- **Validation:** direct generator tests compile nested generic and non-generic proxies inside a constrained generic container, including multiple proxy declarations sharing that container. Runtime tests resolve both `GenericContainer<string>.INested<int>` and a non-generic nested type from a constructed generic outer type.
 - **Recommended:** generate nested proxies with full containing-type handling.
 - **Alternative:** emit a targeted diagnostic explaining the namespace-level restriction.
 
 ### GEN6. Incremental proxy generation retains processed source symbols across updates
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by a four-run `GeneratorDriver` probe.
 
-- Source: `ProxyGenerator.cs:14-21,54-57` stores every processed partial-type symbol in the generator-instance `_processedTypes` dictionary and clears it only during `Initialize`, before any deferred syntax transform executes.
+- Source before the fix: `ProxyGenerator.cs` stored every processed partial-type symbol in the generator-instance `_processedTypes` dictionary and cleared it only during `Initialize`, before any deferred syntax transform executed.
 - Failure: reusing one driver while adding, changing, and removing partial proxy declarations grew the dictionary from one to four entries. Removed and superseded source symbols remained retained for the generator instance's lifetime.
 - Counter-evidence: generated output updated correctly in all four runs, so the original stale-output theory did not reproduce.
 - Impact: repeated IDE/design-time edits cause unbounded symbol retention and may retain associated compilation graphs, increasing long-lived compiler-host memory use.
 - **Maintainer decision:** implement the recommended per-generation deduplication and remove generator-instance symbol retention.
+- **Resolution:** `ProxyGenerator` is stateless. Each collected generation batch is deduplicated with a local `Dictionary<ITypeSymbol, int>` using `SymbolEqualityComparer.Default`; source order is retained and a constraint-bearing partial declaration replaces a constraint-free candidate for the same symbol.
+- **Validation:** a chained four-run driver regression covers the initial, added, changed, and removed partial declarations, compiles every output, verifies current members only, and deterministically asserts that the generator has no retained instance fields.
 - **Recommended:** remove generator-instance mutable state and deduplicate partial declarations within each collected generation batch using a local symbol-keyed map, retaining the constraint-bearing declaration when needed.
 - **Alternative:** introduce explicitly per-run deduplication state, but lifecycle-coupled mutable state is harder to make correct in an incremental pipeline.
 
 ### Investigation notes
 
-- **GEN-I1 — stale-output theory invalid; retention promoted to GEN6.** A reused driver regenerated added, changed, and removed partial members correctly. The probe did not justify a stale-output finding, but it exposed deterministic growth of retained source symbols, now recorded as GEN6.
+- **GEN-I1 — resolved through GEN6.** A reused driver regenerated added, changed, and removed partial members correctly, disproving the stale-output theory. The confirmed symbol-retention issue was promoted to GEN6 and is now fixed by batch-local deduplication.
 
 ## E. Persistence and Redis infrastructure
 
@@ -1498,7 +1504,7 @@ Status: **open, low severity**. Confidence: **Confirmed by source**.
 
 Confirmed boundary gaps are converted into focused regression specifications immediately rather than left as prose-only recommendations. The audit now includes focused classes for Core, Fusion services/state/web, CommandR, RPC, Interception/generation, persistence providers, RestEase/serialization/testing support, and shared key-value semantics. Correct-contract probes fail at the production call sites, while retained clearing/smoke tests pass.
 
-The audit regression tests intentionally assert the correct contract and therefore leave the focused audit slice red until the corresponding production fixes are authorized and implemented. CORE1 and INT1 are not represented by normal in-process tests because their current failure modes respectively spin a worker forever and crash the host process; both need subprocess isolation. CORE9 is a long-duration/overflow boundary requiring a controllable cursor seam. CORE11 and GEN1-5 are compile-time defects covered by isolated compiler/generator builds rather than ordinary runtime tests. CORE15, CORE19, and CORE20 are performance/statistical contracts that need purpose-built allocation, work-count, or distribution tests rather than timing-sensitive unit tests.
+The remaining audit regression tests intentionally assert the correct contract and therefore leave focused slices red until the corresponding production fixes are authorized and implemented. CORE1 is not represented by a normal in-process test because its current failure mode spins a worker forever and needs subprocess isolation. INT1 now has a subprocess-isolated matrix covering every generated argument-list shape. CORE9 is a long-duration/overflow boundary requiring a controllable cursor seam. CORE11 remains a compile-time defect covered by an isolated compiler build; GEN1-6 now have durable direct-driver, runtime, or subprocess regressions. CORE15, CORE19, and CORE20 are performance/statistical contracts that need purpose-built allocation, work-count, or distribution tests rather than timing-sensitive unit tests.
 
 ## Validation log
 
@@ -1521,6 +1527,9 @@ The audit regression tests intentionally assert the correct contract and therefo
 - 2026-07-15: ran the combined Fusion and CommandR audit slice serially — 1 passed and 4 failed. The passing command-scope disposal smoke test closed that coverage gap; the failures confirmed FUS1-2 and CMDR1-2.
 - 2026-07-15: ran `InterceptionAuditRegressionTest` — the nested-proxy test failed as expected for GEN5, while the unsafe struct-invocation reproduction for INT1 remained skipped because the confirmed behavior terminates the test host.
 - 2026-07-15: isolated generator builds reproduced GEN1 with CS0535/malformed keyword output, GEN2 with CS0111, GEN3 with CS8785, and GEN4 with CS1501 plus follow-on CS0019.
+- 2026-07-15: direct `GeneratorDriver` and runtime proxy regressions for GEN3, GEN5, and GEN6 — 6 passed, covering metadata-identity hints, nested constrained generic containers, constructed nested lookup, four chained partial-type updates, and stateless generator instances.
+- 2026-07-15: after remediation, the combined Interception/generator regression slice passed 15/15 on both net10.0 and net8.0. The INT1 subprocess matrix covered all 21 generated argument-list shapes; generator diagnostics, diamond signatures, hint identities, nested proxies, and incremental updates all passed in the same integrated run.
+- 2026-07-15: post-remediation `ActualLab.Generators` build passed for net10.0 and netstandard2.0 with zero warnings; `ActualLab.Interception` passed all nine declared target frameworks with four existing generated IL2055 warnings and zero errors.
 - 2026-07-15: ran `FusionServicesAuditRegressionTest` serially — the initial ordering assertion was too weak and passed; after strengthening it to wait for either command completion or a 250 ms gate, it failed at the production boundary. The final six-test slice fails all six tests, confirming FUS3-8.
 - 2026-07-15: ran `FusionWebAuditRegressionTest` — 0 passed, 3 failed, confirming FUS9-11. A separate SQLite pagination translation smoke test passed and was retained, clearing the suspected `Comparer<T>.Default` translation issue on the current provider.
 - 2026-07-15: added a shared expiry contract to the existing in-memory/database key-value test base — both implementations failed at `Count == 1` after `Get` correctly returned null, confirming FUS12.

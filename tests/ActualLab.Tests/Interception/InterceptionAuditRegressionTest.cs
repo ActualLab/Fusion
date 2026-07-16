@@ -12,6 +12,13 @@ public class InterceptionAuditRegressionTest
         => Proxies.TryGetProxyType(typeof(INestedProxy)).Should().NotBeNull();
 
     [Fact]
+    public void ProxyGeneratorMustSupportNestedGenericTypes()
+    {
+        Proxies.TryGetProxyType(typeof(GenericContainer<string>.INested<int>)).Should().NotBeNull();
+        Proxies.TryGetProxyType(typeof(GenericContainer<string>.INonGeneric)).Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task ArgumentListInvokerMustSupportValueTypeTargets()
     {
         var subprocessCase = Environment.GetEnvironmentVariable(ValueTypeTargetCase);
@@ -115,5 +122,20 @@ public class InterceptionAuditRegressionTest
     public interface INestedProxy : IRequiresAsyncProxy
     {
         Task Run();
+    }
+
+    public static class GenericContainer<TOuter>
+        where TOuter : class
+    {
+        public interface INested<TInner> : IRequiresAsyncProxy
+            where TInner : struct
+        {
+            Task<TOuter> Run(TInner value);
+        }
+
+        public interface INonGeneric : IRequiresAsyncProxy
+        {
+            Task<TOuter> Run();
+        }
     }
 }

@@ -56,11 +56,11 @@ public class ProxyTypeGenerator
     private SemanticModel SemanticModel { get; }
     private TypeDeclarationSyntax TypeDef { get; }
     private TypeSyntax TypeRef { get; } = null!;
-    private ITypeSymbol TypeSymbol { get; } = null!;
+    private INamedTypeSymbol TypeSymbol { get; } = null!;
     private NameSyntax NamespaceRef { get; } = null!;
     private ClassDeclarationSyntax? ClassDef { get; }
     private InterfaceDeclarationSyntax? InterfaceDef { get; }
-    private bool IsGenericType { get; }
+    private bool IsInGenericContext { get; }
     private bool IsInterfaceProxy => InterfaceDef is not null;
     private bool IsFullProxy { get; }
     private bool IsAsyncOnlyProxy => !IsFullProxy;
@@ -86,15 +86,15 @@ public class ProxyTypeGenerator
         TypeDef = typeDef;
         if (SemanticModel.GetDeclaredSymbol(TypeDef) is not { } typeSymbol)
             return;
-        if (TypeDef.GetNamespaceRef() is not { } namespaceRef)
-            return;
 
-        TypeRef = TypeDef.ToTypeRef();
+        TypeRef = typeSymbol.ToTypeRef();
         TypeSymbol = typeSymbol;
-        NamespaceRef = namespaceRef;
+        NamespaceRef = typeSymbol.ContainingNamespace.IsGlobalNamespace
+            ? IdentifierName("")
+            : ParseName(typeSymbol.ContainingNamespace.ToDisplayString());
         ClassDef = TypeDef as ClassDeclarationSyntax;
         InterfaceDef = TypeDef as InterfaceDeclarationSyntax;
-        IsGenericType = TypeDef.TypeParameterList is { } l && l.Parameters.Count != 0;
+        IsInGenericContext = GetContainingTypesAndSelf(typeSymbol).Any(t => t.Arity != 0);
         IsFullProxy = typeSymbol.AllInterfaces.Any(t => Equals(t.ToFullName(), RequiresFullProxyInterfaceName));
         WriteDebug?.Invoke($"{TypeSymbol.ToFullName()}: {(IsFullProxy ? "full" : "async")} proxy");
 
@@ -117,7 +117,7 @@ public class ProxyTypeGenerator
             .WithBaseList(BaseList(CommaSeparatedList(
                 baseTypes.Select(t => (BaseTypeSyntax)SimpleBaseType(t)).ToArray())))
             .WithConstraintClauses(TypeDef.ConstraintClauses);
-        ProxyRef = IsGenericType
+        ProxyRef = TypeDef.TypeParameterList is { Parameters.Count: > 0 }
             ? GenericName(Identifier(ProxyTypeName), TypeArgumentList(CommaSeparatedList<TypeSyntax>(
                 TypeDef.TypeParameterList?.Parameters.Select(x => IdentifierName(x.Identifier.Text)) ?? [])))
             : IdentifierName(ProxyTypeName);
@@ -157,8 +157,13 @@ public class ProxyTypeGenerator
         var proxyNamespaceRef = (NameSyntax)(NamespaceRef.GetText().ToString().Length == 0
             ? IdentifierName(ProxyNamespaceSuffix)
             : QualifiedName(NamespaceRef, IdentifierName(ProxyNamespaceSuffix)));
+        MemberDeclarationSyntax proxyMember = ProxyDef;
+        for (var containingType = TypeSymbol.ContainingType;
+             containingType is not null;
+             containingType = containingType.ContainingType)
+            proxyMember = CreateProxyContainer(containingType, proxyMember);
         var proxyNamespaceDef = FileScopedNamespaceDeclaration(proxyNamespaceRef)
-            .AddMembers(ProxyDef);
+            .AddMembers(proxyMember);
 
         // Building Compilation unit
         var syntaxRoot = SemanticModel.SyntaxTree.GetRoot();
@@ -178,6 +183,57 @@ public class ProxyTypeGenerator
 
             {unit.ToString()}
             """;
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetContainingTypesAndSelf(INamedTypeSymbol typeSymbol)
+    {
+        for (var type = typeSymbol; type is not null; type = type.ContainingType)
+            yield return type;
+    }
+
+    private static ClassDeclarationSyntax CreateProxyContainer(
+        INamedTypeSymbol typeSymbol,
+        MemberDeclarationSyntax member)
+    {
+        var accessibilityModifier = typeSymbol.DeclaredAccessibility == Accessibility.Public
+            ? Token(SyntaxKind.PublicKeyword)
+            : Token(SyntaxKind.InternalKeyword);
+        var typeParameters = typeSymbol.TypeParameters
+            .Select(p => TypeParameter(Identifier(p.Name)))
+            .ToArray();
+        return ClassDeclaration(Identifier(typeSymbol.Name))
+            .AddModifiers(
+                accessibilityModifier,
+                Token(SyntaxKind.StaticKeyword),
+                Token(SyntaxKind.PartialKeyword))
+            .WithTypeParameterList(typeParameters.Length == 0
+                ? null
+                : TypeParameterList(CommaSeparatedList(typeParameters)))
+            .WithConstraintClauses(GetConstraintClauses(typeSymbol))
+            .AddMembers(member);
+    }
+
+    private static SyntaxList<TypeParameterConstraintClauseSyntax> GetConstraintClauses(INamedTypeSymbol typeSymbol)
+    {
+        var clauses = new List<TypeParameterConstraintClauseSyntax>();
+        foreach (var typeParameter in typeSymbol.TypeParameters) {
+            var constraints = new List<TypeParameterConstraintSyntax>();
+            if (typeParameter.HasUnmanagedTypeConstraint)
+                constraints.Add(TypeConstraint(IdentifierName("unmanaged")));
+            else if (typeParameter.HasValueTypeConstraint)
+                constraints.Add(ClassOrStructConstraint(SyntaxKind.StructConstraint));
+            else if (typeParameter.HasReferenceTypeConstraint)
+                constraints.Add(ClassOrStructConstraint(SyntaxKind.ClassConstraint));
+            else if (typeParameter.HasNotNullConstraint)
+                constraints.Add(TypeConstraint(IdentifierName("notnull")));
+            constraints.AddRange(typeParameter.ConstraintTypes.Select(t => TypeConstraint(t.ToTypeRef())));
+            if (typeParameter.HasConstructorConstraint)
+                constraints.Add(ConstructorConstraint());
+            if (constraints.Count != 0)
+                clauses.Add(TypeParameterConstraintClause(IdentifierName(typeParameter.Name))
+                    .WithConstraints(CommaSeparatedList(constraints)));
+        }
+        return List(clauses);
     }
 
     private bool AddClassConstructors()
@@ -232,7 +288,7 @@ public class ProxyTypeGenerator
     private void AddProxyMethods(
         IReadOnlyCollection<(IMethodSymbol Method, IdentifierNameSyntax? UnwrappedReturnType)> proxyMethods)
     {
-        var typeRef = TypeDef.ToTypeRef();
+        var typeRef = TypeRef;
         var methodIndex = 0;
         foreach (var (method, unwrappedReturnType) in proxyMethods) {
             var methodTypeRef = IsInterfaceProxy ? method.ContainingType.ToTypeRef() : typeRef;
@@ -367,7 +423,7 @@ public class ProxyTypeGenerator
         var method = MethodDeclaration(
                 PredefinedType(Token(SyntaxKind.VoidKeyword)),
                 Identifier(KeepCodeMethodName.Identifier.Text));
-        if (!IsGenericType)
+        if (!IsInGenericContext)
             method = method.WithAttributeLists(
                 SingletonList(
                     AttributeList(
