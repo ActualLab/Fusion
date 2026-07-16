@@ -7,7 +7,7 @@ namespace ActualLab.Fusion.Server.Endpoints;
 /// Endpoint handler that manages Blazor render mode persistence via cookies
 /// and returns redirect results.
 /// </summary>
-public class RenderModeEndpoint
+public class RenderModeEndpoint(RedirectUrlChecker redirectUrlChecker)
 {
     public static CookieBuilder Cookie { get; set; } = new() {
         Name = "RenderMode",
@@ -16,6 +16,12 @@ public class RenderModeEndpoint
         SameSite = SameSiteMode.Lax,
         Expiration = TimeSpan.FromDays(365),
     };
+
+    protected RedirectUrlChecker RedirectUrlChecker { get; } = redirectUrlChecker;
+
+    public RenderModeEndpoint()
+        : this(FusionWebServerBuilder.DefaultRedirectUrlChecker)
+    { }
 
     public static RenderModeDef GetRenderMode(HttpContext context)
     {
@@ -32,7 +38,8 @@ public class RenderModeEndpoint
             renderMode = RenderModeDef.All.Single(x => x == renderModeValue).Key;
             response.Cookies.Append(Cookie.Name!, renderMode, Cookie.Build(context));
         }
-        if (redirectTo.IsNullOrEmpty())
+        redirectTo ??= "~/";
+        if (!RedirectUrlChecker.Invoke(redirectTo))
             redirectTo = "~/";
         return Task.FromResult(new RedirectResult(redirectTo));
     }

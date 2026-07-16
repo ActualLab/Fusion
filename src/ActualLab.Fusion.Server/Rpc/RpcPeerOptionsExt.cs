@@ -26,7 +26,8 @@ public static class RpcPeerOptionsExt
             return CreateRpcConnectionAsync(transport, properties);
 
         var query = httpContext.Request.Query;
-        var sessionId = query[SessionParameterName].SingleOrDefault() ?? "";
+        var sessionValues = query[SessionParameterName];
+        var sessionId = sessionValues.Count == 1 ? sessionValues[0] ?? "" : "";
         if (!sessionId.IsNullOrEmpty() && new Session(sessionId) is var session1 && session1.IsValid())
             return CreateSessionBoundRpcConnectionAsync(transport, properties, session1);
 

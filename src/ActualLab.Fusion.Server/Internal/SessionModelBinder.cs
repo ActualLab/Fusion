@@ -27,14 +27,19 @@ public class SessionModelBinder : IModelBinder
         }
 
         try {
-            var sValue = bindingContext.ValueProvider.GetValue(bindingContext.ModelName).FirstValue ?? "";
-            if (sValue.IsNullOrEmpty() || string.Equals(sValue, Session.Default.Id, StringComparison.Ordinal))
+            var value = bindingContext.ValueProvider.GetValue(bindingContext.ModelName);
+            if (value == ValueProviderResult.None)
+                return UseDefaultSession();
+
+            var sValue = value.FirstValue ?? "";
+            if (string.Equals(sValue, Session.Default.Id, StringComparison.Ordinal))
                 return UseDefaultSession();
             bindingContext.Result = ModelBindingResult.Success(new Session(sValue));
             return Task.CompletedTask;
         }
         catch (Exception) {
-            return UseDefaultSession();
+            bindingContext.Result = ModelBindingResult.Failed();
+            return Task.CompletedTask;
         }
     }
 }

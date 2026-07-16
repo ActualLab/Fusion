@@ -688,20 +688,22 @@ Status: **completed**. Confidence: **Confirmed by source and registration regres
 
 ### FUS15. Render-mode switching accepts an external redirect target
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and endpoint regression test**.
+Status: **completed**. Confidence: **Confirmed by source and endpoint regression test**.
 
 - Source: `RenderModeEndpoint.cs:27-37,53-56` returns caller-controlled `redirectTo` unchanged; the MVC controller also redirects to it.
 - Failure: the public endpoint can be used as an open redirect for phishing/token-flow chaining.
 - Test: `FusionServiceBoundaryAuditRegressionTest.RenderModeEndpointShouldNotRedirectToExternalUrls` receives `https://attacker.example/path` unchanged.
-- **Recommended:** accept only local application-relative targets, falling back to `~/`.
+- **Resolution:** render-mode redirects now pass through the shared `RedirectUrlChecker` DI delegate, whose default uses ASP.NET Core's local-URL check; rejected and missing targets fall back to `~/`. The endpoint's parameterless constructor retains the same default policy for direct callers.
+- **Validation:** the endpoint regression first returned the external attacker URL, then passed with `~/`; the shared-policy replacement regression also verifies that the render-mode endpoint uses the registered delegate.
 
 ### FUS16. Authentication endpoints also accept external return URLs
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source; endpoint integration test needed**.
+Status: **completed**. Confidence: **Confirmed by source and endpoint integration test**.
 
 - Source: `AuthEndpoints.cs:29-38,41-53` copies caller `returnUrl` directly into `AuthenticationProperties.RedirectUri` for sign-in and sign-out.
 - Failure: supported authentication handlers can redirect a completed flow to an attacker-controlled origin.
-- **Recommended:** validate with the platform's local-URL helper and use a fixed local fallback.
+- **Resolution:** sign-in and sign-out now use the same `RedirectUrlChecker` delegate as render-mode switching, with `/` as their fixed fallback. `AddAuthEndpoints` injects the existing Fusion.Server registration, while the original direct constructor uses the same default delegate.
+- **Validation:** a recording authentication service first received external redirect URIs, then received `/` for both sign-in and sign-out. A replacement delegate was resolved by both endpoint families and observed one call from each while preserving its allowed URL.
 
 ### FUS17. A database key-value batch with duplicate new keys creates duplicate entities
 
@@ -714,19 +716,21 @@ Status: **completed**. Confidence: **Confirmed by source and shared provider reg
 
 ### FUS18. A malformed explicit session binding falls back to the ambient session
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source; model-binding integration test needed**.
+Status: **completed**. Confidence: **Confirmed by source and model-binding integration test**.
 
 - Source: `SessionModelBinder.cs:29-37` catches construction/value-provider errors and invokes its default-session fallback rather than marking binding failed.
 - Failure: a request that explicitly supplies an invalid target session can silently operate on the caller's ambient session, changing the meaning of the request.
-- **Recommended:** distinguish absent input from malformed explicit input; use ambient fallback only when absent and fail model binding otherwise.
+- **Resolution:** `SessionModelBinder` now detects `ValueProviderResult.None` before conversion and uses the ambient session only for absent input or the explicit default-session sentinel. Any exception or invalid explicit value produces `ModelBindingResult.Failed` without consulting the ambient resolver.
+- **Validation:** the malformed explicit-session regression first bound the ambient session and then passed with a failed binding; the paired absent-input regression continues to bind the ambient session.
 
 ### FUS19. Duplicate session query parameters crash RPC peer setup
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `RpcPeerOptionsExt.cs:28-31` reads `query["session"].SingleOrDefault()`.
 - Failure: a request with duplicate session query values throws during handshake instead of producing a controlled rejection.
-- **Recommended:** require exactly zero or one value without throwing, then reject duplicates with a protocol/HTTP error.
+- **Resolution:** the connection factory now reads a query session only when exactly one value is present. More than one value is treated as no query session without enumeration exceptions, so the normal ambient-session fallback remains in control and no duplicate value is selected.
+- **Validation:** the focused regression first threw `InvalidOperationException` for two query values, then passed with a session-bound connection carrying the ambient cookie session rather than either query value.
 
 ### FUS20. Untyped `State.LastNonErrorValue` returns a `Computed`, not its value
 

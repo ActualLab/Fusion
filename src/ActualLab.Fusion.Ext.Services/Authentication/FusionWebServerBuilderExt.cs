@@ -2,6 +2,7 @@
 
 using ActualLab.Fusion.Authentication.Endpoints;
 using ActualLab.Fusion.Server;
+using ActualLab.Fusion.Server.Endpoints;
 
 namespace ActualLab.Fusion.Authentication;
 
@@ -18,7 +19,9 @@ public static class FusionWebServerBuilderExt
         services.AddSingleton(_ => ServerAuthHelper.Options.Default);
         services.AddScoped(c => new ServerAuthHelper(c.GetRequiredService<ServerAuthHelper.Options>(), c));
         services.AddSingleton(_ => AuthEndpoints.Options.Default);
-        services.AddSingleton(c => new AuthEndpoints(c.GetRequiredService<AuthEndpoints.Options>()));
+        services.AddSingleton(c => new AuthEndpoints(
+            c.GetRequiredService<AuthEndpoints.Options>(),
+            c.GetRequiredService<RedirectUrlChecker>()));
         return fusionWebServer;
     }
 
