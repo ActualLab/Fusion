@@ -4,7 +4,6 @@ using System.Runtime.Intrinsics.X86;
 using ActualLab.Collections;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
-using BenchmarkDotNet.Jobs;
 using MessagePack;
 
 namespace ActualLab.Fusion.Tests.BenchmarkRunner;
@@ -19,7 +18,6 @@ public enum IntegerDistribution
 
 [MemoryDiagnoser]
 [HardwareCounters(HardwareCounter.BranchInstructions, HardwareCounter.BranchMispredictions)]
-[ShortRunJob(RuntimeMoniker.Net10_0)]
 [DisassemblyDiagnoser(maxDepth: 2, printSource: true)]
 public class IntegerCodecBenchmarks
 {
