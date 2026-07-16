@@ -137,9 +137,7 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
                 bool endOfMessage;
                 try {
                     var r = await WebSocket.ReceiveAsync(receiveBuffer, CancellationToken.None).ConfigureAwait(false);
-                    count = r.Count;
-                    messageType = r.MessageType;
-                    endOfMessage = r.EndOfMessage;
+                    (count, messageType, endOfMessage) = (r.Count, r.MessageType, r.EndOfMessage);
                 }
                 catch (Exception e) {
                     if (commonCts.IsCancellationRequested) {
@@ -155,9 +153,7 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
                     if (e is not WebSocketException { WebSocketErrorCode: WebSocketError.ConnectionClosedPrematurely })
                         throw;
 
-                    count = 0;
-                    messageType = WebSocketMessageType.Close;
-                    endOfMessage = true;
+                    (count, messageType, endOfMessage) = (0, WebSocketMessageType.Close, true);
                 }
                 if (messageType == WebSocketMessageType.Close) {
                     if (WebSocket.CloseStatus.HasValue
