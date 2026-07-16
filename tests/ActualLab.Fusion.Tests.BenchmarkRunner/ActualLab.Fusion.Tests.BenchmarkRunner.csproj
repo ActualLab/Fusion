@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ProjectKind>Other</ProjectKind>
+    <TargetFramework>net10.0</TargetFramework>
+    <UseMultitargeting>false</UseMultitargeting>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
+    <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
+    <TieredPGO>true</TieredPGO>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+    <GarbageCollectionAdaptationMode>0</GarbageCollectionAdaptationMode>
+    <CETCompat>false</CETCompat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ActualLab.Fusion\ActualLab.Fusion.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Rpc\ActualLab.Rpc.csproj" />
+    <ProjectReference Include="..\..\src\ActualLab.Generators\ActualLab.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Remove="AwesomeAssertions" />
+    <PackageReference Remove="AutoFixture.AutoMoq" />
+    <PackageReference Remove="coverlet.collector" />
+    <PackageReference Remove="ILogger.Moq" />
+    <PackageReference Remove="Microsoft.NET.Test.Sdk" />
+    <PackageReference Remove="Moq" />
+    <PackageReference Remove="xunit" />
+    <PackageReference Remove="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Remove="ActualLab.Tests.TestHelpers" />
+    <Using Remove="ActualLab.Testing" />
+    <Using Remove="AwesomeAssertions" />
+    <Using Remove="Moq" />
+    <Using Remove="Xunit" />
+    <Using Remove="Xunit.Abstractions" />
+  </ItemGroup>
+
+</Project>
