@@ -37,7 +37,7 @@
          expected by Unity's older build stack. Do NOT upgrade for now - revisit later. -->
     <RoslynVersion>[4.3.0,)</RoslynVersion>
     <!-- EF Core -->
-    <EntityFrameworkCoreVersion>[10.0.0,)</EntityFrameworkCoreVersion>
+    <EntityFrameworkCoreVersion>10.0.10</EntityFrameworkCoreVersion>
     <EntityFrameworkCoreVersion9>[9.0.0,)</EntityFrameworkCoreVersion9>
     <EntityFrameworkCoreVersion8>[8.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,)</EntityFrameworkCoreVersion7>
