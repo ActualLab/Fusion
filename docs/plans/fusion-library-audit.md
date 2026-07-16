@@ -1297,23 +1297,27 @@ Status: **approved — pending implementation**. Confidence: **Confirmed by sour
 
 ### RPC4. Frame-transport enqueue failures never reach the send handler
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused transport regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused transport regression test**.
 
 - Source: `RpcFrameBasedTransport.cs:78-84` discards `ChannelWriter.WriteAsync` whenever `TryWrite` fails.
 - Failure: completed/full/canceled channels fault an unobserved `ValueTask`; `message.SendHandler` is never invoked, leaving calls without completion notification.
 - Test: `SendAfterCompletionReportsFailureToHandler` observes a null handler error after sending to a completed channel.
 - **Maintainer decision:** implement the recommended awaited slow path and exact-once completion.
 - **Recommended:** await the slow path and call the send handler exactly once with success or the enqueue exception.
+- **Resolution:** `RpcFrameBasedTransport.Send` now observes and awaits the channel writer's slow path. A failed or canceled enqueue completes the message with that error, while an accepted message remains owned by the writer loop and completes once after serialization.
+- **Validation:** the focused regression failed before the fix and now receives one `ChannelClosedException` callback after sending to a completed transport.
 
 ### RPC5. Simple-channel transport reports success before enqueue succeeds
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and bounded-channel regression test**.
+Status: **completed**. Confidence: **Confirmed by source and bounded-channel regression test**.
 
 - Source: `RpcSimpleChannelTransport.cs:40-55` serializes into a pooled owner, calls `CompleteSend(success)`, and then discards `WriteAsync`.
 - Failure: a canceled/full bounded channel reports false success and leaks the never-enqueued pooled frame owner.
 - Test: `SimpleChannelSendReportsCanceledEnqueue` receives no cancellation error.
 - **Maintainer decision:** implement the recommended enqueue-before-completion ownership flow.
 - **Recommended:** complete the send only after a successful enqueue; dispose the frame and report the exception otherwise.
+- **Resolution:** `RpcSimpleChannelTransport.Send` now transfers the serialized `ArrayOwner<byte>` only after `TryWrite` or the awaited slow write succeeds. Failed and canceled writes dispose the untransferred owner and report the enqueue error exactly once.
+- **Validation:** the focused canceled-enqueue regression failed before the fix and now observes one cancellation callback plus disposal of the captured pooled frame owner.
 
 ### RPC6. `RpcPeerRef` null equality operators violate the equality contract
 
@@ -1354,30 +1358,36 @@ Status: **completed — zero-copy contract documented**. Confidence: **Confirmed
 
 ### RPC9. Frozen RPC configuration still reflects mutations through the original dictionary
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `RpcConfiguration.cs:37-48` wraps the existing mutable services dictionary in `ReadOnlyDictionary` without copying it.
 - Failure: a retained pre-freeze reference can race or falsify registry construction after configuration is advertised as immutable.
 - **Maintainer decision:** implement the recommended locked snapshot.
 - **Recommended:** snapshot into a new dictionary under the freeze lock before wrapping it.
+- **Resolution:** `RpcConfiguration.Freeze` now copies the service map under the freeze lock and wraps that new dictionary, severing aliases to the caller-supplied mutable map.
+- **Validation:** the focused regression failed before the fix and now confirms that mutating the retained pre-freeze dictionary does not change frozen services.
 
 ### RPC10. Non-positive stream flow-control values cause division by zero or permanent stalls
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and construction-contract theory**.
+Status: **completed**. Confidence: **Confirmed by source and construction-contract theory**.
 
 - Source: `RpcStream.cs:31-34` exposes unvalidated `AckPeriod`/`AckAdvance`; `MaybeSendAck` at lines 363-366 uses modulo by `AckPeriod`, while shared-stream advancement depends on positive `AckAdvance`.
 - Failure: zero period divides by zero; zero advance prevents any item from becoming sendable and waits forever. Values cross the wire.
 - **Maintainer decision:** implement the recommended validation and overflow guards.
 - **Recommended:** reject non-positive values at construction/deserialization and guard buffer arithmetic overflow.
+- **Resolution:** `RpcStream` now validates positive `AckPeriod` and `AckAdvance` values in their init accessors, so every supported deserializer uses the same contract. Buffer capacities that cannot support the ring buffer's extra slot are rejected, shared-stream ACK windows saturate at `long.MaxValue`, and invalid offsets are rejected before narrowing to `int`.
+- **Validation:** construction and wire-format regressions cover zero and negative values, capacity boundaries, and ACK-window addition at `long.MaxValue`; the focused suite and surrounding stream configuration/buffer tests pass.
 
 ### RPC11. `RpcFrameDelayers.Yield` ignores its handshake-frame parameter
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused behavior test**.
+Status: **completed**. Confidence: **Confirmed by source and focused behavior test**.
 
 - Source: `RpcFrameDelayers.cs:13-26,55-56` accepts `handshakeFrameCount` but uses a hard-coded static threshold of two.
 - Failure: callers cannot configure the advertised exemption from yielding.
 - **Maintainer decision:** implement the recommended validated, captured threshold.
 - **Recommended:** validate and capture the supplied threshold in the returned delegate.
+- **Resolution:** `RpcFrameDelayers.Yield` now rejects a negative handshake-frame count and captures the supplied threshold in both yield-count delegate variants.
+- **Validation:** the focused behavior regression failed before the fix and now confirms that all configured handshake frames bypass yielding; a boundary regression confirms negative counts are rejected.
 
 ### RPC12. Fragmented WebSocket messages can force unbounded allocation
 

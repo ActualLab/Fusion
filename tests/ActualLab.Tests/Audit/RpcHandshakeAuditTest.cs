@@ -1,3 +1,5 @@
+using System.Reflection;
+using ActualLab.Channels;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
@@ -60,7 +62,9 @@ public class RpcHandshakeAuditTest
 
     [Theory]
     [InlineData(0, 61)]
+    [InlineData(-1, 61)]
     [InlineData(30, 0)]
+    [InlineData(30, -1)]
     public void RpcStreamRejectsNonPositiveFlowControlSettings(int ackPeriod, int ackAdvance)
     {
         var create = () => new RpcStream<int> {
@@ -71,6 +75,40 @@ public class RpcHandshakeAuditTest
         create.Should().Throw<ArgumentOutOfRangeException>();
     }
 
+    [Theory]
+    [InlineData(0, 61)]
+    [InlineData(30, 0)]
+    public void RpcStreamRejectsNonPositiveDeserializedFlowControlSettings(int ackPeriod, int ackAdvance)
+    {
+        var serialized = $"{Guid.NewGuid()},1,{ackPeriod},{ackAdvance},1,0";
+
+        var deserialize = () => RpcStream<int>.DeserializeFromString(serialized);
+
+        deserialize.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void RpcStreamRejectsBufferCapacityOverflow()
+    {
+        var createWithAckAdvance = () => new RpcStream<int> { AckAdvance = int.MaxValue };
+        var createWithBufferSize = () => new RpcStream<int> { BufferSize = int.MaxValue };
+
+        createWithAckAdvance.Should().Throw<ArgumentOutOfRangeException>();
+        createWithBufferSize.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void RpcSharedStreamSaturatesAckWindowAtLongBoundary()
+    {
+        var getMaxIndex = typeof(RpcSharedStream<int>).GetMethod(
+            "GetMaxIndex",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+
+        var maxIndex = getMaxIndex.Invoke(null, [long.MaxValue - 1, 61]);
+
+        maxIndex.Should().Be(long.MaxValue);
+    }
+
     [Fact]
     public void YieldFrameDelayerHonorsHandshakeFrameCount()
     {
@@ -79,6 +117,10 @@ public class RpcHandshakeAuditTest
         for (var i = 0; i < 4; i++)
             delayer(0).Should().BeSameAs(Task.CompletedTask);
     }
+
+    [Fact]
+    public void YieldFrameDelayerRejectsNegativeHandshakeFrameCount()
+        => Assert.Throws<ArgumentOutOfRangeException>(() => RpcFrameDelayers.Yield(handshakeFrameCount: -1));
 
     [Fact]
     public void FrozenRpcConfigurationSnapshotsServices()
@@ -106,19 +148,25 @@ public class RpcHandshakeAuditTest
             Arguments = ArgumentList.New(default(Guid)),
             MethodDef = method,
         };
-        var handlerError = (Exception?)null;
+        var sendCount = 0;
+        var sendCompleted = TaskCompletionSourceExt.New<Exception?>();
         var message = new RpcOutboundMessage(
             context,
             method,
             1,
             false,
             null,
-            (_, _, error) => handlerError = error);
+            (_, _, error) => {
+                Interlocked.Increment(ref sendCount);
+                sendCompleted.TrySetResult(error);
+            });
 
         transport.TryComplete();
         transport.Send(message);
 
+        var handlerError = await sendCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         handlerError.Should().BeOfType<ChannelClosedException>();
+        sendCount.Should().Be(1);
     }
 
     [Fact]
@@ -129,22 +177,30 @@ public class RpcHandshakeAuditTest
         await using var serviceProvider = services.BuildServiceProvider();
         var hub = serviceProvider.RpcHub();
         var peer = new RpcClientPeer(hub, RpcPeerRef.Default);
-        var channel = Channel.CreateBounded<ArrayOwner<byte>>(1);
+        var frameWriter = new CancelingFrameWriter();
+        var channel = new CustomChannel<ArrayOwner<byte>>(
+            Channel.CreateUnbounded<ArrayOwner<byte>>().Reader,
+            frameWriter);
         await using var transport = new RpcSimpleChannelTransport(peer, channel);
         var method = hub.ServiceRegistry[typeof(IRpcSystemCalls)]["AckEnd:1"];
-        transport.Send(NewMessage(null));
         using var cancellationSource = new CancellationTokenSource();
         cancellationSource.Cancel();
-        var handlerError = (Exception?)null;
+        var sendCount = 0;
+        var sendCompleted = TaskCompletionSourceExt.New<Exception?>();
 
         try {
-            transport.Send(NewMessage((_, _, error) => handlerError = error), cancellationSource.Token);
+            transport.Send(NewMessage((_, _, error) => {
+                Interlocked.Increment(ref sendCount);
+                sendCompleted.TrySetResult(error);
+            }), cancellationSource.Token);
+            var handlerError = await sendCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
             handlerError.Should().BeAssignableTo<OperationCanceledException>();
+            sendCount.Should().Be(1);
+            frameWriter.Frame.Should().NotBeNull();
+            frameWriter.Frame!.IsDisposed.Should().BeTrue();
         }
         finally {
             transport.TryComplete();
-            while (channel.Reader.TryRead(out var frame))
-                frame.Dispose();
         }
         return;
 
@@ -155,6 +211,29 @@ public class RpcHandshakeAuditTest
                 MethodDef = method,
             };
             return new RpcOutboundMessage(context, method, 1, false, null, sendHandler);
+        }
+    }
+
+    private sealed class CancelingFrameWriter : ChannelWriter<ArrayOwner<byte>>
+    {
+        public ArrayOwner<byte>? Frame { get; private set; }
+
+        public override bool TryComplete(Exception? error = null)
+            => true;
+
+        public override bool TryWrite(ArrayOwner<byte> item)
+        {
+            Frame = item;
+            return false;
+        }
+
+        public override ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken = default)
+            => new(Task.FromCanceled<bool>(cancellationToken));
+
+        public override ValueTask WriteAsync(ArrayOwner<byte> item, CancellationToken cancellationToken = default)
+        {
+            Frame = item;
+            return new ValueTask(Task.FromCanceled(cancellationToken));
         }
     }
 

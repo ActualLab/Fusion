@@ -44,7 +44,8 @@ public class RpcConfiguration
                 return;
 
             IsFrozen = true;
-            _services = new ReadOnlyDictionary<Type, RpcServiceBuilder>(Services);
+            _services = new ReadOnlyDictionary<Type, RpcServiceBuilder>(
+                new Dictionary<Type, RpcServiceBuilder>(Services));
         }
     }
 

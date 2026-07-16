@@ -29,9 +29,20 @@ public abstract class RpcStream : IRpcObject
     };
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
-    public int AckPeriod { get; init; } = 30;
+    public int AckPeriod {
+        get;
+        init => field = value > 0
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(AckPeriod), "Ack period must be positive.");
+    } = 30;
     [DataMember(Order = 1), MemoryPackOrder(1), Key("AckAdvance")]
-    public int AckAdvance { get; init; } = 61;
+    public int AckAdvance {
+        get;
+        init => field = value is > 0 and < int.MaxValue
+            ? value
+            : throw new ArgumentOutOfRangeException(
+                nameof(AckAdvance), "Ack advance must be positive and below Int32.MaxValue.");
+    } = 61;
     [DataMember(Order = 3), MemoryPackOrder(3)]
     public bool AllowReconnect { get; init; } = true;
     [DataMember(Order = 4), MemoryPackOrder(4)]
@@ -49,7 +60,13 @@ public abstract class RpcStream : IRpcObject
     public abstract RpcObjectKind Kind { get; }
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public int BufferSize { get; init; }
+    public int BufferSize {
+        get;
+        init => field = value is >= 0 and < int.MaxValue
+            ? value
+            : throw new ArgumentOutOfRangeException(
+                nameof(BufferSize), "Buffer size must be non-negative and below Int32.MaxValue.");
+    }
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public int BatchSize { get; init => field = value.Clamp(1, MaxBatchSize); } = 64;
 
@@ -228,9 +245,9 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         var allowReconnect = !parser.TryParseNext() || !parser.Item.Equals("0", StringComparison.Ordinal);
         var isRealTime = parser.TryParseNext() && parser.Item.Equals("1", StringComparison.Ordinal);
         return new RpcStream<T>() {
-            SerializedId = id,
             AckPeriod = ackPeriod,
             AckAdvance = ackAdvance,
+            SerializedId = id,
             AllowReconnect = allowReconnect,
             IsRealTime = isRealTime,
         };

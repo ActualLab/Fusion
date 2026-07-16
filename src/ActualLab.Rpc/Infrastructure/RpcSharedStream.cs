@@ -202,10 +202,15 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 SendInvalidPosition(index);
                 goto nextAck;
             }
-            var bufferIndex = (int)(index - bufferStart);
+            var bufferOffset = index - bufferStart;
+            if (bufferOffset > buffer.Count) {
+                SendInvalidPosition(index);
+                goto nextAck;
+            }
+            var bufferIndex = (int)bufferOffset;
 
             // 3. Send as much as we can
-            var maxIndex = ack.NextIndex + Stream.AckAdvance;
+            var maxIndex = GetMaxIndex(ack.NextIndex, Stream.AckAdvance);
             while (index < maxIndex) {
                 Result<T> item;
 
@@ -289,6 +294,11 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
 
     private void SendInvalidPosition(long index)
         => Send(index, Result.NewError<T>(Errors.RpcStreamInvalidPosition()));
+
+    private static long GetMaxIndex(long nextIndex, int ackAdvance)
+        => nextIndex >= long.MaxValue - ackAdvance
+            ? long.MaxValue
+            : nextIndex + ackAdvance;
 
     private void Send(long index, Result<T> item)
     {

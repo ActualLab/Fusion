@@ -17,13 +17,19 @@ public static class RpcFrameDelayers
 
     public static RpcFrameDelayer? Yield(int yieldCount = 1, long handshakeFrameCount = 1)
     {
+        if (handshakeFrameCount < 0)
+            throw new ArgumentOutOfRangeException(nameof(handshakeFrameCount));
         if (yieldCount < 1)
             return null;
 
         long frameIndex = 0;
         return yieldCount == 1
-            ? frameSize => MustDelay(frameIndex++, frameSize) ? TaskExt.YieldDelay() : Task.CompletedTask
-            : frameSize => MustDelay(frameIndex++, frameSize) ? TaskExt.YieldDelay(yieldCount) : Task.CompletedTask;
+            ? frameSize => MustDelay(frameIndex++, frameSize, handshakeFrameCount)
+                ? TaskExt.YieldDelay()
+                : Task.CompletedTask
+            : frameSize => MustDelay(frameIndex++, frameSize, handshakeFrameCount)
+                ? TaskExt.YieldDelay(yieldCount)
+                : Task.CompletedTask;
     }
 
     public static RpcFrameDelayer NextTick(TickSource? tickSource = null)
@@ -54,4 +60,8 @@ public static class RpcFrameDelayers
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool MustDelay(long frameIndex, int frameSize)
         => frameSize < DelayedFrameSize && frameIndex >= NoDelayFrameCount;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool MustDelay(long frameIndex, int frameSize, long noDelayFrameCount)
+        => frameSize < DelayedFrameSize && frameIndex >= noDelayFrameCount;
 }

@@ -80,7 +80,7 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         if (_writeChannelWriter.TryWrite(message))
             return;
 
-        _ = _writeChannelWriter.WriteAsync(message, cancellationToken);
+        _ = Write(message, cancellationToken);
     }
 
     public override bool TryComplete(Exception? error = null)
@@ -142,6 +142,16 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         => Task.CompletedTask;
 
     // Private methods
+
+    private async Task Write(RpcOutboundMessage message, CancellationToken cancellationToken)
+    {
+        try {
+            await _writeChannelWriter.WriteAsync(message, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e) {
+            CompleteSend(message, e);
+        }
+    }
 
     private async Task RunWriter()
     {

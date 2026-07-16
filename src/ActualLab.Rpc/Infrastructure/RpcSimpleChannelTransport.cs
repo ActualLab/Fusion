@@ -39,20 +39,38 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
 
     public override void Send(RpcOutboundMessage message, CancellationToken cancellationToken = default)
     {
+        ArrayOwner<byte> frame;
         try {
             if (_whenCompleted.IsCompleted)
                 throw new ChannelClosedException();
 
-            // No need to dispose the buffer, its array is disposed by the receiving side via frame.Dispose there
-            var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, InitialBufferCapacity, mustClear: false);
+            using var buffer = new ArrayPoolBuffer<byte>(
+                ArrayPools.SharedBytePool, InitialBufferCapacity, mustClear: false);
             MessageSerializer.WriteFunc(buffer, message);
-            CompleteSend(message);
-            var frame = new ArrayOwner<byte>(buffer.Pool, buffer.Array, buffer.WrittenCount);
-            _ = _writer.WriteAsync(frame, cancellationToken);
+            frame = buffer.ToArrayOwnerAndDispose();
         }
         catch (Exception e) {
             CompleteSend(message, e);
+            return;
         }
+
+        bool isWritten;
+        try {
+            isWritten = _writer.TryWrite(frame);
+        }
+        catch (Exception e) {
+            frame.Dispose();
+            CompleteSend(message, e);
+            return;
+        }
+        if (isWritten) {
+            CompleteSend(message);
+            return;
+        }
+
+#pragma warning disable CA2025
+        _ = Write(frame, message, cancellationToken);
+#pragma warning restore CA2025
     }
 
     public override bool TryComplete(Exception? error = null)
@@ -70,6 +88,26 @@ public sealed class RpcSimpleChannelTransport : RpcTransport
             : throw ActualLab.Internal.Errors.AlreadyInvoked($"{GetType().GetName()}.GetAsyncEnumerator");
 
     // Private methods
+
+    private async Task Write(
+        ArrayOwner<byte> frame,
+        RpcOutboundMessage message,
+        CancellationToken cancellationToken)
+    {
+        Exception? error = null;
+        try {
+            await _writer.WriteAsync(frame, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e) {
+            frame.Dispose();
+            error = e;
+        }
+
+        if (error is null)
+            CompleteSend(message);
+        else
+            CompleteSend(message, error);
+    }
 
     private async IAsyncEnumerable<RpcInboundMessage> ReadAllImpl([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
