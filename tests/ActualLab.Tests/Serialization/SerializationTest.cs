@@ -3,6 +3,8 @@ using ActualLab.IO;
 using ActualLab.Reflection;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+using Nerdbank.MessagePack;
+using PolyType.ReflectionProvider;
 using TextOrBytes = ActualLab.Serialization.TextOrBytes;
 
 namespace ActualLab.Tests.Serialization;
@@ -461,5 +463,45 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         TypeDecoratingUniSerialized.New<object>(new Moment(new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc)))
             .PassThroughAllSerializers(Out)
             .Value.Should().BeOfType<Moment>();
+    }
+
+    [Fact]
+    public void TypeDecoratingUniSerializedShouldUseOwningNerdbankSerializer()
+    {
+        var converter = new TrackingIntConverter();
+        var defaultSerializer = NerdbankMessagePackByteSerializer.DefaultSerializer;
+        var serializer = defaultSerializer with {
+            Converters = [converter, .. defaultSerializer.Converters],
+        };
+        var byteSerializer = new NerdbankMessagePackByteSerializer(
+            serializer,
+            ReflectionTypeShapeProvider.Default);
+        var typedSerializer = byteSerializer.ToTyped<TypeDecoratingUniSerialized<int>>();
+        var value = TypeDecoratingUniSerialized.New(42);
+
+        using var data = typedSerializer.Write(value);
+        var result = typedSerializer.Read(data.WrittenMemory, out _);
+
+        result.Value.Should().Be(42);
+        converter.WriteCount.Should().Be(1);
+        converter.ReadCount.Should().Be(1);
+    }
+
+    private sealed class TrackingIntConverter : MessagePackConverter<int>
+    {
+        public int ReadCount { get; private set; }
+        public int WriteCount { get; private set; }
+
+        public override int Read(ref MessagePackReader reader, SerializationContext context)
+        {
+            ReadCount++;
+            return reader.ReadInt32() - 1000;
+        }
+
+        public override void Write(ref MessagePackWriter writer, in int value, SerializationContext context)
+        {
+            WriteCount++;
+            writer.Write(value + 1000);
+        }
     }
 }

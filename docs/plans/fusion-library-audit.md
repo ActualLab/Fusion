@@ -1227,39 +1227,47 @@ Status: **completed**. Confidence: **Confirmed by source and disposal regression
 
 ### NERD1. `Option<T>` and `ApiOption<T>` readers leave declared array elements unread
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and representative alignment regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused alignment regression tests**.
 
 - Source: `OptionNerdbankConverter.cs:10-18` and `ApiOptionNerdbankConverter.cs:10-18` accept any positive array length but consume only one item.
 - Failure: an extended/malformed option corrupts the containing reader's alignment, so following values are read from inside the option.
 - Test: `SupportingProjectsAuditRegressionTest.OptionConverterShouldConsumeItsWholeDeclaredArray` reports two consumed bytes for a three-byte declared array.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** both option converters now read the value and skip every remaining element in the declared array, preserving forward-compatible extension data without leaving the containing reader misaligned.
+- **Validation:** the original `Option<T>` regression and a matching `ApiOption<T>` regression fail before the change and pass after it; the Nerdbank MessagePack project builds for every supported target framework.
 - **Recommended:** require exactly one item for `Some`, or explicitly skip extension fields before returning.
 
 ### NERD2. Embedded `RpcObjectId` parsing has the same alignment defect
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and focused alignment regression test**.
 
 - Source: `RpcStreamNerdbankConverter.cs:67-76` neither validates its required two fields nor skips fields after index one.
 - Failure: extended object IDs leave the outer map reader positioned inside the ID, corrupting the remainder of the RPC stream value.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** the stream converter now delegates embedded IDs to the shared `RpcObjectIdNerdbankConverter`, which validates the two required fields and skips all declared extension fields.
+- **Validation:** the embedded-stream regression fails before the change and passes after verifying both the parsed ID and complete outer payload consumption; the Nerdbank MessagePack project builds for every supported target framework.
 - **Recommended:** validate the minimum shape and consume/skip the complete declared array.
 
 ### PLUGIN1. File-system plugin cache identity omits a result-changing option
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and focused cache-identity regression test**.
 
 - Source: `FileSystemPluginFinder.cs:31-33,61-68,109-111`. `DetectIndirectAssemblyDependencies` changes generated metadata but is absent from the file/timestamp cache key.
 - Failure: finders sharing a cache directory can retrieve metadata produced under the opposite dependency-detection policy.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** cache identities now carry a `v1` schema marker and the indirect-dependency policy before the existing assembly/timestamp fingerprint.
+- **Validation:** the focused regression observes identical empty-directory keys before the change and distinct versioned keys after it; the Plugins project builds for every supported target framework.
 - **Recommended:** include all result-affecting settings and an algorithm/schema version in the cache identity.
 
 ### PLUGIN2. Failed plugin-host construction leaks its service provider
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and provider-ownership regression tests**.
 
 - Source: `PluginHostBuilder.cs:46-53` builds the provider without a cleanup path if finder resolution or host startup throws.
 - Failure: singleton disposables created before the failure remain alive.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** failed builds now asynchronously dispose the constructed provider when possible, fall back to synchronous disposal, and transfer provider ownership unchanged when a host is returned successfully.
+- **Validation:** failure-path and successful-ownership regressions both fail before the change and pass after it; the Plugins project builds for every supported target framework.
 - **Recommended:** wrap construction in try/catch and dispose the provider on failure before rethrowing.
 
 ### PLUGIN3. `ReflectionTypeLoadException` aborts plugin discovery
@@ -1309,7 +1317,7 @@ Status: **approved — pending implementation**. Confidence: **Confirmed by sour
 
 ### Investigation notes
 
-- **NERD-I1 — custom serializer isolation.** Status: **approved for validation**. `TypeDecoratingUniSerializedNerdbankConverter.cs:20-39` hardcodes the global `DefaultTypeDecorating` serializer for nested values. Add a custom-context regression test and implement the owning-serializer fix if the test confirms divergence; retain a useful test only when it covers a supported contract.
+- **NERD-I1 — custom serializer isolation.** Status: **completed**. A custom-context regression confirmed that the converter bypassed an owning serializer's supported custom converter stack. Nested type references and values now use converters obtained from the active `SerializationContext`, preserving the existing type-decorated wire shape without copying the binary payload during reads. The regression fails before the change and passes after observing the custom converter on both write and read; the Nerdbank MessagePack project builds for every supported target framework.
 
 ## G. RPC
 

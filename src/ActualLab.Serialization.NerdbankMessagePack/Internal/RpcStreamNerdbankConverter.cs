@@ -63,25 +63,9 @@ public sealed class RpcStreamNerdbankConverter<T> : MessagePackConverter<RpcStre
         WriteRpcObjectId(ref writer, value.SerializedId, context);
     }
 
-    // RpcObjectId uses [MessagePackObject] (array/index-based): [0]=HostId, [1]=LocalId
     private static RpcObjectId ReadRpcObjectId(ref MessagePackReader reader, SerializationContext context)
-    {
-        var arrayLen = reader.ReadArrayHeader();
-        var hostId = arrayLen > 0
-            ? context.GetConverter<Guid>(context.TypeShapeProvider).Read(ref reader, context)
-            : default;
-#pragma warning disable NBMsgPack031
-        var localId = arrayLen > 1 ? reader.ReadInt64() : 0;
-#pragma warning restore NBMsgPack031
-        return new RpcObjectId(hostId, localId);
-    }
+        => context.GetConverter<RpcObjectId>(context.TypeShapeProvider).Read(ref reader, context);
 
     private static void WriteRpcObjectId(ref MessagePackWriter writer, RpcObjectId id, SerializationContext context)
-    {
-        writer.WriteArrayHeader(2);
-        context.GetConverter<Guid>(context.TypeShapeProvider).Write(ref writer, id.HostId, context);
-#pragma warning disable NBMsgPack031
-        writer.Write(id.LocalId);
-#pragma warning restore NBMsgPack031
-    }
+        => context.GetConverter<RpcObjectId>(context.TypeShapeProvider).Write(ref writer, id, context);
 }

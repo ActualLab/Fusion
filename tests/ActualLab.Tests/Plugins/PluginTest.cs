@@ -1,7 +1,10 @@
 using ActualLab.Caching;
+using ActualLab.IO;
 using ActualLab.Plugins;
+using ActualLab.Plugins.Metadata;
 using ActualLab.Reflection;
 using ActualLab.Testing.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
@@ -63,6 +66,50 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
 
         logContent = await RunCombinedTest();
         logContent.Should().Contain("Cached plugin set info found");
+    }
+
+    [Fact]
+    public void PluginFinderCacheKeyShouldIncludeResultAffectingSettings()
+    {
+        var provider = new PluginInfoProvider();
+        var finder1 = new ExposedFileSystemPluginFinder(
+            new FileSystemPluginFinder.Options { DetectIndirectAssemblyDependencies = false },
+            provider);
+        var finder2 = new ExposedFileSystemPluginFinder(
+            new FileSystemPluginFinder.Options { DetectIndirectAssemblyDependencies = true },
+            provider);
+
+        finder1.CacheKey.Should().NotBe(finder2.CacheKey);
+        finder1.CacheKey.Should().StartWith("v1:");
+        finder2.CacheKey.Should().StartWith("v1:");
+    }
+
+    [Fact]
+    public async Task FailedPluginHostBuildShouldDisposeItsServiceProvider()
+    {
+        var finder = new TrackingPluginFinder(mustFail: true);
+        var builder = new PluginHostBuilder();
+        builder.Services.RemoveAll<IPluginFinder>();
+        builder.Services.AddSingleton<IPluginFinder>(_ => finder);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => builder.BuildAsync());
+
+        finder.DisposeCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SuccessfulPluginHostBuildShouldTransferServiceProviderOwnership()
+    {
+        var finder = new TrackingPluginFinder(mustFail: false);
+        var builder = new PluginHostBuilder();
+        builder.Services.RemoveAll<IPluginFinder>();
+        builder.Services.AddSingleton<IPluginFinder>(_ => finder);
+
+        var host = await builder.BuildAsync();
+        finder.DisposeCount.Should().Be(0);
+
+        await host.DisposeAsync();
+        finder.DisposeCount.Should().Be(1);
     }
 
     private PluginHostBuilder CreateHostBuilder(bool mustClearCache = false)
@@ -152,5 +199,36 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
             .Should().BeEquivalentTo("TestPlugin2");
         host.GetPlugins<ITestPlugin>(_ => false).Count().Should().Be(0);
         host.GetPlugins<ITestPlugin>(_ => true).Count().Should().Be(2);
+    }
+
+    private sealed class ExposedFileSystemPluginFinder(
+        FileSystemPluginFinder.Options settings,
+        IPluginInfoProvider pluginInfoProvider)
+        : FileSystemPluginFinder(settings, pluginInfoProvider)
+    {
+        public string CacheKey => GetCacheKey();
+
+        protected override FilePath[] GetPluginAssemblyNames()
+            => [];
+    }
+
+    private sealed class TrackingPluginFinder(bool mustFail) : IPluginFinder, IAsyncDisposable
+    {
+        public PluginSetInfo? FoundPlugins { get; private set; }
+        public int DisposeCount { get; private set; }
+
+        public Task Run(CancellationToken cancellationToken = default)
+        {
+            if (mustFail)
+                throw new InvalidOperationException("Failure requested by test.");
+            FoundPlugins = PluginSetInfo.Empty;
+            return Task.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            DisposeCount++;
+            return default;
+        }
     }
 }

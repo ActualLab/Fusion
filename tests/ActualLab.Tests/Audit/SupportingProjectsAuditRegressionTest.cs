@@ -1,6 +1,9 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
+using ActualLab.Api;
+using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 using ActualLab.RestEase.Internal;
 using RestEase;
 
@@ -128,6 +131,41 @@ public class SupportingProjectsAuditRegressionTest
         _ = serializer.Read(data, out var readLength);
 
         readLength.Should().Be(data.Length);
+    }
+
+    [Fact]
+    public void ApiOptionConverterShouldConsumeItsWholeDeclaredArray()
+    {
+        var serializer = NerdbankMessagePackByteSerializer.Default.ToTyped<ApiOption<int>>();
+        var data = new byte[] { 0x92, 0x01, 0x02 };
+
+        _ = serializer.Read(data, out var readLength);
+
+        readLength.Should().Be(data.Length);
+    }
+
+    [Fact]
+    public void RpcStreamConverterShouldConsumeTheWholeObjectId()
+    {
+        var serializer = NerdbankMessagePackByteSerializer.Default.ToTyped<RpcStream<int>?>();
+        var hostId = Guid.NewGuid();
+        var data = new List<byte> { 0x81, 0xAC };
+        data.AddRange(Encoding.UTF8.GetBytes("SerializedId"));
+        data.AddRange([0x93, 0xD9, 0x24]);
+        data.AddRange(Encoding.UTF8.GetBytes(hostId.ToString()));
+        data.AddRange([0x01, 0x02]);
+
+        var oldContext = RpcInboundContext.Current;
+        RpcInboundContext.Current = (RpcInboundContext)RuntimeHelpers.GetUninitializedObject(typeof(RpcInboundContext));
+        try {
+            var result = serializer.Read(data.ToArray(), out var readLength);
+
+            result!.Id.Should().Be(new RpcObjectId(hostId, 1));
+            readLength.Should().Be(data.Count);
+        }
+        finally {
+            RpcInboundContext.Current = oldContext;
+        }
     }
 #endif
 

@@ -26,16 +26,43 @@ public sealed class TypeDecoratingUniSerializedNerdbankConverter<T> : MessagePac
         var raw = reader.ReadBytes();
         if (!raw.HasValue || raw.Value.Length == 0)
             return new TypeDecoratingUniSerialized<T> { Value = default! };
-        var bytes = BuffersExtensions.ToArray(raw.Value);
-        var value = (T?)NerdbankMessagePackByteSerializer.DefaultTypeDecorating.Read(bytes, typeof(T), out _);
+        var innerReader = new MessagePackReader(raw.Value);
+        var typeRefConverter = context.GetConverter<TypeRef>(context.TypeShapeProvider);
+        var actualTypeRef = typeRefConverter.Read(ref innerReader, context);
+        if (actualTypeRef == default)
+            return new TypeDecoratingUniSerialized<T> { Value = default! };
+
+#pragma warning disable IL2026
+        var actualType = actualTypeRef.Resolve();
+#pragma warning restore IL2026
+        if (!typeof(T).IsAssignableFrom(actualType))
+            throw Errors.UnsupportedSerializedType(actualType);
+        var valueConverter = context.GetConverter(actualType, context.TypeShapeProvider);
+        var value = (T?)valueConverter.ReadObject(ref innerReader, context);
         return new TypeDecoratingUniSerialized<T> { Value = value! };
     }
 
-    public override void Write(ref MessagePackWriter writer, in TypeDecoratingUniSerialized<T> value, SerializationContext context)
+#pragma warning disable NBMsgPack031
+    public override void Write(
+        ref MessagePackWriter writer,
+        in TypeDecoratingUniSerialized<T> value,
+        SerializationContext context)
     {
         var buffer = new ArrayBufferWriter<byte>();
-        NerdbankMessagePackByteSerializer.DefaultTypeDecorating.Write(buffer, value.Value, typeof(T));
+        var innerWriter = new MessagePackWriter(buffer);
+        var typeRefConverter = context.GetConverter<TypeRef>(context.TypeShapeProvider);
+        if (ReferenceEquals(value.Value, null))
+            typeRefConverter.Write(ref innerWriter, default, context);
+        else {
+            var actualType = value.Value.GetType();
+            var actualTypeRef = new TypeRef(actualType).WithoutAssemblyVersions();
+            typeRefConverter.Write(ref innerWriter, actualTypeRef, context);
+            var valueConverter = context.GetConverter(actualType, context.TypeShapeProvider);
+            valueConverter.WriteObject(ref innerWriter, value.Value, context);
+        }
+        innerWriter.Flush();
         writer.WriteArrayHeader(1);
         writer.Write(buffer.WrittenSpan);
     }
+#pragma warning restore NBMsgPack031
 }

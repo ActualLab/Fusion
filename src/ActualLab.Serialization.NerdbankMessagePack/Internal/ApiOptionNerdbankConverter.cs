@@ -14,7 +14,10 @@ public sealed class ApiOptionNerdbankConverter<T> : MessagePackConverter<ApiOpti
             return default;
 
         var itemConverter = context.GetConverter<T>(context.TypeShapeProvider);
-        return itemConverter.Read(ref reader, context)!;
+        var result = itemConverter.Read(ref reader, context)!;
+        for (var i = 1; i < count; i++)
+            reader.Skip(context);
+        return result;
     }
 
     public override void Write(ref MessagePackWriter writer, in ApiOption<T> value, SerializationContext context)

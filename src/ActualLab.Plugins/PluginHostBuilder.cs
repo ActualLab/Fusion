@@ -46,9 +46,17 @@ public class PluginHostBuilder
     public virtual async Task<IPluginHost> BuildAsync(CancellationToken cancellationToken = default)
     {
         var services = ServiceProviderFactory.Invoke(Services);
-        var pluginFinder = services.GetRequiredService<IPluginFinder>();
-        await pluginFinder.Run(cancellationToken).ConfigureAwait(false);
-        var host = services.GetRequiredService<IPluginHost>();
-        return host;
+        try {
+            var pluginFinder = services.GetRequiredService<IPluginFinder>();
+            await pluginFinder.Run(cancellationToken).ConfigureAwait(false);
+            return services.GetRequiredService<IPluginHost>();
+        }
+        catch {
+            if (services is IAsyncDisposable asyncDisposable)
+                await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+            else if (services is IDisposable disposable)
+                disposable.Dispose();
+            throw;
+        }
     }
 }

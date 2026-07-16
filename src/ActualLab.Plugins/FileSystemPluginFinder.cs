@@ -65,7 +65,8 @@ public class FileSystemPluginFinder : CachingPluginFinderBase
             let modifyDate = File.GetLastWriteTime(name)
             select (name, modifyDate.ToFileTime())
         ).ToArray();
-        return files.ToDelimitedString();
+        var detectIndirectDependencies = Settings.DetectIndirectAssemblyDependencies ? 1 : 0;
+        return $"v1:{detectIndirectDependencies}:{files.ToDelimitedString()}";
     }
 
     protected virtual FilePath[] GetPluginAssemblyNames()
