@@ -16,9 +16,14 @@ public class RestEaseHttpMessageHandler(IServiceProvider services) : DelegatingH
     {
         var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.InternalServerError) {
-            // [JsonifyErrors] responds with this status code
-            var error = await DeserializeError(response).ConfigureAwait(false);
-            throw error;
+            try {
+                // [JsonifyErrors] responds with this status code
+                var error = await DeserializeError(response).ConfigureAwait(false);
+                throw error;
+            }
+            finally {
+                response.Dispose();
+            }
         }
         return response;
     }

@@ -36,6 +36,7 @@ public static class TestExt
         IEnumerable<TimeSpan>? checkIntervals,
         CancellationToken cancellationToken)
     {
+        string[]? lastFailures = null;
         foreach (var timeout in checkIntervals ?? DefaultCheckIntervals) {
             using (var scope = new AssertionScope()) {
                 try {
@@ -47,10 +48,11 @@ public static class TestExt
                 if (!scope.HasFailures())
                     return;
                 if (!cancellationToken.IsCancellationRequested)
-                    scope.Discard();
+                    lastFailures = scope.Discard();
             }
             await Task.Delay(timeout, cancellationToken).SuppressCancellationAwait(false);
         }
+        ThrowFailures(lastFailures);
     }
 
     public static Task When(Func<Task> condition,
@@ -69,6 +71,7 @@ public static class TestExt
         IEnumerable<TimeSpan>? checkIntervals,
         CancellationToken cancellationToken)
     {
+        string[]? lastFailures = null;
         foreach (var timeout in checkIntervals ?? DefaultCheckIntervals) {
             using (var scope = new AssertionScope()) {
                 try {
@@ -80,9 +83,20 @@ public static class TestExt
                 if (!scope.HasFailures())
                     return;
                 if (!cancellationToken.IsCancellationRequested)
-                    scope.Discard();
+                    lastFailures = scope.Discard();
             }
             await Task.Delay(timeout, cancellationToken).SuppressCancellationAwait(false);
         }
+        ThrowFailures(lastFailures);
+    }
+
+    private static void ThrowFailures(string[]? failures)
+    {
+        if (failures is null)
+            return;
+
+        using var scope = new AssertionScope();
+        foreach (var failure in failures)
+            scope.AddPreFormattedFailure(failure);
     }
 }

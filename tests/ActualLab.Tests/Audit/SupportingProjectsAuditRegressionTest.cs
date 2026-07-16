@@ -23,11 +23,12 @@ public class SupportingProjectsAuditRegressionTest
     [Fact]
     public async Task FinitePollingSequenceShouldNotHideLastAssertion()
     {
+        var attempt = 0;
         Exception? error = null;
         try {
             await TestExt.When(
-                () => false.Should().BeTrue(),
-                [TimeSpan.Zero],
+                () => false.Should().BeTrue($"on attempt {++attempt}"),
+                [TimeSpan.Zero, TimeSpan.Zero],
                 CancellationToken.None);
         }
         catch (Exception e) {
@@ -35,6 +36,29 @@ public class SupportingProjectsAuditRegressionTest
         }
 
         error.Should().NotBeNull();
+        error!.Message.Should().Contain("on attempt 2");
+    }
+
+    [Fact]
+    public async Task FiniteAsyncPollingSequenceShouldNotHideLastAssertion()
+    {
+        var attempt = 0;
+        Exception? error = null;
+        try {
+            await TestExt.When(
+                async () => {
+                    await Task.Yield();
+                    false.Should().BeTrue($"on attempt {++attempt}");
+                },
+                [TimeSpan.Zero, TimeSpan.Zero],
+                CancellationToken.None);
+        }
+        catch (Exception e) {
+            error = e;
+        }
+
+        error.Should().NotBeNull();
+        error!.Message.Should().Contain("on attempt 2");
     }
 
     [Fact]
@@ -57,6 +81,17 @@ public class SupportingProjectsAuditRegressionTest
         var serializer = new ExposedQuerySerializer();
 
         var result = serializer.SerializeComplex("model", new IndexedModel());
+
+        Assert.Single(result);
+        Assert.Equal("value", result["model.Name"]);
+    }
+
+    [Fact]
+    public void QuerySerializerShouldIgnoreUnreadableProperties()
+    {
+        var serializer = new ExposedQuerySerializer();
+
+        var result = serializer.SerializeComplex("model", new WriteOnlyModel());
 
         Assert.Single(result);
         Assert.Equal("value", result["model.Name"]);
@@ -112,6 +147,12 @@ public class SupportingProjectsAuditRegressionTest
     {
         public string Name => "value";
         public string this[int index] => index.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private sealed class WriteOnlyModel
+    {
+        public string Name => "value";
+        public string WriteOnly { set { } }
     }
 
     private sealed class TrackingContent(string value) : HttpContent

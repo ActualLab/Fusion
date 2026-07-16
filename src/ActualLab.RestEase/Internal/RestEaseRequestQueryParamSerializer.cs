@@ -42,7 +42,9 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
         if (source.GetType().IsValueType)
             return source is DateTime dateTime
                 ? dateTime.ToString(info.Format ?? "o", CultureInfo.InvariantCulture)
-                : source.ToString() ?? "";
+                : source is IFormattable formattable
+                    ? formattable.ToString(null, info.FormatProvider)
+                    : source.ToString() ?? "";
         return null;
     }
 
@@ -79,6 +81,9 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
         var prefix = name.IsNullOrEmpty() ? "" : $"{name}.";
         var properties = value.GetType().GetProperties();
         foreach (var property in properties) {
+            if (!property.CanRead || property.GetIndexParameters().Length != 0)
+                continue;
+
             var pValue = property.GetValue(value, null);
             SerializeComplexType($"{prefix}{property.Name}", pValue, info, map);
         }

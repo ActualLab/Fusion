@@ -42,7 +42,8 @@ public class TestIdFormatter(string testId)
             sb.Append(RunId);
             sb.Append('_');
         }
-        var r = sb.ToStringAndRelease()[.. Math.Max(0, sb.Length - 1)];
+        var r = sb.ToStringAndRelease();
+        r = r[.. Math.Max(0, r.Length - 1)];
         r = FilePath.GetHashedName(r, null, maxLength ?? MaxLength, alwaysHash ?? AlwaysHash);
         r = PostProcess(r);
         return r;

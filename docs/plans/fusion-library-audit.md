@@ -1169,50 +1169,60 @@ All 84 production C# files in `ActualLab.Plugins`, `ActualLab.RestEase`, `Actual
 
 ### SUP1. `TestIdFormatter` collapses formatted IDs to the empty string
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `src/ActualLab.Testing/TestIdFormatter.cs:32-46` calls `ToStringAndRelease()` and then reads the released builder's now-zero `Length` to slice the result.
 - Failure: selected ID parts are removed, causing supposedly unique external-resource/test IDs to collide.
 - Test: `SupportingProjectsAuditRegressionTest.TestIdFormatterShouldIncludeSelectedParts` expected `alpha` and received an empty string.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** formatting now trims the returned string instead of reading the released builder's reset length, preserving every selected identifier component before hashing and post-processing.
+- **Validation:** the focused formatter regression now returns `alpha` when only the test identifier is selected.
 - **Recommended:** capture the relevant length before release, or trim the returned string directly.
 
 ### SUP2. Finite polling sequences silently succeed after every assertion fails
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: `src/ActualLab.Testing/TestExt.cs:39-54,72-87`. Both sync and async `When` variants discard assertion failures while intervals remain, then return normally if a finite sequence ends before cancellation.
 - Failure: a test can report success although its condition was never satisfied.
 - Test: `SupportingProjectsAuditRegressionTest.FinitePollingSequenceShouldNotHideLastAssertion` observes no final error.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** both synchronous and asynchronous polling overloads retain the most recent discarded assertion failures and restore them to a final assertion scope when a finite interval sequence is exhausted.
+- **Validation:** focused sync and async regressions each run two failed attempts and verify that the second attempt's assertion is reported.
 - **Recommended:** retain the last assertion exception and throw it when the interval sequence ends.
 
 ### REST1. Scalar query serialization ignores the supplied format provider
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and culture regression test**.
+Status: **completed**. Confidence: **Confirmed by source and culture regression test**.
 
 - Source: `src/ActualLab.RestEase/Internal/RestEaseRequestQueryParamSerializer.cs:36-46` uses parameterless `ToString()` for non-date value types despite `RequestQueryParamSerializerInfo.FormatProvider`.
 - Failure: decimal/floating query values change with process culture and can be rejected or misinterpreted by servers.
 - Test: the invariant serializer emits `1,5` under `fr-FR` rather than `1.5`.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** non-date scalar value types implementing `IFormattable` now format with the request's supplied format provider; the existing invariant round-trip `DateTime` path is unchanged.
+- **Validation:** the focused culture regression now serializes decimal `1.5` as `1.5` under `fr-FR` when the request supplies `InvariantCulture`.
 - **Recommended:** use `IFormattable.ToString(null, info.FormatProvider)` with the existing scalar special cases.
 
 ### REST2. Complex query objects with indexers throw during serialization
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and focused regression test**.
+Status: **completed**. Confidence: **Confirmed by source and focused regression test**.
 
 - Source: the same serializer at lines 78-84 invokes every public property's getter without checking index parameters.
 - Failure: common types exposing indexers throw `TargetParameterCountException` instead of serializing their ordinary properties.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** complex query serialization skips public properties that have index parameters or no readable getter.
+- **Validation:** focused regressions serialize the ordinary property while ignoring both an indexer and a write-only property.
 - **Recommended:** exclude indexed and unreadable properties.
 
 ### REST3. Rejected HTTP 500 responses are not disposed
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source and disposal regression test**.
+Status: **completed**. Confidence: **Confirmed by source and disposal regression test**.
 
 - Source: `src/ActualLab.RestEase/Internal/RestEaseHttpMessageHandler.cs:17-22` translates the response to an exception and throws without disposing it.
 - Failure: content streams/connections are leaked because the caller never receives the response to dispose it.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** rejected 500 responses are disposed in a `finally` block after exception extraction, including when reading or deserializing the error itself fails.
+- **Validation:** the focused handler regression confirms that the translated `RemoteException` is thrown and its source response content is disposed.
 - **Recommended:** dispose the response before throwing, after extracting all error information.
 
 ### NERD1. `Option<T>` and `ApiOption<T>` readers leave declared array elements unread
