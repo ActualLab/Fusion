@@ -51,11 +51,16 @@ public class PluginHostBuilder
             await pluginFinder.Run(cancellationToken).ConfigureAwait(false);
             return services.GetRequiredService<IPluginHost>();
         }
-        catch {
-            if (services is IAsyncDisposable asyncDisposable)
-                await asyncDisposable.DisposeAsync().ConfigureAwait(false);
-            else if (services is IDisposable disposable)
-                disposable.Dispose();
+        catch (Exception error) {
+            try {
+                if (services is IAsyncDisposable asyncDisposable)
+                    await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                else if (services is IDisposable disposable)
+                    disposable.Dispose();
+            }
+            catch (Exception disposeError) {
+                throw new AggregateException(error, disposeError);
+            }
             throw;
         }
     }

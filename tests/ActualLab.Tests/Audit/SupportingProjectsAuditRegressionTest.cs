@@ -79,6 +79,15 @@ public class SupportingProjectsAuditRegressionTest
     }
 
     [Fact]
+    public void QuerySerializerShouldHonorFormatAndFormatProvider()
+    {
+        var serializer = new ExposedQuerySerializer();
+        var formatProvider = new NumberFormatInfo { NumberDecimalSeparator = "," };
+
+        serializer.SerializeSimple(1.5m, "F2", formatProvider).Should().Be("1,50");
+    }
+
+    [Fact]
     public void QuerySerializerShouldIgnoreIndexedProperties()
     {
         var serializer = new ExposedQuerySerializer();
@@ -176,6 +185,9 @@ public class SupportingProjectsAuditRegressionTest
 
         public string? SerializeSimple(object value)
             => SerializeSimpleType(value, SerializerInfo);
+
+        public string? SerializeSimple(object value, string? format, IFormatProvider? formatProvider)
+            => SerializeSimpleType(value, new RequestQueryParamSerializerInfo(null!, format, formatProvider));
 
         public Dictionary<string, string> SerializeComplex(string name, object value)
             => SerializeComplexType(name, value, SerializerInfo);

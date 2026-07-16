@@ -43,7 +43,7 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
             return source is DateTime dateTime
                 ? dateTime.ToString(info.Format ?? "o", CultureInfo.InvariantCulture)
                 : source is IFormattable formattable
-                    ? formattable.ToString(null, info.FormatProvider)
+                    ? formattable.ToString(info.Format, info.FormatProvider)
                     : source.ToString() ?? "";
         return null;
     }

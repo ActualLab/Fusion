@@ -99,6 +99,24 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
+    public async Task FailedPluginHostBuildShouldPreserveStartupAndCleanupErrors()
+    {
+        var finder = new TrackingPluginFinder(mustFail: true);
+        var builder = new PluginHostBuilder();
+        builder.Services.RemoveAll<IPluginFinder>();
+        builder.Services.AddSingleton<IPluginFinder>(_ => finder);
+        builder.ServiceProviderFactory = services =>
+            new FailingDisposeServiceProvider(services.BuildServiceProvider());
+
+        var error = await Assert.ThrowsAsync<AggregateException>(() => builder.BuildAsync());
+
+        error.InnerExceptions.Should().HaveCount(2);
+        error.InnerExceptions[0].Should().BeOfType<InvalidOperationException>();
+        error.InnerExceptions[1].Should().BeOfType<IOException>();
+        finder.DisposeCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task SuccessfulPluginHostBuildShouldTransferServiceProviderOwnership()
     {
         var finder = new TrackingPluginFinder(mustFail: false);
@@ -246,6 +264,25 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
     {
         public override IEnumerable<Type> ExportedTypes
             => throw new ReflectionTypeLoadException([typeof(TestPlugin1), null!], [loaderError]);
+    }
+
+    private sealed class FailingDisposeServiceProvider(ServiceProvider inner)
+        : IServiceProvider, IAsyncDisposable, IDisposable
+    {
+        public object? GetService(Type serviceType)
+            => inner.GetService(serviceType);
+
+        public void Dispose()
+        {
+            inner.Dispose();
+            throw new IOException("Cleanup failure requested by test.");
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await inner.DisposeAsync().ConfigureAwait(false);
+            throw new IOException("Cleanup failure requested by test.");
+        }
     }
 
     private sealed class TrackingPluginFinder(bool mustFail) : IPluginFinder, IAsyncDisposable

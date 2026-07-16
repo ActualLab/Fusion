@@ -1203,9 +1203,9 @@ Status: **completed**. Confidence: **Confirmed by source and culture regression 
 - Failure: decimal/floating query values change with process culture and can be rejected or misinterpreted by servers.
 - Test: the invariant serializer emits `1,5` under `fr-FR` rather than `1.5`.
 - **Maintainer decision:** implement the recommended fix.
-- **Resolution:** non-date scalar value types implementing `IFormattable` now format with the request's supplied format provider; the existing invariant round-trip `DateTime` path is unchanged.
-- **Validation:** the focused culture regression now serializes decimal `1.5` as `1.5` under `fr-FR` when the request supplies `InvariantCulture`.
-- **Recommended:** use `IFormattable.ToString(null, info.FormatProvider)` with the existing scalar special cases.
+- **Resolution:** non-date scalar value types implementing `IFormattable` now format with the request's supplied format and format provider; the existing invariant round-trip `DateTime` path is unchanged.
+- **Validation:** focused regressions serialize decimal `1.5` as `1.5` under `fr-FR` with `InvariantCulture` and honor an explicit `F2` format together with a custom decimal separator.
+- **Recommended:** use `IFormattable.ToString(info.Format, info.FormatProvider)` with the existing scalar special cases.
 
 ### REST2. Complex query objects with indexers throw during serialization
 
@@ -1270,8 +1270,8 @@ Status: **completed**. Confidence: **Confirmed by source and provider-ownership 
 - Source: `PluginHostBuilder.cs:46-53` builds the provider without a cleanup path if finder resolution or host startup throws.
 - Failure: singleton disposables created before the failure remain alive.
 - **Maintainer decision:** implement the recommended fix.
-- **Resolution:** failed builds now asynchronously dispose the constructed provider when possible, fall back to synchronous disposal, and transfer provider ownership unchanged when a host is returned successfully.
-- **Validation:** failure-path and successful-ownership regressions both fail before the change and pass after it; the Plugins project builds for every supported target framework.
+- **Resolution:** failed builds now asynchronously dispose the constructed provider when possible, fall back to synchronous disposal, and transfer provider ownership unchanged when a host is returned successfully. If cleanup also fails, both errors are preserved with the construction/startup error first.
+- **Validation:** failure-path and successful-ownership regressions cover disposal and ownership transfer, while a dual-failure regression verifies that startup and cleanup errors are both reported in order; the Plugins project builds for every supported target framework.
 - **Recommended:** wrap construction in try/catch and dispose the provider on failure before rethrowing.
 
 ### PLUGIN3. `ReflectionTypeLoadException` aborts plugin discovery
