@@ -169,7 +169,7 @@ public class RpcPeerStateMonitor : WorkerBase
         // Disconnected case
         var disconnectedFor = now - d.DisconnectedAt;
         if (disconnectedFor < JustDisconnectedPeriod) {
-            InvalidateIn(JustConnectedPeriod - disconnectedFor);
+            InvalidateIn(JustDisconnectedPeriod - disconnectedFor);
             return new RpcPeerState(RpcPeerStateKind.JustDisconnected, d.LastError);
         }
         var reconnectsIn = d.ReconnectsAt - now;

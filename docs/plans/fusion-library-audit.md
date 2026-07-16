@@ -584,58 +584,63 @@ Confidence: **Confirmed** by source and focused regression test.
 
 ### FUS6. In-memory command completion returns before asynchronous scope handlers finish
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and a gated ordering regression test.
 
 - Source: `src/ActualLab.Fusion/Operations/Internal/InMemoryOperationScopeProvider.cs:35-48` discards the `ValueTask` returned by `scope.DisposeAsync()`. `InMemoryOperationScope.DisposeAsync` at `src/ActualLab.Fusion/Operations/Internal/InMemoryOperationScope.cs:52-70` awaits registered completion handlers when they are asynchronous.
 - Failure: the outer command can finish while its scope completion handler is still running. Handler failures are logged after the caller has observed success, and callers cannot use command completion as a lifecycle barrier.
 - Test: `FusionServicesAuditRegressionTest.InMemoryOperationShouldAwaitCompletionHandlers` gates an async handler and confirms the command task completes before the gate is released.
-- **Recommended:** await `Commit` and `DisposeAsync` in the provider. This reuses the existing scope lifecycle contract and preserves handler ordering.
+- **Resolution:** the provider now awaits both `Commit` and `DisposeAsync`, reusing the existing scope lifecycle contract so command completion remains an ordering barrier for asynchronous completion handlers.
+- **Validation:** the gated regression failed when the command completed before its handler was released and now passes; the focused Fusion services regression run passes all three FUS6-8 cases, and all nine `ActualLab.Fusion` target frameworks build.
 
 ### FUS7. The just-disconnected state is invalidated using the just-connected period
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and focused state regression test.
 
 - Source: `src/ActualLab.Fusion/Extensions/RpcPeerStateMonitor.cs:169-173`. The disconnected branch checks `JustDisconnectedPeriod` but schedules invalidation with `JustConnectedPeriod - disconnectedFor`.
 - Failure: differing configuration values shorten, lengthen, or make the delay negative. A negative delay immediately invalidates the computed state and can cause unnecessary recomputation instead of honoring the configured `JustDisconnectedPeriod` window. Public C# documentation does not define this timing contract.
 - Test: `FusionServicesAuditRegressionTest.JustDisconnectedStateShouldRemainValidForItsConfiguredPeriod` configures a 20 ms connected period and 200 ms disconnected period; a state only 50 ms old is already invalidated.
-- **Recommended:** subtract `disconnectedFor` from `JustDisconnectedPeriod`.
+- **Resolution:** the disconnected branch now subtracts `disconnectedFor` from `JustDisconnectedPeriod`, matching the period used by its state transition check.
+- **Validation:** the focused state regression failed with an immediately invalidated computed and now remains consistent for the configured just-disconnected window.
 
 ### FUS8. `FusionMonitor` drops the first unregistration in every category
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and focused metrics regression test.
 
 - Source: `src/ActualLab.Fusion/Diagnostics/FusionMonitor.cs:197-209`. The missing-category branch initializes an unregistration tuple to `(0, 0)`.
 - Failure: the first sampled unregistration for each category is silently omitted, undercounting invalidations and skewing diagnostic ratios.
 - Test: `FusionServicesAuditRegressionTest.FusionMonitorShouldCountTheFirstUnregistration` invokes the event path once and observes `(0, 0)` instead of `(0, 1)`.
-- **Recommended:** initialize the tuple to `(0, 1)`.
+- **Resolution:** the missing-category branch now initializes the unregistration tuple to `(0, 1)`.
+- **Validation:** the focused event-path regression failed with `(0, 0)` and now records the first sampled unregistration as `(0, 1)`.
 
 ### FUS9. `SessionMiddleware` ignores the invalid-session handler's short-circuit result
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and focused middleware regression test.
 
 - Source: `src/ActualLab.Fusion.Server/Middlewares/SessionMiddleware.cs:80-86` awaits `InvalidSessionHandler` but discards its `bool`; `InvokeAsync` at lines 60-64 always invokes the next middleware. The option's source-level contract defines `true` as redirect/reload without invoking the next middleware; the public Fusion documentation is silent on this detail.
 - Failure: the default redirect path and custom rejection handlers cannot stop downstream endpoint execution. A response may be redirected while protected application logic still runs.
 - Test: `FusionWebAuditRegressionTest.InvalidSessionHandlerShouldBeAbleToShortCircuitThePipeline` configures a rejecting validator and a handler returning `true`; the next delegate is still called once.
-- **Recommended:** propagate the short-circuit decision from session resolution to `InvokeAsync` and return before calling `next` when requested.
+- **Resolution:** session resolution now carries the handler decision through a private request feature; `InvokeAsync` returns before assigning a session or calling the next delegate when short-circuiting is requested. This preserves the existing public virtual method signature, avoids shared middleware state, and adds no `Items` dictionary allocation to the normal request path.
+- **Validation:** the focused middleware regression failed with one downstream invocation and now records none; it also verifies that the short-circuited response does not issue a replacement session cookie.
 
 ### FUS10. A malformed session cookie turns an anonymous request into a server error
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by source and focused middleware regression test.
 
 - Source: `src/ActualLab.Fusion.Server/Middlewares/SessionMiddleware.cs:67-73` constructs `new Session(sessionId)` outside the validator try/catch at lines 78-92.
 - Failure: any syntactically invalid client-controlled cookie, such as a one-character session ID, throws `ArgumentOutOfRangeException` and aborts the request instead of being rejected and replaced with a fresh session.
 - Test: `FusionWebAuditRegressionTest.MalformedSessionCookieShouldBeReplaced` supplies `FusionAuth.SessionId=x` and observes the constructor exception.
-- **Recommended:** treat parsing/validation failures from the cookie as an invalid session, invoke the configured invalid-session policy, and issue a replacement only if processing should continue.
+- **Resolution:** cookie parsing and validator failures now enter the same invalid-session path. The configured policy is invoked, and a replacement session and cookie are produced only when the policy allows request processing to continue.
+- **Validation:** the malformed-cookie regression failed with `ArgumentOutOfRangeException` and now passes, verifies one invalid-session callback, a replacement cookie, and a fresh resolved session. The two focused middleware cases and nine surrounding operation/RPC tests pass together, and all seven `ActualLab.Fusion.Server` target frameworks build.
 
 ### FUS11. The subdomain extractor accepts a configured suffix in the middle of an unrelated host
 

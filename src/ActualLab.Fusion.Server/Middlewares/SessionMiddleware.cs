@@ -59,8 +59,13 @@ public class SessionMiddleware : IMiddleware, IHasServices
 
     public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
     {
-        if (Settings.RequestFilter.Invoke(httpContext))
-            SessionResolver.Session = await GetOrCreateSession(httpContext).ConfigureAwait(false);
+        if (Settings.RequestFilter.Invoke(httpContext)) {
+            var session = await GetOrCreateSession(httpContext).ConfigureAwait(false);
+            if (httpContext.Features.Get<MustShortCircuitFeature>() is not null)
+                return;
+
+            SessionResolver.Session = session;
+        }
         await next(httpContext).ConfigureAwait(false);
     }
 
@@ -75,20 +80,28 @@ public class SessionMiddleware : IMiddleware, IHasServices
     public virtual async Task<Session> GetOrCreateSession(HttpContext httpContext)
     {
         var cancellationToken = httpContext.RequestAborted;
-        var originalSession = GetSession(httpContext);
-        var session = originalSession;
-        if (session is not null && SessionValidator is not null) {
-            try {
+        var originalSession = (Session?)null;
+        var session = (Session?)null;
+        var isInvalid = false;
+        try {
+            originalSession = GetSession(httpContext);
+            session = originalSession;
+            if (session is not null && SessionValidator is not null) {
                 var isValid = await SessionValidator.IsValidSession(session, cancellationToken).ConfigureAwait(false);
-                if (!isValid) {
-                    await Settings.InvalidSessionHandler(this, httpContext).ConfigureAwait(false);
-                    session = null;
-                }
+                isInvalid = !isValid;
             }
-            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-                Log.LogError(e, "Session is unavailable: {Session}", session);
-                session = null;
+        }
+        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+            Log.LogError(e, "Session is unavailable: {Session}", session);
+            isInvalid = true;
+        }
+        if (isInvalid) {
+            var mustShortCircuit = await Settings.InvalidSessionHandler(this, httpContext).ConfigureAwait(false);
+            if (mustShortCircuit) {
+                httpContext.Features.Set(MustShortCircuitFeature.Instance);
+                return Session.New();
             }
+            session = null;
         }
         session ??= Session.New();
         session = Settings.TagProvider?.Invoke(session, httpContext) ?? session;
@@ -98,5 +111,12 @@ public class SessionMiddleware : IMiddleware, IHasServices
             responseCookies.Append(cookieName, session.Id, Settings.Cookie.Build(httpContext));
         }
         return session;
+    }
+
+    // Nested types
+
+    private sealed class MustShortCircuitFeature
+    {
+        public static MustShortCircuitFeature Instance { get; } = new();
     }
 }

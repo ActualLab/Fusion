@@ -206,7 +206,7 @@ public sealed class FusionMonitor : WorkerBase
             if (registrations.TryGetValue(category, out var counts))
                 registrations[category] = (counts.Item1, counts.Item2 + 1);
             else
-                registrations[category] = (0, 0);
+                registrations[category] = (0, 1);
 
             if (Invalidation.TrackingMode is not InvalidationTrackingMode.None) {
                 var origin = computed.GetInvalidationOrigin();

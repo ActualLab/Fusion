@@ -27,6 +27,7 @@ public class FusionWebAuditRegressionTest
         });
 
         nextCallCount.Should().Be(0);
+        context.Response.Headers.SetCookie.Should().BeEmpty();
     }
 
     [Fact]
@@ -36,13 +37,22 @@ public class FusionWebAuditRegressionTest
         services.AddFusion();
         await using var serviceProvider = services.BuildServiceProvider();
         await using var scope = serviceProvider.CreateAsyncScope();
-        var middleware = new SessionMiddleware(new(), scope.ServiceProvider);
+        var invalidSessionCallCount = 0;
+        var options = new SessionMiddleware.Options {
+            InvalidSessionHandler = (_, _) => {
+                invalidSessionCallCount++;
+                return TaskExt.FalseTask;
+            },
+        };
+        var middleware = new SessionMiddleware(options, scope.ServiceProvider);
         var context = NewHttpContext(scope.ServiceProvider, "FusionAuth.SessionId=x");
 
         var action = () => middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         await action.Should().NotThrowAsync();
+        invalidSessionCallCount.Should().Be(1);
         scope.ServiceProvider.GetRequiredService<ISessionResolver>().Session.Id.Should().NotBe("x");
+        context.Response.Headers.SetCookie.Should().NotBeEmpty();
     }
 
     [Fact]

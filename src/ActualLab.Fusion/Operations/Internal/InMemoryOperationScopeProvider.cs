@@ -37,8 +37,8 @@ public class InMemoryOperationScopeProvider(IServiceProvider services) : IComman
             if (operation?.Scope is { IsUsed: true } scope) {
                 if (scope is InMemoryOperationScope) {
                     if (error is null)
-                        _ = scope.Commit(cancellationToken); // TransientOperationScope is fully synchronous
-                    _ = scope.DisposeAsync(); // TransientOperationScope is fully synchronous
+                        await scope.Commit(cancellationToken).ConfigureAwait(false);
+                    await scope.DisposeAsync().ConfigureAwait(false);
                 }
                 // If scope is of another type, it's already committed/disposed at this point
 
