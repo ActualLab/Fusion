@@ -112,7 +112,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
             // A bug in user code: the method must have just 2 parameters
             Log.LogError(
                 "RpcMethodDef matching '{ServiceType}.{Method}' must have 2 parameters instead of {ParameterCount}",
-                serviceType.GetName(), method.Name, methodDef.ParameterTypes);
+                serviceType.GetName(), method.Name, methodDef.ParameterTypes.Length);
             return null;
         }
         return methodDef;

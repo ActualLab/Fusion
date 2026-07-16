@@ -883,27 +883,29 @@ Confidence: **Ignored by maintainer direction**.
 
 ### CMDR2. Inbound RPC command middleware evaluates its filter twice
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
 Confidence: **Confirmed** by focused regression test (observed two calls, expected one).
 
 - Source: `src/ActualLab.CommandR/Rpc/RpcInboundCommandHandler.cs:20-25` invokes `Filter(methodDef)` in an initial guard and again after checking `RpcMethodKind.Command`.
 - Failure: every accepted command method evaluates a caller-provided predicate twice. A stateful predicate can accept the first evaluation and reject the second; an expensive predicate doubles discovery/setup work.
-- Test: `CommandRExecutionAuditTest.RpcInboundCommandFilterMustBeEvaluatedOnce` observed an invocation count of 2.
+- Test: `CommandRExecutionAuditTest.RpcInboundCommandFilterMustBeEvaluatedOnce` observed an invocation count of 2, and `RpcInboundCommandFilterMustNotBeEvaluatedForQueries` observed one invocation for a query.
 - Impact: custom middleware filters can behave inconsistently and unexpectedly fall through to the next middleware, while side effects occur twice.
-- **Recommended:** check method kind first and evaluate `Filter` once in the combined guard.
+- **Resolution:** the method-kind check now precedes the single `Filter` invocation in the combined guard, avoiding predicate work entirely for non-command methods.
+- **Validation:** the focused regressions failed with two command-path invocations and one query-path invocation before the fix; they pass with one and zero respectively. The full CommandR test namespace passes (16 tests), and the multi-target `ActualLab.CommandR` build succeeds.
 - **Alternative:** cache the first result in a local. This fixes duplication but retains the unnecessary filter evaluation for non-command methods.
 
 ### CMDR3. Malformed RPC command diagnostics log an array as the parameter count
 
-Status: **approved — pending implementation**.
+Status: **completed**.
 
-Confidence: **Confirmed** by source inspection.
+Confidence: **Confirmed** by focused regression test and source inspection.
 
 - Source: `src/ActualLab.CommandR/Rpc/RpcCommandHandler.cs:111-118`. The message template uses `{ParameterCount}`, but the supplied value is `methodDef.ParameterTypes` rather than its `Length`.
 - Failure: configuration errors print the parameter-type array representation where an integer count is promised, obscuring the actionable mismatch.
 - Impact: low runtime risk, but degraded diagnostics on the exact path used to identify invalid distributed command signatures.
-- **Recommended:** pass `methodDef.ParameterTypes.Length`; optionally log the type list in a separate structured property.
+- **Resolution:** the diagnostic now passes `methodDef.ParameterTypes.Length` to the `{ParameterCount}` property.
+- **Validation:** the focused capturing-logger regression rendered the parameter type list before the fix and passes with the numeric count `3` after it. The full CommandR test namespace passes (16 tests), and the multi-target `ActualLab.CommandR` build succeeds.
 - **Alternative:** rename the template property to `ParameterTypes` and retain the array, trading the count for richer structured detail.
 
 ## D. ActualLab.Interception and ActualLab.Generators

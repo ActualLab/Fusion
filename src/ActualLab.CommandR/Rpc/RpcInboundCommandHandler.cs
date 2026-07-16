@@ -19,8 +19,6 @@ public sealed record RpcInboundCommandHandler : IRpcMiddleware
     public Func<RpcInboundCall, Task<T>> Create<T>(RpcMiddlewareContext<T> context, Func<RpcInboundCall, Task<T>> next)
     {
         var methodDef = context.MethodDef;
-        if (!Filter.Invoke(methodDef))
-            return next;
         if (methodDef.Kind is not RpcMethodKind.Command || !Filter.Invoke(methodDef))
             return next;
 
