@@ -916,7 +916,7 @@ The Interception runtime and proxy generator were reviewed across method definit
 
 ### INT1. Dynamic invocation of a struct instance method can crash the process
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by isolated test-host crash (`0xC0000005`).
 
@@ -924,72 +924,92 @@ Confidence: **Confirmed** by isolated test-host crash (`0xC0000005`).
 - Failure: creating/invoking the dynamic delegate for a zero-argument struct instance method aborted the .NET test host with access violation `0xC0000005`; it did not produce a catchable managed exception.
 - Test: `InterceptionAuditRegressionTest.ArgumentListInvokerMustSupportValueTypeTargets` preserves the correct contract but is skipped because activating it destabilizes the entire suite. The crash was confirmed before the skip was added.
 - Impact: reflected value-type targets can terminate the process, making this a denial-of-service boundary rather than a normal invocation error.
+- **Maintainer decision:** implement the recommended address-preserving struct invocation fix.
 - **Recommended:** emit address-preserving struct invocation IL and use `Call` where required; add a subprocess-isolated regression for all generated argument-list arities.
 - **Alternative:** reject value-type instance methods before dynamic code generation with a clear exception. Safer than a crash but narrower than the public invoker contract.
 
 ### GEN1. Proxy parameters lose passing modifiers and identifier escaping
 
-Status: **open**.
+Status: **approved — pending diagnostic implementation**.
 
 Confidence: **Confirmed** by isolated compile repros.
 
 - Source: `src/ActualLab.Generators/ProxyTypeGenerator.cs:242-245` recreates parameters using only their name and type; it does not preserve `RefKind` or escape keyword identifiers.
 - Failure: a proxy for `Increment(ref int)` fails CS0535 because the generated member does not implement the interface. A parameter named `@event` is emitted as raw `event`, producing malformed-member compiler errors.
 - Impact: valid proxy contracts fail consumer builds with unrelated C# diagnostics.
+- **Maintainer decision:** emit a purpose-built diagnostic rejecting unsupported parameter shapes.
 - **Recommended:** render parameters from symbol semantics, preserving `ref`/`out`/`in` and using Roslyn-safe escaped identifiers in declarations and arguments.
 - **Alternative:** emit a purpose-built diagnostic rejecting unsupported shapes; clearer than broken source but needlessly excludes ordinary C# signatures.
 
 ### GEN2. Diamond interface methods are emitted twice
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by isolated compile repro (CS0111).
 
 - Source: `ProxyTypeGenerator.cs:378-403` deduplicates by `IMethodSymbol` identity. Identical callable signatures inherited through separate base interfaces are distinct symbols.
 - Failure: two base interfaces declaring the same `Task Run()` produce two identical proxy methods.
 - Impact: common diamond interface composition makes proxy generation unusable.
+- **Maintainer decision:** implement the recommended effective-signature deduplication.
 - **Recommended:** deduplicate by effective callable signature, including name, generic arity, parameter types/ref kinds, and return compatibility.
 - **Alternative:** explicitly implement colliding base-interface members when distinct metadata must be preserved.
 
 ### GEN3. Proxy source hint names collide across generic arity
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by isolated compile repro (CS8785).
 
 - Source: `src/ActualLab.Generators/ProxyGenerator.cs:97-101` builds the hint from namespace and simple type name, omitting generic arity and containing-type identity.
 - Failure: `IArityProxy` and `IArityProxy<T>` request the same hint. Roslyn reports generator failure; the build can still exit zero while required proxies are missing.
 - Impact: consumers can receive runtime missing-proxy failures after an apparently successful build.
+- **Maintainer decision:** implement the recommended deterministic full-identity hint name.
 - **Recommended:** derive a deterministic unique hint from full metadata identity, including containing types and generic arity.
 - **Alternative:** append a stable hash of the fully qualified symbol identity.
 
 ### GEN4. Proxy methods with more than ten parameters generate uncompilable code
 
-Status: **open**.
+Status: **approved — pending diagnostic implementation**.
 
 Confidence: **Confirmed** by central isolated build (CS1501 plus a follow-on lambda error).
 
 - Source: `ProxyTypeGenerator.cs:289-293` emits `ArgumentList.New` for any arity, while runtime factories stop at ten items.
 - Failure: an eleven-parameter interface generates a call to a nonexistent overload.
 - Impact: a valid interface silently crosses an undocumented generator/runtime limit and breaks the consumer build.
+- **Maintainer decision:** report a targeted generator diagnostic for arity above ten.
 - **Recommended:** extend runtime and generator together, or generate a general array-backed representation above specialized arities.
 - **Alternative:** report a targeted generator diagnostic for arity above ten.
 
 ### GEN5. Nested proxy types are silently ignored
 
-Status: **open**.
+Status: **approved — pending implementation**.
 
 Confidence: **Confirmed** by focused regression test.
 
 - Source: `src/ActualLab.Generators/ProxyGenerator.cs:27-35` accepts declarations only directly under namespaces or the compilation unit.
 - Failure: a nested interface implementing `IRequiresAsyncProxy` compiles, but `Proxies.TryGetProxyType` returns null. The active regression test fails at that lookup.
 - Impact: consumers get a late runtime proxy failure for a declaration the generator silently skipped.
+- **Maintainer decision:** implement the recommended nested-proxy generation with containing-type handling.
 - **Recommended:** generate nested proxies with full containing-type handling.
 - **Alternative:** emit a targeted diagnostic explaining the namespace-level restriction.
 
+### GEN6. Incremental proxy generation retains processed source symbols across updates
+
+Status: **approved — pending implementation**.
+
+Confidence: **Confirmed** by a four-run `GeneratorDriver` probe.
+
+- Source: `ProxyGenerator.cs:14-21,54-57` stores every processed partial-type symbol in the generator-instance `_processedTypes` dictionary and clears it only during `Initialize`, before any deferred syntax transform executes.
+- Failure: reusing one driver while adding, changing, and removing partial proxy declarations grew the dictionary from one to four entries. Removed and superseded source symbols remained retained for the generator instance's lifetime.
+- Counter-evidence: generated output updated correctly in all four runs, so the original stale-output theory did not reproduce.
+- Impact: repeated IDE/design-time edits cause unbounded symbol retention and may retain associated compilation graphs, increasing long-lived compiler-host memory use.
+- **Maintainer decision:** implement the recommended per-generation deduplication and remove generator-instance symbol retention.
+- **Recommended:** remove generator-instance mutable state and deduplicate partial declarations within each collected generation batch using a local symbol-keyed map, retaining the constraint-bearing declaration when needed.
+- **Alternative:** introduce explicitly per-run deduplication state, but lifecycle-coupled mutable state is harder to make correct in an incremental pipeline.
+
 ### Investigation notes
 
-- **GEN-I1 — mutable incremental-generator state.** `_processedTypes` is generator-instance state mutated inside syntax transforms and cleared only during `Initialize`, including one clear before deferred transforms run. This plausibly suppresses changed partial types on later incremental updates. It remains an investigation until a two-run `GeneratorDriver` test confirms stale output.
+- **GEN-I1 — stale-output theory invalid; retention promoted to GEN6.** A reused driver regenerated added, changed, and removed partial members correctly. The probe did not justify a stale-output finding, but it exposed deterministic growth of retained source symbols, now recorded as GEN6.
 
 ## E. Persistence and Redis infrastructure
 
