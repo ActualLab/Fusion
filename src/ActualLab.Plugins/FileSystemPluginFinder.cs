@@ -93,7 +93,7 @@ public class FileSystemPluginFinder : CachingPluginFinderBase
 #else
                 var assembly = context.LoadFromAssemblyPath(assemblyPath);
 #endif
-                foreach (var type in assembly.ExportedTypes) {
+                foreach (var type in GetExportedTypes(assembly, assemblyPath)) {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (type.IsAbstract || type.IsNotPublic)
                         continue;
@@ -110,6 +110,20 @@ public class FileSystemPluginFinder : CachingPluginFinderBase
         return new PluginSetInfo(plugins,
             PluginInfoProvider,
             Settings.DetectIndirectAssemblyDependencies);
+    }
+
+    protected virtual IEnumerable<Type> GetExportedTypes(Assembly assembly, FilePath assemblyPath)
+    {
+        try {
+            return assembly.ExportedTypes;
+        }
+        catch (ReflectionTypeLoadException e) {
+            foreach (var loaderError in e.LoaderExceptions ?? Array.Empty<Exception>()) {
+                if (loaderError is not null)
+                    Log.LogWarning(loaderError, "Type load failed in assembly: {AssemblyName}", assemblyPath);
+            }
+            return e.Types.OfType<Type>();
+        }
     }
 
 #if NETCOREAPP3_1_OR_GREATER

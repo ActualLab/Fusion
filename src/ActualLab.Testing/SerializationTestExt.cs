@@ -29,72 +29,13 @@ public static class SerializationTestExt
     }
 
     public static T AssertPassesThroughAllSerializers<T>(this T value, ITestOutputHelper? output = null)
-    {
-        var v = value;
-        v = v.PassThroughSystemJsonSerializer(output);
-        v.Should().Be(value);
-        v = v.PassThroughNewtonsoftJsonSerializer(output);
-        v.Should().Be(value);
-        v = v.PassThroughMessagePackByteSerializer(output);
-        v.Should().Be(value);
-        v = v.PassThroughMemoryPackByteSerializer(output);
-        v.Should().Be(value);
-        v = v.PassThroughNerdbankMessagePackByteSerializer(output);
-        v.Should().Be(value);
-        v = v.PassThroughTypeDecoratingTextSerializer(output);
-        v.Should().Be(value);
-        v = v.PassThroughTypeDecoratingByteSerializer(output);
-        v.Should().Be(value);
-        return v;
-    }
+        => PassThroughSerializerMatrix(value, v => v.Should().Be(value), output);
 
     public static T AssertPassesThroughAllSerializers<T>(this T value, Action<T> assertion, ITestOutputHelper? output = null)
-    {
-        var v = value;
-        v = v.PassThroughSystemJsonSerializer(output);
-        assertion.Invoke(v);
-        v = v.PassThroughNewtonsoftJsonSerializer(output);
-        assertion.Invoke(v);
-        v = v.PassThroughMessagePackByteSerializer(output);
-        assertion.Invoke(v);
-        v = v.PassThroughMemoryPackByteSerializer(output);
-        assertion.Invoke(v);
-        v = v.PassThroughNerdbankMessagePackByteSerializer(output);
-        assertion.Invoke(v);
-        v = v.PassThroughTypeDecoratingTextSerializer(output);
-        assertion.Invoke(v);
-        v = v.PassThroughTypeDecoratingByteSerializer(output);
-        assertion.Invoke(v);
-        v = v.PassThroughUniSerialized(output);
-        assertion.Invoke(v);
-        v = v.PassThroughTypeDecoratingUniSerialized(output);
-        assertion.Invoke(v);
-        return v;
-    }
+        => PassThroughSerializerMatrix(value, assertion, output);
 
     public static T AssertPassesThroughAllSerializers<T>(this T value, Action<T, T> assertion, ITestOutputHelper? output = null)
-    {
-        var v = value;
-        v = v.PassThroughSystemJsonSerializer(output);
-        assertion.Invoke(v, value);
-        v = v.PassThroughNewtonsoftJsonSerializer(output);
-        assertion.Invoke(v, value);
-        v = v.PassThroughMessagePackByteSerializer(output);
-        assertion.Invoke(v, value);
-        v = v.PassThroughMemoryPackByteSerializer(output);
-        assertion.Invoke(v, value);
-        v = v.PassThroughNerdbankMessagePackByteSerializer(output);
-        assertion.Invoke(v, value);
-        v = v.PassThroughTypeDecoratingTextSerializer(output);
-        assertion.Invoke(v, value);
-        v = v.PassThroughTypeDecoratingByteSerializer(output);
-        assertion.Invoke(v, value);
-        v = v.PassThroughUniSerialized(output);
-        assertion.Invoke(v, value);
-        v = v.PassThroughTypeDecoratingUniSerialized(output);
-        assertion.Invoke(v, value);
-        return v;
-    }
+        => PassThroughSerializerMatrix(value, v => assertion.Invoke(v, value), output);
 
     public static T2 AssertPassesThroughMemoryPackSerializer<T1, T2>(this T1 value, Action<T2, T1> assertion,
         ITestOutputHelper? output = null)
@@ -132,17 +73,29 @@ public static class SerializationTestExt
     }
 
     public static T PassThroughAllSerializers<T>(this T value, ITestOutputHelper? output = null)
+        => PassThroughSerializerMatrix(value, static _ => { }, output);
+
+    private static T PassThroughSerializerMatrix<T>(T value, Action<T> assertion, ITestOutputHelper? output)
     {
         var v = value;
         v = v.PassThroughSystemJsonSerializer(output);
+        assertion.Invoke(v);
         v = v.PassThroughNewtonsoftJsonSerializer(output);
+        assertion.Invoke(v);
         v = v.PassThroughMessagePackByteSerializer(output);
+        assertion.Invoke(v);
         v = v.PassThroughMemoryPackByteSerializer(output);
+        assertion.Invoke(v);
         v = v.PassThroughNerdbankMessagePackByteSerializer(output);
+        assertion.Invoke(v);
         v = v.PassThroughTypeDecoratingTextSerializer(output);
+        assertion.Invoke(v);
         v = v.PassThroughTypeDecoratingByteSerializer(output);
+        assertion.Invoke(v);
         v = v.PassThroughUniSerialized(output);
+        assertion.Invoke(v);
         v = v.PassThroughTypeDecoratingUniSerialized(output);
+        assertion.Invoke(v);
         return v;
     }
 

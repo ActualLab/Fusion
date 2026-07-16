@@ -1,3 +1,4 @@
+using System.Reflection;
 using ActualLab.Caching;
 using ActualLab.IO;
 using ActualLab.Plugins;
@@ -112,6 +113,32 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
         finder.DisposeCount.Should().Be(1);
     }
 
+    [Fact]
+    public void PluginDiscoveryShouldRetainTypesFromPartiallyLoadableAssemblies()
+    {
+        var loggerProvider = new CapturingLoggerProvider();
+        using var loggerFactory = new LoggerFactory([loggerProvider]);
+        var loaderError = new FileNotFoundException("Missing dependency.");
+        var assembly = new PartiallyLoadableAssembly(loaderError);
+        var finder = new ExposedFileSystemPluginFinder(
+            new FileSystemPluginFinder.Options(),
+            new PluginInfoProvider(),
+            loggerFactory.CreateLogger<FileSystemPluginFinder>());
+
+        finder.GetLoadableTypes(assembly).Should().Equal(typeof(TestPlugin1));
+        loggerProvider.Content.Should().Contain(loaderError.Message);
+    }
+
+    [Fact]
+    public void MissingPluginDependenciesShouldIdentifyPluginAndDependency()
+    {
+        var action = () => new PluginSetInfo([typeof(WrongPlugin)], new PluginInfoProvider(), false);
+
+        var error = action.Should().Throw<InvalidOperationException>().Which;
+        error.Message.Should().Contain(nameof(WrongPlugin));
+        error.Message.Should().Contain(new TypeRef(typeof(TestPlugin2)).ToString());
+    }
+
     private PluginHostBuilder CreateHostBuilder(bool mustClearCache = false)
     {
         var stringBuilderLoggerProvider = new CapturingLoggerProvider();
@@ -203,13 +230,22 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
 
     private sealed class ExposedFileSystemPluginFinder(
         FileSystemPluginFinder.Options settings,
-        IPluginInfoProvider pluginInfoProvider)
-        : FileSystemPluginFinder(settings, pluginInfoProvider)
+        IPluginInfoProvider pluginInfoProvider,
+        ILogger<FileSystemPluginFinder>? log = null)
+        : FileSystemPluginFinder(settings, pluginInfoProvider, log)
     {
         public string CacheKey => GetCacheKey();
+        public IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+            => GetExportedTypes(assembly, "partial.dll");
 
         protected override FilePath[] GetPluginAssemblyNames()
             => [];
+    }
+
+    private sealed class PartiallyLoadableAssembly(Exception loaderError) : Assembly
+    {
+        public override IEnumerable<Type> ExportedTypes
+            => throw new ReflectionTypeLoadException([typeof(TestPlugin1), null!], [loaderError]);
     }
 
     private sealed class TrackingPluginFinder(bool mustFail) : IPluginFinder, IAsyncDisposable

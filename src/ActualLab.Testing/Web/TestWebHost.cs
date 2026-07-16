@@ -81,8 +81,12 @@ public abstract class TestWebHostBase : ITestWebHost
             var host1 = self.Host;
             // 100ms for graceful shutdown
             await host1.StopAsync().SilentAwait(false);
-            if (disposeOnStop)
-                _ = Task.Run(() => host1.Dispose());
+            if (disposeOnStop) {
+                if (host1 is IAsyncDisposable asyncDisposable)
+                    await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                else
+                    host1.Dispose();
+            }
             self.HostLazy = new Lazy<IHost>(CreateHost);
         }, this);
     }

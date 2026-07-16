@@ -1,3 +1,5 @@
+using Errors = ActualLab.Plugins.Internal.Errors;
+
 namespace ActualLab.Plugins.Metadata;
 
 #pragma warning disable IL2026
@@ -60,6 +62,12 @@ public class PluginSetInfo
                 var existingImpls = dTypesByBaseType.GetValueOrDefault(baseType)
                     ?? ImmutableHashSet<TypeRef>.Empty;
                 dTypesByBaseType[baseType] = existingImpls.Add(pluginInfo.Type);
+            }
+        }
+        foreach (var plugin in dPlugins.Values) {
+            foreach (var dependency in plugin.AllDependencies) {
+                if (!dPlugins.ContainsKey(dependency))
+                    throw Errors.PluginDependencyNotFound(plugin.Type, dependency);
             }
         }
 

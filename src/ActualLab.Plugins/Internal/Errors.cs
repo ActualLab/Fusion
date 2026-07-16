@@ -20,6 +20,9 @@ public static class Errors
         => new InvalidOperationException($"Plugin '{pluginType}' is an abstract type.");
     public static Exception PluginIsNonPublic(Type pluginType)
         => new InvalidOperationException($"Plugin '{pluginType}' is a non-public type.");
+    public static Exception PluginDependencyNotFound(TypeRef pluginType, TypeRef dependencyType)
+        => new InvalidOperationException(
+            $"Plugin '{pluginType}' depends on missing plugin '{dependencyType}'.");
 
     public static Exception PluginFinderRunFailed(Type pluginFinderType)
         => new InvalidOperationException($"'{pluginFinderType}.{nameof(IPluginFinder.Run)}()' method failed.");

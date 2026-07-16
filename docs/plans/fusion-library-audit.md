@@ -1276,47 +1276,57 @@ Status: **completed**. Confidence: **Confirmed by source and provider-ownership 
 
 ### PLUGIN3. `ReflectionTypeLoadException` aborts plugin discovery
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and focused partial-load regression test**.
 
 - Source: `FileSystemPluginFinder.cs:93-105` enumerates `Assembly.ExportedTypes` but catches `TypeLoadException`, `FileNotFoundException`, and `FileLoadException`, not the common aggregate `ReflectionTypeLoadException`.
 - Failure: one partially unloadable assembly aborts the complete scan rather than yielding its loadable exported types or a controlled exclusion.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** discovery now records every available loader error and continues with the aggregate exception's non-null types, which are then filtered by the existing plugin policy.
+- **Validation:** the regression fails before the change with `ReflectionTypeLoadException` and passes after retaining the permitted type and capturing its loader error; the Plugins project builds for every supported target framework.
 - **Recommended:** handle `ReflectionTypeLoadException`, record loader errors, and use its non-null `Types` where policy permits.
 
 ### PLUGIN4. Missing declared dependencies surface as incidental dictionary errors
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and focused dependency-closure regression test**.
 
 - Source: `PluginSetInfo.cs:66-69` indexes every declared dependency through `dPlugins[t]` without validation.
 - Failure: inconsistent metadata produces a context-free `KeyNotFoundException` rather than a plugin-resolution diagnostic.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** plugin-set construction now validates the dependency closure before ordering and throws a targeted diagnostic naming both the declaring plugin and missing `TypeRef`.
+- **Validation:** the regression observes the old incidental `KeyNotFoundException` and passes after receiving the contextual error; the Plugins project builds for every supported target framework.
 - **Recommended:** validate dependency closure and report the plugin and missing `TypeRef` explicitly.
 
 ### TESTING1. One “all serializers” overload omits two serializers
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source comparison**.
+Status: **completed**. Confidence: **Confirmed by source comparison and focused serializer-matrix regression test**.
 
 - Source: `SerializationTestExt.cs:31-48` omits `UniSerialized` and `TypeDecoratingUniSerialized`; assertion overloads at lines 51-96 include them.
 - Failure: equality-based tests can claim all-serializer coverage while silently skipping two wire formats.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** all same-type pass-through and assertion overloads now use one complete serializer matrix, including `UniSerialized` and `TypeDecoratingUniSerialized`.
+- **Validation:** the equality overload produced 30 fewer output events before the change and now exactly matches the complete pass-through matrix in the focused regression.
 - **Recommended:** share one serializer matrix across overloads.
 
 ### TESTING2. .NET Framework OWIN dependency scopes resolve from the root
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and a focused .NET Framework lifecycle harness**.
 
 - Source: `src/ActualLab.Testing/Compatibility/OwinWebApiServer.cs:146-174` returns the root resolver from `BeginScope`; `Web/TestWebHost.cs:101-105` expects scope validation.
 - Failure: scoped services are effectively root singletons and are not disposed per request.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** `BeginScope` now creates an `IServiceScope`, resolves through its provider, and disposes only the owned scope when Web API ends the request.
+- **Validation:** the net472 harness exits with a failure against the old root resolver and passes after confirming distinct per-request instances and deterministic disposal; all ActualLab.Testing target frameworks build.
 - **Recommended:** create and own a real DI scope in `BeginScope`.
 
 ### TESTING3. Serving cleanup completes before host disposal
 
-Status: **approved — pending implementation**. Confidence: **Confirmed by source**.
+Status: **completed**. Confidence: **Confirmed by source and focused disposal-order regression test**.
 
 - Source: `src/ActualLab.Testing/Web/TestWebHost.cs:70-87` schedules `host.Dispose()` in an unobserved `Task.Run`, publishes a fresh host, and returns from async cleanup.
 - Failure: cleanup exceptions are lost and subsequent tests can overlap still-live resources.
 - **Maintainer decision:** implement the recommended fix.
+- **Resolution:** serving cleanup now awaits asynchronous host disposal when supported, otherwise disposes synchronously, and only publishes the replacement host after successful cleanup.
+- **Validation:** the regression observes premature completion before the change and now confirms disposal is awaited and its exception reaches the caller; all ActualLab.Testing target frameworks build.
 - **Recommended:** await asynchronous/synchronous host disposal within the cleanup callback before publishing completion.
 
 ### Investigation notes

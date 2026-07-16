@@ -145,33 +145,33 @@ internal sealed class WebApiStartup
 /// </summary>
 public class DefaultDependencyResolver : IDependencyResolver
 {
-    private IServiceProvider serviceProvider;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScope? _scope;
 
     public DefaultDependencyResolver(IServiceProvider serviceProvider)
-    {
-        this.serviceProvider = serviceProvider;
-    }
+        => _serviceProvider = serviceProvider;
+
+    private DefaultDependencyResolver(IServiceScope scope)
+        : this(scope.ServiceProvider)
+        => _scope = scope;
 
     public object GetService(Type serviceType)
     {
-        var service = this.serviceProvider.GetService(serviceType);
+        var service = _serviceProvider.GetService(serviceType);
         return service;
     }
 
     public IEnumerable<object> GetServices(Type serviceType)
     {
-        var services = this.serviceProvider.GetServices(serviceType);
+        var services = _serviceProvider.GetServices(serviceType);
         return services!;
     }
 
     public void Dispose()
-    {
-    }
+        => _scope?.Dispose();
 
     public IDependencyScope BeginScope()
-    {
-        return this;
-    }
+        => new DefaultDependencyResolver(_serviceProvider.CreateScope());
 }
 
 /// <summary>
