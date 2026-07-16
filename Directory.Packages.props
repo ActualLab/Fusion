@@ -188,6 +188,7 @@
     <PackageVersion Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
     <!-- Test time only -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
     <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
     <PackageVersion Include="AutoFixture.AutoMoq" Version="4.18.1" />
     <PackageVersion Include="Castle.Core" Version="5.2.1" />
