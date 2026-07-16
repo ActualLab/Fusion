@@ -10,6 +10,10 @@ public class SpanExtTest(ITestOutputHelper @out) : TestBase(@out)
         foreach (var value in UInt32Values())
             TestRoundtrip(value, buffer);
 
+        ((ReadOnlySpan<byte>)new byte[] { 0x7F }).ReadVarUInt32().Should().Be((0x7Fu, 1));
+        ((ReadOnlySpan<byte>)new byte[] { 0x80, 0x01 }).ReadVarUInt32().Should().Be((0x80u, 2));
+        ((ReadOnlySpan<byte>)new byte[] { 0x80, 0x80, 0x01 }).ReadVarUInt32().Should().Be((0x4000u, 3));
+
         // Invalid: 5th byte must be <= 15 and must not have the high bit set
         Assert.Throws<FormatException>(() => new byte[] { 0x80, 0x80, 0x80, 0x80, 0x10 }.ReadVarUInt32());
         Assert.Throws<FormatException>(() => new byte[] { 0x80, 0x80, 0x80, 0x80, 0x80 }.ReadVarUInt32());
