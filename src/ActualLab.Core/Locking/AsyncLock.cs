@@ -22,8 +22,16 @@ public sealed class AsyncLock(LockReentryMode reentryMode = LockReentryMode.Unch
     public void Dispose()
         => _semaphore.Dispose();
 
-    async ValueTask<IAsyncLockReleaser> IAsyncLock.Lock(CancellationToken cancellationToken)
-        => await Lock(cancellationToken).ConfigureAwait(false);
+    ValueTask<IAsyncLockReleaser> IAsyncLock.Lock(CancellationToken cancellationToken)
+    {
+        var task = Lock(cancellationToken);
+        return task.IsCompletedSuccessfully
+            ? new ValueTask<IAsyncLockReleaser>(task.Result)
+            : CompleteAsync(task);
+
+        static async ValueTask<IAsyncLockReleaser> CompleteAsync(ValueTask<Releaser> task)
+            => await task.ConfigureAwait(false);
+    }
     public ValueTask<Releaser> Lock(CancellationToken cancellationToken = default)
     {
         if (IsLockedLocally)

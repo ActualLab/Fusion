@@ -299,6 +299,15 @@ Expected cascade improvement: **8-20%**, with negligible raw-invalidation impact
    completed bridge: **15-30%** interface-based uncontended improvement, with no
    expected effect on concrete calls.
 
+   Status: **Closed — retained.**
+
+   Remarks: repeated .NET 10 runs improved interface-based uncontended acquisition
+   from 25.21 ns to 19.92-20.42 ns, or 19-21%, with the required boxed releaser
+   unchanged at 32 B. The concrete control stayed flat at 17.97 ns before and
+   17.81 ns after. The adapter consumes a completed `ValueTask` directly and awaits
+   an incomplete one exactly once in the slow helper. Fourteen focused lock tests,
+   including synchronous interface completion, cancellation, and handoff, pass.
+
 Contended percentages apply only to the software handoff interval after release.
 
 ## AsyncLockSet
