@@ -39,12 +39,11 @@ public static class RpcSendHandlers
             if (error is null || IsAutoHandledError(error))
                 return;
 
-            // The inbound call unregisters itself before its result is sent,
-            // so it may be gone by the time a send failure is reported
+            // The error is sent by RelatedId: the inbound call unregisters itself
+            // before its result is sent, so it may be gone by this moment - but the
+            // client still waits for the response and must get one no matter what
             var peer = transport.Peer;
-            var inboundCall = peer.InboundCalls.Get(message.RelatedId);
-            if (inboundCall is not null)
-                peer.Hub.SystemCallSender.Error(peer, inboundCall, error);
+            peer.Hub.SystemCallSender.Error(peer, message.RelatedId, error);
             peer.Log.LogError(error, "Failed to send Ok response for call #{CallId}", message.RelatedId);
         };
 

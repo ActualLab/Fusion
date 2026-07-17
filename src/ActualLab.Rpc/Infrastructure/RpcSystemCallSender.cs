@@ -109,6 +109,11 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     public void Error(
         RpcPeer peer, RpcInboundCall inboundCall, Exception error,
         RpcHeader[]? headers = null)
+        => Error(peer, inboundCall.Id, error, headers);
+
+    public void Error(
+        RpcPeer peer, long callId, Exception error,
+        RpcHeader[]? headers = null)
     {
         if (peer.StopToken.IsCancellationRequested) {
             // The peer is stopping, we may omit sending the call result here
@@ -121,7 +126,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
             }
         }
 
-        var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
+        var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCallForSendNoWait(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
         call.SendNoWait(needsPolymorphism: false);
     }
