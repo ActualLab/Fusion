@@ -79,7 +79,7 @@ public abstract class TestWebHostBase : ITestWebHost
         // ReSharper disable once HeapView.BoxingAllocation
         return AsyncDisposable.New(async self => {
             var host1 = self.Host;
-            // 100ms for graceful shutdown
+            // Graceful shutdown is capped by HostOptions.ShutdownTimeout, see CreateHostBuilder
             await host1.StopAsync().SilentAwait(false);
             if (disposeOnStop) {
                 if (host1 is IAsyncDisposable asyncDisposable)
@@ -109,7 +109,9 @@ public abstract class TestWebHostBase : ITestWebHost
         });
         builder.ConfigureServices(services => {
             services.AddSingleton<TestServiceProviderTag>();
-            services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(3));
+            // Tiny: test teardown always has open WebSockets, which never close
+            // gracefully, so Kestrel drains them for the full period on every stop
+            services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromMilliseconds(50));
         });
 
 #if NETCOREAPP
