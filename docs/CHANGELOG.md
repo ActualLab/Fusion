@@ -11,6 +11,96 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.0.17+ddd1df1b | npm: 14.0.17
+
+Release date: 2026-07-16
+
+Major release. Three things land together: a **proxy/interception overhaul**
+that replaces the per-interceptor dispatch path with compile-time method slots
+(breaking — see below), a **hot-path performance campaign** across the proxy,
+compute, locking, and RPC layers, and a **systematic correctness audit** of the
+entire .NET codebase (Core, Fusion, RPC, Interception + generators, CommandR,
+Blazor, and the persistence/EF/Redis/Npgsql supporting libraries) that fixed a
+large batch of edge-case and boundary defects.
+
+### Breaking Changes
+
+- [**Proxy method slots + array-based interceptor dispatch.**](https://github.com/ActualLab/Fusion/commit/2780de31)
+  Generated proxies now assign a compile-time integer slot to every intercepted
+  method and cache the resolved handler per proxy instance, per slot — a warm
+  call is a field load + delegate invoke, with no dictionary probe and no
+  virtual `SelectHandler` dispatch. This changes several `ActualLab.Interception`
+  contracts:
+  - `IProxy.Interceptor` is replaced by `IProxy.MethodTable` (static
+    `ProxyMethodTable`) + `IProxy.Binding` (`InterceptorBinding`).
+  - `Invocation` now carries `(MethodTable, MethodIndex)`; `Method` resolves via
+    the table. The legacy `MethodInfo`-based `Invocation` constructor is removed.
+  - New public types `ProxyMethodTable`, `ProxyMethodRef`, and
+    `InterceptorBinding`; `InterceptorExt`/`InvocationExt` surfaces changed.
+
+  **Migration:** rebuild — the source generator emits the new proxy shape, so a
+  clean rebuild regenerates all proxies. Only code that constructs `Invocation`
+  by hand or reads `IProxy.Interceptor` directly needs source changes.
+
+### Performance
+
+- [Compute method leaf invalidation, empty-computed invalidation, and registry-slot carry-through](https://github.com/ActualLab/Fusion/commit/19f89bf3)
+- [Cached compute-input lookup, initial computed registration, and completed-task result adaptation](https://github.com/ActualLab/Fusion/commit/12d6c660)
+- [`AsyncLockSet`: atomic entry lifecycle, uncontended-release fast path, and fewer redundant locks during invalidation cascades](https://github.com/ActualLab/Fusion/commit/5fe003c1)
+- [Inlining hints on proxy dispatch, compute lookup, and the RPC/Fusion hot paths](https://github.com/ActualLab/Fusion/commit/2bc21f0c)
+- [`VarUInt` encode/decode fast paths (VarUInt32/VarUInt64)](https://github.com/ActualLab/Fusion/commit/d8993893)
+- [WebSocket receive transfers use tuple-assigned metadata](https://github.com/ActualLab/Fusion/commit/311a4e94)
+- [Skip inactive RPC inbound/outbound traces, redundant simple-channel disposal, and redundant envelope-encoding scans](https://github.com/ActualLab/Fusion/commit/82b596ce)
+
+### Added
+
+- [Invalidation handler logging helper exposed, kept in its handler set](https://github.com/ActualLab/Fusion/commit/c65058e4)
+- [Typed delegate invocation-list helper added to Core](https://github.com/ActualLab/Fusion/commit/90320f01)
+- [Fusion redirect-checker defaults are now factory-based](https://github.com/ActualLab/Fusion/commit/3ae18bb5)
+
+### Changed
+
+- [Use `127.0.0.1` instead of `localhost` in service connection strings](https://github.com/ActualLab/Fusion/commit/7111fb5b)
+- [Complete builder wiring for pre-registered implementations](https://github.com/ActualLab/Fusion/commit/12f0c88b)
+- [Read JSON property names case-insensitively in `SystemJsonSerializer`](https://github.com/ActualLab/Fusion/commit/cfcc7354)
+
+### Fixed
+
+**RPC**
+- [Frame buffer corruption on transport send failures](https://github.com/ActualLab/Fusion/commit/e3a8c37e)
+- [Always notify the client when a response send fails](https://github.com/ActualLab/Fusion/commit/63d1df85)
+- [Enqueue completion and stream flow-control correctness](https://github.com/ActualLab/Fusion/commit/29772fba); [handshake/WebSocket boundary hardening](https://github.com/ActualLab/Fusion/commit/d467da61) and [clearer handshake-mismatch errors](https://github.com/ActualLab/Fusion/commit/dc00589c)
+- [Backend validation and NetFx WebSocket ownership](https://github.com/ActualLab/Fusion/commit/65d6af0d)
+- [Keep the TS stream reset flag across drained ack batches](https://github.com/ActualLab/Fusion/commit/e152a571)
+
+**Interception + generators**
+- [Proxy generator identity, nesting, and incremental retention](https://github.com/ActualLab/Fusion/commit/9f97421c)
+- [Reject unsupported proxy signatures and deduplicate diamond methods](https://github.com/ActualLab/Fusion/commit/70edbb7c)
+- [Prevent `ArgumentList` struct invokers from crashing the process](https://github.com/ActualLab/Fusion/commit/18b58d73)
+
+**Fusion**
+- [State, synchronization, and invalidation contracts](https://github.com/ActualLab/Fusion/commit/b6562e8c); [state notifications, dependency snapshots, and Blazor metadata](https://github.com/ActualLab/Fusion/commit/d4a4e5be); [Blazor lifecycle and render-point contracts](https://github.com/ActualLab/Fusion/commit/b9a4fc79)
+- [Secure redirects and session-binding boundaries](https://github.com/ActualLab/Fusion/commit/f70abf56); [web and key-value service boundary defects](https://github.com/ActualLab/Fusion/commit/8ae0a9a0)
+- [Lifecycle, monitoring, and session edge cases](https://github.com/ActualLab/Fusion/commit/eca3cec7); [cache, pruner, comparer, and session-tag defects](https://github.com/ActualLab/Fusion/commit/847b6c7e)
+
+**Core**
+- [Encoding, reflection, framing, and sampling bugs](https://github.com/ActualLab/Fusion/commit/69d57147); [sharding, numeric, random, and conversion boundaries](https://github.com/ActualLab/Fusion/commit/86eacdaf)
+- [Collection, timer, and convenience API defects](https://github.com/ActualLab/Fusion/commit/8e1865b1); [file, activation, collection, and hash-ring edge cases](https://github.com/ActualLab/Fusion/commit/75e5cd0c); [disposal, channel, and pooled-buffer boundaries](https://github.com/ActualLab/Fusion/commit/3b016058)
+
+**CommandR**
+- [RPC filter evaluation and parameter-count diagnostics](https://github.com/ActualLab/Fusion/commit/8579fb25)
+
+**Persistence + supporting libraries**
+- [Persistence boundaries, watcher, and shard-factory lifecycles](https://github.com/ActualLab/Fusion/commit/27cf340f); [Nerdbank alignment and plugin lifecycle correctness](https://github.com/ActualLab/Fusion/commit/f1d6bd1f)
+- [EF save guards and Npgsql SQL generation](https://github.com/ActualLab/Fusion/commit/b6383609); [Redis isolation and atomic sequence resets](https://github.com/ActualLab/Fusion/commit/da25cf35)
+- [Honor REST query formats and preserve plugin cleanup failures](https://github.com/ActualLab/Fusion/commit/97b8172e)
+
+### Infrastructure
+
+- [BenchmarkDotNet performance runner](https://github.com/ActualLab/Fusion/commit/abcf94b4) with RPC argument-codec, WebSocket-transfer, and VarUInt benchmarks
+- Test deflaking and faster test hosts: [cut web-host shutdown grace from 3s to 50ms](https://github.com/ActualLab/Fusion/commit/bf6e8294), [deflake Redis streamer](https://github.com/ActualLab/Fusion/commit/038f22ae) and [just-disconnected peer state](https://github.com/ActualLab/Fusion/commit/7eb86799) tests
+
+
 ## 13.0.163+7e1e746a | npm: 13.0.167
 
 Release date: 2026-07-15
