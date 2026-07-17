@@ -281,7 +281,7 @@ public static class PerShardDbContextConfigExample
     }
 
     private static string GetConnectionString(string shard)
-        => $"Host=localhost;Database={shard}";
+        => $"Host=127.0.0.1;Database={shard}";
 }
 
 public static class QueryTransformationExample

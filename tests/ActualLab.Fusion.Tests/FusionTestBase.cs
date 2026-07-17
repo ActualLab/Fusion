@@ -45,11 +45,11 @@ public abstract class FusionTestBase : RpcTestBase
     public string RedisKeyPrefix { get; protected set; }
     public FilePath SqliteDbPath { get; protected set; }
     public string PostgreSqlConnectionString { get; protected set; } =
-        "Server=localhost;Database=fusion_tests;Port=5432;User Id=postgres;Password=postgres;Enlist=false";
+        "Server=127.0.0.1;Database=fusion_tests;Port=5432;User Id=postgres;Password=postgres;Enlist=false";
     public string MariaDbConnectionString { get; protected set; } =
-        "Server=localhost;Database=fusion_tests;Port=3306;User=root;Password=mariadb";
+        "Server=127.0.0.1;Database=fusion_tests;Port=3306;User=root;Password=mariadb";
     public string SqlServerConnectionString { get; protected set; } =
-        "Server=localhost,1433;Database=fusion_tests;MultipleActiveResultSets=true;TrustServerCertificate=true;User Id=sa;Password=SqlServer1";
+        "Server=127.0.0.1,1433;Database=fusion_tests;MultipleActiveResultSets=true;TrustServerCertificate=true;User Id=sa;Password=SqlServer1";
 
     protected FusionTestBase(ITestOutputHelper @out) : base(@out)
     {

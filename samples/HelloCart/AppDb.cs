@@ -15,7 +15,7 @@ public static class AppDb
         services.AddPooledDbContextFactory<AppDbContext>(db => {
             if (AppSettings.Db.UsePostgreSql) {
                 var connectionString =
-                    "Server=localhost;Database=fusion_hellocart;Port=5432;User Id=postgres;Password=postgres";
+                    "Server=127.0.0.1;Database=fusion_hellocart;Port=5432;User Id=postgres;Password=postgres";
                 db.UseNpgsql(connectionString, npgsql => {
                     npgsql.EnableRetryOnFailure(0);
                 });
