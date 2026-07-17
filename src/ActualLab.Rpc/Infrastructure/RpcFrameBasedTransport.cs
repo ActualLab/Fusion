@@ -192,6 +192,9 @@ public abstract class RpcFrameBasedTransport : RpcTransport
                 error = e;
         }
         finally {
+            // The write/flush buffers are disposed once this method completes,
+            // so an in-flight WriteFrame must be awaited no matter how we exit
+            await lastFlushTask.SilentAwait(false);
             TryComplete(error);
         }
     }
@@ -204,58 +207,65 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         var reader = _writeChannel.Reader;
         var serialize = Codec.Serialize;
 
-        while (true) {
-            if (whenMustFlush is not null) {
-                if (whenMustFlush.IsCompleted) {
-                    if (WriteFrameLength != 0) {
+        try {
+            while (true) {
+                if (whenMustFlush is not null) {
+                    if (whenMustFlush.IsCompleted) {
+                        if (WriteFrameLength != 0) {
+                            await lastFlushTask.ConfigureAwait(false);
+                            lastFlushTask = FlushFrame();
+                        }
+                        whenMustFlush = null;
+                    }
+                    else {
+                        waitToReadTask ??= reader.WaitToReadAsync(CancellationToken.None).AsTask();
+                        await Task.WhenAny(whenMustFlush, waitToReadTask).ConfigureAwait(false);
+                        if (!waitToReadTask.IsCompleted)
+                            continue;
+                    }
+                }
+
+                bool canRead;
+                if (waitToReadTask is not null) {
+                    canRead = await waitToReadTask.ConfigureAwait(false);
+                    waitToReadTask = null;
+                }
+                else
+                    canRead = await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false);
+                if (!canRead)
+                    break;
+
+                while (reader.TryRead(out var message)) {
+                    try {
+                        serialize(message, _writeBuffer);
+                        CompleteSend(message);
+                    }
+                    catch (Exception e) {
+                        CompleteSend(message, e);
+                        continue;
+                    }
+
+                    if (WriteFrameLength >= _frameSize) {
                         await lastFlushTask.ConfigureAwait(false);
                         lastFlushTask = FlushFrame();
+                        whenMustFlush = null;
                     }
-                    whenMustFlush = null;
                 }
-                else {
-                    waitToReadTask ??= reader.WaitToReadAsync(CancellationToken.None).AsTask();
-                    await Task.WhenAny(whenMustFlush, waitToReadTask).ConfigureAwait(false);
-                    if (!waitToReadTask.IsCompleted)
-                        continue;
-                }
+                if (whenMustFlush is null && WriteFrameLength > 0)
+                    whenMustFlush = frameDelayer.Invoke(WriteFrameLength);
             }
 
-            bool canRead;
-            if (waitToReadTask is not null) {
-                canRead = await waitToReadTask.ConfigureAwait(false);
-                waitToReadTask = null;
+            if (WriteFrameLength != 0) {
+                await lastFlushTask.ConfigureAwait(false);
+                lastFlushTask = FlushFrame();
             }
-            else
-                canRead = await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false);
-            if (!canRead)
-                break;
-
-            while (reader.TryRead(out var message)) {
-                try {
-                    serialize(message, _writeBuffer);
-                    CompleteSend(message);
-                }
-                catch (Exception e) {
-                    CompleteSend(message, e);
-                    continue;
-                }
-
-                if (WriteFrameLength >= _frameSize) {
-                    await lastFlushTask.ConfigureAwait(false);
-                    lastFlushTask = FlushFrame();
-                    whenMustFlush = null;
-                }
-            }
-            if (whenMustFlush is null && WriteFrameLength > 0)
-                whenMustFlush = frameDelayer.Invoke(WriteFrameLength);
-        }
-
-        if (WriteFrameLength != 0) {
             await lastFlushTask.ConfigureAwait(false);
-            lastFlushTask = FlushFrame();
         }
-        await lastFlushTask.ConfigureAwait(false);
+        finally {
+            // The write/flush buffers are disposed once the writer completes,
+            // so an in-flight WriteFrame must be awaited no matter how we exit
+            await lastFlushTask.SilentAwait(false);
+        }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

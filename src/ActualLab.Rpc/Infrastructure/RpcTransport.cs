@@ -17,11 +17,26 @@ public abstract class RpcTransport(RpcPeer peer, CancellationTokenSource? stopTo
 
     // Protected methods
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    // CompleteSend must never throw: it runs on transport write loops, where
+    // an escaping exception kills the writer and lets its pooled frame buffers
+    // be disposed and reused while a frame flush may still be in flight
     protected void CompleteSend(RpcOutboundMessage message)
-        => message.SendHandler?.Invoke(this, message, error: null);
+    {
+        try {
+            message.SendHandler?.Invoke(this, message, error: null);
+        }
+        catch (Exception e) {
+            Peer.Log.LogError(e, "Send handler failed");
+        }
+    }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void CompleteSend(RpcOutboundMessage message, Exception error)
-        => (message.SendHandler ?? RpcSendHandlers.Default).Invoke(this, message, error);
+    {
+        try {
+            (message.SendHandler ?? RpcSendHandlers.Default).Invoke(this, message, error);
+        }
+        catch (Exception e) {
+            Peer.Log.LogError(e, "Send handler failed");
+        }
+    }
 }
