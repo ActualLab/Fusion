@@ -39,6 +39,7 @@ public sealed class InterceptorBinding
     // construction and never changes, and racing threads store the same handler
     // instance here (GetHandler returns the single published one), so plain,
     // read-optimized field access is safe on both sides.
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static Func<Invocation, object?> GetAndCacheHandler(
         ref Func<Invocation, object?>? handlerSlot,
         InterceptorBinding? binding,
@@ -52,11 +53,13 @@ public sealed class InterceptorBinding
         return handler;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Func<Invocation, object?> GetHandler(in Invocation invocation)
         => _handlers[invocation.MethodIndex] ?? ResolveHandler(invocation);
 
     // Private methods
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private Func<Invocation, object?> ResolveHandler(in Invocation invocation)
     {
         // SelectHandler runs at most once per slot; concurrent first calls may

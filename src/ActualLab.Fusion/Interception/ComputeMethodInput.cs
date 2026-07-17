@@ -105,6 +105,7 @@ public sealed class ComputeMethodInput : ComputedInput, IEquatable<ComputeMethod
         public readonly Invocation Invocation;
         public readonly int HashCode;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Lookup(IComputeFunction function, ComputeMethodDef methodDef, Invocation invocation)
         {
             Function = function;

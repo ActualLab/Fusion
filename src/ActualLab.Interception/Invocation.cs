@@ -26,6 +26,7 @@ public readonly struct Invocation
 
     public object? InterfaceProxyTarget => (Proxy as InterfaceProxy)?.ProxyTarget;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Invocation(
         object proxy, ProxyMethodTable methodTable, int methodIndex,
         ArgumentList arguments, Delegate interceptedDelegate)
