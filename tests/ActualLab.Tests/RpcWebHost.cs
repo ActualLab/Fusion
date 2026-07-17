@@ -44,6 +44,8 @@ public class RpcWebHost(
     protected override void ConfigureHost(IHostBuilder builder)
     {
         builder.ConfigureServices(services => {
+            services.AddLogging(logging => logging.ClearProviders());
+
             // Copy all services from the base service provider here
             services.AddRange(BaseServices);
 

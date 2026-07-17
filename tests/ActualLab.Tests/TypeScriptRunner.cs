@@ -190,13 +190,39 @@ public class TypeScriptRunner(ITestOutputHelper @out)
     private static readonly string[] RequiredTsupPackages = [
         "core", "rpc", "fusion", "fusion-rpc",
     ];
+    private static readonly string[] RootBuildInputs = [
+        "package.json", "package-lock.json", "tsconfig.json", "tsup.config.ts",
+    ];
 
     private static bool IsTsBuilt()
+        => IsTsBuilt(TsDir);
+
+    internal static bool IsTsBuilt(string tsDir)
     {
-        if (!File.Exists(Path.Combine(TsDir, ".ts-built")))
+        var buildMarker = Path.Combine(tsDir, ".ts-built");
+        if (!File.Exists(buildMarker))
             return false;
+        var builtAt = File.GetLastWriteTimeUtc(buildMarker);
+        foreach (var relativePath in RootBuildInputs) {
+            var inputPath = Path.Combine(tsDir, relativePath);
+            if (!File.Exists(inputPath) || File.GetLastWriteTimeUtc(inputPath) > builtAt)
+                return false;
+        }
         foreach (var pkg in RequiredTsupPackages) {
-            var distDir = Path.Combine(TsDir, "packages", pkg, "dist");
+            var packageDir = Path.Combine(tsDir, "packages", pkg);
+            var packageJson = Path.Combine(packageDir, "package.json");
+            var tsConfig = Path.Combine(packageDir, "tsconfig.json");
+            var sourceDir = Path.Combine(packageDir, "src");
+            if (!File.Exists(packageJson)
+                || !File.Exists(tsConfig)
+                || !Directory.Exists(sourceDir)
+                || File.GetLastWriteTimeUtc(packageJson) > builtAt
+                || File.GetLastWriteTimeUtc(tsConfig) > builtAt
+                || Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories)
+                    .Any(path => File.GetLastWriteTimeUtc(path) > builtAt))
+                return false;
+
+            var distDir = Path.Combine(packageDir, "dist");
             // tsup's .cjs output is the unambiguous "tsup ran" marker (tsc
             // doesn't emit .cjs). Its absence means either no build ran or the
             // dist has been wiped since.
