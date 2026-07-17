@@ -127,6 +127,7 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         var whenAckReady = ackReader.WaitToReadAsync(cancellationToken).AsTask();
         var whenMovedNext = SafeMoveNext(enumerator);
         var whenMovedNextAsTask = (Task<bool>?)null;
+        var mustReset = false;
         while (true) {
             nextAck:
             // 1. Await for an acknowledgement & process accumulated acknowledgements
@@ -142,6 +143,10 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 if (ack.NextIndex == long.MaxValue)
                     return; // Client tells us it's done w/ this stream
 
+                // A reconnect's reset ack may be drained in one batch with regular
+                // consumption acks the client sends right after it, so the flag must
+                // stick for the whole batch - the last ack alone can't represent it
+                mustReset |= ack.MustReset;
                 if (ack.MustReset || index < ack.NextIndex)
                     index = ack.NextIndex;
             }
@@ -154,7 +159,8 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
                 goto nextAck;
 
             // 1.1. Reconnect: clear stale buffer and skip to next CanSkipTo item
-            if (isRealTime && ack.MustReset && !isFullyBuffered) {
+            if (isRealTime && mustReset && !isFullyBuffered) {
+                mustReset = false;
                 buffer.Clear();
                 bufferStart = index;
                 while (true) {
