@@ -22,7 +22,12 @@ public class SystemJsonSerializer : TextSerializerBase
     public static JsonSerializerOptions PrettyOptions { get; set; }
         = new() { WriteIndented = true };
     public static JsonSerializerOptions DefaultOptions { get; set; }
-        = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        = new() {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            // Cross-language clients (e.g. the TypeScript one) may send PascalCase
+            // property names; Newtonsoft.Json reads them case-insensitively as well
+            PropertyNameCaseInsensitive = true,
+        };
 
     public static SystemJsonSerializer Pretty {
         get {
