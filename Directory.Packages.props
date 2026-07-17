@@ -77,7 +77,7 @@
     <OpenTelemetryVersion>[1.13.0,)</OpenTelemetryVersion>
     <!-- Build & Samples -->
     <AspireSdkVersion>13.0.0</AspireSdkVersion>
-    <BlazoriseVersion>[1.8.9,)</BlazoriseVersion>
+    <BlazoriseVersion>2.2.2</BlazoriseVersion>
     <FusionVersion>13.0.12</FusionVersion>
   </PropertyGroup>
   <!-- Dependencies -->
