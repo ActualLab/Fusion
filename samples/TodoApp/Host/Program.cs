@@ -235,7 +235,6 @@ void ConfigureServices()
             ctx.CookieOptions.Expires = DateTimeOffset.UtcNow.AddDays(28);
             return Task.CompletedTask;
         };
-#if false // Disabled for now, MicrosoftAccountClientXxx settings have to be updated
     }).AddMicrosoftAccount(options => {
         options.ClientId = hostSettings.MicrosoftAccountClientId;
         options.ClientSecret = hostSettings.MicrosoftAccountClientSecret;
@@ -243,7 +242,6 @@ void ConfigureServices()
         options.AuthorizationEndpoint = "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize";
         options.TokenEndpoint = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";
         options.CorrelationCookie.SameSite = SameSiteMode.Lax;
-#endif
     }).AddGitHub(options => {
         options.ClientId = hostSettings.GitHubClientId;
         options.ClientSecret = hostSettings.GitHubClientSecret;
@@ -290,6 +288,15 @@ void ConfigureShardDbContext(IServiceProvider services, string shard, DbContextO
 void ConfigureApp()
 {
     // Configure the HTTP request pipeline
+    // Behind the TLS-terminating edge (Caddy) the app sees plain HTTP, so make it
+    // treat requests as HTTPS - otherwise OAuth redirect URIs are built with the
+    // http scheme and the providers reject them.
+    if (!app.Environment.IsDevelopment()) {
+        app.Use((context, next) => {
+            context.Request.Scheme = "https";
+            return next();
+        });
+    }
     StaticWebAssetsLoader.UseStaticWebAssets(env, cfg);
     if (app.Environment.IsDevelopment()) {
         app.UseWebAssemblyDebugging();
