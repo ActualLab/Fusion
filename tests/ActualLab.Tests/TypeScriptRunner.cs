@@ -156,7 +156,23 @@ public class TypeScriptRunner(ITestOutputHelper @out)
         var processTimeout = (timeout ?? TimeSpan.FromSeconds(30)).Positive();
 #if NET5_0_OR_GREATER
         using var cts = new CancellationTokenSource(processTimeout);
-        await process.WaitForExitAsync(cts.Token);
+        try {
+            await process.WaitForExitAsync(cts.Token);
+        }
+        catch (OperationCanceledException) {
+            // Kill + report the captured output - otherwise timeouts are undiagnosable
+            try {
+                process.Kill(entireProcessTree: true);
+            }
+            catch {
+                // Intended: the process may have exited by now
+            }
+            var timeoutStdout = await stdoutTask;
+            var timeoutStderr = await stderrTask;
+            throw new TimeoutException(
+                $"Process timed out after {processTimeout}: '{fileName} {finalArguments}'.\n" +
+                $"Stdout:\n{timeoutStdout}\nStderr:\n{timeoutStderr}");
+        }
 #else
         process.WaitForExit((int)processTimeout.TotalMilliseconds);
 #endif
