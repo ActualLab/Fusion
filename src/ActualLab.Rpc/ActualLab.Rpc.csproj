@@ -18,6 +18,7 @@
     <PackageReference Include="System.IO.Pipelines" VersionOverride="$(MicrosoftExtensionsVersion7)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net6')) or $(TargetFramework.StartsWith('net5')) or $(TargetFramework.StartsWith('netcoreapp')) or $(TargetFramework.StartsWith('netstandard'))">
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" VersionOverride="10.0.10" />
     <PackageReference Include="System.IO.Pipelines" VersionOverride="$(MicrosoftExtensionsVersion6)" />
   </ItemGroup>
 
