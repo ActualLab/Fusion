@@ -16,6 +16,7 @@ public struct RefHashSetSlim3<T> : IRefHashSetSlim<T>
     }
 
     public readonly int Count {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             if (HasSet) return _set!.Count;
             if (_tuple.Item1 is null) return 0;
@@ -103,6 +104,7 @@ public struct RefHashSetSlim3<T> : IRefHashSetSlim<T>
         return false;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Clear()
     {
         _set = null;

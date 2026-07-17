@@ -165,6 +165,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
             : $"{GetType().GetName()}[{_position}]"; // Same representation used in Span<T>
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Memory<T> GetMemory(int sizeHint = 0)
     {
         EnsureCapacity(sizeHint);
@@ -172,6 +173,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Span<T> GetSpan(int sizeHint = 0)
     {
         EnsureCapacity(sizeHint);
@@ -179,6 +181,7 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Advance(int count)
     {
         if (count < 0 || _position + count > _array.Length)

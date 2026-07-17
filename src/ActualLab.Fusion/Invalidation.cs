@@ -10,8 +10,10 @@ public static class Invalidation
 {
     public static InvalidationTrackingMode TrackingMode { get; set; } = InvalidationTrackingMode.OriginOnly;
 
-    public static bool IsActive
-        => (ComputeContext.Current.CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
+    public static bool IsActive {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => (ComputeContext.Current.CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ComputeContextScope Begin(InvalidationSource source)

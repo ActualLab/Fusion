@@ -16,6 +16,7 @@ public partial class RpcMethodDef
     // taking the values of other properties into account.
     public Func<RpcOutboundContext, RpcOutboundCall> OutboundCallFactory { get; protected set; } = null!;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundCall? CreateOutboundCall(RpcOutboundContext context)
     {
         var peer = context.Peer;
@@ -27,6 +28,7 @@ public partial class RpcMethodDef
             : OutboundCallFactory.Invoke(context);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcPeer RouteCall(ArgumentList args, RpcRoutingMode routingMode)
         => routingMode switch {
             RpcRoutingMode.Outbound => RouteOutboundCall(args),
@@ -36,6 +38,7 @@ public partial class RpcMethodDef
         };
 
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcPeer RouteCall(ArgumentList args, RpcRoutingMode routingMode, RpcPeer? preroutedPeer)
         => routingMode switch {
             RpcRoutingMode.Outbound => RouteOutboundCall(args),

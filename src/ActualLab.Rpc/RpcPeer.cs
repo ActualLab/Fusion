@@ -79,7 +79,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
 #pragma warning disable CA1721
-    public RpcMethodResolver ServerMethodResolver => _serverMethodResolver;
+    public RpcMethodResolver ServerMethodResolver {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _serverMethodResolver;
+    }
 #pragma warning restore CA1721
 
     public RpcPeerStopMode StopMode

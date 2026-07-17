@@ -21,6 +21,7 @@ public sealed class RpcMethodResolver
     public readonly RpcMethodResolver? NextResolver;
 
     public RpcMethodDef? this[in RpcMethodRef methodRef] {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             if (MethodByRef is not null && MethodByRef.TryGetValue(methodRef, out var methodEntry))
                 return methodEntry.MethodDef;
@@ -39,6 +40,7 @@ public sealed class RpcMethodResolver
     }
 
     public RpcMethodDef? this[int hashCode] {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             if (MethodByHashCode is not null && MethodByHashCode.TryGetValue(hashCode, out var methodEntry))
                 return methodEntry.MethodDef;

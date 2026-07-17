@@ -34,6 +34,7 @@ public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
     public virtual void Initialize(RpcPeer peer)
         => Peer = peer;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TRpcCall? Get(long callId)
         => Calls.GetValueOrDefault(callId);
 }
@@ -45,6 +46,7 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 {
     public RpcInboundCall this[long id] => Calls[id];
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcInboundCall GetOrRegister(RpcInboundCall call)
     {
         if (call.NoWait || Calls.TryAdd(call.Id, call))
@@ -55,6 +57,7 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
         return Calls.GetOrAdd(call.Id, static (_, call1) => call1, call);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Unregister(RpcInboundCall call)
         // NoWait should always return true here!
         => call.NoWait || Calls.TryRemove(call.Id, call);

@@ -86,6 +86,7 @@ public ref struct SpanWriter(Span<byte> buffer)
         Advance(2 + span.Length);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteL4Span(ReadOnlySpan<byte> span)
     {
         BinaryPrimitives.WriteInt32LittleEndian(Remaining, span.Length);
@@ -94,6 +95,7 @@ public ref struct SpanWriter(Span<byte> buffer)
         Advance(span.Length);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteNativeL4Span(ReadOnlySpan<byte> span)
     {
         Remaining.WriteUnchecked(span.Length);
@@ -102,6 +104,7 @@ public ref struct SpanWriter(Span<byte> buffer)
         Advance(span.Length);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteLVarSpan(ReadOnlySpan<byte> span)
     {
         WriteVarUInt32((uint)span.Length);

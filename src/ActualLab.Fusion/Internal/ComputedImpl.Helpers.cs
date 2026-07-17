@@ -15,6 +15,7 @@ public static partial class ComputedImpl
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryUseExisting(Computed? existing, ComputeContext context)
     {
         if (context.CallOptions != 0) // Way less frequent path
@@ -107,6 +108,7 @@ public static partial class ComputedImpl
             : computed.Value;
 
     [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume Task<T> constructors are preserved")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task GetValueOrDefaultAsTask(Computed? computed, ComputeContext context, Type outputType)
         => computed is null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
             ? TaskExt.FromDefaultResult(outputType)

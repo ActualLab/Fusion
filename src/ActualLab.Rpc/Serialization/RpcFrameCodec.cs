@@ -109,7 +109,6 @@ public sealed class RpcFrameCodec
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private RpcInboundMessage? TryDeserializeBinary(byte[] array, ref int offset, int totalLength)
     {
         _incomingItemCounter?.Add(1);
@@ -128,7 +127,6 @@ public sealed class RpcFrameCodec
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private RpcInboundMessage? TryDeserializeBinaryWithSize(byte[] array, ref int offset, int totalLength)
     {
         _incomingItemCounter?.Add(1);
@@ -157,7 +155,6 @@ public sealed class RpcFrameCodec
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private RpcInboundMessage? TryDeserializeText(byte[] array, ref int offset, int totalLength)
     {
         _incomingItemCounter?.Add(1);

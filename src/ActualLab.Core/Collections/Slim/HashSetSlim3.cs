@@ -17,6 +17,7 @@ public struct HashSetSlim3<T> : IHashSetSlim<T>
     }
 
     public readonly int Count {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             if (HasSet) return _set!.Count;
             return _count;
@@ -98,6 +99,7 @@ public struct HashSetSlim3<T> : IHashSetSlim<T>
         return false;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Clear()
     {
         _set = null;

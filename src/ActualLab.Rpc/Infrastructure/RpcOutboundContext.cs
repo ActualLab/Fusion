@@ -55,7 +55,6 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     public static Scope Deactivate()
         => new(null!);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundCall? PrepareCall(RpcMethodDef methodDef, ArgumentList arguments)
     {
         if (MethodDef != methodDef) {

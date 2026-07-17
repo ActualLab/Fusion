@@ -41,6 +41,7 @@ public readonly struct Invocation
         InterceptedDelegate = interceptedDelegate;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Invocation(
         ProxyMethodTable methodTable, int methodIndex,
         object proxy, ArgumentList arguments, Delegate interceptedDelegate)

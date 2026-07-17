@@ -105,6 +105,7 @@ public struct InvalidatedHandlerSet
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Clear()
         => _storage = null;
 
@@ -154,6 +155,7 @@ public struct InvalidatedHandlerSet
         }
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static void LogHandlerError(Computed computed, Exception error)
     {
         try {

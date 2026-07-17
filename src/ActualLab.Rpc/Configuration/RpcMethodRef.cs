@@ -76,13 +76,17 @@ public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 
     // Equality
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(RpcMethodRef other)
         => HashCode == other.HashCode && Utf8Name.Span.SequenceEqual(other.Utf8Name.Span);
     public override bool Equals(object? obj)
         => obj is RpcMethodRef other && Equals(other);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override int GetHashCode()
         => HashCode;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(RpcMethodRef left, RpcMethodRef right) => left.Equals(right);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator !=(RpcMethodRef left, RpcMethodRef right) => !left.Equals(right);
 
     // Static methods

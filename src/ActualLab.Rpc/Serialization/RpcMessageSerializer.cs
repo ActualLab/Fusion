@@ -29,7 +29,10 @@ public abstract class RpcMessageSerializer(RpcPeer peer)
     public static int Utf8BufferCapacity { get; set; } = 512; // In bytes and characters, used only for header values
     public static int Utf8BufferReplaceCapacity { get; set; } = 8192; // In bytes and characters, used only for header values
 
-    protected RpcMethodResolver ServerMethodResolver => Peer.ServerMethodResolver;
+    protected RpcMethodResolver ServerMethodResolver {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => Peer.ServerMethodResolver;
+    }
 
     public RpcPeer Peer { get; } = peer;
     public virtual bool PersistsMessageSize => false;

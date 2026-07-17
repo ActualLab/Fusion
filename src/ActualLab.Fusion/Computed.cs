@@ -195,11 +195,13 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
     // GetValuePromise, UpdateUntyped & UseUntyped
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Task GetValuePromise()
-    {
-        if (_untypedValuePromise is not null)
-            return _untypedValuePromise;
+        => _untypedValuePromise ?? GetOrCreateValuePromise();
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private Task GetOrCreateValuePromise()
+    {
         lock (Lock)
             return _untypedValuePromise ??= CreateValuePromise();
     }

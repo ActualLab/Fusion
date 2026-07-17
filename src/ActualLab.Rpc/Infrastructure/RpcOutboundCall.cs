@@ -32,7 +32,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     public virtual int CompletedStage {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => ResultSource.Task.IsCompleted
             ? RpcCallStage.ResultReady | RpcCallStage.Unregistered
             : 0;

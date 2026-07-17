@@ -11,9 +11,16 @@ public abstract class Computed<T> : Computed, IResult<T>
 {
     public static readonly Result DefaultResult = new(default(T));
 
-    public new Result<T> Output => UntypedOutput.ToTypedResult<T>();
-    public new T Value => (T)UntypedOutput.Value!;
+    public new Result<T> Output {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => UntypedOutput.ToTypedResult<T>();
+    }
+    public new T Value {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => (T)UntypedOutput.Value!;
+    }
     public T? ValueOrDefault {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             var output = UntypedOutput.GetUntypedValueOrErrorBox();
             return output is ErrorBox ? default : (T)output!;
