@@ -70,7 +70,9 @@ public class FusionServicesAuditRegressionTest
         await using var serviceProvider = services.BuildServiceProvider();
         await using var monitor = new TestRpcPeerStateMonitor(serviceProvider) {
             JustConnectedPeriod = TimeSpan.FromMilliseconds(20),
-            JustDisconnectedPeriod = TimeSpan.FromMilliseconds(200),
+            // The guarded regression is an immediate invalidation, so the period
+            // only needs to be too long for the scheduled one to fire mid-test
+            JustDisconnectedPeriod = TimeSpan.FromSeconds(10),
             ExtraInvalidationDelay = TimeSpan.Zero,
         };
         monitor.Disconnect(TimeSpan.FromMilliseconds(50));
