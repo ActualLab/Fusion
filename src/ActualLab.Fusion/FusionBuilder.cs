@@ -419,10 +419,13 @@ public readonly struct FusionBuilder
     {
         var services = Services;
         services.AddSingleton(optionsFactory, _ => OperationReprocessor.Options.Default);
-        if (services.HasService<TOperationReprocessor>())
+        if (services.HasService<IOperationReprocessor>())
             return this;
 
-        services.AddTransient<TOperationReprocessor>();
+        // The implementation may be pre-registered with a custom lifetime or factory -
+        // in this case only the remaining wiring is added
+        if (!services.HasService<TOperationReprocessor>())
+            services.AddTransient<TOperationReprocessor>();
         services.AddAlias<IOperationReprocessor, TOperationReprocessor>(ServiceLifetime.Transient);
         Commander.AddHandlers<TOperationReprocessor>();
         services.AddSingleton(TransiencyResolvers.PreferNonTransient.ForContext<IOperationReprocessor>());
@@ -439,10 +442,11 @@ public readonly struct FusionBuilder
     {
         var services = Services;
         services.AddSingleton(optionsFactory);
-        if (services.HasService<TCache>())
+        if (services.HasService<IRemoteComputedCache>())
             return this;
 
-        services.AddSingleton<TCache>();
+        if (!services.HasService<TCache>())
+            services.AddSingleton<TCache>();
         services.AddAlias<IRemoteComputedCache, TCache>();
         return this;
     }
@@ -455,10 +459,11 @@ public readonly struct FusionBuilder
     {
         var services = Services;
         services.AddSingleton(optionsFactory);
-        if (services.HasService<TCache>())
+        if (services.HasService<IRemoteComputedCache>())
             return this;
 
-        services.AddSingleton<TCache>();
+        if (!services.HasService<TCache>())
+            services.AddSingleton<TCache>();
         services.AddSingleton(c => new SharedRemoteComputedCache(c.GetRequiredService<TCache>));
         services.AddAlias<IRemoteComputedCache, SharedRemoteComputedCache>();
         return this;
