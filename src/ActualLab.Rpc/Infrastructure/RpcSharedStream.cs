@@ -70,7 +70,9 @@ public sealed class RpcSharedStream<T> : RpcSharedStream
         var requested = Stream.BufferSize;
         _bufferSize = requested >= ackAdvance ? requested : ackAdvance;
         if (requested != 0 && requested < ackAdvance)
-            Log.LogWarning(
+            // In a constructor the compiler tracks Log's backing field as unassigned,
+            // even though its lazy getter can't return null
+            Log!.LogWarning(
                 "RpcStream BufferSize ({BufferSize}) is below AckAdvance ({AckAdvance}); using AckAdvance as buffer size",
                 requested, ackAdvance);
     }
