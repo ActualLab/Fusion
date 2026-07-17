@@ -9,6 +9,7 @@ public class MethodDefAsyncInvokerTest
         .GetMethod(nameof(Get), BindingFlags.Static | BindingFlags.NonPublic)!;
     private static readonly MethodInfo VoidMethod = typeof(MethodDefAsyncInvokerTest)
         .GetMethod(nameof(GetVoid), BindingFlags.Static | BindingFlags.NonPublic)!;
+    private static readonly ProxyMethodTable MethodTable = new(typeof(MethodDefAsyncInvokerTest), [Method, VoidMethod]);
 
     [Fact]
     public async Task CompletedTask()
@@ -113,13 +114,13 @@ public class MethodDefAsyncInvokerTest
     private static Func<object, ValueTask<object?>> CreateInvoker(Func<ArgumentList, Task<int>> intercepted)
     {
         var invoker = new MethodDef(typeof(MethodDefAsyncInvokerTest), Method).InterceptedObjectAsyncInvoker;
-        return proxy => invoker.Invoke(new Invocation(proxy, Method, ArgumentList.New(), intercepted));
+        return proxy => invoker.Invoke(new Invocation(proxy, MethodTable, 0, ArgumentList.New(), intercepted));
     }
 
     private static Func<object, ValueTask<object?>> CreateVoidInvoker(Func<ArgumentList, Task> intercepted)
     {
         var invoker = new MethodDef(typeof(MethodDefAsyncInvokerTest), VoidMethod).InterceptedObjectAsyncInvoker;
-        return proxy => invoker.Invoke(new Invocation(proxy, VoidMethod, ArgumentList.New(), intercepted));
+        return proxy => invoker.Invoke(new Invocation(proxy, MethodTable, 1, ArgumentList.New(), intercepted));
     }
 
     private static Task<int> Get()
