@@ -48,6 +48,8 @@ public static class Errors
         => new RpcSerializationFormatException(message);
     public static Exception HandshakeFailed()
         => new RpcException("Handshake failed.");
+    public static Exception HandshakeFailed(string reason)
+        => new RpcException($"Handshake failed: {reason}");
     public static Exception UnsupportedProtocolVersion(int actual, int minimum, int current)
         => new RpcException($"Unsupported RPC protocol version: got {actual}, expected {minimum}..{current}.");
     public static Exception PeerChanged()

@@ -489,15 +489,17 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         if (message.MethodRef != methodDef.Ref
             || message.CallTypeId != methodDef.CallType.Id
             || message.RelatedId != 0)
-            throw Errors.HandshakeFailed();
+            throw Errors.HandshakeFailed(
+                $"expected {methodDef.Ref} call, but got: MethodRef = {message.MethodRef}, " +
+                $"CallTypeId = {message.CallTypeId}, RelatedId = {message.RelatedId}.");
 
         var context = InboundCallOptions.ContextFactory.Invoke(this, message, cancellationToken);
         if (!ReferenceEquals(context.MethodDef, methodDef))
-            throw Errors.HandshakeFailed();
+            throw Errors.HandshakeFailed($"the call is bound to an unexpected method: {context.MethodDef}.");
 
         _ = context.Call.Process(cancellationToken);
         return context.Call.Arguments?.GetUntyped(0) as RpcHandshake
-            ?? throw Errors.HandshakeFailed();
+            ?? throw Errors.HandshakeFailed("the call carries no RpcHandshake argument.");
     }
 
     protected virtual RpcMethodResolver GetServerMethodResolver(RpcHandshake? handshake)
