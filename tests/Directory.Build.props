@@ -54,26 +54,30 @@
     <!-- CA1852: Type C can be sealed because it has no subtypes in its containing assembly and is not externally visible -->
     <!-- CA1861: Prefer 'static readonly' fields over constant array arguments -->
     <!-- CA1862: Prefer the string comparison method overload of 'string.Contains(string)' that takes a 'StringComparison' -->
+    <!-- CA2002: Do not lock on objects with weak identity -->
     <!-- CA2007: Consider calling ConfigureAwait on the awaited task -->
     <!-- CA2016: Forward the 'cancellationToken' parameter to the 'Delay' method -->
     <!-- CA2201: Exception type System.NullReferenceException is reserved by the runtime -->
     <!-- CA2237: Add [Serializable] to WeirdException -->
+    <!-- CA5359: The ServerCertificateValidationCallback accepts any server certificate (fine for self-signed test certs) -->
     <NoWarn>$(NoWarn);CA1032;CA1052;CA1303;CA1305;CA1307;CA1310;CA1515;CA1721;CA1812;CA1822;CA1852;CA1861;CA1862</NoWarn>
-    <NoWarn>$(NoWarn);CA2007;CA2016;CA2201;CA2237</NoWarn>
+    <NoWarn>$(NoWarn);CA2002;CA2007;CA2016;CA2201;CA2237;CA5359</NoWarn>
     <!-- MA0002: Use an overload that has a IEqualityComparer<string> or IComparer<string> parameter -->
     <!-- MA0004: Use Task.ConfigureAwait(false) as the current SynchronizationContext is not needed -->
     <!-- MA0006: Use string.Equals instead of Equals operator -->
     <!-- MA0011: Use an overload of 'TryParse' that has a 'System.IFormatProvider' parameter -->
     <!-- MA0051: Method is too long (41 lines; maximum allowed: 40)-->
+    <!-- MA0064: Avoid locking on publicly accessible instance -->
     <!-- MA0074: Use an overload of 'Contains' that has a StringComparison parameter -->
-    <NoWarn>$(NoWarn);MA0002;MA0004;MA0006;MA0011;MA0051;MA0074</NoWarn>
+    <NoWarn>$(NoWarn);MA0002;MA0004;MA0006;MA0011;MA0051;MA0064;MA0074</NoWarn>
     <!-- NU1510: PackageReference System.ValueTuple will not be pruned. -->
     <!-- NU1701: Package 'xunit.runner.visualstudio' was restored using .NETFramework,Version=v4.6.1 -->
     <!-- NETSDK1206: Found version-specific or distribution-specific runtime identifier(s): alpine-arm, alpine-arm64, alpine-x64. Affected libraries: SQLitePCLRaw.lib.e_sqlite3. In .NET 8.0 and higher, assets for version-specific and distribution-specific runtime identifiers will not be found by default. See https://aka.ms/dotnet/rid-usage for details. -->
+    <!-- RCS1059: Lock on private field instead of locking on 'this' -->
     <!-- RCS1155: Use StringComparison when comparing strings. -->
     <!-- xUnit1030: .ConfigureAwait(false) in tests -->
     <!-- xUnit1031: .ConfigureAwait(false) in tests -->
-    <NoWarn>$(NoWarn);NU1510;NU1701;NETSDK1206;RCS1155;xUnit1030;xUnit1031</NoWarn>
+    <NoWarn>$(NoWarn);NU1510;NU1701;NETSDK1206;RCS1059;RCS1155;xUnit1030;xUnit1031</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
