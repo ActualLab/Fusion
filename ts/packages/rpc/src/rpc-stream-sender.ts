@@ -498,13 +498,18 @@ export class RpcStreamSender<T> implements IRpcObject {
     }
     /* eslint-enable @typescript-eslint/no-unnecessary-condition */
 
-    /** Drain all queued ACKs, returning the most recent one (or null if none). */
+    /** Drain all queued ACKs, returning the most recent one (or null if none).
+     *  A reconnect's reset ACK may be drained in one batch with regular
+     *  consumption ACKs the client sends right after it, so `mustReset` is
+     *  OR-ed over the whole batch — the last ACK alone can't represent it. */
     private _tryProcessAcks(): { nextIndex: number; mustReset: boolean } | null {
         if (this._acks.length === 0) return null;
-        let last: { nextIndex: number; mustReset: boolean } | null = null;
+        let nextIndex = 0;
+        let mustReset = false;
         while (this._acks.length > 0) {
             const a = this._acks.shift()!;
-            last = a;
+            nextIndex = a.nextIndex;
+            mustReset ||= a.mustReset;
             if (a.mustReset || this._nextIndex < a.nextIndex) {
                 this._nextIndex = a.nextIndex;
             }
@@ -512,7 +517,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         try {
             this.onAckProcessed?.();
         } catch { /* listener errors don't break the pump */ }
-        return last;
+        return { nextIndex, mustReset };
     }
 
     /** Wait for the ACK queue to have at least one entry (or `_ended`). */
