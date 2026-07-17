@@ -18,6 +18,9 @@ public class PersistenceLifecycleAuditRegressionTest
         var multiplexer = new Mock<IConnectionMultiplexer>();
         var startId = (RedisValue)"1-0";
         var sawAdvancedPosition = false;
+        // The hard cap only guards against a hang: the read is canceled
+        // as soon as the advanced position is observed
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         database
             .Setup(x => x.StreamReadAsync(
                 It.IsAny<RedisKey>(),
@@ -25,8 +28,10 @@ public class PersistenceLifecycleAuditRegressionTest
                 It.IsAny<int?>(),
                 It.IsAny<CommandFlags>()))
             .Returns<RedisKey, RedisValue, int?, CommandFlags>((_, position, _, _) => {
-                if (position == startId)
+                if (position == startId) {
                     sawAdvancedPosition = true;
+                    cts.Cancel();
+                }
                 var entries = position == startId
                     ? []
                     : new[] { new StreamEntry(startId, [new NameValueEntry("s", "[")]) };
@@ -50,7 +55,6 @@ public class PersistenceLifecycleAuditRegressionTest
         var streamer = new RedisDb(connector).GetStreamer<int>("stream", new RedisStreamer<int>.Options {
             AppendCheckPeriod = TimeSpan.FromMilliseconds(20),
         });
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
         var read = async () => await streamer.Read(cts.Token).FirstAsync(cts.Token);
 
