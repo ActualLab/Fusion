@@ -37,13 +37,27 @@ namespace YourNamespace.ActualLabProxies;
 
 public sealed class TodoApiProxy : TodoApi, IProxy  // Inherits from TodoApi
 {
-    private static MethodInfo? __cachedMethod0 = ProxyHelper.GetMethodInfo(
-        typeof(TodoApi), "GetTodos", new[] { typeof(CancellationToken) });
+    // One static table per proxy type; the array position is the method's slot index
+    private static readonly ProxyMethodTable __methodTable = new(typeof(TodoApiProxy), new[] {
+        ProxyHelper.GetMethodInfo(typeof(TodoApi), "GetTodos", new[] { typeof(CancellationToken) }),
+    });
     private Func<ArgumentList, Task<string[]>>? __cachedIntercepted0;
-    private Func<Invocation, Task<string[]>>? __cachedIntercept0;
-    private Interceptor? __interceptor;
+    private Func<Invocation, object?>? __handler0;  // Per-slot handler cache
+    private InterceptorBinding? __binding;
 
-    Interceptor IProxy.Interceptor { get => ...; set => ...; }
+    ProxyMethodTable IProxy.MethodTable => __methodTable;
+
+    InterceptorBinding IProxy.Binding {
+        get => ...;  // Returns __binding, or throws if the proxy isn't bound yet
+        set {
+            // The binding is assigned just once, right after the proxy construction
+            if (__binding != null)
+                throw Errors.InterceptorIsAlreadyBound();
+            if (value.MethodTable != __methodTable)
+                throw Errors.InvalidInterceptorBinding();
+            __binding = value;
+        }
+    }
 
     public TodoApiProxy() : base() { }  // Calls base constructor
 
@@ -56,9 +70,12 @@ public sealed class TodoApiProxy : TodoApi, IProxy  // Inherits from TodoApi
             return base.GetTodos((CancellationToken)sa.Item0);
         };
 
-        var invocation = new Invocation(this, __cachedMethod0!,
+        var invocation = new Invocation(this, __methodTable, 0,  // 0 = this method's slot
             ArgumentList.New(cancellationToken), intercepted);
-        return __cachedIntercept0!.Invoke(invocation);
+        var handler = __handler0 ?? InterceptorBinding.GetAndCacheHandler(ref __handler0, __binding, invocation);
+        if (ReferenceEquals(handler, InterceptorBinding.NoHandler))
+            return intercepted.Invoke(invocation.Arguments);  // Not intercepted -> typed direct call
+        return (Task<string[]>)handler.Invoke(invocation)!;
     }
 }
 ```
@@ -84,13 +101,19 @@ namespace YourNamespace.ActualLabProxies;
 
 public sealed class ITodoApiProxy : InterfaceProxy, ITodoApi, IProxy  // Inherits from InterfaceProxy
 {
-    private static MethodInfo? __cachedMethod0 = ProxyHelper.GetMethodInfo(
-        typeof(ITodoApi), "GetTodos", new[] { typeof(CancellationToken) });
+    private static readonly ProxyMethodTable __methodTable = new(typeof(ITodoApiProxy), new[] {
+        ProxyHelper.GetMethodInfo(typeof(ITodoApi), "GetTodos", new[] { typeof(CancellationToken) }),
+    });
     private Func<ArgumentList, Task<string[]>>? __cachedIntercepted0;
-    private Func<Invocation, Task<string[]>>? __cachedIntercept0;
-    private Interceptor? __interceptor;
+    private Func<Invocation, object?>? __handler0;
+    private InterceptorBinding? __binding;
 
-    Interceptor IProxy.Interceptor { get => ...; set => ...; }
+    ProxyMethodTable IProxy.MethodTable => __methodTable;
+
+    InterceptorBinding IProxy.Binding {
+        get => ...;   // Same as in the class proxy
+        set { ... }
+    }
 
     // No constructor needed - InterfaceProxy provides ProxyTarget property
 
@@ -103,9 +126,12 @@ public sealed class ITodoApiProxy : InterfaceProxy, ITodoApi, IProxy  // Inherit
             return ((ITodoApi)ProxyTarget!).GetTodos((CancellationToken)sa.Item0);
         };
 
-        var invocation = new Invocation(this, __cachedMethod0!,
+        var invocation = new Invocation(this, __methodTable, 0,
             ArgumentList.New(cancellationToken), intercepted);
-        return __cachedIntercept0!.Invoke(invocation);
+        var handler = __handler0 ?? InterceptorBinding.GetAndCacheHandler(ref __handler0, __binding, invocation);
+        if (ReferenceEquals(handler, InterceptorBinding.NoHandler))
+            return intercepted.Invoke(invocation.Arguments);
+        return (Task<string[]>)handler.Invoke(invocation)!;
     }
 }
 ```
@@ -120,9 +146,10 @@ public sealed class ITodoApiProxy : InterfaceProxy, ITodoApi, IProxy  // Inherit
 | Aspect | Description |
 |--------|-------------|
 | **Inheritance** | Class proxies inherit from the original class; interface proxies inherit from `InterfaceProxy` |
-| **Caching** | `MethodInfo`, interceptor handlers, and base method delegates are all cached for performance |
+| **Method slots** | Every intercepted method gets a compile-time slot index in the static `ProxyMethodTable`; the table maps slots to `MethodInfo` and back |
+| **Caching** | Each proxy instance caches the resolved handler per slot in a dedicated field, so a warm call is a field load + delegate invoke; the `InterceptorBinding` (one per interceptor + method table pair) shares resolved handlers across instances, and `SelectHandler` runs at most once per slot |
 | **ArgumentList** | Arguments are packed into an `ArgumentList` struct (generic `ArgumentListG*` or struct-based `ArgumentListS*`) |
-| **Invocation** | Contains proxy, method, arguments, and delegate to call the non-intercepted method |
+| **Invocation** | Contains proxy, method table + slot index (exposed as `Method`), arguments, and delegate to call the non-intercepted method |
 | **Trimming** | `ModuleInitializer` and `CodeKeeper` ensure the proxy survives AOT compilation and trimming |
 
 ## Proxy Type Resolution

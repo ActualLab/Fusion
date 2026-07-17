@@ -29,4 +29,12 @@ public static class Errors
 
     public static Exception NoInterceptor()
         => new InvalidOperationException("This proxy has no interceptor - you must call SetInterceptor method first.");
+
+    public static Exception InterceptorIsAlreadyBound()
+        => new InvalidOperationException(
+            "This proxy already has an interceptor: it can be bound just once, right after the proxy construction.");
+
+    public static Exception InvalidInterceptorBinding()
+        => new ArgumentOutOfRangeException("value",
+            "The binding's method table doesn't match this proxy's method table.");
 }

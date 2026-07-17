@@ -8,30 +8,33 @@ namespace ActualLab.Interception;
 /// </summary>
 public static class InvocationExt
 {
-    private delegate object? InterceptedUntypedFunc(in Invocation invocation);
-
     private static readonly MethodInfo InvokeInterceptedUntypedImplMethod = typeof(InvocationExt)
         .GetMethod(nameof(InvokeInterceptedUntypedImpl), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly ConcurrentDictionary<Type, InterceptedUntypedFunc> InterceptedUntypedCache
+    private static readonly ConcurrentDictionary<Type, Func<Invocation, object?>> InterceptedUntypedCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
 
+    public static object? InvokeInterceptedUntyped(in this Invocation invocation)
+        => GetInterceptedUntypedInvoker(invocation.Method.ReturnType).Invoke(invocation);
+
+    // The returned invoker is also cached as the per-slot handler
+    // for methods their interceptor leaves unhandled.
     [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "We assume InvokeInterceptedUntypedImpl method is preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume InvokeInterceptedUntypedImpl method is preserved")]
-    public static object? InvokeInterceptedUntyped(in this Invocation invocation)
-        => InterceptedUntypedCache.GetOrAdd(invocation.Method.ReturnType,
-            static returnType => returnType == typeof(void)
-                ? (in Invocation invocation) => {
+    public static Func<Invocation, object?> GetInterceptedUntypedInvoker(Type returnType)
+        => InterceptedUntypedCache.GetOrAdd(returnType,
+            static returnType1 => returnType1 == typeof(void)
+                ? invocation => {
                     invocation.InvokeIntercepted();
                     return null;
                 }
-                : (InterceptedUntypedFunc)InvokeInterceptedUntypedImplMethod
-                    .MakeGenericMethod(returnType)
-                    .CreateDelegate(typeof(InterceptedUntypedFunc))
-        ).Invoke(invocation);
+                : (Func<Invocation, object?>)InvokeInterceptedUntypedImplMethod
+                    .MakeGenericMethod(returnType1)
+                    .CreateDelegate(typeof(Func<Invocation, object?>))
+        );
 
     // Private methods
 
-    private static object? InvokeInterceptedUntypedImpl<TResult>(in Invocation invocation)
+    private static object? InvokeInterceptedUntypedImpl<TResult>(Invocation invocation)
         // ReSharper disable once HeapView.PossibleBoxingAllocation
         => invocation.InterceptedDelegate is Func<ArgumentList, TResult> func
             ? func.Invoke(invocation.Arguments)

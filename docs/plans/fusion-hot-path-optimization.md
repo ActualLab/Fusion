@@ -90,7 +90,10 @@ baselines still need dedicated benchmarks.
 
 The separate [proxy method slots](proxy-method-slots.md) task changes generated
 proxy dispatch, interceptor binding, and the association between proxy methods and
-`MethodDef` instances. Its relevant dependencies are:
+`MethodDef` instances. It is now implemented (`feat/proxy-method-slots`); notably,
+`MethodDef` creation and identity did not change - bindings cache resolved handlers
+per slot, so `MethodDef` instances are still created and shared exactly as before.
+Its relevant dependencies were:
 
 - The alternate computed-registry lookup **may depend on the final method-slot
   design**. `ComputeMethodInput` currently hashes and compares `MethodDef` by

@@ -22,9 +22,10 @@ How a method call flows through the proxy system:
 
 | Field | Type | Purpose |
 |-------|------|---------|
-| `__interceptor` | `Interceptor` | The interceptor instance |
+| `__methodTable` | `ProxyMethodTable` (static) | Slot-indexed `MethodInfo` table shared by all instances of the proxy type |
+| `__binding` | `InterceptorBinding?` | Binds the interceptor to the method table; shares resolved handlers across proxy instances |
+| `__handler0` | `Func<Invocation, object?>?` | Per-slot handler cache, filled on the first call |
 | `__cachedIntercepted0` | `Func<ArgumentList, Task<string>>` | Cached delegate to target |
-| `__cachedIntercept0` | `Func<Invocation, Task<string>>` | Cached intercept delegate |
 | `ProxyTarget` | `object?` | Real service (from `InterfaceProxy`) |
 
 
@@ -33,7 +34,8 @@ How a method call flows through the proxy system:
 | Field | Description |
 |-------|-------------|
 | `Proxy` | The proxy instance (e.g., `IGreetingServiceProxy`) |
-| `Method` | `MethodInfo` of the called method |
+| `MethodTable`, `MethodIndex` | Table-qualified slot of the called method (`ProxyMethodRef` via `MethodRef`); the index is validated against the table in the constructor |
+| `Method` | `MethodInfo` of the called method, resolved as `MethodTable.Methods[MethodIndex]` |
 | `Arguments` | `ArgumentList` containing method arguments |
 | `InterceptedDelegate` | Delegate to call the real implementation (for pass-through) |
 | `InterfaceProxyTarget` | The real service instance |
@@ -63,6 +65,14 @@ How a method call flows through the proxy system:
 
 
 ## Handler Caching
+
+Handlers are cached at two levels: each proxy instance caches the resolved handler per method
+slot in a dedicated field, and the `InterceptorBinding` shares resolved handlers across all
+proxy instances using the same (interceptor, method table) pair. The interceptor is bound
+just once, right after the proxy construction, so both caches only ever go from unresolved
+to resolved. `Interceptor.SelectHandler` runs at most once per slot; a slot the interceptor
+leaves unhandled caches the `InterceptorBinding.NoHandler` marker, which generated proxies
+detect by reference to invoke their typed original-call delegate directly (no boxed results).
 
 <img src="/img/diagrams/PartAP-D-5.svg" alt="Handler Caching" style="width: 100%; max-width: 800px;" />
 

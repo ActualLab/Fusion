@@ -76,17 +76,16 @@ public class ClassProxy : IInterfaceProxy, INotifyInitialized
 
 public class AltClassProxy
 {
-    private MethodInfo? _cachedMethodInfo;
+    private static readonly ProxyMethodTable MethodTable = new(typeof(AltClassProxy), [
+        ProxyHelper.GetMethodInfo(typeof(ClassProxy), "Method2", [typeof(int), typeof(CancellationToken)]),
+    ]);
+
     private Func<ArgumentList, Task>? _cachedIntercepted;
-    private Func<Invocation, Task>? _cachedIntercept;
-    private Interceptor _interceptor;
+    private Func<Invocation, object?>? _handler0;
+    private readonly InterceptorBinding _binding;
 
     public AltClassProxy(Interceptor interceptor)
-    {
-        _interceptor = interceptor;
-        _cachedIntercept = _interceptor.Intercept<Task>;
-        _cachedMethodInfo = ProxyHelper.GetMethodInfo(typeof(ClassProxy), "Method2", [typeof(int), typeof(CancellationToken)]);
-    }
+        => _binding = interceptor.GetBinding(MethodTable);
 
     public virtual Task Method2(int x, CancellationToken cancellationToken)
     {
@@ -97,12 +96,11 @@ public class AltClassProxy
             var sa = (ArgumentListS2)args;
             return Method2Base((int)sa.Item0!, (CancellationToken)sa.Item1!);
         };
-        var invocation = new Invocation(this, _cachedMethodInfo!,
+        var invocation = new Invocation(this, MethodTable, 0,
             ArgumentList.New(x, cancellationToken),
             intercepted);
-        if (_cachedIntercept is null)
-            throw new InvalidOperationException("No interceptor!.");
-        return _cachedIntercept.Invoke(invocation);
+        var handler = _handler0 ?? InterceptorBinding.GetAndCacheHandler(ref _handler0, _binding, invocation);
+        return (Task)handler.Invoke(invocation)!;
     }
 
     public Task Method2Base(int x, CancellationToken cancellationToken)

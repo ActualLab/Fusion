@@ -39,7 +39,7 @@
 
   <!-- Interceptor Subgraph -->
   <rect x="100" y="320" width="500" height="170" fill="rgba(200,215,240,0.15)" stroke="#c0c8d4" stroke-width="1.5" stroke-dasharray="6 4" rx="8"/>
-  <text x="115" y="340" class="header">Interceptor</text>
+  <text x="115" y="340" class="header">InterceptorBinding</text>
 
   <!-- Target Subgraph -->
   <rect x="70" y="520" width="560" height="100" fill="rgba(200,215,240,0.15)" stroke="#c0c8d4" stroke-width="1.5" stroke-dasharray="6 4" rx="8"/>
@@ -64,19 +64,19 @@
 
   <!-- P1 -->
   <rect x="90" y="160" width="520" height="40" fill="url(#action-grad)" stroke="#e0cba8" stroke-width="1.5" rx="14"/>
-  <text x="350" y="185" text-anchor="middle" class="code">1. Create Invocation(proxy, method, arguments, intercepted)</text>
+  <text x="350" y="185" text-anchor="middle" class="code">1. Create Invocation(proxy, methodTable, slot, arguments, intercepted)</text>
 
   <!-- P2 -->
   <rect x="90" y="230" width="520" height="40" fill="url(#action-grad)" stroke="#e0cba8" stroke-width="1.5" rx="14"/>
-  <text x="350" y="255" text-anchor="middle" class="code">2. Call interceptor.Intercept&lt;TResult&gt;(invocation)</text>
+  <text x="350" y="255" text-anchor="middle" class="code">2. handler = __handler0 ?? GetAndCacheHandler(...)</text>
 
   <!-- I1 -->
   <rect x="120" y="360" width="460" height="40" fill="url(#action-grad)" stroke="#e0cba8" stroke-width="1.5" rx="14"/>
-  <text x="350" y="385" text-anchor="middle" class="code">1. GetHandler(invocation) - lookup or create</text>
+  <text x="350" y="385" text-anchor="middle" class="code">1. SelectHandler(invocation) - at most once per slot</text>
 
   <!-- I2 -->
   <rect x="120" y="430" width="460" height="40" fill="url(#action-grad)" stroke="#e0cba8" stroke-width="1.5" rx="14"/>
-  <text x="350" y="455" text-anchor="middle" class="code">2. handler(invocation) - execute your logic</text>
+  <text x="350" y="455" text-anchor="middle" class="code">2. handler.Invoke(invocation) - execute your logic</text>
 
   <!-- T1 -->
   <rect x="90" y="560" width="520" height="40" fill="url(#action-grad)" stroke="#e0cba8" stroke-width="1.5" rx="14"/>

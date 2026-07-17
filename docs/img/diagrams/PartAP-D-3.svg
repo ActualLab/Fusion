@@ -57,9 +57,9 @@
         <line x1="0" y1="45" x2="320" y2="45" stroke="#bcc8da" stroke-width="1.5" />
         <text x="160" y="20" text-anchor="middle" class="label">implements IGreetingService, IProxy</text>
         <text x="160" y="36" text-anchor="middle" class="code" font-weight="bold">IGreetingServiceProxy</text>
-        <text x="15" y="65" class="code">__interceptor: Interceptor</text>
-        <text x="15" y="85" class="code">__cachedIntercepted0: Func</text>
-        <text x="15" y="105" class="code">__cachedIntercept0: Func</text>
+        <text x="15" y="65" class="code">__methodTable: ProxyMethodTable</text>
+        <text x="15" y="85" class="code">__binding: InterceptorBinding?</text>
+        <text x="15" y="105" class="code">__cachedIntercepted0: Func</text>
         <text x="15" y="125" class="code">GreetAsync(name, ct)</text>
     </g>
 </svg>
