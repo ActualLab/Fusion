@@ -2,7 +2,12 @@
 
 Date: 2026-07-16
 
-Status: hypothesis validated by source review; implementation and measurement pending
+Status: implemented and measured (2026-07-16, `feat/proxy-method-slots`). Cached compute
+calls got 8-25% faster (Long 36.5 -> 28.3 ns, String 46.5 -> 34.7 ns, SessionAndString
+44.7 -> 41.0 ns, recompute -12%), matching the estimate below; raw proxy dispatch got
+1.3-3.7x faster with unchanged per-call allocations. Legacy `MethodInfo`-keyed caches
+remain as the compatibility/cold path; slot-indexed `MethodDef?[]` on the binding and
+old-cache removal are still deferred.
 
 ## Conclusion
 

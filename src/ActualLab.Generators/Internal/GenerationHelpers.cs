@@ -37,7 +37,6 @@ public static class GenerationHelpers
     // Types
     public static readonly IdentifierNameSyntax ProxyInterfaceTypeName = IdentifierName($"{InterceptionGns}.IProxy");
     public static readonly IdentifierNameSyntax InterfaceProxyBaseTypeName = IdentifierName($"{InterceptionInternalGns}.InterfaceProxy");
-    public static readonly IdentifierNameSyntax InterceptorTypeName = IdentifierName($"{InterceptionGns}.Interceptor");
     public static readonly IdentifierNameSyntax ProxyHelperTypeName = IdentifierName($"{InterceptionInternalGns}.ProxyHelper");
     public static readonly IdentifierNameSyntax ArgumentListTypeName = IdentifierName($"{InterceptionGns}.ArgumentList");
     public static readonly IdentifierNameSyntax ArgumentList0TypeName = IdentifierName($"{InterceptionGns}.ArgumentList0");
@@ -45,13 +44,25 @@ public static class GenerationHelpers
     public static readonly IdentifierNameSyntax CodeKeeperTypeName = IdentifierName($"{TrimmingGns}.CodeKeeper");
     public static readonly IdentifierNameSyntax ProxyCodeKeeperTypeName = IdentifierName($"{InterceptionTrimmingGns}.ProxyCodeKeeper");
     public static readonly IdentifierNameSyntax ErrorsTypeName = IdentifierName($"{InterceptionInternalGns}.Errors");
-    public static readonly TypeSyntax NullableMethodInfoType = NullableType(typeof(MethodInfo).ToTypeRef());
+    public static readonly IdentifierNameSyntax ProxyMethodTableTypeName = IdentifierName($"{InterceptionGns}.ProxyMethodTable");
+    public static readonly IdentifierNameSyntax InterceptorBindingTypeName = IdentifierName($"{InterceptionGns}.InterceptorBinding");
+    public static readonly TypeSyntax MethodInfoType = typeof(MethodInfo).ToTypeRef();
+    public static readonly TypeSyntax NullableMethodInfoType = NullableType(MethodInfoType);
+    public static readonly TypeSyntax HandlerFuncTypeName = GenericName(Identifier("global::System.Func"))
+        .WithTypeArgumentList(TypeArgumentList(CommaSeparatedList<TypeSyntax>(
+            IdentifierName($"{InterceptionGns}.Invocation"),
+            NullableType(PredefinedType(Token(SyntaxKind.ObjectKeyword))))));
     // Methods
     public static readonly IdentifierNameSyntax ArgumentListNewMethodName = IdentifierName("New");
     public static readonly IdentifierNameSyntax GetMethodInfoMethodName = IdentifierName("GetMethodInfo");
-    public static readonly IdentifierNameSyntax InterceptMethodName = IdentifierName("Intercept");
-    public static readonly GenericNameSyntax InterceptGenericMethodName = GenericName(InterceptMethodName.Identifier.Text);
+    public static readonly IdentifierNameSyntax GetAndCacheHandlerMethodName = IdentifierName("GetAndCacheHandler");
+    public static readonly IdentifierNameSyntax InvokeMethodName = IdentifierName("Invoke");
+    public static readonly IdentifierNameSyntax ReferenceEqualsMethodName = IdentifierName("ReferenceEquals");
+    public static readonly IdentifierNameSyntax NoHandlerFieldName = IdentifierName("NoHandler");
+    public static readonly IdentifierNameSyntax InvocationArgumentsPropertyName = IdentifierName("Arguments");
     public static readonly IdentifierNameSyntax NoInterceptorMethodName = IdentifierName("NoInterceptor");
+    public static readonly IdentifierNameSyntax InterceptorIsAlreadyBoundMethodName = IdentifierName("InterceptorIsAlreadyBound");
+    public static readonly IdentifierNameSyntax InvalidInterceptorBindingMethodName = IdentifierName("InvalidInterceptorBinding");
     public static readonly IdentifierNameSyntax KeepCodeMethodName = IdentifierName("KeepCode");
     public static readonly IdentifierNameSyntax AlwaysFalseFieldName = IdentifierName("AlwaysFalse");
     public static readonly GenericNameSyntax CodeKeeperKeepMethodName = GenericName("Keep");
@@ -60,11 +71,14 @@ public static class GenerationHelpers
     public static readonly GenericNameSyntax CodeKeeperKeepSyncMethodGenericMethodName = GenericName("KeepSyncMethod");
     // Properties, fields, locals
     public static readonly IdentifierNameSyntax ProxyTargetPropertyName = IdentifierName("ProxyTarget");
-    public static readonly IdentifierNameSyntax InterceptorPropertyName = IdentifierName("Interceptor");
-    public static readonly IdentifierNameSyntax InterceptorFieldName = IdentifierName("__interceptor");
+    public static readonly IdentifierNameSyntax BindingPropertyName = IdentifierName("Binding");
+    public static readonly IdentifierNameSyntax MethodTablePropertyName = IdentifierName("MethodTable");
+    public static readonly IdentifierNameSyntax MethodTableFieldName = IdentifierName("__methodTable");
+    public static readonly IdentifierNameSyntax BindingFieldName = IdentifierName("__binding");
     public static readonly IdentifierNameSyntax ValueParameterName = IdentifierName("value");
     public static readonly IdentifierNameSyntax InterceptedVarName = IdentifierName("intercepted");
     public static readonly IdentifierNameSyntax InvocationVarName = IdentifierName("invocation");
+    public static readonly IdentifierNameSyntax HandlerVarName = IdentifierName("handler");
 
     // Helpers
 
@@ -136,6 +150,9 @@ public static class GenerationHelpers
         => PrivateFieldDef(type, name, false, initializer);
     public static FieldDeclarationSyntax PrivateStaticFieldDef(TypeSyntax type, SyntaxToken name, ExpressionSyntax? initializer = null)
         => PrivateFieldDef(type, name, true, initializer);
+    public static FieldDeclarationSyntax PrivateStaticReadonlyFieldDef(TypeSyntax type, SyntaxToken name, ExpressionSyntax initializer)
+        => PrivateFieldDef(type, name, true, initializer)
+            .AddModifiers(Token(SyntaxKind.ReadOnlyKeyword));
     public static FieldDeclarationSyntax PrivateFieldDef(TypeSyntax type, SyntaxToken name, bool isStatic, ExpressionSyntax? initializer = null)
     {
         var initializerClause = initializer is null

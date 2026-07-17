@@ -43,11 +43,11 @@ public abstract class Interceptor : IHasServices
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(m => string.Equals(m.Name, nameof(CreateTypedHandler), StringComparison.Ordinal));
 
-    private readonly Func<MethodInfo, Invocation, Func<Invocation, object?>?> _createHandler;
     private readonly Func<MethodInfo, Type, MethodDef?> _createMethodDef;
     private readonly ConcurrentDictionary<Type, Unit> _validateTypeCache;
     private readonly ConcurrentDictionary<MethodInfo, MethodDef?> _methodDefCache;
-    private readonly ConcurrentDictionary<MethodInfo, Func<Invocation, object?>?> _handlerCache;
+    // Lazily created via Interlocked.CompareExchange; a stale null read is benign
+    private ConcurrentDictionary<ProxyMethodTable, InterceptorBinding>? _bindings;
 
     protected readonly ILogger Log;
     protected readonly ILogger? DefaultLog;
@@ -77,13 +77,10 @@ public abstract class Interceptor : IHasServices
         DefaultLog = Log.IfEnabled(settings.LogLevel);
         ValidationLog = Log.IfEnabled(settings.ValidationLogLevel);
 
-        _createHandler = CreateHandler;
         _createMethodDef = CreateMethodDef;
         _validateTypeCache = new ConcurrentDictionary<Type, Unit>(
             settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
         _methodDefCache = new ConcurrentDictionary<MethodInfo, MethodDef?>(
-            settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
-        _handlerCache = new ConcurrentDictionary<MethodInfo, Func<Invocation, object?>?>(
             settings.HandlerCacheConcurrencyLevel, settings.HandlerCacheCapacity);
     }
 
@@ -92,7 +89,8 @@ public abstract class Interceptor : IHasServices
         if (MustInterceptSyncCalls && proxy is not IRequiresFullProxy && MustValidateProxyType)
             throw Errors.InvalidProxyType(proxy.GetType(), typeof(IRequiresFullProxy));
 
-        proxy.RequireProxy<IProxy>().Interceptor = this;
+        var typedProxy = proxy.RequireProxy<IProxy>();
+        typedProxy.Binding = GetBinding(typedProxy.MethodTable);
         if (proxyTarget is not null)
             proxy.RequireProxy<InterfaceProxy>().ProxyTarget = proxyTarget;
         // ReSharper disable once SuspiciousTypeConversion.Global
@@ -100,62 +98,34 @@ public abstract class Interceptor : IHasServices
             notifyInitialized.Initialized();
     }
 
-    /// <summary>
-    /// Invoked for intercepted calls returning <see cref="Void"/> type.
-    /// </summary>
-    /// <param name="invocation">Invocation descriptor.</param>
     public void Intercept(Invocation invocation)
-    {
-        var handler = SelectHandler(invocation);
-        if (handler is not null)
-            handler.Invoke(invocation);
-        else
-            invocation.InvokeIntercepted();
-    }
+        => GetBinding(invocation.MethodTable).GetHandler(invocation).Invoke(invocation);
 
-    /// <summary>
-    /// Invoked for intercepted calls returning non-<see cref="Void"/> type.
-    /// </summary>
-    /// <param name="invocation"></param>
-    /// <typeparam name="TResult">The type of method call result.</typeparam>
-    /// <returns>Method call result.</returns>
     public TResult Intercept<TResult>(Invocation invocation)
-    {
-        var handler = SelectHandler(invocation);
-        return handler is not null
-            ? (TResult)handler.Invoke(invocation)!
-            : invocation.InvokeIntercepted<TResult>();
-    }
+        => (TResult)GetBinding(invocation.MethodTable).GetHandler(invocation).Invoke(invocation)!;
 
-    /// <summary>
-    /// Invoked for intercepted calls returning any type.
-    /// </summary>
-    /// <param name="invocation"></param>
-    /// <returns>Method call result.</returns>
-#if NET5_0_OR_GREATER
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-#endif
     public object? InterceptUntyped(Invocation invocation)
-    {
-        var handler = SelectHandler(invocation);
-        return handler is not null
-            ? handler.Invoke(invocation)!
-            : invocation.InvokeInterceptedUntyped();
-    }
+        => GetBinding(invocation.MethodTable).GetHandler(invocation).Invoke(invocation);
 
+    // Called at most once per (interceptor, method table, slot); the result is cached
+    // by InterceptorBinding and in per-proxy handler slots. Per-call logic belongs
+    // inside the returned handler; null means "invoke the original implementation".
     public virtual Func<Invocation, object?>? SelectHandler(in Invocation invocation)
-        => GetHandler(invocation);
-
-    public Func<Invocation, object?>? GetHandler(in Invocation invocation)
-    {
-        if (_handlerCache.TryGetValue(invocation.Method, out var handler))
-            return handler;
-
-        return _handlerCache.GetOrAdd(invocation.Method, _createHandler, invocation);
-    }
+        => CreateHandler(invocation);
 
     public virtual MethodDef? GetMethodDef(MethodInfo method, Type proxyType)
         => _methodDefCache.GetOrAdd(method, _createMethodDef, proxyType);
+
+    public InterceptorBinding GetBinding(ProxyMethodTable methodTable)
+    {
+        var bindings = _bindings;
+        if (bindings is null) {
+            bindings = new ConcurrentDictionary<ProxyMethodTable, InterceptorBinding>();
+            bindings = Interlocked.CompareExchange(ref _bindings, bindings, null) ?? bindings;
+        }
+        return bindings.GetOrAdd(methodTable,
+            static (methodTable1, self) => new InterceptorBinding(self, methodTable1), this);
+    }
 
     public void ValidateType(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
@@ -197,18 +167,18 @@ public abstract class Interceptor : IHasServices
         throw ActualLab.Internal.Errors.InternalError($"{GetType().Name} requires this method to be implemented.");
     }
 
-    protected Func<Invocation, object?>? CreateHandler(MethodInfo method, Invocation initialInvocation)
+    protected Func<Invocation, object?>? CreateHandler(in Invocation invocation)
     {
-        var methodDef = GetMethodDef(method, initialInvocation.Proxy.GetType());
+        var methodDef = GetMethodDef(invocation.Method, invocation.Proxy.GetType());
         if (methodDef is null)
             return null;
 
         if (UsesUntypedHandlers)
-            return CreateUntypedHandler(initialInvocation, methodDef);
+            return CreateUntypedHandler(invocation, methodDef);
 
         return (Func<Invocation, object?>?)CreateTypedHandlerMethod
             .MakeGenericMethod(methodDef.UnwrappedReturnType)
-            .Invoke(this, [initialInvocation, methodDef])!;
+            .Invoke(this, [invocation, methodDef])!;
     }
 
     protected virtual MethodDef? CreateMethodDef(MethodInfo method,
