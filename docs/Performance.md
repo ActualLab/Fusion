@@ -41,8 +41,8 @@ method's default result), single-threaded:
 | Proxy variant | Calls/s per core | Mean | Allocated |
 |---------------|------------------|------|-----------|
 | No proxy (direct virtual call) | 763.7M | 1.31 ns | – |
-| **[ActualLab, simple interceptor](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#proxy-and-interception-benchmarks)** | **386.0M** | **2.59 ns** | **24 B** |
-| **[Castle DynamicProxy, simple](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#proxy-and-interception-benchmarks)** | **61.94M** | **16.15 ns** | **128 B** |
+| [ActualLab, simple interceptor](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#proxy-and-interception-benchmarks) | 386.0M | 2.59 ns | 24 B |
+| [Castle DynamicProxy, simple](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#proxy-and-interception-benchmarks) | 61.94M | 16.15 ns | 128 B |
 
 ActualLab's interception is **~5-7x faster than Castle DynamicProxy** — and only **~2-3x slower than a
 plain virtual call** — while allocating far less. That's why Fusion can afford to wrap every compute
