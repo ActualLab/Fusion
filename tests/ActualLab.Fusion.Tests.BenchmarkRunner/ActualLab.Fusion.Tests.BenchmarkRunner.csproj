@@ -30,6 +30,7 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" />
+    <PackageReference Include="Castle.Core" />
     <PackageReference Remove="AwesomeAssertions" />
     <PackageReference Remove="AutoFixture.AutoMoq" />
     <PackageReference Remove="coverlet.collector" />
