@@ -197,6 +197,14 @@ These benchmarks run in Docker containers with CPU limits to measure **4-core se
 The server container is limited to 4 CPUs while client containers have 24 CPUs available,
 ensuring the server is the bottleneck. This setup matches [grpc_bench](https://github.com/LesnyRumcajs/grpc_bench), `SayHello` w/ `gRPC` is identical to what `grpc_bench` measures.
 
+> **External cross-check.** grpc_bench's own
+> [.NET gRPC result on an i9-13900KF @ 5.5 GHz](https://github.com/LesnyRumcajs/grpc_bench/discussions/441)
+> (4-CPU server — a desktop CPU with per-core throughput close to the 9950X3D) is **~402K req/s**,
+> essentially identical to our `SayHello` gRPC figure of **399.32K** below. Same library (grpc-dotnet),
+> same 4-CPU setup — which confirms our gRPC numbers are measured fairly. gRPC-dotnet is the *fastest*
+> framework in that grpc_bench run, and ActualLab.Rpc's `SayHello` (**2.52M**) is still **~6.3× faster**
+> than it.
+
 ### Docker Calls
 
 | Framework | Sum | GetUser | SayHello |
