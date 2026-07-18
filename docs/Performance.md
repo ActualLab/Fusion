@@ -151,14 +151,6 @@ Other options, such as **StreamJsonRpc** and **RESTful API**, are way slower, so
   />
 </ClientOnly>
 
-### Call Latency Under Peak Throughput
-
-| Framework | Sum (p50 / p95 / p99) | GetUser (p50 / p95 / p99) | SayHello (p50 / p95 / p99) |
-|-----------|-----------------------|---------------------------|----------------------------|
-| ActualLab.Rpc | **1.8ms** / **2.4ms** / **6.1ms** | **2.0ms** / **2.6ms** / **6.0ms** | **2.9ms** / **3.4ms** / **6.8ms** |
-| gRPC | 3.4ms / 4.5ms / 12.1ms | 3.5ms / 4.4ms / 11.0ms | 3.5ms / 4.4ms / 10.5ms |
-| SignalR | 5.1ms / 16.4ms / 22.7ms | 6.1ms / 7.8ms / 13.3ms | 11.7ms / 16.2ms / 20.5ms |
-
 ### Streams
 
 | Test | ActualLab.Rpc | gRPC | SignalR | Speedup |
@@ -232,17 +224,6 @@ ensuring the server is the bottleneck. This setup matches [grpc_bench](https://g
     yLabel="M calls/s"
   />
 </ClientOnly>
-
-### Docker Call Latency Under Peak Throughput
-
-| Framework | Sum (p50 / p95 / p99) | GetUser (p50 / p95 / p99) | SayHello (p50 / p95 / p99) |
-|-----------|-----------------------|---------------------------|----------------------------|
-| ActualLab.Rpc | 3.5ms / **8.4ms** / **12.8ms** | 4.1ms / 8.6ms / **13.1ms** | 6.4ms / 9.6ms / 24.3ms |
-| SignalR | 8.7ms / 28.1ms / 30.0ms | 9.8ms / 32.2ms / 35.2ms | 20.1ms / 31.2ms / 40.6ms |
-| gRPC | **3.3ms** / 32.3ms / 45.4ms | **3.5ms** / **6.8ms** / 32.1ms | **4.2ms** / 9.6ms / 36.2ms |
-| MagicOnion | 4.5ms / 8.3ms / 24.1ms | 5.0ms / 10.8ms / 23.1ms | 5.5ms / **8.8ms** / **12.3ms** |
-| StreamJsonRpc | 43.4ms / 56.4ms / 59.6ms | 58.9ms / 70.1ms / 72.5ms | 107.3ms / 212.3ms / 222.0ms |
-| HTTP | 33.9ms / 51.4ms / 54.9ms | 34.2ms / 44.3ms / 45.9ms | 30.4ms / 44.0ms / 45.5ms |
 
 ### Docker Streams
 
