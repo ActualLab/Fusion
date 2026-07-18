@@ -85,13 +85,13 @@ The next bump at ~`4-5ms` is when the service actually goes to the DB &ndash; i.
 
 ### Benchmark Highlights
 
-Our [benchmarks](./docs/Performance.md) show Fusion delivering **over 300 million calls per second** on a consumer CPU (AMD Ryzen 9 9950X3D) with its transparent caching:
+Our [benchmarks](./docs/Performance.md) show Fusion delivering **over 500 million calls per second** on a consumer CPU (AMD Ryzen 9 9950X3D) with its transparent caching:
 
-| Scenario                                       | Without Fusion        | With Fusion     | Speedup     |
-|------------------------------------------------|-----------------------|-----------------|-------------|
-| Local DAL, almost no writes (peak performance) | 38.61K calls/s        | 313.75M calls/s | **>8,000x** |
-| Local repo-like service, non-stop writes       | 118.15K calls/s       | 261.32M calls/s | **~2,212x** |
-| Remote repo-like service, non-stop writes      | 80.43K calls/s (REST) | 215.45M calls/s | **~2,679x** |
+| Scenario                                       | Without Fusion        | With Fusion     | Speedup      |
+|------------------------------------------------|-----------------------|-----------------|--------------|
+| Local DAL, almost no writes (peak performance) | 38.61K calls/s        | 533.85M calls/s | **>13,000x** |
+| Local repo-like service, non-stop writes       | 171.05K calls/s       | 344.98M calls/s | **~2,017x**  |
+| Remote repo-like service, non-stop writes      | 102.82K calls/s (REST)| 230.16M calls/s | **~2,239x**  |
 
 These aren't typos &ndash; Fusion makes your services **thousands of times faster** by eliminating redundant computation, RPC, and database access.
 
@@ -103,9 +103,9 @@ Note that these benchmarks test Fusion method calls with no dependency chains. R
 
 | Framework | Calls/s | Streaming |
 |-----------|---------|-----------|
-| **ActualLab.Rpc** | **10.16M** | **96.96M items/s** |
-| SignalR | 5.31M | 18.30M items/s |
-| gRPC | 1.29M | 43.78M items/s |
+| **ActualLab.Rpc** | **9.91M** | **99.96M items/s** |
+| SignalR | 4.85M | 17.97M items/s |
+| gRPC | 1.28M | 43.78M items/s |
 
 So it's **significantly faster** than gRPC and SignalR, both for calls and for streaming.
 
@@ -114,7 +114,7 @@ So it's **significantly faster** than gRPC and SignalR, both for calls and for s
 - The concept itself is all about eliminating any unnecessary computation. Think `msbuild`, but for your method call results: what's computed and consistent is never recomputed.
 - Fusion caches call results in memory, so if there's a cache hit, the result is instantly available. No round-trips to external caches, no serialization/deserialization, etc.
 - Moreover, there is no cloning: what's cached is the .NET object or struct returned from a call, so any call result is "shared". This is much more CPU cache-friendly than, e.g., deserializing a new copy on every hit.
-- Fusion uses its own `ActualLab.Interception` library for method interception. Unlike [Castle.DynamicProxy](http://www.castleproject.org/projects/dynamicproxy/) and similar libraries that box arguments and allocate heavily, our interceptors require just 1 allocation per call with zero boxing &ndash; making them the fastest on .NET.
+- Fusion uses its own `ActualLab.Interception` library for method interception. Unlike [Castle.DynamicProxy](http://www.castleproject.org/projects/dynamicproxy/) and similar libraries that box arguments and allocate heavily, our interceptors require just 1 allocation per call with zero boxing &ndash; making them the fastest on .NET (our microbenchmarks show them **~5-7x faster per call than Castle DynamicProxy**).
 - `ActualLab.Rpc` uses the fastest serializers available on .NET &ndash; [MemoryPack](https://github.com/Cysharp/MemoryPack) by default (it doesn't require runtime IL Emit), though you can also use [MessagePack](https://github.com/MessagePack-CSharp/MessagePack-CSharp) (it's slightly faster, but requires IL Emit) or anything else you prefer.
 - All critical execution paths in Fusion are heavily optimized. The [archived version of this page](https://web.archive.org/web/20201212144353/https://github.com/servicetitan/Stl.Fusion/) shows that the performance of local compute services is currently 10x better than it was a few years ago.
 

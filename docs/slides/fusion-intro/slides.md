@@ -610,10 +610,10 @@ Rendering 100 rows at once? 100 RPC calls fire at once, batched by ActualLab.Rpc
 
 | Workload | Fusion | Baseline | Ratio |
 |---|---:|---:|---:|
-| Local cache hit (all cores) | 316 M/s | Redis: 0.23 M/s | **1,380×** |
-| Remote, client cache hit | 215 M/s | HTTP + DB: 80 K/s | **2,679×** |
-| Plain RPC calls | 10.2 M/s | gRPC 1.29 M/s | **7.9×** |
-| Streaming 100-byte items | 4.30 GB/s | gRPC 1.43 GB/s | **3.0×** |
+| Local cache hit (all cores) | 534 M/s | Redis: 0.23 M/s | **2,321×** |
+| Remote, client cache hit | 230 M/s | HTTP + DB: 103 K/s | **2,239×** |
+| Plain RPC calls | 9.9 M/s | gRPC 1.28 M/s | **7.7×** |
+| Streaming 100-byte items | 4.49 GB/s | gRPC 2.59 GB/s | **1.7×** |
 
 <div class="pt-16 text-sm opacity-60 mt-3">
 Ryzen 9 9950X3D, 32 logical cores.<br/>

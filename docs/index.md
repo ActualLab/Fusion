@@ -37,7 +37,7 @@ features:
     details: "Automatic <span style='color:var(--hl-feat);'>state sync</span> across your <span style='color:var(--hl-feat);'>server cluster and every client</span> connected to it. No SignalR hubs. No event handlers. No manual pub/sub."
   - icon: ⚡
     title: Unbeatable Speed
-    details: "<span style='color:var(--hl-feat);'>100x faster than Redis:</span> 20M cache-resolving calls/s per core. The fastest RPC available: <span style='color:var(--hl-feat);'>2–7x faster than gRPC and SignalR.</span>"
+    details: "<span style='color:var(--hl-feat);'>200x faster than Redis:</span> 50M cache-resolving calls/s per core. The fastest RPC available: <span style='color:var(--hl-feat);'>2–7x faster than gRPC and SignalR.</span>"
     link: /Performance#results
     linkText: See benchmarks
   - icon: ✈️
@@ -210,9 +210,9 @@ Fusion doesn't just add real-time—it makes your app **thousands of times faste
 
 | Scenario | Without Fusion | With Fusion | Speedup |
 |----------|----------------|-------------|---------|
-| Local service, minimal writes | 38.6K calls/s | **313.8M calls/s** | <span style="color: #22c55e; font-weight: bold;">8,127x</span> |
-| Local service, continuous writes | 118.2K calls/s | **261.3M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,212x</span> |
-| Remote service, continuous writes | 80.4K calls/s (REST) | **215.5M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,679x</span> |
+| Local service, minimal writes | 38.6K calls/s | **533.8M calls/s** | <span style="color: #22c55e; font-weight: bold;">13,827x</span> |
+| Local service, continuous writes | 171.1K calls/s | **345.0M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,017x</span> |
+| Remote service, continuous writes | 102.8K calls/s (REST) | **230.2M calls/s** | <span style="color: #22c55e; font-weight: bold;">2,239x</span> |
 
 <p style="font-size: 0.85em; color: #666; margin-top: 0.5rem;">
 Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark details</a>.
@@ -222,13 +222,13 @@ Benchmarks on AMD Ryzen 9 9950X3D. See <a href="/Performance">full benchmark det
 
 | Framework | RPC Calls/sec | Streaming Items/sec |
 |-----------|---------------|---------------------|
-| **ActualLab.Rpc** | **10.16M** | **96.96M** |
-| SignalR | 5.31M | 18.30M |
-| gRPC | 1.29M | 43.78M |
-| **Speedup** | <span style="color: #22c55e; font-weight: bold;">1.9..7.9x</span> | <span style="color: #22c55e; font-weight: bold;">2.2..5.3x</span> |
+| **ActualLab.Rpc** | **9.91M** | **99.96M** |
+| SignalR | 4.85M | 17.97M |
+| gRPC | 1.28M | 43.78M |
+| **Speedup** | <span style="color: #22c55e; font-weight: bold;">2.0..7.7x</span> | <span style="color: #22c55e; font-weight: bold;">2.3..5.6x</span> |
 
 <p style="font-size: 0.85em; color: #666;">
-7.9x faster than gRPC for calls. 5.3x faster than SignalR for streaming.
+7.7x faster than gRPC for calls. 5.6x faster than SignalR for streaming.
 </p>
 
 ## How It Works: The MSBuild/Make Analogy
