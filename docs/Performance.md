@@ -119,6 +119,10 @@ The benchmark measures throughput of a simple repository-style user lookup servi
 | ActualLab.Rpc Client → Fusion Service | 7.82M calls/s | <span style="color: #22c55e; font-weight: bold;">~76x</span> |
 | Fusion Client → Fusion Service | 230.16M calls/s | <span style="color: #22c55e; font-weight: bold;">~2,239x</span> |
 
+Wondering what each of these scenarios means (HTTP vs ActualLab.Rpc vs Fusion client)? See
+[What each scenario means](https://github.com/ActualLab/Fusion.Samples/blob/master/Benchmarks.md#what-each-scenario-means)
+in the source report.
+
 ## RpcBenchmark.cmd from ActualLab.Fusion.Samples
 
 This benchmark compares **ActualLab.Rpc** with **gRPC**, **SignalR**, and other RPC frameworks.
