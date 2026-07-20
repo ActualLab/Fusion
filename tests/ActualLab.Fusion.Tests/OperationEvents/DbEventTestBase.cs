@@ -189,11 +189,12 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
         }
         await Enqueue(events);
 
-        // Wait for all events to be processed
+        // Wait for all events to be processed. The pipeline is at-least-once, so a reprocessed
+        // event may add a duplicate - the condition must check ids rather than the count
         var expectedIds = events.Select(e => ((EventCatcher_Event)e.Value!).Id).ToArray();
         await ComputedTest.When(async ct => {
             var processed = await c.Events.Use(ct);
-            processed.Count.Should().Be(eventCount);
+            processed.Should().Contain(expectedIds);
         }, TimeSpan.FromSeconds(eventCount + 10));
 
         // Assert each event was processed close to its scheduled time
