@@ -21,10 +21,7 @@ public class SqliteAuthServiceTest : AuthServiceTestBase
 public class PostgreSqlAuthServiceTest : AuthServiceTestBase
 {
     public PostgreSqlAuthServiceTest(ITestOutputHelper @out) : base(@out)
-    {
-        DbType = FusionTestDbType.PostgreSql;
-        UseRedisOperationLogChangeTracking = false;
-    }
+        => DbType = FusionTestDbType.PostgreSql;
 }
 
 public class MariaDbAuthServiceTest : AuthServiceTestBase

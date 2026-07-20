@@ -14,10 +14,7 @@ public class SqliteEventTest : DbEventTestBase
 public class PostgreSqlEventTest : DbEventTestBase
 {
     public PostgreSqlEventTest(ITestOutputHelper @out) : base(@out)
-    {
-        DbType = FusionTestDbType.PostgreSql;
-        UseRedisOperationLogChangeTracking = false;
-    }
+        => DbType = FusionTestDbType.PostgreSql;
 }
 
 public class MariaDbEventTest : DbEventTestBase

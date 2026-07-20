@@ -12,6 +12,7 @@ using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Rpc;
 #endif
 using ActualLab.Fusion.Tests.DbModel;
+using ActualLab.Generators;
 using ActualLab.Locking;
 using ActualLab.Rpc;
 using ActualLab.Testing.Collections;
@@ -37,6 +38,7 @@ public abstract class FusionTestBase : RpcTestBase
     public bool IsConsoleApp { get; set; } = false;
     public bool UseOperationLogChangeTracking { get; set; } = true;
     public bool UseRedisOperationLogChangeTracking { get; set; } = !TestRunnerInfo.IsBuildAgent();
+    public bool UseNpgsqlOperationLogChangeTracking { get; set; } = !TestRunnerInfo.IsBuildAgent();
     public bool UseInMemoryKeyValueStore { get; set; }
     public bool UseInMemoryAuthService { get; set; }
     public bool UseRemoteComputedCache { get; set; }
@@ -188,6 +190,16 @@ public abstract class FusionTestBase : RpcTestBase
             });
             services.AddDbContextServices<TestDbContext>(db => {
                 var useRedis = UseOperationLogChangeTracking && UseRedisOperationLogChangeTracking;
+                var mustPickWatcher = UseOperationLogChangeTracking
+                    && DbType == FusionTestDbType.PostgreSql
+                    && !TestRunnerInfo.IsBuildAgent(); // Build agents have neither Redis nor PostgreSql
+                if (mustPickWatcher) {
+                    // A tie (both flags are set or both are unset) is resolved by a true random pick
+                    useRedis = UseRedisOperationLogChangeTracking == UseNpgsqlOperationLogChangeTracking
+                        ? RandomShared.Next() % 2 == 0
+                        : UseRedisOperationLogChangeTracking;
+                    WriteLine($"Operation log watcher: {(useRedis ? "Redis" : "Npgsql")}");
+                }
                 if (useRedis)
                     db.AddRedisDb("127.0.0.1", RedisKeyPrefix);
                 db.AddOperations(operations => {
