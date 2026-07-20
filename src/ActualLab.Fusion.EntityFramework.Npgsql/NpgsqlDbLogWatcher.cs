@@ -103,8 +103,13 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
             // every request accepted while it awaits its turn - they all share its task.
             Task notifyTask;
             lock (_lock) {
-                if (_activeNotifyTask is { IsCompleted: false } activeNotifyTask)
-                    notifyTask = _queuedNotifyTask ??= QueuedNotify(activeNotifyTask);
+                // The queued task must be checked first: the active one may be already completed
+                // while the queued one hasn't promoted itself yet, and starting a new NOTIFY
+                // in this state would bypass the queued one
+                if (_queuedNotifyTask is { } queuedNotifyTask)
+                    notifyTask = queuedNotifyTask;
+                else if (_activeNotifyTask is { IsCompleted: false } activeNotifyTask)
+                    notifyTask = _queuedNotifyTask = QueuedNotify(activeNotifyTask);
                 else
                     notifyTask = _activeNotifyTask = Notify();
             }
@@ -120,9 +125,14 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
             // below before NotifyChanged (still holding _lock) assigns _queuedNotifyTask = this task
             await Task.Yield();
             lock (_lock) {
-                if (!ReferenceEquals(_activeNotifyTask, activeNotifyTask))
-                    throw ActualLab.Internal.Errors.InternalError(
-                        $"{nameof(QueuedNotify)}: the notify task it chained itself behind isn't the active one.");
+                if (!ReferenceEquals(_activeNotifyTask, activeNotifyTask)) {
+                    // Must be unreachable; skipping the NOTIFY is the recovery here - the send
+                    // pipeline stays consistent, and the readers fall back to their check periods
+                    Owner.Log.LogCritical(
+                        $"{nameof(QueuedNotify)}: the notify task it chained itself behind isn't the active one");
+                    _queuedNotifyTask = null;
+                    return;
+                }
 
                 _activeNotifyTask = _queuedNotifyTask;
                 _queuedNotifyTask = null;
