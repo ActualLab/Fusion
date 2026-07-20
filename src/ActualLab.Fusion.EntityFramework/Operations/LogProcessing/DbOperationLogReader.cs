@@ -33,4 +33,12 @@ public class DbOperationLogReader<TDbContext>
             ? Task.CompletedTask
             : OperationCompletionNotifier.NotifyCompleted(entry.ToModel(), null);
     }
+
+    protected override void ReportProcessingDelay(string shard, DbOperation entry, string path)
+    {
+        // Local operations are invalidated in-process right on commit, so their reader-side timing is irrelevant
+        var isLocal = string.Equals(entry.HostId, DbHub.HostId.Id, StringComparison.Ordinal);
+        if (!isLocal)
+            base.ReportProcessingDelay(shard, entry, path);
+    }
 }

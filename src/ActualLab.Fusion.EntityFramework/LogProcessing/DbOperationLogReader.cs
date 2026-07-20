@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Diagnostics;
+using ActualLab.Fusion.EntityFramework.Internal;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -19,6 +20,8 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     // Per-shard set of unresolved indexes: gaps (missing entries) and present-but-failing entries.
     // Re-checked in batches on an adaptive cadence - see ProcessGaps.
     protected ConcurrentDictionary<string, ShardGapSet> Gaps { get; } = new(StringComparer.Ordinal);
+    protected ConcurrentDictionary<string, DelayWarningState> DelayWarningStates { get; }
+        = new(StringComparer.Ordinal);
 
     public override DbLogKind LogKind => DbLogKind.Operations;
 
@@ -94,9 +97,17 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         foreach (var entry in entries) {
             while (nextIndex != entry.Index)
                 AddGap(shard, nextIndex++, now);
-            yield return ProcessSafe(shard, entry.Index, entry, canReprocess: true, cancellationToken);
+            yield return ProcessBatchEntry(shard, entry, cancellationToken);
             nextIndex++;
         }
+    }
+
+    private async Task ProcessBatchEntry(string shard, TDbEntry entry, CancellationToken cancellationToken)
+    {
+        var isProcessed = await ProcessSafe(shard, entry.Index, entry, canReprocess: true, cancellationToken)
+            .ConfigureAwait(false);
+        if (isProcessed)
+            ReportProcessingDelay(shard, entry, "batch");
     }
 
     protected override async Task<bool> ProcessOne(
@@ -116,6 +127,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
             return false;
 
         await Process(shard, entry, cancellationToken).ConfigureAwait(false);
+        ReportProcessingDelay(shard, entry, "reprocess");
         return true;
     }
 
@@ -315,6 +327,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
             await Process(shard, entry, cancellationToken).ConfigureAwait(false);
             lock (shardGaps)
                 shardGaps.Entries.Remove(index);
+            ReportProcessingDelay(shard, entry, "gap");
             DebugLog?.LogDebug(
                 $"{nameof(ProcessGaps)}[{{Shard}}]: entry #{{Index}} is processed",
                 shard, index);
@@ -345,6 +358,50 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         }
     }
 
+    protected virtual void ReportProcessingDelay(string shard, TDbEntry entry, string path)
+    {
+        var delay = SystemClock.Now.ToDateTime() - entry.LoggedAt;
+        if (delay < TimeSpan.Zero)
+            delay = TimeSpan.Zero; // Cross-host clock drift can make it slightly negative
+        FusionEntityFrameworkInstruments.OperationLogProcessingDelay.Record(
+            delay.TotalMilliseconds,
+            new KeyValuePair<string, object?>("shard", shard),
+            new KeyValuePair<string, object?>("path", path));
+
+        var threshold = Settings.ProcessingDelayWarningThreshold;
+        if (threshold <= TimeSpan.Zero || delay <= threshold)
+            return;
+
+        int suppressedCount;
+        TimeSpan maxSuppressedDelay;
+        var state = DelayWarningStates.GetOrAdd(shard, static _ => new DelayWarningState());
+        lock (state) {
+            var now = SystemClock.Now;
+            if (now < state.NextWarningAt) {
+                state.SuppressedCount++;
+                state.MaxSuppressedDelay = TimeSpanExt.Max(state.MaxSuppressedDelay, delay);
+                return;
+            }
+
+            (suppressedCount, maxSuppressedDelay) = (state.SuppressedCount, state.MaxSuppressedDelay);
+            state.SuppressedCount = 0;
+            state.MaxSuppressedDelay = default;
+            state.NextWarningAt = now + Settings.ProcessingDelayWarningPeriod;
+        }
+        if (suppressedCount > 0)
+            Log.LogWarning(
+                $"{nameof(ReportProcessingDelay)}[{{Shard}}]: entry #{{Index}} was processed {{Delay}} " +
+                "after logging ({Path} path); +{SuppressedCount} more delayed entries " +
+                "(max {MaxDelay}) since the last warning",
+                shard, entry.Index, delay.ToShortString(), path,
+                suppressedCount, maxSuppressedDelay.ToShortString());
+        else
+            Log.LogWarning(
+                $"{nameof(ReportProcessingDelay)}[{{Shard}}]: entry #{{Index}} was processed {{Delay}} " +
+                "after logging ({Path} path)",
+                shard, entry.Index, delay.ToShortString(), path);
+    }
+
     // Nested types
 
     protected sealed class GapEntry(Moment addedAt, int retriesLeft)
@@ -361,5 +418,12 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
     {
         public Dictionary<long, GapEntry> Entries { get; } = new();
         public bool SizeLimitWarned { get; set; }
+    }
+
+    protected sealed class DelayWarningState
+    {
+        public Moment NextWarningAt;
+        public int SuppressedCount;
+        public TimeSpan MaxSuppressedDelay;
     }
 }

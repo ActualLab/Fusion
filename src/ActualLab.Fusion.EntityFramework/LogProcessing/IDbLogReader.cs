@@ -53,6 +53,9 @@ public abstract record DbOperationLogReaderOptions : DbLogReaderOptions
     public int GapSetSizeLimit { get; init; } = 16384;
     public int GapCheckChunkSize { get; init; } = 256;
     public int FailedEntryRetryLimit { get; init; } = 10;
+    // Processing-delay reporting settings (see DbOperationLogReader); Threshold <= 0 disables the warnings
+    public TimeSpan ProcessingDelayWarningThreshold { get; init; } = TimeSpan.FromSeconds(1);
+    public TimeSpan ProcessingDelayWarningPeriod { get; init; } = TimeSpan.FromSeconds(10);
 
     protected DbOperationLogReaderOptions()
     {

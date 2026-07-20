@@ -182,6 +182,27 @@ public class OperationLogReaderGapTest(ITestOutputHelper @out) : FusionTestBase(
     }
 
     [Fact]
+    public async Task ProcessingDelayWarningTest()
+    {
+        var reader = CreateReader(new());
+        var realHostId = Services.GetRequiredService<DbHub<TestDbContext>>().HostId.Id;
+        reader.KnownEntries[5] = NewDbOperation(5); // LoggedAt is 10 minutes ago - way past the 1 s threshold
+        reader.KnownEntries[6] = NewDbOperation(6); // Must be suppressed by ProcessingDelayWarningPeriod
+        var localOp = NewDbOperation(7);
+        localOp.HostId = realHostId; // Local entries must not be reported at all
+        reader.KnownEntries[7] = localOp;
+        reader.RunAddGap(5);
+        reader.RunAddGap(6);
+        reader.RunAddGap(7);
+        await reader.RunProcessGaps();
+        reader.GapCount().Should().Be(0);
+
+        var content = _loggerProvider.Content;
+        content.Should().Contain("(gap path)");
+        (content.Split("was processed").Length - 1).Should().Be(1);
+    }
+
+    [Fact]
     public async Task ResolveFrontGapTest()
     {
         var reader = CreateReader(new());
