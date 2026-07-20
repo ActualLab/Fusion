@@ -255,7 +255,7 @@ Configures WebSocket-based RPC server endpoints.
 | `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
 | `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
-| `ConfigureWebSocket` | `Func<...>` | Empty context | Configure WebSocketAcceptContext (.NET 6+) |
+| `ConfigureWebSocket` | `RpcWebSocketServerAcceptContextFactory` | Empty context | Creates the WebSocket accept context per connection from `(server, context, peerRef)` — e.g. to enable compression selectively (.NET 6+) |
 
 ### Example
 

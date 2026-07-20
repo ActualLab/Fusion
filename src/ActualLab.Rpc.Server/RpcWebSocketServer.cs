@@ -45,7 +45,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
                 Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}' for {Request}",
                     peerRef, peerRef.SerializationFormat, requestDescription);
 #if NET6_0_OR_GREATER
-                var rejectAcceptContext = Options.ConfigureWebSocket.Invoke();
+                var rejectAcceptContext = Options.ConfigureWebSocket.Invoke(this, context, peerRef);
                 webSocket = await context.WebSockets.AcceptWebSocketAsync(rejectAcceptContext).ConfigureAwait(false);
 #else
                 webSocket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
@@ -76,7 +76,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             }
 
 #if NET6_0_OR_GREATER
-            var webSocketAcceptContext = Options.ConfigureWebSocket.Invoke();
+            var webSocketAcceptContext = Options.ConfigureWebSocket.Invoke(this, context, peerRef);
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync(webSocketAcceptContext);
 #else
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync();

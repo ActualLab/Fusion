@@ -64,16 +64,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
             }
         }
 
-        var headers =
-            GetValue<IDictionary<string, string[]>>(context.Environment, "owin.RequestHeaders")
-            ?? ImmutableDictionary<string, string[]>.Empty;
-
-        var acceptOptions = new Dictionary<string, object>(StringComparer.Ordinal);
-        if (headers.TryGetValue("Sec-WebSocket-Protocol", out string[]? subProtocols) && subProtocols.Length > 0) {
-            // Select the first one from the client
-            acceptOptions.Add("websocket.SubProtocol", subProtocols[0].Split(',').First().Trim());
-        }
-
+        var acceptOptions = Settings.ConfigureWebSocket.Invoke(this, context, peerRef);
         acceptToken(acceptOptions, wsEnv => {
             var wsContext = (WebSocketContext)wsEnv["System.Net.WebSockets.WebSocketContext"];
             return HandleWebSocket(context, wsContext, peerRef);
@@ -132,7 +123,4 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
                 webSocket?.Dispose();
         }
     }
-
-    private static T? GetValue<T>(IDictionary<string, object?> env, string key)
-        => env.TryGetValue(key, out var value) && value is T result ? result : default;
 }

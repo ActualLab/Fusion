@@ -17,6 +17,7 @@ public record RpcWebSocketServerOptions
     public string SerializationFormatParameterName { get; init; } = RpcWebSocketClientOptions.Default.SerializationFormatParameterName;
     public string ClientIdParameterName { get; init; } = RpcWebSocketClientOptions.Default.ClientIdParameterName;
 #if NET6_0_OR_GREATER
-    public Func<WebSocketAcceptContext> ConfigureWebSocket { get; init; } = () => new();
+    public RpcWebSocketServerAcceptContextFactory ConfigureWebSocket { get; init; }
+        = RpcWebSocketServerDefaultDelegates.AcceptContextFactory;
 #endif
 }
