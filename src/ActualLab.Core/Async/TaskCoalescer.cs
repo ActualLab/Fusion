@@ -7,7 +7,11 @@ namespace ActualLab.Async;
 /// </summary>
 public sealed class TaskCoalescer(Func<Task> taskFactory)
 {
+#if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
     private Task? _activeTask;
     private Task? _queuedTask;
 
@@ -21,7 +25,7 @@ public sealed class TaskCoalescer(Func<Task> taskFactory)
         }
     }
 
-    public Task Run()
+    public Task Invoke()
     {
         lock (_lock) {
             // The queued task must be checked first: the active one may be already completed
@@ -42,7 +46,7 @@ public sealed class TaskCoalescer(Func<Task> taskFactory)
     {
         await activeTask.SilentAwait(false);
         // The yield forces an asynchronous continuation, which can't enter the promotion block
-        // below before Run (still holding _lock) assigns _queuedTask = this task
+        // below before Invoke (still holding _lock) assigns _queuedTask = this task
         await Task.Yield();
         lock (_lock) {
             if (!ReferenceEquals(_activeTask, activeTask)) {

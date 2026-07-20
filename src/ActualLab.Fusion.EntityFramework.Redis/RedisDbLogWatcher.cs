@@ -69,6 +69,6 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
         }
 
         public override Task NotifyChanged(CancellationToken cancellationToken)
-            => _notifyCoalescer.Run().WaitAsync(cancellationToken);
+            => _notifyCoalescer.Invoke().WaitAsync(cancellationToken);
     }
 }

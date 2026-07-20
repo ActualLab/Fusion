@@ -11,9 +11,9 @@ public class TaskCoalescerTest(ITestOutputHelper @out) : TestBase(@out)
             await Task.Yield();
         });
 
-        await coalescer.Run();
-        await coalescer.Run();
-        await coalescer.Run();
+        await coalescer.Invoke();
+        await coalescer.Invoke();
+        await coalescer.Invoke();
         runCount.Should().Be(3); // No concurrency = no coalescing
     }
 
@@ -27,9 +27,9 @@ public class TaskCoalescerTest(ITestOutputHelper @out) : TestBase(@out)
             await gate.Task.ConfigureAwait(false);
         });
 
-        var t1 = coalescer.Run();
-        var t2 = coalescer.Run();
-        var t3 = coalescer.Run();
+        var t1 = coalescer.Invoke();
+        var t2 = coalescer.Invoke();
+        var t3 = coalescer.Invoke();
         runCount.Should().Be(1);
         t2.Should().BeSameAs(t3); // Requests behind an in-flight run share the queued one
         t2.Should().NotBeSameAs(t1);
@@ -51,10 +51,10 @@ public class TaskCoalescerTest(ITestOutputHelper @out) : TestBase(@out)
             await gate.Task.ConfigureAwait(false);
         });
 
-        var t1 = coalescer.Run();
+        var t1 = coalescer.Invoke();
         var tasks = Enumerable.Range(0, 100)
             .AsParallel()
-            .Select(_ => coalescer.Run())
+            .Select(_ => coalescer.Invoke())
             .ToArray();
         runCount.Should().Be(1);
         tasks.Should().AllSatisfy(t => t.Should().BeSameAs(tasks[0]));
@@ -77,9 +77,9 @@ public class TaskCoalescerTest(ITestOutputHelper @out) : TestBase(@out)
                 throw new InvalidOperationException("Simulated");
         });
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => coalescer.Run());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => coalescer.Invoke());
         mustFail = false;
-        await coalescer.Run(); // A faulted active task must not block new runs
+        await coalescer.Invoke(); // A faulted active task must not block new runs
         runCount.Should().Be(2);
     }
 
@@ -95,13 +95,13 @@ public class TaskCoalescerTest(ITestOutputHelper @out) : TestBase(@out)
                 throw new InvalidOperationException("Simulated");
         });
 
-        var t1 = coalescer.Run();
-        var t2 = coalescer.Run();
+        var t1 = coalescer.Invoke();
+        var t2 = coalescer.Invoke();
         gate.SetResult(default);
         await t1;
         await Assert.ThrowsAsync<InvalidOperationException>(() => t2);
 
-        await coalescer.Run(); // And a faulted queued task must not block new runs either
+        await coalescer.Invoke(); // And a faulted queued task must not block new runs either
         runCount.Should().Be(3);
     }
 }
