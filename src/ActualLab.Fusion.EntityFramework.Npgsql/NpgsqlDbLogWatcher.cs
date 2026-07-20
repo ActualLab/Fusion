@@ -1,6 +1,5 @@
 using ActualLab.Fusion.EntityFramework.LogProcessing;
 using ActualLab.Fusion.EntityFramework.Operations;
-using ActualLab.Locking;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -38,9 +37,12 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
     /// </summary>
     protected class ShardWatcher : DbShardWatcher
     {
+        private readonly object _sendLock = new();
+        private Task? _activeSendTask;
+        private Task? _queuedSendTask;
+
         public NpgsqlDbLogWatcher<TDbContext, TDbEntry> Owner { get; }
         public DbHub<TDbContext> DbHub => Owner.DbHub;
-        public AsyncLock NotifyLock { get; } = new();
         public string ListenSql { get; }
         public string NotifySql { get; }
         public string QuotedNotifyPayload { get; }
@@ -83,40 +85,70 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
 
         protected override async Task DisposeAsyncCore()
         {
-            using var releaser = await NotifyLock.Lock().ConfigureAwait(false);
+            Task? lastSendTask;
+            lock (_sendLock)
+                lastSendTask = _queuedSendTask ?? _activeSendTask;
+            if (lastSendTask is not null)
+                await lastSendTask.SilentAwait(false);
             if (DbContext is { } dbContext) {
                 DbContext = null;
                 await dbContext.DisposeAsync().ConfigureAwait(false);
             }
         }
 
-        public override async Task NotifyChanged(CancellationToken cancellationToken)
+        public override Task NotifyChanged(CancellationToken cancellationToken)
         {
-            var releaser = await NotifyLock.Lock(cancellationToken).ConfigureAwait(false);
+            // Coalescing instead of a send queue: at most one send is in flight and at most one more
+            // is queued behind it. The payload is constant (host id), so the queued send covers every
+            // request accepted while it awaits its turn - they all share its task.
+            Task sendTask;
+            lock (_sendLock) {
+                if (_activeSendTask is { IsCompleted: false } activeSendTask)
+                    sendTask = _queuedSendTask ??= QueuedSend(activeSendTask);
+                else
+                    sendTask = _activeSendTask = Send();
+            }
+            return sendTask.WaitAsync(cancellationToken);
+        }
+
+        // Private methods
+
+        private async Task QueuedSend(Task activeSendTask)
+        {
+            await activeSendTask.SilentAwait(false);
+            // The yield forces an asynchronous continuation, which can't enter the promotion block
+            // below before NotifyChanged (still holding _sendLock) assigns _queuedSendTask = this task
+            await Task.Yield();
+            lock (_sendLock) {
+                _activeSendTask = _queuedSendTask;
+                _queuedSendTask = null;
+            }
+            await Send().ConfigureAwait(false);
+        }
+
+        private async Task Send()
+        {
+            // Never runs concurrently with itself: NotifyChanged starts it only when no send is
+            // in flight, and QueuedSend only after the active send completes
             try {
                 if (StopToken.IsCancellationRequested)
                     return;
 
                 DbContext ??= await DbHub.ContextFactory
-                    .CreateDbContextAsync(Shard, cancellationToken)
+                    .CreateDbContextAsync(Shard, StopToken)
                     .ConfigureAwait(false);
-                if (StopToken.IsCancellationRequested)
-                    return;
-
                 await DbContext.Database
-                    .ExecuteSqlRawAsync(NotifySql, cancellationToken)
+                    .ExecuteSqlRawAsync(NotifySql, StopToken)
                     .ConfigureAwait(false);
             }
-            catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+            catch (Exception e) {
                 if (DbContext is { } dbContext) {
                     DbContext = null;
                     await dbContext.DisposeAsync().ConfigureAwait(false);
                 }
-                Owner.Log.LogError(e, "NotifyChanged failed for shard '{Shard}'", Shard);
+                if (!e.IsCancellationOf(StopToken))
+                    Owner.Log.LogError(e, "NotifyChanged failed for shard '{Shard}'", Shard);
                 throw;
-            }
-            finally {
-                releaser.Dispose();
             }
         }
     }
