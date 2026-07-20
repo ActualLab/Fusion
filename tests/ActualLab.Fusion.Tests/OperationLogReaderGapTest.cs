@@ -182,6 +182,36 @@ public class OperationLogReaderGapTest(ITestOutputHelper @out) : FusionTestBase(
     }
 
     [Fact]
+    public async Task NotifiedWakeGapCheckTest()
+    {
+        var reader = CreateReader(new() {
+            CheckPeriod = TimeSpan.FromSeconds(30),
+            GapCheckPeriod = TimeSpan.FromSeconds(30),
+        });
+        reader.KnownEntries[7] = NewDbOperation(7);
+        reader.FailingIndexes[7] = default;
+        reader.RunOnReprocessExhausted(7); // A budgeted (failed earlier) entry
+        reader.RunAddGap(5); // A pure gap
+        await reader.RunProcessGaps(); // Both miss/fail and get gated for ~30 s
+        reader.QueryCounts[5].Should().Be(1);
+        reader.ProcessAttempts[7].Should().Be(1);
+
+        // Not notified -> the gates hold even though the gap entry is committed now
+        reader.KnownEntries[5] = NewDbOperation(5);
+        await reader.RunProcessGaps();
+        reader.QueryCounts[5].Should().Be(1);
+
+        // Notified -> the young pure gap is re-checked immediately, the budgeted entry isn't
+        reader.RunOnChangeNotified();
+        await reader.RunProcessGaps();
+        reader.HasGap(5).Should().BeFalse();
+        reader.ProcessAttempts[5].Should().Be(1);
+        reader.QueryCounts[5].Should().Be(2);
+        reader.HasGap(7).Should().BeTrue();
+        reader.ProcessAttempts[7].Should().Be(1);
+    }
+
+    [Fact]
     public async Task ProcessingDelayWarningTest()
     {
         var reader = CreateReader(new());
@@ -270,6 +300,9 @@ public class GapTestLogReader(
 
     public void RunOnReprocessExhausted(long index)
         => OnReprocessExhausted(Shard, index, CancellationToken.None);
+
+    public void RunOnChangeNotified()
+        => OnChangeNotified(Shard);
 
     public Task<long> RunResolveFrontGap(
         TestDbContext dbContext, long nextIndex, long firstIndex, CancellationToken cancellationToken = default)

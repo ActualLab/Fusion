@@ -85,12 +85,18 @@ public abstract class DbLogReader<TDbContext, TDbKey, TDbEntry, TOptions>(
 
             await whenChanged.SilentAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
+            // Successful completion = a MarkChanged wake-up; cancellation = the check period / gap timer
+            if (whenChanged.IsCompletedSuccessfully)
+                OnChangeNotified(shard);
         }
         finally {
             // We have to cancel timeoutCts to abort WhenEntriesAdded & timeoutTask
             timeoutCts.CancelAndDisposeSilently();
         }
     }
+
+    protected virtual void OnChangeNotified(string shard)
+    { }
 
     protected async Task<bool> ProcessSafe(
         string shard, TDbKey key, TDbEntry entry, bool canReprocess,

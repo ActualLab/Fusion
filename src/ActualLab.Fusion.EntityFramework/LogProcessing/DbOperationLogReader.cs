@@ -193,6 +193,24 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
         return firstIndex;
     }
 
+    protected override void OnChangeNotified(string shard)
+    {
+        // The notification may announce a commit that landed behind the cursor, i.e. a pending gap.
+        // Forcing young pure gaps due makes the next ProcessGaps re-check them immediately instead of
+        // waiting out GapCheckPeriod. Budgeted (failed earlier) entries keep their cadence - they're
+        // present rather than missing, so a commit notification says nothing about them.
+        if (!Gaps.TryGetValue(shard, out var shardGaps))
+            return;
+
+        var now = SystemClock.Now;
+        var horizon = now - Settings.GapFastCheckAge;
+        lock (shardGaps) {
+            foreach (var gap in shardGaps.Entries.Values)
+                if (gap.RetriesLeft < 0 && gap.AddedAt >= horizon && gap.NextAttemptAt > now)
+                    gap.NextAttemptAt = now;
+        }
+    }
+
     protected void AddGap(string shard, long index, Moment now, int retriesLeft = -1)
     {
         var shardGaps = Gaps.GetOrAdd(shard, static _ => new ShardGapSet());
