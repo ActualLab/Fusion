@@ -37,9 +37,7 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
     /// </summary>
     protected class ShardWatcher : DbShardWatcher
     {
-        private readonly Lock _lock = new();
-        private Task? _activeNotifyTask;
-        private Task? _queuedNotifyTask;
+        private readonly TaskCoalescer _notifyCoalescer;
 
         public NpgsqlDbLogWatcher<TDbContext, TDbEntry> Owner { get; }
         public DbHub<TDbContext> DbHub => Owner.DbHub;
@@ -63,6 +61,8 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
 #endif
             ListenSql = $"LISTEN {quotedChannelName}";
             NotifySql = $"NOTIFY {quotedChannelName}, '{QuotedNotifyPayload}'";
+            // The payload is constant (host id), so coalescing NOTIFY sends is lossless
+            _notifyCoalescer = new TaskCoalescer(Notify) { Log = owner.Log };
 
             var watchChain = new AsyncChain($"Watch({shard})", async cancellationToken => {
                 var dbContext = await DbHub.CreateDbContext(Shard, cancellationToken).ConfigureAwait(false);
@@ -85,10 +85,7 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
 
         protected override async Task DisposeAsyncCore()
         {
-            Task? lastNotifyTask;
-            lock (_lock)
-                lastNotifyTask = _queuedNotifyTask ?? _activeNotifyTask;
-            if (lastNotifyTask is not null)
+            if (_notifyCoalescer.LastTask is { } lastNotifyTask)
                 await lastNotifyTask.SilentAwait(false);
             if (DbContext is { } dbContext) {
                 DbContext = null;
@@ -97,53 +94,13 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
         }
 
         public override Task NotifyChanged(CancellationToken cancellationToken)
-        {
-            // Coalescing instead of a send queue: at most one NOTIFY is in flight and at most one
-            // more is queued behind it. The payload is constant (host id), so the queued one covers
-            // every request accepted while it awaits its turn - they all share its task.
-            Task notifyTask;
-            lock (_lock) {
-                // The queued task must be checked first: the active one may be already completed
-                // while the queued one hasn't promoted itself yet, and starting a new NOTIFY
-                // in this state would bypass the queued one
-                if (_queuedNotifyTask is { } queuedNotifyTask)
-                    notifyTask = queuedNotifyTask;
-                else if (_activeNotifyTask is { IsCompleted: false } activeNotifyTask)
-                    notifyTask = _queuedNotifyTask = QueuedNotify(activeNotifyTask);
-                else
-                    notifyTask = _activeNotifyTask = Notify();
-            }
-            return notifyTask.WaitAsync(cancellationToken);
-        }
+            => _notifyCoalescer.Run().WaitAsync(cancellationToken);
 
         // Private methods
 
-        private async Task QueuedNotify(Task activeNotifyTask)
-        {
-            await activeNotifyTask.SilentAwait(false);
-            // The yield forces an asynchronous continuation, which can't enter the promotion block
-            // below before NotifyChanged (still holding _lock) assigns _queuedNotifyTask = this task
-            await Task.Yield();
-            lock (_lock) {
-                if (!ReferenceEquals(_activeNotifyTask, activeNotifyTask)) {
-                    // Must be unreachable; skipping the NOTIFY is the recovery here - the send
-                    // pipeline stays consistent, and the readers fall back to their check periods
-                    Owner.Log.LogCritical(
-                        $"{nameof(QueuedNotify)}: the notify task it chained itself behind isn't the active one");
-                    _queuedNotifyTask = null;
-                    return;
-                }
-
-                _activeNotifyTask = _queuedNotifyTask;
-                _queuedNotifyTask = null;
-            }
-            await Notify().ConfigureAwait(false);
-        }
-
         private async Task Notify()
         {
-            // Never runs concurrently with itself: NotifyChanged starts it only when no NOTIFY is
-            // in flight, and QueuedNotify only after the active one completes
+            // Never runs concurrently with itself - TaskCoalescer guarantees that
             try {
                 if (StopToken.IsCancellationRequested)
                     return;

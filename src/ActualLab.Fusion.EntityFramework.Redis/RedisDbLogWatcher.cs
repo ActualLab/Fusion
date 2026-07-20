@@ -32,6 +32,8 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
     /// </summary>
     protected class ShardWatcher : DbShardWatcher
     {
+        private readonly TaskCoalescer _notifyCoalescer;
+
         public RedisDbLogWatcher<TDbContext, TDbEntry> Owner { get; }
         public string Key { get; }
         public RedisPub RedisPub { get; }
@@ -44,6 +46,8 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
             Key = owner.Settings.PubSubKeyFormatter.Invoke(Shard, typeof(TDbEntry));
             RedisPub = owner.RedisDb.GetPub(Key);
             NotifyPayload = hostId.Id;
+            // The payload is constant (host id), so coalescing publishes is lossless
+            _notifyCoalescer = new TaskCoalescer(() => RedisPub.Publish(NotifyPayload)) { Log = owner.Log };
             Owner.Log.IfEnabled(LogLevel.Debug)
                 ?.LogDebug("Watch[{Shard}]: pub/sub key = '{Key}'", shard, RedisPub.FullKey);
 
@@ -65,9 +69,6 @@ public class RedisDbLogWatcher<TDbContext, TDbEntry>(
         }
 
         public override Task NotifyChanged(CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return RedisPub.Publish(NotifyPayload);
-        }
+            => _notifyCoalescer.Run().WaitAsync(cancellationToken);
     }
 }
