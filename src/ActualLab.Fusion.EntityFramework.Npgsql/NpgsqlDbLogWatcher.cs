@@ -37,9 +37,9 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
     /// </summary>
     protected class ShardWatcher : DbShardWatcher
     {
-        private readonly object _sendLock = new();
-        private Task? _activeSendTask;
-        private Task? _queuedSendTask;
+        private readonly Lock _lock = new();
+        private Task? _activeNotifyTask;
+        private Task? _queuedNotifyTask;
 
         public NpgsqlDbLogWatcher<TDbContext, TDbEntry> Owner { get; }
         public DbHub<TDbContext> DbHub => Owner.DbHub;
@@ -85,11 +85,11 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
 
         protected override async Task DisposeAsyncCore()
         {
-            Task? lastSendTask;
-            lock (_sendLock)
-                lastSendTask = _queuedSendTask ?? _activeSendTask;
-            if (lastSendTask is not null)
-                await lastSendTask.SilentAwait(false);
+            Task? lastNotifyTask;
+            lock (_lock)
+                lastNotifyTask = _queuedNotifyTask ?? _activeNotifyTask;
+            if (lastNotifyTask is not null)
+                await lastNotifyTask.SilentAwait(false);
             if (DbContext is { } dbContext) {
                 DbContext = null;
                 await dbContext.DisposeAsync().ConfigureAwait(false);
@@ -98,38 +98,42 @@ public class NpgsqlDbLogWatcher<TDbContext, TDbEntry>(
 
         public override Task NotifyChanged(CancellationToken cancellationToken)
         {
-            // Coalescing instead of a send queue: at most one send is in flight and at most one more
-            // is queued behind it. The payload is constant (host id), so the queued send covers every
-            // request accepted while it awaits its turn - they all share its task.
-            Task sendTask;
-            lock (_sendLock) {
-                if (_activeSendTask is { IsCompleted: false } activeSendTask)
-                    sendTask = _queuedSendTask ??= QueuedSend(activeSendTask);
+            // Coalescing instead of a send queue: at most one NOTIFY is in flight and at most one
+            // more is queued behind it. The payload is constant (host id), so the queued one covers
+            // every request accepted while it awaits its turn - they all share its task.
+            Task notifyTask;
+            lock (_lock) {
+                if (_activeNotifyTask is { IsCompleted: false } activeNotifyTask)
+                    notifyTask = _queuedNotifyTask ??= QueuedNotify(activeNotifyTask);
                 else
-                    sendTask = _activeSendTask = Send();
+                    notifyTask = _activeNotifyTask = Notify();
             }
-            return sendTask.WaitAsync(cancellationToken);
+            return notifyTask.WaitAsync(cancellationToken);
         }
 
         // Private methods
 
-        private async Task QueuedSend(Task activeSendTask)
+        private async Task QueuedNotify(Task activeNotifyTask)
         {
-            await activeSendTask.SilentAwait(false);
+            await activeNotifyTask.SilentAwait(false);
             // The yield forces an asynchronous continuation, which can't enter the promotion block
-            // below before NotifyChanged (still holding _sendLock) assigns _queuedSendTask = this task
+            // below before NotifyChanged (still holding _lock) assigns _queuedNotifyTask = this task
             await Task.Yield();
-            lock (_sendLock) {
-                _activeSendTask = _queuedSendTask;
-                _queuedSendTask = null;
+            lock (_lock) {
+                if (!ReferenceEquals(_activeNotifyTask, activeNotifyTask))
+                    throw ActualLab.Internal.Errors.InternalError(
+                        $"{nameof(QueuedNotify)}: the notify task it chained itself behind isn't the active one.");
+
+                _activeNotifyTask = _queuedNotifyTask;
+                _queuedNotifyTask = null;
             }
-            await Send().ConfigureAwait(false);
+            await Notify().ConfigureAwait(false);
         }
 
-        private async Task Send()
+        private async Task Notify()
         {
-            // Never runs concurrently with itself: NotifyChanged starts it only when no send is
-            // in flight, and QueuedSend only after the active send completes
+            // Never runs concurrently with itself: NotifyChanged starts it only when no NOTIFY is
+            // in flight, and QueuedNotify only after the active one completes
             try {
                 if (StopToken.IsCancellationRequested)
                     return;
