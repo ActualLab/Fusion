@@ -31,7 +31,8 @@ public class MyDto { }
 public interface IMyService : IRequiresAsyncProxy { }
 public class MyServiceProxy : IProxy
 {
-    public Interceptor Interceptor { get; set; } = null!;
+    public ProxyMethodTable MethodTable { get; } = null!;
+    public InterceptorBinding Binding { get; set; } = null!;
 }
 public class MyType { }
 
