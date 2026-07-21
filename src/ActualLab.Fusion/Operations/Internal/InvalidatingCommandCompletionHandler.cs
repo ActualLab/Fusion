@@ -57,9 +57,6 @@ public class InvalidatingCommandCompletionHandler(
         var passState = activity is not null || durationHistogram is not null || commandCountHistogram is not null
             ? new InvalidationPassState(activity)
             : null;
-        var oldPassState = passState is null ? null : context.Items.KeylessGet<InvalidationPassState>();
-        if (passState is not null)
-            context.Items.KeylessSet(passState);
         var operationItems = operation.Items;
         var oldOperation = context.TryGetOperation();
         context.ChangeOperation(operation);
@@ -76,10 +73,11 @@ public class InvalidatingCommandCompletionHandler(
             //   assuming the current version of N still depends on it.
             var index = 1;
             foreach (var (nestedCommand, nestedOperationItems) in operation.NestedOperations) {
-                index = await TryInvalidate(context, operation, nestedCommand, nestedOperationItems.ToMutable(), index)
+                index = await TryInvalidate(
+                        context, operation, nestedCommand, nestedOperationItems.ToMutable(), index, passState)
                     .ConfigureAwait(false);
             }
-            await TryInvalidate(context, operation, command, operationItems, index).ConfigureAwait(false);
+            await TryInvalidate(context, operation, command, operationItems, index, passState).ConfigureAwait(false);
         }
         catch (Exception e) {
             outcome = "error";
@@ -89,13 +87,8 @@ public class InvalidatingCommandCompletionHandler(
         finally {
             invalidateScope.Dispose();
             context.ChangeOperation(oldOperation);
-            if (passState is not null) {
-                outcome = passState.HasError ? "error" : outcome;
-                if (oldPassState is null)
-                    context.Items.KeylessRemove<InvalidationPassState>();
-                else
-                    context.Items.KeylessSet(oldPassState);
-            }
+            if (passState is { HasError: true })
+                outcome = "error";
             if (durationHistogram is not null || commandCountHistogram is not null) {
                 var tags = new TagList {
                     { "command.name", commandType },
@@ -143,12 +136,12 @@ public class InvalidatingCommandCompletionHandler(
         Operation operation,
         ICommand command,
         MutablePropertyBag operationItems,
-        int index)
+        int index,
+        InvalidationPassState? passState)
     {
         if (!IsRequired(command, out var finalHandler, out var rpcServiceDef))
             return index;
 
-        var passState = context.Items.KeylessGet<InvalidationPassState>();
         if (passState is not null)
             passState.CommandCount++;
         operation.Items = operationItems;
@@ -231,7 +224,7 @@ public class InvalidatingCommandCompletionHandler(
 
     // Nested types
 
-    private sealed class InvalidationPassState(Activity? activity)
+    protected sealed class InvalidationPassState(Activity? activity)
     {
         private Activity? Activity { get; } = activity;
 
