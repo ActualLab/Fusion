@@ -1,8 +1,10 @@
 using System.Diagnostics.Metrics;
+using ActualLab.Fusion.Client.Internal;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
 
@@ -76,6 +78,29 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
     }
 
     [Fact]
+    public async Task InboundComputeTraceIncludesResponseSerializationTest()
+    {
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var peer = connection.ServerPeer;
+        await peer.WhenConnected();
+
+        var method = services.RpcHub().ServiceRegistry[typeof(ICounterService)]["Get:2"];
+        var message = new RpcInboundMessage(RpcCallTypeIds.Regular, 1, method.Ref, default, null);
+        var context = new RpcInboundContext(peer, message, default);
+        var call = new TestInboundComputeCall(context) {
+            ResultTask = Task.FromResult(1),
+        };
+        var trace = new TestInboundCallTrace();
+        call.Trace = trace;
+        peer.InboundCalls.GetOrRegister(call).Should().BeSameAs(call);
+
+        await call.TryReprocess(0, default)!;
+
+        trace.Error.Should().BeSameAs(call.SerializationError);
+    }
+
+    [Fact]
     public async Task PeerMonitorTest()
     {
         var services = CreateServices();
@@ -118,4 +143,25 @@ public class FusionRpcBasicTest(ITestOutputHelper @out) : SimpleFusionTestBase(@
         string Name,
         long Value,
         KeyValuePair<string, object?>[] Tags);
+
+    private sealed class TestInboundComputeCall(RpcInboundContext context) : RpcInboundComputeCall(context)
+    {
+        public readonly Exception SerializationError = new InvalidDataException("Response serialization failed.");
+
+        public override Computed? UntypedComputed => null;
+
+        protected override void SendResult()
+        {
+            Trace.Should().NotBeNull();
+            CompleteTrace(SerializationError);
+        }
+    }
+
+    private sealed class TestInboundCallTrace() : RpcInboundCallTrace(null)
+    {
+        public Exception? Error;
+
+        public override void Complete(RpcInboundCall call, Exception? error)
+            => Error = error;
+    }
 }

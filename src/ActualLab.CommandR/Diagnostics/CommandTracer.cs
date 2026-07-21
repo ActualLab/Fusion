@@ -26,10 +26,6 @@ public class CommandTracer(CommandTracer.Options settings, IServiceProvider serv
 
     public LogLevel ErrorLogLevel { get; init; } = LogLevel.Error;
 
-    public CommandTracer(IServiceProvider services)
-        : this(Options.Default, services)
-    { }
-
     [CommandFilter(Priority = CommanderCommandHandlerPriority.CommandTracer)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {

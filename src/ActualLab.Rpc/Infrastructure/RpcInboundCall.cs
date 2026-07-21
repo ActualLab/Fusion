@@ -203,7 +203,7 @@ public abstract class RpcInboundCall : RpcCall
                 UnregisterFromLock();
 
             if (CallCancelToken.IsCancellationRequested) {
-                CompleteTrace();
+                CompleteTrace(null);
                 return;
             }
 
@@ -252,7 +252,7 @@ public abstract class RpcInboundCall : RpcCall
     public void Cancel()
         => CallCancelSource.CancelAndDisposeSilently();
 
-    public void CompleteTrace(Exception? error = null)
+    public void CompleteTrace(Exception? error)
     {
         lock (Lock) {
             if (Trace is not { } trace)

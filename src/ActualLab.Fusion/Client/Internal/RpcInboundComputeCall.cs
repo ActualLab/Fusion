@@ -60,18 +60,26 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
     protected override async Task ProcessStage1Plus(CancellationToken cancellationToken)
     {
         await ResultTask!.SilentAwait(false);
+        var isCancelled = false;
         lock (Lock) {
-            if (Trace is { } trace) {
-                trace.Complete(this);
-                Trace = null;
-            }
             if (CallCancelToken.IsCancellationRequested) {
                 // The call is cancelled by the remote party
                 UnregisterFromLock();
-                return;
+                isCancelled = true;
             }
         }
-        SendResult();
+        if (isCancelled) {
+            CompleteTrace(null);
+            return;
+        }
+
+        try {
+            SendResult();
+        }
+        catch (Exception error) {
+            CompleteTrace(error);
+            throw;
+        }
         if (IsRegularCall) {
             Unregister();
             return;

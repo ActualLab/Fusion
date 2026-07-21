@@ -32,11 +32,11 @@ public class TestRpcCallTracer(RpcMethodDef methodDef) : RpcCallTracer(methodDef
             Interlocked.Increment(ref _tracer._enterCount);
         }
 
-        public override void Complete(RpcInboundCall call)
+        public override void Complete(RpcInboundCall call, Exception? error)
         {
             Interlocked.Increment(ref _tracer._exitCount);
             var resultTask = call.ResultTask;
-            if (resultTask is not null && !resultTask.IsCompletedSuccessfully)
+            if (error is not null || resultTask is not null && !resultTask.IsCompletedSuccessfully)
                 Interlocked.Increment(ref _tracer._errorCount);
         }
     }

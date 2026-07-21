@@ -135,6 +135,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var peer = connection.ServerPeer;
+        await peer.WhenConnected();
         var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
         var inboundMessage = new RpcInboundMessage(method.CallType.Id, 1, method.Ref, default, null) {
             Arguments = ArgumentList.New<int?, int>(6, 2),

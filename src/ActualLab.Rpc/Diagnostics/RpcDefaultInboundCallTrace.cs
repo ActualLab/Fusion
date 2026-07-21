@@ -9,9 +9,6 @@ namespace ActualLab.Rpc.Diagnostics;
 public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Activity? activity)
     : RpcInboundCallTrace(activity)
 {
-    public override void Complete(RpcInboundCall call)
-        => Complete(call, null);
-
     public override void Complete(RpcInboundCall call, Exception? error)
     {
         if (Activity is not null) {

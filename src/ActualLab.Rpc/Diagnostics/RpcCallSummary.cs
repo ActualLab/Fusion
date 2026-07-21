@@ -10,7 +10,7 @@ public readonly record struct RpcCallSummary(
     TaskResultKind ResultKind,
     double DurationMs)
 {
-    public RpcCallSummary(RpcInboundCall inboundCall, Exception? completionError = null)
+    public RpcCallSummary(RpcInboundCall inboundCall, Exception? completionError)
         : this(
             completionError is null
                 ? inboundCall.ResultTask?.GetResultKind() ?? TaskResultKind.Incomplete
