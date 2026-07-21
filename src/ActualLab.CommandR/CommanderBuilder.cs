@@ -59,7 +59,8 @@ public readonly struct CommanderBuilder
         // Default handlers
         services.AddSingleton(_ => new PreparedCommandHandler());
         AddHandlers<PreparedCommandHandler>();
-        services.AddSingleton(c => new CommandTracer(c));
+        services.AddSingleton(_ => CommandTracer.Options.Default);
+        services.AddSingleton(c => new CommandTracer(c.GetRequiredService<CommandTracer.Options>(), c));
         AddHandlers<CommandTracer>();
         services.AddSingleton(c => new RpcCommandHandler(c));
         AddHandlers<RpcCommandHandler>();

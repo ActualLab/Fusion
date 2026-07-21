@@ -122,6 +122,16 @@ Fusion also reports operation retry behavior:
 
 Both use `command.name` and `transiency`; the counter also uses `outcome`.
 
+Invalidation replay is measured once per pass rather than on each computed
+invalidation or dependency edge:
+
+| Metric | Kind | Unit | Meaning |
+|--------|------|------|---------|
+| `invalidation.pass.duration` | Histogram | ms | Completion-replay pass duration |
+| `invalidation.pass.command.count` | Histogram | `{command}` | Commands attempted in one pass |
+
+Both use the bounded `command.name` and `outcome` attributes.
+
 
 ## Fusion Entity Framework Metrics (`ActualLab.Fusion.EntityFramework`)
 
@@ -170,6 +180,14 @@ RPC **propagates the trace context across the wire**: outbound calls inject
 the current `Activity` context into the RPC message headers, and inbound
 calls extract it, so a client span and the matching server span end up in the
 same trace.
+
+Command and invalidation spans report bounded command name/kind attributes by
+default. Command values are omitted. To capture them explicitly, register
+`CommandTracer.Options` or `InvalidatingCommandCompletionHandler.Options`
+with `CaptureCommandPayload = true`; payload formatting is still skipped when
+the listener requests propagation data only. Swallowed invalidation replay
+failures mark the enclosing span as an error with `invalidation.partial_failure`
+and `invalidation.failure.count`.
 
 [`Activity`]: https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.activity
 
@@ -337,7 +355,8 @@ Two things worth copying from this setup:
 | Operation-log lag | `ActualLab.Fusion.EntityFramework` | `db.operation_log.processing.delay` |
 | Event-log lag | `ActualLab.Fusion.EntityFramework` | `db.event_log.processing.delay` |
 | Database log batch health | `ActualLab.Fusion.EntityFramework` | `db.log.batch.size`, `db.log.batch.duration` |
-| Command spans | `ActualLab.CommandR` | (traces only) |
+| Command execution | `ActualLab.CommandR` | `command.execution.duration` and command spans |
+| Fusion retries and invalidation | `ActualLab.Fusion` | `operation.retry.*`, `invalidation.pass.*` |
 | Distributed traces across RPC | RPC, CommandR, Fusion, and EF sources | `in.*` / `out.*` spans |
 
 Because Fusion relies on the built-in .NET metrics/tracing primitives, all of

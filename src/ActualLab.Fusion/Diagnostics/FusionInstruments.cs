@@ -14,4 +14,8 @@ public static class FusionInstruments
         "operation.retry.count", "{retry}", "Count of operation retry outcomes.");
     public static readonly Histogram<double> OperationRetryDelay = Meter.CreateHistogram<double>(
         "operation.retry.delay", "ms", "Delay before operation retries.");
+    public static readonly Histogram<double> InvalidationPassDuration = Meter.CreateHistogram<double>(
+        "invalidation.pass.duration", "ms", "Duration of invalidation replay passes.");
+    public static readonly Histogram<long> InvalidationPassCommandCount = Meter.CreateHistogram<long>(
+        "invalidation.pass.command.count", "{command}", "Commands attempted per invalidation replay pass.");
 }

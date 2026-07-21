@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ActualLab.CommandR.Diagnostics;
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Rpc;
@@ -21,6 +22,7 @@ public class InvalidatingCommandCompletionHandler(
     public record Options
     {
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;
+        public bool CaptureCommandPayload { get; init; }
     }
 
     private static readonly ConcurrentDictionary<Type, bool> ReplayDisqualifiedCommandTypes = new();
@@ -43,16 +45,26 @@ public class InvalidatingCommandCompletionHandler(
             return;
         }
 
-        var commandType = command.GetType().GetName();
+        var commandType = command.GetType().NonProxyType().GetName();
         Log.IfEnabled(Settings.LogLevel)
             ?.Log(Settings.LogLevel, "Invalidating: {CommandType}", commandType);
 
         // "Finally" block disposes everything here
+        var mustMeasureDuration = FusionInstruments.InvalidationPassDuration.Enabled;
+        var mustMeasureCommandCount = FusionInstruments.InvalidationPassCommandCount.Enabled;
+        var startedAt = mustMeasureDuration ? CpuTimestamp.Now : default;
         var activity = StartActivity(command);
+        var passState = activity is not null || mustMeasureDuration || mustMeasureCommandCount
+            ? new InvalidationPassState(activity)
+            : null;
+        var oldPassState = passState is null ? null : context.Items.KeylessGet<InvalidationPassState>();
+        if (passState is not null)
+            context.Items.KeylessSet(passState);
         var operationItems = operation.Items;
         var oldOperation = context.TryGetOperation();
         context.ChangeOperation(operation);
         var invalidateScope = Invalidation.Begin(new InvalidationSource($"{commandType}'s invalidation pass"));
+        var outcome = "success";
         try {
             // If we care only about the eventual consistency, the invalidation order
             // doesn't matter:
@@ -70,12 +82,30 @@ public class InvalidatingCommandCompletionHandler(
             await TryInvalidate(context, operation, command, operationItems, index).ConfigureAwait(false);
         }
         catch (Exception e) {
+            outcome = "error";
             activity?.Finalize(e, cancellationToken);
             throw;
         }
         finally {
             invalidateScope.Dispose();
             context.ChangeOperation(oldOperation);
+            if (passState is not null) {
+                outcome = passState.HasError ? "error" : outcome;
+                if (oldPassState is null)
+                    context.Items.KeylessRemove<InvalidationPassState>();
+                else
+                    context.Items.KeylessSet(oldPassState);
+            }
+            if (mustMeasureDuration || mustMeasureCommandCount) {
+                var tags = new TagList {
+                    { "command.name", commandType },
+                    { "outcome", outcome },
+                };
+                if (mustMeasureDuration)
+                    FusionInstruments.InvalidationPassDuration.Record(startedAt.Elapsed.TotalMilliseconds, tags);
+                if (mustMeasureCommandCount)
+                    FusionInstruments.InvalidationPassCommandCount.Record(passState?.CommandCount ?? 0, tags);
+            }
             activity?.Dispose();
         }
     }
@@ -120,6 +150,9 @@ public class InvalidatingCommandCompletionHandler(
         if (!IsRequired(command, out var finalHandler, out var rpcServiceDef))
             return index;
 
+        var passState = context.Items.KeylessGet<InvalidationPassState>();
+        if (passState is not null)
+            passState.CommandCount++;
         operation.Items = operationItems;
         Log.IfEnabled(Settings.LogLevel)?.Log(Settings.LogLevel,
             "- Invalidation #{Index}: {Service}.{Method} <- {Command}",
@@ -137,7 +170,8 @@ public class InvalidatingCommandCompletionHandler(
                 task = finalHandler.Invoke(command, context, default);
             await task.ConfigureAwait(false);
         }
-        catch (Exception) {
+        catch (Exception e) {
+            passState?.RegisterFailure(e);
             Log.LogError(
                 "Invalidation #{Index} failed: {Service}.{Method} <- {Command}",
                 index, finalHandler.ServiceType.GetName(), finalHandler.Method.Name, command);
@@ -147,13 +181,10 @@ public class InvalidatingCommandCompletionHandler(
 
     protected virtual Activity? StartActivity(ICommand command)
     {
-        var operationName = command.GetOperationName("", "-inv");
+        var commandName = command.GetType().NonProxyType().GetName();
+        var operationName = $"-inv.{DiagnosticsExt.FixName(commandName)}";
         var activity = FusionInstruments.ActivitySource.StartActivity(operationName);
-        if (activity is not null) {
-            var tags = new ActivityTagsCollection { { "command", command.ToString() } };
-            var activityEvent = new ActivityEvent(operationName, tags: tags);
-            activity.AddEvent(activityEvent);
-        }
+        activity?.AddCommandTags(command, Settings.CaptureCommandPayload);
         return activity;
     }
 
@@ -197,6 +228,43 @@ public class InvalidatingCommandCompletionHandler(
             Log.IfEnabled(LogLevel.Debug)?.LogDebug(e,
                 "Cannot resolve '{ServiceType}' from the root service provider", serviceType.GetName());
             return null;
+        }
+    }
+
+    // Nested types
+
+    private sealed class InvalidationPassState(Activity? activity)
+    {
+        private Activity? Activity { get; } = activity;
+
+        public int CommandCount { get; set; }
+        public bool HasError { get; private set; }
+        public int FailureCount { get; private set; }
+
+        public void RegisterFailure(Exception error)
+        {
+            HasError = true;
+            FailureCount++;
+            if (Activity is not { } activity)
+                return;
+
+            activity.SetTag("invalidation.partial_failure", true);
+            activity.SetTag("invalidation.failure.count", FailureCount);
+            activity.SetStatus(ActivityStatusCode.Error, "One or more invalidation commands failed.");
+            if (!activity.IsAllDataRequested)
+                return;
+
+            var tags = new ActivityTagsCollection {
+                { "exception.type", error.GetType().FullName ?? error.GetType().Name },
+            };
+            try {
+                tags.Add("exception.message", error.Message);
+                tags.Add("exception.stacktrace", error.ToString());
+            }
+            catch {
+                // The failure is already visible via its type, status, and partial-failure tags.
+            }
+            activity.AddEvent(new ActivityEvent("exception", tags: tags));
         }
     }
 }

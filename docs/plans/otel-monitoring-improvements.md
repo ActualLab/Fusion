@@ -36,7 +36,7 @@ field and metric must be verified in the dashboard.
   cancellation or reroute to error status.
 - [x] T4: move inbound completion to include response serialization/enqueue and cover serialization failure.
 - [x] T5: route Fusion.EntityFramework activities through its registered activity source and test source ownership.
-- [ ] T6: make command payload capture safe and explicitly opt-in; expose swallowed invalidation failures on the
+- [x] T6: make command payload capture safe and explicitly opt-in; expose swallowed invalidation failures on the
   enclosing activity.
 
 Cancellation and reroute status semantics are recommendation-only in this work. They are non-error outcomes; the
@@ -54,7 +54,7 @@ recommended representation is unset status plus stable events/attributes, subjec
 - [x] M4: add CommandR execution duration and Fusion operation retry count/delay.
 - [x] M5: retain and verify the existing `db.operation_log.processing.delay`; add event-log processing delay and
   log batch size/duration. Update stale docs to register the EF meter.
-- [ ] M6: add invalidation pass duration and command count at the completion-replay scope. Do not instrument
+- [x] M6: add invalidation pass duration and command count at the completion-replay scope. Do not instrument
   individual computed invalidations, dependency edges, or other nanosecond-class paths.
 - [ ] M7: add persistent remote-computed cache request/lookup and stale-value-served metrics. Do not instrument
   in-memory cache hits.

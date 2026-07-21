@@ -7,9 +7,17 @@ namespace ActualLab.CommandR.Diagnostics;
 /// A command filter that creates OpenTelemetry activities for command execution
 /// and logs errors.
 /// </summary>
-public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand>
+public class CommandTracer(CommandTracer.Options settings, IServiceProvider services) : ICommandHandler<ICommand>
 {
+    public record Options
+    {
+        public static Options Default { get; set; } = new();
+
+        public bool CaptureCommandPayload { get; init; }
+    }
+
     protected IServiceProvider Services { get; } = services;
+    protected Options Settings { get; } = settings;
 
     protected ILogger Log {
         get => field ??= Services.LogFor(GetType());
@@ -17,6 +25,10 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
     }
 
     public LogLevel ErrorLogLevel { get; init; } = LogLevel.Error;
+
+    public CommandTracer(IServiceProvider services)
+        : this(Options.Default, services)
+    { }
 
     [CommandFilter(Priority = CommanderCommandHandlerPriority.CommandTracer)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
@@ -79,13 +91,13 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
 
     protected virtual Activity? StartActivity(ICommand command, CommandContext context)
     {
-        var operationName = command.GetOperationName();
+        var commandName = command.GetType().NonProxyType().GetName();
+        var operationName = $"cmd.{DiagnosticsExt.FixName(commandName)}";
         var activity = CommanderInstruments.ActivitySource.StartActivity(operationName);
-        if (activity is not null) {
-            var tags = new ActivityTagsCollection { { "command", command.ToString() } };
-            var activityEvent = new ActivityEvent(operationName, tags: tags);
-            activity.AddEvent(activityEvent);
-        }
+        activity?.AddCommandTags(
+            command,
+            Settings.CaptureCommandPayload,
+            context.IsOutermost ? "outermost" : "nested");
         return activity;
     }
 }
