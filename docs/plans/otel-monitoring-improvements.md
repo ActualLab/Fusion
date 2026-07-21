@@ -44,7 +44,7 @@ recommended representation is unset status plus stable events/attributes, subjec
 
 ## Metrics batches
 
-- [ ] M0: correct live ComputedRegistry and RPC transport instance measurements from `ObservableCounter` to
+- [x] M0: correct live ComputedRegistry and RPC transport instance measurements from `ObservableCounter` to
   `ObservableGauge` without renaming them.
 - [ ] M1: replace dynamic per-method RPC duration instruments with fixed `rpc.server.call.duration` and
   `rpc.client.call.duration` histograms, both in milliseconds, tagged by stable RPC system and method names. Add

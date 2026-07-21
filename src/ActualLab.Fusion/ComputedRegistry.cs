@@ -351,9 +351,9 @@ public sealed class ComputedRegistry
     /// </summary>
     public class MeterSet
     {
-        public readonly ObservableCounter<long> CapacityCounter;
-        public readonly ObservableCounter<long> NodeCounter;
-        public readonly ObservableCounter<long> EdgeCounter;
+        public readonly ObservableGauge<long> CapacityCounter;
+        public readonly ObservableGauge<long> NodeCounter;
+        public readonly ObservableGauge<long> EdgeCounter;
         public readonly Counter<long> PrunedKeyCount;
         public readonly Counter<long> PrunedDisposedCount;
         public readonly Counter<long> PrunedEdgeCount;
@@ -370,13 +370,13 @@ public sealed class ComputedRegistry
         {
             var m = FusionInstruments.Meter;
             var ms = "computed.registry";
-            CapacityCounter = m.CreateObservableCounter($"{ms}.key.count",
+            CapacityCounter = m.CreateObservableGauge($"{ms}.key.count",
                 () => InterlockedExt.VolatileRead(ref KeyCount),
                 null, "ComputedRegistry key count.");
-            NodeCounter = m.CreateObservableCounter($"{ms}.node.count",
+            NodeCounter = m.CreateObservableGauge($"{ms}.node.count",
                 () => InterlockedExt.VolatileRead(ref NodeCount),
                 null, "Count of nodes in Computed<T> dependency graph.");
-            EdgeCounter = m.CreateObservableCounter($"{ms}.edge.count",
+            EdgeCounter = m.CreateObservableGauge($"{ms}.edge.count",
                 () => InterlockedExt.VolatileRead(ref EdgeCount),
                 null, "Count of edges in Computed<T> dependency graph.");
 

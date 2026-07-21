@@ -291,7 +291,7 @@ public abstract class RpcFrameBasedTransport : RpcTransport
 
     public abstract class FrameMeterSet
     {
-        public readonly ObservableCounter<long> ChannelCounter;
+        public readonly ObservableGauge<long> ChannelCounter;
         public readonly Counter<long> IncomingItemCounter;
         public readonly Counter<long> OutgoingItemCounter;
         public readonly Histogram<int> IncomingFrameSizeHistogram;
@@ -302,7 +302,7 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         {
             var m = RpcInstruments.Meter;
             var ms = $"rpc.{name}.transport";
-            ChannelCounter = m.CreateObservableCounter($"{ms}.count",
+            ChannelCounter = m.CreateObservableGauge($"{ms}.count",
                 () => InterlockedExt.VolatileRead(ref ChannelCount),
                 null, $"Number of {descriptionName} instances.");
             IncomingItemCounter = m.CreateCounter<long>($"{ms}.incoming.item.count",
