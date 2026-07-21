@@ -158,12 +158,14 @@ uninstrumented:
 
 | Metric | Kind | Unit | Meaning |
 |--------|------|------|---------|
-| `remote_computed.cache.request.count` | Counter | `{request}` | Persistent cache lookup requests |
+| `remote_computed.cache.request.count` | Counter | `{request}` | Persistent cache lookups by outcome, including misses |
 | `remote_computed.cache.lookup.duration` | Histogram | ms | Persistent cache lookup duration |
-| `remote_computed.cache.stale_value.count` | Counter | `{request}` | Cached values served during disconnection |
+| `remote_computed.cache.stale_value.count` | Counter | `{request}` | Cached values served when freshness cannot be revalidated |
 
 Request count and lookup duration use the bounded `outcome` attribute
-(`hit`, `miss`, `error`, or `cancel`). The stale-value counter uses
+(`hit`, `miss`, `error`, or `cancel`), so the `outcome="miss"` series is the persistent-cache miss count. A stale
+value is an existing cache entry returned as a fallback after Fusion cannot confirm or refresh it; it is not a cache
+miss. The stale-value counter uses
 `operation` (`connection_check` or `active_call`) to distinguish a value
 served while already disconnected from one served when an active call loses
 its connection.
