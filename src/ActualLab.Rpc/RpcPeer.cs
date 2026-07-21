@@ -270,10 +270,16 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             while (true) {
                 var error = (Exception?)null;
                 var connectedAt = Hub.SystemClock.Now;
-                var mustCountConnectionAttempt = RpcInstruments.ConnectionAttemptCounter.Enabled;
-                var mustMeasureConnectionAttempt = RpcInstruments.ConnectionAttemptDurationHistogram.Enabled;
+                var clientPeer = this as RpcClientPeer;
+                var mustCountConnectionAttempt = clientPeer is not null
+                    && RpcInstruments.ClientConnectionAttemptCounter.Enabled;
+                var mustMeasureConnectionAttempt = clientPeer is not null
+                    && RpcInstruments.ClientConnectionAttemptDurationHistogram.Enabled;
                 var connectionAttemptStartedAt = mustMeasureConnectionAttempt ? CpuTimestamp.Now : default;
-                var mustMeasureConnectionUptime = RpcInstruments.ConnectionUptimeHistogram.Enabled;
+                var connectionUptimeHistogram = clientPeer is not null
+                    ? RpcInstruments.ClientConnectionUptimeHistogram
+                    : RpcInstruments.ServerConnectionUptimeHistogram;
+                var mustMeasureConnectionUptime = connectionUptimeHistogram.Enabled;
                 var connectionUptimeStartedAt = (CpuTimestamp?)null;
                 var isConnectionAttemptCompleted = false;
                 var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
@@ -375,9 +381,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionStateValue.Connection != connection)
                         continue; // Somehow disconnected
 
-                    if (mustCountConnectionAttempt || mustMeasureConnectionAttempt) {
-                        RpcInstruments.RegisterConnectionAttempt(
-                            this,
+                    if (clientPeer is not null && (mustCountConnectionAttempt || mustMeasureConnectionAttempt)) {
+                        RpcInstruments.RegisterClientConnectionAttempt(
+                            clientPeer,
                             mustMeasureConnectionAttempt ? connectionAttemptStartedAt.Elapsed.TotalMilliseconds : null,
                             error: null,
                             cancellationToken.IsCancellationRequested);
@@ -424,9 +430,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     var connectionUptimeMs = connectionUptimeStartedAt?.Elapsed.TotalMilliseconds;
                     readerTokenSource.CancelAndDisposeSilently();
                     await maintainTask.SilentAwait(false);
-                    if (!isConnectionAttemptCompleted && (mustCountConnectionAttempt || mustMeasureConnectionAttempt))
-                        RpcInstruments.RegisterConnectionAttempt(
-                            this,
+                    if (clientPeer is not null
+                        && !isConnectionAttemptCompleted
+                        && (mustCountConnectionAttempt || mustMeasureConnectionAttempt))
+                        RpcInstruments.RegisterClientConnectionAttempt(
+                            clientPeer,
                             mustMeasureConnectionAttempt ? connectionAttemptStartedAt.Elapsed.TotalMilliseconds : null,
                             error,
                             cancellationToken.IsCancellationRequested);

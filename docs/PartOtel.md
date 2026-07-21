@@ -76,16 +76,17 @@ Call durations and server outcome counters carry `rpc.system.name` and
 The client call-event counter uses the bounded `rpc.call.event` attribute;
 active-call gauges are aggregated at scrape time and carry no peer identity.
 
-Connection lifecycle instruments cover both client and server peers:
+Connection attempts exist only on client peers. Established connection lifetime is useful on both sides and uses
+separate client and server instruments:
 
 | Metric | Kind | Unit | Meaning |
 |--------|------|------|---------|
-| `rpc.connection.attempt.count` | Counter | `{attempt}` | Completed connection attempts |
-| `rpc.connection.attempt.duration` | Histogram | ms | Connection attempt duration |
-| `rpc.connection.uptime` | Histogram | ms | Established connection lifetime |
+| `rpc.client.connection.attempt.count` | Counter | `{attempt}` | Completed client connection attempts |
+| `rpc.client.connection.attempt.duration` | Histogram | ms | Client connection attempt duration |
+| `rpc.client.connection.uptime` | Histogram | ms | Client-side established connection lifetime |
+| `rpc.server.connection.uptime` | Histogram | ms | Server-side established connection lifetime |
 
-Their bounded attributes are `rpc.peer.type`, `rpc.connection.kind`, and
-`outcome` (`success`, `error`, or `cancel`).
+Their bounded attributes are `rpc.connection.kind` and `outcome` (`success`, `error`, or `cancel`).
 
 [views]: https://opentelemetry.io/docs/specs/otel/metrics/sdk/#view
 
@@ -383,7 +384,7 @@ Two things worth copying from this setup:
 | RPC call latency and errors | `ActualLab.Rpc` | `rpc.server.call.duration`, `rpc.client.call.duration` |
 | RPC reroutes | `ActualLab.Rpc` | `rpc.client.reroute.count` |
 | RPC active calls and maintenance | `ActualLab.Rpc` | `rpc.*.call.active`, `rpc.client.call.event.count` |
-| RPC connection health | `ActualLab.Rpc` | `rpc.connection.attempt.*`, `rpc.connection.uptime` |
+| RPC connection health | `ActualLab.Rpc` | `rpc.client.connection.attempt.*`, `rpc.*.connection.uptime` |
 | RPC transport throughput | `ActualLab.Rpc` | `rpc.{transport}.transport.*` |
 | Compute graph size & pruning | `ActualLab.Fusion` | `computed.registry.node.count`, `computed.registry.edge.count` |
 | Operation-log lag | `ActualLab.Fusion.EntityFramework` | `db.operation_log.processing.delay` |

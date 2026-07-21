@@ -22,9 +22,10 @@ public static class RpcInstruments
     public static readonly Histogram<double> InboundDurationHistogram;
     public static readonly Histogram<double> OutboundDurationHistogram;
     public static readonly Counter<long> OutboundRerouteCounter;
-    public static readonly Counter<long> ConnectionAttemptCounter;
-    public static readonly Histogram<double> ConnectionAttemptDurationHistogram;
-    public static readonly Histogram<double> ConnectionUptimeHistogram;
+    public static readonly Counter<long> ClientConnectionAttemptCounter;
+    public static readonly Histogram<double> ClientConnectionAttemptDurationHistogram;
+    public static readonly Histogram<double> ClientConnectionUptimeHistogram;
+    public static readonly Histogram<double> ServerConnectionUptimeHistogram;
     public static readonly ObservableGauge<long> ActiveInboundCallGauge;
     public static readonly ObservableGauge<long> ActiveOutboundCallGauge;
     public static readonly Counter<long> ClientCallEventCounter;
@@ -60,12 +61,15 @@ public static class RpcInstruments
             "ms", "Duration of outbound RPC calls.");
         OutboundRerouteCounter = m.CreateCounter<long>($"{ms}.client.reroute.count",
             "{reroute}", "Count of outbound RPC call reroutes.");
-        ConnectionAttemptCounter = m.CreateCounter<long>($"{ms}.connection.attempt.count",
-            "{attempt}", "Count of completed RPC connection attempts.");
-        ConnectionAttemptDurationHistogram = m.CreateHistogram<double>($"{ms}.connection.attempt.duration",
-            "ms", "Duration of RPC connection attempts.");
-        ConnectionUptimeHistogram = m.CreateHistogram<double>($"{ms}.connection.uptime",
-            "ms", "Duration of established RPC connections.");
+        ClientConnectionAttemptCounter = m.CreateCounter<long>($"{ms}.client.connection.attempt.count",
+            "{attempt}", "Count of completed client connection attempts.");
+        ClientConnectionAttemptDurationHistogram = m.CreateHistogram<double>(
+            $"{ms}.client.connection.attempt.duration",
+            "ms", "Duration of client connection attempts.");
+        ClientConnectionUptimeHistogram = m.CreateHistogram<double>($"{ms}.client.connection.uptime",
+            "ms", "Duration of established client connections.");
+        ServerConnectionUptimeHistogram = m.CreateHistogram<double>($"{ms}.server.connection.uptime",
+            "ms", "Duration of established server connections.");
         ActiveInboundCallGauge = m.CreateObservableGauge<long>($"{server}.call.active",
             ObserveActiveInboundCalls, "{call}", "Number of active inbound RPC calls.");
         ActiveOutboundCallGauge = m.CreateObservableGauge<long>($"{ms}.client.call.active",
@@ -114,16 +118,16 @@ public static class RpcInstruments
         OutboundRerouteCounter.Add(1, tags);
     }
 
-    public static void RegisterConnectionAttempt(
-        RpcPeer peer,
+    public static void RegisterClientConnectionAttempt(
+        RpcClientPeer peer,
         double? durationMs,
         Exception? error,
         bool isCancellationRequested)
     {
         var tags = GetConnectionTags(peer, error, isCancellationRequested);
-        ConnectionAttemptCounter.Add(1, tags);
+        ClientConnectionAttemptCounter.Add(1, tags);
         if (durationMs is { } value)
-            ConnectionAttemptDurationHistogram.Record(value, tags);
+            ClientConnectionAttemptDurationHistogram.Record(value, tags);
     }
 
     public static void RegisterConnectionUptime(
@@ -133,7 +137,10 @@ public static class RpcInstruments
         bool isCancellationRequested)
     {
         var tags = GetConnectionTags(peer, error, isCancellationRequested);
-        ConnectionUptimeHistogram.Record(durationMs, tags);
+        var histogram = peer is RpcClientPeer
+            ? ClientConnectionUptimeHistogram
+            : ServerConnectionUptimeHistogram;
+        histogram.Record(durationMs, tags);
     }
 
     public static void RegisterCallTracker(RpcInboundCallTracker tracker)
@@ -175,7 +182,6 @@ public static class RpcInstruments
             ? "cancel"
             : error is null ? "success" : "error";
         return new TagList {
-            { "rpc.peer.type", peer is RpcClientPeer ? "client" : "server" },
             { "rpc.connection.kind", peer.ConnectionKind.ToString().ToLowerInvariant() },
             { "outcome", outcome },
         };
