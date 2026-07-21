@@ -85,6 +85,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         try {
 #pragma warning disable MA0100
             var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
+            context.InboundCall = inboundCall;
             var call = context.PrepareCallForSendNoWait(OkMethodDef, ArgumentList.New(result))!;
             var inboundHash = inboundCall.Context.Message.Headers.TryGet(WellKnownRpcHeaders.Hash);
             if (inboundHash is null) {
@@ -95,21 +96,21 @@ public sealed class RpcSystemCallSender : RpcServiceBase
             var (message, hash) = call.CreateOutboundMessageWithHashHeader(
                 call.Context.RelatedId, needsArgumentPolymorphism, RpcSendHandlers.PropagateToInboundCall);
             if (string.Equals(hash, inboundHash, StringComparison.Ordinal))
-                Match(peer, inboundCall.Id, headers);
+                Match(peer, inboundCall, headers);
             else
                 call.SendNoWait(message);
 #pragma warning restore MA0100
         }
         catch (Exception error) when (!RpcSendHandlers.IsAutoHandledError(error)) {
             Log.LogError(error, "Failed to send Ok response for call #{CallId}", inboundCall.Id);
-            Error(peer, inboundCall, error);
+            Error(peer, inboundCall, error, headers, traceError: error);
         }
     }
 
     public void Error(
         RpcPeer peer, RpcInboundCall inboundCall, Exception error,
         RpcHeader[]? headers = null)
-        => Error(peer, inboundCall.Id, error, headers);
+        => Error(peer, inboundCall, error, headers, traceError: null);
 
     public void Error(
         RpcPeer peer, long callId, Exception error,
@@ -131,6 +132,21 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         call.SendNoWait(needsPolymorphism: false);
     }
 
+    private void Error(
+        RpcPeer peer,
+        RpcInboundCall inboundCall,
+        Exception error,
+        RpcHeader[]? headers,
+        Exception? traceError)
+    {
+        var context = new RpcOutboundContext(peer, inboundCall.Id, headers) {
+            InboundCall = inboundCall,
+            InboundCallTraceError = traceError,
+        };
+        var call = context.PrepareCallForSendNoWait(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
+        call.SendNoWait(needsPolymorphism: false, RpcSendHandlers.CompleteInboundCall);
+    }
+
     public void Cancel(RpcPeer peer, long callId, RpcHeader[]? headers = null)
     {
         var context = new RpcOutboundContext(peer, callId, headers);
@@ -143,6 +159,15 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         var context = new RpcOutboundContext(peer, callId, headers);
         var call = context.PrepareCallForSendNoWait(MatchMethodDef, ArgumentList.Empty)!;
         call.SendNoWait(needsPolymorphism: false);
+    }
+
+    private void Match(RpcPeer peer, RpcInboundCall inboundCall, RpcHeader[]? headers)
+    {
+        var context = new RpcOutboundContext(peer, inboundCall.Id, headers) {
+            InboundCall = inboundCall,
+        };
+        var call = context.PrepareCallForSendNoWait(MatchMethodDef, ArgumentList.Empty)!;
+        call.SendNoWait(needsPolymorphism: false, RpcSendHandlers.CompleteInboundCall);
     }
 
     // Objects

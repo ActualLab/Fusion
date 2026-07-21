@@ -11,4 +11,6 @@ public abstract class RpcInboundCallTrace(Activity? activity)
     public readonly Activity? Activity = activity;
 
     public abstract void Complete(RpcInboundCall call);
+    public virtual void Complete(RpcInboundCall call, Exception? error)
+        => Complete(call);
 }

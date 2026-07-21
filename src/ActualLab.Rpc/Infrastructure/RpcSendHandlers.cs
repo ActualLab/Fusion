@@ -36,6 +36,7 @@ public static class RpcSendHandlers
 
     public static readonly RpcTransportSendHandler PropagateToInboundCall
         = (transport, message, error) => {
+            CompleteInboundCallTrace(message, error);
             if (error is null || IsAutoHandledError(error))
                 return;
 
@@ -47,6 +48,21 @@ public static class RpcSendHandlers
             peer.Log.LogError(error, "Failed to send Ok response for call #{CallId}", message.RelatedId);
         };
 
+    public static readonly RpcTransportSendHandler CompleteInboundCall
+        = (transport, message, error) => {
+            CompleteInboundCallTrace(message, error);
+            if (error is null || IsAutoHandledError(error))
+                return;
+
+            transport.Peer.Log.LogError(error, "Failed to send response for call #{CallId}", message.RelatedId);
+        };
+
     public static bool IsAutoHandledError(Exception error)
         => error is OperationCanceledException or ChannelClosedException;
+
+    private static void CompleteInboundCallTrace(RpcOutboundMessage message, Exception? error)
+    {
+        var context = message.Context;
+        context.InboundCall?.CompleteTrace(error ?? context.InboundCallTraceError);
+    }
 }

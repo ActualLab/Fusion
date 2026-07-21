@@ -10,6 +10,9 @@ public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Acti
     : RpcInboundCallTrace(activity)
 {
     public override void Complete(RpcInboundCall call)
+        => Complete(call, null);
+
+    public override void Complete(RpcInboundCall call, Exception? error)
     {
         if (Activity is not null) {
             var untypedResultTask = call.ResultTask;
@@ -18,15 +21,16 @@ public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Acti
                 untypedResultTask = Task.CompletedTask;
             }
 
-            Activity.Finalize(untypedResultTask, call.CallCancelToken);
+            error ??= untypedResultTask.ToResultSynchronously().Error;
+            Activity.Finalize(error, call.CallCancelToken);
             Activity.DisposeNonCurrent();
         }
 
         if (!tracer.IsEnabled)
             return;
 
-        var callStats = new RpcCallSummary(call);
-        var error = call.ResultTask?.ToResultSynchronously().Error;
+        error ??= call.ResultTask?.ToResultSynchronously().Error;
+        var callStats = new RpcCallSummary(call, error);
         tracer.RegisterInboundCall(callStats, error);
     }
 }

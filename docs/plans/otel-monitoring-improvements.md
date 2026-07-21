@@ -34,7 +34,7 @@ field and metric must be verified in the dashboard.
   Reroute remains expected control flow, not an error.
 - [x] T3: remove the duplicate parent link; add stable RPC semantic attributes and exception events. Do not change
   cancellation or reroute to error status.
-- [ ] T4: move inbound completion to include response serialization/enqueue and cover serialization failure.
+- [x] T4: move inbound completion to include response serialization/enqueue and cover serialization failure.
 - [x] T5: route Fusion.EntityFramework activities through its registered activity source and test source ownership.
 - [ ] T6: make command payload capture safe and explicitly opt-in; expose swallowed invalidation failures on the
   enclosing activity.

@@ -10,9 +10,13 @@ public readonly record struct RpcCallSummary(
     TaskResultKind ResultKind,
     double DurationMs)
 {
-    public RpcCallSummary(RpcInboundCall inboundCall)
+    public RpcCallSummary(RpcInboundCall inboundCall, Exception? completionError = null)
         : this(
-            inboundCall.ResultTask?.GetResultKind() ?? TaskResultKind.Incomplete,
+            completionError is null
+                ? inboundCall.ResultTask?.GetResultKind() ?? TaskResultKind.Incomplete
+                : completionError is OperationCanceledException
+                    ? TaskResultKind.Cancellation
+                    : TaskResultKind.Error,
             inboundCall.Context.CreatedAt.Elapsed.TotalMilliseconds)
     { }
 }

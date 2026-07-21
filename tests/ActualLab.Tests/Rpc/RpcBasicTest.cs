@@ -113,6 +113,60 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Fact]
+    public async Task InboundTraceIncludesResponseSerializationTest()
+    {
+        var stoppedActivities = new ConcurrentQueue<Activity>();
+        var measurements = new ConcurrentQueue<KeyValuePair<string, object?>[]>();
+        using var activityListener = new ActivityListener {
+            ShouldListenTo = source => source == RpcInstruments.ActivitySource,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = stoppedActivities.Enqueue,
+        };
+        ActivitySource.AddActivityListener(activityListener);
+        using var meterListener = new MeterListener();
+        meterListener.InstrumentPublished = (instrument, targetListener) => {
+            if (ReferenceEquals(instrument, RpcInstruments.InboundDurationHistogram))
+                targetListener.EnableMeasurementEvents(instrument);
+        };
+        meterListener.SetMeasurementEventCallback<double>((_, _, tags, _) =>
+            measurements.Enqueue(tags.ToArray()));
+        meterListener.Start();
+
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var peer = connection.ServerPeer;
+        var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
+        var inboundMessage = new RpcInboundMessage(method.CallType.Id, 1, method.Ref, default, null) {
+            Arguments = ArgumentList.New<int?, int>(6, 2),
+        };
+        var inboundContext = new RpcInboundContext(peer, inboundMessage, default);
+        var inboundCall = inboundContext.Call;
+        inboundCall.ResultTask = Task.FromResult<int?>(3);
+        inboundCall.Trace = method.Tracer!.StartInboundTrace(inboundCall);
+        var responseContext = new RpcOutboundContext(peer, inboundCall.Id) {
+            InboundCall = inboundCall,
+        };
+        var responseCall = responseContext.PrepareCallForSendNoWait(
+            services.GetRequiredService<RpcSystemCallSender>().OkMethodDef,
+            ArgumentList.New<int?>(3))!;
+        var responseMessage = responseCall.CreateOutboundMessage(
+            inboundCall.Id,
+            needsPolymorphism: false,
+            RpcSendHandlers.CompleteInboundCall);
+        var serializationError = new InvalidDataException("Response serialization failed.");
+
+        stoppedActivities.Should().BeEmpty();
+        RpcSendHandlers.CompleteInboundCall(
+            peer.ConnectionState.Value.Transport!, responseMessage, serializationError);
+
+        var activity = stoppedActivities.Should().ContainSingle().Subject;
+        activity.Status.Should().Be(ActivityStatusCode.Error);
+        activity.GetTagItem("error.type").Should().Be(typeof(InvalidDataException).FullName);
+        measurements.Should().ContainSingle();
+        HasTag(measurements.Single(), "error.type", typeof(InvalidDataException).FullName!).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task CallMetricsTest()
     {
         var measurements = new ConcurrentQueue<(

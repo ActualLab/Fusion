@@ -199,15 +199,21 @@ public abstract class RpcInboundCall : RpcCall
         }
 
         void Complete() {
-            lock (Lock) {
-                if (Trace is { } trace) {
-                    trace.Complete(this);
-                    Trace = null;
-                }
+            lock (Lock)
                 UnregisterFromLock();
+
+            if (CallCancelToken.IsCancellationRequested) {
+                CompleteTrace();
+                return;
             }
-            if (!CallCancelToken.IsCancellationRequested)
+
+            try {
                 SendResult();
+            }
+            catch (Exception error) {
+                CompleteTrace(error);
+                throw;
+            }
         }
     }
 
@@ -245,6 +251,17 @@ public abstract class RpcInboundCall : RpcCall
 
     public void Cancel()
         => CallCancelSource.CancelAndDisposeSilently();
+
+    public void CompleteTrace(Exception? error = null)
+    {
+        lock (Lock) {
+            if (Trace is not { } trace)
+                return;
+
+            Trace = null;
+            trace.Complete(this, error);
+        }
+    }
 
     protected bool Unregister()
     {

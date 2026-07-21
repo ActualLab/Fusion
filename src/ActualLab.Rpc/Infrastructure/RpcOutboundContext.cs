@@ -29,6 +29,8 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     public RpcRoutingMode RoutingMode;
     public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
+    public RpcInboundCall? InboundCall;
+    public Exception? InboundCallTraceError;
     public RpcOutboundCallTrace? Trace;
     public ActivityContext ActivityContext;
     public CpuTimestamp? MetricsStartedAt;
