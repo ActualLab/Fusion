@@ -9,12 +9,16 @@ namespace ActualLab.Rpc.Diagnostics;
 /// </summary>
 public static class RpcInstruments
 {
-    private static readonly ConditionalWeakTable<RpcInboundCallTracker, object> InboundCallTrackers = new();
-    private static readonly ConditionalWeakTable<RpcOutboundCallTracker, object> OutboundCallTrackers = new();
-    private static readonly object CallTrackerTag = new();
+    private static long _openInboundPendingCallCount;
+    private static long _openInboundResultReadyCallCount;
+    private static long _openInboundInvalidatedCallCount;
+    private static long _openOutboundPendingCallCount;
+    private static long _openOutboundResultReadyCallCount;
+    private static long _openOutboundInvalidatedCallCount;
 
     public static readonly ActivitySource ActivitySource = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);
     public static readonly Meter Meter = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);
+
     // public static readonly Counter<long> InboundCallCounter;
     public static readonly Counter<long> InboundErrorCounter;
     public static readonly Counter<long> InboundCancellationCounter;
@@ -26,8 +30,8 @@ public static class RpcInstruments
     public static readonly Histogram<double> ClientConnectionAttemptDurationHistogram;
     public static readonly Histogram<double> ClientConnectionUptimeHistogram;
     public static readonly Histogram<double> ServerConnectionUptimeHistogram;
-    public static readonly ObservableGauge<long> ActiveInboundCallGauge;
-    public static readonly ObservableGauge<long> ActiveOutboundCallGauge;
+    public static readonly ObservableGauge<long> OpenInboundCallGauge;
+    public static readonly ObservableGauge<long> OpenOutboundCallGauge;
     public static readonly Counter<long> ClientCallEventCounter;
     public static bool IsInboundEnabled {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -70,10 +74,10 @@ public static class RpcInstruments
             "ms", "Duration of established client connections.");
         ServerConnectionUptimeHistogram = m.CreateHistogram<double>($"{ms}.server.connection.uptime",
             "ms", "Duration of established server connections.");
-        ActiveInboundCallGauge = m.CreateObservableGauge<long>($"{server}.call.active",
-            ObserveActiveInboundCalls, "{call}", "Number of active inbound RPC calls.");
-        ActiveOutboundCallGauge = m.CreateObservableGauge<long>($"{ms}.client.call.active",
-            ObserveActiveOutboundCalls, "{call}", "Number of active outbound RPC calls.");
+        OpenInboundCallGauge = m.CreateObservableGauge<long>($"{server}.call.open",
+            ObserveOpenInboundCalls, "{call}", "Number of open inbound RPC calls by stage.");
+        OpenOutboundCallGauge = m.CreateObservableGauge<long>($"{ms}.client.call.open",
+            ObserveOpenOutboundCalls, "{call}", "Number of open outbound RPC calls by stage.");
         ClientCallEventCounter = m.CreateCounter<long>($"{ms}.client.call.event.count",
             "{event}", "Count of client call maintenance events.");
     }
@@ -143,11 +147,19 @@ public static class RpcInstruments
         histogram.Record(durationMs, tags);
     }
 
-    public static void RegisterCallTracker(RpcInboundCallTracker tracker)
-        => InboundCallTrackers.Add(tracker, CallTrackerTag);
+    internal static void UpdateOpenInboundCallCounts(RpcCallStageCounts oldValue, RpcCallStageCounts newValue)
+    {
+        Interlocked.Add(ref _openInboundPendingCallCount, newValue.Pending - oldValue.Pending);
+        Interlocked.Add(ref _openInboundResultReadyCallCount, newValue.ResultReady - oldValue.ResultReady);
+        Interlocked.Add(ref _openInboundInvalidatedCallCount, newValue.Invalidated - oldValue.Invalidated);
+    }
 
-    public static void RegisterCallTracker(RpcOutboundCallTracker tracker)
-        => OutboundCallTrackers.Add(tracker, CallTrackerTag);
+    internal static void UpdateOpenOutboundCallCounts(RpcCallStageCounts oldValue, RpcCallStageCounts newValue)
+    {
+        Interlocked.Add(ref _openOutboundPendingCallCount, newValue.Pending - oldValue.Pending);
+        Interlocked.Add(ref _openOutboundResultReadyCallCount, newValue.ResultReady - oldValue.ResultReady);
+        Interlocked.Add(ref _openOutboundInvalidatedCallCount, newValue.Invalidated - oldValue.Invalidated);
+    }
 
     public static void RegisterClientCallEvents(int delayedCount, int resendCount, int timeoutCount)
     {
@@ -187,19 +199,23 @@ public static class RpcInstruments
         };
     }
 
-    private static long ObserveActiveInboundCalls()
+    private static IEnumerable<Measurement<long>> ObserveOpenInboundCalls()
     {
-        var count = 0L;
-        foreach (var (tracker, _) in InboundCallTrackers)
-            count += tracker.Count;
-        return count;
+        yield return new(Volatile.Read(ref _openInboundPendingCallCount),
+            new KeyValuePair<string, object?>("rpc.call.stage", "pending"));
+        yield return new(Volatile.Read(ref _openInboundResultReadyCallCount),
+            new KeyValuePair<string, object?>("rpc.call.stage", "result_ready"));
+        yield return new(Volatile.Read(ref _openInboundInvalidatedCallCount),
+            new KeyValuePair<string, object?>("rpc.call.stage", "invalidated"));
     }
 
-    private static long ObserveActiveOutboundCalls()
+    private static IEnumerable<Measurement<long>> ObserveOpenOutboundCalls()
     {
-        var count = 0L;
-        foreach (var (tracker, _) in OutboundCallTrackers)
-            count += tracker.Count;
-        return count;
+        yield return new(Volatile.Read(ref _openOutboundPendingCallCount),
+            new KeyValuePair<string, object?>("rpc.call.stage", "pending"));
+        yield return new(Volatile.Read(ref _openOutboundResultReadyCallCount),
+            new KeyValuePair<string, object?>("rpc.call.stage", "result_ready"));
+        yield return new(Volatile.Read(ref _openOutboundInvalidatedCallCount),
+            new KeyValuePair<string, object?>("rpc.call.stage", "invalidated"));
     }
 }

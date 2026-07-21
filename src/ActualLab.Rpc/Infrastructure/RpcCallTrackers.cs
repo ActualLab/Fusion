@@ -6,7 +6,7 @@ using Errors = ActualLab.Internal.Errors;
 namespace ActualLab.Rpc.Infrastructure;
 
 /// <summary>
-/// Base class for tracking active RPC calls (inbound or outbound) on a peer.
+/// Base class for tracking open RPC calls (inbound or outbound) on a peer.
 /// </summary>
 public abstract class RpcCallTracker<TRpcCall> : IEnumerable<TRpcCall>
     where TRpcCall : RpcCall
@@ -47,10 +47,12 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 {
     public RpcInboundCall this[long id] => Calls[id];
 
-    public override void Initialize(RpcPeer peer)
+    internal RpcCallStageCounts GetStageCounts()
     {
-        base.Initialize(peer);
-        RpcInstruments.RegisterCallTracker(this);
+        var result = default(RpcCallStageCounts);
+        foreach (var call in this)
+            result.Add(call.CompletedStage);
+        return result;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -79,15 +81,12 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 {
     private readonly ConcurrentDictionary<long, RpcOutboundCall> _longLivingCalls = new(HardwareInfo.ProcessorCountPo2, 131);
+    private RpcCallStageCounts _reportedInboundCallCounts;
+    private RpcCallStageCounts _reportedOutboundCallCounts;
+    private CpuTimestamp _lastCallMetricsReportAt;
     private long _lastId;
 
     public RpcOutboundCall this[long id] => Calls[id];
-
-    public override void Initialize(RpcPeer peer)
-    {
-        base.Initialize(peer);
-        RpcInstruments.RegisterCallTracker(this);
-    }
 
     public void Register(RpcOutboundCall call)
     {
@@ -124,6 +123,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     public async Task Maintain(RpcPeerConnectionState connectionState, CancellationToken cancellationToken)
     {
         var lastSummaryReportAt = CpuTimestamp.Now;
+        var callMetricsPeriod = Peer.Hub.DiagnosticsOptions.OpenCallMetricsPeriodProvider.Invoke(Peer);
         var delayedCallLimit = Limits.LogDelayedCallLimit;
         var summaryLogSettings = Limits.LogCallSummarySettings;
         var keepAliveTimeout = Limits.KeepAliveTimeout;
@@ -145,10 +145,17 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 var callCount = 0;
                 var inProgressCallCount = 0;
                 var timeoutCallCount = 0;
+                var mustReportInboundCallMetrics = RpcInstruments.OpenInboundCallGauge.Enabled
+                    && (_lastCallMetricsReportAt == default || _lastCallMetricsReportAt.Elapsed >= callMetricsPeriod);
+                var mustReportOutboundCallMetrics = RpcInstruments.OpenOutboundCallGauge.Enabled
+                    && (_lastCallMetricsReportAt == default || _lastCallMetricsReportAt.Elapsed >= callMetricsPeriod);
+                var outboundCallCounts = default(RpcCallStageCounts);
                 delayedCalls.Clear();
                 callsToResend.Clear();
                 foreach (var call in this) {
                     callCount++;
+                    if (mustReportOutboundCallMetrics)
+                        outboundCallCounts.Add(call.CompletedStage);
                     if (call.ResultTask.IsCompleted)
                         continue;
 
@@ -210,6 +217,14 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 RpcInstruments.RegisterClientCallEvents(
                     delayedCalls.Count, callsToResend.Count, timeoutCallCount);
 
+                if (mustReportInboundCallMetrics || mustReportOutboundCallMetrics) {
+                    _lastCallMetricsReportAt = CpuTimestamp.Now;
+                    ReportCallMetrics(
+                        mustReportInboundCallMetrics,
+                        mustReportOutboundCallMetrics,
+                        outboundCallCounts);
+                }
+
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period
                     && callCount > summaryLogSettings.MinCount) {
                     lastSummaryReportAt = CpuTimestamp.Now;
@@ -225,6 +240,19 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         catch {
             // Intended
         }
+    }
+
+    internal void ClearInboundCallMetrics()
+    {
+        RpcInstruments.UpdateOpenInboundCallCounts(_reportedInboundCallCounts, default);
+        _reportedInboundCallCounts = default;
+    }
+
+    internal void ClearCallMetrics()
+    {
+        ClearInboundCallMetrics();
+        RpcInstruments.UpdateOpenOutboundCallCounts(_reportedOutboundCallCounts, default);
+        _reportedOutboundCallCounts = default;
     }
 
     public async Task Reconnect(
@@ -300,6 +328,22 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         }
     }
 
+    private void ReportCallMetrics(
+        bool reportInbound,
+        bool reportOutbound,
+        RpcCallStageCounts outboundCallCounts)
+    {
+        if (reportInbound) {
+            var inboundCallCounts = Peer.InboundCalls.GetStageCounts();
+            RpcInstruments.UpdateOpenInboundCallCounts(_reportedInboundCallCounts, inboundCallCounts);
+            _reportedInboundCallCounts = inboundCallCounts;
+        }
+        if (reportOutbound) {
+            RpcInstruments.UpdateOpenOutboundCallCounts(_reportedOutboundCallCounts, outboundCallCounts);
+            _reportedOutboundCallCounts = outboundCallCounts;
+        }
+    }
+
     public async Task Abort(Exception error, bool assumeCancelled)
     {
         var abortedCallIds = new HashSet<long>();
@@ -314,5 +358,23 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
             await Task.Delay(Limits.CallAbortCyclePeriod).ConfigureAwait(false);
         }
+    }
+}
+
+[StructLayout(LayoutKind.Auto)]
+internal struct RpcCallStageCounts
+{
+    public int Pending;
+    public int ResultReady;
+    public int Invalidated;
+
+    public void Add(int completedStage)
+    {
+        if (completedStage <= 0)
+            Pending++;
+        else if (completedStage == RpcCallStage.ResultReady)
+            ResultReady++;
+        else
+            Invalidated++;
     }
 }

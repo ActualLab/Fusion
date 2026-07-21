@@ -163,6 +163,7 @@ Configures diagnostics, call tracing, and logging behavior.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
+| `OpenCallMetricsPeriodProvider` | `Func<RpcPeer, TimeSpan>` | 5 minutes for server peers, 1 minute for client peers | Minimum interval between open-call table scans |
 | `CallTracerFactory` | `Func<...>` | `RpcDefaultCallTracer` (server), `null` (client) | Factory to create call tracers |
 | `CallLoggerFactory` | `Func<...>` | Filters system KeepAlive calls | Factory to create call loggers |
 

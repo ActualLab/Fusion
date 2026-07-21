@@ -63,8 +63,8 @@ method while preserving aggregate and per-method views:
 | `rpc.server.call.duration` | Histogram | ms | Duration of inbound RPC calls |
 | `rpc.client.call.duration` | Histogram | ms | Logical outbound call duration, including reroutes |
 | `rpc.client.reroute.count` | Counter | `{reroute}` | Outbound calls rerouted by the RPC layer |
-| `rpc.server.call.active` | ObservableGauge | `{call}` | Active tracked inbound calls |
-| `rpc.client.call.active` | ObservableGauge | `{call}` | Active tracked outbound calls |
+| `rpc.server.call.open` | ObservableGauge | `{call}` | Open inbound calls by stage |
+| `rpc.client.call.open` | ObservableGauge | `{call}` | Open outbound calls by stage |
 | `rpc.client.call.event.count` | Counter | `{event}` | Batched delayed, resend, and timeout observations |
 | `rpc.server.error.count` | Counter | | Inbound calls that failed with an error |
 | `rpc.server.cancellation.count` | Counter | | Inbound calls that were cancelled |
@@ -74,7 +74,10 @@ Call durations and server outcome counters carry `rpc.system.name` and
 `rpc.method`. Failed calls also carry `error.type`. Reroutes carry
 `rpc.method`, `rpc.method.kind`, and `rpc.routing.mode`.
 The client call-event counter uses the bounded `rpc.call.event` attribute;
-active-call gauges are aggregated at scrape time and carry no peer identity.
+open-call gauges use `rpc.call.stage` (`pending`, `result_ready`, or `invalidated`) and carry no peer identity. Their
+cached values are refreshed by the existing call-maintenance pass no more often than
+`RpcDiagnosticsOptions.OpenCallMetricsPeriodProvider`; metric collection itself never scans call tables. The default
+period is 5 minutes for server peers and 1 minute for client peers.
 
 Connection attempts exist only on client peers. Established connection lifetime is useful on both sides and uses
 separate client and server instruments:
@@ -383,7 +386,7 @@ Two things worth copying from this setup:
 |---------------|-----------------------|-----------|
 | RPC call latency and errors | `ActualLab.Rpc` | `rpc.server.call.duration`, `rpc.client.call.duration` |
 | RPC reroutes | `ActualLab.Rpc` | `rpc.client.reroute.count` |
-| RPC active calls and maintenance | `ActualLab.Rpc` | `rpc.*.call.active`, `rpc.client.call.event.count` |
+| RPC open calls and maintenance | `ActualLab.Rpc` | `rpc.*.call.open`, `rpc.client.call.event.count` |
 | RPC connection health | `ActualLab.Rpc` | `rpc.client.connection.attempt.*`, `rpc.*.connection.uptime` |
 | RPC transport throughput | `ActualLab.Rpc` | `rpc.{transport}.transport.*` |
 | Compute graph size & pruning | `ActualLab.Fusion` | `computed.registry.node.count`, `computed.registry.edge.count` |

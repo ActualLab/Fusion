@@ -507,6 +507,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         // Inbound calls are auto-aborted via peerChangedToken from OnRun,
         // which becomes RpcInboundCallContext.CancellationToken.
         InboundCalls.Clear();
+        if (isStopped)
+            OutboundCalls.ClearCallMetrics();
+        else
+            OutboundCalls.ClearInboundCallMetrics();
         Log.LogInformation("'{Route}': {Action}", Route, isStopped ? "Stopped" : "Peer changed");
     }
 
