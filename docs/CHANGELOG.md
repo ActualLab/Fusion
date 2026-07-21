@@ -80,12 +80,6 @@ npm `14.1.5` is the TS side of the same release (published from
   churn coalescing, `Reset()`, `GetPeer` replacement and races, and
   local↔remote shard flips with computed invalidation on a stable ref.
 
-### Infrastructure
-
-- [`/publish` skill](https://github.com/ActualLab/Fusion/commit/79939c2a):
-  NuGet/npm publishing with TS lint + tests, build-error fixing, and
-  changelog handoff.
-
 
 ## 14.0.37+1d67c8de | npm: 14.0.17
 
