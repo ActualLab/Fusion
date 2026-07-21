@@ -24,7 +24,7 @@
     <BlazorVersion6>$(AspNetCoreVersion6)</BlazorVersion6>
     <BlazorVersion5>$(AspNetCoreVersion5)</BlazorVersion5>
     <BlazorVersion3>$(AspNetCoreVersion3)</BlazorVersion3>
-    <MicrosoftExtensionsVersion>[10.0.0,)</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion>10.8.0</MicrosoftExtensionsVersion>
     <MicrosoftExtensionsVersion9>[9.0.0,)</MicrosoftExtensionsVersion9>
     <MicrosoftExtensionsVersion8>[8.0.0,)</MicrosoftExtensionsVersion8>
     <MicrosoftExtensionsVersion7>[7.0.0,)</MicrosoftExtensionsVersion7>
