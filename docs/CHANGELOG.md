@@ -11,7 +11,7 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 14.1.3+79939c2a | npm: 14.0.17
+## 14.1.3+79939c2a | npm: 14.1.5
 
 Release date: 2026-07-21
 
@@ -22,8 +22,13 @@ new ref — the ref's **route** (a new per-generation `RpcRoute`) is reset
 instead, while peers stay 1:1 with route generations, so the entire
 battle-tested reroute pipeline is preserved.
 
+npm `14.1.5` is the TS side of the same release (published from
+[0abe15b7](https://github.com/ActualLab/Fusion/commit/0abe15b7)).
+
 ### Breaking Changes
 
+- TS (`@actuallab/rpc`): `RpcPeerRefBuilder` is renamed to `RpcRefBuilder`.
+  TS refs stay plain strings — there's no `RpcRoute` counterpart on the TS side.
 - [`RpcPeerRef` is renamed to `RpcRef`, and `RpcRouteState` is replaced by `RpcRoute`](https://github.com/ActualLab/Fusion/commit/99468623)
   — see the ["RpcPeerRef: renamed to RpcRef in v14.1"](https://fusion.actuallab.net/PartR-CallRouting#rpcpeerref-renamed-to-rpcref-in-v14-1)
   migration note. Key points:
