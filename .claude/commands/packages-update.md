@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Edit, Bash, Grep, WebFetch
 description: Update NuGet package versions in Directory.Packages.props following Fusion's pinning rules
-argument-hint: [optional: package name(s) or "all"]
+argument-hint: '[optional: package name(s) or "all"]'
 ---
 
 # NuGet Package Updater

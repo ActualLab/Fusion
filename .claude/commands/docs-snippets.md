@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 description: Documentation snippets guide - authoring, running, and embedding code snippets
-argument-hint: [question-or-task]
+argument-hint: "[question-or-task]"
 ---
 
 # Documentation Snippets Guide

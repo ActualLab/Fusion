@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion
 description: Synchronize Fusion TypeScript code between ActualLab.Fusion and ActualChat projects
-argument-hint: [direction-or-instructions]
+argument-hint: "[direction-or-instructions]"
 ---
 
 # Fusion TypeScript Sync

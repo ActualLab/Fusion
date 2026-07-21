@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash
 description: Generate an SVG using Gemini API
-argument-hint: [output-file] [description]
+argument-hint: "[output-file] [description]"
 ---
 
 Generate an SVG file using Google's Gemini 3.1 Pro Preview model based on the user's description.

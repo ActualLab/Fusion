@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash, PowerShell, Read, Grep, Glob
 description: Run the test suite with parallel runners (scopes: core|fusion|rpc|all; modes: fast|full)
-argument-hint: [core|fusion|rpc|all] [fast|full]
+argument-hint: "[core|fusion|rpc|all] [fast|full]"
 ---
 
 # Parallel test runner

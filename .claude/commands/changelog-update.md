@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Edit, Bash, Glob, Grep, WebFetch
 description: Generate a new CHANGELOG.md entry from commits
-argument-hint: [version-number] - e.g., "12.0.0"
+argument-hint: '[version-number] - e.g., "12.0.0"'
 ---
 
 # Changelog Entry Generator

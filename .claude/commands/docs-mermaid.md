@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Edit, Write, Glob, Grep
 description: Mermaid diagram syntax guidelines for Fusion docs
-argument-hint: [task-description]
+argument-hint: "[task-description]"
 ---
 
 # Mermaid Diagram Syntax Guidelines

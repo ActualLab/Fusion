@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Edit, Bash, Glob, Grep, WebFetch, AskUserQuestion, Skill
 description: Publish NuGet (.NET) and/or npm (TS) packages; auto-detects what changed, tests via /test, then updates the changelog
-argument-hint: [.net|ts|both|auto] [-test|-no-test] [-changelog|-no-changelog]
+argument-hint: "[.net|ts|both|auto] [-test|-no-test] [-changelog|-no-changelog]"
 ---
 
 # Publish

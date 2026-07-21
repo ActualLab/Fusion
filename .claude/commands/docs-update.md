@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Write
 description: Update documentation in Docs folder
-argument-hint: [file-name] [desired-change-description]
+argument-hint: "[file-name] [desired-change-description]"
 ---
 
 Update the documentation in /docs folder as it's described in $ARGUMENTS:

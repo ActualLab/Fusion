@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 description: Documentation writer for Fusion docs - use for any docs/ folder tasks
-argument-hint: [task-description]
+argument-hint: "[task-description]"
 ---
 
 # Fusion Documentation Writer

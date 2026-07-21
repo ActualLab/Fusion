@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash
 description: Generate an image using Gemini API
-argument-hint: [output-file] [description]
+argument-hint: "[output-file] [description]"
 ---
 
 Generate an image using Google's Gemini API based on the user's description.

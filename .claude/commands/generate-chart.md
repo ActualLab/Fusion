@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Write, Bash(python3:*)
 description: Generate charts using Python 3 (matplotlib, seaborn, plotly, pandas, numpy)
-argument-hint: [output-file] [description]
+argument-hint: "[output-file] [description]"
 ---
 
 # Generate Chart
