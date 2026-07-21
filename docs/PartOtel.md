@@ -185,7 +185,7 @@ logs are consumed and how its database batches behave:
 
 The delay histogram's `path` is bounded to `batch`, `gap`, or `reprocess`
 for operations and to `batch` or `reprocess` for events. Batch `log.kind` is
-`operation` or `event`; `outcome` is `success` or `error`. Event delay starts
+`operation` or `event`; `outcome` is `success`, `error`, or `cancel`. Event delay starts
 when an event becomes eligible rather than when it was logged, so an
 intentional scheduled delay does not look like processing lag.
 
@@ -232,13 +232,23 @@ and `invalidation.failure.count`.
 ### When RPC call tracing is active
 
 The default `CallTracerFactory` only attaches the per-method tracer on the
-**server** side (`RuntimeInfo.IsServer`). Clients therefore don't pay for
-per-method metric/activity bookkeeping unless you opt in by supplying your
-own factory via `RpcDiagnosticsOptions.CallTracerFactory`. All of this is
-still gated by the usual OpenTelemetry rule: an `ActivitySource` produces
-spans only when a listener (your tracer provider) is subscribed to it, and a
-`Meter`'s instruments record only when a `MeterProvider` collects them. If
-you register nothing, the instrumentation is effectively free.
+**server** side (`RuntimeInfo.IsServer`), so RPC *spans* originate there by
+default; supply your own factory via `RpcDiagnosticsOptions.CallTracerFactory`
+to create client-side call spans too. Three things work on clients even
+without a tracer:
+
+- `rpc.client.call.duration` records whenever the meter is collected —
+  no tracer registration is needed.
+- The ambient `Activity.Current` context (e.g. an ASP.NET Core request span)
+  is injected into outbound call headers, so downstream server spans join
+  the caller's trace even when no RPC client span exists.
+- Reroute and connection instruments record on their (rare) lifecycle paths.
+
+All of this is still gated by the usual OpenTelemetry rule: an
+`ActivitySource` produces spans only when a listener (your tracer provider)
+is subscribed to it, and a `Meter`'s instruments record only when a
+`MeterProvider` collects them. If you register nothing and no ambient
+`Activity` exists, the instrumentation cost is near-zero.
 
 
 ## Enabling It in an Aspire Host
@@ -322,11 +332,11 @@ packages — nothing ActualLab-specific:
 
 ## Production Setup
 
-In a real deployment you rarely want *every* per-method RPC metric — there
-are too many, and most are noise. [Voxt](https://voxt.ai) registers the same
-meters and sources but adds two production refinements: **trace sampling**
-and a **metric view** that drops all but a handful of high-value per-method
-histograms.
+RPC call instruments are fixed, and their per-method dimension is the
+bounded `rpc.method` attribute — so cardinality control is an *attribute*
+decision, not an instrument-name decision. [Voxt](https://voxt.ai) registers
+the same meters and sources but adds two production refinements: **trace
+sampling** and a **metric view** that picks the RPC aggregation level.
 
 Registering by the runtime name avoids typos and keeps the registration in
 sync with the assemblies:
@@ -341,15 +351,12 @@ otel.WithMetrics(meter => meter
     // ... your own per-assembly meters ...
     .AddOtlpExporter(cfg => { /* endpoint, batching, protocol */ })
     .AddView(instrument => {
-        // Keep only *.duration (ms) per-method RPC metrics, and only for a
-        // curated set of hot methods; drop the rest to cut cardinality.
-        if (instrument.Meter == RpcInstruments.Meter && instrument.Name.StartsWith("rpc.server.")) {
-            if (instrument.Unit != "ms")
-                return MetricStreamConfiguration.Drop;
-            if (!instrument.Name.StartsWith("rpc.server.IChats/Get")
-                && !instrument.Name.StartsWith("rpc.server.IAuthors/Get"))
-                return MetricStreamConfiguration.Drop;
-        }
+        // RPC call metrics carry the bounded `rpc.method` attribute. Keep it
+        // for per-method dashboards; drop it (as below) for a service-wide
+        // aggregate that cuts each instrument to a handful of series.
+        if (instrument.Meter == RpcInstruments.Meter
+            && instrument.Name.StartsWith("rpc.server.", StringComparison.Ordinal))
+            return new MetricStreamConfiguration { TagKeys = ["rpc.system.name", "error.type"] };
         return null; // Keep everything else as-is
     })
 );
