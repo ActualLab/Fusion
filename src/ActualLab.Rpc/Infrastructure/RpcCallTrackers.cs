@@ -1,4 +1,5 @@
 using ActualLab.OS;
+using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Internal;
 using Errors = ActualLab.Internal.Errors;
 
@@ -46,6 +47,12 @@ public sealed class RpcInboundCallTracker : RpcCallTracker<RpcInboundCall>
 {
     public RpcInboundCall this[long id] => Calls[id];
 
+    public override void Initialize(RpcPeer peer)
+    {
+        base.Initialize(peer);
+        RpcInstruments.RegisterCallTracker(this);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcInboundCall GetOrRegister(RpcInboundCall call)
     {
@@ -75,6 +82,12 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     private long _lastId;
 
     public RpcOutboundCall this[long id] => Calls[id];
+
+    public override void Initialize(RpcPeer peer)
+    {
+        base.Initialize(peer);
+        RpcInstruments.RegisterCallTracker(this);
+    }
 
     public void Register(RpcOutboundCall call)
     {
@@ -131,6 +144,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
                 var callCount = 0;
                 var inProgressCallCount = 0;
+                var timeoutCallCount = 0;
                 delayedCalls.Clear();
                 callsToResend.Clear();
                 foreach (var call in this) {
@@ -146,6 +160,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
                     var elapsed = startedAt.Elapsed;
                     if (elapsed >= timeouts.RunTimeout) {
+                        timeoutCallCount++;
                         var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.RunTimeout);
                         call.SetError(error, context: null, assumeCancelled: false);
                         Peer.Log.LogError(error,
@@ -191,6 +206,9 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 if (callsToResend.Count > 0)
                     foreach (var call in callsToResend)
                         call.SendRegistered();
+
+                RpcInstruments.RegisterClientCallEvents(
+                    delayedCalls.Count, callsToResend.Count, timeoutCallCount);
 
                 if (lastSummaryReportAt.Elapsed > summaryLogSettings.Period
                     && callCount > summaryLogSettings.MinCount) {
