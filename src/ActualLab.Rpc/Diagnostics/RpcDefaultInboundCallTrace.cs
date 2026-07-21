@@ -11,22 +11,17 @@ public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Acti
 {
     public override void Complete(RpcInboundCall call, Exception? error)
     {
+        // ResultTask may be null or incomplete here (aborted / never-processed calls) -
+        // RpcCallSummary maps that state to TaskResultKind.Incomplete
+        if (call.ResultTask is { IsCompleted: true } resultTask)
+            error ??= resultTask.ToResultSynchronously().Error;
         if (Activity is not null) {
-            var untypedResultTask = call.ResultTask;
-            if (untypedResultTask is null) {
-                StaticLog.For(typeof(RpcDefaultInboundCallTrace)).LogError("Call doesn't have ResultTask yet");
-                untypedResultTask = Task.CompletedTask;
-            }
-
-            error ??= untypedResultTask.ToResultSynchronously().Error;
             Activity.Finalize(error, call.CallCancelToken);
             Activity.DisposeNonCurrent();
         }
-
         if (!tracer.IsEnabled)
             return;
 
-        error ??= call.ResultTask?.ToResultSynchronously().Error;
         var callStats = new RpcCallSummary(call, error);
         tracer.RegisterInboundCall(callStats, error);
     }
