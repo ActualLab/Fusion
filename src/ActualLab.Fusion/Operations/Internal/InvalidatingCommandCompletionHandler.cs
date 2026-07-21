@@ -45,7 +45,7 @@ public class InvalidatingCommandCompletionHandler(
             return;
         }
 
-        var commandType = command.GetType().NonProxyType().GetName();
+        var commandType = command.GetType().GetName();
         Log.IfEnabled(Settings.LogLevel)
             ?.Log(Settings.LogLevel, "Invalidating: {CommandType}", commandType);
 
@@ -181,7 +181,7 @@ public class InvalidatingCommandCompletionHandler(
 
     protected virtual Activity? StartActivity(ICommand command)
     {
-        var commandName = command.GetType().NonProxyType().GetName();
+        var commandName = command.GetType().GetName();
         var operationName = $"-inv.{DiagnosticsExt.FixName(commandName)}";
         var activity = FusionInstruments.ActivitySource.StartActivity(operationName);
         activity?.AddCommandTags(command, Settings.CaptureCommandPayload);

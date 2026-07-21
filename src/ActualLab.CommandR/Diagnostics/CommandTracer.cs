@@ -62,7 +62,7 @@ public class CommandTracer(CommandTracer.Options settings, IServiceProvider serv
         finally {
             if (mustMeasure) {
                 var tags = new TagList {
-                    { "command.name", command.GetType().NonProxyType().GetName() },
+                    { "command.name", command.GetType().GetName() },
                     { "command.kind", command is IEventCommand ? "event" : "command" },
                     { "command.scope", context.IsOutermost ? "outermost" : "nested" },
                     { "outcome", outcome },
@@ -91,7 +91,7 @@ public class CommandTracer(CommandTracer.Options settings, IServiceProvider serv
 
     protected virtual Activity? StartActivity(ICommand command, CommandContext context)
     {
-        var commandName = command.GetType().NonProxyType().GetName();
+        var commandName = command.GetType().GetName();
         var operationName = $"cmd.{DiagnosticsExt.FixName(commandName)}";
         var activity = CommanderInstruments.ActivitySource.StartActivity(operationName);
         activity?.AddCommandTags(

@@ -10,7 +10,7 @@ public static class CommandActivityExt
         bool capturePayload,
         string? scope = null)
     {
-        var commandName = command.GetType().NonProxyType().GetName();
+        var commandName = command.GetType().GetName();
         activity.SetTag("command.name", commandName);
         activity.SetTag("command.kind", command is IEventCommand ? "event" : "command");
         if (scope is not null)
