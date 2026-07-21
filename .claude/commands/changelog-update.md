@@ -135,6 +135,8 @@ Release date: <YYYY-MM-DD>
 - **Focus on major changes** - not every commit needs an entry
 - **Group related commits** - multiple commits for one feature = one entry
 - **Skip trivial commits** - minor chores, formatting, typo fixes
+- **Skip skill/command updates** - commits touching `.claude/` (skills, commands,
+  agent config) don't ship in packages and never belong in the changelog
 - **User-facing language** - describe the impact, not the implementation
 - **Start with verb** - "Added", "Fixed", "Improved", etc.
 - **Include context** - mention affected components (RPC, Fusion, Blazor, etc.)
