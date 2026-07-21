@@ -6,7 +6,7 @@ public class ArgumentListBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBa
 {
     private static readonly int DefaultIterationCount = 10_000_000;
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task GetLikeMethod0Test()
     {
         var iterationCount = DefaultIterationCount;
@@ -22,7 +22,7 @@ public class ArgumentListBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBa
         });
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task GetLikeMethod1Test()
     {
         var iterationCount = DefaultIterationCount;
@@ -38,7 +38,7 @@ public class ArgumentListBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBa
         });
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task GetLikeMethod2Test()
     {
         var iterationCount = DefaultIterationCount;
@@ -54,7 +54,7 @@ public class ArgumentListBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBa
         });
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task CommandLikeTest()
     {
         var iterationCount = DefaultIterationCount;
@@ -72,7 +72,7 @@ public class ArgumentListBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBa
         });
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task CancellationTokenGetTest()
     {
         var iterationCount = DefaultIterationCount;
@@ -94,7 +94,7 @@ public class ArgumentListBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBa
         });
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task CancellationTokenGetSetTest()
     {
         var iterationCount = DefaultIterationCount;

@@ -1,11 +1,10 @@
 using ActualLab.Internal;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Rpc;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
+[Trait("Category", "Rpc")]
 public class RpcStreamBasicTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]

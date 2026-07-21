@@ -1,10 +1,8 @@
 using ActualLab.Fusion.Extensions;
 using ActualLab.Rpc;
-using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Rpc;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcWebSocketTest : RpcTestBase
 {
     public RpcWebSocketTest(ITestOutputHelper @out) : base(@out)
@@ -34,20 +32,7 @@ public class RpcWebSocketTest : RpcTestBase
         => BasicTest("json5");
 
     [Theory]
-    [InlineData("json5")]
-    [InlineData("njson5")]
-    [InlineData("mempack5")]
-    [InlineData("mempack5c")]
-    [InlineData("msgpack5")]
-    [InlineData("msgpack5c")]
-    [InlineData("mempack6")]
-    [InlineData("mempack6c")]
-    [InlineData("msgpack6")]
-    [InlineData("msgpack6c")]
-#if NET8_0_OR_GREATER
-    [InlineData("nmsgpack6")]
-    [InlineData("nmsgpack6c")]
-#endif
+    [MemberData(nameof(RpcTestFormats.NoNP), MemberType = typeof(RpcTestFormats))]
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -162,20 +147,7 @@ public class RpcWebSocketTest : RpcTestBase
     }
 
     [Theory]
-    [InlineData("json5")]
-    [InlineData("njson5")]
-    [InlineData("mempack5")]
-    [InlineData("mempack5c")]
-    [InlineData("msgpack5")]
-    [InlineData("msgpack5c")]
-    [InlineData("mempack6")]
-    [InlineData("mempack6c")]
-    [InlineData("msgpack6")]
-    [InlineData("msgpack6c")]
-#if NET8_0_OR_GREATER
-    [InlineData("nmsgpack6")]
-    [InlineData("nmsgpack6c")]
-#endif
+    [MemberData(nameof(RpcTestFormats.NoNP), MemberType = typeof(RpcTestFormats))]
     public async Task PolymorphTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -226,22 +198,7 @@ public class RpcWebSocketTest : RpcTestBase
         => StreamTest("json5");
 
     [Theory]
-    [InlineData("json5")]
-    [InlineData("njson5")]
-    [InlineData("mempack5")]
-    [InlineData("mempack5c")]
-    [InlineData("msgpack5")]
-    [InlineData("msgpack5c")]
-    [InlineData("mempack6")]
-    [InlineData("mempack6c", false)]
-    [InlineData("mempack6c", true)]
-    [InlineData("msgpack6")]
-    [InlineData("msgpack6c", false)]
-    [InlineData("msgpack6c", true)]
-#if NET8_0_OR_GREATER
-    [InlineData("nmsgpack6")]
-    [InlineData("nmsgpack6c")]
-#endif
+    [MemberData(nameof(RpcTestFormats.NoNPWithReconnectFlag), MemberType = typeof(RpcTestFormats))]
     public async Task StreamTest(string serializationFormat, bool allowReconnect = true)
     {
         SerializationFormat = serializationFormat;
@@ -278,20 +235,7 @@ public class RpcWebSocketTest : RpcTestBase
     }
 
     [Theory]
-    [InlineData("json5")]
-    [InlineData("njson5")]
-    [InlineData("mempack5")]
-    [InlineData("mempack5c")]
-    [InlineData("msgpack5")]
-    [InlineData("msgpack5c")]
-    [InlineData("mempack6")]
-    [InlineData("mempack6c")]
-    [InlineData("msgpack6")]
-    [InlineData("msgpack6c")]
-#if NET8_0_OR_GREATER
-    [InlineData("nmsgpack6")]
-    [InlineData("nmsgpack6c")]
-#endif
+    [MemberData(nameof(RpcTestFormats.NoNP), MemberType = typeof(RpcTestFormats))]
     public async Task StreamInputTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;

@@ -22,7 +22,7 @@ public class TypeScriptRpcPerfTest(ITestOutputHelper @out) : RpcTestBase(@out)
         fusion.AddService<ITypeScriptTestComputeService, TypeScriptTestComputeService>(RpcServiceMode.Server);
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData("compute", 32, 100_000)]
     public async Task ComputePerformance(string scenario, int workerCount, int iterCount)
     {
@@ -30,7 +30,7 @@ public class TypeScriptRpcPerfTest(ITestOutputHelper @out) : RpcTestBase(@out)
         await RunScenario(scenario, workerCount, iterCount);
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData("compute-rpc-same", 32, 100_000)]
     public async Task ComputeRpcSamePerformance(string scenario, int workerCount, int iterCount)
     {
@@ -38,7 +38,7 @@ public class TypeScriptRpcPerfTest(ITestOutputHelper @out) : RpcTestBase(@out)
         await RunScenario(scenario, workerCount, iterCount);
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData("compute-rpc-unique", 32, 5_000)]
     public async Task ComputeRpcUniquePerformance(string scenario, int workerCount, int iterCount)
     {
@@ -46,7 +46,7 @@ public class TypeScriptRpcPerfTest(ITestOutputHelper @out) : RpcTestBase(@out)
         await RunScenario(scenario, workerCount, iterCount);
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData("rpc", 32, 5_000)]
     public async Task RpcPerformance(string scenario, int workerCount, int iterCount)
     {
@@ -54,7 +54,7 @@ public class TypeScriptRpcPerfTest(ITestOutputHelper @out) : RpcTestBase(@out)
         await RunScenario(scenario, workerCount, iterCount);
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData("stream", 32, 2_000, 10)]
     [InlineData("stream", 32, 50, 5_000)]
     public async Task StreamPerformance(string scenario, int workerCount, int iterCount, int itemCount)

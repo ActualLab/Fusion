@@ -1,14 +1,11 @@
 using ActualLab.OS;
 using ActualLab.Rpc;
-using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Rpc;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcLoopbackConnectionTest(ITestOutputHelper @out)
     : RpcLocalConnectionTestBase(RpcPeerConnectionKind.Loopback, @out);
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcLocalConnectionTest(ITestOutputHelper @out)
     : RpcLocalConnectionTestBase(RpcPeerConnectionKind.Local, @out);
 
@@ -70,7 +67,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         (await client.PolymorphResult(2)).Should().Be(new Tuple<int>(2));
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(100)]
     [InlineData(1000)]
     [InlineData(50_000)]
@@ -116,7 +113,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
     }
 
     // This test mirrors RpcWebSocketTest.PerformanceTest exactly to allow comparison
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(500_000, "mempack6c")]
     public async Task PerformanceTestV2(int iterationCount, string serializationFormat)
     {
@@ -154,7 +151,7 @@ public abstract class RpcLocalConnectionTestBase : RpcTestBase
         }
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(100)]
     [InlineData(1000)]
     [InlineData(10_000)]

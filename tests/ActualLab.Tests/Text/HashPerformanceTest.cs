@@ -7,7 +7,7 @@ public sealed class HashPerformanceTest(ITestOutputHelper @out) : BenchmarkTestB
     private static readonly int[] DefaultVariants = [0, 1, 16, 256, 16384];
     private static readonly int DefaultByteCount = 16384 * 1024;
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task DjbVsXxHash3()
     {
         var byteCount = DefaultByteCount;

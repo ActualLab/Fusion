@@ -5,7 +5,7 @@ public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTes
     private static readonly int[] DefaultVariants = [12, 20, 32, 64];
     private static readonly int DefaultIterationCount = 20_000_000;
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task CreationTest()
     {
         var options = DefaultVariants;
@@ -27,7 +27,7 @@ public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTes
         }, options);
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task HashCodeTest()
     {
         var options = DefaultVariants;
@@ -57,7 +57,7 @@ public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTes
         }, 5, 10, 20);
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task EqualsTest()
     {
         var options = DefaultVariants;
@@ -89,7 +89,7 @@ public sealed class SymbolPerformanceTest(ITestOutputHelper @out) : BenchmarkTes
         }, options);
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task DictionaryLookupTest()
     {
         var sizeOptions = new[] { 10_000 };

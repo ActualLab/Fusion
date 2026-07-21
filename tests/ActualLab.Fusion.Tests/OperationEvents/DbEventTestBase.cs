@@ -1,6 +1,7 @@
 using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Testing;
 using ActualLab.Fusion.Tests.Services;
+using ActualLab.Testing.Collections;
 using ActualLab.Versioning;
 
 namespace ActualLab.Fusion.Tests.OperationEvents;
@@ -35,6 +36,7 @@ public class InMemoryEventTest : DbEventTestBase
         => DbType = FusionTestDbType.InMemory;
 }
 
+[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@out)
 {
     protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
@@ -50,6 +52,8 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
     [Fact]
     public async Task FailStrategyTest()
     {
+        if (MustSkip()) return;
+
         var c = Services.GetRequiredService<EventCatcher>();
         await Enqueue(E("a1.0"), E("a1.1"));
         await ComputedTest.When(async ct => {
@@ -81,6 +85,8 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
     [Fact]
     public async Task SkipStrategyTest()
     {
+        if (MustSkip()) return;
+
         var c = Services.GetRequiredService<EventCatcher>();
 
         await Enqueue(ES("a1.0"), ES("a1.1"), ES("a1.2"));
@@ -110,6 +116,8 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
     [Fact]
     public async Task ConcurrentSkipStrategyTest()
     {
+        if (MustSkip()) return;
+
         // Regression test for the KeyConflictStrategy race on _events inserts
         // (Actual-Chat/actual-chat#4049): concurrent producers inserting the same
         // deterministic-UUID event with KeyConflictStrategy.Skip must not fail the command.
@@ -137,6 +145,8 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
     [Fact]
     public async Task UpdateStrategyTest()
     {
+        if (MustSkip()) return;
+
         var c = Services.GetRequiredService<EventCatcher>();
         await WarmUp(c);
 
@@ -171,6 +181,8 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
     [Fact]
     public async Task DelayedEventsTimingTest()
     {
+        if (MustSkip()) return;
+
         var c = Services.GetRequiredService<EventCatcher>();
         await WarmUp(c);
 

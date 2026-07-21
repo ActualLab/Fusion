@@ -27,7 +27,7 @@ public class StringBuilderExtTest(ITestOutputHelper @out) : BenchmarkTestBase(@o
         }
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task PerformanceTest()
     {
         var options = DefaultVariants;

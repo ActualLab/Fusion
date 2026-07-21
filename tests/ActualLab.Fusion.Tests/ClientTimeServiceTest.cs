@@ -1,8 +1,10 @@
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Rpc;
+using ActualLab.Testing.Collections;
 
 namespace ActualLab.Fusion.Tests;
 
+[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class ClientTimeServiceTest(ITestOutputHelper @out) : FusionTestBase(@out)
 {
     protected override void ConfigureTestServices(IServiceCollection services, bool isClient)

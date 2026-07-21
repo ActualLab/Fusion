@@ -1,8 +1,11 @@
 using System.Diagnostics.Metrics;
 using ActualLab.Fusion.Diagnostics;
+using ActualLab.Testing.Collections;
 
 namespace ActualLab.Fusion.Tests;
 
+// Meters are process-global, so concurrently running tests distort the measurements
+[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class OperationRetryMetricsTest : FusionTestBase
 {
     public OperationRetryMetricsTest(ITestOutputHelper @out) : base(@out)

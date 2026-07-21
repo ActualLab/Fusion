@@ -6,7 +6,7 @@ namespace ActualLab.Tests.Generators;
 
 public class ProxyTest(ITestOutputHelper @out) : BenchmarkTestBase(@out)
 {
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(100_000)]
     [InlineData(1000_000)]
     [InlineData(10_000_000)]

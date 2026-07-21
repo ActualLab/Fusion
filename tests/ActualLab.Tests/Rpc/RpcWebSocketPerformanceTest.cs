@@ -1,10 +1,8 @@
 using ActualLab.OS;
 using ActualLab.Rpc;
-using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Rpc;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcWebSocketPerformanceTest : RpcTestBase
 {
     public RpcWebSocketPerformanceTest(ITestOutputHelper @out) : base(@out)
@@ -33,7 +31,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
         }
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(1, 10_000)]
     // [InlineData(32, 200_000)]
     // [InlineData(64, 100_000)]
@@ -64,7 +62,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
         }
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     // Fastest options (compact)
     [InlineData(200_000, "mempack6c")]
     [InlineData(200_000, "msgpack6c")]
@@ -117,7 +115,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
         }
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(100)]
     [InlineData(1000)]
     [InlineData(10_000)]
@@ -157,7 +155,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
         }
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(1, 1, 300)]
     [InlineData(1, 3, 100)]
     [InlineData(1, 3, 1_000)]
@@ -192,7 +190,7 @@ public class RpcWebSocketPerformanceTest : RpcTestBase
         }
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(1, 1, 300)]
     [InlineData(1, 3, 100)]
     [InlineData(1, 3, 1_000)]

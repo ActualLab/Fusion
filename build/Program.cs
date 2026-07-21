@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Bullseye;
 using CliWrap;
 using CliWrap.Buffered;
@@ -32,6 +34,8 @@ internal static class Program
     /// <param name="cancellationToken"></param>
     /// <param name="configuration">The configuration for building</param>
     /// <param name="framework">The framework to build for</param>
+    /// <param name="testScope">The scope for the "test" target: core | rpc | fusion | all</param>
+    /// <param name="testMode">The mode for the "test" target: fast | full</param>
     private static async Task Main(
         string[] arguments,
         bool clear,
@@ -48,7 +52,9 @@ internal static class Program
         CancellationToken cancellationToken,
         // Our own options
         string configuration = "",
-        string framework = "")
+        string framework = "",
+        string testScope = "",
+        string testMode = "")
     {
         var publicBuildEnvVar = Environment.GetEnvironmentVariable("PUBLIC_BUILD")?.Trim() ?? "";
         var isPublicRelease = false;
@@ -178,7 +184,6 @@ internal static class Program
                     .Add("test")
                     .Add("--nologo")
                     .Add("--no-restore")
-                    .Add("-p:ParallelizeTestCollections=false")
                     .Add("--blame")
                     .Add("--collect:\"XPlat Code Coverage\"")
                     .Add("--results-directory").Add(testOutputPath)
@@ -196,6 +201,106 @@ internal static class Program
             // Removes all files in inner folders, workaround for https://github.com/microsoft/vstest/issues/2334
             foreach (var path in Directory.EnumerateDirectories(testOutputPath).Select(FilePath.New))
                 DeleteDir(path);
+        });
+
+        // Runs tests split into parallel groups; see tests/README.md.
+        // Usage: dotnet run --project build -- test [--test-scope core|rpc|fusion|all] [--test-mode fast|full]
+        // (or Run-Tests.cmd / Run-Tests.ps1 in the repository root)
+        Target("test", async () => {
+            var scope = testScope.IsNullOrEmpty() ? "all" : testScope.ToLowerInvariant();
+            var mode = testMode.IsNullOrEmpty() ? "fast" : testMode.ToLowerInvariant();
+            if (scope is not ("core" or "rpc" or "fusion" or "all"))
+                throw new InvalidOperationException($"Unknown test scope: '{scope}'. Use core, rpc, fusion, or all.");
+            if (mode is not ("fast" or "full"))
+                throw new InvalidOperationException($"Unknown test mode: '{mode}'. Use fast or full.");
+
+            var conf = configuration.IsNullOrEmpty() ? "Debug" : configuration;
+            var fw = framework.IsNullOrEmpty() ? "net10.0" : framework;
+            var coreProject = FilePath.New("tests") & "ActualLab.Tests" & "ActualLab.Tests.csproj";
+            var fusionProject = FilePath.New("tests") & "ActualLab.Fusion.Tests" & "ActualLab.Fusion.Tests.csproj";
+            var runsPath = artifactsPath & "tests" & "runs" & DateTime.Now.ToString("yyMMdd-HHmmss");
+            CreateDir(runsPath, true);
+            KillStaleTestHosts();
+
+            // Building ActualLab.Fusion.Tests builds ActualLab.Tests too (it's a project reference)
+            var buildProject = scope is "core" or "rpc" ? coreProject : fusionProject;
+            await Cli.Wrap(dotnetExePath).WithArguments(args => args
+                    .Add("build").Add(buildProject)
+                    .AddOption("-c", conf)
+                    .AddOption("-f", fw)
+                ).ToConsole()
+                .ExecuteAsync(cancellationToken).ConfigureAwait(false);
+
+            var timingFilter = "Category=TimeSensitiveTests|Category=PerformanceTests";
+            var phaseA = new List<TestGroup>();
+            if (scope is "core" or "all")
+                phaseA.Add(new("core", coreProject, "Category!=Rpc&Category!=TimeSensitiveTests&Category!=PerformanceTests"));
+            if (scope is "rpc" or "all")
+                phaseA.Add(new("rpc", coreProject, "Category=Rpc&Category!=TimeSensitiveTests"));
+            if (scope is "fusion" or "all")
+                phaseA.Add(new("fusion", fusionProject, "Category!=TimeSensitiveTests"));
+
+            var phaseB = new List<TestGroup>();
+            switch (scope) {
+            case "all":
+                phaseB.Add(new("core-ts", coreProject, timingFilter));
+                break;
+            case "core":
+                phaseB.Add(new("core-ts", coreProject, $"({timingFilter})&Category!=Rpc"));
+                break;
+            case "rpc":
+                phaseB.Add(new("rpc-ts", coreProject, "Category=TimeSensitiveTests&Category=Rpc"));
+                break;
+            }
+            if (scope is "fusion" or "all")
+                phaseB.Add(new("fusion-ts", fusionProject, "Category=TimeSensitiveTests"));
+
+            var startedAt = Stopwatch.StartNew();
+            Console.WriteLine($"Phase A - parallel runners: {string.Join(", ", phaseA.Select(g => g.Name))}");
+            var results = (await Task.WhenAll(phaseA.Select(RunTestGroup)).ConfigureAwait(false)).ToList();
+            Console.WriteLine($"Phase B - exclusive runners: {string.Join(", ", phaseB.Select(g => g.Name))}");
+            foreach (var group in phaseB)
+                results.Add(await RunTestGroup(group).ConfigureAwait(false));
+
+            Console.WriteLine();
+            Console.WriteLine($"Scope: {scope}, mode: {mode}, total time: {startedAt.Elapsed.TotalSeconds:F0}s, logs: {runsPath}");
+            foreach (var result in results)
+                Console.WriteLine($"  {result}");
+            var failedTests = results.SelectMany(r => r.FailedTests).ToArray();
+            if (failedTests.Length != 0) {
+                Console.WriteLine("Failed tests:");
+                foreach (var failedTest in failedTests)
+                    Console.WriteLine($"  {failedTest}");
+            }
+            if (results.Any(r => !r.IsPassed))
+                throw new InvalidOperationException("Some tests failed or a test runner crashed.");
+
+            return;
+
+            async Task<TestGroupResult> RunTestGroup(TestGroup group) {
+                var logPath = runsPath & $"{group.Name}.log";
+                var groupStartedAt = Stopwatch.StartNew();
+                var result = await Cli.Wrap(dotnetExePath).WithArguments(args => args
+                        .Add("test").Add(group.Project)
+                        .AddOption("-c", conf)
+                        .AddOption("-f", fw)
+                        .Add("--no-build")
+                        .Add("--filter").Add(group.Filter)
+                        .Add("--logger").Add($"trx;LogFileName={group.Name}.trx")
+                        .Add("--results-directory").Add(runsPath)
+                    )
+                    .WithEnvironmentVariables(e => {
+                        if (mode == "full")
+                            e.Set("ActualLab_FullTestRun", "1");
+                    })
+                    .WithValidation(CommandResultValidation.None)
+                    .WithStandardOutputPipe(PipeTarget.ToFile(logPath))
+                    .WithStandardErrorPipe(PipeTarget.ToFile(runsPath & $"{group.Name}.err.log"))
+                    .ExecuteAsync(cancellationToken).ConfigureAwait(false);
+                var groupResult = TestGroupResult.Parse(group.Name, result.ExitCode, groupStartedAt.Elapsed, logPath);
+                Console.WriteLine($"  {groupResult}");
+                return groupResult;
+            }
         });
 
         Target("default", ["build"]);
@@ -256,6 +361,29 @@ internal static class Program
             }
             DeleteDir(dirPath);
             dirIndex++;
+        }
+    }
+
+    private static void KillStaleTestHosts()
+    {
+        // Test hosts sometimes survive a test run; they hold DLL locks that fail the next build.
+        // Only the current repo/worktree's test hosts are killed here.
+        foreach (var process in Process.GetProcessesByName("testhost")) {
+            try {
+                var path = process.MainModule?.FileName ?? "";
+                if (!path.StartsWith(Environment.CurrentDirectory, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                Console.WriteLine($"Killing stale testhost: {process.Id} ({path})");
+                process.Kill();
+                process.WaitForExit(5000);
+            }
+            catch {
+                // Intended: the process may be gone already, or its module info may be inaccessible
+            }
+            finally {
+                process.Dispose();
+            }
         }
     }
 
@@ -334,5 +462,37 @@ internal static class Program
                 throw;
             return false;
         }
+    }
+
+    // Nested types
+
+    private sealed record TestGroup(string Name, FilePath Project, string Filter);
+
+    private sealed record TestGroupResult(
+        string Name, int ExitCode, TimeSpan Elapsed,
+        int Passed, int Failed, int Skipped, string[] FailedTests)
+    {
+        public bool IsPassed => ExitCode == 0 && Failed == 0;
+
+        public static TestGroupResult Parse(string name, int exitCode, TimeSpan elapsed, FilePath logPath)
+        {
+            var text = File.Exists(logPath) ? File.ReadAllText(logPath) : "";
+            var summary = Regex.Match(text, @"(?:Passed|Failed)!\s+-\s+Failed:\s+(\d+),\s+Passed:\s+(\d+),\s+Skipped:\s+(\d+)");
+            var failedTests = Regex.Matches(text, @"^\s+Failed (.+?) \[", RegexOptions.Multiline)
+                .Select(m => m.Groups[1].Value)
+                .Distinct()
+                .ToArray();
+            return summary.Success
+                ? new(name, exitCode, elapsed,
+                    int.Parse(summary.Groups[2].Value, CultureInfo.InvariantCulture),
+                    int.Parse(summary.Groups[1].Value, CultureInfo.InvariantCulture),
+                    int.Parse(summary.Groups[3].Value, CultureInfo.InvariantCulture),
+                    failedTests)
+                : new(name, exitCode, elapsed, 0, 0, 0, failedTests);
+        }
+
+        public override string ToString()
+            => $"{Name,-9} : {(IsPassed ? "OK    " : "FAILED")} - " +
+                $"failed: {Failed}, passed: {Passed}, skipped: {Skipped}, time: {Elapsed.TotalSeconds:F0}s";
     }
 }

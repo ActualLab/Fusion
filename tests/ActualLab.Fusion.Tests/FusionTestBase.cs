@@ -15,12 +15,10 @@ using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Generators;
 using ActualLab.Locking;
 using ActualLab.Rpc;
-using ActualLab.Testing.Collections;
 using ActualLab.Tests;
 
 namespace ActualLab.Fusion.Tests;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public abstract class FusionTestBase : RpcTestBase
 {
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);

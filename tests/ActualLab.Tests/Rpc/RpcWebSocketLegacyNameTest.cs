@@ -1,9 +1,7 @@
 using ActualLab.Rpc;
-using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Rpc;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcWebSocketLegacyNameTest : RpcTestBase
 {
     public VersionSet ClientPeerVersions = RpcDefaults.ApiPeerVersions;

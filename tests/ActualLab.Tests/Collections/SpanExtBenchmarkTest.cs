@@ -6,7 +6,7 @@ public class SpanExtBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@o
 {
     private static readonly int DefaultIterationCount = 100_000_000;
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task ReadVarUInt32Test()
     {
         var buffer = new byte[100];

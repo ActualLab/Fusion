@@ -1,10 +1,8 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Testing;
-using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Rpc;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcRemoteExecutionModeTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 {
     protected override void ConfigureServices(ServiceCollection services)

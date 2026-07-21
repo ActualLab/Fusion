@@ -17,7 +17,7 @@ public class ProxyBenchmarkTest(ITestOutputHelper @out) : BenchmarkTestBase(@out
         .AddSingleton(_ => new CastlePassThroughInterceptor())
         .BuildServiceProvider();
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task ActualLabProxyTest()
     {
         var noProxy = new ProxyProxyBenchmarkTester();

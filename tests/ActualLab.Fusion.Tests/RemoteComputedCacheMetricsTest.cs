@@ -3,9 +3,12 @@ using ActualLab.Fusion.Client;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Tests.Services;
+using ActualLab.Testing.Collections;
 
 namespace ActualLab.Fusion.Tests;
 
+// Meters are process-global, so concurrently running tests distort the measurements
+[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RemoteComputedCacheMetricsTest : FusionTestBase
 {
     public RemoteComputedCacheMetricsTest(ITestOutputHelper @out) : base(@out)

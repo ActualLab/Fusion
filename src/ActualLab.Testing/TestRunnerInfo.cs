@@ -53,8 +53,14 @@ public static class TestRunnerInfo
         }
     }
 
+    private static bool? _isFullRun;
+
     public static bool IsBuildAgent()
         => IsGitHubAction() || IsTeamCityAgent();
+
+    public static bool IsFullRun()
+        => _isFullRun ??= (Environment.GetEnvironmentVariable("ActualLab_FullTestRun") ?? "")
+            .Trim() is "1" or "true" or "True";
 
     public static bool IsTeamCityAgent()
         => TeamCity.Version is not null;

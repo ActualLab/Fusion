@@ -24,7 +24,7 @@ public class CachingStructuresTest(ITestOutputHelper @out) : BenchmarkTestBase(@
         }
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task LookupBenchmark()
     {
         var iterationCount = 1000_000;

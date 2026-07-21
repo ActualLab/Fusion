@@ -6,7 +6,7 @@ public class GCHandlePoolBenchmark(ITestOutputHelper @out) : BenchmarkTestBase(@
 {
     private const int IterationCount = 10_000_000;
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task DirectBenchmark()
     {
         await Benchmark("GCHandle.Alloc()*N + Free()*N", IterationCount, n => {
@@ -27,7 +27,7 @@ public class GCHandlePoolBenchmark(ITestOutputHelper @out) : BenchmarkTestBase(@
         });
     }
 
-    [Fact]
+    [FullRunOnlyFact]
     public async Task PoolBenchmark()
     {
         await Benchmark("GCHandlePool.Acquire()*N + Release()*N", IterationCount, n => {

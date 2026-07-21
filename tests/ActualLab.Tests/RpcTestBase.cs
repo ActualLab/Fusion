@@ -5,14 +5,13 @@ using ActualLab.Locking;
 using ActualLab.RestEase;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
-using ActualLab.Testing.Collections;
 using ActualLab.Time.Testing;
 using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
 namespace ActualLab.Tests;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
+[Trait("Category", "Rpc")]
 public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
     public static string DefaultSerializationFormat => "mempack6c";

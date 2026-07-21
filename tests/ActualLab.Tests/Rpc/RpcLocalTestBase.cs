@@ -6,6 +6,7 @@ using Xunit.DependencyInjection.Logging;
 
 namespace ActualLab.Tests.Rpc;
 
+[Trait("Category", "Rpc")]
 public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
 {
     protected string SerializationFormat { get; set; } = RpcTestBase.DefaultSerializationFormat;

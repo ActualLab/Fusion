@@ -46,7 +46,7 @@ public class ShardMapTest(ITestOutputHelper @out) : TestBase(@out)
             "consistent hashing should cause minimal extra reallocations beyond the dead node's shards");
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(12, 6)]
     [InlineData(13, 6)]
     [InlineData(17, 6)]

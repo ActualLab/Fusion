@@ -6,11 +6,9 @@ using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.Testing;
-using ActualLab.Testing.Collections;
 
 namespace ActualLab.Tests.Rpc;
 
-[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
 public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 {
     protected override void ConfigureServices(ServiceCollection services)
@@ -433,22 +431,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Theory]
-    [InlineData("json5")]
-    [InlineData("njson5")]
-    [InlineData("json5np")]
-    [InlineData("njson5np")]
-    [InlineData("mempack5")]
-    [InlineData("mempack5c")]
-    [InlineData("msgpack5")]
-    [InlineData("msgpack5c")]
-    [InlineData("mempack6")]
-    [InlineData("mempack6c")]
-    [InlineData("msgpack6")]
-    [InlineData("msgpack6c")]
-#if NET8_0_OR_GREATER
-    [InlineData("nmsgpack6")]
-    [InlineData("nmsgpack6c")]
-#endif
+    [MemberData(nameof(RpcTestFormats.All), MemberType = typeof(RpcTestFormats))]
     public async Task BasicTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -648,20 +631,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Theory]
-    [InlineData("json5")]
-    [InlineData("njson5")]
-    [InlineData("mempack5")]
-    [InlineData("mempack5c")]
-    [InlineData("msgpack5")]
-    [InlineData("msgpack5c")]
-    [InlineData("mempack6")]
-    [InlineData("mempack6c")]
-    [InlineData("msgpack6")]
-    [InlineData("msgpack6c")]
-#if NET8_0_OR_GREATER
-    [InlineData("nmsgpack6")]
-    [InlineData("nmsgpack6c")]
-#endif
+    [MemberData(nameof(RpcTestFormats.NoNP), MemberType = typeof(RpcTestFormats))]
     public async Task PolymorphTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -724,22 +694,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Theory]
-    [InlineData("json5")]
-    [InlineData("njson5")]
-    [InlineData("json5np")]
-    [InlineData("njson5np")]
-    [InlineData("mempack5")]
-    [InlineData("mempack5c")]
-    [InlineData("msgpack5")]
-    [InlineData("msgpack5c")]
-    [InlineData("mempack6")]
-    [InlineData("mempack6c")]
-    [InlineData("msgpack6")]
-    [InlineData("msgpack6c")]
-#if NET8_0_OR_GREATER
-    [InlineData("nmsgpack6")]
-    [InlineData("nmsgpack6c")]
-#endif
+    [MemberData(nameof(RpcTestFormats.All), MemberType = typeof(RpcTestFormats))]
     public async Task StreamTest(string serializationFormat)
     {
         SerializationFormat = serializationFormat;
@@ -763,7 +718,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await AssertNoObjects(clientPeer);
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(1000)]
     [InlineData(5000)]
     [InlineData(10_000)]
@@ -791,7 +746,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await AssertNoCalls(clientPeer, Out);
     }
 
-    [Theory]
+    [FullRunOnlyTheory]
     [InlineData(1000)]
     [InlineData(5000)]
     [InlineData(10_000)]
