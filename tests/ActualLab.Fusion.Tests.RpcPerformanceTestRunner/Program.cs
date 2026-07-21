@@ -1,4 +1,5 @@
 ﻿using ActualLab.OS;
+using ActualLab.Rpc;
 using ActualLab.Tests.Rpc;
 
 #pragma warning disable MA0047, CA1050
@@ -29,6 +30,9 @@ internal class RpcWebSocketTestWrapper(ITestOutputHelper @out) : RpcWebSocketPer
     protected override void ConfigureServices(IServiceCollection services, bool isClient)
     {
         base.ConfigureServices(services, isClient);
+        services.AddSingleton(_ => RpcDiagnosticsOptions.Default with {
+            MustPropagateAmbientActivityContext = false,
+        });
 
         // Add console logging with Debug level for all categories
         services.AddLogging(logging => {

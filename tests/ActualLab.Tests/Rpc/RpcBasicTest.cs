@@ -312,6 +312,29 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Fact]
+    public async Task AmbientActivityContextPropagationCanBeDisabledTest()
+    {
+        await using var services = CreateServices(s => {
+            s.AddSingleton<RpcDiagnosticsOptions>(_ => RpcDiagnosticsOptions.Default with {
+                MustPropagateAmbientActivityContext = false,
+                CallTracerFactory = _ => null,
+            });
+        });
+        var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
+        var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
+        using var parent = new Activity("parent").SetIdFormat(ActivityIdFormat.W3C).Start();
+
+        var context = new RpcOutboundContext(clientPeer);
+        var call = context.PrepareCall(method, ArgumentList.New<int?, int>(6, 2))!;
+        var message = call.CreateOutboundMessage(call.Id, method.HasPolymorphicArguments, sendHandler: null);
+        call.Register();
+        call.SetResult(3, context: null);
+
+        context.ParentActivityContext.Should().Be(default(ActivityContext));
+        RpcActivityInjector.TryExtract(message.Headers, out _).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task TraceRerouteActivityTest()
     {
         var stoppedActivities = new ConcurrentQueue<Activity>();

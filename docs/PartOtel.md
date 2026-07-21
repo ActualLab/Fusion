@@ -241,7 +241,9 @@ without a tracer:
   no tracer registration is needed.
 - The ambient `Activity.Current` context (e.g. an ASP.NET Core request span)
   is injected into outbound call headers, so downstream server spans join
-  the caller's trace even when no RPC client span exists.
+  the caller's trace even when no RPC client span exists. Set
+  `RpcDiagnosticsOptions.MustPropagateAmbientActivityContext = false` to skip
+  the `Activity.Current` lookup entirely — e.g. in benchmarks.
 - Reroute and connection instruments record on their (rare) lifecycle paths.
 
 All of this is still gated by the usual OpenTelemetry rule: an

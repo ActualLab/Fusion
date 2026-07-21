@@ -20,6 +20,9 @@ public abstract class RpcBenchmarkBase
     {
         var services = new ServiceCollection();
         services.AddRpc().AddServerAndClient<IRpcBenchmarkService, RpcBenchmarkService>();
+        services.AddSingleton(_ => RpcDiagnosticsOptions.Default with {
+            MustPropagateAmbientActivityContext = false,
+        });
         _services = services.BuildServiceProvider();
 
         var hub = _services.RpcHub();

@@ -85,7 +85,8 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
             return Call;
 
         if (Trace is null) {
-            ParentActivityContext = Activity.Current?.Context ?? default;
+            if (hub.DiagnosticsOptions.MustPropagateAmbientActivityContext)
+                ParentActivityContext = Activity.Current?.Context ?? default;
             CpuTimestamp? metricsStartedAt = RpcInstruments.IsOutboundEnabled ? CpuTimestamp.Now : null;
             Trace = StartTrace(Call, metricsStartedAt);
         }

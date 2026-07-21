@@ -12,6 +12,10 @@ public record RpcDiagnosticsOptions
     public static RpcDiagnosticsOptions Default { get; set; } = new();
     protected static readonly string KeepAliveMethodName = $"{nameof(IRpcSystemCalls.KeepAlive)}:1";
 
+    // Propagates Activity.Current to outbound call headers even when no RPC client activity exists.
+    // Disable to avoid the Activity.Current lookup on the outbound call path.
+    public bool MustPropagateAmbientActivityContext { get; init; } = true;
+
     // Delegate options
     public Func<RpcPeer, TimeSpan> OpenCallMetricsPeriodProvider { get; init; }
     public Func<RpcMethodDef, RpcCallTracer?> CallTracerFactory { get; init; }

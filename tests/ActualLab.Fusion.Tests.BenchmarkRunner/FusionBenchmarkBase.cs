@@ -1,3 +1,4 @@
+using ActualLab.Rpc;
 using BenchmarkDotNet.Attributes;
 
 namespace ActualLab.Fusion.Tests.BenchmarkRunner;
@@ -14,6 +15,9 @@ public abstract class FusionBenchmarkBase
     {
         var services = new ServiceCollection();
         services.AddFusion().AddComputeService<IBenchmarkComputeService, BenchmarkComputeService>();
+        services.AddSingleton(_ => RpcDiagnosticsOptions.Default with {
+            MustPropagateAmbientActivityContext = false,
+        });
         _services = services.BuildServiceProvider();
         Service = _services.GetRequiredService<IBenchmarkComputeService>();
         OnSetup();
