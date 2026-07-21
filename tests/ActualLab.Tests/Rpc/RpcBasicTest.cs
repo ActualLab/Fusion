@@ -269,6 +269,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
         (await client.Div(6, 2)).Should().Be(3);
         await AssertNoCalls(clientPeer, Out);
+        await WaitFor(() => stoppedActivities.Any(a =>
+            a.Kind == ActivityKind.Server && a.DisplayName == divTracer.InboundCallName));
 
         var serverActivity = stoppedActivities.Single(a =>
             a.Kind == ActivityKind.Server && a.DisplayName == divTracer.InboundCallName);
@@ -387,6 +389,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
         await Assert.ThrowsAsync<DivideByZeroException>(() => client.Div(1, 0));
         await AssertNoCalls(clientPeer, Out);
+        await WaitFor(() => stoppedActivities.Count(a =>
+            a.DisplayName == tracer.InboundCallName || a.DisplayName == tracer.OutboundCallName) == 2);
 
         var activities = stoppedActivities
             .Where(a => a.DisplayName == tracer.InboundCallName || a.DisplayName == tracer.OutboundCallName)
@@ -795,4 +799,15 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         string name,
         object value)
         => tags.Any(x => x.Key == name && Equals(x.Value, value));
+
+    private static async Task WaitFor(Func<bool> condition)
+    {
+        for (var i = 0; i < 200; i++) {
+            if (condition.Invoke())
+                return;
+
+            await Task.Delay(10);
+        }
+        Assert.Fail("The expected RPC trace wasn't completed.");
+    }
 }
