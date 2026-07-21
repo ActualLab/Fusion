@@ -86,7 +86,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 : nextGapCheckAt;
         }
         catch (Exception e) {
-            outcome = "error";
+            outcome = e is OperationCanceledException ? "cancel" : "error";
             activity?.Finalize(e, cancellationToken);
             throw;
         }

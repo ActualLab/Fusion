@@ -82,7 +82,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             return await GetMinDelayUntil(dbEntries, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) {
-            outcome = "error";
+            outcome = e is OperationCanceledException ? "cancel" : "error";
             activity?.Finalize(e, cancellationToken);
             throw;
         }

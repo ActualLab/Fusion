@@ -190,21 +190,27 @@ public class OperationReprocessor : IOperationReprocessor
 
     private void RecordRetry(Transiency transiency, string outcome)
     {
+        if (FusionInstruments.OperationRetryCount.IfEnabled() is not { } retryCounter)
+            return;
+
         var tags = new TagList {
-            { "command.name", CommandContext.UntypedCommand.GetType().NonProxyType().GetName() },
+            { "command.name", CommandContext.UntypedCommand.GetType().GetName() },
             { "transiency", GetTransiencyName(transiency) },
             { "outcome", outcome },
         };
-        FusionInstruments.OperationRetryCount.Add(1, tags);
+        retryCounter.Add(1, tags);
     }
 
     private void RecordRetryDelay(Transiency transiency, TimeSpan delay)
     {
+        if (FusionInstruments.OperationRetryDelay.IfEnabled() is not { } retryDelayHistogram)
+            return;
+
         var tags = new TagList {
-            { "command.name", CommandContext.UntypedCommand.GetType().NonProxyType().GetName() },
+            { "command.name", CommandContext.UntypedCommand.GetType().GetName() },
             { "transiency", GetTransiencyName(transiency) },
         };
-        FusionInstruments.OperationRetryDelay.Record(delay.TotalMilliseconds, tags);
+        retryDelayHistogram.Record(delay.TotalMilliseconds, tags);
     }
 
     private static string GetTransiencyName(Transiency transiency)
