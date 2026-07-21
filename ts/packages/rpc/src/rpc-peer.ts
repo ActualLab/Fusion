@@ -56,9 +56,10 @@
 //   - ProcessMessage() — creates RpcInboundContext per message, dispatches via
 //     MethodDef.InboundCallInvoker.  TS dispatches via _handleMessage →
 //     handleSystemCall or RpcServiceHost.dispatch.
-//   - RpcPeerRef / routing — .NET peers are keyed by RpcPeerRef (which encodes
-//     client/server, route state, versions, serialization format).  TS peers are
-//     keyed by string ref (URL for clients, "server://{uuid}" for servers).
+//   - RpcRef / RpcRoute / routing — .NET peers are bound to an RpcRoute (one route
+//     generation of a stable RpcRef, which encodes client/server, versions,
+//     serialization format).  TS peers are keyed by string ref (URL for clients,
+//     "server://{uuid}" for servers).
 //   - StopMode / ComputeAutoStopMode — controls behavior of inbound calls when
 //     peer stops (cancel vs keep-incomplete).  TS has no stop mode.
 //   - ConnectionKind detector (Remote/Loopback/Local/None) — .NET detects if peer
@@ -792,7 +793,7 @@ export class RpcClientPeer extends RpcPeer {
      * @param url Full WebSocket URL — the serialization format is taken from
      *            the `f=` query parameter (e.g. `wss://host/rpc/ws?f=msgpack6`);
      *            falls back to the resolver's default when absent. Use
-     *            {@link RpcPeerRefBuilder.forClient} to compose URLs with a format.
+     *            {@link RpcRefBuilder.forClient} to compose URLs with a format.
      * @param mustStart Kick off the reconnect loop automatically at the end of
      *            construction (default `true`). Pass `false` if you need to
      *            tweak `reconnectDelayer`, `handshakeTimeoutMs`, or similar

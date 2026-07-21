@@ -16,6 +16,7 @@ _ReSharper*/
 *.sln.docstates
 *.userprefs
 **/Properties/launchSettings.json
+!samples/TodoApp/AspireHost/Properties/launchSettings.json
 
 # Build artifacts
 [Aa]rtifacts/

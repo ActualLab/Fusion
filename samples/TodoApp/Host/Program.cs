@@ -332,6 +332,7 @@ void ConfigureApp()
 
     // Fusion endpoints
     app.MapRpcWebSocketServer();
-    app.MapFusionAuthEndpoints();
+    if (hostKind != HostKind.BackendServer)
+        app.MapFusionAuthEndpoints();
     app.MapFusionRenderModeEndpoints();
 }

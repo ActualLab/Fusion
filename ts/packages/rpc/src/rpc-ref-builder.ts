@@ -5,10 +5,10 @@
 // `RpcServerPeer`'s ref is `server://{id}`.
 //
 // Typical use:
-//     rpcHub.defaultPeerUrl = RpcPeerRefBuilder.forClient('wss://host/rpc/ws', 'msgpack6');
-//     const serverRef = RpcPeerRefBuilder.forServer(crypto.randomUUID());
+//     rpcHub.defaultPeerUrl = RpcRefBuilder.forClient('wss://host/rpc/ws', 'msgpack6');
+//     const serverRef = RpcRefBuilder.forServer(crypto.randomUUID());
 
-export class RpcPeerRefBuilder {
+export class RpcRefBuilder {
     /** Build a client peer ref from a WebSocket URL, optionally baking in the
      *  serialization format as a `f=` query parameter.
      *  @param url Base WebSocket URL, e.g. `wss://host/rpc/ws`.

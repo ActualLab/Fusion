@@ -13,7 +13,7 @@ import WebSocket from 'ws';
 import {
     RpcClientPeer,
     RpcError,
-    RpcPeerRefBuilder,
+    RpcRefBuilder,
     RpcType,
     defineRpcService,
     type RpcConnectionState,
@@ -155,7 +155,7 @@ async function run(): Promise<void> {
     const hub = new FusionHub();
     // Bake the serialization format into the URL via ?f=... so the peer ctor
     // picks it up. Pass `mustStart=false` — we need to set webSocketFactory first.
-    const peer = new RpcClientPeer(hub, RpcPeerRefBuilder.forClient(serverUrl, rpcFormat), false);
+    const peer = new RpcClientPeer(hub, RpcRefBuilder.forClient(serverUrl, rpcFormat), false);
 
     // wsFactory: create ws WebSocket (Node.js)
     peer.webSocketFactory = (url: string) => new WebSocket(url) as unknown as WebSocketLike;

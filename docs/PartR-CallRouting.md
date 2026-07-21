@@ -52,6 +52,7 @@ Starting from v14.1, `RpcPeerRef` is replaced by the `RpcRef` + `RpcRoute` pair:
 | `RpcPeerRef` | `RpcRef` (stable; one instance per logical target) |
 | `RpcRouteState` | `RpcRoute` (one instance per route generation) |
 | `RpcPeerRef.RouteState` | `RpcRef.Route` (re-minted via `CreateRoute()` on change) |
+| `RpcPeerRefBuilder` (TS, `@actuallab/rpc`) | `RpcRefBuilder` (TS refs stay plain strings; no route concept) |
 | `RpcRouteStateExt` | Merged into `RpcRoute` (`IsChanged`, `RerouteIfChanged`, etc.) |
 | `RpcPeer.Ref.RouteState` | `RpcPeer.Route` (the generation the peer is bound to) |
 

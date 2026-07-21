@@ -187,10 +187,10 @@ describe('RPC Reconnection', () => {
         const r1 = await calc.add(1, 2);
         expect(r1).toBe(3);
 
-        const peerRef = conn.clientPeer.ref;
+        const rpcRef = conn.clientPeer.ref;
         const peerIdBefore = conn.clientPeer.id;
         expect(conn.clientPeer.connection).toBeDefined();
-        expect(clientHub.peers.get(peerRef)).toBe(conn.clientPeer);
+        expect(clientHub.peers.get(rpcRef)).toBe(conn.clientPeer);
 
         // Call the public disconnect() — closes WS without disposing peer.
         conn.clientPeer.disconnect();
@@ -198,7 +198,7 @@ describe('RPC Reconnection', () => {
 
         // Connection is cleared, peer instance survives with same identity.
         expect(conn.clientPeer.connection).toBeUndefined();
-        expect(clientHub.peers.get(peerRef)).toBe(conn.clientPeer);
+        expect(clientHub.peers.get(rpcRef)).toBe(conn.clientPeer);
         expect(conn.clientPeer.id).toBe(peerIdBefore);
 
         // Re-attach a fresh connection — the same peer instance is reused.

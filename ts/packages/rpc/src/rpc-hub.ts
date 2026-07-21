@@ -3,7 +3,7 @@
 //     DI-resolved configuration (RpcRegistryOptions, PeerOptions, InboundCallOptions,
 //     OutboundCallOptions, DiagnosticsOptions), SerializationFormats, Middlewares,
 //     ClientPeerReconnectDelayer, Limits, SystemClock.
-//     Manages peers via ConcurrentDictionary<RpcPeerRef, RpcPeer> with GetPeer()
+//     Manages peers via ConcurrentDictionary<RpcRoute, RpcPeer> with GetPeer()
 //     that lazily creates + starts peers.  Also has GetClient<T>() / GetServer<T>()
 //     that look up services in ServiceRegistry.
 //
@@ -15,14 +15,15 @@
 //     addService() / addClient() calls.
 //   - GetClient<T>() / GetServer<T>() — .NET resolves typed client/server proxies
 //     via the ServiceRegistry + DI.  TS uses addClient<T>(peer, def).
-//   - RpcPeerRef-keyed peer dictionary — .NET peers are keyed by RpcPeerRef (rich
-//     value object encoding route, version, serialization format).  TS uses string
-//     refs (URL for clients, "server://{uuid}" for servers).
+//   - RpcRoute-keyed peer dictionary — .NET peers are keyed by RpcRoute (one
+//     route generation of a stable RpcRef, which encodes client/server, versions,
+//     serialization format).  TS uses string refs (URL for clients,
+//     "server://{uuid}" for servers).
 //   - Lazy peer creation + Start() — .NET's GetPeer auto-creates and starts a
 //     peer's reconnection loop.  TS requires explicit addPeer() + run().
 //   - DisposeAsync — .NET disposes all peers on hub shutdown.  TS has close().
-//   - Route change detection (RouteState.WhenChanged → Dispose peer) — .NET
-//     watches for load-balancer route changes and auto-disposes stale peers.
+//   - Route change detection (RpcRoute.WhenChanged → Dispose peer) — .NET
+//     watches for topology changes and auto-disposes stale-route peers.
 //     TS has no routing layer.
 //   - Middlewares (IRpcMiddleware[]) — ordered middleware pipeline for inbound
 //     calls.  TS dispatches directly to service implementations.
@@ -52,7 +53,7 @@ import { RpcSystemCalls } from './rpc-message.js';
 const { warnLog } = getLogs('RpcHub');
 
 /** Factory signature shared by all peer lookup/creation methods. Serialization
- *  format is encoded in the URL via `?f=...` (see {@link RpcPeerRefBuilder}),
+ *  format is encoded in the URL via `?f=...` (see {@link RpcRefBuilder}),
  *  so the factory doesn't need an extra parameter for it. `getClientPeer` /
  *  `getServerPeer` cast the result, so the factory returns RpcPeer. */
 export type RpcPeerFactory = (hub: RpcHub, ref: string) => RpcPeer;

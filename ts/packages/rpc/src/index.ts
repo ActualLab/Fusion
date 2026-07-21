@@ -88,7 +88,7 @@ export type {
 } from './rpc-peer.js';
 export { RpcHub } from './rpc-hub.js';
 export type { RpcPeerFactory } from './rpc-hub.js';
-export { RpcPeerRefBuilder } from './rpc-peer-ref-builder.js';
+export { RpcRefBuilder } from './rpc-ref-builder.js';
 export { RpcServiceHost } from './rpc-service-host.js';
 export type { RpcServiceImpl, RpcDispatchContext } from './rpc-service-host.js';
 export { createRpcClient } from './rpc-client.js';
