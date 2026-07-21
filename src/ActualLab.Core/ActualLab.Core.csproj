@@ -91,6 +91,7 @@
   <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard2.0'))">
     <PackageReference Include="IndexRange" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" VersionOverride="10.0.10" />
     <PackageReference Include="System.Memory" />
     <PackageReference Include="System.Reflection.Emit.Lightweight" />
   </ItemGroup>
