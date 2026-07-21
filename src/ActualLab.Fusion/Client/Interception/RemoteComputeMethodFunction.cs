@@ -183,9 +183,9 @@ public abstract class RemoteComputeMethodFunction(
                 var staleComputed = NewRemoteComputed(input, staleResult, existingCacheEntry);
                 existingRemoteComputed!.ChainSynchronizedSourceTo((IRemoteComputed)staleComputed);
                 _ = InvalidateWhenReconnected(staleComputed, peer);
-                if (FusionInstruments.RemoteComputedCacheStaleValueCount.Enabled) {
+                if (FusionInstruments.RemoteComputedCacheStaleValueCount.IfEnabled() is { } staleValueCounter) {
                     var tags = new TagList { { "operation", "connection_check" } };
-                    FusionInstruments.RemoteComputedCacheStaleValueCount.Add(1, tags);
+                    staleValueCounter.Add(1, tags);
                 }
                 return staleComputed;
             }
@@ -222,9 +222,9 @@ public abstract class RemoteComputeMethodFunction(
                     var staleComputed = NewRemoteComputed(input, staleResult, existingCacheEntry);
                     existingRemoteComputed!.ChainSynchronizedSourceTo((IRemoteComputed)staleComputed);
                     _ = InvalidateWhenReconnected(staleComputed, peer);
-                    if (FusionInstruments.RemoteComputedCacheStaleValueCount.Enabled) {
+                    if (FusionInstruments.RemoteComputedCacheStaleValueCount.IfEnabled() is { } staleValueCounter) {
                         var tags = new TagList { { "operation", "active_call" } };
-                        FusionInstruments.RemoteComputedCacheStaleValueCount.Add(1, tags);
+                        staleValueCounter.Add(1, tags);
                     }
                     return staleComputed;
                 }

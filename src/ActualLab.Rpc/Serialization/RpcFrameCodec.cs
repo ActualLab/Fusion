@@ -32,8 +32,8 @@ public sealed class RpcFrameCodec
 
     public RpcFrameCodec(
         RpcMessageSerializer serializer,
-        Counter<long>? incomingItemCounter = null,
-        Counter<long>? outgoingItemCounter = null,
+        Counter<long> incomingItemCounter,
+        Counter<long> outgoingItemCounter,
         ILogger? errorLog = null)
     {
         Serializer = serializer;
@@ -41,8 +41,8 @@ public sealed class RpcFrameCodec
 
         _readFunc = serializer.ReadFunc;
         _writeFunc = serializer.WriteFunc;
-        _incomingItemCounter = incomingItemCounter;
-        _outgoingItemCounter = outgoingItemCounter;
+        _incomingItemCounter = incomingItemCounter.IfEnabled();
+        _outgoingItemCounter = outgoingItemCounter.IfEnabled();
         _errorLog = errorLog;
 
         Serialize = IsTextSerializer

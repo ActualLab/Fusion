@@ -83,7 +83,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     private readonly ConcurrentDictionary<long, RpcOutboundCall> _longLivingCalls = new(HardwareInfo.ProcessorCountPo2, 131);
     private RpcCallStageCounts _reportedInboundCallCounts;
     private RpcCallStageCounts _reportedOutboundCallCounts;
-    private CpuTimestamp _lastCallMetricsReportAt;
+    private CpuTimestamp _lastCallMetricsRefreshAt;
     private long _lastId;
 
     public RpcOutboundCall this[long id] => Calls[id];
@@ -145,10 +145,15 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 var callCount = 0;
                 var inProgressCallCount = 0;
                 var timeoutCallCount = 0;
-                var mustReportInboundCallMetrics = RpcInstruments.OpenInboundCallGauge.Enabled
-                    && (_lastCallMetricsReportAt == default || _lastCallMetricsReportAt.Elapsed >= callMetricsPeriod);
-                var mustReportOutboundCallMetrics = RpcInstruments.OpenOutboundCallGauge.Enabled
-                    && (_lastCallMetricsReportAt == default || _lastCallMetricsReportAt.Elapsed >= callMetricsPeriod);
+                var mustRefreshCallMetrics = _lastCallMetricsRefreshAt == default
+                    || _lastCallMetricsRefreshAt.Elapsed >= callMetricsPeriod;
+                var mustReportInboundCallMetrics = false;
+                var mustReportOutboundCallMetrics = false;
+                if (mustRefreshCallMetrics) {
+                    _lastCallMetricsRefreshAt = CpuTimestamp.Now;
+                    mustReportInboundCallMetrics = RpcInstruments.OpenInboundCallGauge.IfEnabled() is not null;
+                    mustReportOutboundCallMetrics = RpcInstruments.OpenOutboundCallGauge.IfEnabled() is not null;
+                }
                 var outboundCallCounts = default(RpcCallStageCounts);
                 delayedCalls.Clear();
                 callsToResend.Clear();
@@ -218,7 +223,6 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     delayedCalls.Count, callsToResend.Count, timeoutCallCount);
 
                 if (mustReportInboundCallMetrics || mustReportOutboundCallMetrics) {
-                    _lastCallMetricsReportAt = CpuTimestamp.Now;
                     ReportCallMetrics(
                         mustReportInboundCallMetrics,
                         mustReportOutboundCallMetrics,

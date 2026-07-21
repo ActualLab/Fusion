@@ -271,15 +271,18 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 var error = (Exception?)null;
                 var connectedAt = Hub.SystemClock.Now;
                 var clientPeer = this as RpcClientPeer;
-                var mustCountConnectionAttempt = clientPeer is not null
-                    && RpcInstruments.ClientConnectionAttemptCounter.Enabled;
-                var mustMeasureConnectionAttempt = clientPeer is not null
-                    && RpcInstruments.ClientConnectionAttemptDurationHistogram.Enabled;
-                var connectionAttemptStartedAt = mustMeasureConnectionAttempt ? CpuTimestamp.Now : default;
-                var connectionUptimeHistogram = clientPeer is not null
+                var connectionAttemptCounter = clientPeer is not null
+                    ? RpcInstruments.ClientConnectionAttemptCounter.IfEnabled()
+                    : null;
+                var connectionAttemptDurationHistogram = clientPeer is not null
+                    ? RpcInstruments.ClientConnectionAttemptDurationHistogram.IfEnabled()
+                    : null;
+                var connectionAttemptStartedAt = connectionAttemptDurationHistogram is not null
+                    ? CpuTimestamp.Now
+                    : default;
+                var connectionUptimeHistogram = (clientPeer is not null
                     ? RpcInstruments.ClientConnectionUptimeHistogram
-                    : RpcInstruments.ServerConnectionUptimeHistogram;
-                var mustMeasureConnectionUptime = connectionUptimeHistogram.Enabled;
+                    : RpcInstruments.ServerConnectionUptimeHistogram).IfEnabled();
                 var connectionUptimeStartedAt = (CpuTimestamp?)null;
                 var isConnectionAttemptCompleted = false;
                 var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
@@ -381,15 +384,18 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionStateValue.Connection != connection)
                         continue; // Somehow disconnected
 
-                    if (clientPeer is not null && (mustCountConnectionAttempt || mustMeasureConnectionAttempt)) {
+                    if (clientPeer is not null
+                        && (connectionAttemptCounter is not null || connectionAttemptDurationHistogram is not null)) {
                         RpcInstruments.RegisterClientConnectionAttempt(
                             clientPeer,
-                            mustMeasureConnectionAttempt ? connectionAttemptStartedAt.Elapsed.TotalMilliseconds : null,
+                            connectionAttemptDurationHistogram is not null
+                                ? connectionAttemptStartedAt.Elapsed.TotalMilliseconds
+                                : null,
                             error: null,
                             cancellationToken.IsCancellationRequested);
                         isConnectionAttemptCompleted = true;
                     }
-                    if (mustMeasureConnectionUptime)
+                    if (connectionUptimeHistogram is not null)
                         connectionUptimeStartedAt = CpuTimestamp.Now;
                     connectedAt = Hub.SystemClock.Now;
                     maintainTask = Task.Run(async () => {
@@ -432,10 +438,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     await maintainTask.SilentAwait(false);
                     if (clientPeer is not null
                         && !isConnectionAttemptCompleted
-                        && (mustCountConnectionAttempt || mustMeasureConnectionAttempt))
+                        && (connectionAttemptCounter is not null || connectionAttemptDurationHistogram is not null))
                         RpcInstruments.RegisterClientConnectionAttempt(
                             clientPeer,
-                            mustMeasureConnectionAttempt ? connectionAttemptStartedAt.Elapsed.TotalMilliseconds : null,
+                            connectionAttemptDurationHistogram is not null
+                                ? connectionAttemptStartedAt.Elapsed.TotalMilliseconds
+                                : null,
                             error,
                             cancellationToken.IsCancellationRequested);
                     // If the connection closed gracefully but was too short-lived,

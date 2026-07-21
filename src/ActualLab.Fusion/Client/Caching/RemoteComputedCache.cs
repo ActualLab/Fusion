@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Interception;
 using ActualLab.Rpc;
@@ -69,11 +70,11 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         RpcCacheKey key,
         CancellationToken cancellationToken)
     {
-        var requestCountEnabled = FusionInstruments.RemoteComputedCacheRequestCount.Enabled;
-        var lookupDurationEnabled = FusionInstruments.RemoteComputedCacheLookupDuration.Enabled;
-        return requestCountEnabled || lookupDurationEnabled
-            ? GetWithMetrics(input, key, requestCountEnabled, lookupDurationEnabled, cancellationToken)
-            : GetCore(input, key, false, cancellationToken);
+        var requestCount = FusionInstruments.RemoteComputedCacheRequestCount.IfEnabled();
+        var lookupDuration = FusionInstruments.RemoteComputedCacheLookupDuration.IfEnabled();
+        return requestCount is not null || lookupDuration is not null
+            ? GetImpl(key, requestCount, lookupDuration, cancellationToken)
+            : GetImpl(key, mustRethrowError: false, cancellationToken);
     }
 
     public abstract ValueTask<RpcCacheValue?> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
@@ -90,8 +91,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
 
     // Private methods
 
-    private async ValueTask<RpcCacheEntry?> GetCore(
-        ComputeMethodInput input,
+    private async ValueTask<RpcCacheEntry?> GetImpl(
         RpcCacheKey key,
         bool mustRethrowError,
         CancellationToken cancellationToken)
@@ -125,17 +125,16 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         }
     }
 
-    private async ValueTask<RpcCacheEntry?> GetWithMetrics(
-        ComputeMethodInput input,
+    private async ValueTask<RpcCacheEntry?> GetImpl(
         RpcCacheKey key,
-        bool requestCountEnabled,
-        bool lookupDurationEnabled,
+        Counter<long>? requestCount,
+        Histogram<double>? lookupDuration,
         CancellationToken cancellationToken)
     {
-        var startedAt = lookupDurationEnabled ? CpuTimestamp.Now : default;
+        var startedAt = lookupDuration is not null ? CpuTimestamp.Now : default;
         var outcome = "cancel";
         try {
-            var entry = await GetCore(input, key, true, cancellationToken).ConfigureAwait(false);
+            var entry = await GetImpl(key, mustRethrowError: true, cancellationToken).ConfigureAwait(false);
             outcome = entry is null ? "miss" : "hit";
             return entry;
         }
@@ -145,10 +144,8 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         }
         finally {
             var tags = new TagList { { "outcome", outcome } };
-            if (requestCountEnabled)
-                FusionInstruments.RemoteComputedCacheRequestCount.Add(1, tags);
-            if (lookupDurationEnabled)
-                FusionInstruments.RemoteComputedCacheLookupDuration.Record(startedAt.Elapsed.TotalMilliseconds, tags);
+            requestCount?.Add(1, tags);
+            lookupDuration?.Record(startedAt.Elapsed.TotalMilliseconds, tags);
         }
     }
 }

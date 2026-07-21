@@ -34,13 +34,13 @@ public class CommandTracer(CommandTracer.Options settings, IServiceProvider serv
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
         var mustTrace = ShouldTrace(command, context);
-        var mustMeasure = CommanderInstruments.CommandExecutionDuration.Enabled;
-        if (!mustTrace && !mustMeasure) {
+        var durationHistogram = CommanderInstruments.CommandExecutionDuration.IfEnabled();
+        if (!mustTrace && durationHistogram is null) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        var startedAt = mustMeasure ? CpuTimestamp.Now : default;
+        var startedAt = durationHistogram is not null ? CpuTimestamp.Now : default;
         using var activity = mustTrace ? StartActivity(command, context) : null;
         var outcome = "success";
         try {
@@ -60,14 +60,14 @@ public class CommandTracer(CommandTracer.Options settings, IServiceProvider serv
             throw;
         }
         finally {
-            if (mustMeasure) {
+            if (durationHistogram is not null) {
                 var tags = new TagList {
                     { "command.name", command.GetType().GetName() },
                     { "command.kind", command is IEventCommand ? "event" : "command" },
                     { "command.scope", context.IsOutermost ? "outermost" : "nested" },
                     { "outcome", outcome },
                 };
-                CommanderInstruments.CommandExecutionDuration.Record(startedAt.Elapsed.TotalMilliseconds, tags);
+                durationHistogram.Record(startedAt.Elapsed.TotalMilliseconds, tags);
             }
         }
     }

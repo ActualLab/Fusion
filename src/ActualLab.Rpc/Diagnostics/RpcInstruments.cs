@@ -111,7 +111,7 @@ public static class RpcInstruments
 
     public static void RegisterReroute(RpcMethodDef methodDef, RpcRoutingMode routingMode)
     {
-        if (!OutboundRerouteCounter.Enabled)
+        if (OutboundRerouteCounter.IfEnabled() is not { } rerouteCounter)
             return;
 
         var tags = new TagList {
@@ -119,7 +119,7 @@ public static class RpcInstruments
             { "rpc.method.kind", methodDef.Kind.ToString().ToLowerInvariant() },
             { "rpc.routing.mode", routingMode.ToString().ToLowerInvariant() },
         };
-        OutboundRerouteCounter.Add(1, tags);
+        rerouteCounter.Add(1, tags);
     }
 
     public static void RegisterClientConnectionAttempt(
@@ -163,15 +163,15 @@ public static class RpcInstruments
 
     public static void RegisterClientCallEvents(int delayedCount, int resendCount, int timeoutCount)
     {
-        if (!ClientCallEventCounter.Enabled)
+        if (ClientCallEventCounter.IfEnabled() is not { } callEventCounter)
             return;
 
         if (delayedCount > 0)
-            ClientCallEventCounter.Add(delayedCount, new KeyValuePair<string, object?>("rpc.call.event", "delayed"));
+            callEventCounter.Add(delayedCount, new KeyValuePair<string, object?>("rpc.call.event", "delayed"));
         if (resendCount > 0)
-            ClientCallEventCounter.Add(resendCount, new KeyValuePair<string, object?>("rpc.call.event", "resend"));
+            callEventCounter.Add(resendCount, new KeyValuePair<string, object?>("rpc.call.event", "resend"));
         if (timeoutCount > 0)
-            ClientCallEventCounter.Add(timeoutCount, new KeyValuePair<string, object?>("rpc.call.event", "timeout"));
+            callEventCounter.Add(timeoutCount, new KeyValuePair<string, object?>("rpc.call.event", "timeout"));
     }
 
     private static TagList GetCallTags(RpcMethodDef methodDef, Exception? error)

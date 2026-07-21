@@ -50,11 +50,11 @@ public class InvalidatingCommandCompletionHandler(
             ?.Log(Settings.LogLevel, "Invalidating: {CommandType}", commandType);
 
         // "Finally" block disposes everything here
-        var mustMeasureDuration = FusionInstruments.InvalidationPassDuration.Enabled;
-        var mustMeasureCommandCount = FusionInstruments.InvalidationPassCommandCount.Enabled;
-        var startedAt = mustMeasureDuration ? CpuTimestamp.Now : default;
+        var durationHistogram = FusionInstruments.InvalidationPassDuration.IfEnabled();
+        var commandCountHistogram = FusionInstruments.InvalidationPassCommandCount.IfEnabled();
+        var startedAt = durationHistogram is not null ? CpuTimestamp.Now : default;
         var activity = StartActivity(command);
-        var passState = activity is not null || mustMeasureDuration || mustMeasureCommandCount
+        var passState = activity is not null || durationHistogram is not null || commandCountHistogram is not null
             ? new InvalidationPassState(activity)
             : null;
         var oldPassState = passState is null ? null : context.Items.KeylessGet<InvalidationPassState>();
@@ -96,15 +96,13 @@ public class InvalidatingCommandCompletionHandler(
                 else
                     context.Items.KeylessSet(oldPassState);
             }
-            if (mustMeasureDuration || mustMeasureCommandCount) {
+            if (durationHistogram is not null || commandCountHistogram is not null) {
                 var tags = new TagList {
                     { "command.name", commandType },
                     { "outcome", outcome },
                 };
-                if (mustMeasureDuration)
-                    FusionInstruments.InvalidationPassDuration.Record(startedAt.Elapsed.TotalMilliseconds, tags);
-                if (mustMeasureCommandCount)
-                    FusionInstruments.InvalidationPassCommandCount.Record(passState?.CommandCount ?? 0, tags);
+                durationHistogram?.Record(startedAt.Elapsed.TotalMilliseconds, tags);
+                commandCountHistogram?.Record(passState?.CommandCount ?? 0, tags);
             }
             activity?.Dispose();
         }
