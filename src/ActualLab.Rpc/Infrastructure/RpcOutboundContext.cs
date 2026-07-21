@@ -29,7 +29,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     public RpcRoutingMode RoutingMode;
     public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
-    public RpcInboundCall? InboundCall;
+    public RpcInboundCall? InboundCall; // Source call for "Ok", "Match", and "Error" outbound calls
     public RpcOutboundCallTrace? Trace;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
