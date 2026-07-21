@@ -31,6 +31,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     public RpcCacheInfoCapture? CacheInfoCapture;
     public RpcInboundCall? InboundCall; // Source call for "Ok", "Match", and "Error" outbound calls
     public RpcOutboundCallTrace? Trace;
+    public ActivityContext ParentActivityContext; // Propagated to headers even when Trace is null
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundContext(RpcPeer peer, RpcHeader[]? headers = null)
@@ -84,9 +85,9 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
             return Call;
 
         if (Trace is null) {
-            var parentActivityContext = Activity.Current?.Context ?? default;
+            ParentActivityContext = Activity.Current?.Context ?? default;
             CpuTimestamp? metricsStartedAt = RpcInstruments.IsOutboundEnabled ? CpuTimestamp.Now : null;
-            Trace = StartTrace(Call, parentActivityContext, metricsStartedAt);
+            Trace = StartTrace(Call, metricsStartedAt);
         }
         return Call;
     }
@@ -128,20 +129,19 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
         var oldTrace = Trace;
         Trace = Call is null
             ? null
-            : StartTrace(Call, oldTrace?.ParentActivityContext ?? default, oldTrace?.MetricsStartedAt);
+            : StartTrace(Call, oldTrace?.MetricsStartedAt);
         if (ReferenceEquals(oldPeer, Peer))
             Peer?.Log.LogWarning("The call {Call} is rerouted to the same peer: {Peer}", Call, Peer);
         return Call;
     }
 
-    private RpcOutboundCallTrace? StartTrace(
-        RpcOutboundCall call,
-        ActivityContext parentActivityContext,
-        CpuTimestamp? metricsStartedAt)
+    private RpcOutboundCallTrace? StartTrace(RpcOutboundCall call, CpuTimestamp? metricsStartedAt)
     {
-        var trace = MethodDef!.Tracer?.StartOutboundTrace(call, parentActivityContext);
-        if (trace is null && (parentActivityContext != default || metricsStartedAt is not null))
-            trace = new RpcDefaultOutboundCallTrace(null, parentActivityContext);
+        // ParentActivityContext propagates to headers even without a trace,
+        // so the trace exists only when there is an activity or metrics to complete
+        var trace = MethodDef!.Tracer?.StartOutboundTrace(call, ParentActivityContext);
+        if (trace is null && metricsStartedAt is not null)
+            trace = new RpcDefaultOutboundCallTrace(null, ParentActivityContext);
         trace?.MetricsStartedAt = metricsStartedAt;
         return trace;
     }

@@ -193,7 +193,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var headers = Context.Headers;
         if (hash is not null)
             headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
-        var activityContext = Context.Trace?.ActivityContext ?? default;
+        var activityContext = Context.Trace?.ActivityContext ?? Context.ParentActivityContext;
         if (activityContext != default)
             headers = RpcActivityInjector.Inject(headers, activityContext);
 
@@ -213,7 +213,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             var headers = Context.Headers;
             if (hash is not null)
                 headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
-            var activityContext = Context.Trace?.ActivityContext ?? default;
+            var activityContext = Context.Trace?.ActivityContext ?? Context.ParentActivityContext;
             if (activityContext != default)
                 headers = RpcActivityInjector.Inject(headers, activityContext);
             return new RpcOutboundMessage(Context, MethodDef, relatedId, needsPolymorphism, headers, argumentData);

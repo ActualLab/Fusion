@@ -254,6 +254,11 @@ public abstract class RpcInboundCall : RpcCall
 
     public void CompleteTrace(Exception? error)
     {
+        // The lock-free null check is safe: Trace is assigned under Lock in Process
+        // before ResultTask exists, and completion paths run after ResultTask completes
+        if (Trace is null)
+            return;
+
         lock (Lock) {
             if (Trace is not { } trace)
                 return;
@@ -266,6 +271,10 @@ public abstract class RpcInboundCall : RpcCall
 
     internal bool TryPrepareTraceCompletion(Exception? error)
     {
+        // See the lock-free null check comment in CompleteTrace
+        if (Trace is null)
+            return false;
+
         lock (Lock) {
             if (Trace is not { } trace)
                 return false;
