@@ -22,7 +22,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
     public readonly Histogram<double> InboundDurationHistogram;
     public bool IsEnabled {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => InboundDurationHistogram.Enabled;
+        get => RpcInstruments.IsInboundEnabled;
     }
 
     public RpcDefaultCallTracer(RpcMethodDef methodDef, bool mustTraceInbound = true, bool mustTraceOutbound = true)
@@ -39,18 +39,10 @@ public class RpcDefaultCallTracer : RpcCallTracer
             new("rpc.method", methodDef.FullName),
         ];
 
-        var m = RpcInstruments.Meter;
-        var ms = $"rpc.server.{fullMethodName}";
-        // InboundCallCounter = m.CreateCounter<long>($"{ms}.call.count",
-        //     null, $"Count of inbound {fullMethodName} calls.");
-        InboundErrorCounter = m.CreateCounter<long>($"{ms}.error.count",
-            null, $"Count of inbound {fullMethodName} calls completed with an error.");
-        InboundCancellationCounter = m.CreateCounter<long>($"{ms}.cancellation.count",
-            null, $"Count of inbound {fullMethodName} calls completed with cancellation.");
-        InboundIncompleteCounter = m.CreateCounter<long>($"{ms}.incomplete.count",
-            null, $"Count of incomplete inbound {fullMethodName} calls.");
-        InboundDurationHistogram = m.CreateHistogram<double>($"{ms}.call.duration",
-            "ms", $"Duration of inbound {fullMethodName} calls.");
+        InboundErrorCounter = RpcInstruments.InboundErrorCounter;
+        InboundCancellationCounter = RpcInstruments.InboundCancellationCounter;
+        InboundIncompleteCounter = RpcInstruments.InboundIncompleteCounter;
+        InboundDurationHistogram = RpcInstruments.InboundDurationHistogram;
     }
 
     public override RpcInboundCallTrace? StartInboundTrace(RpcInboundCall call)
@@ -65,7 +57,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
                 parentContext: activityContext, tags: ActivityTags)
             : ActivitySource.StartActivity(InboundCallName, ActivityKind.Server,
                 parentContext: default(ActivityContext), tags: ActivityTags);
-        if (activity is null && !IsEnabled && !RpcInstruments.IsEnabled)
+        if (activity is null && !IsEnabled)
             return null;
         return new RpcDefaultInboundCallTrace(this, activity);
     }
@@ -85,21 +77,6 @@ public class RpcDefaultCallTracer : RpcCallTracer
         return activity is null ? null : new RpcDefaultOutboundCallTrace(activity);
     }
 
-    public void RegisterInboundCall(in RpcCallSummary callSummary)
-    {
-        // InboundCallCounter.Add(1);
-        var resultKind = callSummary.ResultKind;
-        if (resultKind == TaskResultKind.Incomplete) {
-            InboundIncompleteCounter.Add(1);
-            return;
-        }
-        InboundDurationHistogram.Record(callSummary.DurationMs);
-        if (resultKind == TaskResultKind.Success)
-            return;
-
-        (resultKind == TaskResultKind.Cancellation
-                ? InboundCancellationCounter
-                : InboundErrorCounter
-            ).Add(1);
-    }
+    public void RegisterInboundCall(in RpcCallSummary callSummary, Exception? error)
+        => RpcInstruments.RegisterInboundCall(MethodDef, callSummary, error);
 }

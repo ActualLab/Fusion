@@ -22,15 +22,11 @@ public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Acti
             Activity.DisposeNonCurrent();
         }
 
-        var isTracerEnabled = tracer.IsEnabled;
-        var areInstrumentsEnabled = RpcInstruments.IsEnabled;
-        if (!isTracerEnabled && !areInstrumentsEnabled)
+        if (!tracer.IsEnabled)
             return;
 
         var callStats = new RpcCallSummary(call);
-        if (isTracerEnabled)
-            tracer.RegisterInboundCall(callStats);
-        if (areInstrumentsEnabled)
-            RpcInstruments.RegisterInboundCall(callStats);
+        var error = call.ResultTask?.ToResultSynchronously().Error;
+        tracer.RegisterInboundCall(callStats, error);
     }
 }

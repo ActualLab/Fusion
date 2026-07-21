@@ -1,6 +1,7 @@
 using ActualLab.CommandR.Internal;
 using ActualLab.Interception;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
@@ -85,6 +86,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                 catch (RpcRerouteException e) {
                     Services.ThrowIfDisposedOrDisposing();
                     ++rerouteCount;
+                    RpcInstruments.RegisterReroute(rpcMethodDef, routingMode);
                     context.ResetResult();
                     Log.LogWarning(e, "Rerouting command #{RerouteCount}: {Command}",
                         rerouteCount, context.UntypedCommand);

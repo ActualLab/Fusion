@@ -41,7 +41,7 @@ hard-coding string literals you can reference the runtime names directly —
 e.g. `RpcInstruments.Meter.Name` or `FusionInstruments.ActivitySource.Name`.
 
 The metric names below all use OpenTelemetry's [dotted semantic-convention
-naming][semconv] (`rpc.server.duration`, `computed.registry.node.count`, …),
+naming][semconv] (`rpc.server.call.duration`, `computed.registry.node.count`, …),
 so they slot cleanly into dashboards that follow the same convention.
 
 [semconv]: https://opentelemetry.io/docs/specs/semconv/
@@ -52,36 +52,24 @@ so they slot cleanly into dashboards that follow the same convention.
 RPC metrics are the most valuable ones for most apps — they tell you the
 rate, latency, and error profile of every inbound call your server handles.
 
-### Aggregate server metrics
+### Call metrics
 
-These roll up **all** inbound calls, following the
-[OpenTelemetry RPC metric conventions][rpc-semconv]:
+RPC call instruments are fixed and use the bounded `rpc.method` attribute for
+method-level breakdowns. This avoids creating a separate instrument for every
+method while preserving aggregate and per-method views:
 
 | Metric | Kind | Unit | Meaning |
 |--------|------|------|---------|
-| `rpc.server.duration` | Histogram | ms | Duration of inbound RPC calls |
+| `rpc.server.call.duration` | Histogram | ms | Duration of inbound RPC calls |
+| `rpc.client.call.duration` | Histogram | ms | Logical outbound call duration, including reroutes |
+| `rpc.client.reroute.count` | Counter | `{reroute}` | Outbound calls rerouted by the RPC layer |
 | `rpc.server.error.count` | Counter | | Inbound calls that failed with an error |
 | `rpc.server.cancellation.count` | Counter | | Inbound calls that were cancelled |
 | `rpc.server.incomplete.count` | Counter | | Inbound calls that never completed |
 
-[rpc-semconv]: https://opentelemetry.io/docs/specs/semconv/rpc/rpc-metrics/
-
-### Per-method server metrics
-
-For each RPC method, the default call tracer (`RpcDefaultCallTracer`) also
-emits the same set of instruments, prefixed with the method's full name —
-`rpc.server.{Service}/{Method}`:
-
-| Metric | Kind | Unit |
-|--------|------|------|
-| `rpc.server.{Service}/{Method}.call.duration` | Histogram | ms |
-| `rpc.server.{Service}/{Method}.error.count` | Counter | |
-| `rpc.server.{Service}/{Method}.cancellation.count` | Counter | |
-| `rpc.server.{Service}/{Method}.incomplete.count` | Counter | |
-
-Per-method metrics are high-cardinality: a busy service can define hundreds
-of methods. In production you typically **keep only the ones you care about**
-using an OpenTelemetry [view][views] — see [Production Setup](#production-setup) below.
+Call durations and server outcome counters carry `rpc.system.name` and
+`rpc.method`. Failed calls also carry `error.type`. Reroutes carry
+`rpc.method`, `rpc.method.kind`, and `rpc.routing.mode`.
 
 [views]: https://opentelemetry.io/docs/specs/otel/metrics/sdk/#view
 
@@ -333,17 +321,17 @@ Two things worth copying from this setup:
   level is pure noise. Exclude them and rely on the `ActualLab.Rpc` spans
   instead, which trace at the *call* granularity.
 
-- **Use a metric view to bound RPC per-method cardinality.** Keep the
-  aggregate `rpc.server.*` metrics always; keep per-method histograms only
-  for the endpoints you actually watch on dashboards.
+- **Use metric views to choose RPC aggregation.** Drop `rpc.method` for a
+  service-wide view, or retain it for bounded per-method latency and error
+  reporting. Do not add route, peer, call ID, or argument attributes.
 
 
 ## Summary
 
 | To collect... | Register meter/source | Key names |
 |---------------|-----------------------|-----------|
-| RPC call rate, latency, errors | `ActualLab.Rpc` | `rpc.server.duration`, `rpc.server.error.count` |
-| RPC per-method breakdown | `ActualLab.Rpc` | `rpc.server.{Service}/{Method}.call.duration` |
+| RPC call latency and errors | `ActualLab.Rpc` | `rpc.server.call.duration`, `rpc.client.call.duration` |
+| RPC reroutes | `ActualLab.Rpc` | `rpc.client.reroute.count` |
 | RPC transport throughput | `ActualLab.Rpc` | `rpc.{transport}.transport.*` |
 | Compute graph size & pruning | `ActualLab.Fusion` | `computed.registry.node.count`, `computed.registry.edge.count` |
 | Operation-log lag | `ActualLab.Fusion.EntityFramework` | `db.operation_log.processing.delay` |

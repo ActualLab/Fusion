@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Diagnostics;
@@ -112,6 +113,83 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Fact]
+    public async Task CallMetricsTest()
+    {
+        var measurements = new ConcurrentQueue<(
+            string Name,
+            double Value,
+            KeyValuePair<string, object?>[] Tags)>();
+        var publishedNames = new ConcurrentQueue<string>();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, meterListener) => {
+            if (!ReferenceEquals(instrument.Meter, RpcInstruments.Meter))
+                return;
+
+            publishedNames.Enqueue(instrument.Name);
+            if (instrument is Histogram<double>)
+                meterListener.EnableMeasurementEvents(instrument);
+        };
+        listener.SetMeasurementEventCallback<double>((instrument, value, tags, _) =>
+            measurements.Enqueue((instrument.Name, value, tags.ToArray())));
+        listener.Start();
+
+        await using var services = CreateServices();
+        var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+        var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
+
+        (await client.Div(6, 2)).Should().Be(3);
+        await Assert.ThrowsAsync<DivideByZeroException>(() => client.Div(1, 0));
+        await AssertNoCalls(clientPeer, Out);
+
+        RpcInstruments.InboundDurationHistogram.Name.Should().Be("rpc.server.call.duration");
+        RpcInstruments.InboundDurationHistogram.Unit.Should().Be("ms");
+        RpcInstruments.OutboundDurationHistogram.Name.Should().Be("rpc.client.call.duration");
+        RpcInstruments.OutboundDurationHistogram.Unit.Should().Be("ms");
+        measurements.Should().Contain(x =>
+            x.Name == RpcInstruments.InboundDurationHistogram.Name
+            && HasTag(x.Tags, "rpc.method", method.FullName)
+            && HasTag(x.Tags, "rpc.system.name", "actuallab.rpc"));
+        measurements.Should().Contain(x =>
+            x.Name == RpcInstruments.OutboundDurationHistogram.Name
+            && HasTag(x.Tags, "rpc.method", method.FullName)
+            && HasTag(x.Tags, "rpc.system.name", "actuallab.rpc"));
+        measurements.Should().Contain(x => HasTag(
+            x.Tags, "error.type", typeof(DivideByZeroException).FullName!));
+        measurements.Should().OnlyContain(x => x.Value >= 0);
+        publishedNames.Should().NotContain(x => x.StartsWith("rpc.server.ITestRpcService", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RerouteMetricsTest()
+    {
+        var measurements = new ConcurrentQueue<KeyValuePair<string, object?>[]>();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, meterListener) => {
+            if (ReferenceEquals(instrument, RpcInstruments.OutboundRerouteCounter))
+                meterListener.EnableMeasurementEvents(instrument);
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) => {
+            value.Should().Be(1);
+            measurements.Enqueue(tags.ToArray());
+        });
+        listener.Start();
+
+        await using var services = CreateServices();
+        var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
+
+        RpcInstruments.RegisterReroute(method, RpcRoutingMode.Inbound);
+
+        RpcInstruments.OutboundRerouteCounter.Name.Should().Be("rpc.client.reroute.count");
+        RpcInstruments.OutboundRerouteCounter.Unit.Should().Be("{reroute}");
+        measurements.Should().ContainSingle();
+        var tags = measurements.Single();
+        HasTag(tags, "rpc.method", method.FullName).Should().BeTrue();
+        HasTag(tags, "rpc.method.kind", "query").Should().BeTrue();
+        HasTag(tags, "rpc.routing.mode", "inbound").Should().BeTrue();
+    }
+
+    [Fact]
     public async Task TraceActivityPropagationWithoutOutboundActivityTest()
     {
         var stoppedActivities = new ConcurrentQueue<Activity>();
@@ -180,12 +258,20 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     public async Task TraceRerouteActivityTest()
     {
         var stoppedActivities = new ConcurrentQueue<Activity>();
+        var clientDurations = new ConcurrentQueue<double>();
         using var listener = new ActivityListener {
             ShouldListenTo = source => source.Name == RpcInstruments.ActivitySource.Name,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
             ActivityStopped = stoppedActivities.Enqueue,
         };
         ActivitySource.AddActivityListener(listener);
+        using var meterListener = new MeterListener();
+        meterListener.InstrumentPublished = (instrument, targetListener) => {
+            if (ReferenceEquals(instrument, RpcInstruments.OutboundDurationHistogram))
+                targetListener.EnableMeasurementEvents(instrument);
+        };
+        meterListener.SetMeasurementEventCallback<double>((_, value, _, _) => clientDurations.Enqueue(value));
+        meterListener.Start();
 
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
@@ -224,6 +310,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         propagatedContext.SpanId.Should().Be(secondActivity.SpanId);
         secondActivity.GetTagItem("rpc.system.name").Should().Be("actuallab.rpc");
         secondActivity.GetTagItem("rpc.method").Should().Be(method.FullName);
+        clientDurations.Should().ContainSingle();
+        clientDurations.Single().Should().BeGreaterThanOrEqualTo(0);
     }
 
     [Fact]
@@ -645,4 +733,12 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var elapsed = startedAt.Elapsed;
         WriteLine($"{itemCount}: {itemCount / elapsed.TotalSeconds:F} ops/s");
     }
+
+    // Private methods
+
+    private static bool HasTag(
+        IEnumerable<KeyValuePair<string, object?>> tags,
+        string name,
+        object value)
+        => tags.Any(x => x.Key == name && Equals(x.Value, value));
 }

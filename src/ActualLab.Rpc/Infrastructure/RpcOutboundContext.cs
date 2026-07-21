@@ -31,6 +31,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     public RpcCacheInfoCapture? CacheInfoCapture;
     public RpcOutboundCallTrace? Trace;
     public ActivityContext ActivityContext;
+    public CpuTimestamp? MetricsStartedAt;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundContext(RpcPeer peer, RpcHeader[]? headers = null)
@@ -84,6 +85,8 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
             return Call;
 
         ActivityContext = Activity.Current?.Context ?? default;
+        if (RpcInstruments.IsOutboundEnabled)
+            MetricsStartedAt ??= CpuTimestamp.Now;
         if (MethodDef.Tracer is { } tracer)
             Trace ??= tracer.StartOutboundTrace(Call);
         return Call;
@@ -129,6 +132,19 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
         if (ReferenceEquals(oldPeer, Peer))
             Peer?.Log.LogWarning("The call {Call} is rerouted to the same peer: {Peer}", Call, Peer);
         return Call;
+    }
+
+    public void CompleteMetrics(RpcOutboundCall call)
+    {
+        if (MetricsStartedAt is not { } startedAt)
+            return;
+
+        var error = call.ResultTask.ToResultSynchronously().Error;
+        if (error is RpcRerouteException)
+            return;
+
+        MetricsStartedAt = null;
+        RpcInstruments.RegisterOutboundCall(MethodDef!, startedAt.Elapsed.TotalMilliseconds, error);
     }
 
     // Nested types

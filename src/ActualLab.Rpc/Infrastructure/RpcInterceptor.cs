@@ -1,4 +1,5 @@
 using ActualLab.Interception;
+using ActualLab.Rpc.Diagnostics;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -160,6 +161,7 @@ public sealed class RpcInterceptor : Interceptor
             catch (RpcRerouteException e) {
                 Services.ThrowIfDisposedOrDisposing();
                 ++rerouteCount;
+                RpcInstruments.RegisterReroute(methodDef, context.RoutingMode);
                 if (methodDef.CancellationTokenIndex >= 0)
                     invocation.Arguments.SetCancellationToken(methodDef.CancellationTokenIndex, cancellationToken);
                 Log.LogWarning(e, "Rerouting #{RerouteCount}: {Invocation}", rerouteCount, invocation);

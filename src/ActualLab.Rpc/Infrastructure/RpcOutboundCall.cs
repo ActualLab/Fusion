@@ -357,6 +357,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (!IsLongLiving || Peer.OutboundCalls.UnregisterLongLiving(this)) {
             CancellationHandler.Dispose();
             Context.Trace?.Complete(this);
+            Context.CompleteMetrics(this);
         }
 
         if (notifyCancelled)
@@ -372,6 +373,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         CancellationHandler.Dispose();
         Context.Trace?.Complete(this);
+        Context.CompleteMetrics(this);
     }
 
     // Helpers

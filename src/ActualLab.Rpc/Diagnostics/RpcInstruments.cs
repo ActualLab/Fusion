@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Diagnostics;
 
@@ -15,9 +16,18 @@ public static class RpcInstruments
     public static readonly Counter<long> InboundCancellationCounter;
     public static readonly Counter<long> InboundIncompleteCounter;
     public static readonly Histogram<double> InboundDurationHistogram;
-    public static bool IsEnabled {
+    public static readonly Histogram<double> OutboundDurationHistogram;
+    public static readonly Counter<long> OutboundRerouteCounter;
+    public static bool IsInboundEnabled {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => InboundDurationHistogram.Enabled;
+        get => InboundDurationHistogram.Enabled
+            || InboundErrorCounter.Enabled
+            || InboundCancellationCounter.Enabled
+            || InboundIncompleteCounter.Enabled;
+    }
+    public static bool IsOutboundEnabled {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => OutboundDurationHistogram.Enabled;
     }
 
     static RpcInstruments()
@@ -34,25 +44,62 @@ public static class RpcInstruments
             null, "Count of inbound RPC calls completed with cancellation.");
         InboundIncompleteCounter = m.CreateCounter<long>($"{server}.incomplete.count",
             null, "Count of incomplete inbound RPC calls.");
-        InboundDurationHistogram = m.CreateHistogram<double>($"{server}.duration",
+        InboundDurationHistogram = m.CreateHistogram<double>($"{server}.call.duration",
             "ms", "Duration of inbound RPC calls.");
+        OutboundDurationHistogram = m.CreateHistogram<double>($"{ms}.client.call.duration",
+            "ms", "Duration of outbound RPC calls.");
+        OutboundRerouteCounter = m.CreateCounter<long>($"{ms}.client.reroute.count",
+            "{reroute}", "Count of outbound RPC call reroutes.");
     }
 
-    public static void RegisterInboundCall(in RpcCallSummary callSummary)
+    public static void RegisterInboundCall(
+        RpcMethodDef methodDef,
+        in RpcCallSummary callSummary,
+        Exception? error)
     {
-        // InboundCallCounter.Add(1);
+        var tags = GetCallTags(methodDef, error);
         var resultKind = callSummary.ResultKind;
         if (resultKind == TaskResultKind.Incomplete) {
-            InboundIncompleteCounter.Add(1);
+            InboundIncompleteCounter.Add(1, tags);
             return;
         }
-        InboundDurationHistogram.Record(callSummary.DurationMs);
+        InboundDurationHistogram.Record(callSummary.DurationMs, tags);
         if (resultKind == TaskResultKind.Success)
             return;
 
         (resultKind == TaskResultKind.Cancellation
             ? InboundCancellationCounter
             : InboundErrorCounter
-            ).Add(1);
+            ).Add(1, tags);
+    }
+
+    public static void RegisterOutboundCall(RpcMethodDef methodDef, double durationMs, Exception? error)
+    {
+        var tags = GetCallTags(methodDef, error);
+        OutboundDurationHistogram.Record(durationMs, tags);
+    }
+
+    public static void RegisterReroute(RpcMethodDef methodDef, RpcRoutingMode routingMode)
+    {
+        if (!OutboundRerouteCounter.Enabled)
+            return;
+
+        var tags = new TagList {
+            { "rpc.method", methodDef.FullName },
+            { "rpc.method.kind", methodDef.Kind.ToString().ToLowerInvariant() },
+            { "rpc.routing.mode", routingMode.ToString().ToLowerInvariant() },
+        };
+        OutboundRerouteCounter.Add(1, tags);
+    }
+
+    private static TagList GetCallTags(RpcMethodDef methodDef, Exception? error)
+    {
+        var tags = new TagList {
+            { "rpc.system.name", "actuallab.rpc" },
+            { "rpc.method", methodDef.FullName },
+        };
+        if (error is not null && error is not OperationCanceledException)
+            tags.Add("error.type", error.GetType().FullName);
+        return tags;
     }
 }

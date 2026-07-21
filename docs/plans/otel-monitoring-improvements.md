@@ -35,7 +35,7 @@ field and metric must be verified in the dashboard.
 - [x] T3: remove the duplicate parent link; add stable RPC semantic attributes and exception events. Do not change
   cancellation or reroute to error status.
 - [ ] T4: move inbound completion to include response serialization/enqueue and cover serialization failure.
-- [ ] T5: route Fusion.EntityFramework activities through its registered activity source and test source ownership.
+- [x] T5: route Fusion.EntityFramework activities through its registered activity source and test source ownership.
 - [ ] T6: make command payload capture safe and explicitly opt-in; expose swallowed invalidation failures on the
   enclosing activity.
 
@@ -46,7 +46,7 @@ recommended representation is unset status plus stable events/attributes, subjec
 
 - [x] M0: correct live ComputedRegistry and RPC transport instance measurements from `ObservableCounter` to
   `ObservableGauge` without renaming them.
-- [ ] M1: replace dynamic per-method RPC duration instruments with fixed `rpc.server.call.duration` and
+- [x] M1: replace dynamic per-method RPC duration instruments with fixed `rpc.server.call.duration` and
   `rpc.client.call.duration` histograms, both in milliseconds, tagged by stable RPC system and method names. Add
   `rpc.client.reroute.count` on the rare reroute branch.
 - [ ] M2: add connection attempt count/duration and connection uptime on lifecycle paths.
