@@ -8,6 +8,15 @@ argument-hint: "[.net|ts|both|auto] [-test|-no-test] [-changelog|-no-changelog]"
 
 Publish ActualLab.Fusion packages to NuGet (.NET) and/or npm (TS).
 
+**Publishing is a critical, effectively irreversible action** — a pushed package
+version can't be replaced, and consumers pick it up immediately. So the bar for
+guessing is much higher here than in normal work: **if you're in doubt about
+anything that may negatively impact the outcome** — an unexpected diff or version,
+a partially failed push, a dirty working tree, a test you're tempted to shrug off,
+a workaround you're about to invent — **stop and ask the user** (AskUserQuestion)
+how to resolve it instead of picking an answer yourself. A pause costs a minute;
+a wrong publish costs a version.
+
 ## Instructions
 
 ### Step 1: Parse arguments
