@@ -49,7 +49,7 @@ recommended representation is unset status plus stable events/attributes, subjec
 - [x] M1: replace dynamic per-method RPC duration instruments with fixed `rpc.server.call.duration` and
   `rpc.client.call.duration` histograms, both in milliseconds, tagged by stable RPC system and method names. Add
   `rpc.client.reroute.count` on the rare reroute branch.
-- [ ] M2: add connection attempt count/duration and connection uptime on lifecycle paths.
+- [x] M2: add connection attempt count/duration and connection uptime on lifecycle paths.
 - [ ] M3: add aggregate active server/client call gauges and batched client call-event counts.
 - [x] M4: add CommandR execution duration and Fusion operation retry count/delay.
 - [x] M5: retain and verify the existing `db.operation_log.processing.delay`; add event-log processing delay and

@@ -71,6 +71,17 @@ Call durations and server outcome counters carry `rpc.system.name` and
 `rpc.method`. Failed calls also carry `error.type`. Reroutes carry
 `rpc.method`, `rpc.method.kind`, and `rpc.routing.mode`.
 
+Connection lifecycle instruments cover both client and server peers:
+
+| Metric | Kind | Unit | Meaning |
+|--------|------|------|---------|
+| `rpc.connection.attempt.count` | Counter | `{attempt}` | Completed connection attempts |
+| `rpc.connection.attempt.duration` | Histogram | ms | Connection attempt duration |
+| `rpc.connection.uptime` | Histogram | ms | Established connection lifetime |
+
+Their bounded attributes are `rpc.peer.type`, `rpc.connection.kind`, and
+`outcome` (`success`, `error`, or `cancel`).
+
 [views]: https://opentelemetry.io/docs/specs/otel/metrics/sdk/#view
 
 ### Transport metrics
@@ -350,6 +361,7 @@ Two things worth copying from this setup:
 |---------------|-----------------------|-----------|
 | RPC call latency and errors | `ActualLab.Rpc` | `rpc.server.call.duration`, `rpc.client.call.duration` |
 | RPC reroutes | `ActualLab.Rpc` | `rpc.client.reroute.count` |
+| RPC connection health | `ActualLab.Rpc` | `rpc.connection.attempt.*`, `rpc.connection.uptime` |
 | RPC transport throughput | `ActualLab.Rpc` | `rpc.{transport}.transport.*` |
 | Compute graph size & pruning | `ActualLab.Fusion` | `computed.registry.node.count`, `computed.registry.edge.count` |
 | Operation-log lag | `ActualLab.Fusion.EntityFramework` | `db.operation_log.processing.delay` |

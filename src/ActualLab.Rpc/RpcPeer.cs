@@ -270,6 +270,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             while (true) {
                 var error = (Exception?)null;
                 var connectedAt = Hub.SystemClock.Now;
+                var mustCountConnectionAttempt = RpcInstruments.ConnectionAttemptCounter.Enabled;
+                var mustMeasureConnectionAttempt = RpcInstruments.ConnectionAttemptDurationHistogram.Enabled;
+                var connectionAttemptStartedAt = mustMeasureConnectionAttempt ? CpuTimestamp.Now : default;
+                var mustMeasureConnectionUptime = RpcInstruments.ConnectionUptimeHistogram.Enabled;
+                var connectionUptimeStartedAt = (CpuTimestamp?)null;
+                var isConnectionAttemptCompleted = false;
                 var readerTokenSource = cancellationToken.CreateLinkedTokenSource();
                 var readerToken = readerTokenSource.Token;
                 var isHandshakeError = false;
@@ -369,6 +375,16 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionStateValue.Connection != connection)
                         continue; // Somehow disconnected
 
+                    if (mustCountConnectionAttempt || mustMeasureConnectionAttempt) {
+                        RpcInstruments.RegisterConnectionAttempt(
+                            this,
+                            mustMeasureConnectionAttempt ? connectionAttemptStartedAt.Elapsed.TotalMilliseconds : null,
+                            error: null,
+                            cancellationToken.IsCancellationRequested);
+                        isConnectionAttemptCompleted = true;
+                    }
+                    if (mustMeasureConnectionUptime)
+                        connectionUptimeStartedAt = CpuTimestamp.Now;
                     connectedAt = Hub.SystemClock.Now;
                     maintainTask = Task.Run(async () => {
                         var tasks = new List<Task> {
@@ -405,14 +421,27 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     error = isReaderAbort ? null : e;
                 }
                 finally {
+                    var connectionUptimeMs = connectionUptimeStartedAt?.Elapsed.TotalMilliseconds;
                     readerTokenSource.CancelAndDisposeSilently();
                     await maintainTask.SilentAwait(false);
+                    if (!isConnectionAttemptCompleted && (mustCountConnectionAttempt || mustMeasureConnectionAttempt))
+                        RpcInstruments.RegisterConnectionAttempt(
+                            this,
+                            mustMeasureConnectionAttempt ? connectionAttemptStartedAt.Elapsed.TotalMilliseconds : null,
+                            error,
+                            cancellationToken.IsCancellationRequested);
+                    // If the connection closed gracefully but was too short-lived,
+                    // treat it as an error to bump ConnectionAttemptIndex and apply reconnect delay
+                    if (error is null && Hub.SystemClock.Now - connectedAt < Hub.Limits.PrematureDisconnectTimeout)
+                        error = Errors.PrematureDisconnect();
+                    if (connectionUptimeMs is { } uptimeMs) {
+                        RpcInstruments.RegisterConnectionUptime(
+                            this,
+                            uptimeMs,
+                            error,
+                            cancellationToken.IsCancellationRequested);
+                    }
                 }
-
-                // If the connection closed gracefully but was too short-lived,
-                // treat it as an error to bump ConnectionAttemptIndex and apply reconnect delay
-                if (error is null && Hub.SystemClock.Now - connectedAt < Hub.Limits.PrematureDisconnectTimeout)
-                    error = Errors.PrematureDisconnect();
 
                 if (cancellationToken.IsCancellationRequested) {
                     var isTerminal = error is not null && Options.TerminalErrorDetector.Invoke(this, error);

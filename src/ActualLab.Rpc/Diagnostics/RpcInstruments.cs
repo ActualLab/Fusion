@@ -18,6 +18,9 @@ public static class RpcInstruments
     public static readonly Histogram<double> InboundDurationHistogram;
     public static readonly Histogram<double> OutboundDurationHistogram;
     public static readonly Counter<long> OutboundRerouteCounter;
+    public static readonly Counter<long> ConnectionAttemptCounter;
+    public static readonly Histogram<double> ConnectionAttemptDurationHistogram;
+    public static readonly Histogram<double> ConnectionUptimeHistogram;
     public static bool IsInboundEnabled {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => InboundDurationHistogram.Enabled
@@ -50,6 +53,12 @@ public static class RpcInstruments
             "ms", "Duration of outbound RPC calls.");
         OutboundRerouteCounter = m.CreateCounter<long>($"{ms}.client.reroute.count",
             "{reroute}", "Count of outbound RPC call reroutes.");
+        ConnectionAttemptCounter = m.CreateCounter<long>($"{ms}.connection.attempt.count",
+            "{attempt}", "Count of completed RPC connection attempts.");
+        ConnectionAttemptDurationHistogram = m.CreateHistogram<double>($"{ms}.connection.attempt.duration",
+            "ms", "Duration of RPC connection attempts.");
+        ConnectionUptimeHistogram = m.CreateHistogram<double>($"{ms}.connection.uptime",
+            "ms", "Duration of established RPC connections.");
     }
 
     public static void RegisterInboundCall(
@@ -92,6 +101,28 @@ public static class RpcInstruments
         OutboundRerouteCounter.Add(1, tags);
     }
 
+    public static void RegisterConnectionAttempt(
+        RpcPeer peer,
+        double? durationMs,
+        Exception? error,
+        bool isCancellationRequested)
+    {
+        var tags = GetConnectionTags(peer, error, isCancellationRequested);
+        ConnectionAttemptCounter.Add(1, tags);
+        if (durationMs is { } value)
+            ConnectionAttemptDurationHistogram.Record(value, tags);
+    }
+
+    public static void RegisterConnectionUptime(
+        RpcPeer peer,
+        double durationMs,
+        Exception? error,
+        bool isCancellationRequested)
+    {
+        var tags = GetConnectionTags(peer, error, isCancellationRequested);
+        ConnectionUptimeHistogram.Record(durationMs, tags);
+    }
+
     private static TagList GetCallTags(RpcMethodDef methodDef, Exception? error)
     {
         var tags = new TagList {
@@ -101,5 +132,20 @@ public static class RpcInstruments
         if (error is not null && error is not OperationCanceledException)
             tags.Add("error.type", error.GetType().FullName);
         return tags;
+    }
+
+    private static TagList GetConnectionTags(
+        RpcPeer peer,
+        Exception? error,
+        bool isCancellationRequested)
+    {
+        var outcome = isCancellationRequested || error is OperationCanceledException
+            ? "cancel"
+            : error is null ? "success" : "error";
+        return new TagList {
+            { "rpc.peer.type", peer is RpcClientPeer ? "client" : "server" },
+            { "rpc.connection.kind", peer.ConnectionKind.ToString().ToLowerInvariant() },
+            { "outcome", outcome },
+        };
     }
 }
