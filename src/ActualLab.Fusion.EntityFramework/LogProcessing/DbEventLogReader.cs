@@ -29,7 +29,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
         var startedAt = CpuTimestamp.Now;
         var entryCount = 0;
         var outcome = "success";
-        var activity = FusionInstruments.ActivitySource
+        var activity = FusionEntityFrameworkInstruments.ActivitySource
             .IfEnabled(Settings.IsTracingEnabled)
             .StartActivity(GetType())
             .AddShardTags(shard);

@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Diagnostics;
+using ActualLab.Fusion.EntityFramework.Internal;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -58,7 +59,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
         while (!cancellationToken.IsCancellationRequested) {
             await Task.Delay(Settings.StatisticsPeriod.Next(), cancellationToken).ConfigureAwait(false);
 
-            var activity = FusionInstruments.ActivitySource
+            var activity = FusionEntityFrameworkInstruments.ActivitySource
                 .IfEnabled(Settings.IsTracingEnabled)
                 .StartActivity(GetType())
                 .AddShardTags(shard);
@@ -94,7 +95,7 @@ public abstract class DbOperationLogTrimmer<TDbContext, TDbEntry, TOptions>(
     {
         var minLoggedAt = SystemClock.Now.ToDateTime() - Settings.MaxEntryAge;
 
-        var activity = FusionInstruments.ActivitySource
+        var activity = FusionEntityFrameworkInstruments.ActivitySource
             .IfEnabled(Settings.IsTracingEnabled)
             .StartActivity(GetType())
             .AddShardTags(shard);

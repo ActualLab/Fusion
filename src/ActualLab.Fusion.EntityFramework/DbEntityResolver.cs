@@ -305,7 +305,7 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
 
     protected virtual Activity? StartProcessBatchActivity(string shard, int batchSize, int tryIndex)
     {
-        var activity = FusionInstruments.ActivitySource
+        var activity = FusionEntityFrameworkInstruments.ActivitySource
             .IfEnabled(Settings.IsTracingEnabled)
             .StartActivity(GetType(), nameof(ProcessBatch));
         if (activity is null)
