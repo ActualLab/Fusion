@@ -14,9 +14,9 @@ public class RpcRemoteExecutionModeTest(ITestOutputHelper @out) : RpcLocalTestBa
         rpc.AddServerAndClient<ITestRemoteExecService, TestRemoteExecService>();
         services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptions.Default with {
             UseRandomHandshakeIndex = true,
-            PeerFactory = (hub, peerRef) => peerRef.IsServer
-                ? new RpcServerPeer(hub, peerRef)
-                : new RpcClientPeer(hub, peerRef),
+            PeerFactory = (hub, route) => route.Ref.IsServer
+                ? new RpcServerPeer(hub, route)
+                : new RpcClientPeer(hub, route),
         });
     }
 

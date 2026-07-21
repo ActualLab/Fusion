@@ -46,8 +46,8 @@ public sealed class RpcInterceptor : Interceptor
             var routingMode = context.RoutingMode;
 
             if (routingMode is RpcRoutingMode.Outbound) {
-                if (peer.Ref.RouteState is null) {
-                    // There is no RoutingState, and thus no rerouting and no shard routing
+                if (peer.Route.IsStatic) {
+                    // The route never changes, and thus no rerouting and no shard routing
                     if (call is not null) {
                         // Direct outbound RPC call
                         if (!rpcMethodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
@@ -65,7 +65,7 @@ public sealed class RpcInterceptor : Interceptor
                         resultTask = localCallAsyncInvoker.Invoke(invocation);
                     }
                 }
-                else // There is a RoutingState, and thus rerouting is possible
+                else // The route may change, and thus rerouting is possible
                     resultTask = InvokeWithRerouting(rpcMethodDef, context, call, localCallAsyncInvoker, invocation);
             }
             else { // RoutingMode is Inbound or None
@@ -120,7 +120,7 @@ public sealed class RpcInterceptor : Interceptor
         var rerouteCount = 0;
         while (true) {
             var peer = context.Peer!;
-            var routeState = peer.Ref.RouteState; // May become null after rerouting
+            var route = peer.Route; // May become Static after rerouting
             try {
                 if (call is not null) {
                     if (mustRerouteUnlessLocal) {
@@ -139,7 +139,7 @@ public sealed class RpcInterceptor : Interceptor
                 if (localCallAsyncInvoker is null)
                     throw Errors.CannotExecuteInterfaceCallLocally();
 
-                var linkedCts = await routeState
+                var linkedCts = await route
                     .PrepareLocalExecution(methodDef, addDependency: false, cancellationToken)
                     .ConfigureAwait(false);
                 if (linkedCts is not null && methodDef.CancellationTokenIndex >= 0)
@@ -150,7 +150,7 @@ public sealed class RpcInterceptor : Interceptor
                         .Invoke(untypedResultTask)
                         .ConfigureAwait(false);
                 }
-                catch (OperationCanceledException e) when (routeState.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
+                catch (OperationCanceledException e) when (route.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
                     throw RpcRerouteException.MustReroute(nameof(RpcInterceptor));
                 }
                 finally {

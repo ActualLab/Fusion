@@ -3,30 +3,30 @@ using System.Text;
 namespace ActualLab.Rpc.Internal;
 
 /// <summary>
-/// Formats and parses <see cref="RpcPeerRef"/> address strings containing connection kind, tags, and host info.
+/// Formats and parses <see cref="RpcRef"/> address strings containing connection kind, tags, and host info.
 /// </summary>
-public static class RpcPeerRefAddress
+public static class RpcRefAddress
 {
     public const char TagDelimiter = '.';
     public const string HostInfoDelimiter = "://";
     public const string ServerTag = "server";
     public const string BackendTag = "backend";
 
-    public static string Format(RpcPeerRef peerRef)
+    public static string Format(RpcRef rpcRef)
     {
         var sb = StringBuilderExt.Acquire();
-        AddTag(sb, peerRef.ConnectionKind.Format());
-        AddTag(sb, peerRef.IsBackend ? BackendTag : "");
-        AddTag(sb, peerRef.IsServer ? ServerTag : "");
-        AddTag(sb, peerRef.SerializationFormat);
-        sb.Append(HostInfoDelimiter).Append(peerRef.HostInfo);
+        AddTag(sb, rpcRef.ConnectionKind.Format());
+        AddTag(sb, rpcRef.IsBackend ? BackendTag : "");
+        AddTag(sb, rpcRef.IsServer ? ServerTag : "");
+        AddTag(sb, rpcRef.SerializationFormat);
+        sb.Append(HostInfoDelimiter).Append(rpcRef.HostInfo);
         return sb.ToStringAndRelease();
     }
 
-    public static RpcPeerRef Parse(string address, bool initialize = true)
-        => TryParse(address, initialize) ?? throw Errors.InvalidRpcPeerRefAddress(address);
+    public static RpcRef Parse(string address, bool initialize = true)
+        => TryParse(address, initialize) ?? throw Errors.InvalidRpcRefAddress(address);
 
-    public static RpcPeerRef? TryParse(string address, bool initialize = true)
+    public static RpcRef? TryParse(string address, bool initialize = true)
     {
         if (address.IsNullOrEmpty())
             return null;
@@ -43,7 +43,7 @@ public static class RpcPeerRefAddress
         var isBackend = HasNextTag(ref s, BackendTag);
         var isServer = HasNextTag(ref s, ServerTag);
         var serializationFormat = GetNextTag(ref s).ToString();
-        var peerRef = new RpcPeerRef {
+        var rpcRef = new RpcRef {
             Address = address,
             IsServer = isServer,
             IsBackend = isBackend,
@@ -52,8 +52,8 @@ public static class RpcPeerRefAddress
             HostInfo = hostInfo,
         };
         if (initialize)
-            peerRef.Initialize();
-        return peerRef;
+            rpcRef.Initialize();
+        return rpcRef;
     }
 
     // Formatting and parsing helpers

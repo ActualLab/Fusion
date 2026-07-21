@@ -31,7 +31,7 @@
     <text x="130" y="40" class="code-bold" text-anchor="middle">RpcPeer</text>
     <line x1="0" y1="52" x2="260" y2="52" stroke="#bcc8da" stroke-width="1.5" />
     <text x="15" y="76" class="code">+Hub: RpcHub</text>
-    <text x="15" y="98" class="code">+Ref: RpcPeerRef</text>
+    <text x="15" y="98" class="code">+Ref: RpcRef</text>
     <text x="15" y="120" class="code">+ConnectionState</text>
     <text x="15" y="142" class="code">+InboundCalls</text>
     <text x="15" y="164" class="code">+OutboundCalls</text>

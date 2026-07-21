@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Http;
 namespace ActualLab.Rpc.Server;
 
 /// <summary>
-/// Delegate that creates an <see cref="RpcPeerRef"/> for a WebSocket server connection
+/// Delegate that creates an <see cref="RpcRef"/> for a WebSocket server connection
 /// based on the HTTP context and backend flag.
 /// </summary>
-public delegate RpcPeerRef RpcWebSocketServerPeerRefFactory(RpcWebSocketServer server, HttpContext context, bool isBackend);
+public delegate RpcRef RpcWebSocketServerRefFactory(RpcWebSocketServer server, HttpContext context, bool isBackend);
 
 #if NET6_0_OR_GREATER
 /// <summary>
@@ -15,7 +15,7 @@ public delegate RpcPeerRef RpcWebSocketServerPeerRefFactory(RpcWebSocketServer s
 /// (e.g. compression) based on the HTTP context and peer reference.
 /// </summary>
 public delegate WebSocketAcceptContext RpcWebSocketServerAcceptContextFactory(
-    RpcWebSocketServer server, HttpContext context, RpcPeerRef peerRef);
+    RpcWebSocketServer server, HttpContext context, RpcRef rpcRef);
 #endif
 
 /// <summary>
@@ -24,16 +24,16 @@ public delegate WebSocketAcceptContext RpcWebSocketServerAcceptContextFactory(
 /// </summary>
 public static class RpcWebSocketServerDefaultDelegates
 {
-    public static RpcWebSocketServerPeerRefFactory PeerRefFactory { get; set; } =
+    public static RpcWebSocketServerRefFactory RefFactory { get; set; } =
         static (server, context, isBackend) => {
             var query = context.Request.Query;
             var clientId = query[server.Options.ClientIdParameterName].SingleOrDefault() ?? "";
             var serializationFormat = query[server.Options.SerializationFormatParameterName].SingleOrDefault() ?? "";
-            return RpcPeerRef.NewServer(clientId, serializationFormat, isBackend);
+            return RpcRef.NewServer(clientId, serializationFormat, isBackend);
         };
 
 #if NET6_0_OR_GREATER
     public static RpcWebSocketServerAcceptContextFactory AcceptContextFactory { get; set; } =
-        static (server, context, peerRef) => new();
+        static (server, context, rpcRef) => new();
 #endif
 }

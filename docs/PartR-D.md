@@ -24,9 +24,9 @@ Diagrams for the RPC concepts introduced in [Part 2](PartR.md).
 | Connected | Active connection, can send/receive messages |
 
 
-## RpcPeerRef Types
+## RpcRef Types
 
-<img src="/img/diagrams/PartR-D-4.svg" alt="RpcPeerRef Types" style="width: 100%; max-width: 800px;" />
+<img src="/img/diagrams/PartR-D-4.svg" alt="RpcRef Types" style="width: 100%; max-width: 800px;" />
 
 | PeerRef | ConnectionKind | Use Case |
 |---------|----------------|----------|

@@ -51,7 +51,7 @@ public class RpcNoWaitExamples
     public async Task WhenConnectedExample()
     {
         #region PartRNoWait_WhenConnected
-        var peer = services.RpcHub().GetClientPeer(RpcPeerRef.Default);
+        var peer = services.RpcHub().GetClientPeer(RpcRef.Default);
         await peer.WhenConnected(cancellationToken);
         await simpleService.Ping("Now it's very likely to be sent!");
         #endregion

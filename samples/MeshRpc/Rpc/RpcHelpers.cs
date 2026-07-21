@@ -12,43 +12,45 @@ public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(servi
 
     public string HostUrlResolver(RpcClientPeer peer)
     {
-        if (peer.Ref is not IMeshPeerRef meshPeerRef)
+        var hostId = peer.Route is RpcShardRoute shardRoute
+            ? shardRoute.HostId
+            : (peer.Ref as IRpcMeshRef)?.HostId;
+        if (hostId is null)
             return "";
 
-        var host = MeshState.State.Value.HostById.GetValueOrDefault(meshPeerRef.HostId);
+        var host = MeshState.State.Value.HostById.GetValueOrDefault(hostId);
         return host?.Url ?? "";
     }
 
-    public Func<ArgumentList, RpcPeerRef> RouterFactory(RpcMethodDef methodDef)
+    public Func<ArgumentList, RpcRef> RouterFactory(RpcMethodDef methodDef)
         => args => {
             if (args.Length == 0)
-                return RpcPeerRef.Local;
+                return RpcRef.Local;
 
             var arg0Type = args.GetType(0);
             if (arg0Type == typeof(HostRef))
-                return RpcHostPeerRef.Get(args.Get<HostRef>(0));
+                return RpcHostRef.Get(args.Get<HostRef>(0));
             if (typeof(IHasHostRef).IsAssignableFrom(arg0Type))
-                return RpcHostPeerRef.Get(args.Get<IHasHostRef>(0).HostRef);
+                return RpcHostRef.Get(args.Get<IHasHostRef>(0).HostRef);
 
             if (arg0Type == typeof(ShardRef))
-                return RpcShardPeerRef.Get(args.Get<ShardRef>(0));
+                return RpcShardRef.Get(args.Get<ShardRef>(0));
             if (typeof(IHasShardRef).IsAssignableFrom(arg0Type))
-                return RpcShardPeerRef.Get(args.Get<IHasShardRef>(0).ShardRef);
+                return RpcShardRef.Get(args.Get<IHasShardRef>(0).ShardRef);
 
             if (arg0Type == typeof(int))
-                return RpcShardPeerRef.Get(ShardRef.New(args.Get<int>(0)));
+                return RpcShardRef.Get(ShardRef.New(args.Get<int>(0)));
 
-            return RpcShardPeerRef.Get(ShardRef.New(args.GetUntyped(0)));
+            return RpcShardRef.Get(ShardRef.New(args.GetUntyped(0)));
         };
 
-    public RpcPeerConnectionKind ConnectionKindDetector(RpcPeerRef peerRef)
+    public RpcPeerConnectionKind ConnectionKindDetector(RpcRoute route)
     {
-        var connectionKind = peerRef.ConnectionKind;
-        var hostId = peerRef switch {
-            RpcHostPeerRef hostPeerRef => hostPeerRef.HostId,
-            RpcShardPeerRef shardPeerRef => shardPeerRef.HostId,
-            _ => null
-        };
+        var rpcRef = route.Ref;
+        var connectionKind = rpcRef.ConnectionKind;
+        var hostId = route is RpcShardRoute shardRoute
+            ? shardRoute.HostId
+            : (rpcRef as IRpcMeshRef)?.HostId;
         if (hostId is null || connectionKind is not RpcPeerConnectionKind.Remote)
             return connectionKind;
 

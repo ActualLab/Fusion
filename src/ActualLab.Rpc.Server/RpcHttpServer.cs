@@ -17,7 +17,7 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
     public RpcHttpServerOptions Options { get; } = options;
     public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
     public RpcHttpClientOptions HttpClientOptions { get; } = services.GetRequiredService<RpcHttpClientOptions>();
-    public RpcHttpServerPeerRefFactory PeerRefFactory { get; } = services.GetRequiredService<RpcHttpServerPeerRefFactory>();
+    public RpcHttpServerRefFactory RefFactory { get; } = services.GetRequiredService<RpcHttpServerRefFactory>();
 
     public virtual async Task Invoke(HttpContext context, bool isBackend)
     {
@@ -43,24 +43,24 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
         }
 
         RpcConnection? connection = null;
-        RpcPeerRef? peerRef = null;
+        RpcRef? rpcRef = null;
         try {
-            peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
-            if (!Hub.SerializationFormats.TryGet(peerRef.SerializationFormat, out _)) {
+            rpcRef = RefFactory.Invoke(this, context, isBackend).RequireServer();
+            if (!Hub.SerializationFormats.TryGet(rpcRef.SerializationFormat, out _)) {
                 Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}' for {Request}",
-                    peerRef, peerRef.SerializationFormat, requestDescription);
+                    rpcRef, rpcRef.SerializationFormat, requestDescription);
                 context.Response.StatusCode = (int)HttpStatusCode.UnsupportedMediaType;
                 return;
             }
 
-            Log.LogInformation("'{PeerRef}': Accepting RPC connection for {Request}", peerRef, requestDescription);
-            var peer = Hub.GetServerPeer(peerRef);
+            Log.LogInformation("'{PeerRef}': Accepting RPC connection for {Request}", rpcRef, requestDescription);
+            var peer = Hub.GetServerPeer(rpcRef);
 
             // Disconnect any stale connection BEFORE starting the response.
             // See RpcWebSocketServer.Invoke for the detailed rationale.
             if (peer.ConnectionState.Value.IsConnectingOrConnected()) {
                 Log.LogWarning("'{PeerRef}': {Peer} is already connected, disconnecting the old connection first...",
-                    peerRef, peer);
+                    rpcRef, peer);
                 await peer.Disconnect(cancellationToken).ConfigureAwait(false);
             }
 
@@ -99,18 +99,18 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
         catch (Exception e) {
             if (e.IsCancellationOf(cancellationToken)) {
                 Log.LogInformation(e, "'{PeerRef}': Normal RPC connection termination (via cancellation) for {Request}",
-                    peerRef, requestDescription);
+                    rpcRef, requestDescription);
                 return; // Intended: this is typically a normal connection termination
             }
 
             if (connection is not null) {
                 Log.LogInformation(e, "'{PeerRef}': Normal RPC connection termination for {Request}",
-                    peerRef, requestDescription);
+                    rpcRef, requestDescription);
                 return; // Intended: this is typically a normal connection termination
             }
 
             Log.LogWarning(e, "'{PeerRef}': Failed to accept RPC connection for {Request}",
-                peerRef, requestDescription);
+                rpcRef, requestDescription);
             try {
                 if (!context.Response.HasStarted)
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;

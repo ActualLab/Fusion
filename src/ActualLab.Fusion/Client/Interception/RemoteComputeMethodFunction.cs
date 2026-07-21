@@ -87,7 +87,7 @@ public abstract class RemoteComputeMethodFunction(
         while (true) {
             try {
                 var peer = RpcMethodDef.RouteCall(typedInput.Invocation.Arguments, routingMode);
-                peer.Ref.RouteState.RerouteIfChanged();
+                peer.Route.RerouteIfChanged();
 
                 if (peer.ConnectionKind is RpcPeerConnectionKind.Local) {
                     // Local computation / no RPC call scenario
@@ -98,8 +98,8 @@ public abstract class RemoteComputeMethodFunction(
                     var computed = NewComputed(typedInput);
                     using var _ = Computed.BeginCompute(computed);
                     try {
-                        var routeState = peer.Ref.RouteState;
-                        var linkedCts = await routeState
+                        var route = peer.Route;
+                        var linkedCts = await route
                             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                             .PrepareLocalExecution(RpcMethodDef, addDependency: true, cancellationToken)
                             .ConfigureAwait(false);
@@ -111,7 +111,7 @@ public abstract class RemoteComputeMethodFunction(
                             return computed;
                         }
                         // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                        catch (OperationCanceledException e) when (routeState.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
+                        catch (OperationCanceledException e) when (route.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
                             throw RpcRerouteException.MustReroute();
                         }
                         finally {
@@ -210,7 +210,7 @@ public abstract class RemoteComputeMethodFunction(
                 if (winner == disconnectTask) {
                     // If WhenDisconnected faulted (terminal error), rethrow rather than serve stale.
                     if (disconnectTask.IsFaulted) {
-                        peer.Ref.RouteState?.ThrowIfChanged();
+                        peer.Route.ThrowIfChanged();
                         await disconnectTask.ConfigureAwait(false);
                     }
                     var staleResult = Result.NewUntyped(existingCacheEntry.DeserializedValue);

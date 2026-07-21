@@ -20,7 +20,7 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     internal RpcSystemCallSender SystemCallSender => field ??= Services.GetRequiredService<RpcSystemCallSender>();
     internal RpcClient Client => field ??= Services.GetRequiredService<RpcClient>();
 
-    internal ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers { get; } = new(HardwareInfo.ProcessorCountPo2, 17);
+    internal ConcurrentDictionary<RpcRoute, RpcPeer> Peers { get; } = new(HardwareInfo.ProcessorCountPo2, 17);
 
     public Guid Id { get; init; } = Guid.NewGuid();
     public HostId HostId => field ??= Services.GetRequiredService<HostId>();
@@ -33,10 +33,10 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public MomentClock SystemClock { get; }
 
     // The most useful peers are cached
-    public RpcClientPeer DefaultPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Default);
-    public RpcClientPeer LoopbackPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Loopback);
-    public RpcClientPeer LocalPeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.Local);
-    public RpcClientPeer NonePeer => field ??= (RpcClientPeer)GetPeer(RpcPeerRef.None);
+    public RpcClientPeer DefaultPeer => field ??= (RpcClientPeer)GetPeer(RpcRef.Default);
+    public RpcClientPeer LoopbackPeer => field ??= (RpcClientPeer)GetPeer(RpcRef.Loopback);
+    public RpcClientPeer LocalPeer => field ??= (RpcClientPeer)GetPeer(RpcRef.Local);
+    public RpcClientPeer NonePeer => field ??= (RpcClientPeer)GetPeer(RpcRef.None);
 
     public RpcHub(IServiceProvider services)
     {
@@ -100,41 +100,58 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
 
     // Peer management
 
-    public RpcPeer GetPeer(RpcPeerRef peerRef)
+    public RpcClientPeer GetClientPeer(RpcRef rpcRef)
+        => (RpcClientPeer)GetPeer(rpcRef.RequireClient());
+
+    public RpcServerPeer GetServerPeer(RpcRef rpcRef)
+        => (RpcServerPeer)GetPeer(rpcRef.RequireServer());
+
+    public RpcPeer GetPeer(RpcRef rpcRef)
+        => GetPeer(rpcRef.Route); // Re-mints the route if the current one is changed
+
+    public RpcClientPeer GetClientPeer(RpcRoute route)
     {
-        if (Peers.TryGetValue(peerRef, out var peer))
+        route.Ref.RequireClient();
+        return (RpcClientPeer)GetPeer(route);
+    }
+
+    public RpcServerPeer GetServerPeer(RpcRoute route)
+    {
+        route.Ref.RequireServer();
+        return (RpcServerPeer)GetPeer(route);
+    }
+
+    public RpcPeer GetPeer(RpcRoute route)
+    {
+        // This method uses the exact route it gets: a peer created for an already changed
+        // route disposes itself instantly, and its calls reroute - so this is safe.
+        if (Peers.TryGetValue(route, out var peer))
             return peer;
 
         lock (Lock) {
-            if (Peers.TryGetValue(peerRef, out peer))
+            if (Peers.TryGetValue(route, out peer))
                 return peer;
             if (WhenDisposed is not null)
                 throw Errors.AlreadyDisposed(GetType());
 
-            peer = PeerOptions.PeerFactory.Invoke(this, peerRef);
-            Peers[peerRef] = peer;
+            peer = PeerOptions.PeerFactory.Invoke(this, route);
+            Peers[route] = peer; // One entry per route generation; a drained generation's entry is removed via RemovePeer
             peer.Start(isolate: true); // We don't want to capture Activity.Current, etc. here
-            if (peerRef.RouteState is { } routeState)
-                _ = routeState.WhenChanged().ContinueWith(_ => {
+            if (peer.Route is { IsStatic: false } peerRoute)
+                _ = peerRoute.WhenChanged.ContinueWith(_ => {
                     peer.Dispose();
-                    peer.Log.LogWarning("'{PeerRef}': Ref is rerouted, peer {Peer} is disposed", peer.Ref, peer);
+                    peer.Log.LogWarning("'{Route}': Route is changed, peer {Peer} is disposed", peer.Route, peer);
                 }, TaskScheduler.Default);
             return peer;
         }
     }
 
-    public RpcClientPeer GetClientPeer(RpcPeerRef peerRef)
-        => (RpcClientPeer)GetPeer(peerRef.RequireClient());
-
-    public RpcServerPeer GetServerPeer(RpcPeerRef peerRef)
-        => (RpcServerPeer)GetPeer(peerRef.RequireServer());
-
     internal bool RemovePeer(RpcPeer peer)
     {
-        if (!Peers.TryRemove(peer.Ref, peer))
+        if (!Peers.TryRemove(peer.Route, peer))
             return false;
 
-        peer.Log.LogWarning("'{PeerRef}': peer is removed from RpcHub", peer.Ref);
+        peer.Log.LogWarning("'{Route}': peer is removed from RpcHub", peer.Route);
         return true;
     }
 }

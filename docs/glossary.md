@@ -222,7 +222,7 @@ receive, and track calls over reconnectable connections. See [`RpcPeer`](PartR-C
 ###### RPC peer reference
 
 A stable description of which peer a call targets and how that peer is routed or resolved.
-It can outlive an individual connection or concrete peer instance. See [`RpcPeerRef`](PartR-CC.md#rpcpeerref).
+It can outlive an individual connection or concrete peer instance. See [`RpcRef`](PartR-CC.md#rpcpeerref).
 
 ###### `RpcNoWait` call
 

@@ -1,6 +1,6 @@
 namespace Samples.MeshRpc;
 
-public interface IMeshPeerRef
+public interface IRpcMeshRef
 {
     public string HostId { get; }
 }

@@ -96,8 +96,8 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
             services.AddSingleton(_ => new RpcSerializationFormatResolver(format.Key, new[] { format }));
         }
         var serviceProvider = services.BuildServiceProvider();
-        var peerRef = RpcPeerRef.NewClient("size-test", format.Key);
-        var peer = new RpcClientPeer(serviceProvider.RpcHub(), peerRef);
+        var rpcRef = RpcRef.NewClient("size-test", format.Key);
+        var peer = new RpcClientPeer(serviceProvider.RpcHub(), rpcRef.Route);
         var webSocket = new FragmentedWebSocket(fragments);
         var owner = new WebSocketOwner("size-test", webSocket, serviceProvider);
         var transport = new RpcWebSocketTransport(options, peer, owner) {

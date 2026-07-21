@@ -138,7 +138,7 @@
 
     private async Task SendPings(CancellationToken cancellationToken)
     {
-        var peer = Services.RpcHub().GetClientPeer(RpcPeerRef.Default);
+        var peer = Services.RpcHub().GetClientPeer(RpcRef.Default);
         // RpcNoWait calls are simply dropped if there is no connection -
         // that's why it makes sense to wait for a connection before sending the first ping.
         // Try disconnecting the client and refresh the page to see how it works.

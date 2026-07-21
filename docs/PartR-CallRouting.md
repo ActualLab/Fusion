@@ -16,60 +16,100 @@ The `RouterFactory` is the entry point for custom routing. It's configured via `
 ```cs
 services.AddSingleton(_ => RpcOutboundCallOptions.Default with {
     RouterFactory = methodDef => args => {
-        // Return RpcPeerRef based on method and arguments
-        return RpcPeerRef.Default;
+        // Return RpcRef based on method and arguments
+        return RpcRef.Default;
     }
 });
 ```
 
-The factory receives an `RpcMethodDef` and returns a function that maps `ArgumentList` to `RpcPeerRef`. This two-level design allows you to:
+The factory receives an `RpcMethodDef` and returns a function that maps `ArgumentList` to `RpcRef`. This two-level design allows you to:
 1. Inspect the method definition once (outer function)
 2. Make per-call routing decisions based on arguments (inner function)
 
 
-### RpcPeerRef
+### RpcRef
 
-`RpcPeerRef` identifies the target peer for a call:
+`RpcRef` identifies the target peer for a call:
 
 | Type | Description |
 |------|-------------|
-| `RpcPeerRef.Default` | The default remote peer (for single-server scenarios) |
-| `RpcPeerRef.Local` | Execute locally (bypass RPC) |
-| `RpcPeerRef.Loopback` | In-process loopback (for testing) |
-| Custom `RpcPeerRef` | Your own peer reference with routing state |
+| `RpcRef.Default` | The default remote peer (for single-server scenarios) |
+| `RpcRef.Local` | Execute locally (bypass RPC) |
+| `RpcRef.Loopback` | In-process loopback (for testing) |
+| Custom `RpcRef` | Your own peer reference, optionally with a resettable route |
+
+`RpcRef` instances are **stable**: there is one ref per logical target (shard, host, "default"),
+so you can cache them forever and return them from routers with no extra ceremony.
+When the target moves (e.g., a shard-map change), the ref itself doesn't change &mdash;
+its **route** (see below) is reset instead.
+
+#### RpcPeerRef: renamed to RpcRef in v14.1
+
+Starting from v14.1, `RpcPeerRef` is replaced by the `RpcRef` + `RpcRoute` pair:
+
+| Before v14.1 | v14.1+ |
+|--------------|--------|
+| `RpcPeerRef` | `RpcRef` (stable; one instance per logical target) |
+| `RpcRouteState` | `RpcRoute` (one instance per route generation) |
+| `RpcPeerRef.RouteState` | `RpcRef.Route` (re-minted via `CreateRoute()` on change) |
+| `RpcRouteStateExt` | Merged into `RpcRoute` (`IsChanged`, `RerouteIfChanged`, etc.) |
+| `RpcPeer.Ref.RouteState` | `RpcPeer.Route` (the generation the peer is bound to) |
+
+The key semantic change: refs used to be re-created on every topology change, so caches
+had to version and re-mint them; now the ref is permanent and only its route is reset.
 
 
-### RpcRouteState
+### RpcRoute
 
-`RpcRouteState` enables dynamic rerouting when the target peer changes:
+`RpcRoute` represents one *route generation* of an `RpcRef`: it carries the resolved target
+info for that generation and signals when the route changes. A ref becomes reroutable by
+overriding `CreateRoute()`:
 
 ```cs
-public class MyPeerRef : RpcPeerRef
+public class MyPeerRef : RpcRef
 {
     public MyPeerRef(string targetId)
     {
         HostInfo = targetId;
-        RouteState = new RpcRouteState();
+        Initialize(); // Mints the first route via CreateRoute()
+    }
 
-        // Start monitoring for topology changes
+    protected override RpcRoute CreateRoute()
+    {
+        var route = new MyRoute(this); // Resolves the current target
+        // Start monitoring for topology changes; each generation gets its own watcher
         _ = Task.Run(async () => {
-            await WaitForTopologyChange();
-            RouteState.MarkChanged(); // Triggers rerouting
+            await WaitForTopologyChange(route.ChangedToken);
+            route.MarkChanged(); // Triggers rerouting
         });
+        return route;
     }
 }
 ```
 
-When `RouteState.MarkChanged()` is called:
-1. Active calls on this peer receive `RpcRerouteException`
-2. The RPC interceptor catches the exception
-3. After a delay (`ReroutingDelays`), the call is rerouted via `RouterFactory`
+- `Initialize()` calls `CreateRoute()` once; the base implementation returns
+  `RpcRoute.NewStatic(this)` &mdash; a *static* route (`IsStatic == true`) that is never
+  marked as changed, so no rerouting logic is engaged (that's what plain client and
+  server refs use).
+- The `RpcRef.Route` getter re-mints **lazily**: when the current route is marked as changed,
+  the next read invokes `CreateRoute()` for the next generation. A burst of topology churn
+  with no interleaved calls therefore coalesces into a single re-resolution.
+- `RpcRef.Reset()` marks the current route as changed and eagerly mints the next one.
+- Each `RpcPeer` captures the route it was created for in `RpcPeer.Route`, so a draining
+  peer keeps observing *its own* generation while `ref.Route` already points to the next one.
+
+When `route.MarkChanged()` is called:
+1. The `RpcPeer` bound to that route generation is disposed
+2. Active calls on that peer receive `RpcRerouteException`
+3. The RPC interceptor catches the exception
+4. After a delay (`ReroutingDelays`), the call is rerouted via `RouterFactory`,
+   which resolves the same stable ref &mdash; now with a freshly minted route
 
 
 ### RpcRerouteException
 
 `RpcRerouteException` signals that a call must be rerouted to a different peer. It's thrown automatically when:
-- `RouteState.MarkChanged()` is called on the peer's `RpcPeerRef`
+- `MarkChanged()` is called on the route of the peer serving the call
 - An inbound call arrives at a server that's no longer responsible for the shard/entity
 
 ```cs
@@ -88,7 +128,7 @@ var serverUrls = Enumerable.Range(0, serverCount)
     .Select(i => $"http://localhost:{22222 + i}/")
     .ToArray();
 var clientPeerRefs = serverUrls
-    .Select(url => RpcPeerRef.NewClient(url))
+    .Select(url => RpcRef.NewClient(url))
     .ToArray();
 
 services.AddSingleton(_ => RpcOutboundCallOptions.Default with {
@@ -105,7 +145,7 @@ services.AddSingleton(_ => RpcOutboundCallOptions.Default with {
 
             return clientPeerRefs[hash.PositiveModulo(serverCount)];
         }
-        return RpcPeerRef.Default;
+        return RpcRef.Default;
     }
 });
 ```
@@ -113,77 +153,92 @@ services.AddSingleton(_ => RpcOutboundCallOptions.Default with {
 Key points:
 - Routes `IChat` calls based on the first argument (chat ID or command)
 - Uses `GetXxHash3()` for consistent hashing (doesn't change between runs)
-- Falls back to `RpcPeerRef.Default` for other services
+- Falls back to `RpcRef.Default` for other services
 
 
 ## Advanced Example: Dynamic Mesh Routing
 
 The `MeshRpc` sample demonstrates dynamic routing with automatic rerouting when topology changes.
 
-### Custom PeerRef with RouteState
+### Custom stable PeerRef with a resettable route
 
 ```cs
-public sealed class RpcShardPeerRef : RpcPeerRef
+public sealed class RpcShardRef : RpcRef
 {
-    private static readonly ConcurrentDictionary<ShardRef, LazySlim<ShardRef, RpcShardPeerRef>> Cache = new();
+    private static readonly ConcurrentDictionary<ShardRef, RpcShardRef> Cache = new();
 
     public ShardRef ShardRef { get; }
-    public string HostId { get; }
 
-    public static RpcShardPeerRef Get(ShardRef shardRef)
-        => Cache.GetOrAdd(shardRef, static (shardRef, lazy) => new RpcShardPeerRef(shardRef, lazy));
+    public static RpcShardRef Get(ShardRef shardRef)
+        => Cache.GetOrAdd(shardRef, static key => new RpcShardRef(key));
 
-    private RpcShardPeerRef(ShardRef shardRef, LazySlim<ShardRef, RpcShardPeerRef> lazy)
+    private RpcShardRef(ShardRef shardRef)
+    {
+        ShardRef = shardRef;
+        HostInfo = shardRef.ToString();
+        UseReferentialEquality = true;
+        Initialize(); // Mints the first RpcShardRoute
+    }
+
+    protected override RpcRoute CreateRoute()
+        => new RpcShardRoute(this);
+}
+
+public sealed class RpcShardRoute : RpcRoute
+{
+    public string HostId { get; } // The resolved target of this route generation
+
+    internal RpcShardRoute(RpcShardRef rpcRef) : base(rpcRef)
     {
         var meshState = MeshState.State.Value;
-        ShardRef = shardRef;
-        HostId = meshState.GetShardHost(shardRef)?.Id ?? "null";
-        HostInfo = $"{shardRef}-v{meshState.Version}->{HostId}";
+        HostId = meshState.GetShardHost(rpcRef.ShardRef)?.Id ?? "null";
 
-        // Enable rerouting
-        RouteState = new RpcRouteState();
-
-        // Monitor for topology changes
+        // Monitor for topology changes; the watcher dies with its route generation
         _ = Task.Run(async () => {
             var computed = MeshState.State.Computed;
             // Wait until this host is removed from the mesh
-            await computed.When(x => !x.HostById.ContainsKey(HostId), CancellationToken.None);
-
-            // Remove from cache and trigger rerouting
-            Cache.TryRemove(ShardRef, lazy);
-            RouteState.MarkChanged();
+            await computed.When(x => !x.HostById.ContainsKey(HostId), ChangedToken);
+            MarkChanged(); // Triggers rerouting; the next Route read mints a new RpcShardRoute
         });
     }
+
+    // Makes the route render as "<address> [vN->hostId]" in logs
+    protected override string GetTargetString()
+        => HostId;
 }
 ```
+
+Note that the ref itself carries only the stable shard identity; the per-generation
+resolution (`HostId`) lives on the route. The cache is a plain `GetOrAdd` &mdash; no
+versioning, no `IsChanged` double-checks, no re-minting races in app code.
 
 ### RouterFactory with Type-Based Routing
 
 ```cs
-public Func<ArgumentList, RpcPeerRef> RouterFactory(RpcMethodDef methodDef)
+public Func<ArgumentList, RpcRef> RouterFactory(RpcMethodDef methodDef)
     => args => {
         if (args.Length == 0)
-            return RpcPeerRef.Local;
+            return RpcRef.Local;
 
         var arg0Type = args.GetType(0);
 
         // Route by HostRef
         if (arg0Type == typeof(HostRef))
-            return RpcHostPeerRef.Get(args.Get<HostRef>(0));
+            return RpcHostRef.Get(args.Get<HostRef>(0));
         if (typeof(IHasHostRef).IsAssignableFrom(arg0Type))
-            return RpcHostPeerRef.Get(args.Get<IHasHostRef>(0).HostRef);
+            return RpcHostRef.Get(args.Get<IHasHostRef>(0).HostRef);
 
         // Route by ShardRef
         if (arg0Type == typeof(ShardRef))
-            return RpcShardPeerRef.Get(args.Get<ShardRef>(0));
+            return RpcShardRef.Get(args.Get<ShardRef>(0));
         if (typeof(IHasShardRef).IsAssignableFrom(arg0Type))
-            return RpcShardPeerRef.Get(args.Get<IHasShardRef>(0).ShardRef);
+            return RpcShardRef.Get(args.Get<IHasShardRef>(0).ShardRef);
 
         // Route by hash of first argument
         if (arg0Type == typeof(int))
-            return RpcShardPeerRef.Get(ShardRef.New(args.Get<int>(0)));
+            return RpcShardRef.Get(ShardRef.New(args.Get<int>(0)));
 
-        return RpcShardPeerRef.Get(ShardRef.New(args.GetUntyped(0)));
+        return RpcShardRef.Get(ShardRef.New(args.GetUntyped(0)));
     };
 ```
 
@@ -197,7 +252,7 @@ When a peer's route state changes, the following sequence occurs:
 
 ## Local Execution Mode
 
-When a call routes to the local server (via `RpcPeerRef.Local` or a custom peer ref pointing to the current host), `RpcLocalExecutionMode` controls how local execution coordinates with rerouting signals.
+When a call routes to the local server (via `RpcRef.Local` or a custom peer ref pointing to the current host), `RpcLocalExecutionMode` controls how local execution coordinates with rerouting signals.
 
 This is only relevant for **distributed services** (`RpcServiceMode.Distributed`). Non-distributed services ignore this setting.
 
@@ -207,17 +262,17 @@ This is only relevant for **distributed services** (`RpcServiceMode.Distributed`
 |------|----------------------|-----------------|-------------------|----------|
 | `Unconstrained` | Not awaited | None | Original token | Non-distributed services, simple calls |
 | `ConstrainedEntry` | Awaited once | At entry point only | Original token | Compute services, where late reroutes are acceptable |
-| `Constrained` | Awaited | At entry + during execution | Linked to `RpcRouteState.ChangedToken` | Long-running calls that must abort on reroute |
+| `Constrained` | Awaited | At entry + during execution | Linked to `RpcRoute.ChangedToken` | Long-running calls that must abort on reroute |
 
 ### How It Works
 
-When a call executes locally with `RpcRouteState`:
+When a call executes locally with an `RpcRoute`:
 
 1. **Unconstrained**: Executes immediately without coordination. Use for calls where rerouting mid-execution is acceptable.
 
 2. **ConstrainedEntry**: Waits for `LocalExecutionAwaiter` before starting. If the route changed while waiting, throws `RpcRerouteException`. Once execution starts, it won't be interrupted.
 
-3. **Constrained**: Same as `ConstrainedEntry`, plus the cancellation token is linked to `RpcRouteState.ChangedToken`. If the route changes during execution, the call is cancelled and rerouted. This is the most defensive mode.
+3. **Constrained**: Same as `ConstrainedEntry`, plus the cancellation token is linked to `RpcRoute.ChangedToken`. If the route changes during execution, the call is cancelled and rerouted. This is the most defensive mode.
 
 ### Default Modes
 
@@ -387,13 +442,15 @@ The delay sequence uses exponential backoff to avoid overwhelming the system dur
 
 ### Host URL Resolution
 
-When using custom `RpcPeerRef` types, configure how to resolve the actual host URL:
+When using custom `RpcRef` types, configure how to resolve the actual host URL.
+Read the *peer's* route (`peer.Route`) rather than the ref's current one &mdash; the peer
+must keep connecting to the target of its own route generation:
 
 ```cs
 services.Configure<RpcWebSocketClientOptions>(o => {
     o.HostUrlResolver = peer => {
-        if (peer.Ref is IMyMeshPeerRef meshPeerRef) {
-            var host = GetHostById(meshPeerRef.HostId);
+        if (peer.Route is RpcShardRoute rpcShardRoute) {
+            var host = GetHostById(rpcShardRoute.HostId);
             return host?.Url ?? "";
         }
         return peer.Ref.HostInfo;
@@ -403,30 +460,36 @@ services.Configure<RpcWebSocketClientOptions>(o => {
 
 ### Connection Kind Detection
 
-Detect whether a peer reference points to a local or remote peer:
+Detect whether a peer points to a local or remote target. The detector receives the
+route generation the peer is created for (its ref is `route.Ref`); it's consulted only
+when the route doesn't specify a `ConnectionKind` on its own:
 
 ```cs
 services.Configure<RpcPeerOptions>(o => {
-    o.ConnectionKindDetector = peerRef => {
-        if (peerRef is MyShardPeerRef shardPeerRef)
-            return shardPeerRef.HostId == currentHostId
+    o.ConnectionKindDetector = route => {
+        if (route is RpcShardRoute rpcShardRoute)
+            return rpcShardRoute.HostId == currentHostId
                 ? RpcPeerConnectionKind.Local
                 : RpcPeerConnectionKind.Remote;
 
-        return peerRef.ConnectionKind;
+        return route.Ref.ConnectionKind;
     };
 });
 ```
 
+Alternatively, when each process resolves routes only for itself, set
+`RpcRoute.ConnectionKind` directly in `CreateRoute()` &mdash; it takes precedence
+over the detector.
+
 
 ## Best Practices
 
-1. **Cache PeerRefs** &ndash; Create and reuse `RpcPeerRef` instances for the same routing key. The `MeshRpc` sample uses `ConcurrentDictionary` with `LazySlim` for thread-safe caching.
+1. **Cache PeerRefs** &ndash; Create and reuse `RpcRef` instances for the same routing key. Since refs are stable, a plain `ConcurrentDictionary.GetOrAdd` is all you need.
 
 2. **Use consistent hashing** &ndash; Use `GetXxHash3()` or similar stable hash functions. `string.GetHashCode()` varies between runs.
 
-3. **Handle topology changes gracefully** &ndash; Use `RpcRouteState` to automatically reroute when servers come and go.
+3. **Handle topology changes gracefully** &ndash; Override `CreateRoute()` and call `MarkChanged()` on the route to automatically reroute when servers come and go.
 
 4. **Monitor rerouting** &ndash; Rerouting is logged at Warning level. High rerouting rates may indicate topology instability.
 
-5. **Consider local execution** &ndash; Return `RpcPeerRef.Local` when the call can be handled by the current server to avoid network overhead.
+5. **Consider local execution** &ndash; Return `RpcRef.Local` when the call can be handled by the current server to avoid network overhead.

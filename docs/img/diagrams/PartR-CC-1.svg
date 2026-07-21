@@ -26,10 +26,10 @@
 
     <rect x="235" y="80" width="495" height="210" rx="8" fill="rgba(200,215,240,0.15)" stroke="#c0c8d4" stroke-width="1.5" stroke-dasharray="6 4" />
     <text x="250" y="105" font-family="&quot;SF Mono&quot;, &quot;Fira Code&quot;, Consolas, monospace" font-size="13px" font-weight="bold" fill="#1a1a2e">Peers</text>
-    <text x="250" y="122" font-family="Inter, sans-serif" font-size="11px" font-weight="600" text-transform="uppercase" fill="#8b90a8">Map: RpcPeerRef → RpcPeer</text>
+    <text x="250" y="122" font-family="Inter, sans-serif" font-size="11px" font-weight="600" text-transform="uppercase" fill="#8b90a8">Map: RpcRef → RpcPeer</text>
 
     <rect x="255" y="140" width="150" height="135" rx="8" fill="url(#nodeGradient)" stroke="#bcc8da" stroke-width="1.5" />
-    <text x="330" y="195" font-family="&quot;SF Mono&quot;, &quot;Fira Code&quot;, Consolas, monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcPeerRef</text>
+    <text x="330" y="195" font-family="&quot;SF Mono&quot;, &quot;Fira Code&quot;, Consolas, monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcRef</text>
     <text x="330" y="215" font-family="Inter, -apple-system, sans-serif" font-size="11px" font-style="italic" fill="#6b7084" text-anchor="middle">identifies a peer</text>
     <text x="330" y="230" font-family="Inter, -apple-system, sans-serif" font-size="11px" font-style="italic" fill="#6b7084" text-anchor="middle">manages peer lifetime</text>
 

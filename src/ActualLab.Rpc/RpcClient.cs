@@ -36,7 +36,7 @@ public abstract class RpcClient(IServiceProvider services) : RpcServiceBase(serv
         RpcPeerConnectionState connectionState,
         CancellationToken cancellationToken)
     {
-        var serverPeerRef = RpcPeerRef.NewServer(
+        var serverPeerRef = RpcRef.NewServer(
             clientPeer.ClientId,
             clientPeer.SerializationFormat.Key,
             clientPeer.Ref.IsBackend,

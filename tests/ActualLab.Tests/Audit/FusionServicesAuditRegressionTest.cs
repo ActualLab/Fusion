@@ -4,6 +4,7 @@ using ActualLab.Fusion.Blazor;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Operations.Internal;
+using ActualLab.Rpc;
 
 namespace ActualLab.Tests.Audit;
 
@@ -133,14 +134,14 @@ public class FusionServicesAuditRegressionTest
     }
 
     private sealed class TestRpcPeerStateMonitor(IServiceProvider services)
-        : RpcPeerStateMonitor(services, null, mustStart: false)
+        : RpcPeerStateMonitor(services.RpcHub(), rpcRef: null, mustStart: false)
     {
         public void Disconnect(TimeSpan ago)
         {
             var disconnectedAt = RpcHub.SystemClock.Now - ago;
             ((IMutableState<RpcPeerRawState>)RawState).Value =
                 new RpcPeerRawDisconnectedState(disconnectedAt, default, null);
-            State = Services.StateFactory().NewComputed(ComputeState, GetType().Name);
+            State = Services.StateFactory().NewComputed(ComputeState, nameof(TestRpcPeerStateMonitor));
         }
     }
 }

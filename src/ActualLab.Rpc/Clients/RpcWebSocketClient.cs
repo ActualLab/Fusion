@@ -26,14 +26,14 @@ public class RpcWebSocketClient(IServiceProvider services) : RpcClient(services)
         if (uri is null) {
             // The expected behavior for null URI is to wait indefinitely
             Log.LogWarning(
-                "'{PeerRef}': No connection URL for ClientId='{ClientId}' - waiting for peer termination",
-                clientPeer.Ref, clientPeer.ClientId);
+                "'{Route}': No connection URL for ClientId='{ClientId}' - waiting for peer termination",
+                clientPeer.Route, clientPeer.ClientId);
             await TaskExt.NeverEnding(cancellationToken).ConfigureAwait(false);
         }
 
         Log.LogInformation(
-            "'{PeerRef}': Connecting ClientId='{ClientId}' to {Url}",
-            clientPeer.Ref, clientPeer.ClientId, uri);
+            "'{Route}': Connecting ClientId='{ClientId}' to {Url}",
+            clientPeer.Route, clientPeer.ClientId, uri);
         var hub = clientPeer.Hub;
         var connectTokenSource = (CancellationTokenSource?)new CancellationTokenSource();
         var connectToken = connectTokenSource!.Token;
@@ -71,7 +71,7 @@ public class RpcWebSocketClient(IServiceProvider services) : RpcClient(services)
             if (e.IsCancellationOf(connectToken) && !cancellationToken.IsCancellationRequested)
                 throw Errors.ConnectTimeout();
 
-            Log.LogWarning(e, "'{PeerRef}': Failed to connect to {Url}", clientPeer.Ref, uri);
+            Log.LogWarning(e, "'{Route}': Failed to connect to {Url}", clientPeer.Route, uri);
             throw;
         }
         finally {

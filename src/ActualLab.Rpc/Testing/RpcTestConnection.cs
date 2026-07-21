@@ -18,8 +18,8 @@ public class RpcTestConnection
 
     public RpcTestClient TestClient { get; }
     public RpcHub Hub => TestClient.Hub;
-    public RpcPeerRef ClientPeerRef { get; }
-    public RpcPeerRef ServerPeerRef { get; }
+    public RpcRef ClientPeerRef { get; }
+    public RpcRef ServerPeerRef { get; }
     public RpcClientPeer ClientPeer => field ??= Hub.GetClientPeer(ClientPeerRef);
     public RpcServerPeer ServerPeer => field ??= Hub.GetServerPeer(ServerPeerRef);
 
@@ -45,7 +45,7 @@ public class RpcTestConnection
         }
     }
 
-    public RpcTestConnection(RpcTestClient testClient, RpcPeerRef clientPeerRef, RpcPeerRef serverPeerRef)
+    public RpcTestConnection(RpcTestClient testClient, RpcRef clientPeerRef, RpcRef serverPeerRef)
     {
         if (clientPeerRef.IsServer)
             throw new ArgumentOutOfRangeException(nameof(clientPeerRef));

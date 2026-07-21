@@ -103,14 +103,14 @@ public static class ClientStartup
             fusion.Rpc.AddWebSocketClient(remoteRpcHostUrl);
             if (hostKind is HostKind.ApiServer or HostKind.SingleServer) {
                 // All server-originating RPC connections should go to the default backend server
-                RpcPeerRef.Default = RpcPeerRef.GetDefaultPeerRef(isBackend: true);
+                RpcRef.Default = RpcRef.GetDefaultRef(isBackend: true);
                 // And want to call the client via this server-side RPC client:
                 fusion.Rpc.AddClient<ISimpleClientSideService>();
             }
 
             // If we're here, hostKind is Client, ApiServer, or SingleServer
             fusion.AddComputeService<Todos>(ServiceLifetime.Scoped);
-            services.AddScoped(c => new RpcPeerStateMonitor(c, OSInfo.IsAnyClient ? RpcPeerRef.Default : null));
+            services.AddScoped(c => new RpcPeerStateMonitor(c.RpcHub(), OSInfo.IsAnyClient ? RpcRef.Default : null));
             services.AddScoped<IUpdateDelayer>(c => new UpdateDelayer(c.UIActionTracker(), 0.25)); // 0.25s
 
             // Uncomment to make computed state components to re-render only on re-computation of their state.

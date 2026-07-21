@@ -7,7 +7,7 @@ namespace ActualLab.Rpc;
 public partial class RpcMethodDef
 {
     public RpcCallTimeouts OutboundCallTimeouts { get; protected set; } = RpcCallTimeouts.None;
-    public Func<ArgumentList, RpcPeerRef>? OutboundCallRouter { get; protected set; } = null;
+    public Func<ArgumentList, RpcRef>? OutboundCallRouter { get; protected set; } = null;
     public RpcLocalExecutionMode LocalExecutionMode { get; protected set; }
     public RpcRemoteExecutionMode RemoteExecutionMode { get; protected set; }
 
@@ -54,8 +54,8 @@ public partial class RpcMethodDef
 
         while (true) {
             try {
-                var peerRef = OutboundCallRouter!.Invoke(args);
-                return Hub.GetPeer(peerRef);
+                var rpcRef = OutboundCallRouter!.Invoke(args);
+                return Hub.GetPeer(rpcRef);
             }
             catch (RpcRerouteException e) {
                 // This should never happen, but just in case...

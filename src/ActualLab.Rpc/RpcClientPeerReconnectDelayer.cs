@@ -29,7 +29,7 @@ public class RpcClientPeerReconnectDelayer : RetryDelayer, IHasServices
         RpcClientPeer peer, int tryIndex, Exception? lastError,
         CancellationToken cancellationToken = default)
     {
-        var delayLogger = new RetryDelayLogger("reconnect", string.Concat("'", peer.Ref, "'"), Log);
+        var delayLogger = new RetryDelayLogger("reconnect", string.Concat("'", peer.Route, "'"), Log);
         return this.GetDelay(tryIndex, delayLogger, cancellationToken);
     }
 }

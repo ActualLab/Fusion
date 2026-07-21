@@ -1505,9 +1505,9 @@ A serializable RPC method reference identified by its UTF-8 full name and hash c
 
 The only purpose of this class struct is to offer extension point for extensions in other parts of Fusion applying overrides to different `RpcXxxOptions.Default`.
 
-###### `RpcPeerRef`, `RpcPeerRefExt`
+###### `RpcRef`, `RpcRefExt`
 
-Reference to an RPC peer, encapsulating its address, connection kind, and versioning info.
+A stable reference to a logical RPC peer target, encapsulating its address, connection kind, versioning info, and the current `RpcRoute` generation.
 
 ###### `RpcReconnectFailedException`
 
@@ -1517,9 +1517,9 @@ Thrown when an RPC peer permanently fails to reconnect to the remote host.
 
 Exception indicating that an RPC call must be re-routed to a different peer.
 
-###### `RpcRouteState`, `RpcRouteStateExt`
+###### `RpcRoute`
 
-Tracks the routing state of an RPC peer, signaling when a route change (reroute) occurs.
+A single route generation of an `RpcRef`: carries the resolved target info for this generation and signals when a route change (reroute) occurs. A static route (`RpcRoute.NewStatic`) belongs to a ref that never reroutes.
 
 ###### `RpcSerializationFormat`, `RpcSerializationFormatResolver` (record)
 
@@ -1999,9 +1999,9 @@ Configuration options for `RpcHttpServer`, including request paths, backend expo
 
 Builder for configuring `RpcHttpServer` and its options.
 
-###### `RpcHttpServerPeerRefFactory` (delegate)
+###### `RpcHttpServerRefFactory` (delegate)
 
-Creates an `RpcPeerRef` for an HTTP server connection from its HTTP context and backend flag.
+Creates an `RpcRef` for an HTTP server connection from its HTTP context and backend flag.
 
 ###### `RpcHttpServerDefaultDelegates`
 
@@ -2011,9 +2011,9 @@ Provides default delegate implementations for `RpcHttpServer`.
 
 Server-side handler that accepts incoming `WebSocket` connections and establishes RPC peer connections for ASP.NET Core hosts.
 
-###### `RpcWebSocketServerPeerRefFactory` (delegate)
+###### `RpcWebSocketServerRefFactory` (delegate)
 
-Delegate that creates an `RpcPeerRef` for a `WebSocket` server connection based on the `HttpContext` and backend flag.
+Delegate that creates an `RpcRef` for a `WebSocket` server connection based on the `HttpContext` and backend flag.
 
 ###### `RpcWebSocketServerDefaultDelegates`
 

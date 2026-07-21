@@ -85,6 +85,6 @@ public record RpcWebSocketClientOptions
     private WebSocketOwner DefaultWebSocketOwnerFactory(RpcClientPeer peer)
     {
         var clientWebSocket = new ClientWebSocket();
-        return new WebSocketOwner(peer.Ref.ToString(), clientWebSocket, peer.Hub.Services);
+        return new WebSocketOwner(peer.Route.ToString(), clientWebSocket, peer.Hub.Services);
     }
 }

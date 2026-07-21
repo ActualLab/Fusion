@@ -39,7 +39,7 @@ public class RpcWebSocketClientConnectLeakTest(ITestOutputHelper @out) : TestBas
 
         var hub = sp.RpcHub();
         // Touching the peer starts its OnRun loop, which calls ConnectRemote repeatedly.
-        var peer = hub.GetClientPeer(RpcPeerRef.Default);
+        var peer = hub.GetClientPeer(RpcRef.Default);
 
         // Let several reconnect attempts fire. ConnectTimeout is 200 ms and the reconnect
         // delay starts at ~1 s for clients, so 3 s is enough for at least 2 cycles.

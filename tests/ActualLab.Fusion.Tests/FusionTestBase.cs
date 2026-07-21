@@ -106,15 +106,15 @@ public abstract class FusionTestBase : RpcTestBase
 #if !NETFRAMEWORK
         services.AddSingleton(_ => RpcPeerOptions.Default.WithFusionServerOverrides() with {
             UseRandomHandshakeIndex = true,
-            PeerFactory = (hub, peerRef) => peerRef.IsServer
-                ? new RpcServerPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
-                : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
+            PeerFactory = (hub, route) => route.Ref.IsServer
+                ? new RpcServerPeer(hub, route) { CallLogLevel = RpcCallLogLevel }
+                : new RpcClientPeer(hub, route) { CallLogLevel = RpcCallLogLevel }
         });
 #else
         services.AddSingleton(_ => RpcPeerOptions.Default with {
-            PeerFactory = (hub, peerRef) => peerRef.IsServer
-                ? new RpcServerPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
-                : new RpcClientPeer(hub, peerRef) { CallLogLevel = RpcCallLogLevel }
+            PeerFactory = (hub, route) => route.Ref.IsServer
+                ? new RpcServerPeer(hub, route) { CallLogLevel = RpcCallLogLevel }
+                : new RpcClientPeer(hub, route) { CallLogLevel = RpcCallLogLevel }
         });
 #endif
         if (UseRemoteComputedCache)

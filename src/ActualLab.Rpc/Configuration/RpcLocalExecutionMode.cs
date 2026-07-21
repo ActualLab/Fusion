@@ -17,22 +17,22 @@ public enum RpcLocalExecutionMode
     Default = 0,
 
     /// <summary>
-    /// <see cref="RpcRouteState.LocalExecutionAwaiter"/> isn't used,
+    /// <see cref="RpcRoute.LocalExecutionAwaiter"/> isn't used,
     /// the cancellation token passed to the local call invoker is the original cancellation token.
-    /// This mode is implicitly used for any call that is routed to an <see cref="RpcPeerRef"/>
-    /// with a <see cref="RpcPeerRef.RouteState"/> with <c>null</c> <see cref="RpcRouteState.LocalExecutionAwaiter"/>.
+    /// This mode is implicitly used for any call that is routed to an <see cref="RpcRef"/>
+    /// with a <see cref="RpcRef.Route"/> with <c>null</c> <see cref="RpcRoute.LocalExecutionAwaiter"/>.
     /// </summary>
     Unconstrained = 1,
 
     /// <summary>
-    /// <see cref="RpcRouteState.LocalExecutionAwaiter"/> is awaited before the local call execution.
+    /// <see cref="RpcRoute.LocalExecutionAwaiter"/> is awaited before the local call execution.
     /// </summary>
     ConstrainedEntry = 0x10,
 
     /// <summary>
-    /// <see cref="RpcRouteState.LocalExecutionAwaiter"/> is awaited before the local call execution,
+    /// <see cref="RpcRoute.LocalExecutionAwaiter"/> is awaited before the local call execution,
     /// and the cancellation token passed to the local call invoker is linked to the
-    /// <see cref="RpcRouteState.ChangedToken"/> to enforce instant abort on rerouting.
+    /// <see cref="RpcRoute.ChangedToken"/> to enforce instant abort on rerouting.
     /// </summary>
     Constrained = ConstrainedEntry | 0x20,
 }

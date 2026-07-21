@@ -47,7 +47,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
             while (true) {
                 var args = ArgumentList.New(command, cancellationToken);
                 var peer = rpcMethodDef.RouteCall(args, routingMode);
-                var routeState = peer.Ref.RouteState;
+                var route = peer.Route;
                 try {
                     if (peer.ConnectionKind is not RpcPeerConnectionKind.Local) {
                         if (!rpcMethodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AwaitForConnection)
@@ -62,7 +62,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                     }
 
                     // Local call -> continue the pipeline
-                    var linkedCts = await routeState
+                    var linkedCts = await route
                         // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                         .PrepareLocalExecution(rpcMethodDef, addDependency: false, cancellationToken)
                         .ConfigureAwait(false);
@@ -75,7 +75,7 @@ public sealed class RpcCommandHandler(IServiceProvider services) : ICommandHandl
                         return;
                     }
                     // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-                    catch (OperationCanceledException e) when (routeState.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
+                    catch (OperationCanceledException e) when (route.MustConvertToRpcRerouteException(e, linkedCts, cancellationToken)) {
                         throw RpcRerouteException.MustReroute();
                     }
                     finally {

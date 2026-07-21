@@ -19,7 +19,7 @@ public sealed class RpcInternalServices(RpcHub hub) : IHasServices
     public RpcClientPeerReconnectDelayer ClientPeerReconnectDelayer => Hub.ClientPeerReconnectDelayer;
     public RpcSystemCallSender SystemCallSender => Hub.SystemCallSender;
     public RpcClient Client => Hub.Client;
-    public ConcurrentDictionary<RpcPeerRef, RpcPeer> Peers => Hub.Peers;
+    public ConcurrentDictionary<RpcRoute, RpcPeer> Peers => Hub.Peers;
 
     public readonly RpcInterceptor.Options InterceptorOptions
         = hub.Services.GetRequiredService<RpcInterceptor.Options>();

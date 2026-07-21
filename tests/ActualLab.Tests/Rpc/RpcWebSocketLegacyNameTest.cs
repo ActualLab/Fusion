@@ -21,7 +21,7 @@ public class RpcWebSocketLegacyNameTest : RpcTestBase
             commander.AddService<ITestRpcService>();
             services.AddSingleton<RpcPeerOptions>(_ => RpcPeerOptions.Default with {
                 UseRandomHandshakeIndex = true,
-                PeerFactory = (hub, peerRef) => new RpcClientPeer(hub, peerRef, ClientPeerVersions),
+                PeerFactory = (hub, route) => new RpcClientPeer(hub, route, ClientPeerVersions),
             });
         }
         else {

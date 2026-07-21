@@ -5,7 +5,7 @@ namespace ActualLab.Rpc;
 /// </summary>
 public enum RpcPeerConnectionKind
 {
-    None = 0, // Used only as RpcPeerRef.ConnectionKind, RpcPeer.ConnectionKind maps this value to Remote
+    None = 0, // Used only as RpcRef.ConnectionKind, RpcPeer.ConnectionKind maps this value to Remote
     Remote = 1,
     Loopback = 10,
     Local = 100,

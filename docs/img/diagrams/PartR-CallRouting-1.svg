@@ -26,7 +26,7 @@
   <!-- Node A -->
   <rect x="100" y="50" width="400" height="50" fill="url(#action-grad)" stroke="#e0cba8" stroke-width="1.5" rx="14" />
   <text x="300" y="79" text-anchor="middle">
-    <tspan font-family="SF Mono, Fira Code, Consolas, monospace" font-size="13px" fill="#1a1a2e">RouteState.MarkChanged()</tspan>
+    <tspan font-family="SF Mono, Fira Code, Consolas, monospace" font-size="13px" fill="#1a1a2e">Route.MarkChanged()</tspan>
     <tspan font-family="Inter, -apple-system, sans-serif" font-size="13px" fill="#1a1a2e"> called</tspan>
   </text>
 
@@ -63,7 +63,7 @@
   <rect x="100" y="500" width="400" height="50" fill="url(#action-grad)" stroke="#e0cba8" stroke-width="1.5" rx="14" />
   <text x="300" y="529" text-anchor="middle">
     <tspan font-family="Inter, -apple-system, sans-serif" font-size="13px" fill="#1a1a2e">Get new </tspan>
-    <tspan font-family="SF Mono, Fira Code, Consolas, monospace" font-size="13px" fill="#1a1a2e">RpcPeerRef</tspan>
+    <tspan font-family="SF Mono, Fira Code, Consolas, monospace" font-size="13px" fill="#1a1a2e">RpcRef</tspan>
     <tspan font-family="Inter, -apple-system, sans-serif" font-size="13px" fill="#1a1a2e"> (possibly different peer)</tspan>
   </text>
 

@@ -5,8 +5,8 @@ namespace ActualLab.Rpc;
 /// <summary>
 /// Represents the server side of an RPC peer connection, waiting for incoming connections.
 /// </summary>
-public class RpcServerPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions = null)
-    : RpcPeer(hub, peerRef, versions)
+public class RpcServerPeer(RpcHub hub, RpcRoute route, VersionSet? versions = null)
+    : RpcPeer(hub, route, versions)
 {
     private volatile AsyncState<RpcConnection?> _nextConnection = new(null);
 

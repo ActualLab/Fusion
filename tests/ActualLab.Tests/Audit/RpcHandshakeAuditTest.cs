@@ -12,10 +12,10 @@ namespace ActualLab.Tests.Audit;
 public class RpcHandshakeAuditTest
 {
     [Fact]
-    public void RpcPeerRefNullOperatorsFollowEqualityContract()
+    public void RpcRefNullOperatorsFollowEqualityContract()
     {
-        RpcPeerRef? left = null;
-        RpcPeerRef? right = null;
+        RpcRef? left = null;
+        RpcRef? right = null;
 
         (left == right).Should().BeTrue();
         (left != right).Should().BeFalse();
@@ -24,8 +24,8 @@ public class RpcHandshakeAuditTest
     [Fact]
     public void RequireBackendAcceptsOnlyBackendReferences()
     {
-        var backend = RpcPeerRef.NewClient("backend", isBackend: true);
-        var frontend = RpcPeerRef.NewClient("frontend", isBackend: false);
+        var backend = RpcRef.NewClient("backend", isBackend: true);
+        var frontend = RpcRef.NewClient("frontend", isBackend: false);
 
         backend.RequireBackend().Should().BeSameAs(backend);
         Assert.Throws<ArgumentOutOfRangeException>(() => frontend.RequireBackend());
@@ -141,7 +141,7 @@ public class RpcHandshakeAuditTest
         services.AddRpc();
         await using var serviceProvider = services.BuildServiceProvider();
         var hub = serviceProvider.RpcHub();
-        var peer = new RpcClientPeer(hub, RpcPeerRef.Default);
+        var peer = new RpcClientPeer(hub, RpcRef.Default.Route);
         await using var transport = new CompletedFrameTransport(peer);
         var method = hub.ServiceRegistry[typeof(IRpcSystemCalls)]["AckEnd:1"];
         var context = new RpcOutboundContext(peer) {
@@ -176,7 +176,7 @@ public class RpcHandshakeAuditTest
         services.AddRpc();
         await using var serviceProvider = services.BuildServiceProvider();
         var hub = serviceProvider.RpcHub();
-        var peer = new RpcClientPeer(hub, RpcPeerRef.Default);
+        var peer = new RpcClientPeer(hub, RpcRef.Default.Route);
         var frameWriter = new CancelingFrameWriter();
         var channel = new CustomChannel<ArrayOwner<byte>>(
             Channel.CreateUnbounded<ArrayOwner<byte>>().Reader,
@@ -245,7 +245,7 @@ public class RpcHandshakeAuditTest
         rpc.AddServer<ITestRpcService, TestRpcService>();
         await using var serviceProvider = services.BuildServiceProvider();
         var hub = serviceProvider.RpcHub();
-        var peer = hub.GetServerPeer(RpcPeerRef.NewServer("audit-peer"));
+        var peer = hub.GetServerPeer(RpcRef.NewServer("audit-peer"));
         var method = hub.ServiceRegistry[typeof(ITestRpcService)]["MaybeSet:2"];
         var message = new RpcInboundMessage(
             method.CallType.Id,
@@ -271,7 +271,7 @@ public class RpcHandshakeAuditTest
         services.AddRpc();
         await using var serviceProvider = services.BuildServiceProvider();
         var hub = serviceProvider.RpcHub();
-        var peer = hub.GetServerPeer(RpcPeerRef.NewServer("audit-peer"));
+        var peer = hub.GetServerPeer(RpcRef.NewServer("audit-peer"));
         var method = hub.ServiceRegistry[typeof(IRpcSystemCalls)]["Handshake:1"];
         var handshake = new RpcHandshake(
             Guid.NewGuid(),
@@ -304,7 +304,7 @@ public class RpcHandshakeAuditTest
         rpc.AddServer<IAuditBackend, AuditBackend>();
         using var serviceProvider = services.BuildServiceProvider();
         var hub = serviceProvider.RpcHub();
-        var peer = new AuditServerPeer(hub, RpcPeerRef.NewServer("audit-peer", isBackend: false));
+        var peer = new AuditServerPeer(hub, RpcRef.NewServer("audit-peer", isBackend: false).Route);
         var method = hub.ServiceRegistry[typeof(IAuditBackend)]["Mutate:1"];
         var message = new RpcInboundMessage(
             method.CallType.Id,
@@ -355,7 +355,7 @@ public class RpcHandshakeAuditTest
         }
     }
 
-    private sealed class AuditServerPeer(RpcHub hub, RpcPeerRef peerRef) : RpcServerPeer(hub, peerRef)
+    private sealed class AuditServerPeer(RpcHub hub, RpcRoute route) : RpcServerPeer(hub, route)
     {
         public RpcInboundContext? Dispatch(RpcInboundMessage message)
             => ProcessMessage(message, default, default);

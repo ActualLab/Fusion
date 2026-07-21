@@ -26,7 +26,7 @@
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => StateHasChanged()">StateHasChanged()</Button>
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => State.Invalidate()">State.Invalidate()</Button>
     <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => State.Recompute()">State.Recompute()</Button>
-    <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => RpcHub.GetPeer(RpcPeerRef.Default).Disconnect()">Disconnect</Button>
+    <Button Color="Color.Danger" Size="Size.Small" Clicked="_ => RpcHub.GetPeer(RpcRef.Default).Disconnect()">Disconnect</Button>
 </Div>
 <Note>
     Try typing "#" and "@@" symbols in item title.

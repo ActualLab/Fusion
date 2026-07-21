@@ -13,8 +13,8 @@ public class RpcReconnectFailedException : Exception, ITransientException
     private const string DefaultMessage = "Impossible to (re)connect: the remote host is unreachable.";
     private const string DefaultMessagePrefix = "Impossible to (re)connect:";
 
-    public static RpcReconnectFailedException ReconnectFailed(RpcPeerRef peerRef, Exception? innerException = null)
-        => ReconnectFailed(peerRef.GetRemotePartyName(), innerException);
+    public static RpcReconnectFailedException ReconnectFailed(RpcRef rpcRef, Exception? innerException = null)
+        => ReconnectFailed(rpcRef.GetRemotePartyName(), innerException);
     public static RpcReconnectFailedException ReconnectFailed(string remoteParty = "remote host", Exception? innerException = null)
         => new($"Impossible to (re)connect: the {remoteParty} is unreachable.", innerException);
     public static RpcReconnectFailedException DisconnectedExplicitly(Exception? innerException = null)

@@ -38,17 +38,17 @@
 
     <!-- Top Area: GetPeer Action -->
     <rect x="285" y="57" width="180" height="36" rx="14" class="action-box"/>
-    <text x="375" y="80" class="code-text" text-anchor="middle">GetPeer(RpcPeerRef)</text>
+    <text x="375" y="80" class="code-text" text-anchor="middle">GetPeer(RpcRef)</text>
     <!-- Arrow from GetPeer to Peers Area -->
     <path d="M375,93 L375,134" class="arrow-line"/>
 
-    <!-- Middle Area: RpcPeerRef and RpcPeer -->
-    <!-- RpcPeerRef Node -->
+    <!-- Middle Area: RpcRef and RpcPeer -->
+    <!-- RpcRef Node -->
     <rect x="65" y="162" width="130" height="46" rx="8" class="node-box"/>
-    <text x="130" y="182" class="code-text" text-anchor="middle">RpcPeerRef</text>
+    <text x="130" y="182" class="code-text" text-anchor="middle">RpcRef</text>
     <text x="130" y="198" class="label-text" text-anchor="middle">address</text>
 
-    <!-- Arrow from RpcPeerRef to RpcPeer -->
+    <!-- Arrow from RpcRef to RpcPeer -->
     <path d="M195,185 L287,185" class="arrow-line"/>
 
     <!-- RpcPeer Container -->

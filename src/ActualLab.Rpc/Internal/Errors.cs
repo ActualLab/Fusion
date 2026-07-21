@@ -103,8 +103,8 @@ public static class Errors
             $"An object of type '{actualType.GetName()}' is polymorphic descendant of '{expectedType.GetName()}', "
             + $"but polymorphic serialization is not allowed by the selected serialization format.");
 
-    public static Exception ConnectTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
-        => ConnectTimeout(peerRef.GetRemotePartyName());
+    public static Exception ConnectTimeout(RpcRef rpcRef, TimeSpan? timeout = null)
+        => ConnectTimeout(rpcRef.GetRemotePartyName());
     public static Exception ConnectTimeout(string remoteParty = "remote host", TimeSpan? timeout = null)
         => new TimeoutException(
             timeout is { } t
@@ -114,8 +114,8 @@ public static class Errors
     public static Exception PrematureDisconnect()
         => new ChannelClosedException("Connection is closed prematurely.");
 
-    public static Exception CallTimeout(RpcPeerRef peerRef, TimeSpan? timeout = null)
-        => CallTimeout(peerRef.GetRemotePartyName());
+    public static Exception CallTimeout(RpcRef rpcRef, TimeSpan? timeout = null)
+        => CallTimeout(rpcRef.GetRemotePartyName());
 
     public static Exception CallTimeout(string remoteParty = "remote host", TimeSpan? timeout = null)
         => new TimeoutException(
@@ -128,12 +128,12 @@ public static class Errors
     public static Exception KeepAliveTimeout()
         => new TimeoutException("Timeout while waiting for RPC keep-alive.");
 
-    public static Exception ClientRpcPeerRefExpected(string argumentName)
-        => new ArgumentOutOfRangeException(argumentName, "Client RpcPeerRef is expected.");
-    public static Exception ServerRpcPeerRefExpected(string argumentName)
-        => new ArgumentOutOfRangeException(argumentName, "Server RpcPeerRef is expected.");
-    public static Exception BackendRpcPeerRefExpected(string argumentName)
-        => new ArgumentOutOfRangeException(argumentName, "Backend RpcPeerRef is expected.");
+    public static Exception ClientRpcRefExpected(string argumentName)
+        => new ArgumentOutOfRangeException(argumentName, "Client RpcRef is expected.");
+    public static Exception ServerRpcRefExpected(string argumentName)
+        => new ArgumentOutOfRangeException(argumentName, "Server RpcRef is expected.");
+    public static Exception BackendRpcRefExpected(string argumentName)
+        => new ArgumentOutOfRangeException(argumentName, "Backend RpcRef is expected.");
 
     public static Exception InvalidRpcObjectKind(RpcObjectKind expectedKind)
         => new InvalidOperationException($"Invalid IRpcObject kind (expected: {expectedKind}).");
@@ -165,6 +165,6 @@ public static class Errors
     public static Exception SystemCallsMustBePrerouted()
         => new InvalidOperationException("System calls must be prerouted.");
 
-    public static Exception InvalidRpcPeerRefAddress(string id)
-        => new ArgumentException($"Invalid {nameof(RpcPeerRef)}.{nameof(RpcPeerRef.Address)}: \"{id}\".", id);
+    public static Exception InvalidRpcRefAddress(string id)
+        => new ArgumentException($"Invalid {nameof(RpcRef)}.{nameof(RpcRef.Address)}: \"{id}\".", id);
 }

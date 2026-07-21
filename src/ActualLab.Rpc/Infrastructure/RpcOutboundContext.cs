@@ -117,7 +117,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
 
         // Peer & Call
         var oldPeer = Peer;
-        if (oldPeer is null || oldPeer.Ref.RouteState is not null)
+        if (oldPeer is null || !oldPeer.Route.IsStatic)
             Peer = MethodDef.RouteOutboundCall(Arguments);
         Call = MethodDef.CreateOutboundCall(this);
         if (ReferenceEquals(oldPeer, Peer))

@@ -17,7 +17,7 @@ public record RpcOutboundCallOptions
     // Delegate options
     public Func<RpcMethodDef, RpcCallTimeouts> TimeoutsProvider { get; init; }
     public Func<RpcOutboundCall, RpcPeer, RpcDelayedCallAction> DelayHandler { get; init; }
-    public Func<RpcMethodDef, Func<ArgumentList, RpcPeerRef>> RouterFactory { get; init; }
+    public Func<RpcMethodDef, Func<ArgumentList, RpcRef>> RouterFactory { get; init; }
     public Func<RpcMethodDef, int, CancellationToken, Task> ReroutingDelayer { get; init; }
     public Func<ReadOnlyMemory<byte>, string> Hasher { get; init; }
 
@@ -33,8 +33,8 @@ public record RpcOutboundCallOptions
 
     // Protected methods
 
-    protected static Func<ArgumentList, RpcPeerRef> DefaultRouterFactory(RpcMethodDef methodDef)
-        => static _ => RpcPeerRef.Default;
+    protected static Func<ArgumentList, RpcRef> DefaultRouterFactory(RpcMethodDef methodDef)
+        => static _ => RpcRef.Default;
 
     protected static RpcCallTimeouts DefaultTimeoutsProvider(RpcMethodDef methodDef)
     {

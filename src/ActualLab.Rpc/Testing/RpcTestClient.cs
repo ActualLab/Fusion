@@ -8,20 +8,20 @@ namespace ActualLab.Rpc.Testing;
 /// </summary>
 public class RpcTestClient(IServiceProvider services) : RpcClient(services)
 {
-    private readonly ConcurrentDictionary<RpcPeerRef, RpcTestConnection> _connections = new();
+    private readonly ConcurrentDictionary<RpcRef, RpcTestConnection> _connections = new();
     private long _lastPairId;
 
     public RpcTestClientOptions Options { get; init; } = services.GetRequiredService<RpcTestClientOptions>();
 
-    public RpcTestConnection this[RpcPeerRef peerRef]
-        => _connections.GetValueOrDefault(peerRef) ?? throw new KeyNotFoundException();
+    public RpcTestConnection this[RpcRef rpcRef]
+        => _connections.GetValueOrDefault(rpcRef) ?? throw new KeyNotFoundException();
 
-    public IReadOnlyDictionary<RpcPeerRef, RpcTestConnection> Connections => _connections;
+    public IReadOnlyDictionary<RpcRef, RpcTestConnection> Connections => _connections;
 
     // CreateXxx
 
     public RpcTestConnection CreateDefaultConnection(bool isBackend = false)
-        => CreateConnection(RpcPeerRef.DefaultHostId, RpcPeerRef.DefaultHostId, isBackend);
+        => CreateConnection(RpcRef.DefaultHostId, RpcRef.DefaultHostId, isBackend);
 
     public RpcTestConnection CreateRandomConnection(bool isBackend = false)
     {
@@ -41,12 +41,12 @@ public class RpcTestClient(IServiceProvider services) : RpcClient(services)
             ? serializationFormat
             : "";
 
-        var clientPeerRef = RpcPeerRef.NewClient(clientHostInfo, clientSerializationFormat, isBackend);
-        var serverPeerRef = RpcPeerRef.NewServer(serverHostInfo, serializationFormat, isBackend);
+        var clientPeerRef = RpcRef.NewClient(clientHostInfo, clientSerializationFormat, isBackend);
+        var serverPeerRef = RpcRef.NewServer(serverHostInfo, serializationFormat, isBackend);
         return CreateConnection(clientPeerRef, serverPeerRef);
     }
 
-    public RpcTestConnection CreateConnection(RpcPeerRef clientPeerRef, RpcPeerRef serverPeerRef)
+    public RpcTestConnection CreateConnection(RpcRef clientPeerRef, RpcRef serverPeerRef)
     {
         if (_connections.TryGetValue(clientPeerRef, out var connection))
             return connection;
@@ -59,9 +59,9 @@ public class RpcTestClient(IServiceProvider services) : RpcClient(services)
 
     // FindConnection
 
-    public RpcTestConnection GetConnection(RpcPeerRef peerRef)
-        => Connections.First(kv => kv.Key == peerRef).Value;
-    public RpcTestConnection GetConnection(Func<RpcPeerRef, bool> predicate)
+    public RpcTestConnection GetConnection(RpcRef rpcRef)
+        => Connections.First(kv => kv.Key == rpcRef).Value;
+    public RpcTestConnection GetConnection(Func<RpcRef, bool> predicate)
         => Connections.First(kv => predicate.Invoke(kv.Key)).Value;
 
     // RpcClient implementation

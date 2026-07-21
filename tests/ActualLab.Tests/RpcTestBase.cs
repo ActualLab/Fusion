@@ -18,8 +18,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     public static string DefaultSerializationFormat => "mempack6c";
 
     private static readonly AsyncLock InitializeLock = new(LockReentryMode.CheckedFail);
-    protected static readonly RpcPeerRef ClientPeerRef = RpcPeerRef.Default;
-    protected static readonly RpcPeerRef BackendClientPeerRef = RpcPeerRef.DefaultBackend;
+    protected static readonly RpcRef ClientPeerRef = RpcRef.Default;
+    protected static readonly RpcRef BackendClientPeerRef = RpcRef.DefaultBackend;
 
     private IServiceProvider? _services;
     private IServiceProvider? _clientServices;
@@ -173,9 +173,9 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
         services.AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptions.Default with {
             RouterFactory = methodDef => args => {
                 if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
-                    return RpcPeerRef.Local; // Commands in the invalidation mode must always run locally
+                    return RpcRef.Local; // Commands in the invalidation mode must always run locally
 
-                return RpcPeerRef.GetDefaultPeerRef(ConnectionKind, methodDef.IsBackend);
+                return RpcRef.GetDefaultRef(ConnectionKind, methodDef.IsBackend);
             },
         });
         services.AddSingleton<RpcSerializationFormatResolver>(

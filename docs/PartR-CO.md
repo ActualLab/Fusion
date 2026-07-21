@@ -60,7 +60,7 @@ Configures RPC peer creation, connection handling, and lifecycle management.
 |----------|------|---------|-------------|
 | `UseRandomHandshakeIndex` | `bool` | `false` | Use random handshake index values. Set to `true` for testing handshake issues. |
 | `PeerFactory` | `Func<...>` | Auto | Factory to create RpcPeer instances (RpcServerPeer or RpcClientPeer based on ref type) |
-| `ConnectionKindDetector` | `Func<...>` | Uses `RpcPeerRef.ConnectionKind` | Determines connection kind for a peer reference |
+| `ConnectionKindDetector` | `Func<...>` | Uses `RpcRef.ConnectionKind` | Determines connection kind for a peer reference |
 | `TerminalErrorDetector` | `Func<...>` | `RpcReconnectFailedException` | Determines if an exception requires disconnection |
 | `ServerConnectionFactory` | `Func<...>` | Auto | Creates RpcConnection for server peers |
 | `ServerPeerShutdownTimeoutProvider` | `Func<...>` | 33% of peer lifetime (3-15 min) | Shutdown timeout for server peers |
@@ -89,7 +89,7 @@ Configures outbound RPC call behavior including routing, timeouts, and rerouting
 |----------|------|---------|-------------|
 | `ReroutingDelays` | `RetryDelaySeq` | `Exp(0.1, 5)` | Exponential backoff for rerouting delays (0.1s to 5s). See [Call Routing](./PartR-CallRouting.md). |
 | `TimeoutsProvider` | `Func<...>` | Based on method kind | Provides `RpcCallTimeouts` for specific methods |
-| `RouterFactory` | `Func<...>` | Routes to `RpcPeerRef.Default` | Creates routers to select target peer. See [Call Routing](./PartR-CallRouting.md). |
+| `RouterFactory` | `Func<...>` | Routes to `RpcRef.Default` | Creates routers to select target peer. See [Call Routing](./PartR-CallRouting.md). |
 | `ReroutingDelayer` | `Func<...>` | `Task.Delay()` | Async function to apply rerouting delays |
 | `Hasher` | `Func<...>` | SHA256, 24-char Base64 | Hashes byte data for consistency checking |
 
@@ -128,7 +128,7 @@ services.AddRpc().Configure<RpcOutboundCallOptions>(options => {
 
     // Custom router (e.g., for sharding or load balancing)
     // See PartR-CallRouting.md for detailed examples
-    options.RouterFactory = methodDef => args => RpcPeerRef.Default;
+    options.RouterFactory = methodDef => args => RpcRef.Default;
 });
 ```
 
@@ -255,7 +255,7 @@ Configures WebSocket-based RPC server endpoints.
 | `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
 | `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
-| `ConfigureWebSocket` | `RpcWebSocketServerAcceptContextFactory` | Empty context | Creates the WebSocket accept context per connection from `(server, context, peerRef)` — e.g. to enable compression selectively (.NET 6+) |
+| `ConfigureWebSocket` | `RpcWebSocketServerAcceptContextFactory` | Empty context | Creates the WebSocket accept context per connection from `(server, context, rpcRef)` — e.g. to enable compression selectively (.NET 6+) |
 
 ### Example
 

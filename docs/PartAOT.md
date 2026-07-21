@@ -118,7 +118,7 @@ public static async Task Main()
             fusion.AddServerAndClient<ITestService, TestService>();
         })
         .AddSingleton(_ => RpcOutboundCallOptions.Default with {
-            RouterFactory = methodDef => args => RpcPeerRef.Loopback,
+            RouterFactory = methodDef => args => RpcRef.Loopback,
         })
         .BuildServiceProvider();
 

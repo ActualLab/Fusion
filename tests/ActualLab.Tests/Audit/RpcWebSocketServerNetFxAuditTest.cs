@@ -15,10 +15,10 @@ public class RpcWebSocketServerNetFxAuditTest
         var services = new ServiceCollection();
         var rpc = services.AddRpc();
         rpc.AddWebSocketServer();
-        var peerRefFactoryCallCount = 0;
-        services.AddSingleton<RpcWebSocketServerPeerRefFactory>((_, _, _) => {
-            peerRefFactoryCallCount++;
-            return RpcPeerRef.NewServer("audit", RpcSerializationFormat.SystemJsonV5.Key);
+        var rpcRefFactoryCallCount = 0;
+        services.AddSingleton<RpcWebSocketServerRefFactory>((_, _, _) => {
+            rpcRefFactoryCallCount++;
+            return RpcRef.NewServer("audit", RpcSerializationFormat.SystemJsonV5.Key);
         });
         services.AddSingleton(new RpcPeerOptions {
             ServerConnectionFactory = (_, _, _, _) =>
@@ -43,7 +43,7 @@ public class RpcWebSocketServerNetFxAuditTest
             ["System.Net.WebSockets.WebSocketContext"] = webSocketContext,
         });
 
-        peerRefFactoryCallCount.Should().Be(1);
+        rpcRefFactoryCallCount.Should().Be(1);
         webSocket.IsDisposed.Should().BeTrue();
     }
 

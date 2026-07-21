@@ -1,4 +1,4 @@
-﻿using ActualLab.Fusion.Rpc;
+using ActualLab.Fusion.Rpc;
 using Samples.MultiServerRpc;
 using ActualLab.Fusion.Server;
 using ActualLab.IO;
@@ -13,13 +13,14 @@ using static System.Console;
 
 const int serverCount = 2;
 var serverUrls = Enumerable.Range(0, serverCount).Select(i => $"http://localhost:{22222 + i}/").ToArray();
-var clientPeerRefs = Enumerable.Range(0, serverCount).Select(i => RpcPeerRef.NewClient(serverUrls[i])).ToArray();
+var clientPeerRefs = Enumerable.Range(0, serverCount).Select(i => RpcRef.NewClient(serverUrls[i])).ToArray();
 
 await (args switch {
     ["server"] => RunServers(),
     ["client"] => RunClient(),
     _ => Task.WhenAll(RunServers(), RunClient()),
 });
+return;
 
 Task RunServers()
     => Task.WhenAll(Enumerable.Range(0, serverCount).Select(RunServer));
@@ -67,7 +68,7 @@ async Task RunClient()
                         throw new NotSupportedException("Can't route this call.");
                     return clientPeerRefs[hash.PositiveModulo(serverCount)];
                 }
-                return RpcPeerRef.Default;
+                return RpcRef.Default;
             }
         })
         .BuildServiceProvider();

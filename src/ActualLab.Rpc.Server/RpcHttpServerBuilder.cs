@@ -19,7 +19,7 @@ public readonly struct RpcHttpServerBuilder
             return;
         }
 
-        services.AddSingleton(_ => RpcHttpServerDefaultDelegates.PeerRefFactory);
+        services.AddSingleton(_ => RpcHttpServerDefaultDelegates.RefFactory);
         services.AddSingleton(_ => RpcHttpServerOptions.Default);
         services.AddSingleton(c => new RpcHttpServer(c.GetRequiredService<RpcHttpServerOptions>(), c));
         configure?.Invoke(this);

@@ -90,14 +90,14 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
 
     // Private methods
 
-    private Func<ArgumentList, RpcPeerRef> RouterFactory(RpcMethodDef methodDef)
+    private Func<ArgumentList, RpcRef> RouterFactory(RpcMethodDef methodDef)
         => args => {
             if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
-                return RpcPeerRef.Local;
+                return RpcRef.Local;
 
             // For testing, we route based on its argument's hash or value
             if (args.Length == 0)
-                return RpcPeerRef.Local;
+                return RpcRef.Local;
 
             var arg0 = args.Get0Untyped();
             var shardKey = arg0 switch {
@@ -105,21 +105,21 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
                 IHasShardKey hrk => hrk.ShardKey,
                 _ => arg0?.GetHashCode() ?? 0
             };
-            return MeshMap.GetShardPeerRef(shardKey);
+            return MeshMap.GetShardRef(shardKey);
         };
 
-    private RpcPeerConnectionKind ConnectionKindDetector(RpcPeerRef peerRef)
+    private RpcPeerConnectionKind ConnectionKindDetector(RpcRoute route)
     {
-        if (peerRef is not ShardPeerRef testPeerRef)
-            return peerRef.ConnectionKind;
+        if (route is not RpcShardRoute shardRoute)
+            return route.Ref.ConnectionKind;
 
-        return AllowLocalRpcConnectionKind && testPeerRef.Host == this
+        return AllowLocalRpcConnectionKind && shardRoute.Host == this
             ? RpcPeerConnectionKind.Local
             : RpcPeerConnectionKind.Remote;
     }
 
     private string HostUrlResolver(RpcClientPeer peer)
-        => peer.Ref is ShardPeerRef shardPeerRef
-            ? shardPeerRef.Host?.Url ?? ""
+        => peer.Route is RpcShardRoute shardRoute
+            ? shardRoute.Host?.Url ?? ""
             : throw new ArgumentOutOfRangeException(nameof(peer));
 }

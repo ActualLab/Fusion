@@ -125,7 +125,7 @@ Client-side peer that manages a WebSocket connection with automatic reconnection
 import {
   RpcClientPeer,
   RpcConnectionState,
-  RpcPeerRefBuilder,
+  RpcRefBuilder,
   type WebSocketLike,
 } from "@actuallab/rpc";
 
@@ -133,11 +133,11 @@ import {
 const peer = new RpcClientPeer(hub, "ws://localhost:5005/rpc/ws");
 
 // Node.js / tests: pass mustStart=false so you can set webSocketFactory first.
-// RpcPeerRefBuilder.forClient bakes the serialization format into the URL as ?f=...
+// RpcRefBuilder.forClient bakes the serialization format into the URL as ?f=...
 import WebSocket from "ws";
 const peer2 = new RpcClientPeer(
   hub,
-  RpcPeerRefBuilder.forClient("ws://localhost:5005/rpc/ws", "msgpack6"),
+  RpcRefBuilder.forClient("ws://localhost:5005/rpc/ws", "msgpack6"),
   false);
 peer2.webSocketFactory = url => new WebSocket(url) as unknown as WebSocketLike;
 peer2.start();

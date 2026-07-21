@@ -100,7 +100,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
     public void TryReroute()
     {
-        if (!Peer.Ref.RouteState.IsChanged())
+        if (!Peer.Route.IsChanged)
             return;
 
         foreach (var call in this)
@@ -149,8 +149,8 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         var error = Internal.Errors.CallTimeout(Peer.Ref, timeouts.RunTimeout);
                         call.SetError(error, context: null, assumeCancelled: false);
                         Peer.Log.LogError(error,
-                            "'{PeerRef}': call {Call} is timed out ({Elapsed} > {Timeout}), completed stage: {Stage}, routing mode: {RoutingMode}",
-                            Peer.Ref, call,
+                            "'{Route}': call {Call} is timed out ({Elapsed} > {Timeout}), completed stage: {Stage}, routing mode: {RoutingMode}",
+                            Peer.Route, call,
                             elapsed.ToShortString(), timeouts.RunTimeout.ToShortString(),
                             call.CompletedStageName, call.Context.RoutingMode);
                     }
@@ -160,8 +160,8 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
                         if (action.HasFlag(RpcDelayedCallAction.Log) && delayedCalls.Count <= delayedCallLimit)
                             Peer.Log.LogWarning(
-                                "'{PeerRef}': call {Call} is delayed ({Elapsed} > {DelayTimeout}), completed stage: {Stage}, routing mode: {RoutingMode}",
-                                Peer.Ref, call,
+                                "'{Route}': call {Call} is delayed ({Elapsed} > {DelayTimeout}), completed stage: {Stage}, routing mode: {RoutingMode}",
+                                Peer.Route, call,
                                 elapsed.ToShortString(), timeouts.DelayTimeout.ToShortString(),
                                 call.CompletedStageName, call.Context.RoutingMode);
 
@@ -177,14 +177,14 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 #if false // Ugly debugging piece
                 if (delayedCalls.Count > 0)
                     WriteLine(
-                        $"--- {Peer.Ref}: {Peer.ConnectionState.Value.Handshake}, "
+                        $"--- {Peer.Route}: {Peer.ConnectionState.Value.Handshake}, "
                         + $"delayed calls ({delayedCalls.Count}: "
                         + $"{delayedCalls.Select(x => x.MethodDef).ToDelimitedString()}");
 #endif
                 if (delayedCalls.Count > delayedCallLimit) {
                     Peer.Log.LogWarning(
-                        "'{PeerRef}': {UnloggedDelayedCallCount} more delayed call(s) aren't logged",
-                        Peer.Ref, delayedCalls.Count - delayedCallLimit);
+                        "'{Route}': {UnloggedDelayedCallCount} more delayed call(s) aren't logged",
+                        Peer.Route, delayedCalls.Count - delayedCallLimit);
                 }
 
                 // Resend delayed calls if requested by the handler
@@ -196,8 +196,8 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     && callCount > summaryLogSettings.MinCount) {
                     lastSummaryReportAt = CpuTimestamp.Now;
                     Peer.Log.LogInformation(
-                        "'{PeerRef}': Tracking {CallCount} outbound calls (in progress: {InProgressCallCount}, delayed: {DelayedCallCount})",
-                        Peer.Ref, callCount, inProgressCallCount, delayedCalls.Count);
+                        "'{Route}': Tracking {CallCount} outbound calls (in progress: {InProgressCallCount}, delayed: {DelayedCallCount})",
+                        Peer.Route, callCount, inProgressCallCount, delayedCalls.Count);
                 }
 
                 delayedCalls.Clear();

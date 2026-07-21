@@ -31,12 +31,13 @@ ActualLab.Rpc is built around a few core abstractions:
 ### Key Methods
 
 ```csharp
-// Get or create a peer by reference
-RpcPeer GetPeer(RpcPeerRef peerRef);
+// Get or create a peer by route or reference
+RpcPeer GetPeer(RpcRoute route);
+RpcPeer GetPeer(RpcRef rpcRef); // Same as GetPeer(rpcRef.Route)
 
 // Get specifically typed peers
-RpcClientPeer GetClientPeer(RpcPeerRef peerRef);
-RpcServerPeer GetServerPeer(RpcPeerRef peerRef);
+RpcClientPeer GetClientPeer(RpcRef rpcRef);
+RpcServerPeer GetServerPeer(RpcRef rpcRef);
 
 // Get RPC service proxies
 TService GetClient<TService>() where TService : class, IRpcService;
@@ -56,9 +57,9 @@ var userService = rpcHub.GetClient<IUserService>();
 var defaultPeer = rpcHub.DefaultPeer;
 ```
 
-## `RpcPeerRef`
+## `RpcRef`
 
-`RpcPeerRef` is an immutable reference that identifies a remote or local peer. Think of it as an "address" for an RPC endpoint.
+`RpcRef` is an immutable reference that identifies a remote or local peer. Think of it as an "address" for an RPC endpoint.
 
 ### Key Properties
 
@@ -75,20 +76,20 @@ var defaultPeer = rpcHub.DefaultPeer;
 ### Well-Known Peer Refs
 
 ```csharp
-RpcPeerRef.Default   // Default remote peer
-RpcPeerRef.Loopback  // In-process loopback
-RpcPeerRef.Local     // Local (same-process) calls
-RpcPeerRef.None      // No peer (null object)
+RpcRef.Default   // Default remote peer
+RpcRef.Loopback  // In-process loopback
+RpcRef.Local     // Local (same-process) calls
+RpcRef.None      // No peer (null object)
 ```
 
 ### Creating Peer Refs
 
 ```csharp
 // Create a client peer ref (for outbound connections)
-var clientRef = RpcPeerRef.NewClient(hostInfo: "https://api.example.com");
+var clientRef = RpcRef.NewClient(hostInfo: "https://api.example.com");
 
 // Create a server peer ref (for inbound connections)
-var serverRef = RpcPeerRef.NewServer(hostInfo: "client-123");
+var serverRef = RpcRef.NewServer(hostInfo: "client-123");
 
 // Peer refs must be initialized before use
 clientRef = clientRef.Initialize();
@@ -108,7 +109,7 @@ clientRef = clientRef.Initialize();
 | Property | Description |
 |----------|-------------|
 | `Hub` | Reference to the parent RpcHub |
-| `Ref` | The RpcPeerRef this peer represents |
+| `Ref` | The RpcRef this peer represents |
 | `Id` | Unique Guid for this peer instance |
 | `ConnectionState` | Current connection state (AsyncState) |
 | `ConnectionKind` | Type of connection |
@@ -271,7 +272,7 @@ public interface IUserService : IRpcService
 ## Connection Lifecycle
 
 ```
-1. RpcHub.GetPeer(peerRef) creates or retrieves RpcPeer
+1. RpcHub.GetPeer(rpcRef) creates or retrieves RpcPeer
                 │
 2. RpcClientPeer.GetConnection() establishes connection
    └── RpcClient.ConnectRemote() or ConnectLoopback()

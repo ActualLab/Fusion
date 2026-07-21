@@ -15,8 +15,8 @@ public record RpcPeerOptions
     public bool UseRandomHandshakeIndex { get; init; } = false;
 
     // Delegate options
-    public Func<RpcHub, RpcPeerRef, RpcPeer> PeerFactory { get; init; }
-    public Func<RpcPeerRef, RpcPeerConnectionKind> ConnectionKindDetector { get; init; }
+    public Func<RpcHub, RpcRoute, RpcPeer> PeerFactory { get; init; }
+    public Func<RpcRoute, RpcPeerConnectionKind> ConnectionKindDetector { get; init; }
     public Func<RpcPeer, Exception, bool> TerminalErrorDetector { get; init; }
     public Func<RpcServerPeer, RpcTransport, PropertyBag, CancellationToken, Task<RpcConnection>> ServerConnectionFactory { get; init; }
     public Func<RpcServerPeer, TimeSpan> ServerPeerShutdownTimeoutProvider { get; init; }
@@ -35,13 +35,13 @@ public record RpcPeerOptions
 
     // Protected methods
 
-    protected static RpcPeer DefaultPeerFactory(RpcHub hub, RpcPeerRef peerRef)
-        => peerRef.IsServer
-            ? new RpcServerPeer(hub, peerRef)
-            : new RpcClientPeer(hub, peerRef);
+    protected static RpcPeer DefaultPeerFactory(RpcHub hub, RpcRoute route)
+        => route.Ref.IsServer
+            ? new RpcServerPeer(hub, route)
+            : new RpcClientPeer(hub, route);
 
-    protected static RpcPeerConnectionKind DefaultConnectionKindDetector(RpcPeerRef peerRef)
-        => peerRef.ConnectionKind;
+    protected static RpcPeerConnectionKind DefaultConnectionKindDetector(RpcRoute route)
+        => route.Ref.ConnectionKind;
 
     protected static bool DefaultTerminalErrorDetector(RpcPeer peer, Exception error)
         => error is RpcReconnectFailedException or RpcSerializationFormatException;
@@ -58,9 +58,15 @@ public record RpcPeerOptions
     }
 
     protected static TimeSpan DefaultPeerRemoveDelayProvider(RpcPeer peer)
-        => peer.Ref.IsServer
+    {
+        if (peer.Route.IsChanged)
+            // The peer is already replaced by the next route generation's one
+            return TimeSpan.Zero;
+
+        return peer.Ref.IsServer
             // Server peers can be safely recreated on reconnection later, so it's safe to remove them instantly
             ? TimeSpan.Zero
             // Client peer's termination is final. We remove them eventually only to prevent memory leaks.
             : TimeSpan.FromMinutes(5);
+    }
 }

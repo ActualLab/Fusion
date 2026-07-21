@@ -4,7 +4,7 @@ namespace ActualLab.Fusion.Tests.MeshRpc;
 
 public sealed class MeshMap(StateFactory stateFactory)
 {
-    private readonly ConcurrentDictionary<int, LazySlim<int, MeshMap, ShardPeerRef>> _peerRefs = new();
+    private readonly ConcurrentDictionary<int, RpcShardRef> _rpcRefs = new();
 
     public MutableState<ImmutableList<MeshHost>> State { get; }
         = stateFactory.NewMutable(ImmutableList<MeshHost>.Empty);
@@ -51,23 +51,13 @@ public sealed class MeshMap(StateFactory stateFactory)
                 : hosts.SetItem(index1, h2).SetItem(index2, h1);
         });
 
-    // Get/RemoveShardPeerRef
+    // GetShardRef
 
-    public ShardPeerRef GetShardPeerRef(int shardKey)
+    public RpcShardRef GetShardRef(int shardKey)
     {
-        var sw = new SpinWait();
-        while (true) {
-            var shardIndex = shardKey.PositiveModulo(ShardPeerRef.ShardCount);
-            var peerRef = _peerRefs.GetOrAdd(shardIndex,
-                static (shardKey, self, holder) => new(self, shardKey, holder),
-                this);
-            if (!peerRef.RouteState.IsChanged())
-                return peerRef;
-
-            sw.SpinOnce();
-        }
+        var shardIndex = shardKey.PositiveModulo(RpcShardRef.ShardCount);
+        return _rpcRefs.GetOrAdd(shardIndex,
+            static (shardIndex, self) => new RpcShardRef(self, shardIndex),
+            this);
     }
-
-    internal void RemoveShardPeerRef(int shardIndex, LazySlim<int, MeshMap, ShardPeerRef> entry)
-        => _peerRefs.TryRemove(shardIndex, entry);
 }

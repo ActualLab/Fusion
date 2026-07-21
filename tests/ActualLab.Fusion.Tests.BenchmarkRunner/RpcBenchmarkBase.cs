@@ -23,11 +23,11 @@ public abstract class RpcBenchmarkBase
         _services = services.BuildServiceProvider();
 
         var hub = _services.RpcHub();
-        var peerRef = RpcPeerRef.NewServer(
+        var rpcRef = RpcRef.NewServer(
             "benchmark-peer",
             BenchmarkSettings.RpcSerializationFormat,
             isBackend: false);
-        Peer = new BenchmarkRpcPeer(hub, peerRef);
+        Peer = new BenchmarkRpcPeer(hub, rpcRef.Route);
         GetMethodDef = hub.ServiceRegistry[typeof(IRpcBenchmarkService)].Methods
             .Single(x => x.MethodInfo.Name == nameof(IRpcBenchmarkService.Get));
         OkMethodDef = hub.ServiceRegistry[typeof(IRpcSystemCalls)].Methods
@@ -64,7 +64,7 @@ public abstract class RpcBenchmarkBase
     }
 }
 
-public sealed class BenchmarkRpcPeer(RpcHub hub, RpcPeerRef peerRef) : RpcServerPeer(hub, peerRef)
+public sealed class BenchmarkRpcPeer(RpcHub hub, RpcRoute route) : RpcServerPeer(hub, route)
 {
     public RpcInboundContext? Dispatch(RpcInboundMessage message)
         => ProcessMessage(message, default, default);

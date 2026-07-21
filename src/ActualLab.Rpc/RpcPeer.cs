@@ -59,7 +59,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected internal ILogger? DebugLog => Log.IfEnabled(LogLevel.Debug);
 
     public RpcHub Hub { get; }
-    public RpcPeerRef Ref { get; }
+    public RpcRoute Route { get; }
+    public RpcRef Ref => Route.Ref;
     public MutablePropertyBag Extensions { get; init; }
     public Guid Id { get; } = Guid.NewGuid();
     public Moment CreatedAt { get; } = Moment.Now;
@@ -95,7 +96,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    protected RpcPeer(RpcHub hub, RpcPeerRef peerRef, VersionSet? versions)
+    protected RpcPeer(RpcHub hub, RpcRoute route, VersionSet? versions)
     {
         // ServiceRegistry is resolved in a lazy fashion in RpcHub.
         // We access it here to make sure any configuration error gets thrown at this point.
@@ -103,21 +104,23 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
         Hub = hub;
         Services = hub.Services;
-        Ref = peerRef;
+        Route = route;
         Options = Hub.PeerOptions;
         Extensions = new MutablePropertyBag();
         InboundCallOptions = Hub.InboundCallOptions;
         OutboundCallOptions = Hub.OutboundCallOptions;
-        ConnectionKind = Options.ConnectionKindDetector.Invoke(peerRef);
+        ConnectionKind = route.ConnectionKind;
+        if (ConnectionKind is RpcPeerConnectionKind.None)
+            ConnectionKind = Options.ConnectionKindDetector.Invoke(route);
         if (ConnectionKind is RpcPeerConnectionKind.None)
             ConnectionKind = RpcPeerConnectionKind.Remote; // RpcPeer.ConnectionKind should never be None
-        Versions = versions ?? peerRef.Versions;
+        Versions = versions ?? route.Ref.Versions;
 #pragma warning disable CA2214 // Do not call overridable methods in constructors
         // ReSharper disable once VirtualMemberCallInConstructor
         _serverMethodResolver = GetServerMethodResolver(handshake: null);
 #pragma warning restore CA2214
 
-        SerializationFormat = Hub.SerializationFormats.Get(peerRef.SerializationFormat);
+        SerializationFormat = Hub.SerializationFormats.Get(route.Ref.SerializationFormat);
         ArgumentSerializer = SerializationFormat.ArgumentSerializer;
         MessageSerializer = SerializationFormat.MessageSerializerFactory.Invoke(this);
         Hasher = OutboundCallOptions.Hasher;
@@ -134,7 +137,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     }
 
     public override string ToString()
-        => $"{GetType().Name}({Ref}, #{GetHashCode()})";
+        => $"{GetType().Name}({Route}, #{GetHashCode()})";
 
     // WhenConnected
 
@@ -165,12 +168,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     public async Task<RpcPeerConnectionState> WhenConnectedOrReroute(CancellationToken cancellationToken = default)
     {
-        Ref.RouteState?.ThrowIfChanged();
+        Route.ThrowIfChanged();
         try {
             return await ConnectionState.Value.WhenConnected.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            Ref.RouteState?.ThrowIfChanged();
+            Route.ThrowIfChanged();
             throw;
         }
     }
@@ -242,11 +245,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
-        Log.LogInformation("'{PeerRef}': Started ({ConnectionKind})", Ref, ConnectionKind);
+        Log.LogInformation("'{Route}': Started ({ConnectionKind})", Route, ConnectionKind);
 
         // ReSharper disable once UseAwaitUsing
         // ReSharper disable once RedundantAssignment
-        using var routeChangedTokenRegistration = Ref.RouteState?.ChangedToken.Register(
+        using var routeChangedTokenRegistration = Route.ChangedToken.Register(
             () => Task.Run(DisposeAsync, CancellationToken.None));
 
         var handshakeIndex = Options.UseRandomHandshakeIndex
@@ -286,7 +289,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
                     // Expose the in-flight connection via _connectionState BEFORE the handshake
                     // exchange, so an external Disconnect() (e.g. RpcWebSocketServer.Invoke when a
-                    // new connection arrives for the same peerRef) can cancel the handshake reader
+                    // new connection arrives for the same rpcRef) can cancel the handshake reader
                     // and let this loop iterate to pick up the next queued connection. Without this,
                     // Disconnect short-circuits while Transport is null and incoming connections pile
                     // up against a peer stuck waiting for a handshake that never arrives.
@@ -305,7 +308,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     RpcHandshake handshake;
                     RpcHandshake ownHandshake;
                     try {
-                        DebugLog?.LogDebug("'{PeerRef}': Sending handshake", Ref);
+                        DebugLog?.LogDebug("'{Route}': Sending handshake", Route);
                         (handshake, ownHandshake) = await Task.Run(
                                 async () => {
                                     var ownHandshake1 = new RpcHandshake(
@@ -333,7 +336,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                             handshake = handshake with { RemoteApiVersionSet = new() };
                     }
                     catch (Exception e) {
-                        Log.LogWarning(e, "'{PeerRef}': Failed to send handshake", Ref);
+                        Log.LogWarning(e, "'{Route}': Failed to send handshake", Route);
                         isHandshakeError = true;
                         readerTokenSource.CancelAndDisposeSilently();
                         if (e.IsCancellationOfTimeoutToken(handshakeToken, cancellationToken))
@@ -345,8 +348,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     // Processing Handshake
                     var peerChangeKind = handshake.GetPeerChangeKind(lastHandshake);
                     Log.LogInformation(
-                        "'{PeerRef}': Handshake succeeded, PeerChangeKind={PeerChangeKind}",
-                        Ref, peerChangeKind);
+                        "'{Route}': Handshake succeeded, PeerChangeKind={PeerChangeKind}",
+                        Route, peerChangeKind);
                     lastHandshake = handshake;
                     if (peerChangeKind != RpcPeerChangeKind.Unchanged) {
                         // Remote RpcPeer changed -> we must abort every inbound call / shared object
@@ -381,7 +384,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         await Task.WhenAll(tasks).SilentAwait(false);
                     }, readerToken);
 
-                    DebugLog?.LogDebug("'{PeerRef}': Processing messages", Ref);
+                    DebugLog?.LogDebug("'{Route}': Processing messages", Route);
                     RpcInboundContext.Current = null;
                     Activity.Current = null;
                     try {
@@ -395,7 +398,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }
                 }
                 catch (Exception e) {
-                    Log.LogInformation(e, "'{PeerRef}': Read loop ended", Ref);
+                    Log.LogInformation(e, "'{Route}': Read loop ended", Route);
                     var isReaderAbort = readerToken.IsCancellationRequested
                         && !cancellationToken.IsCancellationRequested
                         && !isHandshakeError;
@@ -425,7 +428,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             }
         }
         finally {
-            Log.LogInformation("'{PeerRef}': Stopping", Ref);
+            Log.LogInformation("'{Route}': Stopping", Route);
 
             // Make sure the sequence of ConnectionStates terminates
             Exception? error;
@@ -467,7 +470,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         // Inbound calls are auto-aborted via peerChangedToken from OnRun,
         // which becomes RpcInboundCallContext.CancellationToken.
         InboundCalls.Clear();
-        Log.LogInformation("'{PeerRef}': {Action}", Ref, isStopped ? "Stopped" : "Peer changed");
+        Log.LogInformation("'{Route}': {Action}", Route, isStopped ? "Stopped" : "Peer changed");
     }
 
     protected RpcInboundContext? ProcessMessage(
@@ -607,17 +610,17 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
             // The code below is responsible solely for logging - all important stuff is already done
             if (terminalError is not null)
-                Log.LogInformation("'{PeerRef}': Can't (re)connect, will shut down", Ref);
+                Log.LogInformation("'{Route}': Can't (re)connect, will shut down", Route);
             else if (newState.IsConnected())
-                Log.LogInformation("'{PeerRef}': Connected", Ref);
+                Log.LogInformation("'{Route}': Connected", Route);
             else if (newState.IsConnecting())
-                DebugLog?.LogDebug("'{PeerRef}': Handshaking", Ref);
+                DebugLog?.LogDebug("'{Route}': Handshaking", Route);
             else {
                 var e = newState.Error;
                 if (e is not null)
-                    Log.LogInformation(e, "'{PeerRef}': Disconnected: {ErrorMessage}", Ref, e.Message);
+                    Log.LogInformation(e, "'{Route}': Disconnected: {ErrorMessage}", Route, e.Message);
                 else
-                    Log.LogInformation("'{PeerRef}': Disconnected", Ref);
+                    Log.LogInformation("'{Route}': Disconnected", Route);
             }
         }
     }

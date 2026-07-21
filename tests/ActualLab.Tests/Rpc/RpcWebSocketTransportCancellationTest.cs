@@ -16,7 +16,7 @@ public class RpcWebSocketTransportCancellationTest(ITestOutputHelper @out) : Tes
         services.AddRpc();
         using var sp = services.BuildServiceProvider();
 
-        var peer = new RpcClientPeer(sp.RpcHub(), RpcPeerRef.Default);
+        var peer = new RpcClientPeer(sp.RpcHub(), RpcRef.Default.Route);
         var webSocket = new AbortableReceiveWebSocket();
         var webSocketOwner = new WebSocketOwner("test", webSocket, sp);
         var transport = new RpcWebSocketTransport(RpcWebSocketTransport.Options.Default, peer, webSocketOwner);

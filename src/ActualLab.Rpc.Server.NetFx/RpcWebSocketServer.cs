@@ -22,7 +22,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
     public RpcWebSocketServerOptions Settings { get; } = settings;
     public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
     public RpcWebSocketClientOptions WebSocketClientOptions { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
-    public RpcWebSocketServerPeerRefFactory PeerRefFactory { get; } = services.GetRequiredService<RpcWebSocketServerPeerRefFactory>();
+    public RpcWebSocketServerRefFactory RefFactory { get; } = services.GetRequiredService<RpcWebSocketServerRefFactory>();
 
     public virtual async Task<HttpStatusCode> Invoke(IOwinContext context, bool isBackend)
     {
@@ -32,17 +32,17 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
         if (acceptToken is null)
             return HttpStatusCode.BadRequest;
 
-        var peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
+        var rpcRef = RefFactory.Invoke(this, context, isBackend).RequireServer();
 
         // Validate serialization format before peer creation to avoid KeyNotFoundException.
         // Empty format is also rejected — clients must specify one explicitly.
-        if (!Hub.SerializationFormats.TryGet(peerRef.SerializationFormat, out _)) {
+        if (!Hub.SerializationFormats.TryGet(rpcRef.SerializationFormat, out _)) {
             Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}'",
-                peerRef, peerRef.SerializationFormat);
+                rpcRef, rpcRef.SerializationFormat);
             return HttpStatusCode.BadRequest;
         }
 
-        var peer = Hub.GetServerPeer(peerRef);
+        var peer = Hub.GetServerPeer(rpcRef);
 
         // Disconnect any stale connection BEFORE upgrading the new WebSocket.
         // Doing this after the upgrade would consume the client's HandshakeTimeout,
@@ -54,40 +54,40 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
         // peer stuck mid-handshake instead of replacing the stale one.
         if (peer.ConnectionState.Value.IsConnectingOrConnected()) {
             Log.LogWarning("'{PeerRef}': {Peer} is already connected, disconnecting the old connection first...",
-                peerRef, peer);
+                rpcRef, peer);
             try {
                 await peer.Disconnect(context.Request.CallCancelled).ConfigureAwait(false);
             }
             catch (Exception e) when (!e.IsCancellationOf(context.Request.CallCancelled)) {
-                Log.LogWarning(e, "'{PeerRef}': Failed to disconnect old connection", peerRef);
+                Log.LogWarning(e, "'{PeerRef}': Failed to disconnect old connection", rpcRef);
                 return HttpStatusCode.InternalServerError;
             }
         }
 
-        var acceptOptions = Settings.ConfigureWebSocket.Invoke(this, context, peerRef);
+        var acceptOptions = Settings.ConfigureWebSocket.Invoke(this, context, rpcRef);
         acceptToken(acceptOptions, wsEnv => {
             var wsContext = (WebSocketContext)wsEnv["System.Net.WebSockets.WebSocketContext"];
-            return HandleWebSocket(context, wsContext, peerRef);
+            return HandleWebSocket(context, wsContext, rpcRef);
         });
 
         return HttpStatusCode.SwitchingProtocols;
     }
 
-    private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, RpcPeerRef peerRef)
+    private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, RpcRef rpcRef)
     {
         var cancellationToken = context.Request.CallCancelled;
         WebSocket? webSocket = null;
         WebSocketOwner? webSocketOwner = null;
         RpcConnection? connection = null;
         try {
-            var peer = Hub.GetServerPeer(peerRef);
+            var peer = Hub.GetServerPeer(rpcRef);
 
             webSocket = wsContext.WebSocket;
             var properties = PropertyBag.Empty
                 .KeylessSet((RpcPeer)peer)
                 .KeylessSet(context)
                 .KeylessSet(webSocket);
-            webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
+            webSocketOwner = new WebSocketOwner(peer.Route.ToString(), webSocket, Services);
             var transportOptions = WebSocketClientOptions.WebSocketTransportOptionsFactory.Invoke(peer, properties);
             var stopTokenSource = cancellationToken.CreateLinkedTokenSource();
             var transport = new RpcWebSocketTransport(transportOptions, peer, webSocketOwner, stopTokenSource) {

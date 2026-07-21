@@ -76,7 +76,7 @@ public abstract class RpcStream : IRpcObject
         => new(outgoingSource.ToAsyncEnumerable()) { AllowReconnect = allowReconnect };
 
     public override string ToString()
-        => $"{GetType().GetName()}({Id} @ {Peer?.Ref}, {Kind})";
+        => $"{GetType().GetName()}({Id} @ {Peer?.Route}, {Kind})";
 
     public abstract void Disconnect();
 

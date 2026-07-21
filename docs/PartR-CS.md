@@ -189,24 +189,28 @@ services.AddSingleton(_ => RpcOutboundCallOptions.Default with {
         if (methodDef.Service.Type == typeof(IMyService)) {
             var key = args.Get<string>(0);
             var hash = key.GetXxHash3();
-            return peerRefs[hash.PositiveModulo(serverCount)];
+            return rpcRefs[hash.PositiveModulo(serverCount)];
         }
-        return RpcPeerRef.Default;
+        return RpcRef.Default;
     }
 });
 ```
 
-Custom PeerRef with dynamic rerouting:
+Custom stable PeerRef with dynamic rerouting:
 
 ```cs
-public class MyShardPeerRef : RpcPeerRef
+public class MyShardPeerRef : RpcRef
 {
     public MyShardPeerRef(string shardId)
     {
         HostInfo = shardId;
-        RouteState = new RpcRouteState();
-        // Monitor topology, call RouteState.MarkChanged() when target changes
+        Initialize(); // Mints the first route via CreateRoute()
     }
+
+    protected override RpcRoute CreateRoute()
+        => new RpcRoute(this);
+        // Resolve the current target here; monitor topology
+        // and call route.MarkChanged() when the target changes
 }
 ```
 
@@ -218,7 +222,7 @@ var rpcHub = services.RpcHub();
 // or: services.GetRequiredService<RpcHub>();
 
 var client = rpcHub.GetClient<IUserService>();   // Get client proxy
-var peer = rpcHub.GetClientPeer(RpcPeerRef.Default);  // Get default peer
+var peer = rpcHub.GetClientPeer(RpcRef.Default);  // Get default peer
 ```
 
 
@@ -236,15 +240,15 @@ await peer.Disconnect();
 ```
 
 
-## RpcPeerRef
+## RpcRef
 
 ```cs
-RpcPeerRef.Default   // Default remote peer
-RpcPeerRef.Loopback  // In-process loopback (for tests)
-RpcPeerRef.Local     // Local (same-process) calls
+RpcRef.Default   // Default remote peer
+RpcRef.Loopback  // In-process loopback (for tests)
+RpcRef.Local     // Local (same-process) calls
 
 // Custom peer ref
-var peerRef = RpcPeerRef.NewClient(hostInfo: "https://api.example.com");
+var rpcRef = RpcRef.NewClient(hostInfo: "https://api.example.com");
 ```
 
 

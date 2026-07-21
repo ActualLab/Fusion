@@ -17,7 +17,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
     public RpcWebSocketServerOptions Options { get; } = options;
     public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
     public RpcWebSocketClientOptions WebSocketClientOptions { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
-    public RpcWebSocketServerPeerRefFactory PeerRefFactory { get; } = services.GetRequiredService<RpcWebSocketServerPeerRefFactory>();
+    public RpcWebSocketServerRefFactory RefFactory { get; } = services.GetRequiredService<RpcWebSocketServerRefFactory>();
 
     public virtual async Task Invoke(HttpContext context, bool isBackend)
     {
@@ -38,28 +38,28 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
 
         WebSocket? webSocket = null;
         RpcConnection? connection = null;
-        RpcPeerRef? peerRef = null;
+        RpcRef? rpcRef = null;
         try {
-            peerRef = PeerRefFactory.Invoke(this, context, isBackend).RequireServer();
-            if (!Hub.SerializationFormats.TryGet(peerRef.SerializationFormat, out _)) {
+            rpcRef = RefFactory.Invoke(this, context, isBackend).RequireServer();
+            if (!Hub.SerializationFormats.TryGet(rpcRef.SerializationFormat, out _)) {
                 Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}' for {Request}",
-                    peerRef, peerRef.SerializationFormat, requestDescription);
+                    rpcRef, rpcRef.SerializationFormat, requestDescription);
 #if NET6_0_OR_GREATER
-                var rejectAcceptContext = Options.ConfigureWebSocket.Invoke(this, context, peerRef);
+                var rejectAcceptContext = Options.ConfigureWebSocket.Invoke(this, context, rpcRef);
                 webSocket = await context.WebSockets.AcceptWebSocketAsync(rejectAcceptContext).ConfigureAwait(false);
 #else
                 webSocket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
 #endif
                 await webSocket.CloseAsync(
                     (WebSocketCloseStatus)RpcWebSocketCloseCode.UnsupportedFormat,
-                    $"Unsupported RPC serialization format: '{peerRef.SerializationFormat}'",
+                    $"Unsupported RPC serialization format: '{rpcRef.SerializationFormat}'",
                     cancellationToken
                     ).ConfigureAwait(false);
                 return;
             }
 
-            Log.LogInformation("'{PeerRef}': Accepting RPC connection for {Request}", peerRef, requestDescription);
-            var peer = Hub.GetServerPeer(peerRef);
+            Log.LogInformation("'{PeerRef}': Accepting RPC connection for {Request}", rpcRef, requestDescription);
+            var peer = Hub.GetServerPeer(rpcRef);
 
             // Disconnect any stale connection BEFORE upgrading the new WebSocket.
             // Doing this after AcceptWebSocketAsync would consume the client's HandshakeTimeout,
@@ -71,12 +71,12 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             // peer stuck mid-handshake instead of replacing the stale one.
             if (peer.ConnectionState.Value.IsConnectingOrConnected()) {
                 Log.LogWarning("'{PeerRef}': {Peer} is already connected, disconnecting the old connection first...",
-                    peerRef, peer);
+                    rpcRef, peer);
                 await peer.Disconnect(cancellationToken).ConfigureAwait(false);
             }
 
 #if NET6_0_OR_GREATER
-            var webSocketAcceptContext = Options.ConfigureWebSocket.Invoke(this, context, peerRef);
+            var webSocketAcceptContext = Options.ConfigureWebSocket.Invoke(this, context, rpcRef);
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync(webSocketAcceptContext);
 #else
             var acceptWebSocketTask = context.WebSockets.AcceptWebSocketAsync();
@@ -86,7 +86,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
                 .KeylessSet((RpcPeer)peer)
                 .KeylessSet(context)
                 .KeylessSet(webSocket);
-            var webSocketOwner = new WebSocketOwner(peer.Ref.ToString(), webSocket, Services);
+            var webSocketOwner = new WebSocketOwner(peer.Route.ToString(), webSocket, Services);
             var transportOptions = WebSocketClientOptions.WebSocketTransportOptionsFactory.Invoke(peer, properties);
             var stopTokenSource = cancellationToken.CreateLinkedTokenSource();
             var transport = new RpcWebSocketTransport(transportOptions, peer, webSocketOwner, stopTokenSource) {
@@ -102,18 +102,18 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
         catch (Exception e) {
             if (e.IsCancellationOf(cancellationToken)) {
                 Log.LogInformation(e, "'{PeerRef}': Normal RPC connection termination (via cancellation) for {Request}",
-                    peerRef, requestDescription);
+                    rpcRef, requestDescription);
                 return; // Intended: this is typically a normal connection termination
             }
 
             if (connection is not null) {
                 Log.LogInformation(e, "'{PeerRef}': Normal RPC connection termination for {Request}",
-                    peerRef, requestDescription);
+                    rpcRef, requestDescription);
                 return; // Intended: this is typically a normal connection termination
             }
 
             Log.LogWarning(e, "'{PeerRef}': Failed to accept RPC connection for {Request}",
-                peerRef, requestDescription);
+                rpcRef, requestDescription);
             if (webSocket is not null)
                 return;
 

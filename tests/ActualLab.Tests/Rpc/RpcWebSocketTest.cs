@@ -421,10 +421,10 @@ public class RpcWebSocketTest : RpcTestBase
         ConfigureServices(clientServices, isClient: true);
         clientServices.AddSingleton(_ => new RpcSerializationFormatResolver("bogus-format", formats));
         clientServices.AddFusion(); // Required for RpcPeerStateMonitor
-        await using var sp = clientServices.BuildServiceProvider();
+        await using var c = clientServices.BuildServiceProvider();
 
-        var peer = sp.RpcHub().GetClientPeer(ClientPeerRef);
-        var monitor = new RpcPeerStateMonitor(sp, peer.Ref);
+        var peer = c.RpcHub().GetClientPeer(ClientPeerRef);
+        var monitor = new RpcPeerStateMonitor(c.RpcHub(), peer.Ref);
         var state = monitor.State;
 
         // The monitor should eventually report the terminal error

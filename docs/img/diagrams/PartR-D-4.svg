@@ -19,27 +19,27 @@
 
   <!-- Subgraph: PeerRefs -->
   <rect x="40" y="40" width="300" height="360" fill="rgba(200,215,240,0.15)" stroke="#c0c8d4" stroke-width="1.5" stroke-dasharray="6 4" rx="8" />
-  <text x="55" y="65" font-family="Inter,sans-serif" font-size="11px" fill="#8b90a8" font-weight="600" text-transform="uppercase">RpcPeerRef</text>
+  <text x="55" y="65" font-family="Inter,sans-serif" font-size="11px" fill="#8b90a8" font-weight="600" text-transform="uppercase">RpcRef</text>
 
-  <!-- Left Nodes (RpcPeerRef Types) -->
+  <!-- Left Nodes (RpcRef Types) -->
   <!-- Default -->
   <rect x="60" y="80" width="260" height="54" fill="url(#state-grad)" stroke="#bcc8da" stroke-width="1.5" rx="8" />
-  <text x="190" y="102" font-family="&quot;SF Mono&quot;,&quot;Fira Code&quot;,Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcPeerRef.Default</text>
+  <text x="190" y="102" font-family="&quot;SF Mono&quot;,&quot;Fira Code&quot;,Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcRef.Default</text>
   <text x="190" y="120" font-family="Inter,-apple-system,sans-serif" font-size="11px" fill="#6b7084" font-style="italic" text-anchor="middle">(remote)</text>
 
   <!-- Custom -->
   <rect x="60" y="160" width="260" height="54" fill="url(#state-grad)" stroke="#bcc8da" stroke-width="1.5" rx="8" />
-  <text x="190" y="182" font-family="&quot;SF Mono&quot;,&quot;Fira Code&quot;,Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcPeerRef.NewClient(host)</text>
+  <text x="190" y="182" font-family="&quot;SF Mono&quot;,&quot;Fira Code&quot;,Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcRef.NewClient(host)</text>
   <text x="190" y="200" font-family="Inter,-apple-system,sans-serif" font-size="11px" fill="#6b7084" font-style="italic" text-anchor="middle">(custom remote)</text>
 
   <!-- Local -->
   <rect x="60" y="240" width="260" height="54" fill="url(#state-grad)" stroke="#bcc8da" stroke-width="1.5" rx="8" />
-  <text x="190" y="262" font-family="&quot;SF Mono&quot;,&quot;Fira Code&quot;,Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcPeerRef.Local</text>
+  <text x="190" y="262" font-family="&quot;SF Mono&quot;,&quot;Fira Code&quot;,Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcRef.Local</text>
   <text x="190" y="280" font-family="Inter,-apple-system,sans-serif" font-size="11px" fill="#6b7084" font-style="italic" text-anchor="middle">(same-process)</text>
 
   <!-- Loopback -->
   <rect x="60" y="320" width="260" height="54" fill="url(#state-grad)" stroke="#bcc8da" stroke-width="1.5" rx="8" />
-  <text x="190" y="342" font-family="&quot;SF Mono&quot;,&quot;Fira Code&quot;,Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcPeerRef.Loopback</text>
+  <text x="190" y="342" font-family="&quot;SF Mono&quot;,&quot;Fira Code&quot;,Consolas,monospace" font-size="13px" fill="#1a1a2e" text-anchor="middle">RpcRef.Loopback</text>
   <text x="190" y="360" font-family="Inter,-apple-system,sans-serif" font-size="11px" fill="#6b7084" font-style="italic" text-anchor="middle">(in-process test)</text>
 
   <!-- Right Nodes (Peer Implementations) -->

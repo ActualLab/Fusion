@@ -59,7 +59,7 @@ RpcNoWait calls are **dropped if there is no active connection**. They are not q
 To maximize delivery likelihood, wait for the connection to be established first:
 
 ```cs
-var peer = services.RpcHub().GetClientPeer(RpcPeerRef.Default);
+var peer = services.RpcHub().GetClientPeer(RpcRef.Default);
 await peer.WhenConnected(cancellationToken);
 await simpleService.Ping("Now it's very likely to be sent!");
 ```

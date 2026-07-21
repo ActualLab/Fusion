@@ -15,7 +15,7 @@ public class RpcPeerStateMonitor : WorkerBase
     protected Moment Now => RpcHub.SystemClock.Now;
 
     public RpcHub RpcHub { get; }
-    public RpcPeerRef? PeerRef { get; protected set; }
+    public RpcRef? RpcRef { get; protected set; }
     public TimeSpan JustConnectedPeriod { get; init; } = TimeSpan.FromSeconds(1.5);
     public TimeSpan JustDisconnectedPeriod { get; init; } = TimeSpan.FromSeconds(3);
     public TimeSpan MinReconnectsIn { get; init; } = TimeSpan.FromSeconds(1);
@@ -29,18 +29,19 @@ public class RpcPeerStateMonitor : WorkerBase
     public IState<RpcPeerState> State { get; protected set; } = null!;
 
     public RpcPeerStateMonitor(
-        IServiceProvider services,
-        RpcPeerRef? peerRef,
+        RpcHub rpcHub,
+        RpcRef? rpcRef,
         bool mustStart = true,
         bool mustCreateStates = true)
     {
-        RpcHub = services.RpcHub();
-        PeerRef = peerRef;
+        RpcHub = rpcHub;
+        RpcRef = rpcRef;
         if (!mustCreateStates)
             return;
 
+        var services = rpcHub.Services;
         var stateFactory = services.StateFactory();
-        var connectionState = peerRef is null ? null : RpcHub.GetPeer(peerRef).ConnectionState.Value;
+        var connectionState = rpcRef is null ? null : RpcHub.GetPeer(rpcRef).ConnectionState.Value;
         var isConnected = connectionState?.IsConnected() ?? true;
 
         var initialRawState = isConnected
@@ -50,7 +51,7 @@ public class RpcPeerStateMonitor : WorkerBase
         _rawState = stateFactory.NewMutable(initialRawState, stateCategory);
 
         stateCategory = $"{GetType().Name}.{nameof(LastReconnectDelayCancelledAt)}";
-        LastReconnectDelayCancelledAt = peerRef is null
+        LastReconnectDelayCancelledAt = rpcRef is null
             ? stateFactory.NewMutable((Moment)default, stateCategory)
             : stateFactory.NewComputed(
                 FixedDelayer.NextTick,
@@ -59,9 +60,9 @@ public class RpcPeerStateMonitor : WorkerBase
 
         stateCategory = $"{GetType().Name}.{nameof(State)}";
         var initialState = initialRawState.IsConnected
-            ? new RpcPeerState(peerRef is null ? RpcPeerStateKind.Connected : RpcPeerStateKind.JustConnected)
+            ? new RpcPeerState(rpcRef is null ? RpcPeerStateKind.Connected : RpcPeerStateKind.JustConnected)
             : new RpcPeerState(RpcPeerStateKind.JustDisconnected, connectionState?.Error);
-        State = peerRef is null
+        State = rpcRef is null
             ? stateFactory.NewMutable(initialState, stateCategory)
             : stateFactory.NewComputed(initialState, FixedDelayer.NextTick, ComputeState, stateCategory);
         if (mustStart)
@@ -79,13 +80,15 @@ public class RpcPeerStateMonitor : WorkerBase
 
     protected override async Task OnRun(CancellationToken cancellationToken)
     {
-        var peerRef = PeerRef;
-        if (peerRef is null) // Always connected
+        var rpcRef = RpcRef;
+        if (rpcRef is null) // Always connected
             return;
 
         while (true) {
-            Log.LogInformation("`{PeerRef}`: monitor (re)started", peerRef);
-            var peer = RpcHub.GetClientPeer(peerRef);
+            Log.LogInformation("'{PeerRef}': monitor (re)started", rpcRef);
+            // GetClientPeer resolves the current route generation, so after a reroute
+            // the restart below picks up the new generation's peer
+            var peer = RpcHub.GetClientPeer(rpcRef);
             var peerCts = cancellationToken.LinkWith(peer.StopToken);
             var peerCancellationToken = peerCts.Token;
             var error = (Exception?)null;
@@ -122,15 +125,17 @@ public class RpcPeerStateMonitor : WorkerBase
             catch (Exception e) {
                 // ReSharper disable once PossiblyMistakenUseOfCancellationToken
                 if (e.IsCancellationOf(cancellationToken)) {
-                    Log.LogInformation("`{PeerRef}`: monitor stopped", peerRef);
+                    Log.LogInformation("'{PeerRef}': monitor stopped", rpcRef);
                     return;
                 }
 
                 error = e;
-                if (peer.StopToken.IsCancellationRequested)
-                    Log.LogWarning("`{PeerRef}`: peer is terminated, will restart", peerRef);
+                if (peer.Route.IsChanged)
+                    Log.LogInformation("'{PeerRef}': peer is rerouted, will restart", rpcRef);
+                else if (peer.StopToken.IsCancellationRequested)
+                    Log.LogWarning("'{PeerRef}': peer is terminated, will restart", rpcRef);
                 else
-                    Log.LogError(e, "`{PeerRef}`: monitor failed, will restart", peerRef);
+                    Log.LogError(e, "'{PeerRef}': monitor failed, will restart", rpcRef);
             }
             finally {
                 _rawState.Set(_rawState.Value.ToDisconnected(Now, default, error));

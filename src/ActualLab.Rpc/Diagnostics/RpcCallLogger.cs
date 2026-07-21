@@ -16,7 +16,7 @@ public class RpcCallLogger(RpcPeer peer, ILogger? log, LogLevel logLevel)
         => Log is not null && Filter.Invoke(Peer, call);
 
     public virtual void LogInbound(RpcInboundCall call)
-        => Log?.Log(LogLevel, "'{PeerRef}': {Call}", Peer.Ref, call);
+        => Log?.Log(LogLevel, "'{Route}': {Call}", Peer.Route, call);
 
     public virtual void LogOutbound(RpcOutboundCall call, RpcOutboundMessage message)
     {
@@ -25,6 +25,6 @@ public class RpcCallLogger(RpcPeer peer, ILogger? log, LogLevel logLevel)
             return;
 
         var callState = connectionState.Value.IsConnected() ? "" : " - queued";
-        Log?.Log(LogLevel, "'{PeerRef}': {Call}{State}", Peer.Ref, call, callState);
+        Log?.Log(LogLevel, "'{Route}': {Call}{State}", Peer.Route, call, callState);
     }
 }
