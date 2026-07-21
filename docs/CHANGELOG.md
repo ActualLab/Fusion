@@ -11,6 +11,77 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.1.3+79939c2a | npm: 14.0.17
+
+Release date: 2026-07-21
+
+This release makes RPC peer refs **stable**: there is now one `RpcRef` per
+logical target (shard, host, "default"), cached forever and safe to return
+from routers with no factory ceremony. A topology change no longer mints a
+new ref — the ref's **route** (a new per-generation `RpcRoute`) is reset
+instead, while peers stay 1:1 with route generations, so the entire
+battle-tested reroute pipeline is preserved.
+
+### Breaking Changes
+
+- [`RpcPeerRef` is renamed to `RpcRef`, and `RpcRouteState` is replaced by `RpcRoute`](https://github.com/ActualLab/Fusion/commit/99468623)
+  — see the ["RpcPeerRef: renamed to RpcRef in v14.1"](https://fusion.actuallab.net/PartR-CallRouting#rpcpeerref-renamed-to-rpcref-in-v14-1)
+  migration note. Key points:
+  - Custom refs override `CreateRoute()` to mint a route per generation
+    instead of being re-created on topology changes; ref caches collapse to a
+    plain `ConcurrentDictionary.GetOrAdd`. `RpcRef.Route` re-mints lazily
+    when the current route is marked as changed; `RpcRoute.NewStatic()`
+    denotes refs that never reroute.
+  - `RpcRouteStateExt` is merged into `RpcRoute`; `IsChanged` / `WhenChanged`
+    are properties now, and per-generation target data (host id, endpoint)
+    belongs on `RpcRoute` subclasses.
+  - `RpcPeer` is constructed from `RpcRoute` (`peer.Ref` == `peer.Route.Ref`);
+    the pipeline reads `peer.Route` — the generation the peer is bound to.
+  - `RpcHub.GetPeer(RpcRoute)` is the primary overload (uses the exact
+    generation); `GetPeer(RpcRef)` resolves the current one; `RpcHub.Peers`
+    is keyed by route.
+  - Delegate signature changes: `RpcPeerOptions.PeerFactory` is
+    `Func<RpcHub, RpcRoute, RpcPeer>`, `ConnectionKindDetector` is
+    `Func<RpcRoute, RpcPeerConnectionKind>`; server-side delegate renames:
+    `RpcWebSocketServerPeerRefFactory` → `RpcWebSocketServerRefFactory`,
+    `RpcHttpServerPeerRefFactory` → `RpcHttpServerRefFactory`, `PeerRefFactory`
+    properties → `RefFactory`.
+  - `RpcPeerStateMonitor` is constructed from `(RpcHub, RpcRef?)` and
+    transparently restarts across reroutes.
+- [The operation log processing delay metric is renamed](https://github.com/ActualLab/Fusion/commit/4dc18e91)
+  from `db.operation.log.processing.delay` to `db.operation_log.processing.delay`
+  (OTel naming conventions: "operation log" is a single snake_case component).
+  The Prometheus-flattened name is unchanged.
+
+### Changed
+
+- Rerouted peers are now removed from `RpcHub.Peers` with zero delay once
+  drained — the 5-minute removal delay applies only to terminally-failed
+  client peers.
+- A burst of topology churn with no interleaved calls coalesces into a
+  single route re-resolution — something the previous ref-per-version model
+  couldn't do.
+- Peer-bound logging now renders the route generation
+  (`<address> [vN->target]`, cached), so overlapping generations are
+  distinguishable in logs; `RpcRoute.GetTargetString()` supplies the target.
+- `FusionEntityFrameworkInstruments` now follows the shared instruments
+  pattern (adds `ActivitySource`); the TodoApp Aspire sample registers the
+  `ActualLab.Fusion.EntityFramework` meter, so the operation log delay
+  histogram reaches the dashboard.
+
+### Tests
+
+- New `RpcRefRouteTest` and `MeshStableRefTest` suites: route re-mint and
+  churn coalescing, `Reset()`, `GetPeer` replacement and races, and
+  local↔remote shard flips with computed invalidation on a stable ref.
+
+### Infrastructure
+
+- [`/publish` skill](https://github.com/ActualLab/Fusion/commit/79939c2a):
+  NuGet/npm publishing with TS lint + tests, build-error fixing, and
+  changelog handoff.
+
+
 ## 14.0.37+1d67c8de | npm: 14.0.17
 
 Release date: 2026-07-20
