@@ -30,7 +30,7 @@ field and metric must be verified in the dashboard.
 
 - [x] T1: preserve ambient W3C context when no RPC client activity is created; replace stale caller-supplied trace
   headers without mutating caller-owned arrays. Add propagation and header regression tests.
-- [ ] T2: give every rerouted attempt a live client activity and verify the successful attempt is parented correctly.
+- [x] T2: give every rerouted attempt a live client activity and verify the successful attempt is parented correctly.
   Reroute remains expected control flow, not an error.
 - [ ] T3: remove the duplicate parent link; add stable RPC semantic attributes and exception events. Do not change
   cancellation or reroute to error status.

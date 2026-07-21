@@ -83,10 +83,9 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
         if (Call is null)
             return Call;
 
-        var activityContext = Activity.Current?.Context ?? default;
+        ActivityContext = Activity.Current?.Context ?? default;
         if (MethodDef.Tracer is { } tracer)
             Trace ??= tracer.StartOutboundTrace(Call);
-        ActivityContext = Trace?.Activity?.Context ?? activityContext;
         return Call;
     }
 
@@ -124,6 +123,9 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
         if (oldPeer is null || !oldPeer.Route.IsStatic)
             Peer = MethodDef.RouteOutboundCall(Arguments);
         Call = MethodDef.CreateOutboundCall(this);
+        Trace = Call is not null && MethodDef.Tracer is { } tracer
+            ? tracer.StartOutboundTrace(Call)
+            : null;
         if (ReferenceEquals(oldPeer, Peer))
             Peer?.Log.LogWarning("The call {Call} is rerouted to the same peer: {Peer}", Call, Peer);
         return Call;

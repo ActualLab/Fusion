@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ActualLab.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -170,6 +171,54 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         extractedContext.SpanId.Should().Be(activityContext.SpanId);
         extractedContext.TraceFlags.Should().Be(activityContext.TraceFlags);
         extractedContext.TraceState.Should().Be(activityContext.TraceState);
+    }
+
+    [Fact]
+    public async Task TraceRerouteActivityTest()
+    {
+        var stoppedActivities = new ConcurrentQueue<Activity>();
+        using var listener = new ActivityListener {
+            ShouldListenTo = source => source.Name == RpcInstruments.ActivitySource.Name,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = stoppedActivities.Enqueue,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        await using var services = CreateServices();
+        var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
+        var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
+        var tracer = (RpcDefaultCallTracer)method.Tracer!;
+        using var parent = new Activity("parent").SetIdFormat(ActivityIdFormat.W3C).Start();
+        var parentContext = parent.Context;
+
+        var context = new RpcOutboundContext(clientPeer);
+        var firstCall = context.PrepareCall(method, ArgumentList.New<int?, int>(6, 2))!;
+        var firstActivity = context.Trace!.Activity!;
+        firstCall.Register();
+        firstCall.SetMustRerouteError();
+
+        var secondCall = context.PrepareReroutedCall()!;
+        var secondActivity = context.Trace!.Activity!;
+        var secondMessage = secondCall.CreateOutboundMessage(
+            secondCall.Id,
+            method.HasPolymorphicArguments,
+            sendHandler: null,
+            activity: secondActivity);
+        secondCall.Register();
+        secondCall.SetResult(3, context: null);
+
+        var outboundActivities = stoppedActivities
+            .Where(a => a.Kind == ActivityKind.Client && a.DisplayName == tracer.OutboundCallName)
+            .ToArray();
+        outboundActivities.Should().HaveCount(2);
+        outboundActivities.Should().OnlyContain(a => a.ParentSpanId == parentContext.SpanId);
+        outboundActivities.Select(a => a.SpanId).Should().OnlyHaveUniqueItems();
+        firstActivity.Duration.Should().BeGreaterThan(TimeSpan.Zero);
+        secondActivity.Duration.Should().BeGreaterThan(TimeSpan.Zero);
+        secondActivity.SpanId.Should().NotBe(firstActivity.SpanId);
+        RpcActivityInjector.TryExtract(secondMessage.Headers, out var propagatedContext).Should().BeTrue();
+        propagatedContext.TraceId.Should().Be(secondActivity.TraceId);
+        propagatedContext.SpanId.Should().Be(secondActivity.SpanId);
     }
 
     [Theory]
