@@ -21,27 +21,42 @@ public class CommandTracer(IServiceProvider services) : ICommandHandler<ICommand
     [CommandFilter(Priority = CommanderCommandHandlerPriority.CommandTracer)]
     public async Task OnCommand(ICommand command, CommandContext context, CancellationToken cancellationToken)
     {
-        if (!ShouldTrace(command, context)) {
+        var mustTrace = ShouldTrace(command, context);
+        var mustMeasure = CommanderInstruments.CommandExecutionDuration.Enabled;
+        if (!mustTrace && !mustMeasure) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        using var activity = StartActivity(command, context);
+        var startedAt = mustMeasure ? CpuTimestamp.Now : default;
+        using var activity = mustTrace ? StartActivity(command, context) : null;
+        var outcome = "success";
         try {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception e) when (activity is not null) {
-            if (!ActivityExt.IsError(e))
-                throw; // Don't log non-error
-
-            activity.Finalize(e, cancellationToken);
-            var message = context.IsOutermost ?
-                "Outermost command failed: {Command}" :
-                "Nested command failed: {Command}";
-            var level = activity.Status is ActivityStatusCode.Error ? LogLevel.Error : LogLevel.Warning;
-            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-            Log.IfEnabled(level)?.Log(level, e, message, command);
+        catch (Exception e) {
+            outcome = e is OperationCanceledException ? "cancel" : "error";
+            if (activity is not null && ActivityExt.IsError(e)) {
+                activity.Finalize(e, cancellationToken);
+                var message = context.IsOutermost ?
+                    "Outermost command failed: {Command}" :
+                    "Nested command failed: {Command}";
+                var level = activity.Status is ActivityStatusCode.Error ? LogLevel.Error : LogLevel.Warning;
+                // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
+                Log.IfEnabled(level)?.Log(level, e, message, command);
+            }
             throw;
+        }
+        finally {
+            if (mustMeasure) {
+                var tags = new TagList {
+                    { "command.name", command.GetType().NonProxyType().GetName() },
+                    { "command.kind", command is IEventCommand ? "event" : "command" },
+                    { "command.scope", context.IsOutermost ? "outermost" : "nested" },
+                    { "outcome", outcome },
+                };
+                CommanderInstruments.CommandExecutionDuration.Record(startedAt.Elapsed.TotalMilliseconds, tags);
+            }
         }
     }
 

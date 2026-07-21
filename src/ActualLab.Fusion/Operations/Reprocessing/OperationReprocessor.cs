@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.OS;
 using ActualLab.Resilience;
@@ -111,14 +113,17 @@ public class OperationReprocessor : IOperationReprocessor
         if (!transiency.IsAnyTransient())
             return false;
 
-        if (transiency is not Transiency.SuperTransient && TryIndex >= Settings.MaxRetryCount)
+        if (transiency is not Transiency.SuperTransient && TryIndex >= Settings.MaxRetryCount) {
+            RecordRetry(transiency, "exhausted");
             return false;
+        }
 
         var operation = CommandContext.TryGetOperation();
         if (operation is not { Scope: not InMemoryOperationScope })
             return false;
 
         if (operation.Scope is { IsCommitted: true }) {
+            RecordRetry(transiency, "suppressed_committed");
             Log.LogWarning(
                 "No retry: operation '{OperationUuid}' is already committed - retry suppressed to avoid double execution",
                 operation.Uuid);
@@ -170,6 +175,8 @@ public class OperationReprocessor : IOperationReprocessor
                 context.Items.Snapshot = itemsBackup;
                 context.ExecutionState = executionStateBackup;
                 var delay = Settings.RetryDelays[TryIndex];
+                RecordRetry(transiency, "scheduled");
+                RecordRetryDelay(transiency, delay);
                 Log.LogWarning(
                     "Retry #{TryIndex}/{MaxTryCount} on {Error}: {Command} with {Delay} delay",
                     TryIndex, Settings.MaxRetryCount,
@@ -178,4 +185,32 @@ public class OperationReprocessor : IOperationReprocessor
             }
         }
     }
+
+    // Private methods
+
+    private void RecordRetry(Transiency transiency, string outcome)
+    {
+        var tags = new TagList {
+            { "command.name", CommandContext.UntypedCommand.GetType().NonProxyType().GetName() },
+            { "transiency", GetTransiencyName(transiency) },
+            { "outcome", outcome },
+        };
+        FusionInstruments.OperationRetryCount.Add(1, tags);
+    }
+
+    private void RecordRetryDelay(Transiency transiency, TimeSpan delay)
+    {
+        var tags = new TagList {
+            { "command.name", CommandContext.UntypedCommand.GetType().NonProxyType().GetName() },
+            { "transiency", GetTransiencyName(transiency) },
+        };
+        FusionInstruments.OperationRetryDelay.Record(delay.TotalMilliseconds, tags);
+    }
+
+    private static string GetTransiencyName(Transiency transiency)
+        => transiency switch {
+            Transiency.Transient => "transient",
+            Transiency.SuperTransient => "super_transient",
+            _ => "unknown",
+        };
 }

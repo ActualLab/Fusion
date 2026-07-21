@@ -51,7 +51,7 @@ recommended representation is unset status plus stable events/attributes, subjec
   `rpc.client.reroute.count` on the rare reroute branch.
 - [ ] M2: add connection attempt count/duration and connection uptime on lifecycle paths.
 - [ ] M3: add aggregate active server/client call gauges and batched client call-event counts.
-- [ ] M4: add CommandR execution duration and Fusion operation retry count/delay.
+- [x] M4: add CommandR execution duration and Fusion operation retry count/delay.
 - [ ] M5: retain and verify the existing `db.operation_log.processing.delay`; add event-log processing delay and
   log batch size/duration. Update stale docs to register the EF meter.
 - [ ] M6: add invalidation pass duration and command count at the completion-replay scope. Do not instrument
