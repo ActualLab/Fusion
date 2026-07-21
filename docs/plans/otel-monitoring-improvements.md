@@ -32,7 +32,7 @@ field and metric must be verified in the dashboard.
   headers without mutating caller-owned arrays. Add propagation and header regression tests.
 - [x] T2: give every rerouted attempt a live client activity and verify the successful attempt is parented correctly.
   Reroute remains expected control flow, not an error.
-- [ ] T3: remove the duplicate parent link; add stable RPC semantic attributes and exception events. Do not change
+- [x] T3: remove the duplicate parent link; add stable RPC semantic attributes and exception events. Do not change
   cancellation or reroute to error status.
 - [ ] T4: move inbound completion to include response serialization/enqueue and cover serialization failure.
 - [ ] T5: route Fusion.EntityFramework activities through its registered activity source and test source ownership.

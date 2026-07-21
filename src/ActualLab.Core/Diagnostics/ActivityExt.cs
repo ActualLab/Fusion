@@ -55,9 +55,7 @@ public static class ActivityExt
             return activity;
         }
 
-        var description = $"{error.GetType().GetName()}: {error.Message}";
-        activity.SetStatus(ActivityStatusCode.Error, description);
-        return activity;
+        return activity.FinalizeError(error);
     }
 
     public static Activity Finalize(this Activity activity, Exception? error, bool detectCancellation = false)
@@ -74,9 +72,7 @@ public static class ActivityExt
             return activity;
         }
 
-        var description = $"{error.GetType().GetName()}: {error.Message}";
-        activity.SetStatus(ActivityStatusCode.Error, description);
-        return activity;
+        return activity.FinalizeError(error);
     }
 
     // DisposeSafely
@@ -94,5 +90,21 @@ public static class ActivityExt
                 // Intended
             }
         }
+    }
+
+    // Private methods
+
+    private static Activity FinalizeError(this Activity activity, Exception error)
+    {
+        var errorType = error.GetType().FullName ?? error.GetType().Name;
+        activity.SetTag("error.type", errorType);
+        activity.AddEvent(new ActivityEvent("exception", tags: new ActivityTagsCollection {
+            { "exception.type", errorType },
+            { "exception.message", error.Message },
+            { "exception.stacktrace", error.ToString() },
+        }));
+        var description = $"{error.GetType().GetName()}: {error.Message}";
+        activity.SetStatus(ActivityStatusCode.Error, description);
+        return activity;
     }
 }

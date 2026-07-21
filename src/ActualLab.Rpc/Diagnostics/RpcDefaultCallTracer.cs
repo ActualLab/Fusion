@@ -14,6 +14,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
     public readonly string InboundCallName;
     public readonly string OutboundCallName;
     public readonly ActivitySource ActivitySource;
+    public readonly KeyValuePair<string, object?>[] ActivityTags;
     // public readonly Counter<long> InboundCallCounter;
     public readonly Counter<long> InboundErrorCounter;
     public readonly Counter<long> InboundCancellationCounter;
@@ -33,6 +34,10 @@ public class RpcDefaultCallTracer : RpcCallTracer
         InboundCallName = "in." + fullMethodName;
         OutboundCallName = "out." + fullMethodName;
         ActivitySource = RpcInstruments.ActivitySource;
+        ActivityTags = [
+            new("rpc.system.name", "actuallab.rpc"),
+            new("rpc.method", methodDef.FullName),
+        ];
 
         var m = RpcInstruments.Meter;
         var ms = $"rpc.server.{fullMethodName}";
@@ -57,9 +62,9 @@ public class RpcDefaultCallTracer : RpcCallTracer
         var headers = call.Context.Message.Headers;
         var activity = headers is not null && RpcActivityInjector.TryExtract(headers, out var activityContext)
             ? ActivitySource.StartActivity(InboundCallName, ActivityKind.Server,
-                parentContext: activityContext,
-                links: [new ActivityLink(activityContext)])
-            : ActivitySource.StartActivity(InboundCallName, ActivityKind.Server);
+                parentContext: activityContext, tags: ActivityTags)
+            : ActivitySource.StartActivity(InboundCallName, ActivityKind.Server,
+                parentContext: default(ActivityContext), tags: ActivityTags);
         if (activity is null && !IsEnabled && !RpcInstruments.IsEnabled)
             return null;
         return new RpcDefaultInboundCallTrace(this, activity);
@@ -72,7 +77,9 @@ public class RpcDefaultCallTracer : RpcCallTracer
 
         // Activity should never become Current
         var lastActivity = Activity.Current;
-        var activity = ActivitySource.StartActivity(OutboundCallName, ActivityKind.Client);
+        var parentContext = lastActivity?.Context ?? default;
+        var activity = ActivitySource.StartActivity(
+            OutboundCallName, ActivityKind.Client, parentContext: parentContext, tags: ActivityTags);
         if (lastActivity != activity)
             Activity.Current = lastActivity;
         return activity is null ? null : new RpcDefaultOutboundCallTrace(activity);

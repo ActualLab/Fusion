@@ -142,6 +142,9 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             a.Kind == ActivityKind.Server && a.DisplayName == divTracer.InboundCallName);
         serverActivity.TraceId.Should().Be(parentContext.TraceId);
         serverActivity.ParentSpanId.Should().Be(parentContext.SpanId);
+        serverActivity.Links.Should().BeEmpty();
+        serverActivity.GetTagItem("rpc.system.name").Should().Be("actuallab.rpc");
+        serverActivity.GetTagItem("rpc.method").Should().Be(divMethod.FullName);
     }
 
     [Fact]
@@ -219,6 +222,45 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         RpcActivityInjector.TryExtract(secondMessage.Headers, out var propagatedContext).Should().BeTrue();
         propagatedContext.TraceId.Should().Be(secondActivity.TraceId);
         propagatedContext.SpanId.Should().Be(secondActivity.SpanId);
+        secondActivity.GetTagItem("rpc.system.name").Should().Be("actuallab.rpc");
+        secondActivity.GetTagItem("rpc.method").Should().Be(method.FullName);
+    }
+
+    [Fact]
+    public async Task TraceErrorActivityTest()
+    {
+        var stoppedActivities = new ConcurrentQueue<Activity>();
+        using var listener = new ActivityListener {
+            ShouldListenTo = source => source.Name == RpcInstruments.ActivitySource.Name,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = stoppedActivities.Enqueue,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        await using var services = CreateServices();
+        var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+        var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
+        var tracer = (RpcDefaultCallTracer)method.Tracer!;
+
+        await Assert.ThrowsAsync<DivideByZeroException>(() => client.Div(1, 0));
+        await AssertNoCalls(clientPeer, Out);
+
+        var activities = stoppedActivities
+            .Where(a => a.DisplayName == tracer.InboundCallName || a.DisplayName == tracer.OutboundCallName)
+            .ToArray();
+        activities.Should().HaveCount(2);
+        activities.Should().OnlyContain(a => a.Status == ActivityStatusCode.Error);
+        activities.Should().OnlyContain(a => Equals(
+            a.GetTagItem("error.type"), typeof(DivideByZeroException).FullName));
+        activities.Should().OnlyContain(a => a.Events.Single().Name == "exception");
+        activities.Should().OnlyContain(a => Equals(
+            a.Events.Single().Tags.Single(t => t.Key == "exception.type").Value,
+            typeof(DivideByZeroException).FullName));
+        activities.Should().OnlyContain(a =>
+            !a.Events.Single().Tags.Single(t => t.Key == "exception.message").Value!.ToString()!.IsNullOrEmpty());
+        activities.Should().OnlyContain(a =>
+            !a.Events.Single().Tags.Single(t => t.Key == "exception.stacktrace").Value!.ToString()!.IsNullOrEmpty());
     }
 
     [Theory]
