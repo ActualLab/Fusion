@@ -58,6 +58,7 @@ public static class Extensions
                 metrics.AddMeter("ActualLab.Rpc");
                 metrics.AddMeter("ActualLab.CommandR");
                 metrics.AddMeter("ActualLab.Fusion");
+                metrics.AddMeter("ActualLab.Fusion.EntityFramework");
                 metrics.AddMeter("Samples.TodoApp");
             })
             .WithTracing(tracing => {
@@ -69,6 +70,7 @@ public static class Extensions
                 tracing.AddSource("ActualLab.Rpc");
                 tracing.AddSource("ActualLab.CommandR");
                 tracing.AddSource("ActualLab.Fusion");
+                tracing.AddSource("ActualLab.Fusion.EntityFramework");
                 tracing.AddSource("Samples.TodoApp");
                 // tracing.AddNpgsql();
                 // tracing.AddConsoleExporter();
