@@ -32,15 +32,18 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
 
     protected override async Task<Moment> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken)
     {
-        var nextIndexOpt = await TryGetNextIndex(shard, cancellationToken).ConfigureAwait(false);
-        if (nextIndexOpt is not { } nextIndex)
-            return await ProcessGaps(shard, cancellationToken).ConfigureAwait(false); // The log is empty
-
+        var startedAt = CpuTimestamp.Now;
+        var entryCount = 0;
+        var outcome = "success";
         var activity = FusionInstruments.ActivitySource
             .IfEnabled(Settings.IsTracingEnabled)
             .StartActivity(GetType())
             .AddShardTags(shard);
         try {
+            var nextIndexOpt = await TryGetNextIndex(shard, cancellationToken).ConfigureAwait(false);
+            if (nextIndexOpt is not { } nextIndex)
+                return await ProcessGaps(shard, cancellationToken).ConfigureAwait(false); // The log is empty
+
             List<TDbEntry> entries;
             var dbContext = await DbHub
                 .CreateDbContext(shard, readWrite: true, cancellationToken).ConfigureAwait(false);
@@ -57,6 +60,7 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                     .Take(batchSize)
                     .ToListAsync(cancellationToken)
                     .ConfigureAwait(false);
+                entryCount = entries.Count;
                 if (entries.Count != 0 && entries[0].Index > nextIndex)
                     nextIndex = await ResolveFrontGap(shard, dbContext, nextIndex, entries[0].Index, cancellationToken)
                         .ConfigureAwait(false);
@@ -82,11 +86,18 @@ public abstract class DbOperationLogReader<TDbContext, TDbEntry, TOptions>(
                 : nextGapCheckAt;
         }
         catch (Exception e) {
+            outcome = "error";
             activity?.Finalize(e, cancellationToken);
             throw;
         }
         finally {
             activity?.Dispose();
+            FusionEntityFrameworkInstruments.LogBatchSize.Record(entryCount,
+                new KeyValuePair<string, object?>("log.kind", "operation"),
+                new KeyValuePair<string, object?>("outcome", outcome));
+            FusionEntityFrameworkInstruments.LogBatchDuration.Record(startedAt.Elapsed.TotalMilliseconds,
+                new KeyValuePair<string, object?>("log.kind", "operation"),
+                new KeyValuePair<string, object?>("outcome", outcome));
         }
     }
 

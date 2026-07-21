@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Diagnostics;
+using ActualLab.Fusion.EntityFramework.Internal;
 using Microsoft.EntityFrameworkCore;
 
 namespace ActualLab.Fusion.EntityFramework.LogProcessing;
@@ -25,6 +26,9 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
 
     protected override async Task<Moment> ProcessBatch(string shard, int batchSize, CancellationToken cancellationToken)
     {
+        var startedAt = CpuTimestamp.Now;
+        var entryCount = 0;
+        var outcome = "success";
         var activity = FusionInstruments.ActivitySource
             .IfEnabled(Settings.IsTracingEnabled)
             .StartActivity(GetType())
@@ -46,6 +50,7 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
                 .Take(batchSize)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
+            entryCount = entries.Count;
             if (entries.Count == 0)
                 return await GetMinDelayUntil(dbEntries, cancellationToken).ConfigureAwait(false);
 
@@ -66,6 +71,10 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             }
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var (entry, isProcessed) in entriesZipped) {
+                if (isProcessed)
+                    ReportProcessingDelay(shard, entry, "batch");
+            }
             if (entries.Count >= batchSize)
                 return default; // Full batch = there might be more entries
 
@@ -73,11 +82,18 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
             return await GetMinDelayUntil(dbEntries, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e) {
+            outcome = "error";
             activity?.Finalize(e, cancellationToken);
             throw;
         }
         finally {
             activity?.Dispose();
+            FusionEntityFrameworkInstruments.LogBatchSize.Record(entryCount,
+                new KeyValuePair<string, object?>("log.kind", "event"),
+                new KeyValuePair<string, object?>("outcome", outcome));
+            FusionEntityFrameworkInstruments.LogBatchDuration.Record(startedAt.Elapsed.TotalMilliseconds,
+                new KeyValuePair<string, object?>("log.kind", "event"),
+                new KeyValuePair<string, object?>("outcome", outcome));
         }
     }
 
@@ -127,6 +143,19 @@ public abstract class DbEventLogReader<TDbContext, TDbEntry, TOptions>(
         if (DbHub.ChaosMaker.IsEnabled)
             await DbHub.ChaosMaker.Act(this, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        if (!mustDiscard)
+            ReportProcessingDelay(shard, entry, "reprocess");
         return true;
+    }
+
+    protected virtual void ReportProcessingDelay(string shard, TDbEntry entry, string path)
+    {
+        var delay = SystemClock.Now.ToDateTime() - entry.DelayUntil;
+        if (delay < TimeSpan.Zero)
+            delay = TimeSpan.Zero;
+        FusionEntityFrameworkInstruments.EventLogProcessingDelay.Record(
+            delay.TotalMilliseconds,
+            new KeyValuePair<string, object?>("shard", shard),
+            new KeyValuePair<string, object?>("path", path));
     }
 }

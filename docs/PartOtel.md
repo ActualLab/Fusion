@@ -31,6 +31,7 @@ Every instrumented ActualLab assembly exposes a single `Meter` and a single
 |----------|-----------------------------|-------------------|
 | `ActualLab.Rpc` | `ActualLab.Rpc` | `RpcInstruments` |
 | `ActualLab.Fusion` | `ActualLab.Fusion` | `FusionInstruments` |
+| `ActualLab.Fusion.EntityFramework` | `ActualLab.Fusion.EntityFramework` | `FusionEntityFrameworkInstruments` |
 | `ActualLab.CommandR` | `ActualLab.CommandR` | `CommanderInstruments` |
 | `ActualLab.Interception` | `ActualLab.Interception` | `InterceptionInstruments` |
 
@@ -91,7 +92,7 @@ throughput metrics under `rpc.{transport}.transport`:
 
 | Metric | Kind | Unit | Meaning |
 |--------|------|------|---------|
-| `rpc.{transport}.transport.count` | ObservableCounter | | Live transport/channel instances |
+| `rpc.{transport}.transport.count` | ObservableGauge | | Live transport/channel instances |
 | `rpc.{transport}.transport.incoming.item.count` | Counter | | Items received |
 | `rpc.{transport}.transport.outgoing.item.count` | Counter | | Items sent |
 | `rpc.{transport}.transport.incoming.frame.size` | Histogram | By | Incoming frame size |
@@ -106,9 +107,9 @@ them. They are emitted under the `computed.registry` prefix:
 
 | Metric | Kind | Unit | Meaning |
 |--------|------|------|---------|
-| `computed.registry.key.count` | ObservableCounter | | Registered `Computed<T>` keys |
-| `computed.registry.node.count` | ObservableCounter | | Nodes in the dependency graph |
-| `computed.registry.edge.count` | ObservableCounter | | Edges in the dependency graph |
+| `computed.registry.key.count` | ObservableGauge | | Registered `Computed<T>` keys |
+| `computed.registry.node.count` | ObservableGauge | | Nodes in the dependency graph |
+| `computed.registry.edge.count` | ObservableGauge | | Edges in the dependency graph |
 | `computed.registry.pruned.key.count` | Counter | | Pruned `Computed<T>` instances |
 | `computed.registry.pruned.disposed.count` | Counter | | Pruned disposable `Computed<T>` instances |
 | `computed.registry.pruned.edge.count` | Counter | | Pruned dependency edges |
@@ -124,18 +125,49 @@ usually points at a caching / invalidation issue (see
 [Memory Management](PartF-MM.md)). The prune metrics tell you whether the
 registry's background pruning is keeping up.
 
+Fusion also reports operation retry behavior:
+
+| Metric | Kind | Unit | Meaning |
+|--------|------|------|---------|
+| `operation.retry.count` | Counter | `{retry}` | Retry outcomes |
+| `operation.retry.delay` | Histogram | ms | Delay before a scheduled retry |
+
+Both use `command.name` and `transiency`; the counter also uses `outcome`.
+
+
+## Fusion Entity Framework Metrics (`ActualLab.Fusion.EntityFramework`)
+
+The Entity Framework integration reports how promptly operation and event
+logs are consumed and how its database batches behave:
+
+| Metric | Kind | Unit | Attributes | Meaning |
+|--------|------|------|------------|---------|
+| `db.operation_log.processing.delay` | Histogram | ms | `shard`, `path` | Applied-operation lag |
+| `db.event_log.processing.delay` | Histogram | ms | `shard`, `path` | Eligible-event lag |
+| `db.log.batch.size` | Histogram | `{entry}` | `log.kind`, `outcome` | Entries read in one batch |
+| `db.log.batch.duration` | Histogram | ms | `log.kind`, `outcome` | End-to-end duration of one log batch |
+
+The delay histogram's `path` is bounded to `batch`, `gap`, or `reprocess`
+for operations and to `batch` or `reprocess` for events. Batch `log.kind` is
+`operation` or `event`; `outcome` is `success` or `error`. Event delay starts
+when an event becomes eligible rather than when it was logged, so an
+intentional scheduled delay does not look like processing lag.
+
 
 ## CommandR Metrics (`ActualLab.CommandR`)
 
-CommandR does not emit counters by default; its instrumentation is
-trace-oriented — see [Tracing](#tracing) below. The `ActualLab.CommandR`
-meter still exists so you can register it once and attach your own
-command-level instruments to it if you add any.
+CommandR reports command execution latency independently of trace sampling:
+
+| Metric | Kind | Unit | Meaning |
+|--------|------|------|---------|
+| `command.execution.duration` | Histogram | ms | Command handler pipeline duration |
+
+Attributes are `command.name`, `command.kind`, `command.scope`, and `outcome`.
 
 
 ## Tracing
 
-All three layers create [`Activity`] spans on their `ActivitySource`, so a
+The instrumented layers create [`Activity`] spans on their `ActivitySource`, so a
 single logical operation can be followed across the commander, the compute
 graph, and RPC hops:
 
@@ -143,7 +175,8 @@ graph, and RPC hops:
 |--------|-------|
 | `ActualLab.CommandR` | One span per top-level command (`CommandTracer`); errors are recorded on the span |
 | `ActualLab.Rpc` | `in.{Service}/{Method}` (server kind) and `out.{Service}/{Method}` (client kind) spans per call |
-| `ActualLab.Fusion` | Spans around operation-log processing, event-log processing, entity-resolver batches, and invalidation |
+| `ActualLab.Fusion` | Spans around compute and invalidation work |
+| `ActualLab.Fusion.EntityFramework` | Log processing and entity-resolver batch spans |
 
 RPC **propagates the trace context across the wire**: outbound calls inject
 the current `Activity` context into the RPC message headers, and inbound
@@ -187,6 +220,7 @@ public static IHostApplicationBuilder ConfigureOpenTelemetry(this IHostApplicati
             metrics.AddMeter("ActualLab.Rpc");
             metrics.AddMeter("ActualLab.CommandR");
             metrics.AddMeter("ActualLab.Fusion");
+            metrics.AddMeter("ActualLab.Fusion.EntityFramework");
             metrics.AddMeter("Samples.TodoApp"); // Your own meter(s)
         })
         .WithTracing(tracing => {
@@ -196,6 +230,7 @@ public static IHostApplicationBuilder ConfigureOpenTelemetry(this IHostApplicati
             tracing.AddSource("ActualLab.Rpc");
             tracing.AddSource("ActualLab.CommandR");
             tracing.AddSource("ActualLab.Fusion");
+            tracing.AddSource("ActualLab.Fusion.EntityFramework");
             tracing.AddSource("Samples.TodoApp"); // Your own activity source(s)
         });
 
@@ -257,6 +292,8 @@ otel.WithMetrics(meter => meter
     .AddMeter(RpcInstruments.Meter.Name)        // "ActualLab.Rpc"
     .AddMeter(CommanderInstruments.Meter.Name)  // "ActualLab.CommandR"
     .AddMeter(FusionInstruments.Meter.Name)     // "ActualLab.Fusion"
+    .AddMeter(FusionEntityFrameworkInstruments.Meter.Name)
+                                                // "ActualLab.Fusion.EntityFramework"
     // ... your own per-assembly meters ...
     .AddOtlpExporter(cfg => { /* endpoint, batching, protocol */ })
     .AddView(instrument => {
@@ -279,6 +316,7 @@ otel.WithTracing(tracer => tracer
     .AddSource(RpcInstruments.ActivitySource.Name)
     .AddSource(CommanderInstruments.ActivitySource.Name)
     .AddSource(FusionInstruments.ActivitySource.Name)
+    .AddSource(FusionEntityFrameworkInstruments.ActivitySource.Name)
     // ... your own per-assembly sources ...
     .AddAspNetCoreInstrumentation(opt => {
         // Exclude noisy, high-volume endpoints (RPC websocket, health checks, _blazor, ...)
@@ -308,8 +346,11 @@ Two things worth copying from this setup:
 | RPC per-method breakdown | `ActualLab.Rpc` | `rpc.server.{Service}/{Method}.call.duration` |
 | RPC transport throughput | `ActualLab.Rpc` | `rpc.{transport}.transport.*` |
 | Compute graph size & pruning | `ActualLab.Fusion` | `computed.registry.node.count`, `computed.registry.edge.count` |
+| Operation-log lag | `ActualLab.Fusion.EntityFramework` | `db.operation_log.processing.delay` |
+| Event-log lag | `ActualLab.Fusion.EntityFramework` | `db.event_log.processing.delay` |
+| Database log batch health | `ActualLab.Fusion.EntityFramework` | `db.log.batch.size`, `db.log.batch.duration` |
 | Command spans | `ActualLab.CommandR` | (traces only) |
-| Distributed traces across RPC | all three `ActivitySource`s | `in.*` / `out.*` spans |
+| Distributed traces across RPC | RPC, CommandR, Fusion, and EF sources | `in.*` / `out.*` spans |
 
 Because Fusion relies on the built-in .NET metrics/tracing primitives, all of
 this works with any OpenTelemetry-compatible backend — the Aspire dashboard,
