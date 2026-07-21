@@ -11,6 +11,7 @@ public static class FusionEntityFrameworkInstruments
 {
     public static readonly ActivitySource ActivitySource = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);
     public static readonly Meter Meter = new(ThisAssembly.AssemblyName, ThisAssembly.AssemblyVersion);
+
     public static readonly Histogram<double> EventLogProcessingDelay;
     public static readonly Histogram<int> LogBatchSize;
     public static readonly Histogram<double> LogBatchDuration;
