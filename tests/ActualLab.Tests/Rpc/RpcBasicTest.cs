@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
@@ -106,6 +108,68 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         await Assert.ThrowsAsync<DivideByZeroException>(
             () => client.Div(1, 0));
         await AssertNoCalls(clientPeer, Out);
+    }
+
+    [Fact]
+    public async Task TraceActivityPropagationWithoutOutboundActivityTest()
+    {
+        var stoppedActivities = new ConcurrentQueue<Activity>();
+        using var listener = new ActivityListener {
+            ShouldListenTo = source => source.Name == RpcInstruments.ActivitySource.Name,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = stoppedActivities.Enqueue,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        await using var services = CreateServices(s => {
+            s.AddSingleton<RpcDiagnosticsOptions>(_ => RpcDiagnosticsOptions.Default with {
+                CallTracerFactory = methodDef => new RpcDefaultCallTracer(
+                    methodDef, mustTraceInbound: true, mustTraceOutbound: false),
+            });
+        });
+        var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+        var divMethod = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
+        var divTracer = (RpcDefaultCallTracer)divMethod.Tracer!;
+        using var parent = new Activity("parent").SetIdFormat(ActivityIdFormat.W3C).Start();
+        var parentContext = parent.Context;
+
+        (await client.Div(6, 2)).Should().Be(3);
+        await AssertNoCalls(clientPeer, Out);
+
+        var serverActivity = stoppedActivities.Single(a =>
+            a.Kind == ActivityKind.Server && a.DisplayName == divTracer.InboundCallName);
+        serverActivity.TraceId.Should().Be(parentContext.TraceId);
+        serverActivity.ParentSpanId.Should().Be(parentContext.SpanId);
+    }
+
+    [Fact]
+    public void TraceHeaderInjectionTest()
+    {
+        var activityContext = new ActivityContext(
+            ActivityTraceId.CreateRandom(),
+            ActivitySpanId.CreateRandom(),
+            ActivityTraceFlags.Recorded,
+            "new-state");
+        var originalHeaders = new[] {
+            new RpcHeader(WellKnownRpcHeaders.W3CTraceParent, "old-parent-1"),
+            new RpcHeader(WellKnownRpcHeaders.W3CTraceState, "old-state-1"),
+            new RpcHeader("custom", "value"),
+            new RpcHeader(WellKnownRpcHeaders.W3CTraceParent, "old-parent-2"),
+            new RpcHeader(WellKnownRpcHeaders.W3CTraceState, "old-state-2"),
+        };
+
+        var headers = RpcActivityInjector.Inject(originalHeaders, activityContext);
+
+        originalHeaders[0].Value.Should().Be("old-parent-1");
+        headers.Count(h => h.Key == WellKnownRpcHeaders.W3CTraceParent).Should().Be(1);
+        headers.Count(h => h.Key == WellKnownRpcHeaders.W3CTraceState).Should().Be(1);
+        headers.TryGet(new RpcHeaderKey("custom")).Should().Be("value");
+        RpcActivityInjector.TryExtract(headers, out var extractedContext).Should().BeTrue();
+        extractedContext.TraceId.Should().Be(activityContext.TraceId);
+        extractedContext.SpanId.Should().Be(activityContext.SpanId);
+        extractedContext.TraceFlags.Should().Be(activityContext.TraceFlags);
+        extractedContext.TraceState.Should().Be(activityContext.TraceState);
     }
 
     [Theory]

@@ -119,4 +119,52 @@ public static class RpcHeadersExt
         newHeaders[^1] = header;
         return newHeaders;
     }
+
+    public static RpcHeader[] WithReplaced(this RpcHeader[]? headers, in RpcHeader header)
+    {
+        if (headers is null || headers.Length == 0)
+            return [header];
+
+        var matchingCount = 0;
+        foreach (var existingHeader in headers)
+            if (existingHeader.Key == header.Key)
+                matchingCount++;
+
+        if (matchingCount == 0)
+            return headers.With(header);
+
+        var newHeaders = new RpcHeader[headers.Length - matchingCount + 1];
+        var index = 0;
+        foreach (var existingHeader in headers)
+            if (existingHeader.Key != header.Key)
+                newHeaders[index++] = existingHeader;
+        newHeaders[index] = header;
+        return newHeaders;
+    }
+
+    public static RpcHeader[] WithReplaced(
+        this RpcHeader[]? headers,
+        in RpcHeader header1,
+        in RpcHeader header2)
+    {
+        if (headers is null || headers.Length == 0)
+            return [header1, header2];
+
+        var matchingCount = 0;
+        foreach (var existingHeader in headers)
+            if (existingHeader.Key == header1.Key || existingHeader.Key == header2.Key)
+                matchingCount++;
+
+        if (matchingCount == 0)
+            return headers.With(header1, header2);
+
+        var newHeaders = new RpcHeader[headers.Length - matchingCount + 2];
+        var index = 0;
+        foreach (var existingHeader in headers)
+            if (existingHeader.Key != header1.Key && existingHeader.Key != header2.Key)
+                newHeaders[index++] = existingHeader;
+        newHeaders[index] = header1;
+        newHeaders[index + 1] = header2;
+        return newHeaders;
+    }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ActualLab.Interception;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Diagnostics;
@@ -29,6 +30,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
     public RpcOutboundCallTrace? Trace;
+    public ActivityContext ActivityContext;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundContext(RpcPeer peer, RpcHeader[]? headers = null)
@@ -81,8 +83,10 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
         if (Call is null)
             return Call;
 
+        var activityContext = Activity.Current?.Context ?? default;
         if (MethodDef.Tracer is { } tracer)
             Trace ??= tracer.StartOutboundTrace(Call);
+        ActivityContext = Trace?.Activity?.Context ?? activityContext;
         return Call;
     }
 

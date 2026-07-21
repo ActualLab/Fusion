@@ -28,7 +28,7 @@ field and metric must be verified in the dashboard.
 
 ## Tracing batches
 
-- [ ] T1: preserve ambient W3C context when no RPC client activity is created; replace stale caller-supplied trace
+- [x] T1: preserve ambient W3C context when no RPC client activity is created; replace stale caller-supplied trace
   headers without mutating caller-owned arrays. Add propagation and header regression tests.
 - [ ] T2: give every rerouted attempt a live client activity and verify the successful attempt is parented correctly.
   Reroute remains expected control flow, not an error.

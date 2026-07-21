@@ -15,7 +15,7 @@ public static class RpcActivityInjector
         var (traceParent, traceState) = activityContext.Format();
         var traceParentHeader = new RpcHeader(WellKnownRpcHeaders.W3CTraceParent, traceParent);
         var traceStateHeader = new RpcHeader(WellKnownRpcHeaders.W3CTraceState, traceState);
-        return headers.With(traceParentHeader, traceStateHeader);
+        return headers.WithReplaced(traceParentHeader, traceStateHeader);
     }
 
     public static bool TryExtract(RpcHeader[]? headers, out ActivityContext activityContext)

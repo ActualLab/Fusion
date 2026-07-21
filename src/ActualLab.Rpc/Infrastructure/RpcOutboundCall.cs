@@ -174,7 +174,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var cacheInfoCapture = context.CacheInfoCapture;
         var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
         var activity = context.Trace?.Activity;
-        var message = CreateOutboundMessage(Id, MethodDef.HasPolymorphicArguments, RpcSendHandlers.PropagateToCall, hash, activity);
+        var message = CreateOutboundMessage(
+            Id, MethodDef.HasPolymorphicArguments, RpcSendHandlers.PropagateToCall, hash, activity);
 
         // For cache key capture, we need serialized data
         if (cacheInfoCapture is not null) {
@@ -194,8 +195,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var headers = Context.Headers;
         if (hash is not null)
             headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
-        if (activity is not null)
-            headers = RpcActivityInjector.Inject(headers, activity.Context);
+        var activityContext = activity?.Context ?? Context.ActivityContext;
+        if (activityContext != default)
+            headers = RpcActivityInjector.Inject(headers, activityContext);
 
         return new RpcOutboundMessage(Context, MethodDef, relatedId, needsPolymorphism, headers, sendHandler);
     }
@@ -213,8 +215,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             var headers = Context.Headers;
             if (hash is not null)
                 headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
-            if (activity is not null)
-                headers = RpcActivityInjector.Inject(headers, activity.Context);
+            var activityContext = activity?.Context ?? Context.ActivityContext;
+            if (activityContext != default)
+                headers = RpcActivityInjector.Inject(headers, activityContext);
             return new RpcOutboundMessage(Context, MethodDef, relatedId, needsPolymorphism, headers, argumentData);
         }
         finally {
