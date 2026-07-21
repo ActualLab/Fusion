@@ -11,6 +11,61 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.0.37+1d67c8de | npm: 14.0.17
+
+Release date: 2026-07-20
+
+This release focuses on **cross-host invalidation latency**: the operation log
+reader now reports its processing delays (metric + rate-limited warnings), the
+out-of-order-commit path reacts to notifications instead of polling them out,
+and both the Npgsql and Redis log watchers coalesce their change notifications.
+
+### Breaking Changes
+
+- [`RpcWebSocketServerOptions.ConfigureWebSocket` is now an `RpcWebSocketServerAcceptContextFactory`](https://github.com/ActualLab/Fusion/commit/8e140bea)
+  receiving `(server, context, peerRef)` instead of a plain
+  `Func<WebSocketAcceptContext>`, so the accept context can vary per connection
+  (e.g. to enable WebSocket compression selectively based on the request or
+  peer ref). The OWIN/.NET Framework server gains the same hook.
+
+  **Migration:** if you assign a custom `ConfigureWebSocket` delegate, update
+  it to the new signature; the default behavior is unchanged.
+
+### Added
+
+- [Operation log processing delay reporting](https://github.com/ActualLab/Fusion/commit/49b4b9a4):
+  every remote operation applied by the log reader records a
+  `db.operation.log.processing.delay` histogram (tagged with shard and the
+  processing path: batch / gap / reprocess), and delays above
+  `ProcessingDelayWarningThreshold` (1 s by default) produce rate-limited
+  warnings naming that path — enough to tell out-of-order-commit gap polling
+  from lost-notification check-period fallbacks.
+- [`TaskCoalescer` in `ActualLab.Core`](https://github.com/ActualLab/Fusion/commit/eccd8dc4):
+  coalesces concurrent runs of a task factory — at most one run in flight plus
+  one queued behind it, so any burst of requests is served by at most two runs.
+
+### Performance
+
+- [Out-of-order commits now invalidate near-instantly](https://github.com/ActualLab/Fusion/commit/95e51c11):
+  a notification-triggered wake-up of the operation log reader forces young
+  pending gaps to be re-checked immediately, collapsing the former up-to-~1 s
+  gap-poll delay to one notification round-trip plus one query.
+- [Npgsql and Redis log watchers coalesce change notifications](https://github.com/ActualLab/Fusion/commit/c3787c58)
+  via `TaskCoalescer`: a burst of N commits costs at most two NOTIFY/PUBLISH
+  round-trips instead of N, and the Npgsql watcher no longer serializes sends
+  behind a per-shard lock.
+
+### Tests
+
+- PostgreSql-backed tests randomly split between the Redis and Npgsql
+  operation log watchers, so both notification transports get coverage.
+
+### Documentation
+
+- Performance doc refresh: benchmark numbers updated to 14.0.17, external
+  grpc_bench cross-check, layout cleanups.
+
+
 ## 14.0.17+ddd1df1b | npm: 14.0.17
 
 Release date: 2026-07-16
