@@ -142,8 +142,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
         var trace = MethodDef!.Tracer?.StartOutboundTrace(call, parentActivityContext);
         if (trace is null && (parentActivityContext != default || metricsStartedAt is not null))
             trace = new RpcDefaultOutboundCallTrace(null, parentActivityContext);
-        if (trace is not null)
-            trace.MetricsStartedAt = metricsStartedAt;
+        trace?.MetricsStartedAt = metricsStartedAt;
         return trace;
     }
 

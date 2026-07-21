@@ -11,7 +11,7 @@ public abstract class RpcOutboundCallTrace(Activity? activity, ActivityContext p
     public readonly Activity? Activity = activity;
     public readonly ActivityContext ParentActivityContext = parentActivityContext;
     public readonly ActivityContext ActivityContext = activity?.Context ?? parentActivityContext;
-    internal CpuTimestamp? MetricsStartedAt;
+    public CpuTimestamp? MetricsStartedAt;
 
     public abstract void Complete(RpcOutboundCall call);
 
