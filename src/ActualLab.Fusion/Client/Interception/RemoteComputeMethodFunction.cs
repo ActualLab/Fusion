@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Client.Internal;
+using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
@@ -182,6 +183,10 @@ public abstract class RemoteComputeMethodFunction(
                 var staleComputed = NewRemoteComputed(input, staleResult, existingCacheEntry);
                 existingRemoteComputed!.ChainSynchronizedSourceTo((IRemoteComputed)staleComputed);
                 _ = InvalidateWhenReconnected(staleComputed, peer);
+                if (FusionInstruments.RemoteComputedCacheStaleValueCount.Enabled) {
+                    var tags = new TagList { { "operation", "connection_check" } };
+                    FusionInstruments.RemoteComputedCacheStaleValueCount.Add(1, tags);
+                }
                 return staleComputed;
             }
             whenConnected = WhenConnectedCheckedAsync(input, peer, cancellationToken);
@@ -217,6 +222,10 @@ public abstract class RemoteComputeMethodFunction(
                     var staleComputed = NewRemoteComputed(input, staleResult, existingCacheEntry);
                     existingRemoteComputed!.ChainSynchronizedSourceTo((IRemoteComputed)staleComputed);
                     _ = InvalidateWhenReconnected(staleComputed, peer);
+                    if (FusionInstruments.RemoteComputedCacheStaleValueCount.Enabled) {
+                        var tags = new TagList { { "operation", "active_call" } };
+                        FusionInstruments.RemoteComputedCacheStaleValueCount.Add(1, tags);
+                    }
                     return staleComputed;
                 }
                 // Assign the completed task back to sendTask, coz we "unwrapped" the old one

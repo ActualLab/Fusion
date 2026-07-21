@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Interception;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
@@ -62,7 +64,37 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         Set(VersionKey, new RpcCacheValue(expectedData, ""));
     }
 
-    public async ValueTask<RpcCacheEntry?> Get(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
+    public ValueTask<RpcCacheEntry?> Get(
+        ComputeMethodInput input,
+        RpcCacheKey key,
+        CancellationToken cancellationToken)
+    {
+        var requestCountEnabled = FusionInstruments.RemoteComputedCacheRequestCount.Enabled;
+        var lookupDurationEnabled = FusionInstruments.RemoteComputedCacheLookupDuration.Enabled;
+        return requestCountEnabled || lookupDurationEnabled
+            ? GetWithMetrics(input, key, requestCountEnabled, lookupDurationEnabled, cancellationToken)
+            : GetCore(input, key, false, cancellationToken);
+    }
+
+    public abstract ValueTask<RpcCacheValue?> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
+    public abstract void Set(RpcCacheKey key, RpcCacheValue value);
+    public abstract void Remove(RpcCacheKey key);
+    public abstract Task Clear(CancellationToken cancellationToken = default);
+
+    // Protected methods
+
+    protected Task WhenInitializedUnlessVersionKey(RpcCacheKey key) =>
+        WhenInitialized.IsCompleted || ReferenceEquals(key, VersionKey)
+            ? Task.CompletedTask
+            : WhenInitialized;
+
+    // Private methods
+
+    private async ValueTask<RpcCacheEntry?> GetCore(
+        ComputeMethodInput input,
+        RpcCacheKey key,
+        bool mustRethrowError,
+        CancellationToken cancellationToken)
     {
         var methodDef = AnyMethodResolver[key.Name];
         if (methodDef is null)
@@ -86,19 +118,37 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
             Log.LogWarning("Read failed for key `{Key}`: {Type}({Message})",
                 key, e.GetType().GetName(), e.Message);
+            if (mustRethrowError)
+                throw;
+
             return null;
         }
     }
 
-    public abstract ValueTask<RpcCacheValue?> Get(RpcCacheKey key, CancellationToken cancellationToken = default);
-    public abstract void Set(RpcCacheKey key, RpcCacheValue value);
-    public abstract void Remove(RpcCacheKey key);
-    public abstract Task Clear(CancellationToken cancellationToken = default);
-
-    // Protected methods
-
-    protected Task WhenInitializedUnlessVersionKey(RpcCacheKey key) =>
-        WhenInitialized.IsCompleted || ReferenceEquals(key, VersionKey)
-            ? Task.CompletedTask
-            : WhenInitialized;
+    private async ValueTask<RpcCacheEntry?> GetWithMetrics(
+        ComputeMethodInput input,
+        RpcCacheKey key,
+        bool requestCountEnabled,
+        bool lookupDurationEnabled,
+        CancellationToken cancellationToken)
+    {
+        var startedAt = lookupDurationEnabled ? CpuTimestamp.Now : default;
+        var outcome = "cancel";
+        try {
+            var entry = await GetCore(input, key, true, cancellationToken).ConfigureAwait(false);
+            outcome = entry is null ? "miss" : "hit";
+            return entry;
+        }
+        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+            outcome = "error";
+            return null;
+        }
+        finally {
+            var tags = new TagList { { "outcome", outcome } };
+            if (requestCountEnabled)
+                FusionInstruments.RemoteComputedCacheRequestCount.Add(1, tags);
+            if (lookupDurationEnabled)
+                FusionInstruments.RemoteComputedCacheLookupDuration.Record(startedAt.Elapsed.TotalMilliseconds, tags);
+        }
+    }
 }

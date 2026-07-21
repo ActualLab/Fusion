@@ -50,13 +50,13 @@ recommended representation is unset status plus stable events/attributes, subjec
   `rpc.client.call.duration` histograms, both in milliseconds, tagged by stable RPC system and method names. Add
   `rpc.client.reroute.count` on the rare reroute branch.
 - [x] M2: add connection attempt count/duration and connection uptime on lifecycle paths.
-- [ ] M3: add aggregate active server/client call gauges and batched client call-event counts.
+- [x] M3: add aggregate active server/client call gauges and batched client call-event counts.
 - [x] M4: add CommandR execution duration and Fusion operation retry count/delay.
 - [x] M5: retain and verify the existing `db.operation_log.processing.delay`; add event-log processing delay and
   log batch size/duration. Update stale docs to register the EF meter.
 - [x] M6: add invalidation pass duration and command count at the completion-replay scope. Do not instrument
   individual computed invalidations, dependency edges, or other nanosecond-class paths.
-- [ ] M7: add persistent remote-computed cache request/lookup and stale-value-served metrics. Do not instrument
+- [x] M7: add persistent remote-computed cache request/lookup and stale-value-served metrics. Do not instrument
   in-memory cache hits.
 
 Metric tags must be bounded. IDs, routes, arguments, command values, error messages, cache keys, and unbounded shard

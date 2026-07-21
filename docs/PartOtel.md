@@ -63,6 +63,9 @@ method while preserving aggregate and per-method views:
 | `rpc.server.call.duration` | Histogram | ms | Duration of inbound RPC calls |
 | `rpc.client.call.duration` | Histogram | ms | Logical outbound call duration, including reroutes |
 | `rpc.client.reroute.count` | Counter | `{reroute}` | Outbound calls rerouted by the RPC layer |
+| `rpc.server.call.active` | ObservableGauge | `{call}` | Active tracked inbound calls |
+| `rpc.client.call.active` | ObservableGauge | `{call}` | Active tracked outbound calls |
+| `rpc.client.call.event.count` | Counter | `{event}` | Batched delayed, resend, and timeout observations |
 | `rpc.server.error.count` | Counter | | Inbound calls that failed with an error |
 | `rpc.server.cancellation.count` | Counter | | Inbound calls that were cancelled |
 | `rpc.server.incomplete.count` | Counter | | Inbound calls that never completed |
@@ -70,6 +73,8 @@ method while preserving aggregate and per-method views:
 Call durations and server outcome counters carry `rpc.system.name` and
 `rpc.method`. Failed calls also carry `error.type`. Reroutes carry
 `rpc.method`, `rpc.method.kind`, and `rpc.routing.mode`.
+The client call-event counter uses the bounded `rpc.call.event` attribute;
+active-call gauges are aggregated at scrape time and carry no peer identity.
 
 Connection lifecycle instruments cover both client and server peers:
 
@@ -142,6 +147,22 @@ invalidation or dependency edge:
 | `invalidation.pass.command.count` | Histogram | `{command}` | Commands attempted in one pass |
 
 Both use the bounded `command.name` and `outcome` attributes.
+
+Persistent remote-computed cache access is measured only on the asynchronous
+cache lookup path; ordinary in-memory `ComputedRegistry` hits remain
+uninstrumented:
+
+| Metric | Kind | Unit | Meaning |
+|--------|------|------|---------|
+| `remote_computed.cache.request.count` | Counter | `{request}` | Persistent cache lookup requests |
+| `remote_computed.cache.lookup.duration` | Histogram | ms | Persistent cache lookup duration |
+| `remote_computed.cache.stale_value.count` | Counter | `{request}` | Cached values served during disconnection |
+
+Request count and lookup duration use the bounded `outcome` attribute
+(`hit`, `miss`, `error`, or `cancel`). The stale-value counter uses
+`operation` (`connection_check` or `active_call`) to distinguish a value
+served while already disconnected from one served when an active call loses
+its connection.
 
 
 ## Fusion Entity Framework Metrics (`ActualLab.Fusion.EntityFramework`)
@@ -361,6 +382,7 @@ Two things worth copying from this setup:
 |---------------|-----------------------|-----------|
 | RPC call latency and errors | `ActualLab.Rpc` | `rpc.server.call.duration`, `rpc.client.call.duration` |
 | RPC reroutes | `ActualLab.Rpc` | `rpc.client.reroute.count` |
+| RPC active calls and maintenance | `ActualLab.Rpc` | `rpc.*.call.active`, `rpc.client.call.event.count` |
 | RPC connection health | `ActualLab.Rpc` | `rpc.connection.attempt.*`, `rpc.connection.uptime` |
 | RPC transport throughput | `ActualLab.Rpc` | `rpc.{transport}.transport.*` |
 | Compute graph size & pruning | `ActualLab.Fusion` | `computed.registry.node.count`, `computed.registry.edge.count` |
@@ -369,6 +391,7 @@ Two things worth copying from this setup:
 | Database log batch health | `ActualLab.Fusion.EntityFramework` | `db.log.batch.size`, `db.log.batch.duration` |
 | Command execution | `ActualLab.CommandR` | `command.execution.duration` and command spans |
 | Fusion retries and invalidation | `ActualLab.Fusion` | `operation.retry.*`, `invalidation.pass.*` |
+| Persistent remote cache | `ActualLab.Fusion` | `remote_computed.cache.*` |
 | Distributed traces across RPC | RPC, CommandR, Fusion, and EF sources | `in.*` / `out.*` spans |
 
 Because Fusion relies on the built-in .NET metrics/tracing primitives, all of

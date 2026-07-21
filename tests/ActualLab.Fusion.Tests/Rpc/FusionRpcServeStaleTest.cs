@@ -1,5 +1,7 @@
+using System.Diagnostics.Metrics;
 using ActualLab.Fusion.Client;
 using ActualLab.Fusion.Client.Caching;
+using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Middlewares;
@@ -28,6 +30,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task SupersededStaleComputedMustSynchronizeTest()
     {
+        var operations = new ConcurrentQueue<string>();
+        using var listener = StartStaleValueListener(operations);
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -57,11 +61,14 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         // Every superseded computed must synchronize once its successor does -
         // otherwise ComputedSynchronizer.Precise waits on it forever
         await c2.WhenSynchronized.WaitAsync(timeout);
+        operations.Should().BeEquivalentTo("connection_check", "connection_check");
     }
 
     [Fact]
     public async Task MidCallDisconnectStaleComputedMustSynchronizeTest()
     {
+        var operations = new ConcurrentQueue<string>();
+        using var listener = StartStaleValueListener(operations);
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -94,5 +101,34 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         // Every superseded computed must synchronize once its successor does -
         // otherwise ComputedSynchronizer.Precise waits on it forever
         await c2.WhenSynchronized.WaitAsync(timeout);
+        operations.Should().BeEquivalentTo("connection_check", "active_call");
+    }
+
+    private static MeterListener StartStaleValueListener(ConcurrentQueue<string> operations)
+    {
+        var staleValueCount = FusionInstruments.RemoteComputedCacheStaleValueCount;
+        staleValueCount.Name.Should().Be("remote_computed.cache.stale_value.count");
+        staleValueCount.Unit.Should().Be("{request}");
+        var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, meterListener) => {
+            if (ReferenceEquals(instrument, staleValueCount))
+                meterListener.EnableMeasurementEvents(instrument);
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) => {
+            value.Should().Be(1);
+            tags.Length.Should().Be(1);
+            operations.Enqueue(GetTag(tags, "operation"));
+        });
+        listener.Start();
+        return listener;
+    }
+
+    private static string GetTag(ReadOnlySpan<KeyValuePair<string, object?>> tags, string name)
+    {
+        foreach (var tag in tags)
+            if (tag.Key == name)
+                return (string)tag.Value!;
+
+        return "";
     }
 }
