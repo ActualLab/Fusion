@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Diagnostics;
@@ -173,13 +172,12 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         var context = Context;
         var cacheInfoCapture = context.CacheInfoCapture;
         var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
-        var activity = context.Trace?.Activity;
         var message = CreateOutboundMessage(
-            Id, MethodDef.HasPolymorphicArguments, RpcSendHandlers.PropagateToCall, hash, activity);
+            Id, MethodDef.HasPolymorphicArguments, RpcSendHandlers.PropagateToCall, hash);
 
         // For cache key capture, we need serialized data
         if (cacheInfoCapture is not null) {
-            var dataMessage = CreateOutboundMessageWithArgumentData(Id, MethodDef.HasPolymorphicArguments, hash, activity);
+            var dataMessage = CreateOutboundMessageWithArgumentData(Id, MethodDef.HasPolymorphicArguments, hash);
             cacheInfoCapture.CaptureKey(context, dataMessage);
             message = dataMessage; // Use pre-serialized message
         }
@@ -190,12 +188,12 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     public RpcOutboundMessage CreateOutboundMessage(
-        long relatedId, bool needsPolymorphism, RpcTransportSendHandler? sendHandler, string? hash = null, Activity? activity = null)
+        long relatedId, bool needsPolymorphism, RpcTransportSendHandler? sendHandler, string? hash = null)
     {
         var headers = Context.Headers;
         if (hash is not null)
             headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
-        var activityContext = activity?.Context ?? Context.ActivityContext;
+        var activityContext = Context.Trace?.ActivityContext ?? default;
         if (activityContext != default)
             headers = RpcActivityInjector.Inject(headers, activityContext);
 
@@ -203,7 +201,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     public RpcOutboundMessage CreateOutboundMessageWithArgumentData(
-        long relatedId, bool needsPolymorphism, string? hash = null, Activity? activity = null)
+        long relatedId, bool needsPolymorphism, string? hash = null)
     {
         var oldOutboundContext = RpcOutboundContext.Current;
         RpcOutboundContext.Current = Context;
@@ -215,7 +213,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             var headers = Context.Headers;
             if (hash is not null)
                 headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
-            var activityContext = activity?.Context ?? Context.ActivityContext;
+            var activityContext = Context.Trace?.ActivityContext ?? default;
             if (activityContext != default)
                 headers = RpcActivityInjector.Inject(headers, activityContext);
             return new RpcOutboundMessage(Context, MethodDef, relatedId, needsPolymorphism, headers, argumentData);
@@ -356,8 +354,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
 
         if (!IsLongLiving || Peer.OutboundCalls.UnregisterLongLiving(this)) {
             CancellationHandler.Dispose();
-            Context.Trace?.Complete(this);
-            Context.CompleteMetrics(this);
+            var trace = Context.Trace;
+            trace?.Complete(this);
+            trace?.CompleteMetrics(this);
         }
 
         if (notifyCancelled)
@@ -372,8 +371,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             return;
 
         CancellationHandler.Dispose();
-        Context.Trace?.Complete(this);
-        Context.CompleteMetrics(this);
+        var trace = Context.Trace;
+        trace?.Complete(this);
+        trace?.CompleteMetrics(this);
     }
 
     // Helpers

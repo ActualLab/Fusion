@@ -17,7 +17,9 @@ public class TestRpcCallTracer(RpcMethodDef methodDef) : RpcCallTracer(methodDef
     public override RpcInboundCallTrace? StartInboundTrace(RpcInboundCall call)
         => new InboundTrace(this);
 
-    public override RpcOutboundCallTrace? StartOutboundTrace(RpcOutboundCall call)
+    public override RpcOutboundCallTrace? StartOutboundTrace(
+        RpcOutboundCall call,
+        ActivityContext parentActivityContext)
         => null;
 
     // Nested types

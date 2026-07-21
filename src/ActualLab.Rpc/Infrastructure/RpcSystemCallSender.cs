@@ -84,8 +84,9 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     {
         try {
 #pragma warning disable MA0100
-            var context = new RpcOutboundContext(peer, inboundCall.Id, headers);
-            context.InboundCall = inboundCall;
+            var context = new RpcOutboundContext(peer, inboundCall.Id, headers) {
+                InboundCall = inboundCall.TryPrepareTraceCompletion(null) ? inboundCall : null,
+            };
             var call = context.PrepareCallForSendNoWait(OkMethodDef, ArgumentList.New(result))!;
             var inboundHash = inboundCall.Context.Message.Headers.TryGet(WellKnownRpcHeaders.Hash);
             if (inboundHash is null) {
@@ -140,8 +141,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         Exception? traceError)
     {
         var context = new RpcOutboundContext(peer, inboundCall.Id, headers) {
-            InboundCall = inboundCall,
-            InboundCallTraceError = traceError,
+            InboundCall = inboundCall.TryPrepareTraceCompletion(traceError) ? inboundCall : null,
         };
         var call = context.PrepareCallForSendNoWait(ErrorMethodDef, ArgumentList.New(error.ToExceptionInfo()))!;
         call.SendNoWait(needsPolymorphism: false, RpcSendHandlers.CompleteInboundCall);
@@ -164,7 +164,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     private void Match(RpcPeer peer, RpcInboundCall inboundCall, RpcHeader[]? headers)
     {
         var context = new RpcOutboundContext(peer, inboundCall.Id, headers) {
-            InboundCall = inboundCall,
+            InboundCall = inboundCall.TryPrepareTraceCompletion(null) ? inboundCall : null,
         };
         var call = context.PrepareCallForSendNoWait(MatchMethodDef, ArgumentList.Empty)!;
         call.SendNoWait(needsPolymorphism: false, RpcSendHandlers.CompleteInboundCall);

@@ -30,10 +30,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     public long RelatedId;
     public RpcCacheInfoCapture? CacheInfoCapture;
     public RpcInboundCall? InboundCall;
-    public Exception? InboundCallTraceError;
     public RpcOutboundCallTrace? Trace;
-    public ActivityContext ActivityContext;
-    public CpuTimestamp? MetricsStartedAt;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RpcOutboundContext(RpcPeer peer, RpcHeader[]? headers = null)
@@ -86,11 +83,11 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
         if (Call is null)
             return Call;
 
-        ActivityContext = Activity.Current?.Context ?? default;
-        if (RpcInstruments.IsOutboundEnabled)
-            MetricsStartedAt ??= CpuTimestamp.Now;
-        if (MethodDef.Tracer is { } tracer)
-            Trace ??= tracer.StartOutboundTrace(Call);
+        if (Trace is null) {
+            var parentActivityContext = Activity.Current?.Context ?? default;
+            CpuTimestamp? metricsStartedAt = RpcInstruments.IsOutboundEnabled ? CpuTimestamp.Now : null;
+            Trace = StartTrace(Call, parentActivityContext, metricsStartedAt);
+        }
         return Call;
     }
 
@@ -128,25 +125,26 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
         if (oldPeer is null || !oldPeer.Route.IsStatic)
             Peer = MethodDef.RouteOutboundCall(Arguments);
         Call = MethodDef.CreateOutboundCall(this);
-        Trace = Call is not null && MethodDef.Tracer is { } tracer
-            ? tracer.StartOutboundTrace(Call)
-            : null;
+        var oldTrace = Trace;
+        Trace = Call is null
+            ? null
+            : StartTrace(Call, oldTrace?.ParentActivityContext ?? default, oldTrace?.MetricsStartedAt);
         if (ReferenceEquals(oldPeer, Peer))
             Peer?.Log.LogWarning("The call {Call} is rerouted to the same peer: {Peer}", Call, Peer);
         return Call;
     }
 
-    public void CompleteMetrics(RpcOutboundCall call)
+    private RpcOutboundCallTrace? StartTrace(
+        RpcOutboundCall call,
+        ActivityContext parentActivityContext,
+        CpuTimestamp? metricsStartedAt)
     {
-        if (MetricsStartedAt is not { } startedAt)
-            return;
-
-        var error = call.ResultTask.ToResultSynchronously().Error;
-        if (error is RpcRerouteException)
-            return;
-
-        MetricsStartedAt = null;
-        RpcInstruments.RegisterOutboundCall(MethodDef!, startedAt.Elapsed.TotalMilliseconds, error);
+        var trace = MethodDef!.Tracer?.StartOutboundTrace(call, parentActivityContext);
+        if (trace is null && (parentActivityContext != default || metricsStartedAt is not null))
+            trace = new RpcDefaultOutboundCallTrace(null, parentActivityContext);
+        if (trace is not null)
+            trace.MetricsStartedAt = metricsStartedAt;
+        return trace;
     }
 
     // Nested types

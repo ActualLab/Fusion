@@ -259,7 +259,20 @@ public abstract class RpcInboundCall : RpcCall
                 return;
 
             Trace = null;
+            error ??= trace.CompletionError;
             trace.Complete(this, error);
+        }
+    }
+
+    internal bool TryPrepareTraceCompletion(Exception? error)
+    {
+        lock (Lock) {
+            if (Trace is not { } trace)
+                return false;
+
+            if (error is not null)
+                trace.CompletionError = error;
+            return true;
         }
     }
 

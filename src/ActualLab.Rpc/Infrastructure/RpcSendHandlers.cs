@@ -57,12 +57,14 @@ public static class RpcSendHandlers
             transport.Peer.Log.LogError(error, "Failed to send response for call #{CallId}", message.RelatedId);
         };
 
-    public static bool IsAutoHandledError(Exception error)
-        => error is OperationCanceledException or ChannelClosedException;
+    // Helper methods
 
-    private static void CompleteInboundCallTrace(RpcOutboundMessage message, Exception? error)
+    public static void CompleteInboundCallTrace(RpcOutboundMessage message, Exception? error)
     {
         var context = message.Context;
-        context.InboundCall?.CompleteTrace(error ?? context.InboundCallTraceError);
+        context.InboundCall?.CompleteTrace(error);
     }
+
+    public static bool IsAutoHandledError(Exception error)
+        => error is OperationCanceledException or ChannelClosedException;
 }

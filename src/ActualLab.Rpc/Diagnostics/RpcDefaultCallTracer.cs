@@ -62,19 +62,20 @@ public class RpcDefaultCallTracer : RpcCallTracer
         return new RpcDefaultInboundCallTrace(this, activity);
     }
 
-    public override RpcOutboundCallTrace? StartOutboundTrace(RpcOutboundCall call)
+    public override RpcOutboundCallTrace? StartOutboundTrace(
+        RpcOutboundCall call,
+        ActivityContext parentActivityContext)
     {
         if (!MustTraceOutbound)
             return null;
 
         // Activity should never become Current
         var lastActivity = Activity.Current;
-        var parentContext = lastActivity?.Context ?? default;
         var activity = ActivitySource.StartActivity(
-            OutboundCallName, ActivityKind.Client, parentContext: parentContext, tags: ActivityTags);
+            OutboundCallName, ActivityKind.Client, parentContext: parentActivityContext, tags: ActivityTags);
         if (lastActivity != activity)
             Activity.Current = lastActivity;
-        return activity is null ? null : new RpcDefaultOutboundCallTrace(activity);
+        return activity is null ? null : new RpcDefaultOutboundCallTrace(activity, parentActivityContext);
     }
 
     public void RegisterInboundCall(in RpcCallSummary callSummary, Exception? error)

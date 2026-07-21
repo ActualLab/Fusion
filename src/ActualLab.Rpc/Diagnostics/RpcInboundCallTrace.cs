@@ -9,6 +9,7 @@ namespace ActualLab.Rpc.Diagnostics;
 public abstract class RpcInboundCallTrace(Activity? activity)
 {
     public readonly Activity? Activity = activity;
+    public Exception? CompletionError;
 
     public abstract void Complete(RpcInboundCall call, Exception? error);
 }

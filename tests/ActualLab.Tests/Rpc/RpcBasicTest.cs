@@ -348,8 +348,7 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var secondMessage = secondCall.CreateOutboundMessage(
             secondCall.Id,
             method.HasPolymorphicArguments,
-            sendHandler: null,
-            activity: secondActivity);
+            sendHandler: null);
         secondCall.Register();
         secondCall.SetResult(3, context: null);
 
