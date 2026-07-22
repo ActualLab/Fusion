@@ -38,7 +38,8 @@ public static class BuiltInHandlerRegistrations
         {
             #region PartCBH_CommandTracerReg
             // Registration (automatic in AddCommander)
-            services.AddSingleton(c => new CommandTracer(c));
+            services.AddSingleton(_ => CommandTracer.Options.Default);
+            services.AddSingleton(c => new CommandTracer(c.GetRequiredService<CommandTracer.Options>(), c));
             commander.AddHandlers<CommandTracer>();
             #endregion
         }

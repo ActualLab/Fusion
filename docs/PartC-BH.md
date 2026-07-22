@@ -42,7 +42,8 @@ Provides diagnostic tracing and activity tracking for command execution. Creates
 <!-- snippet: PartCBH_CommandTracerReg -->
 ```cs
 // Registration (automatic in AddCommander)
-services.AddSingleton(c => new CommandTracer(c));
+services.AddSingleton(_ => CommandTracer.Options.Default);
+services.AddSingleton(c => new CommandTracer(c.GetRequiredService<CommandTracer.Options>(), c));
 commander.AddHandlers<CommandTracer>();
 ```
 <!-- endSnippet -->
