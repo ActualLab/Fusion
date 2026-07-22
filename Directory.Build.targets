@@ -6,10 +6,13 @@
   <Target Name="SetCloudBuildNumberWithVersion" />
 
   <!-- Pack the per-package README.md (referenced by PackageReadmeFile) when present.
-       Update, not Include: the SDK's default globs already add README.md as a None item.
-       This lives in .targets, not .props, so it runs after those globs exist. -->
+       Remove + Include, not Update: pack collects files in the cross-targeting (outer) build,
+       which never imports Microsoft.NET.Sdk.DefaultItems.targets, so EnableDefaultItems stays
+       unset there and the SDK's None glob doesn't run - Update would match nothing (NU5039).
+       Remove keeps inner builds (where the glob does add README.md) free of duplicates. -->
   <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
-    <None Update="README.md" Pack="true" PackagePath="" Visible="false" />
+    <None Remove="README.md" />
+    <None Include="README.md" Pack="true" PackagePath="" Visible="false" />
   </ItemGroup>
 
 </Project>
