@@ -11,6 +11,80 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.1.47+493d3cc7 | npm: 14.1.5
+
+Release date: 2026-07-21
+
+This is a NuGet-only release (npm stays at `14.1.5`) that overhauls Fusion's
+OpenTelemetry story: RPC call and connection metrics, database log pipeline
+metrics, invalidation pass and persistent remote cache monitoring, plus a
+set of distributed-tracing fixes — see the updated
+[Part "OpenTelemetry"](https://fusion.actuallab.net/PartOtel) for the full
+instrument reference.
+
+### Breaking Changes
+
+- Per-method RPC instruments (`rpc.server.{Service}/{Method}.*`) are gone;
+  RPC call metrics are now a fixed set of instruments carrying the bounded
+  `rpc.method` attribute, and `rpc.server.duration` is renamed to
+  `rpc.server.call.duration`. Use metric views to drop `rpc.method` where
+  per-method breakdown isn't needed.
+- Live-count instruments (e.g. `rpc.{transport}.transport.count`) are
+  `ObservableGauge`-s now instead of `ObservableCounter`-s — update
+  dashboards that treated them as monotonic sums.
+
+### Added
+
+- RPC call instruments: `rpc.client.call.duration` (logical call duration
+  including reroutes), `rpc.client.reroute.count`, open-call gauges
+  `rpc.server.call.open` / `rpc.client.call.open` (by call stage), and
+  `rpc.client.call.event.count` for delayed / resend / timeout observations.
+- RPC connection instruments: `rpc.client.connection.attempt.count`,
+  `rpc.client.connection.attempt.duration`, and client/server
+  `rpc.*.connection.uptime` histograms, tagged with `rpc.connection.kind`
+  and `outcome`.
+- Database log pipeline instruments (`ActualLab.Fusion.EntityFramework`):
+  `db.event_log.processing.delay`, `db.log.batch.size`, and
+  `db.log.batch.duration`.
+- Command and operation retry instruments (`operation.retry.*`) in CommandR /
+  Fusion operations.
+- Safe invalidation pass monitoring: `invalidation.pass.duration` and
+  `invalidation.pass.command.count`; partial invalidation failures mark the
+  enclosing span as an error.
+- Persistent remote cache instruments: `remote_computed.cache.request.count`,
+  `remote_computed.cache.lookup.duration`, and
+  `remote_computed.cache.stale_value.count`.
+- `RpcDiagnosticsOptions.MustPropagateAmbientActivityContext` — lets
+  perf-sensitive hosts skip the `Activity.Current` lookup on the outbound
+  call path.
+
+### Fixed
+
+- Distributed trace context is preserved across RPC calls, and call traces
+  are renewed after rerouting.
+- RPC spans are aligned with OpenTelemetry semantic conventions, and
+  response serialization is traced.
+- Entity Framework spans use the proper EF activity source.
+- Blazor circuits suppress only connection-scoped activities, so deliberate
+  ambient activities (e.g. .NET 10 Blazor circuit spans) are preserved; the
+  suppression predicate is virtual for custom policies.
+- Database log batch outcome distinguishes cancellation from error, and
+  retry instruments skip tag construction when disabled.
+- Inbound call trace completion tolerates incomplete result tasks.
+
+### Performance
+
+- Call-path diagnostics overhead is nearly eliminated when telemetry is off:
+  no per-outbound-call trace allocation, and the inbound call lock is
+  skipped when there is no trace to complete.
+- Enabled-instrument checks and staged RPC call counts are cached.
+
+### Infrastructure
+
+- The test suite runs in parallel groups with an exclusive phase for
+  time-sensitive tests: the full default run went from ~38 to ~14 minutes.
+
+
 ## 14.1.3+79939c2a | npm: 14.1.5
 
 Release date: 2026-07-21
