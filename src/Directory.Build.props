@@ -126,7 +126,7 @@
     <RepositoryType>git</RepositoryType>
     <PrivateRepositoryUrl>$(RepositoryUrl)</PrivateRepositoryUrl>
     <ScmRepositoryUrl>$(RepositoryUrl)</ScmRepositoryUrl>
-    <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+    <!-- PackageProjectUrl intentionally not set here: inherit the docs-site URL from the root Directory.Build.props. -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- Revision info -->

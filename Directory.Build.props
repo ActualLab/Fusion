@@ -64,16 +64,13 @@
 
   <!-- Packaging -->
   <PropertyGroup>
-    <PackageProjectUrl>https://github.com/ActualLab/Fusion</PackageProjectUrl>
+    <PackageProjectUrl>https://fusion.actuallab.net/</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/ActualLab/Fusion</RepositoryUrl>
     <PackageTags>actual_chat actual_lab actual_lab_fusion</PackageTags>
-    <Description>A part of Actual Chat, Inc. library.</Description>
-    <!--
-    <ApplicationIcon>$(MSBuildThisFileDirectory)\docs\img\Logo128.jpg</ApplicationIcon>
-    -->
-    <PackageIconUrl>https://github.com/ActualLab/Fusion/master/docs/img/Logo128.jpg</PackageIconUrl>
+    <Description>A part of ActualLab.Fusion - an end-to-end reactive state sync and RPC framework for .NET and Blazor.</Description>
+    <PackageIcon>Logo128.jpg</PackageIcon>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoPackageAnalysis>false</NoPackageAnalysis>
     <DefaultLanguage>en-US</DefaultLanguage>
@@ -84,6 +81,11 @@
     <DebugSymbols>true</DebugSymbols>
     <GenerateFullPaths Condition="'$(TERM_PROGRAM)' == 'vscode'">true</GenerateFullPaths>
   </PropertyGroup>
+
+  <!-- NuGet package icon, referenced by PackageIcon above and packed into every package. -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)docs\img\Logo128.jpg" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
 
   <!-- Analyzers & warnings -->
   <PropertyGroup>
@@ -100,10 +102,9 @@
     <!-- NuGet & libraries / frameworks -->
     <!-- NU1603: Approximate best match for X was resolved -->
     <!-- NU1901-1904: Package 'X' has a known severity vulnerability -->
-    <!-- NU5048: The 'PackageIconUrl'/'iconUrl' element is deprecated -->
     <!-- NU5105: The package version uses SemVer 2.0.0 or components of SemVer 1.0.0 that are not supported on legacy clients -->
     <!-- NETSDK1138: The target framework 'net5.0' is out of support. -->
-    <NoWarn>$(NoWarn);NU1603;NU1901;NU1902;NU1903;NU1904;NU5048;NU5105;NETSDK1138</NoWarn>
+    <NoWarn>$(NoWarn);NU1603;NU1901;NU1902;NU1903;NU1904;NU5105;NETSDK1138</NoWarn>
     <!-- Roslyn analyzers' suppressions (some of these are errors, not just warnings) -->
     <!-- MsgPack006: False positive error on open generic [MessagePackFormatter] types.
          The source generator can't validate IMessagePackFormatter on unbound generic types

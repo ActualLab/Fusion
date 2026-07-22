@@ -11,7 +11,7 @@
       -->hosting plugins are loaded only once you access the plugins <!--
       -->via IoC container. <!--
       -->Despite that, it tries to create IoC container as quickly <!--
-      -->as possible by caching reflected infromation about the plugins, <!--
+      -->as possible by caching reflected information about the plugins, <!--
       -->which is updated only once you change them (i.e. basically, <!--
       -->the startup is typically quite fast).<!--
       --></Description>
