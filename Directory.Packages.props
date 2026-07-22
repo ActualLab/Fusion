@@ -232,7 +232,7 @@
     <PackageVersion Include="xunit.analyzers" Version="1.27.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.123" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.125" />
     <!-- Generators -->
     <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)" />
     <!-- Microsoft.CodeAnalysis.* KEEP LOW: kept in sync with the low Roslyn baseline
