@@ -5,4 +5,11 @@
   <Target Name="SetCloudBuildVersionVars" />
   <Target Name="SetCloudBuildNumberWithVersion" />
 
+  <!-- Pack the per-package README.md (referenced by PackageReadmeFile) when present.
+       Update, not Include: the SDK's default globs already add README.md as a None item.
+       This lives in .targets, not .props, so it runs after those globs exist. -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
+    <None Update="README.md" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
 </Project>

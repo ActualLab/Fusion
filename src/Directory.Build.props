@@ -127,6 +127,7 @@
     <PrivateRepositoryUrl>$(RepositoryUrl)</PrivateRepositoryUrl>
     <ScmRepositoryUrl>$(RepositoryUrl)</ScmRepositoryUrl>
     <!-- PackageProjectUrl intentionally not set here: inherit the docs-site URL from the root Directory.Build.props. -->
+    <PackageReadmeFile Condition="Exists('$(MSBuildProjectDirectory)/README.md')">README.md</PackageReadmeFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- Revision info -->
