@@ -196,3 +196,21 @@ details {
     user-select: text; /* Enable on drag */
   }
 }
+
+/* Robot/AI icon (docs/img/icons/robot.svg), tinted via currentColor so it
+   follows the surrounding text color in both themes. */
+.robot-icon {
+  display: inline-block;
+  width: 1.05em;
+  height: 1.05em;
+  vertical-align: -0.22em;
+  background-color: currentColor;
+  -webkit-mask: url("/img/icons/robot.svg") center / contain no-repeat;
+  mask: url("/img/icons/robot.svg") center / contain no-repeat;
+}
+.robot-icon.suffix {
+  margin-left: 0.4em;
+}
+.robot-icon.prefix {
+  margin-right: 0.4em;
+}

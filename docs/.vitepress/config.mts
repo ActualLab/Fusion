@@ -201,8 +201,8 @@ gtag('config', 'G-PX4G7HX4CM');`],
     nav: [
       { text: "Samples", link: "https://github.com/ActualLab/Fusion.Samples" },
       { text: "GitHub", link: "https://github.com/ActualLab/Fusion" },
-      { text: "MCP", link: "/mcp-server" },
       { text: "Chat", link: "https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo" },
+      { text: "MCP", link: "/mcp-server" },
     ],
     sidebar: [
       {
@@ -363,7 +363,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
           { text: "Glossary", link: "/glossary" },
           { text: "API Index", link: "/api-index-full" },
           { text: "NuGet Packages", link: "/NuGet-Packages" },
-          { text: "MCP Server 🤖", link: "/mcp-server" },
+          { text: "MCP Server<span class='robot-icon suffix'></span>", link: "/mcp-server" },
           {
             text: "Fusion vs...",
             link: "/ActualLab.Fusion-vs/",

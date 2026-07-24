@@ -5,6 +5,14 @@ description: Connect Claude Code or ChatGPT to the public ActualLab.Fusion docum
 
 # Fusion Documentation & Source MCP Server
 
+::: tip Why connect it?
+Once this MCP server is wired up, **Claude or ChatGPT can answer almost any Fusion-related
+question in under 30 seconds**. It makes the assistant aware of Fusion's concepts — compute
+services, invalidation, etc. — and lets it dig into the source that implements them. In our experience this works **better and faster** than instructing
+the assistant via `CLAUDE.md` (or a system prompt) to read Fusion's source and documentation
+from a nearby folder.
+:::
+
 The Fusion documentation site exposes a public, read-only Model Context Protocol server. It gives AI coding assistants
 focused access to the Fusion **documentation** (the same Markdown and anchors used by this website) and to the Fusion
 **source code** (the `.cs` / `.razor` files under `src`, `samples`, and `tests`).

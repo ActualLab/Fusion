@@ -15,9 +15,6 @@ hero:
     - theme: brand
       text: Slides
       link: /Videos-and-Slides
-    - theme: brand
-      text: MCP
-      link: /mcp-server
     - theme: alt
       text: Changelog
       link: /CHANGELOG
@@ -30,27 +27,30 @@ hero:
     - theme: alt
       text: Chat
       link: https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo
+    - theme: alt
+      text: MCP
+      link: /mcp-server
 
 features:
   - icon: ✨
     title: End-to-End Reactivity
-    details: "Automatic <span style='color:var(--hl-feat);'>state sync</span> across your <span style='color:var(--hl-feat);'>server cluster and every client</span> connected to it. No SignalR hubs. No event handlers. No manual pub/sub."
-  - icon: ⚡
+    details: "Automatic <span style='color:var(--hl-feat);'>state sync</span> across your <span style='color:var(--hl-feat);'>server cluster and every client</span> connected to it.<span style='display:block;margin-top:0.5em;'>No SignalR hubs. No event handlers. No manual pub/sub. And no manual cache reads, writes, or consistency checks — read further <span style='color:var(--hl-arrow);'>→</span></span>"
+  - icon: 📦
+    title: Cache Everything, Manage Nothing
+    details: "Fusion <span style='color:var(--hl-feat);'>caches every compute method call</span> and <span style='color:var(--hl-feat);'>tracks what depends on what</span>. When a cached value is marked changed, the <span style='color:var(--hl-feat);'>invalidation cascades</span> through the dependency graph, evicting every <span style='color:var(--hl-feat);'>local and <span style='text-decoration:underline;'>remote</span> dependent.</span>"
+  - icon: 🚀
     title: Unbeatable Speed
-    details: "<span style='color:var(--hl-feat);'>200x faster than Redis:</span> 50M cache-resolving calls/s per core. The fastest RPC available: <span style='color:var(--hl-feat);'>2–7x faster than gRPC and SignalR.</span>"
+    details: "<span style='color:var(--hl-feat);'>At least 40x faster than Redis</span> — and <span style='color:var(--hl-feat);'>up to 1,500x</span> when the locally cached value is still consistent. The fastest RPC available: <span style='color:var(--hl-feat);'>2–7x faster than gRPC and SignalR.</span>"
     link: /Performance#results
     linkText: See benchmarks
   - icon: ✈️
     title: Zero-Effort Offline
-    details: "<span style='color:var(--hl-feat);'>Flip a switch</span> to make your Blazor or MAUI client <span style='color:var(--hl-feat);'>start and operate offline</span>. Bonus: <span style='color:var(--hl-feat);'>10x faster</span> startup, and your app works even on GPRS."
-  - icon: 💎
-    title: No Boilerplate
-    details: "<span style='color:var(--hl-feat);'>Same code</span> you'd write anyway, <span style='color:var(--hl-feat);'>plus a few attributes and invalidation blocks</span>. That's all it takes."
+    details: "<span style='color:var(--hl-feat);'>Flip a switch</span> to make your Blazor or MAUI client <span style='color:var(--hl-feat);'>start and operate offline</span>.<span style='display:block;margin-top:0.5em;'>Bonus: <span style='color:var(--hl-feat);'>10x faster startup</span>, <span style='color:var(--hl-feat);'>speculative execution</span>, and your app works even on GPRS.</span>"
+  - icon: 💰
+    title: Clean Code That Runs Anywhere
+    details: "Fusion logic runs unchanged on <span style='color:var(--hl-feat);'>Blazor Server, WebAssembly, and MAUI.</span> And it's <span style='color:var(--hl-feat);'>almost identical to the code you'd write anyway</span>, plus a few attributes and invalidation blocks."
     link: /PartF#_1-compute-services-and-compute-methods
     linkText: See example
-  - icon: 💰
-    title: Write Once, Run Anywhere
-    details: "Same code runs on Blazor Server, WebAssembly, and MAUI. <span style='color:var(--hl-feat);'>Fusion works everywhere.</span>"
   - icon: 🛡️
     title: Battle-Tested
     details: "Powers <span style='color:var(--hl-feat); text-decoration: underline;'>Voxt.ai</span>—a real-time voice chat with live transcription, translation, and AI summaries across all platforms."
@@ -65,12 +65,14 @@ features:
   --hl-scale: #7c3aed;
   --hl-feat: var(--vp-c-text-1);
   --hl-mit: #15803d;
+  --hl-arrow: #2563eb;
 }
 .dark {
   --hl-rt: #fb923c;
   --hl-cache: #fbbf24;
   --hl-scale: #a78bfa;
   --hl-mit: #22c55e;
+  --hl-arrow: #60a5fa;
 }
 
 /* Hero — dark sun background image, right-aligned. The hero is always
@@ -96,16 +98,18 @@ features:
   color: #c9ccd4;
 }
 
-/* Merge the first three brand actions (Documentation | Slides | MCP) into a
+/* Trim horizontal padding on all hero buttons by 20% (20px -> 16px). */
+.VPHome .VPHero .actions .action .VPButton {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* Merge the first two brand actions (Documentation | Slides) into a
    single split button. */
 .VPHome .VPHero .actions .action:nth-child(1) {
   padding-right: 0;
 }
 .VPHome .VPHero .actions .action:nth-child(2) {
-  padding-left: 0;
-  padding-right: 0;
-}
-.VPHome .VPHero .actions .action:nth-child(3) {
   padding-left: 0;
 }
 .VPHome .VPHero .actions .action:nth-child(1) .VPButton {
@@ -114,12 +118,31 @@ features:
   border-right: 1px solid rgba(255, 255, 255, 0.25);
 }
 .VPHome .VPHero .actions .action:nth-child(2) .VPButton {
-  border-radius: 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.25);
-}
-.VPHome .VPHero .actions .action:nth-child(3) .VPButton {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+
+/* MCP action (last button) — green button with a white robot/AI icon. */
+.VPHome .VPHero .actions .action:last-child .VPButton {
+  background-color: #22c55e;
+  border-color: #22c55e;
+  color: #fff;
+}
+.VPHome .VPHero .actions .action:last-child .VPButton:hover {
+  background-color: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+.VPHome .VPHero .actions .action:last-child .VPButton::before {
+  content: "";
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: 0.3em;
+  vertical-align: -0.22em;
+  background-color: currentColor;
+  -webkit-mask: url("/img/icons/robot.svg") center / contain no-repeat;
+  mask: url("/img/icons/robot.svg") center / contain no-repeat;
 }
 </style>
 
