@@ -1,5 +1,4 @@
 using ActualLab.OS;
-using ActualLab.Time.Internal;
 
 namespace ActualLab.Time;
 

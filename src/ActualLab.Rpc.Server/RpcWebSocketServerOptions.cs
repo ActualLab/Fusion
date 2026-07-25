@@ -1,5 +1,4 @@
 using ActualLab.Rpc.Clients;
-using Microsoft.AspNetCore.Http;
 
 namespace ActualLab.Rpc.Server;
 

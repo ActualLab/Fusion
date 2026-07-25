@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
-using ActualLab.Internal;
 
 namespace ActualLab.Fusion.EntityFramework;
 

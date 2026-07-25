@@ -1,4 +1,3 @@
-using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Internal;
 using ActualLab.Versioning;
 

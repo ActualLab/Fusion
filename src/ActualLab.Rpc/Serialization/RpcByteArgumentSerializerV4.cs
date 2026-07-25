@@ -1,5 +1,4 @@
 using ActualLab.Interception;
-using ActualLab.IO;
 using ActualLab.Rpc.Serialization.Internal;
 
 namespace ActualLab.Rpc.Serialization;

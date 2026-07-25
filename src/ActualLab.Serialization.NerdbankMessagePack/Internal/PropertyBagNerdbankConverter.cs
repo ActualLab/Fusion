@@ -1,4 +1,3 @@
-using ActualLab.Collections;
 using ActualLab.Collections.Internal;
 using Nerdbank.MessagePack;
 

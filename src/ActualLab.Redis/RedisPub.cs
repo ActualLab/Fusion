@@ -1,4 +1,3 @@
-using System.Text;
 using StackExchange.Redis;
 
 namespace ActualLab.Redis;

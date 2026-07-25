@@ -1,4 +1,3 @@
-using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Extensions;
 

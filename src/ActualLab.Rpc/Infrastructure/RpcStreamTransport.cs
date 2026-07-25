@@ -1,4 +1,3 @@
-using ActualLab.Collections;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;

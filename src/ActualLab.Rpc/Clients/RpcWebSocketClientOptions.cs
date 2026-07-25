@@ -1,6 +1,5 @@
 using System.Net.WebSockets;
 using System.Text.Encodings.Web;
-using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc.Clients;

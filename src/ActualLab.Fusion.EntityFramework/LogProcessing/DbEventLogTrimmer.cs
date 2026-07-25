@@ -1,4 +1,3 @@
-using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.EntityFramework.Internal;
 using Microsoft.EntityFrameworkCore;
 

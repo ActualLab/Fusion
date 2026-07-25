@@ -1,4 +1,3 @@
-using ActualLab.Fusion;
 using Nerdbank.MessagePack;
 
 namespace ActualLab.Fusion.Internal;

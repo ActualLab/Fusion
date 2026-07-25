@@ -1,5 +1,4 @@
 using System.Text;
-using ActualLab.IO;
 using ActualLab.Rpc.Infrastructure;
 
 namespace ActualLab.Rpc.Serialization;

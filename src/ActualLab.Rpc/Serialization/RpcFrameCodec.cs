@@ -1,5 +1,4 @@
 using System.Diagnostics.Metrics;
-using ActualLab.Collections;
 using ActualLab.Rpc.Infrastructure;
 using Errors = ActualLab.Rpc.Internal.Errors;
 

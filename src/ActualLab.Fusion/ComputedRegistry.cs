@@ -6,7 +6,6 @@ using ActualLab.Fusion.Internal;
 using ActualLab.Locking;
 using ActualLab.OS;
 using Errors = ActualLab.Fusion.Internal.Errors;
-using ActualLab.Internal;
 
 namespace ActualLab.Fusion;
 

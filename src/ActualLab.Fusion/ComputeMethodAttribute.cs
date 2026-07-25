@@ -1,4 +1,3 @@
-using ActualLab.Fusion.Internal;
 
 namespace ActualLab.Fusion;
 

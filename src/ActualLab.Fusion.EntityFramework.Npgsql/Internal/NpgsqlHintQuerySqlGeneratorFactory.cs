@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Query.Internal;
 
 namespace ActualLab.Fusion.EntityFramework.Npgsql.Internal;
 

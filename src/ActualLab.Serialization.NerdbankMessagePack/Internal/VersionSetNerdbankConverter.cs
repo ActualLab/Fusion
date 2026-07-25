@@ -1,4 +1,3 @@
-using ActualLab.Collections;
 using Nerdbank.MessagePack;
 
 namespace ActualLab.Serialization.Internal;

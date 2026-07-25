@@ -2,7 +2,6 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq.Expressions;
-using ActualLab.Fusion.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using ActualLab.Fusion.EntityFramework.Internal;

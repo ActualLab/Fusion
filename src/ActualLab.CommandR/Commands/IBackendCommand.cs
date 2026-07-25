@@ -1,6 +1,5 @@
 namespace ActualLab.CommandR.Commands;
 using Interception;
-using Rpc;
 
 /// <summary>
 /// A tagging interface indicating that a command can be handled only by a backend peer,

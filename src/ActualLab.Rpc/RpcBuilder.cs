@@ -1,14 +1,8 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ActualLab.Interception;
-using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Clients;
-using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Middlewares;
-using ActualLab.Rpc.Serialization;
-using ActualLab.Rpc.Trimming;
-using ActualLab.Trimming;
 
 namespace ActualLab.Rpc;
 
