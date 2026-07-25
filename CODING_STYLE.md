@@ -174,6 +174,14 @@ Search for `<Using>` to get the full list. Avoid adding explicit usings for glob
   The only exception is slow-path async methods inside other async methods
   (e.g., `CompleteAsync` inside `Write` method that handles the case
   when the operation cannot complete synchronously).
+- **Boolean (and bool-like `int`) variables, fields and parameters**: prefix them,
+  typically with `is`, `must`, or `has` — `isDisposed`, `mustPersistIndex`,
+  `hasOldEntry`. A bare adjective/participle (`disposed`, `dirty`, `checkpointDue`)
+  is wrong. This covers `int` fields used as flags via `Interlocked`/`Volatile`
+  (`_isDirty`), and locals (`var isClosedCleanly = ...`).
+- **Variables and fields storing a `Task`/`ValueTask`**: name them `XxxTask`
+  (`_flushLoopTask`, `readTask`) or `WhenXxx` (`whenCompleted`) — the name must say
+  it's a task, not the operation itself.
 
 ### Braces and Formatting
 
@@ -264,15 +272,18 @@ Members within a class should be ordered as follows:
 5. Lazy style is often preferred for DI-injected properties,
    especially in the UI-related code.
    Use `=> field ??= Services.GetRequiredService<T>()`.
-6. **Constructor-like static NewXxx-style methods**
+6. **Constructor-like static methods** (`New*`, `Open`, `Create`, …) — they go
+   **before** the constructors, including private ones.
 7. **Constructors** (public, then private),
    though primary constructors are preferred.
-8. **Public methods**, ordered by importance/usage frequency.
-9. **Protected/internal methods**.
-   Use `// Protected/internal methods` comment to separate this section
-10. **Private methods**, such as helper methods and utilities.
+8. **`Dispose` / `DisposeAsync`** — right **after** the constructors, not at the
+   end of the type: disposal is part of the lifecycle the constructors start.
+9. **Public methods**, ordered by importance/usage frequency.
+10. **Protected/internal methods**.
+    Use `// Protected/internal methods` comment to separate this section
+11. **Private methods**, such as helper methods and utilities.
     Use `// Private methods` comment to separate this section.
-11. All other nested types.
+12. All other nested types.
     Use `// Nested types` comment to separate this section.
 
 For typical RPC API (interface):
