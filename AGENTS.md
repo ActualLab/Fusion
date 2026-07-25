@@ -435,6 +435,28 @@ ai wt feature1   # Creates ActualLab.Fusion-feature1 if it doesn't exist and run
 
 The worktree is created using `git worktree add` from the main project directory.
 
+# `roslynk` MCP (optional)
+
+A Roslyn-backed MCP server named **`roslynk`** may be wired up (look for
+`mcp__roslynk__*` tools). It's optional — if it's absent, just use the regular
+tools. When present, prefer it for C# semantic work: it keeps a live
+compilation of the solution, so it answers from the compiler's symbol model
+instead of text search.
+
+What it helps with:
+- **Navigation** — definitions, references, callers, implementations, type
+  hierarchy, symbol search (correct across partial classes and generated code).
+- **Diagnostics** — errors/warnings/analyzer results without a rebuild;
+  iterate as edit → `get_diagnostics` → fix.
+- **Refactoring** — semantic rename, signature changes, compiler code fixes.
+- **Dead/unused code** — unused members, unreachable conditional branches,
+  unused `using` directives.
+
+Call `open_solution` first (it loads in the background; retry if a query
+returns `Indexing`). The tools are self-describing once connected — use the
+tool list for exact arguments. See
+https://github.com/mrpmorris/Roslynk/blob/master/skills/roslynk/SKILL.md.
+
 # Fusion documentation and source code
 
 Several projects here build on **ActualLab.Fusion** — an end-to-end
