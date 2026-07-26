@@ -32,6 +32,8 @@ public class InvalidationModeDbTest(ITestOutputHelper @out) : FusionTestBase(@ou
 
         var calls = GetOperation().InvalidationCalls;
         calls.Select(x => x.MethodName).Should().Equal("Get", "Count", "CountOfLength");
+        // A recorded call must resolve on a host running a different build of the same assembly
+        calls[0].ServiceType.AssemblyQualifiedName.Should().NotContain("Version=");
         calls[0].Arguments.Should().Equal("ab");
         calls[1].Arguments.Should().BeEmpty();
         calls[2].Arguments.Should().Equal(2);

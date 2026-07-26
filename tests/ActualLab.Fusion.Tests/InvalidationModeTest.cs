@@ -63,7 +63,7 @@ public class InvalidationModeTest(ITestOutputHelper @out) : SimpleFusionTestBase
     {
         var services = CreateHostServices<LocalInvalidationModeService>();
         var kv = services.GetRequiredService<LocalInvalidationModeService>();
-        var serviceType = new TypeRef(typeof(LocalInvalidationModeService));
+        var serviceType = new TypeRef(typeof(LocalInvalidationModeService)).WithoutAssemblyVersions();
         var calls = ImmutableList.Create(
             new InvalidationCall(serviceType, "Get", ["ab"]),
             new InvalidationCall(serviceType, "Count", []),
@@ -88,7 +88,7 @@ public class InvalidationModeTest(ITestOutputHelper @out) : SimpleFusionTestBase
     {
         var services = CreateHostServices<LocalInvalidationModeService>();
         var kv = services.GetRequiredService<LocalInvalidationModeService>();
-        var serviceType = new TypeRef(typeof(LocalInvalidationModeService));
+        var serviceType = new TypeRef(typeof(LocalInvalidationModeService)).WithoutAssemblyVersions();
         var calls = ImmutableList.Create(
             new InvalidationCall(serviceType, "Get", ["ab"]),
             new InvalidationCall(serviceType, "CountOfLength", [2]));

@@ -80,8 +80,10 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
     }
 
     public InvalidationCall NewInvalidationCall(ArgumentList arguments)
+        // The assembly version is stripped so a recorded call still resolves on a host running
+        // a different build - same reason every other serialized TypeRef here does it
         => new(
-            new TypeRef(MethodDef.Type),
+            new TypeRef(MethodDef.Type).WithoutAssemblyVersions(),
             MethodDef.MethodInfo.Name,
             CancellationTokenIndex >= 0 ? arguments.ToArray(CancellationTokenIndex) : arguments.ToArray());
 
