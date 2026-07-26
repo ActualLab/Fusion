@@ -71,13 +71,17 @@ public class InMemoryOperationScopeProvider(IServiceProvider services) : IComman
             }
             else if (error is null) {
                 // No operation scope at all: "commit" here just means "the handler didn't throw"
-                if (deferScope.HasEntries(InvalidationMode.Replicated))
+                var source = new InvalidationSource($"{command.GetType().GetName()}'s deferred invalidation");
+                await deferScope.Run(source).ConfigureAwait(false);
+                if (deferScope.HasEntries(InvalidationMode.Replicated)) {
+                    // There is no operation to carry these, so they degrade to local: other hosts
+                    // stay stale until their next update, which is the recoverable direction -
+                    // dropping the invalidation entirely is not.
                     Log.LogWarning(
                         "{Command} defers replicated invalidations, but creates no operation scope to carry them",
                         command);
-                await deferScope
-                    .Run(new InvalidationSource($"{command.GetType().GetName()}'s deferred invalidation"))
-                    .ConfigureAwait(false);
+                    await deferScope.Run(source, InvalidationMode.Replicated).ConfigureAwait(false);
+                }
             }
             await deferScopeHandle.DisposeAsync().ConfigureAwait(false);
         }

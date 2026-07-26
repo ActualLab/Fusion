@@ -91,6 +91,24 @@ public class ReplicatedInvalidationModeService : InvalidationModeServiceBase
     }
 }
 
+// A Replicated handler that never creates an operation scope: nothing can carry its calls to the
+// other hosts, so they must at least still invalidate in-process
+[InvalidationMode(InvalidationMode.Replicated)]
+public class ScopelessReplicatedInvalidationModeService : InvalidationModeServiceBase
+{
+    [CommandHandler]
+    public virtual Task OnSet(InvalidationModeService_Set command, CancellationToken cancellationToken = default)
+    {
+        Mutate(command.Key, command.Value);
+        Invalidation.Defer(() => {
+            _ = Get(command.Key, default);
+            _ = Count(default);
+            _ = CountOfLength(command.Key.Length, default);
+        });
+        return Task.CompletedTask;
+    }
+}
+
 public class LegacyInvalidationModeService : InvalidationModeServiceBase
 {
     [CommandHandler]

@@ -108,6 +108,23 @@ public class InvalidationModeTest(ITestOutputHelper @out) : SimpleFusionTestBase
     }
 
     [Fact]
+    public async Task Replicated_WithoutAnOperationDegradesToLocal()
+    {
+        var services = CreateHostServices<ScopelessReplicatedInvalidationModeService>();
+        var kv = services.GetRequiredService<ScopelessReplicatedInvalidationModeService>();
+
+        var (cGet, cCount, cLength) = await Capture(kv, "ab");
+        await services.Commander().Call(new InvalidationModeService_Set("ab", 1));
+
+        // Nothing carries the calls to the other hosts, but dropping them locally too would be
+        // the silent staleness this design exists to avoid
+        cGet.IsConsistent().Should().BeFalse();
+        cCount.IsConsistent().Should().BeFalse();
+        cLength.IsConsistent().Should().BeFalse();
+        kv.MutationCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task Legacy_KeepsReplayingTheCommand()
     {
         var services = CreateHostServices<LegacyInvalidationModeService>();
