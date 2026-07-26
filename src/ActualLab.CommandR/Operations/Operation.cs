@@ -25,6 +25,8 @@ public class Operation : IHasUuid, IHasId<string>
     public ICommand Command { get; set; }
     public MutablePropertyBag Items { get; set; }
     public ImmutableList<NestedOperation> NestedOperations { get; set; }
+    public ImmutableList<InvalidationCall> InvalidationCalls { get; set; }
+        = ImmutableList<InvalidationCall>.Empty;
     public IOperationScope? Scope { get; set; }
     public ImmutableList<OperationEvent> Events { get; private set; }
         = ImmutableList<OperationEvent>.Empty;

@@ -43,6 +43,30 @@ public static class Errors
             $"Compute service '{serviceType.GetName()}' has command handlers and must be registered as a singleton: " +
             "invalidation replay cannot resolve scoped services.");
 
+    // Deferred invalidation
+
+    public static Exception NoDeferInvalidationScope()
+        => new InvalidOperationException(
+            $"{nameof(Invalidation)}.{nameof(Invalidation.Defer)} is called outside of a " +
+            $"{nameof(DeferInvalidationScope)}.");
+    public static Exception NoDeferInvalidationRecorder()
+        => new InvalidOperationException(
+            $"{nameof(CallOptions)}.{nameof(CallOptions.DeferInvalidate)} is set, but no " +
+            $"{nameof(DeferInvalidationScope)} is harvesting.");
+    public static Exception DeferInvalidationInsideInvalidationPass()
+        => new InvalidOperationException(
+            "Deferred invalidation cannot be used while an invalidation pass is active.");
+    public static Exception DeferInvalidationRequiresDeferredMode(InvalidationMode mode)
+        => new InvalidOperationException(
+            $"{nameof(Invalidation)}.{nameof(Invalidation.Defer)} requires " +
+            $"{nameof(InvalidationMode)}.{nameof(InvalidationMode.Local)} or " +
+            $"{nameof(InvalidationMode)}.{nameof(InvalidationMode.Replicated)}, but the handler is {mode}.");
+    public static Exception InvalidationModeOverrideIsNotAllowed(
+        Type serviceType, InvalidationMode declaredMode, InvalidationMode overrideMode)
+        => new InvalidOperationException(
+            $"Cannot override {nameof(InvalidationMode)} of '{serviceType.GetName()}' from " +
+            $"{declaredMode} to {overrideMode}: only Local <-> Replicated overrides are allowed.");
+
     public static Exception InvalidContextCallOptions(CallOptions callOptions)
         => new InvalidOperationException(
             $"{nameof(ComputeContext)} with {nameof(CallOptions)} = {callOptions} cannot be used here.");

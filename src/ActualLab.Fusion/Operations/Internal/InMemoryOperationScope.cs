@@ -71,12 +71,12 @@ public sealed class InMemoryOperationScope : IOperationScope
         }
     }
 
-    public Task Commit(CancellationToken cancellationToken = default)
+    public async Task Commit(CancellationToken cancellationToken = default)
     {
+        await DeferredInvalidation.Harvest(Operation).ConfigureAwait(false);
         Close(true);
         if (IsCommitted == true)
             HasStoredEvents = Operation.Events.Any(x => x.Value is not null);
-        return Task.CompletedTask;
     }
 
     // Private methods

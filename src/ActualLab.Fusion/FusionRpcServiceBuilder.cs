@@ -48,6 +48,10 @@ public class FusionRpcServiceBuilder : RpcServiceBuilder
         // Any server
         var implementationResolver = ImplementationResolver?.Resolver;
         var implementationType = ImplementationResolver?.Type!;
+        if (ImplementationResolver?.Type is { } computeServiceType)
+            // Lets a recorded InvalidationCall, which names the implementation type,
+            // find the type this service is actually resolvable by on any host
+            Fusion.GetComputeServiceRegistry().Register(serviceType, computeServiceType);
         switch (Mode) {
             case RpcServiceMode.Local:
                 // Local services are skipped during RpcServiceRegistry construction

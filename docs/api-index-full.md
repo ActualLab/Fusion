@@ -2375,7 +2375,31 @@ Provides default delegate instances used by Fusion infrastructure.
 
 ###### `Invalidation`
 
-Provides static helpers to check whether invalidation is active and to begin invalidation scopes.
+Provides static helpers to check whether invalidation is active, to begin invalidation scopes, and to defer invalidation blocks.
+
+###### `InvalidationMode` (enum)
+
+Describes how a command handler declares its invalidations and how far they reach: `None`, `Legacy`, `Local`, `Replicated`.
+
+###### `InvalidationModeAttribute`
+
+Declares the `InvalidationMode` of a single `[CommandHandler]` method or of every command handler declared by a compute service type.
+
+###### `InvalidationModeResolver`
+
+Resolves the `InvalidationMode` of a command handler: its method's attribute, then its declaring/service type's one, then the app-wide default.
+
+###### `DeferInvalidationScope`
+
+Collector of deferred invalidation blocks. What happens to them, and when, is up to its `IDeferInvalidationHandler`.
+
+###### `IDeferInvalidationHandler`
+
+Decides when a `DeferInvalidationScope`'s blocks are consumed, and whether they are run or harvested.
+
+###### `InvalidationCall`
+
+A recorded compute-method call to invalidate: everything needed to reproduce the invalidation on this or another host.
 
 ###### `StateCategories`
 

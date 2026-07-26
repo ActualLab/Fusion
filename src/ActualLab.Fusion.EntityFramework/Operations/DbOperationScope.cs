@@ -27,6 +27,10 @@ public abstract class DbOperationScope : IOperationScope
         public static IsolationLevel DefaultIsolationLevel { get; set; } = IsolationLevel.Unspecified;
 
         public IsolationLevel IsolationLevel { get; init; } = DefaultIsolationLevel;
+        // Replicated invalidation calls are never truncated - silently dropping invalidations is
+        // exactly what deferred invalidation exists to avoid - but a handler that persists this
+        // many of them into a single operation row should invalidate a pseudo-method instead.
+        public int InvalidationCallCountWarningThreshold { get; init; } = 1000;
         // Used only on the in-doubt commit path: a bounded, cancellation-immune read that verifies
         // whether the commit actually landed. TryTimeout bounds each attempt; the caller's token
         // is intentionally not used (see Commit).
@@ -211,6 +215,9 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
     public override async Task Commit(CancellationToken cancellationToken = default)
     {
+        // Must run before the lock & the DbOperation row is built: an operation's invalidation
+        // calls are frozen at commit time, and the row is added inside the transaction below.
+        await Fusion.Operations.Internal.DeferredInvalidation.Harvest(Operation).ConfigureAwait(false);
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
         if (IsCommitted is { } isCommitted) {
             if (!isCommitted)
@@ -257,9 +264,18 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
             // Creating either a DbOperation or DbEvent
             HasStoredOperation = MustStoreOperation;
-            var dbCommitVerifier = MustStoreOperation
-                ? (object)new DbOperation(Operation)
-                : new DbEvent(Operation, versionGenerator);
+            object dbCommitVerifier;
+            if (MustStoreOperation) {
+                var invalidationCallCount = Operation.InvalidationCalls.Count;
+                if (invalidationCallCount > Settings.InvalidationCallCountWarningThreshold)
+                    Log.LogWarning(
+                        "Transaction #{TransactionId} @ shard '{Shard}': storing {Count} invalidation calls, " +
+                        "which is above the {Threshold} threshold - consider invalidating a pseudo-method instead",
+                        TransactionId, Shard, invalidationCallCount, Settings.InvalidationCallCountWarningThreshold);
+                dbCommitVerifier = new DbOperation(Operation);
+            }
+            else
+                dbCommitVerifier = new DbEvent(Operation, versionGenerator);
             dbContext.Add(dbCommitVerifier);
 
             // Saving changes

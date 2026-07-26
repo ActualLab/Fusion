@@ -19,6 +19,10 @@ public static class FusionInstruments
         "invalidation.pass.duration", "ms", "Duration of invalidation replay passes.");
     public static readonly Histogram<long> InvalidationPassCommandCount = Meter.CreateHistogram<long>(
         "invalidation.pass.command.count", "{command}", "Commands attempted per invalidation replay pass.");
+    public static readonly Counter<long> DeferredInvalidationFailureCount = Meter.CreateCounter<long>(
+        "invalidation.deferred.failure.count", "{failure}", "Count of deferred invalidation blocks that threw.");
+    public static readonly Counter<long> DeferredInvalidationDropCount = Meter.CreateCounter<long>(
+        "invalidation.deferred.drop.count", "{call}", "Count of replicated invalidation calls dropped on apply.");
     public static readonly Counter<long> RemoteComputedCacheRequestCount = Meter.CreateCounter<long>(
         "remote_computed.cache.request.count", "{request}", "Count of persistent remote-computed cache requests.");
     public static readonly Histogram<double> RemoteComputedCacheLookupDuration = Meter.CreateHistogram<double>(
