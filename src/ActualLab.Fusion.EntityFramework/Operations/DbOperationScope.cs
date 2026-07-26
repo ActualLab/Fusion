@@ -217,7 +217,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
     {
         // Must run before the lock & the DbOperation row is built: an operation's invalidation
         // calls are frozen at commit time, and the row is added inside the transaction below.
-        await Fusion.Operations.Internal.DeferredInvalidation.Harvest(Operation).ConfigureAwait(false);
+        await Fusion.Operations.Internal.DeferredInvalidation.Harvest(this).ConfigureAwait(false);
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
         if (IsCommitted is { } isCommitted) {
             if (!isCommitted)

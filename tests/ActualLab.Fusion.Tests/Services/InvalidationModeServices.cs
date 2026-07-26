@@ -74,25 +74,21 @@ public class LocalInvalidationModeService : InvalidationModeServiceBase
     }
 }
 
+// A transient operation stores nothing, so there is no reliable way to replicate its invalidation
 [InvalidationMode(InvalidationMode.Replicated)]
-public class ReplicatedInvalidationModeService : InvalidationModeServiceBase
+public class TransientReplicatedInvalidationModeService : InvalidationModeServiceBase
 {
     [CommandHandler]
     public virtual Task OnSet(InvalidationModeService_Set command, CancellationToken cancellationToken = default)
     {
         InMemoryOperationScope.Require();
         Mutate(command.Key, command.Value);
-        Invalidation.Defer(() => {
-            _ = Get(command.Key, default);
-            _ = Count(default);
-            _ = CountOfLength(command.Key.Length, default);
-        });
+        Invalidation.Defer(() => _ = Get(command.Key, default));
         return Task.CompletedTask;
     }
 }
 
-// A Replicated handler that never creates an operation scope: nothing can carry its calls to the
-// other hosts, so they must at least still invalidate in-process
+// Same, but without any operation scope at all
 [InvalidationMode(InvalidationMode.Replicated)]
 public class ScopelessReplicatedInvalidationModeService : InvalidationModeServiceBase
 {
@@ -100,11 +96,7 @@ public class ScopelessReplicatedInvalidationModeService : InvalidationModeServic
     public virtual Task OnSet(InvalidationModeService_Set command, CancellationToken cancellationToken = default)
     {
         Mutate(command.Key, command.Value);
-        Invalidation.Defer(() => {
-            _ = Get(command.Key, default);
-            _ = Count(default);
-            _ = CountOfLength(command.Key.Length, default);
-        });
+        Invalidation.Defer(() => _ = Get(command.Key, default));
         return Task.CompletedTask;
     }
 }

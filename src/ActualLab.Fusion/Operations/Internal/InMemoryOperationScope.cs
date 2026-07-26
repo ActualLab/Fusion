@@ -73,7 +73,7 @@ public sealed class InMemoryOperationScope : IOperationScope
 
     public async Task Commit(CancellationToken cancellationToken = default)
     {
-        await DeferredInvalidation.Harvest(Operation).ConfigureAwait(false);
+        await DeferredInvalidation.Harvest(this).ConfigureAwait(false);
         Close(true);
         if (IsCommitted == true)
             HasStoredEvents = Operation.Events.Any(x => x.Value is not null);

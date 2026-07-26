@@ -1,10 +1,9 @@
-using System.Globalization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.CommandR.Operations;
-using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Fusion.Operations;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Fusion.Tests.Services;
+using ActualLab.Reflection;
 using ActualLab.Serialization;
 
 namespace ActualLab.Fusion.Tests;
@@ -39,46 +38,43 @@ public class InvalidationModeTest(ITestOutputHelper @out) : SimpleFusionTestBase
         operation.InvalidationCalls.Should().BeEmpty();
     }
 
+    // Replicated is only as reliable as its carrier, so it's rejected unless the operation is stored -
+    // see InvalidationModeDbTest for the path that works. Both cases below fail per call, not at
+    // startup, because the mode is only known once a handler actually defers something.
+
     [Fact]
-    public async Task Replicated_InvalidatesLocallyAndRecordsCalls()
+    public async Task Replicated_WithATransientOperationThrows()
     {
-        var services = CreateHostServices<ReplicatedInvalidationModeService>();
-        var kv = services.GetRequiredService<ReplicatedInvalidationModeService>();
-
-        var (cGet, cCount, cLength) = await Capture(kv, "ab");
-        await services.Commander().Call(new InvalidationModeService_Set("ab", 1));
-
-        cGet.IsConsistent().Should().BeFalse();
-        cCount.IsConsistent().Should().BeFalse();
-        cLength.IsConsistent().Should().BeFalse();
-        kv.MutationCount.Should().Be(1);
-
-        var operation = services.GetRequiredService<OperationCapture>().Operations.Single();
-        var calls = operation.InvalidationCalls;
-        calls.Should().HaveCount(3);
-        calls.Select(x => x.MethodName).Should().Equal("Get", "Count", "CountOfLength");
-        calls[0].Arguments.Should().Equal("ab");
-        calls[1].Arguments.Should().BeEmpty();
-        calls[2].Arguments.Should().Equal(2);
+        var services = CreateHostServices<TransientReplicatedInvalidationModeService>();
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => services.Commander().Call(new InvalidationModeService_Set("a", 1)));
     }
 
     [Fact]
-    public async Task Replicated_RecordedCallsApplyOnAnotherHost()
+    public async Task Replicated_WithoutAnOperationThrows()
     {
-        var host1 = CreateHostServices<ReplicatedInvalidationModeService>();
-        await host1.Commander().Call(new InvalidationModeService_Set("ab", 1));
-        var operation = host1.GetRequiredService<OperationCapture>().Operations.Single();
+        var services = CreateHostServices<ScopelessReplicatedInvalidationModeService>();
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => services.Commander().Call(new InvalidationModeService_Set("a", 1)));
+    }
 
-        // The operation log carries the calls as text, so the round-trip is part of what's tested
-        var json = NewtonsoftJsonSerializer.Default.Write(operation.InvalidationCalls);
-        var calls = NewtonsoftJsonSerializer.Default.Read<ImmutableList<InvalidationCall>>(json);
+    [Fact]
+    public async Task RecordedCalls_ApplyThroughTheServiceProxy()
+    {
+        var services = CreateHostServices<LocalInvalidationModeService>();
+        var kv = services.GetRequiredService<LocalInvalidationModeService>();
+        var serviceType = new TypeRef(typeof(LocalInvalidationModeService));
+        var calls = ImmutableList.Create(
+            new InvalidationCall(serviceType, "Get", ["ab"]),
+            new InvalidationCall(serviceType, "Count", []),
+            // A long, not an int: text serialization erases the distinction, so the applier
+            // has to bring the argument back to the parameter's type
+            new InvalidationCall(serviceType, "CountOfLength", [2L]));
 
-        var host2 = CreateHostServices<ReplicatedInvalidationModeService>();
-        var kv2 = host2.GetRequiredService<ReplicatedInvalidationModeService>();
-        var (cGet, cCount, cLength) = await Capture(kv2, "ab");
-        var cOther = await Computed.Capture(() => kv2.Get("other"));
+        var (cGet, cCount, cLength) = await Capture(kv, "ab");
+        var cOther = await Computed.Capture(() => kv.Get("other"));
 
-        await host2.GetRequiredService<InvalidationCallApplier>()
+        await services.GetRequiredService<InvalidationCallApplier>()
             .Apply(calls, new InvalidationSource("test"));
 
         cGet.IsConsistent().Should().BeFalse();
@@ -88,40 +84,26 @@ public class InvalidationModeTest(ITestOutputHelper @out) : SimpleFusionTestBase
     }
 
     [Fact]
-    public async Task Replicated_RecordedCallsSurviveTheOperationLogRow()
+    public async Task RecordedCalls_SurviveTheOperationLogSerializer()
     {
-        var services = CreateHostServices<ReplicatedInvalidationModeService>();
-        await services.Commander().Call(new InvalidationModeService_Set("ab", 1));
-        var operation = services.GetRequiredService<OperationCapture>().Operations.Single();
-        operation.Command = new InvalidationModeService_Set("ab", 1); // A transient operation has none
+        var services = CreateHostServices<LocalInvalidationModeService>();
+        var kv = services.GetRequiredService<LocalInvalidationModeService>();
+        var serviceType = new TypeRef(typeof(LocalInvalidationModeService));
+        var calls = ImmutableList.Create(
+            new InvalidationCall(serviceType, "Get", ["ab"]),
+            new InvalidationCall(serviceType, "CountOfLength", [2]));
 
-        var restored = new DbOperation(operation).ToModel().InvalidationCalls;
+        var json = NewtonsoftJsonSerializer.Default.Write(calls);
+        var restored = NewtonsoftJsonSerializer.Default.Read<ImmutableList<InvalidationCall>>(json);
 
-        restored.Select(x => x.MethodName).Should().Equal("Get", "Count", "CountOfLength");
-        restored.Select(x => x.ServiceType).Should().AllBeEquivalentTo(operation.InvalidationCalls[0].ServiceType);
+        restored.Select(x => x.MethodName).Should().Equal("Get", "CountOfLength");
         restored[0].Arguments.Should().Equal("ab");
-        restored[1].Arguments.Should().BeEmpty();
-        // JSON has no int/long distinction for a boxed argument - InvalidationCallApplier.Coerce
-        // is what brings it back to the parameter's type
-        restored[2].Arguments.Should().HaveCount(1);
-        Convert.ToInt32(restored[2].Arguments[0], CultureInfo.InvariantCulture).Should().Be(2);
-    }
+        var (cGet, _, cLength) = await Capture(kv, "ab");
+        await services.GetRequiredService<InvalidationCallApplier>()
+            .Apply(restored, new InvalidationSource("test"));
 
-    [Fact]
-    public async Task Replicated_WithoutAnOperationDegradesToLocal()
-    {
-        var services = CreateHostServices<ScopelessReplicatedInvalidationModeService>();
-        var kv = services.GetRequiredService<ScopelessReplicatedInvalidationModeService>();
-
-        var (cGet, cCount, cLength) = await Capture(kv, "ab");
-        await services.Commander().Call(new InvalidationModeService_Set("ab", 1));
-
-        // Nothing carries the calls to the other hosts, but dropping them locally too would be
-        // the silent staleness this design exists to avoid
         cGet.IsConsistent().Should().BeFalse();
-        cCount.IsConsistent().Should().BeFalse();
         cLength.IsConsistent().Should().BeFalse();
-        kv.MutationCount.Should().Be(1);
     }
 
     [Fact]
@@ -214,16 +196,13 @@ public class InvalidationModeTest(ITestOutputHelper @out) : SimpleFusionTestBase
     [Fact]
     public async Task Configuration_MovesLocalServiceToReplicated()
     {
+        // The service runs on a transient operation, so the override taking effect is exactly what
+        // makes it fail - see InvalidationModeDbTest for the same override on a stored operation
         var services = CreateHostServices<LocalInvalidationModeService>(
             fusion => fusion.WithInvalidationMode<LocalInvalidationModeService>(InvalidationMode.Replicated));
-        var kv = services.GetRequiredService<LocalInvalidationModeService>();
 
-        var (cGet, _, _) = await Capture(kv, "a");
-        await services.Commander().Call(new InvalidationModeService_Set("a", 1));
-
-        cGet.IsConsistent().Should().BeFalse();
-        var operation = services.GetRequiredService<OperationCapture>().Operations.Single();
-        operation.InvalidationCalls.Should().HaveCount(3);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => services.Commander().Call(new InvalidationModeService_Set("a", 1)));
     }
 
     [Fact]

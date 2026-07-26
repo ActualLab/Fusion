@@ -61,6 +61,12 @@ public static class Errors
             $"{nameof(Invalidation)}.{nameof(Invalidation.Defer)} requires " +
             $"{nameof(InvalidationMode)}.{nameof(InvalidationMode.Local)} or " +
             $"{nameof(InvalidationMode)}.{nameof(InvalidationMode.Replicated)}, but the handler is {mode}.");
+    public static Exception ReplicatedInvalidationRequiresStoredOperation(Type? scopeType)
+        => new InvalidOperationException(
+            $"{nameof(InvalidationMode)}.{nameof(InvalidationMode.Replicated)} requires an operation scope " +
+            $"that stores its operation, so the recorded invalidation calls reach the other hosts, but " +
+            $"'{scopeType?.GetName() ?? "none"}' doesn't. Use {nameof(InvalidationMode)}." +
+            $"{nameof(InvalidationMode.Local)} instead, or store the operation.");
     public static Exception InvalidationModeOverrideIsNotAllowed(
         Type serviceType, InvalidationMode declaredMode, InvalidationMode overrideMode)
         => new InvalidOperationException(

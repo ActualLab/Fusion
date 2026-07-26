@@ -20,12 +20,20 @@ public static class DeferredInvalidation
 
     // An operation's invalidation calls are frozen at commit time: DbOperationScope.Commit adds
     // the DbOperation row inside its transaction, so anything harvested later never reaches it.
-    public static async Task Harvest(Operation operation)
+    public static async Task Harvest(IOperationScope scope)
     {
-        if (DeferInvalidationScope.Current is not { } scope)
+        if (DeferInvalidationScope.Current is not { } deferScope)
+            return;
+        if (!deferScope.HasEntries(InvalidationMode.Replicated))
             return;
 
-        operation.InvalidationCalls = await scope.Harvest().ConfigureAwait(false);
+        // Replicated invalidation is only as reliable as its carrier. The operation log row is
+        // written inside the same transaction as the mutation and is read with gap detection;
+        // a scope that stores nothing has no way to replicate the invalidation at all.
+        if (scope.IsTransient || !scope.MustStoreOperation)
+            throw Fusion.Internal.Errors.ReplicatedInvalidationRequiresStoredOperation(scope.GetType());
+
+        scope.Operation.InvalidationCalls = await deferScope.Harvest().ConfigureAwait(false);
     }
 
     // Private methods

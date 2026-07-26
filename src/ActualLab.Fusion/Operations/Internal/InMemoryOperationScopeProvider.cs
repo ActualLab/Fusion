@@ -50,9 +50,13 @@ public class InMemoryOperationScopeProvider(IServiceProvider services) : IComman
             var operation = context.TryGetOperation();
             if (operation?.Scope is { IsUsed: true } scope) {
                 if (scope is InMemoryOperationScope) {
-                    if (error is null)
-                        await scope.Commit(cancellationToken).ConfigureAwait(false);
-                    await scope.DisposeAsync().ConfigureAwait(false);
+                    try {
+                        if (error is null)
+                            await scope.Commit(cancellationToken).ConfigureAwait(false);
+                    }
+                    finally {
+                        await scope.DisposeAsync().ConfigureAwait(false);
+                    }
                 }
                 // If scope is of another type, it's already committed/disposed at this point
 
@@ -70,18 +74,14 @@ public class InMemoryOperationScopeProvider(IServiceProvider services) : IComman
                 }
             }
             else if (error is null) {
-                // No operation scope at all: "commit" here just means "the handler didn't throw"
-                var source = new InvalidationSource($"{command.GetType().GetName()}'s deferred invalidation");
-                await deferScope.Run(source).ConfigureAwait(false);
-                if (deferScope.HasEntries(InvalidationMode.Replicated)) {
-                    // There is no operation to carry these, so they degrade to local: other hosts
-                    // stay stale until their next update, which is the recoverable direction -
-                    // dropping the invalidation entirely is not.
-                    Log.LogWarning(
-                        "{Command} defers replicated invalidations, but creates no operation scope to carry them",
-                        command);
-                    await deferScope.Run(source, InvalidationMode.Replicated).ConfigureAwait(false);
-                }
+                // No operation scope at all: "commit" here just means "the handler didn't throw",
+                // and nothing can replicate the invalidation - so Local works here and Replicated can't
+                if (deferScope.HasEntries(InvalidationMode.Replicated))
+                    throw Fusion.Internal.Errors.ReplicatedInvalidationRequiresStoredOperation(null);
+
+                await deferScope
+                    .Run(new InvalidationSource($"{command.GetType().GetName()}'s deferred invalidation"))
+                    .ConfigureAwait(false);
             }
             await deferScopeHandle.DisposeAsync().ConfigureAwait(false);
         }
