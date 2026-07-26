@@ -67,7 +67,7 @@ public class Operation : IHasUuid, IHasId<string>
         Scope = scope;
     }
 
-    public void MustStore(bool mustStore)
+    public void MustStore(bool? mustStore)
         => Scope.RequireActive().MustStoreOperation = mustStore;
 
     // Add/Remove/ClearEvents

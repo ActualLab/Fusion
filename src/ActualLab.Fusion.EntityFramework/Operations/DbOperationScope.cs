@@ -51,7 +51,7 @@ public abstract class DbOperationScope : IOperationScope
     public bool IsTransient => false;
     public bool IsUsed => MasterDbContext is not null;
     public bool? IsCommitted { get; protected set; }
-    public bool MustStoreOperation { get; set; } = true;
+    public bool? MustStoreOperation { get; set; }
     public bool HasStoredOperation { get; protected set; }
     public bool HasStoredEvents { get; protected set; }
     public ImmutableList<Func<IOperationScope, Task>> CompletionHandlers { get; set; }
@@ -217,7 +217,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
     {
         // Must run before the lock & the DbOperation row is built: an operation's invalidation
         // calls are frozen at commit time, and the row is added inside the transaction below.
-        await Fusion.Operations.Internal.DeferredInvalidation.Harvest(this).ConfigureAwait(false);
+        await Fusion.Operations.Internal.DeferredInvalidation.OnCommit(this).ConfigureAwait(false);
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
         if (IsCommitted is { } isCommitted) {
             if (!isCommitted)
@@ -263,9 +263,9 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             }
 
             // Creating either a DbOperation or DbEvent
-            HasStoredOperation = MustStoreOperation;
+            HasStoredOperation = MustStoreOperation ?? true;
             object dbCommitVerifier;
-            if (MustStoreOperation) {
+            if (HasStoredOperation) {
                 var invalidationCallCount = Operation.InvalidationCalls.Count;
                 if (invalidationCallCount > Settings.InvalidationCallCountWarningThreshold)
                     Log.LogWarning(

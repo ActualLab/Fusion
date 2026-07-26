@@ -60,13 +60,58 @@ public class InvalidationModeDbTest(ITestOutputHelper @out) : FusionTestBase(@ou
             .Apply(restored, new InvalidationSource("test"));
     }
 
+    [Fact]
+    public async Task Replicated_StoresTheOperation()
+    {
+        if (MustSkip()) return;
+
+        await Services.Commander().Call(new InvalidationModeService_Set("ab", 1));
+
+        // The row is what carries the calls to the other hosts, so "auto" has to keep it
+        GetOperation().Scope!.HasStoredOperation.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Local_DoesNotStoreTheOperation()
+    {
+        if (MustSkip()) return;
+
+        await Services.Commander().Call(new DbLocalInvalidationModeService_Set("ab", 1));
+
+        var operation = Services.GetRequiredService<OperationCapture>().Operations
+            .Single(x => x.Command is DbLocalInvalidationModeService_Set);
+        // Nothing reads this operation on the other hosts: its handler isn't replayed and
+        // it carries no invalidation calls
+        operation.Scope!.HasStoredOperation.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Legacy_StillStoresTheOperation()
+    {
+        if (MustSkip()) return;
+
+        var kv = Services.GetRequiredService<DbLegacyInvalidationModeService>();
+        var cGet = await Computed.Capture(() => kv.Get("ab"));
+
+        await Services.Commander().Call(new DbLegacyInvalidationModeService_Set("ab", 1));
+
+        var operation = Services.GetRequiredService<OperationCapture>().Operations
+            .Single(x => x.Command is DbLegacyInvalidationModeService_Set);
+        // The default mode is Legacy, and its invalidation happens through the replay of this row
+        operation.Scope!.HasStoredOperation.Should().BeTrue();
+        cGet.IsConsistent().Should().BeFalse();
+    }
+
     protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
     {
         base.ConfigureTestServices(services, isClient);
         if (isClient)
             return;
 
-        services.AddFusion().AddService<DbInvalidationModeService>();
+        var fusion = services.AddFusion();
+        fusion.AddService<DbInvalidationModeService>();
+        fusion.AddService<DbLocalInvalidationModeService>();
+        fusion.AddService<DbLegacyInvalidationModeService>();
         services.AddSingleton<OperationCapture>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IOperationCompletionListener, OperationCapture>(
             c => c.GetRequiredService<OperationCapture>()));
