@@ -12,7 +12,13 @@ namespace ActualLab.Rpc.Clients;
 public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
 {
     public RpcHttpClientOptions Options { get; } = services.GetRequiredService<RpcHttpClientOptions>();
-    protected HttpClient HttpClient => field ??= Options.HttpClientFactory.Invoke(Services);
+
+    // Every RPC connection holds its request open for as long as the connection lives, and
+    // SocketsHttpHandler can't carry two such requests over one HTTP/2 connection: the second one
+    // never receives its response headers. Sharing a single HttpClient would multiplex them onto
+    // one connection, so each connection gets its own - disposed together with it.
+    protected virtual HttpClient CreateHttpClient()
+        => Options.HttpClientFactory.Invoke(Services);
 
     public override Task<RpcConnection> ConnectRemote(
         RpcClientPeer clientPeer,
@@ -43,7 +49,15 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
         _ = hub.SystemClock
             .Delay(hub.Limits.ConnectTimeout, cancellationToken)
             .ContinueWith(_ => connectTokenSource.CancelAndDisposeSilently(), TaskScheduler.Default);
+        // The request is sent with this token rather than connectToken, because it has to outlive
+        // the connect: cancelling it is the only way to reset the request's HTTP/2 stream once the
+        // connection is closed. Gracefully ending the request body instead leaves the stream
+        // half-open, and the server's undrained response then blocks every other stream sharing
+        // that connection - see RpcHttpConnectionOwner.
+        var requestTokenSource = connectToken.CreateLinkedTokenSource();
+        var requestToken = requestTokenSource.Token;
 
+        var httpClient = CreateHttpClient();
         var content = new DuplexHttpContent();
         HttpRequestMessage? request = null;
         HttpResponseMessage response;
@@ -58,8 +72,8 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
                     : HttpVersionPolicy.RequestVersionExact,
                 Content = content,
             };
-            response = await HttpClient
-                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, connectToken)
+            response = await httpClient
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestToken)
                 .ConfigureAwait(false);
 
             // If we're here, the response headers were received successfully.
@@ -68,7 +82,9 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
         catch (Exception e) {
             content.Complete(); // Unblocks DuplexHttpContent.SerializeToStreamAsync if it has already started
             request?.Dispose();
-            if (e.IsCancellationOf(connectToken) && !cancellationToken.IsCancellationRequested)
+            requestTokenSource.CancelAndDisposeSilently();
+            httpClient.Dispose();
+            if (e.IsCancellationOf(requestToken) && !cancellationToken.IsCancellationRequested)
                 throw Errors.ConnectTimeout();
 
             Log.LogWarning(e, "'{Route}': Failed to connect to {Url}", clientPeer.Route, uri);
@@ -92,7 +108,7 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
                 .KeylessSet((RpcPeer)clientPeer)
                 .KeylessSet(uri)
                 .KeylessSet(response);
-            var owner = new RpcHttpConnectionOwner(content, request, response);
+            var owner = new RpcHttpConnectionOwner(content, request, response, requestTokenSource, httpClient);
             RpcTransport transport;
             if (Options.UsePipes) {
                 var pipeOptions = Options.PipeTransportOptionsFactory.Invoke(clientPeer, properties);
@@ -110,6 +126,8 @@ public class RpcHttpClient(IServiceProvider services) : RpcClient(services)
             content.Complete();
             request.Dispose();
             response.Dispose();
+            requestTokenSource.CancelAndDisposeSilently();
+            httpClient.Dispose();
             Log.LogWarning(e, "'{Route}': Failed to connect to {Url}", clientPeer.Route, uri);
             throw;
         }
