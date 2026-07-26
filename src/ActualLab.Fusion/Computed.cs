@@ -1,4 +1,4 @@
-using ActualLab.Collections.Slim;
+﻿using ActualLab.Collections.Slim;
 using ActualLab.Fusion.Internal;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Internal;
@@ -421,6 +421,10 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
             Transiency.Terminal => Options.AutoInvalidationDelay,
             _ => TimeSpanExt.Min(Options.AutoInvalidationDelay, Options.NonTransientErrorInvalidationDelay),
         };
+        // An IHasRetryDelay error asks not to be retried earlier than its own delay: invalidating
+        // sooner triggers a retry, and for errors caused by request volume the retry makes it worse.
+        if (error is IHasRetryDelay { RetryDelay.Ticks: > 0 } hasRetryDelay)
+            timeout = TimeSpanExt.Max(timeout, hasRetryDelay.RetryDelay);
         if (timeout != TimeSpan.MaxValue)
             this.Invalidate(timeout);
     }
