@@ -27,14 +27,53 @@ Target:
 - `.net`, `dotnet`, or `net` → publish .NET (NuGet) only
 - `ts` → publish TypeScript (npm) only
 - `both`, `all` → publish both (order: .NET first, then TS)
-- `auto` (or no target) → detect what needs publishing (Step 2)
+- `auto` (or no target) → detect what needs publishing (Step 3)
 
 Flags:
 - `-test` (default) / `-no-test` → run or skip the pre-publish test pass (Step 4)
 - `-changelog` (default) / `-no-changelog` → run or skip `/changelog-update` after
   publishing (Step 6)
 
-### Step 2: Auto target detection (target `auto` only)
+### Step 2: Check the branch and the environment
+
+**Publish only from `master`, fully in sync with `origin/master`.** `version.json`
+lists `^refs/heads/master$` as the only `publicReleaseRefSpec`, so any other branch
+stamps a git-hash version like `14.1.64-g59e65c53cc` — and pushing that to NuGet
+burns a bogus version permanently. Verify all of the following:
+
+```powershell
+git rev-parse --abbrev-ref HEAD          # must be: master
+git status --short                       # must be empty
+git fetch origin
+git rev-list --left-right --count origin/master...master   # must be: 0    0
+dotnet nbgv get-version -v NuGetPackageVersion             # must have no -g<hash> suffix
+```
+
+Resolve problems as follows:
+
+- **Not on `master`** → STOP and ask the user (AskUserQuestion) whether to switch,
+  or whether they meant to publish something else. Never switch branches on your own.
+- **Dirty working tree** → STOP and ask. Never stash, discard, or commit on your own.
+- **Behind `origin/master`** → run `git pull --ff-only`; if it isn't a fast-forward,
+  STOP and ask.
+- **Ahead of `origin/master`** → the commits being published must be on the remote
+  first. Push them (`git push`) before publishing, and say what you pushed.
+- **Diverged** (both counts non-zero) → STOP and ask; don't rebase or merge on your own.
+- **Version still has a `-g<hash>` suffix on master** → STOP and ask; something is
+  off with the nbgv setup and the publish would be wrong.
+
+Then check the environment. Publishing runs `.cmd` scripts and needs host credentials
+(`ActualChat_NuGet_API_Key`, `ActualLab_NPM_Key`), so it must run on the
+host OS. **This is a hard requirement for .NET publishing.**
+
+Check the `AC_OS` environment variable:
+
+- Unset, `Windows`, `macOS`, or `Linux` → OK, proceed.
+- `Linux in Docker`, `Linux on WSL`, or anything else sandboxed → STOP and
+  tell the user to re-run the publish from an agent started on the host OS
+  (`ai os`). Do not try to work around this.
+
+### Step 3: Auto target detection (target `auto` only)
 
 Figure out what actually changed since the last publish, per artifact family:
 
@@ -63,19 +102,6 @@ Figure out what actually changed since the last publish, per artifact family:
 
 Report the decision (with the version→commit mapping and a one-line diff summary)
 before proceeding.
-
-### Step 3: Check the environment
-
-Publishing runs `.cmd` scripts and needs host credentials
-(`ActualChat_NuGet_API_Key`, `ActualLab_NPM_Key`), so it must run on the
-host OS. **This is a hard requirement for .NET publishing.**
-
-Check the `AC_OS` environment variable:
-
-- Unset, `Windows`, `macOS`, or `Linux` → OK, proceed.
-- `Linux in Docker`, `Linux on WSL`, or anything else sandboxed → STOP and
-  tell the user to re-run the publish from an agent started on the host OS
-  (`ai os`). Do not try to work around this.
 
 ### Step 4: Pre-publish tests (skip with `-no-test`)
 
