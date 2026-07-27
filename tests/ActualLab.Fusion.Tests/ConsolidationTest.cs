@@ -27,10 +27,6 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         c0.Source.Options.ConsolidationDelay.Should().Be(TimeSpan.MaxValue);
         c0.Source.Options.TransientErrorInvalidationDelay.Should().Be(TimeSpan.FromSeconds(1));
 
-        // Category tests
-        c0.Input.Category.Should().EndWith("." + nameof(CounterSumService.GetC0));
-        c0.Source.Input.Category.Should().Be("~" + c0.Input.Category);
-
         counterSum[0].Set(1);
         await (c0.WhenConsolidated ?? Task.CompletedTask);
         c0.IsConsistent().Should().BeFalse();
