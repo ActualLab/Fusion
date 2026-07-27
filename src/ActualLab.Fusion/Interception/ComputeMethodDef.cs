@@ -75,7 +75,7 @@ public sealed class ComputeMethodDef : MethodDef
 
     public override string ToString()
         => _toStringCached ??= string.Concat(
-            GetType().Name,
+            nameof(ComputeMethodDef),
             "(",
             ConsolidationSourceMethodDef is not null ? "<consolidating>" : "",
             FullName,

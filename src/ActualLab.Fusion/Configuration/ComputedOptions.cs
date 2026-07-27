@@ -75,7 +75,7 @@ public sealed record ComputedOptions
             if (rma is not null && rma.ConsolidationDelay is not double.NaN)
                 throw new InvalidOperationException(
                     $"{nameof(ConsolidationDelay)} cannot be used with {nameof(RemoteComputeMethodAttribute)}.");
-            if (rma is not null && rma.ConsolidationComparer is not null)
+            if (rma?.ConsolidationComparer != null)
                 throw new InvalidOperationException(
                     $"{nameof(ComputeMethodAttribute.ConsolidationComparer)} cannot be used with " +
                     $"{nameof(RemoteComputeMethodAttribute)}.");
