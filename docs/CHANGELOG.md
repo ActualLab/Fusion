@@ -11,6 +11,61 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.1.71+a733921f | npm: 14.1.5
+
+Release date: 2026-07-27
+
+A NuGet-only release (npm stays at `14.1.5`). It adds `TypeSchema` — a way to
+constrain which types a `PropertyBag` is allowed to materialize, which matters
+for bags filled from remote input — plus a per-method consolidation comparer,
+and it turns a silently ignored `ConsolidationDelay` into a startup error.
+
+### Breaking Changes
+
+- `TypeDecoratingUniSerialized<T>` and the four single-format
+  `TypeDecorating*Serialized<T>` wrappers now take `<TSchema, T>`. Open generics
+  can't be aliased, so these call sites need updating —
+  `TypeDecoratingUniSerialized<TypeSchema.Any, T>` preserves today's behavior.
+  `PropertyBag`, `MutablePropertyBag` and `PropertyBagItem` are spelled as
+  before via global using aliases.
+- `ConsolidationDelay` on an RPC-exposed compute method of a
+  `RpcServiceMode.Distributed` service now throws at registration time instead
+  of being silently ignored. Such calls are served by
+  `RemoteComputeMethodFunction`, which always produces a plain
+  `ComputeMethodComputed` — so no consolidation ever happened, even when routing
+  resolved to the local peer. Move the consolidation to a non-RPC-visible (e.g.
+  `protected virtual`) compute method and have the public one derive from it.
+  `Local`, `Server`, `Client` and `ServerAndClient` services are unaffected.
+
+### Added
+
+- `TypeSchema` (`ActualLab.Serialization`) — a phantom type parameter threaded
+  through `PropertyBag`, `MutablePropertyBag`, `PropertyBagItem` and the
+  type-decorating serialized wrappers. It supplies the type filter the
+  type-decorating serializers already accept, so a disallowed type is rejected
+  right after `TypeRef.Resolve()` and never materializes; `PropertyBagItem` also
+  checks on write, so a bad value fails where it's added. `TypeSchema.Any` keeps
+  today's behavior, `TypeSchema.PrimitiveOnly` allows the primitives plus
+  `string`, `Guid`, the date/time types, `Moment` and `Symbol`. The wire format
+  is unchanged — `PropertyBag<TypeSchema.Any>` serializes byte-identically to
+  the previous `PropertyBag`.
+- `ComputeMethodAttribute.ConsolidationComparer` — the `IEqualityComparer<T>`
+  type used to compare two consecutive outputs while consolidating, where `T` is
+  the method's unwrapped return type. Result types with referential equality
+  (or collections whose `Equals` is referential) could never consolidate before,
+  since the default comparer bottoms out in `Equals(x.Value, y.Value)`. The
+  comparer is validated and instantiated once per type at startup, and errors
+  keep the existing error-aware comparison.
+
+### Fixed
+
+- Consolidation sources no longer share a `FusionMonitor` category with the
+  targets that absorb them. `ComputeMethodDef` builds both from the same type
+  and `MethodInfo`, so a churning source was conflated with its quiet target;
+  the source now reports `~<FullName>`, mirroring the `*` prefix
+  `RemoteComputeMethodFunction` uses for remote replicas.
+
+
 ## 14.1.62+ab9673b6 | npm: 14.1.5
 
 Release date: 2026-07-26
