@@ -35,6 +35,9 @@ public sealed record ComputedOptions
         = default; // No invalidation delay
     public TimeSpan ConsolidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
         = TimeSpan.MaxValue; // No consolidation
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+    public Type? ConsolidationComparerType { get; init; }
+        = null; // No custom comparer = use FusionDefaultDelegates.ComputedOutputEqualityComparer
     public RemoteComputedCacheMode RemoteComputedCacheMode { get; init; }
         = RemoteComputedCacheMode.NoCache;
     public ComputedCancellationReprocessingOptions CancellationReprocessing { get; init; }
@@ -72,6 +75,10 @@ public sealed record ComputedOptions
             if (rma is not null && rma.ConsolidationDelay is not double.NaN)
                 throw new InvalidOperationException(
                     $"{nameof(ConsolidationDelay)} cannot be used with {nameof(RemoteComputeMethodAttribute)}.");
+            if (rma is not null && rma.ConsolidationComparer is not null)
+                throw new InvalidOperationException(
+                    $"{nameof(ComputeMethodAttribute.ConsolidationComparer)} cannot be used with " +
+                    $"{nameof(RemoteComputeMethodAttribute)}.");
             var consolidationDelay = a.ConsolidationDelay;
 
             // Default cache behavior must be changed to null to let it "inherit" defaultOptions.ClientCacheMode
@@ -86,8 +93,12 @@ public sealed record ComputedOptions
                 AutoInvalidationDelay = ToTimeSpan(autoInvalidationDelay) ?? defaultOptions.AutoInvalidationDelay,
                 InvalidationDelay = ToTimeSpan(invalidationDelay) ?? defaultOptions.InvalidationDelay,
                 ConsolidationDelay = ToTimeSpan(consolidationDelay) ?? defaultOptions.ConsolidationDelay,
+                ConsolidationComparerType = a.ConsolidationComparer ?? defaultOptions.ConsolidationComparerType,
                 RemoteComputedCacheMode = rmaCacheMode ?? defaultOptions.RemoteComputedCacheMode,
             };
+            if (options.ConsolidationComparerType is not null && !options.IsConsolidating)
+                throw Internal.Errors.ConsolidationComparerWithoutConsolidationDelay(type, method);
+
             // We don't want to multiply instances of ComputedOptions here unless they differ from the default ones
             return options == defaultOptions ? defaultOptions : options;
         });
@@ -121,6 +132,9 @@ public sealed record ComputedOptions
         t = ConsolidationDelay;
         if (t != TimeSpan.MaxValue)
             sb.Append(nameof(ConsolidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
+
+        if (ConsolidationComparerType is { } comparerType)
+            sb.Append(nameof(ConsolidationComparerType)).Append(": ").Append(comparerType.GetName()).Append(", ");
 
         var m = RemoteComputedCacheMode;
         if (m != default)

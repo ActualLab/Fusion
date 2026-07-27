@@ -137,6 +137,34 @@ public interface IPartFCO_ConsolidationDelay : IComputeService
     #endregion
 }
 
+public interface IPartFCO_ConsolidationComparer : IComputeService
+{
+    #region PartFCO_ConsolidationComparer
+    // Conversation has referential Equals, so consolidation would never "swallow"
+    // an invalidation without a custom comparer.
+    [ComputeMethod(ConsolidationDelay = 0.5, ConsolidationComparer = typeof(ConversationComparer))]
+    Task<Conversation?> GetConversation(string chatId);
+    #endregion
+}
+
+#region PartFCO_ConsolidationComparerImpl
+public class Conversation(string title)
+{
+    public string Title { get; } = title;
+}
+
+public class ConversationComparer : IEqualityComparer<Conversation>
+{
+    public bool Equals(Conversation? x, Conversation? y)
+        => x is null || y is null
+            ? x is null && y is null
+            : string.Equals(x.Title, y.Title, StringComparison.Ordinal);
+
+    public int GetHashCode(Conversation obj)
+        => obj.Title.GetHashCode(StringComparison.Ordinal);
+}
+#endregion
+
 public interface IPartFCO_CombiningOptions : IComputeService
 {
     #region PartFCO_CombiningOptions

@@ -1,3 +1,4 @@
+using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Tests.Services;
 using ActualLab.Testing.Collections;
 
@@ -134,6 +135,32 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         var c1 = (ConsolidatingComputed<int>)await c0.Update();
         c1.Value.Should().Be(0);
         c1.IsConsistent().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ProtectedMethodConsolidates()
+    {
+        var services = CreateServices();
+        var counterSum = services.GetRequiredService<CounterSumService>();
+        counterSum[0].Set(0);
+
+        var c0 = (ConsolidatingComputed<int>)await counterSum.CaptureProtectedC0(0);
+        c0.Value.Should().Be(0);
+        c0.WhenConsolidated.Should().BeNull();
+        c0.Options.ConsolidationDelay.Should().Be(TimeSpan.Zero);
+
+        var outer = await Computed.Capture(() => counterSum.GetViaProtectedC0(0));
+        outer.Should().BeOfType<ComputeMethodComputed<int>>();
+        outer.Value.Should().Be(0);
+
+        counterSum[0].Invalidate(); // Source dependency invalidation, but the value stays the same
+        await (c0.WhenConsolidated ?? Task.CompletedTask);
+        c0.IsConsistent().Should().BeTrue();
+        outer.IsConsistent().Should().BeTrue();
+
+        counterSum[0].Set(1);
+        await (c0.WhenConsolidated ?? Task.CompletedTask);
+        c0.IsConsistent().Should().BeFalse();
     }
 
     protected override void ConfigureServices(ServiceCollection services)

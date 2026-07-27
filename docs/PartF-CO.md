@@ -210,6 +210,74 @@ With ConsolidationDelay, the counter only invalidates when its value actually ch
 - Reducing invalidation cascades in deep dependency graphs
 - Preventing unnecessary UI refreshes
 
+**Restrictions — `Distributed` services:**
+
+| Service mode | ConsolidationDelay |
+|--------------|--------------------|
+| `Local` | Allowed — the method is computed locally, so it consolidates |
+| `Server` | Allowed — the method is always computed locally, and remote clients get fewer invalidations as a result |
+| `Client` | Allowed, but inert — the client only consumes the value, and the producer already consolidated it |
+| `ServerAndClient` | Allowed — see the two rows above |
+| `Distributed` | **Rejected at registration time** |
+
+`Distributed` services are served by `RemoteComputeMethodFunction` even when the routing resolves to the local peer, and it always produces a plain `ComputeMethodComputed` — so the consolidation would be silently ignored on the shard owner too. It also can't just be "made to work": consolidation recomputes its source through a local `ComputeMethodFunction` (bypassing `RpcMethodDef.RouteCall` entirely), and its shape is fixed when the method def is built, while the routing is per-call and may flip when a shard moves.
+
+Use a non-RPC-visible (e.g. `protected virtual`) compute method instead, and derive the RPC-exposed one from it:
+
+```cs
+public class Presences : IPresencesBackend
+{
+    public virtual Task<Moment> GetLastCheckIn(UserId userId, CancellationToken cancellationToken = default)
+        => GetConsolidatedLastCheckIn(userId, cancellationToken);
+
+    [ComputeMethod(ConsolidationDelay = 0.5)]
+    protected virtual Task<Moment> GetConsolidatedLastCheckIn(UserId userId, CancellationToken cancellationToken = default)
+        => ...;
+}
+```
+
+### ConsolidationComparer
+
+**Type:** `Type?` (an `IEqualityComparer<T>` implementation)
+**Default:** `null` (use `FusionDefaultDelegates.ComputedOutputEqualityComparer`)
+
+By default consolidation compares two consecutive outputs with `Equals(x.Value, y.Value)`, so a result type with referential equality can never consolidate — a freshly built instance is never "the same" as the previous one. `ConsolidationComparer` names an `IEqualityComparer<T>` (where `T` is the method's unwrapped return type) to use instead:
+
+<!-- snippet: PartFCO_ConsolidationComparer -->
+```cs
+// Conversation has referential Equals, so consolidation would never "swallow"
+// an invalidation without a custom comparer.
+[ComputeMethod(ConsolidationDelay = 0.5, ConsolidationComparer = typeof(ConversationComparer))]
+Task<Conversation?> GetConversation(string chatId);
+```
+<!-- endSnippet -->
+
+<!-- snippet: PartFCO_ConsolidationComparerImpl -->
+```cs
+public class Conversation(string title)
+{
+    public string Title { get; } = title;
+}
+
+public class ConversationComparer : IEqualityComparer<Conversation>
+{
+    public bool Equals(Conversation? x, Conversation? y)
+        => x is null || y is null
+            ? x is null && y is null
+            : string.Equals(x.Title, y.Title, StringComparison.Ordinal);
+
+    public int GetHashCode(Conversation obj)
+        => obj.Title.GetHashCode(StringComparison.Ordinal);
+}
+```
+<!-- endSnippet -->
+
+**Rules:**
+- The comparer type must implement `IEqualityComparer<T>` for the method's unwrapped return type and have a public parameterless constructor. A single instance is created per comparer type and reused.
+- It's consulted only when both compared outputs are values. If either one carries an error, the default (error-aware) comparison applies, so errors keep behaving exactly as before.
+- It requires `ConsolidationDelay` to be set — otherwise it would never be used, so that combination is rejected.
+- Same as `ConsolidationDelay`, it can't be used on `Distributed` services or with `[RemoteComputeMethod]`.
+
 ## Combining Options
 
 Options can be combined for sophisticated caching strategies:
@@ -248,6 +316,7 @@ Fusion provides different defaults for server-side and client-side (remote) comp
 | AutoInvalidationDelay | ∞ (none) | ∞ (none) |
 | InvalidationDelay | 0 | 0 |
 | ConsolidationDelay | -1 (none) | -1 (none) |
+| ConsolidationComparer | null (default comparer) | null (default comparer) |
 
 `MutableState` uses its own defaults (`ComputedOptions.MutableStateDefault`): both `TransientErrorInvalidationDelay` and `NonTransientErrorInvalidationDelay` are `∞`, so its value or error is never auto-invalidated and stays until you change it explicitly.
 

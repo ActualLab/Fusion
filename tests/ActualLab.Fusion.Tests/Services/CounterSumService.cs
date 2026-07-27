@@ -29,6 +29,13 @@ public class CounterSumService : IComputeService
         => await this[counterIndex].Use(cancellationToken);
 
     [ComputeMethod]
+    public virtual async Task<int> GetViaProtectedC0(int counterIndex, CancellationToken cancellationToken = default)
+        => await GetProtectedC0(counterIndex, cancellationToken);
+
+    public Task<Computed<int>> CaptureProtectedC0(int counterIndex)
+        => Computed.Capture(() => GetProtectedC0(counterIndex, default)).AsTask();
+
+    [ComputeMethod]
     public virtual async Task<int> Sum(
         int counterIndex1,
         int counterIndex2,
@@ -41,4 +48,10 @@ public class CounterSumService : IComputeService
         return t1.GetAwaiter().GetResult() + t2.GetAwaiter().GetResult();
 #pragma warning restore VSTHRD103
     }
+
+    // Protected methods
+
+    [ComputeMethod(ConsolidationDelay = 0)]
+    protected virtual async Task<int> GetProtectedC0(int counterIndex, CancellationToken cancellationToken = default)
+        => await this[counterIndex].Use(cancellationToken);
 }

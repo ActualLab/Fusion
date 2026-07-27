@@ -58,4 +58,15 @@ public class ComputeMethodAttribute : Attribute
     /// <code>double.NaN</code> means "use default", which is <see cref="TimeSpan.MaxValue"/> (no consolidation).
     /// </summary>
     public double ConsolidationDelay { get; set; } = double.NaN;
+
+    /// <summary>
+    /// The <see cref="IEqualityComparer{T}"/> type used to compare the outputs of two consecutive
+    /// computations while consolidating, where T is the method's unwrapped return type.
+    /// It must have a public parameterless constructor, and it's usable only together
+    /// with <see cref="ConsolidationDelay"/>.
+    /// <code>null</code> means "use default", which is
+    /// <see cref="FusionDefaultDelegates.ComputedOutputEqualityComparer"/>.
+    /// </summary>
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+    public Type? ConsolidationComparer { get; set; }
 }

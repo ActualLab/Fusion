@@ -38,6 +38,43 @@ public static class Errors
         => new InvalidOperationException($"{nameof(ComputeMethodAttribute)} is applied to a method " +
             $"returning {nameof(RpcNoWait)}: '{method}'.");
 
+    public static Exception ConsolidationOnDistributedServiceMethod(Type serviceType, MethodInfo method)
+        => new InvalidOperationException(
+            $"{nameof(ComputedOptions.ConsolidationDelay)} cannot be used on " +
+            $"'{serviceType.GetName()}.{method.Name}', because it's an RPC-exposed method of a " +
+            $"{nameof(RpcServiceMode)}.{nameof(RpcServiceMode.Distributed)} service: even when the routing " +
+            "resolves to the local peer, such calls are served by RemoteComputeMethodFunction, " +
+            "which always produces a plain ComputeMethodComputed - so the consolidation is silently ignored. " +
+            "It can't be routed either: consolidation recomputes its source via a local ComputeMethodFunction, " +
+            "bypassing the RPC routing, and its shape is fixed at method-def construction time, " +
+            "while the routing is per-call and may flip when a shard moves. " +
+            "Move the consolidation to a non-RPC-visible (e.g. protected virtual) compute method " +
+            $"and make '{method.Name}' derive its result from it. " +
+            $"{nameof(ComputedOptions.ConsolidationDelay)} is fine on " +
+            $"{nameof(RpcServiceMode.Local)}, {nameof(RpcServiceMode.Server)}, " +
+            $"{nameof(RpcServiceMode.Client)} and {nameof(RpcServiceMode.ServerAndClient)} services.");
+
+    public static Exception ConsolidationComparerWithoutConsolidationDelay(Type serviceType, MethodInfo method)
+        => new InvalidOperationException(
+            $"{nameof(ComputeMethodAttribute.ConsolidationComparer)} is set on " +
+            $"'{serviceType.GetName()}.{method.Name}', but its {nameof(ComputedOptions.ConsolidationDelay)} isn't, " +
+            "so the comparer would never be used. " +
+            $"Set {nameof(ComputedOptions.ConsolidationDelay)} as well, or remove the comparer.");
+
+    public static Exception ConsolidationComparerMustImplementIEqualityComparer(
+        Type comparerType, Type valueType, MethodInfo method)
+        => new InvalidOperationException(
+            $"{nameof(ComputeMethodAttribute.ConsolidationComparer)} type '{comparerType.GetName()}' " +
+            $"used on '{method.DeclaringType?.GetName()}.{method.Name}' must implement " +
+            $"IEqualityComparer<{valueType.GetName()}>.");
+
+    public static Exception ConsolidationComparerMustHaveParameterlessConstructor(
+        Type comparerType, MethodInfo method)
+        => new InvalidOperationException(
+            $"{nameof(ComputeMethodAttribute.ConsolidationComparer)} type '{comparerType.GetName()}' " +
+            $"used on '{method.DeclaringType?.GetName()}.{method.Name}' must be a non-abstract type " +
+            "with a public parameterless constructor.");
+
     public static Exception ComputeServiceWithCommandHandlersMustBeSingleton(Type serviceType)
         => new InvalidOperationException(
             $"Compute service '{serviceType.GetName()}' has command handlers and must be registered as a singleton: " +

@@ -1,5 +1,6 @@
 using ActualLab.Fusion.Client.Internal;
 using ActualLab.Rpc;
+using Errors = ActualLab.Fusion.Internal.Errors;
 
 namespace ActualLab.Fusion.Rpc;
 
@@ -18,6 +19,9 @@ public class RpcComputeMethodDef : RpcMethodDef
             throw new InvalidOperationException(
                 $"Compute method '{FullName}' must use "
                 + $"{nameof(RpcRemoteExecutionMode)}.{nameof(RpcRemoteExecutionMode.Default)}.");
+        if (service.Mode is RpcServiceMode.Distributed
+            && (computedOptions.IsConsolidating || computedOptions.ConsolidationComparerType is not null))
+            throw Errors.ConsolidationOnDistributedServiceMethod(service.Type, methodInfo);
 
         CallType = RpcComputeCallType.Value;
         ComputedOptions = computedOptions;

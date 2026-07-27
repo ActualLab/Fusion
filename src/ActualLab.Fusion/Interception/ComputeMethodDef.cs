@@ -11,10 +11,13 @@ namespace ActualLab.Fusion.Interception;
 /// </summary>
 public sealed class ComputeMethodDef : MethodDef
 {
+    private static readonly ConcurrentDictionary<Type, object> ConsolidationComparerCache = new();
+
     public ComputedOptions ComputedOptions { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = ComputedOptions.Default;
     public readonly bool IsOfHasDisposableStatusType;
     public readonly ComputeMethodDef? ConsolidationSourceMethodDef;
     public readonly ComputeMethodDef? ConsolidationTargetMethodDef;
+    public readonly object? ConsolidationComparer;
 
     public ComputeMethodDef(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
@@ -66,6 +69,8 @@ public sealed class ComputeMethodDef : MethodDef
 
         IsOfHasDisposableStatusType = typeof(IHasDisposeStatus).IsAssignableFrom(type);
         ComputedOptions = computedOptions;
+        ConsolidationComparer = GetConsolidationComparer(
+            computedOptions.ConsolidationComparerType, UnwrappedReturnType, methodInfo);
     }
 
     public override string ToString()
@@ -93,5 +98,27 @@ public sealed class ComputeMethodDef : MethodDef
         return (RemoteComputeMethodFunction)functionType
             .MakeGenericType(UnwrappedReturnType)
             .CreateInstance(hub, this, rpcMethodDef);
+    }
+
+    [UnconditionalSuppressMessage("Trimming", "IL2067",
+        Justification = "ConsolidationComparerType is annotated with PublicConstructors")]
+    [UnconditionalSuppressMessage("Trimming", "IL2070",
+        Justification = "We assume attributes on compute methods are fully preserved")]
+    [UnconditionalSuppressMessage("AOT", "IL3050",
+        Justification = "We assume attributes on compute methods are fully preserved")]
+    public static object? GetConsolidationComparer(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type? comparerType,
+        Type valueType,
+        MethodInfo methodInfo)
+    {
+        if (comparerType is null)
+            return null;
+
+        if (!typeof(IEqualityComparer<>).MakeGenericType(valueType).IsAssignableFrom(comparerType))
+            throw Errors.ConsolidationComparerMustImplementIEqualityComparer(comparerType, valueType, methodInfo);
+        if (comparerType.IsAbstract || comparerType.GetConstructor(Type.EmptyTypes) is null)
+            throw Errors.ConsolidationComparerMustHaveParameterlessConstructor(comparerType, methodInfo);
+
+        return ConsolidationComparerCache.GetOrAdd(comparerType, static t => t.CreateInstance());
     }
 }

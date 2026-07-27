@@ -50,6 +50,16 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
 
     // Private methods
 
+    private bool AreOutputsEqual(Result x, Result y)
+    {
+        // A custom comparer knows nothing about errors, so the default (error-aware) logic still applies to them
+        if (x.Error is null && y.Error is null
+            && ((ComputeMethodInput)Input).MethodDef.ConsolidationComparer is IEqualityComparer<T> comparer)
+            return comparer.Equals((T)x.Value!, (T)y.Value!);
+
+        return Input.Function.Hub.ComputedOutputEqualityComparer.Invoke(x, y);
+    }
+
     private void OnSourceInvalidated(Computed invalidated)
     {
         if (_whenConsolidated is not null) return; // Double-check locking
@@ -71,8 +81,7 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
                         await Task.Delay(Options.ConsolidationDelay, CancellationToken.None).ConfigureAwait(false);
 
                     var updatedSource = (Computed<T>)await _source.UpdateUntyped(CancellationToken.None).ConfigureAwait(false);
-                    var outputEqualityComparer = Input.Function.Hub.ComputedOutputEqualityComparer;
-                    nextSource = outputEqualityComparer.Invoke(UntypedOutput, updatedSource.UntypedOutput)
+                    nextSource = AreOutputsEqual(UntypedOutput, updatedSource.UntypedOutput)
                         ? updatedSource
                         : null; // Invalidate
                 }

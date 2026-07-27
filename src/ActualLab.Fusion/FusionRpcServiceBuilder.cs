@@ -38,6 +38,8 @@ public class FusionRpcServiceBuilder : RpcServiceBuilder
     public override void Inject()
     {
         var serviceType = Type;
+        if (Mode is RpcServiceMode.Distributed)
+            RequireNoConsolidatingDistributedMethods(serviceType);
         if (Mode is RpcServiceMode.Client) {
             Services.AddSingleton(serviceType, CreateClient);
             if (MustAddCommandHandlers)
@@ -181,5 +183,26 @@ public class FusionRpcServiceBuilder : RpcServiceBuilder
     {
         base.HasLocalExecutionMode(mode);
         return  this;
+    }
+
+    // Private methods
+
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "We assume RPC-related code is fully preserved")]
+    private static void RequireNoConsolidatingDistributedMethods(Type serviceType)
+    {
+        // The filter below mirrors RpcServiceDef.BuildMethods: only such methods become RPC-exposed ones
+        var bindingFlags = BindingFlags.Instance | BindingFlags.Public;
+        var methods = serviceType.IsInterface
+            ? serviceType.GetAllInterfaceMethods(bindingFlags)
+            : serviceType.GetMethods(bindingFlags);
+        foreach (var method in methods) {
+            if (method.DeclaringType == typeof(object) || method.IsGenericMethodDefinition)
+                continue;
+
+            var options = ComputedOptions.Get(serviceType, method);
+            if (options is { IsConsolidating: true } or { ConsolidationComparerType: not null })
+                throw Internal.Errors.ConsolidationOnDistributedServiceMethod(serviceType, method);
+        }
     }
 }
