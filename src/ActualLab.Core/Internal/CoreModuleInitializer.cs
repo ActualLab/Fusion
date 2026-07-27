@@ -29,11 +29,15 @@ internal static class CoreModuleInitializer
         CodeKeeper.KeepSerializable<TypeDecoratingUniSerialized<TypeSchema.Any, object>>();
 
 #if NET8_0_OR_GREATER
-        // These formatters are generic since TypeSchema was introduced, so the generated resolver
-        // closes them via MakeGenericType - ILC won't emit them unless the closed types are rooted
+        // The generated resolver closes these via MakeGenericType, which ILC can't follow, and
+        // KeepSerializable<T> above doesn't reach them - it keeps the serializers, not the formatters
         CodeKeeper.Keep<global::MessagePack.GeneratedMessagePackResolver.ActualLab.Collections.PropertyBagFormatter<TypeSchema.Any>>();
         CodeKeeper.Keep<global::MessagePack.GeneratedMessagePackResolver.ActualLab.Collections.MutablePropertyBagFormatter<TypeSchema.Any>>();
         CodeKeeper.Keep<global::MessagePack.GeneratedMessagePackResolver.ActualLab.Collections.Internal.PropertyBagItemFormatter<TypeSchema.Any>>();
+        CodeKeeper.Keep<global::MessagePack.GeneratedMessagePackResolver.ActualLab.Serialization.TypeDecoratingUniSerializedFormatter<TypeSchema.Any, object>>();
+        // Both bags serialize their items as PropertyBagItem[], whose formatter MessagePack's own
+        // generic resolver closes reflectively as well
+        CodeKeeper.Keep<global::MessagePack.Formatters.ArrayFormatter<PropertyBagItem>>();
 #endif
     }
 
