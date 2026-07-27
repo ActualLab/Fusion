@@ -1,10 +1,10 @@
-using System.Buffers;
+﻿using System.Buffers;
 using Nerdbank.MessagePack;
 
 namespace ActualLab.Serialization.Internal;
 
 /// <summary>
-/// Nerdbank.MessagePack converter for <see cref="TypeDecoratingUniSerialized{T}"/>.
+/// Nerdbank.MessagePack converter for <see cref="TypeDecoratingUniSerialized{TSchema,T}"/>.
 /// <para>
 /// Emits the same wire format MessagePack-CSharp produced for this type via its
 /// <c>[MessagePackObject] [Key(0)] MessagePackData MessagePack</c> layout: a 1-element array
@@ -15,9 +15,11 @@ namespace ActualLab.Serialization.Internal;
 /// converter stacks treat the same way — which is why cross-compat is restored.
 /// </para>
 /// </summary>
-public sealed class TypeDecoratingUniSerializedNerdbankConverter<T> : MessagePackConverter<TypeDecoratingUniSerialized<T>>
+public sealed class TypeDecoratingUniSerializedNerdbankConverter<TSchema, T>
+    : MessagePackConverter<TypeDecoratingUniSerialized<TSchema, T>>
+    where TSchema : TypeSchema, new()
 {
-    public override TypeDecoratingUniSerialized<T> Read(ref MessagePackReader reader, SerializationContext context)
+    public override TypeDecoratingUniSerialized<TSchema, T> Read(ref MessagePackReader reader, SerializationContext context)
     {
         var len = reader.ReadArrayHeader();
         if (len != 1)
@@ -25,27 +27,29 @@ public sealed class TypeDecoratingUniSerializedNerdbankConverter<T> : MessagePac
                 $"Expected 1-element array for TypeDecoratingUniSerialized<{typeof(T).Name}>, got {len}.");
         var raw = reader.ReadBytes();
         if (!raw.HasValue || raw.Value.Length == 0)
-            return new TypeDecoratingUniSerialized<T> { Value = default! };
+            return new TypeDecoratingUniSerialized<TSchema, T> { Value = default! };
         var innerReader = new MessagePackReader(raw.Value);
         var typeRefConverter = context.GetConverter<TypeRef>(context.TypeShapeProvider);
         var actualTypeRef = typeRefConverter.Read(ref innerReader, context);
         if (actualTypeRef == default)
-            return new TypeDecoratingUniSerialized<T> { Value = default! };
+            return new TypeDecoratingUniSerialized<TSchema, T> { Value = default! };
 
 #pragma warning disable IL2026
         var actualType = actualTypeRef.Resolve();
 #pragma warning restore IL2026
         if (!typeof(T).IsAssignableFrom(actualType))
             throw Errors.UnsupportedSerializedType(actualType);
+        if (TypeSchema<TSchema>.TypeFilter is { } typeFilter && !typeFilter.Invoke(actualType))
+            throw Errors.UnsupportedSerializedType(actualType);
         var valueConverter = context.GetConverter(actualType, context.TypeShapeProvider);
         var value = (T?)valueConverter.ReadObject(ref innerReader, context);
-        return new TypeDecoratingUniSerialized<T> { Value = value! };
+        return new TypeDecoratingUniSerialized<TSchema, T> { Value = value! };
     }
 
 #pragma warning disable NBMsgPack031
     public override void Write(
         ref MessagePackWriter writer,
-        in TypeDecoratingUniSerialized<T> value,
+        in TypeDecoratingUniSerialized<TSchema, T> value,
         SerializationContext context)
     {
         var buffer = new ArrayBufferWriter<byte>();

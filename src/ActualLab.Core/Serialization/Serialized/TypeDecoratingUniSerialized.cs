@@ -4,18 +4,20 @@ using MessagePack;
 namespace ActualLab.Serialization;
 
 /// <summary>
-/// Factory methods for <see cref="TypeDecoratingUniSerialized{T}"/>.
+/// Factory methods for <see cref="TypeDecoratingUniSerialized{TSchema,T}"/>.
 /// </summary>
 public static class TypeDecoratingUniSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TypeDecoratingUniSerialized<TValue> New<TValue>(TValue value = default!)
+    public static TypeDecoratingUniSerialized<TSchema, TValue> New<TSchema, TValue>(TValue value = default!)
+        where TSchema : TypeSchema, new()
         => new() { Value = value };
 }
 
 /// <summary>
 /// A type-decorating variant of <see cref="UniSerialized{T}"/> that prefixes serialized data
-/// with type information across all supported serializer formats.
+/// with type information across all supported serializer formats, and restricts the types it is
+/// allowed to materialize to the ones <typeparamref name="TSchema"/> permits.
 /// </summary>
 #if !NET5_0
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
@@ -23,7 +25,8 @@ public static class TypeDecoratingUniSerialized
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public readonly partial struct TypeDecoratingUniSerialized<T>
+public readonly partial struct TypeDecoratingUniSerialized<TSchema, T>
+    where TSchema : TypeSchema, new()
 {
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public T Value { get; init; } = default!;
@@ -66,19 +69,19 @@ public readonly partial struct TypeDecoratingUniSerialized<T>
         => $"{GetType().GetName()}({Value})";
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator TypeDecoratingUniSerialized<T>(T value) => new() { Value = value };
+    public static implicit operator TypeDecoratingUniSerialized<TSchema, T>(T value) => new() { Value = value };
 
     // Private methods
 
     private static string SerializeText(T value, SerializerKind serializerKind)
     {
-        var serializer = (ITextSerializer)serializerKind.GetDefaultTypeDecoratingSerializer();
+        var serializer = (ITextSerializer)TypeSchema<TSchema>.GetTypeDecoratingSerializer(serializerKind);
         return serializer.Write(value);
     }
 
     private static byte[] SerializeBytes(T value, SerializerKind serializerKind)
     {
-        var serializer = serializerKind.GetDefaultTypeDecoratingSerializer();
+        var serializer = TypeSchema<TSchema>.GetTypeDecoratingSerializer(serializerKind);
         ArrayPoolBuffer<byte>? buffer = null;
         try {
 #if !NETSTANDARD2_0
@@ -99,13 +102,13 @@ public readonly partial struct TypeDecoratingUniSerialized<T>
 
     private static T DeserializeText(string text, SerializerKind serializerKind)
     {
-        var serializer = (ITextSerializer)serializerKind.GetDefaultTypeDecoratingSerializer();
+        var serializer = (ITextSerializer)TypeSchema<TSchema>.GetTypeDecoratingSerializer(serializerKind);
         return serializer.Read<T>(text);
     }
 
     private static T DeserializeBytes(byte[] bytes, SerializerKind serializerKind)
     {
-        var serializer = serializerKind.GetDefaultTypeDecoratingSerializer();
+        var serializer = TypeSchema<TSchema>.GetTypeDecoratingSerializer(serializerKind);
 #if !NETSTANDARD2_0
         if (serializerKind != SerializerKind.MemoryPack)
             return (T)serializer.Read(bytes, typeof(T), out _)!;

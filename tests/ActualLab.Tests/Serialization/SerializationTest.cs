@@ -1,4 +1,4 @@
-using ActualLab.Collections.Internal;
+﻿using ActualLab.Collections.Internal;
 using ActualLab.IO;
 using ActualLab.Reflection;
 using ActualLab.Rpc;
@@ -312,13 +312,13 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void TypeDecoratingUniSerializedSerialization()
     {
-        TypeDecoratingUniSerialized.New(default(Unit)).AssertPassesThroughAllSerializers(Out);
-        TypeDecoratingUniSerialized.New(1).AssertPassesThroughAllSerializers(Out);
-        TypeDecoratingUniSerialized.New((int?)null).AssertPassesThroughAllSerializers(Out);
-        TypeDecoratingUniSerialized.New((int?)1).AssertPassesThroughAllSerializers(Out);
-        TypeDecoratingUniSerialized.New((string?)null).AssertPassesThroughAllSerializers(Out);
-        TypeDecoratingUniSerialized.New("").AssertPassesThroughAllSerializers(Out);
-        TypeDecoratingUniSerialized.New("A").AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, Unit>(default(Unit)).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, int>(1).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, int?>((int?)null).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, int?>((int?)1).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, string?>((string?)null).AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, string>("").AssertPassesThroughAllSerializers(Out);
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, string>("A").AssertPassesThroughAllSerializers(Out);
     }
 
     [Fact]
@@ -456,11 +456,11 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void TypeDecoratingUniSerializedNerdbankConverterEdgeCases()
     {
-        TypeDecoratingUniSerialized.New<object>("hello").PassThroughAllSerializers(Out)
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, object>("hello").PassThroughAllSerializers(Out)
             .Value.Should().Be("hello");
-        TypeDecoratingUniSerialized.New<object>(42).PassThroughAllSerializers(Out)
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, object>(42).PassThroughAllSerializers(Out)
             .Value.Should().Be(42);
-        TypeDecoratingUniSerialized.New<object>(new Moment(new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc)))
+        TypeDecoratingUniSerialized.New<TypeSchema.Any, object>(new Moment(new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc)))
             .PassThroughAllSerializers(Out)
             .Value.Should().BeOfType<Moment>();
     }
@@ -476,8 +476,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         var byteSerializer = new NerdbankMessagePackByteSerializer(
             serializer,
             ReflectionTypeShapeProvider.Default);
-        var typedSerializer = byteSerializer.ToTyped<TypeDecoratingUniSerialized<int>>();
-        var value = TypeDecoratingUniSerialized.New(42);
+        var typedSerializer = byteSerializer.ToTyped<TypeDecoratingUniSerialized<TypeSchema.Any, int>>();
+        var value = TypeDecoratingUniSerialized.New<TypeSchema.Any, int>(42);
 
         using var data = typedSerializer.Write(value);
         var result = typedSerializer.Read(data.WrittenMemory, out _);

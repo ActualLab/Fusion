@@ -1,4 +1,4 @@
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using ActualLab.Collections;
 using ActualLab.Collections.Internal;
@@ -184,7 +184,7 @@ public class PartOSerialization : DocPart
         // Serializers
         _ = typeof(NewtonsoftJsonSerializer);
         _ = typeof(TypeDecoratingTextSerializer);
-        _ = typeof(TypeDecoratingUniSerialized<>);
+        _ = typeof(TypeDecoratingUniSerialized<,>);
 
         // DbOperation serializer
         _ = DbOperation.Serializer;

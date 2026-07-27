@@ -1,18 +1,20 @@
-using MessagePack;
+﻿using MessagePack;
 
 namespace ActualLab.Serialization;
 
 /// <summary>
-/// Factory methods for <see cref="TypeDecoratingSystemJsonSerialized{T}"/>.
+/// Factory methods for <see cref="TypeDecoratingSystemJsonSerialized{TSchema,T}"/>.
 /// </summary>
 public static class TypeDecoratingSystemJsonSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TypeDecoratingSystemJsonSerialized<TValue> New<TValue>(TValue value = default!)
+    public static TypeDecoratingSystemJsonSerialized<TSchema, TValue> New<TSchema, TValue>(TValue value = default!)
+        where TSchema : TypeSchema, new()
         => new() { Value = value };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TypeDecoratingSystemJsonSerialized<TValue> New<TValue>(string data)
+    public static TypeDecoratingSystemJsonSerialized<TSchema, TValue> New<TSchema, TValue>(string data)
+        where TSchema : TypeSchema, new()
         => new() { Data = data };
 }
 
@@ -24,7 +26,8 @@ public static class TypeDecoratingSystemJsonSerialized
 #endif
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public partial class TypeDecoratingSystemJsonSerialized<T> : TextSerialized<T>
+public partial class TypeDecoratingSystemJsonSerialized<TSchema, T> : TextSerialized<T>
+    where TSchema : TypeSchema, new()
 {
     private static volatile ITextSerializer<T>? _serializer;
 
@@ -34,11 +37,11 @@ public partial class TypeDecoratingSystemJsonSerialized<T> : TextSerialized<T>
             return serializer;
         lock (StaticLock)
             // ReSharper disable once NonAtomicCompoundOperator
-            return _serializer ??= new TypeDecoratingTextSerializer(SystemJsonSerializer.Default).ToTyped<T>();
+            return _serializer ??= ((ITextSerializer)TypeSchema<TSchema>.GetTypeDecoratingSerializer(SerializerKind.SystemJson)).ToTyped<T>();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator TypeDecoratingSystemJsonSerialized<T>(T value) => new() { Value = value };
+    public static implicit operator TypeDecoratingSystemJsonSerialized<TSchema, T>(T value) => new() { Value = value };
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator TypeDecoratingSystemJsonSerialized<T>(string data) => new() { Data = data };
+    public static implicit operator TypeDecoratingSystemJsonSerialized<TSchema, T>(string data) => new() { Data = data };
 }

@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using ActualLab.Fusion.Internal;
 using ActualLab.OS;
 using ActualLab.Serialization.Internal;
@@ -125,8 +125,6 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 new ByteStringNerdbankConverter(),
                 new MessagePackDataNerdbankConverter(),
                 new SessionNerdbankConverter(),
-                new PropertyBagNerdbankConverter(),
-                new PropertyBagItemNerdbankConverter(),
                 new ImmutableOptionSetNerdbankConverter(),
                 new RpcHandshakeNerdbankConverter(),
                 new VersionSetNerdbankConverter(),
@@ -146,7 +144,9 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 typeof(ApiArrayNerdbankConverter<>),
                 typeof(ApiMapNerdbankConverter<,>),
                 typeof(RpcStreamNerdbankConverter<>),
-                typeof(TypeDecoratingUniSerializedNerdbankConverter<>),
+                typeof(TypeDecoratingUniSerializedNerdbankConverter<,>),
+                typeof(PropertyBagNerdbankConverter<>),
+                typeof(PropertyBagItemNerdbankConverter<>),
                 typeof(NewtonsoftJsonSerializedNerdbankConverter<>),
             ],
         };

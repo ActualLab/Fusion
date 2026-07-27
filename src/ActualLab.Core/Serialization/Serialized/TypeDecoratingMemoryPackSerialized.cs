@@ -1,18 +1,20 @@
-using MessagePack;
+﻿using MessagePack;
 
 namespace ActualLab.Serialization;
 
 /// <summary>
-/// Factory methods for <see cref="TypeDecoratingMemoryPackSerialized{T}"/>.
+/// Factory methods for <see cref="TypeDecoratingMemoryPackSerialized{TSchema,T}"/>.
 /// </summary>
 public static class TypeDecoratingMemoryPackSerialized
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>(TValue value = default!)
+    public static TypeDecoratingMemoryPackSerialized<TSchema, TValue> New<TSchema, TValue>(TValue value = default!)
+        where TSchema : TypeSchema, new()
         => new() { Value = value };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static TypeDecoratingMemoryPackSerialized<TValue> New<TValue>(byte[] data)
+    public static TypeDecoratingMemoryPackSerialized<TSchema, TValue> New<TSchema, TValue>(byte[] data)
+        where TSchema : TypeSchema, new()
         => new() { Data = data };
 }
 
@@ -24,7 +26,8 @@ public static class TypeDecoratingMemoryPackSerialized
 #endif
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public partial class TypeDecoratingMemoryPackSerialized<T> : ByteSerialized<T>
+public partial class TypeDecoratingMemoryPackSerialized<TSchema, T> : ByteSerialized<T>
+    where TSchema : TypeSchema, new()
 {
     private static volatile IByteSerializer<T>? _serializer;
 
@@ -34,11 +37,11 @@ public partial class TypeDecoratingMemoryPackSerialized<T> : ByteSerialized<T>
             return serializer;
         lock (StaticLock)
             // ReSharper disable once NonAtomicCompoundOperator
-            return _serializer ??= MemoryPackByteSerializer.DefaultTypeDecorating.ToTyped<T>();
+            return _serializer ??= TypeSchema<TSchema>.GetTypeDecoratingSerializer(SerializerKind.MemoryPack).ToTyped<T>();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator TypeDecoratingMemoryPackSerialized<T>(T value) => new() { Value = value };
+    public static implicit operator TypeDecoratingMemoryPackSerialized<TSchema, T>(T value) => new() { Value = value };
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static implicit operator TypeDecoratingMemoryPackSerialized<T>(byte[] data) => new() { Data = data };
+    public static implicit operator TypeDecoratingMemoryPackSerialized<TSchema, T>(byte[] data) => new() { Data = data };
 }

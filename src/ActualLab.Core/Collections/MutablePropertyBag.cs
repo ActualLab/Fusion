@@ -1,4 +1,4 @@
-using ActualLab.Collections.Internal;
+﻿using ActualLab.Collections.Internal;
 using MessagePack;
 
 namespace ActualLab.Collections;
@@ -6,7 +6,7 @@ namespace ActualLab.Collections;
 #pragma warning disable CS0618 // Type or member is obsolete
 
 /// <summary>
-/// A thread-safe mutable property bag backed by an immutable <see cref="PropertyBag"/>
+/// A thread-safe mutable property bag backed by an immutable <see cref="PropertyBag<TSchema>{TSchema}"/>
 /// with atomic update operations and change notifications.
 /// </summary>
 #if !NET5_0
@@ -15,29 +15,30 @@ namespace ActualLab.Collections;
 [StructLayout(LayoutKind.Auto)]
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-public sealed partial class MutablePropertyBag
+public sealed partial class MutablePropertyBag<TSchema>
+    where TSchema : TypeSchema, new()
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
 #else
     private readonly object _lock = new();
 #endif
-    private PropertyBag _snapshot;
+    private PropertyBag<TSchema> _snapshot;
 
     public event Action? Changed;
 
     // MessagePack requires this member to be public
     [Obsolete("This member exists solely to make serialization work. Don't use it!")]
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0), MemoryPackInclude, JsonInclude, Newtonsoft.Json.JsonProperty]
-    public PropertyBagItem[]? RawItems {
+    public PropertyBagItem<TSchema>[]? RawItems {
         get => _snapshot.RawItems;
-        init => _snapshot = new PropertyBag(value);
+        init => _snapshot = new PropertyBag<TSchema>(value);
     }
 
     // Computed properties
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public PropertyBag Snapshot {
+    public PropertyBag<TSchema> Snapshot {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot;
         set => Update(value, (bag, _) => bag);
@@ -50,7 +51,7 @@ public sealed partial class MutablePropertyBag
     }
 
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
-    public IReadOnlyList<PropertyBagItem> Items {
+    public IReadOnlyList<PropertyBagItem<TSchema>> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _snapshot.Items;
     }
@@ -70,19 +71,19 @@ public sealed partial class MutablePropertyBag
     public MutablePropertyBag()
     { }
 
-    public MutablePropertyBag(PropertyBag snapshot)
+    public MutablePropertyBag(PropertyBag<TSchema> snapshot)
         => _snapshot = snapshot;
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
-    public MutablePropertyBag(PropertyBagItem[]? rawItems)
-        => _snapshot = new PropertyBag(rawItems);
+    public MutablePropertyBag(PropertyBagItem<TSchema>[]? rawItems)
+        => _snapshot = new PropertyBag<TSchema>(rawItems);
 
     public override string ToString()
-        => $"{nameof(MutablePropertyBag)}({PropertyBagHelper.GetToStringArgs(RawItems)})";
+        => $"{nameof(MutablePropertyBag<TSchema>)}({PropertyBagHelper.GetToStringArgs(RawItems)})";
 
     // SetMany
 
-    public void SetMany(params ReadOnlySpan<PropertyBagItem> items)
+    public void SetMany(params ReadOnlySpan<PropertyBagItem<TSchema>> items)
     {
         bool isChanged;
         lock (_lock) {
@@ -96,7 +97,7 @@ public sealed partial class MutablePropertyBag
 
     // Update
 
-    public bool Update(PropertyBag bag)
+    public bool Update(PropertyBag<TSchema> bag)
     {
         lock (_lock) {
             if (_snapshot == bag)
@@ -108,7 +109,7 @@ public sealed partial class MutablePropertyBag
         return true;
     }
 
-    public bool Update(Func<PropertyBag, PropertyBag> updater)
+    public bool Update(Func<PropertyBag<TSchema>, PropertyBag<TSchema>> updater)
     {
         lock (_lock) {
             var bag = updater.Invoke(_snapshot);
@@ -121,7 +122,7 @@ public sealed partial class MutablePropertyBag
         return true;
     }
 
-    public bool Update<TState>(TState state, Func<TState, PropertyBag, PropertyBag> updater)
+    public bool Update<TState>(TState state, Func<TState, PropertyBag<TSchema>, PropertyBag<TSchema>> updater)
     {
         lock (_lock) {
             var bag = updater.Invoke(state, _snapshot);

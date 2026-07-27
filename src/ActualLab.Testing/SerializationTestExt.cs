@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using AwesomeAssertions;
 using Newtonsoft.Json;
 using MessagePack;
@@ -113,7 +113,7 @@ public static class SerializationTestExt
 
     public static T PassThroughTypeDecoratingUniSerialized<T>(this T value, ITestOutputHelper? output = null)
     {
-        var v = TypeDecoratingUniSerialized.New((object?)value);
+        var v = TypeDecoratingUniSerialized.New<TypeSchema.Any, object?>((object?)value);
         v = PassThroughSystemJsonSerializer(v, output);
         v = PassThroughNewtonsoftJsonSerializer(v, output);
         v = PassThroughMessagePackByteSerializer(v, output);
@@ -175,9 +175,9 @@ public static class SerializationTestExt
         output?.WriteLine($"SystemJsonSerialized: {v1.Data}");
         value = SystemJsonSerialized.New<T>(v1.Data).Value;
 
-        var v2 = TypeDecoratingSystemJsonSerialized.New(value);
+        var v2 = TypeDecoratingSystemJsonSerialized.New<TypeSchema.Any, T>(value);
         output?.WriteLine($"TypeDecoratingSystemJsonSerialized: {v2.Data}");
-        value = TypeDecoratingSystemJsonSerialized.New<T>(v2.Data).Value;
+        value = TypeDecoratingSystemJsonSerialized.New<TypeSchema.Any, T>(v2.Data).Value;
 
         output?.WriteLine($"PassThroughSystemJsonSerializer -> {value}");
         return value;
@@ -231,9 +231,9 @@ public static class SerializationTestExt
         output?.WriteLine($"MessagePackSerialized: {json1} as {v1.Data.AsByteString()}");
         value = MessagePackSerialized.New<T>(v1.Data).Value;
 
-        var v2 = TypeDecoratingMessagePackSerialized.New(value);
+        var v2 = TypeDecoratingMessagePackSerialized.New<TypeSchema.Any, T>(value);
         output?.WriteLine($"TypeDecoratingMessagePackSerialized: {v2.Data.AsByteString()}");
-        value = TypeDecoratingMessagePackSerialized.New<T>(v2.Data).Value;
+        value = TypeDecoratingMessagePackSerialized.New<TypeSchema.Any, T>(v2.Data).Value;
 
         output?.WriteLine($"PassThroughMessagePackByteSerializer -> {value}");
         return value;
@@ -256,9 +256,9 @@ public static class SerializationTestExt
         output?.WriteLine($"MemoryPackSerialized: {v1.Data.AsByteString()}");
         value = MemoryPackSerialized.New<T>(v1.Data).Value;
 
-        var v2 = TypeDecoratingMemoryPackSerialized.New(value);
+        var v2 = TypeDecoratingMemoryPackSerialized.New<TypeSchema.Any, T>(value);
         output?.WriteLine($"TypeDecoratingMemoryPackSerialized: {v2.Data.AsByteString()}");
-        value = TypeDecoratingMemoryPackSerialized.New<T>(v2.Data).Value;
+        value = TypeDecoratingMemoryPackSerialized.New<TypeSchema.Any, T>(v2.Data).Value;
 
         output?.WriteLine($"PassThroughMemoryPackByteSerializer -> {value}");
         return value;

@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -215,7 +215,7 @@ public static class UniSerializedExamples
 
         #region PartS_TypeDecoratingUniSerialized
         // Used by PropertyBag for storing heterogeneous values
-        var item = TypeDecoratingUniSerialized.New<object>(myValue);
+        var item = TypeDecoratingUniSerialized.New<TypeSchema.Any, object>(myValue);
         #endregion
     }
 }
@@ -335,7 +335,7 @@ public class PartS : DocPart
 
         // UniSerialized types
         _ = typeof(UniSerialized<>);
-        _ = typeof(TypeDecoratingUniSerialized<>);
+        _ = typeof(TypeDecoratingUniSerialized<,>);
 
         // PropertyBag
         _ = typeof(PropertyBag);

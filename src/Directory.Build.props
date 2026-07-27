@@ -86,6 +86,9 @@
     <Using Include="ActualLab.Api" />
     <Using Include="ActualLab.Async" />
     <Using Include="ActualLab.Collections" />
+    <Using Include="ActualLab.Collections.PropertyBag&lt;ActualLab.Serialization.TypeSchema.Any&gt;" Alias="PropertyBag" />
+    <Using Include="ActualLab.Collections.MutablePropertyBag&lt;ActualLab.Serialization.TypeSchema.Any&gt;" Alias="MutablePropertyBag" />
+    <Using Include="ActualLab.Collections.Internal.PropertyBagItem&lt;ActualLab.Serialization.TypeSchema.Any&gt;" Alias="PropertyBagItem" />
     <Using Include="ActualLab.DependencyInjection" />
     <Using Include="ActualLab.Diagnostics" />
     <Using Include="ActualLab.Mathematics" />

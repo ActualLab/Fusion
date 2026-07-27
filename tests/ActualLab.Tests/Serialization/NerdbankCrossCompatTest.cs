@@ -1,4 +1,4 @@
-#if NET8_0_OR_GREATER
+﻿#if NET8_0_OR_GREATER
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
@@ -78,7 +78,7 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
 
     // --- PropertyBag --------------------------------------------------------------------
     //
-    // PropertyBag wraps entries in TypeDecoratingUniSerialized<object>, so its cross-compat
+    // PropertyBag wraps entries in TypeDecoratingUniSerialized<TypeSchema.Any, object>, so its cross-compat
     // reduces to TypeDecoratingUniSerialized's cross-compat — which the Nerdbank converter
     // now preserves by emitting MessagePack-CSharp's [Key(0)] MessagePackData layout.
 
@@ -100,7 +100,7 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
         });
     }
 
-    // --- TypeDecoratingUniSerialized<T> -------------------------------------------------
+    // --- TypeDecoratingUniSerialized<TypeSchema.Any, T> -------------------------------------------------
 
     [Fact]
     public void TypeDecoratingUniSerialized_CrossCompat()
@@ -109,7 +109,7 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
         // layout — a 1-element array carrying the type-decorated inner bytes as a bin. Since the
         // inner payload uses the shared msgpack wire format (string for TypeRef, default converter
         // for the value), bytes come out identical and cross-reads round-trip cleanly.
-        var value = TypeDecoratingUniSerialized.New<object>("hello");
+        var value = TypeDecoratingUniSerialized.New<TypeSchema.Any, object>("hello");
         var mpBytes = MpWrite(value);
         var nbBytes = NbWrite(value);
         Out.WriteLine($"MP ({mpBytes.Length}): {Convert.ToHexString(mpBytes)}");
@@ -119,12 +119,12 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
         nbBytes.Should().BeEquivalentTo(mpBytes, "the Nerdbank converter is designed to be byte-identical to MessagePack-CSharp's [Key(0)] MessagePackData layout");
 
         // Self round-trips.
-        MpRead<TypeDecoratingUniSerialized<object>>(mpBytes).Value.Should().Be("hello");
-        NbRead<TypeDecoratingUniSerialized<object>>(nbBytes).Value.Should().Be("hello");
+        MpRead<TypeDecoratingUniSerialized<TypeSchema.Any, object>>(mpBytes).Value.Should().Be("hello");
+        NbRead<TypeDecoratingUniSerialized<TypeSchema.Any, object>>(nbBytes).Value.Should().Be("hello");
 
         // Cross-reads succeed.
-        NbRead<TypeDecoratingUniSerialized<object>>(mpBytes).Value.Should().Be("hello");
-        MpRead<TypeDecoratingUniSerialized<object>>(nbBytes).Value.Should().Be("hello");
+        NbRead<TypeDecoratingUniSerialized<TypeSchema.Any, object>>(mpBytes).Value.Should().Be("hello");
+        MpRead<TypeDecoratingUniSerialized<TypeSchema.Any, object>>(nbBytes).Value.Should().Be("hello");
     }
 
     // --- System RPC types ----------------------------------------------------------------

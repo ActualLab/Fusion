@@ -1,11 +1,12 @@
-namespace ActualLab.Collections.Internal;
+﻿namespace ActualLab.Collections.Internal;
 
 /// <summary>
 /// Helper methods for <see cref="PropertyBag"/> string formatting.
 /// </summary>
 internal static class PropertyBagHelper
 {
-    public static string GetToStringArgs(PropertyBagItem[]? items)
+    public static string GetToStringArgs<TSchema>(PropertyBagItem<TSchema>[]? items)
+        where TSchema : TypeSchema, new()
     {
         const int limit = 5;
         var count = items?.Length ?? 0;
