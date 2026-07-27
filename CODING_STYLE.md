@@ -221,15 +221,92 @@ More restrictive than default:
 - **0 blank lines** inside types (default allows 1)
 - **0 blank lines** around single-line properties, fields, and methods
 - Keep maximum **1 blank line** in code (default allows more)
-- A blank line typically follows any `return`, `break`, `continue`, `yield return`,
-  or `yield break` statement — i.e. any block-escaping statement — unless it's on
-  the very last line of the enclosing statement block.
-- Methods whose body ends with one or more **local functions** typically have an
-  explicit `return;` right before the first local function, followed by a blank
-  line. This marks where the method's actual execution ends and makes the
-  local-function section unambiguous to the reader.
+- See [Control-Flow Statements](#control-flow-statements) for the blank lines
+  around `return`, `break`, `continue`, etc.
 
-Example:
+### Control-Flow Statements
+
+**Control-flow statement** here means any statement that escapes the enclosing
+block or jumps elsewhere: `return`, `throw`, `break`, `continue`, `goto`,
+`yield return`, and `yield break`.
+
+Such statements are the most important thing to see when you skim a method, so
+the formatting exists to make them stand out. Two rules do that:
+
+**1. A control-flow statement always gets its own line.** Never place it on the
+same line as its `if`, `for`, `while`, `case`, etc.
+
+```csharp
+// Wrong
+if (computed is null) return null;
+
+// Correct
+if (computed is null)
+    return null;
+```
+
+**2. A control-flow statement is followed by a blank line.** The blank line
+separates it from whatever follows, so the statement terminates a visually
+distinct chunk of code:
+
+```csharp
+public CommandHandlerChain GetHandlerChain(ICommand command)
+{
+    if (command is not IEventCommand eventCommand)
+        return SingleHandlerChain;
+
+    var chainId = eventCommand.ChainId;
+    if (chainId.IsNullOrEmpty())
+        return CommandHandlerChain.Empty;
+
+    return HandlerChains.TryGetValue(chainId, out var result)
+        ? result
+        : CommandHandlerChain.Empty;
+}
+```
+
+The blank line is **omitted** when something else already provides the same
+separation, or when adding it would break apart a group that reads as a single
+unit:
+
+- **The enclosing block ends right after the statement.** The closing `}` sits
+  on its own line, which leaves the statement equally visible — so never put a
+  blank line right before a closing brace.
+- **A run of guard clauses.** Consecutive `if (...)` + control-flow pairs form
+  one group; the blank line goes after the last pair, not between them:
+  ```csharp
+  private static object GetParameterValue(ParameterInfo parameter, ...)
+  {
+      if (parameter.ParameterType == typeof(CommandContext))
+          return context;
+      if (parameter.HasDefaultValue)
+          return services.GetService(parameter.ParameterType) ?? parameter.DefaultValue!;
+
+      return services.GetRequiredService(parameter.ParameterType);
+  }
+  ```
+- **The next line is a `case`/`default:` label**, an `else`/`catch`/`finally`
+  clause, or a preprocessor directive such as `#endif` — all of these already
+  read as separators.
+
+**3. When the control-flow statement is the last statement of a nested block,
+the blank line goes after that block's closing brace** rather than before it —
+unless the block itself ends the enclosing method or lambda body:
+
+```csharp
+if (handlerChains.Count == 0) {
+    await OnUnhandledEvent(command, context, cancellationToken).ConfigureAwait(false);
+    return context;
+}
+
+var callTasks = new Task[handlerChains.Count];
+```
+
+**4. Methods whose body ends with one or more local functions** typically have
+an explicit `return;` right before the first local function, followed by a blank
+line. This marks where the method's actual execution ends and makes the
+local-function section unambiguous to the reader:
+
 ```csharp
 protected override async Task OnRun(CancellationToken cancellationToken)
 {
@@ -502,14 +579,11 @@ See [`.editorconfig`](../.editorconfig) for the complete list of silenced analyz
 
 ## TypeScript
 
-TypeScript follows the same flow-control spacing rules as C#:
-- Never place a flow-control statement on the same line as its `if`, `for`,
-  `while`, or similar condition.
-- A `return`, `break`, `continue`, `throw`, or `yield` statement is typically
-  followed by a blank line unless it is the last statement in its enclosing block.
-- If the flow-control statement is the last statement in a nested block, put the
-  blank line after that block instead, unless the block is the whole method or
-  function body.
+TypeScript follows the C# [Control-Flow Statements](#control-flow-statements)
+rules verbatim: `return`, `throw`, `break`, `continue`, and `yield` always get
+their own line, and each is followed by a blank line except in the cases listed
+there (block closing right after it, a run of guard clauses, `case`/`else`/`catch`
+following it).
 
 TypeScript uses the same member-section comments as .NET:
 - Order class members similarly to .NET classes: static fields first, then
