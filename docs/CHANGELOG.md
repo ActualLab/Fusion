@@ -11,6 +11,57 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.1.62+ab9673b6 | npm: 14.1.5
+
+Release date: 2026-07-26
+
+Another NuGet-only release (npm stays at `14.1.5`). Its centerpiece is a fix for
+an HTTP RPC deadlock that could stall a client indefinitely: every connection
+now gets its own `HttpClient`. It also folds in the unreleased `14.1.53`
+packaging work, which makes each package render a README on nuget.org.
+
+### Breaking Changes
+
+- `RpcHttpClient`'s `protected HttpClient HttpClient` property is replaced by
+  `protected virtual HttpClient CreateHttpClient()`, called once per connection.
+  Subclasses that read or override the property should override the method
+  instead.
+- `Options.HttpClientFactory` is now invoked per connection rather than once per
+  client. A custom factory that returns a shared or cached `HttpClient` will
+  reintroduce the deadlock described below — return a fresh instance.
+
+### Added
+
+- `IHasRetryDelay` (`ActualLab.Resilience`) — an error implementing it extends
+  its cached `Computed`'s auto-invalidation delay to at least `RetryDelay`, so a
+  retry can't be issued sooner than the error asks for. Useful for errors caused
+  by request volume, where retrying early makes the underlying condition worse.
+
+### Fixed
+
+- HTTP RPC connections no longer deadlock when two of them are open to the same
+  host. An RPC connection holds its request open for its whole lifetime, and
+  `SocketsHttpHandler` can't carry two such requests over one HTTP/2 connection —
+  the second never receives its response headers. Since `RpcHttpClient` cached a
+  single `HttpClient`, this hit every reconnect (the new connection overlaps the
+  old one's teardown) and every client with both a client and a backend peer,
+  leaving the peer retrying forever. Each connection now creates and disposes its
+  own `HttpClient`, and closing a connection resets its HTTP/2 stream instead of
+  leaving it half-open.
+
+### Infrastructure
+
+- Every NuGet package now ships a README rendered on nuget.org, along with a
+  corrected project URL, an embedded icon, and cleaned-up descriptions.
+- The test runner aborts a hung test group instead of letting it wedge the
+  whole run.
+
+### Documentation
+
+- Reworked the docs-site home hero cards and the MCP page intro.
+- Added `bool`/`Task` naming and member-ordering rules to `CODING_STYLE.md`.
+
+
 ## 14.1.47+493d3cc7 | npm: 14.1.5
 
 Release date: 2026-07-21
