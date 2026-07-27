@@ -197,11 +197,14 @@ header text is actually present.
   resolve; a wrong link in a release channel is exactly the kind of thing this
   skill exists to prevent.
 
-**3. Match the channel's voice.** Read the last ~20 messages
-(`mcp__voxt-robokitty__list_messages` on the same chat id) and follow the
-established pattern rather than inventing a format. As of this writing that is:
-the changelog link on its own first line, then a few short plain-spoken
-paragraphs. Specifically:
+**3. Match the channel's voice.** Read back up to **100 messages**
+(`mcp__voxt-robokitty__list_messages` on the same chat id) and study the past
+release announcements — the ones from **Alex Yakunin** and **RoboKitty**, which
+are the model to imitate. A short tail isn't enough: releases are spaced out, so
+20 messages can be all follow-up discussion and no announcement at all. Read
+enough of them to see the recurring shape, then follow it instead of inventing a
+format. As of this writing that shape is the changelog link on its own first
+line, then a few short plain-spoken paragraphs. Specifically:
 
 - Lead with what actually matters to a user deciding whether to upgrade — the
   headline fix or feature, and who is affected.
