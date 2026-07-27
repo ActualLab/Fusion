@@ -11,6 +11,36 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.1.78+f65f331ed | npm: 14.1.5
+
+Release date: 2026-07-27
+
+A NuGet-only release (npm stays at `14.1.5`) that repairs MessagePack code
+generation for everyone who puts a `PropertyBag` in a MessagePack contract.
+**If you're on 14.1.71 or 14.1.73, upgrade.**
+
+### Fixed
+
+- MessagePack's source generator no longer dies on the `PropertyBag` family.
+  MessagePack 3.1.8 crashes its own generator and analyzer with an
+  `IndexOutOfRangeException` whenever a `[MessagePackObject]` type has a member
+  whose type is a **closed generic struct defined in a referenced assembly** —
+  generic classes and non-generic structs are fine. `TypeSchema` gave
+  `PropertyBag`, `PropertyBagItem` and `TypeDecoratingUniSerialized` exactly that
+  shape in 14.1.71, so since then any assembly with a `PropertyBag` in a
+  MessagePack contract silently lost its *entire* generated resolver — the
+  generator "will not contribute to the output" — which breaks trimming and
+  NativeAOT. The three types now carry `[MessagePackFormatter]` with hand-written
+  formatters that reproduce the previously generated wire format byte for byte,
+  the same thing `Option<T>`, `Result<T>`, `ApiArray<T>` and `Box<T>` already do.
+  `MutablePropertyBag` needed nothing — it's a class, and only broke through its
+  `PropertyBagItem[]` member.
+- The NativeAOT roots added in 14.1.73 are now complete. `KeepSerializable<T>`
+  keeps the type and its serializers but not its MessagePack formatter, so
+  `TypeDecoratingUniSerialized`'s formatter was still missing, as was the
+  `ArrayFormatter` both bags need for their `PropertyBagItem[]` contents.
+
+
 ## 14.1.73+02df3329a | npm: 14.1.5
 
 Release date: 2026-07-27
