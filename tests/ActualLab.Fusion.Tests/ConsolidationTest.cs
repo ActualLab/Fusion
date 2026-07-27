@@ -11,6 +11,33 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     private static readonly TimeSpan MinDelay = TimeSpan.FromMilliseconds(50);
 
     [Fact]
+    public async Task MethodInvalidationReachesConsolidationSource()
+    {
+        var services = CreateServices();
+        var counterSum = services.GetRequiredService<CounterSumService>();
+        counterSum[0].Set(0);
+
+        var c0 = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC0(0));
+        c0.Value.Should().Be(0);
+        var source0 = c0.Source;
+
+        // The value didn't change, so the source is recomputed (hence replaced) and this is swallowed
+        using (Invalidation.Begin())
+            _ = counterSum.GetC0(0);
+        await (c0.WhenConsolidated ?? Task.CompletedTask);
+        c0.IsConsistent().Should().BeTrue();
+        c0.Source.Should().NotBeSameAs(source0);
+
+        // ... and it propagates once the value really differs
+        counterSum[0].Set(1);
+        using (Invalidation.Begin())
+            _ = counterSum.GetC0(0);
+        await (c0.WhenConsolidated ?? Task.CompletedTask);
+        c0.IsConsistent().Should().BeFalse();
+        (await c0.Update()).Value.Should().Be(1);
+    }
+
+    [Fact]
     public async Task NoDelay_InvalidatesImmediately()
     {
         var services = CreateServices();

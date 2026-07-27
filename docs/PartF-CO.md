@@ -236,6 +236,29 @@ public class Presences : IPresencesBackend
 }
 ```
 
+**Invalidating a consolidating method:**
+
+Recall that one consolidating method is backed by *two* method defs and two computeds. Only
+the **outer** one is reachable: calling the method or capturing its computed always gives you
+the consolidation target, a `ConsolidatingComputed<T>`. The **inner** consolidation source def
+is synthesized from the same `MethodInfo`, so there is no separate method to call and no way
+to name its computed — yet that inner computed is the one holding the dependencies, and
+therefore the one that has to be invalidated for the recompute-and-compare to happen at all.
+
+Method-based invalidation handles this for you. `ConsolidatingComputed<T>` implements
+`IHasInvalidationTarget`, pointing at its source, and an `Invalidation.Begin()` block honours
+that — so invalidating the outer method invalidates the inner computed, and the comparison
+runs as intended:
+
+```cs
+using (Invalidation.Begin())
+    _ = service.GetConsolidatedLastCheckIn(userId, default); // -> the source, so the comparison happens
+```
+
+So invalidate the consolidating method itself. Invalidating a method that merely calls it —
+the RPC-exposed wrapper above, say — invalidates only that caller's computed, which then
+re-reads the still-consistent consolidating one and keeps serving the previous value.
+
 ### ConsolidationComparer
 
 **Type:** `Type?` (an `IEqualityComparer<T>` implementation)
