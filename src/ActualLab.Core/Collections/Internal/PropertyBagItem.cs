@@ -1,3 +1,4 @@
+using ActualLab.Serialization.Internal;
 using MessagePack;
 using Errors = ActualLab.Serialization.Internal.Errors;
 
@@ -11,7 +12,8 @@ namespace ActualLab.Collections.Internal;
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[MessagePackFormatter(typeof(PropertyBagItemMessagePackFormatter<>))]
 [method: JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
 public partial record struct PropertyBagItem<TSchema>(
     [property: DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter, Key(0)] string Key,
@@ -21,7 +23,7 @@ public partial record struct PropertyBagItem<TSchema>(
 {
     public static readonly IComparer<PropertyBagItem<TSchema>> Comparer = new ComparerImpl();
 
-    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore]
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public object Value => Serialized.Value;
 
     // Constructor-like methods

@@ -29,6 +29,9 @@ public class DefaultMessagePackResolver : IFormatterResolver
         { typeof(Box<>), typeof(BoxMessagePackFormatter<>) },
         { typeof(MutableBox<>), typeof(MutableBoxMessagePackFormatter<>) },
         { typeof(Result<>), typeof(ResultMessagePackFormatter<>) },
+        { typeof(TypeDecoratingUniSerialized<,>), typeof(TypeDecoratingUniSerializedMessagePackFormatter<,>) },
+        { typeof(PropertyBag<>), typeof(PropertyBagMessagePackFormatter<>) },
+        { typeof(PropertyBagItem<>), typeof(PropertyBagItemMessagePackFormatter<>) },
         { typeof(ImmutableBimap<,>), typeof(ImmutableBimapMessagePackFormatter<,>) },
     };
 

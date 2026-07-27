@@ -23,7 +23,8 @@ public static class TypeDecoratingUniSerialized
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[MessagePackFormatter(typeof(TypeDecoratingUniSerializedMessagePackFormatter<,>))]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct TypeDecoratingUniSerialized<TSchema, T>
     where TSchema : TypeSchema, new()

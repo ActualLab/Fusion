@@ -21,6 +21,9 @@ internal static class CoreModuleInitializer
         // DefaultMessagePackResolver instantiates these reflectively, so nothing roots their constructors
         CodeKeeper.Keep<UnitMessagePackFormatter>();
         CodeKeeper.Keep<UlidMessagePackFormatter>();
+        CodeKeeper.Keep<TypeDecoratingUniSerializedMessagePackFormatter<TypeSchema.Any, object>>();
+        CodeKeeper.Keep<PropertyBagMessagePackFormatter<TypeSchema.Any>>();
+        CodeKeeper.Keep<PropertyBagItemMessagePackFormatter<TypeSchema.Any>>();
 
         CodeKeeper.KeepSerializable<Unit>();
         CodeKeeper.KeepSerializable<PropertyBag>();
@@ -29,12 +32,9 @@ internal static class CoreModuleInitializer
         CodeKeeper.KeepSerializable<TypeDecoratingUniSerialized<TypeSchema.Any, object>>();
 
 #if NET8_0_OR_GREATER
-        // The generated resolver closes these via MakeGenericType, which ILC can't follow, and
-        // KeepSerializable<T> above doesn't reach them - it keeps the serializers, not the formatters
-        CodeKeeper.Keep<global::MessagePack.GeneratedMessagePackResolver.ActualLab.Collections.PropertyBagFormatter<TypeSchema.Any>>();
+        // The generated resolver closes this via MakeGenericType, which ILC can't follow, and
+        // KeepSerializable<T> above doesn't reach it - it keeps the serializers, not the formatters
         CodeKeeper.Keep<global::MessagePack.GeneratedMessagePackResolver.ActualLab.Collections.MutablePropertyBagFormatter<TypeSchema.Any>>();
-        CodeKeeper.Keep<global::MessagePack.GeneratedMessagePackResolver.ActualLab.Collections.Internal.PropertyBagItemFormatter<TypeSchema.Any>>();
-        CodeKeeper.Keep<global::MessagePack.GeneratedMessagePackResolver.ActualLab.Serialization.TypeDecoratingUniSerializedFormatter<TypeSchema.Any, object>>();
         // Both bags serialize their items as PropertyBagItem[], whose formatter MessagePack's own
         // generic resolver closes reflectively as well
         CodeKeeper.Keep<global::MessagePack.Formatters.ArrayFormatter<PropertyBagItem>>();

@@ -1,4 +1,5 @@
 ﻿using ActualLab.Collections.Internal;
+using ActualLab.Serialization.Internal;
 using MessagePack;
 
 namespace ActualLab.Collections;
@@ -13,7 +14,8 @@ namespace ActualLab.Collections;
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 #endif
 [StructLayout(LayoutKind.Auto)]
-[DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
+[DataContract, MemoryPackable(GenerateType.VersionTolerant)]
+[MessagePackFormatter(typeof(PropertyBagMessagePackFormatter<>))]
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public readonly partial struct PropertyBag<TSchema> : IEquatable<PropertyBag<TSchema>>
     where TSchema : TypeSchema, new()
