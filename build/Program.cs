@@ -288,6 +288,12 @@ internal static class Program
                         .Add("--filter").Add(group.Filter)
                         .Add("--logger").Add($"trx;LogFileName={group.Name}.trx")
                         .Add("--results-directory").Add(runsPath)
+                        // A test that never completes (e.g. an RPC call awaiting a connection that
+                        // never happens) would otherwise wedge the whole run indefinitely. This turns
+                        // it into a reported failure plus a dump naming the test.
+                        .Add("--blame-hang")
+                        .Add("--blame-hang-timeout").Add(mode == "full" ? "15m" : "5m")
+                        .Add("--blame-hang-dump-type").Add("full")
                     )
                     .WithEnvironmentVariables(e => {
                         if (mode == "full")
