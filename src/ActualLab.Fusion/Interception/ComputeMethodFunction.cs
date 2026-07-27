@@ -26,12 +26,17 @@ public sealed class ComputeMethodFunction<T> : ComputeMethodFunction
 public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef methodDef)
     : ComputeFunction(hub, methodDef.UnwrappedReturnType)
 {
+    // "~" marks a consolidation source, which otherwise shares its FullName with its consolidation target
+    private readonly string _toString = methodDef.ConsolidationTargetMethodDef is null
+        ? methodDef.FullName
+        : "~" + methodDef.FullName;
+
     public readonly ComputeMethodDef MethodDef = methodDef;
     public readonly ComputedOptions ComputedOptions = methodDef.ComputedOptions;
     public readonly int CancellationTokenIndex = methodDef.CancellationTokenIndex;
 
     public override string ToString()
-        => MethodDef.FullName;
+        => _toString;
 
     public object? ComputeServiceInterceptorHandler(Invocation invocation)
     {

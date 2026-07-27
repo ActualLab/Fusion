@@ -126,6 +126,8 @@ public sealed class ComputedRegistry
         var key = computed.Input;
         var random = key.HashCode + Environment.CurrentManagedThreadId;
 
+        // Fired before the early return below on purpose: Unregister fires OnUnregister just as
+        // unconditionally, so both events count Computed lifecycle transitions, not storage membership
         try {
             OnRegister?.Invoke(computed);
         }
