@@ -213,6 +213,8 @@ line, then a few short plain-spoken paragraphs. Specifically:
 - Mention when a target was skipped, e.g. "NuGet-only release (npm stays at
   `14.1.5`)".
 - Use backticks for type and member names.
+- No blank line directly before or after a `#` heading — the chat already spaces
+  headings generously, and an extra blank line renders as a gap.
 - Leave out infrastructure, docs, and tooling churn — it's release noise.
 - Keep it short. A few paragraphs, not a recital of the changelog.
 
