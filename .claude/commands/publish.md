@@ -203,8 +203,35 @@ release announcements — the ones from **Alex Yakunin** and **RoboKitty**, whic
 are the model to imitate. A short tail isn't enough: releases are spaced out, so
 20 messages can be all follow-up discussion and no announcement at all. Read
 enough of them to see the recurring shape, then follow it instead of inventing a
-format. As of this writing that shape is the changelog link on its own first
-line, then a few short plain-spoken paragraphs. Specifically:
+format.
+
+**Layout.** The established shape is a `#` heading with the changelog entry's own
+title, a one-line summary, bold section labels over bullets, and the link last as
+"More details:". Blank lines matter — the chat adds its own spacing around
+headings and lists, so a blank line where it already spaces renders as a gap.
+This exact skeleton is what the last release used, blank lines included:
+
+```
+# <version>+<hash> | npm: <npm-version>
+<one-line summary: what kind of release it is, and who should upgrade>
+
+**Fixed**
+- <the headline item, in full>
+<a follow-up paragraph attached directly to the bullet it elaborates>
+
+**Breaking** (only if <the narrow condition under which it bites>)
+- <before → after, concretely>
+**Added**
+- <the new API and what it's for>
+
+More details: <changelog link>
+```
+
+So: no blank line after the `#` heading, none between a bullet and a paragraph
+continuing it, and none between a bullet list and the label that follows it — but
+keep one between a paragraph and the next label.
+
+**Content.** Within that shape:
 
 - Lead with what actually matters to a user deciding whether to upgrade — the
   headline fix or feature, and who is affected.
@@ -213,8 +240,8 @@ line, then a few short plain-spoken paragraphs. Specifically:
 - Mention when a target was skipped, e.g. "NuGet-only release (npm stays at
   `14.1.5`)".
 - Use backticks for type and member names.
-- No blank line directly before or after a `#` heading — the chat already spaces
-  headings generously, and an extra blank line renders as a gap.
+- Concrete numbers land better than adjectives — "returns in 44ms, the second one
+  times out", "171 and 732 attempts were observed".
 - Leave out infrastructure, docs, and tooling churn — it's release noise.
 - Keep it short. A few paragraphs, not a recital of the changelog.
 
