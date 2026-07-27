@@ -1,12 +1,13 @@
 ---
-allowed-tools: Read, Edit, Bash, Glob, Grep, WebFetch, AskUserQuestion, Skill
-description: Publish NuGet (.NET) and/or npm (TS) packages; auto-detects what changed, tests via /test, then updates the changelog
-argument-hint: "[.net|ts|both|auto] [-test|-no-test] [-changelog|-no-changelog]"
+allowed-tools: Read, Edit, Bash, Glob, Grep, WebFetch, AskUserQuestion, Skill, mcp__voxt-robokitty__list_messages, mcp__voxt-robokitty__post_message
+description: Publish NuGet (.NET) and/or npm (TS) packages; auto-detects what changed, tests via /test, updates the changelog, then announces the release
+argument-hint: "[.net|ts|both|auto|-post-only] [-test|-no-test] [-changelog|-no-changelog] [-post|-no-post]"
 ---
 
 # Publish
 
-Publish ActualLab.Fusion packages to NuGet (.NET) and/or npm (TS).
+Publish ActualLab.Fusion packages to NuGet (.NET) and/or npm (TS), then announce
+the release on Voxt.
 
 **Publishing is a critical, effectively irreversible action** — a pushed package
 version can't be replaced, and consumers pick it up immediately. So the bar for
@@ -21,20 +22,32 @@ a wrong publish costs a version.
 
 ### Step 1: Parse arguments
 
-`$ARGUMENTS` holds a target and flags; **the default is `auto -test -changelog`**.
+`$ARGUMENTS` holds a target and flags; **the default is `auto -test -changelog -post`**.
 
 Target:
 - `.net`, `dotnet`, or `net` → publish .NET (NuGet) only
 - `ts` → publish TypeScript (npm) only
 - `both`, `all` → publish both (order: .NET first, then TS)
 - `auto` (or no target) → detect what needs publishing (Step 3)
+- `-post-only` → **publish nothing.** Announce the release that's already
+  published (Step 7) and stop. Skip Steps 2–6 entirely; the version comes from
+  the topmost `docs/CHANGELOG.md` entry. Use this to announce a release that was
+  published earlier, or to retry an announcement that was skipped or failed.
 
 Flags:
 - `-test` (default) / `-no-test` → run or skip the pre-publish test pass (Step 4)
 - `-changelog` (default) / `-no-changelog` → run or skip `/changelog-update` after
   publishing (Step 6)
+- `-post` (default) / `-no-post` → announce the release on Voxt (Step 7), or skip
+  it and finish right after the changelog
+
+`-no-changelog` implies `-no-post`: the announcement links to a changelog entry,
+so there's nothing to announce without one. If both `-changelog` and `-no-post`
+are given, that's fine — write the entry, skip the announcement.
 
 ### Step 2: Check the branch and the environment
+
+*(Skipped entirely by `-post-only`, which jumps straight to Step 7.)*
 
 **Publish only from `master`, fully in sync with `origin/master`.** `version.json`
 lists `^refs/heads/master$` as the only `publicReleaseRefSpec`, so any other branch
@@ -154,3 +167,55 @@ nbgv version.)
 Invoke the `changelog-update` skill passing that exact version as its
 argument, and mention in its input which targets (NuGet, npm, or both) were
 just published.
+
+The entry has to be committed and pushed to `master` — Step 7 verifies it on the
+live docs site, which builds from the remote.
+
+### Step 7: Announce the release (skip with `-no-post`)
+
+Announce in Fusion's "🎉Releases" chat on Voxt — chat id
+`s-1KCdcYy9z2-uJVPKZsbEo` — using `mcp__voxt-robokitty__post_message`.
+
+**1. Build the changelog anchor.** The site turns an entry header into an anchor
+by lowercasing it and replacing every run of non-alphanumeric characters with a
+single `-`, prefixed by `_`:
+
+```
+## 14.1.62+ab9673b6 | npm: 14.1.5
+  → https://fusion.actuallab.net/CHANGELOG#_14-1-62-ab9673b6-npm-14-1-5
+```
+
+**2. Confirm the entry is live before announcing anything.** The docs site
+rebuilds from `master` and lags a push by a few minutes, so a link posted right
+after the push can point at a changelog that doesn't have the entry yet.
+WebFetch `https://fusion.actuallab.net/CHANGELOG` and confirm the new version's
+header text is actually present.
+
+- Not there yet → wait a bit and re-check, a few times.
+- Still missing after several tries → **STOP and ask the user** whether to keep
+  waiting or skip the announcement. Never announce a link you haven't seen
+  resolve; a wrong link in a release channel is exactly the kind of thing this
+  skill exists to prevent.
+
+**3. Match the channel's voice.** Read the last ~20 messages
+(`mcp__voxt-robokitty__list_messages` on the same chat id) and follow the
+established pattern rather than inventing a format. As of this writing that is:
+the changelog link on its own first line, then a few short plain-spoken
+paragraphs. Specifically:
+
+- Lead with what actually matters to a user deciding whether to upgrade — the
+  headline fix or feature, and who is affected.
+- Call out breaking changes explicitly, with the concrete migration ("rename X to
+  Y", "override the method instead of the property").
+- Mention when a target was skipped, e.g. "NuGet-only release (npm stays at
+  `14.1.5`)".
+- Use backticks for type and member names.
+- Leave out infrastructure, docs, and tooling churn — it's release noise.
+- Keep it short. A few paragraphs, not a recital of the changelog.
+
+**4. Show the draft to the user and get approval before posting.** Posting to a
+public release channel reaches real users and can't be quietly undone, so treat
+it like the publish itself: present the exact text, ask (AskUserQuestion) whether
+to post it as-is or adjust, and post only after an explicit yes. If anything in
+the draft rests on a guess — an unverified claim about what's affected, a link
+you couldn't confirm — say so alongside the draft instead of burying it.
