@@ -11,6 +11,28 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.1.73+02df3329a | npm: 14.1.5
+
+Release date: 2026-07-27
+
+A small NuGet-only release (npm stays at `14.1.5`) that fixes trimming /
+NativeAOT retention for the types Fusion always serializes. Worth taking if you
+publish trimmed or AOT-compiled apps.
+
+### Fixed
+
+- `Unit`, `PropertyBag`, `MutablePropertyBag` and their serializers are now
+  retained by `ActualLab.Core` itself. `DefaultMessagePackResolver` builds its
+  formatters via `CreateInstance` / `MakeGenericType`, so nothing referenced
+  their constructors and full trimming dropped them — every app had to keep
+  `UnitMessagePackFormatter` from its own startup code. Core has a module
+  initializer of its own now, matching the RPC / CommandR / Fusion ones.
+- The `PropertyBag` family's generated MessagePack formatters are rooted
+  explicitly. They were non-generic before `TypeSchema`, so the generated
+  resolver looked them up statically; since 14.1.71 they are closed via
+  `MakeGenericType`, which ILC can't follow.
+
+
 ## 14.1.71+a733921f | npm: 14.1.5
 
 Release date: 2026-07-27
