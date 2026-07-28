@@ -35,7 +35,7 @@ public static class RpcQuerySanitizer
                 sb.Append('&');
             isFirst = false;
 
-            var equalsIndex = item.IndexOf("=", StringComparison.Ordinal);
+            var equalsIndex = item.IndexOf('=', StringComparison.Ordinal);
             if (equalsIndex < 0) {
                 sb.Append(item);
                 continue;

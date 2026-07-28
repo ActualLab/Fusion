@@ -165,7 +165,7 @@ public sealed partial class Session : IHasId<string>,
     private string ComputeToString()
     {
         var id = Id;
-        var prefix = id.Length <= IdPrefixLength ? id : id.Substring(0, IdPrefixLength);
+        var prefix = id.Length <= IdPrefixLength ? id : id[..IdPrefixLength];
         return string.Concat(prefix, IdPrefixSeparator, Hash);
     }
 
