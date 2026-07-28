@@ -182,6 +182,9 @@ Search for `<Using>` to get the full list. Avoid adding explicit usings for glob
 - **Variables and fields storing a `Task`/`ValueTask`**: name them `XxxTask`
   (`_flushLoopTask`, `readTask`) or `WhenXxx` (`whenCompleted`) — the name must say
   it's a task, not the operation itself.
+- **Fields and properties storing a `Lazy`/`LazySlim`**: name them `XxxLazy`
+  (`_userIdResolverLazy`, `InstanceLazy`) — as with tasks, the name must say it's a
+  lazy rather than the value it produces.
 
 ### Braces and Formatting
 
@@ -506,6 +509,29 @@ public class Chats(IServiceProvider services) : IChats
     private ILogger Log => field ??= Services.LogFor<Chats>(); // Rarely needed
 }
 ```
+
+   **Capture primary constructor parameters into properties in anything but a small
+   type.** Using a parameter from a member body turns it into an invisible captured
+   field: it isn't in the member list, and it can't be renamed or attributed like the
+   properties around it. In a small type — roughly 10-20 lines — using the parameters
+   directly is fine and shorter; the larger the type, the more the properties pay off.
+   Field and property initializers may always use the parameters directly, as above.
+
+   **Prefer required-but-lazy over optional dependencies.** Use
+   `=> field ??= Services.GetRequiredService<T>()` rather than `GetService<T>()`
+   plus null handling. Because it resolves on first use, the dependency is only
+   required in hosts that actually reach that path, and a host that does reach it
+   fails loudly instead of silently degrading.
+
+   **Prefer `LazySlim<T>` over `Lazy<T>`**, and prefer `=> field ??= ...` over both.
+   Reach for a lazy only when `null` is itself a result worth caching — `field ??=`
+   re-evaluates on every access once the value is null.
+
+   **Take `ILogger?` in types that can be constructed without DI** — static defaults,
+   test doubles, non-DI paths — and log via `Log?.LogWarning(...)`. The
+   null-conditional call skips argument evaluation entirely when there is no logger,
+   and logging configuration isn't changed at runtime. Types that are always
+   DI-constructed keep a non-nullable `ILogger`.
 
 2. **API records** should be fully serializable,
    which typically implies the presence of the following attributes:
