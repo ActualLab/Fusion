@@ -14,10 +14,18 @@ public sealed class ApiArrayNerdbankConverter<T> : MessagePackConverter<ApiArray
             return ApiArray<T>.Empty;
 
         var itemConverter = context.GetConverter<T>(context.TypeShapeProvider);
-        var array = new T[len];
-        for (var i = 0; i < len; i++)
-            array[i] = itemConverter.Read(ref reader, context)!;
-        return new ApiArray<T>(array);
+        // len comes straight off the wire and costs the peer ~1 byte per declared item, so the
+        // buffer is capped and grows with the items that actually decode.
+        var buffer = ArrayBuffer<T>.Lease(
+            true, Math.Min(len, NerdbankMessagePackByteSerializer.MaxCollectionPreallocation));
+        try {
+            for (var i = 0; i < len; i++)
+                buffer.Add(itemConverter.Read(ref reader, context)!);
+            return new ApiArray<T>(buffer.ToArray());
+        }
+        finally {
+            buffer.Release();
+        }
     }
 
     public override void Write(ref MessagePackWriter writer, in ApiArray<T> value, SerializationContext context)

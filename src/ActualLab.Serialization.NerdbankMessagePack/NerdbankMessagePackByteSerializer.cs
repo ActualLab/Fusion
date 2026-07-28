@@ -20,6 +20,11 @@ namespace ActualLab.Serialization;
 public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, ITypeShapeProvider typeShapeProvider)
     : IByteSerializer
 {
+    // Nerdbank.MessagePack 1.0.x has no SecuritySettings.MaxCollectionPreallocation, so converters
+    // reading a wire-supplied collection header cap the initial buffer here and grow it as the items
+    // are actually read - a declared count alone must never size an allocation.
+    public const int MaxCollectionPreallocation = 4096;
+
 #if NET9_0_OR_GREATER
     private static readonly Lock StaticLock = new();
 #else

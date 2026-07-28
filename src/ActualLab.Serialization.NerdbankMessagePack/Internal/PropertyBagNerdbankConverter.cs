@@ -26,10 +26,18 @@ public sealed class PropertyBagNerdbankConverter<TSchema> : MessagePackConverter
         if (arrayLen == 0)
             return default;
         var itemConverter = context.GetConverter<PropertyBagItem<TSchema>>(context.TypeShapeProvider);
-        var items = new PropertyBagItem<TSchema>[arrayLen];
-        for (var i = 0; i < arrayLen; i++)
-            items[i] = itemConverter.Read(ref reader, context);
-        return new PropertyBag<TSchema>(items);
+        // arrayLen comes straight off the wire and costs the peer ~1 byte per declared item, so the
+        // buffer is capped and grows with the items that actually decode.
+        var buffer = ArrayBuffer<PropertyBagItem<TSchema>>.Lease(
+            true, Math.Min(arrayLen, NerdbankMessagePackByteSerializer.MaxCollectionPreallocation));
+        try {
+            for (var i = 0; i < arrayLen; i++)
+                buffer.Add(itemConverter.Read(ref reader, context));
+            return new PropertyBag<TSchema>(buffer.ToArray());
+        }
+        finally {
+            buffer.Release();
+        }
     }
 
     public override void Write(ref MessagePackWriter writer, in PropertyBag<TSchema> value, SerializationContext context)
