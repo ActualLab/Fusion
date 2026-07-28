@@ -517,23 +517,29 @@ export abstract class RpcPeer {
         // RpcServerPeer sends its own handshake back.
     }
 
+    // The try covers dispatch too, not just deserialization: a handler that throws
+    // here would otherwise escape into the transport's onmessage - dropping every
+    // remaining message of the frame, or killing a Node process outright.
     private _handleMessage(received: RpcReceivedMessage): void {
-        let message: RpcMessage;
-        let args: unknown[];
         try {
-            if (received.kind === 'binary') {
-                message = received.message;
-                args = received.args;
-            } else {
-                const parsed = deserializeMessage(received.raw);
-                message = parsed.message;
-                args = parsed.args;
-            }
+            this._processMessage(received);
         }
         catch (e) {
             // Mirrors RpcPeer.cs:453 — "Failed to process inbound message".
             errorLog?.log(`'${this.ref}': Failed to process inbound message:`, received, e);
-            return;
+        }
+    }
+
+    private _processMessage(received: RpcReceivedMessage): void {
+        let message: RpcMessage;
+        let args: unknown[];
+        if (received.kind === 'binary') {
+            message = received.message;
+            args = received.args;
+        } else {
+            const parsed = deserializeMessage(received.raw);
+            message = parsed.message;
+            args = parsed.args;
         }
         const method = message.Method ?? '';
         debugLog?.log(`'${this.ref}': <- ${method}#${message.RelatedId ?? 0}`);

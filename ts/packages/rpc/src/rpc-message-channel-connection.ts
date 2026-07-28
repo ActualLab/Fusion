@@ -6,8 +6,11 @@
 // transport without requiring WebSocket mocks.
 
 import { EventHandlerSet } from '@actuallab/core';
+import { getLogs } from './logging.js';
 import { splitFrame } from './rpc-serialization.js';
 import type { RpcConnection, RpcReceivedMessage } from './rpc-connection.js';
+
+const { warnLog } = getLogs('RpcMessageChannelConnection');
 
 /** MessagePort-based RpcConnection — for in-process testing without WebSocket mocks. */
 export class RpcMessageChannelConnection implements RpcConnection {
@@ -24,9 +27,13 @@ export class RpcMessageChannelConnection implements RpcConnection {
         port.onmessage = (ev: MessageEvent) => {
             const data =
                 typeof ev.data === 'string' ? ev.data : String(ev.data);
+            // Isolated per message: one bad message must not drop its frame-mates,
+            // and an escaping error would be an uncaught exception under Node.
             for (const msg of splitFrame(data))
                 if (msg.length > 0)
-                    this.messageReceived.trigger({ kind: 'text', raw: msg });
+                    this.messageReceived.triggerSafe(
+                        { kind: 'text', raw: msg },
+                        e => warnLog?.log('Failed to handle a text message:', e));
         };
     }
 
