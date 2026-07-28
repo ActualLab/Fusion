@@ -17,8 +17,27 @@ export class RpcError extends Error {
 export const REMOTE_EXCEPTION_TYPE_REF = 'ActualLab.Serialization.RemoteException, ActualLab.Core';
 
 /** Wire shape of .NET `ExceptionInfo` for a JS error sent to a .NET peer. */
-export function toExceptionInfo(error: unknown): { TypeRef: string; Message: string } {
+export interface RpcExceptionInfo {
+    TypeRef: string;
+    Message: string;
+}
+
+/** Reshapes what a remote peer gets to see of a local error. */
+export type RpcErrorFilter = (error: unknown, info: RpcExceptionInfo) => RpcExceptionInfo;
+
+/** Opt-in {@link RpcErrorFilter} that hides the original message — Node error
+ *  text routinely embeds absolute paths, connection strings and SQL. */
+export const genericErrorFilter: RpcErrorFilter = () => ({
+    TypeRef: REMOTE_EXCEPTION_TYPE_REF,
+    Message: 'Error: An error occurred while processing the request.',
+});
+
+export function toExceptionInfo(error: unknown, filter?: RpcErrorFilter): RpcExceptionInfo {
     const name = error instanceof Error ? error.name : 'Error';
     const message = error instanceof Error ? error.message : String(error);
-    return { TypeRef: REMOTE_EXCEPTION_TYPE_REF, Message: `${name}: ${message}` };
+    const info: RpcExceptionInfo = {
+        TypeRef: REMOTE_EXCEPTION_TYPE_REF,
+        Message: `${name}: ${message}`,
+    };
+    return filter === undefined ? info : filter(error, info);
 }

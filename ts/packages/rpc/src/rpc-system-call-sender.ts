@@ -23,7 +23,7 @@
 //     mode concept.
 
 import { getLogs } from './logging.js';
-import { toExceptionInfo } from './rpc-error.js';
+import { toExceptionInfo, type RpcErrorFilter } from './rpc-error.js';
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
 import type { RpcConnection } from './rpc-connection.js';
 import type { RpcSerializationFormat } from './rpc-serialization-format.js';
@@ -85,6 +85,12 @@ export class RpcSystemCallSender {
         };
 
     registry?: RpcMethodRegistry;
+
+    /** Applied to every error this hub sends to a remote peer. Undefined means
+     *  pass through, i.e. the peer sees the original message — set it (e.g. to
+     *  {@link genericErrorFilter}) on a TS-hosted server, where handler errors
+     *  would otherwise disclose internal details to unauthenticated callers. */
+    errorFilter?: RpcErrorFilter;
 
     protected _send(
         conn: RpcConnection,
@@ -161,7 +167,7 @@ export class RpcSystemCallSender {
             conn,
             format,
             { Method: RpcSystemCalls.error, RelatedId: relatedId },
-            [toExceptionInfo(error)]
+            [toExceptionInfo(error, this.errorFilter)]
         );
     }
 

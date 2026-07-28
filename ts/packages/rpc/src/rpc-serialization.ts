@@ -168,16 +168,41 @@ function readVarUint(
 
 // --- Binary helpers ---
 
+// Smallest V5 envelope: flags byte + 1-byte VarUint relatedId + 1-byte VarUint
+// method length + 4-byte argument data length. V5Compact swaps the LVar method
+// name for a 4-byte hash. Both are used as the minimum per-message advance the
+// frame splitters accept, so a malformed envelope can never make them reparse
+// bytes they've already consumed.
+const MIN_BINARY_ENVELOPE_SIZE = 7;
+const MIN_COMPACT_BINARY_ENVELOPE_SIZE = 10;
+
+// Every wire-supplied length must pass through here before it's used to slice or
+// advance: an unvalidated one lets a hostile peer read past the frame or (when
+// read as a signed int) move the cursor backwards.
+function requireInBounds(data: Uint8Array, pos: number, length: number, what: string): number {
+    const end = pos + length;
+    if (!Number.isSafeInteger(length) || length < 0 || end > data.length)
+        throw new Error(`Invalid binary RPC message: ${what} length ${length} at ${pos} is out of bounds.`);
+
+    return end;
+}
+
 // Skips `headerCount` V5 headers (key: L1Memory, value: LVarSpan) starting at
 // `pos`, returning the position past them. The TS client never emits headers,
 // but .NET does (e.g. Activity injection), and per the V5 layout they follow
 // the argument data — so they must be accounted for in `bytesRead`.
 function skipHeaders(data: Uint8Array, pos: number, headerCount: number): number {
     for (let h = 0; h < headerCount; h++) {
+        if (pos >= data.length)
+            throw new Error('Invalid binary RPC message: truncated header.');
+
         const keyLen = data[pos++];
-        pos += keyLen;
+        pos = requireInBounds(data, pos, keyLen, 'header key');
         const valLen = readVarUint(data, pos);
-        pos += valLen.bytesRead + valLen.value;
+        if (valLen.bytesRead === 0)
+            throw new Error('Invalid binary RPC message: truncated header value length.');
+
+        pos = requireInBounds(data, pos + valLen.bytesRead, valLen.value, 'header value');
     }
     return pos;
 }
@@ -310,6 +335,8 @@ export function deserializeBinaryMessage(
     decoder: Decoder = defaultBinaryDecoder
 ): { message: RpcMessage; args: unknown[]; bytesRead: number } {
     const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    if (offset + MIN_BINARY_ENVELOPE_SIZE > data.length)
+        throw new Error(`Invalid binary RPC message: truncated envelope at ${offset}.`);
 
     // V5: no frame-level size prefix. Parse envelope directly.
     let pos = offset;
@@ -326,18 +353,23 @@ export function deserializeBinaryMessage(
     // MethodRef as LVarSpan
     const methodLen = readVarUint(data, pos);
     pos += methodLen.bytesRead;
-    const methodBytes = data.subarray(pos, pos + methodLen.value);
-    const method = textDecoder.decode(methodBytes);
-    pos += methodLen.value;
+    const methodEnd = requireInBounds(data, pos, methodLen.value, 'method');
+    const method = textDecoder.decode(data.subarray(pos, methodEnd));
+    pos = methodEnd;
 
     // ArgData length as fixed 4-byte LE, immediately followed by argData (V5
     // writes headers AFTER the argument data — see RpcByteMessageSerializerV5).
-    const argDataLen = view.getInt32(pos, true);
+    // Must be read unsigned: as a signed int it can be negative, which moves the
+    // cursor backwards and makes the frame splitter reparse the same bytes.
+    if (pos + 4 > data.length)
+        throw new Error(`Invalid binary RPC message: truncated argument data length at ${pos}.`);
+
+    const argDataLen = view.getUint32(pos, true);
     pos += 4;
 
     // Deserialize arguments from argData — multiple concatenated MessagePack values
     const args: unknown[] = [];
-    const argEnd = pos + argDataLen;
+    const argEnd = requireInBounds(data, pos, argDataLen, 'argument data');
     if (argDataLen > 0) {
         const argSlice = data.subarray(pos, argEnd);
         // Reuse the provided decoder across calls; `decodeMulti` is a generator
@@ -384,12 +416,24 @@ export function splitBinaryFrame(
     const results: { message: RpcMessage; args: unknown[] }[] = [];
     let offset = 0;
     while (offset < frame.length) {
-        const { message, args, bytesRead } = deserializeBinaryMessage(
-            frame,
-            offset,
-            decoder
-        );
-        if (bytesRead <= 0) break; // defensive — avoid infinite loop on malformed data
+        let parsed;
+        try {
+            parsed = deserializeBinaryMessage(frame, offset, decoder);
+        }
+        catch (e) {
+            // A malformed envelope leaves no resync point, but everything decoded
+            // before it is still valid - and .NET batches many messages per frame,
+            // so dropping them all would strand the $sys.Ok replies among them
+            // (per-call timeouts are unbounded by default, i.e. those calls hang).
+            warnLog?.log(`Failed to parse a binary message at offset ${offset}:`, e);
+            break;
+        }
+        const { message, args, bytesRead } = parsed;
+        // Anything below one minimal envelope means the parse went wrong; advancing
+        // by it would reparse bytes already consumed and invent extra "messages".
+        if (!Number.isFinite(bytesRead) || bytesRead < MIN_BINARY_ENVELOPE_SIZE)
+            break;
+
         results.push({ message, args });
         offset += bytesRead;
     }
@@ -486,6 +530,9 @@ export function deserializeCompactBinaryMessage(
     decoder: Decoder = defaultBinaryDecoder
 ): { message: RpcMessage; args: unknown[]; bytesRead: number } {
     const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    if (offset + MIN_COMPACT_BINARY_ENVELOPE_SIZE > data.length)
+        throw new Error(`Invalid compact binary RPC message: truncated envelope at ${offset}.`);
+
     let pos = offset;
 
     // Byte 0: upper 3 bits = CallTypeId, lower 5 bits = HeaderCount
@@ -498,6 +545,9 @@ export function deserializeCompactBinaryMessage(
     pos += relId.bytesRead;
 
     // Method hash as fixed 4-byte LE uint32
+    if (pos + 8 > data.length)
+        throw new Error(`Invalid compact binary RPC message: truncated envelope at ${offset}.`);
+
     const methodHash = view.getUint32(pos, true);
     pos += 4;
     const method =
@@ -506,12 +556,13 @@ export function deserializeCompactBinaryMessage(
 
     // ArgData length as fixed 4-byte LE, immediately followed by argData
     // (V5Compact writes headers AFTER the argument data, same as V5).
-    const argDataLen = view.getInt32(pos, true);
+    // Unsigned for the same reason as in deserializeBinaryMessage.
+    const argDataLen = view.getUint32(pos, true);
     pos += 4;
 
     // Deserialize arguments
     const args: unknown[] = [];
-    const argEnd = pos + argDataLen;
+    const argEnd = requireInBounds(data, pos, argDataLen, 'argument data');
     if (argDataLen > 0) {
         const argSlice = data.subarray(pos, argEnd);
         for (const decoded of decoder.decodeMulti(argSlice)) {
@@ -544,14 +595,18 @@ export function splitCompactBinaryFrame(
     const results: { message: RpcMessage; args: unknown[] }[] = [];
     let offset = 0;
     while (offset < frame.length) {
-        const { message, args, bytesRead } =
-            deserializeCompactBinaryMessage(
-                frame,
-                offset,
-                registry,
-                decoder
-            );
-        if (bytesRead <= 0) break;
+        let parsed;
+        try {
+            parsed = deserializeCompactBinaryMessage(frame, offset, registry, decoder);
+        }
+        catch (e) {
+            warnLog?.log(`Failed to parse a compact binary message at offset ${offset}:`, e);
+            break;
+        }
+        const { message, args, bytesRead } = parsed;
+        if (!Number.isFinite(bytesRead) || bytesRead < MIN_COMPACT_BINARY_ENVELOPE_SIZE)
+            break;
+
         results.push({ message, args });
         offset += bytesRead;
     }

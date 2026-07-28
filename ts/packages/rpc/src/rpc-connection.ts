@@ -159,19 +159,16 @@ export class RpcWebSocketConnection implements RpcConnection {
                     ev.data instanceof Uint8Array
                         ? ev.data
                         : new Uint8Array(ev.data);
+                let messages;
                 try {
-                    const messages = this._splitBinary(frame);
-                    for (const { message, args } of messages) {
-                        this.messageReceived.trigger({
-                            kind: 'binary',
-                            message,
-                            args,
-                        });
-                    }
+                    messages = this._splitBinary(frame);
                 } catch (e) {
                     warnLog?.log('Failed to split binary frame:', e);
                     this.error.trigger(e);
+                    return;
                 }
+                for (const { message, args } of messages)
+                    this._dispatchBinary(message, args);
             } else if (
                 typeof Blob !== 'undefined' &&
                 ev.data instanceof Blob &&
@@ -182,32 +179,26 @@ export class RpcWebSocketConnection implements RpcConnection {
                 // the binary path so we don't silently drop them.
                 void ev.data.arrayBuffer().then(ab => {
                     const frame = new Uint8Array(ab);
+                    let messages;
                     try {
-                        const messages = this._splitBinary(frame);
-                        for (const { message, args } of messages) {
-                            this.messageReceived.trigger({
-                                kind: 'binary',
-                                message,
-                                args,
-                            });
-                        }
+                        messages = this._splitBinary(frame);
                     } catch (e) {
                         warnLog?.log('Failed to split binary blob frame:', e);
                         this.error.trigger(e);
+                        return;
                     }
+                    for (const { message, args } of messages)
+                        this._dispatchBinary(message, args);
                 });
             } else {
                 // Text frame — JSON delimited messages
                 const data =
                     typeof ev.data === 'string' ? ev.data : String(ev.data);
-                const messages = splitFrame(data);
-                for (const msg of messages) {
+                for (const msg of splitFrame(data))
                     if (msg.length > 0)
-                        this.messageReceived.trigger({
-                            kind: 'text',
-                            raw: msg,
-                        });
-                }
+                        this.messageReceived.triggerSafe(
+                            { kind: 'text', raw: msg },
+                            e => warnLog?.log('Failed to handle a text message:', e));
             }
         };
 
@@ -256,6 +247,15 @@ export class RpcWebSocketConnection implements RpcConnection {
             );
         }
         return splitBinaryFrameFn(frame, this._decoder);
+    }
+
+    // Containment matters here: .NET batches many RPC messages per WebSocket frame,
+    // so letting one bad message escape would drop every other message in the frame -
+    // including $sys.Ok replies, whose per-call timeouts are unbounded by default.
+    private _dispatchBinary(message: RpcMessage, args: unknown[]): void {
+        this.messageReceived.triggerSafe(
+            { kind: 'binary', message, args },
+            e => warnLog?.log('Failed to handle a binary message:', e));
     }
 
     close(code?: number, reason?: string): void {
