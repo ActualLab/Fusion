@@ -59,14 +59,15 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             // a peer, and can't obtain an upgraded socket. It must also stay above the unsupported
             // format branch below, which accepts the socket just to send close code 4001.
             if (!TryVerifyReconnectProof(context, rpcRef)) {
-                Log.LogWarning("'{PeerRef}': Rejected RPC connection - invalid reconnect proof for {Request}",
+                Log.LogWarning("'{PeerRef}': Rejected RPC connection: invalid reconnect proof for {Request}",
                     rpcRef, requestDescription);
                 context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
 
             if (Hub.SerializationFormats.GetClientRejectionReason(rpcRef.SerializationFormat) is { } rejectionReason) {
-                Log.LogWarning("'{PeerRef}': Rejected {Request}: {Reason}",
+                Log.LogWarning(
+                    "'{PeerRef}': Rejected {Request}: {Reason}",
                     rpcRef, requestDescription, rejectionReason);
 #if NET6_0_OR_GREATER
                 var rejectAcceptContext = Options.ConfigureWebSocket.Invoke(this, context, rpcRef);
