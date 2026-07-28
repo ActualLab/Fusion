@@ -215,12 +215,9 @@ public sealed class RpcSystemCallSender : RpcServiceBase
     {
         var context = new RpcOutboundContext(peer, localId, headers);
 #pragma warning disable MA0100
-        // The object slot is kept for wire compatibility, not to reach the polymorphic path -
-        // IsPolymorphic sees through TItem[] now. With object as the expected type the writer
-        // always emits an explicit item type name, which pre-v14.2 receivers require: they expect
-        // object themselves, so the "same as expected" marker an unboxed TItem[] would emit for a
-        // batch whose runtime type is exactly TItem[] would leave them deserializing into object.
-        // Unboxing this is a protocol version bump.
+        // object, not object?[]: TItem is unconstrained, so an RpcStream<int> batch is an int[].
+        // It also keeps the writer emitting an explicit item type name for every batch, which
+        // receivers predating IsPolymorphic's array support require.
         var arguments = RpcArgumentSerializer.IsPolymorphic(typeof(TItem))
             ? ArgumentList.New(index, (object)items)
             : ArgumentList.New(index, items);
