@@ -10,6 +10,11 @@ public static class RpcActivityInjector
 {
     // private static readonly ILogger Log = StaticLog.For(typeof(RpcActivityInjector));
 
+    // W3C Trace Context limits: traceparent is a fixed-length string (55 chars for version 00),
+    // tracestate must be dropped by every implementation once it exceeds 512 chars
+    public const int MaxTraceParentLength = 55;
+    public const int MaxTraceStateLength = 512;
+
     public static RpcHeader[] Inject(RpcHeader[]? headers, ActivityContext activityContext)
     {
         var (traceParent, traceState) = activityContext.Format();
@@ -21,11 +26,14 @@ public static class RpcActivityInjector
     public static bool TryExtract(RpcHeader[]? headers, out ActivityContext activityContext)
     {
         var traceParent = headers.TryGet(WellKnownRpcHeaders.W3CTraceParent);
-        if (traceParent is null) {
+        if (traceParent is null || traceParent.Length > MaxTraceParentLength) {
             activityContext = default;
             return false;
         }
         var traceState = headers.TryGet(WellKnownRpcHeaders.W3CTraceState);
+        if (traceState is { Length: > MaxTraceStateLength })
+            traceState = null; // An over-limit tracestate is dropped, but its traceparent is still adopted
+
         // Log.LogWarning("TryExtract: {TraceParent} | {TraceState}", traceParent, traceState);
 #if NET7_0_OR_GREATER
         return ActivityContext.TryParse(traceParent, traceState, true, out activityContext);

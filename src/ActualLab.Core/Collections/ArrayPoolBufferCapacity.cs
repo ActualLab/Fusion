@@ -26,4 +26,12 @@ internal static class ArrayPoolBufferCapacity
 
         return Math.Max(MinCapacity, (int)Bits.GreaterOrEqualPowerOf2((ulong)capacity));
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int Round(int capacity, int maxCapacity)
+    {
+        // maxCapacity bounds the rounding overshoot only - it can never cut below the requested capacity
+        var result = Round(capacity);
+        return result <= maxCapacity ? result : Math.Max(capacity, maxCapacity);
+    }
 }

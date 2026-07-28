@@ -1,6 +1,7 @@
 using System.Net.WebSockets;
 using System.Text.Json;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
 using ActualLab.Rpc.Serialization.Internal;
 using ActualLab.Rpc.WebSockets;
@@ -63,42 +64,214 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
         message.AsSpan(envelope.Length + 1).Fill(1);
         var maxMessageSize = RpcTextMessageSerializerV3.GetMaxMessageSize(maxArgumentDataSize);
         var fragments = new[] { new Fragment(message, true) };
-        var options = RpcWebSocketTransport.Options.Default with { MaxMessageSize = maxMessageSize };
+        var options = RpcWebSocketTransport.Options.Default with {
+            MaxMessageSize = maxMessageSize,
+            MaxPreHandshakeMessageSize = maxMessageSize,
+        };
         var (transport, _, services) = NewTransport(options, fragments, maxArgumentDataSize);
         await using var _1 = services;
         await using var _2 = transport;
         await using var reader = transport.GetAsyncEnumerator();
 
-        RpcWebSocketTransport.Options.Default.MaxMessageSize.Should().Be(
-            RpcTextMessageSerializerV3.GetMaxMessageSize(Math.Max(
-                RpcTextMessageSerializer.Defaults.MaxArgumentDataSize,
-                RpcByteMessageSerializer.Defaults.MaxArgumentDataSize)));
         message.Length.Should().BeLessThanOrEqualTo(maxMessageSize);
         envelope.Length.Should().Be(RpcTextMessageSerializerV3.MaxEnvelopeSize);
         (await reader.MoveNextAsync()).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PreHandshakeMessageOverCapIsRejectedEarly()
+    {
+        const int preHandshakeLimit = 4096;
+        var options = RpcWebSocketTransport.Options.Default with {
+            MaxMessageSize = 1 << 20,
+            MaxPreHandshakeMessageSize = preHandshakeLimit,
+        };
+        var fragments = Enumerable.Range(0, 1 << 20 >> 10)
+            .Select(_ => new Fragment(new byte[1024], false))
+            .ToArray();
+        var (transport, webSocket, services) = NewTransport(options, fragments);
+        await using var _1 = services;
+        await using var _2 = transport;
+        await using var reader = transport.GetAsyncEnumerator();
+
+        (await reader.MoveNextAsync()).Should().BeFalse();
+        (await webSocket.WhenClosed.WaitAsync(TimeSpan.FromSeconds(2)))
+            .Should().Be(WebSocketCloseStatus.MessageTooBig);
+        webSocket.ReceivedByteCount.Should().BeLessThanOrEqualTo(preHandshakeLimit);
+    }
+
+    [Fact]
+    public async Task OverLimitMessageIsRejectedWithoutAnExtraRead()
+    {
+        const int limit = 8192;
+        var options = RpcWebSocketTransport.Options.Default with {
+            MaxMessageSize = limit,
+            MaxPreHandshakeMessageSize = limit,
+        };
+        // A single unterminated fragment that fills the limit exactly - and nothing after it
+        var fragments = new[] { new Fragment(new byte[limit], false) };
+        var (transport, webSocket, services) = NewTransport(options, fragments);
+        await using var _1 = services;
+        await using var _2 = transport;
+        await using var reader = transport.GetAsyncEnumerator();
+
+        (await reader.MoveNextAsync()).Should().BeFalse();
+        (await webSocket.WhenClosed.WaitAsync(TimeSpan.FromSeconds(2)))
+            .Should().Be(WebSocketCloseStatus.MessageTooBig);
+        webSocket.ReceivedByteCount.Should().Be(limit);
+    }
+
+    [Fact]
+    public async Task PostHandshakeMessageUsesTheNormalLimit()
+    {
+        const int preHandshakeLimit = 16;
+        var tail = new byte[1024];
+        tail.AsSpan().Fill((byte)' ');
+        tail[0] = (byte)'\n';
+        var options = RpcWebSocketTransport.Options.Default with {
+            MaxMessageSize = 1 << 20,
+            MaxPreHandshakeMessageSize = preHandshakeLimit,
+        };
+        var fragments = new[] {
+            new Fragment("{}\n"u8.ToArray(), true), // "Handshake"
+            new Fragment("{}"u8.ToArray(), false),
+            new Fragment(tail, true), // Way above preHandshakeLimit
+        };
+        var (transport, _, services) = NewTransport(options, fragments);
+        await using var _1 = services;
+        await using var _2 = transport;
+        await using var reader = transport.GetAsyncEnumerator();
+
+        (await reader.MoveNextAsync()).Should().BeTrue();
+        (await reader.MoveNextAsync()).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task HandshakeFitsPreHandshakeLimitInEveryFormat()
+    {
+        var apiVersions = Enumerable.Range(0, 32)
+            .ToDictionary(i => $"ActualLab.Rpc.Tests.SampleService{i}", _ => Version.Parse("1.2.3.4"));
+        var handshake = new RpcHandshake(
+            Guid.NewGuid(), new VersionSet(apiVersions), Guid.NewGuid(),
+            RpcHandshake.CurrentProtocolVersion, 1);
+        var maxSize = 0;
+        foreach (var format in RpcSerializationFormat.All) {
+            var (transport, webSocket, services) = NewTransport(
+                RpcWebSocketTransport.Options.Default, [], format: format);
+            await using var _1 = services;
+            await using var _2 = transport;
+            services.GetRequiredService<RpcSystemCallSender>()
+                .Handshake(transport.Peer, transport, handshake);
+            transport.TryComplete();
+            await transport.WhenClosed.WaitAsync(TimeSpan.FromSeconds(5));
+
+            var size = webSocket.SentByteCount;
+            Out.WriteLine($"{format.Key}: {size} bytes");
+            maxSize = Math.Max(maxSize, size);
+        }
+
+        maxSize.Should().BeLessThan(RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize / 2);
+    }
+
+    [Fact]
+    public async Task MaxArgumentDataSizeMessageFitsMaxFrameSizeInEveryFormat()
+    {
+        var maxFrameSize = RpcFrameBasedTransport.DefaultMaxFrameSize;
+        var maxArgumentDataSize = Math.Max(
+            RpcTextMessageSerializer.Defaults.MaxArgumentDataSize,
+            RpcByteMessageSerializer.Defaults.MaxArgumentDataSize);
+        RpcWebSocketTransport.Options.Default.MaxMessageSize.Should().Be(maxFrameSize);
+        RpcPipeTransport.Options.Default.MaxFrameSize.Should().Be(maxFrameSize);
+        RpcStreamTransport.Options.Default.MaxFrameSize.Should().Be(maxFrameSize);
+        // The worst-case envelope of the most expensive registered format must still fit
+        RpcTextMessageSerializerV3.GetMaxMessageSize(maxArgumentDataSize)
+            .Should().BeLessThanOrEqualTo(maxFrameSize);
+
+        var argumentData = new byte[maxArgumentDataSize];
+        argumentData.AsSpan().Fill((byte)'x');
+        var options = RpcWebSocketTransport.Options.Default with {
+            MaxPreHandshakeMessageSize = maxFrameSize,
+        };
+        foreach (var format in RpcSerializationFormat.All) {
+            var (transport, webSocket, services) = NewTransport(options, [], format: format);
+            await using (services)
+            await using (transport)
+                (await SendAndClose(transport, services, argumentData)).Should().BeNull();
+
+            var frame = webSocket.LastSentFrame!;
+            Out.WriteLine($"{format.Key}: {frame.Length} bytes");
+            frame.Length.Should().BeLessThanOrEqualTo(maxFrameSize);
+
+            var (reReader, _, reReaderServices) =
+                NewTransport(options, [new Fragment(frame, true)], format: format);
+            await using (reReaderServices)
+            await using (reReader) {
+                await using var reader = reReader.GetAsyncEnumerator();
+                (await reader.MoveNextAsync()).Should().BeTrue();
+                reader.Current.ArgumentData.Length.Should().Be(maxArgumentDataSize);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task OversizedOutboundMessageFailsLocally()
+    {
+        var options = RpcWebSocketTransport.Options.Default with {
+            FrameSize = 1024,
+            MaxMessageSize = 4096,
+        };
+        var (transport, webSocket, services) = NewTransport(options, []);
+        await using var _1 = services;
+        await using var _2 = transport;
+
+        var error = await SendAndClose(transport, services, new byte[8192]);
+
+        error.Should().BeOfType<FormatException>();
+        webSocket.SentByteCount.Should().Be(0);
+    }
+
+    private static async Task<Exception?> SendAndClose(
+        RpcWebSocketTransport transport,
+        IServiceProvider services,
+        ReadOnlyMemory<byte> argumentData)
+    {
+        var methodDef = services.GetRequiredService<RpcSystemCallSender>().OkMethodDef;
+        var whenSent = TaskCompletionSourceExt.New<Exception?>();
+        var message = new RpcOutboundMessage(
+            new RpcOutboundContext(transport.Peer), methodDef, 1, false, null, argumentData,
+            (_, _, error) => whenSent.TrySetResult(error));
+        transport.Send(message);
+        transport.TryComplete();
+        await transport.WhenClosed.WaitAsync(TimeSpan.FromSeconds(30));
+        return await whenSent.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     private static (RpcWebSocketTransport Transport, FragmentedWebSocket WebSocket, ServiceProvider Services)
         NewTransport(
             RpcWebSocketTransport.Options options,
             IReadOnlyList<Fragment> fragments,
-            int? maxArgumentDataSize = null)
+            int? maxArgumentDataSize = null,
+            RpcSerializationFormat? format = null)
     {
         var services = new ServiceCollection();
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
         services.AddRpc();
-        var format = RpcSerializationFormat.SystemJsonV5;
+        var actualFormat = format ?? RpcSerializationFormat.SystemJsonV5;
         if (maxArgumentDataSize is { } maxSize) {
-            format = new RpcSerializationFormat(
+            actualFormat = new RpcSerializationFormat(
                 "json-size-test",
                 () => RpcSerializationFormat.SystemJsonV5.ArgumentSerializer,
                 peer => new RpcTextMessageSerializerV3(peer) { MaxArgumentDataSize = maxSize });
-            services.AddSingleton(_ => new RpcSerializationFormatResolver(format.Key, new[] { format }));
+            services.AddSingleton(
+                _ => new RpcSerializationFormatResolver(actualFormat.Key, new[] { actualFormat }));
         }
         var serviceProvider = services.BuildServiceProvider();
-        var rpcRef = RpcRef.NewClient("size-test", format.Key);
+        var rpcRef = RpcRef.NewClient("size-test", actualFormat.Key);
         var peer = new RpcClientPeer(serviceProvider.RpcHub(), rpcRef.Route);
-        var webSocket = new FragmentedWebSocket(fragments);
+        var messageType = peer.MessageSerializer is RpcTextMessageSerializer
+            ? WebSocketMessageType.Text
+            : WebSocketMessageType.Binary;
+        var webSocket = new FragmentedWebSocket(fragments, messageType);
         var owner = new WebSocketOwner("size-test", webSocket, serviceProvider);
         var transport = new RpcWebSocketTransport(options, peer, owner) {
             OwnsWebSocketOwner = false,
@@ -108,7 +281,10 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
 
     private sealed record Fragment(byte[] Data, bool EndOfMessage);
 
-    private sealed class FragmentedWebSocket(IReadOnlyList<Fragment> fragments) : WebSocket
+    private sealed class FragmentedWebSocket(
+        IReadOnlyList<Fragment> fragments,
+        WebSocketMessageType messageType = WebSocketMessageType.Text)
+        : WebSocket
     {
         private readonly TaskCompletionSource<WebSocketCloseStatus> _whenClosed = new();
         private WebSocketState _state = WebSocketState.Open;
@@ -117,6 +293,10 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
         private int _fragmentIndex;
         private int _fragmentOffset;
 
+        public int ReceivedByteCount;
+        public int ReceiveCallCount;
+        public int SentByteCount;
+        public byte[]? LastSentFrame;
         public Task<WebSocketCloseStatus> WhenClosed => _whenClosed.Task;
         public override WebSocketCloseStatus? CloseStatus => _closeStatus;
         public override string? CloseStatusDescription => _closeStatusDescription;
@@ -151,12 +331,14 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
             ArraySegment<byte> buffer,
             CancellationToken cancellationToken)
         {
+            ReceiveCallCount++;
             if (_fragmentIndex >= fragments.Count)
                 return Task.FromResult(new WebSocketReceiveResult(0, WebSocketMessageType.Close, true));
 
             var fragment = fragments[_fragmentIndex];
             var count = Math.Min(buffer.Count, fragment.Data.Length - _fragmentOffset);
             fragment.Data.AsSpan(_fragmentOffset, count).CopyTo(buffer.AsSpan());
+            ReceivedByteCount += count;
             _fragmentOffset += count;
             var isFragmentComplete = _fragmentOffset == fragment.Data.Length;
             var endOfMessage = isFragmentComplete && fragment.EndOfMessage;
@@ -164,7 +346,7 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
                 _fragmentIndex++;
                 _fragmentOffset = 0;
             }
-            return Task.FromResult(new WebSocketReceiveResult(count, WebSocketMessageType.Text, endOfMessage));
+            return Task.FromResult(new WebSocketReceiveResult(count, messageType, endOfMessage));
         }
 
         public override Task SendAsync(
@@ -172,6 +354,10 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
             WebSocketMessageType messageType,
             bool endOfMessage,
             CancellationToken cancellationToken)
-            => Task.CompletedTask;
+        {
+            LastSentFrame = buffer.ToArray();
+            Interlocked.Add(ref SentByteCount, buffer.Count);
+            return Task.CompletedTask;
+        }
     }
 }

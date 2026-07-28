@@ -11,10 +11,32 @@ namespace ActualLab.Rpc.Infrastructure;
 /// </summary>
 public abstract class RpcFrameBasedTransport : RpcTransport
 {
+    // Until the handshake is received the peer is anonymous, and the only message it may legitimately
+    // send is the handshake itself - two GUIDs, a version set, and two ints, which measures under 1 KB
+    // in every registered format (see RpcWebSocketTransportSizeTest.HandshakeFitsPreHandshakeLimitInEveryFormat).
+    public const int DefaultMaxPreHandshakeFrameSize = 16_384;
+
+    // The ArrayPool bucket every transport's receive buffer is meant to land in. ArrayPoolBuffer rounds
+    // every capacity request up to the next power of two, so one byte above a bucket boundary doubles the
+    // allocation - which is why the frame limit is defined relative to a bucket rather than freely.
+    public const int MaxFrameSizeBucket = 1 << 24; // 16 MiB
+
+    // The largest frame (= batch of messages) any transport sends or accepts. Two constraints shape it:
+    // - It must fit one maximum-size message: MaxArgumentDataSize (15.5 MiB) plus the worst-case envelope
+    //   of the most expensive registered format, RpcTextMessageSerializerV3.MaxEnvelopeSize (244,297
+    //   = 259 B of syntax + 6x JSON escaping of a 1 KiB method ref and 31 headers of 255 B + 1 KiB)
+    //   plus its delimiter, i.e. 16,497,226 bytes total.
+    //   RpcWebSocketTransportSizeTest.MaxArgumentDataSizeMessageFitsMaxFrameSizeInEveryFormat guards this.
+    // - It must leave room, inside MaxFrameSizeBucket, for what RpcStreamTransport buffers alongside the
+    //   frame itself: its 4-byte length prefix plus up to BufferSize of read-ahead. Hence the 64 KiB
+    //   reserve - without it a maximum-size frame would push that transport into the next 32 MiB bucket.
+    public const int DefaultMaxFrameSize = MaxFrameSizeBucket - 65_536; // 16,711,680
+
     protected const int Int32Size = sizeof(int);
 
     private readonly int _frameSize;
     private readonly int _maxBufferSize;
+    private readonly int _maxFrameSize;
     private readonly Channel<RpcOutboundMessage> _writeChannel;
     private readonly ChannelWriter<RpcOutboundMessage> _writeChannelWriter;
     private readonly AsyncTaskMethodBuilder _whenCompletedSource;
@@ -44,6 +66,7 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         int frameSize,
         int bufferSize,
         int maxBufferSize,
+        int maxFrameSize,
         Func<RpcFrameDelayer?>? frameDelayerFactory,
         ChannelOptions writeChannelOptions,
         FrameMeterSet meters,
@@ -61,6 +84,9 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         _frameSize = frameSize;
         if (_frameSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(frameSize), "Frame size must be positive.");
+        _maxFrameSize = maxFrameSize;
+        if (_maxFrameSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxFrameSize), "Max frame size must be positive.");
         _maxBufferSize = maxBufferSize;
 
         _frameDelayer = frameDelayerFactory?.Invoke();
@@ -163,16 +189,9 @@ public abstract class RpcFrameBasedTransport : RpcTransport
             }
 
             var reader = _writeChannel.Reader;
-            var serialize = Codec.Serialize;
             while (await reader.WaitToReadAsync(CancellationToken.None).ConfigureAwait(false)) {
                 while (reader.TryRead(out var message)) {
-                    try {
-                        serialize(message, _writeBuffer);
-                        CompleteSend(message);
-                    }
-                    catch (Exception e) {
-                        CompleteSend(message, e);
-                    }
+                    SerializeAndCompleteSend(message);
                     if (WriteFrameLength >= _frameSize) {
                         await lastFlushTask.ConfigureAwait(false);
                         lastFlushTask = FlushFrame();
@@ -204,7 +223,6 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         Task lastFlushTask = Task.CompletedTask;
         Task<bool>? waitToReadTask = null;
         var reader = _writeChannel.Reader;
-        var serialize = Codec.Serialize;
 
         try {
             while (true) {
@@ -235,15 +253,7 @@ public abstract class RpcFrameBasedTransport : RpcTransport
                     break;
 
                 while (reader.TryRead(out var message)) {
-                    try {
-                        serialize(message, _writeBuffer);
-                        CompleteSend(message);
-                    }
-                    catch (Exception e) {
-                        CompleteSend(message, e);
-                        continue;
-                    }
-
+                    SerializeAndCompleteSend(message);
                     if (WriteFrameLength >= _frameSize) {
                         await lastFlushTask.ConfigureAwait(false);
                         lastFlushTask = FlushFrame();
@@ -265,6 +275,27 @@ public abstract class RpcFrameBasedTransport : RpcTransport
             // so an in-flight WriteFrame must be awaited no matter how we exit
             await lastFlushTask.SilentAwait(false);
         }
+    }
+
+    private void SerializeAndCompleteSend(RpcOutboundMessage message)
+    {
+        var startOffset = _writeBuffer.WrittenCount;
+        try {
+            Codec.Serialize(message, _writeBuffer);
+        }
+        catch (Exception e) {
+            CompleteSend(message, e);
+            return;
+        }
+        if (WriteFrameLength > _maxFrameSize) {
+            // The receiving peer would drop the connection over this frame, so fail the call locally
+            // instead - a locally failed call isn't retried, an aborted connection's calls are
+            _writeBuffer.Position = startOffset;
+            CompleteSend(message, ActualLab.Internal.Errors.SizeLimitExceeded("Message"));
+            return;
+        }
+
+        CompleteSend(message);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
