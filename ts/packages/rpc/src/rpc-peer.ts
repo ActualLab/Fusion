@@ -789,12 +789,12 @@ export class RpcClientPeer extends RpcPeer {
      *  carried one. In-memory only — never localStorage/sessionStorage/cookie.
      *  A tab reload mints a new `clientId`, so a persisted secret would be
      *  useless anyway. */
-    private _secret: string | undefined;
+    private _reconnectSecret: string | undefined;
     /** Incremented once per *connect attempt*, in `computeReconnectProof()`. A
      *  failed attempt still burns its value: the server may have advanced its
      *  own counter at the gate before the connection died, and reusing the
      *  value would then be rejected forever. */
-    private _counter = 0;
+    private _reconnectCounter = 0;
 
     /** Base64url-encoded peer ID — matches .NET's RpcClientPeer.ClientId (Guid.ToBase64Url). */
     readonly clientId: string;
@@ -896,7 +896,7 @@ export class RpcClientPeer extends RpcPeer {
      *  yet or WebCrypto is unavailable. Consumes one counter value per call,
      *  so call it exactly once per connect attempt. */
     async computeReconnectProof(): Promise<RpcReconnectProofParameters | undefined> {
-        const secret = this._secret;
+        const secret = this._reconnectSecret;
         if (secret === undefined)
             return undefined;
 
@@ -909,7 +909,7 @@ export class RpcClientPeer extends RpcPeer {
             return undefined;
         }
 
-        const counter = (++this._counter).toString();
+        const counter = (++this._reconnectCounter).toString();
         try {
             return { counter, proof: await computeReconnectProof(secret, this.clientId, counter) };
         } catch (e) {
@@ -1082,7 +1082,7 @@ export class RpcClientPeer extends RpcPeer {
                     // different replica adopts that replica's secret. A legacy
                     // server sends none, which leaves the stored value alone.
                     if (remoteHandshake.Secret)
-                        this._secret = remoteHandshake.Secret;
+                        this._reconnectSecret = remoteHandshake.Secret;
 
                     // Peer change detection (like .NET's RpcHandshake.GetPeerChangeKind)
                     const isPeerChanged = this._detectPeerChange(remoteHandshake);

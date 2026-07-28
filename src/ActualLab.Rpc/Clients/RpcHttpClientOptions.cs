@@ -71,9 +71,9 @@ public record RpcHttpClientOptions
         var queryStart = url.IndexOf('?', StringComparison.Ordinal) < 0 ? '?' : '&';
         url = $"{url}{queryStart}{options.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
             + $"&{options.SerializationFormatParameterName}={peer.SerializationFormat.Key}";
-        if (peer.Secret is { } secret) {
+        if (peer.ReconnectSecret is { } secret) {
             // Neither value needs percent-encoding: the counter is decimal digits, the proof is base64url.
-            var counterText = peer.NextCounter().ToString(CultureInfo.InvariantCulture);
+            var counterText = peer.NextReconnectCounter().ToString(CultureInfo.InvariantCulture);
             var proof = RpcReconnectProof.Compute(secret, peer.ClientId, counterText);
             url += $"&{options.ReconnectProofCounterParameterName}={counterText}"
                 + $"&{options.ReconnectProofParameterName}={proof}";

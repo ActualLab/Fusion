@@ -62,19 +62,25 @@ public static class RpcReconnectProof
             return true;
 
         var hasProof = counterText.Length != 0 || proof.Length != 0;
-        if (!hasProof)
-            return !requireProof; // Legacy client
+        if (!hasProof) {
+            // LastSeenReconnectCounter is advanced only by a verified proof, so a non-zero one means this peer's
+            // client has already proven possession at least once - it can't credibly stop now.
+            // Refusing the downgrade is what makes the gate protect anything while RequireProof is
+            // false: without it, omitting c and p is enough to be treated as a legacy client.
+            // A genuinely old client never advances the counter, so it stays on the legacy path.
+            return !requireProof && peer.LastSeenReconnectCounter == 0;
+        }
         if (counterText.Length == 0 || proof.Length == 0)
             return false; // Exactly one of the two - malformed
         if (!long.TryParse(counterText, NumberStyles.None, CultureInfo.InvariantCulture, out var counter)
             || counter <= 0)
             return false;
-        if (!Verify(peer.Secret, clientId, counterText, proof))
+        if (!Verify(peer.ReconnectSecret, clientId, counterText, proof))
             return false;
 
         // Advanced only after the proof verifies, so a forged request can't burn a legitimate
         // client's counter space. A false here means the counter was already used, i.e. a replay.
-        return peer.TryAdvanceCounter(counter);
+        return peer.TryAdvanceReconnectCounter(counter);
     }
 
     // Private methods
