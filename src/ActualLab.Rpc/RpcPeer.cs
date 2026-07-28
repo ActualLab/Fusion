@@ -347,7 +347,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         if (handshake.RemoteApiVersionSet is null)
                             handshake = handshake with { RemoteApiVersionSet = new() };
                         else
-                            RpcHandshake.RequireAcceptableApiVersionSet(handshake.RemoteApiVersionSet);
+                            RpcHandshake.ValidateApiVersionSet(handshake.RemoteApiVersionSet);
                     }
                     catch (Exception e) {
                         Log.LogWarning(e, "'{Route}': Failed to send handshake", Route);

@@ -32,7 +32,7 @@ public sealed partial record RpcHandshake(
     public const int MaxApiVersionSetCount = 16;
     public const int MaxApiVersionSetLength = 512;
 
-    public static void RequireAcceptableApiVersionSet(VersionSet versions)
+    public static void ValidateApiVersionSet(VersionSet versions)
     {
         // Count is checked first, so Value (which is formatted on demand) is cheap by the time it's read.
         if (versions.Count > MaxApiVersionSetCount)
