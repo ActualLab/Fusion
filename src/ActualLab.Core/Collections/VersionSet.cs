@@ -37,9 +37,14 @@ public sealed partial record VersionSet(
     public int HashCode {
         get {
             if (field == 0) {
+                // Items are combined with + rather than ^: the combiner must stay order-independent,
+                // but XOR is linear over GF(2), which makes colliding sets constructible by anyone
+                // who can pick the scopes and versions - and here that's a remote peer's handshake.
                 var hashCode = 0;
-                foreach (var (scope, version) in Items)
-                    hashCode ^= System.HashCode.Combine(scope.GetOrdinalHashCode(), version.GetHashCode());
+                foreach (var (scope, version) in Items) {
+                    var itemHashCode = System.HashCode.Combine(scope.GetOrdinalHashCode(), version.GetHashCode());
+                    hashCode = unchecked(hashCode + itemHashCode);
+                }
                 if (hashCode == 0)
                     hashCode = 1;
                 field = hashCode;
@@ -77,6 +82,24 @@ public sealed partial record VersionSet(
     public VersionSet(string? value)
         : this(Parse(value).Items)
     { }
+
+    public VersionSet KeepScopes(HashSet<string> scopes)
+    {
+        var count = 0;
+        foreach (var (scope, _) in Items)
+            if (scopes.Contains(scope))
+                count++;
+        if (count == Count)
+            return this;
+        if (count == 0)
+            return Empty;
+
+        var items = new Dictionary<string, Version>(count, StringComparer.Ordinal);
+        foreach (var (scope, version) in Items)
+            if (scopes.Contains(scope))
+                items.Add(scope, version);
+        return new VersionSet(items);
+    }
 
     // Conversion
 

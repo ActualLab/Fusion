@@ -12,11 +12,13 @@ public class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcService
 {
     private readonly Dictionary<Type, RpcServiceDef> _services = new();
     private readonly Dictionary<string, RpcServiceDef> _serviceByName = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<VersionSet, RpcMethodResolver> _legacyServerMethodResolvers = new();
+    private readonly HashSet<string> _serviceScopes = new(StringComparer.Ordinal);
+    private readonly PruningCache<VersionSet, RpcMethodResolver> _legacyServerMethodResolvers;
 
     public static LogLevel ConstructionDumpLogLevel { get; set; } = OSInfo.IsAnyClient ? LogLevel.None : LogLevel.Information;
 
     public int Count => _serviceByName.Count;
+    public int LegacyServerMethodResolverCacheSize => _legacyServerMethodResolvers.Count;
     public RpcServiceDef this[Type serviceType] => Get(serviceType) ?? throw Errors.NoService(serviceType);
     public RpcServiceDef this[string serviceName] => Get(serviceName) ?? throw Errors.NoService(serviceName);
 #pragma warning disable CA1721
@@ -52,7 +54,10 @@ public class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcService
                     throw Errors.ServiceTypeConflict(service.Type);
 
             _serviceByName.Add(serviceDef.Name, serviceDef);
+            _serviceScopes.Add(serviceDef.Scope);
         }
+        _legacyServerMethodResolvers = new PruningCache<VersionSet, RpcMethodResolver>(
+            hub.RegistryOptions.LegacyMethodResolverCacheCapacity);
         AnyMethodResolver = new RpcMethodResolver(this, serverOnly: false, Log);
         ServerMethodResolver = new RpcMethodResolver(this, serverOnly: true, null);
         DumpTo(Log, ConstructionDumpLogLevel, "Registered services:");
@@ -112,9 +117,15 @@ public class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcService
         if (versions is null)
             return ServerMethodResolver;
 
-        return _legacyServerMethodResolvers.GetOrAdd(
-            versions,
-            static (versions, self) => new RpcMethodResolver(self, versions, self.ServerMethodResolver, self.Log),
-            this);
+        // Resolution reads the incoming set only as versions[serviceDef.Scope], so a scope no service
+        // uses cannot change its outcome. Dropping such scopes from the cache key is what keeps a peer
+        // that invents them from adding an entry per handshake.
+        versions = versions.KeepScopes(_serviceScopes);
+        if (_legacyServerMethodResolvers.TryGet(versions, out var resolver))
+            return resolver;
+
+        resolver = new RpcMethodResolver(this, versions, ServerMethodResolver, Log);
+        _legacyServerMethodResolvers.TryAdd(versions, resolver);
+        return resolver;
     }
 }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using ActualLab.Rpc.Internal;
 using MessagePack;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -28,6 +29,17 @@ public sealed partial record RpcHandshake(
 ) {
     public const int MinimumProtocolVersion = 2;
     public const int CurrentProtocolVersion = 2;
+    public const int MaxApiVersionSetCount = 16;
+    public const int MaxApiVersionSetLength = 512;
+
+    public static void RequireAcceptableApiVersionSet(VersionSet versions)
+    {
+        // Count is checked first, so Value (which is formatted on demand) is cheap by the time it's read.
+        if (versions.Count > MaxApiVersionSetCount)
+            throw Errors.ApiVersionSetTooLarge("scope count", versions.Count, MaxApiVersionSetCount);
+        if (versions.Value.Length > MaxApiVersionSetLength)
+            throw Errors.ApiVersionSetTooLarge("length", versions.Value.Length, MaxApiVersionSetLength);
+    }
 
     // Comparing RemotePeerId alone is safe - and is deliberately NOT hardened further.
     // Every handshake that reaches this method arrived over a connection that already passed
