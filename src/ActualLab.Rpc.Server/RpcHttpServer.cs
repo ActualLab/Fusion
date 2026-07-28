@@ -58,9 +58,9 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
                 return;
             }
 
-            if (!Hub.SerializationFormats.TryGet(rpcRef.SerializationFormat, out _)) {
-                Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}' for {Request}",
-                    rpcRef, rpcRef.SerializationFormat, requestDescription);
+            if (Hub.SerializationFormats.GetClientRejectionReason(rpcRef.SerializationFormat) is { } rejectionReason) {
+                Log.LogWarning("'{PeerRef}': Rejected {Request}: {Reason}",
+                    rpcRef, requestDescription, rejectionReason);
                 context.Response.StatusCode = (int)HttpStatusCode.UnsupportedMediaType;
                 return;
             }

@@ -235,12 +235,11 @@ public sealed class RpcSystemCalls(IServiceProvider services)
 
         context.RelatedObject = stream;
         needsArgumentPolymorphism = RpcArgumentSerializer.IsPolymorphic(stream.ItemType);
-        arguments = needsArgumentPolymorphism
-            // We need to force polymorphic deserialization of the second argument in RpcArgumentSerializer
-            // in case TItem is polymorphic. TItem[] is non-abstract & non-object, so RpcArgumentSerializer
-            // won't use polymorphic deserialization for the second argument unless we "reset" its type to object.
-            ? ArgumentList.New<long, object>(0L, null!)
-            : stream.CreateStreamBatchArguments();
+        // T[] is the exact expected type, and it's also the bound the wire-supplied item type is
+        // checked against - so the only types accepted here are the U[] (U : T) the sender can
+        // actually produce. RpcArgumentSerializer.IsPolymorphic sees through the array, so this
+        // no longer has to be widened to object to reach the polymorphic path.
+        arguments = stream.CreateStreamBatchArguments();
         return true;
     }
 }
