@@ -7,7 +7,7 @@ import {
     RpcObjectKind,
     RpcType,
     parseStreamRef,
-    resolveStreamRefs,
+    toRpcStream,
     defineRpcService,
     createMessageChannelPair,
 } from '../src/index.js';
@@ -806,12 +806,11 @@ describe('RpcRemoteObjectTracker with shared stream ids (R21)', () => {
         }
     });
 
-    it('resolveStreamRefs does not register nested streams until enumeration (R22)', () => {
+    it('toRpcStream does not register the stream until enumeration (R22)', () => {
         const pair = createTestHubPair('json5np');
         try {
-            const resolved = resolveStreamRefs(
-                { s: 'h,7,10,5,1,0' }, pair.clientPeer) as { s: RpcStream<unknown> };
-            expect(resolved.s).toBeInstanceOf(RpcStream);
+            const stream = toRpcStream({ s: 'h,7,10,5,1,0' }.s, pair.clientPeer);
+            expect(stream).toBeInstanceOf(RpcStream);
             expect([...pair.clientPeer.remoteObjects.keys()]).toEqual([]);
         } finally {
             pair.serverHub.close();

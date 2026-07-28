@@ -46,7 +46,7 @@ import { wireMethodName, RpcType, RpcRemoteExecutionMode } from './rpc-service-d
 import { getServiceMeta, getMethodsMeta, type AnyConstructor } from './rpc-decorators.js';
 import { RpcSystemCallSender } from './rpc-system-call-sender.js';
 import { RpcSystemCallHandler } from './rpc-system-call-handler.js';
-import { RpcStream, parseStreamRef, resolveStreamRefs } from './rpc-stream.js';
+import { toRpcStream } from './rpc-stream.js';
 import { RpcMethodRegistry } from './rpc-method-registry.js';
 import { RpcSystemCalls } from './rpc-message.js';
 
@@ -310,15 +310,12 @@ export class RpcHub {
                 const callArgs = args.slice(0, methodDef.argCount);
                 const outboundCall = peer.call(wireName, callArgs);
                 const result = await outboundCall.result;
-                const ref = parseStreamRef(result);
-                if (!ref)
+                const stream = toRpcStream(result, peer);
+                if (!stream)
                     throw new Error(
                         `Expected stream reference, got: ${JSON.stringify(result)}`
                     );
-                // Registration is deferred to the first iteration (see
-                // RpcStream's lazy-start) so a never-enumerated stream leases
-                // nothing on either peer — RpcStream.GetAsyncEnumerator parity.
-                return new RpcStream(ref, peer);
+                return stream;
             };
         }
 
@@ -333,8 +330,10 @@ export class RpcHub {
                 throw new Error('Outbound call failed: not connected and AwaitForConnection is not set.');
             const callArgs = args.slice(0, methodDef.argCount);
             const outboundCall = peer.call(wireName, callArgs, callOptions);
-            const result = await outboundCall.result;
-            return resolveStreamRefs(result, peer);
+            // The result is handed back as deserialized. A stream reference
+            // nested inside it is converted by the caller via `toRpcStream` —
+            // see the note on that function for why it can't be inferred here.
+            return await outboundCall.result;
         };
     }
 
