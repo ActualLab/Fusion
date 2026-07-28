@@ -116,7 +116,7 @@ public class RpcReconnectProofTest(ITestOutputHelper @out) : TestBase(@out)
             .Should().BeTrue();
         RpcReconnectProof.TryVerify(peer, peer.Ref.HostInfo, "", "", requireProof: true)
             .Should().BeFalse();
-        peer.LastCounter.Should().Be(0);
+        peer.LastSeenReconnectCounter.Should().Be(0);
     }
 
     [Fact]
@@ -127,17 +127,17 @@ public class RpcReconnectProofTest(ITestOutputHelper @out) : TestBase(@out)
         var clientId = peer.Ref.HostInfo;
 
         Verify(5).Should().BeTrue();
-        peer.LastCounter.Should().Be(5);
+        peer.LastSeenReconnectCounter.Should().Be(5);
         Verify(5).Should().BeFalse(); // Replay of a used counter
         Verify(4).Should().BeFalse(); // Older counter
-        peer.LastCounter.Should().Be(5);
+        peer.LastSeenReconnectCounter.Should().Be(5);
         Verify(6).Should().BeTrue();
-        peer.LastCounter.Should().Be(6);
+        peer.LastSeenReconnectCounter.Should().Be(6);
         return;
 
         bool Verify(long counter) {
             var counterText = counter.ToString(CultureInfo.InvariantCulture);
-            var proof = RpcReconnectProof.Compute(peer.Secret, clientId, counterText);
+            var proof = RpcReconnectProof.Compute(peer.ReconnectSecret, clientId, counterText);
             return RpcReconnectProof.TryVerify(peer, clientId, counterText, proof, requireProof: true);
         }
     }
@@ -152,9 +152,9 @@ public class RpcReconnectProofTest(ITestOutputHelper @out) : TestBase(@out)
 
         RpcReconnectProof.TryVerify(peer, clientId, "9", forgedProof, requireProof: true)
             .Should().BeFalse();
-        peer.LastCounter.Should().Be(0);
+        peer.LastSeenReconnectCounter.Should().Be(0);
 
-        var validProof = RpcReconnectProof.Compute(peer.Secret, clientId, "9");
+        var validProof = RpcReconnectProof.Compute(peer.ReconnectSecret, clientId, "9");
         RpcReconnectProof.TryVerify(peer, clientId, "9", validProof, requireProof: true)
             .Should().BeTrue();
     }
@@ -165,13 +165,13 @@ public class RpcReconnectProofTest(ITestOutputHelper @out) : TestBase(@out)
         await using var services = NewServices();
         var peer = NewServerPeer(services);
         var clientId = peer.Ref.HostInfo;
-        var proof = RpcReconnectProof.Compute(peer.Secret, clientId, "1");
+        var proof = RpcReconnectProof.Compute(peer.ReconnectSecret, clientId, "1");
 
         RpcReconnectProof.TryVerify(peer, clientId, "1", "", requireProof: false)
             .Should().BeFalse();
         RpcReconnectProof.TryVerify(peer, clientId, "", proof, requireProof: false)
             .Should().BeFalse();
-        peer.LastCounter.Should().Be(0);
+        peer.LastSeenReconnectCounter.Should().Be(0);
     }
 
     [Theory]
@@ -188,14 +188,14 @@ public class RpcReconnectProofTest(ITestOutputHelper @out) : TestBase(@out)
         await using var services = NewServices();
         var peer = NewServerPeer(services);
         var clientId = peer.Ref.HostInfo;
-        var proof = RpcReconnectProof.Compute(peer.Secret, clientId, counterText);
+        var proof = RpcReconnectProof.Compute(peer.ReconnectSecret, clientId, counterText);
 
         RpcReconnectProof.TryVerify(peer, clientId, counterText, proof, requireProof: false)
             .Should().BeFalse();
-        peer.LastCounter.Should().Be(0);
+        peer.LastSeenReconnectCounter.Should().Be(0);
     }
 
-    // TryAdvanceCounter
+    // TryAdvanceReconnectCounter
 
     [Fact]
     public async Task TryAdvanceCounterAdmitsExactlyOneRacerForTheSameValue()
@@ -205,12 +205,12 @@ public class RpcReconnectProofTest(ITestOutputHelper @out) : TestBase(@out)
         var winCount = 0;
 
         await Task.WhenAll(Enumerable.Range(0, 256).Select(_ => Task.Run(() => {
-            if (peer.TryAdvanceCounter(1))
+            if (peer.TryAdvanceReconnectCounter(1))
                 Interlocked.Increment(ref winCount);
         })));
 
         winCount.Should().Be(1);
-        peer.LastCounter.Should().Be(1);
+        peer.LastSeenReconnectCounter.Should().Be(1);
     }
 
     [Fact]
@@ -221,11 +221,11 @@ public class RpcReconnectProofTest(ITestOutputHelper @out) : TestBase(@out)
         var accepted = new ConcurrentBag<long>();
 
         await Task.WhenAll(Enumerable.Range(1, 32).Select(counter => Task.Run(() => {
-            if (peer.TryAdvanceCounter(counter))
+            if (peer.TryAdvanceReconnectCounter(counter))
                 accepted.Add(counter);
         })));
 
-        peer.LastCounter.Should().Be(32);
+        peer.LastSeenReconnectCounter.Should().Be(32);
         accepted.Should().Contain(32); // Nothing can outrank it, so it's always admitted
         accepted.Max().Should().Be(32);
         accepted.Distinct().Should().HaveCount(accepted.Count);
@@ -276,11 +276,11 @@ public class RpcReconnectProofTest(ITestOutputHelper @out) : TestBase(@out)
         var secondSecret = RpcReconnectProof.NewSecret();
 
         peer.ApplyHandshake(firstSecret);
-        peer.Secret.Should().Be(firstSecret);
+        peer.ReconnectSecret.Should().Be(firstSecret);
         peer.ApplyHandshake(null); // A legacy server leaves the stored secret alone
-        peer.Secret.Should().Be(firstSecret);
+        peer.ReconnectSecret.Should().Be(firstSecret);
         peer.ApplyHandshake(secondSecret); // A different server instance replaces it
-        peer.Secret.Should().Be(secondSecret);
+        peer.ReconnectSecret.Should().Be(secondSecret);
     }
 
     // RpcHandshake

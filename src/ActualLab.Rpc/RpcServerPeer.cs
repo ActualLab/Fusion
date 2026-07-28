@@ -10,13 +10,13 @@ public class RpcServerPeer(RpcHub hub, RpcRoute route, VersionSet? versions = nu
     : RpcPeer(hub, route, versions)
 {
     private volatile AsyncState<RpcConnection?> _nextConnection = new(null);
-    private long _lastCounter;
+    private long _lastSeenReconnectCounter;
 
     // Minted here, so it exists before any handshake and is stable for the peer's whole lifetime.
-    // Secret and _lastCounter are both instance state with no reset path, which is what makes
-    // "the counter never resets while the paired secret survives" true by construction.
-    public string Secret { get; } = RpcReconnectProof.NewSecret();
-    public long LastCounter => Interlocked.Read(ref _lastCounter);
+    // ReconnectSecret and _lastSeenReconnectCounter are both instance state with no reset path, which
+    // is what makes "the counter never resets while the paired secret survives" true by construction.
+    public string ReconnectSecret { get; } = RpcReconnectProof.NewSecret();
+    public long LastSeenReconnectCounter => Interlocked.Read(ref _lastSeenReconnectCounter);
 
     public async Task SetNextConnection(RpcConnection connection, CancellationToken cancellationToken = default)
     {
@@ -66,15 +66,15 @@ public class RpcServerPeer(RpcHub hub, RpcRoute route, VersionSet? versions = nu
         }
     }
 
-    public bool TryAdvanceCounter(long counter)
+    public bool TryAdvanceReconnectCounter(long counter)
     {
         // A CAS loop rather than lock (Lock): this runs on the pre-auth request path, before the
         // peer is otherwise touched, so it must not contend with SetNextConnection's lock.
         while (true) {
-            var lastCounter = Interlocked.Read(ref _lastCounter);
+            var lastCounter = Interlocked.Read(ref _lastSeenReconnectCounter);
             if (counter <= lastCounter)
                 return false;
-            if (Interlocked.CompareExchange(ref _lastCounter, counter, lastCounter) == lastCounter)
+            if (Interlocked.CompareExchange(ref _lastSeenReconnectCounter, counter, lastCounter) == lastCounter)
                 return true;
         }
     }
@@ -82,7 +82,7 @@ public class RpcServerPeer(RpcHub hub, RpcRoute route, VersionSet? versions = nu
     // Protected methods
 
     protected override RpcHandshake CreateHandshake(int index)
-        => base.CreateHandshake(index) with { Secret = Secret };
+        => base.CreateHandshake(index) with { Secret = ReconnectSecret };
 
     protected override async Task<RpcConnection> GetConnection(
         RpcPeerConnectionState connectionState,

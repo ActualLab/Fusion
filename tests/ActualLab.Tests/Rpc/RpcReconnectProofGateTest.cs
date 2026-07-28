@@ -51,8 +51,8 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
 
         var peer = host.GetServerPeer(clientId);
         peer.Should().NotBeNull();
-        peer!.Secret.Should().MatchRegex("^[A-Za-z0-9_-]{43}$");
-        peer.LastCounter.Should().Be(0);
+        peer!.ReconnectSecret.Should().MatchRegex("^[A-Za-z0-9_-]{43}$");
+        peer.LastSeenReconnectCounter.Should().Be(0);
     }
 
     [Fact]
@@ -63,10 +63,10 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
         await host.Connect(clientId);
         var peer = host.GetServerPeer(clientId)!;
 
-        var status = await host.ConnectWithProof(clientId, peer.Secret, 7);
+        var status = await host.ConnectWithProof(clientId, peer.ReconnectSecret, 7);
 
         status.Should().BeNull();
-        peer.LastCounter.Should().Be(7);
+        peer.LastSeenReconnectCounter.Should().Be(7);
     }
 
     [Theory]
@@ -78,13 +78,13 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
         var clientId = NewClientId();
         await host.Connect(clientId);
         var peer = host.GetServerPeer(clientId)!;
-        (await host.ConnectWithProof(clientId, peer.Secret, 7)).Should().BeNull();
+        (await host.ConnectWithProof(clientId, peer.ReconnectSecret, 7)).Should().BeNull();
         var peerCount = host.PeerCount;
 
-        var status = await host.ConnectWithProof(clientId, peer.Secret, counter);
+        var status = await host.ConnectWithProof(clientId, peer.ReconnectSecret, counter);
 
         status.Should().Be(HttpStatusCode.Forbidden);
-        peer.LastCounter.Should().Be(7);
+        peer.LastSeenReconnectCounter.Should().Be(7);
         host.PeerCount.Should().Be(peerCount);
     }
 
@@ -99,7 +99,7 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
         var status = await host.ConnectWithProof(clientId, RpcReconnectProof.NewSecret(), 7);
 
         status.Should().Be(HttpStatusCode.Forbidden);
-        peer.LastCounter.Should().Be(0);
+        peer.LastSeenReconnectCounter.Should().Be(0);
     }
 
     [Fact]
@@ -109,13 +109,13 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
         var clientId = NewClientId();
         await host.Connect(clientId);
         var peer = host.GetServerPeer(clientId)!;
-        var proof = RpcReconnectProof.Compute(peer.Secret, clientId, "7");
+        var proof = RpcReconnectProof.Compute(peer.ReconnectSecret, clientId, "7");
         var tamperedProof = (proof[0] == 'a' ? 'b' : 'a') + proof[1..];
 
         var status = await host.Connect(clientId, "7", tamperedProof);
 
         status.Should().Be(HttpStatusCode.Forbidden);
-        peer.LastCounter.Should().Be(0);
+        peer.LastSeenReconnectCounter.Should().Be(0);
     }
 
     [Theory]
@@ -139,11 +139,11 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
         var clientId = NewClientId();
         await host.Connect(clientId);
         var peer = host.GetServerPeer(clientId)!;
-        var proof = RpcReconnectProof.Compute(peer.Secret, clientId, "7");
+        var proof = RpcReconnectProof.Compute(peer.ReconnectSecret, clientId, "7");
 
         (await host.Connect(clientId, "7", null)).Should().Be(HttpStatusCode.Forbidden);
         (await host.Connect(clientId, null, proof)).Should().Be(HttpStatusCode.Forbidden);
-        peer.LastCounter.Should().Be(0);
+        peer.LastSeenReconnectCounter.Should().Be(0);
     }
 
     [Theory]
@@ -158,12 +158,12 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
         var clientId = NewClientId();
         await host.Connect(clientId);
         var peer = host.GetServerPeer(clientId)!;
-        var proof = RpcReconnectProof.Compute(peer.Secret, clientId, counterText);
+        var proof = RpcReconnectProof.Compute(peer.ReconnectSecret, clientId, counterText);
 
         var status = await host.Connect(clientId, counterText, proof);
 
         status.Should().Be(HttpStatusCode.Forbidden);
-        peer.LastCounter.Should().Be(0);
+        peer.LastSeenReconnectCounter.Should().Be(0);
     }
 
     [Fact]
@@ -191,6 +191,40 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
+    public async Task ProvenClientCantDowngradeToNoProof()
+    {
+        // Without this, RequireReconnectProof: false protects nothing - an attacker just omits
+        // c and p and is treated as a legacy client, which is exactly the eviction the gate exists
+        // to stop.
+        await using var host = await NewHost(requireReconnectProof: false);
+        var clientId = NewClientId();
+        await host.Connect(clientId);
+        var secret = host.GetServerPeer(clientId)!.ReconnectSecret;
+        (await host.ConnectWithProof(clientId, secret, 1)).Should().BeNull();
+
+        var status = await host.Connect(clientId);
+
+        status.Should().Be(HttpStatusCode.Forbidden);
+        host.GetServerPeer(clientId)!.LastSeenReconnectCounter.Should().Be(1); // Rejection burns no counter space
+    }
+
+    [Fact]
+    public async Task ProvenClientKeepsConnectingWithProof()
+    {
+        // The latch must not lock out the client it is protecting.
+        await using var host = await NewHost(requireReconnectProof: false);
+        var clientId = NewClientId();
+        await host.Connect(clientId);
+        var secret = host.GetServerPeer(clientId)!.ReconnectSecret;
+
+        (await host.ConnectWithProof(clientId, secret, 1)).Should().BeNull();
+        (await host.ConnectWithProof(clientId, secret, 2)).Should().BeNull();
+        (await host.ConnectWithProof(clientId, secret, 3)).Should().BeNull();
+
+        host.GetServerPeer(clientId)!.LastSeenReconnectCounter.Should().Be(3);
+    }
+
+    [Fact]
     public async Task RejectedRequestsCreateNoPeerAndBurnNoCounterSpace()
     {
         // Half of the eviction-DoS regression test: a request that fails the gate must not reach
@@ -209,7 +243,7 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
 
         host.PeerCount.Should().Be(peerCount);
         host.GetServerPeer(clientId).Should().BeSameAs(peer);
-        peer.LastCounter.Should().Be(0);
+        peer.LastSeenReconnectCounter.Should().Be(0);
     }
 
     [Fact]
@@ -220,14 +254,14 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
         (await host.HttpConnect(clientId)).Should().Be(HttpStatusCode.OK);
         var peer = host.GetServerPeer(clientId)!;
 
-        var proof = RpcReconnectProof.Compute(peer.Secret, clientId, "5");
+        var proof = RpcReconnectProof.Compute(peer.ReconnectSecret, clientId, "5");
         (await host.HttpConnect(clientId, "5", proof)).Should().Be(HttpStatusCode.OK);
-        peer.LastCounter.Should().Be(5);
+        peer.LastSeenReconnectCounter.Should().Be(5);
 
         (await host.HttpConnect(clientId, "5", proof)).Should().Be(HttpStatusCode.Forbidden); // Replay
         (await host.HttpConnect(clientId)).Should().Be(HttpStatusCode.Forbidden); // No proof
         (await host.HttpConnect(clientId, "6", proof)).Should().Be(HttpStatusCode.Forbidden); // Wrong counter
-        peer.LastCounter.Should().Be(5);
+        peer.LastSeenReconnectCounter.Should().Be(5);
     }
 
     // Private methods

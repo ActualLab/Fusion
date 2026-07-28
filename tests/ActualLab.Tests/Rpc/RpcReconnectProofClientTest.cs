@@ -42,9 +42,9 @@ public class RpcReconnectProofClientTest : RpcTestBase
 
         var clientPeer = hub.GetClientPeer(ClientPeerRef);
         var serverPeer = GetServerPeer(clientPeer.ClientId)!;
-        clientPeer.Secret.Should().NotBeNullOrEmpty();
-        clientPeer.Secret.Should().Be(serverPeer.Secret);
-        serverPeer.LastCounter.Should().Be(0); // The very first connect can't carry a proof
+        clientPeer.ReconnectSecret.Should().NotBeNullOrEmpty();
+        clientPeer.ReconnectSecret.Should().Be(serverPeer.ReconnectSecret);
+        serverPeer.LastSeenReconnectCounter.Should().Be(0); // The very first connect can't carry a proof
 
         var lastCounter = 0L;
         for (var i = 0; i < 3; i++) {
@@ -52,8 +52,8 @@ public class RpcReconnectProofClientTest : RpcTestBase
             (await client.Div(6, 2)).Should().Be(3);
 
             GetServerPeer(clientPeer.ClientId).Should().BeSameAs(serverPeer);
-            serverPeer.LastCounter.Should().BeGreaterThan(lastCounter);
-            lastCounter = serverPeer.LastCounter;
+            serverPeer.LastSeenReconnectCounter.Should().BeGreaterThan(lastCounter);
+            lastCounter = serverPeer.LastSeenReconnectCounter;
         }
     }
 
@@ -84,7 +84,7 @@ public class RpcReconnectProofClientTest : RpcTestBase
         clientPeer.ConnectionState.Should().BeSameAs(connectionState);
         connectionState.Value.IsConnected().Should().BeTrue();
         (await client.Div(10, 2)).Should().Be(5);
-        serverPeer.LastCounter.Should().Be(0);
+        serverPeer.LastSeenReconnectCounter.Should().Be(0);
         WebServices.RpcHub().InternalServices.Peers.Count.Should().Be(peerCount);
     }
 
@@ -99,15 +99,15 @@ public class RpcReconnectProofClientTest : RpcTestBase
 
         var clientPeer = hub.GetClientPeer(ClientPeerRef);
         var serverPeer = GetServerPeer(clientPeer.ClientId)!;
-        var proof = RpcReconnectProof.Compute(serverPeer.Secret, clientPeer.ClientId, "1");
+        var proof = RpcReconnectProof.Compute(serverPeer.ReconnectSecret, clientPeer.ClientId, "1");
         var connectionState = clientPeer.ConnectionState;
 
         // A captured URL works exactly once...
         (await RawConnect(clientPeer.ClientId, "1", proof)).Should().BeNull();
-        serverPeer.LastCounter.Should().Be(1);
+        serverPeer.LastSeenReconnectCounter.Should().Be(1);
         // ...and is spent from then on
         (await RawConnect(clientPeer.ClientId, "1", proof)).Should().Be(HttpStatusCode.Forbidden);
-        serverPeer.LastCounter.Should().Be(1);
+        serverPeer.LastSeenReconnectCounter.Should().Be(1);
 
         // The first (accepted) connect legitimately evicts the incumbent - it proved possession
         clientPeer.ConnectionState.Should().NotBeSameAs(connectionState);
