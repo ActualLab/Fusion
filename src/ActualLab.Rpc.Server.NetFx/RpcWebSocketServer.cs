@@ -50,14 +50,14 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
         // so a request that fails the proof can't evict the incumbent connection
         // and can't create a peer. See RpcWebSocketServer.Invoke in ActualLab.Rpc.Server.
         if (!TryVerifyReconnectProof(context, rpcRef)) {
-            Log.LogWarning("'{PeerRef}': Rejected RPC connection - invalid reconnect proof for {Path}{Query}",
+            Log.LogWarning("'{PeerRef}': Rejected RPC connection: invalid reconnect proof for {Path}{Query}",
                 rpcRef, context.Request.Path, RpcQuerySanitizer.Sanitize(context.Request.QueryString.Value));
             return HttpStatusCode.Forbidden;
         }
 
         // Validate serialization format before peer creation to avoid KeyNotFoundException
         if (Hub.SerializationFormats.GetClientRejectionReason(rpcRef.SerializationFormat) is { } rejectionReason) {
-            Log.LogWarning("'{PeerRef}': Rejected the connection: {Reason}", rpcRef, rejectionReason);
+            Log.LogWarning("'{PeerRef}': Rejected RPC connection: {Reason}", rpcRef, rejectionReason);
             return HttpStatusCode.BadRequest;
         }
 
