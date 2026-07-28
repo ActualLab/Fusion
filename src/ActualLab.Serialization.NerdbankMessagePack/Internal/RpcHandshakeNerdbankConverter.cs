@@ -5,10 +5,11 @@ namespace ActualLab.Serialization.Internal;
 
 /// <summary>
 /// Nerdbank.MessagePack converter for <see cref="RpcHandshake"/>. Wire shape matches the legacy
-/// MessagePack-CSharp <c>[MessagePackObject] + [Key(N)]</c> formatter: a 5-element array of
-/// <c>[RemotePeerId, RemoteApiVersionSet, RemoteHubId, ProtocolVersion, Index]</c>.
+/// MessagePack-CSharp <c>[MessagePackObject] + [Key(N)]</c> formatter: a 6-element array of
+/// <c>[RemotePeerId, RemoteApiVersionSet, RemoteHubId, ProtocolVersion, Index, Secret]</c>.
 /// This is the wire format the TS RPC client emits when calling <c>$sys.Handshake</c>, so it's
-/// required for cross-runtime handshake to succeed.
+/// required for cross-runtime handshake to succeed. A 5-element array (no <c>Secret</c>) is
+/// still accepted, since that's what an older peer - including today's TS client - sends.
 /// </summary>
 public sealed class RpcHandshakeNerdbankConverter : MessagePackConverter<RpcHandshake?>
 {
@@ -27,9 +28,10 @@ public sealed class RpcHandshakeNerdbankConverter : MessagePackConverter<RpcHand
         var remoteHubId = guidConverter.Read(ref reader, context);
         var protocolVersion = reader.ReadInt32();
         var index = reader.ReadInt32();
-        for (var i = 5; i < len; i++)
+        var secret = len >= 6 ? reader.ReadString() : null;
+        for (var i = 6; i < len; i++)
             reader.Skip(context);
-        return new RpcHandshake(remotePeerId, remoteApiVersionSet, remoteHubId, protocolVersion, index);
+        return new RpcHandshake(remotePeerId, remoteApiVersionSet, remoteHubId, protocolVersion, index, secret);
     }
 
     public override void Write(ref MessagePackWriter writer, in RpcHandshake? value, SerializationContext context)
@@ -38,7 +40,7 @@ public sealed class RpcHandshakeNerdbankConverter : MessagePackConverter<RpcHand
             writer.WriteNil();
             return;
         }
-        writer.WriteArrayHeader(5);
+        writer.WriteArrayHeader(6);
         var guidConverter = context.GetConverter<Guid>(context.TypeShapeProvider);
         var versionSetConverter = context.GetConverter<VersionSet?>(context.TypeShapeProvider);
         guidConverter.Write(ref writer, value.RemotePeerId, context);
@@ -46,5 +48,6 @@ public sealed class RpcHandshakeNerdbankConverter : MessagePackConverter<RpcHand
         guidConverter.Write(ref writer, value.RemoteHubId, context);
         writer.Write(value.ProtocolVersion);
         writer.Write(value.Index);
+        writer.Write(value.Secret); // Writes nil when null
     }
 }

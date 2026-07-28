@@ -152,6 +152,10 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
         var withoutVersions = handshake with { RemoteApiVersionSet = null };
         AssertBytesCrossDecode<RpcHandshake?>(withoutVersions, AssertHandshake);
 
+        // The reconnect secret is the 6th element, and it must survive both wires identically.
+        var withSecret = handshake with { Secret = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8" };
+        AssertBytesCrossDecode<RpcHandshake?>(withSecret, AssertHandshake);
+
         static void AssertHandshake(RpcHandshake? a, RpcHandshake? b)
         {
             a.Should().NotBeNull();
@@ -160,7 +164,30 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
             a.RemoteHubId.Should().Be(b.RemoteHubId);
             a.ProtocolVersion.Should().Be(b.ProtocolVersion);
             a.Index.Should().Be(b.Index);
+            a.Secret.Should().Be(b.Secret);
             (a.RemoteApiVersionSet?.Value ?? "").Should().Be(b.RemoteApiVersionSet?.Value ?? "");
+        }
+    }
+
+    [Fact]
+    public void RpcHandshake_LegacyFiveElementArray_CrossCompat()
+    {
+        // What a peer that predates the Secret writes: MessagePack-CSharp emits a 5-element array,
+        // and the Nerdbank converter must read it as Secret == null rather than throwing.
+        var legacy = new OldRpcHandshake5(
+            Guid.Parse("12345678-1234-1234-1234-123456789012"),
+            new VersionSet("api", "1.2.3"),
+            Guid.Parse("87654321-4321-4321-4321-210987654321"),
+            RpcHandshake.CurrentProtocolVersion,
+            7);
+        var legacyBytes = MpWrite(legacy);
+        Out.WriteLine($"Legacy MP ({legacyBytes.Length}): {Convert.ToHexString(legacyBytes)}");
+
+        foreach (var handshake in new[] { MpRead<RpcHandshake?>(legacyBytes), NbRead<RpcHandshake?>(legacyBytes) }) {
+            handshake.Should().NotBeNull();
+            handshake!.RemotePeerId.Should().Be(legacy.RemotePeerId);
+            handshake.Index.Should().Be(legacy.Index);
+            handshake.Secret.Should().BeNull();
         }
     }
 

@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Text.Encodings.Web;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Clients;
 
@@ -14,6 +16,10 @@ public record RpcHttpClientOptions
     public string BackendRequestPath { get; init; } = "/backend/rpc/http";
     public string SerializationFormatParameterName { get; init; } = "f";
     public string ClientIdParameterName { get; init; } = "clientId";
+    public string ReconnectProofCounterParameterName { get; init; }
+        = RpcWebSocketClientOptions.Default.ReconnectProofCounterParameterName;
+    public string ReconnectProofParameterName { get; init; }
+        = RpcWebSocketClientOptions.Default.ReconnectProofParameterName;
     public bool UseAutoFrameDelayerFactory { get; init; } = false;
     public bool UsePipes { get; init; } = true;
     public bool MustRequireHttp2 { get; init; } = true;
@@ -65,6 +71,13 @@ public record RpcHttpClientOptions
         var queryStart = url.IndexOf('?', StringComparison.Ordinal) < 0 ? '?' : '&';
         url = $"{url}{queryStart}{options.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
             + $"&{options.SerializationFormatParameterName}={peer.SerializationFormat.Key}";
+        if (peer.Secret is { } secret) {
+            // Neither value needs percent-encoding: the counter is decimal digits, the proof is base64url.
+            var counterText = peer.NextCounter().ToString(CultureInfo.InvariantCulture);
+            var proof = RpcReconnectProof.Compute(secret, peer.ClientId, counterText);
+            url += $"&{options.ReconnectProofCounterParameterName}={counterText}"
+                + $"&{options.ReconnectProofParameterName}={proof}";
+        }
         return new Uri(url, UriKind.Absolute);
     }
 

@@ -27,6 +27,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     protected Func<RpcFrameDelayer?>? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
     protected string SerializationFormat { get; set; } = DefaultSerializationFormat;
     protected bool ExposeBackend { get; init; } = false;
+    protected bool RequireReconnectProof { get; init; } = false;
     protected bool UseHttpClient { get; init; } = false;
     protected bool UseHttps { get; init; } = false;
     protected bool UseTestClock { get; init; }
@@ -200,6 +201,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
         if (!isClient) {
             services.AddSingleton(_ => new RpcWebHost(services, GetType().Assembly, UseHttpClient, UseHttps) {
                 ExposeBackend = ExposeBackend,
+                RequireReconnectProof = RequireReconnectProof,
             });
         }
         else {

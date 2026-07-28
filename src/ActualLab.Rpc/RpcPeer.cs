@@ -326,10 +326,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         DebugLog?.LogDebug("'{Route}': Sending handshake", Route);
                         (handshake, ownHandshake) = await Task.Run(
                                 async () => {
-                                    var ownHandshake1 = new RpcHandshake(
-                                        Id, Versions, Hub.Id,
-                                        RpcHandshake.CurrentProtocolVersion,
-                                        ++handshakeIndex);
+                                    var ownHandshake1 = CreateHandshake(++handshakeIndex);
                                     Hub.SystemCallSender.Handshake(this, transport, ownHandshake1);
                                     var hasMore = await reader.MoveNextAsync().ConfigureAwait(false);
                                     if (!hasMore)
@@ -361,6 +358,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }
 
                     // Processing Handshake
+                    OnHandshake(handshake);
                     var peerChangeKind = handshake.GetPeerChangeKind(lastHandshake);
                     Log.LogInformation(
                         "'{Route}': Handshake succeeded, PeerChangeKind={PeerChangeKind}",
@@ -557,6 +555,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         return context.Call.Arguments?.GetUntyped(0) as RpcHandshake
             ?? throw Errors.HandshakeFailed("the call carries no RpcHandshake argument.");
     }
+
+    protected virtual RpcHandshake CreateHandshake(int index)
+        => new(Id, Versions, Hub.Id, RpcHandshake.CurrentProtocolVersion, index);
+
+    protected virtual void OnHandshake(RpcHandshake handshake)
+    { }
 
     protected virtual RpcMethodResolver GetServerMethodResolver(RpcHandshake? handshake)
     {

@@ -46,6 +46,15 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
 
         var rpcRef = RefFactory.Invoke(this, context, isBackend).RequireServer();
 
+        // Runs before GetServerPeer, before the WebSocket upgrade and before any Disconnect,
+        // so a request that fails the proof can't evict the incumbent connection
+        // and can't create a peer. See RpcWebSocketServer.Invoke in ActualLab.Rpc.Server.
+        if (!TryVerifyReconnectProof(context, rpcRef)) {
+            Log.LogWarning("'{PeerRef}': Rejected RPC connection - invalid reconnect proof for {Path}{Query}",
+                rpcRef, context.Request.Path, RpcQuerySanitizer.Sanitize(context.Request.QueryString.Value));
+            return HttpStatusCode.Forbidden;
+        }
+
         // Validate serialization format before peer creation to avoid KeyNotFoundException.
         // Empty format is also rejected — clients must specify one explicitly.
         if (!Hub.SerializationFormats.TryGet(rpcRef.SerializationFormat, out _)) {
@@ -84,6 +93,21 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
 
         return HttpStatusCode.SwitchingProtocols;
     }
+
+    // Protected methods
+
+    protected virtual bool TryVerifyReconnectProof(IOwinContext context, RpcRef rpcRef)
+    {
+        var query = context.Request.Query;
+        var counterText = query[Settings.ReconnectProofCounterParameterName] ?? "";
+        var proof = query[Settings.ReconnectProofParameterName] ?? "";
+        // rpcRef.HostInfo is the raw clientId, so the value in the HMAC is the one that selected the peer
+        Hub.TryGetServerPeer(rpcRef, out var peer);
+        return RpcReconnectProof.TryVerify(
+            peer, rpcRef.HostInfo, counterText, proof, Settings.RequireReconnectProof);
+    }
+
+    // Private methods
 
     private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, RpcRef rpcRef)
     {

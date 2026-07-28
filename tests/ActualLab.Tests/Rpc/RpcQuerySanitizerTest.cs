@@ -33,6 +33,7 @@ public sealed class RpcQuerySanitizerTest
     [InlineData("?session=a&session=b", "?session=<redacted>&session=<redacted>")]
     [InlineData("?token", "?token")]
     [InlineData("?apiKey=abc&f=json5", "?apiKey=<redacted>&f=json5")]
+    [InlineData("?c=42&p=Zm9v", "?c=42&p=<redacted>")]
     public void SanitizeTest(string? query, string expected)
         => RpcQuerySanitizer.Sanitize(query).Should().Be(expected);
 

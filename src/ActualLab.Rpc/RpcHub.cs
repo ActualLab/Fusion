@@ -109,6 +109,21 @@ public sealed class RpcHub : ProcessorBase, IHasServices, IHasId<Guid>
     public RpcPeer GetPeer(RpcRef rpcRef)
         => GetPeer(rpcRef.Route); // Re-mints the route if the current one is changed
 
+    // TryGetPeer is the non-creating lookup a pre-auth gate needs: a pure ConcurrentDictionary
+    // read with no lock and no WhenDisposed check, so a request that fails the gate mints nothing.
+
+    public bool TryGetServerPeer(RpcRef rpcRef, [MaybeNullWhen(false)] out RpcServerPeer peer)
+    {
+        peer = TryGetPeer(rpcRef.Route, out var p) ? p as RpcServerPeer : null;
+        return peer is not null;
+    }
+
+    public bool TryGetPeer(RpcRef rpcRef, [MaybeNullWhen(false)] out RpcPeer peer)
+        => TryGetPeer(rpcRef.Route, out peer);
+
+    public bool TryGetPeer(RpcRoute route, [MaybeNullWhen(false)] out RpcPeer peer)
+        => Peers.TryGetValue(route, out peer);
+
     public RpcClientPeer GetClientPeer(RpcRoute route)
     {
         route.Ref.RequireClient();
