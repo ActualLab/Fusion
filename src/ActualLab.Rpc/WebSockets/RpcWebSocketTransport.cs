@@ -24,10 +24,9 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
         public int MaxBufferSize { get; init; } = 256_000;
         // A WebSocket message carries exactly one frame, so this is also the frame limit that
         // RpcPipeTransport and RpcStreamTransport spell MaxFrameSize - all three must agree
-        public int MaxMessageSize { get; init; } = RpcFrameBasedTransport.DefaultMaxFrameSize;
+        public int MaxMessageSize { get; init; } = DefaultMaxFrameSize;
         // Applies until the handshake is received - see RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize
-        public int MaxPreHandshakeMessageSize { get; init; }
-            = RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize;
+        public int MaxPreHandshakeMessageSize { get; init; } = DefaultMaxPreHandshakeFrameSize;
         // High CloseTimeout values "shrink" effective ConnectTimeout,
         // low values increase abrupt/graceful close ratio, which is a no-op in our case.
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(1);
