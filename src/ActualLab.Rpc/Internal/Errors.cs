@@ -52,6 +52,8 @@ public static class Errors
         => new RpcException($"Handshake failed: {reason}");
     public static Exception UnsupportedProtocolVersion(int actual, int minimum, int current)
         => new RpcException($"Unsupported RPC protocol version: got {actual}, expected {minimum}..{current}.");
+    public static Exception ApiVersionSetTooLarge(string what, int actual, int limit)
+        => new RpcException($"Handshake failed: RemoteApiVersionSet {what} is {actual}, but the limit is {limit}.");
     public static Exception PeerChanged()
         => new RpcException("Remote peer has been changed.");
     public static Exception EndpointNotFound(string serviceName, string methodName)
