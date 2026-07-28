@@ -174,7 +174,7 @@ public class OperationReprocessor : IOperationReprocessor
                 context.ChangeOperation(null);
                 context.Items.Snapshot = itemsBackup;
                 context.ExecutionState = executionStateBackup;
-                var delay = Settings.RetryDelays[TryIndex];
+                var delay = Settings.RetryDelays[Math.Max(1, TryIndex)];
                 RecordRetry(transiency, "scheduled");
                 RecordRetryDelay(transiency, delay);
                 Log.LogWarning(

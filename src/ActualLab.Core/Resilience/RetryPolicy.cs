@@ -74,6 +74,7 @@ public record RetryPolicy(
 
         var failedTryCount = 0;
         while (true) {
+            cancellationToken.ThrowIfCancellationRequested();
             try {
                 if (!TryTimeout.HasValue)
                     return await taskFactory.Invoke(cancellationToken).ConfigureAwait(false);
@@ -101,7 +102,10 @@ public record RetryPolicy(
                     throw;
                 }
 
-                var delay = GetDelay(failedTryCount);
+                // failedTryCount stays 0 for SuperTransient errors, and GetDelay(0) is always zero,
+                // so Math.Max(1, ...) is what keeps such retries backing off - same as in
+                // AsyncChainExt.Retry* and DbEntityResolver.
+                var delay = GetDelay(Math.Max(1, failedTryCount));
                 retryLogger?.LogRetry(e, failedTryCount, TryCount, delay);
                 if (delay > TimeSpan.Zero)
                     await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
