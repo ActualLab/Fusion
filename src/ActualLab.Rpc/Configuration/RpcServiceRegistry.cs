@@ -56,8 +56,8 @@ public class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcService
             _serviceByName.Add(serviceDef.Name, serviceDef);
             _serviceScopes.Add(serviceDef.Scope);
         }
-        _legacyServerMethodResolvers = new PruningCache<VersionSet, RpcMethodResolver>(
-            hub.RegistryOptions.LegacyMethodResolverCacheCapacity);
+        _legacyServerMethodResolvers =
+            new PruningCache<VersionSet, RpcMethodResolver>(hub.RegistryOptions.LegacyMethodResolverCacheCapacity);
         AnyMethodResolver = new RpcMethodResolver(this, serverOnly: false, Log);
         ServerMethodResolver = new RpcMethodResolver(this, serverOnly: true, null);
         DumpTo(Log, ConstructionDumpLogLevel, "Registered services:");
