@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.WebSockets;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
@@ -13,7 +16,7 @@ namespace ActualLab.Rpc.Server;
 /// RPC peer connections for ASP.NET Core hosts.
 /// </summary>
 public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvider services)
-    : RpcServiceBase(services)
+    : RpcServiceBase(services), IHostedService
 {
     private const string OriginHeaderName = "Origin";
 
@@ -21,6 +24,15 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
     public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
     public RpcWebSocketClientOptions WebSocketClientOptions { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
     public RpcWebSocketServerRefFactory RefFactory { get; } = services.GetRequiredService<RpcWebSocketServerRefFactory>();
+
+    Task IHostedService.StartAsync(CancellationToken cancellationToken)
+    {
+        WarnIfOriginIsUnvalidated();
+        return Task.CompletedTask;
+    }
+
+    Task IHostedService.StopAsync(CancellationToken cancellationToken)
+        => Task.CompletedTask;
 
     public virtual async Task Invoke(HttpContext context, bool isBackend)
     {
@@ -155,6 +167,28 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
     }
 
     // Protected methods
+
+    protected virtual void WarnIfOriginIsUnvalidated()
+    {
+        if (!Options.WarnOnUnvalidatedOrigin)
+            return;
+        if (Options.OriginValidator != RpcWebSocketServerOriginValidators.AllowAll)
+            return;
+
+        // Options passed straight to app.UseWebSockets(...) are invisible here, so this catches
+        // only the services.Configure<WebSocketOptions>(...) way of setting AllowedOrigins.
+        if (Services.GetService<IOptions<WebSocketOptions>>()?.Value is { AllowedOrigins.Count: > 0 })
+            return;
+
+        Log.LogWarning(
+            "RpcWebSocketServerOptions.OriginValidator is RpcWebSocketServerOriginValidators.AllowAll, " +
+            "so any web page can open an RPC connection to this server - and the browser will attach " +
+            "whatever ambient credentials it holds for this origin, e.g. a session cookie " +
+            "(cross-site WebSocket hijacking). " +
+            "Set OriginValidator to RpcWebSocketServerOriginValidators.SameOrigin or .Allow(...), " +
+            "populate WebSocketOptions.AllowedOrigins, or set WarnOnUnvalidatedOrigin to false if this " +
+            "server's connections carry no ambient credentials. See docs/PartR-CO.md#rpcwebsocketserveroptions");
+    }
 
     protected virtual bool TryVerifyReconnectProof(HttpContext context, RpcRef rpcRef)
     {
