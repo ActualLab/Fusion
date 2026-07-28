@@ -47,32 +47,50 @@ public abstract class CachingPluginFinderBase : IPluginFinder
             Log.LogDebug("Plugin cache is disabled (cache key is null)");
             return await FindPlugins(cancellationToken).ConfigureAwait(false);
         }
-        PluginSetInfo pluginSetInfo;
+
         var result = await Cache.TryGet(cacheKey, cancellationToken).ConfigureAwait(false);
-        if (result.IsSome(out var v)) {
+        if (result.IsSome(out var v) && TryGetCachedPlugins(v) is { } cachedPluginSetInfo) {
             Log.LogDebug("Cached plugin set info found");
-            try {
-                pluginSetInfo = Deserialize(v);
-                return pluginSetInfo;
-            }
-            catch (Exception e) {
-                Log.LogError(e, "Couldn't deserialize cached plugin set info");
-            }
+            return cachedPluginSetInfo;
         }
+
         Log.LogDebug("Cached plugin set info is not available; populating...");
-        pluginSetInfo = await FindPlugins(cancellationToken).ConfigureAwait(false);
+        var pluginSetInfo = await FindPlugins(cancellationToken).ConfigureAwait(false);
         await Cache.Set(cacheKey, Serialize(pluginSetInfo), cancellationToken).ConfigureAwait(false);
         Log.LogDebug("Plugin set info is populated and cached");
         return pluginSetInfo;
     }
 
     protected virtual string Serialize(PluginSetInfo source)
-        => NewtonsoftJsonSerialized.New(source).Data;
+        => SystemJsonSerialized.New(source).Data;
 
     protected virtual PluginSetInfo Deserialize(string source)
-        => NewtonsoftJsonSerialized.New<PluginSetInfo?>(source).Value ?? PluginSetInfo.Empty;
+        => SystemJsonSerialized.New<PluginSetInfo?>(source).Value ?? PluginSetInfo.Empty;
 
     protected abstract IAsyncCache<string, string> CreateCache();
     protected abstract string? GetCacheKey();
     protected abstract Task<PluginSetInfo> FindPlugins(CancellationToken cancellationToken);
+
+    // Every type named by the cache eventually reaches Type.GetType and ActivatorUtilities.CreateInstance,
+    // so the cache must stay an optimization: implementations have to confirm the cached set names
+    // nothing beyond what their own scan would have discovered.
+    protected abstract bool IsValidCachedPluginSet(PluginSetInfo pluginSetInfo);
+
+    // Private methods
+
+    private PluginSetInfo? TryGetCachedPlugins(string data)
+    {
+        try {
+            var pluginSetInfo = Deserialize(data);
+            if (IsValidCachedPluginSet(pluginSetInfo))
+                return pluginSetInfo;
+
+            Log.LogWarning(
+                "Cached plugin set info names plugins that weren't discovered by scanning, so it's rejected");
+        }
+        catch (Exception e) {
+            Log.LogError(e, "Couldn't read cached plugin set info, so it's rejected");
+        }
+        return null;
+    }
 }

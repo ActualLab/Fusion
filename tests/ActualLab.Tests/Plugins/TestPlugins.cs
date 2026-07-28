@@ -53,6 +53,10 @@ public class TestPlugin2 : TestPlugin, ITestPluginEx, IHasCapabilities, ITestSin
     }
 }
 
+// Deliberately not marked with [Plugin]: used to plant a cache entry naming a type
+// that plugin discovery would never return.
+public class NotAPlugin;
+
 [Plugin]
 public class WrongPlugin : IHasDependencies
 {

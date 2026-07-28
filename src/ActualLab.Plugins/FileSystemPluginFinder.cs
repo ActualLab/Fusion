@@ -30,7 +30,7 @@ public class FileSystemPluginFinder : CachingPluginFinderBase
             RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
         public bool UseCache { get; init; } = true;
         public bool DetectIndirectAssemblyDependencies { get; init; } = true;
-        public FilePath CacheDir { get; init; } = FilePath.GetApplicationTempDirectory();
+        public FilePath CacheDir { get; init; } = FilePath.GetApplicationCacheDirectory();
     }
 
     public new Options Settings { get; }
@@ -50,12 +50,18 @@ public class FileSystemPluginFinder : CachingPluginFinderBase
             return new EmptyCache<string, string>();
         }
 
-        var cache = new FileSystemCache<string, string>(GetCacheDir());
+        var cacheDir = GetCacheDir();
+        if (FilePath.IsWritableByOtherUsers(cacheDir)) {
+            Log.LogWarning("Cache directory is writable by other users, so it isn't used: {CacheDirectory}", cacheDir);
+            return new EmptyCache<string, string>();
+        }
+
+        var cache = new FileSystemCache<string, string>(cacheDir);
         Log.LogDebug("Cache directory: {CacheDirectory}", cache.CacheDirectory);
         return cache;
     }
 
-    protected virtual string GetCacheDir()
+    protected virtual FilePath GetCacheDir()
         => Settings.CacheDir;
 
     protected override string GetCacheKey()
@@ -66,7 +72,27 @@ public class FileSystemPluginFinder : CachingPluginFinderBase
             select (name, modifyDate.ToFileTime())
         ).ToArray();
         var detectIndirectDependencies = Settings.DetectIndirectAssemblyDependencies ? 1 : 0;
-        return $"v1:{detectIndirectDependencies}:{files.ToDelimitedString()}";
+        // v2 = System.Text.Json; a v1 entry is Newtonsoft JSON, which reads back with silently
+        // empty capabilities, so the version prefix must keep the two apart.
+        return $"v2:{detectIndirectDependencies}:{files.ToDelimitedString()}";
+    }
+
+    protected override bool IsValidCachedPluginSet(PluginSetInfo pluginSetInfo)
+    {
+        // Accepts exactly what FindPlugins would have discovered - a public, non-abstract type
+        // carrying an enabled PluginAttribute in one of the plugin directory's assemblies - so a
+        // planted cache file can't widen the set of types that reach the plugin factory.
+        var assemblyNames = new HashSet<string>(
+            GetPluginAssemblyNames().Select(path => path.FileNameWithoutExtension.Value),
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var typeRef in GetPluginTypeRefs(pluginSetInfo)) {
+            if (!pluginSetInfo.InfoByType.ContainsKey(typeRef))
+                return false;
+            if (!IsDiscoverablePluginType(typeRef, assemblyNames))
+                return false;
+        }
+
+        return true;
     }
 
     protected virtual FilePath[] GetPluginAssemblyNames()
@@ -130,4 +156,57 @@ public class FileSystemPluginFinder : CachingPluginFinderBase
     protected virtual AssemblyLoadContext GetAssemblyLoadContext()
         => AssemblyLoadContext.Default;
 #endif
+
+    // Private methods
+
+    private static IEnumerable<TypeRef> GetPluginTypeRefs(PluginSetInfo pluginSetInfo)
+        => pluginSetInfo.InfoByType.Keys
+            .Concat(pluginSetInfo.InfoByType.Values.Select(pluginInfo => pluginInfo.Type))
+            .Concat(pluginSetInfo.TypesByBaseType.Values.SelectMany(typeRefs => typeRefs))
+            .Concat(pluginSetInfo.TypesByBaseTypeOrderedByDependency.Values.SelectMany(typeRefs => typeRefs))
+            .Distinct();
+
+    private static bool IsDiscoverablePluginType(TypeRef typeRef, HashSet<string> assemblyNames)
+    {
+        // The name-based check runs first, so a cache naming a type outside the plugin directory
+        // is rejected before Type.GetType gets a chance to load anything.
+        var assemblyName = GetAssemblyName(typeRef);
+        if (assemblyName is null || !assemblyNames.Contains(assemblyName))
+            return false;
+
+        var type = typeRef.TryResolve();
+        if (type is null || type.IsAbstract || type.IsNotPublic)
+            return false;
+        if (!assemblyNames.Contains(type.Assembly.GetName().Name ?? ""))
+            return false;
+
+        return type.GetCustomAttribute<PluginAttribute>()?.IsEnabled == true;
+    }
+
+    private static string? GetAssemblyName(TypeRef typeRef)
+    {
+        // Generic arguments are nested in brackets and carry commas of their own, so only a
+        // top-level comma separates the type name from the assembly name that follows it.
+        var name = typeRef.AssemblyQualifiedName.AsSpan();
+        var depth = 0;
+        var start = -1;
+        for (var i = 0; i < name.Length; i++) {
+            var c = name[i];
+            if (c == '[')
+                depth++;
+            else if (c == ']') {
+                if (--depth < 0)
+                    return null;
+            }
+            else if (c == ',' && depth == 0) {
+                if (start >= 0)
+                    return name.Slice(start, i - start).Trim().ToString();
+
+                start = i + 1;
+            }
+        }
+        return start >= 0 && start < name.Length
+            ? name.Slice(start).Trim().ToString()
+            : null;
+    }
 }
