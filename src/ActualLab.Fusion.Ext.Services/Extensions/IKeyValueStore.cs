@@ -1,11 +1,16 @@
+using ActualLab.Rpc;
 using MessagePack;
 
 namespace ActualLab.Fusion.Extensions;
 
+// IBackendService is load-bearing here: every method takes a raw shard + key and authorizes
+// nothing, so none of them may be reachable from a client peer.
+// ISandboxedKeyValueStore is the client-facing surface.
+
 /// <summary>
 /// A shard-aware key-value store service with compute method support for invalidation.
 /// </summary>
-public interface IKeyValueStore : IComputeService
+public interface IKeyValueStore : IComputeService, IBackendService
 {
     [CommandHandler]
     public Task Set(KeyValueStore_Set command, CancellationToken cancellationToken = default);

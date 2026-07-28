@@ -1,5 +1,4 @@
 namespace ActualLab.CommandR.Commands;
-using Interception;
 
 /// <summary>
 /// A tagging interface indicating that a command can be handled only by a backend peer,
@@ -8,7 +7,9 @@ using Interception;
 /// Otherwise, it will be rejected with an error.
 /// </summary>
 /// <remarks>
-/// <see cref="CommandServiceInterceptor"/> is responsible for checks associated with this interface.
+/// Enforced on the inbound RPC path by <c>RpcInboundContext</c>, which rejects any method whose
+/// <c>RpcMethodDef.IsBackend</c> is true on a non-backend peer, and by <c>RpcInboundCommandHandler</c>,
+/// which re-checks the deserialized command's runtime type.
 /// </remarks>
 public interface IBackendCommand : ICommand;
 

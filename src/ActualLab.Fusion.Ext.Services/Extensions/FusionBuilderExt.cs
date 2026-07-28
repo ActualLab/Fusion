@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Extensions.Services;
+using ActualLab.Rpc;
 
 namespace ActualLab.Fusion.Extensions;
 
@@ -35,7 +36,8 @@ public static class FusionBuilderExt
         services.TryAddSingleton<IDbShardRegistry<Unit>>(c => new DbShardRegistry<Unit>(c, DbShard.Single));
         services.TryAddSingleton<IDbShardResolver<Unit>>(c => new DbShardResolver<Unit>(c));
         services.AddSingleton(optionsFactory, _ => InMemoryKeyValueStore.Options.Default);
-        fusion.AddService<IKeyValueStore, InMemoryKeyValueStore>();
+        // Local is explicit: IKeyValueStore authorizes nothing, so DefaultServiceMode must never expose it
+        fusion.AddService<IKeyValueStore, InMemoryKeyValueStore>(RpcServiceMode.Local);
         services.AddHostedService(c => (InMemoryKeyValueStore)c.GetRequiredService<IKeyValueStore>());
         return fusion;
     }
@@ -63,7 +65,8 @@ public static class FusionBuilderExt
         var dbContext = services.AddDbContextServices<TDbContext>();
         dbContext.AddOperations();
         dbContext.TryAddEntityResolver<string, TDbKeyValue>();
-        fusion.AddService<IKeyValueStore, DbKeyValueStore<TDbContext, TDbKeyValue>>();
+        // Local is explicit: IKeyValueStore authorizes nothing, so DefaultServiceMode must never expose it
+        fusion.AddService<IKeyValueStore, DbKeyValueStore<TDbContext, TDbKeyValue>>(RpcServiceMode.Local);
 
         // DbKeyValueTrimmer - hosted service!
         services.TryAddSingleton<DbKeyValueTrimmer<TDbContext, TDbKeyValue>>();

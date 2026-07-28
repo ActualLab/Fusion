@@ -1,7 +1,8 @@
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Middlewares;
+using CommandRErrors = ActualLab.CommandR.Internal.Errors;
+using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.CommandR.Rpc;
 
@@ -40,6 +41,10 @@ public sealed record RpcInboundCommandHandler : IRpcMiddleware
 #pragma warning disable CA2208
                 throw new ArgumentNullException(nameof(command));
 #pragma warning restore CA2208
+            // RpcMethodDef.IsBackend is computed from the declared parameter type, so a polymorphic
+            // argument can still deliver an IBackendCommand to a method that isn't backend-only.
+            if (command is IBackendCommand && !call.Context.Peer.Ref.IsBackend)
+                throw CommandRErrors.BackendCommandRequiresBackendPeer();
 
             var cancellationToken = args.GetCancellationToken(1);
             var commandContext = CommandContext.New(commander, command, isOutermost: true);
