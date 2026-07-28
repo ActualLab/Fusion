@@ -27,14 +27,14 @@ public class RpcHandshakeVersionSetLimitTest(ITestOutputHelper @out) : RpcLocalT
     [Fact]
     public void LimitTest()
     {
-        RpcHandshake.RequireAcceptableApiVersionSet(VersionSet.Empty);
-        RpcHandshake.RequireAcceptableApiVersionSet(RpcDefaults.ApiPeerVersions);
-        RpcHandshake.RequireAcceptableApiVersionSet(RpcDefaults.BackendPeerVersions);
-        RpcHandshake.RequireAcceptableApiVersionSet(NewVersionSet(RpcHandshake.MaxApiVersionSetCount));
+        RpcHandshake.ValidateApiVersionSet(VersionSet.Empty);
+        RpcHandshake.ValidateApiVersionSet(RpcDefaults.ApiPeerVersions);
+        RpcHandshake.ValidateApiVersionSet(RpcDefaults.BackendPeerVersions);
+        RpcHandshake.ValidateApiVersionSet(NewVersionSet(RpcHandshake.MaxApiVersionSetCount));
 
-        Assert.Throws<RpcException>(() => RpcHandshake.RequireAcceptableApiVersionSet(
+        Assert.Throws<RpcException>(() => RpcHandshake.ValidateApiVersionSet(
             NewVersionSet(RpcHandshake.MaxApiVersionSetCount + 1)));
-        Assert.Throws<RpcException>(() => RpcHandshake.RequireAcceptableApiVersionSet(
+        Assert.Throws<RpcException>(() => RpcHandshake.ValidateApiVersionSet(
             new VersionSet(new string('x', RpcHandshake.MaxApiVersionSetLength), "1.0")));
     }
 
