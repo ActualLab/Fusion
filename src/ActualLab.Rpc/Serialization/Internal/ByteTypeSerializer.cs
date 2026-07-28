@@ -11,13 +11,21 @@ namespace ActualLab.Rpc.Serialization.Internal;
 /// </summary>
 public static class ByteTypeSerializer
 {
+    public const int DefaultFromBytesCacheCapacity = 16384;
+
     private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<ByteString, Type?> FromBytesCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static volatile PruningCache<ByteString, Type?> _fromBytesCache
+        = new(DefaultFromBytesCacheCapacity);
 
     public static ReadOnlySpan<byte> ExpectedTypeSpan => "\0\0"u8;
     public static ReadOnlySpan<byte> NullValueTypeSpan => "\u0001\0"u8;
+
+    public static int FromBytesCacheCapacity {
+        get => _fromBytesCache.Capacity;
+        set => _fromBytesCache = new PruningCache<ByteString, Type?>(value);
+    }
+    public static int FromBytesCacheSize => _fromBytesCache.Count;
 
     public static ByteString ToBytes(Type type) =>
         ToBytesCache.GetOrAdd(type, static t => {
@@ -35,7 +43,7 @@ public static class ByteTypeSerializer
                     throw new ArgumentOutOfRangeException(nameof(type), "Serialized type length exceeds 65535 bytes.");
 
                 BinaryPrimitives.WriteUInt16LittleEndian(writer.Remaining, (ushort)nameSpan.Length); // Length
-                BinaryPrimitives.WriteUInt16LittleEndian(writer.Remaining.Slice(2), unchecked((ushort)nameSpan.GetXxHash3L())); // 2-byte hash for faster lookups
+                BinaryPrimitives.WriteUInt16LittleEndian(writer.Remaining.Slice(2), unchecked((ushort)nameSpan.GetXxHash3L())); // 2-byte name hash
                 nameSpan.CopyTo(writer.Remaining[4..]);
                 buffer.Advance(fullLength);
                 return buffer.WrittenSpan.ToArray().AsByteString();
@@ -45,22 +53,18 @@ public static class ByteTypeSerializer
             }
         });
 
-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
     public static Type? FromBytes(ByteString bytes)
-        => FromBytesCache.GetOrAdd(bytes, static b => {
-            var memory = b.Bytes;
-            var length = BinaryPrimitives.ReadUInt16LittleEndian(memory.Span);
-            switch (length) {
-            case 0:
-                return null;
-            case 1:
-                return typeof(NullValue);
-            default:
-                var utf8 = new ByteString(memory[4..(length + 4)]);
-                var typeRef = new TypeRef(utf8.ToStringAsUtf8());
-                return typeRef.Resolve();
-            }
-        });
+    {
+        // bytes usually projects into a pooled transport buffer that's recycled right after the
+        // frame is parsed, so we probe the cache first and store an owned copy only on a miss.
+        var fromBytesCache = _fromBytesCache;
+        if (fromBytesCache.TryGet(bytes, out var cachedType))
+            return cachedType;
+
+        var type = Resolve(bytes);
+        fromBytesCache.TryAdd(new ByteString(bytes.Bytes.ToArray()), type);
+        return type;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WriteDerivedItemType(IBufferWriter<byte> buffer, Type expectedType, Type itemType)
@@ -95,6 +99,9 @@ public static class ByteTypeSerializer
 
     public static Type? ReadItemType(ref ReadOnlyMemory<byte> data)
     {
+        if (data.Length < 2)
+            throw Errors.InvalidItemTypeFormat();
+
         var length = BinaryPrimitives.ReadUInt16LittleEndian(data.Span);
         switch (length) {
         case 0:
@@ -105,9 +112,42 @@ public static class ByteTypeSerializer
             return typeof(NullValue);
         default:
             var fullLength = length + 4;
+            if (data.Length < fullLength)
+                throw Errors.InvalidItemTypeFormat();
+
             var itemType = FromBytes(data[..fullLength].AsByteString());
             data = data[fullLength..];
             return itemType;
+        }
+    }
+
+    // Private methods
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
+    private static Type? Resolve(ByteString marker)
+    {
+        var span = marker.Span;
+        if (span.Length < 2)
+            throw Errors.InvalidItemTypeFormat();
+
+        var length = BinaryPrimitives.ReadUInt16LittleEndian(span);
+        switch (length) {
+        case 0:
+        case 1:
+            if (span.Length != 2)
+                throw Errors.InvalidItemTypeFormat();
+
+            return length == 0 ? null : typeof(NullValue);
+        default:
+            if (span.Length != length + 4)
+                throw Errors.InvalidItemTypeFormat();
+
+            var utf8Name = new ByteString(marker.Bytes[4..]);
+            var expectedHash = unchecked((ushort)utf8Name.Span.GetXxHash3L());
+            if (BinaryPrimitives.ReadUInt16LittleEndian(span[2..]) != expectedHash)
+                throw Errors.InvalidItemTypeFormat();
+
+            return new TypeRef(utf8Name.ToStringAsUtf8()).Resolve();
         }
     }
 }

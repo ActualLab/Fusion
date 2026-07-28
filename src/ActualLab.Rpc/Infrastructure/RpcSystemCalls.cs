@@ -97,10 +97,17 @@ public sealed class RpcSystemCalls(IServiceProvider services)
         var context = RpcInboundContext.GetCurrent();
         var peer = context.Peer;
         var outboundCallId = context.Message.RelatedId;
-        var exception = error.ToException()!;
+        // The call is looked up before ToException(), so an unmatched RelatedId never resolves
+        // the peer-supplied exception type name
+        var outboundCall = peer.OutboundCalls.Get(outboundCallId);
+        if (outboundCall is null)
+            return RpcNoWait.Tasks.Completed;
+
+        // ToException() returns null for ExceptionInfo.None, and SetError requires a non-null exception
+        var exception = error.ToException() ?? Errors.EmptyErrorResponse();
         if (exception is RpcRerouteException)
             Log.LogWarning(exception, "Got RpcRerouteException from remote peer");
-        peer.OutboundCalls.Get(outboundCallId)?.SetError(exception, context);
+        outboundCall.SetError(exception, context);
         return RpcNoWait.Tasks.Completed;
     }
 

@@ -14,6 +14,7 @@ public sealed class RecentlySeenMap<TKey, TValue>(
     private readonly BinaryHeap<Moment, TKey> _heap = new(capacity + 1); // we may add one extra item, so "+ 1"
     private readonly Dictionary<TKey, TValue> _map = new(capacity + 1, keyComparer); // we may add one extra item, so "+ 1"
 
+    public int Count => _map.Count;
     public int Capacity { get; } = capacity;
     public TimeSpan Duration { get; } = duration;
     public MomentClock Clock { get; } = clock ?? MomentClockSet.Default.SystemClock;
