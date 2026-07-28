@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.WebSockets;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Owin;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
@@ -18,26 +17,24 @@ namespace ActualLab.Rpc.Server;
 /// Server-side handler that accepts incoming WebSocket connections and establishes
 /// RPC peer connections for OWIN-based .NET Framework hosts.
 /// </summary>
-public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProvider services)
-    : RpcServiceBase(services), IHostedService
+public class RpcWebSocketServer : RpcServiceBase
 {
     private const string OriginHeaderName = "Origin";
 
-    public RpcWebSocketServerOptions Settings { get; } = settings;
-    public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
-    public RpcWebSocketClientOptions WebSocketClientOptions { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
-    public RpcWebSocketServerRefFactory RefFactory { get; } = services.GetRequiredService<RpcWebSocketServerRefFactory>();
+    public RpcWebSocketServerOptions Settings { get; }
+    public RpcPeerOptions PeerOptions { get; }
+    public RpcWebSocketClientOptions WebSocketClientOptions { get; }
+    public RpcWebSocketServerRefFactory RefFactory { get; }
 
-    // An OWIN host has no generic host to run this, so the warning surfaces only where one is
-    // present - which is why it's also cheap enough to keep here for parity with ActualLab.Rpc.Server.
-    Task IHostedService.StartAsync(CancellationToken cancellationToken)
+    public RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProvider services)
+        : base(services)
     {
+        Settings = settings;
+        PeerOptions = services.GetRequiredService<RpcPeerOptions>();
+        WebSocketClientOptions = services.GetRequiredService<RpcWebSocketClientOptions>();
+        RefFactory = services.GetRequiredService<RpcWebSocketServerRefFactory>();
         WarnIfOriginIsUnvalidated();
-        return Task.CompletedTask;
     }
-
-    Task IHostedService.StopAsync(CancellationToken cancellationToken)
-        => Task.CompletedTask;
 
     public virtual async Task<HttpStatusCode> Invoke(IOwinContext context, bool isBackend)
     {
@@ -106,7 +103,24 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
 
     // Protected methods
 
-    protected virtual void WarnIfOriginIsUnvalidated()
+    protected virtual bool TryVerifyReconnectProof(IOwinContext context, RpcRef rpcRef)
+    {
+        var query = context.Request.Query;
+        var counterText = query[Settings.ReconnectProofCounterParameterName] ?? "";
+        var proof = query[Settings.ReconnectProofParameterName] ?? "";
+        // rpcRef.HostInfo is the raw clientId, so the value in the HMAC is the one that selected the peer
+        Hub.TryGetServerPeer(rpcRef, out var peer);
+        return RpcReconnectProof.TryVerify(
+            peer, rpcRef.HostInfo, counterText, proof, Settings.RequireReconnectProof);
+    }
+
+    // Private methods
+
+    // Not virtual: it runs from the constructor, where an override would see an
+    // uninitialized derived instance. Suppress it with WarnOnUnvalidatedOrigin instead.
+    // OWIN has no equivalent of WebSocketOptions.AllowedOrigins, so OriginValidator is the
+    // only origin gate here and there is nothing else to check before warning.
+    private void WarnIfOriginIsUnvalidated()
     {
         if (!Settings.WarnOnUnvalidatedOrigin)
             return;
@@ -122,19 +136,6 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
             "or set WarnOnUnvalidatedOrigin to false if this server's connections carry no ambient " +
             "credentials. See docs/PartR-CO.md#rpcwebsocketserveroptions");
     }
-
-    protected virtual bool TryVerifyReconnectProof(IOwinContext context, RpcRef rpcRef)
-    {
-        var query = context.Request.Query;
-        var counterText = query[Settings.ReconnectProofCounterParameterName] ?? "";
-        var proof = query[Settings.ReconnectProofParameterName] ?? "";
-        // rpcRef.HostInfo is the raw clientId, so the value in the HMAC is the one that selected the peer
-        Hub.TryGetServerPeer(rpcRef, out var peer);
-        return RpcReconnectProof.TryVerify(
-            peer, rpcRef.HostInfo, counterText, proof, Settings.RequireReconnectProof);
-    }
-
-    // Private methods
 
     private async Task HandleWebSocket(IOwinContext context, WebSocketContext wsContext, RpcRef rpcRef)
     {

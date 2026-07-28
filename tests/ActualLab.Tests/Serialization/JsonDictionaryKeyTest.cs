@@ -10,7 +10,7 @@ namespace ActualLab.Tests.Serialization;
 /// NotSupportedException - so a value type that round-trips fine as a value can still be
 /// unusable as a dictionary key. These are the ActualLab key types that must work.
 /// </summary>
-public class JsonDictionaryKeyTest(ITestOutputHelper @out) : TestBase(@out)
+public class JsonDictionaryKeyTest(ITestOutputHelper @out)
 {
     [Fact]
     public void SymbolKeysRoundTrip()

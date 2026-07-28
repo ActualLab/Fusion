@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ActualLab.Rpc.Server;
@@ -25,7 +24,6 @@ public readonly struct RpcWebSocketServerBuilder
         services.AddSingleton(_ => RpcWebSocketServerDefaultDelegates.RefFactory);
         services.AddSingleton(_ => RpcWebSocketServerOptions.Default);
         services.AddSingleton(c => new RpcWebSocketServer(c.GetRequiredService<RpcWebSocketServerOptions>(), c));
-        services.AddHostedService(c => c.GetRequiredService<RpcWebSocketServer>());
 
         configure?.Invoke(this);
     }
