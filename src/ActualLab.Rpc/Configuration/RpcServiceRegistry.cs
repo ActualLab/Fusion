@@ -120,7 +120,7 @@ public class RpcServiceRegistry : RpcServiceBase, IReadOnlyCollection<RpcService
         // Resolution reads the incoming set only as versions[serviceDef.Scope], so a scope no service
         // uses cannot change its outcome. Dropping such scopes from the cache key is what keeps a peer
         // that invents them from adding an entry per handshake.
-        versions = versions.KeepScopes(_serviceScopes);
+        versions = versions.IntersectScopes(_serviceScopes);
         if (_legacyServerMethodResolvers.TryGet(versions, out var resolver))
             return resolver;
 
