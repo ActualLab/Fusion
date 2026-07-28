@@ -343,7 +343,7 @@ A thread-safe mutable property bag backed by an immutable `PropertyBag` with ato
 
 ###### `OptionSet`
 
-A thread-safe mutable set of named options. Consider using `MutablePropertyBag` instead.
+A thread-safe mutable set of named options. **Obsolete** - use `MutablePropertyBag` instead.
 
 ###### `PruningCache<TKey, TValue>`
 

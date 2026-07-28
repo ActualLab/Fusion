@@ -2,6 +2,8 @@ using Nerdbank.MessagePack;
 
 namespace ActualLab.Serialization.Internal;
 
+#pragma warning disable CS0618 // ImmutableOptionSet is obsolete, but its legacy wire format is still read
+
 /// <summary>
 /// Nerdbank.MessagePack converter for <see cref="ImmutableOptionSet"/>. Wire shape matches the
 /// legacy MessagePack-CSharp formatter: a 1-element array wrapping the

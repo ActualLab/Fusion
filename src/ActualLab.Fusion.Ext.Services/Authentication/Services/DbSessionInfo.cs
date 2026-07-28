@@ -16,7 +16,7 @@ namespace ActualLab.Fusion.Authentication.Services;
 [Index(nameof(IPAddress), nameof(IsSignOutForced))]
 public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
 {
-    private NewtonsoftJsonSerialized<ImmutableOptionSet> _options = ImmutableOptionSet.Empty;
+    private NewtonsoftJsonSerialized<PropertyBag> _options = PropertyBag.Empty;
 
     [Key, StringLength(256)]
     public string Id { get; set; } = "";
@@ -44,11 +44,23 @@ public class DbSessionInfo<TDbUserId> : IHasId<string>, IHasVersion<long>
     // Options
     public string OptionsJson {
         get => _options.Data;
-        set => _options = value;
+        set {
+            // Rows written before the ImmutableOptionSet -> PropertyBag migration may not parse anymore.
+            // Session options are small, session-scoped and rebuildable, so such a row loses its options
+            // instead of becoming unreadable. The session Id is intentionally not logged - it's a credential.
+            try {
+                _options = value;
+            }
+            catch (Exception e) {
+                StaticLog.For<DbSessionInfo<TDbUserId>>()
+                    .LogWarning(e, "Can't deserialize session options, resetting them to empty");
+                _options = PropertyBag.Empty;
+            }
+        }
     }
 
     [NotMapped]
-    public ImmutableOptionSet Options {
+    public PropertyBag Options {
         get => _options.Value;
         set => _options = value;
     }

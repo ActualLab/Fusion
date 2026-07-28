@@ -58,6 +58,8 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
 
     // --- ImmutableOptionSet -------------------------------------------------------------
 
+#pragma warning disable CS0618 // ImmutableOptionSet is obsolete, but its wire format is still tested
+
     [Fact]
     public void ImmutableOptionSet_Empty_CrossCompat()
     {
@@ -75,6 +77,8 @@ public class NerdbankCrossCompatTest(ITestOutputHelper @out) : TestBase(@out)
             .Set((1, "tag"));
         AssertBytesCrossDecode(s, (a, b) => a.Items.Should().BeEquivalentTo(b.Items));
     }
+
+#pragma warning restore CS0618
 
     // --- PropertyBag --------------------------------------------------------------------
     //

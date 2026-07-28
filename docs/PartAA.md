@@ -340,7 +340,7 @@ public virtual async Task<List<OrderHeaderDto>> GetMyOrders(Session session, Can
 
 If you look at `IAuth` and `IAuthBackend` APIs, it's easy to conclude there is no authentication per se:
 
-- `IAuth` allows to retrieve the authentication state &ndash; i.e. get `SessionInfo`, `User` and session options (key-value pairs represented as `ImmutableOptionSet`) associated with a `Session`
+- `IAuth` allows to retrieve the authentication state &ndash; i.e. get `SessionInfo`, `User` and session options (key-value pairs represented as `PropertyBag`) associated with a `Session`
 - `IAuthBackend`, on contrary, allows to set them.
 
 So in fact, these APIs just maintain the authentication state. It's assumed that you authenticate users using something else, and use these services in "Fusion world" to access the authentication info. Since these are compute services, they'll ensure that compute services calling them will invalidate their results once authentication info changes.

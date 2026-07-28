@@ -1,5 +1,7 @@
 namespace ActualLab.Tests.Collections.Legacy;
 
+#pragma warning disable CS0618 // ImmutableOptionSet / OptionSet are obsolete, but still tested here
+
 public class OptionSetTest(ITestOutputHelper @out) : TestBase(@out)
 {
     [Fact]

@@ -28,7 +28,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ### Collections — [PartCore-PropertyBag.md](PartCore-PropertyBag.md)
 - `PropertyBag` (struct) — immutable typed property bag
 - `MutablePropertyBag` — thread-safe mutable property bag with change notifications
-- `OptionSet` — thread-safe mutable set of named options
+- `OptionSet` — **obsolete**, use `MutablePropertyBag`
 - `RingBuffer<T>` (struct) — fixed-capacity circular buffer (power-of-2 capacity)
 - `ArrayBuffer<T>` (struct) — `ArrayPool`-backed list-like buffer (zero alloc)
 - `ArrayOwner<T>` — pooled array as `IMemoryOwner<T>`

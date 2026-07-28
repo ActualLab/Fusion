@@ -20,7 +20,7 @@ public partial record SessionInfo : SessionAuthInfo, IHasVersion<long>
     [DataMember(Order = 12), MemoryPackOrder(12)] public Moment LastSeenAt { get; init; }
     [DataMember(Order = 13), MemoryPackOrder(13)] public string IPAddress { get => field ?? ""; init; }
     [DataMember(Order = 14), MemoryPackOrder(14)] public string UserAgent { get => field ?? ""; init; }
-    [DataMember(Order = 15), MemoryPackOrder(15)] public ImmutableOptionSet Options { get; init; }
+    [DataMember(Order = 15), MemoryPackOrder(15)] public PropertyBag Options { get; init; }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
     public SessionInfo()

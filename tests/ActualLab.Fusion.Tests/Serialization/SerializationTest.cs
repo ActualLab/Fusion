@@ -184,9 +184,11 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             IPAddress = "1.1.1.1",
             UserAgent = "None",
             IsSignOutForced = true,
+            Options = PropertyBag.Empty
+                .KeylessSet((Symbol)"test")
+                .KeylessSet(true),
         };
-        si.Options.Set((Symbol)"test");
-        si.Options.Set(true);
+        si.Options.Count.Should().Be(2);
         Test(si);
 
         void Test(SessionInfo s) {
@@ -226,11 +228,11 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
     private static User ToNewUser(Types.OldUser user)
         => new(user.Id, user.Name, user.Version, user.Claims.ToApiMap(), user.JsonCompatibleIdentities.ToApiMap());
 
-    private static void AssertEqual(ImmutableOptionSet a, ImmutableOptionSet b)
+    private static void AssertEqual(PropertyBag a, PropertyBag b)
     {
-        b.Items.Count.Should().Be(a.Items.Count);
-        foreach (var (key, item) in b.Items)
-            item.Should().Be(a[key]);
+        b.Count.Should().Be(a.Count);
+        foreach (var item in b.Items)
+            item.Value.Should().Be(a[item.Key]);
     }
 
     private static void AssertEqual(User some, User expected)
