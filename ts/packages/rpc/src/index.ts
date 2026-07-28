@@ -92,6 +92,8 @@ export type {
     RpcCallOptions,
     RpcConnectionUrlResolver,
 } from './rpc-peer.js';
+export { computeReconnectProof, isReconnectProofSupported } from './reconnect-proof.js';
+export type { RpcReconnectProofParameters } from './reconnect-proof.js';
 export { RpcHub } from './rpc-hub.js';
 export type { RpcPeerFactory } from './rpc-hub.js';
 export { RpcRefBuilder } from './rpc-ref-builder.js';

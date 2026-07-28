@@ -17,6 +17,14 @@ export function base64Encode(bytes: Uint8Array): string {
     return btoa(binary);
 }
 
+/** RFC 4648 §5 base64url, unpadded — matches .NET's `Base64UrlEncoder.Encode`. */
+export function base64UrlEncode(bytes: Uint8Array): string {
+    return base64Encode(bytes)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+}
+
 export function base64Decode(encoded: string): Uint8Array {
     const binary = atob(encoded);
     const out = new Uint8Array(binary.length);
