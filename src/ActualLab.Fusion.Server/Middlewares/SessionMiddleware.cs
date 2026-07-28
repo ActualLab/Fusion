@@ -25,13 +25,27 @@ public class SessionMiddleware : IMiddleware, IHasServices
             Expiration = TimeSpan.FromDays(28),
         };
         public bool AlwaysUpdateCookie { get; init; } = true; // This ensures cookie expiration time gets bumped up on each request
+        public string ReloadGuardCookieName { get; init; } = "FusionAuth.SessionReload"; // "" disables the anti-redirect-loop guard
         public Func<HttpContext, bool> RequestFilter { get; init; } = _ => true;
         public Func<SessionMiddleware, HttpContext, Task<bool>> InvalidSessionHandler { get; init; } = DefaultInvalidSessionHandler;
         public Func<Session, HttpContext, Session>? TagProvider { get; init; }
 
         public static async Task<bool> DefaultInvalidSessionHandler(SessionMiddleware self, HttpContext httpContext)
         {
-            await httpContext.SignOutAsync().ConfigureAwait(false);
+            // A parameterless SignOutAsync throws when there is no default sign-out scheme,
+            // which would turn an invalid session into a permanent 500 in apps not using ASP.NET auth.
+            var schemes = httpContext.RequestServices.GetService<IAuthenticationSchemeProvider>();
+            var scheme = schemes is null
+                ? null
+                : await schemes.GetDefaultSignOutSchemeAsync().ConfigureAwait(false);
+            if (scheme is not null) {
+                try {
+                    await httpContext.SignOutAsync(scheme.Name).ConfigureAwait(false);
+                }
+                catch (Exception e) {
+                    self.Log.LogWarning(e, "Sign-out failed for '{Scheme}' scheme", scheme.Name);
+                }
+            }
             var url = httpContext.Request.GetEncodedPathAndQuery();
             httpContext.Response.Redirect(url);
             // true: reload: redirect w/o invoking the next middleware
@@ -95,22 +109,68 @@ public class SessionMiddleware : IMiddleware, IHasServices
             Log.LogError(e, "Session is unavailable: {SessionHash}", session?.Hash);
             isInvalid = true;
         }
-        if (isInvalid) {
-            var mustShortCircuit = await Settings.InvalidSessionHandler(this, httpContext).ConfigureAwait(false);
-            if (mustShortCircuit) {
-                httpContext.Features.Set(MustShortCircuitFeature.Instance);
-                return Session.New();
-            }
+        if (isInvalid)
             session = null;
-        }
         session ??= Session.New();
         session = Settings.TagProvider?.Invoke(session, httpContext) ?? session;
+        // The cookie must be rewritten before InvalidSessionHandler gets a chance to short-circuit
+        // the pipeline - otherwise every redirected request re-presents the rejected session id.
         if (Settings.AlwaysUpdateCookie || session != originalSession) {
             var cookieName = Settings.Cookie.Name ?? "";
             var responseCookies = httpContext.Response.Cookies;
             responseCookies.Append(cookieName, session.Id, Settings.Cookie.Build(httpContext));
         }
+        if (!isInvalid) {
+            RemoveReloadGuard(httpContext);
+            return session;
+        }
+
+        if (HasReloadGuard(httpContext)) {
+            // The reload didn't help, so we proceed with a fresh session instead of redirecting again
+            Log.LogWarning("Session is still invalid right after a reload: {SessionHash}", originalSession?.Hash);
+            RemoveReloadGuard(httpContext);
+            return session;
+        }
+
+        if (await Settings.InvalidSessionHandler(this, httpContext).ConfigureAwait(false)) {
+            AddReloadGuard(httpContext);
+            httpContext.Features.Set(MustShortCircuitFeature.Instance);
+        }
         return session;
+    }
+
+    // Private methods
+
+    private bool HasReloadGuard(HttpContext httpContext)
+    {
+        var cookieName = Settings.ReloadGuardCookieName;
+        return !cookieName.IsNullOrEmpty() && httpContext.Request.Cookies.ContainsKey(cookieName);
+    }
+
+    private void AddReloadGuard(HttpContext httpContext)
+    {
+        var cookieName = Settings.ReloadGuardCookieName;
+        if (cookieName.IsNullOrEmpty())
+            return;
+
+        httpContext.Response.Cookies.Append(cookieName, "1", GetReloadGuardCookieOptions(httpContext));
+    }
+
+    private void RemoveReloadGuard(HttpContext httpContext)
+    {
+        if (!HasReloadGuard(httpContext))
+            return;
+
+        httpContext.Response.Cookies.Delete(Settings.ReloadGuardCookieName, GetReloadGuardCookieOptions(httpContext));
+    }
+
+    private CookieOptions GetReloadGuardCookieOptions(HttpContext httpContext)
+    {
+        // The guard must expire with the browser session rather than live as long as the session cookie
+        var options = Settings.Cookie.Build(httpContext);
+        options.Expires = null;
+        options.MaxAge = null;
+        return options;
     }
 
     // Nested types

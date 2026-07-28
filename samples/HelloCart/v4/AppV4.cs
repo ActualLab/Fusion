@@ -33,6 +33,11 @@ public class AppV4 : AppBase
         AppDb.Configure(services);
         services.AddFusion(RpcServiceMode.Server, fusion => {
             fusion.AddWebServer();
+            // The WebSocket handshake is exempt from CORS, so the RPC endpoint needs its own
+            // origin check. Non-browser clients send no Origin and are unaffected by this.
+            fusion.Rpc.AddWebSocketServer().Configure(_ => RpcWebSocketServerOptions.Default with {
+                OriginValidator = RpcWebSocketServerOriginValidators.SameOrigin,
+            });
             fusion.AddService<IProductService, DbProductServiceUsingEntityResolver>();
             fusion.AddService<ICartService, DbCartServiceUsingEntityResolver>();
         });

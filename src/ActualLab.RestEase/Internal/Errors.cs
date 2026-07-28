@@ -15,4 +15,7 @@ public static class Errors
 
     public static Exception UnknownServerSideError()
         => new RemoteException("Unknown server-side error.");
+
+    public static Exception ServerSideErrorIsTooLarge(int maxSize)
+        => new RemoteException($"Server-side error is dropped: its description exceeds {maxSize} bytes.");
 }

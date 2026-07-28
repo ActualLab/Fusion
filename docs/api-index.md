@@ -133,6 +133,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ## RPC Server — [`ActualLab.Rpc.Server`]
 - `RpcHttpServer` — accepts full-duplex HTTP/2 connections for ASP.NET Core
 - `RpcWebSocketServer` — accepts WebSocket connections for ASP.NET Core
+- `RpcWebSocketServerOriginValidators` — `AllowAll` / `SameOrigin` / `Allow(origins)` gates for the WebSocket upgrade
 
 
 ## CommandR (`ActualLab.CommandR`) — [PartC.md](PartC.md)

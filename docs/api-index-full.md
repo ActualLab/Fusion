@@ -2023,6 +2023,14 @@ Delegate that creates an `RpcRef` for a `WebSocket` server connection based on t
 
 Provides default delegate implementations for `RpcWebSocketServer`, including the peer reference factory.
 
+###### `RpcWebSocketServerOriginValidator` (delegate)
+
+Decides whether a `WebSocket` upgrade request may be accepted, based on its `Origin` header.
+
+###### `RpcWebSocketServerOriginValidators`
+
+Ready-made origin validators: `AllowAll` (the default), `SameOrigin`, and `Allow(origins)`.
+
 ###### `AssemblyExt`
 
 Extension methods for `Assembly` to discover Web API controller types.

@@ -117,7 +117,7 @@ public class SupportingProjectsAuditRegressionTest
             Content = content,
         };
         using var services = new ServiceCollection().BuildServiceProvider();
-        using var handler = new RestEaseHttpMessageHandler(services) {
+        using var handler = new RestEaseHttpMessageHandler(RestEaseHttpMessageHandler.Options.Default, services) {
             InnerHandler = new ResponseHandler(response),
         };
         using var invoker = new HttpMessageInvoker(handler);

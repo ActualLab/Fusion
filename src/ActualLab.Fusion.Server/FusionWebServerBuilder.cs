@@ -1,7 +1,9 @@
 using ActualLab.Fusion.Server.Endpoints;
+using ActualLab.Fusion.Server.Internal;
 using ActualLab.Fusion.Server.Middlewares;
 using ActualLab.Fusion.Server.Rpc;
 using ActualLab.Rpc.Server;
+using Microsoft.Extensions.Hosting;
 
 namespace ActualLab.Fusion.Server;
 
@@ -45,6 +47,7 @@ public readonly struct FusionWebServerBuilder
         services.AddScoped(c => new SessionMiddleware(c.GetRequiredService<SessionMiddleware.Options>(), c));
         services.AddSingleton(DefaultRedirectUrlCheckerFactory);
         services.AddSingleton(c => new RenderModeEndpoint(c.GetRequiredService<RedirectUrlChecker>()));
+        services.AddHostedService(c => new RpcOriginValidatorWarner(c));
 
         configure?.Invoke(this);
     }

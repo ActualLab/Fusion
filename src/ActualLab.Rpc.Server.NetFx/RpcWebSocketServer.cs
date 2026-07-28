@@ -20,6 +20,8 @@ namespace ActualLab.Rpc.Server;
 public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProvider services)
     : RpcServiceBase(services)
 {
+    private const string OriginHeaderName = "Origin";
+
     public RpcWebSocketServerOptions Settings { get; } = settings;
     public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
     public RpcWebSocketClientOptions WebSocketClientOptions { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
@@ -32,6 +34,15 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
         var acceptToken = context.Get<WebSocketAccept>("websocket.Accept");
         if (acceptToken is null)
             return HttpStatusCode.BadRequest;
+
+        // Runs before RefFactory, so a rejected request creates no server peer.
+        // OWIN has no equivalent of WebSocketOptions.AllowedOrigins, so this is the only origin gate here.
+        var origin = context.Request.Headers.Get(OriginHeaderName) ?? "";
+        if (!Settings.OriginValidator.Invoke(this, context, origin)) {
+            Log.LogWarning("Rejected RPC connection from origin '{Origin}' for {Path}{Query}",
+                origin, context.Request.Path, RpcQuerySanitizer.Sanitize(context.Request.QueryString.Value));
+            return HttpStatusCode.Forbidden;
+        }
 
         var rpcRef = RefFactory.Invoke(this, context, isBackend).RequireServer();
 
