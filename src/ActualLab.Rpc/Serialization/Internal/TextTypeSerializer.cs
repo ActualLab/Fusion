@@ -11,8 +11,14 @@ public static class TextTypeSerializer
 {
     public const int DefaultFromBytesCacheCapacity = 16384;
 
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
+
     private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache = new();
-    private static volatile PruningCache<ByteString, Type?> _fromBytesCache
+    private static PruningCache<ByteString, Type?> _fromBytesCache
         = new(DefaultFromBytesCacheCapacity);
 
     public static ReadOnlySpan<byte> Prefix => "/* @="u8;
@@ -22,7 +28,10 @@ public static class TextTypeSerializer
 
     public static int FromBytesCacheCapacity {
         get => _fromBytesCache.Capacity;
-        set => _fromBytesCache = new PruningCache<ByteString, Type?>(value);
+        set {
+            lock (StaticLock)
+                _fromBytesCache = new PruningCache<ByteString, Type?>(value);
+        }
     }
     public static int FromBytesCacheSize => _fromBytesCache.Count;
 
