@@ -161,7 +161,8 @@ peer.whenRunning;          // Promise<void> — resolves when the reconnect loop
 ### Connection Lifecycle
 
 1. `peer.start()` (or auto-start via `mustStart = true`) kicks off the reconnect loop
-2. Opens a WebSocket to the URL + query params (`clientId`, `f=json5np`)
+2. Opens a WebSocket to the URL + query params (`clientId`, `f=json5np`, and &mdash; once a
+   reconnect secret is held &mdash; `c` and `p`; see [Reconnect proof](#reconnect-proof))
 3. Exchanges handshakes with the server; state flips to `Connected` **after** the handshake
 4. Detects server restarts via `RemotePeerId` comparison (`peerChanged` event) &mdash; a new
    server-side peer with the same hub still counts as a change
@@ -189,6 +190,39 @@ A successful handshake normally resets the backoff. The exception is a **prematu
 if a connection lives less than `prematureDisconnectTimeoutMs` (15 s) before dropping, the growing
 try-index is *kept* rather than reset, so a server that crash-loops right after each handshake sees
 increasing reconnect delays instead of a ~10×/s reconnect storm.
+
+### Reconnect proof
+
+The connect URL's `clientId` is the whole peer-selection key on the server, so anyone who
+learns it (proxy logs, browser history, `Referer` chains) could otherwise evict or hijack the
+live connection. To close that, the server mints a per-peer secret and delivers it in a **6th
+`RpcHandshake` field**, `Secret` (array index 5; `Secret` / `secret` on the object form) &mdash;
+over the established WebSocket, never in a URL. Every subsequent connect attempt then carries:
+
+| Param | Value |
+|---|---|
+| `c` | monotonic counter, canonical decimal, incremented **once per connect attempt** |
+| `p` | `Base64Url_NoPad(HMAC_SHA256(UTF8(secret), UTF8(clientId + "\n" + c)))` — unpadded, 43 chars |
+
+The separator is a single LF (`0x0A`), and the HMAC key is the UTF-8 secret token itself, not its
+base64url-decoded bytes — `computeReconnectProof` in `reconnect-proof.ts` and .NET's
+`RpcReconnectProof.Compute` are pinned to the same test vector.
+
+The secret lives on the `RpcClientPeer` instance and is **never** persisted — not to
+`localStorage`, `sessionStorage`, or a cookie. A tab reload mints a new `clientId` anyway, so a
+persisted secret could not be useful. A handshake carrying a secret always overwrites the stored
+one (so a client that reached a different replica adopts that replica's secret); a handshake
+without one leaves it alone.
+
+The TS client only *consumes* secrets — `RpcServerPeer` never issues one, so the handshake TS
+sends stays 5 elements wide, which .NET readers tolerate.
+
+`crypto.subtle` is `undefined` in an insecure browser context (plain `http` on a non-localhost
+host). There, `peer.computeReconnectProof()` returns `undefined`, warns **once**, and the client
+connects with the legacy no-proof URL — which the server accepts while its
+`RequireReconnectProof` option is `false`. Serve RPC over `https` before enabling that option.
+
+`sanitizeUrl` redacts `p`, `clientId`, and `session` before a connect URL reaches the log.
 
 
 ## RpcServerPeer

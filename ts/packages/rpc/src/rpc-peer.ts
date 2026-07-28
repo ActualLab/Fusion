@@ -11,7 +11,12 @@
 //     Handshake, OwnHandshake, ReaderTokenSource, Error, TryIndex.
 //   RpcPeerChangeKind (11 lines) — Unchanged/ChangedToVeryFirst/Changed enum.
 //   RpcHandshake (28 lines) — PeerId, ApiVersionSet, HubId, ProtocolVersion,
-//     Index.  Has GetPeerChangeKind(lastHandshake) comparison method.
+//     Index, Secret.  Has GetPeerChangeKind(lastHandshake) comparison method.
+//     `Secret` (index 5, optional) is the server's per-peer reconnect secret;
+//     it flows server→client only, and the client echoes possession of it via
+//     the `c` (counter) and `p` (HMAC proof) connect-URL parameters — see
+//     `reconnect-proof.ts`.  The TS client never issues a secret, so the
+//     handshake it sends stays a 5-element array / 5-property object.
 //   RpcClientPeerReconnectDelayer (35 lines) — exponential backoff profiles:
 //     test (50ms), server (250ms), client (1s) with 1.5x growth, max 10s.
 //
@@ -99,7 +104,12 @@ import { RpcSharedObjectTracker } from './rpc-shared-object-tracker.js';
 import { RpcStream } from './rpc-stream.js';
 import { RpcSerializationFormat, RpcSerializationFormatResolver } from './rpc-serialization-format.js';
 import { IncreasingSeqCompressor } from './increasing-seq-compressor.js';
-import { base64Decode, base64Encode } from './base64.js';
+import { base64Decode, base64Encode, base64UrlEncode } from './base64.js';
+import {
+    computeReconnectProof,
+    isReconnectProofSupported,
+    type RpcReconnectProofParameters,
+} from './reconnect-proof.js';
 
 // Yields to the event loop. Used by the reconnect-resend loop to chunk
 // large bursts so they don't spike main-thread time post-handshake.
@@ -125,31 +135,52 @@ export type RpcConnectionUrlResolver = (peer: RpcClientPeer) => string | Promise
 
 /** Default connection URL provider — sets `clientId` and `f` query parameters,
  *  replacing any existing values to keep the wire format consistent with the
- *  peer's actual `serializationFormat`. */
-export const defaultConnectionUrlResolver: RpcConnectionUrlResolver = peer => {
+ *  peer's actual `serializationFormat`. Adds the reconnect proof (`c` + `p`)
+ *  once the peer holds a server-issued secret. */
+export const defaultConnectionUrlResolver: RpcConnectionUrlResolver = async peer => {
     const formatKey = peer.serializationFormat.key;
+    // Neither value needs percent-encoding: `c` is decimal digits and `p` is
+    // base64url, and `URLSearchParams` encodes neither `-` nor `_`.
+    const proof = await peer.computeReconnectProof();
     try {
         const url = new URL(peer.ref);
         url.searchParams.set('clientId', peer.clientId);
         url.searchParams.set('f', formatKey);
+        if (proof !== undefined) {
+            url.searchParams.set('c', proof.counter);
+            url.searchParams.set('p', proof.proof);
+        }
         return url.toString();
     } catch {
         // Fallback for non-URL refs (tests/harnesses that pass "ws://test" etc.)
         const sep = peer.ref.includes('?') ? '&' : '?';
-        return peer.ref + sep + `clientId=${peer.clientId}&f=${formatKey}`;
+        let url = peer.ref + sep + `clientId=${peer.clientId}&f=${formatKey}`;
+        if (proof !== undefined)
+            url += `&c=${proof.counter}&p=${proof.proof}`;
+        return url;
     }
 };
+
+/** Query parameters replaced with `<redacted>` before a URL reaches the log.
+ *  `clientId` is here because it selects the server-side peer, and `p` because
+ *  it proves possession of that peer's secret. */
+const RedactedParameterNames = ['session', 'clientId', 'p'];
 
 // eslint-disable-next-line prefer-const -- intentionally `let` so consumers can swap the implementation
 export let sanitizeUrl = (url: string): string => {
     try {
         const parsed = new URL(url);
-        if (!parsed.searchParams.has('session'))
-            return url;
-        parsed.searchParams.set('session', '<redacted>');
-        return parsed.toString();
+        let isRedacted = false;
+        for (const name of RedactedParameterNames) {
+            if (!parsed.searchParams.has(name))
+                continue;
+
+            parsed.searchParams.set(name, '<redacted>');
+            isRedacted = true;
+        }
+        return isRedacted ? parsed.toString() : url;
     } catch {
-        return url.replace(/([?&]session=)[^&]*/i, '$1<redacted>');
+        return url.replace(/([?&](?:session|clientId|p)=)[^&]*/gi, '$1<redacted>');
     }
 };
 
@@ -183,6 +214,8 @@ export interface RemoteHandshake {
     RemoteHubId?: string;
     ProtocolVersion?: number;
     Index?: number;
+    /** Server-issued reconnect secret. Server→client only — a client never sends one. */
+    Secret?: string;
 }
 
 /** Base class for RPC peers — handles bidirectional message dispatch. */
@@ -558,12 +591,14 @@ export abstract class RpcPeer {
                         RemoteHubId: raw[2] as string | undefined,
                         ProtocolVersion: raw[3] as number | undefined,
                         Index: raw[4] as number | undefined,
+                        Secret: raw[5] as string | undefined,
                     }
                     : {
                         RemotePeerId: (obj.RemotePeerId ?? obj.remotePeerId) as string | undefined,
                         RemoteHubId: (obj.RemoteHubId ?? obj.remoteHubId) as string | undefined,
                         ProtocolVersion: (obj.ProtocolVersion ?? obj.protocolVersion) as number | undefined,
                         Index: (obj.Index ?? obj.index) as number | undefined,
+                        Secret: (obj.Secret ?? obj.secret) as string | undefined,
                     };
                 this._onHandshakeReceived(handshake);
             }
@@ -750,6 +785,16 @@ export class RpcClientPeer extends RpcPeer {
     private _lastRemotePeerId: string | undefined;
     private _pendingHandshake: PromiseSource<RemoteHandshake> | undefined;
     private _reconnectsAt = 0;
+    /** Server-issued reconnect secret, from the most recent handshake that
+     *  carried one. In-memory only — never localStorage/sessionStorage/cookie.
+     *  A tab reload mints a new `clientId`, so a persisted secret would be
+     *  useless anyway. */
+    private _secret: string | undefined;
+    /** Incremented once per *connect attempt*, in `computeReconnectProof()`. A
+     *  failed attempt still burns its value: the server may have advanced its
+     *  own counter at the gate before the connection died, and reusing the
+     *  value would then be rejected forever. */
+    private _counter = 0;
 
     /** Base64url-encoded peer ID — matches .NET's RpcClientPeer.ClientId (Guid.ToBase64Url). */
     readonly clientId: string;
@@ -844,6 +889,33 @@ export class RpcClientPeer extends RpcPeer {
      *  non-default WebSocket constructor. */
     start(): void {
         void this.run();
+    }
+
+    /** Builds the `c` / `p` connect-URL parameters proving possession of the
+     *  server-issued reconnect secret, or `undefined` when there is no secret
+     *  yet or WebCrypto is unavailable. Consumes one counter value per call,
+     *  so call it exactly once per connect attempt. */
+    async computeReconnectProof(): Promise<RpcReconnectProofParameters | undefined> {
+        const secret = this._secret;
+        if (secret === undefined)
+            return undefined;
+
+        // Degrading to the legacy no-proof URL is safe by construction: the
+        // server's RequireReconnectProof defaults to false, and a request with
+        // neither `c` nor `p` takes the legacy path. Throwing here would instead
+        // lock every insecure-context client out of the reconnect loop entirely.
+        if (!isReconnectProofSupported()) {
+            warnReconnectProofUnavailable(this.ref, 'crypto.subtle is unavailable (insecure context?)');
+            return undefined;
+        }
+
+        const counter = (++this._counter).toString();
+        try {
+            return { counter, proof: await computeReconnectProof(secret, this.clientId, counter) };
+        } catch (e) {
+            warnReconnectProofUnavailable(this.ref, `HMAC-SHA256 failed: ${String(e)}`);
+            return undefined;
+        }
     }
 
     /** The reconnect loop itself. Exposed as `protected` so subclasses (and
@@ -1005,6 +1077,12 @@ export class RpcClientPeer extends RpcPeer {
 
                     // Record the server's handshake index for $sys.Reconnect.
                     this._remoteHandshakeIndex = remoteHandshake.Index ?? 0;
+                    // Overwrite unconditionally when a secret is present: a client
+                    // that missed one self-heals, and a client that reached a
+                    // different replica adopts that replica's secret. A legacy
+                    // server sends none, which leaves the stored value alone.
+                    if (remoteHandshake.Secret)
+                        this._secret = remoteHandshake.Secret;
 
                     // Peer change detection (like .NET's RpcHandshake.GetPeerChangeKind)
                     const isPeerChanged = this._detectPeerChange(remoteHandshake);
@@ -1382,11 +1460,21 @@ function guidToBase64Url(uuid: string): string {
     for (let i = 8; i < 16; i++)
         bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
 
-    const binary = String.fromCharCode(...bytes);
-    return btoa(binary)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
+    return base64UrlEncode(bytes);
+}
+
+// Warned at most once per process: the condition is a property of the host, so
+// it would otherwise repeat on every connect attempt, forever.
+let isReconnectProofUnavailableWarned = false;
+
+function warnReconnectProofUnavailable(ref: string, reason: string): void {
+    if (isReconnectProofUnavailableWarned)
+        return;
+
+    isReconnectProofUnavailableWarned = true;
+    warnLog?.log(
+        `'${ref}': ${reason} - connecting without a reconnect proof. `
+        + 'This fails if the server requires one (RequireReconnectProof).');
 }
 
 /** Coerce a `$sys.Ok` result carrying a byte[] into a Uint8Array. */
