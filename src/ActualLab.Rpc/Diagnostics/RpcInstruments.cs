@@ -33,6 +33,7 @@ public static class RpcInstruments
     public static readonly ObservableGauge<long> OpenInboundCallGauge;
     public static readonly ObservableGauge<long> OpenOutboundCallGauge;
     public static readonly Counter<long> ClientCallEventCounter;
+    public static readonly Counter<long> ResourceLimitBreachCounter;
     public static bool IsInboundEnabled {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => InboundDurationHistogram.Enabled
@@ -80,6 +81,8 @@ public static class RpcInstruments
             ObserveOpenOutboundCalls, "{call}", "Number of open outbound RPC calls by stage.");
         ClientCallEventCounter = m.CreateCounter<long>($"{ms}.client.call.event.count",
             "{event}", "Count of client call maintenance events.");
+        ResourceLimitBreachCounter = m.CreateCounter<long>($"{ms}.peer.resource.limit.breach.count",
+            "{breach}", "Count of per-peer resource limit breaches, each of which resets the peer.");
     }
 
     public static void RegisterInboundCall(
@@ -173,6 +176,9 @@ public static class RpcInstruments
         if (timeoutCount > 0)
             callEventCounter.Add(timeoutCount, new KeyValuePair<string, object?>("rpc.call.event", "timeout"));
     }
+
+    public static void RegisterResourceLimitBreach(string resource)
+        => ResourceLimitBreachCounter.Add(1, new KeyValuePair<string, object?>("rpc.resource", resource));
 
     private static TagList GetCallTags(RpcMethodDef methodDef, Exception? error)
     {

@@ -34,6 +34,19 @@ public record RpcLimits
     public TimeSpan ObjectAbortCyclePeriod { get; init; } = TimeSpan.FromSeconds(1);
     // A single "call abort" cycle period
     public TimeSpan CallAbortCyclePeriod { get; set; } = TimeSpan.FromSeconds(1);
+    // Backstop cap on RpcPeer.InboundCalls.Count + RpcPeer.OutboundCalls.Count.
+    // It's checked once per ObjectReleasePeriod, and the peer is reset when it's exceeded,
+    // so the actual count may overshoot it by up to a cycle's worth of calls.
+    // NoWait calls are never registered in either tracker (see RpcInboundCallTracker.GetOrRegister),
+    // so they're invisible to this cap - lowering it doesn't throttle a NoWait flood.
+    // The default disables the cap: a Fusion server retains one inbound call per live client
+    // subscription, so 100K+ open inbound calls is normal operation rather than a leak.
+    public int CallCountLimit { get; init; } = int.MaxValue;
+    // Backstop cap on RpcPeer.SharedObjects.Count + RpcPeer.RemoteObjects.Count; same cycle
+    // and same reset behavior as CallCountLimit. Shared objects are released only after
+    // ObjectReleaseTimeout of silence, so a peer abandoning streams stays near the cap
+    // (and thus gets reset) roughly once per that timeout.
+    public int ObjectCountLimit { get; init; } = 65536;
     // Call timeout check period
     public RandomTimeSpan CallTimeoutCheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.2);
     public int LogDelayedCallLimit { get; init; } = 10;
