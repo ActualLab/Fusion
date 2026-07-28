@@ -81,8 +81,8 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
             provider);
 
         finder1.CacheKey.Should().NotBe(finder2.CacheKey);
-        finder1.CacheKey.Should().StartWith("v1:");
-        finder2.CacheKey.Should().StartWith("v1:");
+        finder1.CacheKey.Should().StartWith("v2:");
+        finder2.CacheKey.Should().StartWith("v2:");
     }
 
     [Fact]

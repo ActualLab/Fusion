@@ -67,4 +67,43 @@ public readonly partial struct FilePath
             Directory.CreateDirectory(path);
         return path;
     }
+
+    public static FilePath GetApplicationCacheDirectory(string appId = "")
+    {
+        // Unlike GetApplicationTempDirectory, the result is rooted in a per-user location, so
+        // another local user can neither pre-create nor write to it. The application-specific
+        // directory is guaranteed to exist when this method succeeds.
+        if (appId.IsNullOrEmpty())
+            appId = Assembly.GetEntryAssembly()?.GetName()?.Name ?? "unknown";
+        var subdirectory = GetHashedName($"{appId}_{GetApplicationDirectory()}");
+        var root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var path = root.IsNullOrEmpty()
+            ? GetTempPath() & subdirectory
+            : new FilePath(root) & "ActualLab" & subdirectory;
+        if (!Directory.Exists(path))
+            Directory.CreateDirectory(path);
+        return path;
+    }
+
+    public static bool IsWritableByOtherUsers(FilePath path)
+    {
+        // Permission bits exist only on Unix and only since .NET 7; everywhere else the answer is
+        // "unknown", reported as false - callers use this to reject an obviously unsafe location,
+        // not to prove a safe one.
+#if NET7_0_OR_GREATER
+        if (OperatingSystem.IsWindows())
+            return false;
+
+        try {
+            var directory = new DirectoryInfo(path.Value);
+            return directory.Exists
+                && (directory.UnixFileMode & (UnixFileMode.GroupWrite | UnixFileMode.OtherWrite)) != 0;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or PlatformNotSupportedException) {
+            return false;
+        }
+#else
+        return false;
+#endif
+    }
 }
