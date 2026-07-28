@@ -30,6 +30,12 @@ public record RpcWebSocketServerOptions
     public bool RequireReconnectProof { get; init; } = false;
     public RpcWebSocketServerOriginValidator OriginValidator { get; init; }
         = RpcWebSocketServerDefaultDelegates.OriginValidator;
+
+    // Logs one startup warning when nothing validates the Origin of the upgrade request. Turn it
+    // off for a server whose connections carry no ambient credentials - a backend-only endpoint,
+    // or one where every call authenticates itself - since cross-site WebSocket hijacking needs
+    // the browser to attach something the attacker doesn't have.
+    public bool WarnOnUnvalidatedOrigin { get; init; } = true;
 #if NET6_0_OR_GREATER
     public RpcWebSocketServerAcceptContextFactory ConfigureWebSocket { get; init; }
         = RpcWebSocketServerDefaultDelegates.AcceptContextFactory;

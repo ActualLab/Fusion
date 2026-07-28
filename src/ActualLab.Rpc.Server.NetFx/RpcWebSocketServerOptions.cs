@@ -25,6 +25,9 @@ public record RpcWebSocketServerOptions
     public bool RequireReconnectProof { get; init; } = false;
     public RpcWebSocketServerOriginValidator OriginValidator { get; init; }
         = RpcWebSocketServerDefaultDelegates.OriginValidator;
+
+    // See the same option on ActualLab.Rpc.Server's RpcWebSocketServerOptions.
+    public bool WarnOnUnvalidatedOrigin { get; init; } = true;
     public RpcWebSocketServerAcceptContextFactory ConfigureWebSocket { get; init; }
         = RpcWebSocketServerDefaultDelegates.AcceptContextFactory;
 }
