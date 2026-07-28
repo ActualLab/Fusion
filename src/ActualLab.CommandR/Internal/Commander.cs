@@ -110,7 +110,10 @@ public class Commander : ICommander
         IEventCommand command, CommandContext<Unit> context,
         CancellationToken cancellationToken)
     {
-        Log.LogWarning("Unhandled event: {Event}", command);
+        if (command is INotLogged)
+            Log.LogWarning("Unhandled event: {EventName}", command.GetType().GetName());
+        else
+            Log.LogWarning("Unhandled event: {Event}", command);
         return Task.CompletedTask;
     }
 }

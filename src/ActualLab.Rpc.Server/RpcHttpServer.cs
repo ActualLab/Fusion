@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc.Server;
 
@@ -27,7 +28,7 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
             request.Host.Host,
             request.Host.Port ?? -1,
             request.Path,
-            request.QueryString.ToString());
+            RpcQuerySanitizer.Sanitize(request.QueryString.Value));
         var requestDescription = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
         var maxRequestBodySizeFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();

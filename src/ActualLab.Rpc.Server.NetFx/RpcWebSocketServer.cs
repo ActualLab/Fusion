@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using Microsoft.Owin;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.WebSockets;
 using WebSocketAccept = System.Action<
     System.Collections.Generic.IDictionary<string, object>, // WebSocket Accept parameters
@@ -105,7 +106,8 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
                 return; // Intended: this is typically a normal connection termination
 
             var request = context.Request;
-            Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}", request.Path, request.QueryString);
+            Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}",
+                request.Path, RpcQuerySanitizer.Sanitize(request.QueryString.Value));
             if (webSocket is not null)
                 return;
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using ActualLab.Conversion;
 using RestEase;
 
 namespace ActualLab.RestEase.Internal;
@@ -37,6 +38,10 @@ public class RestEaseRequestQueryParamSerializer : RequestQueryParamSerializer
         object source,
         RequestQueryParamSerializerInfo info)
     {
+        // IConvertibleTo<string> goes first: types like Session render a redacted ToString(),
+        // so only Convert() produces the value the other side can parse back.
+        if (source is IConvertibleTo<string> convertible)
+            return convertible.Convert() ?? "";
         if (source is string or IHasToStringProducingJson)
             return source.ToString() ?? "";
         if (source.GetType().IsValueType)

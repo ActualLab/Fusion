@@ -6,6 +6,7 @@ using ActualLab.Rpc;
 
 namespace ActualLab.Tests.CommandR;
 
+[Collection(nameof(CommanderActivityTests))]
 public sealed class CommandActivityPayloadTest
 {
     [Fact]
