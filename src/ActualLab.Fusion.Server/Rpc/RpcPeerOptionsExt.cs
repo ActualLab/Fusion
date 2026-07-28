@@ -13,12 +13,17 @@ public static class RpcPeerOptionsExt
 {
     public const string SessionParameterName = "session";
 
+    // Exposed so hosts can compose it and so RpcOriginValidatorWarner can tell
+    // whether RpcPeerOptions still carries the session-binding factory.
+    public static readonly Func<RpcServerPeer, RpcTransport, PropertyBag, CancellationToken, Task<RpcConnection>>
+        ServerConnectionFactory = CreateServerConnection;
+
     public static RpcPeerOptions WithFusionServerOverrides(this RpcPeerOptions options)
         => options with { ServerConnectionFactory = ServerConnectionFactory };
 
     // Private methods
 
-    private static Task<RpcConnection> ServerConnectionFactory(
+    private static Task<RpcConnection> CreateServerConnection(
         RpcServerPeer peer, RpcTransport transport, PropertyBag properties,
         CancellationToken cancellationToken)
     {

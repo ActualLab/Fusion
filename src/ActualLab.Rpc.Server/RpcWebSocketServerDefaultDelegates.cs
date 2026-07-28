@@ -19,6 +19,14 @@ public delegate WebSocketAcceptContext RpcWebSocketServerAcceptContextFactory(
 #endif
 
 /// <summary>
+/// Delegate that decides whether a WebSocket upgrade request may be accepted, based on its
+/// <c>Origin</c> header value - which is <c>""</c> when the header is absent.
+/// See <see cref="RpcWebSocketServerOriginValidators"/> for ready-made implementations.
+/// </summary>
+public delegate bool RpcWebSocketServerOriginValidator(
+    RpcWebSocketServer server, HttpContext context, string origin);
+
+/// <summary>
 /// Provides default delegate implementations for <see cref="RpcWebSocketServer"/>,
 /// including the peer reference factory.
 /// </summary>
@@ -36,4 +44,10 @@ public static class RpcWebSocketServerDefaultDelegates
     public static RpcWebSocketServerAcceptContextFactory AcceptContextFactory { get; set; } =
         static (server, context, rpcRef) => new();
 #endif
+
+    // The default is AllowAll to keep every client that works today working: Blazor WASM served
+    // from another host, dev servers on another port, mobile WebViews (capacitor://, ionic://,
+    // or a literal "null"), and deliberate iframe embeds all send a foreign Origin.
+    public static RpcWebSocketServerOriginValidator OriginValidator { get; set; } =
+        RpcWebSocketServerOriginValidators.AllowAll;
 }

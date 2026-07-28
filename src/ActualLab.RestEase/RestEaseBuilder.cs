@@ -33,6 +33,7 @@ public readonly struct RestEaseBuilder
 
         // FusionHttpMessageHandler (handles Fusion headers)
         services.AddHttpClient();
+        services.AddSingleton(_ => RestEaseHttpMessageHandler.Options.Default);
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IHttpMessageHandlerBuilderFilter,
             RestEaseHttpMessageHandlerBuilderFilter>());
@@ -54,6 +55,13 @@ public readonly struct RestEaseBuilder
         Action<IServiceProvider, string?, HttpClientFactoryOptions> httpClientFactoryOptionsBuilder)
     {
         Services.Configure(httpClientFactoryOptionsBuilder);
+        return this;
+    }
+
+    public RestEaseBuilder ConfigureHttpMessageHandler(
+        Func<IServiceProvider, RestEaseHttpMessageHandler.Options> optionsFactory)
+    {
+        Services.AddSingleton(optionsFactory);
         return this;
     }
 

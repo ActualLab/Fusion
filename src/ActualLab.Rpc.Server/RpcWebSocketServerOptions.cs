@@ -15,6 +15,8 @@ public record RpcWebSocketServerOptions
     public string BackendRequestPath { get; init; } = RpcWebSocketClientOptions.Default.BackendRequestPath;
     public string SerializationFormatParameterName { get; init; } = RpcWebSocketClientOptions.Default.SerializationFormatParameterName;
     public string ClientIdParameterName { get; init; } = RpcWebSocketClientOptions.Default.ClientIdParameterName;
+    public RpcWebSocketServerOriginValidator OriginValidator { get; init; }
+        = RpcWebSocketServerDefaultDelegates.OriginValidator;
 #if NET6_0_OR_GREATER
     public RpcWebSocketServerAcceptContextFactory ConfigureWebSocket { get; init; }
         = RpcWebSocketServerDefaultDelegates.AcceptContextFactory;

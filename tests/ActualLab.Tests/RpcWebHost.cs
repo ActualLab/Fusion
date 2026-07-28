@@ -33,6 +33,8 @@ public class RpcWebHost(
     public bool UseHttpClient { get; } = useHttpClient;
     public bool UseHttps { get; } = useHttps;
     public bool ExposeBackend { get; set; } = false;
+    public RpcWebSocketServerOriginValidator? OriginValidator { get; set; }
+    public string[] WebSocketAllowedOrigins { get; set; } = [];
 
 #if NETCOREAPP
     protected override HttpProtocols WebHostProtocols
@@ -55,7 +57,10 @@ public class RpcWebHost(
             var webSocketServer = rpc.AddWebSocketServer();
             webSocketServer.Configure(_ => {
                 var defaultOptions = RpcWebSocketServerOptions.Default;
-                return defaultOptions with { ExposeBackend = ExposeBackend };
+                return defaultOptions with {
+                    ExposeBackend = ExposeBackend,
+                    OriginValidator = OriginValidator ?? defaultOptions.OriginValidator,
+                };
             });
 #if NET5_0_OR_GREATER
             var httpServer = rpc.AddHttpServer();
@@ -81,7 +86,14 @@ public class RpcWebHost(
     protected override void ConfigureWebHost(IWebHostBuilder webHost)
     {
         webHost.Configure((_, app) => {
-            app.UseWebSockets();
+            if (WebSocketAllowedOrigins.Length == 0)
+                app.UseWebSockets();
+            else {
+                var webSocketOptions = new WebSocketOptions();
+                foreach (var allowedOrigin in WebSocketAllowedOrigins)
+                    webSocketOptions.AllowedOrigins.Add(allowedOrigin);
+                app.UseWebSockets(webSocketOptions);
+            }
             app.UseRouting();
             app.UseEndpoints(endpoints => {
                 endpoints.MapControllerRoute(name: "DefaultApi", pattern: "api/{controller}/{action}");

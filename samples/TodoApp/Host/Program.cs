@@ -160,6 +160,12 @@ void ConfigureServices()
     // Fusion services
     var fusion = services.AddFusion(RpcServiceMode.Server, true);
     var fusionServer = fusion.AddWebServer(hostKind == HostKind.BackendServer);
+    // The WebSocket handshake is exempt from CORS, and RPC connections here carry the session
+    // cookie - so the endpoint needs its own origin check. This app serves its own client, so
+    // same-origin is enough; use Allow(...) when the client is hosted elsewhere.
+    fusion.Rpc.AddWebSocketServer().Configure(_ => RpcWebSocketServerOptions.Default with {
+        OriginValidator = RpcWebSocketServerOriginValidators.SameOrigin,
+    });
 #if false
     // Enable this to test how the client behaves w/ a delay
     fusion.Rpc.AddMiddleware(_ => new RpcInboundCallDelayer() { Delay = new(1, 0.1) });

@@ -15,6 +15,8 @@ namespace ActualLab.Rpc.Server;
 public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvider services)
     : RpcServiceBase(services)
 {
+    private const string OriginHeaderName = "Origin";
+
     public RpcWebSocketServerOptions Options { get; } = options;
     public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
     public RpcWebSocketClientOptions WebSocketClientOptions { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
@@ -34,6 +36,15 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
         if (!context.WebSockets.IsWebSocketRequest) {
             Log.LogWarning("WebSocket request expected, but got {Request}", requestDescription);
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return;
+        }
+
+        // Runs before RefFactory, so a rejected request creates no server peer
+        var origin = request.Headers[OriginHeaderName].ToString();
+        if (!Options.OriginValidator.Invoke(this, context, origin)) {
+            Log.LogWarning("Rejected RPC connection from origin '{Origin}' for {Request}",
+                origin, requestDescription);
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
             return;
         }
 

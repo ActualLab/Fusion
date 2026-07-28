@@ -257,6 +257,7 @@ Configures WebSocket-based RPC server endpoints.
 | `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
 | `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
+| `OriginValidator` | `RpcWebSocketServerOriginValidator` | `RpcWebSocketServerOriginValidators.AllowAll` | Decides from `(server, context, origin)` whether the upgrade may proceed; rejects with 403 before any peer is created |
 | `ConfigureWebSocket` | `RpcWebSocketServerAcceptContextFactory` | Empty context | Creates the WebSocket accept context per connection from `(server, context, rpcRef)` — e.g. to enable compression selectively (.NET 6+) |
 
 ### Example
@@ -273,6 +274,58 @@ services.AddRpc().Configure<RpcWebSocketServerOptions>(options => {
 ```
 
 > **Warning:** `BackendRequestPath` must never be publicly exposed. Ensure this endpoint is only accessible within your internal network or via service mesh. If `ExposeBackend` is `true`, take extra care to secure this endpoint.
+
+### `OriginValidator`
+
+The WebSocket handshake is exempt from CORS and from preflight, so a CORS policy
+does not protect the RPC endpoint. If connections carry an ambient credential —
+a Fusion session cookie, most notably — any page the victim visits can otherwise
+open one and speak RPC as the victim (*cross-site WebSocket hijacking*).
+
+`RpcWebSocketServerOriginValidators` ships three ready-made validators:
+
+| Validator | Behavior |
+|---|---|
+| `AllowAll` | Accepts any origin. The default, so nothing breaks on upgrade |
+| `SameOrigin` | Accepts only an origin whose host and port match the request's `Host` header |
+| `Allow(params string[] origins)` | Accepts only the listed origins |
+
+```csharp
+rpc.AddWebSocketServer().Configure(_ => RpcWebSocketServerOptions.Default with {
+    OriginValidator = RpcWebSocketServerOriginValidators.SameOrigin,
+});
+
+// Or, when the client is served from elsewhere:
+rpc.AddWebSocketServer().Configure(_ => RpcWebSocketServerOptions.Default with {
+    OriginValidator = RpcWebSocketServerOriginValidators.Allow(
+        "https://app.example.com",
+        "capacitor://localhost", // Mobile WebViews send scheme-specific origins...
+        "null"),                 // ...or a literal "null"
+});
+```
+
+All three allow a request that carries **no** `Origin` header. Browsers always
+send it on a handshake and page scripts cannot forge it (it is a forbidden
+header), so only non-browser clients can omit it — and omitting it gains them
+nothing, since the attack depends on the victim's browser attaching the victim's
+cookie. Non-browser clients (the .NET `RpcWebSocketClient`, CLI tools, backend
+peers) therefore keep working under `SameOrigin` and `Allow(...)`.
+
+`SameOrigin` compares the origin's host and port against the request's `Host`
+header, and deliberately ignores the scheme: behind a TLS-terminating proxy
+`Request.Scheme` is `http` unless forwarded headers are configured, while the
+browser still reports `https`. It rejects the opaque `null` origin and any
+non-`http(s)` scheme — use `Allow(...)` for WebView origins.
+
+> **Note:** ASP.NET Core's `WebSocketMiddleware` has its own, independent gate:
+> when `WebSocketOptions.AllowedOrigins` is non-empty it returns **403** for a
+> mismatched `Origin` before the endpoint runs (an empty list allows everything,
+> and an absent `Origin` is allowed even when the list is non-empty). The two
+> mechanisms compose — the middleware runs first. Fusion's own validator adds
+> what the platform list cannot do: it works on OWIN (`ActualLab.Rpc.Server.NetFx`,
+> which has no equivalent at all), it applies to the RPC endpoint alone rather
+> than every WebSocket in the app, and it can express "same origin as this
+> request" instead of a fixed list.
 
 ## `RpcTestClientOptions`
 

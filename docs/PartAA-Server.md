@@ -499,4 +499,36 @@ fusionServer.ConfigureSessionMiddleware(_ => new SessionMiddleware.Options() {
         SecurePolicy = CookieSecurePolicy.Always,  // Required with SameSite=None
     },
 });
+
+// REQUIRED with SameSite=None: CORS does not apply to WebSocket handshakes,
+// so the RPC endpoint needs its own origin allow-list.
+rpc.AddWebSocketServer().Configure(_ => RpcWebSocketServerOptions.Default with {
+    OriginValidator = RpcWebSocketServerOriginValidators.Allow("https://app.example.com"),
+});
 ```
+
+### Cross-Site WebSocket Hijacking
+
+The RPC WebSocket connection carries the session cookie, and **the WebSocket
+handshake is exempt from CORS and from preflight** — a CORS policy therefore does
+not protect it. Without an origin check, any page the victim visits can open
+`wss://your-app/rpc/ws?clientId=…`, have the browser attach the victim's cookie,
+and then speak RPC as the victim.
+
+Two independent mechanisms can close this, and they compose:
+
+| Mechanism | Scope | Notes |
+|---|---|---|
+| `WebSocketOptions.AllowedOrigins` | Every WebSocket endpoint in the app | ASP.NET Core only. Rejects with 403 before any endpoint runs. Empty list = allow all. Exact, case-sensitive string match |
+| `RpcWebSocketServerOptions.OriginValidator` | The RPC endpoint only | Works on ASP.NET Core **and** OWIN. Can express "same origin as this request", which a static list cannot |
+
+Both treat an **absent** `Origin` as allowed: browsers always send it on a
+handshake and page scripts cannot forge it (it is a forbidden header), so only
+non-browser clients can omit it — and they gain nothing by doing so, because the
+attack depends on the victim's browser attaching the victim's cookie.
+
+Fusion's default is `RpcWebSocketServerOriginValidators.AllowAll`, so nothing
+breaks on upgrade. Pick a stricter one explicitly — see
+[`RpcWebSocketServerOptions`](PartR-CO.md#rpcwebsocketserveroptions). When
+connections are session-bound and the validator is still `AllowAll`, Fusion logs
+a one-time warning at startup.
