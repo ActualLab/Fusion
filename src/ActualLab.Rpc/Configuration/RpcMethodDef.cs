@@ -15,8 +15,10 @@ namespace ActualLab.Rpc;
 /// </summary>
 public partial class RpcMethodDef : MethodDef
 {
+    // These are strings because ActualLab.Rpc must not reference ActualLab.CommandR (it's the other way around).
+    // ActualLab.Tests.CommandR.BackendCommandGateTest pins them to the actual FullName values.
     public static string CommandInterfaceFullName { get; set; } = "ActualLab.CommandR.ICommand";
-    public static string BackendCommandInterfaceFullName { get; set; } = "ActualLab.CommandR.IBackendCommand";
+    public static string BackendCommandInterfaceFullName { get; set; } = "ActualLab.CommandR.Commands.IBackendCommand";
 
     private static readonly HashSet<string> StreamingMethodNames
         = new(StringComparer.Ordinal) { "Ack", "AckEnd", "B", "I", "End" };

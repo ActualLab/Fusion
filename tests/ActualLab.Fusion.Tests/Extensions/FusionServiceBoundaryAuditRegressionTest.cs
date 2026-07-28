@@ -3,9 +3,12 @@ using System.Globalization;
 using System.Security.Claims;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Authentication.Endpoints;
+using ActualLab.Fusion.Extensions;
 using ActualLab.Fusion.Extensions.Services;
 using ActualLab.Fusion.Server;
 using ActualLab.Fusion.Server.Endpoints;
+using ActualLab.Reflection;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -33,6 +36,63 @@ public class FusionServiceBoundaryAuditRegressionTest
         keyChecker.Invoking(x => x.CheckKey(userPrefix + "/private")).Should().NotThrow();
         keyChecker.Invoking(x => x.CheckKey(sessionPrefix)).Should().NotThrow();
         keyChecker.Invoking(x => x.CheckKey(sessionPrefix + "/private")).Should().NotThrow();
+    }
+
+    [Fact]
+    public void KeyValueStoreShouldNotBeReachableFromFrontendPeers()
+    {
+        var services = new ServiceCollection();
+        var fusion = services.AddFusion().WithServiceMode(RpcServiceMode.Server, true);
+        fusion.AddInMemoryKeyValueStore();
+        fusion.AddSandboxedKeyValueStore<Unit>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var registry = serviceProvider.RpcHub().ServiceRegistry;
+
+        registry.Get<IKeyValueStore>().Should().BeNull();
+        var storeMethodPrefix = typeof(IKeyValueStore).GetName() + ".";
+        registry.ServerMethodResolver.MethodByFullName!.Keys
+            .Should().NotContain(x => x.StartsWith(storeMethodPrefix, StringComparison.Ordinal));
+
+        var sandboxedServiceDef = registry.Get<ISandboxedKeyValueStore>();
+        sandboxedServiceDef.Should().NotBeNull();
+        sandboxedServiceDef!.IsBackend.Should().BeFalse();
+        sandboxedServiceDef.Methods.Should().NotBeEmpty();
+        foreach (var methodDef in sandboxedServiceDef.Methods) {
+            methodDef.IsBackend.Should().BeFalse();
+            registry.ServerMethodResolver[methodDef.FullName].Should().BeSameAs(methodDef);
+        }
+    }
+
+    [Fact]
+    public void ExplicitlyExposedKeyValueStoreShouldStillBeBackendOnly()
+    {
+        var services = new ServiceCollection();
+        var fusion = services.AddFusion();
+        services.AddSingleton(_ => InMemoryKeyValueStore.Options.Default);
+        fusion.AddService<IKeyValueStore, InMemoryKeyValueStore>(RpcServiceMode.Server);
+        using var serviceProvider = services.BuildServiceProvider();
+        var registry = serviceProvider.RpcHub().ServiceRegistry;
+
+        var serviceDef = registry.Get<IKeyValueStore>();
+        serviceDef.Should().NotBeNull();
+        serviceDef!.IsBackend.Should().BeTrue();
+        serviceDef.Methods.Should().NotBeEmpty();
+        serviceDef.Methods.Should().OnlyContain(x => x.IsBackend);
+    }
+
+    [Fact]
+    public void KeyValueStoreWriteCommandsShouldBeBackendOnly()
+    {
+        RpcMethodDef.IsCommandType(typeof(KeyValueStore_Set), out var isBackendCommand).Should().BeTrue();
+        isBackendCommand.Should().BeTrue();
+
+        var services = new ServiceCollection();
+        services.AddFusion(RpcServiceMode.Server).AddService<IKeyValueStore, InMemoryKeyValueStore>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var serviceDef = serviceProvider.RpcHub().ServiceRegistry[typeof(IKeyValueStore)];
+
+        serviceDef["Set:2"].IsBackend.Should().BeTrue();
+        serviceDef["Remove:2"].IsBackend.Should().BeTrue();
     }
 
     [Fact]
