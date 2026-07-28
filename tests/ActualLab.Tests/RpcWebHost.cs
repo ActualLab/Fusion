@@ -33,6 +33,7 @@ public class RpcWebHost(
     public bool UseHttpClient { get; } = useHttpClient;
     public bool UseHttps { get; } = useHttps;
     public bool ExposeBackend { get; set; } = false;
+    public bool RequireReconnectProof { get; set; } = false;
     public RpcWebSocketServerOriginValidator? OriginValidator { get; set; }
     public string[] WebSocketAllowedOrigins { get; set; } = [];
 
@@ -59,12 +60,16 @@ public class RpcWebHost(
                 var defaultOptions = RpcWebSocketServerOptions.Default;
                 return defaultOptions with {
                     ExposeBackend = ExposeBackend,
+                    RequireReconnectProof = RequireReconnectProof,
                     OriginValidator = OriginValidator ?? defaultOptions.OriginValidator,
                 };
             });
 #if NET5_0_OR_GREATER
             var httpServer = rpc.AddHttpServer();
-            httpServer.Configure(_ => RpcHttpServerOptions.Default with { ExposeBackend = ExposeBackend });
+            httpServer.Configure(_ => RpcHttpServerOptions.Default with {
+                ExposeBackend = ExposeBackend,
+                RequireReconnectProof = RequireReconnectProof,
+            });
 #endif
             if (RpcFrameDelayerFactory is not null)
                 services.AddSingleton<RpcWebSocketClientOptions>(_ => new RpcWebSocketClientOptions() {

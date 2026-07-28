@@ -125,10 +125,21 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
 
         var hs = new RpcHandshake(new Guid(), new VersionSet(("Test", "1.0")), new Guid(), 2, 2);
         Test(hs);
+        Test(hs with { Secret = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8" });
 
         // Old RpcHandshake -> new RpcHandshake test
         var ohs = new OldRpcHandshake(hs.RemotePeerId, hs.RemoteApiVersionSet, hs.RemoteHubId);
         ohs.AssertPassesThroughAllSerializers<OldRpcHandshake, RpcHandshake>(AssertEqual);
+
+        // The Secret is append-only, so both directions must still work across the arity change
+        var ohs5 = new OldRpcHandshake5(hs.RemotePeerId, hs.RemoteApiVersionSet, hs.RemoteHubId, 2, 2);
+        ohs5.AssertPassesThroughAllSerializers<OldRpcHandshake5, RpcHandshake>((value, expected) => {
+            AssertEqual5(value, expected);
+            value.Secret.Should().BeNull();
+        });
+        (hs with { Secret = "ignored-by-an-old-reader" })
+            .AssertPassesThroughAllSerializers<RpcHandshake, OldRpcHandshake5>(
+                (value, expected) => AssertEqual5(expected, value));
 
         static void Test(RpcHandshake h) {
             var hs = h.PassThroughAllSerializers();
@@ -139,6 +150,14 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             value.RemotePeerId.Should().Be(expected.RemotePeerId);
             value.RemoteHubId.Should().Be(expected.RemoteHubId);
             value.RemoteApiVersionSet!.Value.Should().Be(expected.RemoteApiVersionSet!.Value);
+        }
+
+        static void AssertEqual5(RpcHandshake value, OldRpcHandshake5 expected) {
+            value.RemotePeerId.Should().Be(expected.RemotePeerId);
+            value.RemoteHubId.Should().Be(expected.RemoteHubId);
+            value.RemoteApiVersionSet!.Value.Should().Be(expected.RemoteApiVersionSet!.Value);
+            value.ProtocolVersion.Should().Be(expected.ProtocolVersion);
+            value.Index.Should().Be(expected.Index);
         }
     }
 

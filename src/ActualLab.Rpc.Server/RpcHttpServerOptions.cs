@@ -15,6 +15,14 @@ public record RpcHttpServerOptions
     public string BackendRequestPath { get; init; } = RpcHttpClientOptions.Default.BackendRequestPath;
     public string SerializationFormatParameterName { get; init; } = RpcHttpClientOptions.Default.SerializationFormatParameterName;
     public string ClientIdParameterName { get; init; } = RpcHttpClientOptions.Default.ClientIdParameterName;
+    public string ReconnectProofCounterParameterName { get; init; }
+        = RpcHttpClientOptions.Default.ReconnectProofCounterParameterName;
+    public string ReconnectProofParameterName { get; init; }
+        = RpcHttpClientOptions.Default.ReconnectProofParameterName;
+
+    // See the same option on RpcWebSocketServerOptions for the caveats: it requires sticky
+    // routing and clients that all speak the reconnect proof protocol.
+    public bool RequireReconnectProof { get; init; } = false;
     public bool UsePipes { get; init; } = true;
     public bool MustRequireHttp2 { get; init; } = true;
 }

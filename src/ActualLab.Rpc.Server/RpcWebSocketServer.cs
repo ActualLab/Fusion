@@ -53,6 +53,18 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
         RpcRef? rpcRef = null;
         try {
             rpcRef = RefFactory.Invoke(this, context, isBackend).RequireServer();
+
+            // Runs before GetServerPeer, before AcceptWebSocketAsync and before any Disconnect,
+            // so a request that fails the proof can't evict the incumbent connection, can't create
+            // a peer, and can't obtain an upgraded socket. It must also stay above the unsupported
+            // format branch below, which accepts the socket just to send close code 4001.
+            if (!TryVerifyReconnectProof(context, rpcRef)) {
+                Log.LogWarning("'{PeerRef}': Rejected RPC connection - invalid reconnect proof for {Request}",
+                    rpcRef, requestDescription);
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return;
+            }
+
             if (!Hub.SerializationFormats.TryGet(rpcRef.SerializationFormat, out _)) {
                 Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}' for {Request}",
                     rpcRef, rpcRef.SerializationFormat, requestDescription);
@@ -139,5 +151,18 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
         finally {
             webSocket?.Dispose();
         }
+    }
+
+    // Protected methods
+
+    protected virtual bool TryVerifyReconnectProof(HttpContext context, RpcRef rpcRef)
+    {
+        var query = context.Request.Query;
+        var counterText = query[Options.ReconnectProofCounterParameterName].SingleOrDefault() ?? "";
+        var proof = query[Options.ReconnectProofParameterName].SingleOrDefault() ?? "";
+        // rpcRef.HostInfo is the raw clientId, so the value in the HMAC is the one that selected the peer
+        Hub.TryGetServerPeer(rpcRef, out var peer);
+        return RpcReconnectProof.TryVerify(
+            peer, rpcRef.HostInfo, counterText, proof, Options.RequireReconnectProof);
     }
 }

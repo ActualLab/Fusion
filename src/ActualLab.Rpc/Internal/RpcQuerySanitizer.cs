@@ -11,8 +11,10 @@ public static class RpcQuerySanitizer
 {
     public const string RedactedValue = "<redacted>";
 
+    // "c" is the reconnect proof counter - not a secret, and useful when diagnosing a rejected
+    // reconnect. Its companion "p" (the proof itself) is deliberately absent, i.e. redacted.
     public static ImmutableHashSet<string> AllowedParameterNames { get; set; }
-        = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "f", "serializationFormat");
+        = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "f", "serializationFormat", "c");
     public static ImmutableHashSet<string> HashedParameterNames { get; set; }
         = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "clientId");
 

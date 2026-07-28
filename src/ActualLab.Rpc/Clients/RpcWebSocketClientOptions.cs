@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Net.WebSockets;
 using System.Text.Encodings.Web;
+using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc.Clients;
@@ -15,6 +17,8 @@ public record RpcWebSocketClientOptions
     public string BackendRequestPath { get; init; } = "/backend/rpc/ws";
     public string SerializationFormatParameterName { get; init; } = "f";
     public string ClientIdParameterName { get; init; } = "clientId";
+    public string ReconnectProofCounterParameterName { get; init; } = "c";
+    public string ReconnectProofParameterName { get; init; } = "p";
     public bool UseAutoFrameDelayerFactory { get; init; } = false;
 
     // Delegate options
@@ -66,6 +70,13 @@ public record RpcWebSocketClientOptions
 #pragma warning restore CA1307
         url = $"{url}{queryStart}{options.ClientIdParameterName}={UrlEncoder.Default.Encode(peer.ClientId)}"
             + $"&{options.SerializationFormatParameterName}={peer.SerializationFormat.Key}";
+        if (peer.Secret is { } secret) {
+            // Neither value needs percent-encoding: the counter is decimal digits, the proof is base64url.
+            var counterText = peer.NextCounter().ToString(CultureInfo.InvariantCulture);
+            var proof = RpcReconnectProof.Compute(secret, peer.ClientId, counterText);
+            url += $"&{options.ReconnectProofCounterParameterName}={counterText}"
+                + $"&{options.ReconnectProofParameterName}={proof}";
+        }
         return new Uri(url, UriKind.Absolute);
     }
 
