@@ -42,6 +42,7 @@ import {
     RpcWebSocketConnection,
     RpcSystemCallHandler,
     RpcSystemCallSender,
+    RpcSystemCalls,
     defineRpcService,
     wireMethodName,
     type RpcConnection,
@@ -59,6 +60,7 @@ import {
 import {
     ComputeFunction,
     ComputeContext,
+    type Computed,
     type ComputeFunctionImpl,
 } from '@actuallab/fusion';
 import {
@@ -84,6 +86,12 @@ class FusionSystemCallHandler extends RpcSystemCallHandler {
     override handle(message: RpcMessage, args: unknown[], peer: RpcPeer): void {
         const method = message.Method;
         const relatedId = message.RelatedId ?? 0;
+
+        // The caller dropped its computed, so we no longer owe it an invalidation.
+        // Released here rather than off the inbound call's abort signal because a
+        // completed inbound call may already have been evicted from the tracker.
+        if (method === RpcSystemCalls.cancel)
+            releaseInboundComputed(peer, relatedId);
 
         if (method === FUSION_INVALIDATE_METHOD) {
             // C# RpcComputeSystemCalls.Invalidate: Get + type check BEFORE any
@@ -204,7 +212,10 @@ export class FusionHub extends RpcHub {
         );
         return async (...args: unknown[]) => {
             const context = extractDispatchContext(args);
-            const cleanArgs = context !== undefined ? args.slice(0, -1) : args;
+            // Truncate to the declared arity: ComputeFunction.buildKey folds every argument
+            // into the cache key, so an extra wire argument would otherwise give the same
+            // logical call a fresh key and re-run the handler on every request (I3).
+            const cleanArgs = args.slice(0, methodDef.argCount);
 
             const computed = await cf.invoke(impl, cleanArgs);
 
@@ -212,24 +223,34 @@ export class FusionHub extends RpcHub {
             // the result immediately, with no invalidation tracking.
             if (context?.callType === FUSION_CALL_TYPE_ID) {
                 const { peer, callId } = context;
+                // ComputedRegistry holds computeds weakly, so without this the only
+                // reference left after the wrapper returns is the whenInvalidated
+                // subscription stored on the computed itself — GC then takes both and
+                // the caller never learns its value went stale (I1). .NET's equivalent
+                // is the strong RpcInboundComputeCall.Computed, released on Unregister.
+                retainInboundComputed(peer, callId, computed);
                 // ProcessStage2 parity (F1): whenInvalidated() resolves immediately
                 // for an already-invalidated computed, so an invalidation landing
                 // during computation still produces the send.
-                void computed.whenInvalidated().then(() => {
-                    // C# sends the result (ProcessStage1Plus) before the
-                    // invalidation (ProcessStage2). Here the dispatch loop sends
-                    // $sys.Ok after this wrapper returns, so defer past that turn —
-                    // a client drops an Invalidate that precedes its result.
-                    setTimeout(() => {
-                        const conn = peer.connection;
-                        if (conn !== undefined)
-                            this.systemCallSender.invalidate(
-                                conn,
-                                peer.serializationFormat,
-                                callId
-                            );
-                    }, 0);
-                });
+                void computed.whenInvalidated(context.signal).then(
+                    () => {
+                        releaseInboundComputed(peer, callId);
+                        // C# sends the result (ProcessStage1Plus) before the
+                        // invalidation (ProcessStage2). Here the dispatch loop sends
+                        // $sys.Ok after this wrapper returns, so defer past that turn —
+                        // a client drops an Invalidate that precedes its result.
+                        setTimeout(() => {
+                            const conn = peer.connection;
+                            if (conn !== undefined)
+                                this.systemCallSender.invalidate(
+                                    conn,
+                                    peer.serializationFormat,
+                                    callId
+                                );
+                        }, 0);
+                    },
+                    () => releaseInboundComputed(peer, callId)
+                );
             }
 
             return computed.value;
@@ -269,10 +290,12 @@ export class FusionHub extends RpcHub {
             // cancellation is retried transparently, bounded by MaxTryCount.
             let tryIndex = 0;
             for (;;) {
-                const outboundCall = peer.call(
-                    wireName,
-                    callArgs,
-                    callOptions
+                // Node's AsyncLocalStorage stamps every promise created under a store with
+                // a strong reference to it, and the call's `result`/`whenInvalidated` promises
+                // outlive the computation inside peer.outboundCalls — created here they would
+                // pin the ambient ComputeContext, and with it the computed (I10).
+                const outboundCall = AsyncContext.empty.run(() =>
+                    peer.call(wireName, callArgs, callOptions)
                 ) as RpcOutboundComputeCall;
                 try {
                     const value = await outboundCall.result;
@@ -309,6 +332,42 @@ export class FusionHub extends RpcHub {
     }
 }
 
+// Strong Computed references the server owes an invalidation for, keyed by inbound
+// call id. Per peer, so they die with the peer even if the caller never releases them.
+const inboundComputeds = new WeakMap<RpcPeer, Map<number, Computed<unknown>>>();
+
+function retainInboundComputed(
+    peer: RpcPeer,
+    callId: number,
+    computed: Computed<unknown>
+): void {
+    let computeds = inboundComputeds.get(peer);
+    if (computeds === undefined) {
+        computeds = new Map<number, Computed<unknown>>();
+        inboundComputeds.set(peer, computeds);
+    }
+    computeds.set(callId, computed);
+}
+
+function releaseInboundComputed(peer: RpcPeer, callId: number): void {
+    inboundComputeds.get(peer)?.delete(callId);
+}
+
+// The TS analogue of .NET's `~RemoteComputed() => Dispose()`: the computed becoming
+// unreachable is what unregisters its outbound call and notifies the server.
+const outboundCallReleaser = new FinalizationRegistry<{
+    peer: RpcPeer;
+    call: RpcOutboundComputeCall;
+}>(({ peer, call }) => {
+    if (peer.outboundCalls.remove(call.callId) === undefined)
+        return;
+
+    call.whenInvalidated.resolve();
+    const conn = peer.connection;
+    if (conn !== undefined)
+        peer.hub.systemCallSender.cancel(conn, peer.serializationFormat, call.callId);
+});
+
 // Wires both directions of the client computed ↔ outbound compute call binding:
 //   - server invalidation → local computed invalidation (BindWhenInvalidatedToCall)
 //   - local computed invalidation → release the call + $sys.Cancel, unless the
@@ -322,8 +381,36 @@ function bindComputeCall(
     if (computed === undefined)
         return;
 
-    void call.whenInvalidated.then(() => computed.invalidate());
+    // Two things conspire to pin `computed` here, both fixed below (I10):
+    // - V8 gives every closure declared in one scope the same Context object, so the
+    //   call-side reaction must live in its own function or it reaches `computed`
+    //   strongly through the computed-side one;
+    // - Node's AsyncLocalStorage stamps every promise created under a store with a strong
+    //   reference to it, so a reaction created under the ambient ComputeContext pins the
+    //   very computed we only mean to hold weakly.
+    const computedRef = new WeakRef(computed);
+    AsyncContext.empty.run(() => bindCallToComputed(call, computedRef));
+    AsyncContext.empty.run(() => bindComputedToCall(peer, call, computed));
+    outboundCallReleaser.register(computed, { peer, call }, computed);
+}
+
+// A compute call stays registered in peer.outboundCalls after $sys.Ok, so this reaction
+// must reach the computed weakly — a strong capture pins it and its whole result payload
+// from a GC root, and ComputedRegistry's WeakRef can then never be reclaimed (I10).
+function bindCallToComputed(
+    call: RpcOutboundComputeCall,
+    computedRef: WeakRef<Computed<unknown>>
+): void {
+    void call.whenInvalidated.then(() => computedRef.deref()?.invalidate());
+}
+
+function bindComputedToCall(
+    peer: RpcPeer,
+    call: RpcOutboundComputeCall,
+    computed: Computed<unknown>
+): void {
     void computed.whenInvalidated().then(() => {
+        outboundCallReleaser.unregister(computed);
         if (call.whenInvalidated.isCompleted)
             return;
         if (peer.outboundCalls.remove(call.callId) === undefined)

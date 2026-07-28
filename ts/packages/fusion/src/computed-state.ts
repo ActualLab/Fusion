@@ -58,8 +58,10 @@ export class ComputedState<T> extends State<T> {
         if (this.isDisposed)
             return;
 
-        this._onDisposed();
+        // Abort first: _onDisposed() invalidates the computed, and the update cycle must
+        // see the abort rather than treat that invalidation as a request to recompute.
         this._disposeController.abort();
+        this._onDisposed();
     }
 
     private async _updateCycle(): Promise<void> {

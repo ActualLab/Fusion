@@ -6,6 +6,20 @@ function makeKey(method: string, ...args: unknown[]): string {
     return `Test.${method}[${++_testKeyCounter}]:${args.map(a => JSON.stringify(a)).join(',')}`;
 }
 
+interface RegistryInternals {
+    _entries: Map<string, WeakRef<Computed<unknown>>>;
+    _onFinalized(token: { key: string; ref: WeakRef<Computed<unknown>> }): void;
+}
+
+// The finalizer path is unreachable without real GC, so the I13 tests drive it directly.
+function registryEntries(): Map<string, WeakRef<Computed<unknown>>> {
+    return (ComputedRegistry as unknown as RegistryInternals)._entries;
+}
+
+function onFinalized(token: { key: string; ref: WeakRef<Computed<unknown>> }): void {
+    (ComputedRegistry as unknown as RegistryInternals)._onFinalized(token);
+}
+
 describe('ComputedRegistry', () => {
     it('should register and retrieve computed via setOutput auto-registration', () => {
         const key = makeKey('get', 1);
@@ -65,6 +79,38 @@ describe('ComputedRegistry', () => {
 
         expect(c1.state).toBe(ConsistencyState.Consistent);
         expect(ComputedRegistry.get(key)).toBe(c1);
+    });
+
+    it('should ignore a late finalizer for a key that was re-registered (I13)', () => {
+        const key = makeKey('get', 1);
+        const c1 = new Computed<number>(key);
+        c1.setOutput(1);
+        const staleToken = {
+            key,
+            ref: registryEntries().get(key)!,
+        };
+
+        // The predecessor is collected: its WeakRef clears and `get` drops the dead entry.
+        c1.invalidate();
+        const c2 = new Computed<number>(key);
+        c2.setOutput(2);
+        expect(ComputedRegistry.get(key)).toBe(c2);
+
+        onFinalized(staleToken);
+
+        expect(ComputedRegistry.get(key)).toBe(c2);
+    });
+
+    it('should not unregister a key owned by a different computed (I13)', () => {
+        const key = makeKey('get', 1);
+        const c1 = new Computed<number>(key);
+        c1.setOutput(1);
+        const c2 = new Computed<number>(key);
+        c2.setOutput(2);
+
+        ComputedRegistry.unregister(c1 as Computed<unknown>);
+
+        expect(ComputedRegistry.get(key)).toBe(c2);
     });
 
     it('should track size', () => {

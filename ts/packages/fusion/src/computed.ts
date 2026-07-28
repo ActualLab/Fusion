@@ -18,6 +18,12 @@ const { errorLog } = getLogs('Computed');
 
 let _nextVersion = 0;
 
+// A dependant drops its own edges only when it's invalidated, so a dependency that
+// outlives many dependants accumulates dead WeakRefs. .NET reclaims them from the
+// background ComputedGraphPruner; TS has no worker, so pruning is amortized into
+// addDependency and the threshold doubles past the surviving edge count each time.
+const MinPruneDependantsThreshold = 16;
+
 export const enum ConsistencyState {
     Computing = 0,
     Consistent = 1,
@@ -64,6 +70,7 @@ export class Computed<T> implements IResult<T> {
     private _errorTimer: ReturnType<typeof setTimeout> | undefined;
     private _dependencies = new Set<Computed<unknown>>();
     private _dependants = new Map<number, WeakRef<Computed<unknown>>>();
+    private _pruneDependantsThreshold = MinPruneDependantsThreshold;
     private _onInvalidated = new EventHandlerSet<void>();
     readonly _renewer: (() => Computed<T> | Promise<Computed<T>>) | undefined;
 
@@ -123,6 +130,10 @@ export class Computed<T> implements IResult<T> {
 
     get dependencies(): ReadonlySet<Computed<unknown>> {
         return this._dependencies;
+    }
+
+    get dependantCount(): number {
+        return this._dependants.size;
     }
 
     update(): Computed<T> | Promise<Computed<T>> {
@@ -289,6 +300,26 @@ export class Computed<T> implements IResult<T> {
         dependency._dependants.set(
             this._version,
             new WeakRef(this as Computed<unknown>)
+        );
+        if (dependency._dependants.size >= dependency._pruneDependantsThreshold)
+            dependency.pruneDependants();
+    }
+
+    // Port of .NET Computed.PruneDependants: drops edges to dependants that were
+    // collected or already invalidated. `_dependants` is keyed by the dependant's
+    // unique version, so .NET's "still the registered version" check is implicit.
+    pruneDependants(): void {
+        if (this._state !== ConsistencyState.Consistent)
+            return;
+
+        for (const [version, ref] of this._dependants) {
+            const dependant = ref.deref();
+            if (dependant === undefined || dependant._state === ConsistencyState.Invalidated)
+                this._dependants.delete(version);
+        }
+        this._pruneDependantsThreshold = Math.max(
+            MinPruneDependantsThreshold,
+            this._dependants.size * 2
         );
     }
 }

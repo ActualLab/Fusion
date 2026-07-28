@@ -12,5 +12,10 @@ export default defineConfig({
     },
     test: {
         include: ['packages/*/tests/**/*.test.ts'],
+        // The computed-lifetime tests assert what GC reclaims, so they need global.gc().
+        poolOptions: {
+            forks: { execArgv: ['--expose-gc'] },
+            threads: { execArgv: ['--expose-gc'] },
+        },
     },
 });
