@@ -28,21 +28,33 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
     public const int DefaultUnversionedNameCacheCapacity = 16384;
     public const int DefaultResolveCacheCapacity = 16384;
 
-    private static volatile PruningCache<string, TypeRef> _unversionedNameCache
+#if NET9_0_OR_GREATER
+    private static readonly Lock StaticLock = new();
+#else
+    private static readonly object StaticLock = new();
+#endif
+
+    private static PruningCache<string, TypeRef> _unversionedNameCache
         = NewUnversionedNameCache(DefaultUnversionedNameCacheCapacity);
-    private static volatile PruningCache<string, Type> _resolveCache
+    private static PruningCache<string, Type> _resolveCache
         = NewResolveCache(DefaultResolveCacheCapacity);
 
     public static readonly TypeRef None = default;
 
     public static int UnversionedNameCacheCapacity {
         get => _unversionedNameCache.Capacity;
-        set => _unversionedNameCache = NewUnversionedNameCache(value);
+        set {
+            lock (StaticLock)
+                _unversionedNameCache = NewUnversionedNameCache(value);
+        }
     }
     public static int UnversionedNameCacheSize => _unversionedNameCache.Count;
     public static int ResolveCacheCapacity {
         get => _resolveCache.Capacity;
-        set => _resolveCache = NewResolveCache(value);
+        set {
+            lock (StaticLock)
+                _resolveCache = NewResolveCache(value);
+        }
     }
     public static int ResolveCacheSize => _resolveCache.Count;
 

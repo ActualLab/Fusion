@@ -106,7 +106,7 @@ public class SessionMiddleware : IMiddleware, IHasServices
             }
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            Log.LogError(e, "Session is unavailable: {SessionHash}", session?.Hash);
+            Log.LogError(e, "Session is unavailable: {Session}", session);
             isInvalid = true;
         }
         if (isInvalid)
@@ -127,7 +127,7 @@ public class SessionMiddleware : IMiddleware, IHasServices
 
         if (HasReloadGuard(httpContext)) {
             // The reload didn't help, so we proceed with a fresh session instead of redirecting again
-            Log.LogWarning("Session is still invalid right after a reload: {SessionHash}", originalSession?.Hash);
+            Log.LogWarning("Session is still invalid right after a reload: {Session}", originalSession);
             RemoveReloadGuard(httpContext);
             return session;
         }
