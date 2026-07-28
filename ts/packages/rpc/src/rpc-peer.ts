@@ -893,26 +893,33 @@ export class RpcClientPeer extends RpcPeer {
 
     /** Builds the `c` / `p` connect-URL parameters proving possession of the
      *  server-issued reconnect secret, or `undefined` when there is no secret
-     *  yet or WebCrypto is unavailable. Consumes one counter value per call,
-     *  so call it exactly once per connect attempt. */
+     *  yet or WebCrypto is unavailable. Consumes one counter value per proof
+     *  produced, so call it exactly once per connect attempt. */
     async computeReconnectProof(): Promise<RpcReconnectProofParameters | undefined> {
         const secret = this._reconnectSecret;
         if (secret === undefined)
             return undefined;
 
-        // Degrading to the legacy no-proof URL is safe by construction: the
-        // server's RequireReconnectProof defaults to false, and a request with
-        // neither `c` nor `p` takes the legacy path. Throwing here would instead
-        // lock every insecure-context client out of the reconnect loop entirely.
+        // Degrading to the legacy no-proof URL keeps a client that can never prove - an insecure
+        // context has no crypto.subtle - out of a permanent reconnect failure. It is not a way
+        // back for a client that has already proven: the server refuses that downgrade, since it
+        // is exactly how an attacker would strip the proof. crypto.subtle availability is a
+        // property of the environment, not of the attempt, so a client is on one side or the other
+        // for its whole life.
         if (!isReconnectProofSupported()) {
             warnReconnectProofUnavailable(this.ref, 'crypto.subtle is unavailable (insecure context?)');
             return undefined;
         }
 
-        const counter = (++this._reconnectCounter).toString();
+        const counter = (this._reconnectCounter + 1).toString();
         try {
-            return { counter, proof: await computeReconnectProof(secret, this.clientId, counter) };
+            const proof = await computeReconnectProof(secret, this.clientId, counter);
+            this._reconnectCounter++; // Only a produced proof consumes counter space
+            return { counter, proof };
         } catch (e) {
+            // Anomalous: crypto.subtle exists but failed. The connect will be refused once this
+            // peer has proven before, and the reconnect loop retries - which recovers if the
+            // failure was transient.
             warnReconnectProofUnavailable(this.ref, `HMAC-SHA256 failed: ${String(e)}`);
             return undefined;
         }
