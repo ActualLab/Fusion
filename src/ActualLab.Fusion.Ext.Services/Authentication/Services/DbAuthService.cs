@@ -78,10 +78,20 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
             return;
         }
 
+        // Signing out a session that was never set up is a no-op, and this check must run before
+        // CreateOperationDbContext - otherwise any client-chosen session id costs an operation log entry.
+        if (await Sessions.Get(shard, session.Id, cancellationToken).ConfigureAwait(false) is null)
+            return;
+
         var dbContext = await DbHub.CreateOperationDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
-        var dbSessionInfo = await Sessions.GetOrCreate(dbContext, session.Id, cancellationToken).ConfigureAwait(false);
+        var dbSessionInfo = await Sessions.Get(dbContext, session.Id, true, cancellationToken).ConfigureAwait(false);
+        if (dbSessionInfo is null) {
+            context.Operation.MustStore(false); // The session is gone (trimmed?), so there is nothing to log
+            return;
+        }
+
         var sessionInfo = SessionConverter.ToModel(dbSessionInfo);
         // ReSharper disable once ConditionIsAlwaysTrueOrFalse
         if (sessionInfo is null || sessionInfo.IsSignOutForced)

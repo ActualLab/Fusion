@@ -5,6 +5,7 @@ using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.Tests.DbModel;
 using ActualLab.Generators;
 using ActualLab.Reflection;
+using Microsoft.EntityFrameworkCore;
 using User = ActualLab.Fusion.Authentication.User;
 
 namespace ActualLab.Fusion.Tests.Authentication;
@@ -344,6 +345,21 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         user = await auth.GetUser(session);
         user.Should().NotBeNull();
         user!.Name.Should().Be("John");
+    }
+
+    [Fact]
+    public async Task SignOutOfUnknownSessionMustNotWriteAnything()
+    {
+        if (MustSkip() || UseInMemoryAuthService) return;
+
+        var commander = Services.Commander();
+        for (var i = 0; i < 10; i++)
+            await commander.Call(new Auth_SignOut(Session.New()));
+
+        await using var dbContext = await CreateDbContext();
+        (await dbContext.AuthSessions.CountAsync()).Should().Be(0);
+        (await dbContext.Operations.CountAsync()).Should().Be(0);
+        (await dbContext.Events.CountAsync()).Should().Be(0);
     }
 
     [Fact]

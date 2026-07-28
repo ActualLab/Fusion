@@ -55,15 +55,28 @@ public class DbShardResolver<TDbContext>(IServiceProvider services)
 
         switch (source) {
             case Session session:
-                return DbShard.Validate(session.GetTag(SessionShardTag));
+                return Validate(session.GetTag(SessionShardTag));
             case IHasShard hasShard:
-                return DbShard.Validate(hasShard.Shard);
+                return Validate(hasShard.Shard);
             case ICommand command:
                 if (command is ISessionCommand sessionCommand)
-                    return DbShard.Validate(sessionCommand.Session.GetTag(SessionShardTag));
+                    return Validate(sessionCommand.Session.GetTag(SessionShardTag));
                 return DbShard.Single;
             default:
                 return DbShard.Single;
         }
+    }
+
+    // Private methods
+
+    private string Validate(string shard)
+    {
+        // Every caller uses the result as a per-shard cache key, so an unregistered shard must be
+        // rejected here rather than on first use. DbShard.Validate still runs first: CanUse accepts
+        // DbShard.Template, which must never be reachable from a client-supplied tag.
+        DbShard.Validate(shard);
+        return ShardRegistry.CanUse(shard)
+            ? shard
+            : throw Internal.Errors.NoShard(shard);
     }
 }
