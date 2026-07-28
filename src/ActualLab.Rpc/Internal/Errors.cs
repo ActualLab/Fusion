@@ -58,6 +58,13 @@ public static class Errors
         => new RpcException($"Endpoint not found: '{serviceName}.{methodName}'.");
     public static Exception InvalidCallTypeId(string serviceName, string methodName, string expected, string actual)
         => new RpcException($"Invalid CallTypeId: '{serviceName}.{methodName}' expected '{expected}', but got '{actual}'.");
+    public static Exception InboundCallIdConflict(
+        long callId,
+        (string MethodName, string CallTypeDescription) expected,
+        (string MethodName, string CallTypeDescription) actual)
+        => new RpcException(
+            $"Inbound call #{callId} is already bound to '{expected.MethodName}' ({expected.CallTypeDescription}), " +
+            $"but the incoming call is '{actual.MethodName}' ({actual.CallTypeDescription}).");
     public static Exception MatchButNoCachedEntry()
         => new RpcException("The remote server responded with 'Match', but the outbound call has no cached entry.");
     public static Exception EmptyErrorResponse()

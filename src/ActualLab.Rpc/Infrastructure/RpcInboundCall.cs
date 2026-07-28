@@ -113,7 +113,17 @@ public abstract class RpcInboundCall : RpcCall
 
         var existingCall = context.Peer.InboundCalls.GetOrRegister(this);
         if (existingCall != this) {
-            // Dispose message since this call instance won't process it
+            // This instance never got registered, so its token was never handed to anything: the source
+            // must be disposed rather than cancelled to release its PeerChangedToken registration.
+            CallCancelSource.DisposeSilently();
+            var existingMessage = existingCall.Context.Message;
+            var message = context.Message;
+            if (existingMessage.MethodRef != message.MethodRef
+                || existingMessage.CallTypeId != message.CallTypeId)
+                throw Errors.InboundCallIdConflict(Id,
+                    (existingMessage.MethodRef.FullName, RpcCallTypes.GetDescription(existingMessage.CallTypeId)),
+                    (message.MethodRef.FullName, RpcCallTypes.GetDescription(message.CallTypeId)));
+
             return existingCall.TryReprocess(0, cancellationToken)
                 ?? existingCall.WhenProcessed
                 ?? Task.CompletedTask;
@@ -126,9 +136,12 @@ public abstract class RpcInboundCall : RpcCall
 
                 Arguments ??= DeserializeArguments();
                 // Release the message buffer after deserialization
-                if (Arguments is null)
-                    return
-                        Task.CompletedTask; // No way to resolve argument list type -> the related call is already gone
+                if (Arguments is null) {
+                    // No way to resolve argument list type -> the related call is already gone.
+                    // This one is registered already, and Unregister is what disposes CallCancelSource.
+                    UnregisterFromLock();
+                    return Task.CompletedTask;
+                }
 
                 if (peer.CallLogger.IsLogged(this))
                     peer.CallLogger.LogInbound(this);

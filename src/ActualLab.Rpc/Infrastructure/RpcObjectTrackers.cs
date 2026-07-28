@@ -1,6 +1,7 @@
 using ActualLab.Concurrency;
 using ActualLab.Internal;
 using ActualLab.OS;
+using ActualLab.Rpc.Diagnostics;
 
 namespace ActualLab.Rpc.Infrastructure;
 
@@ -241,6 +242,17 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
                         .ConfigureAwait(false);
                     return;
                 }
+
+                if (GetCountLimitError() is { } countLimitError) {
+                    // Reset first: it's what frees the trackers even if the same client reconnects
+                    // (an unchanged peer never hits the RpcPeer.Reset call in OnRun). The Disconnect
+                    // that follows cancels the reader token, which aborts in-flight inbound calls,
+                    // and ends this loop - the next connection starts a fresh Maintain.
+                    await Peer.Reset(countLimitError).ConfigureAwait(false);
+                    await Peer.Disconnect(countLimitError, cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
                 var minLastKeepAliveAt = Moment.Now - Limits.ObjectReleaseTimeout;
                 foreach (var (_, obj) in _objects)
                     if (obj.LastKeepAliveAt < minLastKeepAliveAt && Unregister(obj))
@@ -293,8 +305,46 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
 
     // Private methods
 
-    private static void TryDispose(IRpcSharedObject obj)
+    private RpcResourceLimitExceededException? GetCountLimitError()
     {
+        var peer = Peer;
+        var callCountLimit = Limits.CallCountLimit;
+        if (callCountLimit != int.MaxValue) {
+            var inboundCallCount = peer.InboundCalls.Count;
+            var outboundCallCount = peer.OutboundCalls.Count;
+            if ((long)inboundCallCount + outboundCallCount > callCountLimit) {
+                RpcInstruments.RegisterResourceLimitBreach("call");
+                peer.Log.LogWarning(
+                    "'{Route}': call count limit is exceeded, resetting the peer: "
+                    + "{InboundCallCount} inbound + {OutboundCallCount} outbound > {CallCountLimit}",
+                    peer.Route, inboundCallCount, outboundCallCount, callCountLimit);
+                return RpcResourceLimitExceededException.CallCountLimitExceeded(
+                    peer.Ref, inboundCallCount, outboundCallCount, callCountLimit);
+            }
+        }
+
+        var objectCountLimit = Limits.ObjectCountLimit;
+        if (objectCountLimit != int.MaxValue) {
+            var sharedObjectCount = Count;
+            var remoteObjectCount = peer.RemoteObjects.Count;
+            if ((long)sharedObjectCount + remoteObjectCount > objectCountLimit) {
+                RpcInstruments.RegisterResourceLimitBreach("object");
+                peer.Log.LogWarning(
+                    "'{Route}': object count limit is exceeded, resetting the peer: "
+                    + "{SharedObjectCount} shared + {RemoteObjectCount} remote > {ObjectCountLimit}",
+                    peer.Route, sharedObjectCount, remoteObjectCount, objectCountLimit);
+                return RpcResourceLimitExceededException.ObjectCountLimitExceeded(
+                    peer.Ref, sharedObjectCount, remoteObjectCount, objectCountLimit);
+            }
+        }
+        return null;
+    }
+
+    private void TryDispose(IRpcSharedObject obj)
+    {
+        // A shared object that was never started (e.g. a stream the remote peer never
+        // enumerated) has no OnStop to run, so disposal alone won't unregister it.
+        Unregister(obj);
         if (obj is IAsyncDisposable ad)
             _ = ad.DisposeAsync();
         else if (obj is IDisposable d)

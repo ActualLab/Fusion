@@ -506,7 +506,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    protected async Task Reset(Exception error, bool isStopped = false)
+    protected internal async Task Reset(Exception error, bool isStopped = false)
     {
         RemoteObjects.Abort();
         await SharedObjects.Abort(error).ConfigureAwait(false);
@@ -519,7 +519,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             OutboundCalls.ClearCallMetrics();
         else
             OutboundCalls.ClearInboundCallMetrics();
-        Log.LogInformation("'{Route}': {Action}", Route, isStopped ? "Stopped" : "Peer changed");
+        Log.LogInformation("'{Route}': {Action} ({Reason})",
+            Route, isStopped ? "Stopped" : "Reset", error.Message);
     }
 
     protected RpcInboundContext? ProcessMessage(
