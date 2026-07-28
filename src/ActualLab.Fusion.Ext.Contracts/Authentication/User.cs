@@ -102,7 +102,7 @@ public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarg
         if (Identities.IsEmpty)
             return this;
 
-        var maskedIdentities = ApiMap<UserIdentity, string>.Empty;
+        var maskedIdentities = new ApiMap<UserIdentity, string>();
         foreach (var (id, _) in Identities)
             maskedIdentities.TryAdd((id.Schema, "<hidden>"), "");
         return this with { Identities = maskedIdentities };

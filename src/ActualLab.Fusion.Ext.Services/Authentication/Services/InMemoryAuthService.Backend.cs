@@ -147,6 +147,7 @@ public partial class InMemoryAuthService
 
     // Protected methods
 
+    [ComputeMethod]
     protected virtual Task<ImmutableArray<(string Id, SessionInfo SessionInfo)>> GetUserSessions(
         string shard, string userId, CancellationToken cancellationToken = default)
     {

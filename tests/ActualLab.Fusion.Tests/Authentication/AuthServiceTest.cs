@@ -348,6 +348,34 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
     }
 
     [Fact]
+    public async Task GetUserSessionsIsInvalidatedWhenAnotherSessionIsUpdated()
+    {
+        if (MustSkip()) return;
+
+        // AuthBackend_SetupSession is the case that isolates the intermediate GetUserSessions
+        // overload: its invalidation block touches GetUserSessions(shard, userId) but not
+        // GetUser(shard, userId), so nothing else can invalidate the outer computed on its behalf.
+        // A sign-out wouldn't prove anything - it invalidates GetUser too.
+        var commander = Services.Commander();
+        var auth = Services.GetRequiredService<IAuth>();
+        var sessionA = Session.New();
+        var sessionB = Session.New();
+
+        var bob = new User("Bob").WithIdentity("g:1");
+        await commander.Call(new AuthBackend_SignIn(sessionA, bob));
+        await commander.Call(new AuthBackend_SignIn(sessionB, bob));
+
+        var c = await Computed.Capture(() => auth.GetUserSessions(sessionA));
+        c.Value.Select(s => s.SessionHash).Should().BeEquivalentTo(sessionA.Hash, sessionB.Hash);
+
+        await commander.Call(new AuthBackend_SetupSession(sessionB, "1.2.3.4", "TestAgent"));
+        await c.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(5));
+
+        c = await Computed.Capture(() => auth.GetUserSessions(sessionA));
+        c.Value.Single(s => Equals(s.SessionHash, sessionB.Hash)).UserAgent.Should().Be("TestAgent");
+    }
+
+    [Fact]
     public async Task SignOutOfUnknownSessionMustNotWriteAnything()
     {
         if (MustSkip() || UseInMemoryAuthService) return;

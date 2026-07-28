@@ -158,6 +158,20 @@ public class CoreAuditRegressionTest
     }
 
     [Fact]
+    public void EmptyApiMapAndApiSetMustNotBeShared()
+    {
+        var map = ApiMap<string, string>.Empty;
+        map.TryAdd("a", "b");
+        ApiMap<string, string>.Empty.Should().NotBeSameAs(map);
+        ApiMap<string, string>.Empty.Count.Should().Be(0);
+
+        var set = ApiSet<string>.Empty;
+        set.Add("a");
+        ApiSet<string>.Empty.Should().NotBeSameAs(set);
+        ApiSet<string>.Empty.Count.Should().Be(0);
+    }
+
+    [Fact]
     public void EmptyApiMapMustReleaseStringBuilder()
         => MustReleaseStringBuilder(static () => new ApiMap<int, int>().ToString()).Should().BeTrue();
 
