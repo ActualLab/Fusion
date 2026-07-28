@@ -10,4 +10,12 @@ public class ByteStringJsonConverter : JsonConverter<ByteString>
 
     public override void Write(Utf8JsonWriter writer, ByteString value, JsonSerializerOptions options)
         => writer.WriteStringValue(value.ToBase64());
+
+    public override ByteString ReadAsPropertyName(
+        ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        => ByteString.FromBase64(reader.GetString());
+
+    public override void WriteAsPropertyName(
+        Utf8JsonWriter writer, ByteString value, JsonSerializerOptions options)
+        => writer.WritePropertyName(value.ToBase64());
 }
