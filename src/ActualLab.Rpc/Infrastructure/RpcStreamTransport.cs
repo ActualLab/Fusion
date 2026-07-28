@@ -22,10 +22,9 @@ public sealed class RpcStreamTransport : RpcFrameBasedTransport
         public int BufferSize { get; init; } = 16_000;
         public int MaxBufferSize { get; init; } = 256_000;
         // Enforced on both the inbound and the outbound path - see RpcFrameBasedTransport.DefaultMaxFrameSize
-        public int MaxFrameSize { get; init; } = RpcFrameBasedTransport.DefaultMaxFrameSize;
+        public int MaxFrameSize { get; init; } = DefaultMaxFrameSize;
         // Applies until the handshake is received - see RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize
-        public int MaxPreHandshakeFrameSize { get; init; }
-            = RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize;
+        public int MaxPreHandshakeFrameSize { get; init; } = DefaultMaxPreHandshakeFrameSize;
 
         // Use of UnboundedChannelOptions is totally fine here: if the message is enqueued
         public ChannelOptions WriteChannelOptions { get; init; } = new UnboundedChannelOptions() {

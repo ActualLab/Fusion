@@ -11,15 +11,11 @@ namespace ActualLab.Rpc.Infrastructure;
 /// </summary>
 public abstract class RpcFrameBasedTransport : RpcTransport
 {
-    // Until the handshake is received the peer is anonymous, and the only message it may legitimately
-    // send is the handshake itself - two GUIDs, a version set, and two ints, which measures under 1 KB
-    // in every registered format (see RpcWebSocketTransportSizeTest.HandshakeFitsPreHandshakeLimitInEveryFormat).
-    public const int DefaultMaxPreHandshakeFrameSize = 16_384;
-
+    // This constant is used only in the calculation of DefaultMaxFrameSize below.
     // The ArrayPool bucket every transport's receive buffer is meant to land in. ArrayPoolBuffer rounds
     // every capacity request up to the next power of two, so one byte above a bucket boundary doubles the
     // allocation - which is why the frame limit is defined relative to a bucket rather than freely.
-    public const int MaxFrameSizeBucket = 1 << 24; // 16 MiB
+    public const int MaxFrameSizeBucket = 1 << 24; // 16 MiB,
 
     // The largest frame (= batch of messages) any transport sends or accepts. Two constraints shape it:
     // - It must fit one maximum-size message: MaxArgumentDataSize (15.5 MiB) plus the worst-case envelope
@@ -31,6 +27,10 @@ public abstract class RpcFrameBasedTransport : RpcTransport
     //   frame itself: its 4-byte length prefix plus up to BufferSize of read-ahead. Hence the 64 KiB
     //   reserve - without it a maximum-size frame would push that transport into the next 32 MiB bucket.
     public const int DefaultMaxFrameSize = MaxFrameSizeBucket - 65_536; // 16,711,680
+    // Until the handshake is received the peer is anonymous, and the only message it may legitimately
+    // send is the handshake itself - two GUIDs, a version set, and two ints, which measures under 1 KB
+    // in every registered format (see RpcWebSocketTransportSizeTest.HandshakeFitsPreHandshakeLimitInEveryFormat).
+    public const int DefaultMaxPreHandshakeFrameSize = 16_384;
 
     protected const int Int32Size = sizeof(int);
 
