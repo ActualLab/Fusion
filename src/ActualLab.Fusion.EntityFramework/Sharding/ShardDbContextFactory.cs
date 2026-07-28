@@ -128,7 +128,7 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
             throw ActualLab.Internal.Errors.AlreadyDisposed<ShardDbContextFactory<TDbContext>>();
 
         return _factories.TryGetValue(shard, out var entry)
-            ? entry.Value
+            ? GetValue(shard, entry)
             : GetDbContextFactorySlow(shard);
     }
 
@@ -159,10 +159,23 @@ public class ShardDbContextFactory<TDbContext> : IShardDbContextFactory<TDbConte
                 this);
         }
         if (Volatile.Read(ref _isDisposed) == 0)
-            return entry.Value;
+            return GetValue(shard, entry);
 
         Remove(shard, entry);
         throw ActualLab.Internal.Errors.AlreadyDisposed<ShardDbContextFactory<TDbContext>>();
+    }
+
+    private IDbContextFactory<TDbContext> GetValue(string shard, CacheEntry entry)
+    {
+        // An entry that fails to initialize (e.g. an unregistered shard) must not stay cached:
+        // otherwise any shard name a caller passes in permanently grows _factories.
+        try {
+            return entry.Value;
+        }
+        catch {
+            Remove(shard, entry);
+            throw;
+        }
     }
 
     private IDbContextFactory<TDbContext> CreateDbContextFactory(string shard)

@@ -283,6 +283,13 @@ public class DbEntityResolver<TDbContext, TKey, TDbEntity>
         var batchProcessors = _batchProcessors;
         if (batchProcessors is null)
             throw ActualLab.Internal.Errors.AlreadyDisposed(GetType());
+        if (batchProcessors.TryGetValue(shard, out var batchProcessor))
+            return batchProcessor;
+
+        // Every processor owns a worker task, an unbounded channel and a CTS, and they're released
+        // only on disposal - so an unregistered shard must never reach GetOrAdd.
+        if (!DbHub.ShardRegistry.CanUse(shard))
+            throw Errors.NoShard(shard);
 
         return batchProcessors.GetOrAdd(shard, static (shard1, self) => self.CreateBatchProcessor(shard1), this);
     }
