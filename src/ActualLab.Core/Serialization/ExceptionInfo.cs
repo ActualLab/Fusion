@@ -23,6 +23,10 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 
     public static readonly ExceptionInfo None = default;
     public static Func<TypeRef, Type>? UnknownExceptionTypeResolver { get; set; } = null;
+    // ToException resolves a type name that typically comes from a remote peer. These two knobs
+    // bound what it's even willing to look up; widen them only if your exception types need it.
+    public static int MaxTypeGenericArity { get; set; } = 1;
+    public static string[] TypeNameSuffixes { get; set; } = ["Exception", "Error"];
 
     [DataMember(Order = 0), MemoryPackOrder(0)]
     public TypeRef TypeRef { get; }
@@ -96,8 +100,13 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
         if (exceptionInfo.IsNone)
             return null;
 
-        var (type, message) = (exceptionInfo.TypeRef.TryResolve(), exceptionInfo.Message);
-        type ??= UnknownExceptionTypeResolver?.Invoke(exceptionInfo.TypeRef);
+        // The structural check runs before TryResolve, so an unacceptable name never triggers
+        // assembly probing or a loader heap entry
+        var (typeRef, message) = (exceptionInfo.TypeRef, exceptionInfo.Message);
+        var type = typeRef.IsAcceptableName(MaxTypeGenericArity, TypeNameSuffixes)
+            ? typeRef.TryResolve()
+            : null;
+        type ??= UnknownExceptionTypeResolver?.Invoke(typeRef);
         if (type is null || !typeof(Exception).IsAssignableFrom(type))
             return null;
 

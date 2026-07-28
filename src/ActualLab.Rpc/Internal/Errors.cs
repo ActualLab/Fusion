@@ -60,6 +60,8 @@ public static class Errors
         => new RpcException($"Invalid CallTypeId: '{serviceName}.{methodName}' expected '{expected}', but got '{actual}'.");
     public static Exception MatchButNoCachedEntry()
         => new RpcException("The remote server responded with 'Match', but the outbound call has no cached entry.");
+    public static Exception EmptyErrorResponse()
+        => new RpcException("The remote peer responded with an empty error.");
     public static Exception TooLateToReconnect(string reason)
         => new RpcException($"Too late for this reconnect round: {reason}.");
 

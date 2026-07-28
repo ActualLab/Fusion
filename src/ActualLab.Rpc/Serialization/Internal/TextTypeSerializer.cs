@@ -9,13 +9,22 @@ namespace ActualLab.Rpc.Serialization.Internal;
 /// </summary>
 public static class TextTypeSerializer
 {
+    public const int DefaultFromBytesCacheCapacity = 16384;
+
     private static readonly ConcurrentDictionary<Type, ByteString> ToBytesCache = new();
-    private static readonly ConcurrentDictionary<ByteString, Type?> FromBytesCache = new();
+    private static volatile PruningCache<ByteString, Type?> _fromBytesCache
+        = new(DefaultFromBytesCacheCapacity);
 
     public static ReadOnlySpan<byte> Prefix => "/* @="u8;
     public static ReadOnlySpan<byte> Suffix => " */"u8;
     public static ReadOnlySpan<byte> ExpectedTypeSpan => "/* @= */"u8; // Must be Prefix + Suffix
     public static ReadOnlySpan<byte> NullValueTypeSpan => "/* @=0 */"u8; // Must be Prefix + Suffix
+
+    public static int FromBytesCacheCapacity {
+        get => _fromBytesCache.Capacity;
+        set => _fromBytesCache = new PruningCache<ByteString, Type?>(value);
+    }
+    public static int FromBytesCacheSize => _fromBytesCache.Count;
 
     public static ByteString ToBytes(Type type) =>
         ToBytesCache.GetOrAdd(type, static t => {
@@ -30,16 +39,18 @@ public static class TextTypeSerializer
             return new ByteString(sb.AsSpan().ToArray());
         });
 
-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
     public static Type? FromBytes(ByteString bytes)
-        => FromBytesCache.GetOrAdd(bytes, static b => {
-            if (b.Span.SequenceEqual(NullValueTypeSpan))
-                return typeof(NullValue);
+    {
+        // bytes usually projects into a pooled transport buffer that's recycled right after the
+        // frame is parsed, so we probe the cache first and store an owned copy only on a miss.
+        var fromBytesCache = _fromBytesCache;
+        if (fromBytesCache.TryGet(bytes, out var cachedType))
+            return cachedType;
 
-            var utf8Name = new ByteString(b.Bytes[Prefix.Length..^Suffix.Length]);
-            var typeRef = new TypeRef(utf8Name.ToStringAsUtf8());
-            return typeRef.Resolve();
-        });
+        var type = Resolve(bytes);
+        fromBytesCache.TryAdd(new ByteString(bytes.Bytes.ToArray()), type);
+        return type;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WriteDerivedItemType(Utf8TextWriter writer, Type expectedType, Type itemType)
@@ -92,5 +103,25 @@ public static class TextTypeSerializer
         var result = FromBytes(data[..typeLength].AsByteString());
         data = data[typeLength..];
         return result;
+    }
+
+    // Private methods
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume RPC-related code is fully preserved")]
+    private static Type? Resolve(ByteString marker)
+    {
+        var span = marker.Span;
+        if (span.SequenceEqual(NullValueTypeSpan))
+            return typeof(NullValue);
+        if (span.Length < ExpectedTypeSpan.Length
+            || !span[..Prefix.Length].SequenceEqual(Prefix)
+            || !span[^Suffix.Length..].SequenceEqual(Suffix))
+            throw Errors.InvalidItemTypeFormat();
+
+        if (span.Length == ExpectedTypeSpan.Length)
+            return null;
+
+        var utf8Name = new ByteString(marker.Bytes[Prefix.Length..^Suffix.Length]);
+        return new TypeRef(utf8Name.ToStringAsUtf8()).Resolve();
     }
 }

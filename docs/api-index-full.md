@@ -345,6 +345,10 @@ A thread-safe mutable property bag backed by an immutable `PropertyBag` with ato
 
 A thread-safe mutable set of named options. Consider using `MutablePropertyBag` instead.
 
+###### `PruningCache<TKey, TValue>`
+
+A capacity-bounded cache with lock-free reads; once it grows past its capacity, a background prune evicts arbitrary entries until half of that capacity is left.
+
 ###### `RadixHeapSet<T>`
 
 A radix heap with set semantics, providing efficient monotone priority queue operations using integer priorities. Each value can appear at most once.
