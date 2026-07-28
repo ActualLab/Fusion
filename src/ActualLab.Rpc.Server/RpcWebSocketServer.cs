@@ -65,9 +65,9 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
                 return;
             }
 
-            if (!Hub.SerializationFormats.TryGet(rpcRef.SerializationFormat, out _)) {
-                Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}' for {Request}",
-                    rpcRef, rpcRef.SerializationFormat, requestDescription);
+            if (Hub.SerializationFormats.GetClientRejectionReason(rpcRef.SerializationFormat) is { } rejectionReason) {
+                Log.LogWarning("'{PeerRef}': Rejected {Request}: {Reason}",
+                    rpcRef, requestDescription, rejectionReason);
 #if NET6_0_OR_GREATER
                 var rejectAcceptContext = Options.ConfigureWebSocket.Invoke(this, context, rpcRef);
                 webSocket = await context.WebSockets.AcceptWebSocketAsync(rejectAcceptContext).ConfigureAwait(false);

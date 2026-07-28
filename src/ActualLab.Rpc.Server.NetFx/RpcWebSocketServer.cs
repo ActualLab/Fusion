@@ -55,11 +55,9 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions settings, IServiceProv
             return HttpStatusCode.Forbidden;
         }
 
-        // Validate serialization format before peer creation to avoid KeyNotFoundException.
-        // Empty format is also rejected — clients must specify one explicitly.
-        if (!Hub.SerializationFormats.TryGet(rpcRef.SerializationFormat, out _)) {
-            Log.LogWarning("'{PeerRef}': Unsupported RPC serialization format '{Format}'",
-                rpcRef, rpcRef.SerializationFormat);
+        // Validate serialization format before peer creation to avoid KeyNotFoundException
+        if (Hub.SerializationFormats.GetClientRejectionReason(rpcRef.SerializationFormat) is { } rejectionReason) {
+            Log.LogWarning("'{PeerRef}': Rejected the connection: {Reason}", rpcRef, rejectionReason);
             return HttpStatusCode.BadRequest;
         }
 

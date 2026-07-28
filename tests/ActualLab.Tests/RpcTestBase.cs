@@ -26,6 +26,9 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
     protected RpcPeerConnectionKind ConnectionKind { get; init; } = RpcPeerConnectionKind.Remote;
     protected Func<RpcFrameDelayer?>? RpcFrameDelayerFactory { get; set; } = () => RpcFrameDelayers.Delay(1); // Just for testing
     protected string SerializationFormat { get; set; } = DefaultSerializationFormat;
+    // The test suite runs the whole format matrix - including the Newtonsoft ones - over real
+    // sockets, so test servers opt back into client-selected Newtonsoft formats
+    protected ImmutableHashSet<string> ClientDeniedFormatKeys { get; set; } = ImmutableHashSet<string>.Empty;
     protected bool ExposeBackend { get; init; } = false;
     protected bool RequireReconnectProof { get; init; } = false;
     protected bool UseHttpClient { get; init; } = false;
@@ -179,7 +182,9 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
             },
         });
         services.AddSingleton<RpcSerializationFormatResolver>(
-            _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()));
+            _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()) {
+                ClientDeniedFormatKeys = ClientDeniedFormatKeys,
+            });
 #if NET5_0_OR_GREATER
         if (UseHttpClient)
             services.AddSingleton<RpcHttpClientOptions>(_ => new RpcHttpClientOptions() {

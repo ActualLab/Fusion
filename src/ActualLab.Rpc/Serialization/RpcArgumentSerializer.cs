@@ -38,5 +38,10 @@ public abstract class RpcArgumentSerializer
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsPolymorphic(Type type)
-        => (type.IsAbstract || type == typeof(object)) && RpcSerializableAttribute.Get(type) is null;
+        // An array is as polymorphic as its elements: T[] is never abstract, so without this
+        // an abstract T inside it would reach the base serializer undecorated, which only
+        // works for types that opt out via [RpcSerializable] - and those return false here anyway.
+        => type.IsArray
+            ? IsPolymorphic(type.GetElementType()!)
+            : (type.IsAbstract || type == typeof(object)) && RpcSerializableAttribute.Get(type) is null;
 }
