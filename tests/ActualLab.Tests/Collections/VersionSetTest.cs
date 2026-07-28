@@ -47,18 +47,31 @@ public class VersionSetTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void KeepScopesTest()
+    public void WhereTest()
+    {
+        var versions = new VersionSet(("a", "1.0"), ("b", "2.0"), ("c", "3.0"));
+        versions.Where((_, _) => true).Should().BeSameAs(versions);
+
+        var oddMajor = versions.Where((_, version) => version.Major % 2 != 0);
+        oddMajor.Should().Be(new VersionSet(("a", "1.0"), ("c", "3.0")));
+
+        versions.Where((_, _) => false).Should().BeSameAs(VersionSet.Empty);
+        VersionSet.Empty.Where((_, _) => false).Should().BeSameAs(VersionSet.Empty);
+    }
+
+    [Fact]
+    public void IntersectScopesTest()
     {
         var versions = new VersionSet(("a", "1.0"), ("b", "2.0"), ("c", "3.0"));
         var abc = new HashSet<string>(StringComparer.Ordinal) { "a", "b", "c", "d" };
-        versions.KeepScopes(abc).Should().BeSameAs(versions);
+        versions.IntersectScopes(abc).Should().BeSameAs(versions);
 
-        var ac = versions.KeepScopes(new HashSet<string>(StringComparer.Ordinal) { "a", "c" });
+        var ac = versions.IntersectScopes(new HashSet<string>(StringComparer.Ordinal) { "a", "c" });
         ac.Should().Be(new VersionSet(("a", "1.0"), ("c", "3.0")));
 
-        var none = versions.KeepScopes(new HashSet<string>(StringComparer.Ordinal) { "x" });
+        var none = versions.IntersectScopes(new HashSet<string>(StringComparer.Ordinal) { "x" });
         none.Should().BeSameAs(VersionSet.Empty);
-        VersionSet.Empty.KeepScopes(abc).Should().BeSameAs(VersionSet.Empty);
+        VersionSet.Empty.IntersectScopes(abc).Should().BeSameAs(VersionSet.Empty);
     }
 
     // Private methods

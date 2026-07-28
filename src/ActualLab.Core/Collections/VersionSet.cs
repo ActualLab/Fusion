@@ -83,24 +83,6 @@ public sealed partial record VersionSet(
         : this(Parse(value).Items)
     { }
 
-    public VersionSet KeepScopes(HashSet<string> scopes)
-    {
-        var count = 0;
-        foreach (var (scope, _) in Items)
-            if (scopes.Contains(scope))
-                count++;
-        if (count == Count)
-            return this;
-        if (count == 0)
-            return Empty;
-
-        var items = new Dictionary<string, Version>(count, StringComparer.Ordinal);
-        foreach (var (scope, version) in Items)
-            if (scopes.Contains(scope))
-                items.Add(scope, version);
-        return new VersionSet(items);
-    }
-
     // Conversion
 
     public override string ToString()
