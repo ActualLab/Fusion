@@ -29,7 +29,6 @@ import { RpcError } from './rpc-error.js';
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
 import type { RpcPeer } from './rpc-peer.js';
 import type { RpcStream } from './rpc-stream.js';
-import { resolveStreamRefs } from './rpc-stream.js';
 import type { RpcStreamSender } from './rpc-stream-sender.js';
 import { RpcCallStage } from './rpc-call-stage.js';
 import { IncreasingSeqCompressor } from './increasing-seq-compressor.js';
@@ -145,10 +144,7 @@ export class RpcSystemCallHandler {
             else if (args.length > 2)
                 stream.onEnd(args[0] as number, polymorphicPayloadError(method, args.length, 2));
             else
-                stream.onItem(
-                        args[0] as number,
-                        resolveStreamRefs(args[1], peer)
-                );
+                stream.onItem(args[0] as number, args[1]);
             break;
         }
         case RpcSystemCalls.batch: {
@@ -159,12 +155,8 @@ export class RpcSystemCallHandler {
                 debugLog?.log(`$sys.B: no stream for relatedId=${relatedId}`);
             else if (args.length > 2)
                 stream.onEnd(args[0] as number, polymorphicPayloadError(method, args.length, 2));
-            else if (Array.isArray(args[1])) {
-                const items = args[1] as unknown[];
-                for (let i = 0; i < items.length; i++)
-                    items[i] = resolveStreamRefs(items[i], peer);
-                stream.onBatch(args[0] as number, items);
-            }
+            else if (Array.isArray(args[1]))
+                stream.onBatch(args[0] as number, args[1] as unknown[]);
             break;
         }
         case RpcSystemCalls.end: {
@@ -221,6 +213,12 @@ export class RpcSystemCallHandler {
             // on its side (e.g. shared stream closed).  Propagate disconnect() to the
             // matching remote objects so any pending consumers (for-await loops) exit
             // cleanly instead of hanging.
+            //
+            // The ids come from the sender's shared-object namespace, which is our
+            // *remote* one — they must never be resolved against `peer.sharedObjects`.
+            // Both id counters start at 1, so such a lookup would routinely abort an
+            // unrelated outgoing sender. Mirrors RpcSystemCalls.cs:139, which
+            // likewise touches RemoteObjects only.
             const ids = args[0] as number[] | undefined;
             if (Array.isArray(ids)) {
                 for (const id of ids) {
@@ -230,15 +228,6 @@ export class RpcSystemCallHandler {
                             typeof remoteObj.disconnect === 'function'
                     ) {
                         remoteObj.disconnect();
-                    }
-                    // Also check shared objects — server may disconnect a client-to-server
-                    // stream sender (e.g. audio stream) after pod restart or timeout.
-                    const sharedObj = peer.sharedObjects.get(id);
-                    if (
-                        sharedObj &&
-                            typeof sharedObj.disconnect === 'function'
-                    ) {
-                        sharedObj.disconnect();
                     }
                 }
             }
@@ -266,12 +255,16 @@ export class RpcSystemCallHandler {
         // targets a stale connection generation; reject it so the caller falls
         // back to blind resend (absorbed by the inbound-call dedup). Mirrors
         // C# RpcSystemCalls.Reconnect's ownHandshake check (RpcSystemCalls.cs:59-62).
+        // A non-numeric or absent index is rejected rather than waved through:
+        // C#'s parameter is a typed `int`, so there is no shape that skips the
+        // comparison there either.
         const handshakeIndex = args[0];
-        if (typeof handshakeIndex === 'number' && handshakeIndex !== peer.ownHandshakeIndex) {
+        if (typeof handshakeIndex !== 'number' || handshakeIndex !== peer.ownHandshakeIndex) {
+            const got = typeof handshakeIndex === 'number' ? handshakeIndex : `<${typeof handshakeIndex}>`;
             peer.hub.systemCallSender.error(
                 peer.connection, peer.serializationFormat, relatedId,
                 new Error(
-                    `TooLateToReconnect: own handshake index ${peer.ownHandshakeIndex} != ${handshakeIndex}`));
+                    `TooLateToReconnect: own handshake index ${peer.ownHandshakeIndex} != ${got}`));
             return;
         }
 

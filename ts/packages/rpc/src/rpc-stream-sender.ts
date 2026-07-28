@@ -14,6 +14,10 @@ const DEFAULT_ACK_PERIOD = 256;
 const DEFAULT_ACK_ADVANCE = 128;
 /** Sliding window over which minRttMs is the minimum of ack round-trip samples. */
 const RTT_WINDOW_MS = 20_000;
+/** Hard cap on unmatched send timestamps. They are normally drained by the next
+ *  ACK, but nothing drains them while the peer is disconnected — and RTT
+ *  sampling is diagnostics, so dropping the oldest half is free. */
+const MAX_PENDING_SEND_TIMES = 4096;
 
 /**
  * Server-side RPC stream producer — sends items to a remote consumer via
@@ -132,8 +136,17 @@ export class RpcStreamSender<T> implements IRpcObject {
         return min;
     }
 
-    // -- ACK queue (analog of .NET's Channel<(long, bool)>) --
-    private _acks: { nextIndex: number; mustReset: boolean }[] = [];
+    // -- Coalesced ACK state (analog of .NET's Channel<(long, bool)>) --
+    // The pump reduces any queued ACKs to the newest index plus the OR of
+    // `mustReset` anyway, so we accumulate exactly that at receipt: an ACK flood
+    // then costs O(1) memory and O(1) work instead of an unbounded array drained
+    // with repeated `shift()`.
+    /** Newest unprocessed ACK index; -1 means "nothing pending". */
+    private _ackIndex = -1;
+    private _ackMustReset = false;
+    /** Highest ACK index accepted so far — the monotonicity baseline a
+     *  non-reset ACK may not regress below. */
+    private _maxAckIndex = 0;
     private _whenAckReady: PromiseSource<void> | null = null;
 
     constructor(
@@ -189,6 +202,15 @@ export class RpcStreamSender<T> implements IRpcObject {
             return;
         }
 
+        // A consumer can only acknowledge indexes we actually sent. A NaN,
+        // fractional, negative or run-ahead index is a protocol violation, and
+        // accepting one would push `_nextIndex` past the replay buffer — after
+        // which the pump drains the source without ever sending again.
+        if (!Number.isSafeInteger(nextIndex) || nextIndex < 0 || nextIndex > this._nextIndex) {
+            this._sendDisconnect();
+            return;
+        }
+
         if (!this._started.isCompleted) {
             // A not-yet-started stream only accepts the initial connect ack.
             if (mustReset && nextIndex === 0)
@@ -207,8 +229,15 @@ export class RpcStreamSender<T> implements IRpcObject {
             return;
         }
 
+        // Only a reset may move the acknowledged position backwards; a plain
+        // regression carries no window information the pump doesn't already have.
+        if (!mustReset && nextIndex < this._maxAckIndex)
+            return;
+
+        this._maxAckIndex = nextIndex;
         this._sampleRtt(nextIndex, mustReset);
-        this._acks.push({ nextIndex, mustReset });
+        this._ackIndex = nextIndex;
+        this._ackMustReset ||= mustReset;
         if (this._whenAckReady) {
             this._whenAckReady.resolve();
             this._whenAckReady = null;
@@ -247,6 +276,8 @@ export class RpcStreamSender<T> implements IRpcObject {
                 conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, item,
             );
             this._pendingSendTimes.push({ index: this._nextIndex, sentAtMs: Date.now() });
+            if (this._pendingSendTimes.length > MAX_PENDING_SEND_TIMES)
+                this._pendingSendTimes.splice(0, MAX_PENDING_SEND_TIMES >> 1);
         }
         this._nextIndex++;
     }
@@ -451,14 +482,14 @@ export class RpcStreamSender<T> implements IRpcObject {
                     // Real-time: pre-buffer aggressively up to the ring's
                     // capacity (which may exceed ackAdvance when bufferSize
                     // is set), so a freshly arrived ACK is served from RAM.
-                    while (buffer.hasRemainingCapacity && !isFullyBuffered && this._acks.length === 0) {
+                    while (buffer.hasRemainingCapacity && !isFullyBuffered && !this._hasPendingAck) {
                         if (!await bufferNext(true, true))
                             break;
                     }
                     if (bufferIndex >= buffer.count
                         && !isFullyBuffered
                         && buffer.hasRemainingCapacity
-                        && this._acks.length === 0) {
+                        && !this._hasPendingAck) {
                         await bufferNext(false, true);
                     }
                     if (ack.nextIndex > 0) {
@@ -470,7 +501,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                     }
 
                     // Bail out so step 1 can process a mustReset ACK immediately.
-                    if (this._acks.length > 0) break;
+                    if (this._hasPendingAck) break;
                 }
 
                 // Drain buffered items until the window is full.
@@ -498,31 +529,36 @@ export class RpcStreamSender<T> implements IRpcObject {
     }
     /* eslint-enable @typescript-eslint/no-unnecessary-condition */
 
-    /** Drain all queued ACKs, returning the most recent one (or null if none).
-     *  A reconnect's reset ACK may be drained in one batch with regular
-     *  consumption ACKs the client sends right after it, so `mustReset` is
-     *  OR-ed over the whole batch — the last ACK alone can't represent it. */
+    private get _hasPendingAck(): boolean {
+        return this._ackIndex >= 0;
+    }
+
+    /** Consume the coalesced ACK state (or null if nothing is pending).
+     *  A reconnect's reset ACK may be coalesced with the regular consumption
+     *  ACKs the client sends right after it, so `mustReset` accumulates across
+     *  the whole batch — the newest ACK alone can't represent it. */
     private _tryProcessAcks(): { nextIndex: number; mustReset: boolean } | null {
-        if (this._acks.length === 0) return null;
-        let nextIndex = 0;
-        let mustReset = false;
-        while (this._acks.length > 0) {
-            const a = this._acks.shift()!;
-            nextIndex = a.nextIndex;
-            mustReset ||= a.mustReset;
-            if (a.mustReset || this._nextIndex < a.nextIndex) {
-                this._nextIndex = a.nextIndex;
-            }
-        }
+        const nextIndex = this._ackIndex;
+        if (nextIndex < 0)
+            return null;
+
+        const mustReset = this._ackMustReset;
+        this._ackIndex = -1;
+        this._ackMustReset = false;
+        if (mustReset || this._nextIndex < nextIndex)
+            this._nextIndex = nextIndex;
+
         try {
             this.onAckProcessed?.();
         } catch { /* listener errors don't break the pump */ }
         return { nextIndex, mustReset };
     }
 
-    /** Wait for the ACK queue to have at least one entry (or `_ended`). */
+    /** Wait until an ACK is pending (or `_ended`). */
     private async _waitAckReady(): Promise<void> {
-        if (this._acks.length > 0 || this._ended) return;
+        if (this._hasPendingAck || this._ended)
+            return;
+
         this._whenAckReady = new PromiseSource<void>();
         await this._whenAckReady;
         this._whenAckReady = null;

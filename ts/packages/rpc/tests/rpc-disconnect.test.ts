@@ -77,17 +77,19 @@ describe('$sys.Disconnect handling', () => {
         expect(obj2.disconnected).toBe(true);
     });
 
-    it('should disconnect matching shared objects', () => {
+    // The ids belong to the sender's shared-object namespace, i.e. our remote
+    // one — a shared-object lookup would tear down an unrelated outgoing stream.
+    it('should not disconnect shared objects', () => {
         const obj = new MockRpcObject(201, RpcObjectKind.Local);
         clientPeer.sharedObjects.register(obj);
 
         const message: RpcMessage = { Method: '$sys.Disconnect:1' };
         handler.handle(message, [[201]], clientPeer);
 
-        expect(obj.disconnected).toBe(true);
+        expect(obj.disconnected).toBe(false);
     });
 
-    it('should disconnect both remote and shared objects with same id', () => {
+    it('should disconnect only the remote object when a shared object shares its id', () => {
         const remoteObj = new MockRpcObject(301, RpcObjectKind.Remote);
         const sharedObj = new MockRpcObject(301, RpcObjectKind.Local);
         clientPeer.remoteObjects.register(remoteObj);
@@ -97,7 +99,7 @@ describe('$sys.Disconnect handling', () => {
         handler.handle(message, [[301]], clientPeer);
 
         expect(remoteObj.disconnected).toBe(true);
-        expect(sharedObj.disconnected).toBe(true);
+        expect(sharedObj.disconnected).toBe(false);
     });
 
     it('should not error when object ids do not match any registered object', () => {

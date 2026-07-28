@@ -685,13 +685,16 @@ describe('RpcStreamSender observability metrics', () => {
             for (let i = 0; i < 1000; i++) yield i;
         }
 
-        // Queue three ACKs synchronously before the pump starts so they
-        // collapse into a single drain.
         sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+        // Let the pump send its initial window first: an ACK may only refer to
+        // an index that was actually sent.
+        for (let i = 0; sender.nextIndex < ackAdvance && i < 100; i++)
+            await delay(0);
+
+        // Two ACKs delivered within one tick collapse into a single drain.
         sender.onAck(5, '');
         sender.onAck(10, '');
-
-        const writeDone = sender.writeFrom(source());
         for (let i = 0; sender.lastAckIndex < 10 && i < 100; i++)
             await delay(0);
         expect(sender.lastAckIndex).toBe(10);
@@ -751,16 +754,19 @@ describe('RpcStreamSender observability metrics', () => {
             for (let i = 0; i < 1000; i++) yield i;
         }
 
-        // Three queued ACKs before the pump starts → single drain at startup.
         sender.onAck(0, sender.id.hostId);
+        const writeDone = sender.writeFrom(source());
+        for (let i = 0; sender.nextIndex < ackAdvance && i < 100; i++)
+            await delay(0);
+        const baseline = callbackCount;
+
+        // Two ACKs within one tick → one further drain, one further callback.
         sender.onAck(5, '');
         sender.onAck(10, '');
-
-        const writeDone = sender.writeFrom(source());
         for (let i = 0; sender.lastAckIndex < 10 && i < 100; i++)
             await delay(0);
         expect(sender.lastAckIndex).toBe(10);
-        expect(callbackCount).toBe(1);
+        expect(callbackCount).toBe(baseline + 1);
 
         sender.disconnect();
         await writeDone.catch(() => { /* noop */ });

@@ -253,6 +253,10 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     onItem(index: number, item: T): void {
         if (this._disposed || this._completed) return;
 
+        if (!_isValidIndex(index)) {
+            this._failProtocol(`invalid $sys.I index: ${String(index)}`);
+            return;
+        }
         if (index > this._nextExpectedIndex) {
             warnLog?.log(`item index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`);
             if (!this.allowReconnect) {
@@ -267,6 +271,10 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             this._maybeSendAck(Math.min(index + 1, this._nextConsumedIndex));
             return;
         }
+        if (this._isBeyondAckWindow(index + 1)) {
+            this._failProtocol(this._ackWindowError(index + 1));
+            return;
+        }
 
         this._buffer.push(item);
         this._nextExpectedIndex = index + 1;
@@ -277,6 +285,10 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     onBatch(index: number, items: T[]): void {
         if (this._disposed || this._completed) return;
 
+        if (!_isValidIndex(index) || !_isValidIndex(items.length)) {
+            this._failProtocol(`invalid $sys.B index/length: ${String(index)}/${String(items.length)}`);
+            return;
+        }
         if (index > this._nextExpectedIndex) {
             warnLog?.log(`batch index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`);
             if (!this.allowReconnect) {
@@ -290,6 +302,10 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             this._maybeSendAck(Math.min(index + items.length, this._nextConsumedIndex));
             return;
         }
+        if (this._isBeyondAckWindow(index + items.length)) {
+            this._failProtocol(this._ackWindowError(index + items.length));
+            return;
+        }
 
         for (const item of items) this._buffer.push(item);
         this._nextExpectedIndex = index + items.length;
@@ -300,6 +316,10 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     onEnd(index: number, error: Error | null): void {
         if (this._disposed || this._completed) return;
 
+        if (!_isValidIndex(index)) {
+            this._failProtocol(`invalid $sys.End index: ${String(index)}`);
+            return;
+        }
         if (index > this._nextExpectedIndex) {
             warnLog?.log(`end index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`);
             if (!this.allowReconnect) {
@@ -428,6 +448,27 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
         this._notifyConsumer();
     }
 
+    // Terminates the stream the way the non-reconnectable gap path does: the
+    // consumer sees the error and the sender gets $sys.AckEnd, so nothing is
+    // left pumping into a stream we no longer read.
+    private _failProtocol(message: string): void {
+        warnLog?.log(`localId=${this.id.localId}: ${message}`);
+        this._complete(new Error(message));
+    }
+
+    // The remote advertised `ackAdvance` as the furthest it may run ahead of our
+    // last acknowledged index. The sending side is the only place that window
+    // was ever enforced, which left a flooding remote free to grow our buffer
+    // without bound (I6) — so we enforce our half of the contract here.
+    private _isBeyondAckWindow(nextExpectedIndex: number): boolean {
+        return this.ackAdvance > 0 && nextExpectedIndex > this._ackSentUpTo + this.ackAdvance;
+    }
+
+    private _ackWindowError(nextExpectedIndex: number): string {
+        return `Stream ran past its ack window: reached ${nextExpectedIndex}, `
+            + `acked ${this._ackSentUpTo}, ackAdvance ${this.ackAdvance}`;
+    }
+
     private _gapError(index: number): Error {
         return new Error(
             `Stream gap at index ${index} (expected ${this._nextExpectedIndex}); reconnect not allowed`
@@ -486,6 +527,10 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     }
 }
 
+function _isValidIndex(index: number): boolean {
+    return Number.isSafeInteger(index) && index >= 0;
+}
+
 /** @internal Type guard for RpcStreamSource (AsyncIterable or factory function). */
 function _isStreamSource<T>(value: unknown): value is RpcStreamSource<T> {
     if (typeof value === 'function') return true;
@@ -497,44 +542,25 @@ function _isStreamSource<T>(value: unknown): value is RpcStreamSource<T> {
 }
 
 /**
- * Recursively walks a deserialized value and replaces any stream ref strings
- * with live RpcStream<unknown> instances registered on the given peer.
- * This handles nested stream refs inside complex return types (e.g. Table<T>
- * containing RpcStream<Row<T>> fields serialized as "{hostId},{localId},{ackPeriod},{ackAdvance}").
+ * Converts a wire value that *is* a stream reference — the comma-separated
+ * string the text formats use, or the object shape the binary ones use — into a
+ * live remote {@link RpcStream}. Returns `null` when the value is not a
+ * reference.
+ *
+ * Call results are deliberately **not** scanned for stream references. A
+ * TypeScript client has no typed method definitions, so "is this string a
+ * stream ref?" can only be a shape heuristic, and ordinary data matches it
+ * constantly ("1,2,3,4", a CSV row, a coordinate tuple). Deciding that a value
+ * is a stream is therefore the caller's job — it is the only side that knows
+ * which positions carry streams.
  */
-export function resolveStreamRefs(value: unknown, peer: RpcPeer): unknown {
-    if (value === null || value === undefined) return value;
+export function toRpcStream<T>(value: unknown, peer: RpcPeer): RpcStream<T> | null {
+    const ref = parseStreamRef(value);
+    if (ref === null)
+        return null;
 
-    if (typeof value === 'string') {
-        const ref = parseStreamRef(value);
-        if (ref !== null) {
-            // Registration is deferred to the first iteration (see RpcStream's
-            // lazy-start), so nested stream refs that are never enumerated
-            // create no remote-object lease.
-            return new RpcStream(ref, peer);
-        }
-        return value;
-    }
-
-    if (Array.isArray(value)) {
-        for (let i = 0; i < value.length; i++) {
-            value[i] = resolveStreamRefs(value[i], peer);
-        }
-        return value;
-    }
-
-    if (typeof value === 'object') {
-        if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer)
-            return value;
-
-        for (const key of Object.keys(value as Record<string, unknown>)) {
-            (value as Record<string, unknown>)[key] = resolveStreamRefs(
-                (value as Record<string, unknown>)[key],
-                peer
-            );
-        }
-        return value;
-    }
-
-    return value;
+    // Registration is deferred to the first iteration (see RpcStream's
+    // lazy-start), so a stream that is never enumerated leases nothing on
+    // either peer.
+    return new RpcStream<T>(ref, peer);
 }
