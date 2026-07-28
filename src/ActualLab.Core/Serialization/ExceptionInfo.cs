@@ -55,8 +55,8 @@ public readonly partial struct ExceptionInfo : IEquatable<ExceptionInfo>
 
     public override string ToString()
         => IsNone
-            ? $"{GetType().Name}()"
-            : $"{GetType().Name}({TypeRef.ToString()}, {JsonFormatter.Format(Message)})";
+            ? $"{nameof(ExceptionInfo)}()"
+            : $"{nameof(ExceptionInfo)}({TypeRef.ToString()}, {JsonFormatter.Format(Message)})";
 
     public Exception? ToException()
     {
