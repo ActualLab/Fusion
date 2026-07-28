@@ -1,5 +1,6 @@
 using System.Security;
 using System.Security.Claims;
+using ActualLab.Api;
 using ActualLab.Fusion.Authentication;
 
 namespace ActualLab.Fusion.Tests.Authentication;
@@ -50,6 +51,24 @@ public class UserPropertiesTest : FusionTestBase
         cp.Identity.Should().BeSameAs(ci);
 
         cp.Identity!.IsAuthenticated.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ToClientSideUserMustNotMutateSharedState()
+    {
+        var alice = new User("alice", "Alice").WithIdentity("Google/1", "AliceSecret");
+        var bob = new User("bob", "Bob").WithIdentity("Github/2", "BobSecret");
+
+        var maskedAlice = alice.ToClientSideUser();
+        var maskedBob = bob.ToClientSideUser();
+
+        maskedAlice.Identities.Should().NotBeSameAs(maskedBob.Identities);
+        maskedAlice.Identities.Keys.Single().Id.Should().Be("Google/<hidden>");
+        maskedBob.Identities.Keys.Single().Id.Should().Be("Github/<hidden>");
+
+        ApiMap<UserIdentity, string>.Empty.Count.Should().Be(0);
+        User.NewGuest().Identities.Count.Should().Be(0);
+        new User("carol", "Carol").Identities.Count.Should().Be(0);
     }
 
     [Fact]

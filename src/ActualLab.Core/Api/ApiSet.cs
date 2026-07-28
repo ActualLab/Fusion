@@ -20,7 +20,9 @@ public static class ApiSet
 public sealed partial class ApiSet<T> : HashSet<T>, IEnumerable<T>
 
 {
-    public static readonly ApiSet<T> Empty = new();
+    // Returns a new instance on every call: ApiSet is a mutable HashSet,
+    // so a shared static instance lets any caller corrupt every other one.
+    public static ApiSet<T> Empty => new();
 
     private SortedItemCache? _sortedItemCache;
 

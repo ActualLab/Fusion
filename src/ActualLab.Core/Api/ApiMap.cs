@@ -11,7 +11,9 @@ public sealed partial class ApiMap<TKey, TValue>
     : Dictionary<TKey, TValue>, IEnumerable<KeyValuePair<TKey, TValue>>
     where TKey : notnull
 {
-    public static readonly ApiMap<TKey, TValue> Empty = new();
+    // Returns a new instance on every call: ApiMap is a mutable Dictionary,
+    // so a shared static instance lets any caller corrupt every other one.
+    public static ApiMap<TKey, TValue> Empty => new();
 
     private SortedItemCache? _sortedItemCache;
 
