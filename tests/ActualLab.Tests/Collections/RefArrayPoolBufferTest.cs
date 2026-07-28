@@ -1,3 +1,4 @@
+using ActualLab.Collections.Internal;
 using ActualLab.IO;
 
 namespace ActualLab.Tests.Collections;
@@ -5,6 +6,43 @@ namespace ActualLab.Tests.Collections;
 public class RefArrayPoolBufferTest
 {
     private readonly Random _rnd = new();
+
+    // Mirrors ArrayPoolBufferTest - the two types are meant to stay interchangeable
+    [Fact]
+    public void GrowthIsClampedToMaxCapacity()
+    {
+        var pool = NonPoolingArrayPool<byte>.Instance;
+        var unclamped = new RefArrayPoolBuffer<byte>(pool, 16, mustClear: false);
+        try {
+            unclamped.EnsureCapacity(3_000_000);
+            unclamped.Capacity.Should().Be(4_194_304);
+        }
+        finally {
+            unclamped.Release();
+        }
+
+        var clamped = new RefArrayPoolBuffer<byte>(pool, 16, mustClear: false);
+        try {
+            clamped.EnsureCapacity(3_000_000, 3_500_000);
+            clamped.Capacity.Should().Be(3_500_000);
+        }
+        finally {
+            clamped.Release();
+        }
+    }
+
+    [Fact]
+    public void MaxCapacityNeverCutsBelowTheRequestedCapacity()
+    {
+        var buffer = new RefArrayPoolBuffer<byte>(NonPoolingArrayPool<byte>.Instance, 16, mustClear: false);
+        try {
+            buffer.EnsureCapacity(3_000_000, 1024);
+            buffer.Capacity.Should().Be(3_000_000);
+        }
+        finally {
+            buffer.Release();
+        }
+    }
 
     [Fact]
     public void CombinedTest()

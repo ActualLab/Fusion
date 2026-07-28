@@ -159,9 +159,21 @@ public ref struct RefArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, 
         return _array.AsMemory(_position);
     }
 
+    public Memory<T> GetMemory(int sizeHint, int maxCapacity)
+    {
+        EnsureCapacity(sizeHint, maxCapacity);
+        return _array.AsMemory(_position);
+    }
+
     public Span<T> GetSpan(int sizeHint = 0)
     {
         EnsureCapacity(sizeHint);
+        return _array.AsSpan(_position);
+    }
+
+    public Span<T> GetSpan(int sizeHint, int maxCapacity)
+    {
+        EnsureCapacity(sizeHint, maxCapacity);
         return _array.AsSpan(_position);
     }
 
@@ -196,6 +208,16 @@ public ref struct RefArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, 
         var capacity = ArrayPoolBufferCapacity.GetRequired(_position, sizeHint);
         if (capacity > _array.Length)
             ResizeBuffer(capacity);
+    }
+
+    // Use this overload when the buffer has a known upper bound: the power-of-two rounding
+    // that speeds up growth would otherwise overshoot that bound by up to 2x
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void EnsureCapacity(int sizeHint, int maxCapacity)
+    {
+        var capacity = ArrayPoolBufferCapacity.GetRequired(_position, sizeHint);
+        if (capacity > _array.Length)
+            ResizeBuffer(capacity, maxCapacity);
     }
 
     // List-like members
@@ -289,4 +311,8 @@ public ref struct RefArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ResizeBuffer(int capacity)
         => Pool.Resize(ref _array, ArrayPoolBufferCapacity.Round(capacity), MustClear);
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void ResizeBuffer(int capacity, int maxCapacity)
+        => Pool.Resize(ref _array, ArrayPoolBufferCapacity.Round(capacity, maxCapacity), MustClear);
 }

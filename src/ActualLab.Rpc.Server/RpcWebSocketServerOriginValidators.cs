@@ -54,7 +54,7 @@ public static class RpcWebSocketServerOriginValidators
         => port is null or 80 or 443 ? null : port;
 
     private static string TrimBrackets(string host)
-        => host.Length >= 2 && host[0] == '[' && host[host.Length - 1] == ']'
+        => host is ['[', _, ..] && host[^1] == ']'
             ? host.Substring(1, host.Length - 2)
             : host;
 
