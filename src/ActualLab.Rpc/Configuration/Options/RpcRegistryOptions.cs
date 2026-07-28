@@ -7,9 +7,9 @@ public record RpcRegistryOptions
 {
     public static RpcRegistryOptions Default { get; set; } = new();
 
-    // Caps RpcServiceRegistry's cache of per-VersionSet legacy method resolvers. The key is the
-    // remote peer's handshake version set normalized to the scopes this registry uses, so the only
-    // way past a handful of entries is a peer inventing versions for a scope that does exist.
+    // Caps RpcServiceRegistry's cache of per-VersionSet legacy method resolvers.
+    // The key is the remote peer's handshake version set normalized to the scopes this registry uses,
+    // so the only way past a handful of entries is a peer inventing versions for a scope that does exist.
     public int LegacyMethodResolverCacheCapacity { get; init; } = 256;
 
     // Delegate options
