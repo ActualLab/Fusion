@@ -46,12 +46,16 @@ public class CommandTracer(CommandTracer.Options settings, IServiceProvider serv
             outcome = e is OperationCanceledException ? "cancel" : "error";
             if (activity is not null && ActivityExt.IsError(e)) {
                 activity.Finalize(e, cancellationToken);
-                var message = context.IsOutermost ?
-                    "Outermost command failed: {Command}" :
-                    "Nested command failed: {Command}";
+                var scope = context.IsOutermost ? "Outermost" : "Nested";
                 var level = activity.Status is ActivityStatusCode.Error ? LogLevel.Error : LogLevel.Warning;
+                // An INotLogged command may carry credentials, so only its type name may reach the log
+                var isNotLogged = command is INotLogged;
+                var message = isNotLogged
+                    ? $"{scope} command failed: {{CommandName}}"
+                    : $"{scope} command failed: {{Command}}";
+                object payload = isNotLogged ? command.GetType().GetName() : command;
                 // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-                Log.IfEnabled(level)?.Log(level, e, message, command);
+                Log.IfEnabled(level)?.Log(level, e, message, payload);
             }
             throw;
         }

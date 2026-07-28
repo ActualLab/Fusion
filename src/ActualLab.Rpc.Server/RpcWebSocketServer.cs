@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.WebSockets;
 
 namespace ActualLab.Rpc.Server;
@@ -27,7 +28,7 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
             request.Host.Host,
             request.Host.Port ?? -1,
             request.Path,
-            request.QueryString.ToString());
+            RpcQuerySanitizer.Sanitize(request.QueryString.Value));
         var requestDescription = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
         if (!context.WebSockets.IsWebSocketRequest) {

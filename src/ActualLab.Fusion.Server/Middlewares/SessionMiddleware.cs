@@ -92,7 +92,7 @@ public class SessionMiddleware : IMiddleware, IHasServices
             }
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
-            Log.LogError(e, "Session is unavailable: {Session}", session);
+            Log.LogError(e, "Session is unavailable: {SessionHash}", session?.Hash);
             isInvalid = true;
         }
         if (isInvalid) {

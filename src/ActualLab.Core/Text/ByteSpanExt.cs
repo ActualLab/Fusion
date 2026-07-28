@@ -23,10 +23,11 @@ public static class ByteSpanExt
             ? bytes
             : bytes[..maxLength];
         var result =
-#if NET5_0_OR_GREATER1
+#if NET5_0_OR_GREATER
             Convert.ToHexString(trimmed);
 #else
-            BitConverter.ToString(trimmed.ToArray());
+            // BitConverter.ToString separates bytes with '-', Convert.ToHexString doesn't
+            BitConverter.ToString(trimmed.ToArray()).Replace("-", "");
 #endif
         return trimmed.Length == bytes.Length
             ? result

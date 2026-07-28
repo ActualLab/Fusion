@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
 using MessagePack;
@@ -14,19 +16,37 @@ namespace ActualLab.Fusion;
 [Newtonsoft.Json.JsonConverter(typeof(SessionNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SessionTypeConverter))]
 public sealed partial class Session : IHasId<string>,
-    IEquatable<Session>, IConvertibleTo<string>,
-    IHasToStringProducingJson
+    IEquatable<Session>, IConvertibleTo<string>
 {
+    // A default Id is 20 chars over a 64-symbol alphabet, i.e. ~120 bits of entropy.
+    // ToString() reveals IdPrefixLength of them = 24 bits, so ~96 bits stay secret -
+    // still far out of brute-force reach, but enough for a human to match a log line
+    // against a UI row or a DB record.
+    // ':' isn't a hex digit, isn't in RandomStringGenerator.DefaultAlphabet ("...-_"),
+    // and isn't part of the Id tag syntax ("&s=..."), so the two parts always split cleanly.
+    public const string IdPrefixSeparator = ":";
+    public const int IdPrefixLength = 4;
+
     public static readonly Session Default = new("~");
     public static SessionFactory Factory { get; set; } = DefaultSessionFactory.New();
     public static SessionValidator Validator { get; set; } = session => !session.IsDefault();
 
     private int _hashCode;
+    private string? _toString;
+    private byte[]? _sha256Hash;
 
     [DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter]
     public string Id { get; }
+    // We use a non-cryptographic hash here because it's on the wire (SessionAuthInfo.SessionHash,
+    // Auth_SignOut.KickUserSessionHash), and changing it would break those comparisons across
+    // versions. The length of hash is much smaller than Session.Id, so it's still almost
+    // impossible to guess SessionId by knowing it; on the other hand, ~4B hash variants are
+    // enough to identify a Session of a given user, and that's the only purpose of this hash.
+    // Use Sha256Hash when a strong, collision-resistant identifier is needed.
     [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
     public string Hash => field ??= ComputeHash();
+    [JsonIgnore, Newtonsoft.Json.JsonIgnore, IgnoreDataMember, MemoryPackIgnore, IgnoreMember]
+    public ReadOnlyMemory<byte> Sha256Hash => _sha256Hash ??= ComputeSha256Hash();
 
     public static Session New()
         => Factory.Invoke();
@@ -101,17 +121,10 @@ public sealed partial class Session : IHasId<string>,
         return new Session(string.Concat(id, tagPrefix, value));
     }
 
-    // We use non-cryptographic hash here because System.Security.Cryptography isn't supported in Blazor.
-    // The length of hash is much smaller than Session.Id, so it's still almost impossible to guess
-    // SessionId by knowing it; on the other hand, ~4B hash variants are enough to identify
-    // a Session of a given user, and that's the only purpose of this hash.
-    private string ComputeHash()
-        => ((uint)Id.GetXxHash3()).ToString("x8", CultureInfo.InvariantCulture);
-
     // Conversion
 
     public override string ToString()
-        => Id;
+        => _toString ??= ComputeToString();
 
     string IConvertibleTo<string>.Convert() => Id;
 
@@ -146,4 +159,29 @@ public sealed partial class Session : IHasId<string>,
 
     public static bool operator ==(Session? left, Session? right) => Equals(left, right);
     public static bool operator !=(Session? left, Session? right) => !Equals(left, right);
+
+    // Private methods
+
+    private string ComputeToString()
+    {
+        var id = Id;
+        var prefix = id.Length <= IdPrefixLength ? id : id.Substring(0, IdPrefixLength);
+        return string.Concat(prefix, IdPrefixSeparator, Hash);
+    }
+
+    private string ComputeHash()
+        => ((uint)Id.GetXxHash3()).ToString("x8", CultureInfo.InvariantCulture);
+
+    private byte[] ComputeSha256Hash()
+    {
+        // SHA-256 is fine everywhere this library runs, incl. Blazor WASM: the browser runtime
+        // ships a managed SHA implementation (SHAManagedHashProvider), so this stays synchronous.
+        var bytes = Encoding.UTF8.GetBytes(Id);
+#if NET5_0_OR_GREATER
+        return SHA256.HashData(bytes);
+#else
+        using var sha256 = SHA256.Create();
+        return sha256.ComputeHash(bytes);
+#endif
+    }
 }
