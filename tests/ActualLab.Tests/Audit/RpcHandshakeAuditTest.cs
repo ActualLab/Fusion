@@ -372,6 +372,7 @@ public class RpcHandshakeAuditTest
                 16,
                 16,
                 16,
+                16,
                 null,
                 new UnboundedChannelOptions(),
                 AuditMeters)

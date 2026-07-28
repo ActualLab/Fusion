@@ -10,6 +10,8 @@ public abstract class RpcTextMessageSerializer(RpcPeer peer) : RpcMessageSeriali
     /// </summary>
     public static class Defaults
     {
-        public static int MaxArgumentDataSize { get; set; } = 130_000_000; // 130 MB;
+        // A whole message must fit RpcFrameBasedTransport.DefaultMaxFrameSize together with the
+        // worst-case envelope of the most expensive registered format, so this isn't a round 16 MiB
+        public static int MaxArgumentDataSize { get; set; } = 16_252_928; // 15.5 MiB
     }
 }

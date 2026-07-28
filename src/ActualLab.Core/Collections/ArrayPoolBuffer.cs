@@ -172,11 +172,25 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         return _array.AsMemory(_position);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Memory<T> GetMemory(int sizeHint, int maxCapacity)
+    {
+        EnsureCapacity(sizeHint, maxCapacity);
+        return _array.AsMemory(_position);
+    }
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Span<T> GetSpan(int sizeHint = 0)
     {
         EnsureCapacity(sizeHint);
+        return _array.AsSpan(_position);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Span<T> GetSpan(int sizeHint, int maxCapacity)
+    {
+        EnsureCapacity(sizeHint, maxCapacity);
         return _array.AsSpan(_position);
     }
 
@@ -214,6 +228,16 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
         var capacity = ArrayPoolBufferCapacity.GetRequired(_position, sizeHint);
         if (capacity > _array.Length)
             ResizeBuffer(capacity);
+    }
+
+    // Use this overload when the buffer has a known upper bound: the power-of-two rounding
+    // that speeds up growth would otherwise overshoot that bound by up to 2x
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void EnsureCapacity(int sizeHint, int maxCapacity)
+    {
+        var capacity = ArrayPoolBufferCapacity.GetRequired(_position, sizeHint);
+        if (capacity > _array.Length)
+            ResizeBuffer(capacity, maxCapacity);
     }
 
     // List-like members
@@ -307,6 +331,10 @@ public sealed class ArrayPoolBuffer<T>(ArrayPool<T> pool, int initialCapacity, b
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ResizeBuffer(int capacity)
         => Pool.Resize(ref _array, ArrayPoolBufferCapacity.Round(capacity), MustClear);
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void ResizeBuffer(int capacity, int maxCapacity)
+        => Pool.Resize(ref _array, ArrayPoolBufferCapacity.Round(capacity, maxCapacity), MustClear);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void ReplaceBuffer(int capacity)

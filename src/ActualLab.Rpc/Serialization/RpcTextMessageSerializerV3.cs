@@ -21,7 +21,7 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
     public const int MaxEnvelopeSyntaxSize = 259;
     public const int MaxEnvelopeSize = MaxEnvelopeSyntaxSize
         + MaxJsonEncodedByteExpansion
-        * (MaxMethodRefSize + MaxHeaderCount * (MaxHeaderKeySize + MaxHeaderValueSize));
+        * (MaxMethodRefSize + MaxHeaderCount * (MaxHeaderKeySize + MaxHeaderValueSize)); // 244,297
 
     public int MaxArgumentDataSize { get; init; } = Defaults.MaxArgumentDataSize;
 

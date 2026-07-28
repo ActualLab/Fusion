@@ -23,7 +23,11 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
         public int FrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
         public int BufferSize { get; init; } = 16_000;
         public int MaxBufferSize { get; init; } = 256_000;
-        public int MaxFrameSize { get; init; } = 16_000_000; // Inbound frame size guard against corrupt streams
+        // Enforced on both the inbound and the outbound path - see RpcFrameBasedTransport.DefaultMaxFrameSize
+        public int MaxFrameSize { get; init; } = RpcFrameBasedTransport.DefaultMaxFrameSize;
+        // Applies until the handshake is received - see RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize
+        public int MaxPreHandshakeFrameSize { get; init; }
+            = RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize;
 
         // Use of UnboundedChannelOptions is totally fine here: if the message is enqueued
         public ChannelOptions WriteChannelOptions { get; init; } = new UnboundedChannelOptions() {
@@ -54,6 +58,7 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
             settings.FrameSize,
             settings.BufferSize,
             settings.MaxBufferSize,
+            settings.MaxFrameSize,
             settings.FrameDelayerFactory,
             settings.WriteChannelOptions,
             StaticMeters)
@@ -100,6 +105,7 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
         var reader = PipeReader;
 
         var tryDeserialize = Codec.TryDeserialize;
+        var maxFrameSize = Math.Min(Settings.MaxPreHandshakeFrameSize, Settings.MaxFrameSize);
         var frameBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Settings.BufferSize, mustClear: false);
         var frameLength = -1; // -1 = length header not read yet; >= 0 = bytes still being accumulated into frameBuffer
         try {
@@ -131,7 +137,7 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
                         continue;
                     }
                     frameLength = ReadFrameLength(buffer);
-                    if (frameLength <= 0 || frameLength > Settings.MaxFrameSize)
+                    if (frameLength <= 0 || frameLength > maxFrameSize)
                         throw Errors.InvalidItemSize();
                     consumed = buffer.GetPosition(Int32Size);
                     buffer = buffer.Slice(consumed);
@@ -142,7 +148,7 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
                 var remaining = frameLength - frameBuffer.WrittenCount;
                 if (remaining > 0 && buffer.Length > 0) {
                     var toCopy = (int)Math.Min(remaining, buffer.Length);
-                    var span = frameBuffer.GetSpan(toCopy);
+                    var span = frameBuffer.GetSpan(toCopy, frameLength);
                     buffer.Slice(0, toCopy).CopyTo(span);
                     frameBuffer.Advance(toCopy);
                     consumed = buffer.GetPosition(toCopy);
@@ -158,7 +164,9 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
                 }
 
                 // Frame is complete - parse it out into messages.
+                // The first frame carries the handshake, so from here on the normal limit applies.
                 Meters.IncomingFrameSizeHistogram.Record(frameLength);
+                maxFrameSize = Settings.MaxFrameSize;
                 var array = frameBuffer.Array;
                 var len = frameLength;
                 frameLength = -1; // next iteration starts a new frame

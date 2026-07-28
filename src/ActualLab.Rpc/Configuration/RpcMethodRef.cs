@@ -14,7 +14,10 @@ namespace ActualLab.Rpc;
 [DataContract, MemoryPackable, MessagePackObject]
 public readonly partial struct RpcMethodRef : IEquatable<RpcMethodRef>
 {
-    public const int MaxUtf8NameLength = 4096;
+    // A wire name is "{ServiceName}.{MethodName}:{ParameterCount}", and the service name is the
+    // interface's simple name (no namespace) - so even a deeply nested closed generic stays well
+    // under 512 bytes. ComputeHashCode stackallocs this many bytes, hence the tight bound.
+    public const int MaxUtf8NameLength = 1024;
 
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
     public readonly ReadOnlyMemory<byte> Utf8Name;

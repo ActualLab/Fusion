@@ -21,7 +21,11 @@ public sealed class RpcStreamTransport : RpcFrameBasedTransport
         public int FrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
         public int BufferSize { get; init; } = 16_000;
         public int MaxBufferSize { get; init; } = 256_000;
-        public int MaxFrameSize { get; init; } = 16_000_000; // Inbound frame size guard against corrupt streams
+        // Enforced on both the inbound and the outbound path - see RpcFrameBasedTransport.DefaultMaxFrameSize
+        public int MaxFrameSize { get; init; } = RpcFrameBasedTransport.DefaultMaxFrameSize;
+        // Applies until the handshake is received - see RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize
+        public int MaxPreHandshakeFrameSize { get; init; }
+            = RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize;
 
         // Use of UnboundedChannelOptions is totally fine here: if the message is enqueued
         public ChannelOptions WriteChannelOptions { get; init; } = new UnboundedChannelOptions() {
@@ -52,6 +56,7 @@ public sealed class RpcStreamTransport : RpcFrameBasedTransport
             settings.FrameSize,
             settings.BufferSize,
             settings.MaxBufferSize,
+            settings.MaxFrameSize,
             settings.FrameDelayerFactory,
             settings.WriteChannelOptions,
             StaticMeters)
@@ -105,11 +110,14 @@ public sealed class RpcStreamTransport : RpcFrameBasedTransport
         var stream = ReaderStream;
         var ct = commonCts.Token;
         var tryDeserialize = Codec.TryDeserialize;
+        var maxFrameSize = Math.Min(Settings.MaxPreHandshakeFrameSize, Settings.MaxFrameSize);
+        // The buffer holds one length-prefixed frame plus whatever the last read appended past it
+        var maxBufferCapacity = Int32Size + Settings.MaxFrameSize + bufferSize;
         var buffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, bufferSize, mustClear: false);
         try {
             while (true) {
                 // Read more bytes into the buffer (appending past WrittenCount)
-                buffer.EnsureCapacity(bufferSize); // ensures at least bufferSize free space
+                buffer.EnsureCapacity(bufferSize, maxBufferCapacity); // ensures at least bufferSize free space
                 int read;
                 try {
 #if NETSTANDARD2_0
@@ -142,12 +150,14 @@ public sealed class RpcStreamTransport : RpcFrameBasedTransport
                         break; // need more bytes for the length header
 
                     var frameLength = buffer.Array.AsSpan(dataStart, Int32Size).ReadLittleEndian();
-                    if (frameLength <= 0 || frameLength > Settings.MaxFrameSize)
+                    if (frameLength <= 0 || frameLength > maxFrameSize)
                         throw Errors.InvalidItemSize();
                     if (available < Int32Size + frameLength)
                         break; // need more bytes for the frame body
 
+                    // The first frame carries the handshake, so from here on the normal limit applies
                     Meters.IncomingFrameSizeHistogram.Record(frameLength);
+                    maxFrameSize = Settings.MaxFrameSize;
                     var bodyEnd = dataStart + Int32Size + frameLength;
                     var offset = dataStart + Int32Size;
                     while (offset < bodyEnd) { // Zero-length frames are skipped here

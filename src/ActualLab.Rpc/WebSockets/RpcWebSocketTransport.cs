@@ -22,10 +22,12 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
         public int FrameSize { get; init; } = 12_000; // 8 x 1500 (min. MTU minus some reserve)
         public int BufferSize { get; init; } = 16_000;
         public int MaxBufferSize { get; init; } = 256_000;
-        public int MaxMessageSize { get; init; } = RpcTextMessageSerializerV3.GetMaxMessageSize(
-            Math.Max(
-                RpcTextMessageSerializer.Defaults.MaxArgumentDataSize,
-                RpcByteMessageSerializer.Defaults.MaxArgumentDataSize));
+        // A WebSocket message carries exactly one frame, so this is also the frame limit that
+        // RpcPipeTransport and RpcStreamTransport spell MaxFrameSize - all three must agree
+        public int MaxMessageSize { get; init; } = RpcFrameBasedTransport.DefaultMaxFrameSize;
+        // Applies until the handshake is received - see RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize
+        public int MaxPreHandshakeMessageSize { get; init; }
+            = RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize;
         // High CloseTimeout values "shrink" effective ConnectTimeout,
         // low values increase abrupt/graceful close ratio, which is a no-op in our case.
         public TimeSpan CloseTimeout { get; init; } = TimeSpan.FromSeconds(1);
@@ -59,6 +61,7 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
             settings.FrameSize,
             settings.BufferSize,
             settings.MaxBufferSize,
+            settings.MaxMessageSize,
             settings.FrameDelayerFactory,
             settings.WriteChannelOptions,
             StaticMeters,
@@ -66,6 +69,9 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
     {
         if (settings.MaxMessageSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(settings), "settings.MaxMessageSize must be positive.");
+        if (settings.MaxPreHandshakeMessageSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(settings),
+                "settings.MaxPreHandshakeMessageSize must be positive.");
 
         Settings = settings;
         WebSocketOwner = webSocketOwner;
@@ -93,8 +99,7 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var bufferSize = Settings.BufferSize;
-        var maxMessageSize = Settings.MaxMessageSize;
-        var overflowBuffer = new byte[1];
+        var maxMessageSize = Math.Min(Settings.MaxPreHandshakeMessageSize, Settings.MaxMessageSize);
         using var commonCts = cancellationToken.LinkWith(StopToken);
         // ReSharper disable once UseAwaitUsing
         using var commonTokenRegistration = commonCts.Token.Register(
@@ -107,31 +112,15 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
 
         try {
             while (true) {
-                var remainingCapacity = maxMessageSize - buffer.WrittenCount;
-                var isOverflowProbe = remainingCapacity == 0;
+                var requestedCapacity = Math.Min(
+                    Math.Max(bufferSize, buffer.FreeCapacity),
+                    maxMessageSize - buffer.WrittenCount);
+                _ = buffer.GetMemory(requestedCapacity, maxMessageSize);
 #if NETSTANDARD2_0
-                ArraySegment<byte> receiveBuffer;
+                var receiveBuffer = new ArraySegment<byte>(buffer.Array, buffer.WrittenCount, requestedCapacity);
 #else
-                Memory<byte> receiveBuffer;
+                var receiveBuffer = buffer.Array.AsMemory(buffer.WrittenCount, requestedCapacity);
 #endif
-                if (isOverflowProbe) {
-#if NETSTANDARD2_0
-                    receiveBuffer = new ArraySegment<byte>(overflowBuffer);
-#else
-                    receiveBuffer = overflowBuffer;
-#endif
-                }
-                else {
-                    var requestedCapacity = Math.Min(
-                        Math.Max(bufferSize, buffer.FreeCapacity),
-                        remainingCapacity);
-                    _ = buffer.GetMemory(requestedCapacity);
-#if NETSTANDARD2_0
-                    receiveBuffer = new ArraySegment<byte>(buffer.Array, buffer.WrittenCount, requestedCapacity);
-#else
-                    receiveBuffer = buffer.Array.AsMemory(buffer.WrittenCount, requestedCapacity);
-#endif
-                }
                 int count;
                 WebSocketMessageType messageType;
                 bool endOfMessage;
@@ -164,15 +153,18 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
                 if (messageType != MessageType)
                     throw Errors.InvalidWebSocketMessageType(messageType, MessageType);
 
-                if (isOverflowProbe && count != 0) {
-                    Meters.IncomingFrameSizeHistogram.Record(count);
-                    await CloseMessageTooLarge().ConfigureAwait(false);
-                    yield break;
-                }
                 buffer.Advance(count);
                 Meters.IncomingFrameSizeHistogram.Record(count);
-                if (!endOfMessage)
+                if (!endOfMessage) {
+                    // The message continues, but there is no room left for it: reject it now rather than
+                    // after another read, so its buffer isn't held for as long as the peer stays silent
+                    if (buffer.WrittenCount >= maxMessageSize) {
+                        await CloseMessageTooLarge().ConfigureAwait(false);
+                        yield break;
+                    }
+
                     continue; // Continue reading into the same buffer
+                }
 
                 var array = buffer.Array;
                 var totalLength = buffer.WrittenCount;
@@ -182,6 +174,8 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
                     if (message is not null)
                         yield return message;
                 }
+                // The first message is the handshake, so from here on the normal limit applies
+                maxMessageSize = Settings.MaxMessageSize;
                 // The code that uses frame's data (RpcInboundMessage.ArgumentData) is running synchronously,
                 // so if we're here, the buffer can be reused.
                 buffer.Renew(Settings.MaxBufferSize);

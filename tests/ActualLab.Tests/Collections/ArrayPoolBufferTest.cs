@@ -1,3 +1,4 @@
+using ActualLab.Collections.Internal;
 using ActualLab.IO;
 
 namespace ActualLab.Tests.Collections;
@@ -18,6 +19,30 @@ public class ArrayPoolBufferTest
                 }
             }
         }
+    }
+
+    [Fact]
+    public void GrowthIsClampedToMaxCapacity()
+    {
+        // ArrayPool<T>.Shared rounds every rent up to the next power of two on its own,
+        // so a pool that honors the requested size is what makes the clamp observable
+        var pool = NonPoolingArrayPool<byte>.Instance;
+        using var unclamped = new ArrayPoolBuffer<byte>(pool, 16, mustClear: false);
+        unclamped.EnsureCapacity(3_000_000);
+        unclamped.Capacity.Should().Be(4_194_304);
+
+        using var clamped = new ArrayPoolBuffer<byte>(pool, 16, mustClear: false);
+        clamped.EnsureCapacity(3_000_000, 3_500_000);
+        clamped.Capacity.Should().Be(3_500_000);
+    }
+
+    [Fact]
+    public void MaxCapacityNeverCutsBelowTheRequestedCapacity()
+    {
+        using var buffer = new ArrayPoolBuffer<byte>(NonPoolingArrayPool<byte>.Instance, 16, mustClear: false);
+        buffer.EnsureCapacity(3_000_000, 1024);
+
+        buffer.Capacity.Should().Be(3_000_000);
     }
 
     private void Test<T>(List<T> list)
