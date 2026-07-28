@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.WebSockets;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
@@ -15,24 +14,24 @@ namespace ActualLab.Rpc.Server;
 /// Server-side handler that accepts incoming WebSocket connections and establishes
 /// RPC peer connections for ASP.NET Core hosts.
 /// </summary>
-public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvider services)
-    : RpcServiceBase(services), IHostedService
+public class RpcWebSocketServer : RpcServiceBase
 {
     private const string OriginHeaderName = "Origin";
 
-    public RpcWebSocketServerOptions Options { get; } = options;
-    public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
-    public RpcWebSocketClientOptions WebSocketClientOptions { get; } = services.GetRequiredService<RpcWebSocketClientOptions>();
-    public RpcWebSocketServerRefFactory RefFactory { get; } = services.GetRequiredService<RpcWebSocketServerRefFactory>();
+    public RpcWebSocketServerOptions Options { get; }
+    public RpcPeerOptions PeerOptions { get; }
+    public RpcWebSocketClientOptions WebSocketClientOptions { get; }
+    public RpcWebSocketServerRefFactory RefFactory { get; }
 
-    Task IHostedService.StartAsync(CancellationToken cancellationToken)
+    public RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvider services)
+        : base(services)
     {
+        Options = options;
+        PeerOptions = services.GetRequiredService<RpcPeerOptions>();
+        WebSocketClientOptions = services.GetRequiredService<RpcWebSocketClientOptions>();
+        RefFactory = services.GetRequiredService<RpcWebSocketServerRefFactory>();
         WarnIfOriginIsUnvalidated();
-        return Task.CompletedTask;
     }
-
-    Task IHostedService.StopAsync(CancellationToken cancellationToken)
-        => Task.CompletedTask;
 
     public virtual async Task Invoke(HttpContext context, bool isBackend)
     {
@@ -168,28 +167,6 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
 
     // Protected methods
 
-    protected virtual void WarnIfOriginIsUnvalidated()
-    {
-        if (!Options.WarnOnUnvalidatedOrigin)
-            return;
-        if (Options.OriginValidator != RpcWebSocketServerOriginValidators.AllowAll)
-            return;
-
-        // Options passed straight to app.UseWebSockets(...) are invisible here, so this catches
-        // only the services.Configure<WebSocketOptions>(...) way of setting AllowedOrigins.
-        if (Services.GetService<IOptions<WebSocketOptions>>()?.Value is { AllowedOrigins.Count: > 0 })
-            return;
-
-        Log.LogWarning(
-            "RpcWebSocketServerOptions.OriginValidator is RpcWebSocketServerOriginValidators.AllowAll, " +
-            "so any web page can open an RPC connection to this server - and the browser will attach " +
-            "whatever ambient credentials it holds for this origin, e.g. a session cookie " +
-            "(cross-site WebSocket hijacking). " +
-            "Set OriginValidator to RpcWebSocketServerOriginValidators.SameOrigin or .Allow(...), " +
-            "populate WebSocketOptions.AllowedOrigins, or set WarnOnUnvalidatedOrigin to false if this " +
-            "server's connections carry no ambient credentials. See docs/PartR-CO.md#rpcwebsocketserveroptions");
-    }
-
     protected virtual bool TryVerifyReconnectProof(HttpContext context, RpcRef rpcRef)
     {
         var query = context.Request.Query;
@@ -199,5 +176,34 @@ public class RpcWebSocketServer(RpcWebSocketServerOptions options, IServiceProvi
         Hub.TryGetServerPeer(rpcRef, out var peer);
         return RpcReconnectProof.TryVerify(
             peer, rpcRef.HostInfo, counterText, proof, Options.RequireReconnectProof);
+    }
+
+    // Private methods
+
+    // Not virtual: it runs from the constructor, where an override would see an
+    // uninitialized derived instance. Suppress it with WarnOnUnvalidatedOrigin instead.
+    private void WarnIfOriginIsUnvalidated()
+    {
+        if (!Options.WarnOnUnvalidatedOrigin)
+            return;
+        if (Options.OriginValidator != RpcWebSocketServerOriginValidators.AllowAll)
+            return;
+
+        // Only the services.Configure<WebSocketOptions>(...) way of setting AllowedOrigins is
+        // visible here - options passed straight to app.UseWebSockets(...) never reach DI, so a
+        // host that configured origins that way still gets this warning.
+        if (Services.GetService<IOptions<WebSocketOptions>>()?.Value is { AllowedOrigins.Count: > 0 })
+            return;
+
+        Log.LogWarning(
+            "RpcWebSocketServerOptions.OriginValidator is RpcWebSocketServerOriginValidators.AllowAll, " +
+            "so any web page can open an RPC connection to this server - and the browser will attach " +
+            "whatever ambient credentials it holds for this origin, e.g. a session cookie " +
+            "(cross-site WebSocket hijacking). " +
+            "Set OriginValidator to RpcWebSocketServerOriginValidators.SameOrigin or .Allow(...), " +
+            "populate WebSocketOptions.AllowedOrigins via services.Configure<WebSocketOptions>(...), " +
+            "or set WarnOnUnvalidatedOrigin to false - if you already pass AllowedOrigins to " +
+            "app.UseWebSockets(...), or this server's connections carry no ambient credentials. " +
+            "See docs/PartR-CO.md#rpcwebsocketserveroptions");
     }
 }

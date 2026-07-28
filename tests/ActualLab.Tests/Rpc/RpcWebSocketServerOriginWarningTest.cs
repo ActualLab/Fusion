@@ -3,7 +3,6 @@ using ActualLab.Rpc;
 using ActualLab.Rpc.Server;
 using ActualLab.Testing.Logging;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
 
 namespace ActualLab.Tests.Rpc;
 
@@ -13,7 +12,7 @@ public class RpcWebSocketServerOriginWarningTest
     [Fact]
     public async Task WarnsWhenNothingValidatesTheOrigin()
     {
-        var log = await Start(new RpcWebSocketServerOptions {
+        var log = await Resolve(new RpcWebSocketServerOptions {
             OriginValidator = RpcWebSocketServerOriginValidators.AllowAll,
         });
 
@@ -23,7 +22,7 @@ public class RpcWebSocketServerOriginWarningTest
     [Fact]
     public async Task DoesNotWarnWhenOriginIsValidated()
     {
-        var log = await Start(new RpcWebSocketServerOptions {
+        var log = await Resolve(new RpcWebSocketServerOptions {
             OriginValidator = RpcWebSocketServerOriginValidators.SameOrigin,
         });
 
@@ -33,7 +32,7 @@ public class RpcWebSocketServerOriginWarningTest
     [Fact]
     public async Task DoesNotWarnWhenTheWarningIsTurnedOff()
     {
-        var log = await Start(new RpcWebSocketServerOptions {
+        var log = await Resolve(new RpcWebSocketServerOptions {
             OriginValidator = RpcWebSocketServerOriginValidators.AllowAll,
             WarnOnUnvalidatedOrigin = false,
         });
@@ -44,7 +43,7 @@ public class RpcWebSocketServerOriginWarningTest
     [Fact]
     public async Task DoesNotWarnWhenWebSocketOptionsCarryAllowedOrigins()
     {
-        var log = await Start(
+        var log = await Resolve(
             new RpcWebSocketServerOptions { OriginValidator = RpcWebSocketServerOriginValidators.AllowAll },
             services => services.Configure<WebSocketOptions>(
                 o => o.AllowedOrigins.Add("https://example.com")));
@@ -54,7 +53,7 @@ public class RpcWebSocketServerOriginWarningTest
 
     // Private methods
 
-    private static async Task<string> Start(
+    private static async Task<string> Resolve(
         RpcWebSocketServerOptions options,
         Action<IServiceCollection>? configureServices = null)
     {
@@ -66,8 +65,9 @@ public class RpcWebSocketServerOriginWarningTest
         configureServices?.Invoke(services);
         await using var serviceProvider = services.BuildServiceProvider();
 
-        var server = serviceProvider.GetRequiredService<RpcWebSocketServer>();
-        await ((IHostedService)server).StartAsync(CancellationToken.None);
+        // The warning is emitted by the constructor, and the server is a singleton -
+        // so resolving it once is the whole trigger.
+        _ = serviceProvider.GetRequiredService<RpcWebSocketServer>();
         return loggerProvider.Content;
     }
 }
