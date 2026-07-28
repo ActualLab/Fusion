@@ -126,6 +126,11 @@ export abstract class State<T> implements IResult<T> {
         this._isDisposed = true;
         this._whenUpdatedSource?.reject(State._disposedError());
         this._whenUpdatedSource = null;
+        // A disposed state stops tracking its sources, so leaving its computed Consistent
+        // would strand an edge in every dependency's _dependants map (I15) and let
+        // dependants latch onto a value that will never be updated again. .NET's
+        // ComputedGraphPruner.PruneDisposedInstances invalidates for the same reason.
+        this._computed.invalidate();
     }
 
     private static _disposedError(): Error {

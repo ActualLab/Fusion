@@ -111,6 +111,28 @@ describe('Fusion-over-RPC glue fixes', () => {
         clientHub.close();
     });
 
+    // I3
+    it('ignores wire arguments past the declared arity of a compute method', async () => {
+        const [clientConn, serverConn] = createMessageChannelPair();
+        const clientPeer = new RpcClientPeer(clientHub, 'ws://test');
+        clientPeer.connectWith(clientConn);
+        clientHub.addPeer(clientPeer);
+        server.hub.acceptRpcConnection(serverConn);
+        await delay(10);
+
+        for (let i = 0; i < 5; i++) {
+            const call = clientPeer.call('CounterService.getCount:2', ['x', `junk-${i}`], {
+                callTypeId: 1,
+                outboundCallFactory: (id, m) => new RpcOutboundComputeCall(id, m),
+            }) as RpcOutboundComputeCall;
+            expect(await call.result.promise).toBe(0);
+        }
+
+        expect(server.getCountCalls()).toBe(1);
+
+        clientConn.close();
+    });
+
     // F6
     it('excludes stage-3 compute calls from $sys.Reconnect while regular in-flight calls reconcile', async () => {
         const [clientConn1, serverConn1] = createMessageChannelPair();

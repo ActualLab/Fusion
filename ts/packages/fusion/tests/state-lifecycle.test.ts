@@ -78,6 +78,22 @@ describe('State lifecycle (S11, S5)', () => {
         expect(outcome).toBe('settled');
     });
 
+    it('I15: dispose invalidates the state computed and releases its dependency edges', async () => {
+        const source = new MutableState<number>(1);
+        const states: ComputedState<number>[] = [];
+        for (let i = 0; i < 50; i++) {
+            const state = new ComputedState<number>(() => source.use());
+            await state.whenFirstTimeUpdated();
+            states.push(state);
+        }
+        expect(source.computed.dependantCount).toBe(50);
+
+        for (const state of states) state.dispose();
+
+        expect(source.computed.dependantCount).toBe(0);
+        expect(states[0].computed.isConsistent).toBe(false);
+    });
+
     it('S5: dispose mid-computation publishes nothing', async () => {
         const dep = new MutableState<number>(1);
         const gate = new PromiseSource<void>();

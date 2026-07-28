@@ -307,6 +307,42 @@ describe('Computed.capture()', () => {
         expect(captured.isConsistent).toBe(false);
     });
 
+    it('I15: pruneDependants drops collected and invalidated dependant edges', () => {
+        const dependency = new Computed<number>(makeKey('dep', 0));
+        dependency.setOutput(0);
+
+        const dependants: Computed<number>[] = [];
+        for (let i = 0; i < 10; i++) {
+            const dependant = new Computed<number>(makeKey('use', i));
+            dependant.addDependency(dependency as Computed<unknown>);
+            dependant.setOutput(i);
+            dependants.push(dependant);
+        }
+        expect(dependency.dependantCount).toBe(10);
+
+        // An invalidated dependant that never got to clear its own edges.
+        (dependants[0] as unknown as { _state: ConsistencyState })._state =
+            ConsistencyState.Invalidated;
+        dependency.pruneDependants();
+
+        expect(dependency.dependantCount).toBe(9);
+    });
+
+    it('I15: dependant edges stay bounded as dependants are invalidated and replaced', () => {
+        const dependency = new Computed<number>(makeKey('dep', 0));
+        dependency.setOutput(0);
+
+        for (let i = 0; i < 1000; i++) {
+            const dependant = new Computed<number>(makeKey('use', i));
+            dependant.addDependency(dependency as Computed<unknown>);
+            dependant.setOutput(i);
+            (dependant as unknown as { _state: ConsistencyState })._state =
+                ConsistencyState.Invalidated;
+        }
+
+        expect(dependency.dependantCount).toBeLessThan(64);
+    });
+
     it('should capture a wrapComputeMethod function', async () => {
         const getDouble = wrapComputeMethod((n: number) => n * 2);
 
