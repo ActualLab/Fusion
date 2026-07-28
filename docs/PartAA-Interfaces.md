@@ -169,7 +169,7 @@ public partial record AuthBackend_SetupSession(
     Session Session,
     string IPAddress,
     string UserAgent,
-    ImmutableOptionSet Options
+    PropertyBag Options
 ) : ISessionCommand<SessionInfo>, IBackendCommand, INotLogged;
 ```
 
@@ -181,7 +181,7 @@ Sets custom options on a session.
 [DataContract]
 public partial record AuthBackend_SetSessionOptions(
     Session Session,
-    ImmutableOptionSet Options,
+    PropertyBag Options,
     long? ExpectedVersion = null
 ) : ISessionCommand<Unit>;
 ```
@@ -348,7 +348,7 @@ var user = await Auth.GetUser(Session.Default, ct);
 | `LastSeenAt` | `Moment` | Last activity timestamp |
 | `IPAddress` | `string` | Client IP address |
 | `UserAgent` | `string` | Client user agent string |
-| `Options` | `ImmutableOptionSet` | Custom session options |
+| `Options` | `PropertyBag` | Custom session options |
 | `AuthenticatedIdentity` | `UserIdentity` | The identity used to authenticate |
 | `UserId` | `string` | Associated user ID |
 | `IsSignOutForced` | `bool` | Whether forced sign-out was triggered |

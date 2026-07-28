@@ -376,6 +376,31 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
     }
 
     [Fact]
+    public async Task SessionOptionsTest()
+    {
+        if (MustSkip()) return;
+
+        var commander = Services.Commander();
+        var auth = Services.GetRequiredService<IAuth>();
+
+        var session = Session.New();
+        await commander.Call(new AuthBackend_SetupSession(
+            session, "1.1.1.1", "TestAgent", PropertyBag.Empty.Set("a", 1)));
+        var sessionInfo = await auth.GetSessionInfo(session);
+        sessionInfo.Should().NotBeNull();
+        sessionInfo!.Options["a"].Should().Be(1);
+
+        await commander.Call(new AuthBackend_SetSessionOptions(
+            session, PropertyBag.Empty.Set("b", "x").KeylessSet(true), sessionInfo.Version));
+        sessionInfo = await auth.GetSessionInfo(session);
+        sessionInfo.Should().NotBeNull();
+        sessionInfo!.Options.Count.Should().Be(2);
+        sessionInfo.Options["a"].Should().BeNull();
+        sessionInfo.Options["b"].Should().Be("x");
+        sessionInfo.Options.KeylessGet<bool>().Should().BeTrue();
+    }
+
+    [Fact]
     public async Task SignOutOfUnknownSessionMustNotWriteAnything()
     {
         if (MustSkip() || UseInMemoryAuthService) return;

@@ -271,6 +271,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         m1.Backward.Should().BeEquivalentTo(m.Backward);
     }
 
+#pragma warning disable CS0618 // OptionSet / ImmutableOptionSet are obsolete, but still serializable
+
     [Fact]
     public void OptionSetSerialization()
     {
@@ -296,6 +298,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         var s1 = s.PassThroughAllSerializers(Out);
         s1.Items.Should().BeEquivalentTo(s.Items);
     }
+
+#pragma warning restore CS0618
 
     [Fact]
     public void UniSerializedSerialization()
@@ -435,6 +439,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         s2.Should().BeEquivalentTo(withValueConverter);
     }
 
+#pragma warning disable CS0618 // ImmutableOptionSet is obsolete, but its converter is still tested
+
     [Fact]
     public void ImmutableOptionSetNerdbankConverterEdgeCases()
     {
@@ -452,6 +458,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
         var roundTripped = s.PassThroughAllSerializers(Out);
         roundTripped.Items.Should().BeEquivalentTo(s.Items);
     }
+
+#pragma warning restore CS0618
 
     [Fact]
     public void TypeDecoratingUniSerializedNerdbankConverterEdgeCases()

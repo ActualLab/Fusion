@@ -31,12 +31,11 @@ if (CodeKeeper.AlwaysFalse) {
     // User.Claims / JsonCompatibleIdentities are ApiMap<string,string>.
     CodeKeeper.Keep<GenericDictionaryFormatter<string, string, ApiMap<string, string>>>();
     // The Authentication page lists sessions (ImmutableArray<SessionInfo>); SessionInfo.Options
-    // is a typeless ImmutableOptionSet backed by ImmutableDictionary<string, object>. This sample
+    // is a typeless PropertyBag backed by PropertyBagItem<TypeSchema.Any>[]. This sample
     // never stores option values, so no value-type formatters are needed.
     CodeKeeper.Keep<ImmutableArrayFormatter<SessionInfo>>();
-    CodeKeeper.Keep<InterfaceImmutableDictionaryFormatter<string, object>>();
     CodeKeeper.KeepSerializable<SessionInfo>();
-    CodeKeeper.KeepSerializable<ImmutableOptionSet>();
+    CodeKeeper.KeepSerializable<PropertyBag<TypeSchema.Any>>();
 }
 
 var culture = CultureInfo.CreateSpecificCulture("fr-FR");

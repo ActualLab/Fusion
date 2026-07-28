@@ -86,7 +86,7 @@ Stores session information in the database.
 | `AuthenticatedIdentity` | `string` | Serialized `UserIdentity` |
 | `UserId` | `TDbUserId?` | Foreign key to `Users` |
 | `IsSignOutForced` | `bool` | Force sign-out flag |
-| `OptionsJson` | `string` | Serialized `ImmutableOptionSet` |
+| `OptionsJson` | `string` | Serialized `PropertyBag` |
 
 **Indexes**:
 - `(CreatedAt, IsSignOutForced)`
