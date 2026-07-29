@@ -38,12 +38,12 @@ public partial record AuthBackend_SetupSession(
     [property: DataMember, MemoryPackOrder(3)] PropertyBag Options = default
 ) : ISessionCommand<SessionInfo>, IBackendCommand
 {
-    // Session redacts itself, but IPAddress is PII and Options carries whatever the caller put
-    // there - so this command renders its own members rather than relying on the default.
+    // Session redacts itself, but Options carries whatever the caller put there - so this
+    // command renders its own members rather than relying on the default.
     protected virtual bool PrintMembers(StringBuilder builder)
     {
         builder.Append("Session = ").Append(Session)
-            .Append(", IPAddress = ").Append(Sanitizer.MaybeSanitize<Sanitizers.Hidden>(IPAddress))
+            .Append(", IPAddress = ").Append(IPAddress)
             .Append(", UserAgent = ").Append(UserAgent)
             .Append(", Options = ")
             .Append(Sanitization.IsSuspended ? Options.ToString() : Sanitizers.HiddenValue);

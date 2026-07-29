@@ -1,3 +1,5 @@
+using System.Text;
+using ActualLab.Compliance;
 using MessagePack;
 
 namespace ActualLab.Fusion.Authentication;
@@ -37,7 +39,18 @@ public partial record AuthBackend_SetSessionOptions(
     [property: DataMember, MemoryPackOrder(0)] Session Session,
     [property: DataMember, MemoryPackOrder(1)] PropertyBag Options,
     [property: DataMember, MemoryPackOrder(2)] long? ExpectedVersion = null
-) : ISessionCommand<Unit>;
+) : ISessionCommand<Unit>
+{
+    // Options is whatever the caller put there - same reasoning as AuthBackend_SetupSession
+    protected virtual bool PrintMembers(StringBuilder builder)
+    {
+        builder.Append("Session = ").Append(Session)
+            .Append(", Options = ")
+            .Append(Sanitization.IsSuspended ? Options.ToString() : Sanitizers.HiddenValue)
+            .Append(", ExpectedVersion = ").Append(ExpectedVersion);
+        return true;
+    }
+}
 
 /// <summary>
 /// Command to edit the current user's profile (e.g., name) within a session.
