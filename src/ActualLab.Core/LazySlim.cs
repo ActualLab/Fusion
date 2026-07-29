@@ -50,9 +50,8 @@ public static class LazySlim
 /// </summary>
 public sealed class LazySlim<TValue> : ILazySlim<TValue>
 {
-    // Nulled once the value is computed. Accessed with Volatile on both sides: unlike a plain
-    // lazy reference, this flag gates a plain read of a *separate* field, so a stale or reordered
-    // read of it hands out a default(TValue) - and TValue may be a struct, so it can tear too.
+    // Nulled once the value is computed. Volatile on both sides: it gates a plain read of a
+    // *separate* field, so a stale read hands out default(TValue) - and TValue may be a struct, so it can tear
     private Delegate? _factory;
 
     public bool HasValue => Volatile.Read(ref _factory) is null;
@@ -60,7 +59,9 @@ public sealed class LazySlim<TValue> : ILazySlim<TValue>
     public TValue Value {
         get {
             // Double-check locking
-            if (Volatile.Read(ref _factory) is null) return field;
+            if (Volatile.Read(ref _factory) is null)
+                return field;
+
             lock (this) {
                 switch (_factory) {
                 case null:
@@ -107,9 +108,8 @@ public sealed class LazySlim<TValue> : ILazySlim<TValue>
 /// </summary>
 public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
 {
-    // Nulled once the value is computed. Accessed with Volatile on both sides: unlike a plain
-    // lazy reference, this flag gates a plain read of a *separate* field, so a stale or reordered
-    // read of it hands out a default(TValue) - and TValue may be a struct, so it can tear too.
+    // Nulled once the value is computed. Volatile on both sides: it gates a plain read of a
+    // *separate* field, so a stale read hands out default(TValue) - and TValue may be a struct, so it can tear
     private Delegate? _factory;
     private TArg0 _arg0;
 
@@ -118,7 +118,9 @@ public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
     public TValue Value {
         get {
             // Double-check locking
-            if (Volatile.Read(ref _factory) is null) return field;
+            if (Volatile.Read(ref _factory) is null)
+                return field;
+
             lock (this) {
                 switch (_factory) {
                 case null:
@@ -169,9 +171,8 @@ public sealed class LazySlim<TArg0, TValue> : ILazySlim<TValue>
 /// </summary>
 public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
 {
-    // Nulled once the value is computed. Accessed with Volatile on both sides: unlike a plain
-    // lazy reference, this flag gates a plain read of a *separate* field, so a stale or reordered
-    // read of it hands out a default(TValue) - and TValue may be a struct, so it can tear too.
+    // Nulled once the value is computed. Volatile on both sides: it gates a plain read of a
+    // *separate* field, so a stale read hands out default(TValue) - and TValue may be a struct, so it can tear
     private Delegate? _factory;
     private TArg0 _arg0;
     private TArg1 _arg1;
@@ -181,7 +182,9 @@ public sealed class LazySlim<TArg0, TArg1, TValue> : ILazySlim<TValue>
     public TValue Value {
         get {
             // Double-check locking
-            if (Volatile.Read(ref _factory) is null) return field;
+            if (Volatile.Read(ref _factory) is null)
+                return field;
+
             lock (this) {
                 switch (_factory) {
                 case null:

@@ -13,8 +13,7 @@ public sealed class RandomInt32Generator(RandomNumberGenerator? rng = null) : Ge
 
     public override int Next()
     {
-        // _buffer is shared, so it must be read before the lock is released - otherwise two
-        // concurrent callers can overwrite each other's bytes and return the same value
+        // _buffer is shared: read it inside the lock, or two callers can return the same value
         lock (_rng) {
             _rng.GetBytes(_buffer);
             return MemoryMarshal.Cast<byte, int>(_buffer.AsSpan())[0];

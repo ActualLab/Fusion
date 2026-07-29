@@ -46,10 +46,8 @@ public partial class SanitizedStringMemberTest
 
     [MemoryPackable(GenerateType.VersionTolerant), MessagePackObject]
     public partial record WithSanitized(
-        // [MemoryPackAllowSerialize] is required: MemoryPack's generator only accepts member types
-        // it can see a [MemoryPackable] on, and SanitizedString<T>'s formatter is registered at
-        // runtime. Without it the containing type fails to compile with MEMPACK019 - so swapping a
-        // string member for this one is free on the wire but not quite free in source.
+        // [MemoryPackAllowSerialize] is required: SanitizedString<T>'s formatter is registered at
+        // runtime, and without it the containing type fails to compile with MEMPACK019
         [property: MemoryPackOrder(0), MemoryPackAllowSerialize, Key(0)]
         SanitizedString<Sanitizers.Hidden> Secret);
 

@@ -118,9 +118,8 @@ public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarg
     public virtual bool Equals(User? other) => ReferenceEquals(this, other);
     public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 
-    // The default would print Identities, whose values are the per-provider secrets, plus
-    // Claims and a second copy of the identities via JsonCompatibleIdentities. A whole User
-    // travels inside AuthBackend_SignIn, and commands do get logged.
+    // The default prints Identities (values = per-provider secrets), Claims, and a second copy of
+    // the identities via JsonCompatibleIdentities - and a whole User travels inside AuthBackend_SignIn
     protected virtual bool PrintMembers(StringBuilder builder)
     {
         builder.Append("Id = ").Append(Id)
@@ -133,32 +132,6 @@ public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarg
         AppendNames(builder.Append(", Claims = "), Claims.Keys);
         AppendNames(builder.Append(", Identities = "), Identities.Keys.Select(x => x.Schema));
         return true;
-    }
-
-    // Private methods
-
-    private bool PrintSecrets(StringBuilder builder)
-    {
-        builder.Append(", Claims = ").Append(Claims)
-            .Append(", Identities = ").Append(Identities);
-        return true;
-    }
-
-    private static void AppendNames(StringBuilder builder, IEnumerable<string> names)
-    {
-        const int maxNames = 5; // Matches ApiCollectionExt.MaxToStringItems, which is internal
-        builder.Append('[');
-        var i = 0;
-        foreach (var name in names) {
-            if (i >= maxNames) {
-                builder.Append(", ...");
-                break;
-            }
-            if (i++ > 0)
-                builder.Append(", ");
-            builder.Append(name);
-        }
-        builder.Append(']');
     }
 
     // Protected methods
@@ -186,5 +159,32 @@ public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarg
             var claimsIdentity = new ClaimsIdentity(claims, UserIdentity.DefaultSchema);
             return new ClaimsPrincipal(claimsIdentity);
         }
+    }
+
+    // Private methods
+
+    private bool PrintSecrets(StringBuilder builder)
+    {
+        builder.Append(", Claims = ").Append(Claims)
+            .Append(", Identities = ").Append(Identities);
+        return true;
+    }
+
+    private static void AppendNames(StringBuilder builder, IEnumerable<string> names)
+    {
+        const int maxNames = 5; // Matches ApiCollectionExt.MaxToStringItems, which is internal
+        builder.Append('[');
+        var i = 0;
+        foreach (var name in names) {
+            if (i >= maxNames) {
+                builder.Append(", ...");
+                break;
+            }
+
+            if (i++ > 0)
+                builder.Append(", ");
+            builder.Append(name);
+        }
+        builder.Append(']');
     }
 }

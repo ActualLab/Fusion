@@ -42,6 +42,7 @@ public abstract record Requirement<
         get {
             if (_mustExist is { } value)
                 return value;
+
             lock (MustExistLock) {
                 if (_mustExist is { } newValue)
                     return newValue;

@@ -19,8 +19,8 @@ public class AuthContractRedactionTest
         text.Should().NotContain(ClaimValue);
         // The parts that make a log line useful survive
         text.Should().Contain("u-1").And.Contain("Alice");
-        text.Should().Contain("Google");           // the identity's schema
-        text.Should().Contain(ClaimTypes.Email);   // the claim's name
+        text.Should().Contain("Google"); // The identity's schema
+        text.Should().Contain(ClaimTypes.Email); // The claim's name
     }
 
     [Fact]

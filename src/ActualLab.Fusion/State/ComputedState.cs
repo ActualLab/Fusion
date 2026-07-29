@@ -118,6 +118,7 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
         // Double-check locking
         if (Volatile.Read(ref _whenDisposed) is not null)
             return;
+
         lock (Lock) {
             if (_whenDisposed is not null)
                 return;

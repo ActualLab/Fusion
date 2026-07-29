@@ -59,8 +59,7 @@ public class SanitizerTest
     [InlineData("?p=Zm9vYmFy", "?p=<<Zm* [8-15]>>")]
     [InlineData("?p=abc&c=7", "?p=<<* [2-3]>>&c=7")]
     [InlineData("?P=Zm9vYmFy", "?P=<<Zm* [8-15]>>")] // names are matched case-insensitively
-    // Deny by default: an unlisted parameter is masked rather than logged, so a new one
-    // can't start leaking a credential just because no one remembered to list it
+    // Deny by default: an unlisted parameter is masked rather than logged
     [InlineData("?secret=hunter2", "?secret=<<hu* [4-7]>>")]
     public void RpcRequestQuerySanitizesTheCredentialParameters(string query, string expected)
         => Sanitizer.Get<Sanitizers.RpcRequestQuery>().Apply(query).Should().Be(expected);

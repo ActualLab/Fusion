@@ -183,8 +183,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         CounterSumService.AmbientTag.Value = null;
 
         await whenConsolidated.WaitAsync(OneSecond);
-        // The call count is what makes the tag assertion meaningful: without it, a consolidation
-        // that never recomputed GetC0 would leave the tag null and pass just the same
+        // Without this, a consolidation that never recomputed GetC0 would leave the tag null and pass too
         counterSum.GetC0CallCount.Should().BeGreaterThan(callCount);
         counterSum.LastGetC0Tag.Should().BeNull();
     }

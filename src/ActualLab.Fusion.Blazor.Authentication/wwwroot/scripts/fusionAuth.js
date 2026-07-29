@@ -49,9 +49,8 @@
             window.location.replace(url);
         },
 
-        // The server checks returnUrl with IUrlHelper.IsLocalUrl, which rejects absolute URLs -
-        // even same-origin ones - and silently falls back to "/". Resolving against baseURI first
-        // keeps this correct for an app hosted under a sub-path.
+        // The server checks returnUrl with IUrlHelper.IsLocalUrl, which rejects absolute URLs - even
+        // same-origin ones - and falls back to "/". baseURI keeps this right under a sub-path.
         toSiteRelativeUrl: function(url) {
             let parsed = new URL(url, document.baseURI);
             return parsed.pathname + parsed.search + parsed.hash;
