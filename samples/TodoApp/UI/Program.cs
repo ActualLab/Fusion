@@ -30,12 +30,11 @@ if (CodeKeeper.AlwaysFalse) {
     CodeKeeper.Keep<PriorityQueue<object, object>>();
     // User.Claims / JsonCompatibleIdentities are ApiMap<string,string>.
     CodeKeeper.Keep<GenericDictionaryFormatter<string, string, ApiMap<string, string>>>();
-    // The Authentication page lists sessions (ImmutableArray<SessionInfo>); SessionInfo.Options
-    // is a typeless PropertyBag backed by PropertyBagItem<TypeSchema.Any>[]. This sample
-    // never stores option values, so no value-type formatters are needed.
+    // The Authentication page lists sessions (ImmutableArray<SessionInfo>). SessionInfo.Options
+    // is a typeless PropertyBag, but ActualLab.Core's module initializer already roots that one -
+    // and this sample never stores option values, so no value-type formatters are needed either.
     CodeKeeper.Keep<ImmutableArrayFormatter<SessionInfo>>();
     CodeKeeper.KeepSerializable<SessionInfo>();
-    CodeKeeper.KeepSerializable<PropertyBag<TypeSchema.Any>>();
 }
 
 var culture = CultureInfo.CreateSpecificCulture("fr-FR");
