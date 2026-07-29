@@ -56,9 +56,15 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
         lock (Lock) {
             if (_whenConsolidated is not null) return;
 
-            var whenConsolidated = this.IsConsistent()
-                ? Task.Run(Consolidate, CancellationToken.None)
-                : Task.CompletedTask; // No need to consolidate: we're to be replaced anyway
+            Task whenConsolidated;
+            if (!this.IsConsistent())
+                whenConsolidated = Task.CompletedTask; // No need to consolidate: we're to be replaced anyway
+            else {
+                // The cascade bringing us here may run inside ProduceComputed, and Consolidate re-locks
+                // the very input it produces - so its MarkLockedLocally marker must not flow into it.
+                using var _ = ExecutionContextExt.TrySuppressFlow();
+                whenConsolidated = Task.Run(Consolidate, CancellationToken.None);
+            }
             // Release: the null check above and WhenConsolidated read this without the lock
             Volatile.Write(ref _whenConsolidated, whenConsolidated);
         }

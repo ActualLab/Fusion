@@ -165,6 +165,27 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     }
 
     [Fact]
+    public async Task ConsolidationDoesNotInheritInvalidatorContext()
+    {
+        var services = CreateServices();
+        var counterSum = services.GetRequiredService<CounterSumService>();
+        counterSum[0].Set(0);
+
+        var c0 = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC0(0));
+        c0.Value.Should().Be(0);
+        counterSum.LastGetC0Tag.Should().BeNull();
+
+        CounterSumService.AmbientTag.Value = "invalidator";
+        counterSum[0].Set(1);
+        var whenConsolidated = c0.WhenConsolidated;
+        whenConsolidated.Should().NotBeNull();
+        CounterSumService.AmbientTag.Value = null;
+
+        await whenConsolidated.WaitAsync(OneSecond);
+        counterSum.LastGetC0Tag.Should().BeNull();
+    }
+
+    [Fact]
     public async Task ProtectedMethodConsolidates()
     {
         var services = CreateServices();

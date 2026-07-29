@@ -2,7 +2,11 @@ namespace ActualLab.Fusion.Tests.Services;
 
 public class CounterSumService : IComputeService
 {
+    public static readonly AsyncLocal<string?> AmbientTag = new();
+
     private readonly MutableState<int>[] _counters;
+
+    public string? LastGetC0Tag;
 
     public MutableState<int> this[int counterIndex] => _counters[counterIndex];
 
@@ -22,7 +26,10 @@ public class CounterSumService : IComputeService
 
     [ComputeMethod(ConsolidationDelay = 0)]
     public virtual async Task<int> GetC0(int counterIndex, CancellationToken cancellationToken = default)
-        => await this[counterIndex].Use(cancellationToken);
+    {
+        LastGetC0Tag = AmbientTag.Value;
+        return await this[counterIndex].Use(cancellationToken);
+    }
 
     [ComputeMethod(ConsolidationDelay = 0.2)]
     public virtual async Task<int> GetC2(int counterIndex, CancellationToken cancellationToken = default)
