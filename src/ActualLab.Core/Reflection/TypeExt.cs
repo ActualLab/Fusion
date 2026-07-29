@@ -36,8 +36,6 @@ public static partial class TypeExt
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<Type, Type?> GetTaskOrValueTaskTypeCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static readonly ConcurrentDictionary<Type, object?> DefaultValueCache
-        = new(HardwareInfo.ProcessorCountPo2, 131);
 
     public const string IdentifierSymbolPrefix = "@";
 
@@ -49,22 +47,19 @@ public static partial class TypeExt
         }
     } = DefaultNonProxyTypeResolver;
 
-    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume all used constructors are preserved")]
-    public static object? GetDefaultValue(
-        [DynamicallyAccessedMembers(
-            DynamicallyAccessedMemberTypes.PublicParameterlessConstructor |
-            DynamicallyAccessedMemberTypes.PublicConstructors |
-            DynamicallyAccessedMemberTypes.NonPublicConstructors)] this Type type)
+    // Suppressed rather than propagated as [DynamicallyAccessedMembers], which would spread to
+    // every caller: GetUninitializedObject asks for constructors only as a proxy for "seen as
+    // constructed", and the linker already treats value types that way.
+    [UnconditionalSuppressMessage("Trimming", "IL2067",
+        Justification = "Value types only, which the linker already treats as constructed")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static object? GetDefaultValue(this Type type)
     {
-        if (!type.IsValueType)
-            return null;
-        return DefaultValueCache.GetOrAdd(type, static type => {
 #if !NETSTANDARD2_0
-            return RuntimeHelpers.GetUninitializedObject(type);
+        return !type.IsValueType ? null : RuntimeHelpers.GetUninitializedObject(type);
 #else
-            return FormatterServices.GetUninitializedObject(type);
+        return !type.IsValueType ? null : FormatterServices.GetUninitializedObject(type);
 #endif
-        });
     }
 
     public static Type NonProxyType(this Type type)

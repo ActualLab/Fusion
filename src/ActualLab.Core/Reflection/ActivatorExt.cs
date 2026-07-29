@@ -35,7 +35,9 @@ public static class ActivatorExt
         var hasDefaultCtor = HasDefaultCtorCache.GetOrAdd(type,
             key => ((Type)key).GetConstructor(Type.EmptyTypes) is not null);
         if (hasDefaultCtor)
+#pragma warning disable IL2087
             return (T)type.CreateInstance();
+#pragma warning restore IL2087
         if (failIfNoDefaultConstructor)
             throw Errors.NoDefaultConstructor(type);
         return default!;
@@ -122,10 +124,14 @@ public static class ActivatorExt
             });
 
     public static object CreateInstance(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] this Type type)
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors
+            | DynamicallyAccessedMemberTypes.NonPublicConstructors)] this Type type)
     {
-        var ctor = (Func<object>)type.GetConstructorDelegate()!;
-        return ctor.Invoke();
+        // A value type gets its zeroed default even when it declares a parameterless constructor
+        // (C# 10+), which Activator.CreateInstance would run - see ValueTypeConstructorTest
+        return type.IsValueType
+            ? type.GetDefaultValue()!
+            : ((Func<object>)type.GetConstructorDelegate()!).Invoke();
     }
 
     public static object CreateInstance<T1>(
@@ -184,15 +190,25 @@ public static class ActivatorExt
             throw new ArgumentOutOfRangeException(nameof(argumentTypes),
                 "Count of arguments should match the count of constructor paramters.");
 
-        var m = new DynamicMethod("_Ctor", ctor.DeclaringType, argumentTypes, true);
+        // A value type is boxed here, so the delegate's return type is object rather than the
+        // struct: every CreateInstance overload casts to Func<..., object>, which a
+        // Func<..., TStruct> can't satisfy - delegate return types are covariant only for
+        // reference types. Reference types keep their exact return type, which is what the
+        // typed GetConstructorDelegate callers rely on.
+        var tResult = ctor.DeclaringType!;
+        var tReturn = tResult.IsValueType ? typeof(object) : tResult;
+
+        var m = new DynamicMethod("_Ctor", tReturn, argumentTypes, true);
         var il = m.GetILGenerator();
         for (var i = 0; i < argumentTypes.Length; i++) {
             il.Emit(OpCodes.Ldarg, i);
             il.MaybeEmitCast(argumentTypes[i], ctorParams[i].ParameterType);
         }
         il.Emit(OpCodes.Newobj, ctor);
+        if (tResult.IsValueType)
+            il.Emit(OpCodes.Box, tResult);
         il.Emit(OpCodes.Ret);
-        var tDelegate = FuncExt.GetFuncType(argumentTypes, ctor.DeclaringType!);
+        var tDelegate = FuncExt.GetFuncType(argumentTypes, tReturn);
         return m.CreateDelegate(tDelegate);
     }
 
@@ -209,9 +225,15 @@ public static class ActivatorExt
             parameters[i] = Expression.Parameter(argumentTypes[i]);
             callParameters[i] = ExpressionExt.MaybeConvert(parameters[i], ctorParams[i].ParameterType);
         }
+        // Boxed for the same reason as in CreateConstructorDelegateDM
+        var tResult = ctor.DeclaringType!;
+        Expression body = Expression.New(ctor, callParameters);
+        if (tResult.IsValueType)
+            body = Expression.Convert(body, typeof(object));
+
         return Expression
             // ReSharper disable once CoVariantArrayConversion
-            .Lambda(Expression.New(ctor, callParameters), parameters)
+            .Lambda(body, parameters)
             .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
     }
 }
