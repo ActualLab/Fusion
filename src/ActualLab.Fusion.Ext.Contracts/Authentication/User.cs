@@ -53,8 +53,8 @@ public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarg
     {
         Id = id;
         Name = name;
-        Claims = ApiMap<string, string>.Empty;
-        Identities = ApiMap<UserIdentity, string>.Empty;
+        Claims = new();
+        Identities = new();
     }
 
     [JsonConstructor, Newtonsoft.Json.JsonConstructor, MemoryPackConstructor, SerializationConstructor]
@@ -69,7 +69,7 @@ public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarg
         Name = name;
         Version = version;
         Claims = claims;
-        Identities = ApiMap<UserIdentity, string>.Empty;
+        Identities = new();
         JsonCompatibleIdentities = jsonCompatibleIdentities;
     }
 
