@@ -27,7 +27,7 @@ public class AuthContractRedactionTest
     }
 
     [Fact]
-    public void UserPrintsEverythingWhileSanitizationIsSuspended()
+    public void UserPrintsEverythingWhileSanitizationIsInactive()
     {
         // The default state - what a serializer or a plain Console.WriteLine sees
         var user = NewUser();
@@ -51,15 +51,15 @@ public class AuthContractRedactionTest
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void SessionCommandsHideCallerSuppliedOptions(bool isSuspended)
+    public void SessionCommandsHideCallerSuppliedOptions(bool isActive)
     {
         var options = PropertyBag.Empty.Set("apiKey", Secret);
         var setup = new AuthBackend_SetupSession(Session.Default, "203.0.113.7", "Mozilla/5.0", options);
         var setOptions = new AuthBackend_SetSessionOptions(Session.Default, options);
 
-        using var _ = isSuspended ? Sanitization.Suspend() : Sanitization.Begin();
-        setup.ToString().Contains(Secret, StringComparison.Ordinal).Should().Be(isSuspended);
-        setOptions.ToString().Contains(Secret, StringComparison.Ordinal).Should().Be(isSuspended);
+        using var _ = isActive ? Sanitization.Begin() : Sanitization.Suspend();
+        setup.ToString().Contains(Secret, StringComparison.Ordinal).Should().Be(!isActive);
+        setOptions.ToString().Contains(Secret, StringComparison.Ordinal).Should().Be(!isActive);
         // IPAddress is diagnostic, not a credential - it stays readable either way
         setup.ToString().Should().Contain("203.0.113.7");
     }

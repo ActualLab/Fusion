@@ -45,7 +45,7 @@ public partial record AuthBackend_SetupSession(
             .Append(", IPAddress = ").Append(IPAddress)
             .Append(", UserAgent = ").Append(UserAgent)
             .Append(", Options = ")
-            .Append(Sanitization.IsSuspended ? Options.ToString() : Sanitizers.HiddenValue);
+            .Append(Sanitization.IsActive ? Sanitizers.HiddenValue : Options.ToString());
         return true;
     }
 }

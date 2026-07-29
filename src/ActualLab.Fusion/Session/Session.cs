@@ -33,7 +33,7 @@ public sealed partial class Session : IHasId<string>,
     public static SessionValidator Validator { get; set; } = session => !session.IsDefault();
 
     private int _hashCode;
-    private string? _toString;
+    private string? _sanitizedId;
     private byte[]? _sha256Hash;
 
     [DataMember(Order = 0), MemoryPackOrder(0), StringAsSymbolMemoryPackFormatter]
@@ -125,7 +125,9 @@ public sealed partial class Session : IHasId<string>,
     // Conversion
 
     public override string ToString()
-        => Sanitization.IsSuspended ? Id : _toString ??= ComputeToString();
+        => Sanitization.IsActive
+            ? _sanitizedId ??= ComputeSanitizedId()
+            : Id;
 
     string IConvertibleTo<string>.Convert() => Id;
 
@@ -165,7 +167,7 @@ public sealed partial class Session : IHasId<string>,
 
     // Delegated so the format lives in one place - IdPrefixLength/IdPrefixSeparator above
     // are what SessionString is built to match
-    private string ComputeToString()
+    private string ComputeSanitizedId()
         => Sanitizer.Sanitize<Sanitizers.SessionString>(Id);
 
     private string ComputeHash()

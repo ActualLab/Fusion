@@ -15,9 +15,9 @@ public abstract class Sanitizer
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string MaybeApply(string value)
-        => Sanitization.IsSuspended ? value : Apply(value);
+        => Sanitization.IsActive ? Apply(value) : value;
 
-    // Static methods
+    // (Maybe)Sanitize
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Sanitize<TSanitizer>(string value)
@@ -27,7 +27,9 @@ public abstract class Sanitizer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string MaybeSanitize<TSanitizer>(string value)
         where TSanitizer : Sanitizer, new()
-        => Sanitization.IsSuspended ? value : Get<TSanitizer>().Apply(value);
+        => Sanitization.IsActive ? Get<TSanitizer>().Apply(value) : value;
+
+    // Get
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TSanitizer Get<TSanitizer>()

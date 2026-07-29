@@ -43,6 +43,9 @@ public sealed class CommandLogRedactionTest
             logging.ClearProviders();
             logging.SetMinimumLevel(LogLevel.Debug);
             logging.AddProvider(new RecordingLoggerProvider(records));
+            // Masking happens here and nowhere else, so the redaction this test asserts
+            // exists only because the pipeline is wrapped
+            logging.AddSanitizingLoggerFactory();
         });
         var commander = serviceCollection.AddCommander();
         serviceCollection.AddSingleton<FailingCommandHandler>();
@@ -67,9 +70,9 @@ public sealed class CommandLogRedactionTest
     private sealed class SecretSanitizedCommand : ICommand<Unit>, ISanitized
     {
         public override string ToString()
-            => Sanitization.IsSuspended
-                ? Secret
-                : $"{nameof(SecretSanitizedCommand)} {{ Secret = {Sanitizers.HiddenValue} }}";
+            => Sanitization.IsActive
+                ? $"{nameof(SecretSanitizedCommand)} {{ Secret = {Sanitizers.HiddenValue} }}"
+                : Secret;
     }
 
     private sealed class FailingCommandHandler

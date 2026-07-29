@@ -35,7 +35,7 @@ public partial class SanitizedStringMemberTest
     {
         var value = new WithSanitized(Secret);
         using var _ = Sanitization.Begin();
-        Sanitization.IsSuspended.Should().BeFalse();
+        Sanitization.IsActive.Should().BeTrue();
 
         // Masking is a rendering concern: ToString() hides it, serialization must not -
         // and this is the case that matters, since a serializer can run inside a scope

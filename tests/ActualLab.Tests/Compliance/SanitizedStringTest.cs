@@ -20,22 +20,19 @@ public class SanitizedStringTest
     }
 
     [Fact]
-    public void SuspendAndResumeNest()
+    public void ScopesNest()
     {
-        // Suspended by default, so masking never reaches a serializer reading a masking member.
-        Sanitization.IsGloballySuspended.Should().BeTrue();
-        Sanitization.IsSuspended.Should().BeTrue();
+        // Inactive by default, so masking never reaches a serializer reading a masking member
+        Sanitization.IsActive.Should().BeFalse();
 
         using (Sanitization.Begin()) {
-            // A thread scope overrides the global default - otherwise nothing could turn
-            // masking on for the duration of a log call
-            Sanitization.IsSuspended.Should().BeFalse();
+            Sanitization.IsActive.Should().BeTrue();
             using (Sanitization.Suspend())
-                Sanitization.IsSuspended.Should().BeTrue();
-            Sanitization.IsSuspended.Should().BeFalse();
+                Sanitization.IsActive.Should().BeFalse();
+            Sanitization.IsActive.Should().BeTrue();
         }
 
-        Sanitization.IsSuspended.Should().BeTrue();
+        Sanitization.IsActive.Should().BeFalse();
     }
 
     [Theory]

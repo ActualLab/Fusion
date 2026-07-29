@@ -125,13 +125,14 @@ public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarg
         builder.Append("Id = ").Append(Id)
             .Append(", Name = ").Append(Name)
             .Append(", Version = ").Append(Version.ToString(CultureInfo.InvariantCulture));
-        if (Sanitization.IsSuspended)
-            return PrintSecrets(builder);
+        if (Sanitization.IsActive) {
+            // The claim names and the identity schemas are the parts worth having in a log
+            AppendNames(builder.Append(", Claims = "), Claims.Keys);
+            AppendNames(builder.Append(", Identities = "), Identities.Keys.Select(x => x.Schema));
+            return true;
+        }
 
-        // The claim names and the identity schemas are the parts worth having in a log
-        AppendNames(builder.Append(", Claims = "), Claims.Keys);
-        AppendNames(builder.Append(", Identities = "), Identities.Keys.Select(x => x.Schema));
-        return true;
+        return PrintSecrets(builder);
     }
 
     // Protected methods
