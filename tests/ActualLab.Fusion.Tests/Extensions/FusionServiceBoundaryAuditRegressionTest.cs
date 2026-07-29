@@ -196,13 +196,29 @@ public class FusionServiceBoundaryAuditRegressionTest
         // Stripping alone isn't enough: both of these reduce to something still not local
         urlHelper.Normalize("http://evil.example//attacker.example", "/fallback").Should().Be("/fallback");
         urlHelper.Normalize("javascript:alert(1)", "/fallback").Should().Be("/fallback");
-        urlHelper.Normalize("//evil.example/path", "/fallback").Should().Be("/path");
+        // Protocol-relative: no scheme to parse, so it stays relative and IsLocalUrl rejects it
+        urlHelper.Normalize("//evil.example/path", "/fallback").Should().Be("/fallback");
         urlHelper.Normalize("https://evil.example@localhost/path", "/fallback").Should().Be("/path");
         urlHelper.Normalize("https://localhost:5005/auth?a=1#f", "/fallback").Should().Be("/auth?a=1#f");
         urlHelper.Normalize(null, "/fallback").Should().Be("/fallback");
         // Relative URLs pass through untouched, including the "~/" form
         urlHelper.Normalize("~/foo", "/fallback").Should().Be("~/foo");
         urlHelper.Normalize("/foo?a=1#f", "/fallback").Should().Be("/foo?a=1#f");
+    }
+
+    [Theory]
+    [InlineData("/chat")]
+    [InlineData("/chat?x=1#f")]
+    [InlineData("/a/b/c?q=%20&r=1#frag")]
+    public void RedirectUrlHelperShouldNotParseALocalUrlAsAFilePath(string url)
+    {
+        // Uri.TryCreate(url, UriKind.Absolute) is OS-dependent: on Unix a leading '/' is a valid
+        // file path, so these used to parse as file:///... and come back with '?' and '#'
+        // percent-encoded into the path - silently destroying the query and fragment on Linux
+        // while working on Windows. Kept as a Theory so each mangling shows up on its own.
+        var urlHelper = new RedirectUrlHelper();
+        urlHelper.Check(url).Should().BeTrue();
+        urlHelper.Normalize(url, "/fallback").Should().Be(url);
     }
 
     [Fact]

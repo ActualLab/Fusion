@@ -33,7 +33,7 @@ public class RedirectUrlHelper
     {
         if (url.IsNullOrEmpty())
             return false;
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        if (!TryParseAbsolute(url, out var uri))
             return IsLocal(url);
 
         // The path is re-checked rather than trusted: "http://evil.com//attacker.com" reduces to
@@ -50,7 +50,7 @@ public class RedirectUrlHelper
             Log.LogDebug("Redirect URL is rejected, using {FallbackUrl} instead: {Url}", fallbackUrl, url);
             return fallbackUrl;
         }
-        if (!MustStripHost || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        if (!MustStripHost || !TryParseAbsolute(url!, out var uri))
             return url!;
 
         var relativeUrl = ToRelativeUrl(uri);
@@ -72,6 +72,13 @@ public class RedirectUrlHelper
         // letting one through un-stripped without naming it would be an open redirect
         return AllowedHosts.Length == 0 && MustStripHost;
     }
+
+    // UriKind.Absolute makes this answer differ per OS: on Unix a leading '/' is a valid file
+    // path, so "/chat" parses absolute as file:///chat - and "/chat?x=1#f" parses as a path
+    // containing '?' and '#', which PathAndQuery then hands back percent-encoded. Parsing as
+    // RelativeOrAbsolute and asking IsAbsoluteUri answers the same everywhere.
+    protected static bool TryParseAbsolute(string url, [NotNullWhen(true)] out Uri? uri)
+        => Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out uri) && uri.IsAbsoluteUri;
 
     protected static string ToRelativeUrl(Uri uri)
         => uri.PathAndQuery + uri.Fragment;
