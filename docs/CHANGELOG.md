@@ -11,6 +11,34 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.2.27+b1a110879 | npm: 14.2.23
+
+Release date: 2026-07-29
+
+A single fix for a Linux-only defect in `RedirectUrlHelper`, which shipped in
+14.2.23. NuGet-only release &mdash; npm stays at `14.2.23`.
+
+### Fixed
+
+- **`RedirectUrlHelper` mangled every redirect URL carrying a query or fragment
+  on Linux.** It decided whether a URL was absolute with
+  `Uri.TryCreate(url, UriKind.Absolute, ...)`, and that answer depends on the OS:
+  on Unix a leading `/` is a valid *file* path, so `/chat` parses as
+  `file:///chat` and `/chat?x=1#f` parses as a path **containing** `?` and `#`,
+  which `PathAndQuery` then hands back percent-encoded. Every local redirect
+  therefore took the strip-host branch, and `Normalize` returned
+  `/chat%3Fx=1%23f` &mdash; query and fragment destroyed &mdash; while the same call on
+  Windows returned the URL untouched. Two smaller symptoms went with it: a
+  `"Redirect URL must be relative: /chat -> /chat"` warning on every local
+  redirect, and, with `MustStripHost = false` plus a configured `AllowedHosts`,
+  outright rejection of local URLs, since they parse with an empty host.
+  Parsing as `RelativeOrAbsolute` and asking `IsAbsoluteUri` answers the same
+  everywhere. *This was never an open redirect: `//evil.example` parsed as
+  `file://evil.example` on both platforms and `MustStripHost` reduced it to its
+  path. It is now rejected outright instead &mdash; without a scheme it stays
+  relative, and `IsLocalUrl` catches it &mdash; so a protocol-relative `returnUrl`
+  that used to land on its own path now lands on the fallback.*
+
 ## 14.2.23+ec5b74ab0 | npm: 14.2.23
 
 Release date: 2026-07-29
