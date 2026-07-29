@@ -174,6 +174,7 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         var c0 = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC0(0));
         c0.Value.Should().Be(0);
         counterSum.LastGetC0Tag.Should().BeNull();
+        var callCount = counterSum.GetC0CallCount;
 
         CounterSumService.AmbientTag.Value = "invalidator";
         counterSum[0].Set(1);
@@ -182,6 +183,9 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
         CounterSumService.AmbientTag.Value = null;
 
         await whenConsolidated.WaitAsync(OneSecond);
+        // The call count is what makes the tag assertion meaningful: without it, a consolidation
+        // that never recomputed GetC0 would leave the tag null and pass just the same
+        counterSum.GetC0CallCount.Should().BeGreaterThan(callCount);
         counterSum.LastGetC0Tag.Should().BeNull();
     }
 

@@ -7,6 +7,7 @@ public class CounterSumService : IComputeService
     private readonly MutableState<int>[] _counters;
 
     public string? LastGetC0Tag;
+    public int GetC0CallCount;
 
     public MutableState<int> this[int counterIndex] => _counters[counterIndex];
 
@@ -28,6 +29,7 @@ public class CounterSumService : IComputeService
     public virtual async Task<int> GetC0(int counterIndex, CancellationToken cancellationToken = default)
     {
         LastGetC0Tag = AmbientTag.Value;
+        Interlocked.Increment(ref GetC0CallCount);
         return await this[counterIndex].Use(cancellationToken);
     }
 
