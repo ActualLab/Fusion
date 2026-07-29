@@ -27,10 +27,6 @@ Untyped and strongly typed contracts for a computation result that contains eith
 
 Untyped and strongly typed computation-result contracts whose value or error can be changed.
 
-###### `INotLogged`
-
-A tagging interface for commands and other objects that shouldn't be logged on use / execution.
-
 ###### `IRequirementTarget`
 
 A tagging interface that tags types supported by `RequireExt` type.
