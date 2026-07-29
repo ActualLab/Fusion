@@ -52,7 +52,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
     private HashSetSlim3<(ComputedInput Input, ulong Version)> _dependants;
     // ReSharper disable once InconsistentNaming
     private InvalidatedHandlerSet _invalidated;
-    private object? _invalidationSource; // Object type makes atomic updates and volatile reads possible
+    private object? _invalidationSource; // Read plainly, but only after ConsistencyState reports Invalidated
 
     protected object Lock {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -78,7 +78,10 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
     public ConsistencyState ConsistencyState {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => (ConsistencyState)(_state & ConsistencyStateMask);
+        // Acquire: the transitions to Consistent and Invalidated publish _output and
+        // _invalidationSource, which the readers below reach with plain reads. It also keeps
+        // the spin loop in ComputedRegistry.PseudoUnregister from hoisting this load.
+        get => (ConsistencyState)(Volatile.Read(ref _state) & ConsistencyStateMask);
     }
 
     public Result Output {
@@ -202,8 +205,16 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
     [MethodImpl(MethodImplOptions.NoInlining)]
     private Task GetOrCreateValuePromise()
     {
-        lock (Lock)
-            return _untypedValuePromise ??= CreateValuePromise();
+        lock (Lock) {
+            if (_untypedValuePromise is { } valuePromise)
+                return valuePromise;
+
+            // Release: CreateValuePromise makes a new Task, and GetValuePromise hands it out
+            // after a plain read - so its fields must be visible before the reference is
+            valuePromise = CreateValuePromise();
+            Volatile.Write(ref _untypedValuePromise, valuePromise);
+            return valuePromise;
+        }
     }
 
     public async ValueTask<Computed> UpdateUntyped(CancellationToken cancellationToken = default)
@@ -279,7 +290,8 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
             default: // == ConsistencyState.Computed
                 immediately |= Options.InvalidationDelay <= TimeSpan.Zero;
                 if (immediately) {
-                    _state = (int)ConsistencyState.Invalidated;
+                    // Release: publishes _invalidationSource, which InvalidationSource reads plainly
+                    Volatile.Write(ref _state, (int)ConsistencyState.Invalidated);
                     break;
                 }
 
@@ -375,8 +387,11 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
             if ((_state & ConsistencyStateMask) != 0) // != ComputedState.Computing
                 return false;
 
-            state = _state |= (int)ConsistencyState.Consistent; // Fine to do that, this part of the state was 0
+            // _output must be stored first: the state store is what publishes it to the lock-free
+            // readers of Output/UntypedOutput, which gate on ConsistencyState and then read it plainly
             _output = output;
+            state = _state | (int)ConsistencyState.Consistent; // Fine to do that, this part of the state was 0
+            Volatile.Write(ref _state, state);
         }
 
         if ((state & (int)InvalidationFlags.InvalidateOnSetOutput) != 0) {

@@ -53,9 +53,13 @@ public sealed class RedisTaskSub : RedisSubBase
 
     private void Reset()
     {
-        _nextMessageSource = TaskCompletionSourceExt.New<RedisValue>();
+        var nextMessageSource = TaskCompletionSourceExt.New<RedisValue>();
         if (WhenDisposed is not null)
-            _nextMessageSource.TrySetCanceled();
+            nextMessageSource.TrySetCanceled();
+
+        // Release, and stored last: NextMessage reads this reference lock-free and immediately
+        // dereferences .Task, so the source must be fully built - and already cancelled - first
+        Volatile.Write(ref _nextMessageSource, nextMessageSource);
     }
 }
 
@@ -121,8 +125,10 @@ public sealed class RedisTaskSub<T> : RedisSubBase
 
     private void Reset()
     {
-        _nextMessageSource = TaskCompletionSourceExt.New<T>();
+        var nextMessageSource = TaskCompletionSourceExt.New<T>();
         if (WhenDisposed is not null)
-            _nextMessageSource.TrySetCanceled();
+            nextMessageSource.TrySetCanceled();
+
+        Volatile.Write(ref _nextMessageSource, nextMessageSource);
     }
 }
