@@ -1,4 +1,7 @@
+using System.Globalization;
 using System.Security;
+using System.Text;
+using ActualLab.Compliance;
 using ActualLab.Versioning;
 using MessagePack;
 
@@ -9,11 +12,26 @@ namespace ActualLab.Fusion.Authentication;
 /// IP address, user agent, and additional options.
 /// </summary>
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
-public partial record SessionInfo : SessionAuthInfo, IHasVersion<long>
+public partial record SessionInfo : SessionAuthInfo, IHasVersion<long>, ISanitized
 {
     public static new Requirement<SessionInfo> MustBeAuthenticated { get; set; } = Requirement.New(
         (SessionInfo? i) => i?.IsAuthenticated() ?? false,
         new("Session is not authenticated.", m => new SecurityException(m)));
+
+    // Mirrors AuthBackend_SetupSession, which is where these values come from:
+    // Options holds whatever the caller passed in
+    protected override bool PrintMembers(StringBuilder builder)
+    {
+        base.PrintMembers(builder);
+        builder.Append(", Version = ").Append(Version.ToString(CultureInfo.InvariantCulture))
+            .Append(", CreatedAt = ").Append(CreatedAt)
+            .Append(", LastSeenAt = ").Append(LastSeenAt)
+            .Append(", IPAddress = ").Append(IPAddress)
+            .Append(", UserAgent = ").Append(UserAgent)
+            .Append(", Options = ")
+            .Append(Sanitization.IsSuspended ? Options.ToString() : Sanitizers.HiddenValue);
+        return true;
+    }
 
     [DataMember(Order = 10), MemoryPackOrder(10)] public long Version { get; init; }
     [DataMember(Order = 11), MemoryPackOrder(11)] public Moment CreatedAt { get; init; }
