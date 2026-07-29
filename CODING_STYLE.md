@@ -333,6 +333,22 @@ protected override async Task OnRun(CancellationToken cancellationToken)
   typically they're used only if the statement is prefixed with a comment,
   or when it significantly improves the readability.
 
+### Shared Fields and Memory Ordering
+
+- **Prefer `Volatile.Read` / `Volatile.Write` over the `volatile` modifier.**
+  The modifier is declared once and then silently applies to every access,
+  including the many that don't need it; the explicit calls state the
+  requirement where it actually matters, and make an unfenced access next to a
+  fenced one look deliberate rather than accidental. It's also the only option
+  where the modifier doesn't apply at all: struct-typed fields, array elements,
+  locals, and `Interlocked`-managed fields (`CS0420`).
+- When converting, **remove the modifier in the same edit** — keeping both
+  double-fences every access and warns on `ref` passing.
+- **A `lock` around the write is not a substitute for the release.** Publishing
+  a newly built object under a lock still needs `Volatile.Write`.
+- Annotate non-obvious accesses with a short comment saying what the barrier is
+  for — publication, a guard flag, or a polled loop.
+
 ### Using Directives
 
 - Place using directives **outside namespace** (C# 10+ default is inside).
