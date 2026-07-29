@@ -146,10 +146,11 @@ public partial record User : IHasId<string>, IHasVersion<long>, IRequirementTarg
 
     private static void AppendNames(StringBuilder builder, IEnumerable<string> names)
     {
+        const int maxNames = 5; // Matches ApiCollectionExt.MaxToStringItems, which is internal
         builder.Append('[');
         var i = 0;
         foreach (var name in names) {
-            if (i >= ApiCollectionExt.MaxToStringItems) {
+            if (i >= maxNames) {
                 builder.Append(", ...");
                 break;
             }
