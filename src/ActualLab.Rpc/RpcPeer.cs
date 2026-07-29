@@ -605,21 +605,20 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             return connectionState;
         }
         Exception? terminalError = null;
+        var isTransitioned = false;
         try {
             if (newState.ConnectionAttemptIndex != 0 && _resetConnectionAttemptIndex) {
                 newState.ConnectionAttemptIndex = 0;
                 _resetConnectionAttemptIndex = false;
             }
             var nextConnectionState = connectionState.TrySetNext(newState);
-            if (ReferenceEquals(nextConnectionState, connectionState)) {
-#if NET9_0_OR_GREATER
-                Lock.Exit();
-#else
-                Monitor.Exit(Lock);
-#endif
+            if (ReferenceEquals(nextConnectionState, connectionState))
+                // The state is already final - nothing transitioned, so the finally below
+                // must skip the transition work. It still releases the lock.
                 return connectionState;
-            }
+
             connectionState = nextConnectionState;
+            isTransitioned = true;
             // Both are published to lock-free readers - ConnectionState and ServerMethodResolver
             Volatile.Write(ref _connectionState, connectionState);
             Volatile.Write(ref _serverMethodResolver, GetServerMethodResolver(newState.Handshake));
@@ -630,57 +629,61 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             return connectionState;
         }
         finally {
-            // Only expose Transport once the handshake has completed: outbound calls (e.g. stream
-            // sends) read Peer.Transport directly, and writing to the new channel before the
-            // handshake messages have been exchanged corrupts the peer's handshake on the
-            // remote side (the remote reads our outbound message instead of our handshake).
-            Volatile.Write(ref _transport, newState.IsConnected() ? newState.Transport : null);
-            // Order matters: fault first on terminal error so TrySetException wins over
-            // any later TrySetResult on the same TCS. Covers both:
-            //  - oldState's pending WhenDisconnected (if old was connected): fault, not success.
-            //  - newState's pending WhenConnected (chained from old disconnected) + fresh
-            //    _whenDisconnectedSource (we overrode the Always-shared one for terminal states).
-            if (terminalError is not null) {
-                oldState.MarkTerminated(terminalError);
-                newState.MarkTerminated(terminalError);
-            }
-            else if (newState.IsConnected()) {
-                oldState.MarkConnected(newState);
-                // If the previous state was a transient handshaking state, also resolve its
-                // _whenDisconnectedSource. An external Disconnect() that grabbed this state
-                // races with the handshake completing here; without this, the waiter would
-                // hang because MarkConnected only resolves _whenConnectedSource.
-                if (oldState.IsConnecting())
+            if (isTransitioned) {
+                // Only expose Transport once the handshake has completed: outbound calls (e.g. stream
+                // sends) read Peer.Transport directly, and writing to the new channel before the
+                // handshake messages have been exchanged corrupts the peer's handshake on the
+                // remote side (the remote reads our outbound message instead of our handshake).
+                Volatile.Write(ref _transport, newState.IsConnected() ? newState.Transport : null);
+                // Order matters: fault first on terminal error so TrySetException wins over
+                // any later TrySetResult on the same TCS. Covers both:
+                //  - oldState's pending WhenDisconnected (if old was connected): fault, not success.
+                //  - newState's pending WhenConnected (chained from old disconnected) + fresh
+                //    _whenDisconnectedSource (we overrode the Always-shared one for terminal states).
+                if (terminalError is not null) {
+                    oldState.MarkTerminated(terminalError);
+                    newState.MarkTerminated(terminalError);
+                }
+                else if (newState.IsConnected()) {
+                    oldState.MarkConnected(newState);
+                    // If the previous state was a transient handshaking state, also resolve its
+                    // _whenDisconnectedSource. An external Disconnect() that grabbed this state
+                    // races with the handshake completing here; without this, the waiter would
+                    // hang because MarkConnected only resolves _whenConnectedSource.
+                    if (oldState.IsConnecting())
+                        oldState.MarkDisconnected();
+                }
+                else
                     oldState.MarkDisconnected();
-            }
-            else
-                oldState.MarkDisconnected();
 
-            if (newState.ReaderTokenSource != oldState.ReaderTokenSource)
-                oldState.ReaderTokenSource.CancelAndDisposeSilently();
-            if (newState.Connection != oldState.Connection)
-                oldState.Transport?.TryComplete(newState.Error);
+                if (newState.ReaderTokenSource != oldState.ReaderTokenSource)
+                    oldState.ReaderTokenSource.CancelAndDisposeSilently();
+                if (newState.Connection != oldState.Connection)
+                    oldState.Transport?.TryComplete(newState.Error);
+            }
 #if NET9_0_OR_GREATER
             Lock.Exit();
 #else
             Monitor.Exit(Lock);
 #endif
-            if (this is RpcClientPeer clientPeer)
-                Hub.Client.OnConnectionStateChange(clientPeer, connectionState.Value);
+            if (isTransitioned) {
+                if (this is RpcClientPeer clientPeer)
+                    Hub.Client.OnConnectionStateChange(clientPeer, connectionState.Value);
 
-            // The code below is responsible solely for logging - all important stuff is already done
-            if (terminalError is not null)
-                Log.LogInformation("'{Route}': Can't (re)connect, will shut down", Route);
-            else if (newState.IsConnected())
-                Log.LogInformation("'{Route}': Connected", Route);
-            else if (newState.IsConnecting())
-                DebugLog?.LogDebug("'{Route}': Handshaking", Route);
-            else {
-                var e = newState.Error;
-                if (e is not null)
-                    Log.LogInformation(e, "'{Route}': Disconnected: {ErrorMessage}", Route, e.Message);
-                else
-                    Log.LogInformation("'{Route}': Disconnected", Route);
+                // The code below is responsible solely for logging - all important stuff is already done
+                if (terminalError is not null)
+                    Log.LogInformation("'{Route}': Can't (re)connect, will shut down", Route);
+                else if (newState.IsConnected())
+                    Log.LogInformation("'{Route}': Connected", Route);
+                else if (newState.IsConnecting())
+                    DebugLog?.LogDebug("'{Route}': Handshaking", Route);
+                else {
+                    var e = newState.Error;
+                    if (e is not null)
+                        Log.LogInformation(e, "'{Route}': Disconnected: {ErrorMessage}", Route, e.Message);
+                    else
+                        Log.LogInformation("'{Route}': Disconnected", Route);
+                }
             }
         }
     }

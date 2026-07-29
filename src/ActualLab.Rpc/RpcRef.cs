@@ -93,9 +93,12 @@ public partial class RpcRef : IEquatable<RpcRef>
                 Address = RpcRefAddress.Format(this);
             if (Versions.IsEmpty)
                 Versions = RpcDefaults.GetVersions(IsBackend);
-            // Not atomic, and not under _routeLock: two racing callers can mint two routes
-            if (_route is null)
-                Volatile.Write(ref _route, CreateRoute());
+            // Under _routeLock: otherwise two callers each mint a route, and worse, this write
+            // can clobber a fresher one the Route getter just published while holding the lock
+            lock (_routeLock) {
+                if (_route is null)
+                    Volatile.Write(ref _route, CreateRoute());
+            }
         }
         catch {
             // If initialization fails, reset the state to uninitialized
