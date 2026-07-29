@@ -101,7 +101,6 @@ public static partial class ComputedImpl
             ? default!
             : computed.Value;
 
-    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume type constructors are preserved")]
     public static object? GetValueOrDefaultUntyped(Computed? computed, ComputeContext context, Type outputType)
         => computed is null || CallOptions.GetExisting == (context.CallOptions & CallOptions.GetExisting)
             ? outputType.GetDefaultValue()!

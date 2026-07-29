@@ -38,7 +38,29 @@ public class ActivatorExtTest(ITestOutputHelper @out) : TestBase(@out)
         ActivatorExt.New<string>(false).Should().Be(null);
     }
 
+    [Fact]
+    public void CreateInstanceOfValueTypeTest()
+    {
+        // The constructor delegate returns the declaring type, and CreateInstance casts it to
+        // Func<..., object> - delegate return types are covariant only for reference types, so a
+        // struct has to be boxed inside the delegate rather than by the cast.
+        typeof(S0).CreateInstance().Should().Be(new S0());
+        typeof(S1).CreateInstance(1).Should().Be(new S1(1));
+        typeof(S2).CreateInstance(1, false).Should().Be(new S2(1, false));
+        typeof(S3).CreateInstance(1, false, default(Unit)).Should().Be(new S3(1, false, default));
+        typeof(S4).CreateInstance(1, false, default(Unit), "1").Should().Be(new S4(1, false, default, "1"));
+        typeof(S5).CreateInstance(1, false, default(Unit), "1", 1.0d)
+            .Should().Be(new S5(1, false, default, "1", 1.0d));
+    }
+
     // Nested types
+
+    public readonly record struct S0(int Unused = 0);
+    public readonly record struct S1(int A);
+    public readonly record struct S2(int A, bool B);
+    public readonly record struct S3(int A, bool B, Unit C);
+    public readonly record struct S4(int A, bool B, Unit C, string D);
+    public readonly record struct S5(int A, bool B, Unit C, string D, double E);
 
     public record R0();
     public record R1(int A);

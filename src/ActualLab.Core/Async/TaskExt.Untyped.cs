@@ -12,7 +12,6 @@ public static partial class TaskExt
 
     // FromResult
 
-    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume Task<T> constructors are preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume Task<T> constructors are preserved")]
     public static Task FromResult(object? result, Type resultType)
         => FromResultFactoryCache.GetOrAdd(resultType,
@@ -25,11 +24,9 @@ public static partial class TaskExt
 
     // FromDefaultResult
 
-    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume Task<T> constructors are preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume Task<T> constructors are preserved")]
     public static Task FromDefaultResult(
         [DynamicallyAccessedMembers(
-            DynamicallyAccessedMemberTypes.PublicParameterlessConstructor |
             DynamicallyAccessedMemberTypes.PublicConstructors |
             DynamicallyAccessedMemberTypes.NonPublicConstructors)] Type resultType)
         => FromDefaultResultCache.GetOrAdd(resultType,

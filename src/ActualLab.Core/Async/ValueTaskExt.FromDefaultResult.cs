@@ -9,11 +9,9 @@ public static partial class ValueTaskExt
 
     // FromDefaultResult
 
-    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume ValueTask<T> constructors are preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume Task<T> constructors are preserved")]
     public static object FromDefaultResult(
         [DynamicallyAccessedMembers(
-            DynamicallyAccessedMemberTypes.PublicParameterlessConstructor |
             DynamicallyAccessedMemberTypes.PublicConstructors |
             DynamicallyAccessedMemberTypes.NonPublicConstructors)] Type resultType)
         => FromDefaultResultCache.GetOrAdd(resultType,
