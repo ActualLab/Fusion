@@ -42,7 +42,7 @@ public class RpcWebSocketServer : RpcServiceBase
             request.Host.Host,
             request.Host.Port ?? -1,
             request.Path,
-            Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
+            Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
         var requestDescription = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
         if (!context.WebSockets.IsWebSocketRequest) {

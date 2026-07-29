@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ActualLab.CommandR.Diagnostics;
+using ActualLab.Compliance;
 using ActualLab.Reflection;
 using ActualLab.Rpc;
 
@@ -17,12 +18,12 @@ public sealed class CommandLogRedactionTest
         var loggedRecords = await Run(loggedCommand);
         loggedRecords.Should().Contain(x => x.Contains(Secret, StringComparison.Ordinal));
 
-        var notLoggedCommand = new SecretNotLoggedCommand();
-        var notLoggedRecords = await Run(notLoggedCommand);
-        notLoggedRecords.Should().NotContain(x => x.Contains(Secret, StringComparison.Ordinal));
-        notLoggedRecords.Should().Contain(x => x.Contains("command failed", StringComparison.Ordinal)
-            && x.Contains(typeof(SecretNotLoggedCommand).GetName(), StringComparison.Ordinal));
-        notLoggedCommand.FormatCount.Should().Be(0);
+        // A command that carries a credential redacts itself rather than opting out of logging,
+        // so the log still says which command failed
+        var sanitizedRecords = await Run(new SecretSanitizedCommand());
+        sanitizedRecords.Should().NotContain(x => x.Contains(Secret, StringComparison.Ordinal));
+        sanitizedRecords.Should().Contain(x => x.Contains("command failed", StringComparison.Ordinal)
+            && x.Contains(Sanitizers.HiddenValue, StringComparison.Ordinal));
     }
 
     // Private methods
@@ -64,26 +65,22 @@ public sealed class CommandLogRedactionTest
             => Secret;
     }
 
-    private sealed class SecretNotLoggedCommand : ICommand<Unit>, INotLogged
+    private sealed class SecretSanitizedCommand : ICommand<Unit>, ISanitized
     {
-        private int _formatCount;
-        public int FormatCount => _formatCount;
-
         public override string ToString()
-        {
-            Interlocked.Increment(ref _formatCount);
-            return Secret;
-        }
+            => Sanitization.IsSuspended
+                ? Secret
+                : $"{nameof(SecretSanitizedCommand)} {{ Secret = {Sanitizers.HiddenValue} }}";
     }
 
     private sealed class FailingCommandHandler
-        : ICommandHandler<SecretCommand>, ICommandHandler<SecretNotLoggedCommand>
+        : ICommandHandler<SecretCommand>, ICommandHandler<SecretSanitizedCommand>
     {
         public Task OnCommand(SecretCommand command, CommandContext context, CancellationToken cancellationToken)
             => throw new InvalidOperationException("Intended.");
 
         public Task OnCommand(
-            SecretNotLoggedCommand command, CommandContext context, CancellationToken cancellationToken)
+            SecretSanitizedCommand command, CommandContext context, CancellationToken cancellationToken)
             => throw new InvalidOperationException("Intended.");
     }
 

@@ -1,3 +1,5 @@
+using System.Text;
+using ActualLab.Compliance;
 using ActualLab.Rpc;
 using MessagePack;
 
@@ -34,7 +36,20 @@ public partial record AuthBackend_SetupSession(
     [property: DataMember, MemoryPackOrder(1)] string IPAddress = "",
     [property: DataMember, MemoryPackOrder(2)] string UserAgent = "",
     [property: DataMember, MemoryPackOrder(3)] PropertyBag Options = default
-) : ISessionCommand<SessionInfo>, IBackendCommand, INotLogged;
+) : ISessionCommand<SessionInfo>, IBackendCommand
+{
+    // Session redacts itself, but IPAddress is PII and Options carries whatever the caller put
+    // there - so this command renders its own members rather than relying on the default.
+    protected virtual bool PrintMembers(StringBuilder builder)
+    {
+        builder.Append("Session = ").Append(Session)
+            .Append(", IPAddress = ").Append(Sanitizer.MaybeSanitize<Sanitizers.Hidden>(IPAddress))
+            .Append(", UserAgent = ").Append(UserAgent)
+            .Append(", Options = ")
+            .Append(Sanitization.IsSuspended ? Options.ToString() : Sanitizers.HiddenValue);
+        return true;
+    }
+}
 
 /// <summary>
 /// Backend command to sign in a user with the specified identity.
