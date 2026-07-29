@@ -1,3 +1,4 @@
+using ActualLab.Compliance;
 using System.ComponentModel;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
@@ -34,6 +35,7 @@ public class SessionHashTest
     [Fact]
     public void KnownHashesTest()
     {
+        using var _ = Sanitization.Begin();
         // Hash must stay the legacy XxHash3-based value: it's on the wire via
         // SessionAuthInfo.SessionHash and Auth_SignOut.KickUserSessionHash.
         Session.Default.Hash.Should().Be("9644ea3b");
@@ -52,6 +54,7 @@ public class SessionHashTest
     [Fact]
     public void ToStringIsRedacted()
     {
+        using var _ = Sanitization.Begin();
         var session = Session.New();
         var id = session.Id;
         id.Length.Should().BeGreaterThan(Session.IdPrefixLength);

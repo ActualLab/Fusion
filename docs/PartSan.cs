@@ -125,7 +125,7 @@ public class PartSan : DocPart
         StartSnippetOutput("Suspension");
         #region PartSan_Suspend
         WriteLine(credentials.ApiKey.ToString());
-        using (Sanitization.Suspend())
+        using (Sanitization.Begin())
             WriteLine(credentials.ApiKey.ToString());
         WriteLine(credentials.ApiKey.ToString());
         #endregion

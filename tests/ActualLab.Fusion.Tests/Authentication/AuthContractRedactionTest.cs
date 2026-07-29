@@ -13,6 +13,9 @@ public class AuthContractRedactionTest
     public void UserDoesNotPrintIdentitySecretsOrClaimValues()
     {
         var user = NewUser();
+        // Sanitization is suspended by default so serializers see raw values;
+        // SanitizingLogger opens exactly this scope around each log call
+        using var _ = Sanitization.Begin();
         var text = user.ToString();
 
         text.Should().NotContain(Secret);
@@ -26,8 +29,8 @@ public class AuthContractRedactionTest
     [Fact]
     public void UserPrintsEverythingWhileSanitizationIsSuspended()
     {
+        // The default state - what a serializer or a plain Console.WriteLine sees
         var user = NewUser();
-        using var _ = Sanitization.Suspend();
 
         var text = user.ToString();
         text.Should().Contain(Secret);
@@ -40,6 +43,7 @@ public class AuthContractRedactionTest
         // The command that actually carries a whole User across the wire
         var command = new AuthBackend_SignIn(Session.Default, NewUser());
 
+        using var _ = Sanitization.Begin();
         command.ToString().Should().NotContain(Secret);
         command.ToString().Should().NotContain(ClaimValue);
     }
@@ -53,7 +57,7 @@ public class AuthContractRedactionTest
         var setup = new AuthBackend_SetupSession(Session.Default, "203.0.113.7", "Mozilla/5.0", options);
         var setOptions = new AuthBackend_SetSessionOptions(Session.Default, options);
 
-        using var _ = isSuspended ? Sanitization.Suspend() : default;
+        using var _ = isSuspended ? Sanitization.Suspend() : Sanitization.Begin();
         setup.ToString().Contains(Secret, StringComparison.Ordinal).Should().Be(isSuspended);
         setOptions.ToString().Contains(Secret, StringComparison.Ordinal).Should().Be(isSuspended);
         // IPAddress is diagnostic, not a credential - it stays readable either way
@@ -66,6 +70,7 @@ public class AuthContractRedactionTest
         var session = new Session("s-0123456789abcdefghij");
         var command = new AuthBackend_SetSessionOptions(session, PropertyBag.Empty);
 
+        using var _ = Sanitization.Begin();
         command.ToString().Should().NotContain(session.Id);
         command.ToString().Should().Contain(session.ToString());
     }

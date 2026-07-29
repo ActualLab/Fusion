@@ -17,15 +17,21 @@ public class SanitizerTest
     {
         const string secret = "hunter2";
 
-        Sanitizer.MaybeSanitize<Sanitizers.Hidden>(secret).Should().Be(Sanitizers.HiddenValue);
-        Sanitizer.Get<Sanitizers.Hidden>().MaybeApply(secret).Should().Be(Sanitizers.HiddenValue);
+        // Suspended by default: a masking member is read by serializers too, so nothing may
+        // mask until something turns it on for this thread - see SanitizingLogger
+        Sanitizer.MaybeSanitize<Sanitizers.Hidden>(secret).Should().Be(secret);
+        Sanitizer.Get<Sanitizers.Hidden>().MaybeApply(secret).Should().Be(secret);
 
-        using (Sanitization.Suspend()) {
-            Sanitizer.MaybeSanitize<Sanitizers.Hidden>(secret).Should().Be(secret);
-            Sanitizer.Get<Sanitizers.Hidden>().MaybeApply(secret).Should().Be(secret);
-            // Sanitize() itself is unconditional - the "Maybe" is what reads the ambient state
-            Sanitizer.Get<Sanitizers.Hidden>().Apply(secret).Should().Be(Sanitizers.HiddenValue);
+        using (Sanitization.Begin()) {
+            Sanitizer.MaybeSanitize<Sanitizers.Hidden>(secret).Should().Be(Sanitizers.HiddenValue);
+            Sanitizer.Get<Sanitizers.Hidden>().MaybeApply(secret).Should().Be(Sanitizers.HiddenValue);
+
+            using (Sanitization.Suspend())
+                Sanitizer.MaybeSanitize<Sanitizers.Hidden>(secret).Should().Be(secret);
         }
+
+        // Sanitize() itself is unconditional - the "Maybe" is what reads the ambient state
+        Sanitizer.Get<Sanitizers.Hidden>().Apply(secret).Should().Be(Sanitizers.HiddenValue);
     }
 
     [Fact]
@@ -77,10 +83,13 @@ public class SanitizerTest
 
     [Fact]
     public void RpcRequestQueryIsCacheable()
+    {
         // The point of deriving from UriQuery with a fixed policy: it has a parameterless
         // constructor, so it can be a SanitizedString<> type argument.
-        => new SanitizedString<Sanitizers.RpcRequestQuery>("?p=Zm9vYmFy").ToString()
+        using var _ = Sanitization.Begin();
+        new SanitizedString<Sanitizers.RpcRequestQuery>("?p=Zm9vYmFy").ToString()
             .Should().Be("?p=<<Zm* [8-15]>>");
+    }
 
     [Fact]
     public void RpcRequestQueryHidesAPercentEncodedSessionParameter()
@@ -97,14 +106,15 @@ public class SanitizerTest
     [Fact]
     public void RpcRequestQueryFollowsTheAmbientSanitizationScope()
     {
-        // Request logging calls MaybeSanitize, so Sanitization.Suspend() is the escape hatch
-        // that lets a raw query be logged while debugging - and nothing else turns it off.
+        // Request logging calls MaybeSanitize, which masks only inside a Begin() scope -
+        // SanitizingLogger opens one around each log call, so the query is masked there and
+        // readable everywhere else.
         const string sessionId = "Ab3fSomeLongSessionId";
         const string query = $"?session={sessionId}";
 
-        Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(query).Should().NotContain(sessionId);
-        using var _ = Sanitization.Suspend();
         Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(query).Should().Be(query);
+        using var _ = Sanitization.Begin();
+        Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(query).Should().NotContain(sessionId);
     }
 
     [Fact]

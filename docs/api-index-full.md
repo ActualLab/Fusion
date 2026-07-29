@@ -465,7 +465,7 @@ See [Sanitization: Secrets in Logs](PartSan.md).
 
 ###### `ISanitized`
 
-Tagging interface for types whose `ToString()` honors `Sanitization.IsSuspended` - i.e. that render a masked form by default. `Session`, `User`, `SessionInfo` and the auth commands implement it.
+Tagging interface for types whose `ToString()` honors `Sanitization.IsSuspended` - i.e. that render a masked form inside a `Sanitization.Begin()` scope. `Session`, `User`, `SessionInfo` and the auth commands implement it.
 
 ###### `Sanitizer`
 
@@ -479,9 +479,13 @@ The built-in policies: `Hidden` (`<<hidden>>`), `LengthHint` (`<<* [8-15]>>`, a 
 
 A drop-in for a `string` member that masks itself when rendered while serializing its raw value - converters ship for System.Text.Json, Newtonsoft.Json, MemoryPack, MessagePack and Nerdbank. `ISanitizedString` is the non-generic face, so a serializer or log formatter can read `Value` without knowing the policy.
 
+###### `SanitizingLogger`, `SanitizingLoggerFactory`, `SanitizingLoggerFactoryExt`
+
+An `ILogger` decorator that opens a `Sanitization.Begin()` scope around each `Log(...)` call, so `ISanitized` values mask themselves in the log and nowhere else; the factory applies it to every logger it creates, and `AddSanitizingLoggerFactory()` registers that in DI. The scope only covers what renders *inside* the call, so a log argument must defer its `ToString()` - pass a `SanitizedString<T>` or an `ISanitized`, not the result of an eager `MaybeSanitize<T>(...)`.
+
 ###### `Sanitization`
 
-The ambient switch: sanitization is active unless suspended, so values mask by default. `Suspend()` / `Resume()` return a `Scope` (thread-static, so it does **not** flow across an `await`), and `IsGloballySuspended` is a process-wide debugging escape hatch that outranks every scope.
+The ambient switch: sanitization is **suspended by default**, so a masking getter stays readable to serializers, which go through that same getter. `Begin()` turns masking on for the current thread and `Suspend()` turns it back off; both return a `Scope` (thread-static, so it does **not** flow across an `await`) and override `IsGloballySuspended`, the process-wide default.
 
 ### ActualLab.Concurrency
 

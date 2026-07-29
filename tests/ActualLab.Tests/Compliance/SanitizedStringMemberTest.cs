@@ -34,9 +34,11 @@ public partial class SanitizedStringMemberTest
     public void MemberSerializesRawWhileSanitizationIsActive()
     {
         var value = new WithSanitized(Secret);
+        using var _ = Sanitization.Begin();
         Sanitization.IsSuspended.Should().BeFalse();
 
-        // Masking is a rendering concern: ToString() hides it, serialization must not
+        // Masking is a rendering concern: ToString() hides it, serialization must not -
+        // and this is the case that matters, since a serializer can run inside a scope
         value.ToString().Should().NotContain(Secret);
         foreach (var serializer in TextSerializers())
             serializer.Write(value).Should().Contain(Secret);

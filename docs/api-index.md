@@ -45,7 +45,8 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `Sanitizers` — built-in policies: `Hidden`, `LengthHint`, `PrefixAndLengthHint`, `Fingerprint`, `SessionString`, `UriQuery`, `RpcRequestQuery`
 - `SanitizedString<TSanitizer>` (struct) — string member that masks when rendered, serializes raw
 - `ISanitized` / `ISanitizedString` — tags a type whose `ToString()` honors the ambient scope
-- `Sanitization` — ambient switch; masked by default, `Suspend()` / `Resume()` scopes (thread-static, not `await`-flowing)
+- `Sanitization` — ambient switch; **suspended by default**, `Begin()` / `Suspend()` scopes (thread-static, not `await`-flowing)
+- `SanitizingLogger`, `SanitizingLoggerFactory`, `AddSanitizingLoggerFactory()` — mask `ISanitized` values in the log and nowhere else
 
 ### Async Primitives — [PartCore-AsyncLock.md](PartCore-AsyncLock.md), [PartCore-Worker.md](PartCore-Worker.md)
 - `AsyncLock` — semaphore-based async lock with optional reentry detection

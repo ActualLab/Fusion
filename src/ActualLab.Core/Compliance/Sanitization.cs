@@ -4,27 +4,34 @@ namespace ActualLab.Compliance;
 // So a scope doesn't flow across an await - don't wrap awaited work in one.
 
 /// <summary>
-/// Controls whether <see cref="ISanitized"/> values render their masked form. Active unless
-/// suspended, so a value is masked by default; mirrors <c>Invalidation</c> in Fusion in that it's
-/// an ambient flag plus scopes that set it.
+/// Controls whether <see cref="ISanitized"/> values render their masked form. Suspended by
+/// default, so a value renders in full unless something turns sanitization on for the current
+/// thread - which is what <see cref="SanitizingLogger"/> does around each log call.
 /// </summary>
 public static class Sanitization
 {
-    [ThreadStatic] private static bool _isSuspended;
+    // Null means "follow IsGloballySuspended"; a scope sets it either way and restores it on exit
+    [ThreadStatic] private static bool? _isSuspendedOverride;
     // Read/written with Volatile, so a write from one thread reaches the readers on all the others -
     // and on x64 the acquire read costs the same as a plain one
-    private static bool _isGloballySuspended;
+    private static bool _isGloballySuspended = true;
 
-    // A debugging escape hatch: suspends sanitization process-wide, whatever the scopes say
+    /// <summary>
+    /// The process-wide default, suspended unless changed. A masking getter such as
+    /// <c>get =&gt; Sanitizer.MaybeSanitize&lt;T&gt;(field)</c> is read by serializers too, so
+    /// masking must stay off outside an explicit scope or it would reach the wire.
+    /// </summary>
     public static bool IsGloballySuspended {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Volatile.Read(ref _isGloballySuspended);
         set => Volatile.Write(ref _isGloballySuspended, value);
     }
 
+    // A thread's scope wins over the global default, so Resume() works even when suspended
+    // process-wide - otherwise nothing could turn masking on for just the log call
     public static bool IsSuspended {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Volatile.Read(ref _isGloballySuspended) || _isSuspended;
+        get => _isSuspendedOverride ?? Volatile.Read(ref _isGloballySuspended);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -32,25 +39,24 @@ public static class Sanitization
         => new(true);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Scope Resume()
-        // Doesn't override IsGloballySuspended - that one is meant to win everywhere
+    public static Scope Begin()
         => new(false);
 
     // Nested types
 
     public readonly struct Scope : IDisposable
     {
-        private readonly bool _oldIsSuspended;
+        private readonly bool? _oldIsSuspendedOverride;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Scope(bool isSuspended)
         {
-            _oldIsSuspended = _isSuspended;
-            _isSuspended = isSuspended;
+            _oldIsSuspendedOverride = _isSuspendedOverride;
+            _isSuspendedOverride = isSuspended;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
-            => _isSuspended = _oldIsSuspended;
+            => _isSuspendedOverride = _oldIsSuspendedOverride;
     }
 }

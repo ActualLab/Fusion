@@ -51,7 +51,7 @@ public class RpcWebSocketServer : RpcServiceBase
         if (!Settings.OriginValidator.Invoke(this, context, origin)) {
             Log.LogWarning("Rejected RPC connection from origin '{Origin}' for {Path}{Query}",
                 origin, context.Request.Path,
-                Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(context.Request.QueryString.Value ?? ""));
+                new SanitizedString<Sanitizers.RpcRequestQuery>(context.Request.QueryString.Value ?? ""));
             return HttpStatusCode.Forbidden;
         }
 
@@ -63,7 +63,7 @@ public class RpcWebSocketServer : RpcServiceBase
         if (!TryVerifyReconnectProof(context, rpcRef)) {
             Log.LogWarning("'{PeerRef}': Rejected RPC connection: invalid reconnect proof for {Path}{Query}",
                 rpcRef, context.Request.Path,
-                Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(context.Request.QueryString.Value ?? ""));
+                new SanitizedString<Sanitizers.RpcRequestQuery>(context.Request.QueryString.Value ?? ""));
             return HttpStatusCode.Forbidden;
         }
 
@@ -173,7 +173,7 @@ public class RpcWebSocketServer : RpcServiceBase
 
             var request = context.Request;
             Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}",
-                request.Path, Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
+                request.Path, new SanitizedString<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
             if (webSocket is not null)
                 return;
 

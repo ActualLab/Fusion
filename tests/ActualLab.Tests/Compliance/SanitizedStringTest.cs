@@ -12,7 +12,7 @@ public class SanitizedStringTest
     {
         var value = new SanitizedString<Sanitizers.PrefixAndLengthHint>(Secret);
 
-        using (Sanitization.Resume())
+        using (Sanitization.Begin())
             value.ToString().Should().Be("<<hu* [8-15]>>");
 
         using (Sanitization.Suspend())
@@ -22,19 +22,20 @@ public class SanitizedStringTest
     [Fact]
     public void SuspendAndResumeNest()
     {
-        // Sanitization is active unless suspended, and a test still has to be able to
-        // read the raw value it just wrote.
-        Sanitization.IsGloballySuspended.Should().BeFalse();
-        Sanitization.IsSuspended.Should().BeFalse();
+        // Suspended by default, so masking never reaches a serializer reading a masking member.
+        Sanitization.IsGloballySuspended.Should().BeTrue();
+        Sanitization.IsSuspended.Should().BeTrue();
 
-        using (Sanitization.Suspend()) {
-            Sanitization.IsSuspended.Should().BeTrue();
-            using (Sanitization.Resume())
-                Sanitization.IsSuspended.Should().BeFalse();
-            Sanitization.IsSuspended.Should().BeTrue();
+        using (Sanitization.Begin()) {
+            // A thread scope overrides the global default - otherwise nothing could turn
+            // masking on for the duration of a log call
+            Sanitization.IsSuspended.Should().BeFalse();
+            using (Sanitization.Suspend())
+                Sanitization.IsSuspended.Should().BeTrue();
+            Sanitization.IsSuspended.Should().BeFalse();
         }
 
-        Sanitization.IsSuspended.Should().BeFalse();
+        Sanitization.IsSuspended.Should().BeTrue();
     }
 
     [Theory]
@@ -77,7 +78,7 @@ public class SanitizedStringTest
     {
         // Masking is a rendering concern - a masked value on the wire would be silent data loss.
         var value = new SanitizedString<Sanitizers.LengthHint>(Secret);
-        using var _ = Sanitization.Resume();
+        using var _ = Sanitization.Begin();
 
         foreach (var serializer in TextSerializers())
             serializer.Write(value).Should().Contain(Secret);
@@ -90,7 +91,7 @@ public class SanitizedStringTest
         var b = new SanitizedString<Sanitizers.LengthHint>(Secret);
         var c = new SanitizedString<Sanitizers.LengthHint>("abcdefghijklmno"); // same length as Secret
 
-        using var _ = Sanitization.Resume();
+        using var _ = Sanitization.Begin();
         a.Should().Be(b);
         a.GetHashCode().Should().Be(b.GetHashCode());
         a.Should().NotBe(c);
@@ -107,14 +108,14 @@ public class SanitizedStringTest
     [InlineData("abcdefgh", "<<ab* [8-15]>>")]
     public void PrefixAndLengthHintFallsBackForShortValues(string source, string expected)
     {
-        using var _ = Sanitization.Resume();
+        using var _ = Sanitization.Begin();
         new SanitizedString<Sanitizers.PrefixAndLengthHint>(source).ToString().Should().Be(expected);
     }
 
     [Fact]
     public void HiddenAndFingerprintBehaveAsAdvertised()
     {
-        using var _ = Sanitization.Resume();
+        using var _ = Sanitization.Begin();
         new SanitizedString<Sanitizers.Hidden>(Secret).ToString().Should().Be(Sanitizers.HiddenValue);
 
         var fingerprint = new SanitizedString<Sanitizers.Fingerprint>(Secret).ToString();

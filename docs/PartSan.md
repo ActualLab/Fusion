@@ -226,42 +226,65 @@ via `SessionString`, `clientId` via `Fingerprint`, `p` (the reconnect proof) via
 everything else readable. Each of those name lists is a settable static property, so an app can
 extend the policy.
 
-## Suspending Sanitization
+## Turning Sanitization On
 
-Sanitization is **active unless suspended**, so a value is masked by default and forgetting to opt
-in isn't a failure mode. `Sanitization` is the ambient switch that turns it off:
+Sanitization is **suspended unless a scope turns it on**, and `Sanitization` is the ambient switch:
 
 | Member | Meaning |
 |--------|---------|
-| `Sanitization.IsSuspended` | Whether masking is currently off |
-| `Sanitization.Suspend()` | A scope in which values render raw |
-| `Sanitization.Resume()` | A scope that turns masking back on — nestable inside `Suspend()` |
-| `Sanitization.IsGloballySuspended` | A process-wide debugging escape hatch that `Resume()` deliberately can't override |
+| `Sanitization.IsSuspended` | Whether masking is currently off — `true` by default |
+| `Sanitization.Begin()` | A scope in which values render masked |
+| `Sanitization.Suspend()` | A scope that turns masking back off — nestable inside `Begin()` |
+| `Sanitization.IsGloballySuspended` | The process-wide default, `true`; a thread scope overrides it either way |
 
 <!-- snippet: PartSan_Suspend -->
 ```cs
 WriteLine(credentials.ApiKey.ToString());
-using (Sanitization.Suspend())
+using (Sanitization.Begin())
     WriteLine(credentials.ApiKey.ToString());
 WriteLine(credentials.ApiKey.ToString());
 ```
 <!-- endSnippet -->
 
 ```
-<<sk* [16-31]>>
 sk-7f3a91b8c2e4d6f0
 <<sk* [16-31]>>
+sk-7f3a91b8c2e4d6f0
 ```
 
-This is what makes tests and local debugging workable: with masking on by default, `Suspend()` is
-how you read back the value you just wrote. It's the same shape as Fusion's `Invalidation.Begin()`
-— an ambient flag plus scopes that set it.
+::: danger Why off by default
+A masking member is usually written as `get => Sanitizer.MaybeSanitize<T>(field)` — and a
+**serializer reads that same getter**. Were masking on by default, the masked form would be what
+lands on the wire and in the database: silent data loss no compiler can catch. So masking is off
+until something asks for it, and the thing that asks is [`SanitizingLogger`](#sanitizinglogger),
+which opens a `Begin()` scope around each log call — on the logging thread only.
+:::
 
 ::: warning A scope does not flow across `await`
 The flag is `[ThreadStatic]`, not `AsyncLocal`, because it's read on every `ToString()` of every
 sanitized value and an `AsyncLocal` read is far too expensive for that path. The consequence:
-don't wrap awaited work in a `Suspend()` scope — the continuation may resume on another thread,
+don't wrap awaited work in a `Begin()` scope — the continuation may resume on another thread,
 where the scope was never set. Keep the scope around the synchronous rendering itself.
+:::
+
+## SanitizingLogger
+
+`SanitizingLogger` wraps an `ILogger` and opens a `Sanitization.Begin()` scope around every
+`Log(...)` call, so `ISanitized` values mask themselves in the log and nowhere else.
+`SanitizingLoggerFactory` applies it to every logger a factory creates, and
+`AddSanitizingLoggerFactory()` registers that in DI:
+
+```cs
+services.AddLogging(logging => logging.AddSanitizingLoggerFactory(
+    c => c.GetRequiredService<HostInfo>().IsProductionInstance));
+```
+
+::: warning Sanitize lazily, or not at all
+The scope only covers what is rendered **inside** the log call. `Log.LogInformation("{Query}",
+Sanitizer.MaybeSanitize<T>(query))` evaluates its argument first, outside the scope, so it logs
+the raw value. Pass something whose `ToString()` is deferred — a `SanitizedString<T>` or an
+`ISanitized` — or mask unconditionally with `Sanitizer.Sanitize<T>` when the value only ever
+reaches a log.
 :::
 
 ## Sanitizer: Masking Without Wrapping
