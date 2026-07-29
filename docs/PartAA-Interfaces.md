@@ -289,8 +289,9 @@ The `Session` class represents a user session, typically stored in an HTTP-only 
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `Id` | `string` | Unique session identifier (min 8 chars) |
-| `Hash` | `string` | Short hash for session identification |
+| `Id` | `string` | Unique session identifier (min 8 chars). **A bearer credential &mdash; never log it** |
+| `Hash` | `string` | Short (8 hex chars) non-cryptographic `XxHash3` of `Id`, used to identify a session in the UI and on the wire |
+| `Sha256Hash` | `ReadOnlyMemory<byte>` | SHA-256 of `Id`, computed once and cached. Use it when a strong, collision-resistant identifier is needed |
 
 ### Static Members
 
@@ -299,6 +300,21 @@ The `Session` class represents a user session, typically stored in an HTTP-only 
 | `Default` | Special session (`"~"`) for client-side use |
 | `Factory` | Creates new sessions (default: generates GUIDs) |
 | `Validator` | Validates session IDs |
+
+### `ToString()` Is Redacted
+
+Since v14.2 `Session.ToString()` renders `{first 4 chars of Id}:{Hash}` &mdash; e.g.
+`8Kq2:1f0a3c7d` &mdash; rather than the raw `Id`. Anything that formats a `Session` into a log
+line, an exception message or a diagnostic string used to leak a credential that is enough to
+impersonate the user; the redacted form reveals 24 bits of a ~120-bit id, which is still enough
+for a human to match a log line against a UI row or a DB record.
+
+Use `session.Id` explicitly where the actual value is required (cookies, RPC arguments,
+database lookups) &mdash; nothing about the *wire* representation changed.
+
+`Hash` stays `XxHash3` on purpose: it's on the wire via `SessionAuthInfo.SessionHash` and
+`Auth_SignOut.KickUserSessionHash`, so changing it would break those comparisons across
+versions. `Sha256Hash` is the one to use when collision resistance matters.
 
 ### Session Tags
 

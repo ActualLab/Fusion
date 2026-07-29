@@ -108,6 +108,7 @@ hub.close();  // Close all peers
 | `.peers` | `Map<string, RpcPeer>` of all managed peers |
 | `.reconnectDelayer` | Shared `RpcClientPeerReconnectDelayer` &mdash; exponential backoff for all client peers |
 | `.serviceHost` | Dispatches inbound calls to registered service implementations |
+| `.systemCallSender` | Sends the `$sys.*` calls; its `errorFilter` reshapes what a remote peer sees of a local error |
 | `.addPeer(peer)` | Register a peer |
 | `.getPeer(ref)` | Get or create a peer (client or server based on `ref` prefix) |
 | `.getClientPeer(ref)` | Get or create a client peer |
@@ -115,6 +116,21 @@ hub.close();  // Close all peers
 | `.addService(def, impl)` | Register a service implementation |
 | `.addClient<T>(peer, def)` | Create a typed client proxy on a peer |
 | `.close()` | Close all peers |
+
+### Error Filtering
+
+When a TS host *serves* RPC, a handler's exception message is forwarded to the caller verbatim
+by default &mdash; and Node error text routinely embeds absolute paths, connection strings and
+hostnames. `hub.systemCallSender.errorFilter` reshapes it; `genericErrorFilter` replaces every
+message with a fixed generic one:
+
+```ts
+import { genericErrorFilter } from "@actuallab/rpc";
+
+hub.systemCallSender.errorFilter = genericErrorFilter;
+```
+
+The default stays pass-through, so nothing changes unless you opt in.
 
 
 ## RpcClientPeer
@@ -260,26 +276,43 @@ for await (const item of stream) {
 | Feature | Behavior |
 |---------|----------|
 | Enumeration | Can only be iterated **once** |
-| Flow control | Built-in ack-based backpressure (`ackPeriod`, `ackAdvance`; optional `bufferSize` for local pre-buffering) |
+| Flow control | Built-in ack-based backpressure (`ackPeriod`, `ackAdvance`; optional `bufferSize` for local pre-buffering). The advertised acknowledgement window is enforced on receive &mdash; a server that overruns it fails the stream with `$sys.AckEnd` |
 | Reconnection | Automatically resumes from last received index |
-| Nested streams | Stream refs inside returned objects are auto-resolved |
+| Nested streams | Converted explicitly with `toRpcStream()` &mdash; **not** auto-resolved |
 | Cancellation | `break` from `for await` sends `AckEnd` to the server |
 
 ### Nested Streams
 
-When a method returns an object containing stream fields, the RPC layer
-automatically resolves stream reference strings into live `RpcStream` instances:
+A method whose `returns` is `RpcType.stream` still hands back a live `RpcStream` &mdash; that
+case is declared, so the client knows to convert. A stream reference **nested inside an
+ordinary result** is different: since v14.2 it arrives as the raw wire value, and you convert
+it yourself with `toRpcStream(value, peer)`:
 
 ```ts
+import { toRpcStream } from "@actuallab/rpc";
+
 // .NET service returns Table<int> with an RpcStream<Row<int>> Rows field
 const table = await client.GetTable("My Table");
 console.log(table.Title);
-for await (const row of table.Rows) {
-  for await (const item of row.Items) {
+const rows = toRpcStream<Row>(table.Rows, peer)!;  // null if it isn't a stream reference
+for await (const row of rows) {
+  const items = toRpcStream<number>(row.Items, peer)!;
+  for await (const item of items) {
     console.log(item);
   }
 }
 ```
+
+> **Breaking change (v14.2).** `resolveStreamRefs` is gone, and with it the automatic
+> conversion. It walked every regular result and replaced any string of 4&ndash;6
+> comma-separated parts whose first three parsed as integers with a live `RpcStream` &mdash;
+> so `"1,2,3,4"`, a CSV row or a coordinate tuple all turned into streams. TypeScript has no
+> typed method definitions, so that shape heuristic is unfixable in principle and the wire
+> format can't change; deciding that a value *is* a stream is therefore the caller's job.
+> `toRpcStream` returns `null` when the value isn't a stream reference, and it recognises both
+> the comma-separated string the text formats use and the object shape the binary ones use
+> (the old inference never handled the latter). Registration is deferred to the first
+> iteration, so a converted-but-never-enumerated stream leases nothing on either peer.
 
 
 ## Fire-and-Forget (NoWait)

@@ -1527,7 +1527,7 @@ A single route generation of an `RpcRef`: carries the resolved target info for t
 
 ###### `RpcSerializationFormat`, `RpcSerializationFormatResolver` (record)
 
-Defines a named RPC serialization format with its argument and message serializer factories.
+Defines a named RPC serialization format with its argument and message serializer factories. The resolver's `ClientDeniedFormatKeys` lists the formats a client may not pin via `?f=…` — `njson5` and `njson5np` by default.
 
 ###### `RpcSerializableAttribute`
 
@@ -2347,7 +2347,7 @@ Exception thrown when an RPC call is attempted inside an invalidation block.
 
 ###### `Session`, `SessionResolver`, `SessionFactory` (delegate), `SessionExt`
 
-Represents an authenticated user session identified by a unique string Id.
+Represents an authenticated user session identified by a unique string Id. `ToString()` is redacted to `{4-char Id prefix}:{Hash}`; `Sha256Hash` exposes a strong digest of the Id.
 
 ###### `StateBoundComputed<T>`
 
@@ -2575,7 +2575,7 @@ A compute service that provides auto-invalidating time-related computed values.
 
 ###### `IKeyValueStore`, `KeyValueStoreExt`
 
-A shard-aware key-value store service with compute method support for invalidation.
+A shard-aware key-value store service with compute method support for invalidation. It's an `IBackendService`, so it's reachable only from a backend peer — frontend clients go through `ISandboxedKeyValueStore`.
 
 ###### `ISandboxedKeyValueStore`, `SandboxedKeyValueStoreExt`
 

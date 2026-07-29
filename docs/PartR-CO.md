@@ -36,6 +36,8 @@ Defines timeout and periodic limits for RPC connections, keep-alive, and object 
 | `ObjectAbortCycleCount` | `int` | `3` | Number of cycles to complete object abort (proceeds to next cycle if at least one object was disposed) |
 | `ObjectAbortCyclePeriod` | `TimeSpan` | `1s` | Duration of a single object abort cycle |
 | `CallAbortCyclePeriod` | `TimeSpan` | `1s` | Duration of a single call abort cycle |
+| `CallCountLimit` | `int` | `int.MaxValue` | Backstop cap on `InboundCalls.Count + OutboundCalls.Count` per peer; the peer is reset when it's exceeded |
+| `ObjectCountLimit` | `int` | `65536` | Backstop cap on `SharedObjects.Count + RemoteObjects.Count` per peer; the peer is reset when it's exceeded |
 | `CallTimeoutCheckPeriod` | `RandomTimeSpan` | `5s ±20%` | How often call timeouts are checked |
 
 When a debugger is attached, the defaults for `HandshakeTimeout` (60s), `KeepAlivePeriod` (300s), and `KeepAliveTimeout` (1000s) are relaxed to avoid false timeouts during debugging.
@@ -49,6 +51,23 @@ services.AddSingleton(new RpcLimits(Debugger.IsAttached) {
     KeepAliveTimeout = TimeSpan.FromSeconds(40),
 });
 ```
+
+### Per-Peer Resource Caps
+
+`CallCountLimit` and `ObjectCountLimit` (both added in v14.2) are backstops against a peer that
+opens calls or streams and never finishes them. Both are checked once per `ObjectReleasePeriod`
+rather than per call, so the actual count may overshoot by up to one cycle's worth before the
+peer is reset.
+
+`CallCountLimit` defaults to `int.MaxValue`, i.e. **disabled**, and deliberately so: a Fusion
+server legitimately retains one inbound call per live client subscription, so 100K+ open inbound
+calls is normal operation rather than a leak. Set it only once you know your own ceiling. `NoWait`
+calls are never registered in either tracker, so they're invisible to this cap &mdash; lowering it
+does not throttle a `NoWait` flood.
+
+`ObjectCountLimit` defaults to 65,536. Shared objects are released only after
+`ObjectReleaseTimeout` of silence, so a peer that abandons streams hovers near the cap &mdash; and
+therefore gets reset &mdash; roughly once per that timeout.
 
 ## `RpcPeerOptions`
 
@@ -216,6 +235,8 @@ Configures WebSocket-based RPC client connections.
 | `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
 | `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
+| `ReconnectProofCounterParameterName` | `string` | `"c"` | Query parameter for the reconnect proof counter |
+| `ReconnectProofParameterName` | `string` | `"p"` | Query parameter for the reconnect proof itself |
 | `UseAutoFrameDelayerFactory` | `bool` | `false` | Enable automatic frame delaying |
 | `HostUrlResolver` | `Func<...>` | Uses `peer.Ref.HostInfo` | Resolves host URL from peer reference |
 | `ConnectionUriResolver` | `Func<...>` | HTTP→WS conversion | Creates WebSocket connection URI |
@@ -257,7 +278,11 @@ Configures WebSocket-based RPC server endpoints.
 | `BackendRequestPath` | `string` | `"/backend/rpc/ws"` | WebSocket endpoint path for backend calls. **Must NOT be publicly exposed!** |
 | `SerializationFormatParameterName` | `string` | `"f"` | Query parameter for serialization format |
 | `ClientIdParameterName` | `string` | `"clientId"` | Query parameter for client ID |
+| `ReconnectProofCounterParameterName` | `string` | `"c"` | Query parameter for the reconnect proof counter |
+| `ReconnectProofParameterName` | `string` | `"p"` | Query parameter for the reconnect proof itself |
+| `RequireReconnectProof` | `bool` | `false` | Require a valid reconnect proof from every client reconnecting to a live server peer |
 | `OriginValidator` | `RpcWebSocketServerOriginValidator` | `RpcWebSocketServerOriginValidators.AllowAll` | Decides from `(server, context, origin)` whether the upgrade may proceed; rejects with 403 before any peer is created |
+| `WarnOnUnvalidatedOrigin` | `bool` | `true` | Log one startup warning when nothing validates the upgrade request's `Origin` |
 | `ConfigureWebSocket` | `RpcWebSocketServerAcceptContextFactory` | Empty context | Creates the WebSocket accept context per connection from `(server, context, rpcRef)` — e.g. to enable compression selectively (.NET 6+) |
 
 ### Example
@@ -326,6 +351,71 @@ non-`http(s)` scheme — use `Allow(...)` for WebView origins.
 > which has no equivalent at all), it applies to the RPC endpoint alone rather
 > than every WebSocket in the app, and it can express "same origin as this
 > request" instead of a fixed list.
+
+### `WarnOnUnvalidatedOrigin`
+
+Both WebSocket servers (`ActualLab.Rpc.Server` and `ActualLab.Rpc.Server.NetFx`) log a single
+warning from their constructor when nothing validates the `Origin` &mdash; i.e. when
+`OriginValidator` is still `AllowAll` and, on ASP.NET Core, `WebSocketOptions.AllowedOrigins`
+is empty as far as DI can see. The message links to this page.
+
+Turn it off for a server whose connections carry **no** ambient credentials &mdash; a
+backend-only endpoint, or one where every call authenticates itself:
+
+```csharp
+rpc.AddWebSocketServer().Configure(_ => RpcWebSocketServerOptions.Default with {
+    WarnOnUnvalidatedOrigin = false,
+});
+```
+
+Note that options passed straight to `app.UseWebSockets(new WebSocketOptions { … })` never reach
+DI, so a host that set `AllowedOrigins` that way is still warned; turning the warning off is the
+right answer there.
+
+### `RequireReconnectProof`
+
+The connect URL's `clientId` alone used to select which server peer a connection attaches to,
+and the incumbent connection was disconnected before anything was verified. A `clientId` is
+unguessable, but it travels in a URL &mdash; so it lands in proxy logs, browser history and
+`Referer` chains, and whoever reads one could loop the request to keep the victim permanently
+offline, or replay it and inherit the victim's server-side peer state.
+
+Since v14.2 the server mints a per-peer CSPRNG secret and delivers it inside its
+`RpcHandshake` (the new `Secret` member) &mdash; over the established connection, never in a
+URL. Every subsequent connect then carries two query parameters:
+
+| Param | Value |
+|---|---|
+| `c` | a monotonic counter, canonical decimal, incremented once per connect attempt |
+| `p` | `Base64Url_NoPad(HMAC_SHA256(UTF8(secret), UTF8(clientId + "\n" + c)))` |
+
+Verification (`RpcReconnectProof.TryVerify`) runs before the peer is looked up, before the
+WebSocket is accepted and before any disconnect, so a failed proof is a bare **403**: no socket
+accepted, no peer created, incumbent untouched. All three server endpoints &mdash; ASP.NET Core
+WebSocket, HTTP/2 and OWIN &mdash; share that one policy function, so they can't drift apart.
+
+`RequireReconnectProof` defaults to `false`, and the gate still protects by default:
+
+- An **unknown** `clientId` needs no proof &mdash; there's nothing to hijack yet, and it's what a
+  client reaching a different replica legitimately sends.
+- A `clientId` whose peer has **never** seen a valid proof takes the legacy path, so genuinely
+  old clients keep working.
+- A peer that **has** proven possession at least once may not downgrade: an absent `c`/`p` pair
+  is refused regardless of this option, because that is exactly how an attacker would strip the
+  proof. A new client is therefore covered from its second connect onwards.
+- A present-but-invalid pair is always rejected.
+
+Set it to `true` only once every client that can still reconnect to a live server peer speaks the
+protocol, and only behind sticky routing: a reconnect that lands on a replica which already holds
+a peer for that `clientId` &mdash; but issued a different secret &mdash; is rejected until that
+peer expires (3&ndash;15 min). A host with a custom `ConnectionUriResolver` that supplies a
+persistent `clientId` must not enable it unless it persists the secret too. The option is
+bindable from configuration, so it can be rolled back without a redeploy.
+
+The client side is automatic: `RpcWebSocketClient` appends `c` and `p` as soon as it holds a
+secret. See [Reconnect proof](./PartTS-Rpc.md#reconnect-proof) for the TypeScript client, which
+implements the same construction and degrades to the legacy URL where `crypto.subtle` is
+unavailable.
 
 ## `RpcTestClientOptions`
 

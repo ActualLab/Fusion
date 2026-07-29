@@ -55,8 +55,17 @@ fusionServer.ConfigureSessionMiddleware(_ => new SessionMiddleware.Options() {
 | `Cookie` | `CookieBuilder` | See below | Cookie configuration |
 | `AlwaysUpdateCookie` | `bool` | `true` | Refresh cookie on every request |
 | `RequestFilter` | `Func<HttpContext, bool>` | `_ => true` | Filter which requests get sessions |
-| `ForcedSignOutHandler` | `Func<...>` | Redirect + reload | Handle forced sign-out |
+| `InvalidSessionHandler` | `Func<SessionMiddleware, HttpContext, Task<bool>>` | `DefaultInvalidSessionHandler` | Handles a session the validator rejected. Returns `true` to short-circuit the pipeline (redirect), `false` to continue |
+| `ReloadGuardCookieName` | `string` | `"FusionAuth.SessionReload"` | Cookie that breaks a redirect loop; `""` disables the guard |
 | `TagProvider` | `Func<Session, HttpContext, Session>?` | `null` | Add tags to sessions |
+
+The default handler signs out (using the default sign-out scheme, and only if one is
+configured), then redirects to the same URL. Two v14.2 fixes matter here: the session cookie is
+rewritten **before** the handler can short-circuit, so the redirected request no longer
+re-presents the rejected session id; and the `ReloadGuardCookieName` cookie stops the redirect
+after one attempt, falling through with a fresh session instead. Together they turn what used
+to be an unrecoverable redirect loop (or, with no default sign-out scheme configured, a
+persistent 500) into a single reload.
 
 ### Default Cookie Settings
 
@@ -80,17 +89,21 @@ app.UseAuthentication();
 // ...
 ```
 
-### Custom Forced Sign-Out Handler
+### Custom Invalid-Session Handler
 
 ```csharp
 fusionServer.ConfigureSessionMiddleware(_ => new SessionMiddleware.Options() {
-    ForcedSignOutHandler = async (middleware, httpContext) => {
+    InvalidSessionHandler = async (middleware, httpContext) => {
         await httpContext.SignOutAsync();
         httpContext.Response.Redirect("/logged-out");
         return true;  // true = stop processing, false = continue to next middleware
     },
 });
 ```
+
+A custom handler that calls the parameterless `SignOutAsync()` throws when the app has no
+default sign-out scheme &mdash; pass the scheme name, or copy what
+`SessionMiddleware.Options.DefaultInvalidSessionHandler` does.
 
 ### Session Tags
 
