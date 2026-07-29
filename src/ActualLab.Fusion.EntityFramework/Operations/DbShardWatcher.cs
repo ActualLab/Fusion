@@ -6,7 +6,7 @@ namespace ActualLab.Fusion.EntityFramework.Operations;
 /// </summary>
 public abstract class DbShardWatcher(string shard) : ProcessorBase
 {
-    private volatile AsyncState<Unit> _state = new(default);
+    private AsyncState<Unit> _state = new(default);
 
     public string Shard { get; } = shard;
     public Task WhenChanged => _state.WhenNext();
@@ -15,7 +15,9 @@ public abstract class DbShardWatcher(string shard) : ProcessorBase
 
     public void MarkChanged()
     {
-        lock (Lock)
-            _state = _state.SetNext(default);
+        lock (Lock) {
+            // Release: WhenChanged reads _state lock-free
+            Volatile.Write(ref _state, _state.SetNext(default));
+        }
     }
 }

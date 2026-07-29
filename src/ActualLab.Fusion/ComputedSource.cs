@@ -36,8 +36,8 @@ public interface IComputedSource<T> : IComputedSource
 /// </summary>
 public abstract class ComputedSource : ComputedInput, IComputedSource
 {
-    private volatile Func<ComputedSource, CancellationToken, Task> _computer;
-    private volatile Computed _computed;
+    private Func<ComputedSource, CancellationToken, Task> _computer;
+    private Computed _computed;
     private Action<Computed>? _updated;
     private Action<Computed>[] _updatedHandlers = [];
 
@@ -159,7 +159,8 @@ public abstract class ComputedSource : ComputedInput, IComputedSource
                 return [];
 
             oldComputed.Invalidate(immediately: true, source);
-            _computed = computed;
+            // Release: the Computed property hands this out after a plain, lock-free read
+            Volatile.Write(ref _computed, computed);
             return _updatedHandlers;
         }
     }

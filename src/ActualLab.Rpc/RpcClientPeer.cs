@@ -7,8 +7,8 @@ namespace ActualLab.Rpc;
 /// </summary>
 public class RpcClientPeer : RpcPeer
 {
-    private volatile AsyncState<Moment> _reconnectAt = new(default);
-    private volatile string? _reconnectSecret;
+    private AsyncState<Moment> _reconnectAt = new(default);
+    private string? _reconnectSecret;
     private long _reconnectCounter;
 
     public string ClientId { get; protected init; }
@@ -40,7 +40,7 @@ public class RpcClientPeer : RpcPeer
         // that missed one self-heals, and a client that reached another server instance adopts
         // that instance's secret. A null secret (legacy server) leaves the stored one intact.
         if (handshake.Secret is { Length: > 0 } secret)
-            _reconnectSecret = secret;
+            Volatile.Write(ref _reconnectSecret, secret); // Published to lock-free ReconnectSecret readers
     }
 
     protected override async Task<RpcConnection> GetConnection(
@@ -70,7 +70,7 @@ public class RpcClientPeer : RpcPeer
     {
         lock (Lock) {
             if (_reconnectAt.Value != value)
-                _reconnectAt = _reconnectAt.SetNext(value);
+                Volatile.Write(ref _reconnectAt, _reconnectAt.SetNext(value));
         }
     }
 }

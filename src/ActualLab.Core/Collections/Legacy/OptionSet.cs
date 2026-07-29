@@ -18,14 +18,14 @@ public sealed partial class OptionSet
     private static readonly ImmutableDictionary<string, object> EmptyItems
         = ImmutableDictionary<string, object>.Empty.WithComparers(StringComparer.Ordinal);
 
-    private volatile ImmutableDictionary<string, object> _items; // Used in "ref _items" below
+    private ImmutableDictionary<string, object> _items;
 
     [JsonIgnore, MemoryPackIgnore, IgnoreMember]
     public ImmutableDictionary<string, object> Items {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _items;
+        get => Volatile.Read(ref _items);
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set => _items = value;
+        set => Volatile.Write(ref _items, value);
     }
 
     [DataMember(Order = 0), MemoryPackOrder(0), Key(0)]
@@ -35,10 +35,10 @@ public sealed partial class OptionSet
 
     public object? this[string key] {
         // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
-        get => _items.TryGetValue(key, out var v) ? v : null;
+        get => Volatile.Read(ref _items).TryGetValue(key, out var v) ? v : null;
         set {
             var spinWait = new SpinWait();
-            var items = _items;
+            var items = Volatile.Read(ref _items);
             while (true) {
                 var newItems = value is not null
                     ? items.SetItem(key, value)
@@ -115,7 +115,7 @@ public sealed partial class OptionSet
     public void Clear()
     {
         var spinWait = new SpinWait();
-        var items = _items;
+        var items = Volatile.Read(ref _items);
         while (true) {
             var oldItems = Interlocked.CompareExchange(
                 ref _items, EmptyItems, items);

@@ -11,9 +11,9 @@ public static class HardwareInfo
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile int _processorCount;
-    private static volatile int _processorCountPo2;
-    private static volatile int _lastRefreshTicks =
+    private static int _processorCount;
+    private static int _processorCountPo2;
+    private static int _lastRefreshTicks =
         // Environment.TickCount is negative in WebAssembly @ startup
         Environment.TickCount - (RefreshIntervalTicks << 1);
 
@@ -48,21 +48,23 @@ public static class HardwareInfo
     private static void MaybeRefresh()
     {
         var now = Environment.TickCount;
-        if (now - _lastRefreshTicks < RefreshIntervalTicks)
+        // Acquire read: it's what keeps the plain reads of _processorCount* below ordered after it
+        if (now - Volatile.Read(ref _lastRefreshTicks) < RefreshIntervalTicks)
             return;
 
         lock (StaticLock) {
             if (now - _lastRefreshTicks < RefreshIntervalTicks)
                 return;
 
-            _processorCount = Math.Max(1, Environment.ProcessorCount);
-            if (IsSingleThreaded)
-                _processorCount = 1; // Weird, but Environment.ProcessorCount reports true CPU count in Blazor!
-
-            _processorCountPo2 = Math.Max(1, (int)Bits.GreaterOrEqualPowerOf2((ulong)_processorCount));
-            // This should be done at last, otherwise there is a chance
-            // another thread sees _processorCount == 0
-            _lastRefreshTicks = now;
+            var processorCount = IsSingleThreaded
+                ? 1 // Weird, but Environment.ProcessorCount reports true CPU count in Blazor!
+                : Math.Max(1, Environment.ProcessorCount);
+            var processorCountPo2 = Math.Max(1, (int)Bits.GreaterOrEqualPowerOf2((ulong)processorCount));
+            Volatile.Write(ref _processorCount, processorCount);
+            Volatile.Write(ref _processorCountPo2, processorCountPo2);
+            // This must be the last write: release stores don't reorder with each other,
+            // so no other thread can see a fresh _lastRefreshTicks with _processorCount == 0
+            Volatile.Write(ref _lastRefreshTicks, now);
         }
     }
 }

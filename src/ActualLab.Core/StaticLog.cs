@@ -13,7 +13,7 @@ public static class StaticLog
     private static readonly object StaticLock = new();
 #endif
     private static readonly ConcurrentDictionary<object, ILogger> Cache = new(HardwareInfo.ProcessorCountPo2, 131);
-    private static volatile ILoggerFactory _factory = NullLoggerFactory.Instance;
+    private static ILoggerFactory _factory = NullLoggerFactory.Instance;
 
     public static ILoggerFactory Factory {
         get => _factory;
@@ -22,7 +22,7 @@ public static class StaticLog
                 if (ReferenceEquals(_factory, value))
                     return;
 
-                _factory = value;
+                Volatile.Write(ref _factory, value); // Published to the lock-free getter
                 Cache.Clear();
             }
         }

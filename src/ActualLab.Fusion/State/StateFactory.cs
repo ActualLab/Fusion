@@ -12,19 +12,24 @@ public class StateFactory(IServiceProvider services, bool isScoped) : IHasServic
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile StateFactory? _default;
+    private static StateFactory? _default;
 
     public static StateFactory Default {
         get {
             if (_default is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _default ??= new ServiceCollection().AddFusion().Services.BuildServiceProvider().StateFactory();
+            lock (StaticLock) {
+                if (_default is { } newValue)
+                    return newValue;
+
+                newValue = new ServiceCollection().AddFusion().Services.BuildServiceProvider().StateFactory();
+                Volatile.Write(ref _default, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _default = value;
+                Volatile.Write(ref _default, value);
         }
     }
 

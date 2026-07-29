@@ -8,10 +8,10 @@ namespace ActualLab.Time.Testing;
 /// </summary>
 public sealed class TestClock : MomentClock, IDisposable
 {
-    private volatile TestClockSettings _settings;
+    private TestClockSettings _settings;
 
     public TestClockSettings Settings {
-        get => _settings;
+        get => Volatile.Read(ref _settings);
         set {
             if (!value.IsUsable)
                 throw Errors.AlreadyUsed();
@@ -29,7 +29,7 @@ public sealed class TestClock : MomentClock, IDisposable
         => _settings = settings;
     public TestClock(TimeSpan localOffset = default, TimeSpan realOffset = default, double multiplier = 1)
         => _settings = new TestClockSettings(localOffset, realOffset, multiplier);
-    public void Dispose() => _settings.Dispose();
+    public void Dispose() => Volatile.Read(ref _settings).Dispose();
 
     public override string ToString()
         => $"{GetType().Name}({Settings.LocalOffset} + {Settings.Multiplier} * (t - {Settings.RealOffset}))";

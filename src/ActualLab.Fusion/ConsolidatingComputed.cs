@@ -28,8 +28,8 @@ public interface IConsolidatingComputed : IHasInvalidationTarget, IHasSynchroniz
 /// </remarks>
 public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsolidatingComputed
 {
-    private volatile Computed<T> _source;
-    private volatile Task? _whenConsolidated;
+    private Computed<T> _source;
+    private Task? _whenConsolidated;
 
     Computed IConsolidatingComputed.Source => _source;
     public Computed<T> Source => _source;
@@ -52,13 +52,15 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
 
     private void OnSourceInvalidated(Computed invalidated)
     {
-        if (_whenConsolidated is not null) return; // Double-check locking
+        if (Volatile.Read(ref _whenConsolidated) is not null) return; // Double-check locking
         lock (Lock) {
             if (_whenConsolidated is not null) return;
 
-            _whenConsolidated = this.IsConsistent()
+            var whenConsolidated = this.IsConsistent()
                 ? Task.Run(Consolidate, CancellationToken.None)
                 : Task.CompletedTask; // No need to consolidate: we're to be replaced anyway
+            // Release: the null check above and WhenConsolidated read this without the lock
+            Volatile.Write(ref _whenConsolidated, whenConsolidated);
         }
         // _source.Invalidated is auto-removed on invalidation, so we don't need to bother about this
         return;
@@ -83,8 +85,9 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
                     else {
                         // 1. Re-enable the consolidation
                         lock (Lock) {
-                            _source = nextSource;
-                            _whenConsolidated = null;
+                            Volatile.Write(ref _source, nextSource);
+                            // Stored last: the null re-enables consolidation, which reads _source
+                            Volatile.Write(ref _whenConsolidated, null);
                         }
                         // 2. Subscribe to the next source's invalidation'
                         nextSource.Invalidated += OnSourceInvalidated;

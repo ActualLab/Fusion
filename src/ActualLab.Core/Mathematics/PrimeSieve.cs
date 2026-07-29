@@ -18,7 +18,7 @@ public sealed class PrimeSieve
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile PrimeSieve? _instance;
+    private static PrimeSieve? _instance;
 
     private readonly int _limitSqrt;
     private readonly BitArray _isPrime;
@@ -66,8 +66,9 @@ public sealed class PrimeSieve
             if (_instance?.Limit >= limit)
                 return _instance;
 
-            _instance = new PrimeSieve(limit);
-            return _instance;
+            var instance = new PrimeSieve(limit);
+            Volatile.Write(ref _instance, instance);
+            return instance;
         }
     }
 }

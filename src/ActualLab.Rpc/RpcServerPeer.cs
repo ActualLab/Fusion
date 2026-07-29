@@ -9,7 +9,7 @@ namespace ActualLab.Rpc;
 public class RpcServerPeer(RpcHub hub, RpcRoute route, VersionSet? versions = null)
     : RpcPeer(hub, route, versions)
 {
-    private volatile AsyncState<RpcConnection?> _nextConnection = new(null);
+    private AsyncState<RpcConnection?> _nextConnection = new(null); // Always accessed under Lock
     private long _lastSeenReconnectCounter;
 
     // Minted here, so it exists before any handshake and is stable for the peer's whole lifetime.

@@ -5,7 +5,8 @@ namespace ActualLab.Async;
 /// </summary>
 public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDisposed
 {
-    private volatile Task? _disposeTask;
+    // Written under Lock, but IsDisposed / WhenDisposed read it lock-free
+    private Task? _disposeTask;
 
 #if NET9_0_OR_GREATER
     protected Lock Lock { get; } = new();
@@ -30,13 +31,14 @@ public abstract class ProcessorBase : IAsyncDisposable, IDisposable, IHasWhenDis
 
     public async ValueTask DisposeAsync()
     {
-        Task disposeTask;
+        Task? disposeTask;
         lock (Lock) {
-            if (_disposeTask is null) {
-                StopTokenSource.CancelAndDisposeSilently();
-                _disposeTask = DisposeAsyncCore();
-            }
             disposeTask = _disposeTask;
+            if (disposeTask is null) {
+                StopTokenSource.CancelAndDisposeSilently();
+                disposeTask = DisposeAsyncCore();
+                Volatile.Write(ref _disposeTask, disposeTask);
+            }
         }
         await disposeTask.ConfigureAwait(false);
     }

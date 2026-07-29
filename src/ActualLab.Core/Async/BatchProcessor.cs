@@ -19,7 +19,7 @@ static file class BatchProcessor
 /// </summary>
 public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item> queue) : ProcessorBase
 {
-    private volatile IBatchProcessorWorkerPolicy _workerPolicy = BatchProcessorWorkerPolicy.Default;
+    private IBatchProcessorWorkerPolicy _workerPolicy = BatchProcessorWorkerPolicy.Default;
 
     protected readonly Channel<Item> Queue = queue;
     protected int PlannedWorkerCount;
@@ -35,7 +35,7 @@ public class BatchProcessor<T, TResult>(Channel<BatchProcessor<T, TResult>.Item>
     public Func<List<Item>, CancellationToken, Task> Implementation { get; set; } = (_, _) => Task.CompletedTask;
     public IBatchProcessorWorkerPolicy WorkerPolicy {
         get => _workerPolicy;
-        set => _workerPolicy = value;
+        set => Volatile.Write(ref _workerPolicy, value);
     }
     public ILogger? Log { get; set; }
 

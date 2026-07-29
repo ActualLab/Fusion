@@ -12,15 +12,20 @@ public static class ConsoleExt
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile TaskScheduler? _scheduler;
+    private static TaskScheduler? _scheduler;
 
     public static TaskScheduler Scheduler {
         get {
             if (_scheduler is { } scheduler)
                 return scheduler;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _scheduler ??= new DedicatedThreadScheduler();
+            lock (StaticLock) {
+                if (_scheduler is { } newScheduler)
+                    return newScheduler;
+
+                newScheduler = new DedicatedThreadScheduler();
+                Volatile.Write(ref _scheduler, newScheduler);
+                return newScheduler;
+            }
         }
     }
 

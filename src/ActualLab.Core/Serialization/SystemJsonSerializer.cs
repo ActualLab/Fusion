@@ -15,9 +15,9 @@ public class SystemJsonSerializer : TextSerializerBase
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile SystemJsonSerializer? _pretty;
-    private static volatile SystemJsonSerializer? _default;
-    private static volatile TypeDecoratingTextSerializer? _defaultTypeDecorating;
+    private static SystemJsonSerializer? _pretty;
+    private static SystemJsonSerializer? _default;
+    private static TypeDecoratingTextSerializer? _defaultTypeDecorating;
 
     public static JsonSerializerOptions PrettyOptions { get; set; }
         = new() { WriteIndented = true };
@@ -33,13 +33,18 @@ public class SystemJsonSerializer : TextSerializerBase
         get {
             if (_pretty is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _pretty ??= new(PrettyOptions);
+            lock (StaticLock) {
+                if (_pretty is { } newValue)
+                    return newValue;
+
+                newValue = new(PrettyOptions);
+                Volatile.Write(ref _pretty, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _pretty = value;
+                Volatile.Write(ref _pretty, value);
         }
     }
 
@@ -47,13 +52,18 @@ public class SystemJsonSerializer : TextSerializerBase
         get {
             if (_default is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _default ??= new(DefaultOptions);
+            lock (StaticLock) {
+                if (_default is { } newValue)
+                    return newValue;
+
+                newValue = new(DefaultOptions);
+                Volatile.Write(ref _default, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _default = value;
+                Volatile.Write(ref _default, value);
         }
     }
 
@@ -61,13 +71,18 @@ public class SystemJsonSerializer : TextSerializerBase
         get {
             if (_defaultTypeDecorating is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
+            lock (StaticLock) {
+                if (_defaultTypeDecorating is { } newValue)
+                    return newValue;
+
+                newValue = new TypeDecoratingTextSerializer(Default);
+                Volatile.Write(ref _defaultTypeDecorating, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _defaultTypeDecorating = value;
+                Volatile.Write(ref _defaultTypeDecorating, value);
         }
     }
 

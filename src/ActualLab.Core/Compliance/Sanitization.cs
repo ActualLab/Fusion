@@ -11,20 +11,20 @@ namespace ActualLab.Compliance;
 public static class Sanitization
 {
     [ThreadStatic] private static bool _isSuspended;
-    // Volatile, so a write from one thread is published to the readers on all the others -
-    // and a plain read on this path is as cheap as a non-volatile one on x64
-    private static volatile bool _isGloballySuspended;
+    // Read/written with Volatile, so a write from one thread reaches the readers on all the others -
+    // and on x64 the acquire read costs the same as a plain one
+    private static bool _isGloballySuspended;
 
     // A debugging escape hatch: suspends sanitization process-wide, whatever the scopes say
     public static bool IsGloballySuspended {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _isGloballySuspended;
-        set => _isGloballySuspended = value;
+        get => Volatile.Read(ref _isGloballySuspended);
+        set => Volatile.Write(ref _isGloballySuspended, value);
     }
 
     public static bool IsSuspended {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _isGloballySuspended || _isSuspended;
+        get => Volatile.Read(ref _isGloballySuspended) || _isSuspended;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

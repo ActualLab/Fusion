@@ -18,8 +18,8 @@ public sealed class UIActionTracker(
     }
 
     private long _runningActionCount;
-    private volatile AsyncState<UIAction?> _lastAction = new(null);
-    private volatile AsyncState<IUIActionResult?> _lastResult = new(null);
+    private AsyncState<UIAction?> _lastAction = new(null);
+    private AsyncState<IUIActionResult?> _lastResult = new(null);
 
     public Options Settings { get; } = settings;
     public IServiceProvider Services { get; } = services;
@@ -47,7 +47,8 @@ public sealed class UIActionTracker(
 
             Interlocked.Increment(ref _runningActionCount);
             try {
-                _lastAction = _lastAction.SetNext(action);
+                // Release: LastAction and LastResult are read lock-free
+                Volatile.Write(ref _lastAction, _lastAction.SetNext(action));
             }
             catch (Exception e) {
                 // We need to keep this count consistent if above block somehow fails
@@ -73,7 +74,7 @@ public sealed class UIActionTracker(
                         Log.LogError("UI action has completed w/o a result: {Action}", action);
                         return;
                     }
-                    _lastResult = _lastResult.TrySetNext(result);
+                    Volatile.Write(ref _lastResult, _lastResult.TrySetNext(result));
                 }
             },
             CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);

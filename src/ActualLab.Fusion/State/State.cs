@@ -49,7 +49,7 @@ public interface IState<T> : IState, IResult<T>
 /// </summary>
 public abstract class State : ComputedInput, IState
 {
-    private volatile StateSnapshot? _snapshot;
+    private StateSnapshot? _snapshot;
     private string? _category;
 
     // Protected properties
@@ -251,16 +251,19 @@ public abstract class State : ComputedInput, IState
         computed.AssertConsistencyStateIsNot(ConsistencyState.Computing);
         lock (Lock) {
             var prevSnapshot = _snapshot;
+            StateSnapshot snapshot;
             if (prevSnapshot is not null) {
                 if (prevSnapshot.Computed == computed)
                     return;
 
                 prevSnapshot.Computed.Invalidate(immediately: true, source);
-                _snapshot = new StateSnapshot(this, prevSnapshot, computed);
+                snapshot = new StateSnapshot(this, prevSnapshot, computed);
             }
             else
-                _snapshot = new StateSnapshot(this, null, computed);
-            OnSetSnapshot(_snapshot, prevSnapshot);
+                snapshot = new StateSnapshot(this, null, computed);
+            // Release: Snapshot, Computed, Value, etc. read _snapshot lock-free
+            Volatile.Write(ref _snapshot, snapshot);
+            OnSetSnapshot(snapshot, prevSnapshot);
 
             // If the computed was invalidated while still computing (e.g. a dependency changed
             // mid-computation), its StateBoundComputed.OnInvalidated already fired, but back then

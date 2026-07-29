@@ -15,7 +15,10 @@ public static class CoarseClockHelper
     // ReSharper disable once NotAccessedField.Local
     private static readonly Timer Timer;
     private static readonly RandomInt64Generator Rng = new();
-    private static volatile State _state;
+    // Update publishes a new snapshot via Interlocked.Exchange; the getters below dereference it
+    // immediately, so their plain reads are already ordered - don't "fix" them to Volatile.Read,
+    // it's a real LDAR on ARM64 and this is one of the hottest paths in the framework
+    private static State _state;
 
     public static Moment Now {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -35,9 +38,7 @@ public static class CoarseClockHelper
     static CoarseClockHelper()
     {
         Start = Moment.Now;
-        var state = new State();
-        _state = state; // Just to suppress .NET Standard warning
-        Interlocked.Exchange(ref _state, state);
+        _state = new State(); // Plain: type-init completion publishes it
         var interval = TimeSpan.FromSeconds(1.0 / Frequency);
         Timer = NonCapturingTimer.Create(Update, null!, interval, interval);
     }

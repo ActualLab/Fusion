@@ -15,7 +15,7 @@ public sealed class TickSource(TimeSpan period)
 #else
     private readonly object _lock = new();
 #endif
-    private volatile Task _whenNextTick = Task.CompletedTask;
+    private Task _whenNextTick = Task.CompletedTask;
 
     public TimeSpan Period { get; } = period > TimeSpan.Zero
         ? period
@@ -33,7 +33,9 @@ public sealed class TickSource(TimeSpan period)
             if (!whenNextTick.IsCompleted)
                 return whenNextTick;
 
-            return _whenNextTick = Task.Delay(Period);
+            whenNextTick = Task.Delay(Period);
+            Volatile.Write(ref _whenNextTick, whenNextTick); // Published to the lock-free read above
+            return whenNextTick;
         }
     }
 }

@@ -21,8 +21,8 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
     private static readonly object StaticLock = new();
 #endif
     private readonly JsonSerializer _jsonSerializer;
-    private static volatile NewtonsoftJsonSerializer? _default;
-    private static volatile TypeDecoratingTextSerializer? _defaultTypeDecorating;
+    private static NewtonsoftJsonSerializer? _default;
+    private static TypeDecoratingTextSerializer? _defaultTypeDecorating;
 
     public static JsonSerializerSettings DefaultSettings { get; set; } = new() {
         TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
@@ -37,13 +37,18 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
         get {
             if (_default is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _default ??= new(DefaultSettings);
+            lock (StaticLock) {
+                if (_default is { } newValue)
+                    return newValue;
+
+                newValue = new(DefaultSettings);
+                Volatile.Write(ref _default, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _default = value;
+                Volatile.Write(ref _default, value);
         }
     }
 
@@ -51,13 +56,18 @@ public class NewtonsoftJsonSerializer : TextSerializerBase
         get {
             if (_defaultTypeDecorating is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _defaultTypeDecorating ??= new TypeDecoratingTextSerializer(Default);
+            lock (StaticLock) {
+                if (_defaultTypeDecorating is { } newValue)
+                    return newValue;
+
+                newValue = new TypeDecoratingTextSerializer(Default);
+                Volatile.Write(ref _defaultTypeDecorating, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _defaultTypeDecorating = value;
+                Volatile.Write(ref _defaultTypeDecorating, value);
         }
     }
 

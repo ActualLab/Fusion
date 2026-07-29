@@ -10,14 +10,16 @@ public partial class RemoteComputedCache
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile Func<ComputeMethodInput, RpcPeer, Task?>? _hitToCallDelayer;
+    private static Func<ComputeMethodInput, RpcPeer, Task?>? _hitToCallDelayer;
 
     public static Func<ComputeMethodInput, RpcPeer, Task?>? HitToCallDelayer {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _hitToCallDelayer;
         set {
-            lock (StaticLock)
-                _hitToCallDelayer = value;
+            lock (StaticLock) {
+                // Release: the getter is a plain, lock-free read
+                Volatile.Write(ref _hitToCallDelayer, value);
+            }
         }
     }
 }

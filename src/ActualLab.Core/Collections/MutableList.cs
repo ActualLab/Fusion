@@ -38,7 +38,8 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
 #else
     private readonly object _lock = new();
 #endif
-    private volatile ImmutableList<T> _items = items;
+    // Written under _lock, but every getter reads it lock-free
+    private ImmutableList<T> _items = items;
 
     public ImmutableList<T> Items {
         get => _items;
@@ -66,7 +67,7 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
             if (_items == items)
                 return false;
 
-            _items = items;
+            Volatile.Write(ref _items, items);
         }
         Changed?.Invoke();
         return true;
@@ -78,7 +79,7 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
             if (_items != expectedItems || _items == items)
                 return false;
 
-            _items = items;
+            Volatile.Write(ref _items, items);
         }
         Changed?.Invoke();
         return true;
@@ -92,7 +93,7 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
             if (newItems == items)
                 return false;
 
-            _items = newItems;
+            Volatile.Write(ref _items, newItems);
         }
         Changed?.Invoke();
         return true;
@@ -106,7 +107,7 @@ public class MutableList<T>(ImmutableList<T> items) : IMutableList<T>
             if (newItems == items)
                 return false;
 
-            _items = newItems;
+            Volatile.Write(ref _items, newItems);
         }
         Changed?.Invoke();
         return true;

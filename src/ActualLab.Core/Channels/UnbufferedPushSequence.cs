@@ -9,9 +9,9 @@ public class UnbufferedPushSequence<T> : IAsyncEnumerable<T>, IAsyncDisposable
     // Push is disallowed until the enumeration started
     private readonly SemaphoreSlim _pushAllowed = new(0, 1);
 #if USE_UNSAFE_ACCESSORS
-    private volatile Task<T> _item = AsyncTaskMethodBuilderExt.New<T>().Task;
+    private Task<T> _item = AsyncTaskMethodBuilderExt.New<T>().Task;
 #else
-    private volatile TaskCompletionSource<T> _item = TaskCompletionSourceExt.New<T>();
+    private TaskCompletionSource<T> _item = TaskCompletionSourceExt.New<T>();
 #endif
     private int _isCompleted;
     private int _enumeratorCount;
@@ -38,7 +38,7 @@ public class UnbufferedPushSequence<T> : IAsyncEnumerable<T>, IAsyncDisposable
             if (Interlocked.Exchange(ref _isCompleted, 1) != 0)
                 return;
 
-            GetItemSource(_item).TrySetException(e);
+            GetItemSource(Volatile.Read(ref _item)).TrySetException(e);
             try {
                 _pushAllowed.Release();
             }
@@ -48,19 +48,19 @@ public class UnbufferedPushSequence<T> : IAsyncEnumerable<T>, IAsyncDisposable
             return;
         }
 
-        if (_isCompleted != 0)
+        if (Volatile.Read(ref _isCompleted) != 0)
             throw new ChannelClosedException();
 
         try {
             await _pushAllowed.WaitAsync(cancellationToken).ConfigureAwait(false);
-            if (_isCompleted != 0)
+            if (Volatile.Read(ref _isCompleted) != 0)
                 throw new ChannelClosedException();
 
 #if USE_UNSAFE_ACCESSORS
-            var oldItem = _item;
+            var oldItem = Volatile.Read(ref _item);
             var newItem = AsyncTaskMethodBuilderExt.New<T>().Task;
 #else
-            var oldItem = _item;
+            var oldItem = Volatile.Read(ref _item);
             var newItem = TaskCompletionSourceExt.New<T>();
 #endif
             if (Interlocked.CompareExchange(ref _item, newItem, oldItem) != oldItem)
@@ -92,7 +92,7 @@ public class UnbufferedPushSequence<T> : IAsyncEnumerable<T>, IAsyncDisposable
         try {
             if (!cancellationToken.CanBeCanceled) {
                 while (true) {
-                    var item = GetItemTask(_item);
+                    var item = GetItemTask(Volatile.Read(ref _item));
                     _pushAllowed.Release();
                     var result = await item.ResultAwait(false);
                     if (result.Error is ChannelClosedException)
@@ -103,7 +103,7 @@ public class UnbufferedPushSequence<T> : IAsyncEnumerable<T>, IAsyncDisposable
             }
 
             while (true) {
-                var item = GetItemTask(_item);
+                var item = GetItemTask(Volatile.Read(ref _item));
                 _pushAllowed.Release();
                 var result = await item.WaitAsync(cancellationToken).ResultAwait(false);
                 if (result.Error is ChannelClosedException)

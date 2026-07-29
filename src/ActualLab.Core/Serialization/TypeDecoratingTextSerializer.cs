@@ -16,8 +16,8 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile TypeDecoratingTextSerializer? _default;
-    private static volatile TypeDecoratingTextSerializer? _defaultLegacy;
+    private static TypeDecoratingTextSerializer? _default;
+    private static TypeDecoratingTextSerializer? _defaultLegacy;
 
     public const string TypeDecoratorPrefix = "/* @type ";
     public const string TypeDecoratorSuffix = " */ ";
@@ -27,13 +27,18 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
         get {
             if (_default is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _default ??= new(TextSerializer.Default);
+            lock (StaticLock) {
+                if (_default is { } newValue)
+                    return newValue;
+
+                newValue = new(TextSerializer.Default);
+                Volatile.Write(ref _default, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _default = value;
+                Volatile.Write(ref _default, value);
         }
     }
 
@@ -41,13 +46,18 @@ public class TypeDecoratingTextSerializer(ITextSerializer serializer, Func<Type,
         get {
             if (_defaultLegacy is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _defaultLegacy ??= new LegacyTypeDecoratingTextSerializer(TextSerializer.Default);
+            lock (StaticLock) {
+                if (_defaultLegacy is { } newValue)
+                    return newValue;
+
+                newValue = new LegacyTypeDecoratingTextSerializer(TextSerializer.Default);
+                Volatile.Write(ref _defaultLegacy, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _defaultLegacy = value;
+                Volatile.Write(ref _defaultLegacy, value);
         }
     }
 

@@ -7,8 +7,9 @@ namespace ActualLab.Async;
 /// </summary>
 public abstract class SafeAsyncDisposableBase : IAsyncDisposable, IDisposable, IHasWhenDisposed
 {
-    private volatile int _isDisposing;
-    private volatile Task? _disposeTask;
+    private int _isDisposing;
+    // Published w/ Volatile.Write; DisposeAsync polls it in a spin-wait loop
+    private Task? _disposeTask;
 
     public bool IsDisposed => _disposeTask is not null;
     public Task? WhenDisposed => _disposeTask;
@@ -27,7 +28,7 @@ public abstract class SafeAsyncDisposableBase : IAsyncDisposable, IDisposable, I
         if (Interlocked.CompareExchange(ref _isDisposing, 1, 0) != 0) {
             var spinWait = new SpinWait();
             while (true) {
-                disposeTask = _disposeTask;
+                disposeTask = Volatile.Read(ref _disposeTask);
                 if (disposeTask is not null)
                     return disposeTask.ToValueTask();
                 spinWait.SpinOnce(); // Safe for WASM
@@ -49,7 +50,7 @@ public abstract class SafeAsyncDisposableBase : IAsyncDisposable, IDisposable, I
         catch (Exception e) {
             disposeTask = Task.FromException(e);
         }
-        _disposeTask = disposeTask;
+        Volatile.Write(ref _disposeTask, disposeTask);
         GC.SuppressFinalize(this);
         return disposeTask;
     }
@@ -59,7 +60,7 @@ public abstract class SafeAsyncDisposableBase : IAsyncDisposable, IDisposable, I
         if (Interlocked.CompareExchange(ref _isDisposing, 1, 0) != 0)
             return false;
 
-        _disposeTask = Task.CompletedTask;
+        Volatile.Write(ref _disposeTask, Task.CompletedTask);
         GC.SuppressFinalize(this);
         return true;
     }
