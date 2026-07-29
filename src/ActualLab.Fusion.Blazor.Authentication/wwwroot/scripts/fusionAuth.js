@@ -30,7 +30,7 @@
                 return;
             }
 
-            let redirectUrl = new URL(this.closePath +"?flow=" + encode(flowName), document.baseURI).href;
+            let redirectUrl = this.toSiteRelativeUrl(this.closePath + "?flow=" + encode(flowName));
             let url = action + "?returnUrl=" + encode(redirectUrl);
             let popup = window.open(url, FusionAuth.windowTarget, FusionAuth.windowFeatures);
             if (!popup || popup.closed || typeof popup.closed == 'undefined') {
@@ -44,9 +44,17 @@
         },
 
         authRedirect(action) {
-            let redirectUrl = window.location.href;
+            let redirectUrl = this.toSiteRelativeUrl(window.location.href);
             let url = action + "?returnUrl=" + encode(redirectUrl);
             window.location.replace(url);
+        },
+
+        // The server checks returnUrl with IUrlHelper.IsLocalUrl, which rejects absolute URLs -
+        // even same-origin ones - and silently falls back to "/". Resolving against baseURI first
+        // keeps this correct for an app hosted under a sub-path.
+        toSiteRelativeUrl: function(url) {
+            let parsed = new URL(url, document.baseURI);
+            return parsed.pathname + parsed.search + parsed.hash;
         }
     };
 
