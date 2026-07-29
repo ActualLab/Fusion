@@ -1,4 +1,5 @@
 using ActualLab.Collections.Internal;
+using ActualLab.Compliance.Internal;
 using ActualLab.Serialization.Internal;
 using ActualLab.Trimming;
 using Cysharp.Serialization.MessagePack;
@@ -15,6 +16,13 @@ internal static class CoreModuleInitializer
 {
     static CoreModuleInitializer()
     {
+        // Not a trimming concern, and must run unconditionally: MemoryPack resolves a formatter
+        // by type without touching the type, so SanitizedString<>'s own static constructor can
+        // be too late. Registering the open generic here covers every instantiation.
+#if !NETSTANDARD2_0
+        SanitizedStringMemoryPackFormatter.RegisterGenericType();
+#endif
+
         if (CodeKeeper.AlwaysTrue)
             return;
 

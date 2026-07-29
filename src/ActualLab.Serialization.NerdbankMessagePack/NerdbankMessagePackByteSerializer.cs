@@ -153,6 +153,7 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
                 typeof(PropertyBagNerdbankConverter<>),
                 typeof(PropertyBagItemNerdbankConverter<>),
                 typeof(NewtonsoftJsonSerializedNerdbankConverter<>),
+                typeof(SanitizedStringNerdbankConverter<>),
             ],
         };
         // Encode Guid as 36-char ASCII string ("d9 24 ..."), matching MessagePack-CSharp's default.
