@@ -74,7 +74,7 @@ const rpcExampleReactApp = {
 
     rpcExampleRoot = createRoot(container);
     rpcExampleRoot.render(
-      <RpcExampleApp api={simpleApi} monitor={monitor} pongListeners={pongListeners} />
+      <RpcExampleApp api={simpleApi} peer={peer} monitor={monitor} pongListeners={pongListeners} />
     );
   },
 

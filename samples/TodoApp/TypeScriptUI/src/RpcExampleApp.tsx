@@ -1,5 +1,6 @@
 import React from "react";
-import type { RpcPeerStateMonitor } from "@actuallab/rpc";
+import { toRpcStream } from "@actuallab/rpc";
+import type { RpcPeer, RpcPeerStateMonitor } from "@actuallab/rpc";
 import type { ISimpleService, Table, Row } from "./simple-api.js";
 import { ConnectionStatusBanner } from "./ConnectionStatusBanner.js";
 
@@ -21,11 +22,12 @@ interface TableModel {
 
 interface Props {
   api: ISimpleService;
+  peer: RpcPeer;  // toRpcStream needs it to bind a nested stream reference
   monitor: RpcPeerStateMonitor;
   pongListeners: Set<(message: string) => void>;
 }
 
-export function RpcExampleApp({ api, monitor, pongListeners }: Props) {
+export function RpcExampleApp({ api, peer, monitor, pongListeners }: Props) {
   const [greeting, setGreeting] = React.useState("");
   const [table, setTable] = React.useState<TableModel | null>(null);
   const [lastPing, setLastPing] = React.useState("");
@@ -89,14 +91,14 @@ export function RpcExampleApp({ api, monitor, pongListeners }: Props) {
         };
         setTable(model);
 
-        await readTable(tableResult, model, signal, triggerRender);
+        await readTable(tableResult, peer, model, signal, triggerRender);
       } catch (err) {
         if (!signal.aborted) console.error("RPC Example error:", err);
       }
     })();
 
     return () => abortController.abort();
-  }, [api, triggerRender]);
+  }, [api, peer, triggerRender]);
 
   return (
     <>
@@ -141,19 +143,30 @@ function delay(ms: number): Promise<void> {
 
 async function readTable(
   table: Table<number>,
+  peer: RpcPeer,
   model: TableModel,
   signal: AbortSignal,
   triggerRender: () => void,
 ): Promise<void> {
+  // Since v14.2 a stream nested in an ordinary result is no longer auto-resolved:
+  // only the caller knows which fields carry streams, so it converts them itself
+  const rows = toRpcStream<Row<number>>(table.rows, peer);
+  if (rows === null) {
+    console.error("GetTable returned no stream reference for rows:", table.rows);
+    model.isCompleted = true;
+    triggerRender();
+    return;
+  }
+
   let rowCount = 0;
-  for await (const row of table.rows) {
+  for await (const row of rows) {
     if (signal.aborted) break;
     const rowModel: RowModel = { index: row.index, items: [], isCompleted: false };
     model.rows.push(rowModel);
     triggerRender();
 
     // Read items for this row concurrently
-    void readRow(row, rowModel, signal, triggerRender);
+    void readRow(row, peer, rowModel, signal, triggerRender);
 
     rowCount++;
     if (rowCount >= ROW_LIMIT) break;
@@ -164,13 +177,22 @@ async function readTable(
 
 async function readRow(
   row: Row<number>,
+  peer: RpcPeer,
   model: RowModel,
   signal: AbortSignal,
   triggerRender: () => void,
 ): Promise<void> {
+  const items = toRpcStream<number>(row.items, peer);
+  if (items === null) {
+    console.error(`Row ${model.index} carried no stream reference:`, row.items);
+    model.isCompleted = true;
+    triggerRender();
+    return;
+  }
+
   try {
     let itemCount = 0;
-    for await (const item of row.items) {
+    for await (const item of items) {
       if (signal.aborted) break;
       model.items.push(item);
       triggerRender();
