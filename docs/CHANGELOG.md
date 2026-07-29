@@ -11,17 +11,17 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 14.2.X (upcoming)
+## 14.2.23+ec5b74ab0 | npm: 14.2.23
 
-Release date: unreleased
+Release date: 2026-07-29
 
 The outcome of a second full security and severe-bug review of the library: 120
 findings, of which both CRITICALs and all 35 HIGHs are now closed. Almost
 everything here is a fix on the path from a wire message to a resolved type, an
 allocation, or an authorization decision &mdash; **treat this as a security
 release and read the breaking changes before upgrading.** The TypeScript client
-gets its own round of fixes and one breaking change, so npm moves to `14.2.0`
-alongside NuGet.
+gets its own round of fixes and one breaking change, so npm moves to `14.2.23`
+alongside NuGet &mdash; the two now share a version number.
 
 ### Breaking Changes
 
