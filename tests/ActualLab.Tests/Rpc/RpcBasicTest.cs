@@ -268,10 +268,13 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
         (await client.Div(6, 2)).Should().Be(3);
         await AssertNoCalls(clientPeer, Out);
-        await WaitFor(() => stoppedActivities.Any(a =>
+        // Activity listeners are process-wide, so the trace id is the only thing separating
+        // this test's activities from the ones concurrently running tests produce
+        var ownActivities = stoppedActivities.Where(a => a.TraceId == parentContext.TraceId);
+        await WaitFor(() => ownActivities.Any(a =>
             a.Kind == ActivityKind.Server && a.DisplayName == divTracer.InboundCallName));
 
-        var serverActivity = stoppedActivities.Single(a =>
+        var serverActivity = ownActivities.Single(a =>
             a.Kind == ActivityKind.Server && a.DisplayName == divTracer.InboundCallName);
         serverActivity.TraceId.Should().Be(parentContext.TraceId);
         serverActivity.ParentSpanId.Should().Be(parentContext.SpanId);
@@ -407,15 +410,18 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var client = services.RpcHub().GetClient<ITestRpcService>();
         var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
         var tracer = (RpcDefaultCallTracer)method.Tracer!;
+        using var parent = new Activity("parent").SetIdFormat(ActivityIdFormat.W3C).Start();
+        var parentContext = parent.Context;
 
         await Assert.ThrowsAsync<DivideByZeroException>(() => client.Div(1, 0));
         await AssertNoCalls(clientPeer, Out);
-        await WaitFor(() => stoppedActivities.Count(a =>
-            a.DisplayName == tracer.InboundCallName || a.DisplayName == tracer.OutboundCallName) == 2);
+        // Activity listeners are process-wide, so the trace id is the only thing separating
+        // this test's activities from the ones concurrently running tests produce
+        var ownActivities = stoppedActivities.Where(a => a.TraceId == parentContext.TraceId
+            && (a.DisplayName == tracer.InboundCallName || a.DisplayName == tracer.OutboundCallName));
+        await WaitFor(() => ownActivities.Count() == 2);
 
-        var activities = stoppedActivities
-            .Where(a => a.DisplayName == tracer.InboundCallName || a.DisplayName == tracer.OutboundCallName)
-            .ToArray();
+        var activities = ownActivities.ToArray();
         activities.Should().HaveCount(2);
         activities.Should().OnlyContain(a => a.Status == ActivityStatusCode.Error);
         activities.Should().OnlyContain(a => Equals(
