@@ -33,10 +33,8 @@ public static class Sanitization
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Scope Resume()
-    {
         // Doesn't override IsGloballySuspended - that one is meant to win everywhere
-        return new Scope(false);
-    }
+        => new(false);
 
     // Nested types
 
