@@ -55,8 +55,15 @@ public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
                 return value;
 
             lock (_lock) {
-                return _templateDbContext ??=
-                    ContextFactory.CreateDbContext(ShardRegistry.HasSingleShard ? DbShard.Single : DbShard.Template);
+                if (_templateDbContext is { } newValue)
+                    return newValue;
+
+                // Release: the fast path above reads this reference plainly, and callers
+                // dereference the DbContext right after
+                newValue = ContextFactory.CreateDbContext(
+                    ShardRegistry.HasSingleShard ? DbShard.Single : DbShard.Template);
+                Volatile.Write(ref _templateDbContext, newValue);
+                return newValue;
             }
         }
     }

@@ -16,7 +16,12 @@ public class RpcConfiguration
 #endif
     private IDictionary<Type, RpcServiceBuilder> _services = new Dictionary<Type, RpcServiceBuilder>();
 
-    public bool IsFrozen { get; private set; }
+    // Volatile on both sides: AssertNotFrozen reads it without the lock, so a stale false
+    // silently skips the guard - and the true is what publishes the frozen _services
+    public bool IsFrozen {
+        get => Volatile.Read(ref field);
+        private set => Volatile.Write(ref field, value);
+    }
 
     public RpcServiceMode DefaultServiceMode {
         get;
@@ -43,9 +48,11 @@ public class RpcConfiguration
             if (IsFrozen) // Double-check locking
                 return;
 
+            // IsFrozen is stored last, so no one can observe the frozen flag
+            // while Services still returns the mutable dictionary
+            Volatile.Write(ref _services, new ReadOnlyDictionary<Type, RpcServiceBuilder>(
+                new Dictionary<Type, RpcServiceBuilder>(Services)));
             IsFrozen = true;
-            _services = new ReadOnlyDictionary<Type, RpcServiceBuilder>(
-                new Dictionary<Type, RpcServiceBuilder>(Services));
         }
     }
 
