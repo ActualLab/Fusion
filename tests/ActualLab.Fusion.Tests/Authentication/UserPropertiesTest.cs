@@ -66,7 +66,6 @@ public class UserPropertiesTest : FusionTestBase
         maskedAlice.Identities.Keys.Single().Id.Should().Be("Google/<hidden>");
         maskedBob.Identities.Keys.Single().Id.Should().Be("Github/<hidden>");
 
-        ApiMap<UserIdentity, string>.Empty.Count.Should().Be(0);
         User.NewGuest().Identities.Count.Should().Be(0);
         new User("carol", "Carol").Identities.Count.Should().Be(0);
     }

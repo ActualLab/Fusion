@@ -158,17 +158,12 @@ public class CoreAuditRegressionTest
     }
 
     [Fact]
-    public void EmptyApiMapAndApiSetMustNotBeShared()
+    public void ApiMapAndApiSetMustHaveNoEmptyMember()
     {
-        var map = ApiMap<string, string>.Empty;
-        map.TryAdd("a", "b");
-        ApiMap<string, string>.Empty.Should().NotBeSameAs(map);
-        ApiMap<string, string>.Empty.Count.Should().Be(0);
-
-        var set = ApiSet<string>.Empty;
-        set.Add("a");
-        ApiSet<string>.Empty.Should().NotBeSameAs(set);
-        ApiSet<string>.Empty.Count.Should().Be(0);
+        // They're mutable, so a shared Empty lets any caller corrupt every other one - and an
+        // Empty that isn't shared reads as a singleton while allocating per access. Callers use new().
+        typeof(ApiMap<,>).GetMember("Empty").Should().BeEmpty();
+        typeof(ApiSet<>).GetMember("Empty").Should().BeEmpty();
     }
 
     [Fact]
