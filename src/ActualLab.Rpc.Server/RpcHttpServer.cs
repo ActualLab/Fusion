@@ -29,7 +29,7 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
             request.Host.Host,
             request.Host.Port ?? -1,
             request.Path,
-            Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
+            Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
         var requestDescription = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
         var maxRequestBodySizeFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();

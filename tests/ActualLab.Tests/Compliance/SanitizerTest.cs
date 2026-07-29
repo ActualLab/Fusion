@@ -96,15 +96,16 @@ public class SanitizerTest
     }
 
     [Fact]
-    public void RpcRequestQueryIgnoresTheAmbientSanitizationScope()
+    public void RpcRequestQueryFollowsTheAmbientSanitizationScope()
     {
-        // Request logging calls Apply, not MaybeApply: a suspended scope somewhere up the stack
-        // must never turn a credential back on in the log.
+        // Request logging calls MaybeSanitize, so Sanitization.Suspend() is the escape hatch
+        // that lets a raw query be logged while debugging - and nothing else turns it off.
         const string sessionId = "Ab3fSomeLongSessionId";
-        using var _ = Sanitization.Suspend();
+        const string query = $"?session={sessionId}";
 
-        Sanitizer.Get<Sanitizers.RpcRequestQuery>()
-            .Apply($"?session={sessionId}").Should().NotContain(sessionId);
+        Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(query).Should().NotContain(sessionId);
+        using var _ = Sanitization.Suspend();
+        Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>(query).Should().Be(query);
     }
 
     [Fact]

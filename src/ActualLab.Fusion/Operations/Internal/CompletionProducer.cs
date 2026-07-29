@@ -16,7 +16,6 @@ public class CompletionProducer(CompletionProducer.Options settings, IServicePro
     /// </summary>
     public record Options
     {
-        public bool IgnoreNotLogged { get; init; } = false;
         public LogLevel LogLevel { get; init; } = LogLevel.Information;
     }
 
@@ -39,10 +38,9 @@ public class CompletionProducer(CompletionProducer.Options settings, IServicePro
                 var context = CommandContext.New(Commander, completion, isOutermost: true);
                 context.Items.KeylessSet(new RpcOutboundCallSetup(RpcHub.LocalPeer)); // Override possible routing to a remote peer
                 await context.Call(CancellationToken.None).ConfigureAwait(false);
-                if (command is not INotLogged || Settings.IgnoreNotLogged)
-                    Log.IfEnabled(Settings.LogLevel)?.Log(Settings.LogLevel,
-                        "{OperationType} operation completion succeeded. Host: {HostId}, Command: {Command}",
-                        operationType, operation.HostId, command);
+                Log.IfEnabled(Settings.LogLevel)?.Log(Settings.LogLevel,
+                    "{OperationType} operation completion succeeded. Host: {HostId}, Command: {Command}",
+                    operationType, operation.HostId, command);
             }
             catch (Exception e) {
                 if (!isLocal)
