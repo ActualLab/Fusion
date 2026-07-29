@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ActualLab.Compliance;
 using ActualLab.Fusion.Authentication;
 
