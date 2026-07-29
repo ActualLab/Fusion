@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.WebSockets;
+using ActualLab.Compliance;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -41,7 +42,7 @@ public class RpcWebSocketServer : RpcServiceBase
             request.Host.Host,
             request.Host.Port ?? -1,
             request.Path,
-            RpcQuerySanitizer.Sanitize(request.QueryString.Value));
+            Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
         var requestDescription = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
         if (!context.WebSockets.IsWebSocketRequest) {

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.WebSockets;
+using ActualLab.Compliance;
 using Microsoft.Owin;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
@@ -49,7 +50,7 @@ public class RpcWebSocketServer : RpcServiceBase
         var origin = context.Request.Headers.Get(OriginHeaderName) ?? "";
         if (!Settings.OriginValidator.Invoke(this, context, origin)) {
             Log.LogWarning("Rejected RPC connection from origin '{Origin}' for {Path}{Query}",
-                origin, context.Request.Path, RpcQuerySanitizer.Sanitize(context.Request.QueryString.Value));
+                origin, context.Request.Path, Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>(context.Request.QueryString.Value ?? ""));
             return HttpStatusCode.Forbidden;
         }
 
@@ -60,7 +61,7 @@ public class RpcWebSocketServer : RpcServiceBase
         // and can't create a peer. See RpcWebSocketServer.Invoke in ActualLab.Rpc.Server.
         if (!TryVerifyReconnectProof(context, rpcRef)) {
             Log.LogWarning("'{PeerRef}': Rejected RPC connection: invalid reconnect proof for {Path}{Query}",
-                rpcRef, context.Request.Path, RpcQuerySanitizer.Sanitize(context.Request.QueryString.Value));
+                rpcRef, context.Request.Path, Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>(context.Request.QueryString.Value ?? ""));
             return HttpStatusCode.Forbidden;
         }
 
@@ -170,7 +171,7 @@ public class RpcWebSocketServer : RpcServiceBase
 
             var request = context.Request;
             Log.LogWarning(e, "Failed to accept RPC connection: {Path}{Query}",
-                request.Path, RpcQuerySanitizer.Sanitize(request.QueryString.Value));
+                request.Path, Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
             if (webSocket is not null)
                 return;
 
