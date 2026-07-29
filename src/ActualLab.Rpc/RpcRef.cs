@@ -93,12 +93,9 @@ public partial class RpcRef : IEquatable<RpcRef>
                 Address = RpcRefAddress.Format(this);
             if (Versions.IsEmpty)
                 Versions = RpcDefaults.GetVersions(IsBackend);
-            // Under _routeLock: otherwise two callers each mint a route, and worse, this write
-            // can clobber a fresher one the Route getter just published while holding the lock
-            lock (_routeLock) {
-                if (_route is null)
-                    Volatile.Write(ref _route, CreateRoute());
-            }
+            // No lock and no release store: Initialize runs during construction, before the
+            // ref is shared, so there's nothing to race with and nothing to publish to yet
+            _route ??= CreateRoute();
         }
         catch {
             // If initialization fails, reset the state to uninitialized

@@ -74,27 +74,27 @@ public static partial class Sanitizers
     }
 
     /// <summary>
-    /// The <see cref="UriQuery"/> policy for ActualLab's own RPC endpoints: the parameters that
-    /// carry a credential are masked, everything else is left readable.
+    /// The <see cref="UriQuery"/> policy for ActualLab's own RPC endpoints. Deny by default:
+    /// a parameter is readable only if it's explicitly listed, so a query parameter added later
+    /// can't start leaking a credential just because no one remembered to mask it.
     /// </summary>
     public sealed class RpcRequestQuery() : UriQuery(SelectSanitizer)
     {
+        // "c" is the reconnect proof counter - not a secret, and useful when diagnosing a
+        // rejected reconnect. Its companion "p" (the proof itself) is deliberately absent.
+        public static string[] OpenParameterNames { get; set; } = ["f", "serializationFormat", "c"];
         public static string[] SessionParameterNames { get; set; } = ["s", "session"];
-        public static string[] FingerprintParameterNames { get; set; } = ["clientId"];
-        public static string[] HiddenParameterNames { get; set; } = ["p"];
 
         // Private methods
 
         private static Sanitizer? SelectSanitizer(string name)
         {
-            if (Contains(SessionParameterNames, name))
-                return Get<SessionString>();
-            if (Contains(HiddenParameterNames, name))
-                return Get<Hidden>();
-            if (Contains(FingerprintParameterNames, name))
-                return Get<Fingerprint>();
+            if (Contains(OpenParameterNames, name))
+                return null; // Logged verbatim
 
-            return null;
+            return Contains(SessionParameterNames, name)
+                ? Get<SessionString>()
+                : Get<PrefixAndLengthHint>();
         }
 
         private static bool Contains(string[] names, string name)

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using ActualLab.Compliance;
 using ActualLab.Conversion;
 using ActualLab.Fusion.Internal;
 using MessagePack;
@@ -16,7 +17,7 @@ namespace ActualLab.Fusion;
 [Newtonsoft.Json.JsonConverter(typeof(SessionNewtonsoftJsonConverter))]
 [TypeConverter(typeof(SessionTypeConverter))]
 public sealed partial class Session : IHasId<string>,
-    IEquatable<Session>, IConvertibleTo<string>
+    IEquatable<Session>, IConvertibleTo<string>, ISanitized
 {
     // A default Id is 20 chars over a 64-symbol alphabet, i.e. ~120 bits of entropy.
     // ToString() reveals IdPrefixLength of them = 24 bits, so ~96 bits stay secret -
@@ -124,7 +125,7 @@ public sealed partial class Session : IHasId<string>,
     // Conversion
 
     public override string ToString()
-        => _toString ??= ComputeToString();
+        => Sanitization.IsSuspended ? Id : _toString ??= ComputeToString();
 
     string IConvertibleTo<string>.Convert() => Id;
 
@@ -162,12 +163,10 @@ public sealed partial class Session : IHasId<string>,
 
     // Private methods
 
+    // Delegated so the format lives in one place - IdPrefixLength/IdPrefixSeparator above
+    // are what SessionString is built to match
     private string ComputeToString()
-    {
-        var id = Id;
-        var prefix = id.Length <= IdPrefixLength ? id : id[..IdPrefixLength];
-        return string.Concat(prefix, IdPrefixSeparator, Hash);
-    }
+        => Sanitizer.Sanitize<Sanitizers.SessionString>(Id);
 
     private string ComputeHash()
         => ((uint)Id.GetXxHash3()).ToString("x8", CultureInfo.InvariantCulture);

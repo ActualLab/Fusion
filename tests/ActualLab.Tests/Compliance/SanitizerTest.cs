@@ -56,10 +56,12 @@ public class SanitizerTest
     [InlineData("?f=mempack6", "?f=mempack6")]
     [InlineData("f=mempack6", "f=mempack6")] // works with or without the leading '?'
     [InlineData("?flag", "?flag")] // a valueless parameter is left alone
-    [InlineData("?p=Zm9vYmFy", "?p=" + Sanitizers.HiddenValue)]
-    [InlineData("?p=abc&c=7", "?p=" + Sanitizers.HiddenValue + "&c=7")]
-    [InlineData("?P=Zm9vYmFy", "?P=" + Sanitizers.HiddenValue)] // names are matched case-insensitively
-    [InlineData("?secret=hunter2", "?secret=hunter2")] // not an RPC query parameter - the reconnect secret travels in the handshake
+    [InlineData("?p=Zm9vYmFy", "?p=<<Zm* [8-15]>>")]
+    [InlineData("?p=abc&c=7", "?p=<<* [2-3]>>&c=7")]
+    [InlineData("?P=Zm9vYmFy", "?P=<<Zm* [8-15]>>")] // names are matched case-insensitively
+    // Deny by default: an unlisted parameter is masked rather than logged, so a new one
+    // can't start leaking a credential just because no one remembered to list it
+    [InlineData("?secret=hunter2", "?secret=<<hu* [4-7]>>")]
     public void RpcRequestQuerySanitizesTheCredentialParameters(string query, string expected)
         => Sanitizer.Get<Sanitizers.RpcRequestQuery>().Apply(query).Should().Be(expected);
 
@@ -71,7 +73,7 @@ public class SanitizerTest
 
         sanitized.Should().NotContain("x7FTKcK88zakKdYBij3p-w");
         sanitized.Should().NotContain("SomeLongSessionId");
-        sanitized.Should().MatchRegex(@"^\?clientId=<<[0-9a-f]{8}>>&session=Ab3f:[0-9a-f]{8}&f=mempack6$");
+        sanitized.Should().MatchRegex(@"^\?clientId=<<x7\* \[16-31\]>>&session=Ab3f:[0-9a-f]{8}&f=mempack6$");
     }
 
     [Fact]
@@ -79,7 +81,31 @@ public class SanitizerTest
         // The point of deriving from UriQuery with a fixed policy: it has a parameterless
         // constructor, so it can be a SanitizedString<> type argument.
         => new SanitizedString<Sanitizers.RpcRequestQuery>("?p=Zm9vYmFy").ToString()
-            .Should().Be("?p=" + Sanitizers.HiddenValue);
+            .Should().Be("?p=<<Zm* [8-15]>>");
+
+    [Fact]
+    public void RpcRequestQueryHidesAPercentEncodedSessionParameter()
+    {
+        // "%73ession" decodes to "session" but doesn't match it by name. Deny-by-default is what
+        // keeps it out of the log anyway - an allowlist policy would have had to predict this.
+        const string sessionId = "Ab3fSomeLongSessionId";
+        var sanitized = Sanitizer.Get<Sanitizers.RpcRequestQuery>().Apply($"?%73ession={sessionId}");
+
+        sanitized.Should().NotContain(sessionId);
+        sanitized.Should().Be($"?%73ession={Sanitizer.Sanitize<Sanitizers.PrefixAndLengthHint>(sessionId)}");
+    }
+
+    [Fact]
+    public void RpcRequestQueryIgnoresTheAmbientSanitizationScope()
+    {
+        // Request logging calls Apply, not MaybeApply: a suspended scope somewhere up the stack
+        // must never turn a credential back on in the log.
+        const string sessionId = "Ab3fSomeLongSessionId";
+        using var _ = Sanitization.Suspend();
+
+        Sanitizer.Get<Sanitizers.RpcRequestQuery>()
+            .Apply($"?session={sessionId}").Should().NotContain(sessionId);
+    }
 
     [Fact]
     public void UriQueryLeavesUnmappedParametersAlone()
