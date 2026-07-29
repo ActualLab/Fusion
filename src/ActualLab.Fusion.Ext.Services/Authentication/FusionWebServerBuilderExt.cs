@@ -21,7 +21,7 @@ public static class FusionWebServerBuilderExt
         services.AddSingleton(_ => AuthEndpoints.Options.Default);
         services.AddSingleton(c => new AuthEndpoints(
             c.GetRequiredService<AuthEndpoints.Options>(),
-            c.GetRequiredService<RedirectUrlChecker>()));
+            c.GetRequiredService<RedirectUrlHelper>()));
         return fusionWebServer;
     }
 
