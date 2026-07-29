@@ -45,7 +45,9 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
         get => _unversionedNameCache.Capacity;
         set {
             lock (StaticLock)
-                _unversionedNameCache = NewUnversionedNameCache(value);
+                // Release, so the new cache is fully constructed before the reference is visible;
+                // readers stay plain - they reach its fields through this reference
+                Volatile.Write(ref _unversionedNameCache, NewUnversionedNameCache(value));
         }
     }
     public static int UnversionedNameCacheSize => _unversionedNameCache.Count;
@@ -53,7 +55,7 @@ public readonly partial struct TypeRef : IEquatable<TypeRef>, IComparable<TypeRe
         get => _resolveCache.Capacity;
         set {
             lock (StaticLock)
-                _resolveCache = NewResolveCache(value);
+                Volatile.Write(ref _resolveCache, NewResolveCache(value));
         }
     }
     public static int ResolveCacheSize => _resolveCache.Count;

@@ -5,11 +5,29 @@ namespace ActualLab.Compliance;
 /// A type rather than a delegate, so it can be the type argument of
 /// <see cref="SanitizedString{TSanitizer}"/>. Implementations must be stateless and thread-safe.
 /// </summary>
-public abstract partial class Sanitizer
+public abstract class Sanitizer
 {
     private static readonly ConcurrentDictionary<Type, Sanitizer> Cache = new();
 
-    public abstract string Sanitize(string value);
+    // Instance methods
+
+    public abstract string Apply(string value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public string MaybeApply(string value)
+        => Sanitization.IsSuspended ? value : Apply(value);
+
+    // Static methods
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static string Sanitize<TSanitizer>(string value)
+        where TSanitizer : Sanitizer, new()
+        => Get<TSanitizer>().Apply(value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static string MaybeSanitize<TSanitizer>(string value)
+        where TSanitizer : Sanitizer, new()
+        => Sanitization.IsSuspended ? value : Get<TSanitizer>().Apply(value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TSanitizer Get<TSanitizer>()

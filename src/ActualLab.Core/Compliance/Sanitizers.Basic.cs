@@ -3,7 +3,7 @@ using System.Globalization;
 namespace ActualLab.Compliance;
 
 // Each sanitizer is named after what it leaves visible - the only thing that distinguishes them.
-public abstract partial class Sanitizer
+public static partial class Sanitizers
 {
     public const string HiddenValue = "<<hidden>>";
 
@@ -12,7 +12,7 @@ public abstract partial class Sanitizer
     /// <summary>Reveals nothing: <c>"&lt;&lt;hidden&gt;&gt;"</c>.</summary>
     public sealed class Hidden : Sanitizer
     {
-        public override string Sanitize(string value)
+        public override string Apply(string value)
             => value.Length == 0 ? value : HiddenValue;
     }
 
@@ -22,19 +22,19 @@ public abstract partial class Sanitizer
     /// </summary>
     public sealed class LengthHint : Sanitizer
     {
-        public override string Sanitize(string value)
+        public override string Apply(string value)
             => value.Length == 0 ? value : $"<<* {LengthRange.Get(value.Length)}>>";
     }
 
     /// <summary>
     /// Reveals the first two characters and a length range: <c>"&lt;&lt;ab* [8-15]&gt;&gt;"</c>.
-    /// Values of 3 characters or fewer fall back to <see cref="Sanitizer.LengthHint"/>.
+    /// Values of 3 characters or fewer fall back to <see cref="LengthHint"/>.
     /// </summary>
     public sealed class PrefixAndLengthHint : Sanitizer
     {
         public const int PrefixLength = 2;
 
-        public override string Sanitize(string value)
+        public override string Apply(string value)
         {
             var length = value.Length;
             if (length == 0)
@@ -53,7 +53,7 @@ public abstract partial class Sanitizer
     /// </summary>
     public sealed class Fingerprint : Sanitizer
     {
-        public override string Sanitize(string value)
+        public override string Apply(string value)
             => value.Length == 0
                 ? value
                 : $"<<{((uint)value.GetXxHash3()).ToString("x8", CultureInfo.InvariantCulture)}>>";

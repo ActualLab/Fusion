@@ -8,11 +8,11 @@ public class SanitizedStringTest
     private const string Secret = "hunter2-hunter2";
 
     [Fact]
-    public void RendersMaskedWhileActive()
+    public void RendersMaskedUnlessSuspended()
     {
-        var value = new SanitizedString<Sanitizer.PrefixAndLengthHint>(Secret);
+        var value = new SanitizedString<Sanitizers.PrefixAndLengthHint>(Secret);
 
-        using (Sanitization.Begin())
+        using (Sanitization.Resume())
             value.ToString().Should().Be("<<hu* [8-15]>>");
 
         using (Sanitization.Suspend())
@@ -20,21 +20,21 @@ public class SanitizedStringTest
     }
 
     [Fact]
-    public void SuspendOverridesIsAlwaysActive()
+    public void SuspendAndResumeNest()
     {
-        // This is the whole reason IsActive is tri-state rather than an OR: with
-        // IsAlwaysActive at its default, a test still has to be able to read the raw value.
-        Sanitization.IsAlwaysActive.Should().BeTrue();
-        Sanitization.IsActive.Should().BeTrue();
+        // Sanitization is active unless suspended, and a test still has to be able to
+        // read the raw value it just wrote.
+        Sanitization.IsGloballySuspended.Should().BeFalse();
+        Sanitization.IsSuspended.Should().BeFalse();
 
         using (Sanitization.Suspend()) {
-            Sanitization.IsActive.Should().BeFalse();
-            using (Sanitization.Begin())
-                Sanitization.IsActive.Should().BeTrue();
-            Sanitization.IsActive.Should().BeFalse();
+            Sanitization.IsSuspended.Should().BeTrue();
+            using (Sanitization.Resume())
+                Sanitization.IsSuspended.Should().BeFalse();
+            Sanitization.IsSuspended.Should().BeTrue();
         }
 
-        Sanitization.IsActive.Should().BeTrue();
+        Sanitization.IsSuspended.Should().BeFalse();
     }
 
     [Theory]
@@ -46,9 +46,9 @@ public class SanitizedStringTest
     {
         // The point of the type: changing a member from string to SanitizedString<T> must not
         // be a wire change. Every format must produce the bytes a plain string produces.
-        var value = new SanitizedString<Sanitizer.LengthHint>(source);
+        var value = new SanitizedString<Sanitizers.LengthHint>(source);
 
-        var type = typeof(SanitizedString<Sanitizer.LengthHint>);
+        var type = typeof(SanitizedString<Sanitizers.LengthHint>);
         foreach (var serializer in ByteSerializers()) {
             using var expectedBuffer = serializer.Write(source, typeof(string));
             using var actualBuffer = serializer.Write(value, type);
@@ -57,7 +57,7 @@ public class SanitizedStringTest
             actual.Should().Equal(expected, "byte format must match string");
 
             // Both directions: a string payload reads back as SanitizedString<T>, and vice versa
-            ((SanitizedString<Sanitizer.LengthHint>)serializer.Read(expected, type, out _)!).Value
+            ((SanitizedString<Sanitizers.LengthHint>)serializer.Read(expected, type, out _)!).Value
                 .Should().Be(source);
             ((string)serializer.Read(actual, typeof(string), out _)!).Should().Be(source);
         }
@@ -67,17 +67,17 @@ public class SanitizedStringTest
             var actual = serializer.Write(value);
             actual.Should().Be(expected, "text format must match string");
 
-            serializer.Read<SanitizedString<Sanitizer.LengthHint>>(expected).Value.Should().Be(source);
+            serializer.Read<SanitizedString<Sanitizers.LengthHint>>(expected).Value.Should().Be(source);
             serializer.Read<string>(actual).Should().Be(source);
         }
     }
 
     [Fact]
-    public void SerializationCarriesTheRawValueEvenWhileActive()
+    public void SerializationCarriesTheRawValueEvenWhenNotSuspended()
     {
         // Masking is a rendering concern - a masked value on the wire would be silent data loss.
-        var value = new SanitizedString<Sanitizer.LengthHint>(Secret);
-        using var _ = Sanitization.Begin();
+        var value = new SanitizedString<Sanitizers.LengthHint>(Secret);
+        using var _ = Sanitization.Resume();
 
         foreach (var serializer in TextSerializers())
             serializer.Write(value).Should().Contain(Secret);
@@ -86,11 +86,11 @@ public class SanitizedStringTest
     [Fact]
     public void EqualityIsOnTheRawValue()
     {
-        var a = new SanitizedString<Sanitizer.LengthHint>(Secret);
-        var b = new SanitizedString<Sanitizer.LengthHint>(Secret);
-        var c = new SanitizedString<Sanitizer.LengthHint>("abcdefghijklmno"); // same length as Secret
+        var a = new SanitizedString<Sanitizers.LengthHint>(Secret);
+        var b = new SanitizedString<Sanitizers.LengthHint>(Secret);
+        var c = new SanitizedString<Sanitizers.LengthHint>("abcdefghijklmno"); // same length as Secret
 
-        using var _ = Sanitization.Begin();
+        using var _ = Sanitization.Resume();
         a.Should().Be(b);
         a.GetHashCode().Should().Be(b.GetHashCode());
         a.Should().NotBe(c);
@@ -107,21 +107,21 @@ public class SanitizedStringTest
     [InlineData("abcdefgh", "<<ab* [8-15]>>")]
     public void PrefixAndLengthHintFallsBackForShortValues(string source, string expected)
     {
-        using var _ = Sanitization.Begin();
-        new SanitizedString<Sanitizer.PrefixAndLengthHint>(source).ToString().Should().Be(expected);
+        using var _ = Sanitization.Resume();
+        new SanitizedString<Sanitizers.PrefixAndLengthHint>(source).ToString().Should().Be(expected);
     }
 
     [Fact]
     public void HiddenAndFingerprintBehaveAsAdvertised()
     {
-        using var _ = Sanitization.Begin();
-        new SanitizedString<Sanitizer.Hidden>(Secret).ToString().Should().Be(Sanitizer.HiddenValue);
+        using var _ = Sanitization.Resume();
+        new SanitizedString<Sanitizers.Hidden>(Secret).ToString().Should().Be(Sanitizers.HiddenValue);
 
-        var fingerprint = new SanitizedString<Sanitizer.Fingerprint>(Secret).ToString();
+        var fingerprint = new SanitizedString<Sanitizers.Fingerprint>(Secret).ToString();
         fingerprint.Should().MatchRegex("^<<[0-9a-f]{8}>>$");
         fingerprint.Should().NotContain(Secret);
         // Same value -> same fingerprint, which is what makes it usable for correlation
-        new SanitizedString<Sanitizer.Fingerprint>(Secret).ToString().Should().Be(fingerprint);
+        new SanitizedString<Sanitizers.Fingerprint>(Secret).ToString().Should().Be(fingerprint);
     }
 
     // Private methods
