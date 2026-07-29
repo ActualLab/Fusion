@@ -78,9 +78,8 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
 
     public ConsistencyState ConsistencyState {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        // Acquire: the transitions to Consistent and Invalidated publish _output and
-        // _invalidationSource, which the readers below reach with plain reads. It also keeps
-        // the spin loop in ComputedRegistry.PseudoUnregister from hoisting this load.
+        // Acquire: the Consistent/Invalidated transitions publish _output and _invalidationSource,
+        // which are read plainly - and it pins the spin loop in ComputedRegistry.PseudoUnregister
         get => (ConsistencyState)(Volatile.Read(ref _state) & ConsistencyStateMask);
     }
 
@@ -209,8 +208,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
             if (_untypedValuePromise is { } valuePromise)
                 return valuePromise;
 
-            // Release: CreateValuePromise makes a new Task, and GetValuePromise hands it out
-            // after a plain read - so its fields must be visible before the reference is
+            // Release: GetValuePromise hands out this task after a plain read
             valuePromise = CreateValuePromise();
             Volatile.Write(ref _untypedValuePromise, valuePromise);
             return valuePromise;

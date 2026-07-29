@@ -15,9 +15,8 @@ public static class CoarseClockHelper
     // ReSharper disable once NotAccessedField.Local
     private static readonly Timer Timer;
     private static readonly RandomInt64Generator Rng = new();
-    // Update publishes a new snapshot via Interlocked.Exchange; the getters below dereference it
-    // immediately, so their plain reads are already ordered - don't "fix" them to Volatile.Read,
-    // it's a real LDAR on ARM64 and this is one of the hottest paths in the framework
+    // Update publishes a new snapshot via Interlocked.Exchange, and the getters dereference it right
+    // away, so their plain reads are already ordered - don't "fix" them: LDAR isn't free on ARM64
     private static State _state;
 
     public static Moment Now {

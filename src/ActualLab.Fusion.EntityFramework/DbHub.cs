@@ -58,8 +58,7 @@ public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
                 if (_templateDbContext is { } newValue)
                     return newValue;
 
-                // Release: the fast path above reads this reference plainly, and callers
-                // dereference the DbContext right after
+                // Release: the fast path above reads this reference plainly
                 newValue = ContextFactory.CreateDbContext(
                     ShardRegistry.HasSingleShard ? DbShard.Single : DbShard.Template);
                 Volatile.Write(ref _templateDbContext, newValue);

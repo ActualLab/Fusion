@@ -18,8 +18,7 @@ public sealed class CommandLogRedactionTest
         var loggedRecords = await Run(loggedCommand);
         loggedRecords.Should().Contain(x => x.Contains(Secret, StringComparison.Ordinal));
 
-        // A command that carries a credential redacts itself rather than opting out of logging,
-        // so the log still says which command failed
+        // A credential-bearing command redacts itself, so the log still says which command failed
         var sanitizedRecords = await Run(new SecretSanitizedCommand());
         sanitizedRecords.Should().NotContain(x => x.Contains(Secret, StringComparison.Ordinal));
         sanitizedRecords.Should().Contain(x => x.Contains("command failed", StringComparison.Ordinal)

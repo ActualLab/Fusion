@@ -52,7 +52,10 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
 
     private void OnSourceInvalidated(Computed invalidated)
     {
-        if (Volatile.Read(ref _whenConsolidated) is not null) return; // Double-check locking
+        // Double-check locking
+        if (Volatile.Read(ref _whenConsolidated) is not null)
+            return;
+
         lock (Lock) {
             if (_whenConsolidated is not null) return;
 

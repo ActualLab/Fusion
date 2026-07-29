@@ -612,10 +612,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 _resetConnectionAttemptIndex = false;
             }
             var nextConnectionState = connectionState.TrySetNext(newState);
-            if (ReferenceEquals(nextConnectionState, connectionState))
-                // The state is already final - nothing transitioned, so the finally below
-                // must skip the transition work. It still releases the lock.
+            if (ReferenceEquals(nextConnectionState, connectionState)) {
+                // The state is already final: the finally below skips the transition work,
+                // but still releases the lock
                 return connectionState;
+            }
 
             connectionState = nextConnectionState;
             isTransitioned = true;

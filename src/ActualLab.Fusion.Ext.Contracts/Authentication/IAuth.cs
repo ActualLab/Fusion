@@ -41,9 +41,9 @@ public partial record AuthBackend_SetSessionOptions(
     [property: DataMember, MemoryPackOrder(2)] long? ExpectedVersion = null
 ) : ISessionCommand<Unit>
 {
-    // Options is whatever the caller put there - same reasoning as AuthBackend_SetupSession
     protected virtual bool PrintMembers(StringBuilder builder)
     {
+        // Options is whatever the caller put there - same reasoning as AuthBackend_SetupSession
         builder.Append("Session = ").Append(Session)
             .Append(", Options = ")
             .Append(Sanitization.IsSuspended ? Options.ToString() : Sanitizers.HiddenValue)
