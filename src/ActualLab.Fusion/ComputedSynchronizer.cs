@@ -164,7 +164,7 @@ public abstract class ComputedSynchronizer
     {
         public static Safe Instance { get; set; } = new();
 
-        private volatile int _assumeSynchronized;
+        private int _assumeSynchronized;
 
         public bool AssumeSynchronizedWhenDisconnected { get; init; } = true;
         public bool AssumeSynchronizedWhenRemoteComputedCacheHasHitToCallDelayer { get; init; } = true;
@@ -172,8 +172,8 @@ public abstract class ComputedSynchronizer
 
         public bool AssumeSynchronized {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _assumeSynchronized != 0;
-            set => _assumeSynchronized = value ? 1 : 0;
+            get => Volatile.Read(ref _assumeSynchronized) != 0;
+            set => Volatile.Write(ref _assumeSynchronized, value ? 1 : 0);
         }
 
         public Safe()

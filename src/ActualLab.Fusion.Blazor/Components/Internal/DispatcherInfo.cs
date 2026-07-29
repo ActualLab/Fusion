@@ -11,11 +11,11 @@ public static class DispatcherInfo
     // MAUI's Blazor doesn't flow ExecutionContext into InvokeAsync,
     // so we must detect & flow it in case it doesn't flow, otherwise
     // Computed.Current won't be available there.
-    private static volatile int _executionContextFlow;
+    private static int _executionContextFlow;
 
     public static bool IsExecutionContextFlowSupported(ComponentBase anyComponent)
     {
-        var executionContextFlow = (ExecutionContextFlow)_executionContextFlow;
+        var executionContextFlow = (ExecutionContextFlow)Volatile.Read(ref _executionContextFlow);
         switch (executionContextFlow) {
         case ExecutionContextFlow.Supported:
             return true;

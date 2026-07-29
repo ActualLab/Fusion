@@ -50,7 +50,7 @@ public class FeatureCollection : IFeatureCollection
     private readonly IFeatureCollection? _defaults;
     private readonly int _initialCapacity;
     private IDictionary<Type, object>? _features;
-    private volatile int _containerRevision;
+    private int _containerRevision;
 
     /// <summary>
     /// Initializes a new instance of <see cref="FeatureCollection"/>.

@@ -20,8 +20,8 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile MemoryPackByteSerializer? _default;
-    private static volatile TypeDecoratingByteSerializer? _defaultTypeDecorating;
+    private static MemoryPackByteSerializer? _default;
+    private static TypeDecoratingByteSerializer? _defaultTypeDecorating;
 
     private readonly ConcurrentDictionary<Type, MemoryPackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
@@ -32,13 +32,18 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
         get {
             if (_default is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _default ??= new(DefaultOptions);
+            lock (StaticLock) {
+                if (_default is { } newValue)
+                    return newValue;
+
+                newValue = new(DefaultOptions);
+                Volatile.Write(ref _default, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _default = value;
+                Volatile.Write(ref _default, value);
         }
     }
 
@@ -46,13 +51,18 @@ public class MemoryPackByteSerializer(MemoryPackSerializerOptions options) : IBy
         get {
             if (_defaultTypeDecorating is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
+            lock (StaticLock) {
+                if (_defaultTypeDecorating is { } newValue)
+                    return newValue;
+
+                newValue = new TypeDecoratingByteSerializer(Default);
+                Volatile.Write(ref _defaultTypeDecorating, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _defaultTypeDecorating = value;
+                Volatile.Write(ref _defaultTypeDecorating, value);
         }
     }
 

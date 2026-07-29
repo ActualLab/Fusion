@@ -11,7 +11,7 @@ namespace ActualLab.Rpc;
 [DebuggerDisplay("{" + nameof(DebugValue) + "}")]
 public partial class RpcRef : IEquatable<RpcRef>
 {
-    private volatile RpcRoute? _route;
+    private RpcRoute? _route;
 #if NET9_0_OR_GREATER
     private readonly Lock _routeLock = new();
 #else
@@ -54,7 +54,8 @@ public partial class RpcRef : IEquatable<RpcRef>
                     throw Errors.InternalError(
                         $"{GetType().GetName()}.{nameof(CreateRoute)}() must not return a static route for a routed {nameof(RpcRef)}.");
 
-                return _route = route;
+                Volatile.Write(ref _route, route); // Published to the lock-free fast path above
+                return route;
             }
         }
     }
@@ -92,8 +93,9 @@ public partial class RpcRef : IEquatable<RpcRef>
                 Address = RpcRefAddress.Format(this);
             if (Versions.IsEmpty)
                 Versions = RpcDefaults.GetVersions(IsBackend);
-            // ReSharper disable once NonAtomicCompoundOperator
-            _route ??= CreateRoute();
+            // Not atomic, and not under _routeLock: two racing callers can mint two routes
+            if (_route is null)
+                Volatile.Write(ref _route, CreateRoute());
         }
         catch {
             // If initialization fails, reset the state to uninitialized

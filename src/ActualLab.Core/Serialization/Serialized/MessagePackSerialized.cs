@@ -23,15 +23,20 @@ public static class MessagePackSerialized
 [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptOut)]
 public partial class MessagePackSerialized<T> : ByteSerialized<T>
 {
-    private static volatile IByteSerializer<T>? _serializer;
+    private static IByteSerializer<T>? _serializer;
 
     protected override IByteSerializer<T> GetSerializer()
     {
         if (_serializer is { } serializer)
             return serializer;
-        lock (StaticLock)
-            // ReSharper disable once NonAtomicCompoundOperator
-            return _serializer ??= MessagePackByteSerializer.Default.ToTyped<T>();
+        lock (StaticLock) {
+            if (_serializer is { } newSerializer)
+                return newSerializer;
+
+            newSerializer = MessagePackByteSerializer.Default.ToTyped<T>();
+            Volatile.Write(ref _serializer, newSerializer);
+            return newSerializer;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

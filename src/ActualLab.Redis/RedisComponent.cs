@@ -14,7 +14,7 @@ public sealed class RedisComponent<T>(RedisConnector connector, Func<IConnection
 #else
     private readonly object _lock = new();
 #endif
-    private volatile Task<Temporary<T>>? _resultTask;
+    private Task<Temporary<T>>? _resultTask;
 
     public RedisComponent(RedisDb redisDb, Func<IConnectionMultiplexer, T> factory)
         : this(redisDb.Connector, factory)
@@ -43,7 +43,9 @@ public sealed class RedisComponent<T>(RedisConnector connector, Func<IConnection
             if (TryGetTask(out resultTask))
                 return resultTask.WaitAsync(cancellationToken).ToValueTask();
 
-            return (_resultTask = NewTask()).ToValueTask();
+            resultTask = NewTask();
+            Volatile.Write(ref _resultTask, resultTask); // TryGetTask reads it lock-free
+            return resultTask.ToValueTask();
         }
     }
 

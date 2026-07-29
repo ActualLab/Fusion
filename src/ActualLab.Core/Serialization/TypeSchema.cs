@@ -51,7 +51,7 @@ public static class TypeSchema<TSchema>
 
     private sealed class SerializerCache
     {
-        private volatile Entry? _entry;
+        private Entry? _entry;
 
         public IByteSerializer Get(SerializerKind serializerKind, Func<Type, bool> typeFilter)
         {
@@ -66,7 +66,7 @@ public static class TypeSchema<TSchema>
                     => new TypeDecoratingTextSerializer((ITextSerializer)baseSerializer, typeFilter),
                 _ => new TypeDecoratingByteSerializer(baseSerializer, typeFilter),
             };
-            _entry = new Entry(baseSerializer, serializer);
+            Volatile.Write(ref _entry, new Entry(baseSerializer, serializer));
             return serializer;
         }
 

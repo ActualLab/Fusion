@@ -10,8 +10,8 @@ public static class RpcDefaults
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile VersionSet? _backendPeerVersions;
-    private static volatile VersionSet? _apiPeerVersions;
+    private static VersionSet? _backendPeerVersions;
+    private static VersionSet? _apiPeerVersions;
 
     public static RpcOptionDefaults OptionDefaults { get; } = new();
     public static string ApiScope { get; set; } = "Api";
@@ -21,21 +21,33 @@ public static class RpcDefaults
 
     public static VersionSet ApiPeerVersions {
         get {
-            if (_apiPeerVersions?[ApiScope] != ApiVersion)
-                lock (StaticLock)
-                    if (_apiPeerVersions?[ApiScope] != ApiVersion)
-                        _apiPeerVersions = new(ApiScope, ApiVersion);
-            return _apiPeerVersions;
+            if (_apiPeerVersions is { } value && value[ApiScope] == ApiVersion)
+                return value;
+
+            lock (StaticLock) {
+                if (_apiPeerVersions is { } newValue && newValue[ApiScope] == ApiVersion)
+                    return newValue;
+
+                newValue = new VersionSet(ApiScope, ApiVersion);
+                Volatile.Write(ref _apiPeerVersions, newValue);
+                return newValue;
+            }
         }
     }
 
     public static VersionSet BackendPeerVersions {
         get {
-            if (_backendPeerVersions?[BackendScope] != BackendVersion)
-                lock (StaticLock)
-                    if (_backendPeerVersions?[BackendScope] != BackendVersion)
-                        _backendPeerVersions = new(BackendScope, BackendVersion);
-            return _backendPeerVersions;
+            if (_backendPeerVersions is { } value && value[BackendScope] == BackendVersion)
+                return value;
+
+            lock (StaticLock) {
+                if (_backendPeerVersions is { } newValue && newValue[BackendScope] == BackendVersion)
+                    return newValue;
+
+                newValue = new VersionSet(BackendScope, BackendVersion);
+                Volatile.Write(ref _backendPeerVersions, newValue);
+                return newValue;
+            }
         }
     }
 

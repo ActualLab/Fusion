@@ -36,15 +36,15 @@ public abstract record Requirement<
 #else
     private static readonly object MustExistLock = new();
 #endif
-    private static volatile Requirement<T>? _mustExist;
+    private static Requirement<T>? _mustExist;
 
     public static Requirement<T> MustExist {
         get {
-            if (_mustExist is not null)
-                return _mustExist;
+            if (_mustExist is { } value)
+                return value;
             lock (MustExistLock) {
-                if (_mustExist is not null)
-                    return _mustExist;
+                if (_mustExist is { } newValue)
+                    return newValue;
 
                 Requirement<T>? mustExist;
                 if (typeof(IRequirementTarget).IsAssignableFrom(typeof(T))) {
@@ -65,7 +65,8 @@ public abstract record Requirement<
                 }
                 else
                     mustExist = MustExistRequirement<T>.Default;
-                return _mustExist = mustExist;
+                Volatile.Write(ref _mustExist, mustExist);
+                return mustExist;
             }
         }
     }

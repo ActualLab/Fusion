@@ -15,10 +15,12 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 {
     public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
 
-    private volatile AsyncState<RpcPeerConnectionState> _connectionState = new(new RpcPeerConnectionState());
-    private volatile RpcMethodResolver _serverMethodResolver;
-    private volatile RpcTransport? _transport;
-    private volatile RpcPeerStopMode _stopMode;
+    private AsyncState<RpcPeerConnectionState> _connectionState = new(new RpcPeerConnectionState());
+    private RpcMethodResolver _serverMethodResolver;
+    private RpcTransport? _transport;
+    // Plain: an aligned enum load never tears, and this gates nothing - a stale read
+    // just means an almost-current stop mode, which is read once on the way down
+    private RpcPeerStopMode _stopMode;
     private bool _resetConnectionAttemptIndex;
 
     protected internal readonly IServiceProvider Services;
@@ -617,8 +619,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 #endif
                 return connectionState;
             }
-            _connectionState = connectionState = nextConnectionState;
-            _serverMethodResolver = GetServerMethodResolver(newState.Handshake);
+            connectionState = nextConnectionState;
+            // Both are published to lock-free readers - ConnectionState and ServerMethodResolver
+            Volatile.Write(ref _connectionState, connectionState);
+            Volatile.Write(ref _serverMethodResolver, GetServerMethodResolver(newState.Handshake));
             if (newState.Error is not null && Options.TerminalErrorDetector.Invoke(this, newState.Error)) {
                 terminalError = newState.Error;
                 connectionState.TrySetFinal(terminalError);
@@ -630,7 +634,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             // sends) read Peer.Transport directly, and writing to the new channel before the
             // handshake messages have been exchanged corrupts the peer's handshake on the
             // remote side (the remote reads our outbound message instead of our handshake).
-            _transport = newState.IsConnected() ? newState.Transport : null;
+            Volatile.Write(ref _transport, newState.IsConnected() ? newState.Transport : null);
             // Order matters: fault first on terminal error so TrySetException wins over
             // any later TrySetResult on the same TCS. Covers both:
             //  - oldState's pending WhenDisconnected (if old was connected): fault, not success.

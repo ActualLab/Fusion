@@ -14,8 +14,8 @@ public class RedisConnector
     protected readonly object Lock = new();
 #endif
     protected readonly Func<Task<IConnectionMultiplexer>> MultiplexerFactory;
-    protected volatile AsyncState<Task<Temporary<IConnectionMultiplexer>>?> State = new(null);
-    protected volatile CancellationTokenSource? GoneTokenSource;
+    protected AsyncState<Task<Temporary<IConnectionMultiplexer>>?> State = new(null);
+    protected CancellationTokenSource? GoneTokenSource; // Always accessed under Lock
 
     public RetryDelaySeq ReconnectDelays { get; init; } = RetryDelaySeq.Exp(0.5, 3, 0.33);
     public RandomTimeSpan WatchdogTestPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.1);
@@ -65,7 +65,8 @@ public class RedisConnector
             }
 
             var goneTokenSource = new CancellationTokenSource();
-            State = State.SetNext(CreateMultiplexer(goneTokenSource.Token));
+            // GetMultiplexer reads State lock-free
+            Volatile.Write(ref State, State.SetNext(CreateMultiplexer(goneTokenSource.Token)));
             GoneTokenSource?.CancelAndDisposeSilently();
             GoneTokenSource = goneTokenSource;
         }

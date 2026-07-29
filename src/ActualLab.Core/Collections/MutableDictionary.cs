@@ -39,7 +39,8 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
 #else
     private readonly object _lock = new();
 #endif
-    private volatile ImmutableDictionary<TKey, TValue> _items = items;
+    // Written under _lock, but every getter reads it lock-free
+    private ImmutableDictionary<TKey, TValue> _items = items;
 
     public ImmutableDictionary<TKey, TValue> Items {
         get => _items;
@@ -72,7 +73,7 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
             if (_items == items)
                 return false;
 
-            _items = items;
+            Volatile.Write(ref _items, items);
         }
         Changed?.Invoke();
         return true;
@@ -84,7 +85,7 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
             if (_items != expectedItems || _items == items)
                 return false;
 
-            _items = items;
+            Volatile.Write(ref _items, items);
         }
         Changed?.Invoke();
         return true;
@@ -98,7 +99,7 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
             if (newItems == items)
                 return false;
 
-            _items = newItems;
+            Volatile.Write(ref _items, newItems);
         }
         Changed?.Invoke();
         return true;
@@ -112,7 +113,7 @@ public class MutableDictionary<TKey, TValue>(ImmutableDictionary<TKey, TValue> i
             if (newItems == items)
                 return false;
 
-            _items = newItems;
+            Volatile.Write(ref _items, newItems);
         }
         Changed?.Invoke();
         return true;

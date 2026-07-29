@@ -30,9 +30,9 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile NerdbankSerializer? _defaultSerializer;
-    private static volatile NerdbankMessagePackByteSerializer? _default;
-    private static volatile TypeDecoratingByteSerializer? _defaultTypeDecorating;
+    private static NerdbankSerializer? _defaultSerializer;
+    private static NerdbankMessagePackByteSerializer? _default;
+    private static TypeDecoratingByteSerializer? _defaultTypeDecorating;
 
     private readonly ConcurrentDictionary<Type, NerdbankMessagePackByteSerializer> _typedSerializerCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
@@ -44,13 +44,18 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
         get {
             if (_defaultSerializer is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _defaultSerializer ??= CreateDefaultSerializer();
+            lock (StaticLock) {
+                if (_defaultSerializer is { } newValue)
+                    return newValue;
+
+                newValue = CreateDefaultSerializer();
+                Volatile.Write(ref _defaultSerializer, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _defaultSerializer = value;
+                Volatile.Write(ref _defaultSerializer, value);
         }
     }
 
@@ -58,13 +63,18 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
         get {
             if (_default is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _default ??= new(DefaultSerializer, DefaultTypeShapeProvider);
+            lock (StaticLock) {
+                if (_default is { } newValue)
+                    return newValue;
+
+                newValue = new(DefaultSerializer, DefaultTypeShapeProvider);
+                Volatile.Write(ref _default, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _default = value;
+                Volatile.Write(ref _default, value);
         }
     }
 
@@ -72,13 +82,18 @@ public class NerdbankMessagePackByteSerializer(NerdbankSerializer serializer, IT
         get {
             if (_defaultTypeDecorating is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _defaultTypeDecorating ??= new TypeDecoratingByteSerializer(Default);
+            lock (StaticLock) {
+                if (_defaultTypeDecorating is { } newValue)
+                    return newValue;
+
+                newValue = new TypeDecoratingByteSerializer(Default);
+                Volatile.Write(ref _defaultTypeDecorating, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _defaultTypeDecorating = value;
+                Volatile.Write(ref _defaultTypeDecorating, value);
         }
     }
 

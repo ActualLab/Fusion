@@ -3,8 +3,6 @@ using ActualLab.OS;
 
 namespace ActualLab.Interception;
 
-#pragma warning disable CS0420 // A reference to a volatile field will not be treated as volatile
-
 /// <summary>
 /// Base class for method interceptors that handle proxy method calls
 /// and dispatch them to typed or untyped handlers.

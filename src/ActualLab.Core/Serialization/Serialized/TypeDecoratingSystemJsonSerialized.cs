@@ -29,15 +29,21 @@ public static class TypeDecoratingSystemJsonSerialized
 public partial class TypeDecoratingSystemJsonSerialized<TSchema, T> : TextSerialized<T>
     where TSchema : TypeSchema, new()
 {
-    private static volatile ITextSerializer<T>? _serializer;
+    private static ITextSerializer<T>? _serializer;
 
     protected override ITextSerializer<T> GetSerializer()
     {
         if (_serializer is { } serializer)
             return serializer;
-        lock (StaticLock)
-            // ReSharper disable once NonAtomicCompoundOperator
-            return _serializer ??= ((ITextSerializer)TypeSchema<TSchema>.GetTypeDecoratingSerializer(SerializerKind.SystemJson)).ToTyped<T>();
+        lock (StaticLock) {
+            if (_serializer is { } newSerializer)
+                return newSerializer;
+
+            newSerializer = ((ITextSerializer)TypeSchema<TSchema>
+                .GetTypeDecoratingSerializer(SerializerKind.SystemJson)).ToTyped<T>();
+            Volatile.Write(ref _serializer, newSerializer);
+            return newSerializer;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

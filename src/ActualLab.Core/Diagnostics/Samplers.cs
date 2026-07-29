@@ -49,7 +49,6 @@ public sealed record Sampler(
             return sampler.Next();
         }, () => ToConcurrent());
 
-        Thread.MemoryBarrier();
         return sampler;
     }
 
@@ -79,7 +78,6 @@ public sealed record Sampler(
             }, () => EveryNth(n));
         }
 
-        Thread.MemoryBarrier();
         return sampler;
     }
 
@@ -101,7 +99,6 @@ public sealed record Sampler(
             lock (@lock)
                 return rnd.Next() <= maxIntBasedLimit;
         }, () => Random(probability));
-        Thread.MemoryBarrier();
         return sampler;
     }
 
@@ -119,7 +116,6 @@ public sealed record Sampler(
         var sampler = new Sampler(nameof(RandomShared), probability,
             () => System.Random.Shared.Next() <= maxIntBasedLimit,
             () => RandomShared(probability));
-        Thread.MemoryBarrier();
         return sampler;
 #endif
     }
@@ -167,7 +163,6 @@ public sealed record Sampler(
                 return true;
             }
         }, () => AlternativeRandom(probability));
-        Thread.MemoryBarrier();
         return sampler;
     }
 

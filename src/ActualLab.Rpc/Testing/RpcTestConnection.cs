@@ -14,7 +14,7 @@ public class RpcTestConnection
 #else
     private readonly object _lock = new();
 #endif
-    private volatile AsyncState<ChannelPair<ArrayOwner<byte>>?> _channels = new(null);
+    private AsyncState<ChannelPair<ArrayOwner<byte>>?> _channels = new(null);
 
     public RpcTestClient TestClient { get; }
     public RpcHub Hub => TestClient.Hub;
@@ -40,7 +40,7 @@ public class RpcTestConnection
                     oldChannels.Channel2.Writer.TryComplete();
                 }
 
-                _channels = _channels.SetNext(value);
+                Volatile.Write(ref _channels, _channels.SetNext(value)); // Channels reads it lock-free
             }
         }
     }

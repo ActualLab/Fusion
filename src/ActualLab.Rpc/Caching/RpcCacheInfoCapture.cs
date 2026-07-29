@@ -22,8 +22,8 @@ public sealed class RpcCacheInfoCapture
 {
     public readonly RpcCacheInfoCaptureMode CaptureMode;
     public readonly RpcCacheEntry? CacheEntry;
-    public volatile RpcOutboundCall? Call;
-    public volatile RpcCacheKey? Key;
+    public RpcOutboundCall? Call;
+    public RpcCacheKey? Key;
     public object? ValueOrError; // Either RpcCacheValue or Exception
 
     public RpcCacheInfoCapture(RpcCacheInfoCaptureMode captureMode)
@@ -65,11 +65,12 @@ public sealed class RpcCacheInfoCapture
     {
         var call = context.Call;
         lock (call!) {
-            Call = call;
+            // Both fields are read lock-free elsewhere, hence the release stores
+            Volatile.Write(ref Call, call);
             // Outbound serialization copies small payloads and detaches large buffers from reuse,
             // so the retained memory stays immutable without another copy here.
-            // ReSharper disable once NonAtomicCompoundOperator
-            Key ??= new RpcCacheKey(context.MethodDef!.FullName, message.ArgumentData);
+            if (Key is null)
+                Volatile.Write(ref Key, new RpcCacheKey(context.MethodDef!.FullName, message.ArgumentData));
         }
     }
 

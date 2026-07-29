@@ -12,7 +12,8 @@ public sealed class Connector<TConnection> : WorkerBase
     where TConnection : class
 {
     private readonly Func<CancellationToken, Task<TConnection>> _connectionFactory;
-    private volatile AsyncState<State> _state = new(State.New());
+    // Updated under Lock, but read w/o it in GetConnection - hence Volatile.Write on every update
+    private AsyncState<State> _state = new(State.New());
     private long _reconnectsAt;
     private bool _resetTryIndex;
 
@@ -73,9 +74,9 @@ public sealed class Connector<TConnection> : WorkerBase
                 return; // The connection is already renewed
 #pragma warning restore VSTHRD104
 
-            _state = prevState.SetNext(State.New() with {
+            Volatile.Write(ref _state, prevState.SetNext(State.New() with {
                 LastError = error,
-            });
+            }));
         }
         prevState.Value.Dispose();
     }
@@ -113,7 +114,8 @@ public sealed class Connector<TConnection> : WorkerBase
 
             if (connection is not null) {
                 lock (Lock) {
-                    state = _state = _state.SetNext(new State(connectionSource));
+                    state = _state.SetNext(new State(connectionSource));
+                    Volatile.Write(ref _state, state);
                     IsConnected = IsConnected.SetNext(true);
                 }
 
@@ -136,10 +138,11 @@ public sealed class Connector<TConnection> : WorkerBase
                         _resetTryIndex = false;
                         newTryIndex = 0;
                     }
-                    state = _state = oldState.SetNext(State.New() with {
+                    state = oldState.SetNext(State.New() with {
                         LastError = error,
                         TryIndex = newTryIndex,
                     });
+                    Volatile.Write(ref _state, state);
                     oldState.Value.Dispose();
                 }
                 else {
@@ -188,7 +191,7 @@ public sealed class Connector<TConnection> : WorkerBase
             if (!prevState.Value.ConnectionTask.IsCompleted)
                 prevState.Value.ConnectionSource.TrySetCanceled(StopToken);
 
-            _state = prevState.SetNext(State.NewCancelled(StopToken));
+            Volatile.Write(ref _state, prevState.SetNext(State.NewCancelled(StopToken)));
             _state.SetFinal(StopToken); // StopToken is cancelled here
             prevState.Value.Dispose();
 

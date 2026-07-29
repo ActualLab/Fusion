@@ -17,19 +17,24 @@ public class TypeDecoratingByteSerializer(IByteSerializer serializer, Func<Type,
     private static readonly object StaticLock = new();
 #endif
     private static readonly object DefaultTypeRefAsObject = default(TypeRef);
-    private static volatile TypeDecoratingByteSerializer? _default;
+    private static TypeDecoratingByteSerializer? _default;
 
     public static TypeDecoratingByteSerializer Default {
         get {
             if (_default is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _default ??= new(ByteSerializer.Default);
+            lock (StaticLock) {
+                if (_default is { } newValue)
+                    return newValue;
+
+                newValue = new(ByteSerializer.Default);
+                Volatile.Write(ref _default, newValue);
+                return newValue;
+            }
         }
         set {
             lock (StaticLock)
-                _default = value;
+                Volatile.Write(ref _default, value);
         }
     }
 

@@ -53,24 +53,26 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
     }
 
     private const string GenericTimeoutReason = nameof(ComputedState) + "." + nameof(Dispose);
-    private volatile Task? _whenDisposed;
-    private volatile IUpdateDelayer _updateDelayer = null!;
+    private Task? _whenDisposed;
+    private IUpdateDelayer _updateDelayer = null!;
 
-    protected volatile Computed? ComputingComputed;
+    // Every access to this field must happen inside lock (Lock)
+    protected Computed? ComputingComputed;
     protected readonly CancellationTokenSource DisposeTokenSource;
     protected readonly CancellationTokenSource? GracefulDisposeTokenSource;
     protected readonly TimeSpan GracefulDisposeDelay;
 
     public IUpdateDelayer UpdateDelayer {
         get => _updateDelayer;
-        set => _updateDelayer = value;
+        // Release: UpdateCycle reads this property lock-free
+        set => Volatile.Write(ref _updateDelayer, value);
     }
 
     public CancellationToken DisposeToken { get; }
     public CancellationToken GracefulDisposeToken { get; }
     public Task UpdateCycleTask { get; private set; } = null!;
-    public Task? WhenDisposed => _whenDisposed;
-    public override bool IsDisposed => _whenDisposed is not null;
+    public Task? WhenDisposed => Volatile.Read(ref _whenDisposed);
+    public override bool IsDisposed => Volatile.Read(ref _whenDisposed) is not null;
 
     protected ComputedState(IComputedStateOptions options, IServiceProvider services, bool initialize = true)
         : base(options, services, initialize: false)
@@ -114,14 +116,14 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
     public virtual void Dispose()
     {
         // Double-check locking
-        if (_whenDisposed is not null)
+        if (Volatile.Read(ref _whenDisposed) is not null)
             return;
         lock (Lock) {
             if (_whenDisposed is not null)
                 return;
 
             // UpdateCycleTask is null if Initialize wasn't called somehow
-            _whenDisposed = UpdateCycleTask ?? Task.CompletedTask;
+            Volatile.Write(ref _whenDisposed, UpdateCycleTask ?? Task.CompletedTask);
         }
         GC.SuppressFinalize(this);
         DisposeTokenSource.CancelAndDisposeSilently();

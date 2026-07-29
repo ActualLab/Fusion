@@ -8,7 +8,8 @@ namespace ActualLab.Async;
 public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null)
     : ProcessorBase(stopTokenSource), IWorker
 {
-    private volatile Task? _whenRunning;
+    // Written under Lock, but WhenRunning and Run's fast path read it lock-free
+    private Task? _whenRunning;
 
     protected bool FlowExecutionContext { get; init; } = false;
 
@@ -31,7 +32,8 @@ public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null
             if (StopToken.IsCancellationRequested || WhenDisposed is not null) {
                 // We behave here like if OnStart() was cancelled right in the very beginning.
                 // In this case _whenRunning would store a task that successfully completed.
-                return _whenRunning = Task.CompletedTask;
+                Volatile.Write(ref _whenRunning, Task.CompletedTask);
+                return Task.CompletedTask;
             }
 #pragma warning restore MA0100
 
@@ -46,8 +48,7 @@ public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null
             catch (Exception e) {
                 onStartTask = Task.FromException(e);
             }
-            // ReSharper disable once PossibleMultipleWriteAccessInDoubleCheckLocking
-            _whenRunning = Task.Run(async () => {
+            var whenRunning = Task.Run(async () => {
                 try {
                     try {
                         await onStartTask.ConfigureAwait(false);
@@ -62,8 +63,10 @@ public abstract class WorkerBase(CancellationTokenSource? stopTokenSource = null
                     // Intended: WhenRunning is returned by DisposeAsyncCore, so it should never throw
                 }
             }, default);
+            // ReSharper disable once PossibleMultipleWriteAccessInDoubleCheckLocking
+            Volatile.Write(ref _whenRunning, whenRunning);
+            return whenRunning;
         }
-        return _whenRunning;
     }
 
     protected abstract Task OnRun(CancellationToken cancellationToken);

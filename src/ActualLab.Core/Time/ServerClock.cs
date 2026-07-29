@@ -6,7 +6,7 @@ namespace ActualLab.Time;
 /// </summary>
 public class ServerClock(MomentClock? baseClock = null) : MomentClock
 {
-    private volatile TaskCompletionSource<TimeSpan> _offsetSource = TaskCompletionSourceExt.New<TimeSpan>();
+    private TaskCompletionSource<TimeSpan> _offsetSource = TaskCompletionSourceExt.New<TimeSpan>();
 
     public MomentClock BaseClock { get; } = baseClock ?? MomentClockSet.Default.CpuClock;
 
@@ -17,7 +17,7 @@ public class ServerClock(MomentClock? baseClock = null) : MomentClock
         }
         set {
             if (_offsetSource.Task.IsCompleted)
-                _offsetSource = TaskCompletionSourceExt.New<TimeSpan>().WithResult(value);
+                Volatile.Write(ref _offsetSource, TaskCompletionSourceExt.New<TimeSpan>().WithResult(value));
             else
                 _offsetSource.TrySetResult(value);
         }

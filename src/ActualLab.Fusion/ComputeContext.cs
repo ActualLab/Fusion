@@ -11,7 +11,7 @@ public sealed class ComputeContext
 
     private static readonly AsyncLocal<ComputeContext?> CurrentLocal = new();
 
-    private volatile Computed? _captured;
+    private Computed? _captured;
     public readonly InvalidationSource InvalidationSource;
 
     public static ComputeContext Current {
@@ -80,6 +80,7 @@ public sealed class ComputeContext
         // - Computed.BeginCompute(computed) wraps any Computed computation, and it is responsible
         //   for creating a new ComputeContext, so dependencies cannot be captured by subsequent calls
         //   of TryCompute happening in chains like "ComputeX -> ComputeDependencyOfX".
-        _captured = computed;
+        // Release: the (Try)GetCaptured methods above read _captured plainly
+        Volatile.Write(ref _captured, computed);
     }
 }

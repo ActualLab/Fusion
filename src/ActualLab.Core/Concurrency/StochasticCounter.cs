@@ -13,11 +13,11 @@ public struct StochasticCounter
     public const int MaxPrecision = 2048;
     public static int DefaultPrecision => HardwareInfo.ProcessorCountPo2;
 
-    private volatile int _value;
+    private int _value;
 
     public int Value {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _value;
+        get => Volatile.Read(ref _value);
     }
 
     public readonly int Mask;
@@ -59,7 +59,7 @@ public struct StochasticCounter
 
     public bool TryIncrement(int random, int max)
     {
-        if (_value > max)
+        if (Volatile.Read(ref _value) > max)
             return false;
 
         if (Increment(random) is { } value && value > max) {
@@ -72,7 +72,7 @@ public struct StochasticCounter
 
     public bool TryDecrement(int random, int min)
     {
-        if (_value < min)
+        if (Volatile.Read(ref _value) < min)
             return false;
 
         if (Decrement(random) is { } value && value < min) {

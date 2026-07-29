@@ -34,8 +34,8 @@ public sealed class AuthStateProvider : AuthenticationStateProvider, IDisposable
     private readonly object _lock = new();
 #endif
     private Session? _session;
-    private volatile Task<AuthState> _authStateTask;
-    private volatile Task<AuthenticationState> _authenticationStateTask;
+    private Task<AuthState> _authStateTask;
+    private Task<AuthenticationState> _authenticationStateTask;
 
     private IServiceProvider Services { get; }
     private IAuth Auth { get; }
@@ -95,7 +95,9 @@ public sealed class AuthStateProvider : AuthenticationStateProvider, IDisposable
                     return;
 
                 authStateTask = _authStateTask = Task.FromResult(authState);
-                authenticationStateTask = _authenticationStateTask = Task.FromResult((AuthenticationState)authState);
+                authenticationStateTask = Task.FromResult((AuthenticationState)authState);
+                // Release: GetAuthenticationStateAsync reads this field without the lock
+                Volatile.Write(ref _authenticationStateTask, authenticationStateTask);
             }
 
             NotifyAuthenticationStateChanged(authenticationStateTask);

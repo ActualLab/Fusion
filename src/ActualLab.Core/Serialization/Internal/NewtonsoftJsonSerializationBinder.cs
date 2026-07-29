@@ -15,16 +15,21 @@ public static class NewtonsoftJsonSerializationBinder
 #else
     private static readonly object StaticLock = new();
 #endif
-    private static volatile ISerializationBinder? _default;
+    private static ISerializationBinder? _default;
 
     public static ISerializationBinder Default {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get {
             if (_default is { } value)
                 return value;
-            lock (StaticLock)
-                // ReSharper disable once NonAtomicCompoundOperator
-                return _default ??= new JsonSerializer().SerializationBinder;
+            lock (StaticLock) {
+                if (_default is { } newValue)
+                    return newValue;
+
+                newValue = new JsonSerializer().SerializationBinder;
+                Volatile.Write(ref _default, newValue);
+                return newValue;
+            }
         }
     }
 }
