@@ -11,6 +11,55 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.2.28+d56f733a8 | npm: 14.2.23
+
+Release date: 2026-07-29
+
+Sanitization changes direction: it is now **off** unless something turns it on,
+and what turns it on is a logger. If you adopted `ActualLab.Compliance` in
+14.2.23, read the breaking change &mdash; the old default could put masked values
+on the wire. NuGet-only release &mdash; npm stays at `14.2.23`.
+
+### Breaking Changes
+
+- **Sanitization is suspended by default, and `Sanitization.Resume()` is now
+  `Sanitization.Begin()`.** A masking member is written as
+  `get =&gt; Sanitizer.MaybeSanitize&lt;T&gt;(field)` &mdash; and **a serializer reads that
+  same getter**. With masking on by default, the masked form is what reaches the
+  wire and the database: silent data loss that no compiler catches and no test
+  notices until the stored data is already wrong. That made the framework
+  unusable for the very pattern it was built for, so
+  `Sanitization.IsGloballySuspended` now defaults to `true`. A thread scope
+  overrides the global default in either direction, rather than being outranked
+  by it &mdash; otherwise nothing could turn masking on for the duration of a single
+  log call. *Migration: rename `Sanitization.Resume()` to `Sanitization.Begin()`,
+  and register `AddSanitizingLoggerFactory()` (below) to get masked logs back.
+  Code that only relied on the default is now unmasked &mdash; which is what keeps it
+  off the wire.*
+
+### Added
+
+- **`SanitizingLogger`, `SanitizingLoggerFactory`, `AddSanitizingLoggerFactory()`.**
+  The logger decorator opens a `Sanitization.Begin()` scope around each
+  `ILogger.Log` call, so `ISanitized` values mask themselves in the log and
+  nowhere else. Register it where you want redaction, typically production only:
+  `logging.AddSanitizingLoggerFactory(c =&gt; c.HostInfo().IsProductionInstance)`.
+  *Note the scope covers only what renders **inside** the call:
+  `Log.LogInformation("{Query}", Sanitizer.MaybeSanitize&lt;T&gt;(query))` evaluates its
+  argument first and logs the raw value. Pass something whose `ToString()` is
+  deferred &mdash; a `SanitizedString&lt;T&gt;` or an `ISanitized` &mdash; or mask
+  unconditionally with `Sanitizer.Sanitize&lt;T&gt;` when the value only ever reaches a
+  log.*
+
+### Fixed
+
+- **The RPC servers no longer pre-sanitize their log arguments eagerly.** Under
+  the new default that would have logged raw queries. The two request
+  descriptions are composed outside any scope and so mask unconditionally &mdash; they
+  only ever reach a log &mdash; while the three direct log arguments became
+  `SanitizedString&lt;Sanitizers.RpcRequestQuery&gt;`, whose `ToString()` runs inside
+  the logger's scope.
+
 ## 14.2.27+b1a110879 | npm: 14.2.23
 
 Release date: 2026-07-29
