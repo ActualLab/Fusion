@@ -346,18 +346,27 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
             ActivityStopped = stoppedActivities.Enqueue,
         };
         ActivitySource.AddActivityListener(listener);
-        using var meterListener = new MeterListener();
-        meterListener.InstrumentPublished = (instrument, targetListener) => {
-            if (ReferenceEquals(instrument, RpcInstruments.OutboundDurationHistogram))
-                targetListener.EnableMeasurementEvents(instrument);
-        };
-        meterListener.SetMeasurementEventCallback<double>((_, value, _, _) => clientDurations.Enqueue(value));
-        meterListener.Start();
 
         await using var services = CreateServices();
         var clientPeer = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend).ClientPeer;
         var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["Div:2"];
         var tracer = (RpcDefaultCallTracer)method.Tracer!;
+
+        // Started only once the method is known: the meter is process-global, so measurements
+        // have to be scoped by their rpc.method tag or parallel tests bleed into clientDurations
+        var methodName = method.FullName;
+        using var meterListener = new MeterListener();
+        meterListener.InstrumentPublished = (instrument, targetListener) => {
+            if (ReferenceEquals(instrument, RpcInstruments.OutboundDurationHistogram))
+                targetListener.EnableMeasurementEvents(instrument);
+        };
+        meterListener.SetMeasurementEventCallback<double>((_, value, tags, _) => {
+            foreach (var tag in tags)
+                if (tag.Key == "rpc.method" && Equals(tag.Value, methodName))
+                    clientDurations.Enqueue(value);
+        });
+        meterListener.Start();
+
         using var parent = new Activity("parent").SetIdFormat(ActivityIdFormat.W3C).Start();
         var parentContext = parent.Context;
 
@@ -376,8 +385,12 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         secondCall.Register();
         secondCall.SetResult(3, context: null);
 
+        // The listener is process-global, so other tests running in parallel feed it too -
+        // a.TraceId is what narrows this to our own parent activity
         var outboundActivities = stoppedActivities
-            .Where(a => a.Kind == ActivityKind.Client && a.DisplayName == tracer.OutboundCallName)
+            .Where(a => a.TraceId == parentContext.TraceId
+                && a.Kind == ActivityKind.Client
+                && a.DisplayName == tracer.OutboundCallName)
             .ToArray();
         outboundActivities.Should().HaveCount(2);
         outboundActivities.Should().OnlyContain(a => a.ParentSpanId == parentContext.SpanId);
