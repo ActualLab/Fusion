@@ -159,7 +159,7 @@ export class RpcWebSocketConnection implements RpcConnection {
                     ev.data instanceof Uint8Array
                         ? ev.data
                         : new Uint8Array(ev.data);
-                let messages;
+                let messages: { message: RpcMessage; args: unknown[] }[];
                 try {
                     messages = this._splitBinary(frame);
                 } catch (e) {
@@ -179,7 +179,7 @@ export class RpcWebSocketConnection implements RpcConnection {
                 // the binary path so we don't silently drop them.
                 void ev.data.arrayBuffer().then(ab => {
                     const frame = new Uint8Array(ab);
-                    let messages;
+                    let messages: { message: RpcMessage; args: unknown[] }[];
                     try {
                         messages = this._splitBinary(frame);
                     } catch (e) {
