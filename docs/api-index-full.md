@@ -365,6 +365,10 @@ A fixed-capacity circular buffer that supports efficient push/pull operations at
 
 An immutable, serializable set of scoped `Version` values, stored as a comma-separated string of scope=version pairs.
 
+###### `VersionSetExt`
+
+Extension methods for `VersionSet`: `Where(predicate)` and `IntersectScopes(scopes)`, both returning the source instance when nothing is dropped. The latter is what keeps a peer that invents scopes from adding a cache entry per handshake.
+
 ###### `ArrayPools`
 
 Provides static references to commonly used `ArrayPool<T>` instances.
@@ -454,6 +458,30 @@ An equality comparer for `IHasId<TId>` that compares by `Id`.
 ###### `VersionExt`
 
 Extension methods and helpers for `Version`.
+
+### ActualLab.Compliance
+
+See [Sanitization: Secrets in Logs](PartSan.md).
+
+###### `ISanitized`
+
+Tagging interface for types whose `ToString()` honors `Sanitization.IsSuspended` - i.e. that render a masked form by default. `Session`, `User`, `SessionInfo` and the auth commands implement it.
+
+###### `Sanitizer`
+
+Maps a raw string to the form that may be rendered. `Apply` masks unconditionally, `MaybeApply` respects the ambient scope; the static `Sanitize<T>` / `MaybeSanitize<T>` / `Get<T>` reach one cached, stateless instance per type. A class rather than a delegate so it can be a `SanitizedString<TSanitizer>` type argument.
+
+###### `Sanitizers`
+
+The built-in policies: `Hidden` (`<<hidden>>`), `LengthHint` (`<<* [8-15]>>`, a power-of-two bucket so the exact length never leaks), `PrefixAndLengthHint` (`<<ab* [8-15]>>`), `Fingerprint` (`<<a1b2c3d4>>` - equal values give equal output, so it's the wrong choice for anything low-entropy), `SessionString` (`Ab3f:9644ea3b`), `UriQuery` (per-parameter, selector-driven) and `RpcRequestQuery` (the deny-by-default policy for ActualLab's own RPC endpoints).
+
+###### `SanitizedString<TSanitizer>` (struct), `ISanitizedString`
+
+A drop-in for a `string` member that masks itself when rendered while serializing its raw value - converters ship for System.Text.Json, Newtonsoft.Json, MemoryPack, MessagePack and Nerdbank. `ISanitizedString` is the non-generic face, so a serializer or log formatter can read `Value` without knowing the policy.
+
+###### `Sanitization`
+
+The ambient switch: sanitization is active unless suspended, so values mask by default. `Suspend()` / `Resume()` return a `Scope` (thread-static, so it does **not** flow across an `await`), and `IsGloballySuspended` is a process-wide debugging escape hatch that outranks every scope.
 
 ### ActualLab.Concurrency
 
@@ -1548,6 +1576,10 @@ Typed RPC stream that supports serialization, remote enumeration, and batched de
 ###### `RpcStreamNotFoundException`
 
 Thrown when an RPC stream cannot be found or has been disconnected.
+
+###### `RpcResourceLimitExceededException`
+
+Thrown when an inbound message, frame, header, method ref or per-peer object/call count exceeds its `RpcLimits` ceiling. An `ITransientException`, so a retry policy treats it as retryable.
 
 ###### `RpcDiagnosticsOptions` (record)
 
@@ -2814,6 +2846,10 @@ MVC controller that handles Blazor render mode selection via cookie.
 ###### `RenderModeEndpoint`
 
 Endpoint handler that manages Blazor render mode persistence via cookies and returns redirect results.
+
+###### `RedirectUrlHelper`
+
+Validates and normalizes the redirect URLs Fusion's server endpoints accept (`returnUrl`, `redirectTo`). `Check` accepts or rejects; `Normalize` reduces an accepted URL to a relative one, falling back to a caller-supplied URL when it's rejected. `AllowedHosts` and `MustStripHost` are init-only, and the registered instance is replaceable via `FusionWebServerBuilder.DefaultRedirectUrlHelperFactory`. Replaces the `RedirectUrlChecker` delegate.
 
 ### ActualLab.Fusion.Server.Middlewares
 

@@ -37,6 +37,15 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `BinaryHeap<TPriority, TValue>` — min-heap
 - `FenwickTree<T>` — binary indexed tree for prefix sums
 - `ApiList<T>`, `ApiMap<TKey,TValue>`, `ApiSet<T>`, `ApiNullable<T>` — serializable API contract collections
+- `PruningCache<TKey,TValue>` — capacity-bounded cache, lock-free reads, background prune to half capacity
+- `VersionSetExt` — `Where` / `IntersectScopes` for `VersionSet`
+
+### Compliance — [PartSan.md](PartSan.md)
+- `Sanitizer` — maps a raw string to its renderable form; `Apply` / `MaybeApply`, one cached instance per type
+- `Sanitizers` — built-in policies: `Hidden`, `LengthHint`, `PrefixAndLengthHint`, `Fingerprint`, `SessionString`, `UriQuery`, `RpcRequestQuery`
+- `SanitizedString<TSanitizer>` (struct) — string member that masks when rendered, serializes raw
+- `ISanitized` / `ISanitizedString` — tags a type whose `ToString()` honors the ambient scope
+- `Sanitization` — ambient switch; masked by default, `Suspend()` / `Resume()` scopes (thread-static, not `await`-flowing)
 
 ### Async Primitives — [PartCore-AsyncLock.md](PartCore-AsyncLock.md), [PartCore-Worker.md](PartCore-Worker.md)
 - `AsyncLock` — semaphore-based async lock with optional reentry detection
@@ -121,14 +130,15 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ### Configuration
 - `RpcBuilder` (struct) — fluent builder for registering RPC services in DI
 - `RpcConfiguration` — registered service builders + default service mode
-- `RpcLimits` (record) — timeout/periodic limits for connections, keep-alive
+- `RpcLimits` (record) — timeout/periodic limits for connections and keep-alive, plus the per-peer `CallCountLimit` / `ObjectCountLimit` backstops
 - `RpcCallTimeouts` (record) — connect/run/delay timeouts for outbound calls
 - `RpcServiceMode` (enum) — local, server, client, or distributed
 
 ### Transports
-- `RpcFrameBasedTransport` — batches outbound RPC messages into frames
+- `RpcFrameBasedTransport` — batches outbound RPC messages into frames; owns `DefaultMaxFrameSize` / `DefaultMaxPreHandshakeFrameSize`
 - `RpcPipeTransport` / `RpcStreamTransport` — length-prefixed framed transports over pipes or streams
 - `RpcPeerConnectionStateKind` (enum) — disconnected, connecting, connected, or terminal peer state
+- `RpcResourceLimitExceededException` — an inbound message, frame, header or count exceeded its ceiling (transient)
 
 ## RPC Server — [`ActualLab.Rpc.Server`]
 - `RpcHttpServer` — accepts full-duplex HTTP/2 connections for ASP.NET Core
@@ -225,6 +235,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ### Server-Side Services & Helpers
 - `SessionMiddleware` — resolves/creates `Session` from cookies
 - `FusionWebServerBuilder` (struct) — configures RPC, session middleware, render mode
+- `RedirectUrlHelper` — `Check` / `Normalize` for `returnUrl` and `redirectTo`; `AllowedHosts`, `MustStripHost`
 - `ServerAuthHelper` — syncs ASP.NET Core auth state with Fusion `IAuth`
 
 
