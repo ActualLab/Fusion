@@ -2,6 +2,7 @@ using System.Runtime.Serialization;
 using ActualLab.Compliance;
 using MemoryPack;
 using MessagePack;
+using Microsoft.Extensions.Hosting;
 using static System.Console;
 // ReSharper disable ArrangeTypeMemberModifiers
 // ReSharper disable InconsistentNaming
@@ -55,7 +56,8 @@ public sealed class ConnectRequest(string path, string query)
 #region PartSan_CustomSanitizer
 public sealed class EmailDomain : Sanitizer
 {
-    public override string Apply(string value)
+    // Null never reaches here - Sanitizer.Apply passes it through
+    protected override string Sanitize(string value)
     {
         var atIndex = value.IndexOf('@', StringComparison.Ordinal);
         return atIndex < 0
@@ -85,7 +87,8 @@ public class PartSan : DocPart
 
         StartSnippetOutput("Rendering");
         #region PartSan_Render
-        WriteLine($"Authenticating {credentials.UserId} with {credentials.ApiKey}");
+        using (Sanitization.Begin()) // What SanitizingLogger opens around every log call
+            WriteLine($"Authenticating {credentials.UserId} with {credentials.ApiKey}");
         WriteLine(credentials.ApiKey.Value); // .Value is the raw one, and it's the only way to get it
         #endregion
 
@@ -122,34 +125,63 @@ public class PartSan : DocPart
         WriteLine(Sanitizer.Sanitize<Sanitizers.Fingerprint>("bob@example.com"));
         #endregion
 
-        StartSnippetOutput("Suspension");
+        StartSnippetOutput("Null and empty pass through");
+        #region PartSan_NullAndEmpty
+        WriteLine(Sanitizer.Sanitize<Sanitizers.Hidden>(null) is null);
+        WriteLine($"'{Sanitizer.Sanitize<Sanitizers.Hidden>("")}'");
+        #endregion
+
+        StartSnippetOutput("Turning it on");
         #region PartSan_Suspend
-        WriteLine(credentials.ApiKey.ToString());
-        using (Sanitization.Begin())
+        WriteLine(credentials.ApiKey.ToString()); // Inactive by default
+        using (Sanitization.Begin()) {
             WriteLine(credentials.ApiKey.ToString());
-        WriteLine(credentials.ApiKey.ToString());
+            using (Sanitization.Suspend())
+                WriteLine(credentials.ApiKey.ToString());
+        }
+        #endregion
+
+        #region PartSan_AddSanitizingLoggerFactory
+        var services = new ServiceCollection();
+        services.AddLogging(logging => logging.AddSanitizingLoggerFactory(
+            c => c.GetRequiredService<IHostEnvironment>().IsProduction()));
+
+        // No ILoggingBuilder to hook? Wrap the factory itself
+        StaticLog.Factory = StaticLog.Factory.Sanitizing();
+        #endregion
+
+        StartSnippetOutput("A log argument must defer its ToString()");
+        #region PartSan_LogArgument
+        var deferred = new SanitizedString<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSessionId");
+        var eager = Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSessionId");
+        using (Sanitization.Begin()) { // What SanitizingLogger opens around Log(...)
+            WriteLine(deferred); // ToString() runs inside the scope
+            WriteLine(eager); // Already a plain string by the time the scope opens
+        }
         #endregion
 
         StartSnippetOutput("MaybeSanitize");
         #region PartSan_MaybeSanitize_Use
         var request = new ConnectRequest("/rpc/ws", "?s=Ab3fSomeLongSessionId&f=mempack6");
         WriteLine(request.LogTitle);
-        using (Sanitization.Suspend())
+        using (Sanitization.Begin())
             WriteLine(request.LogTitle); // MaybeSanitize honors the scope, Sanitize wouldn't
         #endregion
 
         StartSnippetOutput("Custom sanitizers");
         #region PartSan_CustomSanitizer_Use
         WriteLine(Sanitizer.Sanitize<EmailDomain>("alice@example.com"));
-        WriteLine(new SanitizedString<EmailDomain>("alice@example.com").ToString());
         WriteLine(Sanitizer.Sanitize<DownloadQuery>("?id=17&token=Zm9vYmFy"));
+        using (Sanitization.Begin())
+            WriteLine(new SanitizedString<EmailDomain>("alice@example.com"));
         #endregion
 
         StartSnippetOutput("Equality");
         #region PartSan_Equality
         var a = new SanitizedString<Sanitizers.LengthHint>("hunter2-hunter2");
         var b = new SanitizedString<Sanitizers.LengthHint>("abcdefghijklmno"); // Same length, same mask
-        WriteLine($"{a} == {b}: {a == b}");
+        using (Sanitization.Begin())
+            WriteLine($"{a} == {b}: {a == b}");
         #endregion
 
         StartSnippetOutput("The wrong way");

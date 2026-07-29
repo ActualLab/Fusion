@@ -11,86 +11,9 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 14.2.29+d56f733a8 | npm: 14.2.23
+## 14.2.TBD | npm: 14.2.23
 
-Release date: 2026-07-29
-
-Sanitization changes direction: it is now **off** unless something turns it on,
-and what turns it on is a logger. If you adopted `ActualLab.Compliance` in
-14.2.23, read the breaking change &mdash; the old default could put masked values
-on the wire. NuGet-only release &mdash; npm stays at `14.2.23`.
-
-### Breaking Changes
-
-- **Sanitization is suspended by default, and `Sanitization.Resume()` is now
-  `Sanitization.Begin()`.** A masking member is written as
-  `get =&gt; Sanitizer.MaybeSanitize&lt;T&gt;(field)` &mdash; and **a serializer reads that
-  same getter**. With masking on by default, the masked form is what reaches the
-  wire and the database: silent data loss that no compiler catches and no test
-  notices until the stored data is already wrong. That made the framework
-  unusable for the very pattern it was built for, so
-  `Sanitization.IsGloballySuspended` now defaults to `true`. A thread scope
-  overrides the global default in either direction, rather than being outranked
-  by it &mdash; otherwise nothing could turn masking on for the duration of a single
-  log call. *Migration: rename `Sanitization.Resume()` to `Sanitization.Begin()`,
-  and register `AddSanitizingLoggerFactory()` (below) to get masked logs back.
-  Code that only relied on the default is now unmasked &mdash; which is what keeps it
-  off the wire.*
-
-### Added
-
-- **`SanitizingLogger`, `SanitizingLoggerFactory`, `AddSanitizingLoggerFactory()`.**
-  The logger decorator opens a `Sanitization.Begin()` scope around each
-  `ILogger.Log` call, so `ISanitized` values mask themselves in the log and
-  nowhere else. Register it where you want redaction, typically production only:
-  `logging.AddSanitizingLoggerFactory(c =&gt; c.HostInfo().IsProductionInstance)`.
-  *Note the scope covers only what renders **inside** the call:
-  `Log.LogInformation("{Query}", Sanitizer.MaybeSanitize&lt;T&gt;(query))` evaluates its
-  argument first and logs the raw value. Pass something whose `ToString()` is
-  deferred &mdash; a `SanitizedString&lt;T&gt;` or an `ISanitized` &mdash; or mask
-  unconditionally with `Sanitizer.Sanitize&lt;T&gt;` when the value only ever reaches a
-  log.*
-
-### Fixed
-
-- **The RPC servers no longer pre-sanitize their log arguments eagerly.** Under
-  the new default that would have logged raw queries. The two request
-  descriptions are composed outside any scope and so mask unconditionally &mdash; they
-  only ever reach a log &mdash; while the three direct log arguments became
-  `SanitizedString&lt;Sanitizers.RpcRequestQuery&gt;`, whose `ToString()` runs inside
-  the logger's scope.
-
-## 14.2.27+b1a110879 | npm: 14.2.23
-
-Release date: 2026-07-29
-
-A single fix for a Linux-only defect in `RedirectUrlHelper`, which shipped in
-14.2.23. NuGet-only release &mdash; npm stays at `14.2.23`.
-
-### Fixed
-
-- **`RedirectUrlHelper` mangled every redirect URL carrying a query or fragment
-  on Linux.** It decided whether a URL was absolute with
-  `Uri.TryCreate(url, UriKind.Absolute, ...)`, and that answer depends on the OS:
-  on Unix a leading `/` is a valid *file* path, so `/chat` parses as
-  `file:///chat` and `/chat?x=1#f` parses as a path **containing** `?` and `#`,
-  which `PathAndQuery` then hands back percent-encoded. Every local redirect
-  therefore took the strip-host branch, and `Normalize` returned
-  `/chat%3Fx=1%23f` &mdash; query and fragment destroyed &mdash; while the same call on
-  Windows returned the URL untouched. Two smaller symptoms went with it: a
-  `"Redirect URL must be relative: /chat -> /chat"` warning on every local
-  redirect, and, with `MustStripHost = false` plus a configured `AllowedHosts`,
-  outright rejection of local URLs, since they parse with an empty host.
-  Parsing as `RelativeOrAbsolute` and asking `IsAbsoluteUri` answers the same
-  everywhere. *This was never an open redirect: `//evil.example` parsed as
-  `file://evil.example` on both platforms and `MustStripHost` reduced it to its
-  path. It is now rejected outright instead &mdash; without a scheme it stays
-  relative, and `IsLocalUrl` catches it &mdash; so a protocol-relative `returnUrl`
-  that used to land on its own path now lands on the fallback.*
-
-## 14.2.23+ec5b74ab0 | npm: 14.2.23
-
-Release date: 2026-07-29
+Release date: unreleased
 
 The outcome of a second full security and severe-bug review of the library: 120
 findings, of which both CRITICALs and all 35 HIGHs are now closed. Almost
@@ -98,7 +21,7 @@ everything here is a fix on the path from a wire message to a resolved type, an
 allocation, or an authorization decision &mdash; **treat this as a security
 release and read the breaking changes before upgrading.** The TypeScript client
 gets its own round of fixes and one breaking change, so npm moves to `14.2.23`
-alongside NuGet &mdash; the two now share a version number.
+alongside NuGet.
 
 ### Breaking Changes
 
@@ -236,16 +159,15 @@ alongside NuGet &mdash; the two now share a version number.
 
 ### Added
 
-- **A sanitization framework** (`ActualLab.Compliance`). `Sanitizer` maps a raw
-  string to the form that may be rendered, `Sanitizers` supplies the policies
-  (`Hidden`, `LengthHint`, `PrefixAndLengthHint`, `Fingerprint`, `SessionString`,
-  `UriQuery`, `RpcRequestQuery`), and `SanitizedString<TSanitizer>` is a drop-in
-  for a `string` member that redacts itself when rendered while serializing
-  byte-identically on every supported format. `Sanitization.Suspend()` /
-  `IsGloballySuspended` are the escape hatches. `ISanitized` marks a type whose
-  `ToString()` respects them. One wart worth knowing: a `[MemoryPackable]` type
-  holding a `SanitizedString<T>` needs `[MemoryPackAllowSerialize]` on the member,
-  or it fails to compile with `MEMPACK019`. See
+- **A sanitization framework** (`ActualLab.Compliance`), for keeping secrets out
+  of logs without keeping them off the wire. `SanitizedString<TSanitizer>` is a
+  drop-in for a `string` member that masks itself when rendered while serializing
+  byte-identically, `ISanitized` marks a type whose `ToString()` does the same,
+  and `Sanitizers` supplies the policies (`Hidden`, `LengthHint`,
+  `PrefixAndLengthHint`, `Fingerprint`, `SessionString`, `UriQuery`,
+  `RpcRequestQuery`). Masking is off until a scope turns it on, and
+  `AddSanitizingLoggerFactory()` is what opens one around each log call &mdash; so
+  secrets are masked in the log and nowhere else. See
   [Sanitization](PartSan.md).
 - **RPC request queries are sanitized by an allow-list.** `RpcQuerySanitizer` is
   replaced by `Sanitizers.RpcRequestQuery`, which is deny-by-default: a parameter

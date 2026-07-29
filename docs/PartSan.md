@@ -17,8 +17,9 @@ member's type from `string` to `SanitizedString<T>` is not a wire change and nee
 
 ## SanitizedString&lt;TSanitizer&gt;
 
-Pick a sanitizer, use it as the type argument, and the value masks itself whenever anything
-renders it:
+Pick a sanitizer, use it as the type argument, and the value masks itself whenever it's rendered
+**inside a sanitization scope** — which is exactly what [`SanitizingLogger`](#sanitizinglogger)
+opens around every log call:
 
 <!-- snippet: PartSan_Declare -->
 ```cs
@@ -34,7 +35,8 @@ public sealed partial record ApiCredentials(
 
 <!-- snippet: PartSan_Render -->
 ```cs
-WriteLine($"Authenticating {credentials.UserId} with {credentials.ApiKey}");
+using (Sanitization.Begin()) // What SanitizingLogger opens around every log call
+    WriteLine($"Authenticating {credentials.UserId} with {credentials.ApiKey}");
 WriteLine(credentials.ApiKey.Value); // .Value is the raw one, and it's the only way to get it
 ```
 <!-- endSnippet -->
@@ -49,7 +51,7 @@ transparent:
 
 | Member | Behavior |
 |--------|----------|
-| `ToString()` | The masked form — unless [sanitization is suspended](#suspending-sanitization) |
+| `ToString()` | The masked form while [sanitization is active](#turning-sanitization-on), the raw string otherwise |
 | `Value` | The raw string, always |
 | `implicit operator SanitizedString<T>(string?)` | Assign a `string` and it just works |
 | `explicit operator string(...)` | **Explicit** on purpose, so the raw value can't slip into an interpolation by accident |
@@ -63,7 +65,8 @@ text, and a lookup keyed on the masked form would collide.
 ```cs
 var a = new SanitizedString<Sanitizers.LengthHint>("hunter2-hunter2");
 var b = new SanitizedString<Sanitizers.LengthHint>("abcdefghijklmno"); // Same length, same mask
-WriteLine($"{a} == {b}: {a == b}");
+using (Sanitization.Begin())
+    WriteLine($"{a} == {b}: {a == b}");
 ```
 <!-- endSnippet -->
 
@@ -145,7 +148,7 @@ above) and MemoryPack defers to the registered formatter. Nothing about the payl
 ## The Sanitizers
 
 Each sanitizer is named after **what it leaves visible** — that's the only thing distinguishing
-them. All of them pass an empty value through unchanged.
+them.
 
 | Sanitizer | Leaves visible | `sk-7f3a91b8c2e4d6f0` renders as |
 |-----------|----------------|----------------------------------|
@@ -153,8 +156,8 @@ them. All of them pass an empty value through unchanged.
 | `Sanitizers.LengthHint` | A length bucket | `<<* [16-31]>>` |
 | `Sanitizers.PrefixAndLengthHint` | First 2 chars + a length bucket | `<<sk* [16-31]>>` |
 | `Sanitizers.Fingerprint` | Identity, not content | `<<2e513fef>>` |
-| `Sanitizers.SessionString` | A 4-char prefix + a hash, in `Session.ToString()`'s format | `Ab3f:297ccba4` |
-| `Sanitizers.UriQuery` | Everything except the parameters its policy names | see below |
+| `Sanitizers.SessionString` | A 4-char prefix + a hash, in `Session.ToString()`'s format | `Ab3fSomeLongSessionId` → `Ab3f:297ccba4` |
+| `Sanitizers.UriQuery` | A query string, parameter by parameter, per its policy | see below |
 | `Sanitizers.RpcRequestQuery` | Same, with ActualLab's RPC endpoint policy baked in | see below |
 
 <!-- snippet: PartSan_Sanitizers -->
@@ -174,11 +177,30 @@ WriteLine(Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSession
 <<sk* [16-31]>>
 <<2e513fef>>
 Ab3f:297ccba4
-?s=Ab3f:297ccba4&p=<<hidden>>&f=mempack6
+?s=Ab3f:297ccba4&p=<<Zm* [8-15]>>&f=mempack6
 ```
 
 `PrefixAndLengthHint` falls back to `LengthHint` for values of 3 characters or fewer — a 2-character
 prefix of a 3-character secret isn't a hint, it's the secret.
+
+### `null` and `""` pass through unchanged
+
+`null` stays `null`: there's nothing to reveal, and a `<<hidden>>` standing in for an absent value
+would misreport what the object actually holds. The filtering happens once, in the non-virtual
+`Sanitizer.Apply`, so no sanitizer has to remember to do it. An empty string is passed through by
+every built-in policy for the same reason.
+
+<!-- snippet: PartSan_NullAndEmpty -->
+```cs
+WriteLine(Sanitizer.Sanitize<Sanitizers.Hidden>(null) is null);
+WriteLine($"'{Sanitizer.Sanitize<Sanitizers.Hidden>("")}'");
+```
+<!-- endSnippet -->
+
+```
+True
+''
+```
 
 ### Length hints are buckets, not lengths
 
@@ -218,31 +240,40 @@ numbers, postcodes.
 ### Query strings
 
 `UriQuery` sanitizes a URL query parameter by parameter: its selector maps a parameter name to the
-`Sanitizer` for that parameter's value, or to `null` to leave it alone. Parameter names are matched
-by the policy, valueless parameters are passed through, and the leading `?` is optional.
+`Sanitizer` for that parameter's value, or to `null` to leave it alone. The leading `?` is
+optional, and a valueless parameter is passed through.
 
-`RpcRequestQuery` is `UriQuery` with the policy for ActualLab's own RPC endpoints — `s`/`session`
-via `SessionString`, `clientId` via `Fingerprint`, `p` (the reconnect proof) via `Hidden`, and
-everything else readable. Each of those name lists is a settable static property, so an app can
-extend the policy.
+`RpcRequestQuery` is `UriQuery` with the policy for ActualLab's own RPC endpoints, and that policy
+is **deny by default** — a parameter is readable only if it's explicitly listed, so a query
+parameter added later can't start leaking a credential just because no one remembered to mask it:
+
+| Parameter | Rendered with |
+|-----------|---------------|
+| `RpcRequestQuery.OpenParameterNames` — `f`, `serializationFormat`, `c` | Nothing: logged verbatim |
+| `RpcRequestQuery.SessionParameterNames` — `s`, `session` | `SessionString` |
+| Anything else — including `p`, the reconnect proof | `PrefixAndLengthHint` |
+
+Both name lists are settable static properties, so an app can extend the policy.
 
 ## Turning Sanitization On
 
-Sanitization is **suspended unless a scope turns it on**, and `Sanitization` is the ambient switch:
+Sanitization is **inactive unless a scope turns it on**, and `Sanitization` is the ambient switch:
 
 | Member | Meaning |
 |--------|---------|
-| `Sanitization.IsSuspended` | Whether masking is currently off — `true` by default |
+| `Sanitization.IsActive` | Whether masking is currently on — `false` by default |
 | `Sanitization.Begin()` | A scope in which values render masked |
 | `Sanitization.Suspend()` | A scope that turns masking back off — nestable inside `Begin()` |
-| `Sanitization.IsGloballySuspended` | The process-wide default, `true`; a thread scope overrides it either way |
+| `Sanitization.Scope` | The `readonly struct` both return; disposing it restores the previous state |
 
 <!-- snippet: PartSan_Suspend -->
 ```cs
-WriteLine(credentials.ApiKey.ToString());
-using (Sanitization.Begin())
+WriteLine(credentials.ApiKey.ToString()); // Inactive by default
+using (Sanitization.Begin()) {
     WriteLine(credentials.ApiKey.ToString());
-WriteLine(credentials.ApiKey.ToString());
+    using (Sanitization.Suspend())
+        WriteLine(credentials.ApiKey.ToString());
+}
 ```
 <!-- endSnippet -->
 
@@ -271,13 +302,29 @@ where the scope was never set. Keep the scope around the synchronous rendering i
 
 `SanitizingLogger` wraps an `ILogger` and opens a `Sanitization.Begin()` scope around every
 `Log(...)` call, so `ISanitized` values mask themselves in the log and nowhere else.
-`SanitizingLoggerFactory` applies it to every logger a factory creates, and
-`AddSanitizingLoggerFactory()` registers that in DI:
+`SanitizingLoggerFactory` applies that wrapper to every logger a factory creates — cheaper than
+wrapping each `ILoggerProvider`, and it covers providers registered later.
 
+| Registration | Use it when |
+|--------------|-------------|
+| `logging.AddSanitizingLoggerFactory()` | Masking is always on |
+| `logging.AddSanitizingLoggerFactory(bool mustSanitize)` | The decision is already made — e.g. from configuration |
+| `logging.AddSanitizingLoggerFactory(Func<IServiceProvider, bool> mustSanitizeResolver)` | The decision needs DI — e.g. "only on production instances" |
+| `factory.Sanitizing(bool mustSanitize = true)` | There's no `ILoggingBuilder` to hook, e.g. when assigning `StaticLog.Factory` |
+
+<!-- snippet: PartSan_AddSanitizingLoggerFactory -->
 ```cs
+var services = new ServiceCollection();
 services.AddLogging(logging => logging.AddSanitizingLoggerFactory(
-    c => c.GetRequiredService<HostInfo>().IsProductionInstance));
+    c => c.GetRequiredService<IHostEnvironment>().IsProduction()));
+
+// No ILoggingBuilder to hook? Wrap the factory itself
+StaticLog.Factory = StaticLog.Factory.Sanitizing();
 ```
+<!-- endSnippet -->
+
+`Sanitizing()` skips re-wrapping a factory that's already a `SanitizingLoggerFactory`, so calling
+it twice costs nothing; passing `false` leaves the factory exactly as it was.
 
 ::: warning Sanitize lazily, or not at all
 The scope only covers what is rendered **inside** the log call. `Log.LogInformation("{Query}",
@@ -287,6 +334,22 @@ the raw value. Pass something whose `ToString()` is deferred — a `SanitizedStr
 reaches a log.
 :::
 
+<!-- snippet: PartSan_LogArgument -->
+```cs
+var deferred = new SanitizedString<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSessionId");
+var eager = Sanitizer.MaybeSanitize<Sanitizers.RpcRequestQuery>("?s=Ab3fSomeLongSessionId");
+using (Sanitization.Begin()) { // What SanitizingLogger opens around Log(...)
+    WriteLine(deferred); // ToString() runs inside the scope
+    WriteLine(eager); // Already a plain string by the time the scope opens
+}
+```
+<!-- endSnippet -->
+
+```
+?s=Ab3f:297ccba4
+?s=Ab3fSomeLongSessionId
+```
+
 ## Sanitizer: Masking Without Wrapping
 
 Not every value wants to be a `SanitizedString<T>`. When a type already holds a plain `string` and
@@ -294,17 +357,20 @@ only one computed member needs masking, use `Sanitizer` directly:
 
 | API | Applies the sanitizer… |
 |-----|------------------------|
-| `sanitizer.Apply(value)` | Always |
-| `sanitizer.MaybeApply(value)` | Only when sanitization isn't suspended |
-| `Sanitizer.Sanitize<T>(value)` | Always |
-| `Sanitizer.MaybeSanitize<T>(value)` | Only when sanitization isn't suspended |
+| `sanitizer.Apply(value)` | Always — except to `null`, which passes through |
+| `sanitizer.MaybeApply(value)` | Only while `Sanitization.IsActive` |
+| `Sanitizer.Sanitize<T>(value)` | Always — the static form of `Apply` |
+| `Sanitizer.MaybeSanitize<T>(value)` | Only while `Sanitization.IsActive` |
 | `Sanitizer.Get<T>()` / `Sanitizer.Get(Type)` | — returns the single shared instance |
+
+All four masking APIs are annotated `[return: NotNullIfNotNull(nameof(value))]`, so a non-null
+argument gives a non-null result and the nullable analysis stays exact.
 
 `Get<T>()` and `Get(Type)` hand out the same instance, so two call sites can't end up with
 different policy. Sanitizers must be stateless and thread-safe.
 
-`MaybeSanitize<T>` is the one to reach for in a getter or a `ToString()` — it honors `Suspend()`
-without any wrapper type:
+`MaybeSanitize<T>` is the one to reach for in a getter or a `ToString()` — it honors the ambient
+scope without any wrapper type:
 
 <!-- snippet: PartSan_MaybeSanitize -->
 ```cs
@@ -322,14 +388,14 @@ public sealed class ConnectRequest(string path, string query)
 ```cs
 var request = new ConnectRequest("/rpc/ws", "?s=Ab3fSomeLongSessionId&f=mempack6");
 WriteLine(request.LogTitle);
-using (Sanitization.Suspend())
+using (Sanitization.Begin())
     WriteLine(request.LogTitle); // MaybeSanitize honors the scope, Sanitize wouldn't
 ```
 <!-- endSnippet -->
 
 ```
-/rpc/ws?s=Ab3f:297ccba4&f=mempack6
 /rpc/ws?s=Ab3fSomeLongSessionId&f=mempack6
+/rpc/ws?s=Ab3f:297ccba4&f=mempack6
 ```
 
 ### Don't do this in a serialized member
@@ -361,24 +427,28 @@ WriteLine(SystemJsonSerializer.Default.Write(bad));
 <!-- endSnippet -->
 
 ```json
-{"apiKey":"<<hidden>>"}
+{"apiKey":"\u003C\u003Chidden\u003E\u003E"}
 ```
 
-The mask went on the wire and into the database; the key is gone. `SanitizedString<T>` makes this
+That's `{"apiKey":"<<hidden>>"}` — System.Text.Json escapes `<` and `>` by default. The mask went
+on the wire and into the database; the key is gone. `SanitizedString<T>` makes this
 impossible — its converters read `Value` and never call `ToString()`. **If a member is serialized,
 never apply a sanitizer in its getter.**
 
 ## Writing Your Own
 
-Derive from `Sanitizer`, implement `Apply`, and name the type after what it leaves visible. Keep
-it stateless — a single instance is shared process-wide. A sanitizer with a parameterless
-constructor can be a `SanitizedString<>` type argument:
+Derive from `Sanitizer` and override `protected string Sanitize(string value)` — that's the single
+extension point. The public `Apply` is non-virtual and already filtered `null` out, so the override
+only ever sees a real string. Name the type after what it leaves visible, and keep it stateless — a
+single instance is shared process-wide. A sanitizer with a parameterless constructor can be a
+`SanitizedString<>` type argument:
 
 <!-- snippet: PartSan_CustomSanitizer -->
 ```cs
 public sealed class EmailDomain : Sanitizer
 {
-    public override string Apply(string value)
+    // Null never reaches here - Sanitizer.Apply passes it through
+    protected override string Sanitize(string value)
     {
         var atIndex = value.IndexOf('@', StringComparison.Ordinal);
         return atIndex < 0
@@ -388,6 +458,10 @@ public sealed class EmailDomain : Sanitizer
 }
 ```
 <!-- endSnippet -->
+
+The protected override and the public `static string? Sanitize<TSanitizer>(string?)` helper share a
+name on purpose: inside a sanitizer, `Sanitize<Sanitizers.Hidden>(value)` reads as "sanitize this
+with that policy", and the two never collide because their signatures differ.
 
 `UriQuery` carries its policy delegate as a constructor argument, so it has no parameterless
 constructor and **can't** be a `SanitizedString<>` type argument. Derive from it with a fixed
@@ -408,15 +482,16 @@ public sealed class DownloadQuery() : Sanitizers.UriQuery(SelectSanitizer)
 <!-- snippet: PartSan_CustomSanitizer_Use -->
 ```cs
 WriteLine(Sanitizer.Sanitize<EmailDomain>("alice@example.com"));
-WriteLine(new SanitizedString<EmailDomain>("alice@example.com").ToString());
 WriteLine(Sanitizer.Sanitize<DownloadQuery>("?id=17&token=Zm9vYmFy"));
+using (Sanitization.Begin())
+    WriteLine(new SanitizedString<EmailDomain>("alice@example.com"));
 ```
 <!-- endSnippet -->
 
 ```
 <<hidden>>@example.com
-<<hidden>>@example.com
 ?id=17&token=<<hidden>>
+<<hidden>>@example.com
 ```
 
 ## Tagging Interfaces
@@ -425,8 +500,11 @@ Two interfaces let infrastructure recognize sanitized values without knowing the
 
 | Interface | Meaning |
 |-----------|---------|
-| `ISanitized` | This type's `ToString()` takes `Sanitization.IsSuspended` into account |
+| `ISanitized` | This type's `ToString()` takes `Sanitization.IsActive` into account |
 | `ISanitizedString` | `ISanitized` + `Value` and `Sanitizer` — the non-generic face of `SanitizedString<T>`, for serializers and log formatters |
+
+`Session`, `User` and `SessionInfo` implement `ISanitized`, so they mask themselves in every log
+line a `SanitizingLogger` produces.
 
 ## Choosing a Sanitizer
 

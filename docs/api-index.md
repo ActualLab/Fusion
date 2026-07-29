@@ -41,12 +41,12 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `VersionSetExt` — `Where` / `IntersectScopes` for `VersionSet`
 
 ### Compliance — [PartSan.md](PartSan.md)
-- `Sanitizer` — maps a raw string to its renderable form; `Apply` / `MaybeApply`, one cached instance per type
+- `Sanitizer` — maps a raw string to its renderable form; non-virtual `Apply` / `MaybeApply` pass `null` through, custom policies override `protected Sanitize(string)`, one cached instance per type
 - `Sanitizers` — built-in policies: `Hidden`, `LengthHint`, `PrefixAndLengthHint`, `Fingerprint`, `SessionString`, `UriQuery`, `RpcRequestQuery`
 - `SanitizedString<TSanitizer>` (struct) — string member that masks when rendered, serializes raw
 - `ISanitized` / `ISanitizedString` — tags a type whose `ToString()` honors the ambient scope
-- `Sanitization` — ambient switch; **suspended by default**, `Begin()` / `Suspend()` scopes (thread-static, not `await`-flowing)
-- `SanitizingLogger`, `SanitizingLoggerFactory`, `AddSanitizingLoggerFactory()` — mask `ISanitized` values in the log and nowhere else
+- `Sanitization` — ambient switch; `IsActive` is **`false` by default**, `Begin()` / `Suspend()` return a `Scope` (thread-static, not `await`-flowing)
+- `SanitizingLogger`, `SanitizingLoggerFactory`, `AddSanitizingLoggerFactory()` / `Sanitizing()` — mask `ISanitized` values in the log and nowhere else
 
 ### Async Primitives — [PartCore-AsyncLock.md](PartCore-AsyncLock.md), [PartCore-Worker.md](PartCore-Worker.md)
 - `AsyncLock` — semaphore-based async lock with optional reentry detection

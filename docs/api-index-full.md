@@ -465,27 +465,27 @@ See [Sanitization: Secrets in Logs](PartSan.md).
 
 ###### `ISanitized`
 
-Tagging interface for types whose `ToString()` honors `Sanitization.IsSuspended` - i.e. that render a masked form inside a `Sanitization.Begin()` scope. `Session`, `User`, `SessionInfo` and the auth commands implement it.
+Tagging interface for types whose `ToString()` honors `Sanitization.IsActive` - i.e. that render a masked form inside a `Sanitization.Begin()` scope. `Session`, `User` and `SessionInfo` implement it.
 
 ###### `Sanitizer`
 
-Maps a raw string to the form that may be rendered. `Apply` masks unconditionally, `MaybeApply` respects the ambient scope; the static `Sanitize<T>` / `MaybeSanitize<T>` / `Get<T>` reach one cached, stateless instance per type. A class rather than a delegate so it can be a `SanitizedString<TSanitizer>` type argument.
+Maps a raw string to the form that may be rendered. The public `Apply` is non-virtual and masks unconditionally, passing `null` through so no policy has to remember to; `MaybeApply` masks only while `Sanitization.IsActive`; the static `Sanitize<T>` / `MaybeSanitize<T>` are their `[return: NotNullIfNotNull]` shorthands, and `Get<T>` / `Get(Type)` hand out one cached, stateless instance per type. A custom policy overrides `protected abstract string Sanitize(string value)` - the same name as the static helper, deliberately, and null never reaches it. A class rather than a delegate so it can be a `SanitizedString<TSanitizer>` type argument.
 
 ###### `Sanitizers`
 
-The built-in policies: `Hidden` (`<<hidden>>`), `LengthHint` (`<<* [8-15]>>`, a power-of-two bucket so the exact length never leaks), `PrefixAndLengthHint` (`<<ab* [8-15]>>`), `Fingerprint` (`<<a1b2c3d4>>` - equal values give equal output, so it's the wrong choice for anything low-entropy), `SessionString` (`Ab3f:9644ea3b`), `UriQuery` (per-parameter, selector-driven) and `RpcRequestQuery` (the deny-by-default policy for ActualLab's own RPC endpoints).
+The built-in policies, each named after what it leaves visible and each passing `null` and `""` through unchanged: `Hidden` (`<<hidden>>`), `LengthHint` (`<<* [8-15]>>`, a power-of-two bucket so the exact length never leaks), `PrefixAndLengthHint` (`<<ab* [8-15]>>`), `Fingerprint` (`<<a1b2c3d4>>` - equal values give equal output, so it's the wrong choice for anything low-entropy), `SessionString` (`Ab3f:9644ea3b`), `UriQuery` (per-parameter, selector-driven) and `RpcRequestQuery` (the deny-by-default policy for ActualLab's own RPC endpoints: `OpenParameterNames` verbatim, `SessionParameterNames` via `SessionString`, everything else via `PrefixAndLengthHint`).
 
 ###### `SanitizedString<TSanitizer>` (struct), `ISanitizedString`
 
-A drop-in for a `string` member that masks itself when rendered while serializing its raw value - converters ship for System.Text.Json, Newtonsoft.Json, MemoryPack, MessagePack and Nerdbank. `ISanitizedString` is the non-generic face, so a serializer or log formatter can read `Value` without knowing the policy.
+A drop-in for a `string` member whose `ToString()` masks while `Sanitization.IsActive` and serializes its raw value always - converters ship for System.Text.Json, Newtonsoft.Json, MemoryPack, MessagePack and Nerdbank. `ISanitizedString` is the non-generic face, so a serializer or log formatter can read `Value` without knowing the policy.
 
 ###### `SanitizingLogger`, `SanitizingLoggerFactory`, `SanitizingLoggerFactoryExt`
 
-An `ILogger` decorator that opens a `Sanitization.Begin()` scope around each `Log(...)` call, so `ISanitized` values mask themselves in the log and nowhere else; the factory applies it to every logger it creates, and `AddSanitizingLoggerFactory()` registers that in DI. The scope only covers what renders *inside* the call, so a log argument must defer its `ToString()` - pass a `SanitizedString<T>` or an `ISanitized`, not the result of an eager `MaybeSanitize<T>(...)`.
+An `ILogger` decorator that opens a `Sanitization.Begin()` scope around each `Log(...)` call, so `ISanitized` values mask themselves in the log and nowhere else; the factory applies it to every logger it creates - cheaper than wrapping each `ILoggerProvider`, and it covers providers registered later. `logging.AddSanitizingLoggerFactory()` registers that in DI, optionally taking a `bool` or a `Func<IServiceProvider, bool>`; `factory.Sanitizing(mustSanitize)` is the non-DI path (e.g. for `StaticLog.Factory`) and skips re-wrapping an already-wrapped factory. The scope only covers what renders *inside* the call, so a log argument must defer its `ToString()` - pass a `SanitizedString<T>` or an `ISanitized`, not the result of an eager `MaybeSanitize<T>(...)`.
 
 ###### `Sanitization`
 
-The ambient switch: sanitization is **suspended by default**, so a masking getter stays readable to serializers, which go through that same getter. `Begin()` turns masking on for the current thread and `Suspend()` turns it back off; both return a `Scope` (thread-static, so it does **not** flow across an `await`) and override `IsGloballySuspended`, the process-wide default.
+The ambient switch, and it is **off by default**: `IsActive` is a `[ThreadStatic]` `false`, so a masking getter - written as `get => Sanitizer.MaybeSanitize<T>(field)` - stays readable to serializers, which go through that same getter. `Begin()` turns masking on for the current thread and `Suspend()` turns it back off (nestable inside `Begin()`); both return a `Scope`, a `readonly struct` that restores the previous state on `Dispose`. Thread-static, so a scope does **not** flow across an `await`.
 
 ### ActualLab.Concurrency
 
