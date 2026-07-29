@@ -30,7 +30,7 @@ public static class TextTypeSerializer
         get => _fromBytesCache.Capacity;
         set {
             lock (StaticLock)
-                _fromBytesCache = new PruningCache<ByteString, Type?>(value);
+                Volatile.Write(ref _fromBytesCache, new PruningCache<ByteString, Type?>(value));
         }
     }
     public static int FromBytesCacheSize => _fromBytesCache.Count;

@@ -3,8 +3,8 @@ using System.Globalization;
 namespace ActualLab.Compliance;
 
 // Sanitizers that know something about the shape of what they're sanitizing, rather than
-// treating it as an opaque string. See Sanitizer.Basic.cs for the shape-agnostic ones.
-public abstract partial class Sanitizer
+// treating it as an opaque string. See Sanitizers.Basic.cs for the shape-agnostic ones.
+public static partial class Sanitizers
 {
     // Nested types
 
@@ -18,7 +18,7 @@ public abstract partial class Sanitizer
         public const string PrefixSeparator = ":";
         public const int PrefixLength = 4;
 
-        public override string Sanitize(string value)
+        public override string Apply(string value)
         {
             if (value.Length == 0)
                 return value;
@@ -35,11 +35,11 @@ public abstract partial class Sanitizer
     /// Sanitizes a URL query parameter by parameter: the selector maps a parameter name to the
     /// <see cref="Sanitizer"/> for its value, or to <c>null</c> to leave it alone. Having no
     /// parameterless constructor, it can't be a <see cref="SanitizedString{TSanitizer}"/> argument -
-    /// derive with a fixed policy, as <see cref="Sanitizer.RpcRequestQuery"/> does.
+    /// derive with a fixed policy, as <see cref="RpcRequestQuery"/> does.
     /// </summary>
     public class UriQuery(Func<string, Sanitizer?> parameterSanitizerSelector) : Sanitizer
     {
-        public override string Sanitize(string value)
+        public override string Apply(string value)
         {
             if (value.Length == 0)
                 return value;
@@ -66,7 +66,7 @@ public abstract partial class Sanitizer
                 var name = item[..equalsIndex];
                 var itemValue = item[(equalsIndex + 1)..];
                 if (parameterSanitizerSelector.Invoke(name) is { } sanitizer)
-                    itemValue = sanitizer.Sanitize(itemValue);
+                    itemValue = sanitizer.Apply(itemValue);
                 sb.Append(name).Append('=').Append(itemValue);
             }
             return sb.ToStringAndRelease();
@@ -74,7 +74,7 @@ public abstract partial class Sanitizer
     }
 
     /// <summary>
-    /// The <see cref="Sanitizer.UriQuery"/> policy for ActualLab's own RPC endpoints: the parameters that
+    /// The <see cref="UriQuery"/> policy for ActualLab's own RPC endpoints: the parameters that
     /// carry a credential are masked, everything else is left readable.
     /// </summary>
     public sealed class RpcRequestQuery() : UriQuery(SelectSanitizer)

@@ -4,58 +4,55 @@ namespace ActualLab.Compliance;
 // So a scope doesn't flow across an await - don't wrap awaited work in one.
 
 /// <summary>
-/// Controls whether <see cref="ISanitized"/> values render their masked form.
-/// Mirrors <c>Invalidation</c> in Fusion: an ambient flag plus scopes that set it.
+/// Controls whether <see cref="ISanitized"/> values render their masked form. Active unless
+/// suspended, so a value is masked by default; mirrors <c>Invalidation</c> in Fusion in that it's
+/// an ambient flag plus scopes that set it.
 /// </summary>
 public static class Sanitization
 {
-    [ThreadStatic] private static State _state;
+    [ThreadStatic] private static bool _isSuspended;
+    // Volatile, so a write from one thread is published to the readers on all the others -
+    // and a plain read on this path is as cheap as a non-volatile one on x64
+    private static volatile bool _isGloballySuspended;
 
-    // What IsActive falls back to when no scope is in effect
-    public static bool IsAlwaysActive { get; set; } = true;
-
-    public static bool IsActive {
+    // A debugging escape hatch: suspends sanitization process-wide, whatever the scopes say
+    public static bool IsGloballySuspended {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => _state switch {
-            State.Active => true,
-            State.Suspended => false,
-            _ => IsAlwaysActive,
-        };
+        get => _isGloballySuspended;
+        set => _isGloballySuspended = value;
+    }
+
+    public static bool IsSuspended {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _isGloballySuspended || _isSuspended;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Scope Begin()
-        => new(State.Active);
+    public static Scope Suspend()
+        => new(true);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Scope Suspend()
+    public static Scope Resume()
     {
-        // Overrides IsAlwaysActive, which is what lets a test read a value it just wrote
-        return new Scope(State.Suspended);
+        // Doesn't override IsGloballySuspended - that one is meant to win everywhere
+        return new Scope(false);
     }
 
     // Nested types
 
-    internal enum State : byte
-    {
-        Unset = 0,
-        Active,
-        Suspended,
-    }
-
     public readonly struct Scope : IDisposable
     {
-        private readonly State _oldState;
+        private readonly bool _oldIsSuspended;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal Scope(State state)
+        internal Scope(bool isSuspended)
         {
-            _oldState = _state;
-            _state = state;
+            _oldIsSuspended = _isSuspended;
+            _isSuspended = isSuspended;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
-            => _state = _oldState;
+            => _isSuspended = _oldIsSuspended;
     }
 }

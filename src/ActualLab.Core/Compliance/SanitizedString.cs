@@ -47,7 +47,7 @@ public readonly struct SanitizedString<TSanitizer>(string? value)
     }
 
     public override string ToString()
-        => Sanitization.IsActive ? Sanitizer.Get<TSanitizer>().Sanitize(Value) : Value;
+        => Sanitizer.MaybeSanitize<TSanitizer>(Value);
 
     // Conversion
 
