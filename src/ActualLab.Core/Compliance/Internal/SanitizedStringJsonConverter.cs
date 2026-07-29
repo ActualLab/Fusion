@@ -12,6 +12,7 @@ public class SanitizedStringJsonConverter : JsonConverterFactory
         => typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(SanitizedString<>);
 
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume JSON converter code is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume JSON converter code is preserved")]
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
         => ConverterCache.GetOrAdd(typeToConvert, static t => {
             if (!(t.IsGenericType && t.GetGenericTypeDefinition() == typeof(SanitizedString<>)))

@@ -40,7 +40,7 @@ public static class RpcWebSocketServerOriginValidators
         // is "http" unless forwarded headers are wired up, while the browser still reports "https".
         // The Host header - which Origin's host must match - survives such a proxy intact.
         var host = request.Host;
-        if (!string.Equals(TrimBrackets(originUri.Host), TrimBrackets(host.Host), StringComparison.OrdinalIgnoreCase))
+        if (!TrimBrackets(originUri.Host).Equals(TrimBrackets(host.Host), StringComparison.OrdinalIgnoreCase))
             return false;
 
         return NormalizePort(originUri.Port) == NormalizePort(host.Port);
@@ -53,10 +53,11 @@ public static class RpcWebSocketServerOriginValidators
     private static int? NormalizePort(int? port)
         => port is null or 80 or 443 ? null : port;
 
-    private static string TrimBrackets(string host)
+    // A span rather than a string: this runs per connection, and the only consumer compares it
+    private static ReadOnlySpan<char> TrimBrackets(string host)
         => host is ['[', _, ..] && host[^1] == ']'
-            ? host.Substring(1, host.Length - 2)
-            : host;
+            ? host.AsSpan(1, host.Length - 2)
+            : host.AsSpan();
 
     private static string Normalize(string origin)
         => origin.TrimEnd('/').ToLowerInvariant();

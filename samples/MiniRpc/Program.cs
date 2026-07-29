@@ -1,4 +1,4 @@
-﻿using System.Runtime.Serialization;
+using System.Runtime.Serialization;
 using ActualLab.Fusion.Server;
 using ActualLab.IO;
 using ActualLab.Rpc;
@@ -7,6 +7,7 @@ using MemoryPack;
 using MessagePack;
 using Microsoft.AspNetCore.Builder;
 using static System.Console;
+using ActualLab.Compliance;
 
 #pragma warning disable ASP0000
 
@@ -48,6 +49,7 @@ async Task RunClient()
             logging.ClearProviders();
             if (useLogging)
                 logging.SetMinimumLevel(LogLevel.Debug).AddConsole();
+            logging.AddSanitizingLoggerFactory();
         })
         .AddFusion(fusion => {
             fusion.Rpc.AddWebSocketClient(baseUrl);

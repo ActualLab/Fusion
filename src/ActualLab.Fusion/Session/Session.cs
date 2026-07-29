@@ -168,7 +168,16 @@ public sealed partial class Session : IHasId<string>,
     // Delegated so the format lives in one place - IdPrefixLength/IdPrefixSeparator above
     // are what SessionString is built to match
     private string ComputeSanitizedId()
-        => Sanitizer.Sanitize<Sanitizers.SessionString>(Id);
+    {
+        // Must be in sync with Sanitizers.SessionString.Apply impl.
+        if (Id.Length == 0)
+            return Id;
+
+        var prefix = Id.Length <= Sanitizers.SessionString.PrefixLength
+            ? Id
+            : Id[..Sanitizers.SessionString.PrefixLength];
+        return string.Concat(prefix, Sanitizers.SessionString.PrefixSeparator, Hash);
+    }
 
     private string ComputeHash()
         => ((uint)Id.GetXxHash3()).ToString("x8", CultureInfo.InvariantCulture);

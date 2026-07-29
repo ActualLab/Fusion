@@ -47,6 +47,9 @@ public static class RpcWebSocketServerOriginValidators
         return NormalizePort(originUri.Port) == NormalizePort(port);
     }
 
+    // CA1846 wants AsSpan here, but int.TryParse's span overload doesn't exist on net472/net48,
+    // which this project targets - System.Memory brings Span, not the parse overloads
+#pragma warning disable CA1846
     private static (string Host, int? Port) ParseHost(string hostAndPort)
     {
         var colonIndex = hostAndPort.LastIndexOf(':');

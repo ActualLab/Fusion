@@ -1,3 +1,4 @@
+using ActualLab.Compliance;
 namespace Samples.HelloCart;
 
 public static class AppLogging
@@ -14,6 +15,7 @@ public static class AppLogging
             logging.AddFilter("ActualLab.Fusion.EntityFramework.Operations.LogProcessing", LogLevel.Information);
             logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Connection", LogLevel.Warning);
             logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+            logging.AddSanitizingLoggerFactory();
         });
     }
 }

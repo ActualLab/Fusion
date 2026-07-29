@@ -18,7 +18,7 @@ public static partial class Sanitizers
         public const string PrefixSeparator = ":";
         public const int PrefixLength = 4;
 
-        public override string Apply(string value)
+        protected override string Sanitize(string value)
         {
             if (value.Length == 0)
                 return value;
@@ -39,7 +39,7 @@ public static partial class Sanitizers
     /// </summary>
     public class UriQuery(Func<string, Sanitizer?> parameterSanitizerSelector) : Sanitizer
     {
-        public override string Apply(string value)
+        protected override string Sanitize(string value)
         {
             if (value.Length == 0)
                 return value;

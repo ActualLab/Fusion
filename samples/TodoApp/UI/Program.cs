@@ -10,6 +10,7 @@ using ActualLab.Trimming;
 using MessagePack.Formatters;
 using MessagePack.ImmutableCollection;
 using Samples.TodoApp.UI;
+using ActualLab.Compliance;
 
 /*
 Console.WriteLine(CpuTimestamp.TickFrequency);
@@ -45,7 +46,7 @@ try {
     var builder = WebAssemblyHostBuilder.CreateDefault(args);
     ClientStartup.ConfigureServices(builder.Services, builder);
     var host = builder.Build();
-    StaticLog.Factory = host.Services.LoggerFactory();
+    StaticLog.Factory = host.Services.LoggerFactory().Sanitizing();
     ComponentInfo.DebugLog = StaticLog.For<ComponentInfo>();
     await host.RunAsync();
 }

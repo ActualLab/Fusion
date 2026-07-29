@@ -9,27 +9,21 @@ public abstract class Sanitizer
 {
     private static readonly ConcurrentDictionary<Type, Sanitizer> Cache = new();
 
-    // Instance methods
-
-    public abstract string Apply(string value);
+    // Static (Maybe)Sanitize
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public string MaybeApply(string value)
-        => Sanitization.IsActive ? Apply(value) : value;
-
-    // (Maybe)Sanitize
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string Sanitize<TSanitizer>(string value)
+    [return: NotNullIfNotNull(nameof(value))]
+    public static string? Sanitize<TSanitizer>(string? value)
         where TSanitizer : Sanitizer, new()
         => Get<TSanitizer>().Apply(value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string MaybeSanitize<TSanitizer>(string value)
+    [return: NotNullIfNotNull(nameof(value))]
+    public static string? MaybeSanitize<TSanitizer>(string? value)
         where TSanitizer : Sanitizer, new()
         => Sanitization.IsActive ? Get<TSanitizer>().Apply(value) : value;
 
-    // Get
+    // Static Get
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TSanitizer Get<TSanitizer>()
@@ -44,6 +38,25 @@ public abstract class Sanitizer
 
             return (Sanitizer)t.CreateInstance();
         });
+
+    // Instance methods
+
+    // Null is passed through rather than masked: there's nothing to reveal, and a "<<hidden>>"
+    // standing in for an absent value would misreport what the object actually holds.
+    // Filtering it here means no implementation has to remember to.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [return: NotNullIfNotNull(nameof(value))]
+    public string? Apply(string? value)
+        => value is null ? null : Sanitize(value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [return: NotNullIfNotNull(nameof(value))]
+    public string? MaybeApply(string? value)
+        => Sanitization.IsActive ? Apply(value) : value;
+
+    // Protected methods
+
+    protected abstract string Sanitize(string value);
 
     // Nested types
 

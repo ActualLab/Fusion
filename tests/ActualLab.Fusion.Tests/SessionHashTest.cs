@@ -60,7 +60,7 @@ public class SessionHashTest
         id.Length.Should().BeGreaterThan(Session.IdPrefixLength);
 
         var s = session.ToString();
-        s.Should().Be(id.Substring(0, Session.IdPrefixLength) + Session.IdPrefixSeparator + session.Hash);
+        s.Should().Be(string.Concat(id.AsSpan(0, Session.IdPrefixLength), Session.IdPrefixSeparator, session.Hash));
         s.Should().NotContain(id);
         // Nothing beyond the intended prefix leaks: the 5th+ chars of Id must be absent
         s.Should().NotContain(id.Substring(0, Session.IdPrefixLength + 1));

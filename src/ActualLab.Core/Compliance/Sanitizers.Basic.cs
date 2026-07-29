@@ -12,7 +12,7 @@ public static partial class Sanitizers
     /// <summary>Reveals nothing: <c>"&lt;&lt;hidden&gt;&gt;"</c>.</summary>
     public sealed class Hidden : Sanitizer
     {
-        public override string Apply(string value)
+        protected override string Sanitize(string value)
             => value.Length == 0 ? value : HiddenValue;
     }
 
@@ -22,7 +22,7 @@ public static partial class Sanitizers
     /// </summary>
     public sealed class LengthHint : Sanitizer
     {
-        public override string Apply(string value)
+        protected override string Sanitize(string value)
             => value.Length == 0 ? value : $"<<* {LengthRange.Get(value.Length)}>>";
     }
 
@@ -34,7 +34,7 @@ public static partial class Sanitizers
     {
         public const int PrefixLength = 2;
 
-        public override string Apply(string value)
+        protected override string Sanitize(string value)
         {
             var length = value.Length;
             if (length == 0)
@@ -53,7 +53,7 @@ public static partial class Sanitizers
     /// </summary>
     public sealed class Fingerprint : Sanitizer
     {
-        public override string Apply(string value)
+        protected override string Sanitize(string value)
             => value.Length == 0
                 ? value
                 : $"<<{((uint)value.GetXxHash3()).ToString("x8", CultureInfo.InvariantCulture)}>>";

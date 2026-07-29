@@ -20,7 +20,7 @@ public class RpcDefaultCallTracer : RpcCallTracer
     public readonly Counter<long> InboundCancellationCounter;
     public readonly Counter<long> InboundIncompleteCounter;
     public readonly Histogram<double> InboundDurationHistogram;
-    public bool IsEnabled {
+    public static bool IsEnabled {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => RpcInstruments.IsInboundEnabled;
     }

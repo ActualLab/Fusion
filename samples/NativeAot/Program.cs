@@ -4,6 +4,7 @@ using ActualLab.Rpc;
 using MemoryPack;
 using MessagePack;
 using static System.Console;
+using ActualLab.Compliance;
 
 #pragma warning disable IL3050
 
@@ -32,6 +33,7 @@ var services = new ServiceCollection()
     .AddLogging(l => {
         l.SetMinimumLevel(LogLevel.Debug);
         l.AddSimpleConsole();
+        l.AddSanitizingLoggerFactory();
     })
     .AddFusion(fusion => {
         fusion.Rpc.AddWebSocketClient();

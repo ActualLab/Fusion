@@ -46,7 +46,7 @@ public partial record AuthBackend_SetSessionOptions(
         // Options is whatever the caller put there - same reasoning as AuthBackend_SetupSession
         builder.Append("Session = ").Append(Session)
             .Append(", Options = ")
-            .Append(Sanitization.IsActive ? Sanitizers.HiddenValue : Options.ToString())
+            .Append(Sanitizer.MaybeSanitize<Sanitizers.Hidden>(Options.ToString()))
             .Append(", ExpectedVersion = ").Append(ExpectedVersion);
         return true;
     }

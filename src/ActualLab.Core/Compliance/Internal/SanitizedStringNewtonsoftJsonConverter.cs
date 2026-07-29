@@ -17,6 +17,7 @@ public class SanitizedStringNewtonsoftJsonConverter : Newtonsoft.Json.JsonConver
         => writer.WriteValue(((ISanitizedString?)value)?.Value);
 
     [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume JSON converter code is preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "We assume JSON converter code is preserved")]
     public override object ReadJson(
         JsonReader reader, Type objectType, object? existingValue, Newtonsoft.Json.JsonSerializer serializer)
         => objectType.CreateInstance((string?)reader.Value);

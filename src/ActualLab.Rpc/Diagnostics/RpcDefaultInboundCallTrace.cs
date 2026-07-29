@@ -19,7 +19,7 @@ public sealed class RpcDefaultInboundCallTrace(RpcDefaultCallTracer tracer, Acti
             Activity.Finalize(error, call.CallCancelToken);
             Activity.DisposeNonCurrent();
         }
-        if (!tracer.IsEnabled)
+        if (!RpcDefaultCallTracer.IsEnabled)
             return;
 
         var callStats = new RpcCallSummary(call, error);

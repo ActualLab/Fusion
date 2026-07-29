@@ -36,6 +36,7 @@ using Samples.TodoApp.Host.Components.Pages;
 using Samples.TodoApp.Services;
 using Samples.TodoApp.Services.Db;
 using Samples.TodoApp.UI;
+using ActualLab.Compliance;
 
 // Constrain thread pool to 1 thread to debug possible issues with async logic
 // ThreadPool.SetMinThreads(1, 1);
@@ -108,6 +109,9 @@ void ConfigureLogging()
         logging.ClearProviders();
         logging.AddConsole();
         logging.SetMinimumLevel(LogLevel.Debug);
+        // Masks Session, User and the auth commands in the log - and only there.
+        // Drop this line (or pass false) to see raw values while debugging.
+        logging.AddSanitizingLoggerFactory();
     });
 }
 

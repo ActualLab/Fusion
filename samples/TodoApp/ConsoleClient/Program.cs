@@ -1,6 +1,7 @@
 using ActualLab.Fusion.UI;
 using Samples.TodoApp.Abstractions;
 using static System.Console;
+using ActualLab.Compliance;
 
 #pragma warning disable MA0004 // Use .ConfigureAwait(...)
 
@@ -45,6 +46,7 @@ IServiceProvider CreateServiceProvider()
         logging.ClearProviders();
         logging.SetMinimumLevel(LogLevel.Warning);
         logging.AddConsole();
+        logging.AddSanitizingLoggerFactory();
     });
 
     var fusion = services.AddFusion();

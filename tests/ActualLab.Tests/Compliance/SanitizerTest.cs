@@ -35,6 +35,29 @@ public class SanitizerTest
     }
 
     [Fact]
+    public void NullPassesThrough()
+    {
+        // There's nothing to reveal, and a "<<hidden>>" standing in for an absent value would
+        // misreport what the object holds. The base class filters it, so no policy can mask it.
+        using var _ = Sanitization.Begin();
+        foreach (var sanitizer in AllSanitizers()) {
+            sanitizer.Apply(null).Should().BeNull(sanitizer.GetType().Name);
+            sanitizer.MaybeApply(null).Should().BeNull(sanitizer.GetType().Name);
+        }
+
+        Sanitizer.Sanitize<Sanitizers.Hidden>(null).Should().BeNull();
+        Sanitizer.MaybeSanitize<Sanitizers.Hidden>(null).Should().BeNull();
+    }
+
+    [Fact]
+    public void EmptyPassesThroughToo()
+    {
+        using var _ = Sanitization.Begin();
+        foreach (var sanitizer in AllSanitizers())
+            sanitizer.Apply("").Should().Be("", sanitizer.GetType().Name);
+    }
+
+    [Fact]
     public void SessionStringMatchesSessionToString()
     {
         // The format is Session.ToString()'s: a 4-char prefix, ':' and the bare XxHash3.
@@ -125,4 +148,17 @@ public class SanitizerTest
 
         sanitizer.Apply("?a=1&b=2").Should().Be("?a=" + Sanitizers.HiddenValue + "&b=2");
     }
+
+    // Private methods
+
+    private static Sanitizer[] AllSanitizers()
+        => [
+            Sanitizer.Get<Sanitizers.Hidden>(),
+            Sanitizer.Get<Sanitizers.LengthHint>(),
+            Sanitizer.Get<Sanitizers.PrefixAndLengthHint>(),
+            Sanitizer.Get<Sanitizers.Fingerprint>(),
+            Sanitizer.Get<Sanitizers.SessionString>(),
+            Sanitizer.Get<Sanitizers.RpcRequestQuery>(),
+            new Sanitizers.UriQuery(_ => Sanitizer.Get<Sanitizers.Hidden>()),
+        ];
 }

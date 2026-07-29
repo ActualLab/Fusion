@@ -4,6 +4,9 @@ using MessagePack.Formatters;
 
 namespace ActualLab.Serialization.Internal;
 
+// RawItems is [Obsolete] to keep it out of normal use - a serializer is exactly who it exists for
+#pragma warning disable CS0618
+
 /// <summary>
 /// A MessagePack formatter for <see cref="PropertyBag{TSchema}"/>.
 /// </summary>
