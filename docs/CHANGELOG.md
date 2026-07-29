@@ -11,9 +11,9 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 14.2.TBD | npm: 14.2.23
+## 14.2.34+ae17db7ca | npm: 14.2.23
 
-Release date: unreleased
+Release date: 2026-07-29
 
 The outcome of a second full security and severe-bug review of the library: 120
 findings, of which both CRITICALs and all 35 HIGHs are now closed. Almost
