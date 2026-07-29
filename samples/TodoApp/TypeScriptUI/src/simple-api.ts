@@ -9,14 +9,16 @@ export interface ISimpleService {
     Ping(message: string): void;  // noWait
 }
 
+// Nested streams arrive as the raw wire value - a stream reference, not a live stream.
+// Convert them with toRpcStream(value, peer); see RpcExampleApp.readTable/readRow.
 export interface Table<T> {
   title: string;
-  rows: AsyncIterable<Row<T>>;  // resolved from stream ref string
+  rows: unknown;  // -> RpcStream<Row<T>>
 }
 
 export interface Row<T> {
   index: number;
-  items: AsyncIterable<T>;  // resolved from stream ref string
+  items: unknown;  // -> RpcStream<T>
 }
 
 export const SimpleServiceDef = defineRpcService("ISimpleService", {
