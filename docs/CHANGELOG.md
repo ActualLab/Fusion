@@ -11,7 +11,7 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 14.2 | npm: 14.2.0
+## 14.2.X (upcoming)
 
 Release date: unreleased
 
@@ -105,8 +105,54 @@ alongside NuGet.
   bumped, so old entries are simply ignored. Override the location via
   `FileSystemPluginFinder.Options.CacheDir` if you relied on the old one.*
 
+- **`INotLogged` is gone.** It suppressed a command's contents everywhere it could
+  be logged, which cost four near-identical branches at the log sites and threw
+  away the whole command even when one member was sensitive. A command that carries
+  a credential now redacts itself instead, so the log still says which command
+  failed and what else was in it. `CompletionProducer.Options.IgnoreNotLogged` goes
+  with it &mdash; it existed only to opt back out of the suppression. *Migration:
+  implement `ISanitized` and override `ToString()`/`PrintMembers` on the command,
+  masking the members that need it &mdash; see `AuthBackend_SetupSession`. Note that
+  removing the interface is silent: a command that relied on it starts being logged
+  in full with no compiler error.*
+- **`RedirectUrlChecker` is now `RedirectUrlHelper`.** The delegate could only
+  accept or reject, so a rejected `returnUrl` was silently replaced with `"/"` &mdash;
+  and since `IUrlHelper.IsLocalUrl` rejects every absolute URL, including a
+  same-origin one addressing a page of this very app, that quietly broke the
+  sign-in and sign-out popups and the render-mode switcher. The replacement is a
+  DI-registered class whose `Normalize` reduces an accepted URL to a relative one
+  rather than discarding it, with `AllowedHosts` and `MustStripHost` as init-only
+  options. *Migration: replace a custom `RedirectUrlChecker` registration with a
+  `RedirectUrlHelper` subclass overriding `Check`;
+  `FusionWebServerBuilder.DefaultRedirectUrlCheckerFactory` is now
+  `DefaultRedirectUrlHelperFactory`. An absolute `returnUrl` that used to end up at
+  `"/"` now lands on its own path.*
+- **`Session.ToString()` and `User.ToString()` no longer print their secrets.**
+  `Session` renders a 4-char prefix plus a hash; `User` prints its claim *names*
+  and identity *schemas* instead of their values &mdash; `User.Identities` maps an
+  identity to that provider's secret, and a whole `User` travels inside
+  `AuthBackend_SignIn`. Serialization is untouched, so nothing on the wire or in the
+  database changes. *Migration: none, unless you parsed either `ToString()`. Wrap a
+  diagnostic in `Sanitization.Suspend()` to get the full contents back.*
+
 ### Added
 
+- **A sanitization framework** (`ActualLab.Compliance`). `Sanitizer` maps a raw
+  string to the form that may be rendered, `Sanitizers` supplies the policies
+  (`Hidden`, `LengthHint`, `PrefixAndLengthHint`, `Fingerprint`, `SessionString`,
+  `UriQuery`, `RpcRequestQuery`), and `SanitizedString<TSanitizer>` is a drop-in
+  for a `string` member that redacts itself when rendered while serializing
+  byte-identically on every supported format. `Sanitization.Suspend()` /
+  `IsGloballySuspended` are the escape hatches. `ISanitized` marks a type whose
+  `ToString()` respects them. One wart worth knowing: a `[MemoryPackable]` type
+  holding a `SanitizedString<T>` needs `[MemoryPackAllowSerialize]` on the member,
+  or it fails to compile with `MEMPACK019`. See
+  [Sanitization](PartSan.md).
+- **RPC request queries are sanitized by an allow-list.** `RpcQuerySanitizer` is
+  replaced by `Sanitizers.RpcRequestQuery`, which is deny-by-default: a parameter
+  is readable only if listed, so one added later can't start leaking a credential
+  because nobody remembered to mask it. Session parameters render as
+  `Session.ToString()` does, everything else as a prefix and length bucket.
 - **Reconnect proof of possession** (.NET and TypeScript). The connect URL's
   `clientId` used to be the whole peer-selection key, and the incumbent connection
   was disconnected before anything was verified &mdash; so anyone who read a
@@ -153,6 +199,33 @@ alongside NuGet.
 
 ### Fixed
 
+- Sign-in, sign-out and the render-mode switch all redirected to the app's home
+  page. `fusionAuth.js` built its `returnUrl` with
+  `new URL(..., document.baseURI).href` and `RenderModeHelper` passed
+  `NavigationManager.Uri`, both absolute &mdash; and the server's redirect check
+  rejects absolute URLs, so all three silently fell back to `"/"`. The visible
+  symptom differed per flow because `ServerAuthHelper` gates them differently:
+  `AllowSignIn` is `AllowAnywhere`, so sign-in worked and only its popup failed to
+  close, while `AllowChange` and `AllowSignOut` require the `/fusion/close` request
+  that never arrived &mdash; so sign-out cleared the ASP.NET cookie while leaving the
+  Fusion session authenticated, and "sign out everywhere" then churned sessions as
+  `IsSignOutForced` invalidated each one `SessionMiddleware` minted. Both callers
+  now send relative URLs, and `RedirectUrlHelper` recovers an absolute one anyway.
+- Publication ordering on lock-free read paths. `Computed.TrySetOutput` stored the
+  `Consistent` flag *before* `_output`, so a reader that saw `Consistent` could read
+  a default output and return `null` from a compute method that had succeeded &mdash;
+  a store-store ordering error x64 doesn't mask. `LazySlim` (all three arities),
+  `DbHub`, `RedisTaskSub` and `RpcConfiguration.Freeze` had broken double-checked
+  locking: a lock orders nothing on its own, because `Monitor.Exit` fences before it
+  exits, leaving the constructor's writes and the reference store mutually
+  unordered. `RandomInt32/64Generator` read their shared buffer after releasing the
+  lock, so two concurrent callers could get the same value from a generator whose
+  point is cryptographic randomness.
+- `RpcPeer.SetConnectionState` released its lock twice. The "state is already final"
+  early return sat inside the `try`, so it exited the lock and then ran the
+  `finally`, which performed the whole transition &mdash; publishing the transport,
+  marking states, cancelling the old reader token source &mdash; with no lock held on a
+  path where nothing had transitioned, then exited the lock again.
 - Wire-driven type resolution and its caches. Type markers were cached under a
   `ByteString` key that aliased the pooled transport buffer, so the next frame
   overwrote it &mdash; the entry became permanently unreachable and the correct marker
