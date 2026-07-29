@@ -68,6 +68,13 @@ public interface IBackendCommand<TResult> : ICommand<TResult>, IBackendCommand;
 
 4. **Peer Validation**: When an RPC call arrives, the system checks if the calling peer is a backend peer. If a non-backend peer attempts to invoke a backend command, the call is rejected.
 
+> **Upgrading to v14.2?** Point 4 only started working in v14.2. The check compared the
+> interface's full name against a misspelled constant, so `isBackendCommand` was always
+> `false` and `IsBackend` collapsed to the service-level flag alone &mdash; the marker had been
+> decorative in every release since v10.3. An application that was (unknowingly) calling an
+> `IBackendCommand` from a non-backend peer will now be rejected. That's the point of the gate,
+> but it's a behavioural break: audit which of your commands carry the marker before upgrading.
+
 **When to use:**
 
 ```cs

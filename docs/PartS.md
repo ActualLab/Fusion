@@ -255,7 +255,7 @@ Adds type decoration for polymorphism:
 <!-- snippet: PartS_TypeDecoratingUniSerialized -->
 ```cs
 // Used by PropertyBag for storing heterogeneous values
-var item = TypeDecoratingUniSerialized.New<object>(myValue);
+var item = TypeDecoratingUniSerialized.New<TypeSchema.Any, object>(myValue);
 ```
 <!-- endSnippet -->
 

@@ -222,6 +222,11 @@ Immutable handshake message exchanged when a connection is established. It enabl
 | `RemoteHubId` | Guid of the remote RpcHub |
 | `ProtocolVersion` | RPC protocol version |
 | `Index` | Handshake sequence number |
+| `Secret` | Server &rarr; client only: the per-peer reconnect secret. A client always sends `null` here, and the server ignores whatever a client sends. See [`RequireReconnectProof`](./PartR-CO.md#requirereconnectproof) |
+
+`RemoteApiVersionSet` is validated on arrival: at most `MaxApiVersionSetCount` (16) scopes and
+`MaxApiVersionSetLength` (512) characters, since it arrives pre-authentication and keys a
+process-wide method-resolver cache.
 
 ## `RpcMessage`
 

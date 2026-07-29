@@ -21,8 +21,8 @@ Each combination of these is packaged as an `RpcSerializationFormat`.
 |--------|-----|-------------|
 | `SystemJsonV5` | `json5` | System.Text.Json with V4 arguments, V3 messages |
 | `SystemJsonV5NP` | `json5np` | System.Text.Json, no-polymorphism variant (plain JSON, no `TypeRef` wrapper) |
-| `NewtonsoftJsonV5` | `njson5` | Newtonsoft.Json with V4 arguments, V3 messages |
-| `NewtonsoftJsonV5NP` | `njson5np` | Newtonsoft.Json, no-polymorphism variant (plain JSON, no `TypeRef` wrapper) |
+| `NewtonsoftJsonV5` | `njson5` | Newtonsoft.Json with V4 arguments, V3 messages. **Not client-selectable by default** &mdash; see [Client-Selectable Formats](#client-selectable-formats) |
+| `NewtonsoftJsonV5NP` | `njson5np` | Newtonsoft.Json, no-polymorphism variant (plain JSON, no `TypeRef` wrapper). **Not client-selectable by default** |
 
 The "NP" (no-polymorphism) variants skip the type-decorating `TypeRef` wrapper entirely, producing plain JSON without type metadata. Use them when all argument and result types are concrete (non-abstract) and no polymorphic dispatch is needed.
 
@@ -32,8 +32,8 @@ The "NP" (no-polymorphism) variants skip the type-decorating `TypeRef` wrapper e
 |-----------------|-----|-----------------------|
 | `MemoryPackV5`  | `mempack5` | V4 args, V4 messages  |
 | `MemoryPackV5C` | `mempack5c` | Compact variant of V5 |
-| `MemoryPackV6`  | `mempack5` | V4 args, V5 messages  |
-| `MemoryPackV6C` | `mempack5c` | Compact variant of V5 |
+| `MemoryPackV6`  | `mempack6` | V4 args, V5 messages  |
+| `MemoryPackV6C` | `mempack6c` | Compact variant of V6 |
 
 ### Binary Formats (MessagePack)
 
@@ -41,8 +41,8 @@ The "NP" (no-polymorphism) variants skip the type-decorating `TypeRef` wrapper e
 |------------------|-----|-----------------------|
 | `MessagePackV5`  | `msgpack5` | V4 args, V4 messages  |
 | `MessagePackV5C` | `msgpack5c` | Compact variant of V5 |
-| `MessagePackV6`  | `msgpack5` | V4 args, V5 messages  |
-| `MessagePackV6C` | `msgpack5c` | Compact variant of V5 |
+| `MessagePackV6`  | `msgpack6` | V4 args, V5 messages  |
+| `MessagePackV6C` | `msgpack6c` | Compact variant of V6 |
 
 ### Binary Formats (Nerdbank.MessagePack)
 
@@ -58,11 +58,16 @@ They are not registered by default &mdash; call `RpcNerdbankSerializationFormat.
 
 ### Default Format
 
-The default format is typically `MemoryPackV5C` (or latest version) for .NET 6+ and `MessagePackV5C` for .NET Standard.
+The default is `MemoryPackV6` (`mempack6`) &mdash; it's the key `RpcSerializationFormatResolver.Default` is created with. Override it process-wide by assigning a new resolver:
+
+```cs
+RpcSerializationFormatResolver.Default = new RpcSerializationFormatResolver(
+    RpcSerializationFormat.MessagePackV6C.Key);
+```
 
 ### Client-Server Negotiation
 
-When a client connects, it requests its preferred serialization format via a URL parameter (e.g., `<endpoint>?f=msgpack6&clientId=...`). The server accepts the connection if it supports that format. Once connected, both parties simultaneously exchange `RpcHandshake` messages:
+When a client connects, it requests its preferred serialization format via a URL parameter (e.g., `<endpoint>?f=msgpack6&clientId=...`). The server accepts the connection if it supports that format **and allows clients to select it**. Once connected, both parties simultaneously exchange `RpcHandshake` messages:
 
 <img src="/img/diagrams/PartR-Serialization-1.svg" alt="Client-Server Negotiation" style="width: 100%; max-width: 800px;" />
 
@@ -77,6 +82,36 @@ ImmutableList<RpcSerializationFormat> all = RpcSerializationFormat.All;
 var format = RpcSerializationFormat.All.First(f => f.Key == "mempack6c");
 ```
 <!-- endSnippet -->
+
+### Client-Selectable Formats
+
+A registered format isn't automatically a format a *client* may pin via `?f=…`.
+`RpcSerializationFormatResolver.ClientDeniedFormatKeys` is the allow-list's complement:
+every RPC server endpoint (WebSocket, HTTP/2, OWIN) rejects a connection whose requested
+key is in it. An empty `f` still means "server picks", so it's always accepted.
+
+**Since v14.2, `njson5` and `njson5np` are denied to clients by default.** Newtonsoft-backed
+formats deserialize with `TypeNameHandling.Auto` and no `SerializationBinder`, so they honor
+nested `$type` markers &mdash; a gadget surface the other formats lack. Server-to-server and
+in-process use of these formats is unaffected; only client-pinned selection is blocked.
+
+To restore the previous behavior:
+
+```cs
+RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys = ImmutableHashSet<string>.Empty;
+```
+
+Or to deny more, e.g. the legacy V5 formats:
+
+```cs
+RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys
+    = RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys
+        .Add(RpcSerializationFormat.MemoryPackV5.Key)
+        .Add(RpcSerializationFormat.MessagePackV5.Key);
+```
+
+`DefaultClientDeniedFormatKeys` seeds `ClientDeniedFormatKeys` on every resolver created after
+it's assigned, so set it at startup, before the first `RpcSerializationFormatResolver` is built.
 
 
 ## Format Structure
@@ -172,7 +207,7 @@ When choosing formats, consider:
 | Debugging | JSON formats (human-readable) |
 | Compatibility | MessagePack for .NET Standard clients |
 | Bandwidth | Compact variants (`*C`) |
-| Security | Latest versions, disable V1 |
+| Security | Latest versions; keep the Newtonsoft formats out of clients' reach (the default) |
 
 
 ## Serialization in RPC Pipeline
@@ -183,6 +218,41 @@ When choosing formats, consider:
 2. Arguments are wrapped in an `RpcMessage` and serialized by `MessageSerializer`
 3. Binary data is sent over WebSocket
 4. Server deserializes in reverse order
+
+
+## Size Limits
+
+Every RPC size ceiling is explicit and enforced **on both the send and the receive path**.
+They were tightened substantially in v14.2 &mdash; the pre-14.2 values are shown for
+comparison, since a peer that relied on the old headroom will now be rejected:
+
+| Limit | Declared on | v14.2 | Before |
+|-------|-------------|-------|--------|
+| Max frame (= one batch of messages) | `RpcFrameBasedTransport.DefaultMaxFrameSize` | 16,711,680 (16 MiB &minus; 64 KiB) | 33,489,152 |
+| Max pre-handshake frame | `RpcFrameBasedTransport.DefaultMaxPreHandshakeFrameSize` | 16,384 | *same as the frame limit* |
+| Max argument data per message | `RpcByteMessageSerializer.Defaults.MaxArgumentDataSize`, `RpcTextMessageSerializer.Defaults.MaxArgumentDataSize` | 16,252,928 (15.5 MiB) | 16 MiB |
+| Max method reference (UTF-8) | `RpcMethodRef.MaxUtf8NameLength`, `RpcByteMessageSerializer.MaxMethodRefSize` | 1,024 | 65,536 |
+| Max single header value | `RpcByteMessageSerializer.MaxHeaderSize` | 1,024 | 65,536 |
+| Max headers per message (text formats) | `RpcTextMessageSerializerV3.MaxHeaderCount` | 31 | 31 |
+| Max text envelope | `RpcTextMessageSerializerV3.MaxEnvelopeSize` | 244,297 | 12,261,961 |
+| Max API version set | `RpcHandshake.MaxApiVersionSetCount` / `MaxApiVersionSetLength` | 16 scopes / 512 chars | *unbounded* |
+
+The frame limit sits 64 KiB *below* the 16 MiB `ArrayPool` bucket on purpose: `ArrayPoolBuffer`
+rounds every capacity request up to the next power of two, and `RpcStreamTransport` buffers a
+4-byte length prefix plus read-ahead alongside the frame &mdash; without the reserve, a
+maximum-size frame would push its receive buffer into the next (32 MiB) bucket.
+`MaxArgumentDataSize` is 15.5 MiB rather than a round 16 MiB for the same reason: the payload,
+the worst-case envelope of the most expensive registered format and the frame delimiter must
+all fit one frame.
+
+An over-limit header, method reference or payload is rejected while reading, and the message is
+dropped **without an error reply** &mdash; the remote peer sees the call as never answered.
+Raise `MaxArgumentDataSize` (on both serializer base classes) if you genuinely move payloads
+this large, but keep the frame ceiling in mind: `RpcWebSocketTransportSizeTest` pins that a
+maximum-size message still fits a maximum-size frame in every registered format.
+
+W3C trace context is bounded by its own spec limits too: an over-length `tracestate` is dropped
+while its `traceparent` is still adopted.
 
 
 ## Polymorphic Serialization
@@ -201,7 +271,17 @@ IsPolymorphic(typeof(object))  // true
 // Concrete types are not:
 IsPolymorphic(typeof(string))  // false
 IsPolymorphic(typeof(int))     // false
+
+// Since v14.2 arrays are seen through — the element type decides:
+IsPolymorphic(typeof(Shape[]))  // true if Shape is polymorphic
+IsPolymorphic(typeof(int[]))    // false
 ```
+
+Before v14.2 an array was never polymorphic (an array type isn't abstract), which forced the
+stream-batch path to widen its declared argument type to `object` just to reach the polymorphic
+serializer &mdash; and the declared type is also the bound that a wire-supplied type name is
+checked against. Recursing into the element type keeps the declared type exact, so the accepted
+set equals the producible set.
 
 ### Opting Out with `[RpcSerializable]`
 

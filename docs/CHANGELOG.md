@@ -11,6 +11,247 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.2 | npm: 14.2.0
+
+Release date: unreleased
+
+The outcome of a second full security and severe-bug review of the library: 120
+findings, of which both CRITICALs and all 35 HIGHs are now closed. Almost
+everything here is a fix on the path from a wire message to a resolved type, an
+allocation, or an authorization decision &mdash; **treat this as a security
+release and read the breaking changes before upgrading.** The TypeScript client
+gets its own round of fixes and one breaking change, so npm moves to `14.2.0`
+alongside NuGet.
+
+### Breaking Changes
+
+- **The backend-service / backend-command gate actually works now.** `RpcMethodDef`
+  compared the command's interface against `"ActualLab.CommandR.IBackendCommand"`,
+  but `IBackendCommand` lives in `ActualLab.CommandR.Commands` &mdash; so the
+  ordinal comparison never matched and `IsBackend` collapsed to the service-level
+  flag alone. The marker had been decorative in every release since v10.3. An app
+  that was (unknowingly) invoking an `IBackendCommand` from a non-backend peer
+  will now be rejected. *Migration: audit which of your commands carry
+  `IBackendCommand` and route those calls through a backend peer &mdash; or drop
+  the marker if the command was never meant to be backend-only.*
+- **`IKeyValueStore` is an `IBackendService`.** It was registered as an ordinary
+  frontend RPC service, so with the gate above dead its `Set`/`Remove` were
+  reachable from any peer &mdash; a shipped cross-user data read and write.
+  *Migration: client-side code must use `ISandboxedKeyValueStore`, which is what
+  the session- and user-scoped key constraints exist for.*
+- **`njson5` and `njson5np` are denied to clients by default.** The server had no
+  format allow-list at all &mdash; its only gate was "is this key registered" &mdash; so
+  a client could pin `?f=njson5` and run Json.NET with `TypeNameHandling.Auto` and
+  no binder. Client-selectable formats are now gated on all three endpoints.
+  *Migration: `RpcSerializationFormatResolver.DefaultClientDeniedFormatKeys =
+  ImmutableHashSet<string>.Empty;` at startup restores the old behavior.*
+- **Session options moved from `ImmutableOptionSet` to `PropertyBag`.**
+  `ImmutableOptionSet` stores its values as `NewtonsoftJsonSerialized<object>`, so
+  deserializing one runs Json.NET with `TypeNameHandling.Auto` on wire data &mdash;
+  reproduced through the *default* `mempack6` and `msgpack6` round-trips, because
+  the binary formatter only ever sees strings and Newtonsoft runs inside the type's
+  own property. `SessionInfo.Options`, `AuthBackend_SetSessionOptions.Options`,
+  `AuthBackend_SetupSession.Options` and `DbSessionInfo.Options` are now
+  `PropertyBag`, which carries the type out of band. Member ordinals are unchanged,
+  but the payload at the slot is not: `mempack6` tolerates empty options in both
+  directions, `msgpack6` does not even when empty, and populated options are
+  incompatible in every format. Legacy `_Sessions.OptionsJson` rows read back as
+  empty options &mdash; accepted, contained silent data loss. *Migration: change your
+  `ImmutableOptionSet` variables to `PropertyBag`; its type-keyed `Set<T>(value)` /
+  `Get<T>()` become `KeylessSet<T>(value)` / `KeylessGet<T>()`, and string-keyed access
+  is `Set(key, value)` / `Get<T>(key)`. Upgrade clients and servers together if you
+  use `msgpack6`.*
+- **`OptionSet` and `ImmutableOptionSet` are `[Obsolete]`.** *Migration: use
+  `MutablePropertyBag` and `PropertyBag`.*
+- **Every RPC size ceiling is explicit, enforced both ways, and much lower.** A
+  single pre-handshake WebSocket message could pin ~136 MB (allocated as 256 MiB)
+  per connection, before any authentication; sizes previously fell out of whatever
+  the buffer happened to grow to. Header and method-ref limits go 64 KiB &rarr;
+  1 KiB, the frame limit 33,489,152 &rarr; 16,711,680, argument data 16 MiB &rarr;
+  15.5 MiB, and the worst-case text envelope 12,261,961 &rarr; 244,297. An
+  over-limit header, method reference or payload is rejected on read and the
+  message is dropped **without an error reply**, so the remote sees the call as
+  never answered. Nothing in Fusion comes near these limits &mdash; the longest real
+  method reference measured anywhere is 59 bytes. *Migration: none expected; if you
+  genuinely move payloads above 15.5 MiB, raise
+  `RpcByteMessageSerializer.Defaults.MaxArgumentDataSize` and its text counterpart,
+  and see [Size Limits](PartR-Serialization.md#size-limits) for what else must move
+  with it.*
+- **`ApiMap.Empty` and `ApiSet.Empty` are removed.** Both are mutable collections,
+  so a shared static instance was a corruption hazard (`User.ToClientSideUser()`
+  was writing into the process-global one); turning it into a fresh-instance
+  property only made `Empty` lie in the other direction. *Migration: write `new()`.*
+- **`Session.ToString()` is redacted** to `{4-char Id prefix}:{Hash}`. It used to
+  return the raw Id &mdash; a bearer credential &mdash; so anything that formatted a
+  `Session` leaked it. *Migration: use `session.Id` where the actual value is
+  needed; nothing about the wire representation changed.*
+- **TypeScript: `resolveStreamRefs` is replaced by `toRpcStream`,** and stream
+  references nested in ordinary results are no longer converted automatically. The
+  old inference replaced any string of 4&ndash;6 comma-separated parts whose first
+  three parsed as integers with a live `RpcStream`, so `"1,2,3,4"`, a CSV row or a
+  coordinate tuple all became streams. TypeScript has no typed method definitions,
+  so the heuristic is unfixable in principle and the wire format can't change.
+  *Migration: `toRpcStream(value, peer)` at the call site; it returns `null` when
+  the value isn't a stream reference, and unlike the old inference it also handles
+  the object shape the binary formats use.*
+- **The plugin cache moved and changed format.** `FileSystemPluginFinder` cached
+  discovered plugins under `Path.GetTempPath()` &mdash; a path any local user could
+  pre-create &mdash; and deserialized it with `TypeNameHandling.Auto` and no binder,
+  which is local code execution out of the box. The cache now lives in a per-user
+  location (`Environment.SpecialFolder.LocalApplicationData` &rarr; `ActualLab/…`;
+  a group- or other-writable directory is refused on Unix), round-trips through
+  System.Text.Json with no `$type`, and re-validates every cached type against the
+  exact predicate scanning applies. *Migration: none &mdash; the cache key version was
+  bumped, so old entries are simply ignored. Override the location via
+  `FileSystemPluginFinder.Options.CacheDir` if you relied on the old one.*
+
+### Added
+
+- **Reconnect proof of possession** (.NET and TypeScript). The connect URL's
+  `clientId` used to be the whole peer-selection key, and the incumbent connection
+  was disconnected before anything was verified &mdash; so anyone who read a
+  `clientId` out of a proxy log, browser history or a `Referer` chain could keep
+  the victim permanently offline, or inherit its server-side peer state. The
+  server now mints a per-peer CSPRNG secret and ships it in a new `RpcHandshake.Secret`
+  member, over the established connection; subsequent connects carry `c` (a
+  monotonic counter) and `p` (`Base64Url_NoPad(HMAC_SHA256(secret, clientId + "\n" + c))`).
+  Verification runs before the peer lookup, before the socket is accepted and before
+  any disconnect, so a failed proof is a bare 403 with the incumbent untouched, and
+  all three server endpoints share one policy function.
+  `RpcWebSocketServerOptions.RequireReconnectProof` defaults to `false`, yet the gate
+  still protects by default: a peer that has proven once may not downgrade to a
+  no-proof reconnect. See [`RequireReconnectProof`](PartR-CO.md#requirereconnectproof).
+- **`RpcWebSocketServerOptions.OriginValidator`** plus
+  `RpcWebSocketServerOriginValidators.AllowAll` / `SameOrigin` / `Allow(origins)`.
+  The WebSocket upgrade is exempt from CORS and from preflight, so a CORS policy
+  never protected the RPC endpoint against cross-site WebSocket hijacking of a
+  cookie-bound session. The default stays `AllowAll` so nothing breaks on upgrade;
+  **`WarnOnUnvalidatedOrigin` (default `true`)** logs one startup warning when
+  nothing validates the `Origin`, from both the ASP.NET Core and the OWIN server.
+- **`RpcLimits.CallCountLimit` and `RpcLimits.ObjectCountLimit`** &mdash; per-peer
+  backstops on inbound+outbound calls and on shared+remote objects, checked once
+  per `ObjectReleasePeriod` and resetting the peer when exceeded. The call cap
+  defaults to `int.MaxValue` on purpose (a Fusion server legitimately holds one
+  inbound call per live subscription); the object cap defaults to 64K. `NoWait`
+  calls are invisible to the cap.
+- `Session.Sha256Hash` &mdash; a strong, collision-resistant digest of the session id,
+  cached as 32 bytes. `Session.Hash` keeps its legacy XxHash3 value because it's on
+  the wire via `SessionAuthInfo.SessionHash` and `Auth_SignOut.KickUserSessionHash`.
+- `PruningCache<TKey, TValue>` &mdash; a capacity-bounded cache with lock-free reads
+  that amortizes its size check through a `StochasticCounter`, so the hot path stays
+  a plain `ConcurrentDictionary` read. It now bounds both `TypeRef` caches and the
+  legacy method-resolver cache.
+- `Symbol`, `Moment`, `ByteString`, `FilePath` and `TypeRef` can be used as
+  System.Text.Json dictionary keys &mdash; STJ routes non-string keys through
+  `ReadAsPropertyName`/`WriteAsPropertyName`, whose defaults throw.
+- `VersionSet` filtering extensions, and clamped-capacity `GetMemory`/`GetSpan`/
+  `EnsureCapacity` overloads on `RefArrayPoolBuffer<T>`, mirroring `ArrayPoolBuffer<T>`.
+- TypeScript: `hub.systemCallSender.errorFilter` with a ready-made
+  `genericErrorFilter`. Handler exception messages were forwarded to the remote peer
+  verbatim, and Node error text routinely embeds absolute paths and connection
+  strings. The default stays pass-through, so nothing changes unless you opt in.
+
+### Fixed
+
+- Wire-driven type resolution and its caches. Type markers were cached under a
+  `ByteString` key that aliased the pooled transport buffer, so the next frame
+  overwrote it &mdash; the entry became permanently unreachable and the correct marker
+  permanently missed, growing under ordinary polymorphic traffic rather than only
+  under attack. `TypeRef.ResolveCache` was unbounded and keyed by the raw wire
+  spelling, which `Type.GetType` accepts in many variants, so one type could occupy
+  many permanent entries; only the canonical spelling is cached now and failures
+  never are. `ExceptionInfo` resolved the remote type *before* correlating
+  `$sys.Error` with an outbound call, so an uncorrelated error still reached
+  `Type.GetType`; the error is correlated first, and type names get structural
+  pre-checks before any assembly probing.
+- Polymorphic reading is no longer reachable through a widened slot type.
+  `$sys.B` replaced the declared argument type `T[]` with `object` whenever `TItem`
+  was polymorphic, purely to reach the polymorphic serializer &mdash; but the declared
+  type is also the bound the wire-supplied type name is checked against, so widening
+  it removed the check. `IsPolymorphic` now recurses into array element types, so the
+  slot stays exactly `T[]`.
+- The legacy method-resolver cache is bounded. It was a process-wide, unbounded
+  `ConcurrentDictionary` keyed by `RpcHandshake.RemoteApiVersionSet` &mdash; taken
+  verbatim from the first message a remote peer sends, pre-authentication. The key
+  is normalized to the scopes the registry knows (so all garbage collapses to one
+  entry), the handshake caps the set at 16 scopes and 512 chars, and the cache is
+  bounded by `PruningCache`. `VersionSet.HashCode` also swaps its XOR fold for an
+  additive one, since XOR is linear over GF(2)^32 and any 33+ hashes contain a
+  subset that XORs to zero.
+- Session ids and command payloads are no longer logged unredacted on every
+  connection and every command failure, and `INotLogged` is honored.
+- A duplicate inbound call id no longer leaks a linked `CancellationTokenSource`
+  (plus its registration on the long-lived peer-change token). A duplicate id
+  carrying a different method reference or call type is now rejected as a protocol
+  violation instead of silently resolving to the registered call; the same leak on
+  the sibling path, where `DeserializeArguments` returns null after registration, is
+  fixed with it.
+- `ApiArrayNerdbankConverter` and `PropertyBagNerdbankConverter` no longer
+  preallocate from the wire-declared count. A 4 MB payload declaring 4M items went
+  from 32 MB to ~40 KB (`ApiArray`) and 64 MB to ~73 KB (`PropertyBag`).
+- `RetryPolicy.Apply` observes its `CancellationToken` and backs off on
+  `SuperTransient` errors instead of retrying with no delay &mdash; together an
+  uncancellable 100% CPU spin, reproduced at 1.9M iterations in 5 s.
+- `Auth_SignOut` on an unknown session id no longer inserts a session row plus an
+  operation-log row, and unregistered shard tags no longer become permanent
+  per-shard cache keys &mdash; both let unauthenticated input create persistent state.
+- `User.ToClientSideUser()` no longer mutates a process-global `ApiMap`, and
+  `InMemoryAuthService`'s intermediate `GetUserSessions` overload is now a
+  `[ComputeMethod]` &mdash; it is on no interface, so it was never intercepted and every
+  invalidation of it did nothing, leaving `IAuth.GetUserSessions` subscribers with a
+  stale session list indefinitely.
+- The default invalid-session handler no longer loops. It signed out and redirected
+  to the same URL without clearing the rejected Fusion cookie, so every redirected
+  request presented the same cookie and got another redirect; the unconditional
+  `SignOutAsync()` also threw when no default sign-out scheme was configured, turning
+  the same cookie into a persistent 500. The cookie is now rewritten before the
+  handler can short-circuit, and a `ReloadGuardCookieName` cookie breaks the loop
+  after one attempt.
+- RestEase no longer buffers an unbounded 500-response body before parsing it.
+- `ActivatorExt.CreateInstance` works for value types &mdash; it threw for every struct,
+  because the constructor delegate's return type was cast to `Func<..., object>`,
+  a conversion delegate return types only allow for reference types.
+- `ByteSpanExt.ToHexString` had a dead `#if NET5_0_OR_GREATER1`, which silently
+  pinned every build to the fallback branch &mdash; which also emitted a different casing.
+
+### Fixed (TypeScript)
+
+- `Computed` lifetime, in both directions. An outbound compute call stayed in
+  `peer.outboundCalls` after `$sys.Ok` and its reaction pinned the `Computed` and its
+  result from a GC root, so a long-lived SPA retained one live call, computed and
+  full result per distinct `(method, args)` tuple ever queried; 300 discarded calls
+  went from `outboundCalls=300, collected=0` to `outboundCalls=1, collected=299`,
+  and the server dropped its 300 retained computeds with them. Conversely, an
+  inbound call now owns its `Computed` strongly for as long as it owes the caller an
+  invalidation. A late `FinalizationRegistry` callback no longer deletes a live
+  replacement computed, and dependency edges are pruned on dispose &mdash; 200
+  mount/dispose cycles left 200 dependants, 199 of them dead; now 0.
+- `$sys.Disconnect` looked ids up in `sharedObjects` as well as `remoteObjects`,
+  which is the wrong namespace &mdash; and both counters start at 1, so collisions were
+  the norm: a client that both consumed a server stream and uploaded one of its own
+  had its outgoing stream aborted the moment the server tore down an unrelated
+  incoming one.
+- The remote stream receiver enforces the acknowledgement window it advertises
+  (overrun fails the stream with `$sys.AckEnd`), `$sys.Ack` is coalesced at receipt
+  instead of accumulating in an array drained with `shift()`, and a huge `nextIndex`
+  can no longer stall a stream permanently. The `$sys.Reconnect` stale-generation
+  check no longer skips a non-numeric handshake index.
+- The binary receive path is hardened. `argDataLen` was read signed and used
+  directly as `pos + argDataLen`, so a negative value moved the cursor backwards and
+  a 7-byte envelope could report `bytesRead = 1` &mdash; the frame was then re-parsed at
+  overlapping offsets, yielding more messages than it contained, each allocating an
+  inbound call and emitting a `$sys.Error` reply. Lengths are read unsigned and
+  validated as in-bounds safe integers before any slice.
+- One bad message no longer discards every message already decoded from the same
+  frame. `.NET` batches many RPC messages per frame, and the peer's `try` covered
+  deserialization but not dispatch, the text branch had no `try`/`catch` at all, and
+  the binary branch's `catch` sat outside the per-message loop &mdash; so `$sys.Ok`
+  replies were dropped and, since per-call timeouts default to unbounded, those calls
+  hung forever. Errors are now contained per message.
+- Inbound compute arguments are truncated to the declared arity, which closes
+  compute-cache poisoning.
+
+
 ## 14.1.78+f65f331ed | npm: 14.1.5
 
 Release date: 2026-07-27

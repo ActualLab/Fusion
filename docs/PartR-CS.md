@@ -34,6 +34,19 @@ builder.Services.Configure<RpcWebSocketServerOptions>(o => {
 });
 ```
 
+Hardening (see [Configuration Options](./PartR-CO.md#rpcwebsocketserveroptions)):
+
+```cs
+builder.Services.Configure<RpcWebSocketServerOptions>(o => {
+    // The WebSocket handshake is exempt from CORS - if connections carry a session
+    // cookie, gate the Origin explicitly. Default is AllowAll, and it warns at startup.
+    o.OriginValidator = RpcWebSocketServerOriginValidators.SameOrigin;
+    // Only once every reconnecting client speaks the reconnect proof protocol,
+    // and only behind sticky routing:
+    o.RequireReconnectProof = true;
+});
+```
+
 
 ## Client Configuration
 
