@@ -120,7 +120,9 @@ public class FusionServiceBoundaryAuditRegressionTest
             renderMode: null,
             redirectTo: "https://attacker.example/path");
 
-        result.Url.Should().Be("~/");
+        // The host is dropped rather than the whole URL - what's left addresses this site only
+        result.Url.Should().NotContain("attacker.example");
+        result.Url.Should().Be("/path");
     }
 
     [Fact]
@@ -135,25 +137,26 @@ public class FusionServiceBoundaryAuditRegressionTest
         var endpoint = serviceProvider.GetRequiredService<AuthEndpoints>();
 
         await endpoint.SignIn(context, "audit", "https://attacker.example/sign-in");
-        authentication.ChallengeProperties!.RedirectUri.Should().Be("/");
+        authentication.ChallengeProperties!.RedirectUri.Should().NotContain("attacker.example");
+        authentication.ChallengeProperties.RedirectUri.Should().Be("/sign-in");
 
         await endpoint.SignOut(context, "audit", "https://attacker.example/sign-out");
-        authentication.SignOutProperties!.RedirectUri.Should().Be("/");
+        authentication.SignOutProperties!.RedirectUri.Should().NotContain("attacker.example");
+        authentication.SignOutProperties.RedirectUri.Should().Be("/sign-out");
     }
 
     [Fact]
-    public async Task RedirectUrlCheckerShouldBeReplaceableForAllEndpointFamilies()
+    public async Task RedirectUrlHelperShouldBeReplaceableForAllEndpointFamilies()
     {
         var authentication = new RecordingAuthenticationService();
-        var callCount = 0;
-        RedirectUrlChecker urlChecker = _ => {
-            callCount++;
-            return true;
+        var urlHelper = new CountingRedirectUrlHelper {
+            AllowedHosts = ["allowed.example"],
+            MustStripHost = false,
         };
         var services = new ServiceCollection();
         services.AddSingleton<IAuthenticationService>(authentication);
         services.AddFusion().AddWebServer().AddAuthEndpoints();
-        services.AddSingleton(urlChecker);
+        services.AddSingleton<RedirectUrlHelper>(urlHelper);
         using var serviceProvider = services.BuildServiceProvider();
         var context = new DefaultHttpContext { RequestServices = serviceProvider };
         const string externalUrl = "https://allowed.example/path";
@@ -165,25 +168,65 @@ public class FusionServiceBoundaryAuditRegressionTest
 
         renderModeResult.Url.Should().Be(externalUrl);
         authentication.ChallengeProperties!.RedirectUri.Should().Be(externalUrl);
-        callCount.Should().Be(2);
+        urlHelper.CheckCallCount.Should().Be(2);
     }
 
     [Fact]
-    public async Task DefaultRedirectUrlCheckerFactoryShouldReplaceEarlierRegistration()
+    public async Task DefaultRedirectUrlHelperFactoryShouldReplaceEarlierRegistration()
     {
-        RedirectUrlChecker urlChecker = _ => true;
         var services = new ServiceCollection();
-        services.AddSingleton(urlChecker);
+        services.AddSingleton<RedirectUrlHelper>(new RedirectUrlHelper {
+            AllowedHosts = ["attacker.example"],
+            MustStripHost = false,
+        });
         services.AddFusion().AddWebServer();
         using var serviceProvider = services.BuildServiceProvider();
 
         var result = await serviceProvider.GetRequiredService<RenderModeEndpoint>()
             .Invoke(new DefaultHttpContext(), null, "https://attacker.example/path");
 
-        result.Url.Should().Be("~/");
+        // The default helper won, so the host is dropped rather than honoured
+        result.Url.Should().Be("/path");
+    }
+
+    [Fact]
+    public void DefaultRedirectUrlHelperShouldNeverLeaveThisSite()
+    {
+        var urlHelper = new RedirectUrlHelper();
+        // Stripping alone isn't enough: both of these reduce to something still not local
+        urlHelper.Normalize("http://evil.example//attacker.example", "/fallback").Should().Be("/fallback");
+        urlHelper.Normalize("javascript:alert(1)", "/fallback").Should().Be("/fallback");
+        urlHelper.Normalize("//evil.example/path", "/fallback").Should().Be("/path");
+        urlHelper.Normalize("https://evil.example@localhost/path", "/fallback").Should().Be("/path");
+        urlHelper.Normalize("https://localhost:5005/auth?a=1#f", "/fallback").Should().Be("/auth?a=1#f");
+        urlHelper.Normalize(null, "/fallback").Should().Be("/fallback");
+        // Relative URLs pass through untouched, including the "~/" form
+        urlHelper.Normalize("~/foo", "/fallback").Should().Be("~/foo");
+        urlHelper.Normalize("/foo?a=1#f", "/fallback").Should().Be("/foo?a=1#f");
+    }
+
+    [Fact]
+    public void RedirectUrlHelperShouldRejectAForeignHostWhenTheHostIsKept()
+    {
+        // MustStripHost = false without an allowlist would be an open redirect, so it rejects
+        var urlHelper = new RedirectUrlHelper { MustStripHost = false };
+        urlHelper.Normalize("https://evil.example/path", "/fallback").Should().Be("/fallback");
+        urlHelper.Normalize("/foo", "/fallback").Should().Be("/foo");
     }
 
     // Nested types
+
+    private sealed class CountingRedirectUrlHelper : RedirectUrlHelper
+    {
+        private int _checkCallCount;
+        public int CheckCallCount => Volatile.Read(ref _checkCallCount);
+
+        public override bool Check(string? url)
+        {
+            Interlocked.Increment(ref _checkCallCount);
+            return base.Check(url);
+        }
+    }
 
     private sealed class RecordingAuthenticationService : IAuthenticationService
     {

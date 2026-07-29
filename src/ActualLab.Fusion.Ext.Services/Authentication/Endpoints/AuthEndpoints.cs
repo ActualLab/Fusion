@@ -11,7 +11,7 @@ namespace ActualLab.Fusion.Authentication.Endpoints;
 /// <summary>
 /// Handles sign-in and sign-out HTTP requests using ASP.NET Core authentication.
 /// </summary>
-public class AuthEndpoints(AuthEndpoints.Options settings, RedirectUrlChecker redirectUrlChecker)
+public class AuthEndpoints(AuthEndpoints.Options settings, RedirectUrlHelper redirectUrlHelper)
 {
     /// <summary>
     /// Configuration options for <see cref="AuthEndpoints"/>.
@@ -27,10 +27,10 @@ public class AuthEndpoints(AuthEndpoints.Options settings, RedirectUrlChecker re
     }
 
     public Options Settings { get; } = settings;
-    protected RedirectUrlChecker RedirectUrlChecker { get; } = redirectUrlChecker;
+    protected RedirectUrlHelper RedirectUrlHelper { get; } = redirectUrlHelper;
 
     public AuthEndpoints(Options settings)
-        : this(settings, FusionWebServerBuilder.DefaultRedirectUrlCheckerFactory.Invoke(
+        : this(settings, FusionWebServerBuilder.DefaultRedirectUrlHelperFactory.Invoke(
             ActualLab.DependencyInjection.ServiceProviderExt.Empty))
     { }
 
@@ -40,9 +40,7 @@ public class AuthEndpoints(AuthEndpoints.Options settings, RedirectUrlChecker re
         string? returnUrl)
     {
         scheme = scheme.NullIfEmpty() ?? Settings.DefaultSignInScheme;
-        returnUrl ??= "/";
-        if (!RedirectUrlChecker.Invoke(returnUrl))
-            returnUrl = "/";
+        returnUrl = RedirectUrlHelper.Normalize(returnUrl, "/");
         var properties = new AuthenticationProperties { RedirectUri = returnUrl };
         Settings.SignInPropertiesBuilder?.Invoke(httpContext, properties);
         return httpContext.ChallengeAsync(scheme, properties);
@@ -57,9 +55,7 @@ public class AuthEndpoints(AuthEndpoints.Options settings, RedirectUrlChecker re
         // when the user agent is redirected from the external identity provider
         // after a successful authentication flow (e.g Google or Facebook).
         scheme = scheme.NullIfEmpty() ?? Settings.DefaultSignOutScheme;
-        returnUrl ??= "/";
-        if (!RedirectUrlChecker.Invoke(returnUrl))
-            returnUrl = "/";
+        returnUrl = RedirectUrlHelper.Normalize(returnUrl, "/");
         var properties = new AuthenticationProperties { RedirectUri = returnUrl };
         Settings.SignOutPropertiesBuilder?.Invoke(httpContext, properties);
         return httpContext.SignOutAsync(scheme, properties);

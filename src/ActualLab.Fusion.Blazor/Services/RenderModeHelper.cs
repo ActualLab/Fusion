@@ -36,7 +36,7 @@ public class RenderModeHelper(CircuitHub circuitHub)
             return;
 
         var navigationManager = CircuitHub.Nav;
-        // NavigationManager.Uri is absolute, and RedirectUrlChecker (IUrlHelper.IsLocalUrl)
+        // NavigationManager.Uri is absolute, and RedirectUrlHelper (IUrlHelper.IsLocalUrl)
         // rejects absolute URLs even when same-origin - silently sending you to "~/" instead.
         // "~/" + base-relative path is what it accepts, and it survives sub-path hosting.
         var redirectTo = "~/" + navigationManager.ToBaseRelativePath(navigationManager.Uri);

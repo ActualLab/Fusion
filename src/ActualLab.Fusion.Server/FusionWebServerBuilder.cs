@@ -14,8 +14,8 @@ namespace ActualLab.Fusion.Server;
 [StructLayout(LayoutKind.Auto)]
 public readonly struct FusionWebServerBuilder
 {
-    public static Func<IServiceProvider, RedirectUrlChecker> DefaultRedirectUrlCheckerFactory { get; set; } =
-        _ => RedirectUrlCheckerExt.IsLocal;
+    public static Func<IServiceProvider, RedirectUrlHelper> DefaultRedirectUrlHelperFactory { get; set; } =
+        _ => RedirectUrlHelper.Default;
 
     private sealed class AddedTag;
     private static readonly ServiceDescriptor AddedTagDescriptor = new(typeof(AddedTag), new AddedTag());
@@ -45,8 +45,8 @@ public readonly struct FusionWebServerBuilder
         // Add other services
         services.AddSingleton(_ => SessionMiddleware.Options.Default);
         services.AddScoped(c => new SessionMiddleware(c.GetRequiredService<SessionMiddleware.Options>(), c));
-        services.AddSingleton(DefaultRedirectUrlCheckerFactory);
-        services.AddSingleton(c => new RenderModeEndpoint(c.GetRequiredService<RedirectUrlChecker>()));
+        services.AddSingleton(DefaultRedirectUrlHelperFactory);
+        services.AddSingleton(c => new RenderModeEndpoint(c.GetRequiredService<RedirectUrlHelper>()));
 
         configure?.Invoke(this);
     }
