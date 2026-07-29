@@ -112,9 +112,31 @@ alongside NuGet.
   failed and what else was in it. `CompletionProducer.Options.IgnoreNotLogged` goes
   with it &mdash; it existed only to opt back out of the suppression. *Migration:
   implement `ISanitized` and override `ToString()`/`PrintMembers` on the command,
-  masking the members that need it &mdash; see `AuthBackend_SetupSession`. Note that
-  removing the interface is silent: a command that relied on it starts being logged
-  in full with no compiler error.*
+  masking the members that need it &mdash; see `AuthBackend_SetupSession`. The
+  interface is gone, so every declaration that named it stops compiling &mdash; but
+  the obvious fix is to delete the marker, and that alone turns full logging back
+  on for a command that was marked precisely because it carries something
+  sensitive. Redact the command before you drop the marker, not after.*
+- **`ApiMap<TKey, TValue>.Empty` and `ApiSet<T>.Empty` are gone.** Both were
+  `static readonly` instances of types that derive from `Dictionary<,>` and
+  `HashSet<>` &mdash; mutable, shared process-wide. `User.ToClientSideUser()` masked
+  a user's identities by starting from `ApiMap<UserIdentity, string>.Empty` and
+  calling `TryAdd` on it, so the one shared map accumulated every masked user's
+  identity schemas and every masked `User` pointed at it: user A's client-side
+  user listed user B's identity schemas, and those are serialized to the client.
+  Concurrent request threads mutating that `Dictionary` unsynchronized could also
+  corrupt its buckets, and it is enumerated on every `User` serialization.
+  Returning a fresh instance from a property would have fixed the sharing while
+  leaving the shape that invites it &mdash; and `Dictionary`/`HashSet` mutators are
+  non-virtual, so a genuinely frozen shared instance can't be enforced through the
+  base-class entry points on every target framework. The members were removed
+  outright instead. `Empty` was a static member, not a wire member, so the
+  serialized shape of both types is unchanged. *Migration:
+  `ApiMap<TKey, TValue>.Empty` &rarr; `new ApiMap<TKey, TValue>()`, `ApiSet<T>.Empty`
+  &rarr; `new ApiSet<T>()`. Every use site is a compile error, so nothing changes
+  silently. `ApiArray`, `ApiOption`, `ApiNullable` and `PropertyBag` are immutable
+  structs and `ApiList` has no `Empty`, so these two types were the only ones
+  affected.*
 - **`RedirectUrlChecker` is now `RedirectUrlHelper`.** The delegate could only
   accept or reject, so a rejected `returnUrl` was silently replaced with `"/"` &mdash;
   and since `IUrlHelper.IsLocalUrl` rejects every absolute URL, including a

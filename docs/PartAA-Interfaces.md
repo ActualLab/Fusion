@@ -170,7 +170,11 @@ public partial record AuthBackend_SetupSession(
     string IPAddress,
     string UserAgent,
     PropertyBag Options
-) : ISessionCommand<SessionInfo>, IBackendCommand, INotLogged;
+) : ISessionCommand<SessionInfo>, IBackendCommand
+{
+    // Hides Options from ToString() unless sanitization is suspended
+    protected virtual bool PrintMembers(StringBuilder builder);
+}
 ```
 
 ### AuthBackend_SetSessionOptions
