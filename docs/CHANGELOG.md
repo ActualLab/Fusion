@@ -11,6 +11,35 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.2.41+82146381f | npm: 14.2.23
+
+Release date: 2026-07-30
+
+A single RPC fix, and only for the **text** serialization formats (`json5`,
+`json5np`). If you're on a binary format &mdash; `mempack6c` is the default &mdash; nothing
+here affects you. NuGet-only release (npm stays at `14.2.23`).
+
+### Fixed
+
+- **Every text-format frame carried a phantom empty message.** The frame-based
+  transport reserves 4 bytes for its length prefix before the first message is
+  written, so the write buffer never starts at offset 0 &mdash; and the text serializer
+  used exactly that ("is the buffer empty?") to decide whether a `LF`+`RS` delimiter
+  was still needed. It always thought one was, so every frame went out with a
+  delimiter in front of its first message. The receiver dutifully treated the leading
+  delimiter as a message, handed a lone `"\n"` to `Utf8JsonReader` and logged
+  `ExpectedJsonTokens LineNumber: 1 | BytePositionInLine: 0` &mdash; once per frame, on
+  both peers. It then recovered and parsed the real message, so nothing was lost;
+  the cost was a stream of spurious errors in the log and 2 wasted bytes per frame.
+  A reader on this version also tolerates a writer on an older one, so a mixed-version
+  pair is quiet in both directions.
+- **`ArgumentData` picked up a stray newline.** The reader treated the position of
+  `RS` as the message's end, which includes the `LF` the delimiter itself starts
+  with, so every message but the last in a frame got a `"\n"` appended to its
+  argument data. Harmless with JSON arguments &mdash; it's trailing whitespace there &mdash;
+  but the payload wasn't byte-exact.
+
+
 ## 14.2.39+3b5885367 | npm: 14.2.23
 
 Release date: 2026-07-30
