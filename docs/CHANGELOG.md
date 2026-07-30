@@ -11,6 +11,48 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.2.39+3b5885367 | npm: 14.2.23
+
+Release date: 2026-07-30
+
+**.NET 11 support.** Every package gains a `net11.0` asset, and nothing else moves:
+no target framework was dropped and no third-party dependency range changed on any
+existing one, verified by diffing the packed `.nuspec` files against `14.2.34`. If you
+stay on your current .NET, upgrading to this release is a no-op &mdash; the only new
+thing is a target framework you aren't using yet. NuGet-only release (npm stays at
+`14.2.23`).
+
+### Added
+
+- **`net11.0` target framework across the board**, alongside `net10.0` down to
+  `netstandard2.0`. Its assets depend on the .NET 11 preview packages
+  (`11.0.0-preview.6.26359.118` for ASP.NET Core, `Microsoft.Extensions.*` and
+  EF Core where applicable), so treat `net11.0` as preview-grade until .NET 11 ships.
+  `Npgsql.EntityFrameworkCore.PostgreSQL 11.0.0-preview.6` backs
+  `ActualLab.Fusion.EntityFramework.Npgsql` there.
+- **`EnableDotNet11` build switch** (`TargetFrameworks.props` in the repository root).
+  It's `true` by default, which makes `net11.0` the primary target for the whole
+  repository; `-p:EnableDotNet11=false` puts everything back on `net10.0`. Relevant
+  only when building Fusion from source, not to package consumers.
+
+### Changed
+
+- **`ActualLab.Fusion.EntityFramework` no longer pins EF Core on `net10.0`/`net11.0`** &mdash;
+  it declares an open `[10.0.0,)` range, so the app picks EF Core 10 or 11. The package
+  is provider-agnostic, so it has no reason to decide for you. Provider packages can't
+  offer the same freedom: `Npgsql`, `Sqlite`, `SqlServer` and `Pomelo` each cap EF Core
+  to a single major version, so whichever provider you reference decides your EF Core
+  version.
+
+### Infrastructure
+
+- Fixed the `pack` build target consuming a `project.assets.json` left behind by a
+  separate `restore` target. Inside the single-process publish chain that could be a
+  single-target-framework restore, which failed every inner build with `NETSDK1005`
+  ("Assets file doesn't have a target for 'net5.0'"). `pack` now runs its own restore,
+  so the assets can't disagree with the target frameworks being built.
+
+
 ## 14.2.34+ae17db7ca | npm: 14.2.23
 
 Release date: 2026-07-29
