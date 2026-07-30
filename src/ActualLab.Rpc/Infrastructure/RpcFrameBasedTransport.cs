@@ -90,7 +90,8 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         _maxBufferSize = maxBufferSize;
 
         _frameDelayer = frameDelayerFactory?.Invoke();
-        Codec = new RpcFrameCodec(MessageSerializer, Meters.IncomingItemCounter, Meters.OutgoingItemCounter, ErrorLog);
+        Codec = new RpcFrameCodec(
+            MessageSerializer, Meters.IncomingItemCounter, Meters.OutgoingItemCounter, ErrorLog, Int32Size);
         _writeBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, bufferSize, mustClear: false);
         _flushingBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, bufferSize, mustClear: false);
         ResetWriteBuffer(_writeBuffer);

@@ -20,6 +20,7 @@ public sealed class RpcFrameCodec
 
     private readonly RpcMessageSerializerReadFunc _readFunc;
     private readonly RpcMessageSerializerWriteFunc _writeFunc;
+    private readonly int _frameHeaderSize;
     private readonly Counter<long>? _incomingItemCounter;
     private readonly Counter<long>? _outgoingItemCounter;
     private readonly ILogger? _errorLog;
@@ -29,17 +30,21 @@ public sealed class RpcFrameCodec
     public SerializeDelegate Serialize { get; }
     public TryDeserializeDelegate TryDeserialize { get; }
 
+    // frameHeaderSize is how many bytes the transport reserves in the write buffer before the first
+    // message - text framing needs it to tell "first message in this frame" from "buffer isn't empty".
     public RpcFrameCodec(
         RpcMessageSerializer serializer,
         Counter<long> incomingItemCounter,
         Counter<long> outgoingItemCounter,
-        ILogger? errorLog = null)
+        ILogger? errorLog = null,
+        int frameHeaderSize = 0)
     {
         Serializer = serializer;
         IsTextSerializer = serializer is RpcTextMessageSerializer;
 
         _readFunc = serializer.ReadFunc;
         _writeFunc = serializer.WriteFunc;
+        _frameHeaderSize = frameHeaderSize;
         _incomingItemCounter = incomingItemCounter.IfEnabled();
         _outgoingItemCounter = outgoingItemCounter.IfEnabled();
         _errorLog = errorLog;
@@ -92,8 +97,11 @@ public sealed class RpcFrameCodec
         _outgoingItemCounter?.Add(1);
         var startOffset = buffer.WrittenCount;
         try {
-            // Text format: use LF+RS delimiter between messages (no size prefix)
-            if (startOffset != 0) {
+            // Text format: use LF+RS delimiter between messages (no size prefix).
+            // Comparing against the frame header size rather than 0 matters: the transport has
+            // already advanced past the reserved header, so the frame's first message would
+            // otherwise get a leading delimiter that the reader sees as an empty message.
+            if (startOffset != _frameHeaderSize) {
                 var delimiterSpan = buffer.GetSpan(2);
                 delimiterSpan[0] = LineFeed;
                 delimiterSpan[1] = RecordSeparator;
@@ -156,15 +164,24 @@ public sealed class RpcFrameCodec
 
     private RpcInboundMessage? TryDeserializeText(byte[] array, ref int offset, int totalLength)
     {
+        // Skip delimiter bytes before the next message. A message always starts with its JSON
+        // envelope, so LF/RS here is always delimiter residue - and Fusion <= 14.2.39 emitted a
+        // delimiter before the frame's first message too, so a frame may well begin with one.
+        while (offset < totalLength && array[offset] is LineFeed or RecordSeparator)
+            offset++;
+        if (offset >= totalLength)
+            return null;
+
         _incomingItemCounter?.Add(1);
         var remaining = array.AsSpan(offset, totalLength - offset);
 
         // Find Record Separator (RS) - messages are delimited by LF+RS
         var rsIndex = remaining.IndexOf(RecordSeparator);
-        // Message length: up to RS (or end of buffer), minus trailing LF before RS
+        // The delimiter's own LF sits right before RS, so the message ends one byte earlier.
+        // Including it would append a stray newline to the message's ArgumentData.
         var messageLength = rsIndex < 0
             ? remaining.Length
-            : rsIndex; // RS position = message length (LF is at rsIndex-1, so message is [0..rsIndex-1] + LF)
+            : rsIndex - 1;
 
         try {
             // Pass limited slice to serializer (like master does)
