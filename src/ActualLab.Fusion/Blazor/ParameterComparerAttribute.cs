@@ -13,7 +13,10 @@ namespace ActualLab.Fusion.Blazor;
     AttributeTargets.Enum |
     AttributeTargets.Delegate |
     AttributeTargets.Property)]
-public class ParameterComparerAttribute(Type comparerType) : Attribute
+public class ParameterComparerAttribute(
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type comparerType
+    ) : Attribute
 {
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     public Type ComparerType { get; } = comparerType;
 }

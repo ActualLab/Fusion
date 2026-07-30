@@ -26,7 +26,9 @@ public class ParameterComparerProvider
 #endif
     };
 
-    [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "False positive")]
+    [UnconditionalSuppressMessage("Trimming", "IL2067",
+        Justification = "Annotations don't flow into the GetOrAdd lambda. Constructors are rooted "
+            + "by ParameterComparerAttribute's annotation and FusionBlazorModuleInitializer.")]
     public static ParameterComparer Get(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type? comparerType)
     {
@@ -47,6 +49,7 @@ public class ParameterComparerProvider
         return Get(comparerType);
     }
 
+    [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     public virtual Type? GetComparerType(PropertyInfo property)
     {
         var type = property.GetCustomAttribute<ParameterComparerAttribute>(inherit: true)?.ComparerType;
@@ -68,6 +71,10 @@ public class ParameterComparerProvider
         return null;
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2073",
+        Justification = "KnownComparerTypes maps to ByValueParameterComparer, which "
+            + "FusionBlazorModuleInitializer roots. Custom entries must root their own constructors.")]
+    [return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     protected virtual Type? GetKnownComparerType(PropertyInfo property)
     {
         var propertyType = property.PropertyType;
