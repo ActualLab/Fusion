@@ -136,13 +136,17 @@ internal static class Program
         // Technically it should depend on "build" target, but such a setup fails
         // due to https://github.com/dotnet/orleans/issues/6073 ,
         // that's why we make "pack" to run "build" too here
+        // No --no-restore here: with it, "pack" consumed whatever project.assets.json
+        // the preceding "restore" left behind, and in the single-process publish chain
+        // that turned out to be a single-TFM restore - so every inner build failed with
+        // NETSDK1005 ("assets file doesn't have a target for net5.0", ...). Letting pack
+        // restore itself guarantees the assets match the properties pack builds with.
         Target("pack", ["clean", "restore"], async () => {
             await Cli.Wrap(dotnetExePath).WithArguments(args => args
                     .Add("pack")
                     .Add("-noLogo")
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
-                    .Add("--no-restore")
                     .AddIfNonEmpty(multitargetingProperty)
                     .AddIfNonEmpty(publicReleaseProperty)
                 )
