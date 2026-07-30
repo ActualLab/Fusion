@@ -215,7 +215,7 @@ internal static class Program
                 throw new InvalidOperationException($"Unknown test mode: '{mode}'. Use fast or full.");
 
             var conf = configuration.IsNullOrEmpty() ? "Debug" : configuration;
-            var fw = framework.IsNullOrEmpty() ? "net10.0" : framework;
+            var fw = framework.IsNullOrEmpty() ? "net11.0" : framework;
             var coreProject = FilePath.New("tests") & "ActualLab.Tests" & "ActualLab.Tests.csproj";
             var fusionProject = FilePath.New("tests") & "ActualLab.Fusion.Tests" & "ActualLab.Fusion.Tests.csproj";
             var runsPath = artifactsPath & "tests" & "runs" & DateTime.Now.ToString("yyMMdd-HHmmss");

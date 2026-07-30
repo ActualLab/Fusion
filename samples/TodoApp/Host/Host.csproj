@@ -21,15 +21,26 @@
   </ItemGroup>
 
   <!-- Other packages -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
     <PackageReference Include="AspNet.Security.OAuth.GitHub" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
+    <!-- efcore.pg 11 pins EF Core to 11, so the other providers here must follow it -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion11)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" VersionOverride="$(EntityFrameworkCoreVersion11)" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="AspNet.Security.OAuth.GitHub" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" VersionOverride="$(AspNetCoreVersion10)" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" VersionOverride="$(AspNetCoreVersion10)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" VersionOverride="$(BlazorVersion10)" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="$(AspNetCoreVersion10)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" VersionOverride="$(EntityFrameworkCoreNpgsqlVersion10)" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <PackageReference Include="AspNet.Security.OAuth.GitHub" VersionOverride="$(AspNetCoreVersion9)" />

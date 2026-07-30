@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- The single place defining which .NET version is "the latest one" for this repo.
+       Imported by every Directory.Build.props that isn't chained to the root one,
+       and by Directory.Packages.props (it keys package versions off EnableDotNet11).
+       Set EnableDotNet11 to false (e.g. -p:EnableDotNet11=false) to fall back to .NET 10:
+       global.json still pins the .NET 11 SDK, which builds net10.0 just fine. -->
+  <PropertyGroup Condition="'$(EnableDotNet11)' == ''">
+    <EnableDotNet11>true</EnableDotNet11>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LatestTargetFramework>net10.0</LatestTargetFramework>
+    <LatestTargetFramework Condition="$(EnableDotNet11)">net11.0</LatestTargetFramework>
+    <!-- Prefix for multitargeting TargetFrameworks lists, which always continue with net10.0 -->
+    <LatestTargetFrameworks Condition="$(EnableDotNet11)">net11.0;</LatestTargetFrameworks>
+  </PropertyGroup>
+
+</Project>

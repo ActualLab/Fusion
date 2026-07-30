@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Normally already imported by the nearest Directory.Build.props; the condition keeps MSB4011 quiet -->
+  <Import Project="$(MSBuildThisFileDirectory)TargetFrameworks.props" Condition="'$(LatestTargetFramework)' == ''" />
   <!-- Central package management -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
@@ -9,8 +11,13 @@
   </PropertyGroup>
   <!-- Constants -->
   <PropertyGroup>
+    <!-- The .NET 11 preview all Microsoft.* / EF Core packages are aligned on.
+         Keep in sync with the SDK version in global.json. -->
+    <DotNet11Version>[11.0.0-preview.6.26359.118,)</DotNet11Version>
     <!-- Core packages -->
-    <AspNetCoreVersion>[10.0.0,)</AspNetCoreVersion>
+    <AspNetCoreVersion10>[10.0.0,)</AspNetCoreVersion10>
+    <AspNetCoreVersion>$(AspNetCoreVersion10)</AspNetCoreVersion>
+    <AspNetCoreVersion Condition="$(EnableDotNet11)">$(DotNet11Version)</AspNetCoreVersion>
     <AspNetCoreVersion9>[9.0.0,)</AspNetCoreVersion9>
     <AspNetCoreVersion8>[8.0.4,)</AspNetCoreVersion8>
     <AspNetCoreVersion7>[7.0.0,)</AspNetCoreVersion7>
@@ -18,13 +25,16 @@
     <AspNetCoreVersion5>[5.0.0,)</AspNetCoreVersion5>
     <AspNetCoreVersion3>[3.1.3,)</AspNetCoreVersion3>
     <BlazorVersion>$(AspNetCoreVersion)</BlazorVersion>
+    <BlazorVersion10>$(AspNetCoreVersion10)</BlazorVersion10>
     <BlazorVersion9>$(AspNetCoreVersion9)</BlazorVersion9>
     <BlazorVersion8>$(AspNetCoreVersion8)</BlazorVersion8>
     <BlazorVersion7>$(AspNetCoreVersion7)</BlazorVersion7>
     <BlazorVersion6>$(AspNetCoreVersion6)</BlazorVersion6>
     <BlazorVersion5>$(AspNetCoreVersion5)</BlazorVersion5>
     <BlazorVersion3>$(AspNetCoreVersion3)</BlazorVersion3>
-    <MicrosoftExtensionsVersion>[10.0.0,)</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion10>[10.0.0,)</MicrosoftExtensionsVersion10>
+    <MicrosoftExtensionsVersion>$(MicrosoftExtensionsVersion10)</MicrosoftExtensionsVersion>
+    <MicrosoftExtensionsVersion Condition="$(EnableDotNet11)">$(DotNet11Version)</MicrosoftExtensionsVersion>
     <MicrosoftExtensionsVersion9>[9.0.0,)</MicrosoftExtensionsVersion9>
     <MicrosoftExtensionsVersion8>[8.0.0,)</MicrosoftExtensionsVersion8>
     <MicrosoftExtensionsVersion7>[7.0.0,)</MicrosoftExtensionsVersion7>
@@ -36,21 +46,30 @@
          whose version is >= the Roslyn it's compiled against; 4.3.0 is the version
          expected by Unity's older build stack. Do NOT upgrade for now - revisit later. -->
     <RoslynVersion>[4.3.0,)</RoslynVersion>
-    <!-- EF Core -->
+    <!-- EF Core. ActualLab.Fusion.EntityFramework is provider-agnostic, so on net10.0/net11.0 it
+         declares this open EF10+ range and lets the app pick EF 10 or 11. Provider packages can't:
+         Npgsql/Sqlite/SqlServer/Pomelo each cap EF to a single major, so whatever provider an app
+         picks decides its EF version. EntityFrameworkCoreVersion11 is what this repo's own apps and
+         tests pin on net11.0, so CI exercises EF 11. -->
     <EntityFrameworkCoreVersion>[10.0.0,)</EntityFrameworkCoreVersion>
+    <EntityFrameworkCoreVersion11>$(DotNet11Version)</EntityFrameworkCoreVersion11>
     <EntityFrameworkCoreVersion9>[9.0.0,)</EntityFrameworkCoreVersion9>
     <EntityFrameworkCoreVersion8>[8.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,)</EntityFrameworkCoreVersion7>
     <EntityFrameworkCoreVersion6>[6.0.33,)</EntityFrameworkCoreVersion6>
     <EntityFrameworkCoreVersion5>[5.0.17,)</EntityFrameworkCoreVersion5>
     <EntityFrameworkCoreVersion3>[3.1.32,)</EntityFrameworkCoreVersion3>
-    <EntityFrameworkCoreNpgsqlVersion>[10.0.0,)</EntityFrameworkCoreNpgsqlVersion>
+    <!-- efcore.pg previews don't carry the SDK build suffix, and they still bind to Npgsql 10.x -->
+    <EntityFrameworkCoreNpgsqlVersion10>[10.0.0,)</EntityFrameworkCoreNpgsqlVersion10>
+    <EntityFrameworkCoreNpgsqlVersion>$(EntityFrameworkCoreNpgsqlVersion10)</EntityFrameworkCoreNpgsqlVersion>
+    <EntityFrameworkCoreNpgsqlVersion Condition="$(EnableDotNet11)">[11.0.0-preview.6,)</EntityFrameworkCoreNpgsqlVersion>
     <EntityFrameworkCoreNpgsqlVersion9>[9.0.0,)</EntityFrameworkCoreNpgsqlVersion9>
     <EntityFrameworkCoreNpgsqlVersion8>[8.0.0,)</EntityFrameworkCoreNpgsqlVersion8>
     <EntityFrameworkCoreNpgsqlVersion7>[7.0.18,)</EntityFrameworkCoreNpgsqlVersion7>
     <EntityFrameworkCoreNpgsqlVersion6>[6.0.29,)</EntityFrameworkCoreNpgsqlVersion6>
     <EntityFrameworkCoreNpgsqlVersion5>[5.0.10,)</EntityFrameworkCoreNpgsqlVersion5>
     <EntityFrameworkCoreNpgsqlVersion3>[3.1.18,)</EntityFrameworkCoreNpgsqlVersion3>
+    <NpgsqlVersion>[10.0.3,)</NpgsqlVersion>
     <MySqlConnectorVersion>[2.5.0,)</MySqlConnectorVersion>
     <MySqlConnectorVersion9>[2.4.0,)</MySqlConnectorVersion9>
     <MySqlConnectorVersion8>[2.3.7,)</MySqlConnectorVersion8>
@@ -115,7 +134,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(EntityFrameworkCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EntityFrameworkCoreVersion)" />
     <PackageVersion Include="MySqlConnector" Version="$(MySqlConnectorVersion)" />
-    <PackageVersion Include="Npgsql" Version="$(EntityFrameworkCoreVersion)" />
+    <PackageVersion Include="Npgsql" Version="$(NpgsqlVersion)" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(EntityFrameworkCoreNpgsqlVersion)" />
     <PackageVersion Include="Microsoft.Identity.Web" Version="2.21.1" />
     <PackageVersion Include="MsgPack.Cli" Version="1.0.1" />
@@ -175,8 +194,9 @@
     <!-- Used only in TodoApp sample -->
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireSdkVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(MicrosoftExtensionsVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(MicrosoftExtensionsVersion)" />
+    <!-- These two ship on their own 10.x train - there's no .NET 11 preview of either -->
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(MicrosoftExtensionsVersion10)" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(MicrosoftExtensionsVersion10)" />
     <!-- Legacy support only -->
     <PackageVersion Include="IndexRange" Version="1.0.3" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />

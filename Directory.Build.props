@@ -1,5 +1,7 @@
 <Project ToolsVersion="latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+  <Import Project="$(MSBuildThisFileDirectory)TargetFrameworks.props" />
+
   <!-- Key properties -->
   <PropertyGroup>
     <RepoRoot>$([MSBuild]::EnsureTrailingSlash('$(MSBuildThisFileDirectory)'))</RepoRoot>
@@ -13,7 +15,7 @@
   <PropertyGroup Condition="'$(UseMultitargeting)' == ''">
     <UseMultitargeting>false</UseMultitargeting>
 <!--    <UseMultitargeting>true</UseMultitargeting>-->
-    <TargetFramework Condition="!$(UseMultitargeting)">net10.0</TargetFramework>
+    <TargetFramework Condition="!$(UseMultitargeting)">$(LatestTargetFramework)</TargetFramework>
   </PropertyGroup>
 
   <!-- Common properties -->

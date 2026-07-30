@@ -4,7 +4,7 @@ rem set DOTNET_ReadyToRun=0
 
 set runtime=%1
 if "%runtime%"=="" (
-  set runtime=net10.0
+  set runtime=net11.0
 )
 shift
 dotnet build -p:UseMultitargeting=true -c:Release -f:%runtime% tests/ActualLab.Fusion.Tests.RpcPerformanceTestRunner/ActualLab.Fusion.Tests.RpcPerformanceTestRunner.csproj

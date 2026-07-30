@@ -22,13 +22,22 @@
     <PackageReference Include="FlakyTest.XUnit" />
   </ItemGroup>
 
+  <!-- efcore.pg 11 pins EF Core to 11, so the other providers here must follow it -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net11'))">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" VersionOverride="$(EntityFrameworkCoreVersion11)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="$(EntityFrameworkCoreVersion11)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" VersionOverride="$(EntityFrameworkCoreVersion11)" />
+    <PackageReference Include="MySqlConnector" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
+    <PackageReference Include="System.Drawing.Common" />
+  </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="MySqlConnector" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
-    <PackageReference Include="System.Drawing.Common" />
+    <PackageReference Include="System.Drawing.Common" VersionOverride="$(MicrosoftExtensionsVersion10)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" VersionOverride="$(EntityFrameworkCoreVersion9)" />

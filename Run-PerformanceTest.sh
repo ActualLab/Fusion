@@ -4,7 +4,7 @@
 
 runtime=$1
 if [ -z "$runtime" ]; then
-  runtime=net9.0
+  runtime=net11.0
 fi
 shift
 

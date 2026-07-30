@@ -16,10 +16,16 @@
     <PackageReference Include="FlakyTest.XUnit" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
+  <!-- No Npgsql here, so EF stays on the open EF10+ range - this is what covers EF 10 on .NET 11 -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net11')) or $(TargetFramework.StartsWith('net10'))">
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net11'))">
     <PackageReference Include="System.Drawing.Common" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
+    <PackageReference Include="System.Drawing.Common" VersionOverride="$(MicrosoftExtensionsVersion10)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" VersionOverride="$(EntityFrameworkCoreVersion9)" />

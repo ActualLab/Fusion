@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks Condition="$(UseMultitargeting)">net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="$(UseMultitargeting)">$(LatestTargetFrameworks)net10.0;net9.0;net8.0;net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
     <PackageTags>actual_chat actual_lab actual_lab_fusion restease</PackageTags>
     <Description>ActualLab.RestEase - RestEase helpers.</Description>
   </PropertyGroup>
@@ -10,8 +10,11 @@
     <PackageReference Include="RestEase" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net11'))">
     <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net10'))">
+    <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="$(MicrosoftExtensionsVersion10)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net9'))">
     <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="$(MicrosoftExtensionsVersion9)" />
@@ -22,7 +25,7 @@
   <ItemGroup Condition="$(TargetFramework.StartsWith('net7'))">
     <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="$(MicrosoftExtensionsVersion7)" />
   </ItemGroup>
-  <ItemGroup Condition="!($(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net11')) or $(TargetFramework.StartsWith('net10')) or $(TargetFramework.StartsWith('net9')) or $(TargetFramework.StartsWith('net8')) or $(TargetFramework.StartsWith('net7')))">
     <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="$(MicrosoftExtensionsVersion6)" />
   </ItemGroup>
 
