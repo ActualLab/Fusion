@@ -11,6 +11,42 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.2.45+5e14b57f3 | npm: 14.2.23
+
+Release date: 2026-07-30
+
+Two trimming fixes, both of which matter only if you publish a fully trimmed app
+&mdash; a Blazor WebAssembly client with `PublishTrimmed`, or NativeAOT. The first one
+unblocks the publish itself; the second fixes a crash that was hiding behind it.
+Untrimmed apps are unaffected. NuGet-only release (npm stays at `14.2.23`).
+
+### Fixed
+
+- **ILLink overflowed its stack on `Requirement<T>`, so trimmed publishes couldn't
+  finish.** `Requirement<T>` and its subclasses annotated `T` with
+  `[DynamicallyAccessedMembers(All)]`, and requirement targets are routinely
+  self-referential &mdash; `class Account { public static Requirement<Account> MustExist; }`.
+  Walking `Account`'s own fields re-required the annotation on `Account`, and on .NET 11
+  the linker recursed until it died: `"dotnet.exe" exited with code -1073741571`
+  (`0xC00000FD`, stack overflow), surfacing as `NETSDK1144: Optimizing assemblies for
+  size failed`. The annotation is gone from `Requirement<T>`; `RequireExt.Require<T>`
+  still carries it, so `T`'s members are preserved on the path that actually needs them.
+  If you resolve `Requirement<T>.MustExist` without going through `Require<T>`, root
+  that type yourself.
+- **Blazor components with a custom parameter comparer threw at render time under full
+  trimming.** `ParameterComparerProvider` creates comparers reflectively, but comparer
+  types are named only inside `typeof()` &mdash; in `[ParameterComparer(...)]` or in
+  `KnownComparerTypes`. Trimming kept the types and dropped their unused parameterless
+  constructors, so `ActivatorExt.CreateInstance` got a null constructor delegate and
+  threw `NullReferenceException` from `FusionComponentBase.SetParametersAsync`.
+  `ParameterComparerAttribute.ComparerType` is now annotated, which roots user-declared
+  comparers at their usage sites, and a new module initializer keeps the built-in
+  non-generic ones. Generic comparers closed over your own types &mdash;
+  `ByIdParameterComparer<TId>` and friends &mdash; are still rooted by the attribute that
+  names them. This one was only reachable once the fix above let a trimmed publish
+  complete at all.
+
+
 ## 14.2.41+82146381f | npm: 14.2.23
 
 Release date: 2026-07-30
