@@ -4,8 +4,7 @@ namespace ActualLab.Requirements;
 /// Base class for requirements that use an <see cref="ExceptionBuilder"/>
 /// to produce validation errors.
 /// </summary>
-public abstract record CustomizableRequirementBase<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
+public abstract record CustomizableRequirementBase<T>
     : Requirement<T>
 {
     public ExceptionBuilder ExceptionBuilder { get; init; }

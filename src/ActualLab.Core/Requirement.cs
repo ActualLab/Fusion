@@ -12,22 +12,20 @@ public abstract record Requirement
     public abstract void CheckUntyped([NotNull] object? value, string? targetName = null);
     public abstract Exception GetErrorUntyped(object? value, string? targetName = null);
 
-    public static FuncRequirement<T> New<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (Func<T?, bool> validator, ExceptionBuilder exceptionBuilder)
+    public static FuncRequirement<T> New<T>(Func<T?, bool> validator, ExceptionBuilder exceptionBuilder)
         => new(validator, exceptionBuilder);
-    public static FuncRequirement<T> New<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-        (Func<T?, bool> validator)
+    public static FuncRequirement<T> New<T>(Func<T?, bool> validator)
         => new(validator);
 }
 
 /// <summary>
 /// Strongly typed requirement that validates values of type <typeparamref name="T"/>.
 /// </summary>
-public abstract record Requirement<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
-    : Requirement
+// T is deliberately not [DynamicallyAccessedMembers]-annotated: requirement targets are
+// self-referential (`class Account { static Requirement<Account> MustExist; }`), and .NET 11's
+// ILLink recurses forever on that - it re-requires the annotation on Account while walking
+// Account's own fields, and overflows its stack. RequireExt.Require<T> keeps T's members instead.
+public abstract record Requirement<T> : Requirement
 {
     private const string MustExistFieldOrPropertyName = "MustExist";
     // ReSharper disable once StaticMemberInGenericType
@@ -39,6 +37,8 @@ public abstract record Requirement<
     private static Requirement<T>? _mustExist;
 
     public static Requirement<T> MustExist {
+        [UnconditionalSuppressMessage("Trimming", "IL2090",
+            Justification = "RequireExt.Require<T> keeps T's members; see the note on Requirement<T>.")]
         get {
             if (_mustExist is { } value)
                 return value;
