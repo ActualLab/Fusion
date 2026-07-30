@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>
