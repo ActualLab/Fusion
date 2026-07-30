@@ -10,8 +10,7 @@ public interface IMustExistRequirement;
 /// <summary>
 /// A requirement that checks a value is not null or default.
 /// </summary>
-public sealed record MustExistRequirement<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
+public sealed record MustExistRequirement<T>
     : CustomizableRequirementBase<T>, IMustExistRequirement
 {
     public readonly ExceptionBuilder DefaultExceptionBuilder

@@ -4,8 +4,7 @@ namespace ActualLab.Requirements;
 /// A <see cref="Requirement{T}"/> wrapper that delegates satisfaction checks to a
 /// base requirement and uses a customizable <see cref="ExceptionBuilder"/> for errors.
 /// </summary>
-public record CustomizableRequirement<
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>
+public record CustomizableRequirement<T>
     (Requirement<T> BaseRequirement) : CustomizableRequirementBase<T>
 {
     public CustomizableRequirement(Requirement<T> baseRequirement, ExceptionBuilder exceptionBuilder)
