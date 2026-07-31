@@ -97,6 +97,53 @@ public static class MemberInfoExt
 
     // Private methods
 
+#if NET11_0_OR_GREATER
+    /// <summary>
+    /// When <c>true</c>, getter/setter delegates are never bound directly to a virtual or interface
+    /// accessor, and emitted codegen is used instead.
+    /// </summary>
+    /// <remarks>
+    /// Works around <see href="https://github.com/dotnet/runtime/issues/130840"/>: the CoreCLR
+    /// interpreter mis-locates the receiver when dispatching an open-instance delegate over a
+    /// virtual/interface method from an R2R-compiled caller, and faults. Apple targets have no JIT,
+    /// so the interpreter is the only fallback there. Emitted codegen yields a delegate over a
+    /// <see cref="DynamicMethod"/>, which takes a different interpreter path and is unaffected.
+    /// Defaults to <c>true</c> only on the affected configurations. The
+    /// <see cref="RuntimeFeature.IsDynamicCodeSupported"/> term is a proxy for "the interpreter is
+    /// enabled": on Apple targets the macios SDK sets <c>DynamicCodeSupport=false</c> exactly when
+    /// neither <c>UseInterpreter</c> nor <c>MtouchInterpreter</c> is set, and with no interpreter
+    /// there is no faulting path to avoid - so taking the direct delegate there is both safe and
+    /// faster than the emitted fallback.
+    /// Settable so the behavior can be exercised on unaffected platforms; changing it does not
+    /// invalidate already-cached delegates.
+    /// </remarks>
+    public static bool MustAvoidOpenVirtualDelegates { get; set; }
+        = Environment.Version.Major == 11 // Self-disables on .NET 12+, where the fix is expected
+            && RuntimeFeature.IsDynamicCodeSupported
+            && (OperatingSystem.IsIOS() || OperatingSystem.IsTvOS() || OperatingSystem.IsMacCatalyst());
+#else
+    // dotnet/runtime#130840 is .NET 11-only, so this compiles away entirely on every other target.
+    private const bool MustAvoidOpenVirtualDelegates = false;
+#endif
+
+    // mustAvoidOpenVirtual is passed in rather than read here so the branch stays deterministically
+    // testable: callers hand it MustAvoidOpenVirtualDelegates, which the JIT still folds at the call
+    // site, so the fast path is unchanged.
+    private static bool CanUseAccessorDelegate(
+        MethodInfo accessor, Type declaringType, Type sourceType, Type valueType, Type propertyType,
+        bool mustAvoidOpenVirtual)
+    {
+        // Tested first on purpose: on every platform but the affected Apple configurations this is a
+        // folded false, so the IsVirtual lookup never runs.
+        if (mustAvoidOpenVirtual && accessor.IsVirtual)
+            return false;
+
+        return !accessor.IsStatic
+            && declaringType.IsAssignableFrom(sourceType)
+            && valueType == propertyType;
+    }
+
+
     private static Delegate CreateSetter(Type sourceType, MemberInfo propertyOrField, Type valueType)
     {
         RuntimeCodegen.OnCreateDelegate?.Invoke(propertyOrField, [sourceType, valueType]);
@@ -126,7 +173,7 @@ public static class MemberInfoExt
         ILGenerator il;
         if (propertyOrField is PropertyInfo pi) {
             var isStatic = pi.GetMethod!.IsStatic;
-            if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
+            if (CanUseAccessorDelegate(pi.GetMethod!, declaringType, sourceType, valueType, pi.PropertyType, MustAvoidOpenVirtualDelegates))
                 return pi.GetMethod!.CreateDelegate(funcType);
 
             m = new DynamicMethod("_Getter", valueType, [sourceType], true);
@@ -169,7 +216,7 @@ public static class MemberInfoExt
         ILGenerator il;
         if (propertyOrField is PropertyInfo pi) {
             var isStatic = pi.SetMethod!.IsStatic;
-            if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
+            if (CanUseAccessorDelegate(pi.SetMethod!, declaringType, sourceType, valueType, pi.PropertyType, MustAvoidOpenVirtualDelegates))
                 return pi.SetMethod!.CreateDelegate(funcType);
 
             m = new DynamicMethod("_Setter", null, [sourceType, valueType], true);
@@ -221,8 +268,7 @@ public static class MemberInfoExt
         var declaringType = propertyOrField.DeclaringType!;
         var pSource = Expression.Parameter(sourceType);
         if (propertyOrField is PropertyInfo pi) {
-            var isStatic = pi.GetMethod!.IsStatic;
-            if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
+            if (CanUseAccessorDelegate(pi.GetMethod!, declaringType, sourceType, valueType, pi.PropertyType, MustAvoidOpenVirtualDelegates))
                 return pi.GetMethod!.CreateDelegate(funcType);
         }
 
@@ -245,8 +291,7 @@ public static class MemberInfoExt
         var pSource = Expression.Parameter(sourceType);
         var pValue = Expression.Parameter(valueType);
         if (propertyOrField is PropertyInfo pi) {
-            var isStatic = pi.SetMethod!.IsStatic;
-            if (!isStatic && declaringType.IsAssignableFrom(sourceType) && valueType == pi.PropertyType)
+            if (CanUseAccessorDelegate(pi.SetMethod!, declaringType, sourceType, valueType, pi.PropertyType, MustAvoidOpenVirtualDelegates))
                 return pi.SetMethod!.CreateDelegate(funcType);
         }
 
