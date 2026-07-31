@@ -24,6 +24,24 @@
     <DefineConstants Condition="$(UseDynamicMethods)">$(DefineConstants);USE_DYNAMIC_METHODS</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- UseRuntimeAsync (.NET 11+): makes the compiler emit MethodImplOptions.Async methods that
+         the runtime suspends, instead of generating async state machine types.
+         Off, because we ship a single net11.0 asset that every consumer resolves:
+         - Blazor WASM is still Mono in .NET 11 (BrowserWasmApp.targets hard-codes it), and Mono
+           can't execute runtime-async IL: it throws PlatformNotSupportedException, or - when a
+           method never actually suspends - hangs silently with no diagnostic. Microsoft ships a
+           separate wasm BCL with zero runtime-async methods; a single-asset package can't.
+           Excluding just .Blazor wouldn't help: the failure is per-assembly, at first call.
+         - The feature is still stabilizing - miscompiles (dotnet/runtime#129813) and GC rooting
+           bugs (#126735) were fixed as late as 2026-06, and ExecutionContext.SuppressFlow() may
+           still be ignored (#122052), which Commander and WorkerBase depend on.
+         Revisit when browser-CoreCLR ships for Blazor (#121511, targeting .NET 12), or if we
+         ever multitarget. Set -p:UseRuntimeAsync=true to benchmark or for a server-only build. -->
+    <UseRuntimeAsync Condition="'$(UseRuntimeAsync)' == ''">false</UseRuntimeAsync>
+    <Features Condition="$(UseRuntimeAsync) and $(TargetFramework.StartsWith('net11'))">$(Features);runtime-async=on</Features>
+  </PropertyGroup>
+
   <!-- Suppressed warnings -->
   <PropertyGroup>
     <!-- [MA0009] Regular expressions should not be vulnerable to Denial of Service attacks -->
