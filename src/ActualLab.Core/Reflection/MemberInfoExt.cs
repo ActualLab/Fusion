@@ -98,14 +98,20 @@ public static class MemberInfoExt
     // Private methods
 
     private static Delegate CreateSetter(Type sourceType, MemberInfo propertyOrField, Type valueType)
-        => RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+    {
+        RuntimeCodegen.OnCreateDelegate?.Invoke(propertyOrField, [sourceType, valueType]);
+        return RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? CreateSetterDM(sourceType, propertyOrField, valueType)
             : CreateSetterET(sourceType, propertyOrField, valueType);
+    }
 
     private static Delegate CreateGetter(Type sourceType, MemberInfo propertyOrField, Type valueType)
-        => RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+    {
+        RuntimeCodegen.OnCreateDelegate?.Invoke(propertyOrField, [sourceType, valueType]);
+        return RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
             ? CreateGetterDM(sourceType, propertyOrField, valueType)
             : CreateGetterET(sourceType, propertyOrField, valueType);
+    }
 
     // Dynamic methods-based codegen
 

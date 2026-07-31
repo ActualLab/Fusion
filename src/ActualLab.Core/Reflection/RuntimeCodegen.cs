@@ -34,6 +34,9 @@ public static class RuntimeCodegen
 #endif
     });
 
+    // Fires on every delegate cache miss in ActivatorExt and MemberInfoExt - i.e. exactly where
+    // a pre-registered delegate would have avoided the codegen. Set it to profile what to register.
+    public static Action<MemberInfo, Type[]>? OnCreateDelegate { get; set; }
     public static RuntimeCodegenMode NativeMode => DefaultModeLazy.Value;
     public static RuntimeCodegenMode Mode { get; set; }
 #if USE_DYNAMIC_METHODS

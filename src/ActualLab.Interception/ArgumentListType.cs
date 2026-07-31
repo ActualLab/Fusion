@@ -103,7 +103,11 @@ public sealed class ArgumentListType
         DefaultValues = new object?[ItemCount];
         for (var i = 0; i < ItemCount; i++)
             DefaultValues[i] = ItemTypes[i].GetDefaultValue();
-        if (SimpleItemCount == 0)
+        if (!useGenerics) {
+            var factory = ArgumentList.SimpleFactories[ItemCount];
+            Factory = () => factory.Invoke(this);
+        }
+        else if (SimpleItemCount == 0)
             Factory = (Func<ArgumentList>)ListType.GetConstructorDelegate()!;
         else {
             var factory = (Func<ArgumentListType, ArgumentList>)ListType.GetConstructorDelegate(typeof(ArgumentListType))!;

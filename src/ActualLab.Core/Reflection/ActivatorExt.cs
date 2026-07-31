@@ -123,6 +123,41 @@ public static class ActivatorExt
                 return CreateConstructorDelegate(tObject.GetConstructor(argTypes), argTypes);
             });
 
+    // Register* methods pre-populate the caches above, so a registered constructor costs
+    // a single dictionary lookup and no reflection at all. TResult must be the constructor's
+    // exact declaring type rather than any of its base types: GetConstructorDelegate callers
+    // cast the result to Func<..., TBase>, which works only via reference-type covariance.
+
+    public static void RegisterConstructorDelegate<TResult>(Func<TResult> ctorDelegate)
+        where TResult : class
+        => CtorDelegate0Cache[typeof(TResult)] = ctorDelegate;
+
+    public static void RegisterConstructorDelegate<TArg1, TResult>(Func<TArg1, TResult> ctorDelegate)
+        where TResult : class
+        => CtorDelegate1Cache[(typeof(TResult), typeof(TArg1))] = ctorDelegate;
+
+    public static void RegisterConstructorDelegate<TArg1, TArg2, TResult>(Func<TArg1, TArg2, TResult> ctorDelegate)
+        where TResult : class
+        => CtorDelegate2Cache[(typeof(TResult), typeof(TArg1), typeof(TArg2))] = ctorDelegate;
+
+    public static void RegisterConstructorDelegate<TArg1, TArg2, TArg3, TResult>(
+        Func<TArg1, TArg2, TArg3, TResult> ctorDelegate)
+        where TResult : class
+        => CtorDelegate3Cache[(typeof(TResult), typeof(TArg1), typeof(TArg2), typeof(TArg3))] = ctorDelegate;
+
+    public static void RegisterConstructorDelegate<TArg1, TArg2, TArg3, TArg4, TResult>(
+        Func<TArg1, TArg2, TArg3, TArg4, TResult> ctorDelegate)
+        where TResult : class
+        => CtorDelegate4Cache[
+            (typeof(TResult), typeof(TArg1), typeof(TArg2), typeof(TArg3), typeof(TArg4))] = ctorDelegate;
+
+    public static void RegisterConstructorDelegate<TArg1, TArg2, TArg3, TArg4, TArg5, TResult>(
+        Func<TArg1, TArg2, TArg3, TArg4, TArg5, TResult> ctorDelegate)
+        where TResult : class
+        => CtorDelegate5Cache[
+            (typeof(TResult), typeof(TArg1), typeof(TArg2), typeof(TArg3), typeof(TArg4), typeof(TArg5))]
+            = ctorDelegate;
+
     public static object CreateInstance(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors
             | DynamicallyAccessedMemberTypes.NonPublicConstructors)] this Type type)
@@ -175,11 +210,15 @@ public static class ActivatorExt
     }
 
     public static Delegate? CreateConstructorDelegate(ConstructorInfo? ctor, params Type[] argumentTypes)
-        =>  ctor is null
-            ? null
-            : RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
-                ? CreateConstructorDelegateDM(ctor, argumentTypes)
-                : CreateConstructorDelegateET(ctor, argumentTypes);
+    {
+        if (ctor is null)
+            return null;
+
+        RuntimeCodegen.OnCreateDelegate?.Invoke(ctor, argumentTypes);
+        return RuntimeCodegen.Mode == RuntimeCodegenMode.DynamicMethods
+            ? CreateConstructorDelegateDM(ctor, argumentTypes)
+            : CreateConstructorDelegateET(ctor, argumentTypes);
+    }
 
     // Private methods
 

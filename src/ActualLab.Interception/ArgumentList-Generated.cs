@@ -63,6 +63,21 @@ public abstract partial record ArgumentList
                 typeof(ArgumentListG10<, , , >),
             })
             : ImmutableArray<Type>.Empty;
+    // Lets ArgumentListType bind its Factory without ActivatorExt's runtime codegen
+    public static readonly ImmutableArray<Func<ArgumentListType, ArgumentList>> SimpleFactories
+        = ImmutableArray.Create(new Func<ArgumentListType, ArgumentList>[] {
+            static _ => new ArgumentList0(),
+            static type => new ArgumentListS1(type),
+            static type => new ArgumentListS2(type),
+            static type => new ArgumentListS3(type),
+            static type => new ArgumentListS4(type),
+            static type => new ArgumentListS5(type),
+            static type => new ArgumentListS6(type),
+            static type => new ArgumentListS7(type),
+            static type => new ArgumentListS8(type),
+            static type => new ArgumentListS9(type),
+            static type => new ArgumentListS10(type),
+        });
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ArgumentList New() => Empty;
