@@ -11,6 +11,46 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.2.50+657b54d72 | npm: 14.2.23
+
+Release date: 2026-07-31
+
+A crash fix for .NET 11 on Apple platforms. `MemberInfoExt.GetGetter` and `GetSetter` handed
+out open-instance delegates bound straight to a property accessor; when that accessor is
+virtual or comes from an interface, the CoreCLR interpreter mis-locates the receiver and
+faults. Apple targets have no JIT, so the interpreter is the only fallback there &mdash; and
+the fault presents as a `0x8BADF00D` watchdog kill with the UI already painted and touches
+dead, because the main thread ends up stuck in CoreCLR's own crash logger. Upgrade if you
+ship .NET 11 on iOS, tvOS, or Mac Catalyst with the interpreter enabled. NuGet-only release
+(npm stays at `14.2.23`).
+
+### Fixed
+
+- **`MemberInfoExt.GetGetter` / `GetSetter` no longer bind a delegate directly to a virtual or
+  interface accessor on the affected .NET 11 Apple configurations.** They now fall through to
+  the emitted-codegen path that was already sitting right below, which yields a delegate over
+  a `DynamicMethod` and takes a different, unaffected interpreter path. Works around
+  [dotnet/runtime#130840](https://github.com/dotnet/runtime/issues/130840). Every other target
+  keeps the direct-delegate fast path untouched, and below .NET 11 the check compiles away
+  entirely.
+
+### Added
+
+- **`MemberInfoExt.MustAvoidOpenVirtualDelegates` controls that workaround.** It defaults to
+  `true` only where the bug actually bites &mdash; .NET 11 exactly, with dynamic code supported
+  (a proxy for "the interpreter is enabled"), on iOS, tvOS, or Mac Catalyst &mdash; and
+  self-disables on .NET 12, where the runtime-side fix is expected. It's settable so the
+  behavior can be exercised on unaffected platforms; changing it doesn't invalidate
+  already-cached delegates. net11.0+ only.
+
+### Infrastructure
+
+- **Runtime async stays off, deliberately.** .NET 11's `runtime-async` is now wired up behind a
+  `UseRuntimeAsync` build property but disabled by default, so the shipped assemblies are
+  unchanged. Fusion publishes a single `net11.0` asset that every consumer resolves, and Blazor
+  WebAssembly is still Mono &mdash; which cannot execute runtime-async IL at all.
+
+
 ## 14.2.47+27e20cb61 | npm: 14.2.23
 
 Release date: 2026-07-30
