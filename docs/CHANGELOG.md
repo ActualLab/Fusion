@@ -11,6 +11,37 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.2.47+27e20cb61 | npm: 14.2.23
+
+Release date: 2026-07-30
+
+A startup-cost release aimed at mobile. Runtime codegen shows up on mobile startup
+traces: every `ActivatorExt` cache miss emits a `DynamicMethod` on Android, and on iOS
+&mdash; where dynamic code isn't available at all &mdash; builds an interpreted expression
+tree instead. This release lets an app pre-register those constructor delegates, and
+removes one codegen path outright. Nothing changes for apps that don't opt in; existing
+APIs behave as before. NuGet-only release (npm stays at `14.2.23`).
+
+### Added
+
+- **`ActivatorExt.RegisterConstructorDelegate` (arities 0&ndash;5) seeds the constructor
+  delegate caches ahead of time.** A registered constructor then costs one dictionary
+  lookup and no reflection or codegen. The overloads are generic with
+  `where TResult : class`, so the compiler enforces the exact-declaring-type requirement
+  that callers' covariant casts depend on &mdash; `TResult` has to be the constructor's own
+  declaring type, not a base of it.
+- **`RuntimeCodegen.OnCreateDelegate` reports what still isn't registered.** It fires on
+  every `ActivatorExt` and `MemberInfoExt` delegate cache miss &mdash; exactly the places a
+  pre-registered delegate would have avoided codegen &mdash; so you can run the app with it
+  set and use the callback to build the registration list.
+
+### Performance
+
+- **The non-generic `ArgumentListType` path no longer generates code.** It now builds its
+  factory from `ArgumentList.SimpleFactories` instead of a generated constructor delegate.
+  The generic path is unchanged.
+
+
 ## 14.2.45+5e14b57f3 | npm: 14.2.23
 
 Release date: 2026-07-30
