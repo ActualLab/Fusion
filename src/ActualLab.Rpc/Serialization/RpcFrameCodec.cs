@@ -13,6 +13,16 @@ public sealed class RpcFrameCodec
     public delegate void SerializeDelegate(RpcOutboundMessage message, ArrayPoolBuffer<byte> buffer);
     public delegate RpcInboundMessage? TryDeserializeDelegate(byte[] array, ref int offset, int totalLength);
 
+    // A frame's int32 header word is [compressed][context reset][30 length bits], so the two
+    // compression flags cost the top 2 bits and cap a frame at ~1 GB - far above anything
+    // reasonable, and far above RpcFrameBasedTransport.DefaultMaxFrameSize (16 MiB).
+    // Over WebSocket only the header's most significant byte is transmitted (the transport's
+    // own message length supplies the rest), which is why the flags live in the top bits.
+    public const int MaxFrameSize = 0x3FFF_FFFF; // 1,073,741,823
+    public const int FrameLengthMask = MaxFrameSize;
+    public const int CompressedFrameFlag = unchecked((int)0x8000_0000);
+    public const int ContextResetFrameFlag = 0x4000_0000;
+
     // Text message delimiters (matches master branch WebSocketChannelImpl)
     private const byte LineFeed = 0x0A; // LF
     private const byte RecordSeparator = 0x1E; // RS

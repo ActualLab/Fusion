@@ -203,7 +203,7 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
             frame.Length.Should().BeLessThanOrEqualTo(maxFrameSize);
 
             var (reReader, _, reReaderServices) =
-                NewTransport(options, [new Fragment(frame, true)], format: format);
+                NewTransport(options, [new Fragment(frame, true)], format: format, isServer: true);
             await using (reReaderServices)
             await using (reReader) {
                 await using var reader = reReader.GetAsyncEnumerator();
@@ -251,7 +251,8 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
             RpcWebSocketTransport.Options options,
             IReadOnlyList<Fragment> fragments,
             int? maxArgumentDataSize = null,
-            RpcSerializationFormat? format = null)
+            RpcSerializationFormat? format = null,
+            bool isServer = false)
     {
         var services = new ServiceCollection();
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
@@ -266,8 +267,12 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
                 _ => new RpcSerializationFormatResolver(actualFormat.Key, new[] { actualFormat }));
         }
         var serviceProvider = services.BuildServiceProvider();
-        var rpcRef = RpcRef.NewClient("size-test", actualFormat.Key);
-        var peer = new RpcClientPeer(serviceProvider.RpcHub(), rpcRef.Route);
+        var hub = serviceProvider.RpcHub();
+        // A compressed format compresses one direction or both, so a frame written by a client
+        // is only readable by a server - which is what isServer produces here.
+        RpcPeer peer = isServer
+            ? new RpcServerPeer(hub, RpcRef.NewServer("size-test", actualFormat.Key).Route)
+            : new RpcClientPeer(hub, RpcRef.NewClient("size-test", actualFormat.Key).Route);
         var messageType = peer.MessageSerializer is RpcTextMessageSerializer
             ? WebSocketMessageType.Text
             : WebSocketMessageType.Binary;

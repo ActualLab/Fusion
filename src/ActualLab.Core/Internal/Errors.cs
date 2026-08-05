@@ -175,4 +175,9 @@ public static class Errors
 
     public static Exception InvalidVarLengthEncodedValue()
         => Format("Invalid variable length encoded value.");
+
+    public static Exception LZ4EncodeFailed()
+        => new InvalidOperationException("LZ4 block encoding failed.");
+    public static Exception LZ4DecodeFailed()
+        => new FormatException("Invalid or corrupted LZ4 frame.");
 }

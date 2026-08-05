@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ActualLab.Generators;
+using ActualLab.Rpc.Compression;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
@@ -69,14 +70,19 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public Moment LastKeepAliveAt => SharedObjects.LastKeepAliveAt;
     public RpcPeerConnectionKind ConnectionKind { get; }
     public VersionSet Versions { get; init; }
+
     public RpcSerializationFormat SerializationFormat { get; init; }
+    public RpcCompressionFormat? OutboundCompression { get; }
+    public RpcCompressionFormat? InboundCompression { get; }
     public RpcArgumentSerializer ArgumentSerializer { get; init; }
     public RpcMessageSerializer MessageSerializer { get; init; }
     public Func<ReadOnlyMemory<byte>, string> Hasher { get; init; }
+
     public RpcInboundCallTracker InboundCalls { get; init; }
     public RpcOutboundCallTracker OutboundCalls { get; init; }
     public RpcRemoteObjectTracker RemoteObjects { get; init; }
     public RpcSharedObjectTracker SharedObjects { get; init; }
+
     public RpcPeerInternalServices InternalServices => new(this);
     public LogLevel CallLogLevel { get; init; } = DefaultCallLogLevel;
 
@@ -123,6 +129,13 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 #pragma warning restore CA2214
 
         SerializationFormat = Hub.SerializationFormats.Get(route.Ref.SerializationFormat);
+        var compressionMode = SerializationFormat.CompressionMode;
+        OutboundCompression = compressionMode.MustCompress(route.Ref.IsServer)
+            ? SerializationFormat.CompressionFormat
+            : null;
+        InboundCompression = compressionMode.MustCompress(!route.Ref.IsServer)
+            ? SerializationFormat.CompressionFormat
+            : null;
         ArgumentSerializer = SerializationFormat.ArgumentSerializer;
         MessageSerializer = SerializationFormat.MessageSerializerFactory.Invoke(this);
         Hasher = OutboundCallOptions.Hasher;

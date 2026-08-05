@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using ActualLab.Channels;
 using ActualLab.Concurrency;
+using ActualLab.Rpc.Compression;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Serialization;
 
@@ -37,6 +38,13 @@ public abstract class RpcFrameBasedTransport : RpcTransport
     private readonly int _frameSize;
     private readonly int _maxBufferSize;
     private readonly int _maxFrameSize;
+    // Both come from the peer's serialization format, and the two directions are independent -
+    // so either can be null on its own
+    private readonly RpcFrameEncoder? _frameEncoder;
+    private readonly RpcFrameDecoder? _frameDecoder;
+    // Smaller than _maxFrameSize by the worst-case compression overhead when there is an encoder,
+    // so that an encoded frame still fits the limit the peer enforces on the wire
+    private readonly int _maxPayloadSize;
     private readonly Channel<RpcOutboundMessage> _writeChannel;
     private readonly ChannelWriter<RpcOutboundMessage> _writeChannelWriter;
     private readonly AsyncTaskMethodBuilder _whenCompletedSource;
@@ -49,6 +57,10 @@ public abstract class RpcFrameBasedTransport : RpcTransport
 
     protected FrameMeterSet Meters { get; }
     protected RpcFrameCodec Codec { get; }
+    // A peer that compresses nothing outbound writes exactly the frames it did before compression
+    // existed, whatever it decodes inbound.
+    protected bool HasFrameEncoder => _frameEncoder is not null;
+    protected bool HasFrameDecoder => _frameDecoder is not null;
     private int WriteFrameLength {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _writeBuffer.WrittenCount - Int32Size;
@@ -85,9 +97,24 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         if (_frameSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(frameSize), "Frame size must be positive.");
         _maxFrameSize = maxFrameSize;
-        if (_maxFrameSize <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maxFrameSize), "Max frame size must be positive.");
+        // The upper bound is what's left of the header word after the two compression flags
+        if (_maxFrameSize <= 0 || _maxFrameSize > RpcFrameCodec.MaxFrameSize)
+            throw new ArgumentOutOfRangeException(nameof(maxFrameSize),
+                $"Max frame size must be within 1..{RpcFrameCodec.MaxFrameSize}.");
         _maxBufferSize = maxBufferSize;
+
+        // Compression is a property of the peer's serialization format, so both ends know it
+        // before the first frame - there is nothing to negotiate and no arming step.
+        if (peer.InboundCompression is { } inbound)
+            _frameDecoder = new RpcFrameDecoder(
+                inbound.DecompressorFactory.Invoke(), bufferSize, maxBufferSize);
+        if (peer.OutboundCompression is { } outbound) {
+            _frameEncoder = new RpcFrameEncoder(
+                outbound.CompressorFactory.Invoke(), outbound.Options, bufferSize, maxBufferSize);
+            _maxPayloadSize = _maxFrameSize - RpcFrameEncoder.GetMaxOverhead(_maxFrameSize);
+        }
+        else
+            _maxPayloadSize = _maxFrameSize;
 
         _frameDelayer = frameDelayerFactory?.Invoke();
         Codec = new RpcFrameCodec(
@@ -147,6 +174,8 @@ public abstract class RpcFrameBasedTransport : RpcTransport
 
                 _flushingBuffer.Dispose();
                 _writeBuffer.Dispose();
+                _frameEncoder?.Dispose();
+                _frameDecoder?.Dispose();
             }
             catch (Exception e) {
                 Log?.LogError(e, "Error in {Transport}.WhenClosed, this should never happen", GetType().GetName());
@@ -163,6 +192,14 @@ public abstract class RpcFrameBasedTransport : RpcTransport
     protected abstract Task WriteFrame(ReadOnlyMemory<byte> frame);
 
     protected abstract IAsyncEnumerable<RpcInboundMessage> ReadAll(CancellationToken cancellationToken = default);
+
+    // Returns the array and range a frame's messages should be read from - the frame itself when
+    // this direction is uncompressed, the decoded copy of it otherwise.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected (byte[] Array, int Offset, int End) DecodeFrame(int header, byte[] array, int offset, int end)
+        => _frameDecoder is { } decoder
+            ? decoder.Decode(header, array, offset, end, _maxFrameSize)
+            : (array, offset, end);
 
     protected virtual Task CloseTransport(Exception? error)
         => Task.CompletedTask;
@@ -288,7 +325,7 @@ public abstract class RpcFrameBasedTransport : RpcTransport
             CompleteSend(message, e);
             return;
         }
-        if (WriteFrameLength > _maxFrameSize) {
+        if (WriteFrameLength > _maxPayloadSize) {
             // The receiving peer would drop the connection over this frame, so fail the call locally
             // instead - a locally failed call isn't retried, an aborted connection's calls are
             _writeBuffer.Position = startOffset;
@@ -305,10 +342,13 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         (_flushingBuffer, _writeBuffer) = (_writeBuffer, _flushingBuffer);
         var frameLength = _flushingBuffer.WrittenCount - Int32Size;
         var frame = _flushingBuffer.WritableWrittenMemory;
-        frame.Span.WriteLittleEndian(frameLength);
         ResetWriteBuffer(_writeBuffer);
 
         Meters.OutgoingFrameSizeHistogram.Record(frameLength);
+        if (_frameEncoder is { } encoder)
+            return WriteFrame(encoder.Encode(frame));
+
+        frame.Span.WriteLittleEndian(frameLength);
         return WriteFrame(frame);
     }
 

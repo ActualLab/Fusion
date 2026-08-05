@@ -12,6 +12,7 @@ public static class RpcTestFormats
         "json5", "njson5", "json5np", "njson5np",
         "mempack5", "mempack5c", "msgpack5", "msgpack5c",
         "mempack6", "mempack6c", "msgpack6", "msgpack6c",
+        "msgpack6c-lz4", "msgpack6c-lz4f",
 #if NET8_0_OR_GREATER
         "nmsgpack6", "nmsgpack6c",
 #endif

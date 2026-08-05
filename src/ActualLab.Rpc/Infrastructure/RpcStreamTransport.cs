@@ -1,3 +1,4 @@
+using ActualLab.Rpc.Serialization;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -148,7 +149,9 @@ public sealed class RpcStreamTransport : RpcFrameBasedTransport
                     if (available < Int32Size)
                         break; // need more bytes for the length header
 
-                    var frameLength = buffer.Array.AsSpan(dataStart, Int32Size).ReadLittleEndian();
+                    // The header word's top 2 bits are compression flags, not length
+                    var header = buffer.Array.AsSpan(dataStart, Int32Size).ReadLittleEndian();
+                    var frameLength = header & RpcFrameCodec.FrameLengthMask;
                     if (frameLength <= 0 || frameLength > maxFrameSize)
                         throw Errors.InvalidItemSize();
                     if (available < Int32Size + frameLength)
@@ -158,9 +161,9 @@ public sealed class RpcStreamTransport : RpcFrameBasedTransport
                     Meters.IncomingFrameSizeHistogram.Record(frameLength);
                     maxFrameSize = Settings.MaxFrameSize;
                     var bodyEnd = dataStart + Int32Size + frameLength;
-                    var offset = dataStart + Int32Size;
-                    while (offset < bodyEnd) { // Zero-length frames are skipped here
-                        var message = tryDeserialize(buffer.Array, ref offset, bodyEnd);
+                    var (array, offset, end) = DecodeFrame(header, buffer.Array, dataStart + Int32Size, bodyEnd);
+                    while (offset < end) { // Zero-length frames are skipped here
+                        var message = tryDeserialize(array, ref offset, end);
                         if (message is not null)
                             yield return message;
                     }

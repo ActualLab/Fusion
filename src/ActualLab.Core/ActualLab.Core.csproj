@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.HighPerformance" />
+    <PackageReference Include="K4os.Compression.LZ4" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="System.Reactive" />
     <PackageReference Include="Ulid" />

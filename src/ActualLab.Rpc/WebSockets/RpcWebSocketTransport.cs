@@ -91,8 +91,16 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
 
     // Protected/internal methods
 
+    // A WebSocket message is exactly one frame, so its own length makes the header's length bits
+    // redundant - but not its flag bits. When an encoder is armed we therefore keep the header's
+    // most significant byte, which carries both flags (and length bits 24..29, always 0 below
+    // 16 MiB). Without one, the whole header goes, exactly as it did before compression existed.
     protected override Task WriteFrame(ReadOnlyMemory<byte> frame)
-        => WebSocket.SendAsync(frame[Int32Size..], MessageType, endOfMessage: true, CancellationToken.None).AsTask();
+        => WebSocket
+            .SendAsync(
+                frame[(HasFrameEncoder ? Int32Size - 1 : Int32Size)..],
+                MessageType, endOfMessage: true, CancellationToken.None)
+            .AsTask();
 
     protected override async IAsyncEnumerable<RpcInboundMessage> ReadAll(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -165,9 +173,15 @@ public sealed class RpcWebSocketTransport : RpcFrameBasedTransport
                     continue; // Continue reading into the same buffer
                 }
 
-                var array = buffer.Array;
-                var totalLength = buffer.WrittenCount;
-                var offset = 0;
+                // The peer's encoder prepends the header's most significant byte - see WriteFrame
+                var header = 0;
+                var frameStart = 0;
+                if (HasFrameDecoder && buffer.WrittenCount > 0) {
+                    header = buffer.Array[0] << 24;
+                    frameStart = 1;
+                }
+                var (array, offset, totalLength) = DecodeFrame(
+                    header, buffer.Array, frameStart, buffer.WrittenCount);
                 while (offset < totalLength) { // Zero-length frames are skipped here
                     var message = tryDeserialize(array, ref offset, totalLength);
                     if (message is not null)
