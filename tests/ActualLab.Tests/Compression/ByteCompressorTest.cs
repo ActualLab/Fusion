@@ -253,6 +253,55 @@ public abstract class ByteCompressorTestBase(ITestOutputHelper @out) : TestBase(
 
     // Nested types
 
+    // The bound the frame layer budgets on: an underestimate here means an oversized frame and a
+    // dropped connection, so incompressible input - where the codec can only expand - must fit it.
+    [Fact]
+    public void MaxCompressedLengthIsNeverExceededTest()
+    {
+        var random = new Random(11);
+        foreach (var length in (int[])[1, 2, 100, 1000, 10_000, 100_000, 1_000_000]) {
+            using var pair = NewPair();
+            var source = new byte[length];
+            random.NextBytes(source); // Random data is incompressible - the worst case
+            var bound = pair.Compressor.GetMaxCompressedLength(length);
+
+            var compressed = pair.Compress(source);
+            Out.WriteLine($"{length} bytes -> {compressed.Length}, bound {bound}");
+            compressed.Length.Should().BeLessThanOrEqualTo(bound);
+            pair.Decompress(compressed, MaxLength).Should().Equal(source);
+        }
+    }
+
+    [Fact]
+    public void MaxCompressedLengthIsMonotonicTest()
+    {
+        using var compressor = NewCompressor();
+        compressor.GetMaxCompressedLength(0).Should().Be(0);
+
+        var previous = 0;
+        for (var length = 0; length <= 200_000; length += 997) {
+            var bound = compressor.GetMaxCompressedLength(length);
+            bound.Should().BeGreaterThanOrEqualTo(previous);
+            bound.Should().BeGreaterThanOrEqualTo(length); // Compression is never guaranteed
+            previous = bound;
+        }
+    }
+
+    // GetMaxSourceLength is the inverse the frame layer actually calls: its result must fit, and
+    // one byte more must not - otherwise the budget is either unsafe or needlessly small.
+    [Fact]
+    public void MaxSourceLengthIsExactTest()
+    {
+        using var compressor = NewCompressor();
+        foreach (var maxLength in (int[])[0, 1, 1000, 100_000, 16_711_680]) {
+            var sourceLength = compressor.GetMaxSourceLength(maxLength);
+            sourceLength.Should().BeLessThanOrEqualTo(maxLength);
+            compressor.GetMaxCompressedLength(sourceLength).Should().BeLessThanOrEqualTo(maxLength);
+            if (sourceLength < maxLength)
+                compressor.GetMaxCompressedLength(sourceLength + 1).Should().BeGreaterThan(maxLength);
+        }
+    }
+
     protected sealed class CodecPair(ByteCompressor compressor, ByteDecompressor decompressor) : IDisposable
     {
         public ByteCompressor Compressor { get; } = compressor;
@@ -316,7 +365,11 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
 
         maxBlockSize.Should().BeLessThanOrEqualTo(64 * 1024);
         LZ4Codec.MaximumOutputSize(maxBlockSize).Should().BeLessThanOrEqualTo(ushort.MaxValue);
-        LZ4Codec.MaximumOutputSize(maxBlockSize + 1).Should().BeGreaterThan(ushort.MaxValue);
+        // The bound is the largest block K4os will actually use, not the largest integer whose
+        // output fits: it rounds a request up to a power of two, so the next candidate is 2x -
+        // and that one overflows the prefix, which is why the limit sits here.
+        LZ4Codec.MaximumOutputSize(maxBlockSize * 2).Should().BeGreaterThan(ushort.MaxValue);
+        (maxBlockSize & (maxBlockSize - 1)).Should().Be(0); // A power of two
     }
 
     [Fact]
@@ -332,6 +385,46 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
         Assert.Throws<ArgumentOutOfRangeException>(
             () => new LZ4ByteDecompressor(LZ4ByteCompressor.MaxBlockSize + 1));
         Assert.Throws<ArgumentOutOfRangeException>(() => new LZ4ByteCompressor(-1));
+    }
+
+    // Worst-case expansion is a property of the block geometry, not a constant: a small block
+    // pays [ushort length] + LZ4's own per-block overhead far more often. A fixed per-frame
+    // allowance sized for the default geometry is nowhere near enough for a custom one.
+    [Fact]
+    public void MaxCompressedLengthTracksBlockSizeTest()
+    {
+        const int frameSize = 16_711_680; // RpcFrameBasedTransport.DefaultMaxFrameSize
+        const int fixedAllowance = 4 + 64 + (frameSize >> 6); // What a codec-agnostic estimate gave
+
+        using var small = new LZ4ByteCompressor(256);
+        using var large = new LZ4ByteCompressor();
+        var smallOverhead = small.GetMaxCompressedLength(frameSize) - frameSize;
+        var largeOverhead = large.GetMaxCompressedLength(frameSize) - frameSize;
+        Out.WriteLine($"overhead: 256-byte blocks {smallOverhead}, "
+            + $"{LZ4ByteCompressor.MaxBlockSize}-byte blocks {largeOverhead}, fixed {fixedAllowance}");
+
+        largeOverhead.Should().BeLessThan(fixedAllowance); // The default geometry it was tuned for
+        smallOverhead.Should().BeGreaterThan(fixedAllowance); // ...and the one it silently broke
+        small.GetMaxSourceLength(frameSize).Should().BeLessThan(large.GetMaxSourceLength(frameSize));
+    }
+
+    // BlockSize must report what the encoder actually fills, not what it was asked for: K4os
+    // rounds a request up to a power of two, and a bound sized for the request would then be too
+    // small - a full block of incompressible data would encode past the ushort length prefix.
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(256)]
+    [InlineData(1024)]
+    [InlineData(5000)]
+    public void BlockSizeIsTheEffectiveOneTest(int requested)
+    {
+        using var compressor = new LZ4ByteCompressor(requested);
+        using var decompressor = new LZ4ByteDecompressor(requested);
+
+        compressor.BlockSize.Should().Be(decompressor.BlockSize);
+        compressor.BlockSize.Should().BeGreaterThanOrEqualTo(requested);
+        LZ4Codec.MaximumOutputSize(compressor.BlockSize).Should().BeLessThanOrEqualTo(ushort.MaxValue);
     }
 
     // Incompressible data at exactly MaxBlockSize is the case the ushort prefix must survive

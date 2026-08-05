@@ -68,8 +68,9 @@ public sealed class RpcFrameEncoder(
         return _buffer.WritableWrittenMemory;
     }
 
-    // A compressed frame can be slightly larger than its input, so the sender caps what it feeds
-    // in by this much - which keeps every encoded frame within the limit the peer enforces.
-    public static int GetMaxOverhead(int maxFrameSize)
-        => Int32Size + 64 + (maxFrameSize >> 6);
+    // A compressed frame can come out larger than its input, so the sender caps what it feeds in.
+    // The bound comes from the codec: worst-case expansion is a property of its block geometry,
+    // not a constant, so a fixed allowance would be wrong for any codec but one.
+    public int GetMaxPayloadSize(int maxFrameSize)
+        => compressor.GetMaxSourceLength(maxFrameSize);
 }

@@ -111,7 +111,9 @@ public abstract class RpcFrameBasedTransport : RpcTransport
         if (peer.OutboundCompression is { } outbound) {
             _frameEncoder = new RpcFrameEncoder(
                 outbound.CompressorFactory.Invoke(), outbound.Options, bufferSize, maxBufferSize);
-            _maxPayloadSize = _maxFrameSize - RpcFrameEncoder.GetMaxOverhead(_maxFrameSize);
+            // What the peer size-checks is the encoded frame, so the payload budget is the largest
+            // one whose worst-case encoding still fits - which only the codec can say
+            _maxPayloadSize = _frameEncoder.GetMaxPayloadSize(_maxFrameSize);
         }
         else
             _maxPayloadSize = _maxFrameSize;
