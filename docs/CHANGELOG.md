@@ -40,52 +40,30 @@ this release.
   size worth compressing, and how many frames or bytes a compression context may span before reset.
   Register your own format to compress with different settings.
 - **`ByteCompressor.GetMaxCompressedLength` / `GetMaxSourceLength`** are part of the codec contract,
-  the latter inverting the former by binary search. Three bound tests live on the contract base
-  class, so every future codec inherits them.
+  the latter inverting the former by binary search. The sender's payload budget shrinks by the
+  worst-case expansion the codec reports, so an encoded frame still fits the limit the peer
+  enforces. `LZ4ByteCompressor` computes that bound from its own block count in long arithmetic,
+  since a small block over a 1 GB frame overflows `int`.
 
-Frame flags ride in the top bits of the frame's existing int32 length word rather than in a byte
-of their own, so a stored frame costs nothing and copies nothing. This caps a frame at
-`RpcFrameCodec.MaxFrameSize` (~1 GB), now enforced by `RpcFrameBasedTransport` on construction —
-far above the 16 MiB default. Over WebSocket, where the message length already supplies the frame
-length, only the header's most significant byte goes on the wire.
+**Block geometry.** The default block size is 16 KiB, picked by measurement. Block size does not
+bound the match window — that's LZ4's own 64 KiB one, and it spans blocks — so a smaller block
+costs flush points rather than dictionary reach; with 1 KiB blocks a repeated 40 KB payload still
+compresses ~67&times;. What it does change is how often a frame splits, and since a frame is a batch
+capped at `FrameSize` (12,000 by default), the ratio plateaus at 16 KiB: 16K, 32K and 64.5K produce
+byte-identical output there. Only oversized frames improve past it, and slightly (0.47% &rarr; 0.42%
+on the sample). `MaxBlockSize` is 64512 — the largest block K4os will actually use whose worst case
+still fits the `ushort` length prefix — and caps anyone wanting a bigger block via a custom
+`RpcCompressionFormat`.
+
+**Frame header.** The two flags ride in the top bits of the frame's existing int32 length word
+rather than in a byte of their own, so a stored frame costs nothing and copies nothing. This caps a
+frame at `RpcFrameCodec.MaxFrameSize` (~1 GB), now enforced by `RpcFrameBasedTransport` on
+construction — far above the 16 MiB default. Over WebSocket, where the message length already
+supplies the frame length, only the header's most significant byte goes on the wire.
 
 Resetting the compression context periodically bounds both the memory a connection pins and how
 far a BREACH-style probe can correlate across frames. It does **not** make compressing a secret
 alongside attacker-controlled data within one frame safe.
-
-### Fixed
-
-- **Worst-case expansion is taken from the codec instead of a flat constant.** `RpcFrameEncoder`
-  allowed `4 + 64 + (maxFrameSize >> 6)`, but LZ4's worst case is *per block* — each costs a length
-  prefix plus LZ4's own padding, so expansion scales with block count. At the default block that
-  allowance held; at `LZ4ByteCompressor(1024)` the real overhead is ~1.4&times; it, and the sender
-  would encode past `MaxFrameSize` — which the peer drops the connection over. `LZ4ByteCompressor`
-  now computes the bound from its own block count in long arithmetic, since a small block over a
-  1 GB frame overflows `int`.
-- **`MaxBlockSize` is probed rather than assumed.** K4os rounds a requested block size up, so the
-  value derived as "largest integer whose `MaximumOutputSize` fits a `ushort`" was a fiction: the
-  encoder actually filled 65536, whose worst case doesn't fit the `ushort` length prefix, and
-  incompressible payloads at or above 64 KiB threw `LZ4EncodeFailed`. Both codecs now read
-  `BlockSize` back from the encoder/decoder they built; the decompressor had the mirror bug, sizing
-  its output span for the requested block rather than the real one.
-
-Neither bug is reachable through a registered format — `RpcCompressionFormat.LZ4` uses the default
-block size — but the first is one custom `RpcCompressionOptions` away, and the second stayed hidden
-only because the existing incompressible test used exactly `MaxBlockSize` bytes.
-
-### Performance
-
-- **The default LZ4 block size is now 16 KiB, chosen by measurement.** Block size does not bound the
-  match window — that's LZ4's own 64 KiB one, and it spans blocks — so a smaller block costs flush
-  points rather than dictionary reach. With 1 KiB blocks a repeated 40 KB payload still compresses
-  ~67&times;. What block size does change is how often a frame splits, and since a frame is a batch
-  capped at `FrameSize` (12,000 by default), the ratio plateaus at 16 KiB: 16K, 32K and 64.5K
-  produce byte-identical output there. Only oversized frames improve past it, and slightly
-  (0.47% &rarr; 0.42% on the sample).
-- **`MaxBlockSize` now lands on 64512.** K4os rounds to a 1 KiB multiple rather than a power of two
-  (3000 &rarr; 3072, 40000 &rarr; 40960), so stepping the search by powers of two stopped at 32768
-  and left 31 KiB unused. It stays the cap for anyone wanting a bigger block via a custom
-  `RpcCompressionFormat`.
 
 ### Changed
 
