@@ -93,7 +93,7 @@
     <!-- Other -->
     <RedisVersion>[3.0.17,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
-    <OpenTelemetryVersion>[1.13.0,)</OpenTelemetryVersion>
+    <OpenTelemetryVersion>1.17.0</OpenTelemetryVersion>
     <!-- Build & Samples -->
     <AspireSdkVersion>13.4.6</AspireSdkVersion>
     <BlazoriseVersion>[1.8.9,)</BlazoriseVersion>
