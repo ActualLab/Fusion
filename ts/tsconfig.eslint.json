@@ -14,6 +14,11 @@
       "@actuallab/fusion-rpc": ["./packages/fusion-rpc/src/index.ts"]
     },
     "jsx": "react-jsx",
+    // ActualChat lints this code with noImplicitAny off, which disables TS's
+    // evolving-any analysis: a bare `let x;` assigned inside a try stays `any`
+    // there and trips no-unsafe-*. Matching it here keeps the synced sources
+    // lint-clean on both sides.
+    "noImplicitAny": false,
     "composite": false,
     "declaration": false,
     "declarationMap": false,

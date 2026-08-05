@@ -1,6 +1,7 @@
 import {
     RpcHub,
     RpcClientPeer,
+    type RpcConnection,
     type RpcServerPeer,
     RpcSerializationFormat,
     RpcWebSocketConnection,
@@ -44,7 +45,7 @@ export class RpcTestConnection {
 
     async connect(isPeerChanged = true): Promise<void> {
         const format = RpcSerializationFormat.get(this.formatKey);
-        let clientConn, serverConn;
+        let clientConn: RpcConnection, serverConn: RpcConnection;
         if (format.isBinary) {
             const [clientWs, serverWs] = createMockWsPair();
             clientConn = new RpcWebSocketConnection(
