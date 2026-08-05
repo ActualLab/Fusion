@@ -63,7 +63,11 @@ internal static class Program
         if (int.TryParse(publicBuildEnvVar, out var vi))
             isPublicRelease = vi != 0;
 
-        SetDefaults("ActualLab.Fusion.sln", isPublicRelease);
+        // Every solution-level command below must name the .sln explicitly: the repository root
+        // also holds ActualLab.Fusion.CI.slnf, and with both present "dotnet" resolves the target
+        // on its own - it ignored -p:UseMultitargeting=true and restored a single TFM, after which
+        // "pack" built all 9 and failed with NETSDK1005 ("assets file doesn't have a target for ...").
+        var slnPath = SetDefaults("ActualLab.Fusion.sln", isPublicRelease);
         var options = new Options {
             Clear = clear,
             DryRun = dryRun,
@@ -109,6 +113,7 @@ internal static class Program
         Target("restore", async () => {
             await Cli.Wrap(dotnetExePath).WithArguments(args => args
                     .Add("msbuild")
+                    .Add(slnPath.Value)
                     .Add("-noLogo")
                     .Add("-t:Restore")
                     .Add("-p:RestoreForce=true")
@@ -122,6 +127,7 @@ internal static class Program
         Target("build", async () => {
             await Cli.Wrap(dotnetExePath).WithArguments(args => args
                     .Add("build")
+                    .Add(slnPath.Value)
                     .Add("-noLogo")
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
@@ -136,14 +142,10 @@ internal static class Program
         // Technically it should depend on "build" target, but such a setup fails
         // due to https://github.com/dotnet/orleans/issues/6073 ,
         // that's why we make "pack" to run "build" too here
-        // No --no-restore here: with it, "pack" consumed whatever project.assets.json
-        // the preceding "restore" left behind, and in the single-process publish chain
-        // that turned out to be a single-TFM restore - so every inner build failed with
-        // NETSDK1005 ("assets file doesn't have a target for net5.0", ...). Letting pack
-        // restore itself guarantees the assets match the properties pack builds with.
         Target("pack", ["clean", "restore"], async () => {
             await Cli.Wrap(dotnetExePath).WithArguments(args => args
                     .Add("pack")
+                    .Add(slnPath.Value)
                     .Add("-noLogo")
                     .AddOption("-c", configuration)
                     .AddOption("-f", framework)
@@ -333,7 +335,7 @@ internal static class Program
         }
     }
 
-    private static void SetDefaults(string solutionName, bool isPublicRelease)
+    private static FilePath SetDefaults(string solutionName, bool isPublicRelease)
     {
         var slnPath = FindNearest(Environment.CurrentDirectory, solutionName)
             ?? FindNearest(FilePath.New(Assembly.GetExecutingAssembly().Location).DirectoryPath, solutionName)
@@ -348,6 +350,7 @@ internal static class Program
         Environment.SetEnvironmentVariable("POWERSHELL_UPDATECHECK_OPTOUT", "1");
         Environment.SetEnvironmentVariable("DOTNET_CLI_UI_LANGUAGE", "en");
         Environment.SetEnvironmentVariable("PUBLIC_BUILD", isPublicRelease ? "1" : "");
+        return slnPath;
     }
 
     static void MoveCoverageOutputFiles(FilePath testOutputPath)
