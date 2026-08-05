@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.IO.Pipelines;
+using ActualLab.Rpc.Serialization;
 using Errors = ActualLab.Rpc.Internal.Errors;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -107,6 +108,7 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
         var maxFrameSize = Math.Min(Settings.MaxPreHandshakeFrameSize, Settings.MaxFrameSize);
         var frameBuffer = new ArrayPoolBuffer<byte>(ArrayPools.SharedBytePool, Settings.BufferSize, mustClear: false);
         var frameLength = -1; // -1 = length header not read yet; >= 0 = bytes still being accumulated into frameBuffer
+        var header = 0; // The frame's [flags|length] word, kept until its body is complete
         try {
             while (true) {
                 ReadResult result = default;
@@ -135,7 +137,9 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
                         reader.AdvanceTo(buffer.Start, buffer.End); // need more data
                         continue;
                     }
-                    frameLength = ReadFrameLength(buffer);
+                    // The header word's top 2 bits are compression flags, not length
+                    header = ReadFrameHeader(buffer);
+                    frameLength = header & RpcFrameCodec.FrameLengthMask;
                     if (frameLength <= 0 || frameLength > maxFrameSize)
                         throw Errors.InvalidItemSize();
                     consumed = buffer.GetPosition(Int32Size);
@@ -166,10 +170,8 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
                 // The first frame carries the handshake, so from here on the normal limit applies.
                 Meters.IncomingFrameSizeHistogram.Record(frameLength);
                 maxFrameSize = Settings.MaxFrameSize;
-                var array = frameBuffer.Array;
-                var len = frameLength;
+                var (array, offset, len) = DecodeFrame(header, frameBuffer.Array, 0, frameLength);
                 frameLength = -1; // next iteration starts a new frame
-                var offset = 0;
                 while (offset < len) { // Zero-length frames are skipped here
                     var message = tryDeserialize(array, ref offset, len);
                     if (message is not null)
@@ -185,7 +187,7 @@ public sealed class RpcPipeTransport : RpcFrameBasedTransport
         }
     }
 
-    private static int ReadFrameLength(in ReadOnlySequence<byte> buffer)
+    private static int ReadFrameHeader(in ReadOnlySequence<byte> buffer)
     {
         var firstSpan = buffer.First.Span;
         if (firstSpan.Length >= Int32Size)

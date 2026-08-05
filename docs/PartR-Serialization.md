@@ -34,6 +34,10 @@ The "NP" (no-polymorphism) variants skip the type-decorating `TypeRef` wrapper e
 | `MemoryPackV5C` | `mempack5c` | Compact variant of V5 |
 | `MemoryPackV6`  | `mempack6` | V4 args, V5 messages  |
 | `MemoryPackV6C` | `mempack6c` | Compact variant of V6 |
+| `MemoryPackV6_LZ4`   | `mempack6-lz4`   | V6 + LZ4 frame compression, server &rarr; client |
+| `MemoryPackV6C_LZ4`  | `mempack6c-lz4`  | V6C + LZ4 frame compression, server &rarr; client |
+| `MemoryPackV6_LZ4F`  | `mempack6-lz4f`  | V6 + LZ4 frame compression, both directions |
+| `MemoryPackV6C_LZ4F` | `mempack6c-lz4f` | V6C + LZ4 frame compression, both directions |
 
 ### Binary Formats (MessagePack)
 
@@ -43,6 +47,10 @@ The "NP" (no-polymorphism) variants skip the type-decorating `TypeRef` wrapper e
 | `MessagePackV5C` | `msgpack5c` | Compact variant of V5 |
 | `MessagePackV6`  | `msgpack6` | V4 args, V5 messages  |
 | `MessagePackV6C` | `msgpack6c` | Compact variant of V6 |
+| `MessagePackV6_LZ4`   | `msgpack6-lz4`   | V6 + LZ4 frame compression, server &rarr; client |
+| `MessagePackV6C_LZ4`  | `msgpack6c-lz4`  | V6C + LZ4 frame compression, server &rarr; client |
+| `MessagePackV6_LZ4F`  | `msgpack6-lz4f`  | V6 + LZ4 frame compression, both directions |
+| `MessagePackV6C_LZ4F` | `msgpack6c-lz4f` | V6C + LZ4 frame compression, both directions |
 
 ### Binary Formats (Nerdbank.MessagePack)
 
@@ -53,6 +61,10 @@ They are not registered by default &mdash; call `RpcNerdbankSerializationFormat.
 |-------------------------|--------------|-----------------------------------|
 | `NerdbankMessagePackV6` | `nmsgpack6`  | Nerdbank.MessagePack, V4 args, V5 messages |
 | `NerdbankMessagePackV6C`| `nmsgpack6c` | Compact variant of V6             |
+| `NerdbankMessagePackV6_LZ4`   | `nmsgpack6-lz4`   | V6 + LZ4 frame compression, server &rarr; client |
+| `NerdbankMessagePackV6C_LZ4`  | `nmsgpack6c-lz4`  | V6C + LZ4 frame compression, server &rarr; client |
+| `NerdbankMessagePackV6_LZ4F`  | `nmsgpack6-lz4f`  | V6 + LZ4 frame compression, both directions |
+| `NerdbankMessagePackV6C_LZ4F` | `nmsgpack6c-lz4f` | V6C + LZ4 frame compression, both directions |
 
 ## Format Selection
 
@@ -159,6 +171,41 @@ public sealed class RpcSerializationFormatExample(
 Compact variants (`*C` suffix) use smaller message framing at a slight CPU cost. Choose compact for:
 - Lower bandwidth scenarios
 - When message overhead is significant relative to payload
+
+
+## Frame Compression
+
+The `-lz4` and `-lz4f` variants compress whole frames &mdash; a frame is one batch of messages,
+so a batch compresses as a unit and the LZ4 dictionary carries across frames.
+
+Which directions are compressed is part of the format, not something the peers negotiate:
+`-lz4` compresses server &rarr; client only, `-lz4f` compresses both. A client's outbound traffic
+is mostly small call headers, where compression usually costs more than it saves, so `-lz4`
+is the better default. Both peers derive the same answer from the format key, which they
+already agree on when the connection is established, so there is nothing extra on the wire and
+no way for the two to disagree.
+
+Text formats have no compressed variants: a compressed frame is binary, and a text peer reads
+text frames.
+
+`RpcCompressionFormat` names the codec pair and carries the policy its compressor follows
+(`RpcCompressionOptions`): the minimum frame size worth compressing, and how many frames or
+bytes a compression context may span before it's reset. Resetting bounds both the memory a
+connection pins and how far a BREACH-style probe can correlate across frames &mdash; it does
+**not** make compressing a secret alongside attacker-controlled data within one frame safe.
+
+To compress with different settings, register a format of your own:
+
+```cs
+var lz4 = new RpcCompressionFormat("lz4",
+    static () => new LZ4ByteCompressor(),
+    static () => new LZ4ByteDecompressor(),
+    new RpcCompressionOptions { MinCompressedFrameSize = 1024 });
+var format = new RpcSerializationFormat("msgpack6c-lz4-1k",
+    () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+    peer => new RpcByteMessageSerializerV5Compact(peer),
+    lz4, RpcCompressionMode.ServerToClient);
+```
 
 
 ## Configuring Formats
