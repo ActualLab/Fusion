@@ -366,17 +366,40 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
         maxBlockSize.Should().BeLessThanOrEqualTo(64 * 1024);
         LZ4Codec.MaximumOutputSize(maxBlockSize).Should().BeLessThanOrEqualTo(ushort.MaxValue);
         // The bound is the largest block K4os will actually use, not the largest integer whose
-        // output fits: it rounds a request up to a power of two, so the next candidate is 2x -
-        // and that one overflows the prefix, which is why the limit sits here.
-        LZ4Codec.MaximumOutputSize(maxBlockSize * 2).Should().BeGreaterThan(ushort.MaxValue);
-        (maxBlockSize & (maxBlockSize - 1)).Should().Be(0); // A power of two
+        // output fits: it rounds a request up to a 1 KiB multiple, so the next candidate is one
+        // step up - and that one overflows the prefix, which is why the limit sits here.
+        (maxBlockSize % 1024).Should().Be(0);
+        LZ4Codec.MaximumOutputSize(maxBlockSize + 1024).Should().BeGreaterThan(ushort.MaxValue);
+    }
+
+    // Block size doesn't cap the match window - LZ4's own 64 KiB one spans blocks. That's what
+    // makes block size a free parameter: shrinking it costs flush points, not dictionary reach.
+    [Fact]
+    public void MatchWindowSpansBlocksTest()
+    {
+        const int blockSize = 1024;
+        var random = new Random(5);
+        var source = new byte[40_000]; // 40x the block size, and incompressible on its own
+        random.NextBytes(source);
+
+        using var pair = new CodecPair(new LZ4ByteCompressor(blockSize), new LZ4ByteDecompressor(blockSize));
+        pair.RoundTrip(source).Should().Equal(source);
+        var firstSize = pair.LastCompressedSize;
+        pair.RoundTrip(source).Should().Equal(source);
+        var repeatSize = pair.LastCompressedSize;
+
+        Out.WriteLine($"first={firstSize} repeat={repeatSize}");
+        firstSize.Should().BeGreaterThan(source.Length); // Random data can only expand
+        // The repeat can only compress if matches reach ~40 KB back, far past one block
+        repeatSize.Should().BeLessThan(source.Length / 20);
     }
 
     [Fact]
     public void BlockSizeValidationTest()
     {
-        new LZ4ByteCompressor().BlockSize.Should().Be(LZ4ByteCompressor.MaxBlockSize);
-        new LZ4ByteDecompressor().BlockSize.Should().Be(LZ4ByteCompressor.MaxBlockSize);
+        new LZ4ByteCompressor().BlockSize.Should().Be(LZ4ByteCompressor.DefaultBlockSize);
+        new LZ4ByteDecompressor().BlockSize.Should().Be(LZ4ByteCompressor.DefaultBlockSize);
+        LZ4ByteCompressor.DefaultBlockSize.Should().BeLessThanOrEqualTo(LZ4ByteCompressor.MaxBlockSize);
         new LZ4ByteCompressor(LZ4ByteCompressor.MaxBlockSize).BlockSize
             .Should().Be(LZ4ByteCompressor.MaxBlockSize);
 
@@ -431,7 +454,10 @@ public class LZ4ByteCompressorTest(ITestOutputHelper @out) : ByteCompressorTestB
     [Fact]
     public void MaxBlockSizeIncompressibleRoundTripTest()
     {
-        using var pair = NewPair();
+        // Explicitly at MaxBlockSize, so this stays the prefix's worst case whatever the default is
+        using var pair = new CodecPair(
+            new LZ4ByteCompressor(LZ4ByteCompressor.MaxBlockSize),
+            new LZ4ByteDecompressor(LZ4ByteCompressor.MaxBlockSize));
         var random = new Random(7);
         for (var i = 0; i < 3; i++) {
             var source = new byte[LZ4ByteCompressor.MaxBlockSize];

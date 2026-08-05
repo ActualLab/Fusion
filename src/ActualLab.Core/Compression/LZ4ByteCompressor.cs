@@ -16,6 +16,10 @@ namespace ActualLab.Compression;
 public sealed class LZ4ByteCompressor : ByteCompressor
 {
     public const int LengthSize = sizeof(ushort);
+    // A frame is a batch of messages capped at RpcFrameBasedTransport's FrameSize (12,000 by
+    // default), so this holds a typical frame in one block - past which a larger block changes
+    // nothing for that traffic, and only helps the occasional oversized frame.
+    public const int DefaultBlockSize = 16 * 1024;
     // Derived from LZ4's own worst-case expansion rather than assumed, so it tracks the codec
     public static readonly int MaxBlockSize = ComputeMaxBlockSize();
 
@@ -25,13 +29,15 @@ public sealed class LZ4ByteCompressor : ByteCompressor
     // The encoder's own block size, which is what every bound here is sized for - see the ctor
     public int BlockSize { get; }
 
-    // blockSize 0 means MaxBlockSize, which is also the largest value it accepts
+    // blockSize 0 means DefaultBlockSize; MaxBlockSize is the largest value it accepts
     public LZ4ByteCompressor(int blockSize = 0)
     {
         _encoder = new LZ4FastChainEncoder(ValidateBlockSize(blockSize), extraBlocks: 0);
-        // K4os rounds the requested block size up to a power of two (1 KiB minimum), so the block
-        // it actually fills is not necessarily the one we asked for - and it's the real one the
-        // length prefix has to hold. Reading it back is what keeps the two in step.
+        // K4os rounds the requested block size up to a 1 KiB multiple, so the block it actually
+        // fills is not necessarily the one we asked for - and it's the real one the length prefix
+        // has to hold. Reading it back is what keeps the two in step.
+        // Block size doesn't bound the match window: that's LZ4's own 64 KiB, and it spans blocks,
+        // so a smaller block costs flush points rather than dictionary reach.
         BlockSize = _encoder.BlockSize;
         _maxBlockOutputSize = LZ4Codec.MaximumOutputSize(BlockSize);
     }
@@ -83,10 +89,10 @@ public sealed class LZ4ByteCompressor : ByteCompressor
     internal static int ValidateBlockSize(int blockSize)
     {
         if (blockSize == 0)
-            return MaxBlockSize;
+            return DefaultBlockSize;
         if (blockSize < 0 || blockSize > MaxBlockSize)
             throw new ArgumentOutOfRangeException(nameof(blockSize),
-                $"Block size must be 0 (= {MaxBlockSize}) or within 1..{MaxBlockSize}.");
+                $"Block size must be 0 (= {DefaultBlockSize}) or within 1..{MaxBlockSize}.");
 
         return blockSize;
     }
@@ -95,18 +101,27 @@ public sealed class LZ4ByteCompressor : ByteCompressor
 
     private static int ComputeMaxBlockSize()
     {
-        // The largest block whose worst-case encoding still fits a ushort length prefix. Only the
-        // sizes K4os actually uses are candidates, so this probes an encoder rather than searching
-        // over MaximumOutputSize directly - a request it rounds up would overflow the prefix.
-        // 64 KiB, LZ4's match window, is where the search stops; the answer is the step below it.
-        var result = 0;
-        for (var blockSize = 1024; blockSize <= 64 * 1024; blockSize <<= 1) {
-            using var encoder = new LZ4FastChainEncoder(blockSize, extraBlocks: 0);
-            if (LZ4Codec.MaximumOutputSize(encoder.BlockSize) > ushort.MaxValue)
-                break;
-
-            result = encoder.BlockSize;
+        // The largest block whose worst-case encoding still fits a ushort length prefix. K4os
+        // rounds a request up to a 1 KiB multiple, so only those are candidates - and what the
+        // prefix must hold is the size the encoder reports, not the one we asked for. Hence the
+        // probe rather than a search over MaximumOutputSize alone. 64 KiB, LZ4's match window, is
+        // the most a block could ever be worth; the answer is the 1 KiB step below it.
+        const int Step = 1024;
+        var min = 1;
+        var max = 64 * 1024 / Step;
+        while (min < max) {
+            var mid = (min + max + 1) >> 1;
+            if (GetMaxOutputSize(mid * Step) <= ushort.MaxValue)
+                min = mid;
+            else
+                max = mid - 1;
         }
-        return result;
+        return min * Step;
+
+        static int GetMaxOutputSize(int blockSize)
+        {
+            using var encoder = new LZ4FastChainEncoder(blockSize, extraBlocks: 0);
+            return LZ4Codec.MaximumOutputSize(encoder.BlockSize);
+        }
     }
 }

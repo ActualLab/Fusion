@@ -17,7 +17,7 @@ public sealed class LZ4ByteDecompressor : ByteDecompressor
     // all of it, so this is what the output span must be sized for
     public int BlockSize { get; }
 
-    // Must match the peer compressor's block size; 0 means LZ4ByteCompressor.MaxBlockSize
+    // Must match the peer compressor's block size; 0 means LZ4ByteCompressor.DefaultBlockSize
     public LZ4ByteDecompressor(int blockSize = 0)
     {
         _decoder = new LZ4ChainDecoder(LZ4ByteCompressor.ValidateBlockSize(blockSize), extraBlocks: 0);
