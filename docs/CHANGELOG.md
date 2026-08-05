@@ -11,6 +11,106 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.4+3d2bbffed | npm: 14.3.5
+
+Release date: 2026-08-05
+
+LZ4 frame compression arrives as a set of serialization format variants. Every binary format
+gains a `-lz4` variant (compresses server &rarr; client) and a `-lz4f` one (both directions),
+so `msgpack6c-lz4`, `mempack6-lz4f` and — once `RpcNerdbankSerializationFormat.Register()` runs
+— `nmsgpack6c-lz4` and friends. Compression is chosen by the format key rather than negotiated,
+so the handshake is untouched and the two peers cannot disagree. Nothing changes unless you opt
+in: the default format is still what it was, and an uncompressed direction writes exactly the
+frames it wrote before. Both targets were published; the npm packages carry no runtime changes
+this release.
+
+### Added
+
+- **LZ4 frame compression for the frame-based RPC transports** (WebSocket, pipe, stream). A frame
+  is one batch of messages, so a batch compresses as a unit and the LZ4 dictionary carries across
+  frames. A client's outbound traffic is mostly small call headers, where compression costs more
+  than it saves — which is why the one-directional `-lz4` is the variant to reach for first.
+  Text formats get no compressed variants: a compressed frame is binary, and a text peer reads
+  text frames.
+- **`ActualLab.Compression` in `ActualLab.Core`** — `ByteCompressor` / `ByteDecompressor` and their
+  `LZ4ByteCompressor` / `LZ4ByteDecompressor` implementations, plus the `K4os.Compression.LZ4`
+  dependency. The codecs are RPC-agnostic and usable on their own.
+- **`RpcCompressionFormat`, `RpcCompressionOptions` and `RpcCompressionMode`** in `ActualLab.Rpc`.
+  The format names the codec pair and carries the policy its compressor follows: the minimum frame
+  size worth compressing, and how many frames or bytes a compression context may span before reset.
+  Register your own format to compress with different settings.
+- **`ByteCompressor.GetMaxCompressedLength` / `GetMaxSourceLength`** are part of the codec contract,
+  the latter inverting the former by binary search. Three bound tests live on the contract base
+  class, so every future codec inherits them.
+
+Frame flags ride in the top bits of the frame's existing int32 length word rather than in a byte
+of their own, so a stored frame costs nothing and copies nothing. This caps a frame at
+`RpcFrameCodec.MaxFrameSize` (~1 GB), now enforced by `RpcFrameBasedTransport` on construction —
+far above the 16 MiB default. Over WebSocket, where the message length already supplies the frame
+length, only the header's most significant byte goes on the wire.
+
+Resetting the compression context periodically bounds both the memory a connection pins and how
+far a BREACH-style probe can correlate across frames. It does **not** make compressing a secret
+alongside attacker-controlled data within one frame safe.
+
+### Fixed
+
+- **Worst-case expansion is taken from the codec instead of a flat constant.** `RpcFrameEncoder`
+  allowed `4 + 64 + (maxFrameSize >> 6)`, but LZ4's worst case is *per block* — each costs a length
+  prefix plus LZ4's own padding, so expansion scales with block count. At the default block that
+  allowance held; at `LZ4ByteCompressor(1024)` the real overhead is ~1.4&times; it, and the sender
+  would encode past `MaxFrameSize` — which the peer drops the connection over. `LZ4ByteCompressor`
+  now computes the bound from its own block count in long arithmetic, since a small block over a
+  1 GB frame overflows `int`.
+- **`MaxBlockSize` is probed rather than assumed.** K4os rounds a requested block size up, so the
+  value derived as "largest integer whose `MaximumOutputSize` fits a `ushort`" was a fiction: the
+  encoder actually filled 65536, whose worst case doesn't fit the `ushort` length prefix, and
+  incompressible payloads at or above 64 KiB threw `LZ4EncodeFailed`. Both codecs now read
+  `BlockSize` back from the encoder/decoder they built; the decompressor had the mirror bug, sizing
+  its output span for the requested block rather than the real one.
+
+Neither bug is reachable through a registered format — `RpcCompressionFormat.LZ4` uses the default
+block size — but the first is one custom `RpcCompressionOptions` away, and the second stayed hidden
+only because the existing incompressible test used exactly `MaxBlockSize` bytes.
+
+### Performance
+
+- **The default LZ4 block size is now 16 KiB, chosen by measurement.** Block size does not bound the
+  match window — that's LZ4's own 64 KiB one, and it spans blocks — so a smaller block costs flush
+  points rather than dictionary reach. With 1 KiB blocks a repeated 40 KB payload still compresses
+  ~67&times;. What block size does change is how often a frame splits, and since a frame is a batch
+  capped at `FrameSize` (12,000 by default), the ratio plateaus at 16 KiB: 16K, 32K and 64.5K
+  produce byte-identical output there. Only oversized frames improve past it, and slightly
+  (0.47% &rarr; 0.42% on the sample).
+- **`MaxBlockSize` now lands on 64512.** K4os rounds to a 1 KiB multiple rather than a power of two
+  (3000 &rarr; 3072, 40000 &rarr; 40960), so stepping the search by powers of two stopped at 32768
+  and left 31 KiB unused. It stays the cap for anyone wanting a bigger block via a custom
+  `RpcCompressionFormat`.
+
+### Changed
+
+- **The TodoApp sample's client now defaults to `msgpack6c-lz4`** instead of `json5np`. This is the
+  sample's own setting — the library's default format is unchanged.
+
+### Documentation
+
+- **`docs/PartR-Serialization.md` documents the compressed variants** — the full format tables, how
+  direction selection works without negotiation, and how to register a format with custom
+  compression settings.
+
+### Infrastructure
+
+- **The build script names the solution explicitly** for `restore`, `build` and `pack`. The
+  repository root holds both `ActualLab.Fusion.sln` and `ActualLab.Fusion.CI.slnf`; with no project
+  argument `dotnet` resolved the target itself and ignored `-p:UseMultitargeting=true`, so `restore`
+  wrote single-TFM assets while `pack` built all nine against them, failing the publish with
+  `NETSDK1005`.
+- **TypeScript lints with `noImplicitAny` off, matching ActualChat.** That flag disables TS's
+  evolving-any analysis, so a bare `let x;` assigned inside a `try` stays `any` and trips the
+  `no-unsafe-*` rules there. The ESLint rule sets were already identical between the two repos; only
+  the tsconfig differed, letting code pass lint here and fail after a sync.
+
+
 ## 14.2.50+657b54d72 | npm: 14.2.23
 
 Release date: 2026-07-31
