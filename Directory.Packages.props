@@ -89,7 +89,7 @@
     <MemoryPackVersion>[1.21.4,)</MemoryPackVersion>
     <MessagePackVersion>[3.1.8,)</MessagePackVersion>
     <MessagePackVersion2>[2.5.192,)</MessagePackVersion2>
-    <NerdbankMessagePackVersion>[1.0.43,)</NerdbankMessagePackVersion>
+    <NerdbankMessagePackVersion>1.2.36</NerdbankMessagePackVersion>
     <!-- Other -->
     <RedisVersion>[3.0.17,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
