@@ -11,6 +11,36 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.11+3fd57618f | npm: 14.3.5
+
+Release date: 2026-08-06
+
+Every idle HTTP/2 RPC connection was dropped by Kestrel about five seconds into each quiet period,
+and on HTTP/2 that abort takes the whole connection with it — including other peers' RPC streams a
+reverse proxy multiplexed onto the same backend connection. Take this one if you use the HTTP
+transport (`AddHttpServer()` / `AddHttpClient()`); the WebSocket transport was never affected.
+NuGet-only release; the npm packages are unchanged and stay at `14.3.5`.
+
+### Fixed
+
+- **An idle HTTP/2 RPC connection is no longer aborted by Kestrel's `MinRequestBodyDataRate`.**
+  An RPC connection holds its request body open for the connection's whole lifetime and writes into
+  it only when there are outbound messages, so an idle peer sends a ~40-byte keep-alive every 10
+  seconds — roughly 4 B/s. Kestrel's slowloris guard defaults to 240 B/s past a 5-second grace
+  period, so the request was aborted a few seconds into every quiet period with *"Reading the
+  request body timed out due to data arriving too slowly"*. The client saw only the far end of it:
+  `HttpProtocolException: net_http_http2_stream_error, INTERNAL_ERROR, 2`, delivered seconds later
+  by whatever proxy sat in between.
+
+  Light traffic is the trigger rather than an innocent detail, which makes the failure look
+  unrelated to load: a busy connection stays up, and the same connection dies once the app goes
+  quiet. On HTTP/2 the abort is connection-level, so a single idle peer also disconnects every
+  other RPC stream sharing that backend connection — the visible symptom is unrelated clients
+  dropping within a second of each other. `RpcHttpServer.Invoke` now clears
+  `IHttpMinRequestBodyDataRateFeature` per request, the same way it already clears
+  `MaxRequestBodySize`; the per-request opt-out is enough on HTTP/2, so no host-wide
+  `KestrelServerLimits` change is needed.
+
 ## 14.3.8+f51cf2ebd | npm: 14.3.5
 
 Release date: 2026-08-06
