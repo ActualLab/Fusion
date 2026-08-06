@@ -197,15 +197,20 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         // so they don't need auto-savepoints - only the master context does.
         database.DisableAutoTransactions(allowSavepoints: false);
         if (Connection is not null) {
-            var oldConnection = database.GetDbConnection();
             dbContext.SuppressDispose();
+            // Drops this context's own connection before it adopts the scope's one. SetDbConnection does
+            // that too, but only after rejecting any context whose connection is still counted as open -
+            // and that's exactly how a pooled context comes back from a query cancelled mid-flight, since
+            // EF's pool-return path never resets that count. Disposing here clears it, so such a pool
+            // entry stops failing every command that later rents it.
+            var relationalConnection = dbContext.GetService<IRelationalConnection>();
+#if !NETSTANDARD2_0
+            await relationalConnection.DisposeAsync().ConfigureAwait(false);
+#else
+            relationalConnection.Dispose();
+#endif
             database.SetDbConnection(Connection);
             await database.UseTransactionAsync(Transaction!.GetDbTransaction(), cancellationToken).ConfigureAwait(false);
-#if !NETSTANDARD2_0
-            await oldConnection.DisposeAsync().ConfigureAwait(false);
-#else
-            oldConnection.Dispose();
-#endif
         }
     }
 

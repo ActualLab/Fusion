@@ -172,7 +172,16 @@ public class DbHub<TDbContext>(IServiceProvider services) : IDbHub
     {
         var operationScope = DbOperationScope<TDbContext>.GetOrCreate(CommandContext.GetCurrent(), isolationLevel);
         var dbContext = await CreateDbContextImpl(shard, readWrite: true, cancellationToken).ConfigureAwait(false);
-        await operationScope.InitializeDbContext(dbContext, shard, cancellationToken).ConfigureAwait(false);
+        try {
+            await operationScope.InitializeDbContext(dbContext, shard, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception) {
+            // Nobody else can dispose this dbContext, and leaking it also leaks its pool slot.
+            // If it was already enrolled, SuppressDispose makes this a no-op.
+            await dbContext.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+
         return dbContext;
     }
 }
