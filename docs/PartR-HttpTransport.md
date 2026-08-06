@@ -217,6 +217,17 @@ any combination of `RpcWebSocketClient` / `RpcHttpClient` underneath.
 
 ## Common pitfalls
 
+- **Connections drop every ~5 seconds once the peer goes quiet** — Kestrel's
+  `MinRequestBodyDataRate` (240 B/s past a 5-second grace period) treats an
+  idle RPC request body as a slowloris attack and aborts the request:
+  *"Reading the request body timed out due to data arriving too slowly."*
+  `RpcHttpServer` clears the limit per request through
+  `IHttpMinRequestBodyDataRateFeature`, so Kestrel hosts are covered out of
+  the box — but a different server, or middleware that re-applies the limit,
+  needs the same opt-out (host-wide:
+  `KestrelServerLimits.MinRequestBodyDataRate = null`). On HTTP/2 the abort
+  is connection-level, so it also drops every other RPC stream a reverse
+  proxy multiplexed onto that backend connection.
 - **`net_http_invalid_response`-like errors on Kestrel cleartext** — most
   often a sign that the listener is `HttpProtocols.Http1AndHttp2`
   (without TLS) instead of `HttpProtocols.Http2`. Cleartext has no ALPN;

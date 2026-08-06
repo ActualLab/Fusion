@@ -3,6 +3,7 @@ using System.Net;
 using ActualLab.Compliance;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
@@ -35,6 +36,13 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
         var maxRequestBodySizeFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
         if (maxRequestBodySizeFeature is { IsReadOnly: false })
             maxRequestBodySizeFeature.MaxRequestBodySize = null;
+        // The request body stays open for the connection's lifetime and carries nothing at all while
+        // the peer is idle, so Kestrel's slowloris guard (MinRequestBodyDataRate: 240 B/s past a 5s
+        // grace period) aborts it a few seconds into every quiet period. On HTTP/2 that abort is
+        // connection-level, so it also kills every other RPC stream a proxy multiplexed onto the
+        // same backend connection.
+        if (context.Features.Get<IHttpMinRequestBodyDataRateFeature>() is { } minRequestBodyDataRateFeature)
+            minRequestBodyDataRateFeature.MinDataRate = null;
 
         // Full-duplex RPC requires HTTP/2 (or higher) - HTTP/1.x can't read the request while writing the response
         if (Options.MustRequireHttp2 && !IsHttp2OrHigher(request.Protocol)) {
