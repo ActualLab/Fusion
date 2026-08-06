@@ -11,6 +11,35 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.8+f51cf2ebd | npm: 14.3.5
+
+Release date: 2026-08-06
+
+A pooled `DbContext` could return to EF's pool in a state that makes it unusable for writes, and
+every command that later rented that pool entry failed until the pool dropped it. Anyone running
+Fusion on EF Core with pooled contexts — the default — should take this one. NuGet-only release;
+the npm packages are unchanged and stay at `14.3.5`.
+
+### Fixed
+
+- **A `DbContext` returned to EF's pool with a stale connection open count no longer breaks the
+  commands that later rent it.** EF's pool-return path — `RelationalConnection.ResetStateAsync`
+  with `disposeDbConnection: false` — closes the connection but never resets its open count, and
+  EF 11 dropped that reset from the synchronous twin as well. A context returned while its
+  connection was still counted as open, which is what a query cancelled mid-flight leaves behind,
+  re-enters the pool permanently "in use": `SetDbConnection` rejects it with *"The instance of
+  DbConnection is currently in use"*, so every command that later rents it as its operation-scope
+  context fails until the pool drops it.
+
+  The symptom reads as unrelated to whatever failed: a burst of cancellations poisons a few pool
+  entries, and those entries then break arbitrary commands on that host, in pairs, minutes apart.
+  Reads are unaffected — only the enrollment `SetDbConnection` performs trips the check.
+  `DbOperationScope.InitializeDbContext` now disposes the rented context's own connection before
+  adopting the scope's one. That costs nothing: `SetDbConnection` already ran the same disposal,
+  just after the check that rejects the context.
+- **A `DbContext` rented for an operation scope is disposed if enrolling it into the scope throws.**
+  A cancellation between renting and enrolling used to leak the context along with its pool slot.
+
 ## 14.3.4+3d2bbffed | npm: 14.3.5
 
 Release date: 2026-08-05
