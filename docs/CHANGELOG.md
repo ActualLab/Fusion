@@ -11,6 +11,40 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.13+4d9c859d5 | npm: 14.3.5
+
+Release date: 2026-08-07
+
+`RpcMethodAttribute.DelayAction` couldn't be set on the attribute it belongs to — a nullable enum
+isn't a legal attribute argument type, so every `[RpcMethod(DelayAction = ...)]` failed to compile.
+Take this one only if you want to configure delayed-call handling per method; nothing else changes.
+NuGet-only release; the npm packages are unchanged and stay at `14.3.5`.
+
+### Breaking Changes
+
+- **`RpcMethodAttribute.DelayAction` is now `RpcDelayedCallAction`, not `RpcDelayedCallAction?`.**
+  Only code that *reads* the property could compile against the old type — a custom
+  `RpcOutboundCallOptions.DelayHandler`, in practice. Replace
+  `methodDef.Attribute?.DelayAction ?? fallback` with
+  `(methodDef.Attribute?.DelayAction ?? RpcDelayedCallAction.Default).Or(fallback)`.
+
+### Added
+
+- **`RpcDelayedCallAction.Default` and `RpcDelayedCallActionExt.Or(...)`** — the "use the default"
+  sentinel and its resolver. A custom `DelayHandler` can use `Or` to fold the sentinel into whatever
+  action it considers the default for that method.
+
+### Fixed
+
+- **`[RpcMethod(DelayAction = ...)]` compiles.** The property was declared `RpcDelayedCallAction?`,
+  and C# rejects a nullable enum as an attribute argument: *"'DelayAction' is not a valid named
+  attribute argument because it is not a valid attribute parameter type"* (CS0655). So the only
+  way to reach the value was to read it from a custom `DelayHandler` — which is why the property
+  shipped unusable and stayed that way. It's non-nullable now, defaulting to the
+  `RpcDelayedCallAction.Default` sentinel and resolved through `Or(...)`, mirroring how
+  `RpcLocalExecutionMode.Default` already works. The sentinel gets its own bit rather than reusing
+  `None`, which keeps its meaning: no log, no abort, no resend.
+
 ## 14.3.11+3fd57618f | npm: 14.3.5
 
 Release date: 2026-08-06
