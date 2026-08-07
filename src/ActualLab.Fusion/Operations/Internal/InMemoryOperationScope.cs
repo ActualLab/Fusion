@@ -16,7 +16,7 @@ public sealed class InMemoryOperationScope : IOperationScope
     public bool IsTransient => true;
     public bool IsUsed => true;
     public bool? IsCommitted { get; private set; }
-    public bool MustStoreOperation { get; set; }
+    public bool? MustStoreOperation { get; set; }
     public bool HasStoredOperation => false;
     public bool HasStoredEvents { get; private set; }
     public ImmutableList<Func<IOperationScope, Task>> CompletionHandlers { get; set; }
@@ -71,12 +71,12 @@ public sealed class InMemoryOperationScope : IOperationScope
         }
     }
 
-    public Task Commit(CancellationToken cancellationToken = default)
+    public async Task Commit(CancellationToken cancellationToken = default)
     {
+        await DeferredInvalidation.OnCommit(this).ConfigureAwait(false);
         Close(true);
         if (IsCommitted == true)
             HasStoredEvents = Operation.Events.Any(x => x.Value is not null);
-        return Task.CompletedTask;
     }
 
     // Private methods

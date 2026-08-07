@@ -31,6 +31,8 @@ public class InvalidatingCommandCompletionHandler(
     protected Options Settings { get; } = settings;
     protected CommandHandlerResolver CommandHandlerResolver
         => field ??= Services.GetRequiredService<CommandHandlerResolver>();
+    protected InvalidationModeResolver InvalidationModeResolver
+        => field ??= Services.GetRequiredService<InvalidationModeResolver>();
     protected RpcHub RpcHub => field ??= Services.GetRequiredService<RpcHub>();
     protected ILogger Log => field ??= Services.LogFor(GetType());
 
@@ -127,6 +129,11 @@ public class InvalidatingCommandCompletionHandler(
             //   and this host doesn't have a service (server) to handle such a call.
             return false;
         }
+
+        if (InvalidationModeResolver.Resolve(finalHandler) is not InvalidationMode.Legacy)
+            // Only a Legacy handler carries the "if (Invalidation.IsActive) { ...; return; }" guard
+            // that makes a second invocation harmless - replaying any other one re-runs its mutation.
+            return false;
 
         return TryGetService(finalHandler.GetHandlerServiceType()) is IComputeService;
     }

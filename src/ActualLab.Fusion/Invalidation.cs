@@ -25,4 +25,24 @@ public static class Invalidation
         [CallerMemberName] string? member = null,
         [CallerLineNumber] int line = 0)
         => new(new ComputeContext(new InvalidationSource(file, member, line)));
+
+    // Deferred invalidation
+
+    public static DeferInvalidationScopeHandle BeginDeferred(IDeferInvalidationHandler? handler = null)
+        => DeferInvalidationScope.Begin(handler);
+
+    public static void Defer(Action action)
+        => Defer(() => {
+            action.Invoke();
+            return Task.CompletedTask;
+        });
+
+    public static void Defer(Func<Task> action)
+    {
+        if (IsActive)
+            throw Errors.DeferInvalidationInsideInvalidationPass();
+
+        var scope = DeferInvalidationScope.Current ?? throw Errors.NoDeferInvalidationScope();
+        scope.Add(action);
+    }
 }
