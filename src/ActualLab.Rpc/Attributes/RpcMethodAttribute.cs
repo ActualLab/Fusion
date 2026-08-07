@@ -31,9 +31,9 @@ public sealed class RpcMethodAttribute : Attribute
 
     /// <summary>
     /// Action to take when an outbound call is detected as delayed.
-    /// <c>null</c> means "use default" (<see cref="RpcDelayedCallAction.Log"/>).
+    /// <see cref="RpcDelayedCallAction.Default"/> means "use default".
     /// </summary>
-    public RpcDelayedCallAction? DelayAction { get; set; }
+    public RpcDelayedCallAction DelayAction { get; set; } = RpcDelayedCallAction.Default;
 
     /// <summary>
     /// Shard routing mode.

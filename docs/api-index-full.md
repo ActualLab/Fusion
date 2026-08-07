@@ -1445,7 +1445,7 @@ Defines the kind of connection used by an RPC peer (remote, loopback, local, or 
 
 Defines how inbound calls are handled when an RPC peer is stopping.
 
-###### `RpcDelayedCallAction` (enum)
+###### `RpcDelayedCallAction` (enum), `RpcDelayedCallActionExt`
 
 Flags controlling how delayed outbound RPC calls are handled.
 

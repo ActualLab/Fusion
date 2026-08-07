@@ -12,4 +12,15 @@ public enum RpcDelayedCallAction
     Log = 0x10,
     LogAndAbort = Log | Abort,
     LogAndResend = Log | Resend,
+    // A sentinel resolved via Or(...) — it can't be None, which means "do nothing"
+    Default = 0x100,
+}
+
+/// <summary>
+/// Extension methods for <see cref="RpcDelayedCallAction"/>.
+/// </summary>
+public static class RpcDelayedCallActionExt
+{
+    public static RpcDelayedCallAction Or(this RpcDelayedCallAction action, RpcDelayedCallAction actionIfDefault)
+        => action == RpcDelayedCallAction.Default ? actionIfDefault : action;
 }

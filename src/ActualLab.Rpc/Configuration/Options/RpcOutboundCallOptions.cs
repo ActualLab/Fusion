@@ -51,7 +51,8 @@ public record RpcOutboundCallOptions
     protected static RpcDelayedCallAction DefaultDelayHandler(RpcOutboundCall call, RpcPeer peer)
     {
         var methodDef = call.MethodDef;
-        return methodDef.Attribute?.DelayAction ?? methodDef.GetDefaultDelayedCallAction();
+        var action = methodDef.Attribute?.DelayAction ?? RpcDelayedCallAction.Default;
+        return action.Or(methodDef.GetDefaultDelayedCallAction());
     }
 
     protected static Task DefaultReroutingDelayer(RpcMethodDef methodDef, int failureCount, CancellationToken cancellationToken)
