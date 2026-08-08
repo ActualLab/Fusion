@@ -12,6 +12,8 @@ const { warnLog } = getLogs('RpcStream');
 const DEFAULT_ACK_PERIOD = 30;
 /** Default ack advance window (matches .NET RpcStream defaults). */
 const DEFAULT_ACK_ADVANCE = 61;
+/** Largest $sys.B batch a conforming sender emits (matches .NET RpcStream.MaxBatchSize). */
+const MAX_BATCH_SIZE = 1024;
 
 /** Parsed stream reference from the server's result payload. */
 export interface RpcStreamRef {
@@ -289,6 +291,10 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
             this._failProtocol(`invalid $sys.B index/length: ${String(index)}/${String(items.length)}`);
             return;
         }
+        if (items.length > MAX_BATCH_SIZE) {
+            this._failProtocol(`$sys.B batch is too large: ${items.length} > ${MAX_BATCH_SIZE}`);
+            return;
+        }
         if (index > this._nextExpectedIndex) {
             warnLog?.log(`batch index gap: localId=${this.id.localId}, expected=${this._nextExpectedIndex}, received=${index}`);
             if (!this.allowReconnect) {
@@ -460,13 +466,27 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     // last acknowledged index. The sending side is the only place that window
     // was ever enforced, which left a flooding remote free to grow our buffer
     // without bound (I6) — so we enforce our half of the contract here.
+    //
+    // The window is credited by consumption, never by `_ackSentUpTo`: a reset ack
+    // re-bases to what we've *received*, so crediting it would let a peer ratchet
+    // its own limit up by alternating "fill the window" with a forced gap.
+    // Twice ackAdvance is what a conforming sender can leave buffered (ackAdvance
+    // in steady state, plus ackAdvance more after a reset re-bases it), and
+    // ackPeriod covers the lag of acks behind consumption.
     private _isBeyondAckWindow(nextExpectedIndex: number): boolean {
-        return this.ackAdvance > 0 && nextExpectedIndex > this._ackSentUpTo + this.ackAdvance;
+        if (this.ackAdvance <= 0)
+            return false;
+
+        return nextExpectedIndex > this._nextConsumedIndex + this._ackWindowSize();
+    }
+
+    private _ackWindowSize(): number {
+        return 2 * this.ackAdvance + this.ackPeriod;
     }
 
     private _ackWindowError(nextExpectedIndex: number): string {
         return `Stream ran past its ack window: reached ${nextExpectedIndex}, `
-            + `acked ${this._ackSentUpTo}, ackAdvance ${this.ackAdvance}`;
+            + `consumed ${this._nextConsumedIndex}, ackAdvance ${this.ackAdvance}`;
     }
 
     private _gapError(index: number): Error {

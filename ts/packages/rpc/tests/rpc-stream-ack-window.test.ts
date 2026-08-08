@@ -20,6 +20,10 @@ import { delay } from './rpc-test-helpers.js';
 
 const ACK_PERIOD = 10;
 const ACK_ADVANCE = 20;
+const MAX_BATCH_SIZE = 1024;
+// What a conforming sender can leave buffered: ackAdvance in steady state, plus another
+// ackAdvance after a reset re-bases it to what we've received, plus the ack period acks lag by.
+const WINDOW = 2 * ACK_ADVANCE + ACK_PERIOD;
 
 describe('RpcStream ack-window enforcement (I6)', () => {
     let serverHub: RpcHub;
@@ -53,8 +57,12 @@ describe('RpcStream ack-window enforcement (I6)', () => {
         clientHub.close();
     });
 
-    function createRemoteStream(localId = 1): RpcStream<number> {
-        const ref = parseStreamRef(`h,${localId},${ACK_PERIOD},${ACK_ADVANCE},1,0`)!;
+    function createRemoteStream(
+        localId = 1,
+        ackPeriod = ACK_PERIOD,
+        ackAdvance = ACK_ADVANCE,
+    ): RpcStream<number> {
+        const ref = parseStreamRef(`h,${localId},${ackPeriod},${ackAdvance},1,0`)!;
         const stream = new RpcStream<number>(ref, clientPeer);
         clientPeer.remoteObjects.register(stream);
         return stream;
@@ -66,21 +74,58 @@ describe('RpcStream ack-window enforcement (I6)', () => {
 
     it('accepts exactly the advertised window and fails on the item past it', async () => {
         const stream = createRemoteStream();
-        for (let i = 0; i < ACK_ADVANCE; i++)
+        for (let i = 0; i < WINDOW; i++)
             stream.onItem(i, i);
 
         expect(clientPeer.remoteObjects.get(1)).toBe(stream);
         expect(ackEndCount).toBe(0);
 
-        stream.onItem(ACK_ADVANCE, ACK_ADVANCE);
+        stream.onItem(WINDOW, WINDOW);
 
         // Failing the stream unregisters it and acknowledges the end, so the
         // remote's shared stream is released instead of pumping into nowhere.
         expect(clientPeer.remoteObjects.get(1)).toBeUndefined();
         expect(ackEndCount).toBe(1);
-        expect(buffered(stream)).toBe(ACK_ADVANCE);
+        expect(buffered(stream)).toBe(WINDOW);
 
         await expect(drain(stream)).rejects.toThrow('ran past its ack window');
+    });
+
+    it('does not widen the window when a forced gap makes us send a reset ack', async () => {
+        const stream = createRemoteStream();
+
+        // An out-of-order index makes us send a reset ack, which re-bases the sender to what
+        // we've received. Crediting our own window from that ack would let a flooding peer
+        // ratchet its limit up one forced gap at a time.
+        let index = 0;
+        for (let round = 0; round < 50; round++) {
+            for (let i = 0; i < ACK_ADVANCE; i++)
+                stream.onItem(index++, index);
+
+            stream.onItem(index + 1000, -1);
+        }
+
+        expect(buffered(stream)).toBeLessThanOrEqual(WINDOW);
+        await expect(drain(stream)).rejects.toThrow('ran past its ack window');
+    });
+
+    it('rejects a batch larger than the maximum a sender may emit', async () => {
+        // The window is wide enough to admit this batch, so only the size cap can reject it
+        const stream = createRemoteStream(1, 100_000, 1_000_000);
+        stream.onBatch(0, [...Array(MAX_BATCH_SIZE + 1).keys()]);
+
+        expect(clientPeer.remoteObjects.get(1)).toBeUndefined();
+        expect(buffered(stream)).toBe(0);
+
+        await expect(drain(stream)).rejects.toThrow('batch is too large');
+    });
+
+    it('accepts a batch of exactly the maximum size', async () => {
+        const stream = createRemoteStream(1, 100_000, 1_000_000);
+        stream.onBatch(0, [...Array(MAX_BATCH_SIZE).keys()]);
+
+        expect(clientPeer.remoteObjects.get(1)).toBe(stream);
+        expect(buffered(stream)).toBe(MAX_BATCH_SIZE);
     });
 
     it('re-opens the window as the consumer acknowledges', async () => {
@@ -105,7 +150,7 @@ describe('RpcStream ack-window enforcement (I6)', () => {
 
     it('fails on a batch that lands past the window', async () => {
         const stream = createRemoteStream();
-        stream.onBatch(0, [...Array(ACK_ADVANCE + 1).keys()]);
+        stream.onBatch(0, [...Array(WINDOW + 1).keys()]);
 
         expect(clientPeer.remoteObjects.get(1)).toBeUndefined();
         expect(ackEndCount).toBe(1);
@@ -119,7 +164,7 @@ describe('RpcStream ack-window enforcement (I6)', () => {
         for (let i = 0; i < 10_000; i++)
             stream.onItem(i, i);
 
-        expect(buffered(stream)).toBe(ACK_ADVANCE);
+        expect(buffered(stream)).toBe(WINDOW);
         await expect(drain(stream)).rejects.toThrow('ran past its ack window');
     });
 

@@ -1,5 +1,7 @@
 using System.Globalization;
+using ActualLab.Concurrency;
 using ActualLab.Interception;
+using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization.Internal;
 using MessagePack;
@@ -110,6 +112,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     private readonly IAsyncEnumerable<T>? _localSource;
     private Channel<T>? _remoteChannel;
     private long _nextIndex;
+    private long _consumedIndex;
     private bool _isRegistered;
     private bool _isDisconnected;
 
@@ -281,6 +284,12 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 return;
             }
 
+            if (IsBeyondAckWindow(index + 1)) {
+                FailFromLock(Internal.Errors.RpcStreamAckWindowExceeded(
+                    index + 1, InterlockedExt.VolatileRead(ref _consumedIndex), AckAdvance));
+                return;
+            }
+
             // Debug.WriteLine($"{Id}: +#{index} (ack @ {ackIndex})");
             _remoteChannel.Writer.TryWrite((T)item!); // Must always succeed for unbounded channel
             _nextIndex++;
@@ -302,6 +311,16 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             }
 
             var typedItems = (T[])items!;
+            if (typedItems.Length > MaxBatchSize) {
+                FailFromLock(Internal.Errors.RpcStreamBatchTooLarge(typedItems.Length));
+                return;
+            }
+            if (IsBeyondAckWindow(index + typedItems.Length)) {
+                FailFromLock(Internal.Errors.RpcStreamAckWindowExceeded(
+                    index + typedItems.Length, InterlockedExt.VolatileRead(ref _consumedIndex), AckAdvance));
+                return;
+            }
+
             foreach (var item in typedItems) {
                 // Debug.WriteLine($"{Id}: +#{index} (ack @ {ackIndex})");
                 _remoteChannel.Writer.TryWrite(item); // Must always succeed for unbounded channel
@@ -377,6 +396,15 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
     private void SendResetFromLock(long index)
         => SendAckFromLock(index, mustReset: true);
 
+    private void OnItemConsumed(long consumedIndex)
+    {
+        // The ack window is credited by consumption only. Crediting it from any sender-supplied
+        // index - a reset (which re-bases to what we've received) or a duplicate - would let a
+        // flooding peer ratchet up its own limit by forcing gaps.
+        InterlockedExt.ExchangeIfGreater(ref _consumedIndex, consumedIndex);
+        MaybeSendAckFromLock(consumedIndex);
+    }
+
     private void MaybeSendAckFromLock(long index)
     {
         if (index % AckPeriod == 0 && index > 0)
@@ -393,6 +421,23 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
             Peer!.Hub.SystemCallSender.Ack(Peer, Id.LocalId, index, mustReset ? Id.HostId : default);
         else
             Peer!.Hub.SystemCallSender.AckEnd(Peer, Id.LocalId, mustReset ? Id.HostId : default);
+    }
+
+    private void FailFromLock(Exception error)
+    {
+        RpcInstruments.RegisterResourceLimitBreach("stream");
+        CloseFromLock(error);
+    }
+
+    private bool IsBeyondAckWindow(long nextIndex)
+    {
+        // A conforming sender runs at most AckAdvance past the index we last acknowledged, and a
+        // reset re-bases it to what we've already received - hence twice AckAdvance. AckPeriod
+        // covers the lag of _consumedIndex behind actual consumption: it's written off-lock by
+        // the enumerator, and acks themselves only go out once per AckPeriod items.
+        var window = (2L * AckAdvance) + AckPeriod;
+        var consumedIndex = InterlockedExt.VolatileRead(ref _consumedIndex);
+        return consumedIndex < long.MaxValue - window && nextIndex > consumedIndex + window;
     }
 
     // Nested types
@@ -455,7 +500,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
                 _current = Result.NewError<T>(e);
             }
 
-            _stream.MaybeSendAckFromLock(_nextIndex++);
+            _stream.OnItemConsumed(_nextIndex++);
             return GetMoveNextValueTask(_current.Error);
         }
 
@@ -471,7 +516,7 @@ public sealed partial class RpcStream<T> : RpcStream, IAsyncEnumerable<T>
         private async ValueTask<bool> CompleteMoveNextAsync()
         {
             try {
-                _stream.MaybeSendAckFromLock(_nextIndex);
+                _stream.OnItemConsumed(_nextIndex);
 
                 if (!await _reader.WaitToReadAsync(_cancellationToken).ConfigureAwait(false)) {
                     _current = Result.NewError<T>(NoMoreItemsTag);

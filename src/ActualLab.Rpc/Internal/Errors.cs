@@ -158,6 +158,13 @@ public static class Errors
         => new RpcStreamNotFoundException();
     public static Exception RpcStreamInvalidPosition()
         => new InvalidOperationException("RpcStream position is invalid.");
+    public static Exception RpcStreamAckWindowExceeded(long index, long ackedIndex, int ackAdvance)
+        => new RpcResourceLimitExceededException(
+            $"RpcStream sender ran past its ack window: reached {index}, "
+            + $"acknowledged {ackedIndex}, AckAdvance is {ackAdvance}.");
+    public static Exception RpcStreamBatchTooLarge(int size)
+        => new RpcResourceLimitExceededException(
+            $"RpcStream batch is too large: {size} > {RpcStream.MaxBatchSize}.");
 
     public static Exception InvalidWebSocketMessageType(WebSocketMessageType type, WebSocketMessageType expectedType)
         => new InvalidOperationException($"Invalid WebSocket message type: got {type:G}, but expected {expectedType:G}.");

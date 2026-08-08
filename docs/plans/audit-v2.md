@@ -15,7 +15,7 @@ tiers are untouched apart from the handful that fell out of the HIGH work.
 | Tier | Findings |
 |---|---|
 | CRITICAL | H1, F1 |
-| HIGH | A1, A2, A5, B1, B2, B4, B5, B6, C1, C3, C4, C5, D1, D3, D4, F2, F3, F6, G1, H2, H3, I1, I6, I7 |
+| HIGH | A1, A2, A5, B1, B2, B3, B4, B5, B6, C1, C3, C4, C5, D1, D3, D4, F2, F3, F6, G1, H2, H3, I1, I6, I7 |
 | MEDIUM | A6, A8, B12, C6, D2, F8, H4, I8–I14, I16 |
 | LOW | B16, I15 |
 
@@ -28,16 +28,16 @@ Partially fixed:
 
 Rejected outright — see **Maintainer decisions** at the end:
 **A4** (the `CancellationToken.None` claim was simply wrong — `Abort()` faults pending
-operations) and **B3** (a bounded receive channel would put a blocking write on the
-peer's inbound message path — head-of-line blocking for every call on that peer).
+operations).
 
 Known-open on purpose: **A3**, **B4**'s `int.MaxValue` default, **C2**, **C7**, **E2**,
 **F5**, **I2**, **I4**, **I5**, **I15**.
 
-Note **I6** was fixed in TypeScript even though its .NET twin B3 was rejected: the
-approved lever there is enforcing the advertised `AckAdvance` window and failing the
-stream, not bounding the buffer. In the client direction the flooding party is a server
-and the casualty is a browser tab, which is the case worth defending.
+**B3 is now fixed** (see below). The earlier rejection answered B3's *fallback* — "bound
+the receive channel" — and not its primary lever, which the rejection itself named:
+enforce the `AckAdvance` window and fail the stream. The bounded channel stays rejected
+for the reason recorded then; the window check is not that, since it neither blocks nor
+fails a write. Both **B3** and **I6** now enforce the same rule.
 
 ### Carried forward
 
@@ -473,10 +473,29 @@ weakness (**I6**).
 - `src/ActualLab.Rpc/Infrastructure/RpcSystemCalls.cs:164`, `:172`
 - sender-side-only enforcement: `src/ActualLab.Rpc/Infrastructure/RpcSharedStream.cs:221`
 
-**Fix:** enforce the credit window on the receiving side — track the last acked
-index and fail the stream (`AckEnd` + `RpcStreamInvalidPosition`) when
-`_nextIndex - lastAcked > AckAdvance`; or make `_remoteChannel` bounded at
-`max(BufferSize, AckAdvance) + BatchSize`. Cap `T[]` length in `OnBatch`.
+**Fix (applied):** the receiver enforces the credit window. `OnItem`/`OnBatch` fail the
+stream via the existing `CloseFromLock` (which already sends `$sys.AckEnd` and
+unregisters) when the incoming index would run past the window; `OnBatch` also caps
+`T[]` at `RpcStream.MaxBatchSize`. `_remoteChannel` stays **unbounded** — the check is a
+compare inside the lock `OnItem` already holds, so no write ever blocks or fails and the
+peer's inbound path is untouched.
+
+The window is credited by **consumption** (`_consumedIndex`, advanced only by the
+enumerator), never by the last ack sent. A reset ack re-bases to what we've *received*,
+so crediting from it would let a flooding peer ratchet its own limit up by alternating
+"fill the window" with a forced gap — `RpcStreamAckWindowTest.ForcedResetsDoNotWidenTheAckWindow`
+covers exactly that. The bound is `2 * AckAdvance + AckPeriod`: `AckAdvance` in steady
+state, another `AckAdvance` because a reset legitimately re-bases the sender, plus
+`AckPeriod` for the lag of acks behind consumption.
+
+TypeScript (**I6**) enforced the window already but had the same reset ratchet and no
+batch cap; both are fixed, and `_isBeyondAckWindow` now measures from
+`_nextConsumedIndex`.
+
+Residual: this bounds buffered *items*, not bytes — `2 * AckAdvance` items of up to
+`MaxArgumentDataSize` each is still large. `RpcLimits.ObjectCountLimit` caps how many
+streams a peer can hold, so the product is bounded, but a byte budget is the stronger
+lever if this ever matters.
 
 ### B4 · HIGH · **B** — No cap on concurrent inbound calls or on the inbound-call table
 
@@ -2904,8 +2923,8 @@ findings should read this section before reporting them again.
 | Finding | Decision |
 |---|---|
 | **A4**, "`WebSocket.SendAsync` gets `CancellationToken.None`" | **Wrong.** `WebSocket.Abort()` faults pending operations, and the read loop already registers an abort on `readerToken` — the cancellation path exists, it just runs through `Abort` rather than the token. Passing a token forces per-operation registration work on the hottest write path for no additional capability. Both reviewers flagged this; both were wrong. |
-| **B3**, "bound the `RpcStream` receive channel" | **Rejected.** A bounded channel would put a blocking or failing write inside `OnItem`, which runs on the peer's inbound message-processing path — that is head-of-line blocking for *every* call on that peer, worse than the problem. If it ever bites, the lever is enforcing the existing `AckAdvance` window and failing the stream, not bounding the channel. |
-| **I6** (the TS twin of B3) | **Fixed, but via the second lever, not the first.** Same rejection of a bounded receive buffer; instead the TS receiver now *enforces* the `AckAdvance` window it advertises and fails the stream with a protocol violation + `$sys.AckEnd` when the remote runs past it. Taken in TS and not in .NET because here the hostile party is the **server** and the victim is a browser tab — the client-direction case is the one that matters. |
+| **B3**, "bound the `RpcStream` receive channel" | **Still rejected — but this was never B3's main fix.** A bounded channel would put a blocking or failing write inside `OnItem`, which runs on the peer's inbound message-processing path — that is head-of-line blocking for *every* call on that peer, worse than the problem. That reasoning stands. What it does *not* cover is the lever this row itself names: enforcing the existing `AckAdvance` window and failing the stream. That is now implemented in .NET too (see **B3** above) and is not a bounded channel — nothing blocks and no write fails. Closing B3 on this row was an error of attention: the fallback got answered and the primary fix was never evaluated. |
+| **I6** (the TS twin of B3) | **Fixed via the window lever**, same as B3. The TS receiver enforces the `AckAdvance` window it advertises and fails the stream with a protocol violation + `$sys.AckEnd` when the remote runs past it. Its original form still credited the window from the last ack sent, which a peer could ratchet by forcing gaps; it now measures from consumption and caps batch length, matching .NET. |
 | **A4**, "bound the outbound write channel" | **Accepted risk.** Reaching it requires an application-level bug: RPC streams stop quickly on their own ack window, and stuck calls surface as stuck calls. Where the victim is a client, the client fails and that is tolerable. Not worth a bound on the 9M-calls/s write path. |
 
 ### Decided differently from the review's recommendation
