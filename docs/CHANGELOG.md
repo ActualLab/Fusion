@@ -11,6 +11,47 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.16+fe3695af4 | npm: 14.3.16
+
+Release date: 2026-08-08
+
+The receiving side of `RpcStream<T>` never enforced the flow-control window it advertises, so a peer
+that ignores acknowledgements could push unbounded items into an unbounded channel until the
+consumer ran out of memory. Take this one if you accept `RpcStream<T>` arguments from clients, or if
+your clients consume streams returned by a server. Both NuGet and npm are updated — the first npm
+change since `14.3.5`.
+
+### Fixed
+
+- **A stream sender can no longer flood its consumer.** `RpcStream<T>` buffers incoming items in
+  `Channel.CreateUnbounded<T>()` and accepted every in-order one without ever checking how far the
+  sender had run past the last acknowledged index. The entire `AckAdvance`/`AckPeriod` protocol was
+  enforced **only by the sender** (`RpcSharedStream<T>.OnRun`), so it protected against a slow peer
+  but not a hostile one. It bites in both directions: a client passing an `RpcStream<T>` argument
+  makes the server the consumer and can flood `$sys.I`/`$sys.B` at line rate, and a compromised
+  server can do the same to a .NET or Blazor client.
+
+  `OnItem`/`OnBatch` now fail the stream with `RpcResourceLimitExceededException` when an incoming
+  index would run past the window, and `OnBatch` rejects a batch longer than
+  `RpcStream.MaxBatchSize`. The receive channel stays **unbounded** on purpose: the check is a
+  comparison inside the lock `OnItem` already holds, so no write ever blocks or fails and the peer's
+  inbound message path is untouched. Bounding the channel instead would have put a blocking write
+  there and head-of-line blocked every call on that peer.
+
+  The window is credited by *consumption*, never by the last acknowledgement sent. A reset ack
+  re-bases to what has already been received, so crediting from it would let a peer ratchet its own
+  limit upward by alternating "fill the window" with a deliberately out-of-order index. The bound is
+  `2 * AckAdvance + AckPeriod` — `AckAdvance` in steady state, another because a reset legitimately
+  re-bases the sender, plus `AckPeriod` for the lag of acks behind consumption. A conforming sender
+  never reaches it, so no application-visible behavior changes.
+
+  The TypeScript client enforced the window already, but had that same reset ratchet and no batch
+  cap; both are fixed there too, now measuring from the consumption counter.
+
+  One limit worth knowing: this bounds buffered *items*, not bytes. `RpcLimits.ObjectCountLimit`
+  caps how many streams a peer may hold, so the product is bounded, but a byte budget would be the
+  stronger lever if it ever matters.
+
 ## 14.3.13+4d9c859d5 | npm: 14.3.5
 
 Release date: 2026-08-07
