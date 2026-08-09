@@ -120,7 +120,7 @@ describe('RpcStream ack-window enforcement (I6)', () => {
         await expect(drain(stream)).rejects.toThrow('batch is too large');
     });
 
-    it('accepts a batch of exactly the maximum size', async () => {
+    it('accepts a batch of exactly the maximum size', () => {
         const stream = createRemoteStream(1, 100_000, 1_000_000);
         stream.onBatch(0, [...Array(MAX_BATCH_SIZE).keys()]);
 
