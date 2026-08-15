@@ -11,6 +11,39 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.18+11fea4e10 | npm: 14.3.16
+
+Release date: 2026-08-14
+
+**.NET 11 preview 7.** The `net11.0` assets move from preview 6 to preview 7, and the
+`StackExchange.Redis` floor rises on *every* target framework &mdash; the one change here
+that reaches you even if you never touch .NET 11. NuGet-only release (npm stays at
+`14.3.16`).
+
+### Changed
+
+- **`net11.0` assets now depend on `11.0.0-preview.7.26381.103`** for ASP.NET Core,
+  Blazor and `Microsoft.Extensions.*`. `net11.0` stays preview-grade until .NET 11 ships,
+  so expect to move again at preview 8.
+- **EF Core deliberately stays on `11.0.0-preview.6.26359.118`** on `net11.0`.
+  `Npgsql.EntityFrameworkCore.PostgreSQL` has no preview 7 build, and its preview 6
+  `.nuspec` pins `Microsoft.EntityFrameworkCore` and `.Relational` to that exact build,
+  so moving the other providers forward would break restore in any app that references
+  efcore.pg alongside `Sqlite`, `SqlServer` or `InMemory`. Only
+  `ActualLab.Fusion.EntityFramework.Npgsql` is affected by the pin; the provider-agnostic
+  `ActualLab.Fusion.EntityFramework` still declares its open `[10.0.0,)` range.
+- **`StackExchange.Redis` minimum is now `3.1.13`** (was `3.0.17`) in `ActualLab.Redis`
+  and `ActualLab.Fusion.EntityFramework.Redis`, on `netstandard2.0` through `net11.0`
+  alike. Versions below 3.1 read `MulticastDelegate._invocationList` through
+  `UnsafeAccessor` on every `net8.0+` asset, and .NET 11 preview 7 reworked the delegate
+  layout &mdash; that field is gone. The lookup throws `MissingFieldException` on a thread
+  pool thread, which takes the whole process down rather than failing anything you can
+  catch. It bites on the *runtime*, not the target framework, so a `net10.0` build that
+  rolls forward onto .NET 11 hits it too. 3.1 switched to the public
+  `Delegate.EnumerateInvocationList` and ships the same target frameworks as 3.0.17, so
+  the upgrade is a drop-in one.
+
+
 ## 14.3.16+fe3695af4 | npm: 14.3.16
 
 Release date: 2026-08-08
