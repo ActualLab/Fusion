@@ -13,7 +13,7 @@
   <PropertyGroup>
     <!-- The .NET 11 preview all Microsoft.* / EF Core packages are aligned on.
          Keep in sync with the SDK version in global.json. -->
-    <DotNet11Version>[11.0.0-preview.6.26359.118,)</DotNet11Version>
+    <DotNet11Version>[11.0.0-preview.7.26381.103,)</DotNet11Version>
     <!-- Core packages -->
     <AspNetCoreVersion10>[10.0.0,)</AspNetCoreVersion10>
     <AspNetCoreVersion>$(AspNetCoreVersion10)</AspNetCoreVersion>
@@ -50,9 +50,10 @@
          declares this open EF10+ range and lets the app pick EF 10 or 11. Provider packages can't:
          Npgsql/Sqlite/SqlServer/Pomelo each cap EF to a single major, so whatever provider an app
          picks decides its EF version. EntityFrameworkCoreVersion11 is what this repo's own apps and
-         tests pin on net11.0, so CI exercises EF 11. -->
+         tests pin on net11.0, so CI exercises EF 11. It trails DotNet11Version: efcore.pg's newest
+         preview exact-pins EF Core to preview.6, and every other provider must match that build. -->
     <EntityFrameworkCoreVersion>[10.0.0,)</EntityFrameworkCoreVersion>
-    <EntityFrameworkCoreVersion11>$(DotNet11Version)</EntityFrameworkCoreVersion11>
+    <EntityFrameworkCoreVersion11>[11.0.0-preview.6.26359.118,)</EntityFrameworkCoreVersion11>
     <EntityFrameworkCoreVersion9>[9.0.0,)</EntityFrameworkCoreVersion9>
     <EntityFrameworkCoreVersion8>[8.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,)</EntityFrameworkCoreVersion7>
@@ -91,7 +92,11 @@
     <MessagePackVersion2>[2.5.192,)</MessagePackVersion2>
     <NerdbankMessagePackVersion>[1.0.43,)</NerdbankMessagePackVersion>
     <!-- Other -->
-    <RedisVersion>[3.0.17,)</RedisVersion>
+    <!-- 3.1+ is the floor on .NET 11: earlier versions read MulticastDelegate._invocationList via
+         UnsafeAccessor, and preview.7 replaced that field, so any multi-handler event inside
+         StackExchange.Redis throws MissingFieldException on a thread pool thread and kills the process.
+         3.1 switched to Delegate.EnumerateInvocationList, which is public and version-proof. -->
+    <RedisVersion>[3.1.13,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
     <OpenTelemetryVersion>[1.13.0,)</OpenTelemetryVersion>
     <!-- Build & Samples -->
