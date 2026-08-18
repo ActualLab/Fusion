@@ -264,8 +264,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
         // ReSharper disable once UseAwaitUsing
         // ReSharper disable once RedundantAssignment
-        using var routeChangedTokenRegistration = Route.ChangedToken.Register(
-            () => Task.Run(DisposeAsync, CancellationToken.None));
+        using var routeChangedTokenRegistration = Route.ChangedToken.Register(OnRouteChanged);
 
         var handshakeIndex = Options.UseRandomHandshakeIndex
             ? RandomShared.Next().PositiveModulo(65_537) // Prime
@@ -596,6 +595,21 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
             : RpcPeerStopMode.CancelInboundCalls; // When the client dies, server-to-client calls must be cancelled
 
     // Private methods
+
+    private void OnRouteChanged()
+    {
+        // Rerouting must happen here, synchronously - i.e. before RpcHub's own WhenChanged
+        // continuation can dispose this peer. It's the last moment the connection is still
+        // usable, and thus the only chance for the $sys.Cancel-s of the rerouted calls to
+        // reach the remote peer and stop the executions this peer is about to abandon.
+        try {
+            OutboundCalls.TryReroute();
+        }
+        catch (Exception e) {
+            Log.LogWarning(e, "'{Route}': failed to reroute outbound calls on route change", Route);
+        }
+        _ = Task.Run(DisposeAsync, CancellationToken.None);
+    }
 
     // !!! This method can be called only from RpcPeer.OnRun!
     private AsyncState<RpcPeerConnectionState> SetConnectionState(

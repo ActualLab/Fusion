@@ -396,7 +396,12 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         // This SetError call not only sets the error but also invalidates
         // computed method calls awaiting the invalidation.
         // See RpcOutboundComputeCall.SetError / when it calls SetInvalidatedUnsafe.
-        SetError(error, context: null, assumeCancelled: true);
+        //
+        // assumeCancelled: false is what makes $sys.Cancel go out. The call is about to run
+        // again on the new route target, so the old one must be told to stop - otherwise a
+        // non-idempotent method is applied once per route change. It's best-effort: the send
+        // is a no-op once the old peer's transport is gone.
+        SetError(error, context: null, assumeCancelled: false);
     }
 
     // Protected methods
