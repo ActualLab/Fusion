@@ -94,7 +94,10 @@ public static partial class ComputedExt
                 // Intended: this method should never throw any exceptions
             }
             finally {
-                registration.Dispose();
+                // Unregister() rather than Dispose(): the Invalidated event can invoke this handler
+                // from inside Computed's lock (see its add accessor), and Dispose() would wait there
+                // for the registration's own callback - which needs that same lock to Invalidate().
+                registration.Unregister();
                 cts.Dispose();
             }
         };

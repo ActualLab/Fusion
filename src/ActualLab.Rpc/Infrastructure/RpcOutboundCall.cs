@@ -353,7 +353,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             return;
 
         if (!IsLongLiving || Peer.OutboundCalls.UnregisterLongLiving(this)) {
-            CancellationHandler.Dispose();
+            // Unregister() rather than Dispose(): this runs under Lock, and Dispose() waits for a
+            // concurrently running cancellation callback - which is Cancel(), i.e. it wants Lock.
+            CancellationHandler.Unregister();
             var trace = Context.Trace;
             trace?.Complete(this);
             trace?.CompleteMetrics(this);
@@ -370,7 +372,7 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         if (!Peer.OutboundCalls.UnregisterLongLiving(this))
             return;
 
-        CancellationHandler.Dispose();
+        CancellationHandler.Unregister(); // Under Lock - see CompleteAndUnregister
         var trace = Context.Trace;
         trace?.Complete(this);
         trace?.CompleteMetrics(this);

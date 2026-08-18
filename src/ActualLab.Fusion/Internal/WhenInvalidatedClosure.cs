@@ -26,8 +26,11 @@ internal sealed class WhenInvalidatedClosure
 
     private void OnInvalidated(Computed _)
     {
+        // Unregister() rather than Dispose(): this can run from inside Computed's lock (see the
+        // add accessor of its Invalidated event), and Dispose() would wait there for OnUnregister,
+        // which needs that same lock to unsubscribe.
         _taskSource.TrySetResult();
-        _cancellationTokenRegistration.Dispose();
+        _cancellationTokenRegistration.Unregister();
     }
 
     private void OnUnregister()

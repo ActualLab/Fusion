@@ -92,11 +92,7 @@ public static class CancellationTokenExt
         var tcs = AsyncTaskMethodBuilderExt.New(runContinuationsAsynchronously);
         var r = token.Register(() => tcs.TrySetCanceled(token));
         return Disposable.New(tcs.Task, (tcs, token, r), (_, state) => {
-#if NETSTANDARD
-            state.r.Dispose();
-#else
             state.r.Unregister();
-#endif
             state.tcs.TrySetCanceled(state.token);
         });
     }
@@ -108,11 +104,7 @@ public static class CancellationTokenExt
         var tcs = AsyncTaskMethodBuilderExt.New<T>(runContinuationsAsynchronously);
         var r = token.Register(() => tcs.TrySetCanceled(token));
         return Disposable.New(tcs.Task, (tcs, token, r), (_, state) => {
-#if NETSTANDARD
-            state.r.Dispose();
-#else
             state.r.Unregister();
-#endif
             state.tcs.TrySetCanceled(state.token);
         });
     }
