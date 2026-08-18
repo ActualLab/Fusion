@@ -11,6 +11,37 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.29+7a15b6788 | npm: 14.3.26
+
+Release date: 2026-08-18
+
+**A disposed `ComputedState` no longer storms.** Disposing a state while it was mid-update
+made Fusion retry a computation that could never succeed, once per backoff step until the
+reprocessing budget ran out, then latch the cancellation into the state. Worth taking if
+you use `ComputedStateComponent` or any `ComputedState` on a client that can be slow enough
+to be updating when a component goes away. NuGet-only release (npm stays at `14.3.26`).
+
+### Fixed
+
+- **A dispose landing mid-update is no longer misread as an internal cancellation.**
+  `ComputedState` keeps updating on `GracefulDisposeToken` after `DisposeToken` fires &mdash;
+  deliberately, so in-flight RPC calls can finish and cache entries can populate. But that
+  leaves the computation cancelled by one token while the update cycle awaits on another,
+  and the retry classifier only knew about the caller's. It read the mismatch as an
+  *internal* cancellation and retried &mdash; always in vain, because a disposed state hands
+  back the very same cancelled task on every attempt &mdash; until `MaxDuration` (2s by
+  default) expired, then stored the cancellation as the state's error. In a log it looks
+  like a burst of `ProduceComputedFromLock #N for ... was cancelled internally, will retry
+  in 50.057ms`, nine or so per state, several states at once when a screen's components are
+  disposed together. `FinalizeAndTryReprocessInternalCancellation` now accepts a second
+  token that counts as "ours" exactly like the first, and `State` passes `ComputedState`'s
+  `DisposeToken` through a new `OwnDisposeToken` hook. This makes the graceful path behave
+  like the `GracefulDisposeDelay = 0` one, where both tokens are the same source and the
+  cancellation already passed straight through. The window is widest on a starved main
+  thread, which is why it showed up on Android/MAUI first and is hard to reproduce on a
+  desktop WASM client.
+
+
 ## 14.3.26+b857325de | npm: 14.3.26
 
 Release date: 2026-08-18
