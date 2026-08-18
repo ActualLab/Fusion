@@ -59,9 +59,11 @@ and npm.
   each time paying for the call-id decompression and a reconciliation walk over every id
   it names. A connection's single allowance is now claimed on `RpcPeerConnectionState`
   (`TryClaimReconnect`) and repeats are rejected with `TooLateToReconnect`; the next
-  connection gets a fresh one. No conforming peer is affected &mdash; .NET sends it at
-  most once per connection, and the TypeScript client never sends it at all. The
-  TypeScript handler enforces the same rule for TS-hosted servers.
+  connection gets a fresh one. No conforming peer is affected &mdash; the .NET and
+  TypeScript clients both send it once per connection, from their reconnect
+  reconciliation, and a rejected repeat falls back to resending every in-flight call,
+  which the receiving side deduplicates. The TypeScript handler enforces the same rule
+  for TS-hosted servers.
 
 ### Added
 
