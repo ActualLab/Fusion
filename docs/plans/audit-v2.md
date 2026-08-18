@@ -4,7 +4,7 @@ Branch: `feat/audit-v2`. Predecessor: [`audit-v1.md`](audit-v1.md) (the library-
 correctness audit; this one is scoped to security and severe bugs, and was reviewed
 twice independently — see **Method**).
 
-## Fix status (updated 2026-07-28)
+## Fix status (updated 2026-08-18)
 
 **Both CRITICAL findings and all 35 HIGH findings are closed** — fixed, deliberately
 rejected, or recorded as known-open with the reasoning. The MEDIUM (60) and LOW (23)
@@ -20,6 +20,10 @@ tiers are untouched apart from the handful that fell out of the HIGH work.
 | LOW | B16, I15 |
 
 Partially fixed:
+- **B7** — the `Reconnect` half only. `$sys.Reconnect` is now claimed once per connection
+  (`RpcPeerConnectionState.TryClaimReconnect`), so the loop this finding describes is
+  rejected after the first call and the TS handler mirrors it. `TryReprocess` itself is
+  still not idempotent, so the duplicate-`RelatedId` path the finding also names is open.
 - **I3** — the fusion-rpc half only. Inbound compute arguments are truncated to the
   declared arity, which closes the cache-poisoning impact. The general arity check in
   `RpcServiceHost.dispatch` is still absent; TS servers were out of scope.
@@ -575,6 +579,11 @@ simply re-sending a call message with a duplicate `RelatedId`.
 **Fix:** make `TryReprocess` idempotent (return the existing `WhenProcessed` if
 it is set and incomplete); de-duplicate/rate-limit `Reconnect` per connection;
 make `Complete()` a no-op when `UnregisterFromLock()` returns `false`.
+
+**Partially fixed.** The middle lever is in: a connection's single `$sys.Reconnect`
+allowance is claimed on `RpcPeerConnectionState`, so every repeat is rejected with
+`TooLateToReconnect` — on both the .NET and TS sides. The other two are untouched, so the
+duplicate-`RelatedId` route into `TryReprocess` still behaves as described.
 
 ### B8 · MEDIUM · **O** (PLAUSIBLE) — `$sys.Reconnect` accepts an attacker-shaped `Dictionary<int, byte[]>` (hash-flooding)
 
