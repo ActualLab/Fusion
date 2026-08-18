@@ -268,6 +268,16 @@ export class RpcSystemCallHandler {
             return;
         }
 
+        // A conforming peer sends this once per connection, so a repeat is a replay -
+        // reject it rather than paying for the reconciliation again. Mirrors C#
+        // RpcSystemCalls.Reconnect's TryClaimReconnect gate.
+        if (!peer.tryClaimReconnect()) {
+            peer.hub.systemCallSender.error(
+                peer.connection, peer.serializationFormat, relatedId,
+                new Error('TooLateToReconnect: this connection was already reconnected'));
+            return;
+        }
+
         // args[1]: completedStagesData — shape depends on wire format.
         //    JSON:    { [stage: string]: base64-string }
         //    msgpack: Map-like with int keys and Uint8Array values (unsupported in TS).

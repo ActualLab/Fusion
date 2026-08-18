@@ -240,6 +240,9 @@ export abstract class RpcPeer {
      *  stale `$sys.Reconnect` that references an older connection generation
      *  (C# `RpcSystemCalls.Reconnect`'s `ownHandshake.Index` check). */
     protected _ownHandshakeIndex = 0;
+    /** Whether the current connection generation has already used its single
+     *  `$sys.Reconnect`. Mirrors C# `RpcPeerConnectionState.TryClaimReconnect`. */
+    protected _isReconnectClaimed = false;
     protected _connection: RpcConnection | undefined;
     /** Mirror of `_connectionState === Connected`. True only after the
      *  handshake round-trip completes; outbound `call()` checks this to
@@ -325,6 +328,22 @@ export abstract class RpcPeer {
 
     get ownHandshakeIndex(): number {
         return this._ownHandshakeIndex;
+    }
+
+    // A conforming peer sends `$sys.Reconnect` at most once per connection, so anything
+    // beyond that is a replay - and the reconciliation it performs is proportional to the
+    // call ids it carries, with nothing else capping how often it can arrive.
+    public tryClaimReconnect(): boolean {
+        if (this._isReconnectClaimed)
+            return false;
+
+        this._isReconnectClaimed = true;
+        return true;
+    }
+
+    protected nextOwnHandshakeIndex(): number {
+        this._isReconnectClaimed = false;
+        return ++this._ownHandshakeIndex;
     }
 
     protected _setConnectionState(value: RpcConnectionState): void {
@@ -1050,7 +1069,7 @@ export class RpcClientPeer extends RpcPeer {
                             this.serializationFormat,
                             this.id,
                             this.hub.hubId,
-                            ++this._ownHandshakeIndex
+                            this.nextOwnHandshakeIndex()
                         );
                     }
                     catch (e) {
@@ -1437,7 +1456,7 @@ export class RpcServerPeer extends RpcPeer {
                 this.serializationFormat,
                 this.id,
                 this.hub.hubId,
-                ++this._ownHandshakeIndex
+                this.nextOwnHandshakeIndex()
             );
             this._setConnectionState(RpcConnectionState.Connected);
         }
