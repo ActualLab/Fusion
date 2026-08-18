@@ -12,6 +12,7 @@ public sealed record RpcPeerConnectionState
 
     private readonly TaskCompletionSource<RpcPeerConnectionState> _whenConnectedSource;
     private readonly TaskCompletionSource<Unit> _whenDisconnectedSource;
+    private int _isReconnectClaimed;
 
     public readonly RpcConnection? Connection;
     public readonly RpcTransport? Transport;
@@ -90,6 +91,15 @@ public sealed record RpcPeerConnectionState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsTerminal()
         => Kind is RpcPeerConnectionStateKind.Terminal;
+
+    // TryXxx
+
+    public bool TryClaimReconnect()
+    {
+        // A conforming peer sends $sys.Reconnect once per connection (RpcOutboundCallTracker.Reconnect
+        // is invoked once from RpcPeer.OnRun), so anything beyond that is a replay.
+        return Interlocked.CompareExchange(ref _isReconnectClaimed, 1, 0) == 0;
+    }
 
     // MarkXxx
 

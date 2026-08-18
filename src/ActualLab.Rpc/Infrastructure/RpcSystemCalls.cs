@@ -60,6 +60,8 @@ public sealed class RpcSystemCalls(IServiceProvider services)
             throw Errors.TooLateToReconnect("already disconnected");
         if (ownHandshake.Index != handshakeIndex)
             throw Errors.TooLateToReconnect($"own handshake index {ownHandshake.Index} != {handshakeIndex}");
+        if (!connectionState.TryClaimReconnect())
+            throw Errors.TooLateToReconnect("this connection was already reconnected");
 
         CancellationToken readerToken;
         try {
