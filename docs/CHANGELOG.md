@@ -11,6 +11,65 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.26+b857325de | npm: 14.3.26
+
+Release date: 2026-08-18
+
+**A hang fix worth taking.** Completing an RPC call at the same instant its cancellation
+token fired could deadlock two threads permanently, wedging the peer's run loop and, with
+it, disposal of the whole `RpcHub`. Nothing recovers from it &mdash; the affected threads
+stay parked for the life of the process. Everything else here is distributed-mesh
+correctness: a rerouted call now tells the peer it left to stop. Published to both NuGet
+and npm.
+
+### Fixed
+
+- **A call completing while its cancellation token fires no longer deadlocks.**
+  `RpcOutboundCall` released its cancellation registration with
+  `CancellationTokenRegistration.Dispose()` while holding the call's lock. `Dispose()`
+  blocks until a concurrently running callback returns, and that callback is `Cancel()`,
+  which wants the same lock &mdash; so a result arriving exactly when the token fired
+  parked the read loop in `WaitForCallbackToComplete` holding the lock, and the timer
+  thread in `Monitor.Enter` inside it. The peer's `OnRun` then never exited, so disposing
+  the hub never completed. `Unregister()` replaces `Dispose()` at every such site: it
+  releases without waiting, and a callback still in flight finds the result already set
+  and does nothing. Two more places had the same shape, both reachable under `Computed`'s
+  lock via the inline invoke in its `Invalidated` add accessor &mdash; `ComputedExt`'s
+  precise-timer invalidation and `WhenInvalidated`. All three are covered by tests that
+  hang if the change is reverted.
+- **A rerouted call now sends `$sys.Cancel` to the peer it left.** When a call's
+  `RpcRoute` changed, it was completed as if already cancelled, so the old target was
+  never told to stop and ran the method to completion while the call re-executed on the
+  new target. An ordinary shard move or load-balancer switch therefore applied a
+  non-idempotent operation twice, with the caller seeing a single success. Rerouting also
+  moved earlier in the teardown, ahead of the peer's disposal, because that is the last
+  moment the connection can still carry the cancellation; delivery stays best-effort if
+  the connection is already down.
+- **`RpcLocalExecutionMode.Constrained` aborts local execution on a route change again.**
+  The route-change-linked `CancellationTokenSource` was created only when
+  `LocalExecutionAwaiter` completed asynchronously. On the synchronous path &mdash; the
+  steady-state case &mdash; `Constrained` silently degraded to `ConstrainedEntry`: the
+  call ran with the caller's original token and kept executing on the stale shard owner
+  after a migration, which is exactly what the mode exists to prevent.
+
+### Changed
+
+- **`$sys.Reconnect` is accepted once per connection.** The handshake index it carries
+  stays valid for the life of a connection, so a peer could replay the call indefinitely,
+  each time paying for the call-id decompression and a reconciliation walk over every id
+  it names. A connection's single allowance is now claimed on `RpcPeerConnectionState`
+  (`TryClaimReconnect`) and repeats are rejected with `TooLateToReconnect`; the next
+  connection gets a fresh one. No conforming peer is affected &mdash; .NET sends it at
+  most once per connection, and the TypeScript client never sends it at all. The
+  TypeScript handler enforces the same rule for TS-hosted servers.
+
+### Added
+
+- **`CancellationTokenRegistration.Unregister()` on `netstandard`.** A polyfill for the
+  .NET Core method, so the same call compiles across every target framework. It keeps the
+  old blocking behavior there, since `netstandard` offers no way to avoid it.
+
+
 ## 14.3.18+11fea4e10 | npm: 14.3.16
 
 Release date: 2026-08-14
