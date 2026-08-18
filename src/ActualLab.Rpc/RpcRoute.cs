@@ -95,9 +95,16 @@ public class RpcRoute : IEquatable<RpcRoute>
 
         var whenReadyTask = localExecutionAwaiter.Invoke(addDependency, cancellationToken);
         if (whenReadyTask.IsCompletedSuccessfully) {
-            if (methodDef.LocalExecutionMode == RpcLocalExecutionMode.ConstrainedEntry)
+            // This is the steady-state path, so Constrained must mint its linked token source
+            // here as well - otherwise it silently degrades to ConstrainedEntry, and a call
+            // in flight when the route changes keeps running on the stale target.
+            if (methodDef.LocalExecutionMode == RpcLocalExecutionMode.ConstrainedEntry) {
                 RerouteIfChanged();
-            return default;
+                return default;
+            }
+
+            return new ValueTask<CancellationTokenSource?>(
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ChangedToken));
         }
 
         return CompleteAsync(this, methodDef, whenReadyTask, cancellationToken);
