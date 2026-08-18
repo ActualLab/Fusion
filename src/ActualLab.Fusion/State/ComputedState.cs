@@ -73,6 +73,7 @@ public abstract class ComputedState : State, IComputedState, IGenericTimeoutHand
     public Task UpdateCycleTask { get; private set; } = null!;
     public Task? WhenDisposed => Volatile.Read(ref _whenDisposed);
     public override bool IsDisposed => Volatile.Read(ref _whenDisposed) is not null;
+    protected override CancellationToken OwnDisposeToken => DisposeToken;
 
     protected ComputedState(IComputedStateOptions options, IServiceProvider services, bool initialize = true)
         : base(options, services, initialize: false)

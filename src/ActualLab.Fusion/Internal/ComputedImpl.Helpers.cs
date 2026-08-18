@@ -113,7 +113,7 @@ public static partial class ComputedImpl
             ? TaskExt.FromDefaultResult(outputType)
             : computed.GetValuePromise();
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task FinalizeAndTryReprocessInternalCancellation(
         string methodName,
         Computed computed,
@@ -122,6 +122,19 @@ public static partial class ComputedImpl
         ref int tryIndex,
         ILogger log,
         CancellationToken cancellationToken)
+        => FinalizeAndTryReprocessInternalCancellation(
+            methodName, computed, error, startedAt, ref tryIndex, log, cancellationToken, default);
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static Task FinalizeAndTryReprocessInternalCancellation(
+        string methodName,
+        Computed computed,
+        Exception error,
+        CpuTimestamp startedAt,
+        ref int tryIndex,
+        ILogger log,
+        CancellationToken primaryCancellationToken,
+        CancellationToken secondaryCancellationToken)
     {
         if (error is not OperationCanceledException) {
             // Not a cancellation
@@ -129,7 +142,9 @@ public static partial class ComputedImpl
             return SpecialTasks.MustReturn;
         }
 
-        if (cancellationToken.IsCancellationRequested || error is RpcRerouteException) {
+        if (primaryCancellationToken.IsCancellationRequested
+            || secondaryCancellationToken.IsCancellationRequested
+            || error is RpcRerouteException) {
             // !!! Cancellation of our own token & RpcRerouteException always passes through
             computed.Invalidate(immediately: true, InvalidationSource.Cancellation); // Instant invalidation on cancellation
             computed.TrySetError(error);
@@ -145,7 +160,7 @@ public static partial class ComputedImpl
         }
 
         // If we're here:
-        // - it's an internal cancellation (via CT other than cancellationToken)
+        // - it's an internal cancellation (via CT other than the two we got)
         // - we must reprocess it w/ a delay.
 
         computed.Invalidate(immediately: true, InvalidationSource.Cancellation); // Instant invalidation on cancellation
@@ -154,9 +169,11 @@ public static partial class ComputedImpl
         log.LogWarning(error,
             "{Method} #{TryIndex} for {Category} was cancelled internally, will retry in {Delay}",
             methodName, tryIndex, computed.Input.Category, delay.ToShortString());
+        // Only primaryCancellationToken aborts the delay - linking both per retry isn't worth it:
+        // if secondaryCancellationToken fires meanwhile, the next attempt classifies it right away.
         return delay <= TimeSpan.Zero
             ? Task.CompletedTask
-            : Task.Delay(delay, cancellationToken);
+            : Task.Delay(delay, primaryCancellationToken);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

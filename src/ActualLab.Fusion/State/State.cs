@@ -177,6 +177,10 @@ public abstract class State : ComputedInput, IState
         return ProduceComputed(context, cancellationToken);
     }
 
+    // Overridden by ComputedState, which updates on a token outliving its DisposeToken -
+    // see how ProduceComputedFromLock passes this to the cancellation classifier.
+    protected virtual CancellationToken OwnDisposeToken => default;
+
     protected virtual async Task<Computed> ProduceComputed(ComputeContext context, CancellationToken cancellationToken = default)
     {
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
@@ -209,7 +213,8 @@ public abstract class State : ComputedInput, IState
             }
             catch (Exception e) {
                 var delayTask = ComputedImpl.FinalizeAndTryReprocessInternalCancellation(
-                    nameof(ProduceComputedFromLock), computed, e, startedAt, ref tryIndex, Log, cancellationToken);
+                    nameof(ProduceComputedFromLock), computed, e, startedAt, ref tryIndex, Log,
+                    cancellationToken, OwnDisposeToken);
                 if (delayTask == SpecialTasks.MustThrow)
                     throw;
                 if (delayTask == SpecialTasks.MustReturn)
