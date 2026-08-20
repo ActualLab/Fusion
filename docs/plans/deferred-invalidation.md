@@ -1,5 +1,9 @@
 # Deferred Invalidation: one authoring form for local and distributed invalidation
 
+> **Status: implemented** (PR #145), with the revisions recorded in
+> ["Revisions made during implementation"](#revisions-made-during-implementation) at the end of this
+> document. Read that section alongside anything below it contradicts.
+
 ## Goal
 
 Today a mutation declares what it invalidates in one of two mutually incompatible
@@ -1010,3 +1014,82 @@ Under `Local` nothing is persisted and the count is irrelevant.
 - Whether the `DbEvent`-as-commit-verifier reuse is worth cleaning up eventually. It
   works and the alternatives cost more today, but it does mean the events table's
   trimming policy governs commit verification.
+
+## Revisions made during implementation
+
+Six things changed once the design met the code. Where this section contradicts anything above,
+this section is what shipped.
+
+### `Replicated` requires a stored operation. There is no broadcaster.
+
+The transports table above offers `IOperationBroadcaster` (Redis/NATS) as an alternative carrier for
+shard-owned services with no operation log. **That is struck, not deferred.**
+
+What makes `Replicated` correct is not the reliability of a channel — it's that the invalidation
+record is committed *atomically with the mutation*. `DbOperationScope.Commit` adds the `DbOperation`
+row inside the same transaction, so either both land or neither does, and the log is read in index
+order with gap detection. Any after-the-fact publish, however reliable the transport, has an
+unrecoverable window between "mutation committed" and "notification sent": a host that dies there
+leaves every other host stale forever, with nothing to retry from.
+
+So `Replicated` requires an operation scope that stores its operation. A transient scope, or no
+operation scope at all, throws (`Errors.ReplicatedInvalidationRequiresStoredOperation`) rather than
+silently degrading to local. `Local` and `Legacy` are unaffected — they work on any scope, or none.
+
+A store other than a relational DB could host an outbox in principle (a Redis `MULTI`/`EXEC` plus an
+ordered Stream consumed with gap detection), but that is an outbox, not a broadcast, and Fusion has
+no reader for one. In practice: `Replicated` ⇒ operation log ⇒ DB.
+
+Nor is a new abstraction needed for a transport. The seam already exists and is the one
+`DbOperationCompletionListener` uses: `IOperationCompletionListener.OnOperationCompleted` with a
+non-null `CommandContext` is the publish hook, and `IOperationCompletionNotifier.NotifyCompleted(op,
+null)` is the receive hook — it dedupes by `Operation.Uuid` and, if a listener throws on an external
+operation, un-marks the UUID so the transport can redeliver.
+
+### Sharding: the same-DB-shard case needs nothing
+
+When N service shards map to one DB shard, a mutation on one service shard invalidating another's
+data already works: `DbOperationLogReader` is per DB shard and hands every operation it reads to
+`InvalidationCallApplier`, regardless of which service shard owns the key. Cross-*DB*-shard
+invalidation has no sound answer — the operation never appears in the other shard's log, and any
+side channel reintroduces the atomicity gap above — so it stays unsupported.
+
+### `MustStoreOperation` is nullable, not renamed
+
+The plan proposed renaming it to `MustBroadcastOperation` and deriving it from the mode. What
+shipped: `IOperationScope.MustStoreOperation` became `bool?`, where **`null` means "auto"** and is
+the new default. An explicit `true`/`false` still wins, so `Operation.MustStore(...)` is unchanged.
+
+Auto resolves to `true` if the operation has events, carries invalidation calls, or any of its
+commands — outermost or nested — resolves to `InvalidationMode.Legacy`. Anything unresolvable also
+resolves to `true`: an operation row nobody reads only costs storage, while a `Legacy` handler that
+isn't replayed leaves stale caches. Since the default mode is `Legacy`, nothing changes until a
+service opts in; a `Local` or `None` service then stops writing an op-log row that no other host
+has any use for.
+
+### Version skew: two-step deployment, not legacy names
+
+The plan proposed identifying calls by `RpcMethodRef` so `LegacyNameAttribute` would cover renames.
+Rejected for compute methods. A renamed or resignatured compute method simply drops its recorded
+calls on the other host (counted by `invalidation.deferred.drop.count`, logged once per method) —
+the safe direction. Such changes are deployed either without a rolling upgrade, or in two steps:
+first add invalidation of the new method alongside the old, then remove the old one.
+
+Assembly versions *are* stripped from the recorded `TypeRef`, so a rolling upgrade of the same
+assembly resolves normally.
+
+### `InvalidationCall` lives in `ActualLab.CommandR`
+
+The placement table puts it in `ActualLab.Fusion`. It can't be: it's a property of `Operation`, and
+CommandR cannot reference Fusion. It's produced and consumed exclusively by the Fusion layer.
+
+### Out of scope
+
+- **The analyzer.** Compile-time enforcement of the guard-vs-`Defer()` split is its own pass — if we
+  build it, there is more to it than this plan sketches. The runtime tripwires cover the same
+  mistakes in the meantime.
+- **Startup validation.** The mode-table dump and the `Local`-requires-single-owner-routing /
+  `Replicated`-requires-singleton checks are dropped. Note the `Replicated`-requires-a-stored-operation
+  rule can't be a startup check anyway: the scope type isn't known until a handler runs.
+- **"A `Replicated` operation stores no replayable command."** Still blocked on mixed-mode
+  operations, where an outermost `Legacy` command needs its command to replay.
