@@ -102,6 +102,17 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             _longLivingCalls.TryAdd(call.Id, call);  // Must succeed for unique call.Id
     }
 
+    public List<RpcOutboundCall> GetSentCalls()
+    {
+        // Callers must snapshot before the new connection state is exposed - that releases
+        // every call parked on WhenConnected, making queued and in-flight ones alike.
+        var calls = new List<RpcOutboundCall>();
+        foreach (var call in Calls.Values)
+            if (call.IsSent)
+                calls.Add(call);
+        return calls;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool UnregisterLongLiving(RpcOutboundCall call)
         => _longLivingCalls.TryRemove(call.Id, call);
@@ -261,34 +272,34 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
     public async Task Reconnect(
         RpcPeerConnectionState connectionState,
+        List<RpcOutboundCall> sentCalls,
         bool isPeerChanged,
         CancellationToken cancellationToken)
     {
         try {
-            var calls = Calls.Values.ToList();
-
-            // Abort calls that shouldn't survive reconnection based on their RemoteExecutionMode
-            for (var i = calls.Count - 1; i >= 0; i--) {
-                var call = calls[i];
+            // Abort calls that shouldn't survive reconnection based on their RemoteExecutionMode.
+            // sentCalls is pruned in place - the caller never reuses it.
+            for (var i = sentCalls.Count - 1; i >= 0; i--) {
+                var call = sentCalls[i];
                 var mode = call.MethodDef.RemoteExecutionMode;
                 if (!mode.HasFlag(RpcRemoteExecutionMode.AllowReconnect)) {
                     call.SetError(Internal.Errors.OutboundCallFailedCannotReconnect(connectionState.Error),
                         context: null, assumeCancelled: false);
-                    calls.RemoveAt(i);
+                    sentCalls.RemoveAt(i);
                 }
                 else if (isPeerChanged && !mode.HasFlag(RpcRemoteExecutionMode.AllowResend)) {
                     call.SetError(Internal.Errors.OutboundCallFailedCannotResend(connectionState.Error),
                         context: null, assumeCancelled: false);
-                    calls.RemoveAt(i);
+                    sentCalls.RemoveAt(i);
                 }
             }
 
             if (isPeerChanged) {
-                Resend(calls);
+                Resend(sentCalls);
                 return;
             }
 
-            var failedCalls = await TryReconnect(calls).ConfigureAwait(false);
+            var failedCalls = await TryReconnect(sentCalls).ConfigureAwait(false);
             Resend(failedCalls);
         }
         catch {

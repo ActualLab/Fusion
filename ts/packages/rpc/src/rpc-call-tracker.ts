@@ -153,6 +153,17 @@ export class RpcOutboundCallTracker {
         return [...this._calls.keys()];
     }
 
+    /** Calls handed to the transport at least once. Must be snapshotted BEFORE the
+     *  peer enters `Connected` — that flushes every queued call, making queued and
+     *  in-flight calls indistinguishable. Mirrors .NET's `GetSentCalls`. */
+    getSentCalls(): RpcOutboundCall[] {
+        const calls: RpcOutboundCall[] = [];
+        for (const call of this._calls.values())
+            if (call.sentAt !== 0)
+                calls.push(call);
+        return calls;
+    }
+
     /** Reject all pending calls with the given error.
      *  Stage-3 compute calls (result resolved, awaiting invalidation) are kept in the tracker. */
     rejectAll(error: Error): void {

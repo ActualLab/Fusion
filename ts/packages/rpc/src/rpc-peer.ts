@@ -788,6 +788,17 @@ export const enum RpcConnectionState {
     Connected = 3,
 }
 
+/** Outcome of comparing an incoming handshake with the previous one. Mirrors
+ *  .NET `RpcPeerChangeKind` — `ChangedToVeryFirst` lets the first handshake skip
+ *  reconnect processing, since there's no prior connection to reconcile with. */
+export const enum RpcPeerChangeKind {
+    Unchanged = 0,
+    ChangedToVeryFirst = 1,
+    Changed = 2,
+}
+
+const peerChangeKindNames = ['Unchanged', 'ChangedToVeryFirst', 'Changed'];
+
 /** Client-side RPC peer — initiates WebSocket connection. ref = URL. */
 export class RpcClientPeer extends RpcPeer {
     private _disposed = false;
@@ -801,7 +812,10 @@ export class RpcClientPeer extends RpcPeer {
      *  `connectionState.Handshake.Index` path in
      *  `RpcOutboundCallTracker.TryReconnect`. */
     private _remoteHandshakeIndex = 0;
-    private _lastRemotePeerId: string | undefined;
+    /** Mirrors .NET's `lastHandshake` local in `RpcPeer.OnRun`: first-ness is keyed
+     *  off "was there a previous handshake", not off `RemotePeerId` — a legacy server
+     *  sends none, so every one of its handshakes would look like the first. */
+    private _lastHandshake: RemoteHandshake | undefined;
     private _pendingHandshake: PromiseSource<RemoteHandshake> | undefined;
     private _reconnectsAt = 0;
     /** Server-issued reconnect secret, from the most recent handshake that
@@ -889,6 +903,7 @@ export class RpcClientPeer extends RpcPeer {
      *  self-invalidate and remote/shared objects are disposed). Pass `false`
      *  to simulate a same-peer reconnect in tests. */
     connectWith(conn: RpcConnection, isPeerChanged = true): void {
+        const sentCalls = this.outboundCalls.getSentCalls();
         this.setupConnection(conn);
         // Test-only: synthesize the "ready for calls" state without running
         // the handshake. Stays off the public state machine on purpose —
@@ -899,7 +914,7 @@ export class RpcClientPeer extends RpcPeer {
         // the listener set directly.
         this._isConnected = true;
         this.connectionStateChanged.trigger(RpcConnectionState.Connected);
-        void this._reconnect(isPeerChanged);
+        void this._reconnect(sentCalls, isPeerChanged);
     }
 
     /** Kick off the reconnect loop. Idempotent — subsequent calls are
@@ -1111,19 +1126,28 @@ export class RpcClientPeer extends RpcPeer {
                         this._reconnectSecret = remoteHandshake.Secret;
 
                     // Peer change detection (like .NET's RpcHandshake.GetPeerChangeKind)
-                    const isPeerChanged = this._detectPeerChange(remoteHandshake);
+                    const peerChangeKind = this._detectPeerChange(remoteHandshake);
                     // Mirrors RpcPeer.cs:316 — "Handshake succeeded".
-                    infoLog?.log(`'${this.ref}': Handshake succeeded, peerChanged=${isPeerChanged}`);
+                    infoLog?.log(
+                        `'${this.ref}': Handshake succeeded, peerChangeKind=${peerChangeKindNames[peerChangeKind]}`);
 
                     // Activate the connection and re-send outbound calls.
                     // All of this happens AFTER the handshake, so the server is ready to process calls.
+                    // Must be snapshotted before `Connected` — see `getSentCalls`.
+                    const sentCalls = this.outboundCalls.getSentCalls();
                     this._setConnectionState(RpcConnectionState.Connected);
                     connectedAt = Date.now();
+                    // No prior connection to reconcile with on the very first
+                    // handshake (RpcPeer.cs:421-424).
                     // Pass the close signal so `_reconcileReconnect`'s inner
                     // `$sys.Reconnect` call cancels cleanly if the socket dies
                     // mid-reconcile — otherwise its pending result.promise would
                     // deadlock the outer _reconnect() await.
-                    await this._reconnect(isPeerChanged, closedController.signal);
+                    if (peerChangeKind !== RpcPeerChangeKind.ChangedToVeryFirst)
+                        await this._reconnect(
+                            sentCalls,
+                            peerChangeKind === RpcPeerChangeKind.Changed,
+                            closedController.signal);
 
                     // Wait until disconnected — use the eager whenClosed promise
                     // so we don't miss an already-fired close event.
@@ -1166,7 +1190,10 @@ export class RpcClientPeer extends RpcPeer {
     }
 
     /**
-     * Reconcile outbound calls after reconnection, then flush pending sends.
+     * Reconcile the calls that were in flight on the connection that just died
+     * (`sentCalls`), then resend the survivors. Calls still waiting for a
+     * connection are deliberately NOT passed in — `AllowReconnect`/`AllowResend`
+     * don't apply to them, and entering `Connected` already sends them.
      *
      * On peer change (different server hubId) or with binary wire format —
      * we blind-resend every eligible call.
@@ -1184,7 +1211,11 @@ export class RpcClientPeer extends RpcPeer {
      * are always self-invalidated — TS doesn't track compute-call stages
      * across reconnect, so the safest behavior is to force a fresh compute.
      */
-    private async _reconnect(isPeerChanged: boolean, closedSignal?: AbortSignal): Promise<void> {
+    private async _reconnect(
+        sentCalls: RpcOutboundCall[],
+        isPeerChanged: boolean,
+        closedSignal?: AbortSignal
+    ): Promise<void> {
         if (this._connection === undefined) return;
 
         // Handle remote and shared objects on reconnect.
@@ -1203,7 +1234,7 @@ export class RpcClientPeer extends RpcPeer {
 
         // Filter calls by RemoteExecutionMode (same logic as before).
         const eligible: RpcOutboundCall[] = [];
-        for (const call of [...this.outboundCalls.values()]) {
+        for (const call of sentCalls) {
             const mode = call.remoteExecutionMode;
             if (!(mode & 2)) {
                 if (!call.result.isCompleted)
@@ -1226,8 +1257,7 @@ export class RpcClientPeer extends RpcPeer {
             // GetReconnectStage (RpcOutboundCall.cs:343). Without it, a call kept
             // (server still knows it) or resent after a long outage would be
             // timed out from its stale pre-disconnect send time.
-            if (call.sentAt !== 0)
-                call.sentAt = Date.now();
+            call.sentAt = Date.now();
         }
 
         // Reconcile with the server on same-peer reconnects. On peer change
@@ -1346,23 +1376,21 @@ export class RpcClientPeer extends RpcPeer {
      *  `RpcHandshake.GetPeerChangeKind` keys off `RemotePeerId`, not
      *  `RemoteHubId` (an idle server peer can be replaced while keeping the
      *  same hub id). On a change it clears the inbound tracker and fires
-     *  `peerChanged`; the very first handshake is never a change. */
-    private _detectPeerChange(handshake: RemoteHandshake): boolean {
-        const remotePeerId = handshake.RemotePeerId;
-        if (remotePeerId === undefined)
-            return false;
+     *  `peerChanged`; the very first handshake is `ChangedToVeryFirst`. */
+    private _detectPeerChange(handshake: RemoteHandshake): RpcPeerChangeKind {
+        const lastHandshake = this._lastHandshake;
+        this._lastHandshake = handshake;
+        if (lastHandshake === undefined)
+            return RpcPeerChangeKind.ChangedToVeryFirst;
 
-        const isPeerChanged =
-            this._lastRemotePeerId !== undefined &&
-            this._lastRemotePeerId !== remotePeerId;
-        this._lastRemotePeerId = remotePeerId;
-        if (isPeerChanged) {
-            this.inboundCalls.clear();
-            // Mirrors RpcPeer.cs:439 (Peer changed branch).
-            infoLog?.log(`'${this.ref}': Peer changed`);
-            this.peerChanged.trigger();
-        }
-        return isPeerChanged;
+        if (handshake.RemotePeerId === lastHandshake.RemotePeerId)
+            return RpcPeerChangeKind.Unchanged;
+
+        this.inboundCalls.clear();
+        // Mirrors RpcPeer.cs:439 (Peer changed branch).
+        infoLog?.log(`'${this.ref}': Peer changed`);
+        this.peerChanged.trigger();
+        return RpcPeerChangeKind.Changed;
     }
 
     protected override _onHandshakeReceived(handshake: RemoteHandshake): void {

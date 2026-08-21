@@ -41,6 +41,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public CpuTimestamp StartedAt;
     public CancellationTokenRegistration CancellationHandler;
 
+    // False only while the call is still waiting for a connection - reconnect
+    // processing applies to sent calls alone.
+    public volatile bool IsSent;
+
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
@@ -167,6 +171,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void SendRegistered()
     {
+        // Set even if Transport is null: nothing will release this call a second time.
+        IsSent = true;
+
         // Use lazy CreateOutboundMessage - serialization happens in transport.
         // Serialization errors propagate via message.SendHandler.
         var context = Context;

@@ -87,7 +87,7 @@ public class RpcRemoteExecutionModeTest(ITestOutputHelper @out) : RpcLocalTestBa
     }
 
     [Fact]
-    public async Task AwaitOnly_WaitsButAbortsOnReconnect()
+    public async Task AwaitOnly_WaitsThenRunsOnReconnect()
     {
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
@@ -98,13 +98,14 @@ public class RpcRemoteExecutionModeTest(ITestOutputHelper @out) : RpcLocalTestBa
         await connection.Disconnect();
 
         // Start call while disconnected — it should wait (AwaitForConnection is set)
-        var task = client.AwaitOnlyDelay(TimeSpan.FromMilliseconds(500));
+        var task = client.AwaitOnlyDelay(TimeSpan.FromMilliseconds(50));
         await Delay(0.05);
         task.IsCompleted.Should().BeFalse(); // Still waiting for connection
 
-        // Reconnect triggers Reconnect() which aborts it (no AllowReconnect)
+        // The reconnect sends it rather than aborting it: the call was never on the
+        // connection that died, so the missing AllowReconnect doesn't apply to it.
         await connection.Connect();
-        await Assert.ThrowsAsync<RpcException>(() => task);
+        (await task).Should().Be(TimeSpan.FromMilliseconds(50));
         await AssertNoCalls(clientPeer, Out);
     }
 

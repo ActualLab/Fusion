@@ -390,6 +390,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         }
                     }
 
+                    // Must run before SetConnectionState - see GetSentCalls.
+                    var sentCalls = peerChangeKind != RpcPeerChangeKind.ChangedToVeryFirst
+                        ? OutboundCalls.GetSentCalls()
+                        : null;
+
                     // Only at this point: expose the new connection state
                     var nextConnectionState =
                         connectionState.Value.NextConnected(connection, handshake, ownHandshake, readerTokenSource);
@@ -418,9 +423,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                             RemoteObjects.Maintain(connectionStateValue, readerToken),
                             OutboundCalls.Maintain(connectionStateValue, readerToken)
                         };
-                        if (peerChangeKind != RpcPeerChangeKind.ChangedToVeryFirst) {
+                        if (sentCalls is not null) {
                             var isPeerChanged = peerChangeKind == RpcPeerChangeKind.Changed;
-                            tasks.Add(OutboundCalls.Reconnect(connectionStateValue, isPeerChanged, readerToken));
+                            tasks.Add(OutboundCalls.Reconnect(
+                                connectionStateValue, sentCalls, isPeerChanged, readerToken));
                         }
 
                         await Task.WhenAll(tasks).SilentAwait(false);

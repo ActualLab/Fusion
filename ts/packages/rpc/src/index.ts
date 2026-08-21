@@ -81,6 +81,7 @@ export { RpcSharedObjectTracker } from './rpc-shared-object-tracker.js';
 export {
     RpcPeer,
     RpcConnectionState,
+    RpcPeerChangeKind,
     RpcClientPeer,
     RpcServerPeer,
     RPC_CLOSE_CODE_UNSUPPORTED_FORMAT,
