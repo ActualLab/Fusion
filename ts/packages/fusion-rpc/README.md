@@ -57,7 +57,7 @@ const ids = await api.ListIds('~', 10);
 ```
 
 Render it with
-[`useComputedState`](https://www.npmjs.com/package/@actuallab/fusion-react) and the component
+[`useComputedState`](https://fusion.actuallab.net/PartTS-React#usecomputedstate) and the component
 refreshes itself whenever the server-side data changes.
 
 ## How invalidation flows

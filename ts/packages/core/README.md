@@ -69,7 +69,7 @@ const lock = new AsyncLock();
 await lock.run(async () => { /* critical section */ });
 
 await delayAsync(1000, abortSignal);   // abortable delay
-RetryDelaySeq.exp(1000, 30000);        // 1s, 2s, 4s, … capped at 30s
+RetryDelaySeq.exp(1000, 30000);        // 1s, 1.4s, 2s, 2.8s, … (×√2, ±10% spread), capped at 30s
 ```
 
 ## Documentation

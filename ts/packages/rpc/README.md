@@ -37,6 +37,7 @@ const SimpleServiceDef = defineRpcService('ISimpleService', {
 
 const hub = new RpcHub();
 const peer = new RpcClientPeer(hub, 'ws://localhost:5005/rpc/ws'); // auto-starts
+hub.addPeer(peer);   // registers it, so hub.close() shuts it down too
 const client = hub.addClient<ISimpleService>(peer, SimpleServiceDef);
 
 console.log(await client.Greet('World'));
