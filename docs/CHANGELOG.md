@@ -11,6 +11,28 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.32+40349e1ec | npm: 14.3.32
+
+Release date: 2026-08-20
+
+**The npm packages have README pages now.** All five `@actuallab/*` packages showed a blank
+page on npmjs.com; each one now carries its own README. There is no code in this release
+&mdash; the published JavaScript is byte-for-byte what `14.3.26` shipped &mdash; but an npm
+page only refreshes when a new version is published, so the docs needed a version to ride
+on. Nothing to gain by upgrading unless you want the version numbers to line up. npm-only
+release (NuGet stays at `14.3.29`).
+
+### Documentation
+
+- **Every published npm package now has a README.** `@actuallab/core`, `@actuallab/rpc`,
+  `@actuallab/fusion`, `@actuallab/fusion-rpc`, and `@actuallab/fusion-react` each get
+  badges, install instructions, a quick start, an API table, and links back to the full
+  reference on the docs site. The `ts/` workspace gets one too &mdash; package table, dev
+  commands, layout &mdash; though that one is repo-facing and isn't published. Contributed
+  by [Timurbek Saburov](https://github.com/TimurbekDev) in
+  [#164](https://github.com/ActualLab/Fusion/pull/164), a first-time contributor.
+
+
 ## 14.3.29+7a15b6788 | npm: 14.3.26
 
 Release date: 2026-08-18
