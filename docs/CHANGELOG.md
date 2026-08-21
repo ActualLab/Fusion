@@ -11,6 +11,59 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.34+3f794818c | npm: 14.3.34
+
+Release date: 2026-08-21
+
+**A reconnect no longer destroys the calls it just delivered.** A call issued while the
+client was disconnected &mdash; `RemoteExecutionMode.AwaitForConnection` without
+`AllowReconnect`, the combination you use for one-shot control messages &mdash; waited for
+a connection exactly as designed, went out on the wire the moment one arrived, and was then
+rejected by that same connection's reconnect pass with *"Outbound call failed: disconnected
+and AllowReconnect is not set."* The server had already received and executed it, so the
+caller saw a failure for work that succeeded. Worth taking if any of your `[RpcMethod]`s
+set `AwaitForConnection` without `AllowReconnect`; in the TypeScript client that
+combination was self-defeating on every cold connect. Published to both NuGet and npm.
+
+### Fixed
+
+- **Reconnect processing now applies only to calls that were actually sent.**
+  `RpcOutboundCallTracker.Reconnect` swept every registered call, so a call still parked on
+  `WhenConnected` was judged by `AllowReconnect` / `AllowResend` &mdash; flags that describe
+  what happens to a call that was *in flight* when a link broke. A call that never reached
+  the transport has nothing to reconcile: the reconnect that would sweep it is the very one
+  about to send it. The sweep now runs over a snapshot of sent calls alone, taken **before**
+  the new connection state is exposed &mdash; past that point `SetConnectionState` has
+  released every queued call, and a queued one is indistinguishable from an in-flight one.
+  Filtering later would have raced the `WhenConnected` continuations, since `Reconnect` runs
+  alongside them in the maintenance task. The same reordering also stops a queued
+  `AllowReconnect` call from being sent twice: once by the flush, once by the resend.
+- **The TypeScript client no longer runs reconnect processing on its very first handshake.**
+  The port collapsed .NET's three-state `RpcPeerChangeKind` into a boolean that read `false`
+  for both "same peer" and "first handshake ever", losing the `ChangedToVeryFirst` guard
+  .NET applies in `RpcPeer.OnRun`. A cold connect therefore swept calls that had been
+  waiting for it, which is how the symptom above became deterministic rather than occasional in the
+  browser. First-ness is now keyed off whether a previous handshake exists, not off
+  `RemotePeerId` &mdash; a legacy server sends none, and keying on the id would have
+  classified every one of its handshakes as the first and disabled the sweep entirely.
+
+### Breaking Changes
+
+- `RpcOutboundCallTracker.Reconnect` takes a `List<RpcOutboundCall> sentCalls` parameter
+  before `isPeerChanged`, instead of reading the tracker itself. Only affects code that
+  calls this `Infrastructure` method directly; pass `OutboundCalls.GetSentCalls()`, captured
+  before the connection state is published.
+
+### Added
+
+- `RpcOutboundCall.IsSent` &mdash; `false` only while a call is still waiting for a
+  connection &mdash; and `RpcOutboundCallTracker.GetSentCalls()`, which snapshots the calls
+  reconnect processing applies to.
+- TypeScript: `RpcPeerChangeKind` (`Unchanged` / `ChangedToVeryFirst` / `Changed`) is now
+  exported from `@actuallab/rpc`, mirroring the .NET enum, and the handshake log line
+  reports the kind instead of a bare `peerChanged=` boolean.
+
+
 ## 14.3.32+40349e1ec | npm: 14.3.32
 
 Release date: 2026-08-20
