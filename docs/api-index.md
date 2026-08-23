@@ -195,8 +195,14 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `StateSnapshot` — immutable snapshot of state lifecycle
 
 ### Invalidation
-- `Invalidation` — static helpers to check/begin invalidation scopes
+- `Invalidation` — static helpers to check/begin invalidation scopes, and to defer invalidation
 - `InvalidationSource` (struct) — describes source of invalidation
+- `InvalidationMode` (enum) — `None` / `Legacy` / `Local` / `Replicated` per command handler
+- `InvalidationModeAttribute` — declares the mode on a handler method or a compute service type
+- `InvalidationModeResolver` — resolves a handler's mode (method → type → app-wide default)
+- `DeferInvalidationScope` — collects `Invalidation.Defer(...)` blocks; runs or harvests them
+- `IDeferInvalidationHandler` — decides when a scope's blocks are consumed
+- `InvalidationCall` (record) — a recorded compute-method call, replayable on any host
 - `UpdateDelayer` (record) — integrates with `UIActionTracker` for instant UI updates
 - `FixedDelayer` (record) — fixed update delay with configurable retry delays
 
