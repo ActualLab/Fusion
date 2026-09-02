@@ -11,6 +11,25 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## Unreleased
+
+**A stopping server now turns new RPC connections away.** During a rolling restart a client
+that reconnects can land on a replica that has already received its stop signal; until now
+that replica accepted the connection and then cut it off a few seconds later, so the client
+paid for two reconnects instead of one. `RpcWebSocketServer` and `RpcHttpServer` now answer
+every new connection with `503 Service Unavailable` once
+`IHostApplicationLifetime.ApplicationStopping` fires, and the client's regular reconnect
+backoff carries it to a live replica. Existing connections are not touched - closing them
+is the host's call, and it can do that by disposing the peers in `RpcHub.InternalServices.Peers`.
+
+### Added
+
+- **`MustRejectOnApplicationStopping`** on `RpcWebSocketServerOptions` and
+  `RpcHttpServerOptions`, `true` by default. Set it to `false` to keep the previous
+  behavior. Hosts without `IHostApplicationLifetime` in DI are unaffected either way.
+- **`IHostApplicationLifetime.IsApplicationStopping()`** extension in `ActualLab.Core`.
+
+
 ## 14.3.34+3f794818c | npm: 14.3.34
 
 Release date: 2026-08-21

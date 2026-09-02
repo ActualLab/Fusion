@@ -36,6 +36,11 @@ public record RpcWebSocketServerOptions
     // or one where every call authenticates itself - since cross-site WebSocket hijacking needs
     // the browser to attach something the attacker doesn't have.
     public bool WarnOnUnvalidatedOrigin { get; init; } = true;
+
+    // Answers every new connection with 503 once IHostApplicationLifetime.ApplicationStopping fires,
+    // so a client that lands on a draining replica during a rolling restart retries elsewhere
+    // instead of being accepted and cut off seconds later.
+    public bool MustRejectOnApplicationStopping { get; init; } = true;
 #if NET6_0_OR_GREATER
     public RpcWebSocketServerAcceptContextFactory ConfigureWebSocket { get; init; }
         = RpcWebSocketServerDefaultDelegates.AcceptContextFactory;

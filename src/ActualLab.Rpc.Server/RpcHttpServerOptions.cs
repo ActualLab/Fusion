@@ -23,6 +23,8 @@ public record RpcHttpServerOptions
     // See the same option on RpcWebSocketServerOptions for the caveats: it requires sticky
     // routing and clients that all speak the reconnect proof protocol.
     public bool RequireReconnectProof { get; init; } = false;
+    // See the same option on RpcWebSocketServerOptions
+    public bool MustRejectOnApplicationStopping { get; init; } = true;
     public bool UsePipes { get; init; } = true;
     public bool MustRequireHttp2 { get; init; } = true;
 }

@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using ActualLab.Compliance;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
@@ -19,6 +20,8 @@ public class RpcWebSocketServer : RpcServiceBase
 {
     private const string OriginHeaderName = "Origin";
 
+    private IHostApplicationLifetime? HostLifetime { get; }
+
     public RpcWebSocketServerOptions Options { get; }
     public RpcPeerOptions PeerOptions { get; }
     public RpcWebSocketClientOptions WebSocketClientOptions { get; }
@@ -28,6 +31,7 @@ public class RpcWebSocketServer : RpcServiceBase
         : base(services)
     {
         Options = options;
+        HostLifetime = services.GetService<IHostApplicationLifetime>();
         PeerOptions = services.GetRequiredService<RpcPeerOptions>();
         WebSocketClientOptions = services.GetRequiredService<RpcWebSocketClientOptions>();
         RefFactory = services.GetRequiredService<RpcWebSocketServerRefFactory>();
@@ -45,6 +49,11 @@ public class RpcWebSocketServer : RpcServiceBase
             Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
         var requestDescription = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
+        if (Options.MustRejectOnApplicationStopping && HostLifetime.IsApplicationStopping()) {
+            Log.LogInformation("Rejected {Request}: the application is stopping", requestDescription);
+            context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+            return;
+        }
         if (!context.WebSockets.IsWebSocketRequest) {
             Log.LogWarning("WebSocket request expected, but got {Request}", requestDescription);
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;

@@ -4,6 +4,7 @@ using ActualLab.Compliance;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
+using Microsoft.Extensions.Hosting;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
@@ -17,6 +18,8 @@ namespace ActualLab.Rpc.Server;
 public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider services)
     : RpcServiceBase(services)
 {
+    private IHostApplicationLifetime? HostLifetime { get; } = services.GetService<IHostApplicationLifetime>();
+
     public RpcHttpServerOptions Options { get; } = options;
     public RpcPeerOptions PeerOptions { get; } = services.GetRequiredService<RpcPeerOptions>();
     public RpcHttpClientOptions HttpClientOptions { get; } = services.GetRequiredService<RpcHttpClientOptions>();
@@ -33,6 +36,12 @@ public class RpcHttpServer(RpcHttpServerOptions options, IServiceProvider servic
             Sanitizer.Sanitize<Sanitizers.RpcRequestQuery>(request.QueryString.Value ?? ""));
         var requestDescription = $"{request.Method} {uri}";
         var cancellationToken = context.RequestAborted;
+        if (Options.MustRejectOnApplicationStopping && HostLifetime.IsApplicationStopping()) {
+            Log.LogInformation("Rejected {Request}: the application is stopping", requestDescription);
+            context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+            return;
+        }
+
         var maxRequestBodySizeFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
         if (maxRequestBodySizeFeature is { IsReadOnly: false })
             maxRequestBodySizeFeature.MaxRequestBodySize = null;
