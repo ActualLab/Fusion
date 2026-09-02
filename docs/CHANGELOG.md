@@ -11,7 +11,9 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## Unreleased
+## 14.3.36+d6866aa40 | npm: 14.3.34
+
+Release date: 2026-09-02
 
 **A stopping server now turns new RPC connections away.** During a rolling restart a client
 that reconnects can land on a replica that has already received its stop signal; until now
@@ -21,6 +23,7 @@ every new connection with `503 Service Unavailable` once
 `IHostApplicationLifetime.ApplicationStopping` fires, and the client's regular reconnect
 backoff carries it to a live replica. Existing connections are not touched - closing them
 is the host's call, and it can do that by disposing the peers in `RpcHub.InternalServices.Peers`.
+NuGet-only release (npm stays at `14.3.34`).
 
 ### Added
 
