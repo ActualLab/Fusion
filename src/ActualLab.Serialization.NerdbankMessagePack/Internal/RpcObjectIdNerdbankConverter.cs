@@ -12,6 +12,9 @@ public sealed class RpcObjectIdNerdbankConverter : MessagePackConverter<RpcObjec
 {
     public override RpcObjectId Read(ref MessagePackReader reader, SerializationContext context)
     {
+        if (reader.TryReadNil())
+            return default;
+
         var len = reader.ReadArrayHeader();
         if (len < 2)
             throw new MessagePackSerializationException(

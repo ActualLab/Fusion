@@ -21,6 +21,9 @@ public sealed class TypeDecoratingUniSerializedNerdbankConverter<TSchema, T>
 {
     public override TypeDecoratingUniSerialized<TSchema, T> Read(ref MessagePackReader reader, SerializationContext context)
     {
+        if (reader.TryReadNil())
+            return default;
+
         var len = reader.ReadArrayHeader();
         if (len != 1)
             throw new MessagePackSerializationException(

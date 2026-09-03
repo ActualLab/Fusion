@@ -24,7 +24,7 @@ public sealed class TypeDecoratingUniSerializedMessagePackFormatter<TSchema, T>
         MessagePackSerializerOptions options)
     {
         if (reader.TryReadNil())
-            throw new MessagePackSerializationException($"Unexpected nil for {typeof(TypeDecoratingUniSerialized<TSchema, T>).GetName()}.");
+            return default;
 
         options.Security.DepthStep(ref reader);
         try {

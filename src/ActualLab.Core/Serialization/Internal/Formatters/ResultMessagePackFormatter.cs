@@ -18,6 +18,9 @@ public sealed class ResultMessagePackFormatter<T> : IMessagePackFormatter<Result
 
     public Result<T> Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
     {
+        if (reader.TryReadNil())
+            return default;
+
         var count = reader.ReadArrayHeader();
         if (count != 2)
             throw new MessagePackSerializationException($"Expected 2 items for Result<>, but got {count}.");

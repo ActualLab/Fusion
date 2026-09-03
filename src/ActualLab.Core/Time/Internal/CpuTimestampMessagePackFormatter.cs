@@ -12,5 +12,5 @@ public class CpuTimestampMessagePackFormatter : IMessagePackFormatter<CpuTimesta
         => writer.WriteInt64(value.Value);
 
     public CpuTimestamp Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
-        => new(reader.ReadInt64());
+        => reader.TryReadNil() ? default : new(reader.ReadInt64());
 }

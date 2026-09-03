@@ -12,5 +12,5 @@ public class MomentMessagePackFormatter : IMessagePackFormatter<Moment>
         => writer.WriteInt64(value.EpochOffsetTicks);
 
     public Moment Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
-        => new(reader.ReadInt64());
+        => reader.TryReadNil() ? default : new(reader.ReadInt64());
 }

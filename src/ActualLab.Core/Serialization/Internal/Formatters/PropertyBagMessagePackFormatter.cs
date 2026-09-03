@@ -28,7 +28,7 @@ public sealed class PropertyBagMessagePackFormatter<TSchema> : IMessagePackForma
         MessagePackSerializerOptions options)
     {
         if (reader.TryReadNil())
-            throw new MessagePackSerializationException($"Unexpected nil for {typeof(PropertyBag<TSchema>).GetName()}.");
+            return default;
 
         options.Security.DepthStep(ref reader);
         try {

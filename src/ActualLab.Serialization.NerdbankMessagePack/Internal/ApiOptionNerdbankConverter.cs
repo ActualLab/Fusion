@@ -9,6 +9,9 @@ public sealed class ApiOptionNerdbankConverter<T> : MessagePackConverter<ApiOpti
 {
     public override ApiOption<T> Read(ref MessagePackReader reader, SerializationContext context)
     {
+        if (reader.TryReadNil())
+            return default;
+
         var count = reader.ReadArrayHeader();
         if (count == 0)
             return default;

@@ -20,6 +20,9 @@ public sealed class ApiOptionMessagePackFormatter<T> : IMessagePackFormatter<Api
 
     public ApiOption<T> Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
     {
+        if (reader.TryReadNil())
+            return default;
+
         var count = reader.ReadArrayHeader();
         if (count == 0)
             return default;

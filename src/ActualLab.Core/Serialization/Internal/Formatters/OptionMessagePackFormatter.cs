@@ -20,6 +20,9 @@ public sealed class OptionMessagePackFormatter<T> : IMessagePackFormatter<Option
 
     public Option<T> Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
     {
+        if (reader.TryReadNil())
+            return default;
+
         var count = reader.ReadArrayHeader();
         if (count == 0)
             return default;

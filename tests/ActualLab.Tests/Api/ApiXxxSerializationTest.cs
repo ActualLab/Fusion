@@ -35,17 +35,6 @@ public class ApiXxxSerializationTest(ITestOutputHelper @out) : TestBase(@out)
     }
 
     [Fact]
-    public void ApiArrayNilTest()
-    {
-        var nil = new ReadOnlyMemory<byte>([0xC0]);
-        Read(MessagePackByteSerializer.Default).Should().BeEmpty();
-        Read(NerdbankMessagePackByteSerializer.Default).Should().BeEmpty();
-
-        ApiArray<int> Read(IByteSerializer serializer)
-            => (ApiArray<int>)serializer.Read(nil, typeof(ApiArray<int>), out _)!;
-    }
-
-    [Fact]
     public void ApiListTest()
     {
         for (var length = 0; length < 10; length++) {

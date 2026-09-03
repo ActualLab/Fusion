@@ -66,6 +66,9 @@ public sealed class PropertyBagItemNerdbankConverter<TSchema> : MessagePackConve
 {
     public override PropertyBagItem<TSchema> Read(ref MessagePackReader reader, SerializationContext context)
     {
+        if (reader.TryReadNil())
+            return default;
+
         var len = reader.ReadArrayHeader();
         if (len != 2)
             throw new MessagePackSerializationException(
