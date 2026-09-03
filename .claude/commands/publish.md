@@ -247,7 +247,14 @@ keep one between a paragraph and the next label.
 
 **4. Show the draft to the user and get approval before posting.** Posting to a
 public release channel reaches real users and can't be quietly undone, so treat
-it like the publish itself: present the exact text, ask (AskUserQuestion) whether
-to post it as-is or adjust, and post only after an explicit yes. If anything in
-the draft rests on a guess — an unverified claim about what's affected, a link
-you couldn't confirm — say so alongside the draft instead of burying it.
+it like the publish itself: present the exact text, ask whether to post it as-is
+or adjust, and post only after an explicit yes. If anything in the draft rests on
+a guess — an unverified claim about what's affected, a link you couldn't confirm —
+say so alongside the draft instead of burying it.
+
+**The draft must be on screen before any question about it.** Print the exact
+text in a normal message, end that message with a plain "Post as-is, or adjust?",
+and **end your turn** — the user's reply is the approval. Do NOT call
+AskUserQuestion in the same response as the draft: the dialog opens before the
+preceding text is visible, so the user is asked to approve something they can't
+see. If you want a dialog anyway, it has to carry the full draft text itself.
