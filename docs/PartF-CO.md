@@ -368,6 +368,11 @@ Task<Product> Get(string id);
 - `Default` — inherit from `ComputedOptions.ClientDefault`
 - `Cache` — enable client-side caching of remote results
 - `NoCache` — disable caching, always fetch from server
+- `ReturnDefault` — behave like `Cache`, but with a cache that always "contains" `default(T)`: the first call
+  returns `default(T)` immediately and the real value displaces it once the server answers; while the peer
+  is disconnected, an invalidated value is re-served as `default(T)` rather than parked until reconnect.
+  Nothing is ever read from or written to `IRemoteComputedCache`, so the mode works without one registered.
+  Use it for methods whose stale value would mislead (a live session that ended while offline, who is typing).
 
 ## Tips
 

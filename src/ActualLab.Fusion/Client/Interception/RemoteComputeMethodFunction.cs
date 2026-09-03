@@ -30,6 +30,9 @@ public sealed class RemoteComputeMethodFunction<T>(
 
     protected override Computed NewRemoteComputed(ComputeMethodInput input, Result output, RpcCacheEntry? cacheEntry, RpcOutboundComputeCall? call = null)
         => new RemoteComputed<T>(ComputedOptions, input, output, cacheEntry, call);
+
+    protected override IRemoteComputedCache NewDefaultValueCache()
+        => new DefaultValueRemoteComputedCache(default(T));
 }
 
 /// <summary>
@@ -43,6 +46,7 @@ public abstract class RemoteComputeMethodFunction(
     ) : ComputeMethodFunction(hub, methodDef)
 {
     private string? _toString;
+    private IRemoteComputedCache? _defaultValueCache;
 
     protected readonly (LogLevel LogLevel, int MaxDataLength) LogCacheEntryUpdateSettings
         = hub.RemoteComputeServiceInterceptorOptions.LogCacheEntryUpdateSettings;
@@ -466,6 +470,10 @@ public abstract class RemoteComputeMethodFunction(
         object? deserializedValue,
         Computed? existing = null)
     {
+        // ReturnDefault: the entry is always the default one, whatever the call produced
+        if (cache is DefaultValueRemoteComputedCache defaultValueCache)
+            return defaultValueCache.NewEntry(key);
+
         var updateLogLevel = LogCacheEntryUpdateSettings.LogLevel;
         if (existing is not null && CacheLog.IfEnabled(updateLogLevel) is { } cacheLog) {
             if (LogCacheEntryUpdateSettings.MaxDataLength is var maxDataLength and > 0)
@@ -485,9 +493,11 @@ public abstract class RemoteComputeMethodFunction(
     }
 
     protected IRemoteComputedCache? GetCache(ComputeMethodInput input)
-        => input.MethodDef.ComputedOptions.RemoteComputedCacheMode == RemoteComputedCacheMode.Cache
-            ? RemoteComputedCache
-            : null;
+        => input.MethodDef.ComputedOptions.RemoteComputedCacheMode switch {
+            RemoteComputedCacheMode.Cache => RemoteComputedCache,
+            RemoteComputedCacheMode.ReturnDefault => _defaultValueCache ??= NewDefaultValueCache(),
+            _ => null,
+        };
 
     protected Task TryReprocessServerSideCancellation(ComputeMethodInput input,
         Exception error,
@@ -579,4 +589,6 @@ public abstract class RemoteComputeMethodFunction(
         Result output,
         RpcCacheEntry? cacheEntry,
         RpcOutboundComputeCall? call = null);
+
+    protected abstract IRemoteComputedCache NewDefaultValueCache();
 }
