@@ -58,7 +58,8 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
         await connection.Disconnect();
         var whenConnectedResult = await peer.WhenConnected(TimeSpan.FromSeconds(1)).ResultAwait();
-        whenConnectedResult.Error.Should().BeOfType<TimeoutException>();
+        whenConnectedResult.Error.Should().BeOfType<RpcTimeoutException>()
+            .Which.TimeoutKind.Should().Be(RpcTimeoutKind.Connect);
 
         var whenConnectedTask = peer.WhenConnected(TimeSpan.FromHours(1));
         await peer.DisposeAsync();
@@ -500,17 +501,19 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
         await connection.Disconnect();
         // NOTE: It won't throw under the debugger due to debug mode timeouts
-        await Assert.ThrowsAsync<TimeoutException>(
+        var connectTimeout = await Assert.ThrowsAsync<RpcTimeoutException>(
             // The default connect timeout is 1.5s
             () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(3))));
+        connectTimeout.TimeoutKind.Should().Be(RpcTimeoutKind.Connect);
         await Delay(0.1);
         await AssertNoCalls(clientPeer, Out);
 
         await connection.Connect();
         // NOTE: It won't throw under the debugger due to debug mode timeouts
-        await Assert.ThrowsAsync<TimeoutException>(
+        var runTimeout = await Assert.ThrowsAsync<RpcTimeoutException>(
             // The default run timeout is 10s, but checks are every 10s or so
             () => client.OnHello(new HelloCommand("X", TimeSpan.FromSeconds(30))));
+        runTimeout.TimeoutKind.Should().Be(RpcTimeoutKind.Run);
 
         await AssertNoCalls(clientPeer, Out);
     }

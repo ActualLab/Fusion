@@ -1,4 +1,5 @@
 using ActualLab.Rpc.Infrastructure;
+using ActualLab.Rpc.Internal;
 
 namespace ActualLab.Rpc;
 
@@ -31,6 +32,12 @@ public class RpcClientPeer : RpcPeer
     // client out of every further reconnect.
     public long NextReconnectCounter()
         => Interlocked.Increment(ref _reconnectCounter);
+
+    public override Task<RpcPeerConnectionState> WhenConnectedOrReroute(
+        TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken = default)
+        => timeout == TimeSpan.MaxValue
+            ? WhenConnectedOrReroute(cancellationToken)
+            : WhenConnectedOrRerouteWithTimeout(timeout, timeoutKind, cancellationToken);
 
     // Protected methods
 
@@ -71,6 +78,40 @@ public class RpcClientPeer : RpcPeer
         lock (Lock) {
             if (_reconnectAt.Value != value)
                 Volatile.Write(ref _reconnectAt, _reconnectAt.SetNext(value));
+        }
+    }
+
+    // Private methods
+
+    private async Task<RpcPeerConnectionState> WhenConnectedOrRerouteWithTimeout(
+        TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken)
+    {
+        // A reconnect that ReconnectDelayer parks past the deadline cannot succeed in time,
+        // so the wait fails as soon as that becomes known instead of running the timeout out.
+        var deadline = ReconnectDelayer.Clock.Now + timeout;
+        using var timeoutCts = cancellationToken.CreateLinkedTokenSource(timeout);
+        var timeoutToken = timeoutCts.Token;
+        try {
+            while (true) {
+                var reconnectsAt = ReconnectsAt;
+                if (reconnectsAt.Value > deadline) {
+                    // A pending reroute or the caller's cancellation wins over the timeout, as in the base wait
+                    Route.ThrowIfChanged();
+                    cancellationToken.ThrowIfCancellationRequested();
+                    throw Errors.Timeout(timeoutKind, Ref, timeout);
+                }
+
+                var whenConnected = WhenConnectedOrReroute(timeoutToken);
+                var whenReconnectsAtChanged = reconnectsAt.WhenNext(timeoutToken);
+                var winner = await Task.WhenAny(whenConnected, whenReconnectsAtChanged).ConfigureAwait(false);
+                if (winner == whenConnected)
+                    return await whenConnected.ConfigureAwait(false);
+
+                await whenReconnectsAtChanged.ConfigureAwait(false);
+            }
+        }
+        catch (Exception e) when (e.IsCancellationOfTimeoutToken(timeoutToken, cancellationToken)) {
+            throw Errors.Timeout(timeoutKind, Ref, timeout);
         }
     }
 }

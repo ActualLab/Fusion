@@ -115,29 +115,45 @@ public static class Errors
             + $"but polymorphic serialization is not allowed by the selected serialization format.");
 
     public static Exception ConnectTimeout(RpcRef rpcRef, TimeSpan? timeout = null)
-        => ConnectTimeout(rpcRef.GetRemotePartyName());
+        => ConnectTimeout(rpcRef.GetRemotePartyName(), timeout);
     public static Exception ConnectTimeout(string remoteParty = "remote host", TimeSpan? timeout = null)
-        => new TimeoutException(
+        => new RpcTimeoutException(RpcTimeoutKind.Connect,
             timeout is { } t
                 ? $"Timeout while connecting to {remoteParty} ({t.ToShortString()})."
                 : $"Timeout while connecting to {remoteParty}.");
+
+    public static Exception ReconnectTimeout(RpcRef rpcRef, TimeSpan timeout)
+        => new RpcTimeoutException(RpcTimeoutKind.Reconnect,
+            $"Timeout while waiting for the {rpcRef.GetRemotePartyName()} to reconnect ({timeout.ToShortString()}).");
 
     public static Exception PrematureDisconnect()
         => new ChannelClosedException("Connection is closed prematurely.");
 
     public static Exception CallTimeout(RpcRef rpcRef, TimeSpan? timeout = null)
-        => CallTimeout(rpcRef.GetRemotePartyName());
+        => CallTimeout(rpcRef.GetRemotePartyName(), timeout);
 
     public static Exception CallTimeout(string remoteParty = "remote host", TimeSpan? timeout = null)
-        => new TimeoutException(
+        => new RpcTimeoutException(RpcTimeoutKind.Run,
             timeout is { } t
                 ? $"The {remoteParty} didn't respond in time ({t.ToShortString()})."
                 : $"The {remoteParty} didn't respond in time.");
+    public static Exception DelayTimeout(RpcRef rpcRef, TimeSpan timeout)
+        => new RpcTimeoutException(RpcTimeoutKind.Delay,
+            $"The {rpcRef.GetRemotePartyName()} didn't respond in time ({timeout.ToShortString()}), the delayed call is aborted.");
 
     public static Exception HandshakeTimeout()
-        => new TimeoutException("Timeout while waiting for RPC handshake.");
+        => new RpcTimeoutException(RpcTimeoutKind.Handshake, "Timeout while waiting for RPC handshake.");
     public static Exception KeepAliveTimeout()
-        => new TimeoutException("Timeout while waiting for RPC keep-alive.");
+        => new RpcTimeoutException(RpcTimeoutKind.KeepAlive, "Timeout while waiting for RPC keep-alive.");
+
+    public static Exception Timeout(RpcTimeoutKind timeoutKind, RpcRef rpcRef, TimeSpan timeout)
+        => timeoutKind switch {
+            RpcTimeoutKind.Connect => ConnectTimeout(rpcRef, timeout),
+            RpcTimeoutKind.Run => CallTimeout(rpcRef, timeout),
+            RpcTimeoutKind.Reconnect => ReconnectTimeout(rpcRef, timeout),
+            RpcTimeoutKind.Delay => DelayTimeout(rpcRef, timeout),
+            _ => new RpcTimeoutException(timeoutKind),
+        };
 
     public static Exception ClientRpcRefExpected(string argumentName)
         => new ArgumentOutOfRangeException(argumentName, "Client RpcRef is expected.");

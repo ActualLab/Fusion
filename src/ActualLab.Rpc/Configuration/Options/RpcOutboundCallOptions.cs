@@ -45,7 +45,11 @@ public record RpcOutboundCallOptions
         var connectTimeout = attribute.ConnectTimeout is double.NaN ? defaultTimeouts.ConnectTimeout : ToTimeout(attribute.ConnectTimeout);
         var runTimeout = attribute.RunTimeout is double.NaN ? defaultTimeouts.RunTimeout : ToTimeout(attribute.RunTimeout);
         var delayTimeout = attribute.DelayTimeout is double.NaN ? defaultTimeouts.DelayTimeout : ToTimeout(attribute.DelayTimeout);
-        return new RpcCallTimeouts(connectTimeout, runTimeout) { DelayTimeout = delayTimeout };
+        var reconnectTimeout = attribute.ReconnectTimeout is double.NaN ? defaultTimeouts.ReconnectTimeout : ToTimeout(attribute.ReconnectTimeout);
+        return new RpcCallTimeouts(connectTimeout, runTimeout) {
+            DelayTimeout = delayTimeout,
+            ReconnectTimeout = reconnectTimeout,
+        };
     }
 
     protected static RpcDelayedCallAction DefaultDelayHandler(RpcOutboundCall call, RpcPeer peer)
