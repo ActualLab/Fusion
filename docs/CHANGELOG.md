@@ -11,6 +11,37 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.40+2dc3129be | npm: 14.3.34
+
+Release date: 2026-09-03
+
+**Every hand-written MessagePack formatter now reads `nil` as `default`.** 14.3.38 fixed this for
+`ApiArray<T>` alone; the same slot-predates-the-property case hits every other custom formatter
+whose deserializer opens with `ReadArrayHeader()` or `ReadInt64()`. The motivating case is a type
+that gained members between app versions: ActualChat had to carry its own nil-tolerant `ApiArray<T>`
+formatter so a notification type extended in 2.18 could still read rows persisted by 2.17, and
+[dropped it on 14.3.38](https://github.com/Actual-Chat/actual-chat/commit/1ba45305c1d1570a3a4fd364a41a5187613ed16c).
+One caveat stays on the consumer's side: a formatter only runs for a slot that is present but
+`nil`. A key the row never had is assigned from a local that defaults to `null`, so a `string`
+member that must stay non-null still needs a coalescing `init` accessor. NuGet-only release (npm
+stays at `14.3.34`).
+
+### Fixed
+
+- **`Option<T>`, `ApiOption<T>`, `Result<T>`, `Moment` and `CpuTimestamp` read `nil` as `default`**
+  in both the MessagePack-CSharp formatters and the Nerdbank converters.
+- **`PropertyBag<T>`, `PropertyBagItem<T>` and `TypeDecoratingUniSerialized<,>`** drop their
+  explicit *"Unexpected nil"* exception for the same `default`; the Nerdbank `PropertyBag<T>`
+  converter already behaved that way.
+- **The Nerdbank converters for `RpcObjectId`, `RpcHeader`, `RpcHeaderKey` and `RpcMethodRef`**
+  get the same guard. Their MessagePack-CSharp counterparts are source-generated and still throw
+  on `nil`, as MessagePack-CSharp does for every struct it generates a formatter for.
+- Serialization is unchanged throughout, so blobs written by this version stay readable by older
+  ones. `Unit`, `Symbol`, `FilePath`, `TypeRef`, `SanitizedString<T>`, `ByteString`,
+  `MessagePackData`, `ApiNullable<T>` and `ApiNullable8<T>` already read `nil` as `default`;
+  the new `MessagePackNilTest` pins all of them for both serializers.
+
+
 ## 14.3.38+7777cee66 | npm: 14.3.34
 
 Release date: 2026-09-03
