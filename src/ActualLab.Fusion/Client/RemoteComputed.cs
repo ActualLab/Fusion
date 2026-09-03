@@ -87,7 +87,7 @@ public class RemoteComputed<T> : ComputeMethodComputed<T>, IRemoteComputed
         //   & produce another unsynchronized computed shortly after.
         //   And we want to avoid an extra cache lookup - even if it's at cost of some extra
         //   RAM consumption.
-        if (Options.RemoteComputedCacheMode == RemoteComputedCacheMode.Cache) // && !SynchronizedSource.Task.IsCompleted)
+        if (Options.RemoteComputedCacheMode.UsesCacheEntry()) // && !SynchronizedSource.Task.IsCompleted)
             ComputedRegistry.PseudoUnregister(this);
         else
             ComputedRegistry.Unregister(this, RegistrySlot);
