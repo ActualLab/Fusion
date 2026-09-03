@@ -11,6 +11,27 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.3.38+7777cee66 | npm: 14.3.34
+
+Release date: 2026-09-03
+
+**Adding an `ApiArray<T>` property to a MessagePack type no longer makes old blobs unreadable.**
+An `ApiArray<T>` property added to an array-form `[MessagePackObject]` reads as `nil` from
+blobs written before the property existed. Both MessagePack deserializers &mdash; the
+MessagePack-CSharp formatter in `ActualLab.Core` and the converter in
+`ActualLab.Serialization.NerdbankMessagePack` &mdash; called `ReadArrayHeader()` on that `nil`
+and threw *"Unexpected msgpack code 192 (nil) encountered"*, so every such persisted blob failed
+to load. Worth taking if you persist MessagePack-serialized types that contain `ApiArray<T>` and
+evolve them over time. NuGet-only release (npm stays at `14.3.34`).
+
+### Fixed
+
+- **`ApiArray<T>` MessagePack deserializers read `nil` as `ApiArray<T>.Empty`** instead of
+  throwing, in both the MessagePack-CSharp formatter and the Nerdbank converter. Serialization
+  is unchanged &mdash; an empty `ApiArray<T>` is still written as an empty array header &mdash;
+  so blobs produced by this version stay readable by older ones.
+
+
 ## 14.3.36+d6866aa40 | npm: 14.3.34
 
 Release date: 2026-09-02
