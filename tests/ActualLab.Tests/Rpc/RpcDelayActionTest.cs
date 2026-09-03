@@ -60,8 +60,9 @@ public class RpcDelayActionTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
         var client = services.RpcHub().GetClient<ITestDelayActionService>();
         await client.DefaultDelay(TimeSpan.FromMilliseconds(1)); // Warm up — ensures connection is ready
 
-        await Assert.ThrowsAsync<TimeoutException>(
+        var timeout = await Assert.ThrowsAsync<RpcTimeoutException>(
             () => client.AbortOnDelay(TimeSpan.FromSeconds(5)));
+        timeout.TimeoutKind.Should().Be(RpcTimeoutKind.Delay);
     }
 
     // Private methods

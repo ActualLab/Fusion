@@ -132,7 +132,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RpcBuilder` (struct) — fluent builder for registering RPC services in DI
 - `RpcConfiguration` — registered service builders + default service mode
 - `RpcLimits` (record) — timeout/periodic limits for connections and keep-alive, plus the per-peer `CallCountLimit` / `ObjectCountLimit` backstops
-- `RpcCallTimeouts` (record) — connect/run/delay timeouts for outbound calls
+- `RpcCallTimeouts` (record) — connect/run/delay/reconnect timeouts for outbound calls
 - `RpcServiceMode` (enum) — local, server, client, or distributed
 
 ### Transports

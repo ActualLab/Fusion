@@ -54,7 +54,8 @@ public class RpcHandshakeVersionSetLimitTest(ITestOutputHelper @out) : RpcLocalT
         var whenConnectedResult = await apiConnection.ServerPeer
             .WhenConnected(TimeSpan.FromSeconds(1))
             .ResultAwait();
-        whenConnectedResult.Error.Should().BeOfType<TimeoutException>();
+        whenConnectedResult.Error.Should().BeOfType<RpcTimeoutException>()
+            .Which.TimeoutKind.Should().Be(RpcTimeoutKind.Connect);
     }
 
     // Private methods

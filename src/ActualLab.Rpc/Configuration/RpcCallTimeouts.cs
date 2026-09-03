@@ -1,7 +1,7 @@
 namespace ActualLab.Rpc;
 
 /// <summary>
-/// Defines connect, run, and delay timeouts for outbound RPC calls.
+/// Defines connect, run, delay, and reconnect timeouts for outbound RPC calls.
 /// </summary>
 public sealed partial record RpcCallTimeouts
 {
@@ -11,6 +11,10 @@ public sealed partial record RpcCallTimeouts
     public TimeSpan ConnectTimeout { get; init => field = value.Positive(); }
     public TimeSpan RunTimeout { get; init => field = value.Positive(); }
     public TimeSpan DelayTimeout { get; init => field = value.Positive(); } = DefaultDelayTimeout;
+    // How long a call waits for a peer that lost its connection to reconnect: a remote compute call
+    // with a cached value then serves it, any other call fails with RpcTimeoutException (Reconnect).
+    // Zero (the default) serves a cached value at once and lets other calls wait indefinitely.
+    public TimeSpan ReconnectTimeout { get; init => field = value.Positive(); }
 
     // TimeSpan overloads
 

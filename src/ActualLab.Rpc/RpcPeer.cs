@@ -17,6 +17,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
 
     private AsyncState<RpcPeerConnectionState> _connectionState = new(new RpcPeerConnectionState());
+    private bool _hasEverConnected;
     private RpcMethodResolver _serverMethodResolver;
     private RpcTransport? _transport;
     // Plain: an aligned enum load never tears, and this gates nothing - a stale read
@@ -87,6 +88,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public LogLevel CallLogLevel { get; init; } = DefaultCallLogLevel;
 
     public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
+    public bool HasEverConnected => Volatile.Read(ref _hasEverConnected);
 #pragma warning disable CA1721
     public RpcMethodResolver ServerMethodResolver {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -174,7 +176,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 return await peer.WhenConnected(timeoutToken).ConfigureAwait(false);
             }
             catch (Exception e) when (e.IsCancellationOfTimeoutToken(timeoutToken, cancellationToken)) {
-                throw Errors.ConnectTimeout(peer.Ref);
+                throw Errors.ConnectTimeout(peer.Ref, timeout);
             }
         }
     }
@@ -194,13 +196,28 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     }
 
     public Task<RpcPeerConnectionState> WhenConnectedOrReroute(TimeSpan timeout, CancellationToken cancellationToken = default)
+        => WhenConnectedOrReroute(timeout, RpcTimeoutKind.Connect, cancellationToken);
+
+    public Task<RpcPeerConnectionState> WhenConnectedOrReroute(RpcCallTimeouts timeouts, CancellationToken cancellationToken = default)
     {
+        // ConnectTimeout caps any wait for the connection; a positive ReconnectTimeout is the tighter cap
+        // once the peer has been connected before, i.e. when what's awaited is a reconnect
+        var reconnectTimeout = timeouts.ReconnectTimeout;
+        return reconnectTimeout > TimeSpan.Zero && reconnectTimeout < timeouts.ConnectTimeout && HasEverConnected
+            ? WhenConnectedOrReroute(reconnectTimeout, RpcTimeoutKind.Reconnect, cancellationToken)
+            : WhenConnectedOrReroute(timeouts.ConnectTimeout, RpcTimeoutKind.Connect, cancellationToken);
+    }
+
+    public virtual Task<RpcPeerConnectionState> WhenConnectedOrReroute(
+        TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken = default)
+    {
+        // timeoutKind is what the RpcTimeoutException thrown on expiry reports
         return timeout == TimeSpan.MaxValue
             ? WhenConnectedOrReroute(cancellationToken)
-            : WhenConnectedOrRerouteWithTimeout(this, timeout, cancellationToken);
+            : WhenConnectedOrRerouteWithTimeout(this, timeout, timeoutKind, cancellationToken);
 
         static async Task<RpcPeerConnectionState> WhenConnectedOrRerouteWithTimeout(
-            RpcPeer peer, TimeSpan timeout, CancellationToken cancellationToken)
+            RpcPeer peer, TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken)
         {
             using var timeoutCts = cancellationToken.CreateLinkedTokenSource(timeout);
             var timeoutToken = timeoutCts.Token;
@@ -208,7 +225,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 return await peer.WhenConnectedOrReroute(timeoutToken).ConfigureAwait(false);
             }
             catch (Exception e) when (e.IsCancellationOfTimeoutToken(timeoutToken, cancellationToken)) {
-                throw Errors.ConnectTimeout(peer.Ref);
+                throw Errors.Timeout(timeoutKind, peer.Ref, timeout);
             }
         }
     }
@@ -380,6 +397,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         "'{Route}': Handshake succeeded, PeerChangeKind={PeerChangeKind}",
                         Route, peerChangeKind);
                     lastHandshake = handshake;
+                    Volatile.Write(ref _hasEverConnected, true); // Read lock-free by HasEverConnected
                     if (peerChangeKind != RpcPeerChangeKind.Unchanged) {
                         // Remote RpcPeer changed -> we must abort every inbound call / shared object
                         if (peerChangeKind != RpcPeerChangeKind.ChangedToVeryFirst) {
@@ -485,8 +503,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         error = RpcReconnectFailedException.StopRequested(error);
                 }
                 connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
-                if (!connectionState.IsFinal)
+                if (!connectionState.IsFinal) {
+                    _ = OutboundCalls.AbortOnReconnectTimeout(connectionState.Value, cancellationToken);
                     continue;
+                }
 
                 OutboundCalls.TryReroute();
                 break;

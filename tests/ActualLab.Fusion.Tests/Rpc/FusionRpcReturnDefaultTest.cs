@@ -158,14 +158,13 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
         g2.Value.Should().Be("v-1");
 
         await connection.Connect();
-        await c2.WhenInvalidated().WaitAsync(Timeout);
-        await g2.WhenInvalidated().WaitAsync(Timeout);
-        var c3 = (RemoteComputed<string>)await c2.Update();
-        c3.Value.Should().Be("v-1");
-        var g3 = (RemoteComputed<string>)await g2.Update();
-        g3.Value.Should().Be("v-1");
+        // ReturnDefault: the real value displaces the default; Cache: the server confirms the stale value in place
         await c2.WhenSynchronized.WaitAsync(Timeout);
+        c2.IsInvalidated().Should().BeTrue();
+        var c3 = (RemoteComputed<string>)Computed.GetExisting(() => client.GetDefault("1"))!;
+        c3.Value.Should().Be("v-1");
         await g2.WhenSynchronized.WaitAsync(Timeout);
+        g2.IsConsistent().Should().BeTrue();
 
         cache.GetCount(".Get:", "Get").Should().BeGreaterThan(0);
         cache.GetCount(".Get:", "Set").Should().BeGreaterThan(0);

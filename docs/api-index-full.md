@@ -1445,6 +1445,10 @@ Defines the kind of connection used by an RPC peer (remote, loopback, local, or 
 
 Defines how inbound calls are handled when an RPC peer is stopping.
 
+###### `RpcTimeoutKind` (enum)
+
+Identifies which timeout an `RpcTimeoutException` reports.
+
 ###### `RpcDelayedCallAction` (enum), `RpcDelayedCallActionExt`
 
 Flags controlling how delayed outbound RPC calls are handled.
@@ -1479,7 +1483,7 @@ An ordered collection of `LegacyName` entries, indexed by version for backward c
 
 ###### `RpcCallTimeouts` (record)
 
-Defines connect, run, and delay timeouts for outbound RPC calls.
+Defines connect, run, delay, and reconnect timeouts for outbound RPC calls.
 
 ###### `RpcCallType` (record)
 
@@ -1544,6 +1548,10 @@ A stable reference to a logical RPC peer target, encapsulating its address, conn
 ###### `RpcReconnectFailedException`
 
 Thrown when an RPC peer permanently fails to reconnect to the remote host.
+
+###### `RpcTimeoutException`
+
+Thrown when one of the RPC timeouts expires; `TimeoutKind` tells which one.
 
 ###### `RpcRerouteException`
 

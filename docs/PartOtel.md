@@ -168,7 +168,8 @@ value is an existing cache entry returned as a fallback after Fusion cannot conf
 miss. The stale-value counter uses
 `operation` (`connection_check` or `active_call`) to distinguish a value
 served while already disconnected from one served when an active call loses
-its connection.
+its connection. A call that waits out `RpcCallTimeouts.ReconnectTimeout` and sees the peer
+return in time yields a fresh value and is not counted.
 
 
 ## Fusion Entity Framework Metrics (`ActualLab.Fusion.EntityFramework`)

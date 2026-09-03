@@ -14,7 +14,7 @@ public enum RemoteComputedCacheMode
 /// <summary>
 /// Extension methods for <see cref="RemoteComputedCacheMode"/>.
 /// </summary>
-public static class RemoteComputedCacheModeExt
+internal static class RemoteComputedCacheModeExt
 {
     // Cache and ReturnDefault are the modes whose computeds carry an RpcCacheEntry:
     // they stay pseudo-registered once invalidated and can be served stale.
