@@ -9,6 +9,10 @@ public sealed class ApiArrayNerdbankConverter<T> : MessagePackConverter<ApiArray
 {
     public override ApiArray<T> Read(ref MessagePackReader reader, SerializationContext context)
     {
+        // Nil is what an array-form MessagePackObject slot holds when the blob predates the property
+        if (reader.TryReadNil())
+            return ApiArray<T>.Empty;
+
         var len = reader.ReadArrayHeader();
         if (len == 0)
             return ApiArray<T>.Empty;

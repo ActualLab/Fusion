@@ -23,6 +23,10 @@ public class ApiArrayMessagePackFormatter<T> : IMessagePackFormatter<ApiArray<T>
 
     public ApiArray<T> Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options)
     {
+        // Nil is what an array-form MessagePackObject slot holds when the blob predates the property
+        if (reader.TryReadNil())
+            return ApiArray<T>.Empty;
+
         var len = reader.ReadArrayHeader();
         if (len == 0)
             return ApiArray<T>.Empty;
