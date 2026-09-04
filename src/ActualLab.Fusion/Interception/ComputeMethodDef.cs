@@ -44,8 +44,8 @@ public sealed class ComputeMethodDef : MethodDef
                 computedOptions = computedOptions with {
                     // All invalidation delays are disabled for the consolidation target
                     InvalidationDelay = TimeSpan.Zero,
-                    AutoInvalidationDelay = TimeSpan.MaxValue,
-                    TransientErrorInvalidationDelay = TimeSpan.MaxValue,
+                    AutoInvalidationDelay = TimeSpanExt.Infinite,
+                    TransientErrorInvalidationDelay = TimeSpanExt.Infinite,
                     // Cancellation reprocessing should happen only for the consolidation source
                     CancellationReprocessing = ComputedCancellationReprocessingOptions.None,
                 };
@@ -55,7 +55,7 @@ public sealed class ComputeMethodDef : MethodDef
                 ConsolidationTargetMethodDef = consolidationTargetMethodDef;
                 computedOptions = computedOptions with {
                     // Consolidation delay is disabled for the consolidation source
-                    ConsolidationDelay = TimeSpan.MaxValue,
+                    ConsolidationDelay = TimeSpanExt.Infinite,
                     // Min cache duration is applied to the consolidation target -
                     // it references the consolidation source.
                     // Moreover, the source is updated more frequently than the target,

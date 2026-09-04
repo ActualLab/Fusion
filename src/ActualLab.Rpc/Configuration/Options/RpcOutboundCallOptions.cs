@@ -42,17 +42,17 @@ public record RpcOutboundCallOptions
         if (methodDef.Attribute is not { } attribute)
             return defaultTimeouts;
 
-        // NaN = inherit the kind default; +Inf = MaxValue = never fails.
+        // NaN = inherit the kind default; +Inf = TimeSpanExt.Infinite = no timeout.
         var connectTimeout = attribute.ConnectTimeout is double.NaN
-            ? defaultTimeouts.ConnectTimeout : ToTimeout(attribute.ConnectTimeout);
+            ? defaultTimeouts.ConnectTimeout : attribute.ConnectTimeout.AsTimeout();
         var runTimeout = attribute.RunTimeout is double.NaN
-            ? defaultTimeouts.RunTimeout : ToTimeout(attribute.RunTimeout);
-        var reconnectTimeout = attribute.ReconnectTimeout is double.NaN
-            ? defaultTimeouts.ReconnectTimeout : ToTimeout(attribute.ReconnectTimeout);
+            ? defaultTimeouts.RunTimeout : attribute.RunTimeout.AsTimeout();
+        var cacheFallbackDelay = attribute.CacheFallbackDelay is double.NaN
+            ? defaultTimeouts.CacheFallbackDelay : attribute.CacheFallbackDelay.AsTimeout();
         var delayTimeout = attribute.DelayTimeout is double.NaN
-            ? defaultTimeouts.DelayTimeout : ToTimeout(attribute.DelayTimeout);
+            ? defaultTimeouts.DelayTimeout : attribute.DelayTimeout.AsTimeout();
         return new RpcCallTimeouts(connectTimeout, runTimeout) {
-            ReconnectTimeout = reconnectTimeout,
+            CacheFallbackDelay = cacheFallbackDelay,
             DelayTimeout = delayTimeout,
         };
     }
@@ -84,9 +84,4 @@ public record RpcOutboundCallOptions
         return Convert.ToBase64String(buffer.AsSpan(0, 18).ToArray()); // 18 bytes -> 24 chars
 #endif
     }
-
-    protected static TimeSpan ToTimeout(double? timeout)
-        => timeout is { } value and not double.NaN and not double.PositiveInfinity
-            ? TimeSpan.FromSeconds(value)
-            : TimeSpan.MaxValue;
 }

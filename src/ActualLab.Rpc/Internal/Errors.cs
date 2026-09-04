@@ -122,10 +122,6 @@ public static class Errors
                 ? $"Timeout while connecting to {remoteParty} ({t.ToShortString()})."
                 : $"Timeout while connecting to {remoteParty}.");
 
-    public static Exception ReconnectTimeout(RpcRef rpcRef, TimeSpan timeout)
-        => new RpcTimeoutException(RpcTimeoutKind.Reconnect,
-            $"Timeout while waiting for the {rpcRef.GetRemotePartyName()} to reconnect ({timeout.ToShortString()}).");
-
     public static Exception PrematureDisconnect()
         => new ChannelClosedException("Connection is closed prematurely.");
 
@@ -150,7 +146,6 @@ public static class Errors
         => timeoutKind switch {
             RpcTimeoutKind.Connect => ConnectTimeout(rpcRef, timeout),
             RpcTimeoutKind.Run => CallTimeout(rpcRef, timeout),
-            RpcTimeoutKind.Reconnect => ReconnectTimeout(rpcRef, timeout),
             RpcTimeoutKind.Delay => DelayTimeout(rpcRef, timeout),
             _ => new RpcTimeoutException(timeoutKind),
         };

@@ -414,7 +414,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         var error = Error;
         if (error is null) {
             timeout = Options.AutoInvalidationDelay;
-            if (timeout != TimeSpan.MaxValue)
+            if (timeout != TimeSpanExt.Infinite)
                 this.Invalidate(timeout);
             return;
         }
@@ -438,7 +438,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
         // sooner triggers a retry, and for errors caused by request volume the retry makes it worse.
         if (error is IHasRetryDelay { RetryDelay.Ticks: > 0 } hasRetryDelay)
             timeout = TimeSpanExt.Max(timeout, hasRetryDelay.RetryDelay);
-        if (timeout != TimeSpan.MaxValue)
+        if (timeout != TimeSpanExt.Infinite)
             this.Invalidate(timeout);
     }
 

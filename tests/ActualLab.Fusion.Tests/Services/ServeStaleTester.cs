@@ -6,12 +6,12 @@ public interface IServeStaleTester : IComputeService
 {
     [ComputeMethod]
     public Task<string> Get(string key, CancellationToken cancellationToken = default);
-    [ComputeMethod, RpcMethod(ReconnectTimeout = 1)]
-    public Task<string> GetWithReconnectTimeout(string key, CancellationToken cancellationToken = default);
+    [ComputeMethod, RpcMethod(CacheFallbackDelay = 1)]
+    public Task<string> GetWithCacheFallbackDelay(string key, CancellationToken cancellationToken = default);
     [ComputeMethod, RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.NoCache)]
     public Task<string> GetNoCache(string key, CancellationToken cancellationToken = default);
-    [ComputeMethod, RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.NoCache), RpcMethod(ReconnectTimeout = 1)]
-    public Task<string> GetNoCacheWithReconnectTimeout(string key, CancellationToken cancellationToken = default);
+    [ComputeMethod, RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.NoCache), RpcMethod(ConnectTimeout = 1)]
+    public Task<string> GetNoCacheWithConnectTimeout(string key, CancellationToken cancellationToken = default);
 }
 
 public class ServeStaleTester : IServeStaleTester
@@ -21,13 +21,13 @@ public class ServeStaleTester : IServeStaleTester
     public virtual Task<string> Get(string key, CancellationToken cancellationToken = default)
         => Task.FromResult(GetValue(key));
 
-    public virtual Task<string> GetWithReconnectTimeout(string key, CancellationToken cancellationToken = default)
+    public virtual Task<string> GetWithCacheFallbackDelay(string key, CancellationToken cancellationToken = default)
         => Task.FromResult(GetValue(key));
 
     public virtual Task<string> GetNoCache(string key, CancellationToken cancellationToken = default)
         => Task.FromResult(GetValue(key));
 
-    public virtual Task<string> GetNoCacheWithReconnectTimeout(string key, CancellationToken cancellationToken = default)
+    public virtual Task<string> GetNoCacheWithConnectTimeout(string key, CancellationToken cancellationToken = default)
         => Task.FromResult(GetValue(key));
 
     public void Set(string key, string value)
@@ -35,9 +35,9 @@ public class ServeStaleTester : IServeStaleTester
         _values[key] = value;
         using (Invalidation.Begin()) {
             _ = Get(key);
-            _ = GetWithReconnectTimeout(key);
+            _ = GetWithCacheFallbackDelay(key);
             _ = GetNoCache(key);
-            _ = GetNoCacheWithReconnectTimeout(key);
+            _ = GetNoCacheWithConnectTimeout(key);
         }
     }
 

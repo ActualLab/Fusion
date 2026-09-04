@@ -24,10 +24,6 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public readonly RpcPeer Peer = context.Peer!;
     public readonly RpcCacheInfoCaptureMode CacheInfoCaptureMode = context.CacheInfoCapture?.CaptureMode ?? default;
     public bool IsLongLiving { get; init; }
-    // True when the caller serves something else once ReconnectTimeout elapses, so the call
-    // must stay pending across the disconnect (to be resent) rather than be aborted
-    // Overridden by RpcOutboundComputeCall; false for plain calls.
-    public virtual bool HasReconnectFallback => false;
 
     public Task<object?> ResultTask {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -109,15 +105,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         async Task<object?> CompleteAsync() {
             try {
                 // WhenConnectedOrReroute may throw RpcRerouteException if the peer's route has changed.
-                // Call issued while disconnected.
-                // - A fallback-capable compute call keeps the plain ConnectTimeout wait
-                //   (the compute layer handles ReconnectTimeout for it);
-                // - Everything else gets the tighter of the two.
-                var timeouts = MethodDef.OutboundCallTimeouts;
-                var whenConnected = HasReconnectFallback
-                    ? Peer.WhenConnectedOrReroute(timeouts.ConnectTimeout, Context.CancellationToken)
-                    : Peer.WhenConnectedOrReroute(timeouts, Context.CancellationToken);
-                await whenConnected.ConfigureAwait(false);
+                // ConnectTimeout caps the wait whether this is the first connection or a reconnect.
+                var connectTimeout = MethodDef.OutboundCallTimeouts.ConnectTimeout;
+                await Peer.WhenConnectedOrReroute(connectTimeout, Context.CancellationToken).ConfigureAwait(false);
                 SendRegistered();
             }
             catch (Exception error) {
