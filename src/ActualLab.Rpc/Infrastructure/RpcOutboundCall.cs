@@ -24,10 +24,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public readonly RpcPeer Peer = context.Peer!;
     public readonly RpcCacheInfoCaptureMode CacheInfoCaptureMode = context.CacheInfoCapture?.CaptureMode ?? default;
     public bool IsLongLiving { get; init; }
-    // True when the caller serves something else once CacheFallbackDelay elapses, so the call must
-    // stay pending across the disconnect (to be resent) rather than be aborted on ConnectTimeout.
-    // Overridden by RpcOutboundComputeCall; false for plain calls.
-    public virtual bool HasCacheFallback => false;
+    // Set by OnCacheFallbackDelay once the caller was handed something to show. Such a call must
+    // stay pending across the disconnect - it is what validates the served value on reconnect.
+    public bool IsCacheFallbackServed { get; protected set; }
 
     public Task<object?> ResultTask {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -120,6 +119,18 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             return await ResultTask.ConfigureAwait(false);
         }
     }
+
+    // Disconnect handlers
+    //
+    // RpcOutboundCallTracker.HandleDisconnect calls these when the peer stays away past
+    // CacheFallbackDelay / ConnectTimeout. A call that served a fallback is exempt from
+    // OnConnectTimeout - it has nothing left to fail, and its response still has to arrive.
+
+    public virtual bool OnCacheFallbackDelay(TimeSpan delay)
+        => false; // Plain calls have nothing to fall back to
+
+    public virtual void OnConnectTimeout(TimeSpan timeout)
+        => SetError(Internal.Errors.ConnectTimeout(Peer.Ref, timeout), context: null, assumeCancelled: false);
 
     public void Register()
     {

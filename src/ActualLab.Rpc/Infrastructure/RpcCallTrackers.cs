@@ -113,13 +113,14 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         return calls;
     }
 
-    // Started by RpcPeer.OnRun on every non-final disconnect: ConnectTimeout caps how long a sent
-    // call tolerates a peer that went away, just as it caps the wait of a call issued while it's away.
-    // Returns at once when no sent call has a finite ConnectTimeout.
+    // Started by RpcPeer.OnRun on every non-final disconnect. It owns both deadlines a sent call
+    // has while the peer is away - CacheFallbackDelay, then ConnectTimeout - and only delivers them:
+    // what each one means is up to the call (see RpcOutboundCall.On* handlers).
+    // Returns at once when no sent call has a finite deadline.
     // One loop per disconnect (not a per-call race) so a connected peer pays nothing per call.
     // It wakes at the earliest deadline, on reconnect, or when ReconnectsAt moves (the
     // parked-reconnect shortcut).
-    public async Task AbortOnConnectTimeout(RpcPeerConnectionState disconnectedState, CancellationToken cancellationToken)
+    public async Task HandleDisconnect(RpcPeerConnectionState disconnectedState, CancellationToken cancellationToken)
     {
         var whenConnected = disconnectedState.WhenConnected;
         var clientPeer = Peer as RpcClientPeer;
@@ -130,22 +131,16 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             var reconnectsAt = clientPeer?.ReconnectsAt;
             var nextDeadline = Moment.MaxValue;
             foreach (var call in Calls.Values) {
-                if (!call.IsSent || call.HasCacheFallback || call.ResultTask.IsCompleted)
+                if (!call.IsSent || call.ResultTask.IsCompleted)
                     continue;
 
-                var timeout = call.MethodDef.OutboundCallTimeouts.ConnectTimeout;
-                if (timeout == TimeSpanExt.Infinite)
-                    continue;
-
-                var deadline = disconnectedAt + timeout;
-                if (deadline > now && (reconnectsAt is null || reconnectsAt.Value <= deadline)) {
-                    if (deadline < nextDeadline)
-                        nextDeadline = deadline;
-                    continue;
-                }
-
-                var error = Internal.Errors.ConnectTimeout(Peer.Ref, timeout);
-                call.SetError(error, context: null, assumeCancelled: false);
+                var timeouts = call.MethodDef.OutboundCallTimeouts;
+                // The fallback comes first: a call that serves it is exempt from ConnectTimeout,
+                // and one that cannot (e.g. NoCache) falls through to it.
+                if (!call.IsCacheFallbackServed && IsDue(timeouts.CacheFallbackDelay))
+                    call.OnCacheFallbackDelay(timeouts.CacheFallbackDelay);
+                if (!call.IsCacheFallbackServed && IsDue(timeouts.ConnectTimeout))
+                    call.OnConnectTimeout(timeouts.ConnectTimeout);
             }
             if (nextDeadline == Moment.MaxValue)
                 return;
@@ -157,6 +152,22 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 ?? TaskExt.NeverEnding(delayCts.Token);
             await Task.WhenAny(whenConnected, delayTask, whenReconnectsAtChanged).SilentAwait(false);
             delayCts.CancelAndDisposeSilently();
+            continue;
+
+            // Due now, or unreachable before the peer next tries to reconnect; otherwise it
+            // contributes the wake-up time.
+            bool IsDue(TimeSpan timeout) {
+                if (timeout == TimeSpanExt.Infinite)
+                    return false;
+
+                var deadline = disconnectedAt + timeout;
+                if (deadline <= now || (reconnectsAt is not null && reconnectsAt.Value > deadline))
+                    return true;
+
+                if (deadline < nextDeadline)
+                    nextDeadline = deadline;
+                return false;
+            }
         }
     }
 

@@ -140,17 +140,28 @@ Every one of them can also be set per method via
 reconnect. It applies twice over a call's life: to the wait before the call is sent, and - once the call is
 sent - to the outage if the connection drops mid-call, measured from the disconnect. A call that survives the
 outage is resent as usual; one whose `ConnectTimeout` runs out first fails with `RpcTimeoutException` of
-`Connect` kind. A call that *can* fall back to a value it already has is exempt from the second of those and
-governed by `CacheFallbackDelay` instead.
+`Connect` kind.
 
-`CacheFallbackDelay` is the compute-side counterpart, and it applies whenever a remote compute call has a cached
-value to serve: the peer is disconnected at call time, or the connection dropped while the call was in flight.
-If the peer reconnects in time, the call proceeds as usual. On expiry the cached value is served right away as
-an unsynchronized `Computed` - this includes previously computed `Cache`-mode calls and all `ReturnDefault`
-calls. The pending call remains registered and carries the value's hash; once the peer is back it is resent and
-validates the value: a "match" reply confirms it in place, while a different result displaces it. Such a call
-never fails when the delay runs out, which is why the default is `0` - waiting buys nothing when the served
-value gets re-validated anyway.
+`CacheFallbackDelay` is the earlier of the two deadlines a sent call has while the peer is away. Both are owned
+by one per-disconnect watcher (`RpcOutboundCallTracker.HandleDisconnect`), which only *delivers* them - what
+each means is up to the call:
+
+| | `OnCacheFallbackDelay` | `OnConnectTimeout` |
+|---|---|---|
+| plain RPC call | declines - nothing to serve | fails the call |
+| compute call, `Cache` / `ReturnDefault` | serves the cached value, keeps the call alive | skipped: the call was served |
+| compute call, `NoCache` | declines - nothing to serve | fails the call |
+
+So a call that can serve something does, and is then exempt from `ConnectTimeout` - it has nothing left to fail,
+and its response is what validates what was served. A call that cannot falls straight through to
+`ConnectTimeout`, whose error is transient, so `TransientErrorInvalidationDelay` retries it.
+
+When the fallback fires, the cached value is served right away as an unsynchronized `Computed` - previously
+computed `Cache`-mode calls and all `ReturnDefault` calls. The pending call remains registered and carries the
+value's hash; once the peer is back it is resent and validates the value: a "match" reply confirms it in place,
+while a different result displaces it. That is why the default is `0` - waiting buys nothing when the served
+value gets re-validated anyway. The same fallback applies to a call issued while the peer is already
+disconnected, where the compute layer serves the entry directly rather than through the watcher.
 
 A client peer whose next reconnect attempt is already scheduled past the deadline (`RpcClientPeer.ReconnectsAt`,
 e.g. because the app parks reconnects while the OS reports it offline) waits out neither of the two.

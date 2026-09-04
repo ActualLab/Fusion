@@ -12,6 +12,11 @@ public interface IServeStaleTester : IComputeService
     public Task<string> GetNoCache(string key, CancellationToken cancellationToken = default);
     [ComputeMethod, RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.NoCache), RpcMethod(ConnectTimeout = 1)]
     public Task<string> GetNoCacheWithConnectTimeout(string key, CancellationToken cancellationToken = default);
+    // Both disconnect handlers are wired here too, but there is nothing to fall back to:
+    // the fallback handler declines and ConnectTimeout gets the call instead.
+    [ComputeMethod, RemoteComputeMethod(CacheMode = RemoteComputedCacheMode.NoCache),
+     RpcMethod(CacheFallbackDelay = 0.3, ConnectTimeout = 1)]
+    public Task<string> GetNoCacheWithBothTimeouts(string key, CancellationToken cancellationToken = default);
 }
 
 public class ServeStaleTester : IServeStaleTester
@@ -30,6 +35,9 @@ public class ServeStaleTester : IServeStaleTester
     public virtual Task<string> GetNoCacheWithConnectTimeout(string key, CancellationToken cancellationToken = default)
         => Task.FromResult(GetValue(key));
 
+    public virtual Task<string> GetNoCacheWithBothTimeouts(string key, CancellationToken cancellationToken = default)
+        => Task.FromResult(GetValue(key));
+
     public void Set(string key, string value)
     {
         _values[key] = value;
@@ -38,6 +46,7 @@ public class ServeStaleTester : IServeStaleTester
             _ = GetWithCacheFallbackDelay(key);
             _ = GetNoCache(key);
             _ = GetNoCacheWithConnectTimeout(key);
+            _ = GetNoCacheWithBothTimeouts(key);
         }
     }
 

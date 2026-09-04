@@ -486,7 +486,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 }
                 connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
                 if (!connectionState.IsFinal) {
-                    _ = OutboundCalls.AbortOnConnectTimeout(connectionState.Value, cancellationToken);
+                    _ = OutboundCalls.HandleDisconnect(connectionState.Value, cancellationToken);
                     continue;
                 }
 

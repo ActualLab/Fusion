@@ -26,6 +26,17 @@ public sealed class RpcCacheInfoCapture
     public RpcCacheKey? Key;
     public object? ValueOrError; // Either RpcCacheValue or Exception
 
+    // Completed by RpcOutboundCall.OnCacheFallbackDelay once the peer has been away for
+    // CacheFallbackDelay: it tells the caller to serve CacheEntry and keep the call pending,
+    // so the response validates what was served.
+    private readonly TaskCompletionSource<Unit> _cacheFallbackSource
+        = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public Task WhenCacheFallback => _cacheFallbackSource.Task;
+
+    public bool TrySetCacheFallback()
+        => _cacheFallbackSource.TrySetResult(default);
+
     public RpcCacheInfoCapture(RpcCacheInfoCaptureMode captureMode)
         : this(cacheEntry: null, captureMode)
     { }
