@@ -211,34 +211,19 @@ public abstract class RemoteComputeMethodFunction(
             : null;
         var sendTask = SendRpcCall(input, peer, cacheInfoCapture, cancellationToken);
 
-        // In-flight call with an entry: the same wait, looped because the peer can reconnect and drop again.
-        // On expiry the call is NOT abandoned - it stays registered, the tracker resends it, and ApplyRpcResult
-        // applies its eventual response to the served computed (the "provisional match").
+        // In-flight call with an entry: the sent call raises WhenCacheFallback once the peer stays away
+        // for CacheFallbackDelay (RpcOutboundComputeCall.OnCacheFallbackDelay, driven by the peer-level
+        // disconnect watcher). The call is NOT abandoned then - it stays registered, still carrying the
+        // entry's hash, and ApplyRpcResult applies its eventual response to the value served here.
         if (existingCacheEntry is not null && !sendTask.IsCompleted) {
-            // The call may be in flight when the connection dies. RpcOutboundCallTracker resends it on
-            // reconnect but never times it out, so it's raced against a disconnect: once the peer stays
-            // away for CacheFallbackDelay, the cached value is served, and the call - still registered,
-            // still carrying the entry's hash - validates it whenever its response finally lands.
             var sendTaskAsTask = sendTask.AsTask();
-            while (true) {
-                var disconnectTask = peer.ConnectionState.Value.WhenDisconnected;
-                var winner = await Task.WhenAny(sendTaskAsTask, disconnectTask).ConfigureAwait(false);
-                if (winner == sendTaskAsTask)
-                    break;
-
-                // If WhenDisconnected faulted (terminal error), rethrow rather than serve stale.
-                if (disconnectTask.IsFaulted) {
-                    peer.Route.ThrowIfChanged();
-                    await disconnectTask.ConfigureAwait(false);
-                }
-                if (await WhenReconnectedChecked(input, peer, cancellationToken).ConfigureAwait(false))
-                    continue;
-
+            var winner = await Task.WhenAny(sendTaskAsTask, cacheInfoCapture!.WhenCacheFallback).ConfigureAwait(false);
+            if (winner != sendTaskAsTask) {
                 var staleComputed = NewStaleComputed(input, existingRemoteComputed!, "active_call");
                 // Suppressed execution context - see ComputeCachedOrRpc
                 _ = ExecutionContextExt.Start(
                     ExecutionContextExt.Default,
-                    () => ApplyRpcResult(input, cache!, staleComputed, sendTaskAsTask.ToValueTask(), cacheInfoCapture!));
+                    () => ApplyRpcResult(input, cache!, staleComputed, sendTaskAsTask.ToValueTask(), cacheInfoCapture));
                 return staleComputed;
             }
             // Assign the completed task back to sendTask, coz we "unwrapped" the old one

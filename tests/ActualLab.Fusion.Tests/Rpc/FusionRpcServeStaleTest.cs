@@ -293,6 +293,39 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     }
 
     [Fact]
+    public async Task NoCacheFallsThroughToConnectTimeoutTest()
+    {
+        var operations = new ConcurrentQueue<string>();
+        using var listener = StartStaleValueListener(operations);
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var client = services.RpcHub().GetClient<IServeStaleTester>();
+
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetNoCacheWithBothTimeouts("1"));
+        c1.Value.Should().Be("v-1");
+
+        // Mid-call disconnect on a method with both a CacheFallbackDelay (0.3s) and a ConnectTimeout (1s).
+        // There is no cache entry, so the fallback handler declines and ConnectTimeout aborts the call.
+        c1.Invalidate();
+        _inboundCallDelayMs = 1000;
+        var sw = Stopwatch.StartNew();
+        var updateTask = c1.Update().AsTask();
+        await Delay(0.3);
+        await connection.Disconnect();
+        var c2 = (RemoteComputed<string>)await updateTask.WaitAsync(Timeout);
+        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(1.2),
+            "the declined fallback must not shorten ConnectTimeout");
+        c2.Error.Should().BeOfType<RpcTimeoutException>().Which.TimeoutKind.Should().Be(RpcTimeoutKind.Connect);
+        operations.Should().BeEmpty("nothing was served");
+
+        _inboundCallDelayMs = 0;
+        await connection.Connect();
+        var c3 = (RemoteComputed<string>)await c2.Update();
+        c3.Value.Should().Be("v-1");
+        c3.WhenSynchronized.IsCompleted.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task ColdMissFailsAfterConnectTimeoutTest()
     {
         var operations = new ConcurrentQueue<string>();

@@ -109,6 +109,47 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
     }
 
     [Fact]
+    public async Task CacheFallbackWinsOverConnectTimeoutTest()
+    {
+        using var listener = new StaleValueListener();
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var client = services.RpcHub().GetClient<IReturnDefaultTester>();
+        var server = services.GetRequiredService<ReturnDefaultTester>();
+
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetDefaultWithConnectTimeout("1"));
+        await c1.WhenSynchronized.WaitAsync(Timeout);
+        c1 = (RemoteComputed<string>)Computed.GetExisting(() => client.GetDefaultWithConnectTimeout("1"))!;
+        c1.Value.Should().Be("v-1");
+
+        // Mid-call disconnect: the fallback fires at once (CacheFallbackDelay = 0) and marks the call
+        // served, so the 1s ConnectTimeout must never abort it - it is what validates the served value.
+        server.Set("1", "b");
+        c1.Invalidate();
+        _inboundCallDelayMs = 1000;
+        var updateTask = c1.Update();
+        await Delay(0.3);
+        await connection.Disconnect();
+        var c2 = (RemoteComputed<string>)await updateTask;
+        c2.Value.Should().BeNull("the default is served while the peer is away");
+        c2.Error.Should().BeNull();
+        listener.Operations.Should().BeEquivalentTo("active_call");
+
+        // Well past ConnectTimeout, and the call is still alive
+        await Delay(1.5);
+        c2.WhenSynchronized.IsCompleted.Should().BeFalse("a served call must outlive ConnectTimeout");
+        c2.IsConsistent().Should().BeTrue();
+
+        _inboundCallDelayMs = 0;
+        await connection.Connect();
+        await c2.WhenInvalidated().WaitAsync(Timeout);
+        var c3 = (RemoteComputed<string>)await c2.Update();
+        c3.Value.Should().Be("b", "the resent call must still validate the served value");
+        await c3.WhenSynchronized.WaitAsync(Timeout);
+        await c2.WhenSynchronized.WaitAsync(Timeout);
+    }
+
+    [Fact]
     public async Task MidCallDisconnectServesDefaultTest()
     {
         using var listener = new StaleValueListener();

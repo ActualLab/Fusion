@@ -25,11 +25,20 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
 
     // ReSharper disable once InconsistentlySynchronizedField
     public Task<string> WhenInvalidated => WhenInvalidatedSource.Task;
-    // Tells RpcOutboundCallTracker.AbortOnConnectTimeout to leave this call alone: a real cache entry
-    // means the compute layer serves its value once CacheFallbackDelay elapses and keeps this call
-    // pending to validate it on reconnect.
-    public override bool HasCacheFallback
-        => Context.CacheInfoCapture?.CacheEntry is { } cacheEntry && !ReferenceEquals(cacheEntry, RpcCacheEntry.RequestHash);
+
+    // A real cache entry is something to serve; a NoCache call (or a key-only capture) has nothing,
+    // returns false, and so falls through to OnConnectTimeout like any other call would.
+    public override bool OnCacheFallbackDelay(TimeSpan delay)
+    {
+        if (Context.CacheInfoCapture is not { } cacheInfoCapture)
+            return false;
+        if (cacheInfoCapture.CacheEntry is not { } cacheEntry || ReferenceEquals(cacheEntry, RpcCacheEntry.RequestHash))
+            return false;
+
+        cacheInfoCapture.TrySetCacheFallback();
+        IsCacheFallbackServed = true;
+        return true;
+    }
 
     protected RpcOutboundComputeCall(RpcOutboundContext context) : base(context)
         => IsLongLiving = true;
