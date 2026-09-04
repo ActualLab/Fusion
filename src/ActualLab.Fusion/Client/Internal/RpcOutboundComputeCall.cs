@@ -1,4 +1,5 @@
 using ActualLab.Rpc;
+using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Internal;
 
@@ -24,6 +25,11 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
 
     // ReSharper disable once InconsistentlySynchronizedField
     public Task<string> WhenInvalidated => WhenInvalidatedSource.Task;
+    // Tells RpcOutboundCallTracker.AbortOnConnectTimeout to leave this call alone: a real cache entry
+    // means the compute layer serves its value once CacheFallbackDelay elapses and keeps this call
+    // pending to validate it on reconnect.
+    public override bool HasCacheFallback
+        => Context.CacheInfoCapture?.CacheEntry is { } cacheEntry && !ReferenceEquals(cacheEntry, RpcCacheEntry.RequestHash);
 
     protected RpcOutboundComputeCall(RpcOutboundContext context) : base(context)
         => IsLongLiving = true;

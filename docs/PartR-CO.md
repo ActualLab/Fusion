@@ -118,7 +118,7 @@ Timeouts (and the one delay) used by `TimeoutsProvider`:
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `ConnectTimeout` | `TimeSpan.MaxValue` | How long a call issued while the peer isn't connected waits for the connection - a reconnect included |
+| `ConnectTimeout` | `TimeSpan.MaxValue` | How long a call tolerates a peer that isn't connected - waiting for the connection before it is sent, and waiting out a disconnect after it is sent |
 | `RunTimeout` | `TimeSpan.MaxValue` | Timeout for call execution |
 | `DelayTimeout` | `30 seconds` | Calls running longer than this are reported as delayed |
 | `CacheFallbackDelay` | `0` | How long a call that *can* fall back to a value it already has - currently a remote compute call with a cached value - waits for a disconnected peer before serving that value |
@@ -136,9 +136,12 @@ Every one of them can also be set per method via
 `[RpcMethod(ConnectTimeout = ..., RunTimeout = ..., DelayTimeout = ..., CacheFallbackDelay = ...)]`
 (all in seconds).
 
-`ConnectTimeout` caps the wait of a call issued while the peer isn't connected, and it makes no distinction
-between the first connection and a reconnect. It does not apply to a call that was already sent: such a call
-stays registered across the disconnect and is resent once the peer is back, so only `RunTimeout` bounds it.
+`ConnectTimeout` caps every wait for a connection, making no distinction between the first connection and a
+reconnect. It applies twice over a call's life: to the wait before the call is sent, and - once the call is
+sent - to the outage if the connection drops mid-call, measured from the disconnect. A call that survives the
+outage is resent as usual; one whose `ConnectTimeout` runs out first fails with `RpcTimeoutException` of
+`Connect` kind. A call that *can* fall back to a value it already has is exempt from the second of those and
+governed by `CacheFallbackDelay` instead.
 
 `CacheFallbackDelay` is the compute-side counterpart, and it applies whenever a remote compute call has a cached
 value to serve: the peer is disconnected at call time, or the connection dropped while the call was in flight.

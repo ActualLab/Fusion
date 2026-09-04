@@ -311,21 +311,23 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetNoCacheWithConnectTimeout("1"));
         c1.Value.Should().Be("v-1");
 
-        // A mid-call disconnect is different: ConnectTimeout caps only the wait before the call
-        // is sent, so a call already in flight survives the disconnect and completes on reconnect
+        // Same for a mid-call disconnect: nothing to fall back to, so the in-flight call
+        // is aborted once ConnectTimeout runs out, and the computed carries its error
         c1.Invalidate();
         _inboundCallDelayMs = 1000;
+        sw.Restart();
         var updateTask = c1.Update().AsTask();
         await Delay(0.3);
         await connection.Disconnect();
-        await Delay(1.5); // Longer than ConnectTimeout (1s)
-        updateTask.IsCompleted.Should().BeFalse();
+        var c2 = (RemoteComputed<string>)await updateTask.WaitAsync(Timeout);
+        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(1.2), "ConnectTimeout must run out first");
+        c2.Error.Should().BeOfType<RpcTimeoutException>().Which.TimeoutKind.Should().Be(RpcTimeoutKind.Connect);
 
         _inboundCallDelayMs = 0;
         await connection.Connect();
-        var c2 = (RemoteComputed<string>)await updateTask.WaitAsync(Timeout);
-        c2.Value.Should().Be("v-1");
-        c2.WhenSynchronized.IsCompleted.Should().BeTrue();
+        var c3 = (RemoteComputed<string>)await c2.Update();
+        c3.Value.Should().Be("v-1");
+        c3.WhenSynchronized.IsCompleted.Should().BeTrue();
         operations.Should().BeEmpty();
     }
 

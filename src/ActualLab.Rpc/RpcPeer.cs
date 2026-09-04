@@ -485,8 +485,10 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         error = RpcReconnectFailedException.StopRequested(error);
                 }
                 connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
-                if (!connectionState.IsFinal)
+                if (!connectionState.IsFinal) {
+                    _ = OutboundCalls.AbortOnConnectTimeout(connectionState.Value, cancellationToken);
                     continue;
+                }
 
                 OutboundCalls.TryReroute();
                 break;
