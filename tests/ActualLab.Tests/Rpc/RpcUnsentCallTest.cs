@@ -167,26 +167,6 @@ public class RpcUnsentCallPeerChangeTest(ITestOutputHelper @out) : RpcLocalTestB
         await AssertNoCalls(clientPeer, Out);
     }
 
-    // Nested types
-
-    private sealed class SwitchableRpcTestClient(IServiceProvider services) : RpcTestClient(services)
-    {
-        // The connection the next ConnectRemote binds to - RpcTestClient would
-        // instead look one up by client peer ref, which is exactly the mapping
-        // this test needs to vary.
-        public RpcTestConnection? Connection { get; set; }
-
-        public override async Task<RpcConnection> ConnectRemote(
-            RpcClientPeer clientPeer,
-            RpcPeerConnectionState connectionState,
-            CancellationToken cancellationToken)
-        {
-            var connection = Connection
-                ?? throw new InvalidOperationException($"{nameof(Connection)} isn't set yet.");
-            var transport = await connection.PullClientTransport(clientPeer, cancellationToken).ConfigureAwait(false);
-            return new RpcConnection(transport);
-        }
-    }
 }
 
 public interface ITestUnsentCallService : IRpcService

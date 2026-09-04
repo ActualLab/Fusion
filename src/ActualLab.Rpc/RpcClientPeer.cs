@@ -35,7 +35,7 @@ public class RpcClientPeer : RpcPeer
 
     public override Task<RpcPeerConnectionState> WhenConnectedOrReroute(
         TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken = default)
-        => timeout == TimeSpan.MaxValue
+        => timeout == TimeSpanExt.Infinite
             ? WhenConnectedOrReroute(cancellationToken)
             : WhenConnectedOrRerouteWithTimeout(timeout, timeoutKind, cancellationToken);
 

@@ -6,6 +6,8 @@ namespace ActualLab.Time;
 /// </summary>
 public static class TimeSpanExt
 {
+    // Infinite (= TimeSpan.MaxValue) is the only "no timeout" / "never" value in this codebase,
+    // and zero always means "instantly" - so a plain == Infinite check is all any consumer needs.
     public static readonly TimeSpan Infinite = TimeSpan.MaxValue;
     public static readonly double InfiniteInSeconds = Infinite.TotalSeconds;
 
@@ -25,11 +27,32 @@ public static class TimeSpanExt
     public static RetryDelaySeq ToRetryDelaySeq(this TimeSpan min, TimeSpan max)
         => new(min, max);
 
+    // Timeouts are configured values, so this is the single place validating them
+
+    public static TimeSpan AsTimeout(this TimeSpan value)
+        => value >= TimeSpan.Zero
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(value));
+    public static TimeSpan AsTimeout(this TimeSpan? value)
+        => value is { } v ? v.AsTimeout() : Infinite;
+
+    public static TimeSpan AsTimeout(this double seconds)
+        => seconds >= InfiniteInSeconds ? Infinite // Also covers double.PositiveInfinity
+            : seconds >= 0d ? TimeSpan.FromSeconds(seconds)
+            : throw new ArgumentOutOfRangeException(nameof(seconds)); // NaN lands here too
+    public static TimeSpan AsTimeout(this double? seconds)
+        => seconds is { } v ? v.AsTimeout() : Infinite;
+
     public static string ToShortString(this TimeSpan? timeSpan, string nullValue = "null")
         => timeSpan?.ToShortString() ?? nullValue;
 
     public static string ToShortString(this TimeSpan value)
     {
+        if (value == Infinite)
+            return "inf";
+        if (value == TimeSpan.MinValue)
+            return "-inf";
+
         var absValue = TimeSpan.FromTicks(Math.Abs(value.Ticks));
 #if NETSTANDARD2_0
         if (absValue <= TimeSpan.FromMilliseconds(0.001))

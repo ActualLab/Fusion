@@ -29,7 +29,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         });
         services.AddSingleton<IRemoteComputedCache>(
             c => new InMemoryRemoteComputedCache(InMemoryRemoteComputedCache.Options.Default, c));
-        // Reconnect attempts come well within ReconnectTimeout (1s), unless parked
+        // Reconnect attempts come well within the 1s timeouts used below, unless parked
         services.AddSingleton<RpcClientPeerReconnectDelayer>(c => _reconnectDelayer = new ParkingReconnectDelayer(c) {
             Delays = RetryDelaySeq.Fixed(0.25),
         });
@@ -117,7 +117,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
 
-        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithReconnectTimeout("1"));
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithCacheFallbackDelay("1"));
         c1.WhenSynchronized.IsCompleted.Should().BeTrue();
 
         c1.Invalidate();
@@ -126,7 +126,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         await Delay(0.3);
         await connection.Disconnect();
         await Delay(0.3);
-        await connection.Connect(); // Within ReconnectTimeout (1s)
+        await connection.Connect(); // Within CacheFallbackDelay (1s)
         var c2 = (RemoteComputed<string>)await updateTask;
         c2.Value.Should().Be("v-1");
         c2.IsConsistent().Should().BeTrue();
@@ -144,7 +144,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         var clientPeer = connection.ClientPeer;
         var client = services.RpcHub().GetClient<IServeStaleTester>();
 
-        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithReconnectTimeout("1"));
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithCacheFallbackDelay("1"));
         c1.WhenSynchronized.IsCompleted.Should().BeTrue();
 
         c1.Invalidate();
@@ -154,7 +154,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         await Delay(0.3);
         await connection.Disconnect();
         var c2 = (RemoteComputed<string>)await updateTask;
-        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(1.2), "ReconnectTimeout must run out first");
+        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(1.2), "CacheFallbackDelay must run out first");
         c2.Value.Should().Be("v-1");
         c2.IsConsistent().Should().BeTrue();
         c2.WhenSynchronized.IsCompleted.Should().BeFalse();
@@ -180,7 +180,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         var client = services.RpcHub().GetClient<IServeStaleTester>();
         var server = services.GetRequiredService<ServeStaleTester>();
 
-        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithReconnectTimeout("1"));
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithCacheFallbackDelay("1"));
         c1.WhenSynchronized.IsCompleted.Should().BeTrue();
 
         await connection.Disconnect();
@@ -188,7 +188,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         c1.Invalidate();
         var sw = Stopwatch.StartNew();
         var c2 = (RemoteComputed<string>)await c1.Update();
-        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(0.9), "ReconnectTimeout must run out first");
+        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(0.9), "CacheFallbackDelay must run out first");
         c2.Value.Should().Be("v-1");
         c2.WhenSynchronized.IsCompleted.Should().BeFalse();
         operations.Should().BeEquivalentTo("connection_check");
@@ -196,7 +196,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         await connection.Connect();
         await c2.WhenSynchronized.WaitAsync(Timeout);
         c2.IsInvalidated().Should().BeTrue("the fresh value must displace the stale one");
-        var c3 = (RemoteComputed<string>)Computed.GetExisting(() => client.GetWithReconnectTimeout("1"))!;
+        var c3 = (RemoteComputed<string>)Computed.GetExisting(() => client.GetWithCacheFallbackDelay("1"))!;
         c3.Value.Should().Be("b");
         c3.IsConsistent().Should().BeTrue();
         c3.WhenSynchronized.IsCompleted.Should().BeTrue();
@@ -213,7 +213,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         var client = services.RpcHub().GetClient<IServeStaleTester>();
         var server = services.GetRequiredService<ServeStaleTester>();
 
-        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithReconnectTimeout("1"));
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithCacheFallbackDelay("1"));
         c1.WhenSynchronized.IsCompleted.Should().BeTrue();
 
         await connection.Disconnect();
@@ -221,7 +221,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         c1.Invalidate();
         var updateTask = c1.Update();
         await Delay(0.3);
-        await connection.Connect(); // Within ReconnectTimeout (1s)
+        await connection.Connect(); // Within CacheFallbackDelay (1s)
         var c2 = (RemoteComputed<string>)await updateTask;
         c2.Value.Should().Be("b");
         c2.IsConsistent().Should().BeTrue();
@@ -238,7 +238,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
 
-        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithReconnectTimeout("1"));
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithCacheFallbackDelay("1"));
         c1.WhenSynchronized.IsCompleted.Should().BeTrue();
 
         _reconnectDelayer!.ParkDelay = TimeSpan.FromMinutes(1); // As if the OS reported "offline"
@@ -246,7 +246,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         c1.Invalidate();
         var sw = Stopwatch.StartNew();
         var c2 = (RemoteComputed<string>)await c1.Update();
-        sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(0.5), "a reconnect parked past ReconnectTimeout is not waited for");
+        sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(0.5), "a reconnect parked past CacheFallbackDelay is not waited for");
         c2.Value.Should().Be("v-1");
         c2.WhenSynchronized.IsCompleted.Should().BeFalse();
         operations.Should().BeEquivalentTo("connection_check");
@@ -259,7 +259,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     }
 
     [Fact]
-    public async Task ColdMissWithoutReconnectTimeoutKeepsWaitingTest()
+    public async Task ColdMissWithoutConnectTimeoutKeepsWaitingTest()
     {
         var operations = new ConcurrentQueue<string>();
         using var listener = StartStaleValueListener(operations);
@@ -268,7 +268,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         var client = services.RpcHub().GetClient<IServeStaleTester>();
 
         await connection.Disconnect();
-        var getTask = client.GetNoCache("1"); // Nothing to fall back to, ReconnectTimeout = 0
+        var getTask = client.GetNoCache("1"); // Nothing to fall back to, ConnectTimeout = inf
         await Delay(1.5);
         getTask.IsCompleted.Should().BeFalse();
         await connection.Connect();
@@ -293,7 +293,7 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     }
 
     [Fact]
-    public async Task ColdMissFailsAfterReconnectTimeoutTest()
+    public async Task ColdMissFailsAfterConnectTimeoutTest()
     {
         var operations = new ConcurrentQueue<string>();
         using var listener = StartStaleValueListener(operations);
@@ -304,29 +304,28 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         // Nothing to fall back to: the call fails like any other RPC call would
         await connection.Disconnect();
         var sw = Stopwatch.StartNew();
-        var timeout = await Assert.ThrowsAsync<RpcTimeoutException>(() => client.GetNoCacheWithReconnectTimeout("1"));
-        timeout.TimeoutKind.Should().Be(RpcTimeoutKind.Reconnect);
-        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(0.9), "ReconnectTimeout must run out first");
+        var timeout = await Assert.ThrowsAsync<RpcTimeoutException>(() => client.GetNoCacheWithConnectTimeout("1"));
+        timeout.TimeoutKind.Should().Be(RpcTimeoutKind.Connect);
+        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(0.9), "ConnectTimeout must run out first");
         await connection.Connect();
-        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetNoCacheWithReconnectTimeout("1"));
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetNoCacheWithConnectTimeout("1"));
         c1.Value.Should().Be("v-1");
 
-        // Same for a mid-call disconnect: the in-flight call fails, and the computed carries its error
+        // A mid-call disconnect is different: ConnectTimeout caps only the wait before the call
+        // is sent, so a call already in flight survives the disconnect and completes on reconnect
         c1.Invalidate();
         _inboundCallDelayMs = 1000;
-        sw.Restart();
         var updateTask = c1.Update().AsTask();
         await Delay(0.3);
         await connection.Disconnect();
-        var c2 = (RemoteComputed<string>)await updateTask.WaitAsync(Timeout);
-        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(1.2), "ReconnectTimeout must run out first");
-        c2.Error.Should().BeOfType<RpcTimeoutException>().Which.TimeoutKind.Should().Be(RpcTimeoutKind.Reconnect);
+        await Delay(1.5); // Longer than ConnectTimeout (1s)
+        updateTask.IsCompleted.Should().BeFalse();
 
         _inboundCallDelayMs = 0;
         await connection.Connect();
-        var c3 = (RemoteComputed<string>)await c2.Update();
-        c3.Value.Should().Be("v-1");
-        c3.WhenSynchronized.IsCompleted.Should().BeTrue();
+        var c2 = (RemoteComputed<string>)await updateTask.WaitAsync(Timeout);
+        c2.Value.Should().Be("v-1");
+        c2.WhenSynchronized.IsCompleted.Should().BeTrue();
         operations.Should().BeEmpty();
     }
 
@@ -356,5 +355,114 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
                 return (string)tag.Value!;
 
         return "";
+    }
+}
+
+
+// The same fallback across a real peer change. RpcTestConnection binds to one server peer for
+// life, so this drives the client through two connections sharing a client peer ref but not a
+// server peer ref - the second handshake then reports Changed, which resends the pending call
+// instead of reconnecting it. Nothing invalidates the served value up front: the resent call
+// still carries its hash, so the new peer confirms or displaces it exactly as the old one would.
+[Collection(nameof(TimeSensitiveTests)), Trait("Category", nameof(TimeSensitiveTests))]
+public class FusionRpcServeStalePeerChangeTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
+{
+    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
+
+    protected override void ConfigureServices(ServiceCollection services)
+    {
+        base.ConfigureServices(services);
+        var fusion = services.AddFusion();
+        fusion.AddServerAndClient<IServeStaleTester, ServeStaleTester>();
+        services.AddSingleton<IRemoteComputedCache>(
+            c => new InMemoryRemoteComputedCache(InMemoryRemoteComputedCache.Options.Default, c));
+
+        // AddTestClient aliases RpcClient -> RpcTestClient, so replacing the
+        // RpcTestClient registration is enough to redirect the whole chain.
+        services.RemoveAll(d => d.ServiceType == typeof(RpcTestClient));
+        services.AddSingleton(c => new SwitchableRpcTestClient(c));
+        services.AddAlias<RpcTestClient, SwitchableRpcTestClient>();
+    }
+
+    protected override void StartServices(IServiceProvider services)
+    {
+        // The test builds and switches its own connections.
+    }
+
+    [Fact]
+    public async Task NewPeerConfirmsStaleValueTest()
+    {
+        await using var services = CreateServices();
+        var (connection1, connection2) = CreateConnections(services);
+        var client = services.RpcHub().GetClient<IServeStaleTester>();
+
+        var c2 = await ServeStale(client, connection1);
+
+        // The new peer produces the same value, so the resent call gets "match"
+        await SwitchTo(services, connection2);
+        await c2.WhenSynchronized.WaitAsync(Timeout);
+        c2.IsConsistent().Should().BeTrue("a confirmed stale value must stay in place");
+        c2.Value.Should().Be("v-1");
+        connection1.ClientPeer.ConnectionState.Value.Handshake!.RemotePeerId
+            .Should().Be(connection2.ServerPeer.Id); // The peer really did change
+    }
+
+    [Fact]
+    public async Task NewPeerDisplacesStaleValueTest()
+    {
+        await using var services = CreateServices();
+        var (connection1, connection2) = CreateConnections(services);
+        var client = services.RpcHub().GetClient<IServeStaleTester>();
+        var server = services.GetRequiredService<ServeStaleTester>();
+
+        var c2 = await ServeStale(client, connection1);
+        server.Set("1", "b"); // Changes while the client is offline
+
+        // The new peer produces a different value, so the resent call displaces the served one
+        await SwitchTo(services, connection2);
+        await c2.WhenSynchronized.WaitAsync(Timeout);
+        c2.IsConsistent().Should().BeFalse("a displaced stale value must be invalidated");
+        var c3 = (RemoteComputed<string>)await c2.Update();
+        c3.Value.Should().Be("b");
+        c3.WhenSynchronized.IsCompleted.Should().BeTrue();
+    }
+
+    // Private methods
+
+    private static (RpcTestConnection Connection1, RpcTestConnection Connection2) CreateConnections(
+        IServiceProvider services)
+    {
+        var testClient = services.GetRequiredService<SwitchableRpcTestClient>();
+        var clientPeerRef = RpcRef.Default;
+        var connection1 = new RpcTestConnection(testClient, clientPeerRef, RpcRef.NewServer("server-1"));
+        var connection2 = new RpcTestConnection(testClient, clientPeerRef, RpcRef.NewServer("server-2"));
+        connection1.ServerPeer.Id.Should().NotBe(connection2.ServerPeer.Id);
+        return (connection1, connection2);
+    }
+
+    // Returns a served stale computed whose validating call is still pending
+    private async Task<RemoteComputed<string>> ServeStale(
+        IServeStaleTester client, RpcTestConnection connection1)
+    {
+        var testClient = connection1.TestClient as SwitchableRpcTestClient;
+        testClient!.Connection = connection1;
+        await connection1.Connect();
+
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.Get("1"));
+        c1.Value.Should().Be("v-1");
+        await c1.WhenSynchronized.WaitAsync(Timeout);
+
+        await connection1.Disconnect();
+        c1.Invalidate();
+        var c2 = (RemoteComputed<string>)await c1.Update(); // Disconnected + cached value -> serve-stale
+        c2.Value.Should().Be("v-1");
+        c2.WhenSynchronized.IsCompleted.Should().BeFalse();
+        return c2;
+    }
+
+    private static async Task SwitchTo(IServiceProvider services, RpcTestConnection connection2)
+    {
+        services.GetRequiredService<SwitchableRpcTestClient>().Connection = connection2;
+        await connection2.Connect();
     }
 }

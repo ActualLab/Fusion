@@ -17,7 +17,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public static LogLevel DefaultCallLogLevel { get; set; } = LogLevel.None;
 
     private AsyncState<RpcPeerConnectionState> _connectionState = new(new RpcPeerConnectionState());
-    private bool _hasEverConnected;
     private RpcMethodResolver _serverMethodResolver;
     private RpcTransport? _transport;
     private bool _resetConnectionAttemptIndex;
@@ -85,7 +84,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public LogLevel CallLogLevel { get; init; } = DefaultCallLogLevel;
 
     public AsyncState<RpcPeerConnectionState> ConnectionState => _connectionState;
-    public bool HasEverConnected => Volatile.Read(ref _hasEverConnected);
 #pragma warning disable CA1721
     public RpcMethodResolver ServerMethodResolver {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -155,7 +153,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
     public Task<RpcPeerConnectionState> WhenConnected(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
-        return timeout == TimeSpan.MaxValue
+        return timeout == TimeSpanExt.Infinite
             ? WhenConnected(cancellationToken)
             : WhenConnectedWithTimeout(this, timeout, cancellationToken);
 
@@ -191,26 +189,13 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         TimeSpan timeout, CancellationToken cancellationToken = default)
         => WhenConnectedOrReroute(timeout, RpcTimeoutKind.Connect, cancellationToken);
 
-    // The one place deciding which timeout - and hence which exception kind - governs a wait for the connection.
-    public Task<RpcPeerConnectionState> WhenConnectedOrReroute(
-        RpcCallTimeouts timeouts, CancellationToken cancellationToken = default)
-    {
-        // ConnectTimeout caps any wait for the connection; a positive ReconnectTimeout is the tighter cap
-        // once the peer has been connected before, i.e. when what's awaited is a reconnect
-        var reconnectTimeout = timeouts.ReconnectTimeout;
-        return HasEverConnected && reconnectTimeout > TimeSpan.Zero && reconnectTimeout < timeouts.ConnectTimeout
-            ? WhenConnectedOrReroute(reconnectTimeout, RpcTimeoutKind.Reconnect, cancellationToken)
-            : WhenConnectedOrReroute(timeouts.ConnectTimeout, RpcTimeoutKind.Connect, cancellationToken);
-    }
-
     // Virtual so RpcClientPeer can add the ReconnectsAt shortcut; the
-    // TimeSpan-only overload delegates here with kind = Connect, so nothing
-    // changes for existing callers except the exception type.
+    // TimeSpan-only overload delegates here with kind = Connect.
     public virtual Task<RpcPeerConnectionState> WhenConnectedOrReroute(
         TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken = default)
     {
         // timeoutKind is what the RpcTimeoutException thrown on expiry reports
-        return timeout == TimeSpan.MaxValue
+        return timeout == TimeSpanExt.Infinite
             ? WhenConnectedOrReroute(cancellationToken)
             : WhenConnectedOrRerouteWithTimeout(this, timeout, timeoutKind, cancellationToken);
 
@@ -395,7 +380,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         "'{Route}': Handshake succeeded, PeerChangeKind={PeerChangeKind}",
                         Route, peerChangeKind);
                     lastHandshake = handshake;
-                    Volatile.Write(ref _hasEverConnected, true); // Read lock-free by HasEverConnected
                     if (peerChangeKind != RpcPeerChangeKind.Unchanged) {
                         // Remote RpcPeer changed -> we must abort every inbound call / shared object
                         if (peerChangeKind != RpcPeerChangeKind.ChangedToVeryFirst) {
@@ -501,10 +485,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                         error = RpcReconnectFailedException.StopRequested(error);
                 }
                 connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
-                if (!connectionState.IsFinal) {
-                    _ = OutboundCalls.AbortOnReconnectTimeout(connectionState.Value, cancellationToken);
+                if (!connectionState.IsFinal)
                     continue;
-                }
 
                 OutboundCalls.TryReroute();
                 break;

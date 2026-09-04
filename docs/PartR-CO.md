@@ -114,38 +114,43 @@ Configures outbound RPC call behavior including routing, timeouts, and rerouting
 
 ### `RpcCallTimeouts`
 
-Timeouts used by `TimeoutsProvider`:
+Timeouts (and the one delay) used by `TimeoutsProvider`:
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `ConnectTimeout` | `TimeSpan.MaxValue` | Timeout for establishing connection |
+| `ConnectTimeout` | `TimeSpan.MaxValue` | How long a call issued while the peer isn't connected waits for the connection - a reconnect included |
 | `RunTimeout` | `TimeSpan.MaxValue` | Timeout for call execution |
 | `DelayTimeout` | `30 seconds` | Calls running longer than this are reported as delayed |
-| `ReconnectTimeout` | `0` | How long a call waits for a peer that lost its connection to reconnect before serving a cached value (remote compute calls that have one) or failing with `RpcTimeoutException` (see below) |
+| `CacheFallbackDelay` | `0` | How long a call that *can* fall back to a value it already has - currently a remote compute call with a cached value - waits for a disconnected peer before serving that value |
+
+`TimeSpan.MaxValue` (= `TimeSpanExt.Infinite`) is the only "no timeout" / "never" value; zero always means
+"instantly", and a negative value throws. `TimeSpanExt.AsTimeout()` is the validating converter
+that turns a configured `TimeSpan` / `TimeSpan?` / `double` (seconds) / `double?` into one.
 
 Every timeout expiry throws `RpcTimeoutException`, a transient `TimeoutException` whose `TimeoutKind` names the
-timeout that fired: `Connect`, `Run`, `Reconnect`, `Delay` (a delayed call aborted per `DelayAction`), `Handshake`,
+timeout that fired: `Connect`, `Run`, `Delay` (a delayed call aborted per `DelayAction`), `Handshake`,
 or `KeepAlive`. It is `Unknown` for an `RpcTimeoutException` transferred from the remote side, since only its type
 and message travel.
 
-Every timeout can also be set per method via `[RpcMethod(ConnectTimeout = ..., RunTimeout = ..., DelayTimeout = ..., ReconnectTimeout = ...)]`
+Every one of them can also be set per method via
+`[RpcMethod(ConnectTimeout = ..., RunTimeout = ..., DelayTimeout = ..., CacheFallbackDelay = ...)]`
 (all in seconds).
 
-`ReconnectTimeout` applies whenever a call has to wait for a peer that lost its connection: because the peer is
-disconnected at call time (and has been connected before - the very first connection is governed by `ConnectTimeout`
-alone), or because the connection dropped while the call was in flight. If the peer reconnects in time, the call
-proceeds as usual (an in-flight call is resent, as always). Once the timeout elapses:
+`ConnectTimeout` caps the wait of a call issued while the peer isn't connected, and it makes no distinction
+between the first connection and a reconnect. It does not apply to a call that was already sent: such a call
+stays registered across the disconnect and is resent once the peer is back, so only `RunTimeout` bounds it.
 
-- a remote compute call that has a cached value serves that value right away as an unsynchronized `Computed`.
-  This includes previously computed `Cache`-mode calls and all `ReturnDefault` calls. The pending call remains
-  registered and carries the value's hash. Once the peer is back, it is resent and validates the value: a "match"
-  reply confirms it in place, while a different result displaces it;
-- any other call fails with `RpcTimeoutException` whose `TimeoutKind` is `Reconnect`.
+`CacheFallbackDelay` is the compute-side counterpart, and it applies whenever a remote compute call has a cached
+value to serve: the peer is disconnected at call time, or the connection dropped while the call was in flight.
+If the peer reconnects in time, the call proceeds as usual. On expiry the cached value is served right away as
+an unsynchronized `Computed` - this includes previously computed `Cache`-mode calls and all `ReturnDefault`
+calls. The pending call remains registered and carries the value's hash; once the peer is back it is resent and
+validates the value: a "match" reply confirms it in place, while a different result displaces it. Such a call
+never fails when the delay runs out, which is why the default is `0` - waiting buys nothing when the served
+value gets re-validated anyway.
 
-With the default of `0` a cached value is served at once and other calls wait for the reconnect indefinitely
-(`ConnectTimeout` still caps the wait of a call issued while disconnected). A client peer whose next reconnect
-attempt is already scheduled past the deadline (`RpcClientPeer.ReconnectsAt`, e.g. because the app parks reconnects
-while the OS reports it offline) doesn't wait the timeout out; the same applies to `ConnectTimeout`.
+A client peer whose next reconnect attempt is already scheduled past the deadline (`RpcClientPeer.ReconnectsAt`,
+e.g. because the app parks reconnects while the OS reports it offline) waits out neither of the two.
 
 ### Default Timeouts by Method Type
 

@@ -55,11 +55,11 @@ public interface ITestRpcService : ICommandService
 {
     public Task<int?> Div(int? a, int b);
     public Task<int?> Add(int? a, int b);
-    [RpcMethod(Name = "RenamedMethod", RunTimeout = 0.5, ReconnectTimeout = 2.5, LocalExecutionMode = RpcLocalExecutionMode.Unconstrained)]
+    [RpcMethod(Name = "RenamedMethod", RunTimeout = 0.5, ConnectTimeout = 2.5, LocalExecutionMode = RpcLocalExecutionMode.Unconstrained)]
     public Task<int> AddWithAttribute(int a, int b);
     public Task<TimeSpan> Delay(TimeSpan duration, CancellationToken cancellationToken = default);
-    [RpcMethod(ReconnectTimeout = 1)]
-    public Task<TimeSpan> DelayWithReconnectTimeout(TimeSpan duration, CancellationToken cancellationToken = default);
+    [RpcMethod(ConnectTimeout = 1)]
+    public Task<TimeSpan> DelayWithConnectTimeout(TimeSpan duration, CancellationToken cancellationToken = default);
     public Task<int> GetCancellationCount();
     public Task<byte[]> GetBytes(int count);
     public Task<ReadOnlyMemory<byte>> GetMemory(int count);
@@ -130,7 +130,7 @@ public class TestRpcService(IServiceProvider services) : ITestRpcService
         }
     }
 
-    public virtual Task<TimeSpan> DelayWithReconnectTimeout(TimeSpan duration, CancellationToken cancellationToken = default)
+    public virtual Task<TimeSpan> DelayWithConnectTimeout(TimeSpan duration, CancellationToken cancellationToken = default)
         => Delay(duration, cancellationToken);
 
     public virtual Task<int> GetCancellationCount()

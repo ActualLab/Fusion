@@ -6,6 +6,8 @@ public class TimeSpanExtTest(ITestOutputHelper @out) : TestBase(@out)
     public void ToShortStringTest()
     {
         Check(TimeSpan.Zero, "0s");
+        Check(TimeSpanExt.Infinite, "inf");
+        Check(TimeSpan.MinValue, "-inf");
         Check(S(0.1), "100ms");
         Check(S(-0.1), "-100ms");
 #if !NETFRAMEWORK
@@ -30,5 +32,23 @@ public class TimeSpanExtTest(ITestOutputHelper @out) : TestBase(@out)
 
         void Check(TimeSpan value, string expected)
             => value.ToShortString().Should().Be(expected);
+    }
+
+    [Fact]
+    public void AsTimeoutTest()
+    {
+        TimeSpan.Zero.AsTimeout().Should().Be(TimeSpan.Zero);
+        TimeSpan.FromSeconds(1).AsTimeout().Should().Be(TimeSpan.FromSeconds(1));
+        TimeSpanExt.Infinite.AsTimeout().Should().Be(TimeSpanExt.Infinite);
+        ((TimeSpan?)null).AsTimeout().Should().Be(TimeSpanExt.Infinite);
+        Assert.Throws<ArgumentOutOfRangeException>(() => TimeSpan.FromSeconds(-1).AsTimeout());
+
+        0d.AsTimeout().Should().Be(TimeSpan.Zero);
+        1.5.AsTimeout().Should().Be(TimeSpan.FromSeconds(1.5));
+        double.PositiveInfinity.AsTimeout().Should().Be(TimeSpanExt.Infinite);
+        TimeSpanExt.InfiniteInSeconds.AsTimeout().Should().Be(TimeSpanExt.Infinite);
+        ((double?)null).AsTimeout().Should().Be(TimeSpanExt.Infinite);
+        Assert.Throws<ArgumentOutOfRangeException>(() => (-1d).AsTimeout());
+        Assert.Throws<ArgumentOutOfRangeException>(() => double.NaN.AsTimeout());
     }
 }

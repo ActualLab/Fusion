@@ -30,12 +30,12 @@ public sealed class RpcMethodAttribute : Attribute
     public double DelayTimeout { get; set; } = double.NaN;
 
     /// <summary>
-    /// Reconnect timeout (in seconds) for outbound calls: how long a call waits for a peer that lost
-    /// its connection to reconnect before serving a cached value (remote compute calls that have one)
-    /// or failing with an <see cref="RpcTimeoutException"/> of <see cref="RpcTimeoutKind.Reconnect"/> kind (any other call).
+    /// Cache fallback delay (in seconds) for outbound calls: how long a call that can fall back to a value
+    /// it already has - currently a remote compute call with a cached value - waits for a disconnected
+    /// peer before serving that value.
     /// <code>double.NaN</code> means "use default".
     /// </summary>
-    public double ReconnectTimeout { get; set; } = double.NaN;
+    public double CacheFallbackDelay { get; set; } = double.NaN;
 
     /// <summary>
     /// Action to take when an outbound call is detected as delayed.

@@ -19,8 +19,8 @@ public sealed record ComputedOptions
         CancellationReprocessing = ComputedCancellationReprocessingOptions.ClientDefault,
     };
     public static ComputedOptions MutableStateDefault { get; set; } = new() {
-        TransientErrorInvalidationDelay = TimeSpan.MaxValue,
-        NonTransientErrorInvalidationDelay = TimeSpan.MaxValue,
+        TransientErrorInvalidationDelay = TimeSpanExt.Infinite,
+        NonTransientErrorInvalidationDelay = TimeSpanExt.Infinite,
     };
 
     public TimeSpan MinCacheDuration { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
@@ -30,11 +30,11 @@ public sealed record ComputedOptions
     public TimeSpan NonTransientErrorInvalidationDelay { get; init; }
         = TimeSpan.FromSeconds(30); // Error horizon: a stuck non-transient error clears after this delay
     public TimeSpan AutoInvalidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
-        = TimeSpan.MaxValue; // No auto invalidation
+        = TimeSpanExt.Infinite; // No auto invalidation
     public TimeSpan InvalidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
         = default; // No invalidation delay
     public TimeSpan ConsolidationDelay { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; }
-        = TimeSpan.MaxValue; // No consolidation
+        = TimeSpanExt.Infinite; // No consolidation
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     public Type? ConsolidationComparerType { get; init; }
         = null; // No custom comparer = use FusionDefaultDelegates.ComputedOutputEqualityComparer
@@ -43,11 +43,8 @@ public sealed record ComputedOptions
     public ComputedCancellationReprocessingOptions CancellationReprocessing { get; init; }
         = ComputedCancellationReprocessingOptions.Default;
 
-    public bool HasMinCacheDuration => MinCacheDuration != TimeSpan.Zero;
-    public bool HasInvalidationDelay => InvalidationDelay != TimeSpan.Zero;
-    public bool HasTransientErrorInvalidationDelay => TransientErrorInvalidationDelay != TimeSpan.Zero;
-    public bool IsAutoInvalidating => AutoInvalidationDelay != TimeSpan.MaxValue;
-    public bool IsConsolidating => ConsolidationDelay != TimeSpan.MaxValue;
+    public bool IsAutoInvalidating => AutoInvalidationDelay != TimeSpanExt.Infinite;
+    public bool IsConsolidating => ConsolidationDelay != TimeSpanExt.Infinite;
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "We assume attributes on compute methods are fully preserved")]
     public static ComputedOptions? Get(
@@ -114,23 +111,23 @@ public sealed record ComputedOptions
             sb.Append(nameof(MinCacheDuration)).Append(": ").Append(t.ToShortString()).Append(", ");
 
         t = TransientErrorInvalidationDelay;
-        if (t != TimeSpan.MaxValue)
+        if (t != TimeSpanExt.Infinite)
             sb.Append(nameof(TransientErrorInvalidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
 
         t = NonTransientErrorInvalidationDelay;
-        if (t != TimeSpan.MaxValue)
+        if (t != TimeSpanExt.Infinite)
             sb.Append(nameof(NonTransientErrorInvalidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
 
         t = AutoInvalidationDelay;
-        if (t != TimeSpan.MaxValue)
+        if (t != TimeSpanExt.Infinite)
             sb.Append(nameof(AutoInvalidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
 
         t = InvalidationDelay;
-        if (t != TimeSpan.MaxValue)
+        if (t != TimeSpanExt.Infinite)
             sb.Append(nameof(InvalidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
 
         t = ConsolidationDelay;
-        if (t != TimeSpan.MaxValue)
+        if (t != TimeSpanExt.Infinite)
             sb.Append(nameof(ConsolidationDelay)).Append(": ").Append(t.ToShortString()).Append(", ");
 
         if (ConsolidationComparerType is { } comparerType)
@@ -150,13 +147,5 @@ public sealed record ComputedOptions
     }
 
     private static TimeSpan? ToTimeSpan(double value)
-    {
-        if (double.IsNaN(value))
-            return null;
-        if (value >= TimeSpanExt.InfiniteInSeconds)
-            return TimeSpan.MaxValue;
-        if (value < 0)
-            throw new ArgumentOutOfRangeException(nameof(value));
-        return TimeSpan.FromSeconds(value);
-    }
+        => double.IsNaN(value) ? null : value.AsTimeout(); // NaN = "inherit the default" here
 }

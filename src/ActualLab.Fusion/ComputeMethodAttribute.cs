@@ -43,7 +43,7 @@ public class ComputeMethodAttribute : Attribute
 
     /// <summary>
     /// Auto-invalidation delay (in seconds) for any produced <see cref="Computed"/> instance.
-    /// <code>double.NaN</code> means "use default", which is <see cref="TimeSpan.MaxValue"/> (no auto invalidation).
+    /// <code>double.NaN</code> means "use default", which is <see cref="TimeSpanExt.Infinite"/> (no auto invalidation).
     /// </summary>
     public double AutoInvalidationDelay { get; set; } = double.NaN;
 
@@ -55,7 +55,7 @@ public class ComputeMethodAttribute : Attribute
 
     /// <summary>
     /// Consolidation delay (in seconds) for any produced <see cref="Computed"/> instance.
-    /// <code>double.NaN</code> means "use default", which is <see cref="TimeSpan.MaxValue"/> (no consolidation).
+    /// <code>double.NaN</code> means "use default", which is <see cref="TimeSpanExt.Infinite"/> (no consolidation).
     /// </summary>
     public double ConsolidationDelay { get; set; } = double.NaN;
 

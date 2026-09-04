@@ -78,7 +78,7 @@ public sealed class ConsolidatingComputed<T> : ComputeMethodComputed<T>, IConsol
             Computed<T>? nextSource = null; // null means to Invalidate(), which is the default if this method fails
             try {
                 try {
-                    if (Options.ConsolidationDelay != TimeSpan.MaxValue)
+                    if (Options.ConsolidationDelay != TimeSpanExt.Infinite)
                         await Task.Delay(Options.ConsolidationDelay, CancellationToken.None).ConfigureAwait(false);
 
                     var updatedSource = (Computed<T>)await _source.UpdateUntyped(CancellationToken.None).ConfigureAwait(false);

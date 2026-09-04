@@ -56,7 +56,7 @@ public static partial class ComputedExt
 
     public static void Invalidate(this Computed computed, TimeSpan delay, bool usePreciseTimer, InvalidationSource source)
     {
-        if (delay == TimeSpan.MaxValue) // No invalidation
+        if (delay == TimeSpanExt.Infinite) // No invalidation
             return;
 
         if (delay <= TimeSpan.Zero) { // Instant invalidation

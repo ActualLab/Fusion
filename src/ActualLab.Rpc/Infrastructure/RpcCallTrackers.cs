@@ -113,52 +113,6 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         return calls;
     }
 
-    // Started by RpcPeer.OnRun on every non-final disconnect.
-    // Returns at once when no sent call has a finite ReconnectTimeout.
-    // One loop per disconnect (not a per-call race) so a connected peer pays nothing per call.
-    // It wakes at the earliest deadline, on reconnect, or when ReconnectsAt moves (the
-    // parked-reconnect shortcut).
-    public async Task AbortOnReconnectTimeout(RpcPeerConnectionState disconnectedState, CancellationToken cancellationToken)
-    {
-        var whenConnected = disconnectedState.WhenConnected;
-        var clientPeer = Peer as RpcClientPeer;
-        var clock = clientPeer?.ReconnectDelayer.Clock ?? Peer.Hub.SystemClock;
-        var disconnectedAt = clock.Now;
-        while (!whenConnected.IsCompleted && !cancellationToken.IsCancellationRequested) {
-            var now = clock.Now;
-            var reconnectsAt = clientPeer?.ReconnectsAt;
-            var nextDeadline = Moment.MaxValue;
-            foreach (var call in Calls.Values) {
-                if (!call.IsSent || call.HasReconnectFallback || call.ResultTask.IsCompleted)
-                    continue;
-
-                var timeout = call.MethodDef.OutboundCallTimeouts.ReconnectTimeout;
-                if (timeout <= TimeSpan.Zero || timeout == TimeSpan.MaxValue)
-                    continue;
-
-                var deadline = disconnectedAt + timeout;
-                if (deadline > now && (reconnectsAt is null || reconnectsAt.Value <= deadline)) {
-                    if (deadline < nextDeadline)
-                        nextDeadline = deadline;
-                    continue;
-                }
-
-                var error = Internal.Errors.ReconnectTimeout(Peer.Ref, timeout);
-                call.SetError(error, context: null, assumeCancelled: false);
-            }
-            if (nextDeadline == Moment.MaxValue)
-                return;
-
-            using var delayCts = cancellationToken.CreateLinkedTokenSource();
-            var delay = (nextDeadline - now).Clamp(TimeSpan.FromMilliseconds(32), TimeSpan.FromDays(1));
-            var delayTask = Task.Delay(delay, delayCts.Token);
-            var whenReconnectsAtChanged = reconnectsAt?.WhenNext(delayCts.Token)
-                ?? TaskExt.NeverEnding(delayCts.Token);
-            await Task.WhenAny(whenConnected, delayTask, whenReconnectsAtChanged).SilentAwait(false);
-            delayCts.CancelAndDisposeSilently();
-        }
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool UnregisterLongLiving(RpcOutboundCall call)
         => _longLivingCalls.TryRemove(call.Id, call);

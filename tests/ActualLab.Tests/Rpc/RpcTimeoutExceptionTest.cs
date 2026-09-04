@@ -8,9 +8,9 @@ public class RpcTimeoutExceptionTest(ITestOutputHelper @out) : TestBase(@out)
     [Fact]
     public void BasicTest()
     {
-        var e = new RpcTimeoutException(RpcTimeoutKind.Reconnect, "Test");
+        var e = new RpcTimeoutException(RpcTimeoutKind.Connect, "Test");
         e.Should().BeAssignableTo<TimeoutException>();
-        e.TimeoutKind.Should().Be(RpcTimeoutKind.Reconnect);
+        e.TimeoutKind.Should().Be(RpcTimeoutKind.Connect);
         e.Message.Should().Be("Test");
         TransiencyResolvers.PreferTransient.Invoke(e).Should().Be(Transiency.Transient);
 
