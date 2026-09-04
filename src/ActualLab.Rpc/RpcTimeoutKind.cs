@@ -5,7 +5,7 @@ namespace ActualLab.Rpc;
 /// </summary>
 public enum RpcTimeoutKind
 {
-    Unknown = 0,
+    Unknown = 0, // E.g., when RpcTimeoutException rebuilt from ExceptionInfo on the other side
     Connect = 1,
     Run,
     Reconnect,

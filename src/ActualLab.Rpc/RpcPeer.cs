@@ -20,9 +20,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     private bool _hasEverConnected;
     private RpcMethodResolver _serverMethodResolver;
     private RpcTransport? _transport;
-    // Plain: an aligned enum load never tears, and this gates nothing - a stale read
-    // just means an almost-current stop mode, which is read once on the way down
-    private RpcPeerStopMode _stopMode;
     private bool _resetConnectionAttemptIndex;
 
     protected internal readonly IServiceProvider Services;
@@ -96,14 +93,9 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     }
 #pragma warning restore CA1721
 
-    public RpcPeerStopMode StopMode
-    {
-        get => _stopMode;
-        set
-        {
-            lock (Lock)
-                _stopMode = value;
-        }
+    public RpcPeerStopMode StopMode {
+        get;
+        set { lock (Lock) field = value; }
     }
 
     protected RpcPeer(RpcHub hub, RpcRoute route, VersionSet? versions)
@@ -195,19 +187,25 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         }
     }
 
-    public Task<RpcPeerConnectionState> WhenConnectedOrReroute(TimeSpan timeout, CancellationToken cancellationToken = default)
+    public Task<RpcPeerConnectionState> WhenConnectedOrReroute(
+        TimeSpan timeout, CancellationToken cancellationToken = default)
         => WhenConnectedOrReroute(timeout, RpcTimeoutKind.Connect, cancellationToken);
 
-    public Task<RpcPeerConnectionState> WhenConnectedOrReroute(RpcCallTimeouts timeouts, CancellationToken cancellationToken = default)
+    // The one place deciding which timeout - and hence which exception kind - governs a wait for the connection.
+    public Task<RpcPeerConnectionState> WhenConnectedOrReroute(
+        RpcCallTimeouts timeouts, CancellationToken cancellationToken = default)
     {
         // ConnectTimeout caps any wait for the connection; a positive ReconnectTimeout is the tighter cap
         // once the peer has been connected before, i.e. when what's awaited is a reconnect
         var reconnectTimeout = timeouts.ReconnectTimeout;
-        return reconnectTimeout > TimeSpan.Zero && reconnectTimeout < timeouts.ConnectTimeout && HasEverConnected
+        return HasEverConnected && reconnectTimeout > TimeSpan.Zero && reconnectTimeout < timeouts.ConnectTimeout
             ? WhenConnectedOrReroute(reconnectTimeout, RpcTimeoutKind.Reconnect, cancellationToken)
             : WhenConnectedOrReroute(timeouts.ConnectTimeout, RpcTimeoutKind.Connect, cancellationToken);
     }
 
+    // Virtual so RpcClientPeer can add the ReconnectsAt shortcut; the
+    // TimeSpan-only overload delegates here with kind = Connect, so nothing
+    // changes for existing callers except the exception type.
     public virtual Task<RpcPeerConnectionState> WhenConnectedOrReroute(
         TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken = default)
     {
