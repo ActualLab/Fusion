@@ -24,6 +24,10 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public readonly RpcPeer Peer = context.Peer!;
     public readonly RpcCacheInfoCaptureMode CacheInfoCaptureMode = context.CacheInfoCapture?.CaptureMode ?? default;
     public bool IsLongLiving { get; init; }
+    // True when the caller serves something else once CacheFallbackDelay elapses, so the call must
+    // stay pending across the disconnect (to be resent) rather than be aborted on ConnectTimeout.
+    // Overridden by RpcOutboundComputeCall; false for plain calls.
+    public virtual bool HasCacheFallback => false;
 
     public Task<object?> ResultTask {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

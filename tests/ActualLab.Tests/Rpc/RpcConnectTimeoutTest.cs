@@ -127,7 +127,7 @@ public class RpcConnectTimeoutTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
     }
 
     [Fact]
-    public async Task MidCallDisconnectIsNotCappedByConnectTimeoutTest()
+    public async Task MidCallDisconnectFailsAfterConnectTimeoutTest()
     {
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
@@ -135,14 +135,41 @@ public class RpcConnectTimeoutTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         var client = services.RpcHub().GetClient<ITestRpcService>();
         await clientPeer.WhenConnected(Timeout);
 
-        // ConnectTimeout caps only the wait before the call is sent: a sent call stays
-        // registered across the disconnect and is resent once the peer is back
+        // ConnectTimeout caps a sent call's tolerance of a peer that went away, too
+        var sw = Stopwatch.StartNew();
+        var callTask = client.DelayWithConnectTimeout(TimeSpan.FromSeconds(3));
+        await Delay(0.3);
+        await connection.Disconnect();
+        await AssertConnectTimeout(() => callTask);
+        sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(1.2), "ConnectTimeout must run out first");
+        sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2.5));
+        clientPeer.OutboundCalls.Count.Should().Be(0, "the failed call must be unregistered");
+
+        // A call with the (infinite) query ConnectTimeout survives the same disconnect
+        await connection.Connect();
+        callTask = client.Delay(TimeSpan.FromSeconds(1));
+        await Delay(0.3);
+        await connection.Disconnect();
+        await Delay(1.5);
+        callTask.IsCompleted.Should().BeFalse();
+        await connection.Connect();
+        (await callTask.WaitAsync(Timeout)).Should().Be(TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task MidCallDisconnectReconnectWithinTimeoutCompletesTest()
+    {
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var clientPeer = connection.ClientPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+        await clientPeer.WhenConnected(Timeout);
+
         var callTask = client.DelayWithConnectTimeout(TimeSpan.FromSeconds(1));
         await Delay(0.3);
         await connection.Disconnect();
-        await Delay(1.5); // Longer than the method's ConnectTimeout (1s)
-        callTask.IsCompleted.Should().BeFalse();
-        await connection.Connect();
+        await Delay(0.3);
+        await connection.Connect(); // Within ConnectTimeout (1s)
         (await callTask.WaitAsync(Timeout)).Should().Be(TimeSpan.FromSeconds(1));
     }
 
@@ -156,11 +183,18 @@ public class RpcConnectTimeoutTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         await clientPeer.WhenConnected(Timeout);
 
         _reconnectDelayer!.ParkDelay = TimeSpan.FromMinutes(1); // As if the OS reported "offline"
+        var callTask = client.DelayWithConnectTimeout(TimeSpan.FromSeconds(3));
+        await Delay(0.3);
         await connection.Disconnect();
         var sw = Stopwatch.StartNew();
+        await AssertConnectTimeout(() => callTask);
+        sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(0.5),
+            "a reconnect parked past the deadline fails a sent call at once");
+
+        sw.Restart();
         await AssertConnectTimeout(() => client.DelayWithConnectTimeout(TimeSpan.FromMilliseconds(100)));
         sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(0.5),
-            "a reconnect parked past the deadline fails the call at once");
+            "and a call issued while it is parked, too");
 
         _reconnectDelayer.ParkDelay = null;
         _reconnectDelayer.CancelDelays();
