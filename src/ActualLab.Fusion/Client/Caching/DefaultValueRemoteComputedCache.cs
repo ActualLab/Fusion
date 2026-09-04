@@ -7,6 +7,7 @@ namespace ActualLab.Fusion.Client.Caching;
 /// A store-less <see cref="IRemoteComputedCache"/> backing <see cref="RemoteComputedCacheMode.ReturnDefault"/>:
 /// every lookup "hits" the method's default result, and nothing is ever read or written.
 /// </summary>
+// internal per review: only ever reachable through IRemoteComputedCache.
 internal sealed class DefaultValueRemoteComputedCache(object? defaultValue) : IRemoteComputedCache
 {
     // Empty hash, so the server never answers "Match"; empty data, so HashOrDataEquals

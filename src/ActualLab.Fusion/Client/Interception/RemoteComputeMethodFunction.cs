@@ -177,8 +177,14 @@ public abstract class RemoteComputeMethodFunction(
 
         Task whenConnected;
         if (!peer.ConnectionState.Value.IsConnected(out var handshake, out _)) {
+            // Not connected at call time.
+            // - No entry: the peer-level wait applies ConnectTimeout, or ReconnectTimeout when this is
+            //   a reconnect, and throws on expiry.
+            // - With an entry: wait ReconnectTimeout for a fresh value, then serve the entry
+            //   (the else branch) - never an error.
             if (existingCacheEntry is null)
-                whenConnected = WhenConnectedCheckedAsync(input, peer, RpcMethodDef.OutboundCallTimeouts, cancellationToken);
+                whenConnected = WhenConnectedCheckedAsync(
+                    input, peer, RpcMethodDef.OutboundCallTimeouts, cancellationToken);
             else if (await WhenReconnectedChecked(input, peer, cancellationToken).ConfigureAwait(false))
                 whenConnected = Task.CompletedTask;
             else {
@@ -205,6 +211,10 @@ public abstract class RemoteComputeMethodFunction(
             ? new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash)
             : null;
         var sendTask = SendRpcCall(input, peer, cacheInfoCapture, cancellationToken);
+
+        // In-flight call with an entry: the same wait, looped because the peer can reconnect and drop again.
+        // On expiry the call is NOT abandoned - it stays registered, the tracker resends it, and ApplyRpcResult
+        // applies its eventual response to the served computed (the "provisional match").
         if (existingCacheEntry is not null && !sendTask.IsCompleted) {
             // The call may be in flight when the connection dies. RpcOutboundCallTracker resends it on
             // reconnect but never times it out, so it's raced against a disconnect: once the peer stays
@@ -318,7 +328,11 @@ public abstract class RemoteComputeMethodFunction(
             await delayTask.SilentAwait(false);
 
         // 1. Await for the connection - with no timeout: there is a value to show already,
-        // so a finite ConnectTimeout must never turn it into an error
+        // so a finite ConnectTimeout must never turn it into an error.
+        //
+        // RpcCallTimeouts.None = infinite wait: a background validation already
+        // has a value to show, so no ConnectTimeout/ReconnectTimeout may turn
+        // it into an error.
         var whenConnected = WhenConnectedChecked(input, peer, RpcCallTimeouts.None);
         if (!whenConnected.IsCompletedSuccessfully) { // Slow path
             try {
@@ -339,6 +353,7 @@ public abstract class RemoteComputeMethodFunction(
         await ApplyRpcResult(input, cache, cachedComputed, sendTask, cacheInfoCapture).ConfigureAwait(false);
     }
 
+    // The tail of ApplyRpcUpdate, split out so the mid-call fallback above can feed it an already-sent call.
     public async Task ApplyRpcResult(
         ComputeMethodInput input,
         IRemoteComputedCache cache,
@@ -477,6 +492,7 @@ public abstract class RemoteComputeMethodFunction(
         }
     }
 
+    // Shared by both stale branches
     protected Computed NewStaleComputed(ComputeMethodInput input, IRemoteComputed existing, string operation)
     {
         var cacheEntry = existing.CacheEntry!;
@@ -549,6 +565,8 @@ public abstract class RemoteComputeMethodFunction(
         return Task.Delay(delay, cancellationToken);
     }
 
+    // The with-entry wait: false on ReconnectTimeout expiry (the caller serves the entry);
+    // reroute, cancellation and the same-service check propagate as before.
     protected async Task<bool> WhenReconnectedChecked(
         ComputeMethodInput input, RpcPeer peer, CancellationToken cancellationToken)
     {
@@ -596,6 +614,10 @@ public abstract class RemoteComputeMethodFunction(
     }
 
     // InvalidateXxx
+
+    // InvalidateWhenReconnected is gone: a served entry is now validated by its
+    // pending call (match -> synchronized in place, different result ->
+    // displaced) instead of being invalidated on reconnect.
 
     // Completes when the peer transitions to a non-connected state (Handshake is null).
     protected Task InvalidateOnError(Computed computed, Exception? error, string source)

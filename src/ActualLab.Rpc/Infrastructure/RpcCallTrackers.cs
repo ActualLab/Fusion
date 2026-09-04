@@ -113,10 +113,13 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         return calls;
     }
 
+    // Started by RpcPeer.OnRun on every non-final disconnect.
+    // Returns at once when no sent call has a finite ReconnectTimeout.
+    // One loop per disconnect (not a per-call race) so a connected peer pays nothing per call.
+    // It wakes at the earliest deadline, on reconnect, or when ReconnectsAt moves (the
+    // parked-reconnect shortcut).
     public async Task AbortOnReconnectTimeout(RpcPeerConnectionState disconnectedState, CancellationToken cancellationToken)
     {
-        // Fails the in-flight calls whose ReconnectTimeout elapses before the peer reconnects.
-        // A reconnect attempt already scheduled past a call's deadline fails that call at once.
         var whenConnected = disconnectedState.WhenConnected;
         var clientPeer = Peer as RpcClientPeer;
         var clock = clientPeer?.ReconnectDelayer.Clock ?? Peer.Hub.SystemClock;
@@ -147,9 +150,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 return;
 
             using var delayCts = cancellationToken.CreateLinkedTokenSource();
-            var delay = TimeSpanExt.Min(nextDeadline - now, TimeSpan.FromDays(1));
+            var delay = (nextDeadline - now).Clamp(TimeSpan.FromMilliseconds(32), TimeSpan.FromDays(1));
             var delayTask = Task.Delay(delay, delayCts.Token);
-            var whenReconnectsAtChanged = reconnectsAt?.WhenNext(delayCts.Token) ?? TaskExt.NeverEnding(delayCts.Token);
+            var whenReconnectsAtChanged = reconnectsAt?.WhenNext(delayCts.Token)
+                ?? TaskExt.NeverEnding(delayCts.Token);
             await Task.WhenAny(whenConnected, delayTask, whenReconnectsAtChanged).SilentAwait(false);
             delayCts.CancelAndDisposeSilently();
         }
@@ -246,6 +250,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                                 call.CompletedStageName, call.Context.RoutingMode);
 
                         if (action.HasFlag(RpcDelayedCallAction.Abort)) {
+                            // Was CallTimeout (kind Run); a delayed-call abort is now its own kind.
                             var error = Internal.Errors.DelayTimeout(Peer.Ref, timeouts.DelayTimeout);
                             call.SetError(error, context: null, assumeCancelled: false);
                         }

@@ -42,13 +42,18 @@ public record RpcOutboundCallOptions
         if (methodDef.Attribute is not { } attribute)
             return defaultTimeouts;
 
-        var connectTimeout = attribute.ConnectTimeout is double.NaN ? defaultTimeouts.ConnectTimeout : ToTimeout(attribute.ConnectTimeout);
-        var runTimeout = attribute.RunTimeout is double.NaN ? defaultTimeouts.RunTimeout : ToTimeout(attribute.RunTimeout);
-        var delayTimeout = attribute.DelayTimeout is double.NaN ? defaultTimeouts.DelayTimeout : ToTimeout(attribute.DelayTimeout);
-        var reconnectTimeout = attribute.ReconnectTimeout is double.NaN ? defaultTimeouts.ReconnectTimeout : ToTimeout(attribute.ReconnectTimeout);
+        // NaN = inherit the kind default; +Inf = MaxValue = never fails.
+        var connectTimeout = attribute.ConnectTimeout is double.NaN
+            ? defaultTimeouts.ConnectTimeout : ToTimeout(attribute.ConnectTimeout);
+        var runTimeout = attribute.RunTimeout is double.NaN
+            ? defaultTimeouts.RunTimeout : ToTimeout(attribute.RunTimeout);
+        var reconnectTimeout = attribute.ReconnectTimeout is double.NaN
+            ? defaultTimeouts.ReconnectTimeout : ToTimeout(attribute.ReconnectTimeout);
+        var delayTimeout = attribute.DelayTimeout is double.NaN
+            ? defaultTimeouts.DelayTimeout : ToTimeout(attribute.DelayTimeout);
         return new RpcCallTimeouts(connectTimeout, runTimeout) {
-            DelayTimeout = delayTimeout,
             ReconnectTimeout = reconnectTimeout,
+            DelayTimeout = delayTimeout,
         };
     }
 
