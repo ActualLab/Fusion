@@ -327,6 +327,27 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     }
 
     [Fact]
+    public async Task ColdCacheMissMustSurfaceItsOwnErrorTest()
+    {
+        await using var services = CreateServices();
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var client = services.RpcHub().GetClient<IServeStaleTester>();
+        await connection.ClientPeer.WhenConnected(Timeout);
+
+        // Cache mode, but nothing cached for this key: the call is registered with a capture that
+        // never gets a Call, because ConnectTimeout fails it before it is ever sent. Reading the
+        // capture then has to cope with that instead of dereferencing the missing Call.
+        await connection.Disconnect();
+        var timeout = await Assert.ThrowsAsync<RpcTimeoutException>(
+            () => client.GetWithConnectTimeout("cold").WaitAsync(Timeout));
+        timeout.TimeoutKind.Should().Be(RpcTimeoutKind.Connect);
+
+        await connection.Connect();
+        var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetWithConnectTimeout("cold"));
+        c1.Value.Should().Be("v-cold");
+    }
+
+    [Fact]
     public async Task ColdMissFailsAfterConnectTimeoutTest()
     {
         using var listener = new StaleValueListener();
