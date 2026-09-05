@@ -19,8 +19,8 @@ public class ComputedOptionsProvider(IServiceProvider services)
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type,
         MethodInfo method)
     {
-        // Only the Cache mode needs a store; ReturnDefault works without one
         var options = ComputedOptions.Get(type, method);
+        // Only the Cache mode needs a store; ReturnDefault works without one
         if (options is null || options.RemoteComputedCacheMode != RemoteComputedCacheMode.Cache)
             return options;
 

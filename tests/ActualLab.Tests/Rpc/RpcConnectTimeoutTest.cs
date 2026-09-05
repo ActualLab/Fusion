@@ -29,7 +29,8 @@ public class RpcConnectTimeoutTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         await using var services = CreateServices();
         var serviceDef = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)];
         serviceDef["RenamedMethod"].OutboundCallTimeouts.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(2.5));
-        serviceDef["DelayWithConnectTimeout:2"].OutboundCallTimeouts.ConnectTimeout.Should().Be(TimeSpan.FromSeconds(1));
+        serviceDef["DelayWithConnectTimeout:2"].OutboundCallTimeouts.ConnectTimeout
+            .Should().Be(TimeSpan.FromSeconds(1));
         serviceDef["Div:2"].OutboundCallTimeouts.ConnectTimeout
             .Should().Be(TimeSpanExt.Infinite, "the query default is no timeout");
         serviceDef["Div:2"].OutboundCallTimeouts.CacheFallbackDelay

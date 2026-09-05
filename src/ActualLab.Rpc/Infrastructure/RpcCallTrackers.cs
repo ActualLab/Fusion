@@ -168,8 +168,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             while (!whenConnected.IsCompleted && !cancellationToken.IsCancellationRequested) {
                 var now = clock.Now;
                 var reconnectsAt = clientPeer?.ReconnectsAt;
-                // TryConsumeNewCalls must run before the scan, and before the cheaper checks - it consumes
-                if (newCallTracker.TryConsumeNotification() || now >= nextDeadline || !ReferenceEquals(reconnectsAt, scannedReconnectsAt)) {
+                // TryConsumeNotification must run before the scan, and before the cheaper checks - it consumes
+                if (newCallTracker.TryConsumeNotification()
+                    || now >= nextDeadline
+                    || !ReferenceEquals(reconnectsAt, scannedReconnectsAt)) {
                     scannedReconnectsAt = reconnectsAt;
                     nextDeadline = Moment.MaxValue;
                     foreach (var call in Calls.Values) {
@@ -195,7 +197,8 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
                 using var delayCts = cancellationToken.CreateLinkedTokenSource();
                 var delay = TimeSpanExt.Min(nextDeadline - now, checkPeriod.Next());
-                var delayTask = Task.Delay(delay.Clamp(TimeSpan.FromMilliseconds(32), TimeSpan.FromDays(1)), delayCts.Token);
+                var delayTask = Task.Delay(
+                    delay.Clamp(TimeSpan.FromMilliseconds(32), TimeSpan.FromDays(1)), delayCts.Token);
                 var whenGotNewCall = newCallTracker.WhenNotified;
                 var whenAny = reconnectsAt is null
                     ? Task.WhenAny(whenConnected, delayTask, whenGotNewCall)
@@ -327,7 +330,6 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                                 call.CompletedStageName, call.Context.RoutingMode);
 
                         if (action.HasFlag(RpcDelayedCallAction.Abort)) {
-                            // Was CallTimeout (kind Run); a delayed-call abort is now its own kind.
                             var error = Internal.Errors.DelayTimeout(Peer.Ref, timeouts.DelayTimeout);
                             call.SetError(error, context: null, assumeCancelled: false);
                         }
@@ -508,31 +510,42 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     private sealed class NewCallTracker
     {
         private readonly Lock _lock = new();
-        private volatile bool _isNotified;
+        private bool _isNotified;
         private TaskCompletionSource<Unit> _whenNotified = TaskCompletionSourceExt.New<Unit>();
 
+        // ReSharper disable once InconsistentlySynchronizedField
         public Task WhenNotified => Volatile.Read(ref _whenNotified).Task;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Notify()
         {
-            if (_isNotified) return;
-            lock (_lock) { // Double-checked locking
-                if (_isNotified) return;
+            // ReSharper disable once InconsistentlySynchronizedField
+            if (Volatile.Read(ref _isNotified))
+                return;
 
-                _isNotified = true;
+            lock (_lock) { // Double-checked locking
+                if (_isNotified)
+                    return;
+
+                Volatile.Write(ref _isNotified, true);
                 _whenNotified.TrySetResult(default);
             }
         }
 
         public bool TryConsumeNotification()
         {
-            if (!_isNotified) return false;
-            lock (_lock) { // Double-checked locking
-                if (!_isNotified) return false;
+            // ReSharper disable once InconsistentlySynchronizedField
+            if (!Volatile.Read(ref _isNotified))
+                return false;
 
-                _whenNotified = TaskCompletionSourceExt.New<Unit>();
-                _isNotified = false;
+            lock (_lock) { // Double-checked locking
+                if (!_isNotified)
+                    return false;
+
+                // Both are published to readers outside the lock: WhenNotified reads the source,
+                // and Notify's fast path reads the flag
+                Volatile.Write(ref _whenNotified, TaskCompletionSourceExt.New<Unit>());
+                Volatile.Write(ref _isNotified, false);
                 return true;
             }
         }

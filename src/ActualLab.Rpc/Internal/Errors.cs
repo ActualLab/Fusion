@@ -135,7 +135,8 @@ public static class Errors
                 : $"The {remoteParty} didn't respond in time.");
     public static Exception DelayTimeout(RpcRef rpcRef, TimeSpan timeout)
         => new RpcTimeoutException(RpcTimeoutKind.Delay,
-            $"The {rpcRef.GetRemotePartyName()} didn't respond in time ({timeout.ToShortString()}), the delayed call is aborted.");
+            $"The {rpcRef.GetRemotePartyName()} didn't respond in time ({timeout.ToShortString()}), "
+            + "the delayed call is aborted.");
 
     public static Exception HandshakeTimeout()
         => new RpcTimeoutException(RpcTimeoutKind.Handshake, "Timeout while waiting for RPC handshake.");

@@ -189,12 +189,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         TimeSpan timeout, CancellationToken cancellationToken = default)
         => WhenConnectedOrReroute(timeout, RpcTimeoutKind.Connect, cancellationToken);
 
-    // Virtual so RpcClientPeer can add the ReconnectsAt shortcut; the
-    // TimeSpan-only overload delegates here with kind = Connect.
+    // Virtual so RpcClientPeer can add the ReconnectsAt shortcut; the TimeSpan-only overload
+    // delegates here with kind = Connect, and timeoutKind is what the expiry error reports.
     public virtual Task<RpcPeerConnectionState> WhenConnectedOrReroute(
         TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken = default)
     {
-        // timeoutKind is what the RpcTimeoutException thrown on expiry reports
         return timeout == TimeSpanExt.Infinite
             ? WhenConnectedOrReroute(cancellationToken)
             : WhenConnectedOrRerouteWithTimeout(this, timeout, timeoutKind, cancellationToken);

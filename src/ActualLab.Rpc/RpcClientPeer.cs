@@ -83,14 +83,13 @@ public class RpcClientPeer : RpcPeer
 
     // Private methods
 
+    // A reconnect that ReconnectDelayer parks past the deadline cannot succeed in time, so the wait
+    // fails as soon as that becomes known instead of running the timeout out.
     private async Task<RpcPeerConnectionState> WhenConnectedOrRerouteWithTimeout(
         TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken)
     {
-        // A reconnect that ReconnectDelayer parks past the deadline cannot succeed in time,
-        // so the wait fails as soon as that becomes known instead of running the timeout out.
-        // Same clock the delayer stamps ReconnectsAt with. Looped: the delayer
-        // sets ReconnectsAt a few ms after the disconnect, so a one-shot check
-        // would race; WhenNext re-evaluates on every change.
+        // Same clock the delayer stamps ReconnectsAt with. Looped: the delayer sets ReconnectsAt
+        // a few ms after the disconnect, so a one-shot check would race; WhenNext re-evaluates.
         var deadline = ReconnectDelayer.Clock.Now + timeout;
         using var timeoutCts = cancellationToken.CreateLinkedTokenSource(timeout);
         var timeoutToken = timeoutCts.Token;

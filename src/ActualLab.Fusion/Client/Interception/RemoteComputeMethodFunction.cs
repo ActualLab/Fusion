@@ -177,7 +177,7 @@ public abstract class RemoteComputeMethodFunction(
 
         // The call is never held back waiting for a connection: it is registered and, if there is a
         // transport, sent. ConnectTimeout is enforced by the peer-level disconnect watcher, and the
-        // same-service check by RpcOutboundComputeCall.GetConnectionError once the peer handshakes -
+        // same-service check by RpcOutboundComputeCall.GetOwnHubCallError once the peer handshakes -
         // this one only makes that failure immediate when we already know the answer.
         var isConnected = peer.ConnectionState.Value.IsConnected(out var handshake, out _);
         if (isConnected && handshake!.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy)
@@ -300,7 +300,8 @@ public abstract class RemoteComputeMethodFunction(
         await ApplyRpcResult(input, cache, cachedComputed, sendTask, cacheInfoCapture).ConfigureAwait(false);
     }
 
-    // The tail of ApplyRpcUpdate, split out so the mid-call fallback above can feed it an already-sent call.
+    // The tail of ApplyRpcUpdate, split out so the mid-call fallback can feed it an already-sent
+    // call. A "match" response confirms cachedComputed in place; a fresh value displaces it.
     public async Task ApplyRpcResult(
         ComputeMethodInput input,
         IRemoteComputedCache cache,
@@ -308,8 +309,6 @@ public abstract class RemoteComputeMethodFunction(
         ValueTask<(Result Result, RpcOutboundComputeCall? Call)> sendTask,
         RpcCacheInfoCapture cacheInfoCapture)
     {
-        // Applies the response to the call sent for cachedComputed: a "match" confirms it in place,
-        // a fresh value displaces it with a successor that takes over the call.
         var remoteCachedComputed = (IRemoteComputed)cachedComputed;
         var existingCacheEntry = remoteCachedComputed.CacheEntry;
         var (result, call) = await sendTask.ConfigureAwait(false);
@@ -414,7 +413,7 @@ public abstract class RemoteComputeMethodFunction(
         try {
             var settings = new RpcOutboundCallSetup(peer) {
                 CacheInfoCapture = cacheInfoCapture,
-                // A service's own proxy must never reach the hub it came from - see GetConnectionError
+                // A service's own proxy must never reach the hub it came from - see GetOwnHubCallError
                 MustNotCallOwnHub = invocation.Proxy is not InterfaceProxy,
             };
             using (settings.Activate()) {

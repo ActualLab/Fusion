@@ -59,8 +59,8 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
         }
     }
 
-    // A remote compute call that came from a service's own proxy must not be routed back to the hub
-    // it came from - that is a misconfiguration, and letting it out would call the service on itself.
+    // A call that came from a service's own proxy must not be routed back to the hub it came from -
+    // that is a misconfiguration, and letting it out would call the service on itself.
     public override Exception GetOwnHubCallError(RpcHandshake handshake)
         => Fusion.Internal.Errors.RemoteComputeMethodCallFromTheSameService(MethodDef, Peer.Ref);
 

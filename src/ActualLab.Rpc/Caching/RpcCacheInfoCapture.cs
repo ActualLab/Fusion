@@ -29,9 +29,6 @@ public sealed class RpcCacheInfoCapture
     public object? ValueOrError; // Either RpcCacheValue or Exception
     public Task WhenCacheFallback => _cacheFallbackSource.Task;
 
-    public bool TrySetCacheFallback()
-        => _cacheFallbackSource.TrySetResult(default);
-
     public RpcCacheInfoCapture(RpcCacheInfoCaptureMode captureMode)
         : this(cacheEntry: null, captureMode)
     { }
@@ -46,6 +43,9 @@ public sealed class RpcCacheInfoCapture
         CaptureMode = captureMode;
         CacheEntry = cacheEntry;
     }
+
+    public bool TrySetCacheFallback()
+        => _cacheFallbackSource.TrySetResult(default);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool HasKeyAndValue(
