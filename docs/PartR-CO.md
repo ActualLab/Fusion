@@ -142,19 +142,21 @@ sent - to the outage if the connection drops mid-call, measured from the disconn
 outage is resent as usual; one whose `ConnectTimeout` runs out first fails with `RpcTimeoutException` of
 `Connect` kind.
 
-`CacheFallbackDelay` is the earlier of the two deadlines a sent call has while the peer is away. Both are owned
-by one per-disconnect watcher (`RpcOutboundCallTracker.HandleDisconnect`), which only *delivers* them - what
-each means is up to the call:
+`CacheFallbackDelay` is the other deadline a call has while the peer is away. Both are owned by one
+per-outage watcher (`RpcOutboundCallTracker.HandleDisconnect`), which only *delivers* them - what each means
+is up to the call:
 
 | | `OnCacheFallbackDelay` | `OnConnectTimeout` |
 |---|---|---|
 | plain RPC call | declines - nothing to serve | fails the call |
-| compute call, `Cache` / `ReturnDefault` | serves the cached value, keeps the call alive | skipped: the call was served |
-| compute call, `NoCache` | declines - nothing to serve | fails the call |
+| compute call holding a cache entry | serves that value, keeps the call alive | skipped: the call was served |
+| compute call with nothing cached (`NoCache`, or a cold `Cache` call) | declines - nothing to serve | fails the call |
 
 So a call that can serve something does, and is then exempt from `ConnectTimeout` - it has nothing left to fail,
 and its response is what validates what was served. A call that cannot falls straight through to
-`ConnectTimeout`, whose error is transient, so `TransientErrorInvalidationDelay` retries it.
+`ConnectTimeout`, whose error is transient, so `TransientErrorInvalidationDelay` retries it. The fallback is
+offered whenever either deadline comes due, so setting `CacheFallbackDelay` above `ConnectTimeout` cannot turn
+a servable call into a failed one.
 
 When the fallback fires, the cached value is served right away as an unsynchronized `Computed` - previously
 computed `Cache`-mode calls and all `ReturnDefault` calls. The pending call remains registered and carries the

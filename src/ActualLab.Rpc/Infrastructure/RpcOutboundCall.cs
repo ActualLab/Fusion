@@ -16,6 +16,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         (byte CallTypeId, Type ReturnType),
         Func<RpcOutboundContext, RpcOutboundCall>> FactoryCache = new();
 
+    private int _isSent;
+
     protected AsyncTaskMethodBuilder<object?> ResultSource;
 
     public override string DebugTypeName => "->";
@@ -28,25 +30,28 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     // stay pending across the disconnect - it is what validates the served value on reconnect.
     public bool IsCacheFallbackServed { get; protected set; }
 
+    // False only while the call is still waiting for a connection - reconnect processing applies to sent calls alone.
+    // Flipped by SendRegistered, which is what makes it idempotent: a call registered while the
+    // peer is connecting can be sent both by Invoke and by RpcOutboundCallTracker.SendUnsent.
+    public bool IsSent {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => Volatile.Read(ref _isSent) != 0;
+    }
+
     public Task<object?> ResultTask {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => ResultSource.Task;
     }
 
-    public virtual int CompletedStage {
-        get => ResultSource.Task.IsCompleted
+    public virtual int CompletedStage
+        => ResultSource.Task.IsCompleted
             ? RpcCallStage.ResultReady | RpcCallStage.Unregistered
             : 0;
-    }
 
     public string CompletedStageName => RpcCallStage.GetName(CompletedStage);
 
     public CpuTimestamp StartedAt;
     public CancellationTokenRegistration CancellationHandler;
-
-    // False only while the call is still waiting for a connection - reconnect
-    // processing applies to sent calls alone.
-    public volatile bool IsSent;
 
     [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
@@ -98,35 +103,22 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
             return ResultTask;
         }
 
+        // Register first, then send: a peer that connects in between leaves the call to
+        // SendUnsent, and one that was already connected leaves it to us. Both may fire -
+        // TrySendRegistered is what makes only one of them send.
         Register();
-        if (!Peer.ConnectionState.Value.IsConnected())
-            return CompleteAsync(); // Slow path
+        TrySendRegistered();
 
-        SendRegistered(); // Fast path
+        // Nothing waits for the connection here. A call that cannot be sent yet simply stays
+        // registered, and every way it can fail - ConnectTimeout, reroute, cancellation - reaches
+        // it as SetError: from RpcOutboundCallTracker.HandleDisconnect, from TryReroute via
+        // RpcPeer.OnRouteChanged, and from the handler Register installed.
         return ResultTask;
-
-        async Task<object?> CompleteAsync() {
-            try {
-                // WhenConnectedOrReroute may throw RpcRerouteException if the peer's route has changed.
-                // ConnectTimeout caps the wait whether this is the first connection or a reconnect.
-                var connectTimeout = MethodDef.OutboundCallTimeouts.ConnectTimeout;
-                await Peer.WhenConnectedOrReroute(connectTimeout, Context.CancellationToken).ConfigureAwait(false);
-                SendRegistered();
-            }
-            catch (Exception error) {
-                SetError(error, null);
-            }
-            return await ResultTask.ConfigureAwait(false);
-        }
     }
 
-    // Disconnect handlers
-    //
-    // RpcOutboundCallTracker.HandleDisconnect calls these when the peer stays away past
-    // CacheFallbackDelay / ConnectTimeout. A call that served a fallback is exempt from
-    // OnConnectTimeout - it has nothing left to fail, and its response still has to arrive.
+    // Disconnect handlers - see RpcOutboundCallTracker.HandleDisconnect
 
-    public virtual bool OnCacheFallbackDelay(TimeSpan delay)
+    public virtual bool OnCacheFallbackDelay()
         => false; // Plain calls have nothing to fall back to
 
     public virtual void OnConnectTimeout(TimeSpan timeout)
@@ -183,30 +175,30 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         Peer.Transport?.Send(message, Peer.StopToken);
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public void SendRegistered()
+    // The first send only: two senders race for a queued call (see Invoke), and a resend on
+    // reconnect is not one of them - SendRegistered stays unconditional for that.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TrySendRegistered()
     {
-        // Set even if Transport is null: nothing will release this call a second time.
-        IsSent = true;
+        if (Peer.Transport is not { } transport)
+            return false; // Still unsent, and RpcOutboundCallTracker.SendUnsent will say so
 
-        // Use lazy CreateOutboundMessage - serialization happens in transport.
-        // Serialization errors propagate via message.SendHandler.
-        var context = Context;
-        var cacheInfoCapture = context.CacheInfoCapture;
-        var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
-        var message = CreateOutboundMessage(
-            Id, MethodDef.HasPolymorphicArguments, RpcSendHandlers.PropagateToCall, hash);
+        if (Interlocked.Exchange(ref _isSent, 1) != 0)
+            return false;
 
-        // For cache key capture, we need serialized data
-        if (cacheInfoCapture is not null) {
-            var dataMessage = CreateOutboundMessageWithArgumentData(Id, MethodDef.HasPolymorphicArguments, hash);
-            cacheInfoCapture.CaptureKey(context, dataMessage);
-            message = dataMessage; // Use pre-serialized message
-        }
+        SendRegisteredImpl(transport);
+        return true;
+    }
 
-        if (Peer.CallLogger.IsLogged(this))
-            Peer.CallLogger.LogOutbound(this, message);
-        Peer.Transport?.Send(message, Peer.StopToken);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void SendRegistered(RpcTransport transport)
+    {
+        // Set here and nowhere else, and optimistically: a non-null transport was a chance to send,
+        // and taking it is what makes this an in-flight call - one the next disconnect reconciles
+        // via AllowReconnect and $sys.Reconnect. It deliberately does not mean "the peer got it":
+        // erring that way is what keeps a call that may have executed from being silently resent.
+        Volatile.Write(ref _isSent, 1);
+        SendRegisteredImpl(transport);
     }
 
     public RpcOutboundMessage CreateOutboundMessage(
@@ -429,6 +421,28 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     }
 
     // Protected methods
+
+    protected void SendRegisteredImpl(RpcTransport transport)
+    {
+        // Use lazy CreateOutboundMessage - serialization happens in transport.
+        // Serialization errors propagate via message.SendHandler.
+        var context = Context;
+        var cacheInfoCapture = context.CacheInfoCapture;
+        var hash = cacheInfoCapture?.CacheEntry?.Value.Hash;
+        var message = CreateOutboundMessage(
+            Id, MethodDef.HasPolymorphicArguments, RpcSendHandlers.PropagateToCall, hash);
+
+        // For cache key capture, we need serialized data
+        if (cacheInfoCapture is not null) {
+            var dataMessage = CreateOutboundMessageWithArgumentData(Id, MethodDef.HasPolymorphicArguments, hash);
+            cacheInfoCapture.CaptureKey(context, dataMessage);
+            message = dataMessage; // Use pre-serialized message
+        }
+
+        if (Peer.CallLogger.IsLogged(this))
+            Peer.CallLogger.LogOutbound(this, message);
+        transport.Send(message, Peer.StopToken);
+    }
 
     protected void NotifyCancelled()
     {

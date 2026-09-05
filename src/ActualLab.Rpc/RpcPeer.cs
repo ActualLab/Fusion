@@ -39,7 +39,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
 
             // Fast path: most sends happen while connected, so avoid reading
             // _connectionState unless _transport hasn't caught up yet.
-            var transport = _transport;
+            var transport = Volatile.Read(ref _transport);
             if (transport is not null)
                 return transport;
 
@@ -281,6 +281,11 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 return;
             }
 
+            // The first connection attempt is an outage like any other: a call issued during it must
+            // have its ConnectTimeout enforced, and only the watcher does that now.
+            var watchedWhenConnected = (Task<RpcPeerConnectionState>?)null;
+            StartDisconnectWatcher(connectionState.Value);
+
             while (true) {
                 var error = (Exception?)null;
                 var connectedAt = Hub.SystemClock.Now;
@@ -403,6 +408,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionStateValue.Connection != connection)
                         continue; // Somehow disconnected
 
+                    OutboundCalls.SendUnsent(); // The calls that queued up while we were away
+
                     if (clientPeer is not null
                         && (connectionAttemptCounter is not null || connectionAttemptDurationHistogram is not null)) {
                         RpcInstruments.RegisterClientConnectionAttempt(
@@ -486,12 +493,22 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                 }
                 connectionState = SetConnectionState(connectionState.Value.NextDisconnected(error));
                 if (!connectionState.IsFinal) {
-                    _ = OutboundCalls.HandleDisconnect(connectionState.Value, cancellationToken);
+                    StartDisconnectWatcher(connectionState.Value);
                     continue;
                 }
 
                 OutboundCalls.TryReroute();
                 break;
+            }
+
+            // A failed reconnect attempt reuses the same WhenConnected, so it is the same outage
+            // and must not add a second watcher.
+            void StartDisconnectWatcher(RpcPeerConnectionState state) {
+                if (ReferenceEquals(state.WhenConnected, watchedWhenConnected))
+                    return;
+
+                watchedWhenConnected = state.WhenConnected;
+                _ = OutboundCalls.HandleDisconnect(state, cancellationToken);
             }
         }
         finally {
