@@ -18,9 +18,10 @@ public sealed partial record RpcCallTimeouts
     /// </summary>
     public TimeSpan ConnectTimeout { get; init => field = value.AsTimeout(); }
     /// <summary>
-    /// How long a sent call waits for its result while the peer is connected; the clock restarts
-    /// when the call is resent on reconnect. On expiry the call fails with <see cref="RpcTimeoutException"/>
-    /// of <see cref="RpcTimeoutKind.Run"/> kind.
+    /// How long a call waits for its result, measured from the moment it was registered; the clock
+    /// restarts when an already-sent call is resent on reconnect, but not when a queued one is finally
+    /// sent, so time spent waiting for a connection counts against it.
+    /// On expiry the call fails with <see cref="RpcTimeoutException"/> of <see cref="RpcTimeoutKind.Run"/> kind.
     /// </summary>
     public TimeSpan RunTimeout { get; init => field = value.AsTimeout(); }
     /// <summary>

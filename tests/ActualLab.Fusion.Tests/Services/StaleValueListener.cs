@@ -16,6 +16,8 @@ public sealed class StaleValueListener : IDisposable
     public StaleValueListener()
     {
         var staleValueCount = FusionInstruments.RemoteComputedCacheStaleValueCount;
+        staleValueCount.Name.Should().Be("remote_computed.cache.stale_value.count");
+        staleValueCount.Unit.Should().Be("{request}");
         _listener = new MeterListener();
         _listener.InstrumentPublished = (instrument, meterListener) => {
             if (ReferenceEquals(instrument, staleValueCount))

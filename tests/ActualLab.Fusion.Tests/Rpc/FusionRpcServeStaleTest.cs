@@ -38,8 +38,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task SupersededStaleComputedMustSynchronizeTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -71,8 +71,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task MidCallDisconnectStaleComputedMustSynchronizeTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -111,8 +111,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task ReconnectWithinTimeoutMidCallYieldsFreshValueTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -137,8 +137,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task NoReconnectMidCallServesStaleAfterTimeoutTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var clientPeer = connection.ClientPeer;
@@ -173,8 +173,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task NotConnectedAtCallTimeServesStaleAfterTimeoutTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -206,8 +206,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task ReconnectWithinTimeoutAtCallTimeYieldsFreshValueTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -232,8 +232,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task ParkedReconnectServesStaleImmediatelyTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -262,8 +262,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task ColdMissWithoutConnectTimeoutKeepsWaitingTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -296,8 +296,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task NoCacheFallsThroughToConnectTimeoutTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -329,8 +329,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
     [Fact]
     public async Task ColdMissFailsAfterConnectTimeoutTest()
     {
-        var operations = new ConcurrentQueue<string>();
-        using var listener = StartStaleValueListener(operations);
+        using var listener = new StaleValueListener();
+        var operations = listener.Operations;
         await using var services = CreateServices();
         var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
         var client = services.RpcHub().GetClient<IServeStaleTester>();
@@ -365,33 +365,6 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         operations.Should().BeEmpty();
     }
 
-    private static MeterListener StartStaleValueListener(ConcurrentQueue<string> operations)
-    {
-        var staleValueCount = FusionInstruments.RemoteComputedCacheStaleValueCount;
-        staleValueCount.Name.Should().Be("remote_computed.cache.stale_value.count");
-        staleValueCount.Unit.Should().Be("{request}");
-        var listener = new MeterListener();
-        listener.InstrumentPublished = (instrument, meterListener) => {
-            if (ReferenceEquals(instrument, staleValueCount))
-                meterListener.EnableMeasurementEvents(instrument);
-        };
-        listener.SetMeasurementEventCallback<long>((_, value, tags, _) => {
-            value.Should().Be(1);
-            tags.Length.Should().Be(1);
-            operations.Enqueue(GetTag(tags, "operation"));
-        });
-        listener.Start();
-        return listener;
-    }
-
-    private static string GetTag(ReadOnlySpan<KeyValuePair<string, object?>> tags, string name)
-    {
-        foreach (var tag in tags)
-            if (tag.Key == name)
-                return (string)tag.Value!;
-
-        return "";
-    }
 }
 
 
