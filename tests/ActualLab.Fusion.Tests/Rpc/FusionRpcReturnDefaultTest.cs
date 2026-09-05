@@ -13,7 +13,7 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
-    private volatile int _inboundCallDelayMs;
+    private int _inboundCallDelayMs; // Set by tests, read from the inbound call pipeline
     private bool _useRemoteComputedCache = true;
     private CountingRemoteComputedCache? _cache;
 
@@ -23,7 +23,7 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
         var fusion = services.AddFusion();
         fusion.AddServerAndClient<IReturnDefaultTester, ReturnDefaultTester>();
         services.AddRpc().AddMiddleware(_ => new RpcInboundCallDelayer() {
-            DelayProvider = _ => TimeSpan.FromMilliseconds(_inboundCallDelayMs),
+            DelayProvider = _ => TimeSpan.FromMilliseconds(Volatile.Read(ref _inboundCallDelayMs)),
         });
         if (_useRemoteComputedCache)
             services.AddSingleton<IRemoteComputedCache>(c => _cache = new CountingRemoteComputedCache(
@@ -36,7 +36,7 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
         await using var services = CreateServices();
         var client = services.RpcHub().GetClient<IReturnDefaultTester>();
 
-        _inboundCallDelayMs = 1000;
+        Volatile.Write(ref _inboundCallDelayMs, 1000);
         var sw = Stopwatch.StartNew();
         var c1 = (RemoteComputed<string>)await Computed.Capture(() => client.GetDefault("1"));
         sw.ElapsedMilliseconds.Should().BeLessThan(500, "the default must not wait for the server");
@@ -50,7 +50,7 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
         c1.Options.RemoteComputedCacheMode.Should().Be(RemoteComputedCacheMode.ReturnDefault);
         c1.Options.MinCacheDuration.Should().Be(ComputedOptions.ClientDefault.MinCacheDuration);
 
-        _inboundCallDelayMs = 0;
+        Volatile.Write(ref _inboundCallDelayMs, 0);
         await c1.WhenSynchronized.WaitAsync(Timeout);
         c1.IsInvalidated().Should().BeTrue("the real value must displace the default");
         var c2 = (RemoteComputed<string>)Computed.GetExisting(() => client.GetDefault("1"))!;
@@ -126,7 +126,7 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
         // served, so the 1s ConnectTimeout must never abort it - it is what validates the served value.
         server.Set("1", "b");
         c1.Invalidate();
-        _inboundCallDelayMs = 1000;
+        Volatile.Write(ref _inboundCallDelayMs, 1000);
         var updateTask = c1.Update();
         await Delay(0.3);
         await connection.Disconnect();
@@ -140,7 +140,7 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
         c2.WhenSynchronized.IsCompleted.Should().BeFalse("a served call must outlive ConnectTimeout");
         c2.IsConsistent().Should().BeTrue();
 
-        _inboundCallDelayMs = 0;
+        Volatile.Write(ref _inboundCallDelayMs, 0);
         await connection.Connect();
         await c2.WhenInvalidated().WaitAsync(Timeout);
         var c3 = (RemoteComputed<string>)await c2.Update();
@@ -159,7 +159,7 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
 
         var c1 = await GetSynchronized(client, "1");
         c1.Invalidate();
-        _inboundCallDelayMs = 1000;
+        Volatile.Write(ref _inboundCallDelayMs, 1000);
         var updateTask = c1.Update();
         await Delay(0.3);
         await connection.Disconnect(); // Mid-call disconnect -> the send/disconnect race branch
@@ -168,7 +168,7 @@ public class FusionRpcReturnDefaultTest(ITestOutputHelper @out) : SimpleFusionTe
         c2.WhenSynchronized.IsCompleted.Should().BeFalse();
         listener.Operations.Should().BeEquivalentTo("active_call");
 
-        _inboundCallDelayMs = 0;
+        Volatile.Write(ref _inboundCallDelayMs, 0);
         await connection.Connect();
         await c2.WhenInvalidated().WaitAsync(Timeout);
         var c3 = (RemoteComputed<string>)await c2.Update();

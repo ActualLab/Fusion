@@ -246,7 +246,8 @@ public class FusionRpcServeStaleTest(ITestOutputHelper @out) : SimpleFusionTestB
         c1.Invalidate();
         var sw = Stopwatch.StartNew();
         var c2 = (RemoteComputed<string>)await c1.Update();
-        sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(0.5), "a reconnect parked past CacheFallbackDelay is not waited for");
+        sw.Elapsed.Should().BeLessThan(
+            TimeSpan.FromSeconds(0.5), "a reconnect parked past CacheFallbackDelay is not waited for");
         c2.Value.Should().Be("v-1");
         c2.WhenSynchronized.IsCompleted.Should().BeFalse();
         operations.Should().BeEquivalentTo("connection_check");
@@ -419,10 +420,9 @@ public class FusionRpcServeStalePeerChangeTest(ITestOutputHelper @out) : SimpleF
         services.AddAlias<RpcTestClient, SwitchableRpcTestClient>();
     }
 
+    // Does nothing: the test builds and switches its own connections
     protected override void StartServices(IServiceProvider services)
-    {
-        // The test builds and switches its own connections.
-    }
+    { }
 
     [Fact]
     public async Task NewPeerConfirmsStaleValueTest()

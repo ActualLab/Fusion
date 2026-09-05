@@ -15,7 +15,8 @@ public sealed class CountingRemoteComputedCache(IRemoteComputedCache cache) : IR
 
     public int GetCount(string methodNamePart, string operation)
         => Counts
-            .Where(kv => kv.Key.Method.Contains(methodNamePart, StringComparison.Ordinal) && kv.Key.Operation == operation)
+            .Where(kv => kv.Key.Method.Contains(methodNamePart, StringComparison.Ordinal)
+                && kv.Key.Operation == operation)
             .Sum(kv => kv.Value);
 
     public ValueTask<RpcCacheEntry?> Get(ComputeMethodInput input, RpcCacheKey key, CancellationToken cancellationToken)
