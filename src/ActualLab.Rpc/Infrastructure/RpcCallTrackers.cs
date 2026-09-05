@@ -90,7 +90,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
     public RpcOutboundCall this[long id] => Calls[id];
 
-    public void Register(RpcOutboundCall call)
+    public bool Register(RpcOutboundCall call)
     {
         if (call.NoWait)
             throw new ArgumentOutOfRangeException(nameof(call), "call.NoWait == true.");
@@ -104,11 +104,15 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             _longLivingCalls.TryAdd(call.Id, call);  // Must succeed for unique call.Id
         Volatile.Read(ref _newCallTracker)?.Notify();
 
+        if (Volatile.Read(ref _finalError) is not { } finalError)
+            return true;
+
         // The peer is done: RpcHub keeps handing it out for a while after it stops, and it will
         // never send this call, so it is completed here rather than left registered forever.
         // Latch-then-register vs. latch-then-sweep: both may fire, SetError makes only one win.
-        if (Volatile.Read(ref _finalError) is { } finalError)
-            SetFinalError(call, finalError);
+        SetFinalError(call, finalError);
+        return false;
+
     }
 
     // Called once the connected state is published, so a call registering concurrently either
@@ -249,9 +253,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             return;
 
         // Latched before the sweep, so a call registering concurrently is completed by Register
-        // instead of slipping past this loop onto a peer that will never run it
-        if (Volatile.Read(ref _finalError) is null)
-            Interlocked.CompareExchange(ref _finalError, RpcRerouteException.MustReroute(), comparand: null);
+        // instead of slipping past this loop onto a peer that will never run it. A reroute also
+        // supersedes a terminal error latched earlier - running on the new target beats failing.
+        if (Volatile.Read(ref _finalError) is not RpcRerouteException)
+            Volatile.Write(ref _finalError, RpcRerouteException.MustReroute());
         foreach (var call in this)
             if (call.IsPeerChanged())
                 call.SetMustRerouteError();
@@ -352,9 +357,9 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 }
 
                 // Resend delayed calls if requested by the handler
-                if (callsToResend.Count > 0 && Peer.Transport is { } transport) {
+                if (callsToResend.Count > 0) {
                     foreach (var call in callsToResend)
-                        call.SendRegistered(transport);
+                        call.ResendRegistered();
                 }
 
                 RpcInstruments.RegisterClientCallEvents(
@@ -435,13 +440,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         return;
 
         void Resend(List<RpcOutboundCall> calls) {
-            if (Peer.Transport is not { } transport)
-                return;
-
             foreach (var call in calls) {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (call.GetReconnectStage(isPeerChanged: true) is not null)
-                    call.SendRegistered(transport);
+                    call.ResendRegistered();
             }
         }
 

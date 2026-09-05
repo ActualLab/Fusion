@@ -33,7 +33,6 @@ public record RpcLimits
     // A single "object abort" cycle duration
     public TimeSpan ObjectAbortCyclePeriod { get; init; } = TimeSpan.FromSeconds(1);
     // A single "call abort" cycle period
-    public TimeSpan CallAbortCyclePeriod { get; set; } = TimeSpan.FromSeconds(1);
     // Backstop cap on RpcPeer.InboundCalls.Count + RpcPeer.OutboundCalls.Count.
     // It's checked once per ObjectReleasePeriod, and the peer is reset when it's exceeded,
     // so the actual count may overshoot it by up to a cycle's worth of calls.

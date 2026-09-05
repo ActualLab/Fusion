@@ -106,8 +106,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         // Register first, then send: a peer that connects in between leaves the call to
         // SendUnsent, and one that was already connected leaves it to us. Both may fire -
         // TrySendRegistered is what makes only one of them send.
-        Register();
-        TrySendRegistered();
+        if (Register())
+            TrySendRegistered();
 
         // Nothing waits for the connection here. A call that cannot be sent yet simply stays
         // registered, and every way it can fail - ConnectTimeout, reroute, cancellation - reaches
@@ -128,14 +128,17 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public virtual void OnConnectTimeout(TimeSpan timeout)
         => SetError(Internal.Errors.ConnectTimeout(Peer.Ref, timeout), context: null, assumeCancelled: false);
 
-    public void Register()
+    public bool Register()
     {
-        Peer.OutboundCalls.Register(this);
+        if (!Peer.OutboundCalls.Register(this))
+            return false;
+
         if (CancellationHandler == default)
             CancellationHandler = Context.CancellationToken.Register(static state => {
                 var call = (RpcOutboundCall)state!;
                 call.Cancel(call.Context.CancellationToken);
             }, this, useSynchronizationContext: false);
+        return true;
     }
 
     public void RegisterCacheKeyOnly()
@@ -186,22 +189,23 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     {
         if (Peer.Transport is not { } transport)
             return false; // Still unsent, and RpcOutboundCallTracker.SendUnsent will say so
-
-        if (Context.MustNotCallOwnHub && transport is { IsOwnHub: true } && GetOwnHubCallError() is { } error) {
-            SetError(error, context: null, assumeCancelled: false);
-            return false;
-        }
-
+        if (TrySetOwnHubError(transport))
+            return false; // Just failed: Transport.IsOwnHub & the call expects otherwise
         if (Interlocked.Exchange(ref _isSent, 1) != 0)
-            return false;
+            return false; // Already sent
 
         SendRegisteredImpl(transport);
         return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void SendRegistered(RpcTransport transport)
+    public void ResendRegistered()
     {
+        if (Peer.Transport is not { } transport)
+            return; // Still unsent, and RpcOutboundCallTracker.SendUnsent will say so
+        if (TrySetOwnHubError(transport))
+            return; // Just failed: Transport.IsOwnHub & the call expects otherwise
+
         // Set here and nowhere else, and optimistically: a non-null transport was a chance to send,
         // and taking it is what makes this an in-flight call - one the next disconnect reconciles
         // via AllowReconnect and $sys.Reconnect. It deliberately does not mean "the peer got it":
@@ -476,6 +480,15 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         => NoWait || CacheInfoCaptureMode == RpcCacheInfoCaptureMode.KeyOnly
             ? Cache<TResult>.NoWaitResultSource
             : AsyncTaskMethodBuilderExt.New<object?>(); // MUST run continuations asynchronously!
+
+    protected bool TrySetOwnHubError(RpcTransport transport)
+    {
+        if (!Context.MustNotCallOwnHub || !transport.IsOwnHub || GetOwnHubCallError() is not { } error)
+            return false;
+
+        SetError(error, context: null, assumeCancelled: false);
+        return true;
+    }
 
     // Nested types
 

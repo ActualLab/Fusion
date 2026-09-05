@@ -118,7 +118,7 @@ Provides the foundation for components that need to react to state changes. When
 
 - Maintains a `State` property that can be any `IState<T>` implementation
 - Attaches a `StateChanged` handler that calls `NotifyStateHasChanged()` when the state updates
-- Sets `MustRenderAfterEvent = false` by default, since these components typically render only after state changes
+- Leaves `MustRenderAfterEvent` at its inherited `true`; `ComputedRenderStateComponent` is the one that sets it to `false`
 - Disposes the state when the component is disposed
 
 ### Creating the State
@@ -217,7 +217,7 @@ This is useful for components that may receive multiple render requests but shou
 | Member | Type | Description |
 |--------|------|-------------|
 | `RenderState` | `StateSnapshot` | The last rendered state snapshot |
-| `IsRenderStateChanged()` | Method | Returns `true` if state has changed since last render |
+| `MustUpdateRenderState(old, new)` | Method | Pure predicate: `true` if the new snapshot should be rendered |
 
 ### Default Options
 

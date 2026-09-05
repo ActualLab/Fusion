@@ -324,8 +324,10 @@ public class RpcReconnectProofTest(ITestOutputHelper @out) : TestBase(@out)
     private sealed class TestClientPeer(RpcHub hub, RpcRoute route) : RpcClientPeer(hub, route)
     {
         public void ApplyHandshake(string? secret)
-            => OnHandshake(new RpcHandshake(
-                Guid.NewGuid(), VersionSet.Empty, Guid.NewGuid(),
-                RpcHandshake.CurrentProtocolVersion, 1, secret));
+            => OnHandshake(
+                new RpcHandshake(
+                    Guid.NewGuid(), VersionSet.Empty, Guid.NewGuid(),
+                    RpcHandshake.CurrentProtocolVersion, 1, secret),
+                CreateHandshake(1));
     }
 }

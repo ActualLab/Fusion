@@ -179,9 +179,9 @@ public abstract class RemoteComputeMethodFunction(
         // transport, sent. ConnectTimeout is enforced by the peer-level disconnect watcher, and the
         // same-service check by RpcOutboundComputeCall.GetOwnHubCallError once the peer handshakes -
         // this one only makes that failure immediate when we already know the answer.
-        var connectionState = peer.ConnectionState.Value;
-        var isConnected = connectionState.IsConnected();
-        if (connectionState.IsOwnHub && input.Invocation.Proxy is not InterfaceProxy)
+        // Non-null only once the handshake is done, so it answers "connected?" and "own hub?" at once
+        var transport = peer.InternalServices.Transport;
+        if (transport is { IsOwnHub: true } && input.Invocation.Proxy is not InterfaceProxy)
             throw Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref);
 
         var cacheInfoCapture = cache is not null
@@ -201,7 +201,7 @@ public abstract class RemoteComputeMethodFunction(
                 // The operation tag keeps telling the two apart: a call that never left because the
                 // peer was already down, vs one whose connection died under it
                 var staleComputed = NewStaleComputed(
-                    input, existingRemoteComputed!, isConnected ? "active_call" : "connection_check");
+                    input, existingRemoteComputed!, transport is not null ? "active_call" : "connection_check");
                 // Suppressed execution context - see ComputeCachedOrRpc
                 _ = ExecutionContextExt.Start(
                     ExecutionContextExt.Default,
