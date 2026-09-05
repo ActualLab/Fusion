@@ -408,6 +408,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionStateValue.Connection != connection)
                         continue; // Somehow disconnected
 
+                    OutboundCalls.AbortOwnHubCalls(handshake); // Must run before the queued sends
                     OutboundCalls.SendUnsent(); // The calls that queued up while we were away
 
                     if (clientPeer is not null

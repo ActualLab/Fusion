@@ -101,7 +101,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         Calls.TryAdd(call.Id, call); // Must succeed for unique call.Id
         if (call.IsLongLiving)
             _longLivingCalls.TryAdd(call.Id, call);  // Must succeed for unique call.Id
-        Volatile.Read(ref _newCallTracker)?.OnCallRegistered();
+        Volatile.Read(ref _newCallTracker)?.Notify();
     }
 
     // Called once the connected state is published, so a call registering concurrently either
@@ -122,6 +122,23 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             if (call.IsSent)
                 calls.Add(call);
         return calls;
+    }
+
+    public void AbortOwnHubCalls(RpcHandshake handshake)
+    {
+        if (handshake.RemoteHubId != Peer.Hub.Id)
+            return; // Not own hub
+
+        foreach (var call in Calls.Values) {
+            if (call.ResultTask.IsCompleted)
+                continue; // Too late to abort
+            if (!call.Context.MustNotCallOwnHub)
+                continue; // Fine to run this call on our own hub
+            if (call.GetOwnHubCallError(handshake) is not { } error)
+                continue; // No error provided
+
+            call.SetError(error, context: null, assumeCancelled: false);
+        }
     }
 
     // Started by RpcPeer.OnRun once per outage. It owns both deadlines a registered call has while
@@ -152,7 +169,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 var now = clock.Now;
                 var reconnectsAt = clientPeer?.ReconnectsAt;
                 // TryConsumeNewCalls must run before the scan, and before the cheaper checks - it consumes
-                if (newCallTracker.TryConsumeNewCalls() || now >= nextDeadline || !ReferenceEquals(reconnectsAt, scannedReconnectsAt)) {
+                if (newCallTracker.TryConsumeNotification() || now >= nextDeadline || !ReferenceEquals(reconnectsAt, scannedReconnectsAt)) {
                     scannedReconnectsAt = reconnectsAt;
                     nextDeadline = Moment.MaxValue;
                     foreach (var call in Calls.Values) {
@@ -179,9 +196,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 using var delayCts = cancellationToken.CreateLinkedTokenSource();
                 var delay = TimeSpanExt.Min(nextDeadline - now, checkPeriod.Next());
                 var delayTask = Task.Delay(delay.Clamp(TimeSpan.FromMilliseconds(32), TimeSpan.FromDays(1)), delayCts.Token);
+                var whenGotNewCall = newCallTracker.WhenNotified;
                 var whenAny = reconnectsAt is null
-                    ? Task.WhenAny(whenConnected, delayTask)
-                    : Task.WhenAny(whenConnected, delayTask, reconnectsAt.WhenNext(delayCts.Token));
+                    ? Task.WhenAny(whenConnected, delayTask, whenGotNewCall)
+                    : Task.WhenAny(whenConnected, delayTask, whenGotNewCall, reconnectsAt.WhenNext(delayCts.Token));
                 await whenAny.SilentAwait(false);
                 delayCts.CancelAndDisposeSilently();
                 continue;
@@ -487,27 +505,36 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
     // Nested types
 
-    // Published by HandleDisconnect while it runs, so Register can tell it there is something new
-    // to scan. Its absence is what makes a connected peer free: no flag to touch, just a null read.
     private sealed class NewCallTracker
     {
-        private int _hasNewCalls;
+        private readonly Lock _lock = new();
+        private volatile bool _isNotified;
+        private TaskCompletionSource<Unit> _whenNotified = TaskCompletionSourceExt.New<Unit>();
+
+        public Task WhenNotified => Volatile.Read(ref _whenNotified).Task;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnCallRegistered()
+        public void Notify()
         {
-            // Only the first call after a scan writes; the rest of a burst just read
-            if (Volatile.Read(ref _hasNewCalls) == 0)
-                Interlocked.CompareExchange(ref _hasNewCalls, 1, 0);
+            if (_isNotified) return;
+            lock (_lock) { // Double-checked locking
+                if (_isNotified) return;
+
+                _isNotified = true;
+                _whenNotified.TrySetResult(default);
+            }
         }
 
-        public bool TryConsumeNewCalls()
+        public bool TryConsumeNotification()
         {
-            if (Volatile.Read(ref _hasNewCalls) == 0)
-                return false;
+            if (!_isNotified) return false;
+            lock (_lock) { // Double-checked locking
+                if (!_isNotified) return false;
 
-            Volatile.Write(ref _hasNewCalls, 0);
-            return true;
+                _whenNotified = TaskCompletionSourceExt.New<Unit>();
+                _isNotified = false;
+                return true;
+            }
         }
     }
 }

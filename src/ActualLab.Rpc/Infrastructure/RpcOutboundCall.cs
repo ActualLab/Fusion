@@ -116,6 +116,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return ResultTask;
     }
 
+    public virtual Exception? GetOwnHubCallError(RpcHandshake handshake)
+        => null;
+
     // Disconnect handlers - see RpcOutboundCallTracker.HandleDisconnect
 
     public virtual bool OnCacheFallbackDelay()
