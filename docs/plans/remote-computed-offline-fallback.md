@@ -1,5 +1,15 @@
 # Remote computed: offline fallback primitives
 
+Status: superseded (2026-09-05, `feat/reconnect-timeout`). Part 1 shipped as written.
+Part 2 did not: instead of a `ReconnectTimeout` enforced inside `RemoteComputeMethodFunction`
+that abandons the call and restarts from the cache path, what shipped is `CacheFallbackDelay`,
+delivered by the peer-level watcher (`RpcOutboundCallTracker.HandleDisconnect`) to
+`RpcOutboundCall.OnCacheFallbackDelay`, with the call kept registered so it validates the served
+value in place. `InvalidateWhenReconnected` was removed, and `ConnectTimeout` now also applies to
+already-sent calls. See [PartR-CO.md](../PartR-CO.md) for the shipped design; the rest of this
+document is kept as a dated record of the reasoning, and its line references are pinned to
+`2aa76ab3d`.
+
 Two additions to the client side of remote compute calls, so that an app can keep rendering from
 its `IRemoteComputedCache` while the RPC peer is disconnected:
 
