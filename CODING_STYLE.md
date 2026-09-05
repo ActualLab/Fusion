@@ -63,18 +63,52 @@ the part the signature doesn't already carry.
 
 ### Members (methods, properties, fields, events)
 
-- **Do NOT write `/// <summary>` XML docs on members.** Ever. This is stricter
-  than the default .NET guidance. `///` on members bloats IntelliSense with
-  prose that ages faster than the signature.
-- If a member genuinely needs explanation (per the philosophy above), use a
-  regular `//` comment.
-  - **C#**: put the comment at the **top of the method body** (inside the
-    braces).
-  - **TypeScript**: put the comment **above the method declaration**.
-- If the name already explains what the method does, **omit the comment** —
-  don't restate the signature in English.
-- Keep comments short: a single line is almost always enough. Prefer a useful
-  one-liner over a paragraph.
+Documenting a member is the exception, not the default — see the philosophy
+above. If the name already explains what the member does, **omit the comment** —
+don't restate the signature in English. When a member does earn a note, the
+preferred form differs by language.
+
+**Both languages — keep it to 2 lines.** Write more only when the subtlety
+genuinely needs it; past that, it's the method that needs the work, not the doc
+(see the philosophy above).
+
+**Both languages — the comment goes directly above the declaration**, above its
+attributes. The reader needs it while looking at the signature, not after
+entering the method, and it's the only placement that works for every member
+kind — a field, a property, an expression-bodied method. What differs between
+the languages is the *form*.
+
+#### C# — a regular `//` comment
+
+- **Don't add a *new* `/// <summary>` to a member.** `///` on members bloats
+  IntelliSense with prose that ages faster than the signature. Write a regular
+  `//` comment instead.
+- **An existing `///` on a member stays.** Leave it alone rather than converting
+  it to `//` — that's churn for nothing. But treat it as code: if you change what
+  the member does, **update its doc in the same edit**, and delete it outright
+  when it no longer earns its place. The same goes for a file where every member
+  is already documented that way — a new member there matches its neighbours.
+  ```csharp
+  // Virtual so RpcClientPeer can add the ReconnectsAt shortcut; the
+  // TimeSpan-only overload delegates here with kind = Connect.
+  public virtual Task<RpcPeerConnectionState> WhenConnectedOrReroute(
+      TimeSpan timeout, RpcTimeoutKind timeoutKind, CancellationToken cancellationToken = default)
+  ```
+
+#### TypeScript — a `/** */` docstring
+
+- TS docstrings are much lighter than C# XML docs: no `<summary>` wrapper, and
+  editors surface them on hover, where a `//` above the declaration isn't always
+  shown. So here the doc comment is the default form, not the discouraged one.
+- A plain `//` above the declaration is still fine for a short implementation
+  note — something aimed at whoever edits the method rather than whoever calls
+  it.
+
+#### Either language — comments inside the body
+
+The rules above are about comments describing **the member**. A comment
+explaining one statement — a non-obvious line, a workaround, why this branch
+exists — still belongs next to that statement, inside the body.
 
 ### Placement order for a type (top to bottom)
 
@@ -105,7 +139,7 @@ Example — type doc with `<see cref="..."/>`:
 public class ConcurrentPool<T> : IPool<T>
 ```
 
-Example — C# method comment (inside the body):
+Example — C# statement comment (inside the body, next to what it explains):
 ```csharp
 public Task<bool> SwitchFacing(CancellationToken cancellationToken)
 {
@@ -116,9 +150,9 @@ public Task<bool> SwitchFacing(CancellationToken cancellationToken)
 }
 ```
 
-Example — TypeScript method comment (above the declaration):
+Example — TypeScript member doc (docstring above the declaration):
 ```ts
-// Flips front/back by facingMode so the browser picks the primary lens per facing.
+/** Flips front/back by facingMode so the browser picks the primary lens per facing. */
 public async switchFacing(): Promise<boolean> {
     ...
 }
@@ -608,10 +642,87 @@ public override async Task Require(CancellationToken cancellationToken)
 
 7. **Prefer `sealed` classes and records** unless inheritance is intended.
 
+    **Exception — proxied service types must stay unsealed.** The proxy
+    generator emits a type that *derives* from the service class and overrides
+    its intercepted members, so those members have to stay `virtual` — and a
+    sealed type can't declare one (CS0549). This applies to every
+    `IRequiresAsyncProxy` descendant, which is the base of the whole service
+    hierarchy: `IRpcService`, `ICommandService`, `IComputeService` (and
+    `IRequiresFullProxy`). In practice that's every service class with
+    `[ComputeMethod]` or `[CommandHandler]` members.
+
+    ```csharp
+    // Correct - not sealed: the generated proxy overrides Get and every other intercepted member
+    public class InMemoryKeyValueStore(
+        InMemoryKeyValueStore.Options settings,
+        IServiceProvider services
+        ) : WorkerBase, IKeyValueStore
+    {
+        public virtual Task<string?> Get(string shard, string key, CancellationToken cancellationToken = default)
+    }
+    ```
+
+    Nested types, records, options classes, and any other non-proxied type in
+    the same file still follow the `sealed`-by-default rule.
+
 8. **Prefer `LogFor(GetType())` over `LogFor<T>()`** for the current type in non-static context.
 
 9. **Prefer primary constructors for services** when acceptable.
 
+
+### Test Conventions
+
+**These rules bind new tests, not old ones.** An existing test that predates them
+is fine as it is — don't sweep through the suite renaming methods or rewriting
+assertions. And when you add a test to a file that already does things its own
+way, **match the file**: local consistency beats a file that follows two
+conventions at once.
+
+#### Test Method Naming
+- **Use PascalCase without underscores.** Bad: `Reconnect_Within_Timeout_Yields_Fresh_Value`.
+- **Prefer the `Should` phrasing** — name the test after the expected behavior,
+  embedding `Should` (or `ShouldNot`): `<Subject>Should<ExpectedBehavior>`.
+- Good: `QueryablePaginationShouldTranslateToSql`,
+  `RedirectUrlHelperShouldBeReplaceableForAllEndpointFamilies`
+- Avoid names that state a fact instead of the expected behavior —
+  `EnglishFallbackIsComplete` should be `EnglishFallbackShouldBeComplete`.
+- Much of this repo predates the rule and names tests after the scenario
+  (`BasicTest`, `ConcurrentTest`, `ReconnectMatrix`). Those stay; so does a new
+  case added to such a file.
+
+#### Assertions
+- **Use FluentAssertions** — assert with the `.Should()` API
+  (`actual.Should().Be(expected)`, `collection.Should().BeEquivalentTo(...)`),
+  not raw xUnit `Assert.Equal` / `Assert.True`.
+- **Exceptions are the exception**: `Assert.Throws`, `Assert.ThrowsAsync` and
+  `Assert.ThrowsAnyAsync` are the established form here, and they return the
+  caught exception — usually the very thing the test asserts on next.
+- Pass the `because` reason argument when the failure isn't self-explanatory, so
+  a red test names the invariant that broke.
+
+#### AAA Pattern (Arrange-Act-Assert)
+New tests use the AAA pattern with lowercase comments:
+
+```csharp
+[Fact]
+public void AsTimeoutShouldMapInfiniteSecondsToInfinite()
+{
+    // arrange
+    var seconds = new[] { 0d, 1d, double.PositiveInfinity };
+
+    // act
+    var timeouts = seconds.Select(TimeSpanExt.AsTimeout).ToArray();
+
+    // assert
+    timeouts.Should().Equal([TimeSpan.Zero, TimeSpan.FromSeconds(1), TimeSpanExt.Infinite]);
+}
+```
+
+- **arrange**: set up the test data and dependencies
+- **act**: execute the code being tested
+- **assert**: verify the expected outcome
+- When arrange is trivial its comment can be omitted, but act and assert should
+  always be present.
 
 ### Disabled/Silenced Warnings
 
@@ -649,3 +760,24 @@ if (Api._isDotNetRpcConnected === value)
 
 Api._isDotNetRpcConnected = value;
 ```
+
+### Measuring time: `performance.now()` vs `Date.now()`
+
+Anything that measures an interval, a duration, a velocity, or an animation's progress uses
+`performance.now()`. `Date.now()` is wall-clock and quantised to a whole millisecond, so a duration
+built from it carries up to 1ms of error and a velocity built from it can be wrong by a large factor:
+two events a frame apart that happen to land in the same millisecond pair make a 50px frame read as
+50,000 px/s. It also moves when the system clock does.
+
+Mixing the two is worse than either, because their epochs are unrelated - a `Date.now()` value compared
+against a `performance.now()` one is out by about 1.7e12, so every such comparison is silently true.
+
+`Date.now()` is still right for a wall-clock instant that leaves the process: a timestamp sent to the
+server, serialised, or shown to a user.
+
+`Date.now()` also stays right for a threshold measured in seconds - a heartbeat watchdog, a
+health-check cycle, a presence deadline. There the 1ms quantisation is noise, and the wall clock is
+what the code means: `performance.now()` does not advance while the OS is suspended, so a monotonic
+deadline survives a laptop sleeping and still reports a user who left hours ago as present. Reach for
+`performance.now()` when the threshold is a few hundred milliseconds or less, or when the value is
+divided by to produce a rate.
