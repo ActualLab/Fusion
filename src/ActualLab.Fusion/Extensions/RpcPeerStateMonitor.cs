@@ -138,6 +138,11 @@ public class RpcPeerStateMonitor : WorkerBase
                     Log.LogError(e, "'{PeerRef}': monitor failed, will restart", rpcRef);
             }
             finally {
+                // A peer that stopped before the loop above read its state cancels peerCancellationToken,
+                // and the OperationCanceledException that comes out says nothing about why. The error
+                // the peer recorded on its final state is what callers are waiting for.
+                if (peer.StopToken.IsCancellationRequested && peer.ConnectionState.Value.Error is { } peerError)
+                    error = peerError;
                 _rawState.Set(_rawState.Value.ToDisconnected(Now, default, error));
                 peerCts.CancelAndDisposeSilently();
             }

@@ -35,10 +35,10 @@ Defines timeout and periodic limits for RPC connections, keep-alive, and object 
 | `ObjectReleaseTimeout` | `TimeSpan` | `125s` | If an object doesn't receive a keep-alive for this long, it gets released |
 | `ObjectAbortCycleCount` | `int` | `3` | Number of cycles to complete object abort (proceeds to next cycle if at least one object was disposed) |
 | `ObjectAbortCyclePeriod` | `TimeSpan` | `1s` | Duration of a single object abort cycle |
-| `CallAbortCyclePeriod` | `TimeSpan` | `1s` | Duration of a single call abort cycle |
 | `CallCountLimit` | `int` | `int.MaxValue` | Backstop cap on `InboundCalls.Count + OutboundCalls.Count` per peer; the peer is reset when it's exceeded |
 | `ObjectCountLimit` | `int` | `65536` | Backstop cap on `SharedObjects.Count + RemoteObjects.Count` per peer; the peer is reset when it's exceeded |
 | `CallTimeoutCheckPeriod` | `RandomTimeSpan` | `5s ±20%` | How often call timeouts are checked |
+| `DisconnectCheckPeriod` | `RandomTimeSpan` | `1s ±20%` | Safety-poll period of the per-outage disconnect watcher (`RpcOutboundCallTracker.HandleDisconnect`), which runs only while the peer is disconnected. Registering a call, a deadline it computed, and a rescheduled reconnect each wake it directly, so this tick is a backstop |
 
 When a debugger is attached, the defaults for `HandshakeTimeout` (60s), `KeepAlivePeriod` (300s), and `KeepAliveTimeout` (1000s) are relaxed to avoid false timeouts during debugging.
 
