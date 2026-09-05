@@ -6,7 +6,12 @@ namespace Samples.MeshRpc;
 
 public sealed class RpcHelpers(IServiceProvider services) : RpcServiceBase(services)
 {
-    private static readonly RpcCallTimeouts OutboundCallTimeouts = new(null, 60);
+    // CacheFallbackDelay: rerouting should always beat it, so a served cached value means rerouting
+    // was too slow - which is what TestRunner's staleness check is there to catch. The framework
+    // default is zero, i.e. serve the cached value the moment the peer drops.
+    private static readonly RpcCallTimeouts OutboundCallTimeouts = new(double.PositiveInfinity, 60) {
+        CacheFallbackDelay = TimeSpan.FromSeconds(1),
+    };
 
     public Host OwnHost => field ??= Services.GetRequiredService<Host>();
 
