@@ -162,8 +162,8 @@ When the fallback fires, the cached value is served right away as an unsynchroni
 computed `Cache`-mode calls and all `ReturnDefault` calls. The pending call remains registered and carries the
 value's hash; once the peer is back it is resent and validates the value: a "match" reply confirms it in place,
 while a different result displaces it. That is why the default is `0` - waiting buys nothing when the served
-value gets re-validated anyway. The same fallback applies to a call issued while the peer is already
-disconnected, where the compute layer serves the entry directly rather than through the watcher.
+value gets re-validated anyway. A call issued while the peer is already disconnected takes the same path:
+it is registered and the watcher raises the fallback for it, so both cases are served identically.
 
 A client peer whose next reconnect attempt is already scheduled past the deadline (`RpcClientPeer.ReconnectsAt`,
 e.g. because the app parks reconnects while the OS reports it offline) waits out neither of the two.

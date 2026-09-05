@@ -41,15 +41,6 @@ public class RpcClientPeer : RpcPeer
 
     // Protected methods
 
-    protected override void OnHandshake(RpcHandshake handshake)
-    {
-        // Overwrites unconditionally: the server sends its secret on every handshake, so a client
-        // that missed one self-heals, and a client that reached another server instance adopts
-        // that instance's secret. A null secret (legacy server) leaves the stored one intact.
-        if (handshake.Secret is { Length: > 0 } secret)
-            Volatile.Write(ref _reconnectSecret, secret); // Published to lock-free ReconnectSecret readers
-    }
-
     protected override async Task<RpcConnection> GetConnection(
         RpcPeerConnectionState connectionState,
         CancellationToken cancellationToken)
@@ -79,6 +70,15 @@ public class RpcClientPeer : RpcPeer
             if (_reconnectAt.Value != value)
                 Volatile.Write(ref _reconnectAt, _reconnectAt.SetNext(value));
         }
+    }
+
+    protected override void OnHandshake(RpcHandshake handshake, RpcHandshake ownHandshake)
+    {
+        // Overwrites unconditionally: the server sends its secret on every handshake, so a client
+        // that missed one self-heals, and a client that reached another server instance adopts
+        // that instance's secret. A null secret (legacy server) leaves the stored one intact.
+        if (handshake.Secret is { Length: > 0 } secret)
+            Volatile.Write(ref _reconnectSecret, secret); // Published to lock-free ReconnectSecret readers
     }
 
     // Private methods

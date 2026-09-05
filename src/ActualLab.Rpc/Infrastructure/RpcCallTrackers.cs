@@ -84,6 +84,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     private RpcCallStageCounts _reportedInboundCallCounts;
     private RpcCallStageCounts _reportedOutboundCallCounts;
     private NewCallTracker? _newCallTracker;
+    private Exception? _finalError;
     private CpuTimestamp _lastCallMetricsRefreshAt;
     private long _lastId;
 
@@ -102,6 +103,12 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         if (call.IsLongLiving)
             _longLivingCalls.TryAdd(call.Id, call);  // Must succeed for unique call.Id
         Volatile.Read(ref _newCallTracker)?.Notify();
+
+        // The peer is done: RpcHub keeps handing it out for a while after it stops, and it will
+        // never send this call, so it is completed here rather than left registered forever.
+        // Latch-then-register vs. latch-then-sweep: both may fire, SetError makes only one win.
+        if (Volatile.Read(ref _finalError) is { } finalError)
+            SetFinalError(call, finalError);
     }
 
     // Called once the connected state is published, so a call registering concurrently either
@@ -115,30 +122,13 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
 
     public List<RpcOutboundCall> GetSentCalls()
     {
-        // Callers must snapshot before the new connection state is exposed - that releases
-        // every call parked on WhenConnected, making queued and in-flight ones alike.
+        // Callers must snapshot before the new connection state is exposed - once it is, SendUnsent
+        // flips IsSent on the queued calls, making them indistinguishable from in-flight ones.
         var calls = new List<RpcOutboundCall>();
         foreach (var call in Calls.Values)
             if (call.IsSent)
                 calls.Add(call);
         return calls;
-    }
-
-    public void AbortOwnHubCalls(RpcHandshake handshake)
-    {
-        if (handshake.RemoteHubId != Peer.Hub.Id)
-            return; // Not own hub
-
-        foreach (var call in Calls.Values) {
-            if (call.ResultTask.IsCompleted)
-                continue; // Too late to abort
-            if (!call.Context.MustNotCallOwnHub)
-                continue; // Fine to run this call on our own hub
-            if (call.GetOwnHubCallError(handshake) is not { } error)
-                continue; // No error provided
-
-            call.SetError(error, context: null, assumeCancelled: false);
-        }
     }
 
     // Started by RpcPeer.OnRun once per outage. It owns both deadlines a registered call has while
@@ -150,9 +140,9 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     // still gets its full timeout.
     //
     // Calls.Count can be large, so a tick that cannot do anything does nothing: the scan runs only
-    // when a call was registered since the last one, a deadline it computed came due, or the peer
-    // rescheduled its reconnect. Known deadlines are slept on exactly; DisconnectCheckPeriod only
-    // bounds how late a newly registered call is noticed, since nothing signals its arrival.
+    // on the first pass, when a call was registered since the last one, when a deadline it computed
+    // came due, or when the peer rescheduled its reconnect. Each of those has its own wake-up, so
+    // the DisconnectCheckPeriod tick is just a cheap safety poll - three comparisons and back to sleep.
     public async Task HandleDisconnect(RpcPeerConnectionState disconnectedState, CancellationToken cancellationToken)
     {
         var whenConnected = disconnectedState.WhenConnected;
@@ -163,6 +153,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         var newCallTracker = new NewCallTracker();
         var scannedReconnectsAt = (AsyncState<Moment>?)null;
         var nextDeadline = Moment.MaxValue;
+        var mustScan = true; // The calls already registered when the outage began
         Volatile.Write(ref _newCallTracker, newCallTracker);
         try {
             while (!whenConnected.IsCompleted && !cancellationToken.IsCancellationRequested) {
@@ -170,8 +161,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 var reconnectsAt = clientPeer?.ReconnectsAt;
                 // TryConsumeNotification must run before the scan, and before the cheaper checks - it consumes
                 if (newCallTracker.TryConsumeNotification()
+                    || mustScan
                     || now >= nextDeadline
                     || !ReferenceEquals(reconnectsAt, scannedReconnectsAt)) {
+                    mustScan = false;
                     scannedReconnectsAt = reconnectsAt;
                     nextDeadline = Moment.MaxValue;
                     foreach (var call in Calls.Values) {
@@ -247,11 +240,18 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     public bool Unregister(RpcOutboundCall call)
         => Calls.TryRemove(call.Id, call);
 
+    // Called on a route change and once the connection state is final - i.e. at the point this peer
+    // stops running calls. Rerouting is the usual reason that happens, so it is also what a call
+    // registering afterwards gets: it must run on the new target rather than fail.
     public void TryReroute()
     {
         if (!Peer.Route.IsChanged)
             return;
 
+        // Latched before the sweep, so a call registering concurrently is completed by Register
+        // instead of slipping past this loop onto a peer that will never run it
+        if (Volatile.Read(ref _finalError) is null)
+            Interlocked.CompareExchange(ref _finalError, RpcRerouteException.MustReroute(), comparand: null);
         foreach (var call in this)
             if (call.IsPeerChanged())
                 call.SetMustRerouteError();
@@ -489,27 +489,34 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         }
     }
 
-    public async Task Abort(Exception error, bool assumeCancelled)
+    // One sweep is enough: the latch goes up first, so anything registering from here on
+    // completes itself in Register rather than having to be chased by another cycle.
+    public void Abort(Exception error, bool assumeCancelled)
     {
-        var abortedCallIds = new HashSet<long>();
-        for (int i = 0;; i++) {
-            var abortedCallCountBefore = abortedCallIds.Count;
-            foreach (var call in this) {
-                if (abortedCallIds.Add(call.Id))
-                    call.SetError(error, context: null, assumeCancelled);
-            }
-            if (i >= 2 && abortedCallCountBefore == abortedCallIds.Count)
-                break;
+        Interlocked.CompareExchange(ref _finalError, error, comparand: null);
+        foreach (var call in this)
+            call.SetError(error, context: null, assumeCancelled);
+    }
 
-            await Task.Delay(Limits.CallAbortCyclePeriod).ConfigureAwait(false);
-        }
+    // Private methods
+
+    private static void SetFinalError(RpcOutboundCall call, Exception finalError)
+    {
+        if (finalError is RpcRerouteException)
+            call.SetMustRerouteError(); // Owns the $sys.Cancel decision for the reroute case
+        else
+            call.SetError(finalError, context: null, assumeCancelled: true);
     }
 
     // Nested types
 
     private sealed class NewCallTracker
     {
+#if NET9_0_OR_GREATER
         private readonly Lock _lock = new();
+#else
+        private readonly object _lock = new();
+#endif
         private bool _isNotified;
         private TaskCompletionSource<Unit> _whenNotified = TaskCompletionSourceExt.New<Unit>();
 

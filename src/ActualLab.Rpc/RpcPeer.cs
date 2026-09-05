@@ -378,7 +378,8 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     }
 
                     // Processing Handshake
-                    OnHandshake(handshake);
+                    connection.Transport.OnHandshake(handshake, ownHandshake);
+                    OnHandshake(handshake, ownHandshake);
                     var peerChangeKind = handshake.GetPeerChangeKind(lastHandshake);
                     Log.LogInformation(
                         "'{Route}': Handshake succeeded, PeerChangeKind={PeerChangeKind}",
@@ -407,7 +408,6 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
                     if (connectionStateValue.Connection != connection)
                         continue; // Somehow disconnected
 
-                    OutboundCalls.AbortOwnHubCalls(handshake); // Must run before the queued sends
                     OutboundCalls.SendUnsent(); // The calls that queued up while we were away
 
                     if (clientPeer is not null
@@ -550,7 +550,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         RemoteObjects.Abort();
         await SharedObjects.Abort(error).ConfigureAwait(false);
         if (isStopped)
-            await OutboundCalls.Abort(error, assumeCancelled: true).ConfigureAwait(false);
+            OutboundCalls.Abort(error, assumeCancelled: true);
         // Inbound calls are auto-aborted via peerChangedToken from OnRun,
         // which becomes RpcInboundCallContext.CancellationToken.
         InboundCalls.Clear();
@@ -600,7 +600,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     protected virtual RpcHandshake CreateHandshake(int index)
         => new(Id, Versions, Hub.Id, RpcHandshake.CurrentProtocolVersion, index);
 
-    protected virtual void OnHandshake(RpcHandshake handshake)
+    protected virtual void OnHandshake(RpcHandshake handshake, RpcHandshake ownHandshake)
     { }
 
     protected virtual RpcMethodResolver GetServerMethodResolver(RpcHandshake? handshake)

@@ -31,8 +31,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     public bool IsCacheFallbackServed { get; protected set; }
 
     // False only while the call is still waiting for a connection - reconnect processing applies to sent calls alone.
-    // Flipped by SendRegistered, which is what makes it idempotent: a call registered while the
-    // peer is connecting can be sent both by Invoke and by RpcOutboundCallTracker.SendUnsent.
+    // A call registered while the peer is connecting can be sent both by Invoke and by
+    // RpcOutboundCallTracker.SendUnsent; TrySendRegistered's CAS on this flag is what picks one.
     public bool IsSent {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => Volatile.Read(ref _isSent) != 0;
@@ -116,7 +116,8 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         return ResultTask;
     }
 
-    public virtual Exception? GetOwnHubCallError(RpcHandshake handshake)
+    // Overridden by RpcOutboundComputeCall, which owns the error; a plain call has no such rule
+    public virtual Exception? GetOwnHubCallError()
         => null;
 
     // Disconnect handlers - see RpcOutboundCallTracker.HandleDisconnect
@@ -185,6 +186,11 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     {
         if (Peer.Transport is not { } transport)
             return false; // Still unsent, and RpcOutboundCallTracker.SendUnsent will say so
+
+        if (Context.MustNotCallOwnHub && transport is { IsOwnHub: true } && GetOwnHubCallError() is { } error) {
+            SetError(error, context: null, assumeCancelled: false);
+            return false;
+        }
 
         if (Interlocked.Exchange(ref _isSent, 1) != 0)
             return false;
