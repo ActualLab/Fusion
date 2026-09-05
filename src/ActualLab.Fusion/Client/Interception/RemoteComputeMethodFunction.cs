@@ -179,8 +179,9 @@ public abstract class RemoteComputeMethodFunction(
         // transport, sent. ConnectTimeout is enforced by the peer-level disconnect watcher, and the
         // same-service check by RpcOutboundComputeCall.GetOwnHubCallError once the peer handshakes -
         // this one only makes that failure immediate when we already know the answer.
-        var isConnected = peer.ConnectionState.Value.IsConnected(out var handshake, out _);
-        if (isConnected && handshake!.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy)
+        var connectionState = peer.ConnectionState.Value;
+        var isConnected = connectionState.IsConnected();
+        if (connectionState.IsOwnHub && input.Invocation.Proxy is not InterfaceProxy)
             throw Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref);
 
         var cacheInfoCapture = cache is not null
@@ -352,7 +353,15 @@ public abstract class RemoteComputeMethodFunction(
         }
 
         // 5. Get cached key and data
-        cacheInfoCapture.RequireKeyAndValue(out var cacheKey, out var cacheValueOrError);
+        if (!cacheInfoCapture.HasKeyAndValue(out var cacheKey, out var cacheValueOrError)) {
+            // The call failed before it was ever sent, so there is no key to update the cache with.
+            // The value served against it must not stay: invalidate it and let the error surface.
+            const string reason =
+                $"<FusionRpc>.{nameof(ApplyRpcResult)}: the call failed before it was sent";
+            await InvalidateOnError(cachedComputed, error, reason).ConfigureAwait(false);
+            return;
+        }
+
         var cacheValue = cacheValueOrError as RpcCacheValue;
 
         // 6. Re-entering the lock and check if cachedComputed is still consistent
@@ -513,15 +522,8 @@ public abstract class RemoteComputeMethodFunction(
         return Task.Delay(delay, cancellationToken);
     }
 
-    // The with-entry wait: false once CacheFallbackDelay elapses (the caller serves the entry);
-    // reroute, cancellation and the same-service check propagate as before.
     // InvalidateXxx
 
-    // InvalidateWhenReconnected is gone: a served entry is now validated by its
-    // pending call (match -> synchronized in place, different result ->
-    // displaced) instead of being invalidated on reconnect.
-
-    // Completes when the peer transitions to a non-connected state (Handshake is null).
     protected Task InvalidateOnError(Computed computed, Exception? error, string source)
     {
         if (error is RpcRerouteException)

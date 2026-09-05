@@ -61,7 +61,7 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
 
     // A call that came from a service's own proxy must not be routed back to the hub it came from -
     // that is a misconfiguration, and letting it out would call the service on itself.
-    public override Exception GetOwnHubCallError(RpcHandshake handshake)
+    public override Exception GetOwnHubCallError()
         => Fusion.Internal.Errors.RemoteComputeMethodCallFromTheSameService(MethodDef, Peer.Ref);
 
     // A real cache entry is something to serve; a NoCache call (or a key-only capture) has nothing,

@@ -1257,7 +1257,9 @@ Extension methods for `IServiceProvider` to resolve `MomentClockSet`.
 
 ###### `TimeSpanExt`
 
-Extension methods for `TimeSpan` providing clamping, random jitter, and human-readable short string formatting.
+Extension methods for `TimeSpan` providing clamping, random jitter, and human-readable short string formatting,
+plus the timeout convention: `Infinite` (= `TimeSpan.MaxValue`) is the only "never", zero always means
+"instantly", and `AsTimeout()` is the single validating converter.
 
 ### ActualLab.Time.Testing
 
@@ -2319,7 +2321,8 @@ Defines how much detail is retained when tracking invalidation sources.
 
 ###### `RemoteComputedCacheMode` (enum)
 
-Defines caching behavior for remote computed values.
+Defines caching behavior for remote computed values: `Cache`, `NoCache`, or `ReturnDefault`
+(every lookup "hits" the method's default result, and nothing is read or written).
 
 ###### `StateEventKind` (enum)
 

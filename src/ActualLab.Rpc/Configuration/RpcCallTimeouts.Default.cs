@@ -11,12 +11,12 @@ public sealed partial record RpcCallTimeouts
     {
         public static bool UseDebug { get; set; } = Debugger.IsAttached;
 
-        public static RpcCallTimeouts Debug { get; set; } = new(null, 300);
+        public static RpcCallTimeouts Debug { get; set; } = new(double.PositiveInfinity, 300);
         public static RpcCallTimeouts Query { get; set; } = None;
         public static RpcCallTimeouts Command { get; set; } = new(1.5, 10);
         public static RpcCallTimeouts BackendQuery { get; set; } = None;
         public static RpcCallTimeouts BackendCommand { get; set; } = new(300, 300);
-        // public static RpcCallTimeouts Test { get; set; } = new(null, 30) { DelayTimeout = TimeSpan.FromSeconds(10) };
+        // public static RpcCallTimeouts Test { get; set; } = new(double.PositiveInfinity, 30) { DelayTimeout = TimeSpan.FromSeconds(10) };
 
         public static RpcCallTimeouts Get(RpcMethodDef methodDef)
         {

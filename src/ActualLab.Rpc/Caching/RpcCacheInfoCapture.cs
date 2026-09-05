@@ -52,7 +52,15 @@ public sealed class RpcCacheInfoCapture
         [NotNullWhen(true)] out RpcCacheKey? key,
         [NotNullWhen(true)] out object? valueOrError)
     {
-        lock (Call!.Lock) {
+        // Call is set by CaptureKey, i.e. only once the call is sent. Invoke registers before it
+        // sends, so a call can fail - connect timeout, reroute, peer stop - while this is still null.
+        if (Volatile.Read(ref Call) is not { } call) {
+            key = null;
+            valueOrError = null;
+            return false;
+        }
+
+        lock (call.Lock) {
             key = Key;
             valueOrError = ValueOrError;
             return key is not null && valueOrError is not null;
@@ -64,7 +72,8 @@ public sealed class RpcCacheInfoCapture
     {
         if (!HasKeyAndValue(out key!, out valueOrError!))
             throw Errors.InternalError(
-                $"{nameof(RequireKeyAndValue)} is called, but CaptureMode is {CaptureMode} and Key is {Key}.");
+                $"{nameof(RequireKeyAndValue)} is called, but CaptureMode is {CaptureMode}, "
+                + $"Call is {Call}, and Key is {Key}.");
     }
 
     public void CaptureKey(RpcOutboundContext context, RpcOutboundMessage message)

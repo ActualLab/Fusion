@@ -7,7 +7,21 @@ public abstract class RpcTransport(RpcPeer peer, CancellationTokenSource? stopTo
     : ProcessorBase(stopTokenSource), IAsyncEnumerable<RpcInboundMessage>
 {
     public RpcPeer Peer { get; } = peer;
+    // Set by OnHandshake before this transport is exposed, so the send path can read them plainly
+    public RpcHandshake? Handshake { get; private set; }
+    public RpcHandshake? OwnHandshake { get; private set; }
+    public bool IsOwnHub { get; private set; }
     public abstract Task WhenCompleted { get; }
+
+    // Called once per connection, right after the handshakes are exchanged and before the
+    // connection state exposing this transport is published - which is what makes the three
+    // properties above safe to read lock-free from any thread that got here through Peer.Transport.
+    public void OnHandshake(RpcHandshake handshake, RpcHandshake ownHandshake)
+    {
+        Handshake = handshake;
+        OwnHandshake = ownHandshake;
+        IsOwnHub = handshake.RemoteHubId == ownHandshake.RemoteHubId;
+    }
 
     // This method should never throw - errors are reported via message.SendHandler
     public abstract void Send(RpcOutboundMessage message, CancellationToken cancellationToken = default);

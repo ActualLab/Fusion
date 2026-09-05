@@ -49,9 +49,10 @@ public record RpcLimits
     public int ObjectCountLimit { get; init; } = 65536;
     // Call timeout check period
     public RandomTimeSpan CallTimeoutCheckPeriod { get; init; } = TimeSpan.FromSeconds(5).ToRandom(0.2);
-    // How often a disconnected peer looks for outbound calls registered since its last look.
-    // Known deadlines are slept on exactly, so this only bounds how late a *newly registered* call is noticed.
-    // It costs one timer per disconnected peer - a connected one runs no such loop.
+    // How often a disconnected peer wakes up when nothing else did. Registering a call and
+    // rescheduling a reconnect both signal it directly, and known deadlines are slept on exactly,
+    // so this tick is a safety poll: a few comparisons, then back to sleep unless one of those
+    // says otherwise. It costs one timer per disconnected peer - a connected one runs no such loop.
     public RandomTimeSpan DisconnectCheckPeriod { get; init; } = TimeSpan.FromSeconds(1).ToRandom(0.2);
     public int LogDelayedCallLimit { get; init; } = 10;
     // Outbound call summary logging
