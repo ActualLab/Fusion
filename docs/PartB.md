@@ -218,6 +218,7 @@ This is useful for components that may receive multiple render requests but shou
 |--------|------|-------------|
 | `RenderState` | `StateSnapshot` | The last rendered state snapshot |
 | `MustUpdateRenderState(old, new)` | Method | Pure predicate: `true` if the new snapshot should be rendered |
+| `StateEqualityComparer` | `IEqualityComparer<TState>?` | When set, two consecutive error-free snapshots with equal values don't re-render |
 
 ### Default Options
 

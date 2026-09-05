@@ -140,6 +140,7 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `RpcPipeTransport` / `RpcStreamTransport` — length-prefixed framed transports over pipes or streams
 - `RpcPeerConnectionStateKind` (enum) — disconnected, connecting, connected, or terminal peer state
 - `RpcResourceLimitExceededException` — an inbound message, frame, header or count exceeded its ceiling (transient)
+- `RpcTimeoutException` — thrown when any RPC timeout expires; `TimeoutKind` says which one (connect, run, delay, handshake, keep-alive); transient
 
 ## RPC Server — [`ActualLab.Rpc.Server`]
 - `RpcHttpServer` — accepts full-duplex HTTP/2 connections for ASP.NET Core
