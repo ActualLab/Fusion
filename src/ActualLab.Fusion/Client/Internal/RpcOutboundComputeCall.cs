@@ -28,7 +28,7 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
 
     // A real cache entry is something to serve; a NoCache call (or a key-only capture) has nothing,
     // returns false, and so falls through to OnConnectTimeout like any other call would.
-    public override bool OnCacheFallbackDelay(TimeSpan delay)
+    public override bool OnCacheFallbackDelay()
     {
         if (Context.CacheInfoCapture is not { } cacheInfoCapture)
             return false;

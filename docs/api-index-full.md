@@ -1483,7 +1483,7 @@ An ordered collection of `LegacyName` entries, indexed by version for backward c
 
 ###### `RpcCallTimeouts` (record)
 
-Defines connect, run, delay, and reconnect timeouts for outbound RPC calls.
+Defines the connect, run and delay timeouts of an outbound RPC call, plus its cache fallback delay.
 
 ###### `RpcCallType` (record)
 

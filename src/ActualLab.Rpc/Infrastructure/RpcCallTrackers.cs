@@ -83,6 +83,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
     private readonly ConcurrentDictionary<long, RpcOutboundCall> _longLivingCalls = new(HardwareInfo.ProcessorCountPo2, 131);
     private RpcCallStageCounts _reportedInboundCallCounts;
     private RpcCallStageCounts _reportedOutboundCallCounts;
+    private NewCallTracker? _newCallTracker;
     private CpuTimestamp _lastCallMetricsRefreshAt;
     private long _lastId;
 
@@ -100,6 +101,16 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         Calls.TryAdd(call.Id, call); // Must succeed for unique call.Id
         if (call.IsLongLiving)
             _longLivingCalls.TryAdd(call.Id, call);  // Must succeed for unique call.Id
+        Volatile.Read(ref _newCallTracker)?.OnCallRegistered();
+    }
+
+    // Called once the connected state is published, so a call registering concurrently either
+    // is seen here or sees that state itself and sends from RpcOutboundCall.Invoke.
+    public void SendUnsent()
+    {
+        foreach (var call in Calls.Values)
+            if (call is { IsSent: false, ResultTask.IsCompleted: false })
+                call.TrySendRegistered();
     }
 
     public List<RpcOutboundCall> GetSentCalls()
@@ -113,60 +124,96 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         return calls;
     }
 
-    // Started by RpcPeer.OnRun on every non-final disconnect. It owns both deadlines a sent call
-    // has while the peer is away - CacheFallbackDelay, then ConnectTimeout - and only delivers them:
-    // what each one means is up to the call (see RpcOutboundCall.On* handlers).
-    // Returns at once when no sent call has a finite deadline.
-    // One loop per disconnect (not a per-call race) so a connected peer pays nothing per call.
-    // It wakes at the earliest deadline, on reconnect, or when ReconnectsAt moves (the
-    // parked-reconnect shortcut).
+    // Started by RpcPeer.OnRun once per outage. It owns both deadlines a registered call has while
+    // the peer is away and only delivers them: what each one means is up to the call
+    // (see RpcOutboundCall.On* handlers). Unsent calls are in scope too, so RpcOutboundCall never
+    // times itself out and a connected peer runs nothing at all.
+    //
+    // Both deadlines run from the later of the disconnect and the call, so a call issued mid-outage
+    // still gets its full timeout.
+    //
+    // Calls.Count can be large, so a tick that cannot do anything does nothing: the scan runs only
+    // when a call was registered since the last one, a deadline it computed came due, or the peer
+    // rescheduled its reconnect. Known deadlines are slept on exactly; DisconnectCheckPeriod only
+    // bounds how late a newly registered call is noticed, since nothing signals its arrival.
     public async Task HandleDisconnect(RpcPeerConnectionState disconnectedState, CancellationToken cancellationToken)
     {
         var whenConnected = disconnectedState.WhenConnected;
         var clientPeer = Peer as RpcClientPeer;
         var clock = clientPeer?.ReconnectDelayer.Clock ?? Peer.Hub.SystemClock;
         var disconnectedAt = clock.Now;
-        while (!whenConnected.IsCompleted && !cancellationToken.IsCancellationRequested) {
-            var now = clock.Now;
-            var reconnectsAt = clientPeer?.ReconnectsAt;
-            var nextDeadline = Moment.MaxValue;
-            foreach (var call in Calls.Values) {
-                if (!call.IsSent || call.ResultTask.IsCompleted)
-                    continue;
+        var checkPeriod = Limits.DisconnectCheckPeriod;
+        var newCallTracker = new NewCallTracker();
+        var scannedReconnectsAt = (AsyncState<Moment>?)null;
+        var nextDeadline = Moment.MaxValue;
+        Volatile.Write(ref _newCallTracker, newCallTracker);
+        try {
+            while (!whenConnected.IsCompleted && !cancellationToken.IsCancellationRequested) {
+                var now = clock.Now;
+                var reconnectsAt = clientPeer?.ReconnectsAt;
+                // TryConsumeNewCalls must run before the scan, and before the cheaper checks - it consumes
+                if (newCallTracker.TryConsumeNewCalls() || now >= nextDeadline || !ReferenceEquals(reconnectsAt, scannedReconnectsAt)) {
+                    scannedReconnectsAt = reconnectsAt;
+                    nextDeadline = Moment.MaxValue;
+                    foreach (var call in Calls.Values) {
+                        if (whenConnected.IsCompleted)
+                            break; // The peer is back - its response, not our deadline, decides now
 
-                var timeouts = call.MethodDef.OutboundCallTimeouts;
-                // The fallback comes first: a call that serves it is exempt from ConnectTimeout,
-                // and one that cannot (e.g. NoCache) falls through to it.
-                if (!call.IsCacheFallbackServed && IsDue(timeouts.CacheFallbackDelay))
-                    call.OnCacheFallbackDelay(timeouts.CacheFallbackDelay);
-                if (!call.IsCacheFallbackServed && IsDue(timeouts.ConnectTimeout))
-                    call.OnConnectTimeout(timeouts.ConnectTimeout);
-            }
-            if (nextDeadline == Moment.MaxValue)
-                return;
+                        if (call.ResultTask.IsCompleted)
+                            continue;
 
-            using var delayCts = cancellationToken.CreateLinkedTokenSource();
-            var delay = (nextDeadline - now).Clamp(TimeSpan.FromMilliseconds(32), TimeSpan.FromDays(1));
-            var delayTask = Task.Delay(delay, delayCts.Token);
-            var whenReconnectsAtChanged = reconnectsAt?.WhenNext(delayCts.Token)
-                ?? TaskExt.NeverEnding(delayCts.Token);
-            await Task.WhenAny(whenConnected, delayTask, whenReconnectsAtChanged).SilentAwait(false);
-            delayCts.CancelAndDisposeSilently();
-            continue;
+                        var startedAt = now - call.StartedAt.Elapsed;
+                        var since = startedAt > disconnectedAt ? startedAt : disconnectedAt;
+                        var timeouts = call.MethodDef.OutboundCallTimeouts;
+                        var isConnectDue = IsDue(since, timeouts.ConnectTimeout);
+                        // The fallback gets the first refusal, and also gets it when only ConnectTimeout
+                        // is due - failing a call that has something to serve would help no one.
+                        // A call that serves it is exempt; one that cannot (e.g. NoCache) falls through.
+                        if (!call.IsCacheFallbackServed && (isConnectDue || IsDue(since, timeouts.CacheFallbackDelay)))
+                            TryHandle(call, static c => c.OnCacheFallbackDelay());
+                        if (!call.IsCacheFallbackServed && isConnectDue)
+                            TryHandle(call, c => c.OnConnectTimeout(timeouts.ConnectTimeout));
+                    }
+                }
 
-            // Due now, or unreachable before the peer next tries to reconnect; otherwise it
-            // contributes the wake-up time.
-            bool IsDue(TimeSpan timeout) {
-                if (timeout == TimeSpanExt.Infinite)
+                using var delayCts = cancellationToken.CreateLinkedTokenSource();
+                var delay = TimeSpanExt.Min(nextDeadline - now, checkPeriod.Next());
+                var delayTask = Task.Delay(delay.Clamp(TimeSpan.FromMilliseconds(32), TimeSpan.FromDays(1)), delayCts.Token);
+                var whenAny = reconnectsAt is null
+                    ? Task.WhenAny(whenConnected, delayTask)
+                    : Task.WhenAny(whenConnected, delayTask, reconnectsAt.WhenNext(delayCts.Token));
+                await whenAny.SilentAwait(false);
+                delayCts.CancelAndDisposeSilently();
+                continue;
+
+                // Due now, or unreachable before the peer next tries to reconnect; otherwise it
+                // contributes the wake-up time.
+                bool IsDue(Moment since, TimeSpan timeout) {
+                    if (timeout == TimeSpanExt.Infinite)
+                        return false;
+
+                    var deadline = since + timeout;
+                    if (deadline <= now || (reconnectsAt is not null && reconnectsAt.Value > deadline))
+                        return true;
+
+                    if (deadline < nextDeadline)
+                        nextDeadline = deadline;
                     return false;
+                }
+            }
+        }
+        finally {
+            Interlocked.CompareExchange(ref _newCallTracker, null, newCallTracker);
+        }
+        return;
 
-                var deadline = disconnectedAt + timeout;
-                if (deadline <= now || (reconnectsAt is not null && reconnectsAt.Value > deadline))
-                    return true;
-
-                if (deadline < nextDeadline)
-                    nextDeadline = deadline;
-                return false;
+        // A throwing handler must not cost every other call its deadlines
+        void TryHandle(RpcOutboundCall call, Action<RpcOutboundCall> handler) {
+            try {
+                handler.Invoke(call);
+            }
+            catch (Exception e) {
+                Peer.Log.LogError(e, "'{Route}': disconnect handler failed for call {Call}", Peer.Route, call);
             }
         }
     }
@@ -285,9 +332,10 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 }
 
                 // Resend delayed calls if requested by the handler
-                if (callsToResend.Count > 0)
+                if (callsToResend.Count > 0 && Peer.Transport is { } transport) {
                     foreach (var call in callsToResend)
-                        call.SendRegistered();
+                        call.SendRegistered(transport);
+                }
 
                 RpcInstruments.RegisterClientCallEvents(
                     delayedCalls.Count, callsToResend.Count, timeoutCallCount);
@@ -367,10 +415,13 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
         return;
 
         void Resend(List<RpcOutboundCall> calls) {
+            if (Peer.Transport is not { } transport)
+                return;
+
             foreach (var call in calls) {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (call.GetReconnectStage(isPeerChanged: true) is not null)
-                    call.SendRegistered();
+                    call.SendRegistered(transport);
             }
         }
 
@@ -431,6 +482,32 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                 break;
 
             await Task.Delay(Limits.CallAbortCyclePeriod).ConfigureAwait(false);
+        }
+    }
+
+    // Nested types
+
+    // Published by HandleDisconnect while it runs, so Register can tell it there is something new
+    // to scan. Its absence is what makes a connected peer free: no flag to touch, just a null read.
+    private sealed class NewCallTracker
+    {
+        private int _hasNewCalls;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCallRegistered()
+        {
+            // Only the first call after a scan writes; the rest of a burst just read
+            if (Volatile.Read(ref _hasNewCalls) == 0)
+                Interlocked.CompareExchange(ref _hasNewCalls, 1, 0);
+        }
+
+        public bool TryConsumeNewCalls()
+        {
+            if (Volatile.Read(ref _hasNewCalls) == 0)
+                return false;
+
+            Volatile.Write(ref _hasNewCalls, 0);
+            return true;
         }
     }
 }

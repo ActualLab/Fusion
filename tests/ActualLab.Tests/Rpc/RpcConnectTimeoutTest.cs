@@ -191,9 +191,11 @@ public class RpcConnectTimeoutTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(0.5),
             "a reconnect parked past the deadline fails a sent call at once");
 
+        // A call issued mid-outage is noticed by the peer-level watcher on its next look, so it
+        // fails within a DisconnectCheckPeriod rather than instantly
         sw.Restart();
         await AssertConnectTimeout(() => client.DelayWithConnectTimeout(TimeSpan.FromMilliseconds(100)));
-        sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(0.5),
+        sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2),
             "and a call issued while it is parked, too");
 
         _reconnectDelayer.ParkDelay = null;
