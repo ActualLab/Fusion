@@ -51,21 +51,19 @@ public class TestRunner(IServiceProvider services) : WorkerBase
             var useFusion = UseFusionSampler.Next();
             var mustIncrement = IncrementSampler.Next();
             var key = rnd.Next(CounterCount);
-            var callKind = (useFusion ? nameof(IFusionCounter) : nameof(ISimpleCounter))
-                + (mustIncrement ? ".Increment" : ".Get");
+            var callKind = GetCallKind(useFusion, mustIncrement);
+            var prefix = $"{OwnHost} W{workerId}: call #{callId} {callKind}({key})";
 
             TestCallOutcome outcome;
             try {
                 outcome = mustIncrement
                     ? await Increment(useFusion, key, cancellationToken).ConfigureAwait(false)
-                    : await Get(workerId, callId, useFusion, key, cancellationToken).ConfigureAwait(false);
+                    : await Get(prefix, useFusion, key, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
                 // Counted and logged, but not fatal: one failed call shouldn't end the worker
                 outcome = TestCallOutcome.Error;
-                Console.WriteLine(
-                    $"{Prefix(workerId, callId, callKind, key)}: {e.GetType().Name}({e.Message})"
-                        .PastelBg(ConsoleColor.DarkRed));
+                Console.WriteLine($"{prefix}: {e.GetType().Name}({e.Message})".PastelBg(ConsoleColor.DarkRed));
             }
             TestStats.Register(callKind, outcome);
 
@@ -83,8 +81,20 @@ public class TestRunner(IServiceProvider services) : WorkerBase
         return TestCallOutcome.Ok;
     }
 
+    private string GetCallKind(bool useFusion, bool mustIncrement)
+    {
+        var service = useFusion ? nameof(IFusionCounter) : nameof(ISimpleCounter);
+        if (mustIncrement)
+            return $"{service}.Increment"; // Commands aren't cached, so the host's cache doesn't split them
+
+        // A Fusion Get runs ComputeCachedOrRpc on a host with a RemoteComputedCache and ComputeRpc
+        // without one - different enough that lumping the two together hides which one misbehaves
+        var cacheSuffix = useFusion && OwnHost.UseRemoteComputedCache ? "+Cache" : "";
+        return $"{service}.Get{cacheSuffix}";
+    }
+
     private async Task<TestCallOutcome> Get(
-        int workerId, int callId, bool useFusion, int key, CancellationToken cancellationToken)
+        string prefix, bool useFusion, int key, CancellationToken cancellationToken)
     {
         var computed = await Computed.TryCapture(
             () => useFusion
@@ -124,8 +134,7 @@ public class TestRunner(IServiceProvider services) : WorkerBase
             isCorrect = IsCorrect(counter, trueCounter);
         }
 
-        var callKind = (useFusion ? nameof(IFusionCounter) : nameof(ISimpleCounter)) + ".Get";
-        var message = $"{Prefix(workerId, callId, callKind, key)} -> {counter}";
+        var message = $"{prefix} -> {counter}";
         if (!isCorrect) {
             var recency = counter.Counter.UpdatedAt.Elapsed;
             Console.WriteLine(
@@ -140,7 +149,4 @@ public class TestRunner(IServiceProvider services) : WorkerBase
         Console.WriteLine($"{message}: {fixupActions.ToDelimitedString()}".PastelBg(ConsoleColor.DarkYellow));
         return TestCallOutcome.Warn;
     }
-
-    private string Prefix(int workerId, int callId, string callKind, int key)
-        => $"{OwnHost} W{workerId}: call #{callId} {callKind}({key})";
 }
