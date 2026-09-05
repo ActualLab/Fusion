@@ -283,9 +283,10 @@ export abstract class RpcPeer {
 
     /** Fail outbound calls whose per-call {@link RpcCallTimeouts} elapsed —
      *  the connect timeout while a call still awaits the wire, the run timeout
-     *  once it has been sent. Mirrors .NET `RpcOutboundCallTracker.Maintain`
-     *  (RpcCallTrackers.cs:108-207). Calls without timeouts (queries) never
-     *  time out here. */
+     *  once it has been sent, and the connect timeout again for any pending call while the
+     *  peer is away. Mirrors .NET `RpcOutboundCallTracker.HandleDisconnect` (ConnectTimeout,
+     *  per outage) plus `Maintain` (RunTimeout, per connection). Calls without timeouts
+     *  (queries) never time out here. */
     private _maintainOutboundCalls(): void {
         const now = Date.now();
         // Run timeouts apply only while the link looks alive: .NET's `Maintain` loop is
@@ -411,6 +412,8 @@ export abstract class RpcPeer {
             // misses the case where the conn closes mid-handshake (state
             // still `Connecting`) or was set up via `connectWith` (state
             // still `Disconnected`).
+            if (this._isConnected)
+                this._disconnectedAt = Date.now(); // The outage starts here, not in _setConnectionState
             this._isConnected = false;
             // Mirrors RpcPeer.cs:524-526 — log disconnect with reason if present.
             if (ev.reason)

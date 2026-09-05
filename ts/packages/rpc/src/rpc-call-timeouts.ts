@@ -13,7 +13,8 @@ export class RpcCallTimeouts {
     /** Command default: 1.5 s connect / 10 s run (.NET `RpcCallTimeouts.Default.Command`). */
     static readonly Command = new RpcCallTimeouts(1_500, 10_000);
 
-    /** Max time a call may wait for the connection before it is sent. */
+    /** Max time a call may wait for a connection - before it is sent, and again for the
+     *  duration of any outage it is still pending through. */
     readonly connectTimeoutMs: number;
     /** Max time a sent call may stay unanswered before it is failed. */
     readonly runTimeoutMs: number;

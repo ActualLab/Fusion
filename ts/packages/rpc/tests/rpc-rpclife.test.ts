@@ -225,7 +225,7 @@ describe('R12 — outbound call timeouts', () => {
         await delay(10);
 
         const Def = defineRpcService('StuckOfflineConnect', {
-            command: { args: [], timeouts: new RpcCallTimeouts(100, Infinity) },
+            command: { args: [], timeouts: new RpcCallTimeouts(200, Infinity) },
         });
         pair.serverHub.addService(Def, {
             command: () => new Promise(() => { /* never resolves */ }),
@@ -233,12 +233,14 @@ describe('R12 — outbound call timeouts', () => {
         const svc = pair.clientHub.addClient<{ command(): Promise<unknown> }>(pair.clientPeer, Def);
 
         const result = svc.command();
-        await delay(30); // Long enough for the call to be sent
+        await delay(150); // In flight for most of connectTimeoutMs before the link drops
+        const disconnectedAt = Date.now();
         pair.clientPeer.disconnect();
 
         // A sent call waits for the same reconnect an unsent one does, so ConnectTimeout caps it
-        // too - measured from the disconnect, not from when the call started.
+        // too - and the deadline runs from the disconnect, so those 150ms don't count against it.
         await expect(result).rejects.toThrow(/connect timeout/);
+        expect(Date.now() - disconnectedAt).toBeGreaterThanOrEqual(180);
 
         pair.close();
     });

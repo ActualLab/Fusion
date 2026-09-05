@@ -7,9 +7,10 @@
 //   RpcInboundCall (298 lines) — tracks an inbound call: deserialization,
 //     middleware-chain invocation, cancellation via linked CTS, stage-based
 //     re-processing for reconnection, sending the result back.
-//   RpcOutboundCallTracker (255 lines) — thread-safe ConcurrentDictionary of
-//     outbound calls with: Maintain() loop (timeout monitoring + logging),
-//     Reconnect() protocol (stage-based call resumption), Abort(), TryReroute().
+//   RpcOutboundCallTracker — thread-safe ConcurrentDictionary of outbound calls with:
+//     HandleDisconnect() (per-outage watcher owning ConnectTimeout), Maintain() loop
+//     (RunTimeout/DelayTimeout + logging), Reconnect() protocol (stage-based call
+//     resumption), Abort(), TryReroute().
 //   RpcInboundCallTracker (64 lines) — ConcurrentDictionary, GetOrRegister,
 //     Unregister, Clear.
 //
@@ -39,8 +40,10 @@
 //     drops the peer from the hub map synchronously instead of keeping it for PeerRemoveDelay.
 //   - TryReroute() — checks if the call's peer route has changed (load-balancer
 //     rerouting) and sets RpcRerouteException.  TS has no routing layer.
-//   - IsLongLiving / _longLivingCalls — separate tracking for calls that outlive
-//     normal timeouts (e.g. streaming).  Not needed without RpcStream.
+//   - IsLongLiving / _longLivingCalls — .NET sets this on compute calls only; it governs
+//     whether completing a call releases its cancellation handler and trace
+//     (CompleteAndUnregister vs CompleteKeepRegistered), not whether timeouts apply -
+//     HandleDisconnect and Maintain both iterate every call. TS has no equivalent.
 //   - RpcInboundCall: middleware-chain invocation, deserialization with polymorphic
 //     argument handling, stage-based TryReprocess, CancellationTokenSource per
 //     call.  TS inbound calls are dispatched directly by RpcServiceHost; no
