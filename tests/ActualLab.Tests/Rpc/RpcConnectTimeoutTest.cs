@@ -1,4 +1,6 @@
+using ActualLab.Interception;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
 
@@ -204,6 +206,24 @@ public class RpcConnectTimeoutTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         await connection.Connect();
         (await client.DelayWithConnectTimeout(TimeSpan.FromMilliseconds(100)).WaitAsync(Timeout))
             .Should().Be(TimeSpan.FromMilliseconds(100));
+    }
+
+    [Fact]
+    public async Task ServerPeerOutageMustScanOnFirstPassTest()
+    {
+        await using var services = CreateServices();
+        // A server peer has no ReconnectsAt, so the watcher's "did the reconnect move?" trigger is
+        // always false for it - without an explicit first pass nothing would ever scan its calls
+        var peer = new RpcServerPeer(services.RpcHub(), RpcRef.NewServer("test-client-id").Route);
+        var method = services.RpcHub().ServiceRegistry[typeof(ITestRpcService)]["DelayWithConnectTimeout:2"];
+        var call = new RpcOutboundContext(peer)
+            .PrepareCall(method, ArgumentList.New(TimeSpan.FromMilliseconds(10), default(CancellationToken)))!;
+        var resultTask = call.Invoke();
+
+        using var cts = new CancellationTokenSource();
+        _ = peer.OutboundCalls.HandleDisconnect(new RpcPeerConnectionState(), cts.Token);
+        await AssertConnectTimeout(() => resultTask.WaitAsync(Timeout));
+        await cts.CancelAsync();
     }
 
     // Private methods
