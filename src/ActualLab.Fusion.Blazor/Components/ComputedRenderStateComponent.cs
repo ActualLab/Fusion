@@ -27,7 +27,7 @@ public abstract class ComputedRenderStateComponent<TState> : ComputedStateCompon
 
     protected override bool ShouldRender()
     {
-        if (!IsRenderStateChanged())
+        if (!TryUpdateRenderState(UntypedState.Snapshot))
             return false;
 
         var computed = RenderState.Computed;
@@ -35,13 +35,10 @@ public abstract class ComputedRenderStateComponent<TState> : ComputedStateCompon
             return true;
 
         // Inconsistent state is rare, so we make this check at last
-        return (Options & ComputedStateComponentOptions.RenderInconsistentState) != 0;
+        return Options.HasFlag(ComputedStateComponentOptions.RenderInconsistentState);
     }
 
-    protected bool IsRenderStateChanged()
-        => IsRenderStateChanged(UntypedState.Snapshot);
-
-    protected bool IsRenderStateChanged(StateSnapshot renderState)
+    protected bool TryUpdateRenderState(StateSnapshot renderState)
     {
         if (ReferenceEquals(_renderState, renderState))
             return false;
