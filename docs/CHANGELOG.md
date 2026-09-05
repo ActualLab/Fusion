@@ -11,6 +11,85 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.4.3+eec6e3076 | npm: 14.4.3
+
+Release date: 2026-09-05
+
+**A disconnected client can now keep serving what it already has, and `ConnectTimeout` finally
+governs reconnections.** A remote compute call with a cached value no longer waits for the peer to
+come back: once it stays away for `CacheFallbackDelay` (default `0` — serve at once), the cached
+value is returned and the call stays registered to validate it, so a "match" reply confirms the
+value in place and a different result displaces it. `ConnectTimeout` now covers every registered
+call while the peer is away — including one that was already sent — instead of only a call waiting
+for its first connection, and it applies to reconnections, not just the initial connect. Both
+deadlines are delivered by one watcher per outage rather than a per-call wait, so a connected peer
+runs no timeout machinery at all. npm moves from `14.3.34` to `14.4.3`, carrying the same
+sent-call `ConnectTimeout` rule.
+
+### Breaking Changes
+
+- **`MustRenderAfterEvent` now defaults to `true` for most stateful components.**
+  `StatefulComponentBase` no longer sets it to `false`; `ComputedRenderStateComponent` is the only
+  one that does. So `ComputedStateComponent<T>`, `MixedStateComponent<,>` and anything else derived
+  from `StatefulComponentBase` call `StateHasChanged()` after every event handler again. Set
+  `MustRenderAfterEvent = false` in the component's constructor to keep the old behavior.
+- **`ComputedRenderStateComponent.IsRenderStateChanged()` is replaced by
+  `MustUpdateRenderState(oldRenderState, newRenderState)`** — a pure predicate that also owns the
+  consistency / `RenderInconsistentState` check. `ShouldRender` is now the only writer of
+  `RenderState`, so the snapshot advances only when a render actually happens.
+- **`RpcCallTimeouts` validates its arguments.** `double.NaN` no longer means "no timeout" — pass
+  `double.PositiveInfinity` (or `null`) instead — and negative values throw
+  `ArgumentOutOfRangeException` rather than being clamped to zero. `double.NaN` keeps its "use the
+  default" meaning in `[RpcMethod]` / `[ComputeMethod]` attributes.
+- **`RpcPeer.OnHandshake(RpcHandshake)` is now `OnHandshake(RpcHandshake handshake, RpcHandshake
+  ownHandshake)`** — update overrides.
+- **Removed**: `ComputedOptions.HasMinCacheDuration`, `HasInvalidationDelay` and
+  `HasTransientErrorInvalidationDelay`; `RpcOutboundCallOptions.ToTimeout(double?)`;
+  `RpcLimits.CallAbortCyclePeriod`; `RpcOutboundCallTracker.AbortOwnHubCalls`.
+  `RpcOutboundCallTracker.Abort` is now `void` (a single sweep), `Register` returns `bool`, and
+  `RpcOutboundCall.SendRegistered(RpcTransport)` is now `ResendRegistered()`.
+
+### Added
+
+- `RemoteComputedCacheMode.ReturnDefault` — a cache mode that behaves like `Cache` except every
+  lookup "hits" with `default(T)` and nothing is read from or written to the cache. Lets a client
+  render immediately from a placeholder and replace it when the real value arrives, with no cache
+  store registered.
+- `RpcCallTimeouts.CacheFallbackDelay` — how long a call with something to fall back to waits for a
+  disconnected peer before serving it. Zero (the default) serves at once; the call never fails here.
+  Configurable per method via `[RpcMethod(CacheFallbackDelay = ...)]`.
+- `RpcTimeoutException` (a transient `TimeoutException`) with `RpcTimeoutKind` — `Connect`, `Run`,
+  `Delay`, `Handshake`, `KeepAlive`, or `Unknown` for one rebuilt from a remote error. RPC timeouts
+  previously threw a bare `TimeoutException`, so existing `catch` blocks still match.
+- `TimeSpanExt.Infinite` (= `TimeSpan.MaxValue`) and `AsTimeout()`, the single validating converter
+  behind the timeout convention below. `ToShortString()` prints `inf` / `-inf`.
+- `RpcLimits.DisconnectCheckPeriod` — safety-poll period of the per-outage watcher, which runs only
+  while a peer is disconnected.
+- `RpcTransport.Handshake`, `OwnHandshake` and `IsOwnHub`, set once per connection by `OnHandshake`.
+- `ComputedRenderStateComponent.StateEqualityComparer` — when set, two consecutive error-free
+  snapshots with equal values don't re-render.
+
+### Changed
+
+- **One "no timeout" value.** `TimeSpanExt.Infinite` (= `TimeSpan.MaxValue`) is the only "never",
+  and zero always means "instantly" — it is no longer overloaded to mean "infinite" anywhere.
+- **Calls are never held back waiting for a connection.** An outbound call is registered and sent if
+  there is a transport; otherwise it is sent when the peer connects. Rerouting, cancellation and
+  timeouts all reach it as an error on its result rather than by unblocking a wait.
+- A call registered on a peer that has already rerouted or terminated is completed rather than left
+  pending — with a reroute error where the route changed, which for a compute call means
+  invalidation and a retry on the new target.
+
+### Fixed
+
+- `RpcPeerStateMonitor` reported a meaningless cancellation instead of the peer's terminal error
+  when the peer stopped before the monitor read its state — so a terminal failure such as an
+  unsupported serialization format never surfaced to `LastError`.
+- `TimeSpanExt.ToShortString(TimeSpan.MinValue)` overflowed on `Math.Abs(long.MinValue)`.
+- **TypeScript**: a call that was already sent when the connection dropped was capped by no timeout
+  at all — the connect rule only covered unsent calls and the run rule only applied while
+  connected — so it waited indefinitely for reconnect and replay.
+
 ## 14.3.40+2dc3129be | npm: 14.3.34
 
 Release date: 2026-09-03
