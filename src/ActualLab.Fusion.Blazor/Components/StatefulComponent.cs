@@ -33,7 +33,6 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
 
     protected StatefulComponentBase()
     {
-        MustRenderAfterEvent = false; // Typically these components render only after State change
         StateChanged = (_, _) => {
             if (State is IHasDisposeStatus { IsDisposed: true })
                 return;
