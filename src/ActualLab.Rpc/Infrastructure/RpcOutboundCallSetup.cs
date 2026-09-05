@@ -19,6 +19,7 @@ public sealed class RpcOutboundCallSetup
     public readonly RpcRoutingMode RoutingMode;
     public RpcHeader[]? Headers { get; init; } // You typically shouldn't set it!
     public RpcCacheInfoCapture? CacheInfoCapture { get; init; }
+    public bool MustNotCallOwnHub { get; init; }
     public RpcOutboundContext? ProducedContext { get; private set; } // Set by ProduceContext
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -56,6 +57,7 @@ public sealed class RpcOutboundCallSetup
         context.RoutingMode = value.RoutingMode;
         if (value.CacheInfoCapture is not null)
             context.CacheInfoCapture = value.CacheInfoCapture;
+        context.MustNotCallOwnHub = value.MustNotCallOwnHub;
         value.ProducedContext = context;
         return context;
     }

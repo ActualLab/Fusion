@@ -23,22 +23,11 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
                 : RpcCallStage.ResultReady
             : 0;
 
+    // Read-only peek (no exchange) used only by a Debug.Assert verifying the hand-off was consumed.
+    public bool IsHandOffPending => Volatile.Read(ref _handOffState) != 0;
+
     // ReSharper disable once InconsistentlySynchronizedField
     public Task<string> WhenInvalidated => WhenInvalidatedSource.Task;
-
-    // A real cache entry is something to serve; a NoCache call (or a key-only capture) has nothing,
-    // returns false, and so falls through to OnConnectTimeout like any other call would.
-    public override bool OnCacheFallbackDelay()
-    {
-        if (Context.CacheInfoCapture is not { } cacheInfoCapture)
-            return false;
-        if (cacheInfoCapture.CacheEntry is not { } cacheEntry || ReferenceEquals(cacheEntry, RpcCacheEntry.RequestHash))
-            return false;
-
-        cacheInfoCapture.TrySetCacheFallback();
-        IsCacheFallbackServed = true;
-        return true;
-    }
 
     protected RpcOutboundComputeCall(RpcOutboundContext context) : base(context)
         => IsLongLiving = true;
@@ -48,9 +37,6 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
 
     public bool TryConsumeHandOff()
         => Interlocked.Exchange(ref _handOffState, 0) == 1;
-
-    // Read-only peek (no exchange) used only by a Debug.Assert verifying the hand-off was consumed.
-    public bool IsHandOffPending => Volatile.Read(ref _handOffState) != 0;
 
     public override int? GetReconnectStage(bool isPeerChanged)
     {
@@ -71,6 +57,25 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
             StartedAt = CpuTimestamp.Now;
             return completedStage;
         }
+    }
+
+    // A remote compute call that came from a service's own proxy must not be routed back to the hub
+    // it came from - that is a misconfiguration, and letting it out would call the service on itself.
+    public override Exception GetOwnHubCallError(RpcHandshake handshake)
+        => Fusion.Internal.Errors.RemoteComputeMethodCallFromTheSameService(MethodDef, Peer.Ref);
+
+    // A real cache entry is something to serve; a NoCache call (or a key-only capture) has nothing,
+    // returns false, and so falls through to OnConnectTimeout like any other call would.
+    public override bool OnCacheFallbackDelay()
+    {
+        if (Context.CacheInfoCapture is not { } cacheInfoCapture)
+            return false;
+        if (cacheInfoCapture.CacheEntry is not { } cacheEntry || ReferenceEquals(cacheEntry, RpcCacheEntry.RequestHash))
+            return false;
+
+        cacheInfoCapture.TrySetCacheFallback();
+        IsCacheFallbackServed = true;
+        return true;
     }
 
     public override void SetResult(object? result, RpcInboundContext? context)

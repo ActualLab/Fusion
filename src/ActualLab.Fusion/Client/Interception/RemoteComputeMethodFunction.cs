@@ -175,51 +175,32 @@ public abstract class RemoteComputeMethodFunction(
         var existingRemoteComputed = existing as IRemoteComputed;
         var existingCacheEntry = existingRemoteComputed?.CacheEntry;
 
-        Task whenConnected;
-        if (!peer.ConnectionState.Value.IsConnected(out var handshake, out _)) {
-            // Not connected at call time.
-            // - No entry: the peer-level wait applies ConnectTimeout and throws on expiry.
-            // - With an entry: wait CacheFallbackDelay for a fresh value, then serve the entry
-            //   (the else branch) - never an error.
-            if (existingCacheEntry is null)
-                whenConnected = WhenConnectedCheckedAsync(
-                    input, peer, RpcMethodDef.OutboundCallTimeouts.ConnectTimeout, cancellationToken);
-            else if (await WhenReconnectedChecked(input, peer, cancellationToken).ConfigureAwait(false))
-                whenConnected = Task.CompletedTask;
-            else {
-                // Serve-stale-on-disconnect: the peer didn't come back within CacheFallbackDelay, so the
-                // cached value is served now, and the call validating it goes out once the peer is back.
-                // ApplyRpcUpdate waits for that with no timeout, then either confirms the value in place
-                // (the server answers "match") or displaces it with the fresh one.
-                var staleComputed = NewStaleComputed(input, existingRemoteComputed!, "connection_check");
-                // Suppressed execution context - see ComputeCachedOrRpc
-                _ = ExecutionContextExt.Start(
-                    ExecutionContextExt.Default,
-                    () => ApplyRpcUpdate(input, cache!, staleComputed, peer));
-                return staleComputed;
-            }
-        }
-        else
-            whenConnected = handshake.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy
-                ? Task.FromException(Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref))
-                : Task.CompletedTask;
-        if (!whenConnected.IsCompletedSuccessfully)
-            await whenConnected.ConfigureAwait(false); // May throw RpcRerouteException!
+        // The call is never held back waiting for a connection: it is registered and, if there is a
+        // transport, sent. ConnectTimeout is enforced by the peer-level disconnect watcher, and the
+        // same-service check by RpcOutboundComputeCall.GetConnectionError once the peer handshakes -
+        // this one only makes that failure immediate when we already know the answer.
+        var isConnected = peer.ConnectionState.Value.IsConnected(out var handshake, out _);
+        if (isConnected && handshake!.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy)
+            throw Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref);
 
         var cacheInfoCapture = cache is not null
             ? new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash)
             : null;
         var sendTask = SendRpcCall(input, peer, cacheInfoCapture, cancellationToken);
 
-        // In-flight call with an entry: the sent call raises WhenCacheFallback once the peer stays away
-        // for CacheFallbackDelay (RpcOutboundComputeCall.OnCacheFallbackDelay, driven by the peer-level
-        // disconnect watcher). The call is NOT abandoned then - it stays registered, still carrying the
+        // A call with an entry raises WhenCacheFallback once the peer stays away for
+        // CacheFallbackDelay (RpcOutboundComputeCall.OnCacheFallbackDelay, driven by the peer-level
+        // disconnect watcher) - whether it was sent or is still queued, which is why the two cases
+        // read the same here. The call is NOT abandoned then: it stays registered, still carrying the
         // entry's hash, and ApplyRpcResult applies its eventual response to the value served here.
         if (existingCacheEntry is not null && !sendTask.IsCompleted) {
             var sendTaskAsTask = sendTask.AsTask();
             var winner = await Task.WhenAny(sendTaskAsTask, cacheInfoCapture!.WhenCacheFallback).ConfigureAwait(false);
             if (winner != sendTaskAsTask) {
-                var staleComputed = NewStaleComputed(input, existingRemoteComputed!, "active_call");
+                // The operation tag keeps telling the two apart: a call that never left because the
+                // peer was already down, vs one whose connection died under it
+                var staleComputed = NewStaleComputed(
+                    input, existingRemoteComputed!, isConnected ? "active_call" : "connection_check");
                 // Suppressed execution context - see ComputeCachedOrRpc
                 _ = ExecutionContextExt.Start(
                     ExecutionContextExt.Default,
@@ -311,22 +292,8 @@ public abstract class RemoteComputeMethodFunction(
         if (delayTask is { IsCompleted: false })
             await delayTask.SilentAwait(false);
 
-        // 1. Await for the connection - with no timeout: a background validation already
-        // has a value to show, so no ConnectTimeout may turn it into an error.
-        var whenConnected = WhenConnectedChecked(input, peer, TimeSpanExt.Infinite);
-        if (!whenConnected.IsCompletedSuccessfully) { // Slow path
-            try {
-                await whenConnected.ConfigureAwait(false); // May throw RpcRerouteException!
-            }
-            catch (Exception whenConnectedError) {
-                const string reason =
-                    $"<FusionRpc>.{nameof(ApplyRpcUpdate)}: {nameof(WhenConnectedChecked)} failure";
-                await InvalidateOnError(cachedComputed, whenConnectedError, reason).ConfigureAwait(false);
-                return;
-            }
-        }
-
-        // 2. Send the RPC call
+        // 1. Send the RPC call - it waits for the connection by staying registered, not by
+        // blocking here, and reroute or a same-service peer reaches it as an error on its result.
         var existingCacheEntry = ((IRemoteComputed)cachedComputed).CacheEntry;
         var cacheInfoCapture = new RpcCacheInfoCapture(existingCacheEntry ?? RpcCacheEntry.RequestHash);
         var sendTask = SendRpcCall(input, peer, cacheInfoCapture, default);
@@ -447,6 +414,8 @@ public abstract class RemoteComputeMethodFunction(
         try {
             var settings = new RpcOutboundCallSetup(peer) {
                 CacheInfoCapture = cacheInfoCapture,
+                // A service's own proxy must never reach the hub it came from - see GetConnectionError
+                MustNotCallOwnHub = invocation.Proxy is not InterfaceProxy,
             };
             using (settings.Activate()) {
                 // No "await" inside this block!
@@ -547,53 +516,6 @@ public abstract class RemoteComputeMethodFunction(
 
     // The with-entry wait: false once CacheFallbackDelay elapses (the caller serves the entry);
     // reroute, cancellation and the same-service check propagate as before.
-    protected async Task<bool> WhenReconnectedChecked(
-        ComputeMethodInput input, RpcPeer peer, CancellationToken cancellationToken)
-    {
-        var delay = RpcMethodDef.OutboundCallTimeouts.CacheFallbackDelay;
-        if (delay == TimeSpan.Zero)
-            return false; // The default: serve the entry without waiting at all
-
-        RpcPeerConnectionState connectionState;
-        try {
-            // The delay is the only timeout in play here, so a Connect-kind
-            // RpcTimeoutException can only be the one this wait produced
-            connectionState = await peer
-                .WhenConnectedOrReroute(delay, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (RpcTimeoutException e) when (e.TimeoutKind == RpcTimeoutKind.Connect) {
-            return false;
-        }
-        ThrowIfSameService(input, peer, connectionState.Handshake!);
-        return true;
-    }
-
-    protected Task WhenConnectedChecked(
-        ComputeMethodInput input, RpcPeer peer, TimeSpan connectTimeout, CancellationToken cancellationToken = default)
-    {
-        if (!peer.ConnectionState.Value.IsConnected(out var handshake, out _))
-            return WhenConnectedCheckedAsync(input, peer, connectTimeout, cancellationToken);
-
-        return handshake.RemoteHubId == RpcHub.Id && input.Invocation.Proxy is not InterfaceProxy
-            ? Task.FromException(Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref))
-            : Task.CompletedTask;
-    }
-
-    protected async Task WhenConnectedCheckedAsync(
-        ComputeMethodInput input, RpcPeer peer, TimeSpan connectTimeout, CancellationToken cancellationToken)
-    {
-        // WhenConnectedOrReroute may throw RpcRerouteException if the peer's route has changed.
-        var connectionState = await peer.WhenConnectedOrReroute(connectTimeout, cancellationToken).ConfigureAwait(false);
-        ThrowIfSameService(input, peer, connectionState.Handshake!);
-    }
-
-    protected void ThrowIfSameService(ComputeMethodInput input, RpcPeer peer, RpcHandshake handshake)
-    {
-        if (handshake.RemoteHubId == RpcMethodDef.Hub.Id && input.Invocation.Proxy is not InterfaceProxy)
-            throw Errors.RemoteComputeMethodCallFromTheSameService(RpcMethodDef, peer.Ref);
-    }
-
     // InvalidateXxx
 
     // InvalidateWhenReconnected is gone: a served entry is now validated by its
