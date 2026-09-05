@@ -22,28 +22,44 @@ public abstract class ComputedRenderStateComponent<TState> : ComputedStateCompon
         set => _renderState = value;
     }
 
+    protected IEqualityComparer<TState>? StateEqualityComparer { get; set; }
+
     protected ComputedRenderStateComponent()
-        => Options = ComputedRenderStateComponent.DefaultOptions;
+    {
+        MustRenderAfterEvent = false; // See ShouldRender, it blocks renders unless State is changed
+        Options = ComputedRenderStateComponent.DefaultOptions;
+    }
 
     protected override bool ShouldRender()
     {
-        if (!TryUpdateRenderState(UntypedState.Snapshot))
+        var oldRenderState = _renderState;
+        var newRenderState = UntypedState.Snapshot;
+        if (!MustUpdateRenderState(oldRenderState, newRenderState))
             return false;
 
-        var computed = RenderState.Computed;
+        // RenderState must track what is actually rendered, so it advances only when we render
+        _renderState = newRenderState;
+        return true;
+    }
+
+    protected bool MustUpdateRenderState(StateSnapshot? oldRenderState, StateSnapshot newRenderState)
+    {
+        if (oldRenderState is not null) {
+            if (ReferenceEquals(oldRenderState, newRenderState))
+                return false; // Same state
+            if (StateEqualityComparer is { } stateEqualityComparer
+                && oldRenderState.Computed is Computed<TState> oldComputed
+                && newRenderState.Computed is Computed<TState> newComputed
+                && !oldComputed.HasError && !newComputed.HasError
+                && stateEqualityComparer.Equals(oldComputed.Value, newComputed.Value))
+                return false; // Identical state
+        }
+
+        var computed = newRenderState.Computed;
         if (computed.IsConsistent() || computed.HasError)
             return true;
 
         // Inconsistent state is rare, so we make this check at last
         return Options.HasFlag(ComputedStateComponentOptions.RenderInconsistentState);
-    }
-
-    protected bool TryUpdateRenderState(StateSnapshot renderState)
-    {
-        if (ReferenceEquals(_renderState, renderState))
-            return false;
-
-        _renderState = renderState;
-        return true;
     }
 }
