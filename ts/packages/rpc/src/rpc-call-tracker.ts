@@ -22,10 +22,10 @@
 //     AbortSignal on RpcPeer.call(); the cancel handler rejects the promise,
 //     removes from tracker, and sends $sys.Cancel — same behavior as .NET's
 //     Cancel() + NotifyCancelled().
-//   - StartedAt / CpuTimestamp / Timeout monitoring — .NET's Maintain() loop
-//     checks elapsed time against per-method timeouts every CallTimeoutCheckPeriod.
-//     TS has no per-call timeout mechanism; the WebSocket-level disconnect +
-//     rejectAll handles stuck calls.
+//   (Timeout monitoring IS ported — see RpcPeer._maintainOutboundCalls. .NET splits it
+//   between RpcOutboundCallTracker.HandleDisconnect, a per-outage watcher that owns
+//   ConnectTimeout, and Maintain, which owns RunTimeout while connected; TS runs both
+//   rules from one timer.)
 //   - CompletedStage / RpcCallStage — supports Reliable call type's stage-based
 //     reconnection protocol where the server tells the client which stage each
 //     call reached, avoiding re-execution of completed stages.  TS replays entire
@@ -33,8 +33,10 @@
 //   - Reconnect() protocol — outbound tracker sends $sys.Reconnect with compressed
 //     call IDs grouped by stage; server responds with "unknown" IDs that need
 //     re-sending.  Not ported; TS uses full replay.
-//   - Abort() with multi-pass retry — .NET iterates 3+ times with delays to
-//     catch late-registered calls.  TS does a single-pass rejectAll().
+//   - Abort()'s final-error latch — .NET latches the error before its (single) sweep, so a
+//     call registered afterwards is completed by Register rather than left pending. TS does a
+//     single-pass rejectAll() without the latch; the exposure is much smaller, since close()
+//     drops the peer from the hub map synchronously instead of keeping it for PeerRemoveDelay.
 //   - TryReroute() — checks if the call's peer route has changed (load-balancer
 //     rerouting) and sets RpcRerouteException.  TS has no routing layer.
 //   - IsLongLiving / _longLivingCalls — separate tracking for calls that outlive
