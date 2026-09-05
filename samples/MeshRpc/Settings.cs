@@ -29,4 +29,5 @@ public static class TestSettings
     public static readonly int ProcessesPerHost = 5;
     public static readonly RandomTimeSpan CallPeriod = TimeSpan.FromSeconds(0.25).ToRandom(0.5);
     public static readonly TimeSpan TestStopDelay = TimeSpan.FromSeconds(5);
+    public static readonly TimeSpan StatsPeriod = TimeSpan.FromSeconds(5);
 }

@@ -2,7 +2,9 @@
 using ActualLab.Mathematics;
 using Pastel;
 using Samples.MeshRpc;
+using Samples.MeshRpc.Services;
 using static Samples.MeshRpc.HostFactorySettings;
+using static Samples.MeshRpc.TestSettings;
 using Host = Samples.MeshRpc.Host;
 
 var stopTokenSource = new CancellationTokenSource();
@@ -13,8 +15,22 @@ Console.CancelKeyPress += (_, e) => {
     e.Cancel = true;
 };
 
+_ = ReportStats(stopToken);
 await AddHosts(stopToken).ConfigureAwait(false);
 return;
+
+// Only failed and warned calls print as they happen, so this is the only output a healthy run makes
+async Task ReportStats(CancellationToken cancellationToken)
+{
+    var startedAt = CpuTimestamp.Now;
+    while (!cancellationToken.IsCancellationRequested) {
+        await Task.Delay(StatsPeriod, cancellationToken).SilentAwait(false);
+        if (cancellationToken.IsCancellationRequested)
+            return;
+
+        Console.WriteLine(TestStats.Format(startedAt.Elapsed));
+    }
+}
 
 async Task AddHosts(CancellationToken cancellationToken = default)
 {
