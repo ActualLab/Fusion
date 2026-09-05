@@ -218,6 +218,30 @@ describe('R12 — outbound call timeouts', () => {
 
         pair.close();
     });
+
+    it('a sent command connect-timeouts while the peer stays disconnected', async () => {
+        const limits = new RpcLimits({ callTimeoutCheckPeriodMs: 20 });
+        const pair = connectedPair(limits);
+        await delay(10);
+
+        const Def = defineRpcService('StuckOfflineConnect', {
+            command: { args: [], timeouts: new RpcCallTimeouts(100, Infinity) },
+        });
+        pair.serverHub.addService(Def, {
+            command: () => new Promise(() => { /* never resolves */ }),
+        });
+        const svc = pair.clientHub.addClient<{ command(): Promise<unknown> }>(pair.clientPeer, Def);
+
+        const result = svc.command();
+        await delay(30); // Long enough for the call to be sent
+        pair.clientPeer.disconnect();
+
+        // A sent call waits for the same reconnect an unsent one does, so ConnectTimeout caps it
+        // too - measured from the disconnect, not from when the call started.
+        await expect(result).rejects.toThrow(/connect timeout/);
+
+        pair.close();
+    });
 });
 
 describe('stop signal — close() during a pending reconnect delay', () => {
