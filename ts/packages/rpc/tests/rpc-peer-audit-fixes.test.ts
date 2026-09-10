@@ -350,11 +350,16 @@ describe('RPC peer audit fixes (R5, R8, R9, R13, R16)', () => {
         const serverHub = new RpcHub('server-hub');
         hubs.push(serverHub);
         const format = RpcSerializationFormat.get('json5np');
-        const [, serverWs] = createMockWsPair();
+        const [clientWs, serverWs] = createMockWsPair();
         const serverConn = new RpcWebSocketConnection(serverWs, format.isBinary, format, serverHub.registry);
+        const clientConn = new RpcWebSocketConnection(clientWs, format.isBinary, format, serverHub.registry);
         const serverPeer: RpcServerPeer = serverHub.getServerPeer('server://test');
         serverPeer.serializationFormat = format;
         serverPeer.accept(serverConn);
+        // The $sys.Reconnect replies below are gated on the peer reaching
+        // `Connected`, so the handshake has to actually happen.
+        serverHub.systemCallSender.handshake(
+            clientConn, format, 'client-peer', serverHub.hubId, 1);
         await delay(5);
 
         // Pin the server's own handshake index to a known generation.

@@ -121,14 +121,15 @@ export class RpcSystemCallHandler {
             // its side — reply with $sys.Disconnect so it stops advertising it.
             // Mirrors RpcObjectTrackers.KeepAlive (RpcObjectTrackers.cs:300-317).
             const keepAliveIds = args[0] as number[] | undefined;
-            if (Array.isArray(keepAliveIds) && keepAliveIds.length > 0 && peer.connection !== undefined) {
+            if (Array.isArray(keepAliveIds) && keepAliveIds.length > 0 && peer.wireConnection !== undefined) {
                 const unknownIds: number[] = [];
                 for (const id of keepAliveIds)
                     if (peer.sharedObjects.get(id) === undefined)
                         unknownIds.push(id);
 
                 if (unknownIds.length > 0)
-                    peer.hub.systemCallSender.disconnect(peer.connection, peer.serializationFormat, unknownIds);
+                    peer.hub.systemCallSender.disconnect(
+                        peer.wireConnection, peer.serializationFormat, unknownIds);
             }
             break;
         }
@@ -194,8 +195,9 @@ export class RpcSystemCallHandler {
             // hanging. Mirrors RpcSystemCalls.Ack (RpcSystemCalls.cs:149-159).
             if (sender)
                 sender.onAck(args[0] as number, args[1] as string);
-            else if (peer.connection !== undefined)
-                peer.hub.systemCallSender.disconnect(peer.connection, peer.serializationFormat, [relatedId]);
+            else if (peer.wireConnection !== undefined)
+                peer.hub.systemCallSender.disconnect(
+                    peer.wireConnection, peer.serializationFormat, [relatedId]);
             break;
         }
         case RpcSystemCalls.ackEnd: {
@@ -204,8 +206,9 @@ export class RpcSystemCallHandler {
                     | undefined;
             if (sender)
                 sender.onAckEnd(args[0] as string);
-            else if (peer.connection !== undefined)
-                peer.hub.systemCallSender.disconnect(peer.connection, peer.serializationFormat, [relatedId]);
+            else if (peer.wireConnection !== undefined)
+                peer.hub.systemCallSender.disconnect(
+                    peer.wireConnection, peer.serializationFormat, [relatedId]);
             break;
         }
         case RpcSystemCalls.disconnect: {
@@ -248,7 +251,8 @@ export class RpcSystemCallHandler {
      *                  with the same `RelatedId`.
      */
     private _handleReconnect(relatedId: number, args: unknown[], peer: RpcPeer): void {
-        if (peer.connection === undefined) return;
+        const conn = peer.wireConnection;
+        if (conn === undefined) return;
 
         // args[0]: handshakeIndex — the server's OWN handshake index as the
         // client last saw it. If it no longer matches, this $sys.Reconnect
@@ -262,7 +266,7 @@ export class RpcSystemCallHandler {
         if (typeof handshakeIndex !== 'number' || handshakeIndex !== peer.ownHandshakeIndex) {
             const got = typeof handshakeIndex === 'number' ? handshakeIndex : `<${typeof handshakeIndex}>`;
             peer.hub.systemCallSender.error(
-                peer.connection, peer.serializationFormat, relatedId,
+                conn, peer.serializationFormat, relatedId,
                 new Error(
                     `TooLateToReconnect: own handshake index ${peer.ownHandshakeIndex} != ${got}`));
             return;
@@ -273,7 +277,7 @@ export class RpcSystemCallHandler {
         // RpcSystemCalls.Reconnect's TryClaimReconnect gate.
         if (!peer.tryClaimReconnect()) {
             peer.hub.systemCallSender.error(
-                peer.connection, peer.serializationFormat, relatedId,
+                conn, peer.serializationFormat, relatedId,
                 new Error('TooLateToReconnect: this connection was already reconnected'));
             return;
         }
@@ -314,7 +318,7 @@ export class RpcSystemCallHandler {
 
         const responseBytes = IncreasingSeqCompressor.serialize(unknownIds);
         const responseValue = peer.serializationFormat.isBinary ? responseBytes : base64Encode(responseBytes);
-        peer.hub.systemCallSender.ok(peer.connection, peer.serializationFormat, relatedId, responseValue);
+        peer.hub.systemCallSender.ok(conn, peer.serializationFormat, relatedId, responseValue);
     }
 }
 

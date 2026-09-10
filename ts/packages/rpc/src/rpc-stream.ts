@@ -186,8 +186,11 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     }
 
     /**
-     * For local streams: resolves when the sender finishes pumping (after `toRef()` was called).
-     * Rejects if the source throws. Throws if `toRef()` hasn't been called yet.
+     * For local streams: resolves once the consumer acknowledges the end
+     * ($sys.AckEnd) or the sender is disconnected — NOT when the source drains,
+     * since the sender keeps serving acks after End so a reconnect can replay it.
+     * A source error reaches the consumer as $sys.End(error) instead of rejecting
+     * this. Throws if `toRef()` hasn't been called yet.
      */
     get whenSent(): Promise<void> {
         if (!this._whenSent)
@@ -514,12 +517,9 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
 
     private _sendAck(nextIndex: number, mustReset: boolean): void {
         this._ackSentUpTo = nextIndex;
-        // Gated on `isConnected`, not just `connection` — during connect and
-        // handshake `connection` is already set, and a buffered ack would hit
-        // the wire before $sys.Handshake, corrupting the remote handshake
-        // (R5; C#'s null-Transport-until-handshake). A dropped ack is
-        // recovered by the reset-ack `reconnect()` sends once connected.
-        const conn = this.peer.isConnected ? this.peer.connection : undefined;
+        // A dropped ack is recovered by the reset ack `reconnect()` sends once
+        // connected — see `RpcPeer.wireConnection` for why this is gated.
+        const conn = this.peer.wireConnection;
         if (conn) {
             const hostId = mustReset ? this.id.hostId : RpcStream._emptyGuid;
             this.peer.hub.systemCallSender.ack(
@@ -533,9 +533,9 @@ export class RpcStream<T> implements AsyncIterable<T>, IRpcObject {
     }
 
     private _sendAckEnd(): void {
-        // Same pre-handshake gate as `_sendAck`; a dropped AckEnd just means
-        // the sender terminates via disconnect/keep-alive instead.
-        const conn = this.peer.isConnected ? this.peer.connection : undefined;
+        // A dropped AckEnd just means the sender terminates via
+        // disconnect/keep-alive instead.
+        const conn = this.peer.wireConnection;
         if (conn) {
             this.peer.hub.systemCallSender.ackEnd(
                 conn,

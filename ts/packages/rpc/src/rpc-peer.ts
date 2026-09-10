@@ -326,6 +326,19 @@ export abstract class RpcPeer {
         return this._connection;
     }
 
+    // The connection you may send a non-handshake message on, or `undefined`.
+    // `_connection` is set before the socket even opens and stays set through
+    // the handshake, and `RpcConnection` buffers pre-OPEN sends and flushes them
+    // from `onopen` — so writing through it during Connecting or Handshaking puts
+    // the frame on the wire ahead of $sys.Handshake and corrupts the remote's
+    // handshake. `_isConnected` is the only flag false across both phases.
+    // Port of C#'s `RpcPeer.Transport` (RpcPeer.cs:29-52), which hides the
+    // transport for exactly this reason. $sys.Handshake itself must use
+    // `connection` — it is the frame this gate exists to let through first.
+    get wireConnection(): RpcConnection | undefined {
+        return this._isConnected ? this._connection : undefined;
+    }
+
     get connectionState(): RpcConnectionState {
         return this._connectionState;
     }
@@ -358,21 +371,27 @@ export abstract class RpcPeer {
         if (this._connectionState === value) return;
         const previousState = this._connectionState;
         this._connectionState = value;
-        // `_isConnected` flips on entering `Connected`, and off only when
-        // leaving `Connected`. Failed-handshake transitions (Connecting →
-        // Disconnected) leave it alone — it was already false in production,
-        // and tests that set it directly via `connectWith` keep it true while
-        // the run loop spins through retry iterations without ever reaching
-        // `Connected`.
+        // `_isConnected` flips on entering `Connected`, and off on leaving it for
+        // ANY other state — a server peer re-`accept()`ed mid-session goes
+        // Connected → Connecting → Handshaking, and leaving it set there would
+        // open `wireConnection` on a connection whose handshake hasn't happened.
+        // Failed-handshake transitions (Connecting → Disconnected) leave it alone —
+        // it was already false in production, and tests that set it directly via
+        // `connectWith` keep it true while the run loop spins through retry
+        // iterations without ever reaching `Connected`.
         if (value === RpcConnectionState.Connected) {
             this._isConnected = true;
             this._disconnectedAt = 0;
             this._armKeepAliveWatchdog();
-        } else if (value === RpcConnectionState.Disconnected) {
+        } else {
             if (previousState === RpcConnectionState.Connected) {
                 this._isConnected = false;
                 this._disconnectedAt = Date.now();
             }
+            // Disarmed on leaving `Connected` for any state, not just
+            // `Disconnected`: a re-`accept()`ed server peer would otherwise carry
+            // the previous generation's silence watchdog into the new handshake
+            // window and force-close the new connection. `Connected` re-arms it.
             this._disarmKeepAliveWatchdog();
         }
         this.connectionStateChanged.trigger(value);
@@ -502,13 +521,11 @@ export abstract class RpcPeer {
                 if (this.outboundCalls.remove(callId) !== undefined) {
                     outboundCall.result.reject(cancellationError('Call cancelled.'));
                     outboundCall.onDisconnect();
-                    // Only send $sys.Cancel once the handshake has completed
-                    // (`_isConnected`). Sends are gated on `_isConnected`, so a
-                    // call aborted before then was never put on the wire — a
-                    // pre-handshake Cancel would corrupt the remote handshake
-                    // (C#'s null-Transport-until-handshake, RpcPeer.cs:29-52).
-                    if (this._isConnected && this._connection !== undefined)
-                        this.hub.systemCallSender.cancel(this._connection, this.serializationFormat, callId);
+                    // A call aborted before the handshake was never put on the
+                    // wire, so there is nothing to cancel remotely either.
+                    const conn = this.wireConnection;
+                    if (conn !== undefined)
+                        this.hub.systemCallSender.cancel(conn, this.serializationFormat, callId);
                 }
             };
             signal.addEventListener('abort', onAbort, { once: true });
@@ -566,9 +583,11 @@ export abstract class RpcPeer {
         infoLog?.log(`'${this.ref}': Stopped`);
     }
 
-    /** Send pre-serialized wire data through the current connection. */
+    /** Send pre-serialized wire data through the current connection. Callers are
+     *  already gated on `_isConnected`; the check is repeated here so the next one
+     *  cannot reintroduce a pre-handshake write. $sys.Handshake does not use this. */
     protected _sendWireData(data: string | Uint8Array): void {
-        if (this._connection === undefined) return;
+        if (!this._isConnected || this._connection === undefined) return;
         if (typeof data === 'string') {
             this._connection.send(data);
         } else {
@@ -680,9 +699,12 @@ export abstract class RpcPeer {
                             // R17: a cancelled call sends no response, even though
                             // it may still be registered for R9 dedup.
                             if (call?.isCancelled === true) return;
-                            if (this._connection !== undefined)
+                            // Read at completion time, so it may land mid-reconnect —
+                            // `resendResult` re-sends what this drops.
+                            const conn = this.wireConnection;
+                            if (conn !== undefined)
                                 this.hub.systemCallSender.ok(
-                                    this._connection, this.serializationFormat, relatedId, ref);
+                                    conn, this.serializationFormat, relatedId, ref);
                         };
                         if (call !== undefined) {
                             call.setResult(send);
@@ -693,9 +715,10 @@ export abstract class RpcPeer {
                 } else if (call !== undefined) {
                     const send = (): void => {
                         if (call.isCancelled) return;
-                        if (this._connection !== undefined)
+                        const conn = this.wireConnection;
+                        if (conn !== undefined)
                             this.hub.systemCallSender.ok(
-                                this._connection, this.serializationFormat, relatedId, result);
+                                conn, this.serializationFormat, relatedId, result);
                     };
                     call.setResult(send);
                     this.inboundCalls.markCompleted(call);
@@ -705,9 +728,10 @@ export abstract class RpcPeer {
                 if (call !== undefined) {
                     const send = (): void => {
                         if (call.isCancelled) return;
-                        if (this._connection !== undefined)
+                        const conn = this.wireConnection;
+                        if (conn !== undefined)
                             this.hub.systemCallSender.error(
-                                this._connection, this.serializationFormat, relatedId, e);
+                                conn, this.serializationFormat, relatedId, e);
                     };
                     call.setResult(send);
                     this.inboundCalls.markCompleted(call);
@@ -744,13 +768,16 @@ export abstract class RpcPeer {
     private _armKeepAliveWatchdog(): void {
         // Start the send timer once per connected session.
         this._keepAliveTimer ??= setInterval(() => {
-            if (this._connection !== undefined) {
+            // A re-`accept()`ed server peer can still hold a live timer from the
+            // previous connection while the new one is handshaking.
+            const conn = this.wireConnection;
+            if (conn !== undefined) {
                 // Send remote object IDs so the server's SharedObjectTracker keeps them alive.
                 // Must NOT send outbound call IDs — those are a different ID namespace and would
                 // cause the server to send $sys.Disconnect for IDs it doesn't recognize, which
                 // the client may misinterpret as a disconnect of its own shared objects (e.g.
                 // RpcStreamSender) when the IDs collide numerically.
-                this.hub.systemCallSender.keepAlive(this._connection, this.serializationFormat, [
+                this.hub.systemCallSender.keepAlive(conn, this.serializationFormat, [
                     ...this.remoteObjects.keys(),
                 ]);
             }
@@ -918,16 +945,42 @@ export class RpcClientPeer extends RpcPeer {
     connectWith(conn: RpcConnection, isPeerChanged = true): void {
         const sentCalls = this.outboundCalls.getSentCalls();
         this.setupConnection(conn);
-        // Test-only: synthesize the "ready for calls" state without running
-        // the handshake. Stays off the public state machine on purpose —
-        // tests don't drive the run loop, and entering `Connected` via
-        // `_setConnectionState` would arm the keep-alive watchdog against a
-        // mock transport that never replies to keep-alives. We still need
-        // to release any calls deferred via `whenConnected`, so we trigger
-        // the listener set directly.
+        // Test-only shortcut through the run loop's sequence: it exchanges a real
+        // $sys.Handshake (a server peer on the other end stays in `Handshaking`
+        // until one arrives, and everything it sends is gated on `Connected` —
+        // see `wireConnection`), but synthesizes this side's `Connected` instead
+        // of driving the state machine, because `_setConnectionState(Connected)`
+        // would arm the keep-alive watchdog against a mock transport that never
+        // answers keep-alives. Calls deferred via `whenConnected` are released by
+        // triggering the listener set directly.
+        const whenHandshake = isPeerChanged
+            ? undefined
+            : (this._pendingHandshake = new PromiseSource<RemoteHandshake>());
+        // The handshake goes out before `Connected` releases deferred calls —
+        // the run loop's order.
+        this.hub.systemCallSender.handshake(
+            conn, this.serializationFormat, this.id, this.hub.hubId,
+            this.nextOwnHandshakeIndex());
         this._isConnected = true;
         this.connectionStateChanged.trigger(RpcConnectionState.Connected);
-        void this._reconnect(sentCalls, isPeerChanged);
+        if (whenHandshake === undefined) {
+            // Peer change: the resend is blind, so it needs no remote index.
+            void this._reconnect(sentCalls, true);
+            return;
+        }
+
+        // Same-peer: `_reconcileReconnect` sends `_remoteHandshakeIndex`, which is
+        // only known once the remote's handshake lands, so wait for it exactly as
+        // the run loop does — racing the reply against the socket closing, no
+        // timer. Reconciling synchronously would send a stale index and get
+        // TooLateToReconnect, silently downgrading every same-peer test to blind
+        // resend.
+        const whenClosed = new PromiseSource<void>();
+        conn.closed.add(() => whenClosed.resolve());
+        void Promise.race([whenHandshake, whenClosed]).then(() => {
+            this._pendingHandshake = undefined;
+            return this._reconnect(sentCalls, false);
+        });
     }
 
     /** Kick off the reconnect loop. Idempotent — subsequent calls are
@@ -1407,6 +1460,10 @@ export class RpcClientPeer extends RpcPeer {
     }
 
     protected override _onHandshakeReceived(handshake: RemoteHandshake): void {
+        // Also recorded here, not just on the run loop's path: `connectWith` has
+        // no pending handshake, and leaving this at 0 makes every reconcile it
+        // drives fail with TooLateToReconnect against a real remote index.
+        this._remoteHandshakeIndex = handshake.Index ?? 0;
         this._pendingHandshake?.resolve(handshake);
     }
 

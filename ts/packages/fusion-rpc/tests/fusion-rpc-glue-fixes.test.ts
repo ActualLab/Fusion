@@ -157,10 +157,17 @@ describe('Fusion-over-RPC glue fixes', () => {
         // Same-peer reconnect: capture the $sys.Reconnect frame the client sends.
         const [clientConn2, serverConn2] = createMessageChannelPair();
         const reportedIds = captureReconnectedIds(clientConn2);
+        const serverReplies: string[] = [];
+        const origSend = serverConn2.send.bind(serverConn2);
+        serverConn2.send = data => { serverReplies.push(data); origSend(data); };
         serverPeer.accept(serverConn2);
         clientPeer.connectWith(clientConn2, false);
         await delay(30);
 
+        // The reconciled path, not the blind-resend fallback: that needs the
+        // client to hold the server's current handshake index, which it only has
+        // if it waited for the handshake before reconciling.
+        expect(serverReplies.some(f => f.includes('TooLateToReconnect'))).toBe(false);
         expect(reportedIds()).toContain(hangingCall.callId);
         expect(reportedIds()).not.toContain(computeCall.callId);
         // The invalidate-on-reconnect behavior is preserved.

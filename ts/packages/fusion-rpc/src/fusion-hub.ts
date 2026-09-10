@@ -240,7 +240,7 @@ export class FusionHub extends RpcHub {
                         // $sys.Ok after this wrapper returns, so defer past that turn —
                         // a client drops an Invalidate that precedes its result.
                         setTimeout(() => {
-                            const conn = peer.connection;
+                            const conn = peer.wireConnection;
                             if (conn !== undefined)
                                 this.systemCallSender.invalidate(
                                     conn,
@@ -363,7 +363,7 @@ const outboundCallReleaser = new FinalizationRegistry<{
         return;
 
     call.whenInvalidated.resolve();
-    const conn = peer.connection;
+    const conn = peer.wireConnection;
     if (conn !== undefined)
         peer.hub.systemCallSender.cancel(conn, peer.serializationFormat, call.callId);
 });
@@ -416,7 +416,7 @@ function bindComputedToCall(
         if (peer.outboundCalls.remove(call.callId) === undefined)
             return;
         call.whenInvalidated.resolve();
-        const conn = peer.connection;
+        const conn = peer.wireConnection;
         if (conn !== undefined)
             peer.hub.systemCallSender.cancel(conn, peer.serializationFormat, call.callId);
     });

@@ -17,14 +17,20 @@ interface Harness {
     sent: string[];
 }
 
-function createHarness(ownHandshakeIndex: number): Harness {
+async function createHarness(ownHandshakeIndex: number): Promise<Harness> {
     const hub = new RpcHub('server-hub');
     const format = RpcSerializationFormat.get('json5np');
-    const [, serverWs] = createMockWsPair();
+    const [clientWs, serverWs] = createMockWsPair();
     const conn = new RpcWebSocketConnection(serverWs, format.isBinary, format, hub.registry);
+    const clientConn = new RpcWebSocketConnection(clientWs, format.isBinary, format, hub.registry);
     const peer: RpcServerPeer = hub.getServerPeer('server://test');
     peer.serializationFormat = format;
     peer.accept(conn);
+    // The peer's $sys.Reconnect replies are gated on reaching `Connected`, so the
+    // handshake has to actually happen. It bumps `_ownHandshakeIndex`, hence the
+    // override below it rather than above.
+    hub.systemCallSender.handshake(clientConn, format, 'client-peer', hub.hubId, 1);
+    await delay(5);
     (peer as unknown as { _ownHandshakeIndex: number })._ownHandshakeIndex = ownHandshakeIndex;
 
     const sent: string[] = [];
@@ -57,7 +63,7 @@ describe('$sys.Reconnect single-shot gate', () => {
     });
 
     it('accepts the first Reconnect and rejects every repeat', async () => {
-        harness = createHarness(5);
+        harness = await createHarness(5);
 
         await sendReconnect(harness, 1);
         expect(isRejected(harness.sent)).toBe(false);
@@ -74,7 +80,7 @@ describe('$sys.Reconnect single-shot gate', () => {
     });
 
     it('gives the next connection generation its own allowance', async () => {
-        harness = createHarness(5);
+        harness = await createHarness(5);
 
         await sendReconnect(harness, 1);
         expect(isRejected(harness.sent)).toBe(false);

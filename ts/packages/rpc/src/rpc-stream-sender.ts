@@ -8,6 +8,9 @@ import { RpcStream } from './rpc-stream.js';
 
 const { warnLog } = getLogs('RpcSharedStream');
 
+/** Settle-only view of a promise: observes it without consuming its outcome. */
+function _ignore(): void { /* intentionally empty */ }
+
 /** Default ack period for server-side streams. */
 const DEFAULT_ACK_PERIOD = 256;
 /** Default ack advance window for server-side streams. */
@@ -83,7 +86,11 @@ export class RpcStreamSender<T> implements IRpcObject {
     // -- Pump state --
     /** Next stream index that will be sent (matches .NET's `index`). */
     private _nextIndex = 0;
-    private _ended = false;
+    /** Torn down — `disconnect()` ran. .NET's counterpart is disposal; note it
+     *  does NOT mean "an End was sent", which .NET does not track at all. */
+    private _isDisposed = false;
+    /** The pump has returned. .NET's `WhenRunning.IsCompleted`. */
+    private _isCompleted = false;
     private _started = new PromiseSource<void>();
     /** Highest `nextIndex` observed in an ACK so far (matches .NET's `lastAckNextIndex` idiom). */
     private _lastAckedIndex = 0;
@@ -219,8 +226,10 @@ export class RpcStreamSender<T> implements IRpcObject {
                 this._sendDisconnect();
                 return;
             }
-        } else if (this._ended) {
-            // Ack for an already-completed stream — nothing left to serve.
+        } else if (this._isCompleted) {
+            // The pump has returned — nothing left to serve. An End that was
+            // merely *sent* is not terminal: the End sits in the replay buffer
+            // and a reset ack re-sends it, exactly like any other item.
             this._sendDisconnect();
             return;
         } else if (mustReset && !this.allowReconnect) {
@@ -247,7 +256,7 @@ export class RpcStreamSender<T> implements IRpcObject {
     // Tells the consumer this shared stream is gone, then disposes it —
     // mirrors RpcSharedStream.SendDisconnect (RpcSharedStream.cs:284-289).
     private _sendDisconnect(): void {
-        const conn = this.peer.connection;
+        const conn = this.peer.wireConnection;
         if (conn)
             this.peer.hub.systemCallSender.disconnect(conn, this.peer.serializationFormat, [this.id.localId]);
 
@@ -264,13 +273,13 @@ export class RpcStreamSender<T> implements IRpcObject {
      *
      * Advances `_nextIndex` unconditionally — even if the peer is disconnected
      * the item is considered "sent" from the pump's perspective so the replay
-     * buffer indexing stays consistent. If a connection is absent, the wire
+     * buffer indexing stays consistent. If the peer isn't connected, the wire
      * message is dropped; the item will be resent from the replay buffer
      * after a reconnect (client sends `Ack(N, mustReset=true)`).
      */
     sendItem(item: T): void {
-        if (this._ended) return;
-        const conn = this.peer.connection;
+        if (this._isDisposed) return;
+        const conn = this.peer.wireConnection;
         if (conn) {
             this.peer.hub.systemCallSender.item(
                 conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, item,
@@ -284,8 +293,8 @@ export class RpcStreamSender<T> implements IRpcObject {
 
     /** Send a batch of items to the client. See {@link sendItem} for disconnect semantics. */
     sendBatch(items: T[]): void {
-        if (this._ended || items.length === 0) return;
-        const conn = this.peer.connection;
+        if (this._isDisposed || items.length === 0) return;
+        const conn = this.peer.wireConnection;
         if (conn) {
             this.peer.hub.systemCallSender.batch(
                 conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, items,
@@ -294,11 +303,19 @@ export class RpcStreamSender<T> implements IRpcObject {
         this._nextIndex += items.length;
     }
 
-    /** Signal stream completion to the client. */
+    /** Signal stream completion to the client. Re-sendable on purpose: if the
+     *  peer was not connected the frame is dropped, and the End stays in the
+     *  replay buffer for the next reset ack — .NET has no "already ended" latch
+     *  (the End is an ordinary buffer entry, RpcSharedStream.cs:185/239). */
     sendEnd(error?: Error | null): void {
-        if (this._ended) return;
-        this._ended = true;
-        const conn = this.peer.connection;
+        if (this._isDisposed) return;
+        // The End occupies an index, like any item, and advances `_nextIndex`
+        // whether or not the frame went out (.NET: `_batcher.Add(index++, item)`,
+        // RpcSharedStream.cs:258). Leaving it un-advanced would re-send the End
+        // on a plain ack at the End's own index, and would make `onAck` reject
+        // an End+1 reset ack that .NET accepts.
+        const index = this._nextIndex++;
+        const conn = this.peer.wireConnection;
         if (!conn) return;
         // .NET ExceptionInfo is a non-nullable value type, so we must always
         // emit a valid map shape (empty TypeRef+Message for the "no error" case).
@@ -306,7 +323,7 @@ export class RpcStreamSender<T> implements IRpcObject {
             ? toExceptionInfo(error)
             : { TypeRef: '', Message: '' };
         this.peer.hub.systemCallSender.end(
-            conn, this.peer.serializationFormat, this.id.localId, this._nextIndex, errorInfo,
+            conn, this.peer.serializationFormat, this.id.localId, index, errorInfo,
         );
     }
 
@@ -318,7 +335,7 @@ export class RpcStreamSender<T> implements IRpcObject {
      */
     async writeFrom(source: AsyncIterable<T>): Promise<void> {
         await this._started;
-        if (this._ended) return;
+        if (this._isDisposed) return;
 
         const iterator = source[Symbol.asyncIterator]();
         this._iterator = iterator;
@@ -330,6 +347,7 @@ export class RpcStreamSender<T> implements IRpcObject {
         try {
             await this._run(iterator, state);
         } finally {
+            this._isCompleted = true;
             if (state.iteratorDone && this._iterator === iterator) {
                 this._iterator = null;
             }
@@ -343,7 +361,7 @@ export class RpcStreamSender<T> implements IRpcObject {
      * With `bufferSize > ackAdvance` the local ring buffer holds more than the
      * in-flight window — real-time mode uses the extra space to pre-buffer.
      */
-    /* eslint-disable @typescript-eslint/no-unnecessary-condition -- _ended changes across awaits */
+    /* eslint-disable @typescript-eslint/no-unnecessary-condition -- _isDisposed changes across awaits */
     private async _run(
         iterator: AsyncIterator<T>,
         state: _PumpState,
@@ -382,7 +400,7 @@ export class RpcStreamSender<T> implements IRpcObject {
                 if (r === pending)
                     return false;
                 whenMovedNext = null;
-                if (this._ended) return false;
+                if (this._isDisposed) return false;
                 if (r.done) {
                     buffer.pushTail(_endItem);
                     isFullyBuffered = true;
@@ -407,13 +425,13 @@ export class RpcStreamSender<T> implements IRpcObject {
             }
         };
 
+        nextAck:
         while (true) {
-            // ---- nextAck ----
             // 1. Await for an acknowledgement & process accumulated ACKs.
             let ack = this._tryProcessAcks();
             if (!ack) {
                 await this._waitAckReady();
-                if (this._ended) return;
+                if (this._isDisposed) return;
                 ack = this._tryProcessAcks();
                 if (!ack) {
                     warnLog?.log("Something is off: couldn't read an acknowledgement");
@@ -428,12 +446,12 @@ export class RpcStreamSender<T> implements IRpcObject {
                 buffer.clear();
                 bufferStart = this._nextIndex;
                 while (true) {
-                    if (this._ended) return;
+                    if (this._isDisposed) return;
                     let item: _StreamItem<T>;
                     let accepted = false;
                     try {
                         const r = await readNext();
-                        if (this._ended) return;
+                        if (this._isDisposed) return;
                         if (r.done) {
                             item = _endItem;
                             isFullyBuffered = true;
@@ -467,7 +485,7 @@ export class RpcStreamSender<T> implements IRpcObject {
 
             // 3. Recalculate the next range to send.
             if (this._nextIndex < bufferStart) {
-                if (!this._ended)
+                if (!this._isDisposed)
                     this.sendEnd(new Error('Stream position unavailable.'));
                 return;
             }
@@ -476,7 +494,7 @@ export class RpcStreamSender<T> implements IRpcObject {
             // 3. Send as much as the current ACK window allows.
             const maxIndex = ack.nextIndex + this.ackAdvance;
             while (this._nextIndex < maxIndex) {
-                if (this._ended) return;
+                if (this._isDisposed) return;
 
                 if (isRealTime) {
                     // Real-time: pre-buffer aggressively up to the ring's
@@ -490,7 +508,21 @@ export class RpcStreamSender<T> implements IRpcObject {
                         && !isFullyBuffered
                         && buffer.hasRemainingCapacity
                         && !this._hasPendingAck) {
-                        await bufferNext(false, true);
+                        // Wake on either the source or an ACK — a mustReset ACK
+                        // must not wait out a stalled source (a paused camera, a
+                        // frozen screen share). Mirrors the WhenAny in
+                        // RpcSharedStream.cs:274-279; the non-real-time branch
+                        // below deliberately just blocks and applies backpressure.
+                        whenMovedNext ??= iterator.next();
+                        const whenAckReady = (this._whenAckReady ??= new PromiseSource<void>());
+                        // Race a settle-only view, never the source promise itself:
+                        // a rejection must stay in `whenMovedNext` for `readNext`
+                        // to hit inside `bufferNext`'s try/catch, which is what
+                        // turns it into an error item and then $sys.End(error).
+                        // Awaiting it here instead would reject the whole pump.
+                        await Promise.race([whenMovedNext.then(_ignore, _ignore), whenAckReady]);
+                        if (!this._hasPendingAck)
+                            await bufferNext(false, true);
                     }
                     if (ack.nextIndex > 0) {
                         const result = _compactBufferedUnsentSuffix(
@@ -509,12 +541,13 @@ export class RpcStreamSender<T> implements IRpcObject {
                     const item = buffer.get(bufferIndex++);
                     if (item.kind === 'value') {
                         this.sendItem(item.value);
-                    } else if (item.kind === 'end') {
-                        if (!this._ended) this.sendEnd();
-                        return;
                     } else {
-                        if (!this._ended) this.sendEnd(item.error);
-                        return;
+                        // End (clean or error). Unlike a `return`, this keeps the
+                        // pump serving acks so a reset ack replays the End from
+                        // the buffer. The pump exits on AckEnd (-> disconnect) or
+                        // teardown. Mirrors RpcSharedStream.cs:258-261.
+                        this.sendEnd(item.kind === 'error' ? item.error : undefined);
+                        continue nextAck;
                     }
                 }
                 if (this._nextIndex >= maxIndex)
@@ -554,14 +587,15 @@ export class RpcStreamSender<T> implements IRpcObject {
         return { nextIndex, mustReset };
     }
 
-    /** Wait until an ACK is pending (or `_ended`). */
+    /** Wait until an ACK is pending (or the sender is torn down). */
     private async _waitAckReady(): Promise<void> {
-        if (this._hasPendingAck || this._ended)
+        if (this._hasPendingAck || this._isDisposed)
             return;
 
-        this._whenAckReady = new PromiseSource<void>();
-        await this._whenAckReady;
-        this._whenAckReady = null;
+        const whenAckReady = (this._whenAckReady ??= new PromiseSource<void>());
+        await whenAckReady;
+        if (this._whenAckReady === whenAckReady)
+            this._whenAckReady = null;
     }
 
     // One RTT sample per ack: time from sending the newest acked item to the
@@ -595,8 +629,8 @@ export class RpcStreamSender<T> implements IRpcObject {
     }
 
     disconnect(): void {
-        if (this._ended) return;
-        this._ended = true;
+        if (this._isDisposed) return;
+        this._isDisposed = true;
         this._abortController.abort();
         if (!this._started.isCompleted) {
             this._started.resolve();

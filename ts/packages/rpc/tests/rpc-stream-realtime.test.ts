@@ -8,6 +8,7 @@ import {
     createMessageChannelPair,
     RpcWebSocketConnection,
     RpcSerializationFormat,
+    RpcSystemCalls,
 } from '../src/index.js';
 import type { RpcServerPeer } from '../src/index.js';
 import { delay } from './rpc-test-helpers.js';
@@ -395,7 +396,7 @@ describe.each([1, 3, 5])('RpcStreamSender real-time reconnect (ackPeriod=%i)', (
         const countBefore = sentItems.length;
         sender.onAck(countBefore, sender.id.hostId);
 
-        // Wait for stream to complete
+        await ackEndAfterSourceDrains(sender, () => sentItems.length);
         await writeDone;
 
         // Items should be in ascending order
@@ -450,6 +451,7 @@ describe.each([1, 3, 5])('RpcStreamSender real-time reconnect (ackPeriod=%i)', (
         while (sentItems.length < 15) await delay(5);
         sender.onAck(sentItems.length, sender.id.hostId);
 
+        await ackEndAfterSourceDrains(sender, () => sentItems.length);
         await writeDone;
 
         // Items should be in ascending order
@@ -461,6 +463,109 @@ describe.each([1, 3, 5])('RpcStreamSender real-time reconnect (ackPeriod=%i)', (
         // so there may be at most a gap of 1 (the item consumed during reset check).
         // All items should still be accounted for.
         expect(sentItems.length).toBeGreaterThan(15);
+    });
+});
+
+/**
+ * The pump outlives its source: after sending End it keeps serving ACKs so a
+ * reset ACK can replay the End from the buffer, and exits only on AckEnd or
+ * teardown (.NET parity — `RpcSharedStream` lives until the client acks the
+ * end). So a test must close the stream the way a consumer does rather than
+ * waiting for the source to run out.
+ */
+async function ackEndAfterSourceDrains(
+    sender: RpcStreamSender<number>,
+    sentCount: () => number,
+): Promise<void> {
+    // The count pauses briefly mid-stream (a reset drains the source looking for
+    // a keyframe), so one stable reading is not enough — require several.
+    const stableReadingsNeeded = 4;
+    let previous = -1;
+    let stableReadings = 0;
+    while (stableReadings < stableReadingsNeeded) {
+        await delay(50);
+        const count = sentCount();
+        stableReadings = count === previous ? stableReadings + 1 : 0;
+        previous = count;
+    }
+    sender.onAckEnd('');
+}
+
+describe('RpcStreamSender real-time reset vs a stalled source', () => {
+    let setup: RealTimeTestSetup;
+
+    beforeEach(() => { setup = createRealTimeTestSetup(); });
+    afterEach(() => {
+        setup.serverHub.close();
+        setup.clientHub.close();
+    });
+
+    // .NET races the source read against the ack channel for real-time streams
+    // (`Task.WhenAny(whenAckReady, whenMovedNextAsTask)`, RpcSharedStream.cs:274-279)
+    // precisely so a reconnect is not stuck behind a source that has stopped
+    // producing — a paused camera, a frozen screen share. TS used to just block on
+    // the source, so the reset waited for the next frame that never came.
+    it('processes a reset ack while the source is stalled', async () => {
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 1, 100, true, /* isRealTime */ true);
+        setup.serverPeer.sharedObjects.register(sender);
+
+        let release!: () => void;
+        const stalled = new Promise<void>(r => { release = r; });
+        const writeDone = sender.writeFrom((async function* () {
+            yield 1;
+            await stalled; // The source goes quiet here and never resumes.
+        })());
+
+        sender.onAck(0, sender.id.hostId);
+        while (sender.nextIndex < 1) await delay(5);
+
+        // The pump is now parked on the stalled source. A reset ack must still
+        // be picked up, which `lastAckIndex` advancing proves.
+        sender.onAck(1, sender.id.hostId);
+        for (let i = 0; i < 40 && sender.lastAckIndex !== 1; i++) await delay(5);
+        expect(sender.lastAckIndex).toBe(1);
+
+        release();
+        sender.disconnect();
+        await writeDone;
+    });
+
+    // The race must not become the pump's error path: reaching the source only
+    // through `bufferNext` is what turns a throwing source into an error item
+    // and then $sys.End(error). Awaiting the raw iterator promise instead would
+    // reject `_run`, so no End reaches the consumer and `writeFrom` rejects with
+    // nobody attached (RpcStream.toRef stores it in `_whenSent`).
+    it('reports a source that throws while the pump waits on the race', async () => {
+        const sender = new RpcStreamSender<number>(
+            setup.serverPeer, 1, 100, true, /* isRealTime */ true);
+        setup.serverPeer.sharedObjects.register(sender);
+
+        const frames: string[] = [];
+        const conn = setup.serverPeer.connection!;
+        const origSend = conn.send.bind(conn);
+        conn.send = data => { frames.push(data); origSend(data); };
+
+        const writeDone = sender.writeFrom((async function* () {
+            yield 1;
+            // Long enough that the pump is parked in the race, not in the
+            // non-blocking `tryReadReady` sweep above it.
+            await delay(20);
+            throw new Error('source blew up');
+        })());
+
+        sender.onAck(0, sender.id.hostId);
+        for (let i = 0; i < 40 && !frames.some(f => f.includes(RpcSystemCalls.end)); i++)
+            await delay(5);
+
+        // The failure reaches the consumer as $sys.End(error) rather than
+        // rejecting the pump.
+        expect(frames.some(f => f.includes(RpcSystemCalls.end) && f.includes('source blew up')))
+            .toBe(true);
+
+        // The pump then waits for AckEnd like any completed stream.
+        sender.onAckEnd('');
+        await expect(writeDone).resolves.toBeUndefined();
     });
 });
 

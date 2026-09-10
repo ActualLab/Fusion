@@ -120,8 +120,10 @@ describe('R11 — RpcStreamSender.onAck guards', () => {
         return sender;
     }
 
-    it('host mismatch → disconnect', () => {
+    it('host mismatch → disconnect', async () => {
         const pair = connectedPair();
+        // The disconnect frame is gated on the handshake completing.
+        await pair.serverPeer.whenConnected();
         const spy = withSpy(pair);
         const sender = newSender(pair);
         sender.onAck(0, '11111111-2222-3333-4444-555555555555');
@@ -129,8 +131,9 @@ describe('R11 — RpcStreamSender.onAck guards', () => {
         pair.close();
     });
 
-    it('a not-yet-started stream rejects any ack that is not mustReset && nextIndex === 0', () => {
+    it('a not-yet-started stream rejects any ack that is not mustReset && nextIndex === 0', async () => {
         const pair = connectedPair();
+        await pair.serverPeer.whenConnected();
         const spy = withSpy(pair);
         const sender = newSender(pair);
         // Plain flow-control ack (no reset) before the stream ever started.
@@ -139,8 +142,9 @@ describe('R11 — RpcStreamSender.onAck guards', () => {
         pair.close();
     });
 
-    it('a reset ack on a non-reconnectable sender → disconnect (initial start is still allowed)', () => {
+    it('a reset ack on a non-reconnectable sender → disconnect (initial start is still allowed)', async () => {
         const pair = connectedPair();
+        await pair.serverPeer.whenConnected();
         const spy = withSpy(pair);
         const sender = newSender(pair, /* allowReconnect */ false);
         const hostId = sender.id.hostId;
