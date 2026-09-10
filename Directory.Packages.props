@@ -71,7 +71,7 @@
     <EntityFrameworkCoreNpgsqlVersion5>[5.0.10,)</EntityFrameworkCoreNpgsqlVersion5>
     <EntityFrameworkCoreNpgsqlVersion3>[3.1.18,)</EntityFrameworkCoreNpgsqlVersion3>
     <NpgsqlVersion>[10.0.3,)</NpgsqlVersion>
-    <MySqlConnectorVersion>[2.5.0,)</MySqlConnectorVersion>
+    <MySqlConnectorVersion>2.6.1</MySqlConnectorVersion>
     <MySqlConnectorVersion9>[2.4.0,)</MySqlConnectorVersion9>
     <MySqlConnectorVersion8>[2.3.7,)</MySqlConnectorVersion8>
     <MySqlConnectorVersion7>[2.2.7,)</MySqlConnectorVersion7>
