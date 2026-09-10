@@ -62,8 +62,6 @@
     <PackageReference Include="IndexRange" />
     <PackageReference Include="System.Memory" />
     <PackageReference Include="Microsoft.AspNet.WebApi.OwinSelfHost" />
-    <!-- System.Net.Http.dll isn't in the default reference set for SDK-style .NET Framework projects -->
-    <Reference Include="System.Net.Http" />
   </ItemGroup>
 
   <ItemGroup>
