@@ -11,9 +11,9 @@
   </PropertyGroup>
   <!-- Constants -->
   <PropertyGroup>
-    <!-- The .NET 11 preview all Microsoft.* / EF Core packages are aligned on.
+    <!-- The .NET 11 prerelease all Microsoft.* packages are aligned on.
          Keep in sync with the SDK version in global.json. -->
-    <DotNet11Version>[11.0.0-preview.7.26381.103,)</DotNet11Version>
+    <DotNet11Version>[11.0.0-rc.1.26425.128,)</DotNet11Version>
     <!-- Core packages -->
     <AspNetCoreVersion10>[10.0.0,)</AspNetCoreVersion10>
     <AspNetCoreVersion>$(AspNetCoreVersion10)</AspNetCoreVersion>
