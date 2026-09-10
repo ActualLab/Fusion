@@ -11,6 +11,65 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.4.11+6b3f92d0b | npm: 14.4.11
+
+Release date: 2026-09-10
+
+**.NET 11 rc.1 on NuGet, and a TypeScript RPC client that can no longer talk over its own
+handshake.** There are no C# source changes in this release &mdash; the NuGet side moves only
+its `net11.0` dependency versions to `11.0.0-rc.1.26425.128` and raises the
+`StackExchange.Redis` floor. The npm side carries the real fix: anything a TS peer wrote while
+still connecting or handshaking reached the wire ahead of `$sys.Handshake`, and the server
+answered by rejecting the connection.
+
+### Changed
+
+- **`net11.0` assets now depend on `11.0.0-rc.1.26425.128`** for ASP.NET Core, Blazor and
+  `Microsoft.Extensions.*` (was `11.0.0-preview.7.26381.103`). This is the first non-preview
+  `net11.0` build Fusion ships against; expect one more move when .NET 11 goes RTM.
+- **EF Core deliberately stays on `11.0.0-preview.6.26359.118`** on `net11.0`, unchanged from
+  14.3.18. `Npgsql.EntityFrameworkCore.PostgreSQL` still has no build past preview 6, and its
+  `.nuspec` pins `Microsoft.EntityFrameworkCore` and `.Relational` to that exact build, so
+  moving the other providers forward would break restore in any app that references efcore.pg
+  alongside `Sqlite`, `SqlServer` or `InMemory`. Only
+  `ActualLab.Fusion.EntityFramework.Npgsql` is affected; the provider-agnostic
+  `ActualLab.Fusion.EntityFramework` still declares its open `[10.0.0,)` range.
+- **`StackExchange.Redis` minimum is now `3.1.31`** (was `3.1.13`) in `ActualLab.Redis` and
+  `ActualLab.Fusion.EntityFramework.Redis`, on every target framework. A floor bump only; 3.1
+  is still the boundary that matters, for the delegate-layout reason described in 14.3.18.
+- **npm: `RpcStream.whenSent` resolves on `AckEnd` or disconnect, not when the source drains**,
+  and a source error now arrives at the consumer as `$sys.End(error)` instead of rejecting the
+  promise. The sender's pump outlives its source so it can replay on a reset ack, so "the
+  source finished" was never the event `whenSent` could report.
+
+### Fixed
+
+- **npm: a write issued before the handshake completed broke the connection.** `RpcPeer`'s
+  connection field is set before the socket opens and stays set through the handshake, and
+  `RpcConnection` buffers pre-OPEN sends and flushes them from `onopen` &mdash; so a keep-alive
+  ping, a deferred `$sys.Ok`, a `$sys.Cancel`, a stream ack or a `fusion-hub` invalidation
+  landing in that window went out ahead of `$sys.Handshake`, and the remote closed the
+  connection with `Handshake failed: expected $sys.Handshake, got $sys.I`. Every non-handshake
+  write now goes through `RpcPeer.wireConnection`, the port of C#'s `RpcPeer.Transport`, which
+  hides the transport until the handshake completes. Dropped writes are not lost: inbound
+  replies come back through `resendResult` on `$sys.Reconnect`, and stream items replay from
+  the sender's buffer.
+- **npm: a re-accepted server peer left that gate open.** The connected flag was cleared only
+  on the transition to `Disconnected`, so a peer re-`accept()`ed mid-session went
+  `Connected -> Connecting -> Handshaking` with it still set. It now clears on leaving
+  `Connected` for any state, and the keep-alive watchdog disarms there too &mdash; the previous
+  generation's silence timer could otherwise force-close the new connection mid-handshake.
+- **npm: an `End` dropped while disconnected ended the stream for good.** The shared-stream
+  port conflated "torn down" with "an `End` was sent", so a send that failed during an outage
+  was latched and the consumer received `$sys.Disconnect` rather than a clean completion. The
+  two states are now separate, and the pump keeps serving acks after `End` so a reset ack
+  replays it.
+- **npm: a real-time stream could not resume behind a stalled source.** The pump blocked on the
+  source read, so a reconnect waited on a producer that had stopped &mdash; a paused camera, a
+  frozen screen share. It now races the source read against the ack channel, matching
+  `RpcSharedStream<T>`. The non-real-time branch still blocks, which is deliberate backpressure
+  in both languages.
+
 ## 14.4.3+eec6e3076 | npm: 14.4.3
 
 Release date: 2026-09-05
