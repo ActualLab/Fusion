@@ -250,7 +250,10 @@
     <PackageVersion Include="ActualLab.Core" Version="$(FusionVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="$(BlazorVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(BlazorVersion)" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+    <!-- KEEP AT 8.0.0: 10.0.2xx+ takes a hard dependency on System.IO.Hashing, which NuGet resolves
+         across the whole graph. ActualLab.Core pins System.IO.Hashing per TFM (8.0.0 on net8.0, 9.0.0
+         on net9.0, ...), so a multitargeting restore fails with NU1605 downgrade errors. -->
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(EntityFrameworkCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EntityFrameworkCoreVersion)" />
     <PackageVersion Include="Nerdbank.GitVersioning" Version="3.10.94" />
