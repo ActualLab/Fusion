@@ -4,8 +4,7 @@ using ActualLab.OS;
 using ActualLab.Redis;
 using ActualLab.Reflection;
 using CommunityToolkit.HighPerformance;
-using Xunit.DependencyInjection;
-using Xunit.DependencyInjection.Logging;
+using MartinCostello.Logging.XUnit;
 
 namespace ActualLab.Tests.Redis;
 
@@ -36,12 +35,7 @@ public class RedisTestBase(ITestOutputHelper @out) : TestBase(@out)
                     logging.AddDebug();
                 // XUnit logging requires weird setup b/c otherwise it filters out
                 // everything below LogLevel.Information
-                logging.AddProvider(
-#pragma warning disable CS0618
-                    new XunitTestOutputLoggerProvider(
-                        new TestOutputHelperAccessor() { Output = Out },
-                        LogFilter));
-#pragma warning restore CS0618
+                logging.AddProvider(new XUnitLoggerProvider(Out, new XUnitLoggerOptions { Filter = LogFilter }));
             });
         services.AddRedisDb("127.0.0.1", GetTestRedisKeyPrefix());
 

@@ -1,4 +1,3 @@
-using Xunit.DependencyInjection;
 using Xunit.DependencyInjection.Logging;
 
 namespace ActualLab.Fusion.Tests;
@@ -11,14 +10,7 @@ public class Startup
             logging.ClearProviders();
             logging.SetMinimumLevel(LogLevel.Debug);
             logging.AddDebug();
-            logging.Services.AddSingleton<ILoggerProvider>(c => {
-                var outputAccessor = c.GetRequiredService<ITestOutputHelperAccessor>();
-#pragma warning disable CS0618
-                return new XunitTestOutputLoggerProvider(
-                    outputAccessor,
-                    (_, level) => level >= LogLevel.Debug);
-#pragma warning restore CS0618
-            });
+            logging.AddXunitOutput(options => options.Filter = (_, level) => level >= LogLevel.Debug);
         });
     }
 }

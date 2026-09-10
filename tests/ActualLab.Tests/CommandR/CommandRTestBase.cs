@@ -2,8 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ActualLab.DependencyInjection;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Tests.CommandR.Services;
-using Xunit.DependencyInjection;
-using Xunit.DependencyInjection.Logging;
+using MartinCostello.Logging.XUnit;
 
 namespace ActualLab.Tests.CommandR;
 
@@ -49,12 +48,7 @@ public class CommandRTestBase(ITestOutputHelper @out) : TestBase(@out)
                     logging.AddDebug();
                 // XUnit logging requires weird setup b/c otherwise it filters out
                 // everything below LogLevel.Information
-                logging.AddProvider(
-#pragma warning disable CS0618
-                    new XunitTestOutputLoggerProvider(
-                        new TestOutputHelperAccessor() { Output = Out },
-                        LogFilter));
-#pragma warning restore CS0618
+                logging.AddProvider(new XUnitLoggerProvider(Out, new XUnitLoggerOptions { Filter = LogFilter }));
             });
 
         var commander = services.AddCommander();

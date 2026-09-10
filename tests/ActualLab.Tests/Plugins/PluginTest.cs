@@ -6,8 +6,7 @@ using ActualLab.Plugins.Metadata;
 using ActualLab.Reflection;
 using ActualLab.Testing.Logging;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Xunit.DependencyInjection;
-using Xunit.DependencyInjection.Logging;
+using MartinCostello.Logging.XUnit;
 
 namespace ActualLab.Tests.Plugins;
 
@@ -168,12 +167,9 @@ public class PluginTest(ITestOutputHelper @out) : TestBase(@out)
                     logging.ClearProviders();
                     logging.SetMinimumLevel(LogLevel.Debug);
                     logging.AddProvider(stringBuilderLoggerProvider);
-                    logging.AddProvider(
-#pragma warning disable CS0618
-                        new XunitTestOutputLoggerProvider(
-                            new TestOutputHelperAccessor() { Output = Out },
-                            (_, level) => level >= LogLevel.Debug));
-#pragma warning restore CS0618
+                    logging.AddProvider(new XUnitLoggerProvider(
+                        Out,
+                        new XUnitLoggerOptions { Filter = (_, level) => level >= LogLevel.Debug }));
                 });
             });
         if (mustClearCache) {

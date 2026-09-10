@@ -1,8 +1,7 @@
 using ActualLab.DependencyInjection;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Testing;
-using Xunit.DependencyInjection;
-using Xunit.DependencyInjection.Logging;
+using MartinCostello.Logging.XUnit;
 
 namespace ActualLab.Tests.Rpc;
 
@@ -43,12 +42,9 @@ public abstract class RpcLocalTestBase(ITestOutputHelper @out) : TestBase(@out)
                 logging.SetMinimumLevel(LogLevel.Debug);
                 if (UseDebugLog)
                     logging.AddDebug();
-                logging.AddProvider(
-#pragma warning disable CS0618
-                    new XunitTestOutputLoggerProvider(
-                        new TestOutputHelperAccessor() { Output = Out },
-                        (_, level) => level >= LogLevel.Debug));
-#pragma warning restore CS0618
+                logging.AddProvider(new XUnitLoggerProvider(
+                    Out,
+                    new XUnitLoggerOptions { Filter = (_, level) => level >= LogLevel.Debug }));
             });
 
         var rpc = services.AddRpc();

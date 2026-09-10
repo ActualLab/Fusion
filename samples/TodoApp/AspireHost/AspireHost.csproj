@@ -7,6 +7,10 @@
     <RootNamespace>Samples.TodoApp.AspireHost</RootNamespace>
     <AssemblyName>Samples.TodoApp.AspireHost</AssemblyName>
     <IsAspireHost>true</IsAspireHost>
+    <!-- The CLI bundle is only needed by "aspire run" / "aspire publish"; this sample is launched
+         via "dotnet run", so we skip the extra download and silence the advisory about it. -->
+    <AspireUseCliBundle>false</AspireUseCliBundle>
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
     <UserSecretsId>7039dcb7-bd79-4568-a2ae-0b7662dd6f4e</UserSecretsId>
   </PropertyGroup>
 

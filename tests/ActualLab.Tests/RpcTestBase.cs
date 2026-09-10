@@ -6,8 +6,7 @@ using ActualLab.RestEase;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Clients;
 using ActualLab.Time.Testing;
-using Xunit.DependencyInjection;
-using Xunit.DependencyInjection.Logging;
+using MartinCostello.Logging.XUnit;
 
 namespace ActualLab.Tests;
 
@@ -156,12 +155,7 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
                     logging.AddDebug();
                 // XUnit logging requires weird setup b/c otherwise it filters out
                 // everything below LogLevel.Information
-                logging.AddProvider(
-#pragma warning disable CS0618
-                    new XunitTestOutputLoggerProvider(
-                        new TestOutputHelperAccessor() { Output = Out },
-                        LogFilter));
-#pragma warning restore CS0618
+                logging.AddProvider(new XUnitLoggerProvider(Out, new XUnitLoggerOptions { Filter = LogFilter }));
             });
 
         var rpc = services.AddRpc();

@@ -96,13 +96,13 @@
          UnsafeAccessor, and preview.7 replaced that field, so any multi-handler event inside
          StackExchange.Redis throws MissingFieldException on a thread pool thread and kills the process.
          3.1 switched to Delegate.EnumerateInvocationList, which is public and version-proof. -->
-    <RedisVersion>[3.1.13,)</RedisVersion>
+    <RedisVersion>[3.1.31,)</RedisVersion>
     <RestEaseVersion>[1.6.4,)</RestEaseVersion>
     <OpenTelemetryVersion>[1.13.0,)</OpenTelemetryVersion>
     <!-- Build & Samples -->
-    <AspireSdkVersion>13.4.6</AspireSdkVersion>
+    <AspireSdkVersion>13.5.3</AspireSdkVersion>
     <BlazoriseVersion>[1.8.9,)</BlazoriseVersion>
-    <FusionVersion>13.0.12</FusionVersion>
+    <FusionVersion>14.4.3</FusionVersion>
   </PropertyGroup>
   <!-- Dependencies -->
   <ItemGroup>
@@ -112,8 +112,8 @@
     <PackageVersion Include="Blazorise.DataGrid" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Icons.FontAwesome" Version="$(BlazoriseVersion)" />
     <PackageVersion Include="Blazorise.Sidebar" Version="$(BlazoriseVersion)" />
-    <PackageVersion Include="Bullseye" Version="6.1.0" />
-    <PackageVersion Include="CliWrap" Version="3.10.2" />
+    <PackageVersion Include="Bullseye" Version="6.2.0" />
+    <PackageVersion Include="CliWrap" Version="3.10.5" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="DataAnnotationsValidatorNetStandard" Version="1.0.3" />
     <PackageVersion Include="K4os.Compression.LZ4" Version="1.3.8" />
@@ -145,11 +145,11 @@
     <PackageVersion Include="Microsoft.Identity.Web" Version="2.21.1" />
     <PackageVersion Include="MsgPack.Cli" Version="1.0.1" />
     <PackageVersion Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-    <PackageVersion Include="Pastel" Version="7.0.1" />
+    <PackageVersion Include="Pastel" Version="8.0.0" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="$(EntityFrameworkCoreMySqlVersion)" />
     <PackageVersion Include="RestEase" Version="$(RestEaseVersion)" />
     <PackageVersion Include="StackExchange.Redis" Version="$(RedisVersion)" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.12" />
     <PackageVersion Include="System.CommandLine.DragonFruit" Version="0.4.0-alpha.22272.1" />
     <PackageVersion Include="System.IO.Abstractions" Version="19.2.87" />
     <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
@@ -196,7 +196,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="$(OpenTelemetryVersion)" />
-    <PackageVersion Include="Npgsql.OpenTelemetry" Version="8.0.3" />
+    <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.3" />
     <!-- Used only in TodoApp sample -->
     <!-- Aspire -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireSdkVersion)" />
@@ -215,7 +215,7 @@
     <!-- Test time only -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
-    <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
+    <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="AutoFixture.AutoMoq" Version="4.18.1" />
     <PackageVersion Include="Castle.Core" Version="5.2.1" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
@@ -229,8 +229,10 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="[17.13.0,)" />
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <!-- XunitTestOutputLoggerProvider is gone in Xunit.DependencyInjection.Logging 9.0.0, so we use the latest 8.x for now -->
-    <PackageVersion Include="Xunit.DependencyInjection.Logging" Version="8.1.0" />
+    <!-- Held at 9.x: 10.0.0+ depends on MartinCostello.Logging.XUnit.v3, i.e. it requires xunit v3,
+         and this repo is still on xunit 2.x. 9.0.0 dropped XunitTestOutputLoggerProvider in favor of
+         AddXunitOutput() and MartinCostello.Logging.XUnit's XUnitLoggerProvider. -->
+    <PackageVersion Include="Xunit.DependencyInjection.Logging" Version="9.0.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="[2.8.2,)" />
     <!-- Samples only -->
     <PackageVersion Include="ActualLab.Interception" Version="$(FusionVersion)" />
@@ -248,17 +250,17 @@
     <PackageVersion Include="ActualLab.Core" Version="$(FusionVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="$(BlazorVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(BlazorVersion)" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(EntityFrameworkCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="$(EntityFrameworkCoreVersion)" />
-    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.10.91" />
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.10.94" />
     <PackageVersion Include="PolySharp" Version="1.16.0" />
     <!-- Analyzers -->
     <PackageVersion Include="Moq.Analyzers" Version="0.4.2" />
-    <PackageVersion Include="xunit.analyzers" Version="1.27.0" />
+    <PackageVersion Include="xunit.analyzers" Version="2.0.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.123" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.235" />
     <!-- Generators -->
     <PackageVersion Include="MemoryPack.Generator" Version="$(MemoryPackVersion)" />
     <!-- Microsoft.CodeAnalysis.* KEEP LOW: kept in sync with the low Roslyn baseline

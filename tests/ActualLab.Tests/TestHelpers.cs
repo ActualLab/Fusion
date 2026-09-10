@@ -1,7 +1,6 @@
 using ActualLab.Generators;
 using ActualLab.Rpc;
-using Xunit.DependencyInjection;
-using Xunit.DependencyInjection.Logging;
+using MartinCostello.Logging.XUnit;
 using Xunit.Sdk;
 
 namespace ActualLab.Tests;
@@ -56,13 +55,9 @@ public static class TestHelpers
             logging.SetMinimumLevel(LogLevel.Debug);
             if (useDebugLog)
                 logging.AddDebug();
-            logging.Services.AddSingleton<ILoggerProvider>(_ => {
-#pragma warning disable CS0618
-                return new XunitTestOutputLoggerProvider(
-                    new TestOutputHelperAccessor() { Output = @out },
-                    (_, level) => level >= LogLevel.Debug);
-#pragma warning restore CS0618
-            });
+            logging.AddProvider(new XUnitLoggerProvider(
+                @out,
+                new XUnitLoggerOptions { Filter = (_, level) => level >= LogLevel.Debug }));
         });
         return services.BuildServiceProvider();
     }

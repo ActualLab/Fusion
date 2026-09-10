@@ -3,8 +3,7 @@ using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Tests;
 using ActualLab.Testing.Collections;
-using Xunit.DependencyInjection;
-using Xunit.DependencyInjection.Logging;
+using MartinCostello.Logging.XUnit;
 
 namespace ActualLab.Fusion.Tests.Rpc;
 
@@ -91,12 +90,9 @@ public class FusionRpcCallTypeDowngradeTest(ITestOutputHelper @out) : TestBase(@
         services.AddLogging(logging => {
             logging.ClearProviders();
             logging.SetMinimumLevel(LogLevel.Debug);
-            logging.AddProvider(
-#pragma warning disable CS0618
-                new XunitTestOutputLoggerProvider(
-                    new TestOutputHelperAccessor() { Output = Out },
-                    (_, level) => level >= LogLevel.Debug));
-#pragma warning restore CS0618
+            logging.AddProvider(new XUnitLoggerProvider(
+                Out,
+                new XUnitLoggerOptions { Filter = (_, level) => level >= LogLevel.Debug }));
         });
         services.AddRpc();
     }
