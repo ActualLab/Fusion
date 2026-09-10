@@ -13,7 +13,9 @@ public interface IOperationScope : IAsyncDisposable
     public bool IsTransient { get; }
     public bool IsUsed { get; }
     public bool? IsCommitted { get; }
-    public bool MustStoreOperation { get; set; }
+    // null means "auto": the operation is stored only if something actually needs to read it -
+    // i.e. it has events, carries replicated invalidation calls, or any of its commands is replayed
+    public bool? MustStoreOperation { get; set; }
     public bool HasStoredOperation { get; }
     public bool HasStoredEvents { get; }
     public ImmutableList<Func<IOperationScope, Task>> CompletionHandlers { get; set; }

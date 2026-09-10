@@ -1,5 +1,7 @@
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
+using ActualLab.Reflection;
 
 namespace ActualLab.Fusion.Interception;
 
@@ -54,6 +56,12 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
 #else
             var computed = input.GetExistingComputed();
 #endif
+            if ((context.CallOptions & CallOptions.DeferInvalidate) == CallOptions.DeferInvalidate) {
+                // Recording must happen even when nothing is cached locally: another host may have
+                // this computed while the origin host doesn't.
+                DeferInvalidationScope.Record(NewInvalidationCall(invocation.Arguments));
+                return MethodDef.DefaultResult;
+            }
             if ((context.CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate) {
                 _ = ComputedImpl.TryUseExisting(computed, context);
                 return MethodDef.DefaultResult;
@@ -75,6 +83,14 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
                 invocation.Arguments.SetCancellationToken(CancellationTokenIndex, default);
         }
     }
+
+    public InvalidationCall NewInvalidationCall(ArgumentList arguments)
+        // The assembly version is stripped so a recorded call still resolves on a host running
+        // a different build - same reason every other serialized TypeRef here does it
+        => new(
+            new TypeRef(MethodDef.Type).WithoutAssemblyVersions(),
+            MethodDef.MethodInfo.Name,
+            CancellationTokenIndex >= 0 ? arguments.ToArray(CancellationTokenIndex) : arguments.ToArray());
 
     protected internal override async ValueTask<Computed> ProduceComputedImpl(
         ComputedInput input, Computed? existing, CancellationToken cancellationToken)

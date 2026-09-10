@@ -3,6 +3,7 @@ using ActualLab.Conversion;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.Interception;
 using ActualLab.Fusion.Internal;
+using ActualLab.Fusion.Operations;
 using ActualLab.Fusion.Operations.Internal;
 using ActualLab.Fusion.Operations.Reprocessing;
 using ActualLab.Fusion.Client.Interception;
@@ -83,6 +84,13 @@ public readonly struct FusionBuilder
         // CommandR, command completion and invalidation
         var commander = Commander;
 
+        // Deferred invalidation: mode resolution + the registry used to apply recorded calls
+        services.FindOrAddInstance(() => new InvalidationModeResolver(), addInFront: true);
+        services.FindOrAddInstance(() => new ComputeServiceRegistry(), addInFront: true);
+        services.AddSingleton(c => new InvalidationCallApplier(c));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IOperationCompletionListener, InvalidationCallApplier>(
+            c => c.GetRequiredService<InvalidationCallApplier>()));
+
         // Transient operation scope and its provider
         services.AddSingleton(c => new InMemoryOperationScopeProvider(c));
         commander.AddHandlers<InMemoryOperationScopeProvider>();
@@ -147,6 +155,29 @@ public readonly struct FusionBuilder
         RpcServiceMode serviceMode,
         bool makeDefault = false)
         => new(this, serviceMode, makeDefault);
+
+    // WithInvalidationMode
+
+    public FusionBuilder WithDefaultInvalidationMode(InvalidationMode mode)
+    {
+        GetInvalidationModeResolver().DefaultMode = mode;
+        return this;
+    }
+
+    public FusionBuilder WithInvalidationMode<TService>(InvalidationMode mode)
+        => WithInvalidationMode(typeof(TService), mode);
+
+    public FusionBuilder WithInvalidationMode(Type serviceType, InvalidationMode mode)
+    {
+        GetInvalidationModeResolver().Override(serviceType, mode);
+        return this;
+    }
+
+    public InvalidationModeResolver GetInvalidationModeResolver()
+        => Services.FindOrAddInstance(() => new InvalidationModeResolver(), addInFront: true);
+
+    public ComputeServiceRegistry GetComputeServiceRegistry()
+        => Services.FindOrAddInstance(() => new ComputeServiceRegistry(), addInFront: true);
 
     // AddXxx - Service, Client, ComputeService, Server, DistributedService, DistributedServicePair
 

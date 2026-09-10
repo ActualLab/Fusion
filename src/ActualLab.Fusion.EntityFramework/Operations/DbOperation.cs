@@ -41,6 +41,9 @@ public sealed class DbOperation : IDbIndexedLogEntry
     public string CommandJson { get; set; } = "";
     public string? ItemsJson { get; set; }
     public string? NestedOperations { get; set; }
+    // A dedicated nullable column rather than an Items key: an unknown value type inside the bag
+    // would break the deserialization of the whole bag on a host that doesn't know this feature.
+    public string? InvalidationCallsJson { get; set; }
 
     public DbOperation() { }
     public DbOperation(Operation operation)
@@ -57,6 +60,9 @@ public sealed class DbOperation : IDbIndexedLogEntry
         var nestedOperations = NestedOperations.IsNullOrEmpty()
             ? ImmutableList<NestedOperation>.Empty
             : Serializer.Read<ImmutableList<NestedOperation>>(NestedOperations);
+        var invalidationCalls = InvalidationCallsJson.IsNullOrEmpty()
+            ? ImmutableList<InvalidationCall>.Empty
+            : Serializer.Read<ImmutableList<InvalidationCall>>(InvalidationCallsJson);
         return new Operation(
             Uuid,
             HostId,
@@ -65,6 +71,7 @@ public sealed class DbOperation : IDbIndexedLogEntry
             items.ToMutable(),
             nestedOperations) {
             Index = HasIndex ? Index : null,
+            InvalidationCalls = invalidationCalls,
         };
     }
 
@@ -78,6 +85,9 @@ public sealed class DbOperation : IDbIndexedLogEntry
         CommandJson = Serializer.Write(operation.Command);
         ItemsJson = operation.Items.Items.Count == 0 ? null : Serializer.Write(operation.Items.Snapshot);
         NestedOperations = operation.NestedOperations.Count == 0 ? null : Serializer.Write(operation.NestedOperations);
+        InvalidationCallsJson = operation.InvalidationCalls.Count == 0
+            ? null
+            : Serializer.Write(operation.InvalidationCalls);
         return this;
     }
 }

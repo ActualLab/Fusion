@@ -12,5 +12,6 @@ public enum CallOptions
     Invalidate = 2 + GetExisting,
     Capture = 4,
     InboundRpc = 8,
+    DeferInvalidate = 16 + GetExisting,
 }
 #pragma warning restore MA0062
