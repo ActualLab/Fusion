@@ -3,8 +3,10 @@ using ActualLab.IO;
 using ActualLab.Reflection;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
+#if NET8_0_OR_GREATER
 using Nerdbank.MessagePack;
 using PolyType.ReflectionProvider;
+#endif
 using TextOrBytes = ActualLab.Serialization.TextOrBytes;
 
 namespace ActualLab.Tests.Serialization;
@@ -492,6 +494,8 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             .Value.Should().BeOfType<Moment>();
     }
 
+#if NET8_0_OR_GREATER
+
     [Fact]
     public void TypeDecoratingUniSerializedShouldUseOwningNerdbankSerializer()
     {
@@ -531,4 +535,6 @@ public class SerializationTest(ITestOutputHelper @out) : TestBase(@out)
             writer.Write(value + 1000);
         }
     }
+
+#endif
 }

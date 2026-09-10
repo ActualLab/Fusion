@@ -223,7 +223,11 @@ public class RpcConnectTimeoutTest(ITestOutputHelper @out) : RpcLocalTestBase(@o
         using var cts = new CancellationTokenSource();
         _ = peer.OutboundCalls.HandleDisconnect(new RpcPeerConnectionState(), cts.Token);
         await AssertConnectTimeout(() => resultTask.WaitAsync(Timeout));
-        await cts.CancelAsync();
+#if NET8_0_OR_GREATER
+        await cts.CancelAsync().ConfigureAwait(false);
+#else
+        cts.Cancel();
+#endif
     }
 
     // Private methods

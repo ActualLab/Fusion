@@ -410,9 +410,9 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
             await commander.Call(new Auth_SignOut(Session.New()));
 
         await using var dbContext = await CreateDbContext();
-        (await dbContext.AuthSessions.CountAsync()).Should().Be(0);
-        (await dbContext.Operations.CountAsync()).Should().Be(0);
-        (await dbContext.Events.CountAsync()).Should().Be(0);
+        (await EntityFrameworkQueryableExtensions.CountAsync(dbContext.AuthSessions)).Should().Be(0);
+        (await EntityFrameworkQueryableExtensions.CountAsync(dbContext.Operations)).Should().Be(0);
+        (await EntityFrameworkQueryableExtensions.CountAsync(dbContext.Events)).Should().Be(0);
     }
 
     [Fact]

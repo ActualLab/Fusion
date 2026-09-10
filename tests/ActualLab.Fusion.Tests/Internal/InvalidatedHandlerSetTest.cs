@@ -36,6 +36,8 @@ public class InvalidatedHandlerSetTest(ITestOutputHelper @out) : TestBase(@out)
         calledIndexes.Should().BeEquivalentTo(Enumerable.Range(0, size));
     }
 
+#if !NET472 // GC.GetAllocatedBytesForCurrentThread arrived in .NET Framework 4.8
+
     [Theory]
     [InlineData(1)]
     [InlineData(3)]
@@ -58,6 +60,8 @@ public class InvalidatedHandlerSetTest(ITestOutputHelper @out) : TestBase(@out)
 
         allocated.Should().Be(0);
     }
+
+#endif
 
     private void RunTest(int size, double removalProbability)
     {

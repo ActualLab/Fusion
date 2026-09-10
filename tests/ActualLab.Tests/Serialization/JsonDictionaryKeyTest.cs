@@ -29,8 +29,8 @@ public class JsonDictionaryKeyTest(ITestOutputHelper @out)
     [Fact]
     public void MomentKeysRoundTrip()
         => AssertRoundTrip(new Dictionary<Moment, int> {
-            [new Moment(DateTime.UnixEpoch)] = 1,
-            [new Moment(DateTime.UnixEpoch.AddDays(1))] = 2,
+            [new Moment(DateTimeExt.UnixEpoch)] = 1,
+            [new Moment(DateTimeExt.UnixEpoch.AddDays(1))] = 2,
         });
 
     [Fact]

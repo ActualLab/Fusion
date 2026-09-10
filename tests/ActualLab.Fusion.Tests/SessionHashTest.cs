@@ -42,12 +42,12 @@ public class SessionHashTest
         Session.Default.ToString().Should().Be("~:9644ea3b");
 
         // `printf '~' | sha256sum`
-        Convert.ToHexString(Session.Default.Sha256Hash.ToArray()).ToLowerInvariant().Should()
+        Session.Default.Sha256Hash.ToArray().ToHexString(maxLength: 32).ToLowerInvariant().Should()
             .Be("7ace431cb61584cb9b8dc7ec08cf38ac0a2d649660be86d349fb43108b542fa4");
 
         // `printf 'test-session-id' | sha256sum`
         var session = new Session("test-session-id");
-        Convert.ToHexString(session.Sha256Hash.ToArray()).ToLowerInvariant().Should()
+        session.Sha256Hash.ToArray().ToHexString(maxLength: 32).ToLowerInvariant().Should()
             .Be("08001f8fa6f5dbb9a20ddf1e8366af93a76815f84035cfd2e93233475c968279");
     }
 
@@ -60,7 +60,7 @@ public class SessionHashTest
         id.Length.Should().BeGreaterThan(Session.IdPrefixLength);
 
         var s = session.ToString();
-        s.Should().Be(string.Concat(id.AsSpan(0, Session.IdPrefixLength), Session.IdPrefixSeparator, session.Hash));
+        s.Should().Be(id.Substring(0, Session.IdPrefixLength) + Session.IdPrefixSeparator + session.Hash);
         s.Should().NotContain(id);
         // Nothing beyond the intended prefix leaks: the 5th+ chars of Id must be absent
         s.Should().NotContain(id.Substring(0, Session.IdPrefixLength + 1));

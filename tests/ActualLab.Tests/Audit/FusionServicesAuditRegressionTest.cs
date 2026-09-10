@@ -57,7 +57,7 @@ public class FusionServicesAuditRegressionTest
                 callTask);
         }
         finally {
-            state.AllowCompletion.TrySetResult();
+            state.AllowCompletion.TrySetResult(default);
         }
         await callTask.ConfigureAwait(false);
         completedBeforeHandler.Should().BeFalse();
@@ -113,8 +113,8 @@ public class FusionServicesAuditRegressionTest
 
     private sealed class CompletionOrderingState
     {
-        public TaskCompletionSource WhenStarted { get; } = TaskCompletionSourceExt.New();
-        public TaskCompletionSource AllowCompletion { get; } = TaskCompletionSourceExt.New();
+        public TaskCompletionSource<Unit> WhenStarted { get; } = TaskCompletionSourceExt.New<Unit>();
+        public TaskCompletionSource<Unit> AllowCompletion { get; } = TaskCompletionSourceExt.New<Unit>();
     }
 
     private sealed class CompletionOrderingHandler(CompletionOrderingState state)
@@ -126,7 +126,7 @@ public class FusionServicesAuditRegressionTest
         {
             var scope = InMemoryOperationScope.GetOrCreate(CommandContext.GetCurrent());
             scope.Operation.AddCompletionHandler(async _ => {
-                state.WhenStarted.TrySetResult();
+                state.WhenStarted.TrySetResult(default);
                 await state.AllowCompletion.Task.ConfigureAwait(false);
             });
             return Task.CompletedTask;

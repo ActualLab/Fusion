@@ -21,7 +21,7 @@ public class RetryDelayAwareErrorTest(ITestOutputHelper @out) : SimpleFusionTest
         var whenInvalidated = computed.WhenInvalidated();
 
         // act
-        await Task.Delay(ErrorInvalidationDelay * 2.5);
+        await Task.Delay(TimeSpan.FromTicks(ErrorInvalidationDelay.Ticks * 5 / 2));
 
         // assert
         whenInvalidated.IsCompleted.Should().BeFalse();
@@ -36,7 +36,7 @@ public class RetryDelayAwareErrorTest(ITestOutputHelper @out) : SimpleFusionTest
         var whenInvalidated = computed.WhenInvalidated();
 
         // act, assert
-        await whenInvalidated.WaitAsync(ErrorInvalidationDelay * 4);
+        await whenInvalidated.WaitAsync(TimeSpan.FromTicks(ErrorInvalidationDelay.Ticks * 4));
     }
 
     // Private methods

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using ActualLab.Api;
 using ActualLab.Rpc;
@@ -212,7 +213,7 @@ public class SupportingProjectsAuditRegressionTest
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
         {
             var bytes = Encoding.UTF8.GetBytes(value);
-            return stream.WriteAsync(bytes).AsTask();
+            return stream.WriteAsync(bytes, 0, bytes.Length);
         }
 
         protected override bool TryComputeLength(out long length)

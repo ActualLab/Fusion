@@ -336,7 +336,9 @@ public class RpcReconnectProofGateTest(ITestOutputHelper @out) : TestBase(@out)
             using var httpClient = new HttpClient(new SocketsHttpHandler());
             using var request = new HttpRequestMessage(HttpMethod.Post, uri) {
                 Version = HttpVersion.Version20,
+#if NET5_0_OR_GREATER
                 VersionPolicy = HttpVersionPolicy.RequestVersionExact,
+#endif
                 Content = new StreamContent(new MemoryStream()),
             };
             using var response = await httpClient

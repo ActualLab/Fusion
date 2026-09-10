@@ -34,8 +34,8 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
     {
         var message = "{}\n"u8.ToArray();
         var fragments = new[] {
-            new Fragment(message[..2], false),
-            new Fragment(message[2..], true),
+            new Fragment(message.AsSpan(0, 2).ToArray(), false),
+            new Fragment(message.AsSpan(2).ToArray(), true),
         };
         var options = RpcWebSocketTransport.Options.Default with { MaxMessageSize = message.Length };
         var (transport, _, services) = NewTransport(options, fragments);

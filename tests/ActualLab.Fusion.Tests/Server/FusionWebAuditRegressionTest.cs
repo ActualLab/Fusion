@@ -28,7 +28,7 @@ public class FusionWebAuditRegressionTest
         });
 
         nextCallCount.Should().Be(0);
-        context.Response.Headers.SetCookie.Should().NotBeEmpty();
+        context.Response.Headers["Set-Cookie"].Should().NotBeEmpty();
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class FusionWebAuditRegressionTest
         await action.Should().NotThrowAsync();
         invalidSessionCallCount.Should().Be(1);
         scope.ServiceProvider.GetRequiredService<ISessionResolver>().Session.Id.Should().NotBe("x");
-        context.Response.Headers.SetCookie.Should().NotBeEmpty();
+        context.Response.Headers["Set-Cookie"].Should().NotBeEmpty();
     }
 
     [Fact]
@@ -132,13 +132,13 @@ public class FusionWebAuditRegressionTest
     private static DefaultHttpContext NewHttpContext(IServiceProvider services, string cookie)
     {
         var context = new DefaultHttpContext { RequestServices = services };
-        context.Request.Headers.Cookie = cookie;
+        context.Request.Headers["Cookie"] = cookie;
         return context;
     }
 
     private static string ReplayCookies(HttpContext httpContext)
     {
-        var setCookieHeaders = httpContext.Response.Headers.SetCookie.Select(x => x ?? "").ToArray();
+        var setCookieHeaders = httpContext.Response.Headers["Set-Cookie"].Select(x => x ?? "").ToArray();
         var setCookies = SetCookieHeaderValue.ParseList(setCookieHeaders);
         return setCookies
             .Where(x => x.Expires is not { } expires || expires > DateTimeOffset.UtcNow)

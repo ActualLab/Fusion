@@ -82,7 +82,8 @@ public class RpcConnectionMetricsTest(ITestOutputHelper @out) : RpcLocalTestBase
     private static bool HasStableConnectionTags(KeyValuePair<string, object?>[] tags)
     {
         var expectedKeys = new[] { "rpc.connection.kind", "outcome" };
-        return tags.Select(x => x.Key).Order().SequenceEqual(expectedKeys.Order())
+        return tags.Select(x => x.Key).OrderBy(x => x, StringComparer.Ordinal)
+                .SequenceEqual(expectedKeys.OrderBy(x => x, StringComparer.Ordinal))
             && HasTag(tags, "rpc.connection.kind", "remote")
             && tags.Any(x => x is { Key: "outcome", Value: "success" or "error" or "cancel" });
     }

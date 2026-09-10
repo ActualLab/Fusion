@@ -261,6 +261,8 @@ public class CoreAuditRegressionTest
         generator.Next(1, alphabet).Should().Be(alphabet[256].ToString());
     }
 
+#if !NET472 // GC.GetAllocatedBytesForCurrentThread arrived in .NET Framework 4.8
+
     [Fact]
     public void RandomStringPowerOfTwoPathMustRemainBatchedAndAllocationBounded()
     {
@@ -278,6 +280,8 @@ public class CoreAuditRegressionTest
         rng.CallCount.Should().Be(1);
         allocated.Should().BeLessThanOrEqualTo(2048);
     }
+
+#endif
 
     [Fact]
     public void DescendantTryConvertMustReturnNoneOnMismatch()
@@ -389,10 +393,18 @@ public class CoreAuditRegressionTest
     {
         var path = new FilePath(Path.Combine(Path.GetTempPath(), $"fusion-core-audit-{Guid.NewGuid():N}.txt"));
         try {
+#if NETFRAMEWORK
+            File.WriteAllText(path, "this is much longer");
+#else
             await File.WriteAllTextAsync(path, "this is much longer").ConfigureAwait(false);
+#endif
             await path.WriteLines(Lines(), encoding: null, cancellationToken: default).ConfigureAwait(false);
 
+#if NETFRAMEWORK
+            File.ReadAllText(path).Should().Be($"x{Environment.NewLine}");
+#else
             (await File.ReadAllTextAsync(path).ConfigureAwait(false)).Should().Be($"x{Environment.NewLine}");
+#endif
         }
         finally {
             File.Delete(path);
@@ -463,8 +475,10 @@ public class CoreAuditRegressionTest
         public override void GetBytes(byte[] data, int offset, int count)
             => FillData(data.AsSpan(offset, count));
 
+#if !NETFRAMEWORK
         public override void GetBytes(Span<byte> data)
             => FillData(data);
+#endif
 
         public override void GetNonZeroBytes(byte[] data)
         {

@@ -38,7 +38,7 @@ public class FusionSessionBoundaryAuditRegressionTest
         await using var scope = serviceProvider.CreateAsyncScope();
         var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
         context.Request.QueryString = new QueryString("?session=query-session-1&session=query-session-2");
-        context.Request.Headers.Cookie = "FusionAuth.SessionId=ambient-session";
+        context.Request.Headers["Cookie"] = "FusionAuth.SessionId=ambient-session";
         var properties = PropertyBag.Empty.KeylessSet<HttpContext>(context);
         var factory = new RpcPeerOptions().WithFusionServerOverrides().ServerConnectionFactory;
 

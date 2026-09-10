@@ -30,7 +30,11 @@ public class ValueTypeConstructorTest(ITestOutputHelper @out)
         // Activator honours the declared constructor...
         ((S)Activator.CreateInstance(typeof(S))!).A.Should().Be(42);
         // ...GetUninitializedObject never does, which is why CreateInstance uses it
+#if NETFRAMEWORK
+        ((S)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(S))).A.Should().Be(0);
+#else
         ((S)RuntimeHelpers.GetUninitializedObject(typeof(S))).A.Should().Be(0);
+#endif
     }
 
     [Fact]

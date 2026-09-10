@@ -1,3 +1,4 @@
+#if !NETFRAMEWORK
 using System.Diagnostics;
 using ActualLab.Fusion.Server.Internal;
 
@@ -37,3 +38,4 @@ public sealed class BlazorCircuitActivitySuppressorTest
         }
     }
 }
+#endif

@@ -28,7 +28,9 @@ public class MessagePackNilTest(ITestOutputHelper @out) : TestBase(@out)
         AssertNilReadsAsDefault<PropertyBag>();
         // default(PropertyBagItem).Equals dereferences its null Key, so this one is checked by hand
         ReadNil<PropertyBagItem>(MessagePackByteSerializer.Default).Key.Should().BeNull();
+#if NET8_0_OR_GREATER
         ReadNil<PropertyBagItem>(NerdbankMessagePackByteSerializer.Default).Key.Should().BeNull();
+#endif
         AssertNilReadsAsDefault<TypeDecoratingUniSerialized<TypeSchema.Any, object>>();
         AssertNilReadsAsDefault<Symbol>();
         AssertNilReadsAsDefault<FilePath>();
@@ -37,6 +39,8 @@ public class MessagePackNilTest(ITestOutputHelper @out) : TestBase(@out)
         AssertNilReadsAsDefault<ByteString>();
         AssertNilReadsAsDefault<MessagePackData>();
     }
+
+#if NET8_0_OR_GREATER
 
     [Fact]
     public void NilReadsAsDefaultNerdbankOnlyTest()
@@ -49,12 +53,16 @@ public class MessagePackNilTest(ITestOutputHelper @out) : TestBase(@out)
         AssertNilReadsAsDefault<RpcMethodRef>(serializer);
     }
 
+#endif
+
     // Private methods
 
     private static void AssertNilReadsAsDefault<T>()
     {
         AssertNilReadsAsDefault<T>(MessagePackByteSerializer.Default);
+#if NET8_0_OR_GREATER
         AssertNilReadsAsDefault<T>(NerdbankMessagePackByteSerializer.Default);
+#endif
     }
 
     private static void AssertNilReadsAsDefault<T>(IByteSerializer serializer)

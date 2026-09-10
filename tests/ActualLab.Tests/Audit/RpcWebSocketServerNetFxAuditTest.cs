@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.WebSockets;
 using Microsoft.Owin;
+using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Server;
 

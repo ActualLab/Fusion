@@ -89,7 +89,7 @@ public class AsyncLockSetTest(ITestOutputHelper @out) : AsyncLockTestBase(@out)
             var owner = await lockSet.Lock(0).ConfigureAwait(false);
             using var cancellationSource = new CancellationTokenSource();
             var cancelledWaiter = lockSet.Lock(0, cancellationSource.Token).AsTask();
-            var start = TaskCompletionSourceExt.New();
+            var start = TaskCompletionSourceExt.New<Unit>();
             var cancelTask = Task.Run(async () => {
                 await start.Task.ConfigureAwait(false);
                 cancellationSource.Cancel();
@@ -99,7 +99,7 @@ public class AsyncLockSetTest(ITestOutputHelper @out) : AsyncLockTestBase(@out)
                 owner.Dispose();
             });
 
-            start.SetResult();
+            start.SetResult(default);
             await Task.WhenAll(cancelTask, releaseTask).ConfigureAwait(false);
 
             try {

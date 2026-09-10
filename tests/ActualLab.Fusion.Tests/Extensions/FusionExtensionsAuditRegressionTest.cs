@@ -9,7 +9,7 @@ public class FusionExtensionsAuditRegressionTest
     [Fact]
     public async Task QueryablePaginationShouldTranslateToSql()
     {
-        await using var connection = new SqliteConnection("Data Source=:memory:");
+        using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
         var options = new DbContextOptionsBuilder<AuditDbContext>()
             .UseSqlite(connection)

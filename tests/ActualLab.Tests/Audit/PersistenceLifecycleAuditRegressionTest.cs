@@ -117,15 +117,15 @@ public class PersistenceLifecycleAuditRegressionTest
     [Fact]
     public async Task ShardDbContextFactoryShouldDisposeProviderWhenCreationRacesEviction()
     {
-        var whenCreating = TaskCompletionSourceExt.New();
-        var allowCreation = TaskCompletionSourceExt.New();
+        var whenCreating = TaskCompletionSourceExt.New<Unit>();
+        var allowCreation = TaskCompletionSourceExt.New<Unit>();
         var trackers = new ConcurrentDictionary<string, DisposalTracker>();
         var services = new ServiceCollection();
         services.AddFusion();
         services.AddDbContextServices<TestDbContext>(db => db.AddSharding(sharding => {
             sharding.AddShardRegistry("a");
             sharding.AddShardDbContextFactory((_, shard, shardServices) => {
-                whenCreating.TrySetResult();
+                whenCreating.TrySetResult(default);
                 allowCreation.Task.GetAwaiter().GetResult();
                 shardServices.AddSingleton(_ => {
                     var tracker = new DisposalTracker();
@@ -145,7 +145,7 @@ public class PersistenceLifecycleAuditRegressionTest
         await TestExt.When(
             () => registry.Shards.Value.Should().NotContain("a"),
             TimeSpan.FromSeconds(5));
-        allowCreation.TrySetResult();
+        allowCreation.TrySetResult(default);
         (await removeTask.WaitAsync(TimeSpan.FromSeconds(5))).Should().BeTrue();
         var create = async () => await createTask.WaitAsync(TimeSpan.FromSeconds(5));
         await create.Should().ThrowAsync<InvalidOperationException>();
@@ -156,15 +156,15 @@ public class PersistenceLifecycleAuditRegressionTest
     [Fact]
     public async Task ShardDbContextFactoryShouldNotBlockRemovalDuringFactoryCreation()
     {
-        var whenCreating = TaskCompletionSourceExt.New();
-        var testRemoval = TaskCompletionSourceExt.New();
-        var removalCompleted = TaskCompletionSourceExt.New();
+        var whenCreating = TaskCompletionSourceExt.New<Unit>();
+        var testRemoval = TaskCompletionSourceExt.New<Unit>();
+        var removalCompleted = TaskCompletionSourceExt.New<Unit>();
         var services = new ServiceCollection();
         services.AddFusion();
         services.AddDbContextServices<TestDbContext>(db => db.AddSharding(sharding => {
             sharding.AddShardRegistry("a");
             sharding.AddShardDbContextFactory((_, _, shardServices) => {
-                whenCreating.TrySetResult();
+                whenCreating.TrySetResult(default);
                 testRemoval.Task.GetAwaiter().GetResult();
                 var completedInTime = removalCompleted.Task.Wait(TimeSpan.FromSeconds(5));
                 completedInTime.Should().BeTrue();
@@ -182,13 +182,13 @@ public class PersistenceLifecycleAuditRegressionTest
                 return registry.Remove("a");
             }
             finally {
-                removalCompleted.TrySetResult();
+                removalCompleted.TrySetResult(default);
             }
         });
         await TestExt.When(
             () => registry.Shards.Value.Should().NotContain("a"),
             TimeSpan.FromSeconds(5));
-        testRemoval.TrySetResult();
+        testRemoval.TrySetResult(default);
 
         (await removeTask.WaitAsync(TimeSpan.FromSeconds(5))).Should().BeTrue();
         var create = async () => await createTask.WaitAsync(TimeSpan.FromSeconds(5));
@@ -248,8 +248,8 @@ public class PersistenceLifecycleAuditRegressionTest
     [Fact]
     public async Task ShardDbContextFactoryShouldDisposeProviderWhenCreationRacesRootDisposal()
     {
-        var whenCreating = TaskCompletionSourceExt.New();
-        var allowCreation = TaskCompletionSourceExt.New();
+        var whenCreating = TaskCompletionSourceExt.New<Unit>();
+        var allowCreation = TaskCompletionSourceExt.New<Unit>();
         var trackers = new ConcurrentDictionary<string, DisposalTracker>();
         var services = new ServiceCollection();
         services.AddFusion();
@@ -257,7 +257,7 @@ public class PersistenceLifecycleAuditRegressionTest
             sharding.AddShardRegistry("a", "b");
             sharding.AddShardDbContextFactory((_, shard, shardServices) => {
                 if (shard == "a") {
-                    whenCreating.TrySetResult();
+                    whenCreating.TrySetResult(default);
                     allowCreation.Task.GetAwaiter().GetResult();
                 }
                 shardServices.AddSingleton(_ => {
@@ -280,7 +280,7 @@ public class PersistenceLifecycleAuditRegressionTest
         }, TimeSpan.FromSeconds(5));
         var disposeAsyncTask = ((IAsyncDisposable)factory).DisposeAsync().AsTask();
         disposeAsyncTask.IsCompleted.Should().BeFalse();
-        allowCreation.TrySetResult();
+        allowCreation.TrySetResult(default);
         await disposeTask.WaitAsync(TimeSpan.FromSeconds(5));
         await disposeAsyncTask.WaitAsync(TimeSpan.FromSeconds(5));
         await createTask.SilentAwait(false);
@@ -291,8 +291,8 @@ public class PersistenceLifecycleAuditRegressionTest
     [Fact]
     public async Task ShardDbContextFactoryShouldIgnoreCapturedShardUpdateAfterRootDisposal()
     {
-        var whenUpdating = TaskCompletionSourceExt.New();
-        var allowUpdate = TaskCompletionSourceExt.New();
+        var whenUpdating = TaskCompletionSourceExt.New<Unit>();
+        var allowUpdate = TaskCompletionSourceExt.New<Unit>();
         DisposalTracker? tracker = null;
         var services = new ServiceCollection();
         services.AddFusion();
@@ -315,14 +315,14 @@ public class PersistenceLifecycleAuditRegressionTest
 
         tracker.Should().NotBeNull();
         tracker!.IsDisposed.Should().BeTrue();
-        allowUpdate.TrySetResult();
+        allowUpdate.TrySetResult(default);
         (await removeTask.WaitAsync(TimeSpan.FromSeconds(5))).Should().BeTrue();
         registry.Shards.Updated -= DelayShardUpdate;
         return;
 
         void DelayShardUpdate(State state, StateEventKind eventKind)
         {
-            whenUpdating.TrySetResult();
+            whenUpdating.TrySetResult(default);
             allowUpdate.Task.GetAwaiter().GetResult();
         }
     }

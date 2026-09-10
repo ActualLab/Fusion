@@ -64,7 +64,7 @@ public class TypeSerializerTest(ITestOutputHelper @out) : TestBase(@out)
     {
         ResetCaches();
         var marker = TextTypeSerializer.ToBytes(typeof(string)).Bytes.ToArray();
-        var truncatedMarker = marker[..^1];
+        var truncatedMarker = marker.AsSpan(0, marker.Length - 1).ToArray();
         Assert.Throws<SerializationException>(() => ReadTextItemType(truncatedMarker));
         Assert.Throws<SerializationException>(() => TextTypeSerializer.FromBytes(truncatedMarker.AsByteString()));
         TextTypeSerializer.FromBytesCacheSize.Should().Be(0);

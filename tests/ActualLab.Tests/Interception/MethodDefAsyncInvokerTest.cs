@@ -75,13 +75,13 @@ public class MethodDefAsyncInvokerTest
     [Fact]
     public async Task IncompleteVoidTask()
     {
-        var taskSource = TaskCompletionSourceExt.New();
+        var taskSource = TaskCompletionSourceExt.New<Unit>();
         var invoker = CreateVoidInvoker(_ => taskSource.Task);
 
         var result = invoker.Invoke(new object());
 
         result.IsCompleted.Should().BeFalse();
-        taskSource.SetResult();
+        taskSource.SetResult(default);
         (await result.ConfigureAwait(false)).Should().BeNull();
     }
 

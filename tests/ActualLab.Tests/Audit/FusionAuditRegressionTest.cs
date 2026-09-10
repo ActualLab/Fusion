@@ -39,7 +39,7 @@ public class FusionAuditRegressionTest
         var flushTask = cache.Flush();
         await cache.WhenFlushStarted.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         var completedEarly = flushTask.IsCompleted;
-        cache.AllowFlush.TrySetResult();
+        cache.AllowFlush.TrySetResult(default);
         await cache.WhenFlushCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
         completedEarly.Should().BeFalse();
@@ -59,7 +59,7 @@ public class FusionAuditRegressionTest
 
         var flushTask = cache.Flush();
         await cache.WhenFlushStarted.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-        cache.AllowFlush.TrySetResult();
+        cache.AllowFlush.TrySetResult(default);
 
         var action = () => flushTask;
         (await action.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(error);
@@ -78,9 +78,9 @@ public class FusionAuditRegressionTest
     private sealed class GatedFlushingCache(IServiceProvider services)
         : FlushingRemoteComputedCache(new Options(""), services)
     {
-        public TaskCompletionSource WhenFlushStarted { get; } = TaskCompletionSourceExt.New();
-        public TaskCompletionSource AllowFlush { get; } = TaskCompletionSourceExt.New();
-        public TaskCompletionSource WhenFlushCompleted { get; } = TaskCompletionSourceExt.New();
+        public TaskCompletionSource<Unit> WhenFlushStarted { get; } = TaskCompletionSourceExt.New<Unit>();
+        public TaskCompletionSource<Unit> AllowFlush { get; } = TaskCompletionSourceExt.New<Unit>();
+        public TaskCompletionSource<Unit> WhenFlushCompleted { get; } = TaskCompletionSourceExt.New<Unit>();
         public Exception? FlushError { get; init; }
 
         protected override ValueTask<RpcCacheValue?> Fetch(RpcCacheKey key, CancellationToken cancellationToken)
@@ -88,12 +88,12 @@ public class FusionAuditRegressionTest
 
         protected override async Task Flush(Dictionary<RpcCacheKey, RpcCacheValue?> flushingQueue)
         {
-            WhenFlushStarted.TrySetResult();
+            WhenFlushStarted.TrySetResult(default);
             try {
                 await AllowFlush.Task.ConfigureAwait(false);
             }
             finally {
-                WhenFlushCompleted.TrySetResult();
+                WhenFlushCompleted.TrySetResult(default);
             }
             if (FlushError is { } error)
                 throw error;
