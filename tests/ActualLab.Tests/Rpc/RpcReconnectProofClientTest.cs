@@ -109,8 +109,11 @@ public class RpcReconnectProofClientTest : RpcTestBase
         (await RawConnect(clientPeer.ClientId, "1", proof)).Should().Be(HttpStatusCode.Forbidden);
         serverPeer.LastSeenReconnectCounter.Should().Be(1);
 
-        // The first (accepted) connect legitimately evicts the incumbent - it proved possession
-        clientPeer.ConnectionState.Should().NotBeSameAs(connectionState);
+        // The first (accepted) connect legitimately evicts the incumbent - it proved possession.
+        // The eviction happens server-side, so the client peer needs a moment to notice it.
+        await TestExt.When(
+            () => clientPeer.ConnectionState.Should().NotBeSameAs(connectionState),
+            TimeSpan.FromSeconds(5));
         (await client.Div(10, 2)).Should().Be(5);
     }
 
