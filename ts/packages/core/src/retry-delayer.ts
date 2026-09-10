@@ -34,8 +34,9 @@ export class RetryDelayer {
         if (this.limit !== undefined && tryIndex >= this.limit)
             return RetryDelayLimitExceeded;
 
-        const delayMs = this.delays.getDelay(tryIndex);
-        if (tryIndex === 0 || delayMs <= 0) return RetryDelayNone;
+        const delayMs = this.getDelayMs(tryIndex);
+        if (tryIndex === 0 || delayMs <= 0)
+            return RetryDelayNone;
 
         const actualDelayMs = Math.max(1, delayMs);
         const endsAt = Date.now() + actualDelayMs;
@@ -60,5 +61,11 @@ export class RetryDelayer {
         this._cancelController = new AbortController();
         old.abort();
         this.cancelDelaysChanged.trigger();
+    }
+
+    // Protected/internal methods
+
+    protected getDelayMs(tryIndex: number): number {
+        return this.delays.getDelay(tryIndex);
     }
 }
