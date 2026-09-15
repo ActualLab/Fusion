@@ -37,7 +37,11 @@ public abstract class StatefulComponentBase : CircuitHubComponentBase, IStateful
             if (State is IHasDisposeStatus { IsDisposed: true })
                 return;
 
-            NotifyStateHasChanged();
+            // It is generally unsafe to trigger NotifyStateHasChanged w/o isolation here,
+            // coz even StateEventKind.Updated can be triggered from an arbitrary ExecutionContext
+            // (it can be triggered manually outside the UpdateCycle - e.g., via Recompute()),
+            // not speaking about Invalidated (can be a context w/ Invalidation.Begin() scope).
+            NotifyStateHasChanged(isolate: true);
         };
     }
 

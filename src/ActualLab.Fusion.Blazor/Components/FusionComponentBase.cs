@@ -14,6 +14,10 @@ public abstract class FusionComponentBase : ComponentBase, IHandleEvent
     [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume Blazor components' code is fully preserved")]
     protected ComponentInfo ComponentInfo => field ??= ComponentInfo.Get(GetType());
     protected int ParameterSetIndex { get; set; }
+    protected internal Action StateHasChangedInvoker => field ??= StateHasChanged;
+    private ContextCallback DispatchStateHasChangedInvoker
+        => field ??= state => _ = ((Dispatcher)state!).InvokeAsync(StateHasChangedInvoker);
+
 
     public override Task SetParametersAsync(ParameterView parameters)
     {
@@ -23,6 +27,25 @@ public abstract class FusionComponentBase : ComponentBase, IHandleEvent
 
         ParameterSetIndex = ++parameterSetIndex;
         return base.SetParametersAsync(parameters);
+    }
+
+    public void NotifyStateHasChanged(bool isolate = false)
+    {
+        try {
+            var dispatcher = this.GetDispatcher();
+            if (dispatcher.CheckAccess()) {
+                StateHasChanged(); // Renders in-place, so there is no ExecutionContext to isolate
+                return;
+            }
+
+            if (isolate || (SafeDispatcher.IsUnsafe(dispatcher) && ExecutionContext.IsFlowSuppressed()))
+                ExecutionContext.Run(ExecutionContextExt.Default, DispatchStateHasChangedInvoker, dispatcher);
+            else
+                _ = dispatcher.InvokeAsync(StateHasChangedInvoker);
+        }
+        catch (ObjectDisposedException) {
+            // Intended
+        }
     }
 
     Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? arg)

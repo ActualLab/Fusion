@@ -53,6 +53,11 @@ public static class ComponentExt
     private static readonly Func<RenderHandle, object?> GetOptionalComponentStateGetter;
 #endif
 
+    private static readonly ContextCallback DispatchStateHasChangedInvoker = static state => {
+        var component = (ComponentBase)state!;
+        _ = component.GetDispatcher().InvokeAsync(() => StateHasChangedInvoker(component));
+    };
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static RenderHandle GetRenderHandle(this ComponentBase component)
         => RenderHandleGetter(component);
@@ -80,10 +85,10 @@ public static class ComponentExt
     /// of the component, therefore, it works even when called from another synchronization context
     /// (e.g., a thread-pool thread).
     /// </summary>
-    public static void NotifyStateHasChanged(this ComponentBase component, bool useSafeDispatcher = true)
+    public static void NotifyStateHasChanged(this ComponentBase component, bool isolate = false)
     {
-        if (component is CircuitHubComponentBase c) {
-            c.NotifyStateHasChanged(useSafeDispatcher);
+        if (component is FusionComponentBase fc) {
+            fc.NotifyStateHasChanged(isolate);
             return;
         }
 
@@ -94,15 +99,10 @@ public static class ComponentExt
                 return;
             }
 
-            if (useSafeDispatcher
-                && SafeDispatcher.IsUnsafe(dispatcher)
-                && !ReferenceEquals(ExecutionContext.Capture(), ExecutionContextExt.Default)) {
-                _ = ExecutionContextExt.Start(ExecutionContextExt.Default,
-                    () => dispatcher.InvokeAsync(() => StateHasChangedInvoker(component)));
-                return;
-            }
-
-            _ = dispatcher.InvokeAsync(() => StateHasChangedInvoker(component));
+            if (isolate || (SafeDispatcher.IsUnsafe(dispatcher) && ExecutionContext.IsFlowSuppressed()))
+                ExecutionContext.Run(ExecutionContextExt.Default, DispatchStateHasChangedInvoker, component);
+            else
+                _ = dispatcher.InvokeAsync(() => StateHasChangedInvoker(component));
         }
         catch (ObjectDisposedException) {
             // Intended
@@ -207,4 +207,6 @@ public static class ComponentExt
             .Compile(preferInterpretation: RuntimeCodegen.Mode == RuntimeCodegenMode.InterpretedExpressions);
     }
 #endif
+
+    // Private methods
 }

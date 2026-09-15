@@ -81,8 +81,4 @@ public class CircuitHub : ProcessorBase, IHasServices
             WhenInitializedSource.TrySetResult();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Dispatcher GetDispatcher(bool useSafeDispatcher)
-        => useSafeDispatcher ? SafeDispatcher : Dispatcher;
 }

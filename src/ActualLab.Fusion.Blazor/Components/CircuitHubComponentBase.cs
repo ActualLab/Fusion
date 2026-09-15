@@ -11,7 +11,6 @@ namespace ActualLab.Fusion.Blazor;
 public abstract class CircuitHubComponentBase : FusionComponentBase, IHasCircuitHub
 {
     [Inject] protected CircuitHub CircuitHub { get; init; } = null!;
-    protected Action StateHasChangedInvoker => field ??= StateHasChanged;
 
     // Most useful service shortcuts
     protected IServiceProvider Services => CircuitHub.Services;
@@ -24,18 +23,4 @@ public abstract class CircuitHubComponentBase : FusionComponentBase, IHasCircuit
     // Explicit IHasFusionHub & IHasServices implementation
     CircuitHub IHasCircuitHub.CircuitHub => CircuitHub;
     IServiceProvider IHasServices.Services => Services;
-
-    public void NotifyStateHasChanged(bool useSafeDispatcher = true)
-    {
-        try {
-            var dispatcher = CircuitHub.GetDispatcher(useSafeDispatcher);
-            if (dispatcher.CheckAccess())
-                StateHasChanged();
-            else
-                _ = dispatcher.InvokeAsync(StateHasChangedInvoker);
-        }
-        catch (ObjectDisposedException) {
-            // Intended
-        }
-    }
 }
