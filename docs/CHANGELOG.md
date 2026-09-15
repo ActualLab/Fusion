@@ -11,6 +11,69 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.4.14+6bc9cb898 | npm: 14.4.14
+
+Release date: 2026-09-15
+
+**Blazor Server could render one component from two threads at once, and Fusion was what made
+it happen.** Blazor's own dispatcher may run a queued work item inline on whichever thread frees
+the renderer next. Queued without an `ExecutionContext` &mdash; which is exactly what
+`ExecutionContext.SuppressFlow()` produces &mdash; that work item leaves the renderer's
+`SynchronizationContext` behind on the thread that ran it, because a resumed continuation with no
+execution context never restores its thread's synchronization context. From then on
+`Dispatcher.CheckAccess()` answers `true` on an unrelated thread-pool thread, which renders past
+the dispatcher's queue. `StatefulComponentBase` notified under `SuppressFlow()` on every state
+change of every component, so a rare race became a routine one. Filed upstream as
+[dotnet/aspnetcore#69323](https://github.com/dotnet/aspnetcore/issues/69323).
+
+Only Blazor's own dispatcher is affected, so this matters for **Blazor Server / `InteractiveServer`
+circuits** and for static SSR and prerendering. MAUI, WPF and WinForms `BlazorWebView` supply their
+own dispatchers, and WebAssembly compares thread ids rather than synchronization contexts &mdash;
+none of them can hit this.
+
+### Added
+
+- **`SafeDispatcher`** &mdash; a `Dispatcher` wrapper that never queues a work item without an
+  `ExecutionContext`. `SafeDispatcher.WrapIfUnsafe(dispatcher)` returns the wrapper only for
+  dispatchers that need it and the original instance otherwise, so it costs nothing everywhere
+  else. `SafeDispatcher.IsUnsafe(...)` exposes the same test, and `SafeDispatcher.IsEnabled`
+  turns the whole thing off. All four `InvokeAsync` overloads route through cached delegates, so
+  the guarded path allocates nothing beyond what the underlying dispatcher does.
+- **`CircuitHub.SafeDispatcher`** alongside `CircuitHub.Dispatcher`, plus
+  `CircuitHub.GetDispatcher(bool useSafeDispatcher)`. The safe one is the wrapper on Blazor
+  Server and the very same instance as `Dispatcher` everywhere else.
+- **`CircuitHubComponentBase.NotifyStateHasChanged(bool useSafeDispatcher = true)`** &mdash; the
+  component-level entry point, which skips the render-handle lookup the extension method needs.
+- **`ExecutionContextExt.RunWithDefaultExecutionContext`, `StartWithDefaultExecutionContext` and
+  `IsDefault`** &mdash; run a callback with no `AsyncLocal` values while still leaving
+  `ExecutionContext.Capture()` non-null. That distinction is the whole bug in miniature:
+  `SuppressFlow()` blocks the values *and* removes the context object the runtime uses as its
+  restore hook, while an empty context blocks the values and keeps the hook. It is also ~3-4x
+  faster than the `SuppressFlow()`/`RestoreFlow()` pair and allocation-free where that pair
+  allocated on every call.
+- **npm: `RetryDelayer.getDelayMs(tryIndex)`** as a `protected` override point, so a subclass can
+  shape retry delays without replacing the `RetryDelays` instance.
+
+### Changed
+
+- **`StatefulComponentBase.StateChanged` no longer suppresses execution flow.** It previously ran
+  `NotifyStateHasChanged()` inside `ExecutionContext.SuppressFlow()`, which kept `AsyncLocal`
+  values &mdash; `ComputeContext`, `CommandContext`, `Activity.Current` &mdash; out of the
+  notification. Those values now flow into it. This is only observable when a state change is
+  raised from a context that carries them, most plausibly `MutableState.Set(...)` called inside a
+  command handler or an `Invalidation.Begin()` block; the update cycle itself runs with an empty
+  context either way.
+- **`ComponentExt.NotifyStateHasChanged` takes an optional `useSafeDispatcher` parameter**
+  (default `true`) and forwards to the `CircuitHubComponentBase` overload when it can. Source
+  compatible; recompile anything that called it through a compiled reference.
+
+### Fixed
+
+- **The renderer context leak itself**, by routing component state notifications through
+  `SafeDispatcher`. Regression tests cover both halves: that Blazor's own dispatcher still leaks
+  (which is also the signal for when this workaround can be dropped), and that the wrapper
+  doesn't.
+
 ## 14.4.11+6b3f92d0b | npm: 14.4.11
 
 Release date: 2026-09-10
