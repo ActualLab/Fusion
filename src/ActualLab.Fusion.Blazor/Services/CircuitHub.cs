@@ -38,6 +38,12 @@ public class CircuitHub : ProcessorBase, IHasServices
         protected set;
     } = null!;
 
+    // Same as Dispatcher, except on Blazor Server, where it's a SafeDispatcher wrapping it
+    public Dispatcher SafeDispatcher {
+        get => field ?? throw Errors.NotInitialized();
+        protected set;
+    } = null!;
+
     public RenderModeDef RenderMode {
         get => field ?? throw Errors.NotInitialized();
         protected set;
@@ -70,8 +76,13 @@ public class CircuitHub : ProcessorBase, IHasServices
             }
 
             Dispatcher = dispatcher;
+            SafeDispatcher = Blazor.SafeDispatcher.WrapIfUnsafe(dispatcher);
             RenderMode = renderMode;
             WhenInitializedSource.TrySetResult();
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Dispatcher GetDispatcher(bool useSafeDispatcher)
+        => useSafeDispatcher ? SafeDispatcher : Dispatcher;
 }

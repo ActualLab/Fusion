@@ -80,16 +80,29 @@ public static class ComponentExt
     /// of the component, therefore, it works even when called from another synchronization context
     /// (e.g., a thread-pool thread).
     /// </summary>
-    public static void NotifyStateHasChanged(this ComponentBase component)
+    public static void NotifyStateHasChanged(this ComponentBase component, bool useSafeDispatcher = true)
     {
+        if (component is CircuitHubComponentBase c) {
+            c.NotifyStateHasChanged(useSafeDispatcher);
+            return;
+        }
+
         try {
             var dispatcher = component.GetDispatcher();
-            if (dispatcher.CheckAccess()) // Also handles NullDispatcher, which always returns true here
+            if (dispatcher.CheckAccess()) {
                 StateHasChangedInvoker(component);
-            else if (component is CircuitHubComponentBase fc)
-                _ = dispatcher.InvokeAsync(fc.StateHasChangedInvoker);
-            else
-                _ = dispatcher.InvokeAsync(() => StateHasChangedInvoker(component));
+                return;
+            }
+
+            if (useSafeDispatcher
+                && SafeDispatcher.IsUnsafe(dispatcher)
+                && !ReferenceEquals(ExecutionContext.Capture(), ExecutionContextExt.Default)) {
+                _ = ExecutionContextExt.Start(ExecutionContextExt.Default,
+                    () => dispatcher.InvokeAsync(() => StateHasChangedInvoker(component)));
+                return;
+            }
+
+            _ = dispatcher.InvokeAsync(() => StateHasChangedInvoker(component));
         }
         catch (ObjectDisposedException) {
             // Intended

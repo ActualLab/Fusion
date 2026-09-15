@@ -27,6 +27,11 @@ public static class ExecutionContextExt
             .GetValue(null)!;
 #endif
 
+    public static bool IsDefault {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => ReferenceEquals(ExecutionContext.Capture(), Default);
+    }
+
 #if NET8_0_OR_GREATER
     public static AsyncFlowControl TrySuppressFlow()
         => ExecutionContext.IsFlowSuppressed()
@@ -43,6 +48,45 @@ public static class ExecutionContextExt
     }
 #endif
 
+    // RunWithDefaultExecutionContext & StartWithDefaultExecutionContext
+
+    // Runs the callback with no AsyncLocals. Unlike ExecutionContext.SuppressFlow(), the context left
+    // for Capture() is empty rather than absent - and it's that non-null context which makes a resumed
+    // continuation restore its thread's SynchronizationContext. Without it, any inline-completed
+    // continuation can strand one: that's how Blazor's dispatcher leaks the renderer's to a pool thread.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void RunWithDefaultExecutionContext(ContextCallback callback, object? state = null)
+    {
+        if (IsDefault)
+            callback.Invoke(state);
+        else
+            ExecutionContext.Run(Default, callback, state);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task StartWithDefaultExecutionContext(Func<Task> taskFactory)
+        => IsDefault
+            ? taskFactory.Invoke()
+            : Start(Default, taskFactory);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task StartWithDefaultExecutionContext(Func<object?, Task> taskFactory, object? state = null)
+        => IsDefault
+            ? taskFactory.Invoke(state)
+            : Start(Default, taskFactory, state);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<T> StartWithDefaultExecutionContext<T>(Func<Task<T>> taskFactory)
+        => IsDefault
+            ? taskFactory.Invoke()
+            : Start(Default, taskFactory);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<T> StartWithDefaultExecutionContext<T>(Func<object?, Task<T>> taskFactory, object? state = null)
+        => IsDefault
+            ? taskFactory.Invoke(state)
+            : Start(Default, taskFactory, state);
+
     // Start
 
     public static Task Start(
@@ -52,7 +96,7 @@ public static class ExecutionContextExt
         var oldTask = _task;
         try {
             _taskFactory0 = taskFactory;
-            ExecutionContext.Run(executionContext, static _ => _task = _taskFactory0.Invoke(), null);
+            ExecutionContext.Run(executionContext, static _ => _task = _taskFactory0.Invoke(), state: null);
             return _task!;
         }
         finally {
@@ -83,7 +127,7 @@ public static class ExecutionContextExt
         var oldTask = _task;
         try {
             _taskFactory0 = taskFactory;
-            ExecutionContext.Run(executionContext, static _ => _task = _taskFactory0.Invoke(), null);
+            ExecutionContext.Run(executionContext, static _ => _task = _taskFactory0.Invoke(), state: null);
             return (Task<T>)_task!;
         }
         finally {

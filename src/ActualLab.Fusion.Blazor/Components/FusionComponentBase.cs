@@ -15,8 +15,6 @@ public abstract class FusionComponentBase : ComponentBase, IHandleEvent
     protected ComponentInfo ComponentInfo => field ??= ComponentInfo.Get(GetType());
     protected int ParameterSetIndex { get; set; }
 
-    internal Action StateHasChangedInvoker => field ??= StateHasChanged;
-
     public override Task SetParametersAsync(ParameterView parameters)
     {
         var parameterSetIndex = ParameterSetIndex;
