@@ -11,6 +11,62 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 14.4.16+509f8d69f | npm: 14.4.14
+
+Release date: 2026-09-15
+
+**Restores the execution context isolation that 14.4.14 dropped, and unifies the two state-change
+notification paths into one.** 14.4.14 fixed the renderer `SynchronizationContext` leak by removing
+the `ExecutionContext.SuppressFlow()` around `StatefulComponentBase`'s notification &mdash; which
+also removed the thing that kept the caller's `AsyncLocal` values out of the render. This release
+brings the isolation back using an empty `ExecutionContext` rather than a suppressed one, so both
+properties hold at once. **Skip 14.4.14 and take this one**; it is a NuGet-only release, npm stays
+at `14.4.14`.
+
+Why the isolation matters more than it looks: `StateHasChanged()` is not a flag flip. It calls the
+virtual `ShouldRender()`, and if no render batch is already in progress it runs `ProcessRenderQueue()`
+inline &mdash; every queued component's render fragment, child parameter diffing with the
+synchronous prefixes of their lifecycle methods, and the disposal queue. A notification that
+inherited an *invalidating* `ComputeContext` would therefore run all of that with
+`Invalidation.IsActive` true, turning the render's own compute calls into invalidations. And it is
+not only the `Invalidated` event that can arrive that way: `StateEventKind.Updated` reaches the
+handler from whatever context called it, including a manual `Recompute()` outside the update cycle.
+
+### Fixed
+
+- **State-change notifications are isolated from the caller's `AsyncLocal` values again.**
+  `StatefulComponentBase` now notifies via `NotifyStateHasChanged(isolate: true)`, which posts the
+  render under `ExecutionContextExt.Default`. That keeps `ComputeContext`, `CommandContext` and the
+  rest out of the render while still leaving `ExecutionContext.Capture()` non-null, which is what
+  stops the renderer's `SynchronizationContext` from stranding on a pool thread &mdash; the
+  14.4.14 bug. `SuppressFlow()` gave the first property and broke the second; an empty context
+  gives both.
+- **The leak guard no longer sits behind a parameter.** For callers that don't ask for isolation it
+  is now unconditional: a post goes out under an empty context whenever the flow is suppressed and
+  the dispatcher is Blazor's own. There is no longer a way to switch the protection off by accident.
+
+### Changed
+
+- **One implementation instead of two.** `NotifyStateHasChanged` lives on `FusionComponentBase` and
+  is available on every Fusion component; `ComponentExt.NotifyStateHasChanged` forwards to it and
+  keeps its own equivalent path only for components that don't derive from it. The two used to
+  disagree about when to isolate and about which condition counts as unsafe.
+- Only the posted branch does execution-context work now. When `CheckAccess()` is already true the
+  render happens in place, nothing is captured, and there is nothing to isolate &mdash; so that path
+  costs nothing at all, where 14.4.11 paid for a `SuppressFlow()`/`RestoreFlow()` pair on it.
+
+### Breaking Changes
+
+All of these only affect code written against 14.4.14, which shipped a day earlier.
+
+- `ComponentExt.NotifyStateHasChanged(component, bool useSafeDispatcher = true)` is now
+  `NotifyStateHasChanged(component, bool isolate = false)`. Callers that never named the parameter
+  are unaffected, including everything written against 14.4.11 and earlier.
+- The instance method moved from `CircuitHubComponentBase` to `FusionComponentBase`, and its
+  signature is `NotifyStateHasChanged(bool isolate = false)`.
+- `CircuitHub.GetDispatcher(bool useSafeDispatcher)` is removed. `CircuitHub.SafeDispatcher` stays,
+  for application code that dispatches to the renderer directly.
+
 ## 14.4.14+6bc9cb898 | npm: 14.4.14
 
 Release date: 2026-09-15
