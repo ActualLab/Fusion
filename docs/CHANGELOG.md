@@ -11,7 +11,7 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
-## 15.0.2+3c6740fee | npm: 14.4.14
+## 15.0.8+22fb34a25 | npm: 14.4.14
 
 Release date: 2026-10-03
 
@@ -97,6 +97,21 @@ possible. Replay fit `Replicated` naturally and `Distributed` badly; this is the
   `RpcMethodDef.GetOutboundCallRoute`, which lets `IsLocalCall` answer "do I own this?" from the
   route without minting a peer for a host it has no intention of calling; and
   `MethodDef.AwaitAndReturnDefaultResult` for a call that produces no result.
+- **A quantized event delay is spread by a hash of its uuid prefix.**
+  `OperationEvent.SetDelayUntil`/`SetDelayBy` with a quanta round `DelayUntil` up onto a lattice and
+  put the resulting instant into the `Uuid`, so repeated producers of one logical event deduplicate.
+  Every prefix used to land on the same lattice, so an hourly schedule fired as an hourly storm. The
+  lattice is now offset per prefix: everything sharing one still lands on a single instant, which is
+  what the `Uuid` needs, while different prefixes spread across the quanta. `Moment.Floor`,
+  `Ceiling` and `Round` take an `offset`; `TimeSpanExt.GetHashBasedOffset(source, unit)` derives it
+  (`XxHash3`, so it's identical on every host and in every process); and an overload taking the
+  offset explicitly &mdash; `TimeSpan.Zero` for the bare lattice &mdash; sits right after the quanta.
+  One consequence worth knowing: the cell seam now falls at the prefix's offset rather than at a
+  round boundary, so producers that must deduplicate have to agree on the instant they target, not
+  merely on the hour.
+- `Moment.Floor`/`Ceiling`/`Round` return the value unchanged for a zero unit instead of throwing
+  `DivideByZeroException`, which was reachable &mdash; `SetDelayUntil` only rejects a *negative*
+  quanta, and zero legitimately means "no quantization".
 - `TypeExt.GetInterfacesByDependency` &mdash; a type's interfaces, most derived first.
   `Type.GetInterfaces()` has no specified order, so any "first match wins" lookup over it can
   resolve differently between runs; this is that lookup's deterministic order. Also
@@ -134,6 +149,15 @@ before/after handler; this is the inventory.
   `DeferredInvalidationScopeProvider` sits at `9000` &mdash; below every operation scope provider, so
   a scope is always open before anything can be deferred.
 - `ArrayBuffer.MustClean` is now `MustClear`.
+
+### Changed
+
+- **EF Core on `net11.0` moves from `11.0.0-preview.6` to `11.0.0-rc.1.26425.128`**, the build the
+  SDK and the ASP.NET Core packages already carried. efcore.pg exact-pins EF Core, so this repo's EF
+  version is whatever its newest prerelease names; it now ships `11.0.0-rc.1.1`, which pins that
+  build. This concerns the packages' `net11.0` assets only &mdash;
+  `ActualLab.Fusion.EntityFramework` still declares an open `[10.0.0,)` range there, so an app on
+  EF 10 is unaffected.
 
 ### Documentation
 
