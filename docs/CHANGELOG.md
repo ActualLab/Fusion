@@ -23,26 +23,38 @@ requires draining both tables first &mdash;
 **[Migrating to 15.0](./MigrationTo15.md) is the guide, and worth reading before you upgrade.**
 This is a NuGet-only release, npm stays at `14.4.14`.
 
-The goal was to simplify. The original idea holds up &mdash; a command's invalidations belong with
-the command, and the log row carries them to the other hosts &mdash; but replay was the ugly part.
-To learn what a handler invalidated, the framework ran its body a second time with
-`Invalidation.IsActive` true and expected the handler to notice and touch only the compute methods
-it wanted invalidated. That is tricky to understand and easy to get wrong: one body served two
-purposes, every mutating handler opened with a branch unrelated to its actual job, and the framework
+The goal was to simplify, and replay was the ugly part of the old design. To learn what a handler
+invalidated, the framework ran its body a second time with `Invalidation.IsActive` true and expected
+the handler to notice and touch only the compute methods it wanted invalidated. One body served two
+purposes, every mutating handler opened with a branch unrelated to its job, and the framework
 re-executed arbitrary application code whose side effects it couldn't know.
 
-What replaces it is deliberately less clever. A handler names its invalidations once, as a block,
-where it already knows them; the framework runs that block after the mutation is durable and never
-re-enters the handler. That trades some robustness for quirks of a kind you can actually see &mdash;
-closures capture final values, the mode must be declared, a failed block leaves values stale rather
-than failing the command.
+Replay wasn't ugly by accident, though, and what it bought is worth stating because this release
+gives some of it up. Under replay the only thing that crossed hosts was **the command**, and each
+host re-ran *its own* copy of the handler to decide what to invalidate &mdash; so during a rolling
+deployment an old host replaying a new host's command, or the reverse, mostly worked: if the command
+deserialized, the rest followed. 15.0 sends **the invalidation calls themselves** &mdash; a service
+type, a method, its arguments &mdash; which the receiving host has to still have, with the same
+shape. While two versions coexist, invalidation works only where the invalidated methods exist on
+both with matching signatures; elsewhere a recorded call is dropped and those caches stay stale. **The
+trade is explicit: a simpler invalidation block, paid for with upgrades that need more care.** It
+isn't that the new model is less clever &mdash; it's different, and easier to understand, and what
+got harder is version-to-version evolution of server-side code.
 
-The payoff in daily use: **the invalidation block is the same block in all three modes.** It is just
-a closure naming compute methods, so it doesn't depend on the mode at all. `Local`, `Replicated` and
-`Distributed` change only how far the result travels, never what you write &mdash; a service can
-move between modes, or declare a different mode per handler, without touching a line inside any
-block. Under replay, how an invalidation reached other hosts was tangled up in what the second pass
-did.
+One other cost: recorded calls are serialized, so their *number* now matters. Under replay a command
+could invalidate an arbitrarily large set for free, because nothing was stored. Keep it reasonable.
+
+What it buys, first: **the same invalidation block works everywhere.** The block is a closure naming
+compute methods, so it doesn't depend on the mode at all &mdash; `Local`, `Replicated` and
+`Distributed` change only how far the result travels, never what you write. One of Fusion's core
+premises is that you write code once and then move it, gradually, to a more scalable execution model,
+and invalidation now follows that premise instead of working against it.
+
+And second: **it's geared toward `Distributed`, which is now the primary mode.** `Replicated` is
+simple but scales badly &mdash; every host applies every invalidation, so the cost of one grows with
+the cluster. `Distributed` routes each call to the host that owns the value, so the per-invalidation
+cost stays flat as hosts are added, which is what makes effectively unbounded horizontal scaling
+possible. Replay fit `Replicated` naturally and `Distributed` badly; this is the other way round.
 
 ### Added
 

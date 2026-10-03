@@ -1,7 +1,9 @@
 # Migrating to 15.0
 
 15.0 replaces the Operations Framework's replay-based invalidation with
-[deferred invalidation](./PartO-IM.md). Two things follow from that, and both need action:
+[deferred invalidation](./PartO-IM.md). Two things follow from that and need action now, and one
+changes how you deploy from here on &ndash; see [Why this changed](#why-this-changed) for the last
+one:
 
 - **Every command handler that mutates state has to change.** It declares its invalidations with
   `Invalidation.Defer(...)` and a `[DeferredInvalidationMode]`. There is no default mode: a handler
@@ -17,30 +19,58 @@ mutates &ndash; none of this applies, and 15.0 is a drop-in upgrade apart from t
 
 ## Why this changed
 
-The goal was to simplify. The original Operations Framework idea is a good one &ndash; a command's
-invalidations belong with the command, and the log row is what carries them to the other hosts
-&ndash; but *replay* was the ugly part of it. To find out what a handler had invalidated, the
-framework ran the handler's body a second time with `Invalidation.IsActive` true, and the handler was
-expected to notice that and touch only the compute methods it wanted invalidated.
+The goal was to simplify, and replay was the ugly part of the old design. To learn what a handler had
+invalidated, the framework ran the handler's body a second time with `Invalidation.IsActive` true and
+expected it to notice and touch only the compute methods it wanted invalidated. One body served two
+purposes, every mutating handler opened with a branch that had nothing to do with its job, and the
+framework was in the business of re-executing arbitrary application code whose side effects it
+couldn't know.
 
-That is tricky to understand and easy to get wrong. One body served two purposes, every mutating
-handler opened with a branch that had nothing to do with its actual job, and the framework was in the
-business of re-executing arbitrary application code whose side effects it couldn't know. A handler
-that forgot the branch, or put a mutation above it, misbehaved in ways that were hard to see.
+### What replay was buying
 
-The replacement is deliberately less clever. A handler names its invalidations once, as a block, at
-the point where it already knows them; the framework runs that block after the mutation is durable
-and never re-enters the handler. It is arguably a bit less robust in places and it has quirks of its
-own &ndash; the closure captures final values, the mode has to be declared, a block that fails leaves
-values stale rather than failing the command &ndash; but it is far simpler to hold in your head, and
-the quirks are the kind you can see.
+Replay wasn't ugly by accident. It bought **tolerance across versions during a rolling deployment**,
+and that's worth being explicit about, because the new model gives some of it up.
 
-The part that pays off most in daily use: **the invalidation block is the same block in all three
-modes.** Because the block is just a closure naming compute methods, it doesn't depend on the mode at
-all. `Local`, `Replicated` and `Distributed` change only how far the result travels, never what you
-write. You can move a service from one mode to another &ndash; or declare a different mode per
-handler in the same service &ndash; without touching a line inside any block. Under replay, how the
-invalidation reached other hosts was tangled up in what the second pass did.
+Under replay, the only thing that crossed hosts was **the command**. Each host then re-ran *its own*
+copy of the handler to decide what to invalidate. So an old host replaying a command a new host wrote
+&ndash; or the reverse &ndash; mostly worked: if the command still deserialized, the rest followed,
+using whatever that version considered the right invalidations.
+
+The new model sends **the invalidation calls themselves**: a service type, a method, and its
+arguments. That is a reference to something the receiving host has to still have, with the same
+shape. While two versions coexist, invalidation only works if the methods being invalidated still
+exist on both and their signatures still match &ndash; otherwise a recorded call is dropped on the
+host that can't resolve it, and dependent caches there stay stale until something else invalidates
+them. [Deployment Compatibility Contract](./PartO-Serialization.md#deployment-compatibility-contract)
+spells out the rules and the failure mode.
+
+**So the trade is explicit: a simpler invalidation block, paid for with upgrades that need more
+care.** It is not that the new model is less clever &ndash; it is just different, and easier to
+understand. What got harder is version-to-version evolution of server-side code, and that is the
+honest cost of the change.
+
+One more thing it costs: **invalidation calls are serialized now, so their number matters.** Under
+replay you could invalidate an arbitrarily large set in a single command at no storage cost, because
+nothing was recorded. Keep it to a reasonable number instead. In practice the need for a huge set has
+never come up &ndash; a command that invalidates hundreds of distinct keys is usually a sign the
+compute methods are keyed too finely.
+
+### What it buys
+
+**The same invalidation block works everywhere.** This is the main advantage. The block is a closure
+naming compute methods, so it doesn't depend on the mode at all &ndash; `Local`, `Replicated` and
+`Distributed` change only how far the result travels, never what you write. One of Fusion's core
+premises is that you write code once and then move it, gradually, to a more scalable execution model;
+invalidation now follows that premise instead of working against it. You don't need a different kind
+of invalidation block per mode inside your commands.
+
+**And it's geared toward `Distributed`, which is now the primary mode.** `Replicated` is a fine
+default and it's simple &ndash; every host applies every invalidation as it reads the log &ndash; but
+it scales badly: the work is duplicated on every host, so the cost of one invalidation grows with the
+size of the cluster. `Distributed` routes each call to the host that owns the value, so the cost per
+invalidation stays flat as hosts are added, which is what makes effectively unbounded horizontal
+scaling possible. Replay fit `Replicated` naturally and `Distributed` badly; the new model is the
+other way round.
 
 ## Step 1: Drain `_Events`
 
@@ -78,10 +108,16 @@ look at them, but leaving them is equally fine.
 
 ### Still don't run 14.x and 15.0 at once
 
-A rolling upgrade is the one case where the above doesn't save you: a 15.0 host that has been up
-long enough to have a warm cache won't learn anything from an operation a 14.x host writes, and vice
-versa. That's silent staleness for as long as the two versions overlap. Stop everything, migrate,
-then start &ndash; the restart is what makes the cold-cache argument hold.
+A rolling upgrade across this particular boundary doesn't work, and it's the one case the
+cold-cache argument above doesn't cover: the two versions have no invalidation representation in
+common. 14.x writes `ItemsJson` and expects peers to replay the command; 15.0 writes recorded calls
+and expects peers to apply them. Neither can read the other, so for as long as they overlap, a host
+that's been up long enough to have a warm cache gets silent staleness from every operation the other
+version writes. Stop everything, migrate, then start &ndash; the restart is what makes the
+cold-cache argument hold.
+
+Rolling deployments *between* 15.x versions are fine and normal, but they're no longer free: see
+[What replay was buying](#what-replay-was-buying).
 
 ## Step 2: The schema migration
 
