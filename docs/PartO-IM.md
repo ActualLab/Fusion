@@ -96,11 +96,8 @@ public virtual async Task OnAdd(Tags_Add command, CancellationToken cancellation
 |---|---|
 | `if (Invalidation.IsActive) { ... return; }` at the top of a handler | Delete the branch; move what it invalidated into `Invalidation.Defer(() => ...)` at the end |
 | Nothing &ndash; the mode was implicit | `[DeferredInvalidationMode(...)]` on every handler that defers, or it throws |
-| `FusionBuilder.WithDefaultDeferredInvalidationMode(mode)` | Removed &ndash; declare per handler, or register a `DeferredInvalidationModeResolver` |
-| `DeferredInvalidationMode.Any` | Removed &ndash; a handler that defers nothing needs no attribute |
 | `Operation.Items` carrying data to the replayed branch | Nothing to carry: a deferred block is a closure over the handler's own locals |
-| `Operation.NestedOperations` | Gone &ndash; a nested handler's blocks join the one operation |
-| `InvocationRecord` | `ServiceCall`, in `ActualLab.CommandR.Operations` |
+| `Operation.NestedOperations`, `NestedOperation`, `SuppressNestedOperationLogging()` | Gone &ndash; a nested handler's blocks join the one operation |
 | `InMemoryOperationScope` / `InMemoryOperationScopeProvider` | `TransientOperationScope` / `TransientOperationScopeProvider` |
 | `Operation.ClearEvents()` | `Operation.RemoveEvents()` |
 | A command called from inside an invalidation block | Rejected by `InvalidationGuard` &ndash; nothing replays a handler now |
@@ -149,6 +146,13 @@ again on every `OperationReprocessor` retry.
 
 `[DeferredInvalidationMode]` goes on a handler method, on its declaring type, or on the service
 interface. The first one found wins, in that order.
+
+**Prefer the type or the interface.** How far an invalidation has to reach follows from how the
+service's data is stored and shared, which is a property of the service rather than of one handler &ndash;
+so in practice every handler on a service wants the same mode. Declaring it once on the
+implementation or on the interface says that, and keeps a new handler from silently throwing because
+somebody forgot the attribute. Reach for the method level only where a handler genuinely differs from
+its service.
 
 There is no default mode. A handler that defers a block and declares none throws, because how far
 its invalidation has to reach is something only that handler knows: guessing `Local` leaves other

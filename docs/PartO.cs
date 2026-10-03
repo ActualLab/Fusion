@@ -240,7 +240,6 @@ public class PartO : DocPart
         StartSnippetOutput("Name Changes from Documentation");
         WriteLine("- InMemoryOperationScopeProvider -> TransientOperationScopeProvider");
         WriteLine("- InMemoryOperationScope -> TransientOperationScope");
-        WriteLine("- InvocationRecord -> ServiceCall (now in ActualLab.CommandR.Operations)");
         WriteLine("- Operation.Items / nested operations -> Operation.InvalidationCalls");
         WriteLine("- DbServiceBase.CreateOperationDbContext() -> DbHub.CreateOperationDbContext()");
         WriteLine("- AgentInfo -> HostId (moved to ActualLab.Core)");

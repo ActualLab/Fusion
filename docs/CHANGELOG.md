@@ -113,20 +113,22 @@ before/after handler; this is the inventory.
   type, or on the service interface it's registered as. A handler that defers without a declared
   mode throws. Handlers that used `if (Invalidation.IsActive) { ... return ...; }` blocks should move
   those compute-method calls into `Invalidation.Defer(() => ...)` at the end of the body.
-- **Database migration.** `_Operations` drops `ItemsJson` and `NestedOperations`, and gains
-  `InvalidationCallsJson`, `InvalidationCallsData` and `CommandData`; `_Events` gains `ValueData`;
-  the `*Json` columns become nullable.
-- `Operation.Items` and nested operations are removed &mdash; `Operation.InvalidationCalls` replaces
-  what they were used for.
-- `WithDefaultInvalidationMode(...)` no longer exists. There is deliberately no app-wide default.
+- **Database migration.** `_Operations` drops `ItemsJson` and `NestedOperations`. Every payload now
+  has a text and a binary column declared, but only one is written, so the migration only needs the
+  family your `DbLogEntrySerializer.Format` names &mdash; binary by default, which means adding
+  `CommandData` / `InvalidationCallsData` / `ValueData` and dropping `CommandJson` / `ValueJson`.
+  Decide the format first; the guide has the per-format column lists.
+- `Operation.Items` is removed: it existed to carry data into the replayed branch, and a deferred
+  block closes over the handler's own locals instead. `Operation.NestedOperations`, the
+  `NestedOperation` type and `Operation.SuppressNestedOperationLogging()` go with it &mdash; a nested
+  handler's blocks join the one operation. `Operation.ClearEvents()` is now `RemoveEvents()`, which
+  also takes a predicate overload.
 - `InMemoryOperationScope` and `InMemoryOperationScopeProvider` are now `TransientOperationScope` and
   `TransientOperationScopeProvider`.
 - `RpcArgumentSerializer` and its byte/text implementations are now `ArgumentListSerializer` in
   **`ActualLab.Interception`**, together with the type serializers, `NullValue` and
   `RpcSerializableAttribute`. Argument serialization isn't RPC-specific: anything that records a call
   and replays its arguments needs it, and `ActualLab.Interception` is where `ArgumentList` lives.
-- `OperationCompletion` is constructed through `OperationCompletion.New(...)` rather than its
-  constructors, which were ambiguous between overloads.
 - **Two command handler priorities moved**, which matters only for custom filters that sit between
   them: `DbOperationScopeProvider` goes from `1000` to `9900`, and the new
   `DeferredInvalidationScopeProvider` sits at `9000` &mdash; below every operation scope provider, so

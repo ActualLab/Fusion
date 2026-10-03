@@ -89,10 +89,22 @@ wrote those rows finish them.
    select count(*) from "_Events" where "State" = 0;
    ```
 
-   If it doesn't reach 0, something is failing to process rather than merely lagging &ndash; check
-   the event processor's logs before going further. An event that has exhausted its retries ends up
-   `Discarded` (`State = 2`), not `New`, so it won't hold you here.
-3. **Stop every host**, apply the schema migration (Step 2), then deploy 15.0.
+   If it doesn't reach 0, check whether the remainder are *delayed* events &ndash; a `DelayUntil`
+   in the future is still `State = New`, and no amount of waiting for the processor will clear one
+   before it's due:
+
+   ```sql
+   -- Pending events that aren't due yet, and so won't drain on your schedule
+   select count(*) from "_Events" where "State" = 0 and "DelayUntil" > now();
+   ```
+
+   If that's zero and the first query still isn't, something is failing to process rather than
+   lagging &ndash; check the event processor's logs before going further. An event that has
+   exhausted its retries ends up `Discarded` (`State = 2`), not `New`, so it won't hold you here. If
+   you do have undue delayed events, see
+   [One exception](#one-exception-events-you-can-t-drain).
+3. **Stop every host**, decide the format (Step 2), apply the schema migration (Step 3), then deploy
+   15.0.
 
 ### `_Operations` needs no draining
 
@@ -119,65 +131,93 @@ cold-cache argument hold.
 Rolling deployments *between* 15.x versions are fine and normal, but they're no longer free: see
 [What replay was buying](#what-replay-was-buying).
 
-## Step 2: The schema migration
+## Step 2: Decide the serialization format first
 
-| Table | Change |
-|---|---|
-| `_Operations` | **drop** `ItemsJson` |
-| `_Operations` | **drop** `NestedOperations` |
-| `_Operations` | **add** `InvalidationCallsJson` (text, null) and `InvalidationCallsData` (blob, null) |
-| `_Operations` | **add** `CommandData` (blob, null) |
-| `_Operations` | `CommandJson` becomes **nullable** |
-| `_Events` | **add** `ValueData` (blob, null) |
-| `_Events` | `ValueJson` becomes **nullable** |
+It determines what your schema needs, so settle it before writing the migration.
 
-The `*Json` columns become nullable because a payload now lives in exactly one of its two columns,
-and which one depends on the format &ndash; see [Step 3](#step-3-serialization-now-writes-binary-by-default).
+14.x had one column per payload and always wrote JSON. 15.0 declares two per payload &ndash; one text,
+one binary &ndash; and writes **exactly one** of them, whichever
+`DbLogEntrySerializer.Format` names. It **defaults to `DataFormat.Bytes`** (MessagePack), so an
+upgrade that touches nothing moves new rows to the binary columns and they stop being
+human-readable.
 
-With EF migrations this is the usual `dotnet ef migrations add` against your `DbContext`; the entity
-changes come from the package, so the generated migration should contain exactly the rows above. Read
-it before applying it: if it contains anything about your own entities, that's a change you made,
-not one 15.0 asked for.
-
-## Step 3: Serialization now writes binary by default
-
-14.x had one column per payload and always wrote JSON. 15.0 has two, and
-**`DbLogEntrySerializer.Format` defaults to `DataFormat.Bytes`** &ndash; MessagePack. Upgrade without
-touching anything and your new rows stop being human-readable.
-
-That's usually what you want: it's smaller and faster. But it is a silent change, so decide
-deliberately. To keep text:
+That's usually what you want &ndash; smaller and faster &ndash; but it is a silent change, so choose
+deliberately. To stay on text as 14.x did:
 
 ```cs
-// Keeps _Operations and _Events on their *Json columns, as 14.x did
 services.AddSingleton(_ => DbLogEntrySerializer.Default with {
     Format = DataFormat.Text,
 });
 ```
 
-Two consequences worth knowing:
-
-**Reads take whichever column carries the payload**, not the one `Format` names. Your 14.x rows are
-in `*Json` and stay readable regardless of which format you pick, which is why the format is not
-itself a data migration.
-
-**Don't drop the unused columns yet.** `IgnoreUnusedOperationsFrameworkColumns(format)` maps away the
-columns a format never writes, and it's tempting right after a migration:
+Then **map away the columns that format doesn't write**, from `OnModelCreating`:
 
 ```cs
 protected override void OnModelCreating(ModelBuilder modelBuilder)
 {
-    // The format here MUST be the one the registered DbLogEntrySerializer writes with.
-    // Mapping away the column the writer uses loses the payload silently.
+    // Must be the same format the registered DbLogEntrySerializer writes with:
+    // mapping away the column the writer uses loses the payload silently
     modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DataFormat.Bytes);
 }
 ```
 
-Right after upgrading from 14.x the table holds **both** formats: old rows in `*Json`, new ones in
-`*Data`. Mapping either side away makes the other side's rows unreadable. Wait until the trimmer has
-removed every 14.x row, then drop the columns. And note the direction of the trap: if you have
-"always used JSON" in mind and pass `DataFormat.Text` while the serializer still defaults to
-`Bytes`, you have mapped away the column your writer is using.
+Mind the direction of that trap. If you reason "we've always used JSON" and pass `DataFormat.Text`
+while the serializer still has its default `Bytes`, you have just mapped away the column your writer
+is using.
+
+What you give up by doing this is the ability to change format later without a migration &ndash; a
+read normally takes whichever column holds the payload, so both formats coexist happily until one
+side is unmapped. If you'd rather keep that option, declare both column families and skip the
+`Ignore` call; everything below still applies, you just carry one always-`NULL` column per payload.
+
+## Step 3: The schema migration
+
+Only **one column family** is needed, the one your format writes. The old 14.x payloads don't have to
+survive: `_Operations` rows are inert after the upgrade (see
+[above](#operations-needs-no-draining)) and `_Events` was drained in Step 1, so nothing reads a
+14.x payload again.
+
+Both formats:
+
+| Table | Change |
+|---|---|
+| `_Operations` | **drop** `ItemsJson` and `NestedOperations` |
+
+For `DataFormat.Bytes` (the default) &ndash; the binary columns, and the text ones go away:
+
+| Table | Change |
+|---|---|
+| `_Operations` | **add** `CommandData` (blob, null) and `InvalidationCallsData` (blob, null) |
+| `_Operations` | **drop** `CommandJson` |
+| `_Events` | **add** `ValueData` (blob, null) |
+| `_Events` | **drop** `ValueJson` |
+
+For `DataFormat.Text` &ndash; the text columns only, and `CommandJson` / `ValueJson` stay where they
+already are:
+
+| Table | Change |
+|---|---|
+| `_Operations` | **add** `InvalidationCallsJson` (text, null) |
+| `_Operations` | `CommandJson` becomes **nullable** |
+| `_Events` | `ValueJson` becomes **nullable** |
+
+The `*Json` columns become nullable because a payload lives in exactly one of its two columns, and a
+row that carries it in the other one leaves this side empty. That holds even when you've unmapped the
+other side &ndash; the model allows null, the writer simply always fills it.
+
+With EF migrations this is the usual `dotnet ef migrations add` against your `DbContext`, *after* the
+`Format` registration and the `IgnoreUnusedOperationsFrameworkColumns` call from Step 2 are in place
+&ndash; they're what makes the generated migration contain one column family instead of two. Read it
+before applying: if it mentions your own entities, that's a change you made, not one 15.0 asked for.
+
+### One exception: events you can't drain
+
+A delayed event &ndash; one whose `DelayUntil` is still in the future &ndash; is `State = New` and
+won't drain on any timetable you control. If you have those and don't want to wait them out, 15.0 has
+to be able to read a 14.x payload after all, which means keeping `ValueJson` mapped: either choose
+`DataFormat.Text`, or declare both families on `_Events` and skip the `Ignore` call for it. The same
+caveat as Step 1 applies &ndash; a delayed *command* event will reach a 15.0 handler whose
+invalidation contract has changed.
 
 [Operations Framework Serialization](./PartO-Serialization.md) covers the format switch, the
 serializers behind each column, and the deployment compatibility contract in full.
@@ -211,7 +251,6 @@ After &ndash; it runs once, and names its invalidations where it already knows t
 
 ```cs
 [CommandHandler]
-[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]
 public virtual async Task SetName(Cart_SetName command, CancellationToken cancellationToken)
 {
     var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
@@ -226,6 +265,28 @@ public virtual async Task SetName(Cart_SetName command, CancellationToken cancel
     });
 }
 ```
+
+Note what the handler *doesn't* carry: the mode. **Declare it on the service, not on each handler.**
+How far an invalidation has to reach follows from how the service's data is stored and shared, which
+is a property of the service rather than of one method &ndash; so in practice every handler on a
+service wants the same mode. Declaring it once also keeps a handler you add later from throwing
+because somebody forgot the attribute:
+
+```cs
+// Covers every [CommandHandler] on the service
+[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]
+public class CartService(IServiceProvider services)
+    : DbServiceBase<AppDbContext>(services), ICartService
+{
+    // ... handlers, no attribute of their own
+}
+```
+
+Put it on the **interface** instead when clients share that contract. The resolution order is the
+method, then the implementation the container maps the service type to, then the method's declaring
+type, then the interface &ndash; first one found wins &ndash; so a method-level attribute stays
+available for the odd handler that genuinely differs from its service. See
+[Declaring the Mode](./PartO-IM.md#declaring-the-mode).
 
 Three quirks that bite during this rewrite:
 
@@ -254,20 +315,66 @@ Which mode to declare is the one real decision here;
 require a **stored** operation &ndash; they throw on a transient one, because the row is what carries
 the calls to the other hosts.
 
+## Testing invalidation after the rewrite
+
+Tests written against replay often asserted synchronously right after the command returned, because
+the replay pass ran inline. Deferred invalidation keeps that property for `Local`, but not for the
+other two: `Replicated` applies the calls on the origin before the command returns and routes nothing,
+while `Distributed` routes each call to its owner in the background, so a test that reads another
+host's cache is racing it.
+
+`Computed.Capture` is still how you get a handle on a computed to assert against:
+
+```cs
+var computed = await Computed.Capture(() => service.GetCart(cartId));
+computed.IsConsistent().Should().BeTrue();
+
+await commander.Call(new Cart_SetName(cartId, "new name"));
+
+// Local and Replicated invalidate the origin's own copies before the call returns
+computed.IsConsistent().Should().BeFalse();
+```
+
+For anything that crosses a host &ndash; a `Distributed` invalidation, or a peer applying a
+`Replicated` one as it reads the log &ndash; use `ComputedTest.When` instead of a sleep. It
+re-evaluates the assertion inside a `ComputedSource<T>`, so it retries when the values it reads are
+invalidated and rethrows the last failure on timeout:
+
+```cs
+using ActualLab.Fusion.Testing;
+
+await commander.Call(new Cart_SetName(cartId, "new name"));
+
+await ComputedTest.When(async ct => {
+    var cart = await otherHost.GetRequiredService<ICartService>().GetCart(cartId, ct);
+    cart.Name.Should().Be("new name");
+}, TimeSpan.FromSeconds(5));
+```
+
+Two things that make these tests honest rather than merely green:
+
+- **Assert the mutation count**, not just the invalidation. Under replay a handler body ran twice, so
+  a test that only checked the final value couldn't see a double mutation. A counter incremented in
+  the handler and asserted as `1` is what pins that the body runs once now.
+- **`Replicated` and `Distributed` need a stored operation**, so a test on a transient one throws
+  rather than silently falling back. If a mode test passes suspiciously easily, check that the service
+  is actually running against a database.
+
 ## Renames and moved types
 
 | 14.x | 15.0 |
 |---|---|
-| `InvocationRecord` | `ServiceCall`, in `ActualLab.CommandR.Operations` |
 | `InMemoryOperationScope` | `TransientOperationScope` |
 | `InMemoryOperationScopeProvider` | `TransientOperationScopeProvider` |
-| `Operation.Items`, `Operation.NestedOperations` | Removed &ndash; `Operation.InvalidationCalls` |
-| `Operation.ClearEvents()` | `Operation.RemoveEvents()` |
-| `FusionBuilder.WithDefaultDeferredInvalidationMode(mode)` | Removed &ndash; declare per handler, or register a `DeferredInvalidationModeResolver` |
-| `DeferredInvalidationMode.Any` | Removed &ndash; a handler that defers nothing needs no attribute |
+| `Operation.Items` | Removed. It existed to carry data into the replayed branch, and a deferred block closes over the handler's own locals instead |
+| `Operation.NestedOperations`, the `NestedOperation` type | Removed &ndash; a nested handler's blocks join the one operation |
+| `Operation.SuppressNestedOperationLogging()` | Removed, with the nested operations it suppressed |
+| `Operation.ClearEvents()` | `Operation.RemoveEvents()`, which also takes a predicate overload |
 | `RpcArgumentSerializer` | `ArgumentListSerializer`, in `ActualLab.Interception` |
-| `OperationCompletion` constructors | `OperationCompletion.New(...)` |
 | `ArrayBuffer.MustClean` | `ArrayBuffer.MustClear` |
+
+`ServiceCall`, `Operation.InvalidationCalls` and `OperationCompletion` are new in 15.0 rather than
+renames of anything &ndash; 14.x recorded nothing, which is what replay was for.
 
 `ArgumentListSerializer` moving to `ActualLab.Interception` takes the type serializers, `NullValue`
 and `RpcSerializableAttribute` with it. Argument serialization isn't RPC-specific &ndash; anything
