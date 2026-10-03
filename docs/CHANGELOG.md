@@ -11,6 +11,127 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.0.2+3c6740fee | npm: 14.4.14
+
+Release date: 2026-10-03
+
+**The Operations Framework no longer replays a command handler to invalidate what the handler
+changed.** A handler declares its invalidations with `Invalidation.Defer(...)`, and a
+`[DeferredInvalidationMode]` on it says how far they have to reach. **Every app with an Operations
+Framework command handler has to change**, and `_Operations` / `_Events` need a migration that
+requires draining both tables first &mdash;
+**[Migrating to 15.0](./MigrationTo15.md) is the guide, and worth reading before you upgrade.**
+This is a NuGet-only release, npm stays at `14.4.14`.
+
+The goal was to simplify. The original idea holds up &mdash; a command's invalidations belong with
+the command, and the log row carries them to the other hosts &mdash; but replay was the ugly part.
+To learn what a handler invalidated, the framework ran its body a second time with
+`Invalidation.IsActive` true and expected the handler to notice and touch only the compute methods
+it wanted invalidated. That is tricky to understand and easy to get wrong: one body served two
+purposes, every mutating handler opened with a branch unrelated to its actual job, and the framework
+re-executed arbitrary application code whose side effects it couldn't know.
+
+What replaces it is deliberately less clever. A handler names its invalidations once, as a block,
+where it already knows them; the framework runs that block after the mutation is durable and never
+re-enters the handler. That trades some robustness for quirks of a kind you can actually see &mdash;
+closures capture final values, the mode must be declared, a failed block leaves values stale rather
+than failing the command.
+
+The payoff in daily use: **the invalidation block is the same block in all three modes.** It is just
+a closure naming compute methods, so it doesn't depend on the mode at all. `Local`, `Replicated` and
+`Distributed` change only how far the result travels, never what you write &mdash; a service can
+move between modes, or declare a different mode per handler, without touching a line inside any
+block. Under replay, how an invalidation reached other hosts was tangled up in what the second pass
+did.
+
+### Added
+
+- **`Invalidation.Defer(...)` and `[DeferredInvalidationMode]`.** The three modes differ only in how
+  far the invalidation travels, never in which values a block names:
+  - `Local` &mdash; the blocks run in-process once the commit is verified.
+  - `Replicated` &mdash; the calls travel on the operation log row, and every host applies them as
+    it reads the log.
+  - `Distributed` &mdash; the origin applies them locally, then routes each one over RPC to the host
+    that owns the value, with an `_Events` row for recovery.
+
+  An operation gets one mode, and it comes from the **first handler that defers a block**, not from
+  the outermost command. A handler that defers nothing has no say, which is what lets a command
+  delegate to handlers whose mode it doesn't know; two handlers that need different modes throw
+  rather than one of them being silently narrowed.
+- **`ServiceCall` and `ServiceTypeResolver`** in `ActualLab.CommandR.Operations`. `ServiceCall`
+  records a service-method call; `ServiceTypeResolver` maps an implementation to the type it's
+  registered as, and back.
+- **`Operation.InvalidationCalls`**, with `AddInvalidationCall(s)`, `RemoveInvalidationCall(s)` and
+  `RemoveEvents(...)` to shape what an operation carries.
+- **`OperationCompletion`**, handled by `OperationCompletionHandler` (CommandR) and
+  `FusionOperationCompletionHandler` (Fusion). `CommanderBuilder.AddOperationCompletionHandler`
+  wires the handler, the completion listener and the chain entry in one call &mdash; and replaces
+  them together, so a custom handler can't end up half-registered.
+- **`InvalidationGuard`** rejects a command started inside an invalidation pass. Nothing replays a
+  handler anymore, so such a command would silently skip its operation scope; it now throws instead.
+- **`DeferredInvalidationScopeProvider`** opens the invalidation scope below every operation scope
+  provider, which is what makes `Invalidation.Defer(...)` work from a handler's first statement.
+- **`DbLogEntrySerializer` with `DataFormat`.** `DbOperation` and `DbEvent` gained `byte[]` payload
+  columns beside the existing `*Json` ones; the serializer's format switches new rows between them
+  and a read takes whichever column carries the payload, so the format can change without a
+  migration. `IgnoreUnusedOperationsFrameworkColumns(format)` maps away the columns a schema never
+  writes, trading that migration-free switch for the leaner table.
+- **`RpcCallTypeIds.Invalidate`** and its plumbing: `RpcOutboundMessage.CallTypeId` overrides the
+  method's own call type, the byte message serializers read and write it, and a peer that doesn't
+  know `Invalidate` is sent something it does understand. An inbound invalidation is accepted only
+  from a backend peer &mdash; cache-busting an arbitrary key is a capability the mesh has and a
+  client does not.
+- `RpcRoute.GetConnectionKind` as the single derivation of a route's connection kind;
+  `RpcMethodDef.GetOutboundCallRoute`, which lets `IsLocalCall` answer "do I own this?" from the
+  route without minting a peer for a host it has no intention of calling; and
+  `MethodDef.AwaitAndReturnDefaultResult` for a call that produces no result.
+- `TypeExt.GetInterfacesByDependency` &mdash; a type's interfaces, most derived first.
+  `Type.GetInterfaces()` has no specified order, so any "first match wins" lookup over it can
+  resolve differently between runs; this is that lookup's deterministic order. Also
+  `MethodInfoExt`'s RPC-style method naming and lookup, which lets a recorded call name a method the
+  way RPC already does, and `ArrayPools.SharedTypePool`.
+
+### Breaking Changes
+
+[Migrating to 15.0](./MigrationTo15.md) has the ordered procedure, the schema migration and the
+before/after handler; this is the inventory.
+
+- **Replay is gone.** A command handler that mutates state must call `Invalidation.Defer(...)` and
+  declare `[DeferredInvalidationMode(...)]` &mdash; on the method, on its declaring or implementation
+  type, or on the service interface it's registered as. A handler that defers without a declared
+  mode throws. Handlers that used `if (Invalidation.IsActive) { ... return ...; }` blocks should move
+  those compute-method calls into `Invalidation.Defer(() => ...)` at the end of the body.
+- **Database migration.** `_Operations` drops `ItemsJson` and `NestedOperations`, and gains
+  `InvalidationCallsJson`, `InvalidationCallsData` and `CommandData`; `_Events` gains `ValueData`;
+  the `*Json` columns become nullable.
+- `Operation.Items` and nested operations are removed &mdash; `Operation.InvalidationCalls` replaces
+  what they were used for.
+- `WithDefaultInvalidationMode(...)` no longer exists. There is deliberately no app-wide default.
+- `InMemoryOperationScope` and `InMemoryOperationScopeProvider` are now `TransientOperationScope` and
+  `TransientOperationScopeProvider`.
+- `RpcArgumentSerializer` and its byte/text implementations are now `ArgumentListSerializer` in
+  **`ActualLab.Interception`**, together with the type serializers, `NullValue` and
+  `RpcSerializableAttribute`. Argument serialization isn't RPC-specific: anything that records a call
+  and replays its arguments needs it, and `ActualLab.Interception` is where `ArgumentList` lives.
+- `OperationCompletion` is constructed through `OperationCompletion.New(...)` rather than its
+  constructors, which were ambiguous between overloads.
+- **Two command handler priorities moved**, which matters only for custom filters that sit between
+  them: `DbOperationScopeProvider` goes from `1000` to `9900`, and the new
+  `DeferredInvalidationScopeProvider` sits at `9000` &mdash; below every operation scope provider, so
+  a scope is always open before anything can be deferred.
+- `ArrayBuffer.MustClean` is now `MustClear`.
+
+### Documentation
+
+- The Operations Framework docs are rewritten for the new model. The previous text still described
+  operations as "logged and replayed", and roughly 40 example handlers mutated and deferred without
+  declaring a mode, so they would have thrown as printed. Three claims were wrong rather than merely
+  stale: the operation's mode was said to come from the outermost command, `Local` was described as
+  the default, and the cheat sheet recommended a method that no longer exists.
+- New sections for what had none: the `Operation` mutation API, `OperationCompletionHandler` as an
+  extension point, `InvalidationGuard`, glossary entries for the new nouns, and an old-to-new
+  migration table.
+
 ## 14.4.16+509f8d69f | npm: 14.4.14
 
 Release date: 2026-09-15
