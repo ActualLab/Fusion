@@ -14,4 +14,5 @@ public static class ArrayPools
     public static readonly ArrayPool<float> SharedFloatPool = ArrayPool<float>.Shared;
     public static readonly ArrayPool<double> SharedDoublePool = ArrayPool<double>.Shared;
     public static readonly ArrayPool<string> SharedStringPool = ArrayPool<string>.Shared;
+    public static readonly ArrayPool<Type> SharedTypePool = ArrayPool<Type>.Shared;
 }

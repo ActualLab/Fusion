@@ -9,8 +9,13 @@ namespace ActualLab.Reflection;
 /// </summary>
 public static class MethodInfoExt
 {
+    private const BindingFlags AnyMethodBindingFlags
+        = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
     private static readonly ConcurrentDictionary<MethodInfo, MethodInfo?> BaseOrDeclaringMethodCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<(Type, string), MethodInfo?> MethodInfoByRpcStyleNameCache = new();
+    private static readonly ConcurrentDictionary<MethodInfo, string> RpcStyleNameByMethodInfoCache = new();
+    private static readonly string[] LengthSuffixes = Enumerable.Range(0, 16).Select(i => $":{i}").ToArray();
 
     [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
     public static MethodInfo? GetBaseOrDeclaringMethod(this MethodInfo method)
@@ -84,6 +89,36 @@ public static class MethodInfoExt
         return sb.ToStringAndRelease();
     }
 
+    public static string GetRpcStyleName(this MethodInfo method)
+        => RpcStyleNameByMethodInfoCache.GetOrAdd(method,
+            static m => {
+                var length = m.GetParameters().Length;
+                return length < LengthSuffixes.Length
+                    ? m.Name + LengthSuffixes[length]
+                    : $"{m.Name}:{length:D}";
+            });
+
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
+    public static MethodInfo GetByRpcStyleName(Type type, string rpcStyleName)
+        => TryGetByRpcStyleName(type, rpcStyleName)
+            ?? throw Errors.RpcStyleMethodNotFound(type, rpcStyleName);
+
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
+    public static MethodInfo? TryGetByRpcStyleName(Type type, string rpcStyleName)
+        => MethodInfoByRpcStyleNameCache.GetOrAdd((type.NonProxyType(), rpcStyleName),
+            static key => {
+                var (type, methodName) = key;
+                MethodInfo? result = null;
+                foreach (var method in type.GetMethods(AnyMethodBindingFlags)) {
+                    if (!string.Equals(method.GetRpcStyleName(), methodName, StringComparison.Ordinal))
+                        continue;
+                    if (result is not null)
+                        return null; // Ambiguous overload - the caller reports & skips it
+
+                    result = method;
+                }
+                return result;
+            });
 
     // Private methods
 

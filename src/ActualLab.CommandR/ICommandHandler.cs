@@ -12,6 +12,7 @@ public interface ICommandHandler<in TCommand> : ICommandHandler
     where TCommand : class, ICommand
 {
     public Task OnCommand(
-        TCommand command, CommandContext context,
+        TCommand command,
+        CommandContext context,
         CancellationToken cancellationToken);
 }

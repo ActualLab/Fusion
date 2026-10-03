@@ -19,19 +19,19 @@ public static partial class ChannelExt
                 var newItem = transformer(item);
                 await writer.WriteAsync(newItem, cancellationToken).ConfigureAwait(false);
             }
-            if ((copyMode & ChannelCopyMode.CopyCompletion) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyCompletion))
                 writer.TryComplete();
         }
         catch (OperationCanceledException oce) {
-            if ((copyMode & ChannelCopyMode.CopyCancellation) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyCancellation))
                 writer.TryComplete(oce);
-            if ((copyMode & ChannelCopyMode.Silently) == 0)
+            if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                 throw;
         }
         catch (Exception e) {
-            if ((copyMode & ChannelCopyMode.CopyError) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyError))
                 writer.TryComplete(e);
-            if ((copyMode & ChannelCopyMode.Silently) == 0)
+            if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                 throw;
         }
     }
@@ -49,19 +49,19 @@ public static partial class ChannelExt
                 var newItem = await transformer(item).ConfigureAwait(false);
                 await writer.WriteAsync(newItem, cancellationToken).ConfigureAwait(false);
             }
-            if ((copyMode & ChannelCopyMode.CopyCompletion) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyCompletion))
                 writer.TryComplete();
         }
         catch (OperationCanceledException oce) {
-            if ((copyMode & ChannelCopyMode.CopyCancellation) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyCancellation))
                 writer.TryComplete(oce);
-            if ((copyMode & ChannelCopyMode.Silently) == 0)
+            if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                 throw;
         }
         catch (Exception e) {
-            if ((copyMode & ChannelCopyMode.CopyError) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyError))
                 writer.TryComplete(e);
-            if ((copyMode & ChannelCopyMode.Silently) == 0)
+            if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                 throw;
         }
     }
@@ -100,15 +100,15 @@ public static partial class ChannelExt
                 }
             }
             catch (OperationCanceledException oce) {
-                if ((copyMode & ChannelCopyMode.CopyCancellation) != 0)
+                if (copyMode.HasFlag(ChannelCopyMode.CopyCancellation))
                     writer.TryComplete(oce);
-                if ((copyMode & ChannelCopyMode.Silently) == 0)
+                if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                     throw;
             }
             catch (Exception e) {
-                if ((copyMode & ChannelCopyMode.CopyError) != 0)
+                if (copyMode.HasFlag(ChannelCopyMode.CopyError))
                     writer.TryComplete(e);
-                if ((copyMode & ChannelCopyMode.Silently) == 0)
+                if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                     throw;
             }
         }
@@ -117,7 +117,7 @@ public static partial class ChannelExt
         for (var i = 0; i < concurrencyLevel; i++)
             workers[i] = Task.Run(Worker, CancellationToken.None);
         await Task.WhenAll(workers).ConfigureAwait(false);
-        if ((copyMode & ChannelCopyMode.CopyCompletion) != 0)
+        if (copyMode.HasFlag(ChannelCopyMode.CopyCompletion))
             writer.TryComplete(error);
     }
 
@@ -153,15 +153,15 @@ public static partial class ChannelExt
                 }
             }
             catch (OperationCanceledException oce) {
-                if ((copyMode & ChannelCopyMode.CopyCancellation) != 0)
+                if (copyMode.HasFlag(ChannelCopyMode.CopyCancellation))
                     writer.TryComplete(oce);
-                if ((copyMode & ChannelCopyMode.Silently) == 0)
+                if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                     throw;
             }
             catch (Exception e) {
-                if ((copyMode & ChannelCopyMode.CopyError) != 0)
+                if (copyMode.HasFlag(ChannelCopyMode.CopyError))
                     writer.TryComplete(e);
-                if ((copyMode & ChannelCopyMode.Silently) == 0)
+                if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                     throw;
             }
         }
@@ -170,7 +170,7 @@ public static partial class ChannelExt
         for (var i = 0; i < concurrencyLevel; i++)
             workers[i] = Task.Run(Worker, CancellationToken.None);
         await Task.WhenAll(workers).ConfigureAwait(false);
-        if ((copyMode & ChannelCopyMode.CopyCompletion) != 0)
+        if (copyMode.HasFlag(ChannelCopyMode.CopyCompletion))
             writer.TryComplete(error);
     }
 }
