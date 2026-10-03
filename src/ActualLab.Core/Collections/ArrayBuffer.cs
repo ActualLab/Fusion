@@ -23,7 +23,7 @@ public struct ArrayBuffer<T>
     public T[] Buffer { get; private set; }
     public Span<T> Span => Buffer.AsSpan(0, Count);
     public int Capacity => Buffer.Length;
-    public bool MustClean { get; }
+    public bool MustClear { get; }
     public int Count {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => _count;
@@ -44,9 +44,9 @@ public struct ArrayBuffer<T>
 #pragma warning restore MA0012
     }
 
-    private ArrayBuffer(bool mustClean, int capacity)
+    private ArrayBuffer(bool mustClear, int capacity)
     {
-        MustClean = mustClean;
+        MustClear = mustClear;
         capacity = ComputeCapacity(capacity, MinCapacity);
         Buffer = Pool.Rent(capacity);
         _count = 0;
@@ -63,7 +63,7 @@ public struct ArrayBuffer<T>
     {
         // ReSharper disable once ConditionIsAlwaysTrueOrFalse
         if (Buffer is not null)
-            Pool.Return(Buffer, MustClean);
+            Pool.Return(Buffer, MustClear);
         Buffer = null!;
     }
 
@@ -174,7 +174,7 @@ public struct ArrayBuffer<T>
 
     private void ChangeLease(T[] newLease)
     {
-        Pool.Return(Buffer, MustClean);
+        Pool.Return(Buffer, MustClear);
         Buffer = newLease;
     }
 }

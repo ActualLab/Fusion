@@ -56,10 +56,8 @@ public static class RpcServiceModeExt
         => mode == RpcServiceMode.Default ? defaultMode : mode;
 
     public static bool IsAnyClient(this RpcServiceMode mode)
-        // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-        => (mode & RpcServiceMode.Client) != 0;
+        => mode.HasFlag(RpcServiceMode.Client);
 
     public static bool IsAnyServer(this RpcServiceMode mode)
-        // ReSharper disable once BitwiseOperatorOnEnumWithoutFlags
-        => (mode & RpcServiceMode.Server) != 0;
+        => mode.HasFlag(RpcServiceMode.Server);
 }

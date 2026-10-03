@@ -17,7 +17,7 @@ public static class ActivityContextExt
         var traceParent = string.Concat(
             "00-", activityContext.TraceId.ToHexString(),
             "-", activityContext.SpanId.ToHexString(),
-            (activityContext.TraceFlags & ActivityTraceFlags.Recorded) != 0 ? "-01" : "-00");
+            activityContext.TraceFlags.HasFlag(ActivityTraceFlags.Recorded) ? "-01" : "-00");
 #endif
         var traceState = activityContext.TraceState ?? "";
         return (traceParent, traceState);
@@ -30,7 +30,7 @@ public static class ActivityContextExt
         activityContext.TraceId.ToHexString().CopyTo(span.Slice(3));
         span[35] = '-';
         activityContext.SpanId.ToHexString().CopyTo(span.Slice(36));
-        if ((activityContext.TraceFlags & ActivityTraceFlags.Recorded) != 0)
+        if (activityContext.TraceFlags.HasFlag(ActivityTraceFlags.Recorded))
             "-01".CopyTo(span.Slice(52));
         else
             "-00".CopyTo(span.Slice(52));

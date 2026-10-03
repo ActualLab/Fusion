@@ -70,19 +70,19 @@ public static partial class AsyncEnumerableExt
         try {
             foreach (var item in source)
                 await writer.WriteAsync(item, cancellationToken).ConfigureAwait(false);
-            if ((copyMode & ChannelCopyMode.CopyCompletion) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyCompletion))
                 writer.TryComplete();
         }
         catch (OperationCanceledException oce) {
-            if ((copyMode & ChannelCopyMode.CopyCancellation) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyCancellation))
                 writer.TryComplete(oce);
-            if ((copyMode & ChannelCopyMode.Silently) == 0)
+            if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                 throw;
         }
         catch (Exception e) {
-            if ((copyMode & ChannelCopyMode.CopyError) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyError))
                 writer.TryComplete(e);
-            if ((copyMode & ChannelCopyMode.Silently) == 0)
+            if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                 throw;
         }
     }
@@ -95,19 +95,19 @@ public static partial class AsyncEnumerableExt
         try {
             await foreach (var item in source.WithCancellation(cancellationToken).ConfigureAwait(false))
                 await writer.WriteAsync(item, cancellationToken).ConfigureAwait(false);
-            if ((copyMode & ChannelCopyMode.CopyCompletion) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyCompletion))
                 writer.TryComplete();
         }
         catch (OperationCanceledException oce) {
-            if ((copyMode & ChannelCopyMode.CopyCancellation) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyCancellation))
                 writer.TryComplete(oce);
-            if ((copyMode & ChannelCopyMode.Silently) == 0)
+            if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                 throw;
         }
         catch (Exception e) {
-            if ((copyMode & ChannelCopyMode.CopyError) != 0)
+            if (copyMode.HasFlag(ChannelCopyMode.CopyError))
                 writer.TryComplete(e);
-            if ((copyMode & ChannelCopyMode.Silently) == 0)
+            if (!copyMode.HasFlag(ChannelCopyMode.Silently))
                 throw;
         }
     }

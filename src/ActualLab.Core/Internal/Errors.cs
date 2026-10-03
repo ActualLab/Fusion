@@ -61,6 +61,10 @@ public static class Errors
 
     public static Exception ImplementationNotFound(Type type)
         => new InvalidOperationException($"No implementation is found for type '{type}'.");
+    public static Exception MethodNotFound(Type type, string methodName)
+        => new InvalidOperationException($"'{type.GetName()}.{methodName}' is not found.");
+    public static Exception RpcStyleMethodNotFound(Type type, string methodName)
+        => new InvalidOperationException($"'{type.GetName()}.{methodName}' (RPC-style name) is not found.");
 
     public static Exception ExpressionDoesNotSpecifyAMember(string expression)
         => new ArgumentException($"Expression '{expression}' does not specify a member.");
