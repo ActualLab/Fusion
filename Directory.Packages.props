@@ -50,10 +50,14 @@
          declares this open EF10+ range and lets the app pick EF 10 or 11. Provider packages can't:
          Npgsql/Sqlite/SqlServer/Pomelo each cap EF to a single major, so whatever provider an app
          picks decides its EF version. EntityFrameworkCoreVersion11 is what this repo's own apps and
-         tests pin on net11.0, so CI exercises EF 11. It trails DotNet11Version: efcore.pg's newest
-         preview exact-pins EF Core to preview.6, and every other provider must match that build. -->
+         tests pin on net11.0, so CI exercises EF 11. Its exact value is dictated by efcore.pg, whose
+         every prerelease exact-pins EF Core - [11.0.0-rc.1.26425.128] in 11.0.0-rc.1.1 - so this has
+         to name the same build or restore fails. That build happens to be DotNet11Version's, so EF
+         now matches the SDK and the ASP.NET Core packages; it didn't while efcore.pg's newest
+         prerelease still pinned preview.6. Take rc.1.1 and not rc.1: rc.1 pins 11.0.0-rc.1.26431.118,
+         a different EF build from the one our SDK carries. -->
     <EntityFrameworkCoreVersion>[10.0.0,)</EntityFrameworkCoreVersion>
-    <EntityFrameworkCoreVersion11>[11.0.0-preview.6.26359.118,)</EntityFrameworkCoreVersion11>
+    <EntityFrameworkCoreVersion11>[11.0.0-rc.1.26425.128,)</EntityFrameworkCoreVersion11>
     <EntityFrameworkCoreVersion9>[9.0.0,)</EntityFrameworkCoreVersion9>
     <EntityFrameworkCoreVersion8>[8.0.0,)</EntityFrameworkCoreVersion8>
     <EntityFrameworkCoreVersion7>[7.0.20,)</EntityFrameworkCoreVersion7>
@@ -63,7 +67,7 @@
     <!-- efcore.pg previews don't carry the SDK build suffix, and they still bind to Npgsql 10.x -->
     <EntityFrameworkCoreNpgsqlVersion10>[10.0.0,)</EntityFrameworkCoreNpgsqlVersion10>
     <EntityFrameworkCoreNpgsqlVersion>$(EntityFrameworkCoreNpgsqlVersion10)</EntityFrameworkCoreNpgsqlVersion>
-    <EntityFrameworkCoreNpgsqlVersion Condition="$(EnableDotNet11)">[11.0.0-preview.6,)</EntityFrameworkCoreNpgsqlVersion>
+    <EntityFrameworkCoreNpgsqlVersion Condition="$(EnableDotNet11)">[11.0.0-rc.1.1,)</EntityFrameworkCoreNpgsqlVersion>
     <EntityFrameworkCoreNpgsqlVersion9>[9.0.0,)</EntityFrameworkCoreNpgsqlVersion9>
     <EntityFrameworkCoreNpgsqlVersion8>[8.0.0,)</EntityFrameworkCoreNpgsqlVersion8>
     <EntityFrameworkCoreNpgsqlVersion7>[7.0.18,)</EntityFrameworkCoreNpgsqlVersion7>
