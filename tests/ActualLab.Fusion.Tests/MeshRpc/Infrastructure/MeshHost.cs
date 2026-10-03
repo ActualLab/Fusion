@@ -96,9 +96,6 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
 
     private Func<ArgumentList, RpcRef> RouterFactory(RpcMethodDef methodDef)
         => args => {
-            if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
-                return RpcRef.Local;
-
             // For testing, we route based on its argument's hash or value
             if (args.Length == 0)
                 return RpcRef.Local;

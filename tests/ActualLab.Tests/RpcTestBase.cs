@@ -168,12 +168,8 @@ public abstract class RpcTestBase(ITestOutputHelper @out) : TestBase(@out)
         rpc.AddWebSocketClient(_ => WebHost.ServerUri.ToString());
 #endif
         services.AddSingleton<RpcOutboundCallOptions>(_ => RpcOutboundCallOptions.Default with {
-            RouterFactory = methodDef => args => {
-                if (methodDef.Kind is RpcMethodKind.Command && Invalidation.IsActive)
-                    return RpcRef.Local; // Commands in the invalidation mode must always run locally
-
-                return RpcRef.GetDefaultRef(ConnectionKind, methodDef.IsBackend);
-            },
+            RouterFactory = methodDef => args
+                => RpcRef.GetDefaultRef(ConnectionKind, methodDef.IsBackend),
         });
         services.AddSingleton<RpcSerializationFormatResolver>(
             _ => new RpcSerializationFormatResolver(SerializationFormat, RpcSerializationFormat.All.ToArray()) {

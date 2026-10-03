@@ -139,7 +139,6 @@ public class OperationReprocessor : IOperationReprocessor
             context.IsOutermost // Should be a top-level command
             && command is not ISystemCommand // No reprocessing for system commands
             && context.TryGetOperation() is null // Operation isn't started yet
-            && !Invalidation.IsActive // No invalidation is running
             && Settings.Filter.Invoke(command, context);
         if (!isReprocessingAllowed) {
             await context.InvokeRemainingHandlers(cancellationToken).ConfigureAwait(false);
