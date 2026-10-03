@@ -20,6 +20,22 @@ public static class TimeSpanExt
     public static TimeSpan Max(TimeSpan first, TimeSpan second)
         => new(Math.Max(first.Ticks, second.Ticks));
 
+    // Not an extension: it reads as a factory for one specific, rare job rather than as something
+    // you'd reach for on any TimeSpan.
+    //
+    // A stable offset in [TimeSpan.Zero, unit) for source, meant for Moment.Floor/Ceiling/Round:
+    // quantizing to a bare lattice pins every producer to the same instant, which turns an hourly
+    // schedule into an hourly storm. Keying the offset off source spreads them while keeping every
+    // value derived from the same source on the same instant - which is what makes it usable as a
+    // deduplication key.
+    //
+    // XxHash3 rather than string.GetHashCode(): the latter is randomized per process, so two hosts
+    // would place the same source at different offsets and dedupe against nothing.
+    public static TimeSpan GetHashBasedOffset(string? source, TimeSpan unit)
+        => unit.Ticks <= 0 || source.IsNullOrEmpty()
+            ? TimeSpan.Zero
+            : TimeSpan.FromTicks((long)(source.GetXxHash3L() % (ulong)unit.Ticks));
+
     public static RandomTimeSpan ToRandom(this TimeSpan value, TimeSpan maxDelta)
         => new(value, maxDelta);
     public static RandomTimeSpan ToRandom(this TimeSpan value, double maxDelta)

@@ -132,24 +132,40 @@ public readonly partial struct Moment(long epochOffsetTicks)
     public Moment Clamp(Moment min, Moment max)
         => new(Math.Max(min.EpochOffsetTicks, Math.Min(max.EpochOffsetTicks, EpochOffsetTicks)));
 
-    public Moment Floor(TimeSpan unit)
+    // offset shifts the lattice these quantize onto, from k*unit to offset + k*unit. An offset
+    // outside [0, unit) is fine - PositiveModulo folds it back - so it needs no normalization.
+    // A zero unit has no lattice, and returning this beats dividing by zero.
+
+    public Moment Floor(TimeSpan unit, TimeSpan offset = default)
     {
-        var mod = EpochOffsetTicks.PositiveModulo(unit.Ticks);
-        return new Moment(EpochOffsetTicks - mod);
+        if (unit.Ticks <= 0)
+            return this;
+
+        var ticks = EpochOffsetTicks - offset.Ticks;
+        var mod = ticks.PositiveModulo(unit.Ticks);
+        return new Moment(ticks - mod + offset.Ticks);
     }
 
-    public Moment Ceiling(TimeSpan unit)
+    public Moment Ceiling(TimeSpan unit, TimeSpan offset = default)
     {
-        var mod = EpochOffsetTicks.PositiveModulo(unit.Ticks);
-        return mod == 0 ? this : new Moment(EpochOffsetTicks + unit.Ticks - mod);
+        if (unit.Ticks <= 0)
+            return this;
+
+        var ticks = EpochOffsetTicks - offset.Ticks;
+        var mod = ticks.PositiveModulo(unit.Ticks);
+        return mod == 0 ? this : new Moment(ticks - mod + unit.Ticks + offset.Ticks);
     }
 
-    public Moment Round(TimeSpan unit)
+    public Moment Round(TimeSpan unit, TimeSpan offset = default)
     {
-        var mod = EpochOffsetTicks.PositiveModulo(unit.Ticks);
+        if (unit.Ticks <= 0)
+            return this;
+
+        var ticks = EpochOffsetTicks - offset.Ticks;
+        var mod = ticks.PositiveModulo(unit.Ticks);
         return mod < (unit.Ticks >> 1)
-            ? new Moment(EpochOffsetTicks - mod)
-            : new Moment(EpochOffsetTicks + unit.Ticks - mod);
+            ? new Moment(ticks - mod + offset.Ticks)
+            : new Moment(ticks - mod + unit.Ticks + offset.Ticks);
     }
 
     // Equality

@@ -57,13 +57,32 @@ public sealed class OperationEvent(string uuid, object? value) : IHasUuid, IHasI
         return this;
     }
 
+    // Quantizes DelayUntil onto a lattice offset by a hash of uuidPrefix, so that events with
+    // different prefixes don't all land on the same boundary and arrive as a storm. Everything
+    // sharing a prefix still lands on one instant, which is what makes the Uuid a dedup key.
     public OperationEvent SetDelayUntil(Moment delayUntil, TimeSpan delayQuanta, string? uuidPrefix = null)
     {
         if (delayQuanta < TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(delayQuanta));
 
-        DelayUntil = delayUntil.Ceiling(delayQuanta);
-        Uuid = ProvideDelayBasedUuid(uuidPrefix);
+        // Resolved before the offset, which is derived from it
+        uuidPrefix ??= Uuid;
+        return SetDelayUntil(
+            delayUntil, delayQuanta, TimeSpanExt.GetHashBasedOffset(uuidPrefix, delayQuanta), uuidPrefix);
+    }
+
+    // The same, with the offset you name - TimeSpan.Zero for a lattice aligned to the quanta itself.
+    public OperationEvent SetDelayUntil(
+        Moment delayUntil,
+        TimeSpan delayQuanta,
+        TimeSpan delayQuantaOffset,
+        string? uuidPrefix = null)
+    {
+        if (delayQuanta < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(delayQuanta));
+
+        DelayUntil = delayUntil.Ceiling(delayQuanta, delayQuantaOffset);
+        Uuid = ProvideDelayBasedUuid(uuidPrefix ?? Uuid);
         UuidConflictStrategy = KeyConflictStrategy.Skip;
         return this;
     }
@@ -75,15 +94,14 @@ public sealed class OperationEvent(string uuid, object? value) : IHasUuid, IHasI
     }
 
     public OperationEvent SetDelayBy(TimeSpan delayBy, TimeSpan delayQuanta, string? uuidPrefix = null)
-    {
-        if (delayQuanta < TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(delayQuanta));
+        => SetDelayUntil(LoggedAt + delayBy, delayQuanta, uuidPrefix);
 
-        DelayUntil = (LoggedAt + delayBy).Ceiling(delayQuanta);
-        Uuid = ProvideDelayBasedUuid(uuidPrefix);
-        UuidConflictStrategy = KeyConflictStrategy.Skip;
-        return this;
-    }
+    public OperationEvent SetDelayBy(
+        TimeSpan delayBy,
+        TimeSpan delayQuanta,
+        TimeSpan delayQuantaOffset,
+        string? uuidPrefix = null)
+        => SetDelayUntil(LoggedAt + delayBy, delayQuanta, delayQuantaOffset, uuidPrefix);
 
     public OperationEvent SetUuidConflictStrategy(KeyConflictStrategy uuidConflictStrategy)
     {
@@ -98,9 +116,6 @@ public sealed class OperationEvent(string uuid, object? value) : IHasUuid, IHasI
             ? hasUuid.Uuid
             : UuidGenerator.Next();
 
-    private string ProvideDelayBasedUuid(string? uuidPrefix)
-    {
-        uuidPrefix ??= Uuid;
-        return $"{uuidPrefix}-at-{DelayUntil.EpochOffsetTicks:x}";
-    }
+    private string ProvideDelayBasedUuid(string uuidPrefix)
+        => $"{uuidPrefix}-at-{DelayUntil.EpochOffsetTicks:x}";
 }

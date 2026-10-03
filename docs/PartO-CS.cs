@@ -198,6 +198,9 @@ public class EventExamples
         // Rate-limited (one per minute)
         context.Operation.AddEvent(new RateLimitedEvent())
             .SetDelayUntil(now, TimeSpan.FromMinutes(1), "rate-limit");
+        // ... the same, on a lattice aligned to the quantum rather than offset by the prefix's hash
+        context.Operation.AddEvent(new MyEvent())
+            .SetDelayUntil(now, TimeSpan.FromMinutes(1), TimeSpan.Zero, "rate-limit");
         #endregion
 
         #region PartOCS_EventConflictStrategies

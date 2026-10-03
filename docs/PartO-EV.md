@@ -147,22 +147,56 @@ context.Operation.AddEvent(new ScheduledEvent())
 
 ### Delay Quantization
 
-For rate limiting, you can align delays to time boundaries:
+For rate limiting, you can collapse many triggers onto one coarse schedule. Passing a quantum
+rounds `DelayUntil` up onto a lattice and puts the resulting instant into the UUID, so repeated
+producers of the same logical event deduplicate:
 
 <!-- snippet: PartOEV_DelayQuantization -->
 ```cs
-// Align to 1-minute boundaries (useful for rate limiting)
+// Align to 1-minute cells (useful for rate limiting)
 context.Operation.AddEvent(new RateLimitedEvent())
     .SetDelayUntil(
         SystemClock.Instance.Now,
         TimeSpan.FromMinutes(1),  // Quantum
-        "rate-limit"              // UUID prefix for deduplication
+        "rate-limit"              // UUID prefix: the dedup key, and the offset's source
     );
 ```
 <!-- endSnippet -->
 
 This creates events with UUIDs like `rate-limit-at-{timestamp}` and uses `KeyConflictStrategy.Skip`,
-ensuring only one event per time quantum.
+so one cell of the lattice holds at most one event per prefix.
+
+**The lattice is offset by a hash of the UUID prefix**, not aligned to the quantum itself. Aligning
+every prefix to the same boundary means every hourly job in the system fires at the top of the hour
+&ndash; the schedule becomes a storm. Keying the offset off the prefix spreads them across the
+quantum while keeping everything that shares a prefix on one instant, which is what the UUID needs in
+order to work as a deduplication key. The hash is `XxHash3`, so it's identical on every host and in
+every process; `string.GetHashCode()` would not be.
+
+The consequence worth knowing: the cell seam sits at the prefix's offset rather than at a round
+boundary, so two producers aiming at instants an hour apart in wall-clock terms may land in different
+cells, and two aiming within the same cell will land together. Producers that must deduplicate have
+to agree on the instant they target, not merely on the hour.
+
+To name the offset yourself &ndash; `TimeSpan.Zero` restores the boundary-aligned lattice &ndash;
+pass it after the quantum:
+
+<!-- snippet: PartOEV_DelayQuantizationOffset -->
+```cs
+// The same, but on a lattice aligned to the quantum itself - every prefix fires
+// on the boundary, which is what produces the storm this offset exists to avoid
+context.Operation.AddEvent(new RateLimitedEvent())
+    .SetDelayUntil(
+        SystemClock.Instance.Now,
+        TimeSpan.FromMinutes(1),
+        TimeSpan.Zero,            // The offset, named instead of derived
+        "rate-limit");
+```
+<!-- endSnippet -->
+
+`TimeSpanExt.GetHashBasedOffset(source, unit)` is the derivation itself, if you need to predict where
+a prefix lands or reuse the same spreading elsewhere. A zero or negative quantum means no
+quantization: the instant passes through and the UUID names it exactly, matching nothing else.
 
 ## UUID Conflict Strategies
 

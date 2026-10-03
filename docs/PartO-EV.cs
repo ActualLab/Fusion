@@ -96,13 +96,27 @@ public class EventConfigExamples
     public void DelayQuantizationExample(CommandContext context)
     {
         #region PartOEV_DelayQuantization
-        // Align to 1-minute boundaries (useful for rate limiting)
+        // Align to 1-minute cells (useful for rate limiting)
         context.Operation.AddEvent(new RateLimitedEvent())
             .SetDelayUntil(
                 SystemClock.Instance.Now,
                 TimeSpan.FromMinutes(1),  // Quantum
-                "rate-limit"              // UUID prefix for deduplication
+                "rate-limit"              // UUID prefix: the dedup key, and the offset's source
             );
+        #endregion
+    }
+
+    public void DelayQuantizationOffsetExample(CommandContext context)
+    {
+        #region PartOEV_DelayQuantizationOffset
+        // The same, but on a lattice aligned to the quantum itself - every prefix fires
+        // on the boundary, which is what produces the storm this offset exists to avoid
+        context.Operation.AddEvent(new RateLimitedEvent())
+            .SetDelayUntil(
+                SystemClock.Instance.Now,
+                TimeSpan.FromMinutes(1),
+                TimeSpan.Zero,            // The offset, named instead of derived
+                "rate-limit");
         #endregion
     }
 
