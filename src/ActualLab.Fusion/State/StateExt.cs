@@ -88,22 +88,22 @@ public static class StateExt
     public static void AddEventHandler(this IState state,
         StateEventKind eventFilter, Action<State, StateEventKind> handler)
     {
-        if ((eventFilter & StateEventKind.Invalidated) != 0)
+        if (eventFilter.HasFlag(StateEventKind.Invalidated))
             state.Invalidated += handler;
-        if ((eventFilter & StateEventKind.Updating) != 0)
+        if (eventFilter.HasFlag(StateEventKind.Updating))
             state.Updating += handler;
-        if ((eventFilter & StateEventKind.Updated) != 0)
+        if (eventFilter.HasFlag(StateEventKind.Updated))
             state.Updated += handler;
     }
 
     public static void RemoveEventHandler(this IState state,
         StateEventKind eventFilter, Action<State, StateEventKind> handler)
     {
-        if ((eventFilter & StateEventKind.Invalidated) != 0)
+        if (eventFilter.HasFlag(StateEventKind.Invalidated))
             state.Invalidated -= handler;
-        if ((eventFilter & StateEventKind.Updating) != 0)
+        if (eventFilter.HasFlag(StateEventKind.Updating))
             state.Updating -= handler;
-        if ((eventFilter & StateEventKind.Updated) != 0)
+        if (eventFilter.HasFlag(StateEventKind.Updated))
             state.Updated -= handler;
     }
 }

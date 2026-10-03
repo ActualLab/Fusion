@@ -2,6 +2,7 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace Samples.HelloCart.V2;
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]
 public class DbProductService(IServiceProvider services)
     : DbServiceBase<AppDbContext>(services), IProductService
 {
@@ -10,11 +11,6 @@ public class DbProductService(IServiceProvider services)
         var (productId, product) = command;
         if (string.IsNullOrEmpty(productId))
             throw new ArgumentOutOfRangeException(nameof(command));
-
-        if (Invalidation.IsActive) {
-            _ = Get(productId, default);
-            return;
-        }
 
         await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
         var dbProduct = await dbContext.Products.FindAsync(DbKey.Compose(productId), cancellationToken);
@@ -39,6 +35,8 @@ public class DbProductService(IServiceProvider services)
         context.Operation.AddEvent(logEvent);
         var randomEvent = LogMessageCommand.New();
         context.Operation.AddEvent(randomEvent).SetDelayUntil(randomEvent.DelayUntil);
+
+        Invalidation.Defer(() => _ = Get(productId, default));
     }
 
     public virtual async Task<Product?> Get(string id, CancellationToken cancellationToken = default)

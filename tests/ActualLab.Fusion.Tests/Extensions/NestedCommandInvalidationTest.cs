@@ -3,16 +3,16 @@ using ActualLab.Fusion.Extensions;
 
 namespace ActualLab.Fusion.Tests.Extensions;
 
-public class NestedOperationLoggerTest : FusionTestBase
+public class NestedCommandInvalidationTest : FusionTestBase
 {
-    public NestedOperationLoggerTest(ITestOutputHelper @out) : base(@out)
+    public NestedCommandInvalidationTest(ITestOutputHelper @out) : base(@out)
         => UseTestClock = true;
 
     protected override void ConfigureTestServices(IServiceCollection services, bool isClient)
     {
         base.ConfigureTestServices(services, isClient);
         var fusion = services.AddFusion();
-        fusion.AddService<NestedOperationLoggerTester>();
+        fusion.AddService<NestedCommandInvalidationTester>();
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class NestedOperationLoggerTest : FusionTestBase
         c3.Value.Should().BeNull();
 
         var commander = Services.Commander();
-        var command = new NestedOperationLoggerTester_SetMany(["1", "2", "3"], "v");
+        var command = new NestedCommandInvalidationTester_SetMany(["1", "2", "3"], "v");
         await commander.Call(command);
 
         c1.IsInvalidated().Should().BeTrue();

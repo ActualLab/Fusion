@@ -7,7 +7,7 @@ namespace ActualLab.Fusion.Tests.OperationEvents;
 public class CompletionNoThrowTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {
     [Fact]
-    public async Task RegisteredListenersAndInvalidationPassDoNotThrow()
+    public async Task RegisteredListenersDoNotThrow()
     {
         var capture = new CapturingOperationCompletionListener();
         var services = CreateServices(services => {
@@ -18,33 +18,25 @@ public class CompletionNoThrowTest(ITestOutputHelper @out) : SimpleFusionTestBas
         var commander = services.Commander();
         await commander.Call(new KeyValueService_Set<string>("k", "v"));
 
-        capture.Operation.Should().NotBeNull("the Set command must go through InMemoryOperationScope");
-        var operation = capture.Operation!;
-
+        capture.Operation.Should().NotBeNull("the Set command must go through TransientOperationScope");
         await OperationCompletionNoThrowTester.AssertCompletionListenersDoNotThrow(
-            services, operation, capture.CommandContext);
-        await OperationCompletionNoThrowTester.AssertInvalidationPassDoesNotThrow(commander, operation);
+            services, capture.Operation!, capture.CommandContext);
     }
 
     [Fact]
-    public async Task InvalidationPassViolationIsDetected()
+    public async Task AThrowingDeferredBlockDoesNotFailTheCommand()
     {
-        var capture = new CapturingOperationCompletionListener();
-        var services = CreateServices(services => {
-            services.AddFusion().AddService<IThrowingInvalidationService, ThrowingInvalidationService>();
-            services.AddSingleton<IOperationCompletionListener>(capture);
-        });
+        var services = CreateServices(services =>
+            services.AddFusion().AddService<IThrowingInvalidationService, ThrowingInvalidationService>());
 
-        var commander = services.Commander();
-        // The command itself succeeds: the real handler's replay pass swallows the invalidation failure.
-        await commander.Call(new ThrowingInvalidation_Touch("k"));
+        var service = services.GetRequiredService<IThrowingInvalidationService>();
+        var computed = await Computed.Capture(() => service.Get("k"));
 
-        capture.Operation.Should().NotBeNull("the command must go through InMemoryOperationScope");
-        var operation = capture.Operation!;
+        // The mutation already committed when the block runs, so failing the command is not an option
+        await services.Commander().Call(new ThrowingInvalidation_Touch("k"));
 
-        Func<Task> act = () => OperationCompletionNoThrowTester.AssertInvalidationPassDoesNotThrow(commander, operation);
-        await act.Should().ThrowAsync<Exception>(
-            "the harness must surface an invalidation pass that throws in its Invalidation.IsActive branch");
+        // ... and the block threw before reaching its invalidation call, so the value stays consistent
+        computed.IsConsistent().Should().BeTrue();
     }
 
     // Nested types
@@ -73,6 +65,7 @@ public interface IThrowingInvalidationService : IComputeService
 
 public record ThrowingInvalidation_Touch(string Key) : ICommand<Unit>;
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class ThrowingInvalidationService : IThrowingInvalidationService
 {
     public virtual Task<string> Get(string key, CancellationToken cancellationToken = default)
@@ -80,10 +73,8 @@ public class ThrowingInvalidationService : IThrowingInvalidationService
 
     public virtual Task OnTouch(ThrowingInvalidation_Touch command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive)
-            throw new InvalidOperationException("Invalidation branch failed.");
-
-        InMemoryOperationScope.Require();
+        TransientOperationScope.Require();
+        Invalidation.Defer(() => throw new InvalidOperationException("Invalidation block failed."));
         return Task.CompletedTask;
     }
 }

@@ -63,7 +63,7 @@ public class BenchmarkTest(ITestOutputHelper @out) : TestBase(@out)
             var sum = 0L;
             var value = AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property;
             for (; opCount > 0; opCount--) {
-                if ((value & AttributeTargets.Method) == AttributeTargets.Method)
+                if (value.HasFlag(AttributeTargets.Method))
                     sum++;
             }
             return sum;

@@ -40,7 +40,7 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
             return true;
 
         // Inconsistent state is rare, so we make this check at last
-        return (Options & ComputedStateComponentOptions.RenderInconsistentState) != 0;
+        return Options.HasFlag(ComputedStateComponentOptions.RenderInconsistentState);
     }
 
     // Private methods
@@ -68,7 +68,7 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
         var whenParametersSet = OnParametersSetAsync();
 
         // Maybe render on sync part completion
-        if (isInitializing || (Options & ComputedStateComponentOptions.UseParametersSetRenderPoint) != 0)
+        if (isInitializing || Options.HasFlag(ComputedStateComponentOptions.UseParametersSetRenderPoint))
             StateHasChanged();
 
         // Sync-async branching to speed up the "happy" sync path
@@ -76,13 +76,13 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
             return CompleteOnSetParametersFlowAsync(whenParametersSet, isInitializing);
 
         // Maybe render on async part completion (there is no actual async part, but we act like it's there)
-        if ((Options & ComputedStateComponentOptions.UseParametersSetRenderPoint) != 0)
+        if (Options.HasFlag(ComputedStateComponentOptions.UseParametersSetRenderPoint))
             StateHasChanged();
 
         // The code below handles RecomputeStateOnParameterChange, and:
         // - If we're initializing, the State (re)computes anyway -> no recompute
         // - No RecomputeStateOnParameterChange -> no recompute
-        if (isInitializing || (Options & ComputedStateComponentOptions.RecomputeStateOnParameterChange) == 0)
+        if (isInitializing || !Options.HasFlag(ComputedStateComponentOptions.RecomputeStateOnParameterChange))
             return Task.CompletedTask;
 
         var whenComputed = State.Recompute();
@@ -96,13 +96,13 @@ public abstract partial class ComputedStateComponent : StatefulComponentBase
         await whenParametersSet.SuppressCancellationAwait(); // Blazor views lifecycle method cancellations as ~normal completions
 
         // Maybe render on async part completion (there is no actual async part, but we act like it's there)
-        if ((Options & ComputedStateComponentOptions.UseParametersSetAsyncRenderPoint) != 0)
+        if (Options.HasFlag(ComputedStateComponentOptions.UseParametersSetAsyncRenderPoint))
             StateHasChanged();
 
         // The code below handles RecomputeStateOnParameterChange, and:
         // - If we're initializing, the State (re)computes anyway -> no recompute
         // - No RecomputeStateOnParameterChange -> no recompute
-        if (isInitializing || (Options & ComputedStateComponentOptions.RecomputeStateOnParameterChange) == 0)
+        if (isInitializing || !Options.HasFlag(ComputedStateComponentOptions.RecomputeStateOnParameterChange))
             return;
 
         var whenComputed = State.Recompute();

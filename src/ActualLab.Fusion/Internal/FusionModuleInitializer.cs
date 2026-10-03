@@ -21,6 +21,7 @@ internal static class FusionModuleInitializer
             ProxyCodeKeeper.Extension = new FusionProxyCodeKeeperExtension();
 
         _ = RpcComputeCallType.Value;
+        _ = RpcInvalidateCallType.Value;
         RpcDefaults.OptionDefaults.ApplyFusionOverrides();
         // Access a bunch of types here to ensure JIT generates calls
         // to their methods w/o type initializer check further.

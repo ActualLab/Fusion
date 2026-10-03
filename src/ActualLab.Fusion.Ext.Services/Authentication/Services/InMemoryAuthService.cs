@@ -8,6 +8,7 @@ namespace ActualLab.Fusion.Authentication.Services;
 /// In-memory implementation of <see cref="IAuth"/> and <see cref="IAuthBackend"/>
 /// for testing and client-side scenarios.
 /// </summary>
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAuthBackend
 {
     private long _nextUserId;
@@ -30,26 +31,9 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
         var isKickCommand = kickAllUserSessions || !kickUserSessionHash.IsNullOrEmpty();
         var force = command.Force;
 
-        var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve(command);
 
-        if (Invalidation.IsActive) {
-            if (isKickCommand)
-                return;
-
-            _ = GetSessionInfo(session, default); // Must go first!
-            _ = GetAuthInfo(session, default);
-            if (force)
-                _ = IsSignOutForced(session, default);
-            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo is not null) {
-                _ = GetUser(shard, invSessionInfo.UserId, default);
-                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
-            }
-            return;
-        }
-
-        InMemoryOperationScope.Require();
+        TransientOperationScope.Require();
         // Let's handle special kinds of sign-out first, which only trigger "primary" sign-out version
         if (isKickCommand) {
             var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
@@ -72,30 +56,31 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             return;
 
         // Updating SessionInfo
-        context.Operation.Items.KeylessSet(sessionInfo);
+        var userId = sessionInfo.UserId;
         sessionInfo = sessionInfo with {
             AuthenticatedIdentity = "",
             UserId = "",
             IsSignOutForced = force,
         };
         UpsertSessionInfo(shard, session.Id, sessionInfo, null);
+
+        Invalidation.Defer(() => {
+            _ = GetSessionInfo(session, default); // Must go first!
+            _ = GetAuthInfo(session, default);
+            if (force)
+                _ = IsSignOutForced(session, default);
+            _ = GetUser(shard, userId, default);
+            _ = GetUserSessions(shard, userId, default);
+        });
     }
 
     // [CommandHandler] inherited
     public virtual async Task EditUser(Auth_EditUser command, CancellationToken cancellationToken = default)
     {
         var session = command.Session.RequireValid();
-        var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve(command);
 
-        if (Invalidation.IsActive) {
-            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo is not null)
-                _ = GetUser(shard, invSessionInfo.UserId, default);
-            return;
-        }
-
-        InMemoryOperationScope.Require();
+        TransientOperationScope.Require();
         var sessionInfo = await GetSessionInfo(session, cancellationToken)
             .Require(SessionInfo.MustBeAuthenticated)
             .ConfigureAwait(false);
@@ -103,7 +88,6 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             .Require()
             .ConfigureAwait(false);
 
-        context.Operation.Items.KeylessSet(sessionInfo);
         if (command.Name is not null) {
             if (command.Name.Length < 3)
                 throw new ArgumentOutOfRangeException(nameof(command));
@@ -113,6 +97,8 @@ public partial class InMemoryAuthService(IServiceProvider services) : IAuth, IAu
             };
         }
         Users[(shard, user.Id)] = user;
+
+        Invalidation.Defer(() => _ = GetUser(shard, sessionInfo.UserId, default));
     }
 
     // [CommandHandler] inherited

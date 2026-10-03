@@ -5,6 +5,7 @@ using Samples.TodoApp.Services.Db;
 
 namespace Samples.TodoApp.Services;
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]
 public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext>(services), ITodoBackend
 {
     private IDbEntityResolver<string, DbTodo> DbTodoResolver { get; } = services.DbEntityResolver<string, DbTodo>();
@@ -14,18 +15,8 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
     public virtual async Task<TodoItem> AddOrUpdate(TodoBackend_AddOrUpdate command, CancellationToken cancellationToken = default)
     {
         var (folder, item) = command;
-        var context = CommandContext.GetCurrent();
-        if (Invalidation.IsActive) {
-            // Invalidation logic
-            var isNew = context.Operation.Items.Get<bool>("New");
-            var isDoneChanged = context.Operation.Items.Get<bool>("IsDoneChanged");
-            _ = Get(folder, item.Id, default);
-            if (isNew)
-                _ = PseudoListIds(folder);
-            if (isNew || isDoneChanged)
-                _ = GetSummary(folder, default);
-            return null!;
-        }
+        var isNew = false;
+        var isDoneChanged = false;
 
         var tenant = folder.GetTenant();
         var dbContext = await DbHub.CreateOperationDbContext(tenant, cancellationToken).ConfigureAwait(false);
@@ -42,36 +33,33 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         if (item.Id == Ulid.Empty) {
             item = item with { Id = Ulid.NewUlid() };
             dbContext.Add(new DbTodo(folder, item));
-            // A tag for Invalidation.IsActive block indicating an item was added
-            CommandContext.GetCurrent().Operation.Items.Set("New", true);
+            isNew = true;
         }
         else {
             var key = DbTodo.ComposeKey(folder, item.Id);
             var dbItem = await dbContext.Todos
                 .SingleAsync(x => x.Key == key, cancellationToken)
                 .ConfigureAwait(false);
-            if (dbItem.IsDone != item.IsDone) {
-                // A tag for Invalidation.IsActive block indicating IsDone property was changed
-                CommandContext.GetCurrent().Operation.Items.Set("IsDoneChanged", true);
-            }
+            isDoneChanged = dbItem.IsDone != item.IsDone;
             dbItem.UpdateFrom(item);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        var itemId = item.Id;
+        Invalidation.Defer(() => {
+            _ = Get(folder, itemId, default);
+            if (isNew)
+                _ = PseudoListIds(folder);
+            if (isNew || isDoneChanged)
+                _ = GetSummary(folder, default);
+        });
         return item;
     }
 
     public virtual async Task Remove(TodoBackend_Remove command, CancellationToken cancellationToken = default)
     {
         var (folder, id) = command;
-        if (Invalidation.IsActive) {
-            // Invalidation logic
-            _ = Get(folder, id, default);
-            _ = GetSummary(folder, default);
-            _ = PseudoListIds(folder);
-            return;
-        }
-
         var tenant = folder.GetTenant();
         var dbContext = await DbHub.CreateOperationDbContext(tenant, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
@@ -79,10 +67,17 @@ public class TodoBackend(IServiceProvider services) : DbServiceBase<AppDbContext
         var dbTodo = await dbContext
             .FindAsync<DbTodo>(DbKey.Compose(DbTodo.ComposeKey(folder, id)), cancellationToken)
             .ConfigureAwait(false);
-        if (dbTodo is not null) {
-            dbContext.Remove(dbTodo);
-            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
+        if (dbTodo is null)
+            return;
+
+        dbContext.Remove(dbTodo);
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        Invalidation.Defer(() => {
+            _ = Get(folder, id, default);
+            _ = GetSummary(folder, default);
+            _ = PseudoListIds(folder);
+        });
     }
 
     // Queries

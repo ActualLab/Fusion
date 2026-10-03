@@ -58,32 +58,29 @@ public static class BuiltInHandlerRegistrations
             #endregion
         }
         {
+            #region PartCBH_InvalidationGuardReg
+            // Registration (automatic in AddFusion)
+            services.AddSingleton(_ => new InvalidationGuard());
+            commander.AddHandlers<InvalidationGuard>();
+            #endregion
+        }
+        {
             #region PartCBH_OperationReprocessorReg
             // Registration (optional, via AddOperationReprocessor)
             fusion.AddOperationReprocessor();
             #endregion
         }
         {
-            #region PartCBH_NestedOperationLoggerReg
+            #region PartCBH_TransientOperationScopeProviderReg
             // Registration (automatic in AddFusion)
-            services.AddSingleton(c => new NestedOperationLogger(c));
-            commander.AddHandlers<NestedOperationLogger>();
+            services.AddSingleton(c => new TransientOperationScopeProvider(c));
+            commander.AddHandlers<TransientOperationScopeProvider>();
             #endregion
         }
         {
-            #region PartCBH_InMemoryOperationScopeProviderReg
-            // Registration (automatic in AddFusion)
-            services.AddSingleton(c => new InMemoryOperationScopeProvider(c));
-            commander.AddHandlers<InMemoryOperationScopeProvider>();
-            #endregion
-        }
-        {
-            #region PartCBH_InvalidatingCommandCompletionHandlerReg
-            // Registration (automatic in AddFusion)
-            services.AddSingleton(_ => new InvalidatingCommandCompletionHandler.Options());
-            services.AddSingleton(c => new InvalidatingCommandCompletionHandler(
-                c.GetRequiredService<InvalidatingCommandCompletionHandler.Options>(), c));
-            commander.AddHandlers<InvalidatingCommandCompletionHandler>();
+            #region PartCBH_FusionOperationCompletionHandlerReg
+            // Registration (automatic in AddFusion) - replaces CommandR's OperationCompletionHandler
+            commander.AddOperationCompletionHandler(c => new FusionOperationCompletionHandler(c));
             #endregion
         }
         {

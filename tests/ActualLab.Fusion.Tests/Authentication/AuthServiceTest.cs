@@ -155,6 +155,14 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
         var bob = new User("Bob").WithIdentity("g:1");
 
         var session = sessionA;
+        // Cached on the other host BEFORE the sign-in, so the sign-in has something stale to
+        // invalidate there - without this the assertion below passes even when AuthBackend_SignIn's
+        // invalidation never leaves the origin host
+        var cOtherHostUser = UseInMemoryAuthService
+            ? null
+            : await Computed.Capture(() => auth.GetUser(session));
+        cOtherHostUser?.Value.Should().BeNull();
+
         await webCommander.Call(new AuthBackend_SignIn(session, bob));
         var user = await webAuth.GetUser(session);
         user.Should().NotBeNull();
@@ -184,7 +192,8 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
 
         // Checking if local service is able to see the same user & sessions
         if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
-            await Delay(0.5);
+            // The pre-sign-in capture must have been invalidated on this host too
+            await cOtherHostUser!.When(x => x is not null).WaitAsync(TimeSpan.FromSeconds(5));
             user = await auth.GetUser(session);
             user.Should().NotBeNull();
             user!.Id.Should().Be(bob.Id);
@@ -231,6 +240,14 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
             .WithIdentity("g:1");
 
         var session = sessionA;
+        // Cached on the other host BEFORE the sign-in, so the sign-in has something stale to
+        // invalidate there - without this the assertion below passes even when AuthBackend_SignIn's
+        // invalidation never leaves the origin host
+        var cOtherHostUser = UseInMemoryAuthService
+            ? null
+            : await Computed.Capture(() => auth.GetUser(session));
+        cOtherHostUser?.Value.Should().BeNull();
+
         await webCommander.Call(new AuthBackend_SignIn(session, bob));
         var user = await webAuth.GetUser(session);
         user.Should().NotBeNull();
@@ -263,7 +280,8 @@ public abstract class AuthServiceTestBase(ITestOutputHelper @out) : FusionTestBa
 
         // Checking if local service is able to see the same user & sessions
         if (!UseInMemoryAuthService) { // In-memory auth services don't share the state
-            await Delay(0.5);
+            // The pre-sign-in capture must have been invalidated on this host too
+            await cOtherHostUser!.When(x => x is not null).WaitAsync(TimeSpan.FromSeconds(5));
             user = await auth.GetUser(session);
             user.Should().NotBeNull();
             user!.Id.Should().Be(bob.Id);

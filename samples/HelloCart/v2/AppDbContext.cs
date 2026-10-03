@@ -41,5 +41,9 @@ public class AppDbContext(DbContextOptions options) : DbContextBase(options)
 
         var cartItem = modelBuilder.Entity<DbCartItem>();
         cartItem.HasKey(e => new { e.DbCartId, e.DbProductId });
+
+        // This app never switches payload formats, so each _Operations / _Events payload needs
+        // only the column its serializer actually writes
+        modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DbLogEntrySerializer.Default.Format);
     }
 }

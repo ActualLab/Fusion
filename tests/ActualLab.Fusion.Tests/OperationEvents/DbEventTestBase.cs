@@ -192,7 +192,7 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
         var maxJitter = TimeSpan.FromSeconds(1);
 
         // Schedule 5 events with staggered delays: now+1s, now+2s, ..., now+5s
-        var events = new OperationEvent[eventCount];
+        var events = new EventQueue_Item[eventCount];
         var expectedAt = new Moment[eventCount];
         for (var i = 0; i < eventCount; i++) {
             var id = $"d{i}";
@@ -238,33 +238,66 @@ public abstract class DbEventTestBase(ITestOutputHelper @out) : FusionTestBase(@
         c.Events.Set(ImmutableList<string>.Empty);
     }
 
-    private OperationEvent ES(string id)
+    [Fact]
+    public async Task RemovedEventsAreNotDelivered()
+    {
+        if (MustSkip()) return;
+
+        var c = Services.GetRequiredService<EventCatcher>();
+        // rb goes by its OperationEvent, rc by predicate - and neither is ever stored
+        await EnqueueThenRemove([E("ra"), E("rb"), E("rc")], "rb", "rc");
+        // A later operation is the deterministic marker that the reader got this far
+        await Enqueue(E("rz"));
+
+        await ComputedTest.When(async ct => {
+            var events = await c.Events.Use(ct);
+            events.Should().BeEquivalentTo("ra", "rz");
+        });
+    }
+
+    [Fact]
+    public async Task RemoveEventsDropsAllOfThem()
+    {
+        if (MustSkip()) return;
+
+        var c = Services.GetRequiredService<EventCatcher>();
+        await EnqueueThenRemoveAll(E("ra"), E("rb"));
+        await Enqueue(E("rz"));
+
+        await ComputedTest.When(async ct => {
+            var events = await c.Events.Use(ct);
+            events.Should().BeEquivalentTo("rz");
+        });
+    }
+
+    private EventQueue_Item ES(string id)
         => E(id, KeyConflictStrategy.Skip);
 
-    private OperationEvent ES(string id, Moment delayUntil)
+    private EventQueue_Item ES(string id, Moment delayUntil)
         => E(id, delayUntil, KeyConflictStrategy.Skip);
 
-    private OperationEvent EU(string id)
+    private EventQueue_Item EU(string id)
         => E(id, KeyConflictStrategy.Update);
 
-    private OperationEvent EU(string id, Moment delayUntil)
+    private EventQueue_Item EU(string id, Moment delayUntil)
         => E(id, delayUntil, KeyConflictStrategy.Update);
 
-    private OperationEvent E(string id, KeyConflictStrategy conflictStrategy = KeyConflictStrategy.Fail)
-        => new(GetUuid(id), new EventCatcher_Event(id)) {
-            UuidConflictStrategy = conflictStrategy,
-        };
+    private EventQueue_Item E(string id, KeyConflictStrategy conflictStrategy = KeyConflictStrategy.Fail)
+        => new(GetUuid(id), new EventCatcher_Event(id), default, conflictStrategy);
 
-    private OperationEvent E(string id, Moment delayUntil, KeyConflictStrategy conflictStrategy = KeyConflictStrategy.Fail)
-        => new(GetUuid(id), new EventCatcher_Event(id)) {
-            DelayUntil = delayUntil,
-            UuidConflictStrategy = conflictStrategy,
-        };
+    private EventQueue_Item E(string id, Moment delayUntil, KeyConflictStrategy conflictStrategy = KeyConflictStrategy.Fail)
+        => new(GetUuid(id), new EventCatcher_Event(id), delayUntil, conflictStrategy);
 
-    private Task Enqueue(params OperationEvent[] events)
+    private Task Enqueue(params EventQueue_Item[] events)
         => Services.Commander().Call(new EventQueue_Add(events));
 
-    private async Task Enqueue(double delay, params OperationEvent[] events)
+    private Task EnqueueThenRemove(EventQueue_Item[] events, params string[] removeUuids)
+        => Services.Commander().Call(new EventQueue_AddThenRemove(events, removeUuids));
+
+    private Task EnqueueThenRemoveAll(params EventQueue_Item[] events)
+        => Services.Commander().Call(new EventQueue_AddThenRemove(events, [], RemoveAll: true));
+
+    private async Task Enqueue(double delay, params EventQueue_Item[] events)
     {
         await Task.Delay(TimeSpan.FromSeconds(delay));
         await Services.Commander().Call(new EventQueue_Add(events));

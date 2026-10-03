@@ -66,6 +66,10 @@ public static class FusionBuilderExt
             throw Errors.MustImplement(implementationType, tAuthBackend, nameof(implementationType));
 
         fusion.AddService(typeof(IAuth), implementationType, hasCommandHandlers: false);
+        // IAuthBackend's handlers are registered under IAuthBackend, so without this the
+        // implementation's [DeferredInvalidationMode] is unreachable for them - see
+        // DeferredInvalidationModeResolver.Resolve(IMethodCommandHandler)
+        fusion.ServiceTypeResolver.RegisterAlias(tAuthBackend, implementationType);
         services.AddSingleton(c => (IAuthBackend)c.GetRequiredService<IAuth>());
         services.AddSingleton(c => (ISessionValidator)c.GetRequiredService<IAuth>());
         fusion.Commander.AddHandlers(typeof(IAuth));

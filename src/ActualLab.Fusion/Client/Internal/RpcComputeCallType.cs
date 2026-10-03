@@ -15,6 +15,8 @@ public static class RpcComputeCallType
         Value = new RpcCallType(Id) {
             InboundCallType = typeof(RpcInboundComputeCall<>),
             OutboundCallType = typeof(RpcOutboundComputeCall<>),
+            DowngradeValidator = static callTypeId
+                => callTypeId is RpcCallTypeIds.Regular or RpcCallTypeIds.Invalidate,
         };
         RpcCallTypes.Register(Value);
     }

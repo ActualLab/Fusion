@@ -78,7 +78,7 @@ public abstract class ComputedInput : IEquatable<ComputedInput>, IHasDisposeStat
         ComputeContext context,
         ComputedSynchronizer computedSynchronizer,
         CancellationToken cancellationToken = default)
-        => computedSynchronizer is ComputedSynchronizer.None || (context.CallOptions & CallOptions.GetExisting) != 0
+        => computedSynchronizer is ComputedSynchronizer.None || context.CallOptions.HasFlag(CallOptions.GetExisting)
             ? GetOrProduceValuePromise(context, cancellationToken)
             : Function.ProduceValuePromise(this, context, computedSynchronizer, cancellationToken);
 

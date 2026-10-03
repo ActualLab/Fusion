@@ -1,4 +1,5 @@
 using ActualLab.Collections.Fixed;
+using ActualLab.Internal;
 using ActualLab.OS;
 
 namespace ActualLab.Interception;
@@ -9,6 +10,9 @@ namespace ActualLab.Interception;
 /// </summary>
 public sealed class ArgumentListType
 {
+    private const BindingFlags MethodBindingFlags =
+        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
     private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> GDefCache3
         = new(HardwareInfo.ProcessorCountPo2, 128);
     private static readonly ConcurrentDictionary<FixedArray3<Type?>, ArgumentListType> SDefCache3
@@ -21,6 +25,9 @@ public sealed class ArgumentListType
         = new(HardwareInfo.ProcessorCountPo2, 128);
     private static readonly ConcurrentDictionary<FixedArray10<Type?>, ArgumentListType> SDefCacheN
         = new(HardwareInfo.ProcessorCountPo2, 128);
+    private static readonly ConcurrentDictionary<MethodInfo, ArgumentListType> ArgumentListTypeByMethodInfoCache = new();
+    private static readonly ConcurrentDictionary<MethodInfo, Func<object?, ArgumentList, object?>> InvokerByMethodInfoCache = new();
+
     private string? _toString;
 
     public readonly Type ListType;
@@ -56,6 +63,27 @@ public sealed class ArgumentListType
             ? Get6(useGenerics, itemTypes)
             : GetN(useGenerics, itemTypes);
     }
+
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
+    public static ArgumentListType Get(MethodInfo method)
+        => ArgumentListTypeByMethodInfoCache.GetOrAdd(method,
+            static m => {
+                var parameters = m.GetParameters();
+                var buffer = ArrayBuffer<Type>.Lease(mustClean: true, parameters.Length);
+                try {
+                    foreach (var p in parameters)
+                        buffer.Add(p.ParameterType);
+                    return Get(buffer.Span);
+                }
+                finally {
+                    buffer.Release();
+                }
+            });
+
+    [RequiresUnreferencedCode(UnreferencedCode.Reflection)]
+    public static Func<object?, ArgumentList, object?> GetInvoker(MethodInfo method)
+        => InvokerByMethodInfoCache.GetOrAdd(method,
+            static m => Get(m).Factory.Invoke().GetInvoker(m));
 
     // Private methods
 

@@ -26,5 +26,5 @@ public static class ComputedStateComponentOptionsExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool CanComputeStateOnThreadPool(this ComputedStateComponentOptions options)
-        => HardwareInfo.IsSingleThreaded || (options & ComputedStateComponentOptions.ComputeStateOnThreadPool) != 0;
+        => HardwareInfo.IsSingleThreaded || options.HasFlag(ComputedStateComponentOptions.ComputeStateOnThreadPool);
 }

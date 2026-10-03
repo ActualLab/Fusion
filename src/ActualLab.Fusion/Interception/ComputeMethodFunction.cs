@@ -1,5 +1,6 @@
 using ActualLab.Fusion.Internal;
 using ActualLab.Interception;
+using ActualLab.CommandR.Operations;
 
 namespace ActualLab.Fusion.Interception;
 
@@ -54,7 +55,13 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
 #else
             var computed = input.GetExistingComputed();
 #endif
-            if ((context.CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate) {
+            if (context.CallOptions.HasFlag(CallOptions.CaptureInvalidation)) {
+                // Recording must happen even when nothing is cached locally: another host may have
+                // this computed while the origin host doesn't.
+                context.CaptureInvalidation(NewServiceCall(invocation.Arguments));
+                return MethodDef.DefaultResult;
+            }
+            if (context.CallOptions.HasFlag(CallOptions.Invalidate)) {
                 _ = ComputedImpl.TryUseExisting(computed, context);
                 return MethodDef.DefaultResult;
             }
@@ -103,4 +110,7 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
     }
 
     protected abstract Computed NewComputed(ComputeMethodInput input);
+
+    protected virtual ServiceCall NewServiceCall(ArgumentList arguments)
+        => ServiceCall.New(MethodDef.ServiceType, MethodDef.MethodInfo, arguments);
 }

@@ -124,7 +124,7 @@ public class FusionServicesAuditRegressionTest
             CompletionOrderingCommand command,
             CancellationToken cancellationToken)
         {
-            var scope = InMemoryOperationScope.GetOrCreate(CommandContext.GetCurrent());
+            var scope = TransientOperationScope.GetOrCreate(CommandContext.GetCurrent());
             scope.Operation.AddCompletionHandler(async _ => {
                 state.WhenStarted.TrySetResult(default);
                 await state.AllowCompletion.Task.ConfigureAwait(false);

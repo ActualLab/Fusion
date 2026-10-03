@@ -21,6 +21,7 @@ public partial record InvalidationConventionService_Remove(
 // the entity-specific query it directly targets and every aggregate query whose result may
 // change -- dependency propagation only handles transitive dependants of calls a handler
 // actually re-triggers, it can't discover an omitted root call on its own.
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class InvalidationConventionService : IComputeService
 {
     private readonly ConcurrentDictionary<string, string> _values = new(StringComparer.Ordinal);
@@ -38,35 +39,34 @@ public class InvalidationConventionService : IComputeService
     [CommandHandler]
     public virtual Task Set(InvalidationConventionService_Set command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
+        TransientOperationScope.Require();
+        _values[command.Key] = command.Value;
+
+        Invalidation.Defer(() => {
             _ = Get(command.Key, default);
             _ = Count(default);
-            return Task.CompletedTask;
-        }
-
-        InMemoryOperationScope.Require();
-        _values[command.Key] = command.Value;
+        });
         return Task.CompletedTask;
     }
 
     [CommandHandler]
     public virtual Task Remove(InvalidationConventionService_Remove command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
+        TransientOperationScope.Require();
+        _values.TryRemove(command.Key, out _);
+
+        Invalidation.Defer(() => {
             _ = Get(command.Key, default);
             _ = Count(default);
-            return Task.CompletedTask;
-        }
-
-        InMemoryOperationScope.Require();
-        _values.TryRemove(command.Key, out _);
+        });
         return Task.CompletedTask;
     }
 }
 
-// Same shape as InvalidationConventionService, but Set's invalidation branch "forgets" to
+// Same shape as InvalidationConventionService, but Set's deferred block "forgets" to
 // invalidate the aggregate Count query -- exactly the class of bug the convention test guards
 // against. Used by InvalidationConventionTest to prove the pattern actually catches it.
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class BrokenInvalidationConventionService : IComputeService
 {
     private readonly ConcurrentDictionary<string, string> _values = new(StringComparer.Ordinal);
@@ -82,14 +82,11 @@ public class BrokenInvalidationConventionService : IComputeService
     [CommandHandler]
     public virtual Task Set(InvalidationConventionService_Set command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
-            _ = Get(command.Key, default);
-            // Missing "_ = Count(default)" here on purpose -- see the type doc above.
-            return Task.CompletedTask;
-        }
-
-        InMemoryOperationScope.Require();
+        TransientOperationScope.Require();
         _values[command.Key] = command.Value;
+
+        // Missing "_ = Count(default)" here on purpose -- see the type doc above.
+        Invalidation.Defer(() => _ = Get(command.Key, default));
         return Task.CompletedTask;
     }
 }

@@ -13,9 +13,6 @@ public class EventCatcher(IServiceProvider services) : DbServiceBase<TestDbConte
     [CommandHandler]
     public virtual Task OnEvent(EventCatcher_Event command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive)
-            return Task.CompletedTask;
-
         ProcessedAt.TryAdd(command.Id, Clocks.SystemClock.Now);
         Events.Set(command, static (command1, r) => r.Value.Add(command1.Id));
         return Task.CompletedTask;

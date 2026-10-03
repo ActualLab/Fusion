@@ -1,4 +1,5 @@
 using ActualLab.Fusion.Internal;
+using ActualLab.CommandR.Operations;
 
 namespace ActualLab.Fusion;
 
@@ -12,6 +13,9 @@ public sealed class ComputeContext
     private static readonly AsyncLocal<ComputeContext?> CurrentLocal = new();
 
     private Computed? _captured;
+    // Owned by whoever created this context: that's how the captured calls are read back
+    private readonly List<ServiceCall>? _capturedInvalidations;
+
     public readonly InvalidationSource InvalidationSource;
 
     public static ComputeContext Current {
@@ -26,19 +30,31 @@ public sealed class ComputeContext
     // Constructors
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ComputeContext(Computed computed)
+        => Computed = computed;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ComputeContext(CallOptions callOptions)
         => CallOptions = callOptions;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ComputeContext(InvalidationSource invalidationSource)
+        : this(CallOptions.Invalidate, invalidationSource)
+    { }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ComputeContext(CallOptions callOptions, InvalidationSource invalidationSource)
     {
-        CallOptions = CallOptions.Invalidate;
+        CallOptions = callOptions;
         InvalidationSource = invalidationSource;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ComputeContext(Computed computed)
-        => Computed = computed;
+    public ComputeContext(List<ServiceCall> capturedInvalidations)
+    {
+        CallOptions = CallOptions.CaptureInvalidation;
+        _capturedInvalidations = capturedInvalidations;
+    }
 
     // Conversion
 
@@ -48,6 +64,17 @@ public sealed class ComputeContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ComputeContextScope Activate()
         => new(this);
+
+    // CaptureInvalidation
+
+    public void CaptureInvalidation(ServiceCall invalidation)
+    {
+        if (_capturedInvalidations is not { } capturedCalls)
+            throw Errors.ComputeContextDoesNotCaptureInvalidation(CallOptions);
+
+        lock (capturedCalls)
+            capturedCalls.Add(invalidation);
+    }
 
     // (Try)GetCaptured
 
@@ -70,7 +97,7 @@ public sealed class ComputeContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void TryCapture(Computed computed)
     {
-        if ((CallOptions & CallOptions.Capture) == 0)
+        if (!CallOptions.HasFlag(CallOptions.Capture))
             return;
 
         // The logic below always "overwrites" captured computed - we assume that:

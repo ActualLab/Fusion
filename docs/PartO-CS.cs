@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework;
 using ActualLab.Fusion.EntityFramework.Npgsql;
 using ActualLab.Fusion.EntityFramework.Redis;
@@ -52,53 +53,46 @@ public static class BasicConfigurationExample
     }
 }
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContextExtended>(services), IComputeService
 {
     #region PartOCS_CommandHandlerPattern
     [CommandHandler]
+    [DeferredInvalidationMode(DeferredInvalidationMode.Local)]
     public virtual async Task<Order> CreateOrder(
         CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
-        // 1. INVALIDATION (runs on ALL hosts)
-        if (Invalidation.IsActive) {
-            _ = GetOrder(command.OrderId, default);
-            _ = GetOrdersByUser(command.UserId, default);
-            return default!;
-        }
-
-        // 2. MAIN LOGIC (runs on originating host only)
+        // 1. MUTATE
         await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
 
         var order = new Order { /* ... */ };
         dbContext.Orders.Add(order);
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        // 2. DECLARE THE INVALIDATION - the block runs after the commit
+        Invalidation.Defer(() => {
+            _ = GetOrder(command.OrderId, default);
+            _ = GetOrdersByUser(command.UserId, default);
+        });
         return order;
     }
     #endregion
 
-    #region PartOCS_PassingDataToInvalidation
+    #region PartOCS_DeferredInvalidation
+    // What to invalidate depends on what the mutation found, and a deferred block
+    // is an ordinary closure - so the condition is just evaluated here
     [CommandHandler]
-    public virtual async Task DeleteUser(
+    [DeferredInvalidationMode(DeferredInvalidationMode.Local)]
+    public virtual async Task DeleteUserDeferred(
         DeleteUserCommand command, CancellationToken cancellationToken = default)
     {
-        var context = CommandContext.GetCurrent();
-
-        if (Invalidation.IsActive) {
-            // Retrieve stored data
-            var userId = context.Operation.Items.KeylessGet<long>();
-            _ = GetUser(userId, default);
-            return;
-        }
-
         await using var db = await DbHub.CreateOperationDbContext(cancellationToken);
         var user = await db.Users.FindAsync(command.UserId);
 
-        // Store data for invalidation
-        context.Operation.Items.KeylessSet(user!.Id);
-
-        db.Users.Remove(user);
+        db.Users.Remove(user!);
         await db.SaveChangesAsync(cancellationToken);
+
+        Invalidation.Defer(() => _ = GetUser(user!.Id, default));
     }
     #endregion
 
@@ -107,8 +101,6 @@ public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContex
     public virtual async Task<Order> CreateOrderWithEvent(
         CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) { /* ... */ return default!; }
-
         var context = CommandContext.GetCurrent();
         await using var db = await DbHub.CreateOperationDbContext(cancellationToken);
 
@@ -128,12 +120,11 @@ public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContex
         CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
         #region PartOCS_ConditionalInvalidation
-        if (Invalidation.IsActive) {
+        Invalidation.Defer(() => {
             _ = GetOrder(command.OrderId, default);
             if (command.StatusChanged)
                 _ = GetOrdersByStatus(command.OldStatus, default);
-            return default!;
-        }
+        });
         #endregion
         await Task.CompletedTask;
         return default!;
@@ -144,12 +135,12 @@ public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContex
         CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
         #region PartOCS_MultipleInvalidations
-        if (Invalidation.IsActive) {
-            _ = GetOrder(command.OrderId, default);
+        // Defer() may be called any number of times - the blocks run in registration order
+        Invalidation.Defer(() => _ = GetOrder(command.OrderId, default));
+        Invalidation.Defer(() => {
             _ = GetOrderList(command.UserId, default);
             _ = GetOrderCount(command.UserId, default);
-            return default!;
-        }
+        });
         #endregion
         await Task.CompletedTask;
         return default!;
@@ -159,10 +150,9 @@ public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContex
     public virtual async Task NestedCommandsExample(
         CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) return;
         var parentId = command.OrderId;
         #region PartOCS_NestedCommands
-        // Nested command is automatically logged and invalidated
+        // The nested command declares its own invalidation, deferred into the same operation
         await Commander.Call(new ChildCommand(parentId), cancellationToken);
         #endregion
     }
@@ -171,12 +161,11 @@ public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContex
     public virtual async Task ControlOperationStorageExample(
         CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) return;
         var context = CommandContext.GetCurrent();
         await using var _ = await DbHub.CreateOperationDbContext(cancellationToken);
         #region PartOCS_ControlOperationStorage
         // Disable storage (operation won't replicate)
-        context.Operation.MustStore(false);
+        context.Operation.StoreMode = OperationStoreMode.None;
         #endregion
     }
 

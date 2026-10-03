@@ -12,7 +12,15 @@ public static class Invalidation
 
     public static bool IsActive {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => (ComputeContext.Current.CallOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
+        get => ComputeContext.Current.CallOptions.HasFlag(CallOptions.Invalidate);
+    }
+
+    // True while a Replicated or Distributed operation's blocks run, i.e. while their calls are
+    // recorded rather than applied. It isn't IsActive - no CallOptions.Invalidate - but the same
+    // things are forbidden inside it, so whatever rejects an invalidation pass must reject this too.
+    public static bool IsCapturing {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => ComputeContext.Current.CallOptions.HasFlag(CallOptions.CaptureInvalidation);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -25,4 +33,26 @@ public static class Invalidation
         [CallerMemberName] string? member = null,
         [CallerLineNumber] int line = 0)
         => new(new ComputeContext(new InvalidationSource(file, member, line)));
+
+    // Deferred invalidation
+
+    public static void Defer(Action block)
+    {
+        if (IsActive || IsCapturing)
+            throw Errors.DeferredInvalidationInsideInvalidationPass();
+
+        var context = DeferredInvalidationContext.Current
+            ?? throw Errors.NoDeferredInvalidationContext();
+        context.AddBlock(block);
+    }
+
+    public static void Defer(Func<Task> block)
+    {
+        if (IsActive || IsCapturing)
+            throw Errors.DeferredInvalidationInsideInvalidationPass();
+
+        var context = DeferredInvalidationContext.Current
+            ?? throw Errors.NoDeferredInvalidationContext();
+        context.AddBlock(block);
+    }
 }

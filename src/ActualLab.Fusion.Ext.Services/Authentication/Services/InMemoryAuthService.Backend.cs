@@ -14,21 +14,9 @@ public partial class InMemoryAuthService
     {
         var (session, user, authenticatedIdentity) = (command.Session, command.User, command.AuthenticatedIdentity);
         session.RequireValid();
-        var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve(command);
 
-        if (Invalidation.IsActive) {
-            _ = GetSessionInfo(session, default); // Must go first!
-            _ = GetAuthInfo(session, default);
-            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo is not null) {
-                _ = GetUser(shard, invSessionInfo.UserId, default);
-                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
-            }
-            return Task.CompletedTask;
-        }
-
-        InMemoryOperationScope.Require();
+        TransientOperationScope.Require();
         if (!user.Identities.ContainsKey(authenticatedIdentity))
 #pragma warning disable MA0015
             throw new ArgumentOutOfRangeException(
@@ -39,8 +27,6 @@ public partial class InMemoryAuthService
         sessionInfo ??= new SessionInfo(session, Clocks.SystemClock.Now);
         if (sessionInfo.IsSignOutForced)
             throw Errors.SessionUnavailable();
-
-        var isNewUser = false;
 
         // First, let's validate user.Id
         if (!user.Id.IsNullOrEmpty())
@@ -59,7 +45,6 @@ public partial class InMemoryAuthService
             // Otherwise, create a new one
             if (user.Id.IsNullOrEmpty())
                 user = user with { Id = GetNextUserId() };
-            isNewUser = true;
         }
 
         // Update user.Version
@@ -76,8 +61,14 @@ public partial class InMemoryAuthService
         // Persist changes
         Users[(shard, user.Id)] = user;
         sessionInfo = UpsertSessionInfo(shard, session.Id, sessionInfo, sessionInfo.Version);
-        context.Operation.Items.KeylessSet(sessionInfo);
-        context.Operation.Items.KeylessSet(isNewUser);
+
+        var userId = sessionInfo.UserId;
+        Invalidation.Defer(() => {
+            _ = GetSessionInfo(session, default); // Must go first!
+            _ = GetAuthInfo(session, default);
+            _ = GetUser(shard, userId, default);
+            _ = GetUserSessions(shard, userId, default);
+        });
         return Task.CompletedTask;
     }
 
@@ -87,23 +78,11 @@ public partial class InMemoryAuthService
     {
         var (session, ipAddress, userAgent, options) = command;
         session.RequireValid();
-        var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve(command);
 
-        if (Invalidation.IsActive) {
-            _ = GetSessionInfo(session, default); // Must go first!
-            var invIsNew = context.Operation.Items.KeylessGet<bool>();
-            if (invIsNew)
-                _ = GetAuthInfo(session, default);
-            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo?.IsAuthenticated() ?? false)
-                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
-            return Task.FromResult<SessionInfo>(null!);
-        }
-
-        InMemoryOperationScope.Require();
+        TransientOperationScope.Require();
         var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
-        context.Operation.Items.KeylessSet(sessionInfo is null); // invIsNew
+        var isNew = sessionInfo is null;
         sessionInfo ??= new SessionInfo(session, Clocks.SystemClock.Now);
         sessionInfo = sessionInfo with {
             IPAddress = ipAddress.IsNullOrEmpty() ? sessionInfo.IPAddress : ipAddress,
@@ -111,7 +90,14 @@ public partial class InMemoryAuthService
             Options = options.SetMany(sessionInfo.Options),
         };
         sessionInfo = UpsertSessionInfo(shard, session.Id, sessionInfo, sessionInfo.Version);
-        context.Operation.Items.KeylessSet(sessionInfo); // invSessionInfo
+
+        Invalidation.Defer(() => {
+            _ = GetSessionInfo(session, default); // Must go first!
+            if (isNew)
+                _ = GetAuthInfo(session, default);
+            if (sessionInfo.IsAuthenticated())
+                _ = GetUserSessions(shard, sessionInfo.UserId, default);
+        });
         return Task.FromResult(sessionInfo);
     }
 
@@ -122,12 +108,7 @@ public partial class InMemoryAuthService
         session.RequireValid();
         var shard = ShardResolver.Resolve(command);
 
-        if (Invalidation.IsActive) {
-            _ = GetSessionInfo(session, default);
-            return Task.CompletedTask;
-        }
-
-        InMemoryOperationScope.Require();
+        TransientOperationScope.Require();
         var sessionInfo = SessionInfos.GetValueOrDefault((shard, session.Id));
         if (sessionInfo is null || sessionInfo.IsSignOutForced)
             throw new KeyNotFoundException();
@@ -136,6 +117,8 @@ public partial class InMemoryAuthService
             Options = options
         };
         UpsertSessionInfo(shard, session.Id, sessionInfo, baseVersion);
+
+        Invalidation.Defer(() => _ = GetSessionInfo(session, default));
         return Task.CompletedTask;
     }
 

@@ -2,6 +2,7 @@ using ActualLab.Fusion.Operations.Internal;
 
 namespace ActualLab.Fusion.Tests.MeshRpc;
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class RpcRerouteTestService(MeshHost ownHost) : IRpcRerouteTestService
 {
     private readonly ConcurrentDictionary<string, string> _storage = new();
@@ -22,14 +23,10 @@ public class RpcRerouteTestService(MeshHost ownHost) : IRpcRerouteTestService
 
     public virtual async Task<ValueWithHostId> SetValue(RpcRerouteTestService_SetValue command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
-            _ = GetValue(command.ShardKey, command.Key, cancellationToken);
-            return default!;
-        }
-
         var value = command.Value;
         _storage[command.Key] = value;
-        InMemoryOperationScope.Require(); // We want to trigger operation invalidation handling here
+        TransientOperationScope.Require(); // We want to trigger operation invalidation handling here
+        Invalidation.Defer(() => _ = GetValue(command.ShardKey, command.Key, default));
 
         // Make a recursive call if ExtraCount > 0
         if (command.ExtraCount > 0) {

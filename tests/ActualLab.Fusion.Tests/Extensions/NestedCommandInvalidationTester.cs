@@ -4,19 +4,19 @@ using MessagePack;
 
 namespace ActualLab.Fusion.Tests.Extensions;
 
-public class NestedOperationLoggerTester(IKeyValueStore keyValueStore) : IComputeService
+public class NestedCommandInvalidationTester(IKeyValueStore keyValueStore) : IComputeService
 {
     private IKeyValueStore KeyValueStore { get; } = keyValueStore;
 
     [CommandHandler]
-    public virtual async Task SetMany(NestedOperationLoggerTester_SetMany command, CancellationToken cancellationToken = default)
+    public virtual async Task SetMany(NestedCommandInvalidationTester_SetMany command, CancellationToken cancellationToken = default)
     {
         var (keys, valuePrefix) = command;
         var first = keys.FirstOrDefault();
         if (first is null)
             return;
 
-        var nextCommand = new NestedOperationLoggerTester_SetMany(keys.Skip(1).ToArray(), valuePrefix);
+        var nextCommand = new NestedCommandInvalidationTester_SetMany(keys.Skip(1).ToArray(), valuePrefix);
         var commander = this.GetCommander();
         await commander.Call(nextCommand, cancellationToken).ConfigureAwait(false);
         await KeyValueStore.Set(DbShard.Single, first, valuePrefix + keys.Length, cancellationToken);
@@ -25,7 +25,7 @@ public class NestedOperationLoggerTester(IKeyValueStore keyValueStore) : IComput
 
 [DataContract, MemoryPackable(GenerateType.VersionTolerant), MessagePackObject(true)]
 // ReSharper disable once InconsistentNaming
-public partial record NestedOperationLoggerTester_SetMany(
+public partial record NestedCommandInvalidationTester_SetMany(
     [property: DataMember, MemoryPackOrder(0)] string[] Keys,
     [property: DataMember, MemoryPackOrder(1)] string ValuePrefix
 ) : ICommand<Unit>;
