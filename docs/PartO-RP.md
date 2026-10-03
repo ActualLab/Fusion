@@ -180,8 +180,8 @@ public static class MyTransiencyResolver
 When a command is retried, the execution context is reset:
 
 - New `CommandContext` created
-- Previous `Operation` discarded
-- `Items` collections cleared
+- Previous `Operation` discarded, along with its recorded invalidation calls and events
+- A fresh deferred-invalidation capture scope
 - New execution ID assigned
 
 This ensures each retry attempt starts fresh.

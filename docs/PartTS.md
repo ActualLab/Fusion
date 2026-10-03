@@ -104,7 +104,7 @@ const items = await api.ListIds("~", 10);
 |--------|------|------------|
 | **Dependency Injection** | `services.AddFusion()` + DI container | Explicit construction: `new FusionHub()`, `hub.addClient(...)` |
 | **Compute method marker** | `[ComputeMethod]` attribute + `virtual` method | `@computeMethod` decorator |
-| **Invalidation** | `Invalidation.Begin()` block | `boundMethod.invalidate(...args)` |
+| **Invalidation** | `Invalidation.Begin()` block, or `Invalidation.Defer(...)` in Operations Framework command handlers | `boundMethod.invalidate(...args)` |
 | **Service interface** | C# interface + proxy generation | `defineComputeService()` or `@rpcService` / `@rpcMethod` decorators |
 | **Cancellation** | `CancellationToken` | `AbortSignal` (via `AsyncContext`) |
 | **Async context** | `ExecutionContext` / `AsyncLocal<T>` | `AsyncContext` &mdash; backed by `AsyncLocalStorage` on Node ≥ 20.16 (flows across `await`), explicit threading in browsers |

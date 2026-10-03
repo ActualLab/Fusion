@@ -55,6 +55,7 @@ public interface IUserService : IComputeService
 }
 
 // Server implementation
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : IUserService
 {
     [ComputeMethod]
@@ -62,11 +63,10 @@ public class UserService : IUserService
         => await _db.Users.FindAsync(userId, ct);
 
     [CommandHandler]
-    public async Task UpdateProfile(UpdateProfileCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateProfile(UpdateProfileCommand cmd, CancellationToken ct)
     {
         await _db.Users.UpdateAsync(...);
-        if (Invalidation.IsActive)
-            _ = GetProfile(cmd.UserId, default);
+        Invalidation.Defer(() => _ = GetProfile(cmd.UserId, default));
     }
 }
 

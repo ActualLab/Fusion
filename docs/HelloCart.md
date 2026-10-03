@@ -341,18 +341,21 @@ You might notice just a few unusual things there:
 
 1. All of its API methods (declared in `IProductService`) are
    marked as `virtual`
-2. `Edit` contains a bit unusual piece of code:
+2. The class itself is tagged with
+   `[DeferredInvalidationMode(DeferredInvalidationMode.Local)]` &ndash; every command handler
+   that defers invalidation must declare its mode, there is no default
+3. `Edit` calls `TransientOperationScope.Require()` before changing anything &ndash;
+   this is what makes the command use the Operations Framework, and thus what makes
+   the deferred invalidation below run once the change is committed
+4. `Edit` contains a bit unusual piece of code:
    ```cs
-   if (Invalidation.IsActive) {
-       // Invalidation logic
-       _ = Get(productId, default);
-       return Task.CompletedTask;
-   }
+   // Invalidation logic
+   Invalidation.Defer(() => _ = Get(productId, default));
    ```
 
 Everything else looks absolutely normal.
 
-The same is equally applicable to `InMemoryCartService`:
+`InMemoryCartService` is similar, except it invalidates directly instead of deferring:
 
 1. All of its API methods (declared in `ICartService`) are
    marked as `virtual`
@@ -519,27 +522,24 @@ invalidated once a product with `productId` gets changed.
 Again, remember this code? [InMemoryProductService.cs](https://github.com/ActualLab/Fusion/blob/master/samples/HelloCart/v1/InMemoryProductService.cs):
 
 ```cs
+// Declared on the class: [DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public virtual Task Edit(EditCommand<Product> command, CancellationToken cancellationToken = default)
 {
     var (productId, product) = command;
     if (string.IsNullOrEmpty(productId))
         throw new ArgumentOutOfRangeException(nameof(command));
 
-    if (Invalidation.IsActive) {
-        // This is the invalidation block.
-        // Every [ComputeMethod] result you "touch" here
-        // instantly becomes a 🎃 (gets invalidated)!
-        _ = Get(productId, default);
-        return Task.CompletedTask;
-    }
-
-    // This call triggers Operations Framework use for this command,
-    // which is responsible for triggering invalidation pass.
-    InMemoryOperationScope.Require();
+    // This call triggers Operations Framework use for this command, which is what makes
+    // the deferred invalidation below run once the change is committed.
+    TransientOperationScope.Require();
     if (product is null)
         _products.Remove(productId, out _);
     else
         _products[productId] = product;
+
+    // This registers the invalidation block. Every [ComputeMethod] result you "touch"
+    // inside it becomes a 🎃 (gets invalidated) once the change is committed!
+    Invalidation.Defer(() => _ = Get(productId, default));
     return Task.CompletedTask;
 }
 ```
@@ -566,24 +566,22 @@ So now you have _almost_ the full picture:
   This is why you don't see a call to `GetTotal` in
   any of invalidation blocks.
 
-What's missing is how it happens that when you call `Edit`,
-**\*both** `if (Invalidation.IsActive) { ... }` and the code
-outside of this block runs, assuming this block contains `return`
-statement?
+What's missing is when the block passed to `Invalidation.Defer(...)` actually runs.
 
 I'll give a brief answer here:
 
-- Yes, in reality any Compute Service method decorated with
-  `[CommandHandler]` is called `N + 1` times, where `N` is the
-  number of servers in your cluster 🙀
-- The first call is the normal one &ndash; it makes all the changes
-- `N` more calls are made inside so-called invalidation scope &ndash; i.e. inside
-  `using (Invalidation.Begin()) { ... }` block, and they are reliably
-  executed on every server in your cluster, including the one
-  where the command was originally executed.
-- Moreover, when your command (the `Task<T>` running it) completes
-  on the original server, it's guaranteed that both its normal handler
-  call and "the invalidation call" were completed for it locally.
+- The handler body runs once, and it just *registers* the block.
+- The block runs after the change is committed, inside an
+  `Invalidation.Begin()` scope &ndash; which is what turns the compute
+  method calls inside it into invalidations.
+- How far it reaches is the handler's *invalidation mode*: the origin host only
+  (`Local`), every host (`Replicated`), or the host that owns each
+  value (`Distributed`). There is no default &ndash; a handler that defers must declare
+  its mode with `[DeferredInvalidationMode(...)]` on the method, its implementation type,
+  or its service interface, otherwise it throws.
+  See [Invalidation Modes](PartO-IM.md).
+- When your command (the `Task<T>` running it) completes on the original server,
+  it's guaranteed that its deferred blocks have run locally.
 
 Under the hood all of this is powered by similar AOP-style
 decorators and [CommandR](PartC.md) &ndash; a [MediatR](https://github.com/jbogard/MediatR) &ndash;
@@ -614,25 +612,17 @@ command handler pipeline for this type of command.
 Fusion injects a number of its own middleware-like handlers for
 Compute Service commands. These handlers run your command handler
 (the final one) in the end, but also provide all the infrastructure
-needed to "replay" this command in the invalidation mode on
-every host. In particular, they:
+needed to carry this command's invalidation to every host that needs it.
+In particular, they:
 
 - Provide an abstraction allowing to start a transaction
   for this command and get `DbContext`s associated
   with this transaction.
-- Log the command to the operation log on commit
+- Open the scope that collects the handler's `Invalidation.Defer(...)` blocks
+- Log the operation on commit, together with the invalidation calls its blocks
+  recorded, if its mode records any
 - Notify other hosts that operation log was updated
-- Replay the command in the invalidation mode locally.
-
-Btw, "replaying the command in the invalidation mode" means:
-
-- Restoring the "operation items". Later I'll show you can
-  pass the information from a "normal" command handler "pass"
-  to the subsequent "invalidation pass" run.
-  Typically you need this to properly invalidate something
-  related to what was deleted during the "normal" pass.
-- Running the same command handler, but inside
-  `using (Invalidation.Begin()) { ... }` block.
+- Run the collected blocks locally, right after the commit
 
 ☝ The pipeline described above is called **"Operations Framework"**
 (**OF** further) &ndash; in fact, it's just a set of handlers and services
@@ -644,8 +634,8 @@ And a few final remarks on this:
 1. The pipeline described above is used very partially in `v1`'s
    case: there are no other hosts, no database, and thus no calls
    enabling all these integrations were made when the IoC container
-   was configured. So only a very core part of this pipeline running
-   handlers normally + in the invalidation mode is used.
+   was configured. So only a very core part of it &ndash; running the handler
+   and then its deferred blocks &ndash; is used.
 2. **No, this is not how Fusion delivers changes to every remote
    client** (e.g. Blazor WASM running in your browser).
    This pipeline is server-side only.
@@ -769,6 +759,11 @@ reads/writes the DB:
    but all of them will share the same `DbConnection`, and consequently,
    will "see" the DB through the same transaction.
 
+4. Both of them are tagged with
+   `[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]` &ndash; unlike `v1`,
+   their state lives in a shared database, so every host that uses it must apply
+   the invalidations, not just the one that ran the command.
+
 And that's it. So to use Fusion with EF, you must:
 
 - Make a couple extra calls during IoC container configuration
@@ -778,6 +773,9 @@ And that's it. So to use Fusion with EF, you must:
   to get `DbContext`-s. Alternatively, you just see what these
   methods do and use the same code in Compute Services that
   can't be inherited from `DbServiceBase<TDbContext>`.
+- Declare `[DeferredInvalidationMode(...)]` on any service whose command handlers
+  call `Invalidation.Defer(...)` &ndash; `Replicated` for state backed by a shared DB,
+  since every host has to apply these invalidations.
 
 ## Version 3: Production-grade EF Core code
 
@@ -860,7 +858,7 @@ But why?
 
 So crafting highly efficient Compute Services based on EF Core is actually
 quite easy &ndash; if you think what's the extra code you have to write,
-you'll find it's mainly `if (Invalidation.IsActive) { ... }` blocks &ndash;
+you'll find it's mainly `Invalidation.Defer(...)` blocks &ndash;
 the rest is something you'd likely have otherwise at some point as well!
 
 And if you're curious how much of this "extra" a real app is expected to
@@ -868,7 +866,7 @@ have &ndash; check out [Board Games](https://github.com/alexyakunin/BoardGames).
 It's mentioned in its
 [index.md](https://github.com/alexyakunin/BoardGames/blob/main/index.md)
 that this whole app has
-[just about 35 extra lines of code](https://github.com/alexyakunin/BoardGames/search?q=IsInvalidating)
+[just about 35 extra lines of code](https://github.com/alexyakunin/BoardGames)
 responsible for the invalidation!
 In other words, **Fusion brought the cost of all real-time features this app
 has to nearly zero there**.

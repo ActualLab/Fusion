@@ -15,15 +15,16 @@ A Fusion **compute service** exposes intercepted methods marked with `[ComputeMe
 call produces a cached, immutable `Computed<T>`. While computing, Fusion records every other computed value it reads and
 forms a dependency graph automatically. Calling the same input reuses its current consistent result.
 
-When application data changes, command handlers enter invalidation mode and call the affected compute methods with the
-same arguments. Fusion marks those computed values invalid and immediately propagates invalidation to their live
-dependants. Values are normally recomputed lazily when requested again, so only data that is both affected and still in
-use consumes work.
+When application data changes, a command handler declares what it invalidated with `Invalidation.Defer(() => ...)`; once
+the mutation commits, that block runs and calls the affected compute methods with the same arguments. Fusion marks those
+computed values invalid and immediately propagates invalidation to their live dependants. Values are normally recomputed
+lazily when requested again, so only data that is both affected and still in use consumes work.
 
 `ComputedState<T>` and Fusion's UI components turn invalidation into reactive updates. Fusion RPC carries compute calls,
 results, and invalidation messages across process and network boundaries, extending the same dependency graph to
 Blazor, MAUI, browser, and TypeScript clients. The Operations Framework can record completed commands transactionally
-and replay their invalidation phase on every backend host.
+and, in the `Replicated` and `Distributed` deferred-invalidation modes, carry their invalidation to every backend host
+that needs it.
 
 ## What Is Available
 

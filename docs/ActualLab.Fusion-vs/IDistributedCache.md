@@ -43,6 +43,7 @@ public class UserService
 ## Fusion Approach
 
 ```csharp
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : IComputeService
 {
     [ComputeMethod]
@@ -57,11 +58,10 @@ public class UserService : IComputeService
     }
 
     [CommandHandler]
-    public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {
         await _db.Users.UpdateAsync(cmd.Id, cmd.Data, ct);
-        if (Invalidation.IsActive)
-            _ = GetUser(cmd.Id, default);  // UserSummary auto-invalidates
+        Invalidation.Defer(() => _ = GetUser(cmd.Id, default));  // UserSummary auto-invalidates
     }
 }
 ```
@@ -159,12 +159,12 @@ public virtual async Task<DashboardData> GetDashboard(string userId, Cancellatio
     };
 }
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 [CommandHandler]
-public async Task AddOrder(AddOrderCommand cmd, CancellationToken ct)
+public virtual async Task AddOrder(AddOrderCommand cmd, CancellationToken ct)
 {
     await _db.Orders.AddAsync(cmd.Order, ct);
-    if (Invalidation.IsActive)
-        _ = GetUserOrders(cmd.Order.UserId, default);
+    Invalidation.Defer(() => _ = GetUserOrders(cmd.Order.UserId, default));
     // Dashboard auto-invalidates because it depends on GetUserOrders
 }
 ```

@@ -142,15 +142,19 @@ Fusion also reports operation retry behavior:
 
 Both use `command.name` and `transiency`; the counter also uses `outcome`.
 
-Invalidation replay is measured once per pass rather than on each computed
+Deferred invalidation is measured once per apply pass rather than on each computed
 invalidation or dependency edge:
 
 | Metric | Kind | Unit | Meaning |
 |--------|------|------|---------|
-| `invalidation.pass.duration` | Histogram | ms | Completion-replay pass duration |
-| `invalidation.pass.command.count` | Histogram | `{command}` | Commands attempted in one pass |
+| `invalidation.pass.duration` | Histogram | ms | Deferred invalidation apply pass duration |
+| `invalidation.pass.call.count` | Histogram | `{call}` | Invalidation calls applied in one pass |
+| `invalidation.deferred.failure.count` | Counter | `{failure}` | Blocks and recorded calls that threw |
+| `invalidation.deferred.drop.count` | Counter | `{call}` | Recorded calls dropped on apply |
 
-Both use the bounded `command.name` and `outcome` attributes.
+The two pass metrics use the bounded `invalidation.kind` (`local` or `routed`) and `outcome`
+attributes. An `InvalidationSource` names an operation or a command, so it goes on the span, not
+on the metrics.
 
 Persistent remote-computed cache access is measured only on the asynchronous
 cache lookup path; ordinary in-memory `ComputedRegistry` hits remain
@@ -222,11 +226,11 @@ same trace.
 
 Command and invalidation spans report bounded command name/kind attributes by
 default. Command values are omitted. To capture them explicitly, register
-`CommandTracer.Options` or `InvalidatingCommandCompletionHandler.Options`
+`CommandTracer.Options`
 with `CaptureCommandPayload = true`; payload formatting is still skipped when
-the listener requests propagation data only. Swallowed invalidation replay
-failures mark the enclosing span as an error with `invalidation.partial_failure`
-and `invalidation.failure.count`.
+the listener requests propagation data only. An invalidation apply pass spans
+`inv.pass.local` or `inv.pass.routed`; swallowed call failures mark it as an error with
+`invalidation.partial_failure` and `invalidation.failure.count`.
 
 [`Activity`]: https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.activity
 

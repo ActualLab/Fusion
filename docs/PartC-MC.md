@@ -295,7 +295,7 @@ public class OrderEventHandlers
 
 CommandR is designed specifically for Fusion's needs:
 
-1. **Multi-host invalidation**: The Operations Framework requires an extensible pipeline for operation logging and replay.
+1. **Multi-host invalidation**: The Operations Framework requires an extensible pipeline for operation logging and for applying each operation's recorded invalidation calls on every host.
 
 2. **RPC integration**: CommandR integrates seamlessly with ActualLab.Rpc for distributed command execution.
 

@@ -321,5 +321,5 @@ See [Command Interfaces](./PartC-CI.md) and the [Cheat Sheet](./PartC-CS.md) for
 
 CommandR is the foundation for Fusion's [Operations Framework](./PartO.md), which adds:
 - Multi-host invalidation
-- Operation logging and replay
+- Operation logging and deferred invalidation
 - Transaction support with Entity Framework

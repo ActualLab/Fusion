@@ -133,7 +133,8 @@ class CounterService {
 
 ### Invalidation
 
-In .NET, you invalidate via `Invalidation.Begin()` blocks.
+In .NET, you invalidate via `Invalidation.Begin()` blocks, or via `Invalidation.Defer(...)` inside
+Operations Framework command handlers.
 In TypeScript, each bound method gets an `.invalidate(...args)` function:
 
 ```ts

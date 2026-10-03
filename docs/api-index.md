@@ -166,9 +166,15 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 
 ### Operations (used in Operations Framework)
 - `Operation` — recorded operation (completed command execution)
+- `Operation.InvalidationCalls` (`ImmutableList<ServiceCall>`) — the calls an operation carries; maintained by `AddInvalidationCall` / `AddInvalidationCalls` / `RemoveInvalidationCall` / `RemoveInvalidationCalls`, plus `AddEvent` / `RemoveEvent` / `RemoveEvents` for `Events`
+- `ServiceCall` (record) — a recorded service-method call, applicable on any host that has the service
 - `OperationEvent` — event recorded during an operation (for eventual consistency)
+- `OperationStoreMode` (enum) — what an operation's committed row is: `None` / `Operation` / `Event`
+- `OperationCompletion` (record) — command carrying an operation's `ServiceCall`s to the host applying them
+- `OperationCompletionHandler` — applies those calls; registered via `CommanderBuilder.AddOperationCompletionHandler`
+- `IOperationCompletionListener` — notified when an operation completes
 - `IOperationScope` — manages operation lifecycle within command pipeline
-- `NestedOperation` (record) — nested command within parent operation
+- `ServiceTypeResolver` — maps implementation type to registered service type and back (`TryResolveServiceType` / `TryResolveImplementationType`)
 
 ### Configuration
 - `CommanderBuilder` (struct) — fluent builder for commander registration
@@ -196,8 +202,16 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `StateSnapshot` — immutable snapshot of state lifecycle
 
 ### Invalidation
-- `Invalidation` — static helpers to check/begin invalidation scopes
+- `Invalidation` — static helpers to check/begin invalidation scopes, and to defer invalidation
 - `InvalidationSource` (struct) — describes source of invalidation
+- `DeferredInvalidationMode` (enum) — `Local` / `Replicated` / `Distributed` per command handler
+- `DeferredInvalidationModeAttribute` — declares the mode on a handler method, its declaring/implementation type, or the service interface
+- `DeferredInvalidationModeResolver` — resolves a handler's mode (method → implementation type → declaring type; undeclared throws)
+- `DeferredInvalidationContext` — collects `Invalidation.Defer(...)` blocks of one operation
+- `DeferredInvalidationContext.Scope` (struct) — the ambient context's disposable scope
+- `DeferredInvalidationContextExt` — runs a closed context's blocks, or captures their calls
+- `InvalidationGuard` — command filter that rejects a command started during an invalidation pass
+- `InvalidationTrackingMode` (enum) — `None` / `OriginOnly` / `WholeChain` invalidation source tracking
 - `UpdateDelayer` (record) — integrates with `UIActionTracker` for instant UI updates
 - `FixedDelayer` (record) — fixed update delay with configurable retry delays
 
@@ -253,6 +267,9 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 - `DbOperationScope` / `DbOperationScope<TDbContext>` — manages transaction, operation/event persistence, commit
 - `DbOperation` — persisted operation entity for cross-host replication
 - `DbEvent` — persisted operation event entity with delayed processing
+- `DbLogEntrySerializer` (record) — how `_Operations` and `_Events` serialize their payloads; DI-registered, with a static `Default` fallback
+- `DbLogEntrySerializer.Format` — `DataFormat.Bytes` (MessagePack, the default) / `DataFormat.Text`
+- `DbLogEntryModelBuilderExt.IgnoreUnusedOperationsFrameworkColumns()` — maps away the unused payload columns
 
 ### Sharding
 - `DbShard` — identifies a database shard

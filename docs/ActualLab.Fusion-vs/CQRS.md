@@ -50,16 +50,13 @@ public async Task<Order[]> GetUserOrders(string userId)
 public record CreateOrderCommand(string UserId, List<OrderItem> Items) : ICommand<Order>;
 
 // Command Handler with integrated invalidation
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class OrderService : IComputeService
 {
     [CommandHandler]
-    public async Task<Order> CreateOrder(CreateOrderCommand cmd, CancellationToken ct)
+    public virtual async Task<Order> CreateOrder(CreateOrderCommand cmd, CancellationToken ct)
     {
-        if (Invalidation.IsActive)
-        {
-            _ = GetUserOrders(cmd.UserId, default);
-            return default!;
-        }
+        Invalidation.Defer(() => _ = GetUserOrders(cmd.UserId, default));
 
         var order = new Order { Id = Guid.NewGuid(), UserId = cmd.UserId, Items = cmd.Items };
         await _db.Orders.AddAsync(order, ct);
@@ -133,15 +130,15 @@ public record UpdateUserCommand(string UserId, string Name) : ICommand<Unit>;
 public virtual async Task<User> GetUser(string userId, CancellationToken ct) { ... }
 
 // Command handlers with invalidation
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 [CommandHandler]
-public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
 {
     // Write
     await _db.Users.UpdateAsync(cmd.UserId, cmd.Name, ct);
 
     // Invalidate affected reads
-    if (Invalidation.IsActive)
-        _ = GetUser(cmd.UserId, default);
+    Invalidation.Defer(() => _ = GetUser(cmd.UserId, default));
 }
 ```
 
@@ -161,14 +158,11 @@ Without:
 If you need event sourcing for audit/compliance, you can add it alongside Fusion:
 
 ```csharp
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 [CommandHandler]
-public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
 {
-    if (Invalidation.IsActive)
-    {
-        _ = GetUser(cmd.UserId, default);
-        return;
-    }
+    Invalidation.Defer(() => _ = GetUser(cmd.UserId, default));
 
     // Store event for audit trail
     await _eventStore.Append(new UserUpdatedEvent(cmd.UserId, cmd.Name, DateTime.UtcNow));

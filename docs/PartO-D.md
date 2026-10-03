@@ -11,10 +11,10 @@ This page contains visual diagrams explaining how Operations Framework works.
 | Class | Description |
 |-------|-------------|
 | `OperationReprocessor` | Retries commands that fail with transient errors |
-| `NestedOperationLogger` | Captures nested command calls |
-| `InMemoryOperationScopeProvider` | Provides transient operation scope |
+| `TransientOperationScopeProvider` | Provides transient operation scope |
 | `DbOperationScopeProvider` | Provides DB-backed operation scope |
-| `InvalidatingCompletionHandler` | Runs invalidation for completed operations |
+| `DeferredInvalidationScopeProvider` | Opens the deferred invalidation scope |
+| `OperationCompletionHandler` | Applies the invalidation calls an operation recorded |
 
 **Background Services:**
 
@@ -29,8 +29,8 @@ This page contains visual diagrams explaining how Operations Framework works.
 
 | Class | Description |
 |-------|-------------|
-| `DbOperationCompletionNotifier` | Triggers invalidation for replayed operations |
-| `PostgreSqlDbLogWatcher` | Listens for NOTIFY signals |
+| `DbOperationCompletionListener<TDbContext>` | Notifies log watchers when an operation completes locally |
+| `NpgsqlDbLogWatcher<TDbContext, TDbEntry>` | Listens for NOTIFY signals |
 | `RedisDbLogWatcher` | Subscribes to Redis pub/sub |
 | `FileSystemDbLogWatcher` | Watches for file changes |
 
@@ -41,29 +41,17 @@ This page contains visual diagrams explaining how Operations Framework works.
 
 | Handler | Priority | Responsibility |
 |---------|----------|----------------|
+| `InvalidationGuard` | 999,999,000 | Rejects a nested command run inside an invalidation pass |
 | `OperationReprocessor` | 100,000 | Retries commands that fail with transient errors |
-| `NestedOperationLogger` | 11,000 | Captures nested commands, isolates `Operation.Items` |
-| `InMemoryOperationScopeProvider` | 10,000 | Transient scope, completion handling |
-| `DbOperationScopeProvider` | 1,000 | DB transaction, operation persistence |
-| `InvalidatingCommandCompletionHandler` | 100 | Runs invalidation pass |
+| `TransientOperationScopeProvider` | 10,000 | Transient scope, completion handling |
+| `DbOperationScopeProvider` | 9,900 | DB transaction, operation persistence |
+| `DeferredInvalidationScopeProvider` | 9,000 | Deferred invalidation scope |
+| `CompletionTerminator` | -1,000,000,000 | Terminal handler for `ICompletion` |
 
 
 ## Operation Scope Lifecycle
 
 <img src="/img/diagrams/PartO-D-3.svg" alt="Operation Scope Lifecycle" style="width: 100%; max-width: 800px;" />
-
-
-## Operation Items vs Context Items
-
-| Property | `CommandContext.Items` | `Operation.Items` |
-|----------|------------------------|-------------------|
-| **Scope** | Single command execution | Operation + invalidation across all hosts |
-| **Lifetime** | Command start → end | Command start → invalidation on all hosts |
-| **Persistence** | In-memory only | Stored in database (JSON) |
-| **Cross-host** | No | Yes |
-| **Usage** | `context.Items.Set(...)` / `Get<T>()` | `operation.Items.KeylessSet(x)` / `KeylessGet<T>()` |
-
-<img src="/img/diagrams/PartO-D-4.svg" alt="Operation Items vs Context Items" style="width: 100%; max-width: 800px;" />
 
 
 ## Multi-Host Invalidation Flow

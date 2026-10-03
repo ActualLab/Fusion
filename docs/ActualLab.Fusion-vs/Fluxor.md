@@ -53,6 +53,7 @@ public interface ICounterService : IComputeService
     [ComputeMethod]
     Task<int> GetCount(CancellationToken ct);
 
+    [DeferredInvalidationMode(DeferredInvalidationMode.Local)]
     [CommandHandler]
     Task Increment(IncrementCommand cmd, CancellationToken ct);
 }
@@ -65,11 +66,10 @@ public class CounterService : ICounterService
         => await _db.Counters.SumAsync(c => c.Value, ct);
 
     [CommandHandler]
-    public async Task Increment(IncrementCommand cmd, CancellationToken ct)
+    public virtual async Task Increment(IncrementCommand cmd, CancellationToken ct)
     {
         await _db.ExecuteAsync(...);
-        if (Invalidation.IsActive)
-            _ = GetCount(default);
+        Invalidation.Defer(() => _ = GetCount(default));
     }
 }
 

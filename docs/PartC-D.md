@@ -10,13 +10,14 @@ Diagrams for the CommandR concepts introduced in [Part 4](PartC.md).
 | Handler | Priority | Type | Purpose |
 |---------|----------|------|---------|
 | `PreparedCommandHandler` | 1,000,000,000 | Filter | Calls `IPreparedCommand.Prepare()` if implemented |
+| `InvalidationGuard` | 999,999,000 | Filter | Throws if a command starts inside an invalidation pass |
 | `CommandTracer` | 998,000,000 | Filter | Creates Activity for tracing, logs errors |
-| `LocalCommandRunner` | 900,000,000 | Filter | Runs `ILocalCommand.Run()` if implemented |
+| `LocalCommandRunner` | 900,000,000 | Final | Runs `ILocalCommand.Run()` if implemented |
 | `RpcCommandHandler` | 800,000,000 | Filter | Routes to RPC if command should be handled remotely |
 | `OperationReprocessor` | 100,000 | Filter | Operations Framework |
-| `NestedOperationLogger` | 11,000 | Filter | Operations Framework |
-| `OperationScopeProvider` | 10,000 | Filter | Operations Framework |
-| `DbOperationScopeProvider` | 1,000 | Filter | Operations Framework |
+| `TransientOperationScopeProvider` | 10,000 | Filter | Operations Framework |
+| `DbOperationScopeProvider` | 9,900 | Filter | Operations Framework |
+| `DeferredInvalidationScopeProvider` | 9,000 | Filter | Operations Framework |
 | Your Handler | 0 | Final | Your business logic |
 
 
@@ -91,13 +92,14 @@ if (!isOutermost && (command is IOutermostCommand ||
 | Index | Handler | Priority | Type |
 |-------|---------|----------|------|
 | [0] | `PreparedCommandHandler` | 1,000,000,000 | Filter |
-| [1] | `CommandTracer` | 998,000,000 | Filter |
-| [2] | `LocalCommandRunner` | 900,000,000 | Filter |
-| [3] | `RpcCommandHandler` | 800,000,000 | Filter |
-| [4] | `OperationReprocessor` | 100,000 | Filter |
-| [5] | `NestedOperationLogger` | 11,000 | Filter |
-| [6] | `InMemoryOperationScope` | 10,000 | Filter |
-| [7] | `DbOperationScopeProvider` | 1,000 | Filter |
+| [1] | `InvalidationGuard` | 999,999,000 | Filter |
+| [2] | `CommandTracer` | 998,000,000 | Filter |
+| [3] | `LocalCommandRunner` | 900,000,000 | Final |
+| [4] | `RpcCommandHandler` | 800,000,000 | Filter |
+| [5] | `OperationReprocessor` | 100,000 | Filter |
+| [6] | `TransientOperationScopeProvider` | 10,000 | Filter |
+| [7] | `DbOperationScopeProvider` | 9,900 | Filter |
+| [8] | `DeferredInvalidationScopeProvider` | 9,000 | Filter |
 | [8] | `YourHandler` | 0 | Final |
 
 

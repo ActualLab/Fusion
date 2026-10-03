@@ -274,6 +274,7 @@ gtag('config', 'G-PX4G7HX4CM');`],
             link: "/PartO",
             collapsed: true,
             items: [
+              { text: "Invalidation Modes", link: "/PartO-IM" },
               { text: "Transient Operations", link: "/PartO-TR" },
               { text: "Reprocessing", link: "/PartO-RP" },
               { text: "Events", link: "/PartO-EV" },

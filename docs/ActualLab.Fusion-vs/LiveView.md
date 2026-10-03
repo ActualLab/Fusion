@@ -38,6 +38,7 @@ end
 
 ```csharp
 // Server computes data
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class CounterService : IComputeService
 {
     [ComputeMethod]
@@ -45,11 +46,10 @@ public class CounterService : IComputeService
         => Task.FromResult(_count);
 
     [CommandHandler]
-    public Task Increment(IncrementCommand cmd, CancellationToken ct)
+    public virtual Task Increment(IncrementCommand cmd, CancellationToken ct)
     {
         _count++;
-        if (Invalidation.IsActive)
-            _ = GetCount(default);
+        Invalidation.Defer(() => _ = GetCount(default));
         return Task.CompletedTask;
     }
 }

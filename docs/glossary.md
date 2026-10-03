@@ -91,8 +91,10 @@ references, but the next normal call for the same input must obtain a newer valu
 ###### Invalidation block
 
 An `Invalidation.Begin()` scope in which compute method calls invalidate matching computed
-inputs instead of evaluating the methods. In Operations Framework handlers, the equivalent branch is usually selected
-with `Invalidation.IsActive`. See [Invalidation Block Behavior](PartF-D.md#invalidation-block-behavior).
+inputs instead of evaluating the methods. In Operations Framework handlers, such a block is
+registered with `Invalidation.Defer(...)` and runs after the mutation commits. See
+[Invalidation Block Behavior](PartF-D.md#invalidation-block-behavior) and
+[Invalidation Modes](PartO-IM.md).
 
 ###### Invalidation source
 
@@ -268,16 +270,45 @@ pipeline for tracing, routing, operation scopes, retries, invalidation, and appl
 A proxied service whose handler methods look like normal calls but are redirected through
 `ICommander` and its pipeline. See [Command Services](PartC.md#command-services).
 
+###### Deferred invalidation
+
+The Operations Framework's invalidation model: a command handler declares what it invalidated with
+`Invalidation.Defer(() => ...)`, and that block runs after the mutation commits instead of during the
+handler. See [Deferred Invalidation](PartO-IM.md#deferred-invalidation).
+
+###### Deferred invalidation context (`DeferredInvalidationContext`)
+
+The ambient collector of the deferred invalidation blocks of one operation. Every block it holds
+shares its mode, which the first block added decides; a later block that needs a different mode
+fails instead of being silently narrowed. See
+[Placement and timing](PartO-IM.md#placement-and-timing).
+
+###### Deferred invalidation mode
+
+How far a command handler's deferred invalidation reaches: the origin host only (`Local`), every
+host (`Replicated`), or the host that owns each value (`Distributed`). It is declared with
+`[DeferredInvalidationMode(...)]` on the handler method, on its declaring or implementation type, or
+on the service interface the handler is registered as. There is no default: a handler that defers a
+block without a declared mode throws. See [Invalidation Modes](PartO-IM.md) and
+[Declaring the Mode](PartO-IM.md#declaring-the-mode).
+
 ###### Event command
 
 A command dispatched to multiple independent handler chains instead of one final handler. It is
 CommandR's broadcast-style command model. See [`IEventCommand`](PartC-CI.md#ieventcommand).
 
-###### Invalidation mode
+###### Invalidation call
 
-The Operations Framework replay phase in which a command handler skips its business logic and
-runs only its invalidation branch. This reproduces the originating host's invalidations on other hosts. See
-[Invalidation Mode](PartO.md#invalidation-mode).
+A `ServiceCall` that an operation carries in its `InvalidationCalls` list, recorded while a deferred
+invalidation block ran. Whichever host reads the operation applies the call there, so the same
+record invalidates on every host that needs it. See [Replicated](PartO-IM.md#replicated).
+
+###### `InvalidationGuard`
+
+A command filter at priority 999,999,000 that throws if a command is started while an invalidation
+pass is active. Deferred invalidation never replays a command handler, so such a command would
+mutate without an operation, events, or invalidations. See
+[Built-in Command Handlers](PartC-BH.md#fusion-operations-framework-handlers).
 
 ###### Log watcher
 
@@ -287,14 +318,15 @@ tradeoffs. See [Operations Framework: Log Watchers](PartO-PR.md).
 
 ###### Nested command
 
-A command executed from another command's handler. It receives its own command context and is
-captured as a child of the parent operation. See [Nested Commands](PartO.md#nested-commands).
+A command executed from another command's handler. It receives its own command context, but joins
+the parent's operation and the same deferred invalidation capture scope. See
+[Nested Commands](PartO.md#nested-commands).
 
 ###### Operation
 
-The durable description of a completed command execution, including its command, host, items, nested
-operations, and emitted events. Other hosts consume it to reproduce invalidation. See
-[Operation](PartO.md#operation).
+The durable description of a completed command execution, including its command, host, recorded
+invalidation calls (`InvalidationCalls`), and emitted events. Other hosts read it and apply those
+calls. See [Operation](PartO.md#operation).
 
 ###### Operation event
 
@@ -308,12 +340,6 @@ The ordered durable record of operations consumed by every host. It carries inva
 across the cluster without making cache invalidation part of the original database transaction. See
 [Operations Framework](PartO.md).
 
-###### Operation items
-
-Serializable data attached to an operation to carry information from its execution phase to the
-later invalidation phase on every host. Nested operations have independent item bags. See
-[Passing Data to Invalidation Block](PartO.md#passing-data-to-invalidation-block).
-
 ###### Operation reprocessing
 
 Re-execution of a command after a transient failure, with a fresh command context and a
@@ -322,8 +348,15 @@ configured retry delay. See [Operations Framework: Reprocessing](PartO-RP.md).
 ###### Operation scope
 
 The execution context that collects an operation and controls its completion. Database scopes
-coordinate the business-data transaction with operation-log storage; in-memory scopes produce transient operations.
+coordinate the business-data transaction with operation-log storage; transient scopes
+(`TransientOperationScope`) produce transient operations.
 See [Operation Scope](PartO.md#operation-scope).
+
+###### `OperationCompletion`
+
+The command that carries an operation's invalidation calls to whichever host applies them. It is the
+recovery carrier for an operation whose origin host did not finish applying its own calls, and the
+delivery mechanism for `Distributed` invalidation. See [Distributed](PartO-IM.md#distributed).
 
 ###### Operations Framework (OF)
 
@@ -337,10 +370,16 @@ Writing an operation or event record in the same database transaction as busines
 processing it asynchronously. This avoids losing the notification after a successful data commit and provides
 at-least-once delivery. See [The Outbox Pattern](PartO.md#the-outbox-pattern).
 
+###### `ServiceCall`
+
+A recorded call to a service method: the service type, an RPC-style method name, and the arguments.
+It serializes the way RPC serializes a call, so it can be applied on any host that has the service.
+See [`ServiceCall`](PartO-Serialization.md#servicecall).
+
 ###### Transient operation
 
 An operation completed and invalidated in process without durable operation-log storage.
-It is suitable when replay after restart and cross-host delivery are unnecessary. See
+It is suitable when cross-host invalidation and durable event delivery are unnecessary. See
 [Transient Operations](PartO-TR.md).
 
 ## Authentication and Data Access

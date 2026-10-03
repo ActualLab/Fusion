@@ -1,77 +1,128 @@
 # Operations Framework Serialization
 
-The Operations Framework stores operation data in the database using JSON serialization. This document
-covers how `DbOperation` and `Operation.Items` are serialized, and how to customize the serialization.
+The Operations Framework's own two tables &ndash; `_Operations` and `_Events` &ndash; serialize their
+payloads themselves, outside of DI. This document covers how they do it and how to change it. It
+applies to those two tables only; application entities serialize however you configure them.
 
 
-## DbOperation Storage
+## Storage
 
-When an operation is committed, it's stored as a `DbOperation` entity with the following serialized fields:
+Every payload has **two columns**, one text and one binary, and only one of them is written:
 
-| Column | Content | Serializer |
-|--------|---------|------------|
-| `ItemsJson` | `Operation.Items` property bag | `NewtonsoftJsonSerializer.Default` |
-| `CommandJson` | The command that triggered the operation | `NewtonsoftJsonSerializer.Default` |
+| Entity | Payload | Text column | Binary column |
+|--------|---------|-------------|---------------|
+| `DbOperation` | The command that triggered the operation | `CommandJson` | `CommandData` |
+| `DbOperation` | The recorded invalidation calls ([`Replicated` mode](./PartO-IM.md#replicated)) | `InvalidationCallsJson` | `InvalidationCallsData` |
+| `DbEvent` | The event's value | `ValueJson` | `ValueData` |
 
-### Default Serializer
+### Format
 
-`DbOperation` uses Newtonsoft.Json by default:
+`DbLogEntrySerializer.Format` is the single switch that moves both tables between the two. It's a
+DI-registered service, so an application replaces it the usual way:
+
+<!-- snippet: PartOSerialization_Format -->
+```cs
+// One switch for both _Operations and _Events: it moves new rows between each payload's
+// text and binary column, and nothing else. Which serializer each column uses is a
+// separate decision.
+services.AddSingleton(_ => DbLogEntrySerializer.Default with {
+    Format = DataFormat.Text,
+});
+```
+<!-- endSnippet -->
+
+It defaults to `DataFormat.Bytes`, i.e. MessagePack. A log entry can serialize itself
+without DI, so `DbLogEntrySerializer.Default` is what one falls back to when it wasn't handed a
+serializer &ndash; setting that static is the no-DI way to change the default. The registration is
+storage-wide rather than per-`DbContext`: a format is a property of the schema.
+
+**A read takes whichever column carries the payload**, not the one `Format` names. Flipping the
+switch therefore only changes what *new* rows look like: rows written under the old format stay
+readable, and a deployment can move between the two without a data migration.
+
+### Dropping the unused columns
+
+That safety costs one always-`NULL` column per payload. A schema that has only ever used one
+format can map the other away:
+
+<!-- snippet: PartOSerialization_IgnoreUnusedColumns -->
+```cs
+// Drops the three columns this format doesn't write. It has to be the format the
+// registered DbLogEntrySerializer writes with.
+modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DataFormat.Bytes);
+```
+<!-- endSnippet -->
+
+The format you pass has to be the one the registered `DbLogEntrySerializer` writes with: mapping
+away the column the writer uses loses the payload silently.
+
+This trades the migration-free switch for the leaner schema: rows in the other format become
+unreadable, because the column holding them is no longer in the model. To change format later,
+stop calling this first, deploy, and only drop the old column once nothing needs it.
+
+### Serializers
+
+`Format` picks a column, not a serializer &ndash; each column has its own, and all three are set
+independently on the same object:
 
 <!-- snippet: PartOSerialization_DefaultSerializer -->
 ```cs
-// DbOperation.Serializer is a static, mutable property.
-// Its default value is NewtonsoftJsonSerializer.Default.
-ITextSerializer serializer = DbOperation.Serializer;
+// Each column has its own serializer. The binary one is used by default;
+// the text one only when Format says so.
+IByteSerializer byteSerializer = DbLogEntrySerializer.Default.ByteSerializer;
+ITextSerializer textSerializer = DbLogEntrySerializer.Default.TextSerializer;
 ```
 <!-- endSnippet -->
 
-Newtonsoft.Json is chosen because:
-- It handles polymorphic types well with `TypeNameHandling.Auto`
-- It's more forgiving with missing/extra properties during schema evolution
-- It has mature support for complex object graphs
+Both must preserve the concrete type of a polymorphic payload, because a command and an event's
+value are only known as `ICommand` and `object` when they're read back:
+
+- The binary default is `MessagePackByteSerializer.DefaultTypeDecorating`. MessagePack has no
+  equivalent of `TypeNameHandling`, so the type is written alongside the payload by the
+  `TypeDecoratingByteSerializer` wrapper &ndash; drop the wrapper and polymorphic payloads stop
+  round-tripping.
+- The text default is `NewtonsoftJsonSerializer.Default`, which carries the type itself via
+  `TypeNameHandling.Auto`. Newtonsoft is the text choice because it's forgiving with missing and
+  extra properties during schema evolution.
 
 
-## Operation.Items Serialization
+## Invalidation Serialization
 
-`Operation.Items` is a `MutablePropertyBag` that stores arbitrary key-value pairs. It's serialized
-to the `ItemsJson` column:
+A handler in [`Replicated` mode](./PartO-IM.md#replicated) records its invalidation calls into
+`Operation.InvalidationCalls`, and they're serialized to whichever invalidations column `Format` names:
 
-<!-- snippet: PartOSerialization_ItemsSerialization -->
+<!-- snippet: PartOSerialization_InvalidationsSerialization -->
 ```cs
-// How Items are serialized to DbOperation
-var ItemsJson = operation.Items.Items.Count == 0
-    ? null
-    : Serializer.Write(operation.Items.Snapshot, typeof(PropertyBag));
+// How the recorded invalidation calls are serialized to DbOperation: an array rather
+// than the model's ImmutableList, because MessagePack's standard resolvers don't know
+// the immutable collections
+var (InvalidationCallsJson, InvalidationCallsData) = operation.InvalidationCalls.Count == 0
+    ? default
+    : serializer.Serialize(operation.InvalidationCalls.ToArray());
 ```
 <!-- endSnippet -->
 
-### PropertyBag Internals
+### ServiceCall
 
-Each item in the bag uses `TypeDecoratingUniSerialized<object>` to preserve type information:
+Each recorded call is a `ServiceCall` &ndash; a service, a method, and the arguments to
+invalidate with:
 
-<!-- snippet: PartOSerialization_PropertyBagItem -->
+<!-- snippet: PartOSerialization_ServiceCall -->
 ```cs
-[DataContract, MemoryPackable, MessagePackObject]
-public partial record struct PropertyBagItem(
-    [property: DataMember] string Key,
-    [property: DataMember] TypeDecoratingUniSerialized<object> Serialized);
+// The service the call targets, without assembly versions - so a call
+// survives an assembly version bump between the hosts that write and read it
+TypeRef serviceType = call.ServiceType;
+// The RPC-style method name, which carries the parameter count as its suffix
+string methodName = call.MethodName;
+// The arguments, deserialized against the resolved method's signature
+ArgumentList arguments = call.Arguments;
 ```
 <!-- endSnippet -->
 
-This allows heterogeneous values with full type preservation:
-
-<!-- snippet: PartOSerialization_PropertyBagUsage -->
-```cs
-// Store different types in the same operation
-operation.Items.Set("userId", 123L);           // long
-operation.Items.Set("metadata", myDto);        // custom type
-operation.Items.Set("tags", new[] { "a", "b" }); // array
-
-// Types are preserved after serialization round-trip
-var userId = operation.Items.Get<long>("userId");     // Works correctly
-var metadata = operation.Items.Get<MyDto>("metadata"); // Type preserved
-```
-<!-- endSnippet -->
+The arguments are decoded eagerly, against the signature of the method the call names. A call whose
+service or method no longer exists can't be decoded, so it's dropped on apply rather than applied to
+the wrong thing &ndash; see [Invalidation Modes](./PartO-IM.md) for what that means for
+a rolling deployment.
 
 
 ## Customizing Serialization
@@ -82,13 +133,15 @@ To use different serializer settings:
 
 <!-- snippet: PartOSerialization_ChangeSerializer -->
 ```cs
-// At application startup, before any operations are processed
-DbOperation.Serializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings {
-    TypeNameHandling = TypeNameHandling.Auto,
-    NullValueHandling = NullValueHandling.Ignore,
-    DateParseHandling = DateParseHandling.None,
-    // Add custom converters if needed
-    Converters = { new MyCustomConverter() },
+// Registered, so it replaces DbLogEntrySerializer.Default for this application
+services.AddSingleton(_ => DbLogEntrySerializer.Default with {
+    TextSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings {
+        TypeNameHandling = TypeNameHandling.Auto,
+        NullValueHandling = NullValueHandling.Ignore,
+        DateParseHandling = DateParseHandling.None,
+        // Add custom converters if needed
+        Converters = { new MyCustomConverter() },
+    }),
 });
 ```
 <!-- endSnippet -->
@@ -99,8 +152,13 @@ For explicit type information in the JSON:
 
 <!-- snippet: PartOSerialization_TypeDecoratedSerializer -->
 ```cs
-DbOperation.Serializer = new TypeDecoratingTextSerializer(
-    new NewtonsoftJsonSerializer(customSettings));
+services.AddSingleton(_ => DbLogEntrySerializer.Default with {
+    TextSerializer = new TypeDecoratingTextSerializer(
+        new NewtonsoftJsonSerializer(customSettings)),
+    // The binary one is type-decorating out of the box - MessagePack has no equivalent of
+    // Newtonsoft's TypeNameHandling, so the concrete type has to be written alongside
+    ByteSerializer = MessagePackByteSerializer.DefaultTypeDecorating,
+});
 ```
 <!-- endSnippet -->
 
@@ -112,8 +170,9 @@ This produces JSON like:
 
 ## Command Serialization
 
-Commands stored in `CommandJson` are serialized with type information to enable proper deserialization
-during reprocessing:
+A command is stored in `CommandData`, or in `CommandJson` when `DbLogEntrySerializer.Format` is
+`DataFormat.Text`, and carries type information either way so it can be deserialized on the host
+that reads it:
 
 <!-- snippet: PartOSerialization_CommandRecord -->
 ```cs
@@ -171,11 +230,13 @@ public record CreateUserCommandV2(
 
 ### Deployment Compatibility Contract
 
-`DbOperation` persists the concrete command (including nested-operation and operation-item types) as
-polymorphic JSON, and other hosts deserialize it to replay the invalidation pass. This ties command
+`DbOperation` persists the concrete command and its recorded invalidation calls as a polymorphic
+payload &ndash; type-decorating MessagePack by default, or Newtonsoft JSON when
+`DbLogEntrySerializer.Format` is `DataFormat.Text` &ndash; and other hosts deserialize them to apply
+that invalidation. This ties command
 serialization to your deployment process:
 
-- A command type (or any nested-operation/operation-item type it carries) **must remain deserializable
+- A command type (or any type its recorded invalidation calls carry) **must remain deserializable
   for at least `MaxEntryAge`** (30 minutes by default &ndash; see [Operation Log Trimmer](./PartO-CS.md))
   **past its last producer**. In practice: don't rename or remove a command type and deploy that change
   within the same window; stage such changes across releases instead (e.g. keep the old type around,
@@ -196,16 +257,17 @@ If deserialization fails with "Could not determine type", ensure:
 - Type names haven't changed (namespace, class name)
 - `TypeNameHandling.Auto` is enabled in Newtonsoft.Json settings
 
-### PropertyBag Values Not Deserializing
+### Invalidation Calls Not Applying
 
-Check that stored types:
-- Have parameterless constructors (or appropriate constructor attributes)
-- Are public and not internal/private
-- Have `[DataContract]` or are otherwise serializable
+Check that:
+- The service is registered on the host reading the log &ndash; a record for a service it doesn't
+  have is dropped by design
+- The method still exists with the same name and parameter count
+- The argument types are serializable and haven't changed shape
 
 
 ## Related Topics
 
 - [Core Serialization](./PartS.md) - General serialization infrastructure
 - [Operations Framework](./PartO.md) - Operations Framework overview
-- [Reprocessing](./PartO-RP.md) - How operations are replayed
+- [Reprocessing](./PartO-RP.md) - How failed operations are retried

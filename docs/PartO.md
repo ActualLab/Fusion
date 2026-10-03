@@ -76,30 +76,59 @@ eventually be processed. If it fails, nothing is written.
 
 ### Operation
 
-An **Operation** represents an action that can be logged and replayed. Currently, only commands
-act as operations, but the framework is designed to support other types in the future.
+An **Operation** is the durable record of a completed command: the command itself, the invalidation
+calls it recorded, and the events it produced. Other hosts read that record and apply those calls -
+nothing is replayed. Currently only commands act as operations, but the framework is designed to
+support other types in the future.
 
 Key properties:
 - `Uuid` &ndash; Unique identifier
 - `HostId` &ndash; The server that executed the operation
 - `Command` &ndash; The command that was executed
-- `Items` &ndash; Data passed between execution and invalidation phases
-- `NestedOperations` &ndash; Child operations executed during this operation
+- `InvalidationCalls` &ndash; The calls applied after this operation completes, on every host that reads it
 - `Events` &ndash; Events produced by this operation
+
+Both lists are immutable, and both can be shaped from a handler before the commit:
+
+| Member | What it does |
+|---|---|
+| `AddInvalidationCall(call)` | Appends one recorded call; returns the operation, so calls chain |
+| `AddInvalidationCalls(...)` | Appends several &ndash; `params ReadOnlySpan<ServiceCall>` or an `IEnumerable<ServiceCall>` |
+| `RemoveInvalidationCall(call)` | Removes that call, returning whether it was there |
+| `RemoveInvalidationCalls()` | Drops all of them |
+| `RemoveInvalidationCalls(predicate)` | Drops the ones the predicate matches |
+| `AddEvent(...)` | Appends an event &ndash; from a value, a uuid and a value, an `IOperationEventSource`, or an `OperationEvent` |
+| `RemoveEvent(event)` / `RemoveEvent(uuid)` | Removes one event, returning whether it was there |
+| `RemoveEvents()` / `RemoveEvents(predicate)` | Drops all events, or the matching ones |
+
+You rarely need these: `Invalidation.Defer(...)` is what records invalidation calls, and
+`AddEvent(...)` is the normal way to raise an event. They exist for the cases where a handler wants
+to inspect or edit what it is about to commit &ndash; dropping an invalidation a nested command
+already covered, say.
+
+A `ServiceCall` compares by reference rather than by content, so `RemoveInvalidationCall` removes
+the instance you hand it, not an equal-looking one. Use
+`ServiceCall.ContentEqualityComparer.Instance` to compare two calls by what they invoke.
+
+The event members need an active, non-transient scope and throw otherwise &ndash; a transient
+operation cannot carry events. The invalidation-call members have no such requirement: a recorded
+call is just data.
 
 ### Operation Scope
 
 An **Operation Scope** provides the context for operation execution:
 
 - **DbOperationScope**: Persistent operations stored in database (default for database commands)
-- **InMemoryOperationScope**: Transient operations that don't persist (for in-memory commands)
+- **TransientOperationScope**: Transient operations that don't persist (for in-memory commands)
 
-### Invalidation Mode
+### Deferred Invalidation Mode
 
-When an operation is "replayed" on other hosts, it runs in **invalidation mode**:
-- The command handler's main logic is skipped
-- Only the invalidation block executes
-- This ensures all hosts invalidate the same computed values
+A handler declares what its mutation invalidated by calling `Invalidation.Defer(...)`, which
+registers a block to run after the mutation commits. The handler's **invalidation mode** decides
+how far those blocks reach: the origin host only (`Local`), every host (`Replicated`), or the host
+that owns each value (`Distributed`). There is no default &ndash; a handler that defers a block must
+carry `[DeferredInvalidationMode(...)]`, or the call throws. See
+[Invalidation Modes](./PartO-IM.md).
 
 ## Quick Start
 
@@ -159,17 +188,15 @@ public record PostMessageCommand(Session Session, string Text) : ICommand<ChatMe
 <!-- snippet: PartO_PostOfHandler -->
 ```cs
 [CommandHandler]
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public virtual async Task<ChatMessage> PostMessage(
     PostMessageCommand command, CancellationToken cancellationToken = default)
 {
-    if (Invalidation.IsActive) {
-        _ = PseudoGetAnyChatTail();
-        return default!;
-    }
-
     await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
     // Actual code...
     var message = await PostMessageImpl(dbContext, command, cancellationToken);
+
+    Invalidation.Defer(() => _ = PseudoGetAnyChatTail());
     return message;
 }
 ```
@@ -181,24 +208,23 @@ A command handler with Operations Framework follows this pattern:
 
 ```cs
 [CommandHandler]
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public virtual async Task<TResult> HandleCommand(
     TCommand command, CancellationToken cancellationToken = default)
 {
-    // 1. INVALIDATION BLOCK - runs on ALL hosts after successful execution
-    if (Invalidation.IsActive) {
-        // Invalidate computed values that depend on the data being changed
-        _ = GetSomeData(command.Id, default);
-        _ = GetRelatedData(command.RelatedId, default);
-        return default!;  // Return value is ignored in invalidation mode
-    }
-
-    // 2. MAIN LOGIC - runs only on the originating host
+    // 1. MUTATE
     await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
 
     // Perform your business logic
     var result = await DoWork(dbContext, command, cancellationToken);
 
     await dbContext.SaveChangesAsync(cancellationToken);
+
+    // 2. DECLARE THE INVALIDATION - the block runs after the commit
+    Invalidation.Defer(() => {
+        _ = GetSomeData(command.Id, default);
+        _ = GetRelatedData(command.RelatedId, default);
+    });
     return result;
 }
 ```
@@ -207,40 +233,30 @@ public virtual async Task<TResult> HandleCommand(
 
 1. **`virtual` modifier** &ndash; Required for Fusion's proxy generation
 2. **`[CommandHandler]` attribute** &ndash; Registers this method as a command handler
-3. **`Invalidation.IsActive` check** &ndash; First thing in the method
-4. **`CreateOperationDbContext`** &ndash; Creates a DbContext that participates in the operation scope
+3. **`CreateOperationDbContext`** &ndash; Creates a DbContext that participates in the operation scope
+4. **`Invalidation.Defer(...)`** &ndash; May be called any number of times, anywhere in the handler;
+   the blocks run in registration order, after the mutation commits, on `CancellationToken.None`
 
 ::: warning Don't spawn background work from inside an invalidation block
-The invalidation block (and any synchronous `Invalidated` event handler) runs inside an
+A deferred block (and any synchronous `Invalidated` event handler) runs inside an
 `Invalidation.Begin()` scope. That scope is `AsyncLocal`-based, so if you start a `Task.Run` or similar
 background work from within it, the spawned work inherits the same ambient invalidation context even
 after the block exits. Any compute method it calls will silently skip computation and invalidate instead
 &ndash; see [`Computed.BeginIsolation()`](./PartF-C.md#context-scopes) for the guardrail.
 :::
 
-## Passing Data to Invalidation Block
+## Conditional Invalidation
 
-The invalidation block runs on all hosts, but the main logic only runs on the originating host.
-To pass data from main logic to invalidation, use `Operation.Items`:
+What to invalidate often depends on what the mutation discovered. A deferred block is an ordinary
+closure, so that's just a captured local:
 
 <!-- snippet: PartO_SignOutHandler -->
 ```cs
+[CommandHandler]
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public virtual async Task SignOut(
     SignOutCommand command, CancellationToken cancellationToken = default)
 {
-    // ...
-    var context = CommandContext.GetCurrent();
-    if (Invalidation.IsActive) {
-        // Fetch operation item
-        var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-        if (invSessionInfo is not null) {
-            // Use it
-            _ = GetUser(invSessionInfo.UserId, default);
-            _ = GetUserSessions(invSessionInfo.UserId, default);
-        }
-        return;
-    }
-
     await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
 
     var dbSessionInfo = await Sessions.FindOrCreate(dbContext, command.Session, cancellationToken).ConfigureAwait(false);
@@ -248,27 +264,25 @@ public virtual async Task SignOut(
     if (sessionInfo.IsSignOutForced)
         return;
 
-    // Store operation item for invalidation logic
-    context.Operation.Items.KeylessSet(sessionInfo);
     // ...
+
+    // What to invalidate depends on what the mutation found, so it's an ordinary closure
+    Invalidation.Defer(() => {
+        _ = GetUser(sessionInfo.UserId, default);
+        _ = GetUserSessions(sessionInfo.UserId, default);
+    });
 }
 ```
 <!-- endSnippet -->
 
-### How It Works
-
-1. **During execution**: Store data with `context.Operation.Items.KeylessSet(value)`
-2. **During invalidation**: Retrieve data with `context.Operation.Items.KeylessGet<T>()`
-3. **Serialization**: Items are JSON-serialized and stored with the operation in the database
-
-> **Note**: `Operation.Items` differs from `CommandContext.Items`:
-> - `CommandContext.Items` exists only during command execution on the originating host
-> - `Operation.Items` is persisted and available on all hosts during invalidation
+A block observes the *final* value of a captured local, not its value at the `Defer(...)` call
+site &ndash; ordinary closure semantics, but easy to trip over when the call reads as if it runs in
+place. Snapshot into a fresh local if you need the earlier value.
 
 ## Testing Invalidation
 
 Dependency propagation invalidates every *transitive* dependant of a call automatically, but it can't
-invent an invalidation for a *directly affected* call that a handler's invalidation block forgot to
+invent an invalidation for a *directly affected* call that a handler's deferred block forgot to
 enumerate. Nothing catches that at compile time &ndash; a query added later, a changed data dependency,
 or a broad aggregate query that isn't obviously "related" to the command can silently fall out of sync
 with reality.
@@ -285,6 +299,7 @@ public record KeyValueService_Set(string Key, string Value) : ICommand<Unit>;
 
 <!-- snippet: PartO_TestInvalidation_Service -->
 ```cs
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class KeyValueService : IComputeService
 {
     private readonly ConcurrentDictionary<string, string> _values = new();
@@ -302,19 +317,18 @@ public class KeyValueService : IComputeService
     [CommandHandler]
     public virtual Task<Unit> Set(KeyValueService_Set command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
-            // Every mutating command handler must invalidate BOTH the entity-specific
-            // query it directly affects AND every aggregate query whose result may change --
-            // dependency tracking alone won't discover an omitted root call.
+        // Requests an operation scope, so this in-memory command commits like a stored
+        // one does -- see TransientOperationScopeProvider
+        TransientOperationScope.Require();
+        _values[command.Key] = command.Value;
+
+        // Every mutating command handler must invalidate BOTH the entity-specific
+        // query it directly affects AND every aggregate query whose result may change --
+        // dependency tracking alone won't discover an omitted root call.
+        Invalidation.Defer(() => {
             _ = Get(command.Key, default);
             _ = Count(default);
-            return Task.FromResult(Unit.Default);
-        }
-
-        // Requests an operation scope so this in-memory command gets completion
-        // notifications (and therefore an invalidation replay) -- see InMemoryOperationScopeProvider
-        InMemoryOperationScope.Require();
-        _values[command.Key] = command.Value;
+        });
         return Task.FromResult(Unit.Default);
     }
 }
@@ -351,41 +365,39 @@ Before Set: Get.IsConsistent=True, Count.IsConsistent=True
 After Set:  Get.IsConsistent=False, Count.IsConsistent=False
 ```
 
-If `Set`'s invalidation block only called `Get(command.Key, default)` and forgot `Count(default)`, this
+If `Set`'s deferred block only called `Get(command.Key, default)` and forgot `Count(default)`, this
 test would catch it immediately: `Count.IsConsistent` would stay `True` after the command completes.
 Without the test, that gap would surface later as a UI aggregate (a count, a list, a total) that never
 updates, with nothing in the logs pointing at the cause.
 
 ## Nested Commands
 
-When one command calls another, the nested command is automatically logged and its invalidation
-logic runs on all hosts:
+When one command calls another, the nested handler's deferred blocks join the same operation:
 
 ```cs
 [CommandHandler]
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public virtual async Task<Order> CreateOrder(
     CreateOrderCommand command, CancellationToken cancellationToken = default)
 {
-    if (Invalidation.IsActive) {
-        _ = GetOrder(command.OrderId, default);
-        return default!;
-    }
-
     await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
 
     var order = new Order { /* ... */ };
     dbContext.Orders.Add(order);
     await dbContext.SaveChangesAsync(cancellationToken);
 
-    // This nested command is automatically logged
+    // The nested command declares its own invalidation, deferred into this operation
     await Commander.Call(new SendOrderConfirmationCommand(order.Id), cancellationToken);
 
+    Invalidation.Defer(() => _ = GetOrder(command.OrderId, default));
     return order;
 }
 ```
 
-The nested command's `Operation.Items` are captured independently, so there's no collision
-with the parent command's items.
+One operation gets one capture scope, and its mode comes from the **first handler that defers a
+block** &ndash; not from the outermost command. A handler that defers nothing never gets a say, and
+two handlers that need different modes fail rather than one of them being silently narrowed &ndash;
+see [Nested Commands](./PartO-IM.md#nested-commands).
 
 ## Command Pipeline
 
@@ -393,34 +405,37 @@ Operations Framework adds several filtering handlers to the command pipeline:
 
 | Priority | Handler | Purpose |
 |----------|---------|---------|
+| 999,999,000 | `InvalidationGuard` | Throws if a command is started inside an invalidation pass |
 | 100,000 | `OperationReprocessor` | Retries commands that fail with transient errors |
-| 11,000 | `NestedOperationLogger` | Logs nested commands and their items |
-| 10,000 | `InMemoryOperationScopeProvider` | Provides transient scope, runs completion |
-| 1,000 | `DbOperationScopeProvider` | Provides database scope for each DbContext type |
-| 100 | `InvalidatingCommandCompletionHandler` | Runs invalidation for completed operations |
+| 10,000 | `TransientOperationScopeProvider` | Provides transient scope, runs completion |
+| 9,900 | `DbOperationScopeProvider` | Provides database scope for each DbContext type |
+| 9,000 | `DeferredInvalidationScopeProvider` | Opens the deferred invalidation scope |
+| -1,000,000,000 | `CompletionTerminator` | Terminal handler for `ICompletion` |
 
 ## Invariants and Guarantees
 
-### Invalidation replay and completion listeners must not fail
+### Invalidation blocks and completion listeners must not fail
 
-`InvalidatingCommandCompletionHandler.TryInvalidate` and `OperationCompletionNotifier`'s dispatch to
+Deferred invalidation and `OperationCompletionNotifier`'s dispatch to
 `IOperationCompletionListener`s both catch every exception, log it, and otherwise treat the operation as
-fully processed &ndash; a failed invalidation replay or a failed listener is **not** retried, and (on the
-originating host) it's never revisited within the same process lifetime.
+fully processed &ndash; a failed invalidation block or a failed listener is **not** retried, and (on the
+originating host) it's never revisited within the same process lifetime. The mutation has already
+committed by then, so failing the command isn't an option either.
 
 This is a deliberate design trade-off, but it rests on a hard, mostly-unenforced contract: **invalidation
 logic and completion listeners must not fail.** Concretely, that means:
 
-- Invalidation blocks (the `if (Invalidation.IsActive) { ... }` branch) and any compute method they
-  transitively call must be synchronous or otherwise guaranteed to complete, side-effect-free, and
-  independent of failure-prone infrastructure (no I/O that can legitimately fail).
+- Deferred blocks and any compute method they transitively call must be synchronous or otherwise
+  guaranteed to complete, side-effect-free, and independent of failure-prone infrastructure (no I/O
+  that can legitimately fail).
 - Custom `IOperationCompletionListener` implementations must not throw under any input they can
   reasonably observe.
 
 If this contract is violated, the swallowed exception is your only signal, and the corresponding
 invalidation (or completion notification) is simply lost for that operation. When writing either kind of
 code, test it explicitly against failure scenarios you'd otherwise rely on retry semantics to paper over
-&ndash; retries are not coming.
+&ndash; retries are not coming. The `invalidation.deferred.failure.count` counter is what surfaces a
+block that threw.
 
 ### Completion listener delivery is at-least-once
 
@@ -435,7 +450,8 @@ be idempotent**, keyed off `Operation.Uuid` (or an equivalent per-event key) so 
 ### Command completion isn't a cluster-wide freshness boundary
 
 After a command's transaction commits, invalidation still has to pass through local completion handling,
-watcher notification (or the poll fallback), operation replay on every other host, and &ndash; for
+watcher notification (or the poll fallback), application of the operation's recorded invalidation
+calls on every other host, and &ndash; for
 RPC clients &ndash; a further `Invalidate` message. During that interval, another host or a connected
 client can legitimately observe a cached pre-command value. This is intentional eventual consistency, not
 a bug: **`Commander.Call` returning does not mean every dependent cache cluster-wide has been
@@ -461,6 +477,7 @@ This ensures:
 
 ## Further Reading
 
+- [Invalidation Modes](./PartO-IM.md) &ndash; Deferred, replicated, and distributed invalidation
 - [Events](./PartO-EV.md) &ndash; Producing and consuming events from operations
 - [Transient Operations and Reprocessing](./PartO-TR.md) &ndash; In-memory operations and retry logic
 - [Configuration Options](./PartO-CO.md) &ndash; All configuration options explained
@@ -484,12 +501,42 @@ To explore OF's internals, check out:
 
 This allows OF to determine if an operation originated locally or from a peer.
 
-### InvalidatingCommandCompletionHandler
+### OperationCompletionHandler
 
-The logic that determines whether a command requires invalidation is in
-`InvalidatingCommandCompletionHandler.IsRequired()`. It returns `true` for any command
-with a final handler whose service implements `IComputeService`, but not for compute
-service clients (when `RpcServiceMode.Client` is set).
+`OperationCompletionHandler` applies the invalidation calls an operation recorded &ndash;
+locally right after the commit, and on every other host once the operation log delivers the
+operation. A call whose service isn't registered on the applying host is dropped by design, which
+is what makes a pure RPC client a no-op here: the host that owns the service replicates its own
+invalidations.
+
+It is also the extension point for anything else you want to happen on completion. Register your
+own through `CommanderBuilder.AddOperationCompletionHandler`, which is how `AddFusion()` swaps
+CommandR's base handler for `FusionOperationCompletionHandler`:
+
+```cs
+commander.AddOperationCompletionHandler(c => new MyCompletionHandler(c));
+```
+
+One registration call wires all four things an operation's completion needs &ndash; the DI
+registration, the `IOperationCompletionListener` entry, the `OperationCompletion` command handler,
+and the alias that makes `OperationCompletionHandler` resolve to your type &ndash; and it *replaces*
+whatever was registered before, because a completion applied twice would invalidate twice.
+
+Derive from `FusionOperationCompletionHandler` (not from the CommandR base) in a Fusion app, and
+override whichever of these you need:
+
+| Member | When it runs |
+|---|---|
+| `OnOperationCompleted(operation, commandContext)` | Every completed operation, local or read from the log |
+| `OnCommand(OperationCompletion, ...)` | A routed or recovered completion arriving as a command |
+| `ApplyInvalidations(calls, handleLocally, ...)` | Applies a whole batch, locally or by routing |
+| `ApplyInvalidation(call, ...)` | One call |
+| `DropInvalidation(call, reason, ...)` | A call that couldn't be applied &ndash; the hook for logging or metrics |
+
+An `ICompletion<TCommand>` handler is the other way in, and the better one when what you want is
+tied to a specific command rather than to invalidation. See [Backend Commands](#backend-commands).
+Note that such a handler has to be a **filter**: `CompletionTerminator` is the one non-filter
+handler of every completion, and a second one is an error.
 
 ## Getting Help
 

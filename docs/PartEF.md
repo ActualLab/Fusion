@@ -46,6 +46,7 @@ services.AddDbContextServices<AppDbContext>(db => {
 ### Creating DbContext
 
 ```cs
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class TodoService(DbHub<AppDbContext> dbHub) : IComputeService
 {
     [ComputeMethod]
@@ -59,15 +60,12 @@ public class TodoService(DbHub<AppDbContext> dbHub) : IComputeService
     [CommandHandler]
     public virtual async Task Create(CreateTodoCommand command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
-            _ = GetAll(default);
-            return;
-        }
-
         // Create DbContext for operations (participates in operation scope)
         await using var dbContext = await dbHub.CreateOperationDbContext(cancellationToken);
         dbContext.Todos.Add(new DbTodo { Id = command.Id, Title = command.Title });
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        Invalidation.Defer(() => _ = GetAll(default));
     }
 }
 ```
