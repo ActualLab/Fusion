@@ -4,7 +4,7 @@ using BenchmarkDotNet.Attributes;
 
 namespace ActualLab.Fusion.Tests.BenchmarkRunner;
 
-public class RpcArgumentSerializerBenchmarks : RpcBenchmarkBase
+public class ArgumentListSerializerBenchmarks : RpcBenchmarkBase
 {
     private ArgumentList _longArguments = null!;
     private ArgumentList _stringArguments = null!;
@@ -38,7 +38,7 @@ public class RpcArgumentSerializerBenchmarks : RpcBenchmarkBase
         var totalLength = 0;
         for (var i = 0; i < BenchmarkSettings.OperationCount; i++) {
             _buffer.Reset();
-            Peer.ArgumentSerializer.Serialize(_longArguments, false, _buffer);
+            Peer.ArgumentListSerializer.Serialize(_longArguments, false, _buffer);
             totalLength += _buffer.WrittenCount;
         }
         return totalLength;
@@ -49,7 +49,7 @@ public class RpcArgumentSerializerBenchmarks : RpcBenchmarkBase
     {
         var arguments = _longArguments;
         for (var i = 0; i < BenchmarkSettings.OperationCount; i++)
-            Peer.ArgumentSerializer.Deserialize(ref arguments, false, _longData);
+            Peer.ArgumentListSerializer.Deserialize(ref arguments, false, _longData);
         return arguments.Get<long>(0);
     }
 
@@ -59,7 +59,7 @@ public class RpcArgumentSerializerBenchmarks : RpcBenchmarkBase
         var totalLength = 0;
         for (var i = 0; i < BenchmarkSettings.OperationCount; i++) {
             _buffer.Reset();
-            Peer.ArgumentSerializer.Serialize(_stringArguments, false, _buffer);
+            Peer.ArgumentListSerializer.Serialize(_stringArguments, false, _buffer);
             totalLength += _buffer.WrittenCount;
         }
         return totalLength;
@@ -70,7 +70,7 @@ public class RpcArgumentSerializerBenchmarks : RpcBenchmarkBase
     {
         var arguments = _stringArguments;
         for (var i = 0; i < BenchmarkSettings.OperationCount; i++)
-            Peer.ArgumentSerializer.Deserialize(ref arguments, false, _stringData);
+            Peer.ArgumentListSerializer.Deserialize(ref arguments, false, _stringData);
         return arguments.Get<string>(0);
     }
 
@@ -80,7 +80,7 @@ public class RpcArgumentSerializerBenchmarks : RpcBenchmarkBase
         var totalLength = 0;
         for (var i = 0; i < BenchmarkSettings.OperationCount; i++) {
             _buffer.Reset();
-            Peer.ArgumentSerializer.Serialize(_threeArguments, false, _buffer);
+            Peer.ArgumentListSerializer.Serialize(_threeArguments, false, _buffer);
             totalLength += _buffer.WrittenCount;
         }
         return totalLength;
@@ -91,14 +91,14 @@ public class RpcArgumentSerializerBenchmarks : RpcBenchmarkBase
     {
         var arguments = _threeArguments;
         for (var i = 0; i < BenchmarkSettings.OperationCount; i++)
-            Peer.ArgumentSerializer.Deserialize(ref arguments, false, _threeData);
+            Peer.ArgumentListSerializer.Deserialize(ref arguments, false, _threeData);
         return arguments.Get<long>(1);
     }
 
     private ReadOnlyMemory<byte> SerializeOnce(ArgumentList arguments)
     {
         _buffer.Reset();
-        Peer.ArgumentSerializer.Serialize(arguments, false, _buffer);
+        Peer.ArgumentListSerializer.Serialize(arguments, false, _buffer);
         return _buffer.WrittenMemory.ToArray();
     }
 }

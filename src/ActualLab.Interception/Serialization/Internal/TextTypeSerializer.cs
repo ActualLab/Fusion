@@ -1,8 +1,8 @@
+using ActualLab.Interception.Internal;
 using ActualLab.IO.Internal;
-using ActualLab.Rpc.Internal;
 using Cysharp.Text;
 
-namespace ActualLab.Rpc.Serialization.Internal;
+namespace ActualLab.Interception.Serialization.Internal;
 
 /// <summary>
 /// Serializes and deserializes .NET type references as UTF-8 comment-delimited strings for polymorphic RPC arguments.

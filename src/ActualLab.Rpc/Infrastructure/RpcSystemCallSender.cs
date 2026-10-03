@@ -1,4 +1,5 @@
 using ActualLab.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Resilience;
 using ActualLab.Rpc.Serialization;
 
@@ -218,7 +219,7 @@ public sealed class RpcSystemCallSender : RpcServiceBase
         // object, not object?[]: TItem is unconstrained, so an RpcStream<int> batch is an int[].
         // It also keeps the writer emitting an explicit item type name for every batch, which
         // receivers predating IsPolymorphic's array support require.
-        var arguments = RpcArgumentSerializer.IsPolymorphic(typeof(TItem))
+        var arguments = ArgumentListSerializer.IsPolymorphic(typeof(TItem))
             ? ArgumentList.New(index, (object)items)
             : ArgumentList.New(index, items);
         var call = context.PrepareCallForSendNoWait(BatchMethodDef, arguments)!;

@@ -58,7 +58,7 @@ public class RpcClientFormatGateTest(ITestOutputHelper @out) : RpcTestBase(@out)
         await using var _ = await WebHost.Serve();
 
         var bogusFormat = new RpcSerializationFormat("bogus-format",
-            () => RpcSerializationFormat.SystemJsonV5.ArgumentSerializer,
+            () => RpcSerializationFormat.SystemJsonV5.ArgumentListSerializer,
             RpcSerializationFormat.SystemJsonV5.MessageSerializerFactory);
         var clientServices = new ServiceCollection();
         clientServices.AddSingleton<TestServiceProviderTag>();

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
@@ -27,7 +28,8 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
         public LogLevel LogLevel { get; init; } = LogLevel.Debug;
     }
 
-    protected RpcArgumentSerializer ArgumentSerializer => field ??= Hub.SerializationFormats.DefaultFormat.ArgumentSerializer;
+    protected ArgumentListSerializer ArgumentListSerializer
+        => field ??= Hub.SerializationFormats.DefaultFormat.ArgumentListSerializer;
     protected RpcMethodResolver AnyMethodResolver => field ??= Hub.ServiceRegistry.AnyMethodResolver;
     protected ILogger? DefaultLog;
 
@@ -112,7 +114,7 @@ public abstract partial class RemoteComputedCache : RpcServiceBase, IRemoteCompu
 
             DefaultLog?.Log(Settings.LogLevel, "[?] {Key} -> hit", key);
             var resultList = methodDef.ResultListType.Factory.Invoke();
-            ArgumentSerializer.Deserialize(ref resultList, methodDef.HasPolymorphicResult, entry.Data);
+            ArgumentListSerializer.Deserialize(ref resultList, methodDef.HasPolymorphicResult, entry.Data);
             return new RpcCacheEntry(key, entry, resultList.Get0Untyped());
         }
         catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {

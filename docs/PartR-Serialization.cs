@@ -1,12 +1,10 @@
-using System.Buffers;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using ActualLab.Interception;
-using ActualLab.IO;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
-using ActualLab.Serialization;
 using MemoryPack;
 using MessagePack;
 using static System.Console;
@@ -17,7 +15,7 @@ using static System.Console;
 namespace Docs.PartRSerialization;
 
 // Fake types for snippet compilation
-public class MyArgumentSerializer() : RpcArgumentSerializer
+public class MyArgumentListSerializer() : ArgumentListSerializer
 {
     public override void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer)
         => throw new NotImplementedException();
@@ -42,11 +40,11 @@ public class MyMessageSerializer(RpcPeer peer) : RpcMessageSerializer(peer)
 #region PartRSerialization_FormatStructure
 public sealed class RpcSerializationFormatExample(
     string key,
-    Func<RpcArgumentSerializer> argumentSerializerFactory,
+    Func<ArgumentListSerializer> argumentSerializerFactory,
     Func<RpcPeer, RpcMessageSerializer> messageSerializerFactory)
 {
     public string Key { get; } = key;
-    public RpcArgumentSerializer ArgumentSerializer { get; } = argumentSerializerFactory();
+    public ArgumentListSerializer ArgumentListSerializer { get; } = argumentSerializerFactory();
     public Func<RpcPeer, RpcMessageSerializer> MessageSerializerFactory { get; } = messageSerializerFactory;
 }
 #endregion
@@ -81,7 +79,7 @@ public static class ConfiguringFormats
         RpcSerializationFormat.All = RpcSerializationFormat.All.Add(
             new RpcSerializationFormat(
                 "custom",
-                () => new MyArgumentSerializer(),
+                () => new MyArgumentListSerializer(),
                 peer => new MyMessageSerializer(peer)));
         #endregion
     }
@@ -148,7 +146,7 @@ public class PartRSerialization : DocPart
 
         // Core types
         _ = typeof(RpcSerializationFormat);
-        _ = typeof(RpcArgumentSerializer);
+        _ = typeof(ArgumentListSerializer);
         _ = typeof(RpcMessageSerializer);
         _ = typeof(RpcPeer);
 

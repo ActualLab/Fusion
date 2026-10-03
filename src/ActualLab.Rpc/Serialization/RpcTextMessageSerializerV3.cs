@@ -87,7 +87,7 @@ public sealed class RpcTextMessageSerializerV3(RpcPeer peer) : RpcTextMessageSer
             var oldContext = RpcOutboundContext.Current;
             RpcOutboundContext.Current = message.Context;
             try {
-                message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
+                message.ArgumentListSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
             }
             finally {
                 RpcOutboundContext.Current = oldContext;

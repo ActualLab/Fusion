@@ -85,7 +85,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
 
         // Header, RelatedId, MethodRef, fixed-width ArgumentData length prefix
         var writer = new SpanWriter(buffer.GetSpan(32 + utf8Name.Length + SpanExt.FixedLVarInt32Size));
-        writer.Remaining[0] = (byte)(headers.Length | (message.MethodDef.CallType.Id << 5));
+        writer.Remaining[0] = (byte)(headers.Length | (message.CallTypeId << 5));
         writer.WriteVarUInt64((ulong)message.RelatedId, 1);
         writer.WriteLVarSpan(utf8Name.Span);
 
@@ -98,7 +98,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
         var oldContext = RpcOutboundContext.Current;
         RpcOutboundContext.Current = message.Context;
         try {
-            message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
+            message.ArgumentListSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
         }
         finally {
             RpcOutboundContext.Current = oldContext;
@@ -128,7 +128,7 @@ public class RpcByteMessageSerializerV4(RpcPeer peer) : RpcByteMessageSerializer
         if (headers.Length > 31)
             throw Errors.Format("Header count must not exceed 31.");
 
-        writer.Remaining[0] = (byte)(headers.Length | (message.MethodDef.CallType.Id << 5));
+        writer.Remaining[0] = (byte)(headers.Length | (message.CallTypeId << 5));
 
         // RelatedId
         writer.WriteVarUInt64((ulong)message.RelatedId, 1);

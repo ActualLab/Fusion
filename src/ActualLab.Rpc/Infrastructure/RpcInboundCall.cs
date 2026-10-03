@@ -35,8 +35,14 @@ public abstract class RpcInboundCall : RpcCall
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
     public static Func<RpcInboundContext, RpcInboundCall> GetFactory(RpcMethodDef methodDef)
+        => GetFactory(methodDef, methodDef.CallType.Id);
+
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
+    public static Func<RpcInboundContext, RpcInboundCall> GetFactory(RpcMethodDef methodDef, byte callTypeId)
         => FactoryCache.GetOrAdd(
-            (methodDef.CallType.Id, methodDef.UnwrappedReturnType),
+            (callTypeId, methodDef.UnwrappedReturnType),
             static key => {
                 var type = RpcCallTypes.Resolve(key.CallTypeId)
                     .InboundCallType
@@ -234,7 +240,7 @@ public abstract class RpcInboundCall : RpcCall
     {
         var peer = Context.Peer;
         var message = Context.Message;
-        var argumentSerializer = peer.ArgumentSerializer;
+        var argumentSerializer = peer.ArgumentListSerializer;
         var arguments = message.Arguments;
         var methodDef = MethodDef;
         if (arguments is null) {

@@ -53,10 +53,11 @@ public sealed class RpcInboundContext
             return;
         }
 
-        // The method's required call type is always built; downgrade is signaled via Message.CallTypeId.
-        // Currently the only supported downgrade is "Compute method invoked as Regular call".
-        if (MethodDef.CallType.Id != message.CallTypeId
-            && message.CallTypeId != RpcCallTypeIds.Regular) {
+        // The method's required call type is always built; a downgrade is signaled via
+        // Message.CallTypeId, and the method's own call type is what decides whether it's one
+        // this method understands.
+        var isDowngrade = MethodDef.CallType.Id != message.CallTypeId;
+        if (isDowngrade && !MethodDef.CallType.DowngradeValidator.Invoke(message.CallTypeId)) {
             MethodDef = Peer.Hub.SystemCallSender.NotFoundMethodDef;
             var (service, method) = message.MethodRef.GetServiceAndMethodName();
             Call = new RpcInboundInvalidCallTypeCall<Unit>(this, MethodDef.CallType.Id, message.CallTypeId) {
@@ -66,6 +67,11 @@ public sealed class RpcInboundContext
             return;
         }
 
-        Call = MethodDef.InboundCallFactory.Invoke(this);
+        // A downgrade normally keeps the method's own inbound call type - a compute method invoked
+        // as Regular is still an RpcInboundComputeCall, which handles that via IsRegularCall.
+        // Invalidate is the exception: it does something else entirely, so it needs its own.
+        Call = message.CallTypeId == RpcCallTypeIds.Invalidate
+            ? RpcInboundCall.GetFactory(MethodDef, RpcCallTypeIds.Invalidate).Invoke(this)
+            : MethodDef.InboundCallFactory.Invoke(this);
     }
 }

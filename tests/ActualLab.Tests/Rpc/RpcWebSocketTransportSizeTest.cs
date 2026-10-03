@@ -261,7 +261,7 @@ public class RpcWebSocketTransportSizeTest(ITestOutputHelper @out) : TestBase(@o
         if (maxArgumentDataSize is { } maxSize) {
             actualFormat = new RpcSerializationFormat(
                 "json-size-test",
-                () => RpcSerializationFormat.SystemJsonV5.ArgumentSerializer,
+                () => RpcSerializationFormat.SystemJsonV5.ArgumentListSerializer,
                 peer => new RpcTextMessageSerializerV3(peer) { MaxArgumentDataSize = maxSize });
             services.AddSingleton(
                 _ => new RpcSerializationFormatResolver(actualFormat.Key, new[] { actualFormat }));

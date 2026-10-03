@@ -67,6 +67,14 @@ public partial class MethodDef
     public Func<Task, object?> UniversalAsyncResultConverter
         => field ??= GetCachedFunc<Func<Task, object?>>(typeof(UniversalAsyncResultConverterFactory<>));
 
+    /// <summary>
+    /// A function awaiting its input <c>Task</c> and completing with the default value of
+    /// <see cref="UnwrappedReturnType"/>, wrapped into a proper async <see cref="ReturnType"/>.
+    /// Used where a call produces no result of its own - an invalidation, say.
+    /// </summary>
+    public Func<Task, object?> AwaitAndReturnDefaultResult
+        => field ??= GetCachedFunc<Func<Task, object?>>(typeof(AwaitAndReturnDefaultResultFactory<>));
+
     public Func<Task, ValueTask<object?>> TaskToObjectValueTaskConverter
         => field ??= GenericInstanceCache
             .Get<Func<Task, ValueTask<object?>>>(typeof(TaskExt.ToObjectValueTaskFactory<>), UnwrappedReturnType);

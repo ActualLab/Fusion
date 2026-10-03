@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using ActualLab.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Serialization;
 using MessagePack;
@@ -31,18 +32,18 @@ public class RpcStreamBatchTypeTest(ITestOutputHelper @out) : TestBase(@out)
     {
         // The array carries the polymorphism of its elements - this is what lets the batch slot
         // stay T[] instead of being widened to object to reach the polymorphic path.
-        RpcArgumentSerializer.IsPolymorphic(typeof(ITuple)).Should().BeTrue();
-        RpcArgumentSerializer.IsPolymorphic(typeof(ITuple[])).Should().BeTrue();
-        RpcArgumentSerializer.IsPolymorphic(typeof(ITuple[][])).Should().BeTrue();
+        ArgumentListSerializer.IsPolymorphic(typeof(ITuple)).Should().BeTrue();
+        ArgumentListSerializer.IsPolymorphic(typeof(ITuple[])).Should().BeTrue();
+        ArgumentListSerializer.IsPolymorphic(typeof(ITuple[][])).Should().BeTrue();
 
-        RpcArgumentSerializer.IsPolymorphic(typeof(int)).Should().BeFalse();
-        RpcArgumentSerializer.IsPolymorphic(typeof(int[])).Should().BeFalse();
-        RpcArgumentSerializer.IsPolymorphic(typeof(ForeignBatchItem[])).Should().BeFalse();
+        ArgumentListSerializer.IsPolymorphic(typeof(int)).Should().BeFalse();
+        ArgumentListSerializer.IsPolymorphic(typeof(int[])).Should().BeFalse();
+        ArgumentListSerializer.IsPolymorphic(typeof(ForeignBatchItem[])).Should().BeFalse();
 
         // [RpcSerializable] types handle their own polymorphism, so neither they nor their
         // arrays get ActualLab's type marker.
-        RpcArgumentSerializer.IsPolymorphic(typeof(NonPolymorphicBase)).Should().BeFalse();
-        RpcArgumentSerializer.IsPolymorphic(typeof(NonPolymorphicBase[])).Should().BeFalse();
+        ArgumentListSerializer.IsPolymorphic(typeof(NonPolymorphicBase)).Should().BeFalse();
+        ArgumentListSerializer.IsPolymorphic(typeof(NonPolymorphicBase[])).Should().BeFalse();
     }
 
     [Fact]
@@ -120,22 +121,22 @@ public class RpcStreamBatchTypeTest(ITestOutputHelper @out) : TestBase(@out)
         return (ArgumentList)method.Invoke(new RpcStream<T>(), [])!;
     }
 
-    private static RpcArgumentSerializer GetArgumentSerializer(string formatKey)
+    private static ArgumentListSerializer GetArgumentSerializer(string formatKey)
         => RpcSerializationFormat.All
             .Single(x => string.Equals(x.Key, formatKey, StringComparison.Ordinal))
-            .ArgumentSerializer;
+            .ArgumentListSerializer;
 
-    private static ReadOnlyMemory<byte> Serialize(RpcArgumentSerializer serializer, ArgumentList arguments)
+    private static ReadOnlyMemory<byte> Serialize(ArgumentListSerializer listSerializer, ArgumentList arguments)
     {
         using var buffer = new ArrayPoolBuffer<byte>(256);
-        serializer.Serialize(arguments, needsPolymorphism: true, buffer);
+        listSerializer.Serialize(arguments, needsPolymorphism: true, buffer);
         return buffer.WrittenMemory.ToArray();
     }
 
     private static object? Deserialize(
-        RpcArgumentSerializer serializer, ArgumentList arguments, ReadOnlyMemory<byte> data)
+        ArgumentListSerializer listSerializer, ArgumentList arguments, ReadOnlyMemory<byte> data)
     {
-        serializer.Deserialize(ref arguments, needsPolymorphism: true, data);
+        listSerializer.Deserialize(ref arguments, needsPolymorphism: true, data);
         return arguments.GetUntyped(1);
     }
 }

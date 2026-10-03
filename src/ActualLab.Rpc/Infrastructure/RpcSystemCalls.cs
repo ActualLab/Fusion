@@ -1,4 +1,5 @@
 using ActualLab.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc.Internal;
 using ActualLab.Rpc.Serialization;
 using Errors = ActualLab.Rpc.Internal.Errors;
@@ -226,7 +227,7 @@ public sealed class RpcSystemCalls(IServiceProvider services)
 
             context.RelatedObject = stream;
             arguments = stream.CreateStreamItemArguments();
-            needsArgumentPolymorphism = RpcArgumentSerializer.IsPolymorphic(stream.ItemType);
+            needsArgumentPolymorphism = ArgumentListSerializer.IsPolymorphic(stream.ItemType);
             return true;
         }
 
@@ -236,10 +237,10 @@ public sealed class RpcSystemCalls(IServiceProvider services)
             return false;
 
         context.RelatedObject = stream;
-        needsArgumentPolymorphism = RpcArgumentSerializer.IsPolymorphic(stream.ItemType);
+        needsArgumentPolymorphism = ArgumentListSerializer.IsPolymorphic(stream.ItemType);
         // T[] is the exact expected type, and it's also the bound the wire-supplied item type is
         // checked against - so the only types accepted here are the U[] (U : T) the sender can
-        // actually produce. RpcArgumentSerializer.IsPolymorphic sees through the array, so this
+        // actually produce. ArgumentListSerializer.IsPolymorphic sees through the array, so this
         // no longer has to be widened to object to reach the polymorphic path.
         arguments = stream.CreateStreamBatchArguments();
         return true;

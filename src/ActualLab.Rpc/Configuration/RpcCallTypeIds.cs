@@ -4,4 +4,5 @@ public static class RpcCallTypeIds
 {
     public const byte Regular = 0;
     public const byte Compute = 1;
+    public const byte Invalidate = 2;
 }

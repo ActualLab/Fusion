@@ -39,14 +39,14 @@ public class RpcCompressionModeTest(ITestOutputHelper @out) : TestBase(@out)
     public void HalfConfiguredFormatIsUncompressedTest()
     {
         var noFormat = new RpcSerializationFormat("test-no-format",
-            () => RpcSerializationFormat.MessagePackV6C.ArgumentSerializer,
+            () => RpcSerializationFormat.MessagePackV6C.ArgumentListSerializer,
             RpcSerializationFormat.MessagePackV6C.MessageSerializerFactory,
             compressionMode: RpcCompressionMode.Full);
         noFormat.CompressionFormat.Should().BeNull();
         noFormat.CompressionMode.Should().Be(RpcCompressionMode.None);
 
         var noMode = new RpcSerializationFormat("test-no-mode",
-            () => RpcSerializationFormat.MessagePackV6C.ArgumentSerializer,
+            () => RpcSerializationFormat.MessagePackV6C.ArgumentListSerializer,
             RpcSerializationFormat.MessagePackV6C.MessageSerializerFactory,
             RpcCompressionFormat.LZ4);
         noMode.CompressionFormat.Should().BeNull();

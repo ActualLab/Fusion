@@ -1,4 +1,5 @@
 using System.Globalization;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Serialization;
@@ -58,8 +59,14 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
     [UnconditionalSuppressMessage("Trimming", "IL2077", Justification = "We assume RPC-related code is fully preserved")]
     [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
     public static Func<RpcOutboundContext, RpcOutboundCall> GetFactory(RpcMethodDef methodDef)
+        => GetFactory(methodDef, methodDef.CallType.Id);
+
+    [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "We assume RPC-related code is fully preserved")]
+    [UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "We assume RPC-related code is fully preserved")]
+    public static Func<RpcOutboundContext, RpcOutboundCall> GetFactory(RpcMethodDef methodDef, byte callTypeId)
         => FactoryCache.GetOrAdd(
-            (methodDef.CallType.Id, methodDef.UnwrappedReturnType),
+            (callTypeId, methodDef.UnwrappedReturnType),
             static key => {
                 var type = RpcCallTypes.Resolve(key.CallTypeId)
                     .OutboundCallType
@@ -234,9 +241,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         RpcOutboundContext.Current = Context;
         try {
             var arguments = Context.Arguments!;
-            var buffer = RpcArgumentSerializer.GetWriteBuffer();
-            Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, buffer);
-            var argumentData = RpcArgumentSerializer.GetWriteBufferMemory(buffer);
+            var buffer = ArgumentListSerializer.GetWriteBuffer();
+            Peer.ArgumentListSerializer.Serialize(arguments, needsPolymorphism, buffer);
+            var argumentData = ArgumentListSerializer.GetWriteBufferMemory(buffer);
             var headers = Context.Headers;
             if (hash is not null)
                 headers = headers.With(new(WellKnownRpcHeaders.Hash, hash));
@@ -257,9 +264,9 @@ public abstract class RpcOutboundCall(RpcOutboundContext context)
         RpcOutboundContext.Current = Context;
         try {
             var arguments = Context.Arguments!;
-            var buffer = RpcArgumentSerializer.GetWriteBuffer();
-            Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, buffer);
-            var argumentData = RpcArgumentSerializer.GetWriteBufferMemory(buffer);
+            var buffer = ArgumentListSerializer.GetWriteBuffer();
+            Peer.ArgumentListSerializer.Serialize(arguments, needsPolymorphism, buffer);
+            var argumentData = ArgumentListSerializer.GetWriteBufferMemory(buffer);
             var hash = Peer.Hasher.Invoke(argumentData);
             var headers = Context.Headers.With(new(WellKnownRpcHeaders.Hash, hash));
             var message = new RpcOutboundMessage(

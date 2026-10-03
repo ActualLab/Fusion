@@ -1,13 +1,12 @@
-using ActualLab.Interception;
+using ActualLab.Interception.Serialization.Internal;
 using ActualLab.IO.Internal;
-using ActualLab.Rpc.Serialization.Internal;
 
-namespace ActualLab.Rpc.Serialization;
+namespace ActualLab.Interception.Serialization;
 
 /// <summary>
-/// V4 text-based <see cref="RpcArgumentSerializer"/> that uses a unit-separator delimiter between arguments.
+/// V4 text-based <see cref="ArgumentListSerializer"/> that uses a unit-separator delimiter between arguments.
 /// </summary>
-public sealed class RpcTextArgumentSerializerV4(ITextSerializer baseSerializer) : RpcArgumentSerializer
+public sealed class TextArgumentListSerializer(ITextSerializer baseSerializer) : ArgumentListSerializer
 {
     // We use US (Unit separator, 0x1F) character here.
     // RS (Record separator, 0x1E) is used by WebSocketChannel to compose N-message frames.

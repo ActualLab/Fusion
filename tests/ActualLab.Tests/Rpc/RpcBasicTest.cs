@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using ActualLab.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -580,14 +581,14 @@ public class RpcBasicTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     {
         // NonPolymorphicBase is abstract, so it would normally be polymorphic.
         // But [RpcSerializable] overrides that.
-        RpcArgumentSerializer.IsPolymorphic(typeof(NonPolymorphicBase)).Should().BeFalse();
-        RpcArgumentSerializer.IsPolymorphic(typeof(NonPolymorphicDerived)).Should().BeFalse();
+        ArgumentListSerializer.IsPolymorphic(typeof(NonPolymorphicBase)).Should().BeFalse();
+        ArgumentListSerializer.IsPolymorphic(typeof(NonPolymorphicDerived)).Should().BeFalse();
 
         // Types without [RpcSerializable] still follow the default rules
-        RpcArgumentSerializer.IsPolymorphic(typeof(ITuple)).Should().BeTrue();
-        RpcArgumentSerializer.IsPolymorphic(typeof(object)).Should().BeTrue();
-        RpcArgumentSerializer.IsPolymorphic(typeof(string)).Should().BeFalse();
-        RpcArgumentSerializer.IsPolymorphic(typeof(int)).Should().BeFalse();
+        ArgumentListSerializer.IsPolymorphic(typeof(ITuple)).Should().BeTrue();
+        ArgumentListSerializer.IsPolymorphic(typeof(object)).Should().BeTrue();
+        ArgumentListSerializer.IsPolymorphic(typeof(string)).Should().BeFalse();
+        ArgumentListSerializer.IsPolymorphic(typeof(int)).Should().BeFalse();
     }
 
     [Theory]

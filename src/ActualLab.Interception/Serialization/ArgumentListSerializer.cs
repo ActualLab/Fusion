@@ -1,11 +1,10 @@
-using ActualLab.Interception;
-
-namespace ActualLab.Rpc.Serialization;
+using ActualLab.Rpc;
+namespace ActualLab.Interception.Serialization;
 
 /// <summary>
 /// Base class for serializers that encode and decode RPC method argument lists.
 /// </summary>
-public abstract class RpcArgumentSerializer
+public abstract class ArgumentListSerializer
 {
     [ThreadStatic] private static ArrayPoolBuffer<byte>? _writeBuffer;
 
@@ -16,6 +15,31 @@ public abstract class RpcArgumentSerializer
     // Serializes arguments directly to the provided buffer
     public abstract void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer);
     public abstract void Deserialize(ref ArgumentList arguments, bool needsPolymorphism, ReadOnlyMemory<byte> data);
+
+    public byte[] Serialize(ArgumentList arguments, bool needsPolymorphism)
+    {
+        var buffer = GetWriteBuffer();
+        try {
+            Serialize(arguments, needsPolymorphism, buffer);
+            return GetWriteBufferMemory(buffer).ToArray();
+        }
+        finally {
+            buffer.Reset();
+        }
+    }
+
+    public ArgumentList Deserialize(ReadOnlyMemory<byte> data, ArgumentListType argumentListType, bool needsPolymorphism)
+    {
+        var buffer = GetWriteBuffer();
+        try {
+            var arguments = argumentListType.Factory.Invoke();
+            Deserialize(ref arguments, needsPolymorphism, data);
+            return arguments;
+        }
+        finally {
+            buffer.Reset();
+        }
+    }
 
     // Gets a thread-local write buffer for cases where caller needs to serialize arguments independently
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

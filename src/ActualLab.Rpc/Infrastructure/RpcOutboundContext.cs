@@ -21,6 +21,7 @@ public sealed class RpcOutboundContext(RpcHeader[]? headers = null)
     }
 
     public RpcHeader[]? Headers = headers;
+    public byte? CallTypeId; // Overrides MethodDef.CallType.Id for compute methods as Regular or Invalidate
     public RpcMethodDef? MethodDef;
     public ArgumentList? Arguments;
     public CancellationToken CancellationToken; // From Arguments

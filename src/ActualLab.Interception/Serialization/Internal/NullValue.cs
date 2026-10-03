@@ -1,4 +1,4 @@
-namespace ActualLab.Rpc.Serialization;
+namespace ActualLab.Interception.Serialization.Internal;
 
 /// <summary>
 /// This type is used to serialize null values for polymorphic arguments.

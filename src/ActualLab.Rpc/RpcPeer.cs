@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ActualLab.Generators;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc.Compression;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
@@ -71,7 +72,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
     public RpcSerializationFormat SerializationFormat { get; init; }
     public RpcCompressionFormat? OutboundCompression { get; }
     public RpcCompressionFormat? InboundCompression { get; }
-    public RpcArgumentSerializer ArgumentSerializer { get; init; }
+    public ArgumentListSerializer ArgumentListSerializer { get; init; }
     public RpcMessageSerializer MessageSerializer { get; init; }
     public Func<ReadOnlyMemory<byte>, string> Hasher { get; init; }
 
@@ -109,9 +110,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         Extensions = new MutablePropertyBag();
         InboundCallOptions = Hub.InboundCallOptions;
         OutboundCallOptions = Hub.OutboundCallOptions;
-        ConnectionKind = route.ConnectionKind;
-        if (ConnectionKind is RpcPeerConnectionKind.None)
-            ConnectionKind = Options.ConnectionKindDetector.Invoke(route);
+        ConnectionKind = route.GetConnectionKind(Options);
         if (ConnectionKind is RpcPeerConnectionKind.None)
             ConnectionKind = RpcPeerConnectionKind.Remote; // RpcPeer.ConnectionKind should never be None
         Versions = versions ?? route.Ref.Versions;
@@ -128,7 +127,7 @@ public abstract class RpcPeer : WorkerBase, IHasId<Guid>
         InboundCompression = compressionMode.MustCompress(!route.Ref.IsServer)
             ? SerializationFormat.CompressionFormat
             : null;
-        ArgumentSerializer = SerializationFormat.ArgumentSerializer;
+        ArgumentListSerializer = SerializationFormat.ArgumentListSerializer;
         MessageSerializer = SerializationFormat.MessageSerializerFactory.Invoke(this);
         Hasher = OutboundCallOptions.Hasher;
 

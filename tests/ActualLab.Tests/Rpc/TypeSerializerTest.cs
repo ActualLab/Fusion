@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using ActualLab.Interception.Serialization.Internal;
 using ActualLab.Rpc.Serialization.Internal;
 
 namespace ActualLab.Tests.Rpc;

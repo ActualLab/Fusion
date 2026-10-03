@@ -373,4 +373,27 @@ public partial class MethodDef
                 }
             };
     }
+
+    public sealed class AwaitAndReturnDefaultResultFactory<T> : GenericInstanceFactory, IGenericInstanceFactory<T>
+    {
+        public override object Generate()
+            => (MethodDef methodDef) => {
+                if (!methodDef.IsAsyncMethod)
+                    throw new ArgumentOutOfRangeException(nameof(methodDef), "Async method is required here.");
+
+                if (methodDef.ReturnsTask)
+                    return (Func<Task, object?>)(methodDef.IsAsyncVoidMethod
+                        ? static task => task // There is no result to produce
+                        : static task => AwaitAsync(task));
+
+                return methodDef.IsAsyncVoidMethod
+                    ? static task => task.ToValueTask()
+                    : static task => AwaitAsync(task).ToValueTask();
+
+                static async Task<T> AwaitAsync(Task task) {
+                    await task.ConfigureAwait(false);
+                    return default!;
+                }
+            };
+    }
 }
