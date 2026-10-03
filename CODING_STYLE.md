@@ -219,6 +219,10 @@ Search for `<Using>` to get the full list. Avoid adding explicit usings for glob
 - **Fields and properties storing a `Lazy`/`LazySlim`**: name them `XxxLazy`
   (`_userIdResolverLazy`, `InstanceLazy`) — as with tasks, the name must say it's a
   lazy rather than the value it produces.
+- **Synchronous companion of a `[ComputeMethod]`**: suffix it `NonComputed`, not
+  `Now`/`Sync`/etc. Next to `[ComputeMethod] virtual Task<T> Foo(...)` the
+  non-reactive accessor — typically reading `MutableState.Value` or other state that
+  is never `Use`d — is `FooNonComputed`; the compute method keeps the bare name.
 
 ### Braces and Formatting
 
@@ -253,10 +257,13 @@ var action = () => {
 
 ### Blank Lines
 
-More restrictive than default:
-- **0 blank lines** inside namespaces (default allows 1)
-- **0 blank lines** inside types (default allows 1)
-- **0 blank lines** around single-line properties, fields, and methods
+These restate the ReSharper settings in [`.editorconfig`](.editorconfig), where every
+number is a minimum:
+- No blank line right after the opening `{` or before the closing `}` of a type or namespace
+- A multi-line member is separated from its neighbours by **1 blank line**. A member is
+  multi-line when it spans several lines — e.g. a method whose `=>` body is on the next line
+- Between adjacent single-line members (fields, properties, one-line methods) a blank line
+  is optional; one blank line may separate groups of them
 - Keep maximum **1 blank line** in code (default allows more)
 - See [Control-Flow Statements](#control-flow-statements) for the blank lines
   around `return`, `break`, `continue`, etc.
@@ -366,6 +373,11 @@ protected override async Task OnRun(CancellationToken cancellationToken)
 - **Braces for single statements** are not required,
   typically they're used only if the statement is prefixed with a comment,
   or when it significantly improves the readability.
+- **`=> field ??= ...;` in a `record`**: the generated `Equals` compares every
+  field and the copy constructor copies them, so an instance that's been read
+  differs from one that hasn't, and `with` carries a stale value. Either drop
+  the cache (`=> Compute();`), or add a copy constructor resetting it to `null!`
+  plus properly overridden equality — consider a reference-based one.
 
 ### Shared Fields and Memory Ordering
 
@@ -760,6 +772,38 @@ if (Api._isDotNetRpcConnected === value)
 
 Api._isDotNetRpcConnected = value;
 ```
+
+### Single-caller helpers are nested and named `impl`
+
+A helper with exactly one caller is nested inside that caller's body rather than
+declared at module scope, and it is named simply `impl` — the `xxx` prefix is
+redundant once it is scoped to its only caller.
+
+A separate top-level `fooImpl` makes the reader follow an indirection to find the
+body. Nesting keeps the implementation directly under the function it serves, with
+closure state and parameters visible at one level.
+
+```ts
+export function foo(opts: FooOptions): OperatorAsyncFunction<TIn, TOut> {
+    const { thing } = opts;
+    return source => {
+        return from(impl());
+
+        async function* impl(): AsyncIterable<TOut> {
+            for await (const item of source) // source, thing: closure-captured
+                yield transform(item, thing);
+        }
+    };
+}
+```
+
+`impl` takes no parameters when it wraps an async iterable — closure capture of
+the source, the options and any factory-built collaborators is just as clear, and
+threading them through a parameter list buys nothing. Parameter lists are for
+top-level functions with more than one caller.
+
+A helper with multiple callers, or one that exists as a test seam, stays a
+top-level function with a descriptive name.
 
 ### Measuring time: `performance.now()` vs `Date.now()`
 
