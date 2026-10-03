@@ -68,14 +68,10 @@ Use the `Operation.AddEvent()` method to add events:
 <!-- snippet: PartOEV_AddingEvents -->
 ```cs
 [CommandHandler]
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public virtual async Task<Order> CreateOrder(
     CreateOrderCommand command, CancellationToken cancellationToken = default)
 {
-    if (Invalidation.IsActive) {
-        _ = GetOrder(command.OrderId, default);
-        return default!;
-    }
-
     var context = CommandContext.GetCurrent();
     await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
 
@@ -86,10 +82,27 @@ public virtual async Task<Order> CreateOrder(
     // Add an event to be processed after commit
     context.Operation.AddEvent(new OrderCreatedEvent(order.Id, order.CustomerId));
 
+    Invalidation.Defer(() => _ = GetOrder(command.OrderId, default));
     return order;
 }
 ```
 <!-- endSnippet -->
+
+### Removing events
+
+An event can also be taken off an operation before it commits, which is useful when a handler
+decides partway through that it shouldn't fire after all:
+
+```cs
+var @event = operation.AddEvent(new OrderCreatedEvent(order.Id));
+// ... and later, on some condition:
+operation.RemoveEvent(@event);          // or RemoveEvent(@event.Uuid)
+operation.RemoveEvents(x => x.Value is OrderCreatedEvent);
+operation.RemoveEvents();               // all of them
+```
+
+`RemoveEvent` returns whether it removed anything. Like `AddEvent`, all of these need an active,
+non-transient scope.
 
 ### OperationEvent Properties
 

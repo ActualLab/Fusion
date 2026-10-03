@@ -46,56 +46,63 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
 <!-- snippet: PartOCS_CommandHandlerPattern -->
 ```cs
 [CommandHandler]
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public virtual async Task<Order> CreateOrder(
     CreateOrderCommand command, CancellationToken cancellationToken = default)
 {
-    // 1. INVALIDATION (runs on ALL hosts)
-    if (Invalidation.IsActive) {
-        _ = GetOrder(command.OrderId, default);
-        _ = GetOrdersByUser(command.UserId, default);
-        return default!;
-    }
-
-    // 2. MAIN LOGIC (runs on originating host only)
+    // 1. MUTATE
     await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
 
     var order = new Order { /* ... */ };
     dbContext.Orders.Add(order);
     await dbContext.SaveChangesAsync(cancellationToken);
 
+    // 2. DECLARE THE INVALIDATION - the block runs after the commit
+    Invalidation.Defer(() => {
+        _ = GetOrder(command.OrderId, default);
+        _ = GetOrdersByUser(command.UserId, default);
+    });
     return order;
 }
 ```
 <!-- endSnippet -->
 
-## Passing Data to Invalidation
+## Invalidation Modes
 
-<!-- snippet: PartOCS_PassingDataToInvalidation -->
+See [Invalidation Modes](./PartO-IM.md) for the full picture.
+
+| Mode | Declared with | Reach |
+|------|---------------|-------|
+| `Local` | `Invalidation.Defer(...)` | the origin host |
+| `Replicated` | `Invalidation.Defer(...)` | every host |
+| `Distributed` | `Invalidation.Defer(...)` | the owner of each value |
+
+<!-- snippet: PartOCS_DeferredInvalidation -->
 ```cs
+// What to invalidate depends on what the mutation found, and a deferred block
+// is an ordinary closure - so the condition is just evaluated here
 [CommandHandler]
-public virtual async Task DeleteUser(
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
+public virtual async Task DeleteUserDeferred(
     DeleteUserCommand command, CancellationToken cancellationToken = default)
 {
-    var context = CommandContext.GetCurrent();
-
-    if (Invalidation.IsActive) {
-        // Retrieve stored data
-        var userId = context.Operation.Items.KeylessGet<long>();
-        _ = GetUser(userId, default);
-        return;
-    }
-
     await using var db = await DbHub.CreateOperationDbContext(cancellationToken);
     var user = await db.Users.FindAsync(command.UserId);
 
-    // Store data for invalidation
-    context.Operation.Items.KeylessSet(user!.Id);
-
-    db.Users.Remove(user);
+    db.Users.Remove(user!);
     await db.SaveChangesAsync(cancellationToken);
+
+    Invalidation.Defer(() => _ = GetUser(user!.Id, default));
 }
 ```
 <!-- endSnippet -->
+
+There is no application-wide default: declare the mode on the handler method, on its implementation
+type, or on the service interface. To resolve it some other way &ndash; per namespace, per tenant,
+from configuration &ndash; register your own `DeferredInvalidationModeResolver`.
+
+`Replicated` and `Distributed` both require an operation scope that stores its operation;
+`Distributed` additionally requires `KeepProcessedItems` to stay `true` on the event log reader.
 
 ## Events
 
@@ -107,8 +114,6 @@ public virtual async Task DeleteUser(
 public virtual async Task<Order> CreateOrderWithEvent(
     CreateOrderCommand command, CancellationToken cancellationToken = default)
 {
-    if (Invalidation.IsActive) { /* ... */ return default!; }
-
     var context = CommandContext.GetCurrent();
     await using var db = await DbHub.CreateOperationDbContext(cancellationToken);
 
@@ -286,13 +291,7 @@ public record UpdateProfileCommand(long UserId, string Name)
 ```
 <!-- endSnippet -->
 
-## Key Differences
-
-| Aspect | `Operation.Items` | `CommandContext.Items` |
-|--------|-------------------|------------------------|
-| Scope | Cross-host | Local only |
-| Persistence | Stored in DB | In-memory only |
-| Availability | Execution + Invalidation | Execution only |
+## Transient vs Persistent Operations
 
 | Aspect | Transient Operation | Persistent Operation |
 |--------|---------------------|----------------------|
@@ -305,11 +304,12 @@ public record UpdateProfileCommand(long UserId, string Name)
 
 | Priority | Handler | Purpose |
 |----------|---------|---------|
+| 999,999,000 | `InvalidationGuard` | Rejects commands run while invalidating |
 | 100,000 | `OperationReprocessor` | Transient error retry |
-| 11,000 | `NestedOperationLogger` | Nested commands |
-| 10,000 | `InMemoryOperationScopeProvider` | Transient scope |
-| 1,000 | `DbOperationScopeProvider` | DB scope |
-| 100 | `InvalidatingCommandCompletionHandler` | Invalidation |
+| 10,000 | `TransientOperationScopeProvider` | Transient scope |
+| 9,900 | `DbOperationScopeProvider` | DB scope |
+| 9,000 | `DeferredInvalidationScopeProvider` | Deferred invalidation scope |
+| -1,000,000,000 | `CompletionTerminator` | Terminal handler for `ICompletion` |
 
 ## Common Patterns
 
@@ -317,12 +317,11 @@ public record UpdateProfileCommand(long UserId, string Name)
 
 <!-- snippet: PartOCS_ConditionalInvalidation -->
 ```cs
-if (Invalidation.IsActive) {
+Invalidation.Defer(() => {
     _ = GetOrder(command.OrderId, default);
     if (command.StatusChanged)
         _ = GetOrdersByStatus(command.OldStatus, default);
-    return default!;
-}
+});
 ```
 <!-- endSnippet -->
 
@@ -330,12 +329,12 @@ if (Invalidation.IsActive) {
 
 <!-- snippet: PartOCS_MultipleInvalidations -->
 ```cs
-if (Invalidation.IsActive) {
-    _ = GetOrder(command.OrderId, default);
+// Defer() may be called any number of times - the blocks run in registration order
+Invalidation.Defer(() => _ = GetOrder(command.OrderId, default));
+Invalidation.Defer(() => {
     _ = GetOrderList(command.UserId, default);
     _ = GetOrderCount(command.UserId, default);
-    return default!;
-}
+});
 ```
 <!-- endSnippet -->
 
@@ -343,7 +342,7 @@ if (Invalidation.IsActive) {
 
 <!-- snippet: PartOCS_NestedCommands -->
 ```cs
-// Nested command is automatically logged and invalidated
+// The nested command declares its own invalidation, deferred into the same operation
 await Commander.Call(new ChildCommand(parentId), cancellationToken);
 ```
 <!-- endSnippet -->
@@ -353,6 +352,6 @@ await Commander.Call(new ChildCommand(parentId), cancellationToken);
 <!-- snippet: PartOCS_ControlOperationStorage -->
 ```cs
 // Disable storage (operation won't replicate)
-context.Operation.MustStore(false);
+context.Operation.StoreMode = OperationStoreMode.None;
 ```
 <!-- endSnippet -->

@@ -390,6 +390,16 @@ services.AddDbContextServices<AppDbContext>(db => {
 });
 ```
 
+Its command handlers use deferred invalidation, so the mode is declared on the service type:
+`DbAuthService` carries `[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]` &ndash; its
+state lives in a shared database, so every host must apply the invalidations &ndash; while
+`InMemoryAuthService` carries `Local`.
+
+The handlers themselves are registered on the `IAuthBackend` interface, which declares no mode. That's
+why `AddAuthService` calls `fusion.ServiceTypeResolver.RegisterAlias(typeof(IAuthBackend), implementationType)`:
+the resolver maps the interface back to the implementation type, so the mode declared on
+`DbAuthService` or `InMemoryAuthService` is the one that applies.
+
 See [Part 5: Operations Framework](PartO.md) for details.
 
 

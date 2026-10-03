@@ -45,7 +45,7 @@
   <!-- Commit (Operation -> Action/Process) -->
   <rect x="170" y="140" width="460" height="80" rx="14" fill="url(#actionGrad)" stroke="#e0cba8" stroke-width="1.5" />
   <text x="400" y="162" font-family="Inter, sans-serif" font-size="11" fill="#8b90a8" font-weight="600" text-transform="uppercase" text-anchor="middle">COMMIT TRANSACTION</text>
-  <text x="400" y="182" font-family="'SF Mono', 'Fira Code', Consolas, monospace" font-size="13" fill="#1a1a2e" text-anchor="middle">_Operations: { Command, Items, Events[] }</text>
+  <text x="400" y="182" font-family="'SF Mono', 'Fira Code', Consolas, monospace" font-size="13" fill="#1a1a2e" text-anchor="middle">_Operations: { Command, InvalidationCalls, Events[] }</text>
   <text x="400" y="202" font-family="'SF Mono', 'Fira Code', Consolas, monospace" font-size="13" fill="#1a1a2e" text-anchor="middle">_Events: { Uuid, Value, State: New }</text>
 
   <!-- Reader (Component -> State/Object) -->

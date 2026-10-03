@@ -111,14 +111,11 @@ public class UpdateUserHandler : IRequestHandler<UpdateUserCommand, Unit>
 ```csharp
 public record UpdateUserCommand(string UserId, string Name) : ICommand<Unit>;
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 [CommandHandler]
-public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
 {
-    if (Invalidation.IsActive)
-    {
-        _ = GetUser(cmd.UserId, default);  // Clients observing GetUser are notified
-        return;
-    }
+    Invalidation.Defer(() => _ = GetUser(cmd.UserId, default));  // Clients observing GetUser are notified
     await _db.Users.UpdateAsync(cmd.UserId, cmd.Name, ct);
 }
 ```

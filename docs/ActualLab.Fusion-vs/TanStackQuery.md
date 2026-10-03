@@ -38,6 +38,7 @@ const mutation = useMutation({
 
 ```csharp
 // Server — defines what's cacheable and when it changes
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : IComputeService
 {
     [ComputeMethod]
@@ -45,11 +46,10 @@ public class UserService : IComputeService
         => await _db.Users.FindAsync(userId, ct);
 
     [CommandHandler]
-    public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {
         await _db.Users.UpdateAsync(cmd.UserId, cmd.Data, ct);
-        if (Invalidation.IsActive)
-            _ = GetUser(cmd.UserId, default);  // Server pushes invalidation
+        Invalidation.Defer(() => _ = GetUser(cmd.UserId, default));  // Server pushes invalidation
     }
 }
 
@@ -132,12 +132,12 @@ useQuery({
 
 ```csharp
 // Server invalidates when data actually changes
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 [CommandHandler]
-public async Task CreateOrder(CreateOrderCommand cmd, CancellationToken ct)
+public virtual async Task CreateOrder(CreateOrderCommand cmd, CancellationToken ct)
 {
     await _db.Orders.AddAsync(cmd.Order, ct);
-    if (Invalidation.IsActive)
-        _ = GetOrders(default);  // Clients notified immediately
+    Invalidation.Defer(() => _ = GetOrders(default));  // Clients notified immediately
 }
 
 // Client receives update — no polling, no guessing

@@ -107,7 +107,7 @@ This means:
 1. **New ServiceScope**: The command gets its own `IServiceScope` instead of sharing with the parent command
 2. **Independent Context**: `OutermostContext` points to itself, not the parent
 3. **Isolation**: Any data stored in `context.Items` is isolated from parent commands
-4. **Separate Operation**: With Operations Framework, it starts a new operation instead of being nested
+4. **Separate Operation**: With Operations Framework, it gets its own operation and its own deferred-invalidation capture scope instead of sharing the parent's
 
 **When to use:** When a command must have complete isolation from any calling context:
 
@@ -137,19 +137,13 @@ public interface IDelegatingCommand<TResult> : ICommand<TResult>, IDelegatingCom
        isOutermost = true;
    ```
 
-3. **Operations Framework Bypass**: In `InvalidatingCommandCompletionHandler.IsRequired()`:
-
-   ```cs
-   if (command is null or IDelegatingCommand) {
-       finalHandler = null;
-       return false;  // No invalidation needed
-   }
-   ```
+3. **Operations Framework Bypass**: a delegating command makes no changes of its own, so the
+   Operations Framework handlers are filtered out of its pipeline.
 
    This means:
    - The delegating command itself is not logged to the operation log
-   - No invalidation pass runs for the delegating command
-   - You don't need `if (Invalidation.IsActive) { ... }` blocks
+   - No invalidation is recorded or applied for the delegating command
+   - You don't need to declare any invalidation of your own
 
 4. **Each Sub-Command is Independent**: Each command you call gets its own operation, transaction, and invalidation handling.
 
@@ -166,7 +160,7 @@ public record ProcessBatchOrdersCommand(long[] OrderIds)
 public virtual async Task<BatchResult> ProcessBatch(
     ProcessBatchOrdersCommand command, CancellationToken ct)
 {
-    // No Invalidation.IsActive check needed!
+    // Nothing to invalidate here - each nested command declares its own
     var results = new List<OrderResult>();
     foreach (var orderId in command.OrderIds) {
         // Each ProcessOrderCommand runs as its own outermost command
@@ -230,6 +224,7 @@ public interface IPreparedCommand : ICommand
    ```
 
 2. **Runs Before Everything**: Since it has the highest priority, `Prepare()` runs before:
+   - `InvalidationGuard` (rejects commands during invalidation)
    - `CommandTracer` (tracing/logging)
    - `LocalCommandRunner`
    - `RpcCommandHandler` (routing)

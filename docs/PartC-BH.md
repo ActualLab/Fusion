@@ -84,11 +84,36 @@ These handlers are registered when you call `AddFusion()`. They implement multi-
 
 | Handler | Priority | Type | Command Type |
 |---------|----------|------|--------------|
+| `InvalidationGuard` | 999,999,000 | Filter | `ICommand` |
 | `OperationReprocessor` | 100,000 | Filter | `ICommand` |
-| `NestedOperationLogger` | 11,000 | Filter | `ICommand` |
-| `InMemoryOperationScopeProvider` | 10,000 | Filter | `ICommand` |
-| `InvalidatingCommandCompletionHandler` | 100 | Filter | `ICompletion` |
+| `TransientOperationScopeProvider` | 10,000 | Filter | `ICommand` |
+| `DeferredInvalidationScopeProvider` | 9,000 | Filter | `ICommand` |
+| `FusionOperationCompletionHandler` | 0 | Handler | `OperationCompletion` |
 | `CompletionTerminator` | -1,000,000,000 | Final | `ICompletion` |
+
+### InvalidationGuard
+
+**Priority:** 999,999,000
+
+Throws if a command is started while an invalidation pass is active.
+
+Deferred invalidation re-invokes the compute methods a handler declared &ndash; it never replays the
+command handler &ndash; so a command running inside an invalidation pass is a bug. Left alone it
+would be a quiet one: every operation scope provider down the chain opts out while
+`Invalidation.IsActive`, so such a command would mutate without an operation, without events and
+without invalidations.
+
+Only a *nested* command can reach the guard: `Commander` suppresses the ExecutionContext flow of an
+outermost command and runs its pipeline on a fresh one, so an outermost command never sees its
+caller's `ComputeContext` &ndash; and therefore runs with its Operations Framework intact.
+
+<!-- snippet: PartCBH_InvalidationGuardReg -->
+```cs
+// Registration (automatic in AddFusion)
+services.AddSingleton(_ => new InvalidationGuard());
+commander.AddHandlers<InvalidationGuard>();
+```
+<!-- endSnippet -->
 
 ### OperationReprocessor
 
@@ -105,55 +130,54 @@ fusion.AddOperationReprocessor();
 
 See [Part 5: Operations Framework](PartO.md) for details.
 
-### NestedOperationLogger
-
-**Priority:** 11,000
-
-Captures nested command invocations and logs them for invalidation replay on other hosts.
-
-<!-- snippet: PartCBH_NestedOperationLoggerReg -->
-```cs
-// Registration (automatic in AddFusion)
-services.AddSingleton(c => new NestedOperationLogger(c));
-commander.AddHandlers<NestedOperationLogger>();
-```
-<!-- endSnippet -->
-
-See [Part 5: Operations Framework](PartO.md) for details.
-
-### InMemoryOperationScopeProvider
+### TransientOperationScopeProvider
 
 **Priority:** 10,000
 
 Provides in-memory operation scopes for commands that don't use database-backed operation scopes. Also triggers operation completion notifications.
 
-<!-- snippet: PartCBH_InMemoryOperationScopeProviderReg -->
+<!-- snippet: PartCBH_TransientOperationScopeProviderReg -->
 ```cs
 // Registration (automatic in AddFusion)
-services.AddSingleton(c => new InMemoryOperationScopeProvider(c));
-commander.AddHandlers<InMemoryOperationScopeProvider>();
+services.AddSingleton(c => new TransientOperationScopeProvider(c));
+commander.AddHandlers<TransientOperationScopeProvider>();
 ```
 <!-- endSnippet -->
 
 See [Part 5: Operations Framework](PartO.md) for details.
 
-### InvalidatingCommandCompletionHandler
+### DeferredInvalidationScopeProvider
 
-**Priority:** 100
+**Priority:** 9,000
 
-Handles command completion by running the invalidation pass. Re-executes the original command and its nested commands in invalidation mode.
+Activates the `DeferredInvalidationContext` that `TransientOperationScopeProvider` created for the
+command, and closes it when the handler returns. `Invalidation.Defer(...)` works from a handler's
+first statement because of this scope, and the mode of its first block becomes the operation's.
 
-<!-- snippet: PartCBH_InvalidatingCommandCompletionHandlerReg -->
+It sits below every operation scope provider, including `DbOperationScopeProvider` (9,000 &lt; 9,900),
+so a scope is already open by the time anything can be deferred &ndash; `Replicated` and
+`Distributed` need one to carry their calls to other hosts. Closing the context before those
+providers commit is also what lets the commit read a block list that's final.
+
+See [Part 5: Operations Framework](PartO.md) for details.
+
+### FusionOperationCompletionHandler
+
+**Priority:** 0 (handler for `OperationCompletion`)
+
+Applies the invalidation calls a handler recorded &ndash; locally right after the commit, and on
+every other host once the operation log delivers the operation. It also handles
+`OperationCompletion`, which is how a `Distributed` invalidation is recovered from its
+event row.
+
+<!-- snippet: PartCBH_FusionOperationCompletionHandlerReg -->
 ```cs
-// Registration (automatic in AddFusion)
-services.AddSingleton(_ => new InvalidatingCommandCompletionHandler.Options());
-services.AddSingleton(c => new InvalidatingCommandCompletionHandler(
-    c.GetRequiredService<InvalidatingCommandCompletionHandler.Options>(), c));
-commander.AddHandlers<InvalidatingCommandCompletionHandler>();
+// Registration (automatic in AddFusion) - replaces CommandR's OperationCompletionHandler
+commander.AddOperationCompletionHandler(c => new FusionOperationCompletionHandler(c));
 ```
 <!-- endSnippet -->
 
-See [Part 5: Operations Framework](PartO.md) for details.
+See [Invalidation Modes](PartO-IM.md) for details.
 
 ### CompletionTerminator
 
@@ -177,11 +201,11 @@ These handlers are registered when you call `AddOperations()` on a `DbContextBui
 
 | Handler | Priority | Type | Command Type |
 |---------|----------|------|--------------|
-| `DbOperationScopeProvider` | 1,000 | Filter | `ICommand` |
+| `DbOperationScopeProvider` | 9,900 | Filter | `ICommand` |
 
 ### DbOperationScopeProvider
 
-**Priority:** 1,000
+**Priority:** 9,900
 
 Provides database operation scopes for database-backed operations. Manages transactions and ensures operations are logged to the database.
 
@@ -206,49 +230,54 @@ When all handlers are registered, the pipeline looks like this (in execution ord
 Command Received
     │
     ▼
-┌─────────────────────────────────────────┐
-│ PreparedCommandHandler (1,000,000,000)  │ ← Calls IPreparedCommand.Prepare()
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ PreparedCommandHandler (1,000,000,000)   │ ← Calls IPreparedCommand.Prepare()
+└──────────────────────────────────────────┘
     │
     ▼
-┌─────────────────────────────────────────┐
-│ CommandTracer (998,000,000)             │ ← Creates activity, logs errors
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ InvalidationGuard (999,999,000)          │ ← Rejects commands during invalidation
+└──────────────────────────────────────────┘
     │
     ▼
-┌─────────────────────────────────────────┐
-│ LocalCommandRunner (900,000,000)        │ ← Runs ILocalCommand.Run() if applicable
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ CommandTracer (998,000,000)              │ ← Creates activity, logs errors
+└──────────────────────────────────────────┘
     │
     ▼
-┌─────────────────────────────────────────┐
-│ RpcCommandHandler (800,000,000)         │ ← Routes to RPC if needed
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ LocalCommandRunner (900,000,000)         │ ← Runs ILocalCommand.Run() if applicable
+└──────────────────────────────────────────┘
     │
     ▼
-┌─────────────────────────────────────────┐
-│ OperationReprocessor (100,000)          │ ← Retries on transient errors
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ RpcCommandHandler (800,000,000)          │ ← Routes to RPC if needed
+└──────────────────────────────────────────┘
     │
     ▼
-┌─────────────────────────────────────────┐
-│ NestedOperationLogger (11,000)          │ ← Logs nested commands
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ OperationReprocessor (100,000)           │ ← Retries on transient errors
+└──────────────────────────────────────────┘
     │
     ▼
-┌─────────────────────────────────────────┐
-│ InMemoryOperationScopeProvider (10,000) │ ← Provides operation scope
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ TransientOperationScopeProvider (10,000) │ ← Provides operation scope
+└──────────────────────────────────────────┘
     │
     ▼
-┌─────────────────────────────────────────┐
-│ DbOperationScopeProvider (1,000)        │ ← Provides DB operation scope
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ DbOperationScopeProvider (9,900)         │ ← Provides DB operation scope
+└──────────────────────────────────────────┘
     │
     ▼
-┌─────────────────────────────────────────┐
-│ Your Handlers (default priority: 0)     │ ← Your command handlers
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ DeferredInvalidationScopeProvider (9,000)│ ← Opens the invalidation scope
+└──────────────────────────────────────────┘
+    │
+    ▼
+┌──────────────────────────────────────────┐
+│ Your Handlers (default priority: 0)      │ ← Your command handlers
+└──────────────────────────────────────────┘
 ```
 
 For completion commands (`ICompletion<T>`):
@@ -257,16 +286,14 @@ For completion commands (`ICompletion<T>`):
 Completion Command
     │
     ▼
-┌─────────────────────────────────────────┐
-│ InvalidatingCommandCompletionHandler    │ ← Runs invalidation pass
-│ (100)                                   │
-└─────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────┐
-│ CompletionTerminator (-1,000,000,000)   │ ← Terminal handler
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ CompletionTerminator (-1,000,000,000)    │ ← Terminal handler
+└──────────────────────────────────────────┘
 ```
+
+`CompletionTerminator` is the terminal handler of every completion, so a handler of your own for
+`ICompletion<T>` has to be a **filter** &ndash; a second non-filter handler for the same completion
+is an error.
 
 ## Adding Custom Handlers
 

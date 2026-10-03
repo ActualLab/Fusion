@@ -109,12 +109,12 @@ await response.WriteAsync($"data: {newItem}\n\n");
 **Fusion:**
 ```csharp
 // Invalidation triggers automatic update
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 [CommandHandler]
-public async Task AddItem(AddItemCommand cmd, CancellationToken ct)
+public virtual async Task AddItem(AddItemCommand cmd, CancellationToken ct)
 {
     await _db.Items.AddAsync(cmd.Item, ct);
-    if (Invalidation.IsActive)
-        _ = GetItems(ct); // Observers automatically notified
+    Invalidation.Defer(() => _ = GetItems(ct));  // Observers automatically notified
 }
 ```
 

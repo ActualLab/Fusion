@@ -39,6 +39,10 @@ using (Invalidation.Begin()) {
 | Return value | `Task.FromResult(default(T))` or `default(T)` |
 | Side effect | Invalidates cached `Computed<T>` for this call |
 
+Inside an Operations Framework command handler you don't open this scope yourself:
+`Invalidation.Defer(...)` registers the block, and the framework opens the invalidation scope and runs
+it after the commit.
+
 ## Computed Value Dependency Graph (DAG)
 
 Example from PartF: `Sum("a", "b")` depends on `Get("a")` and `Get("b")`.

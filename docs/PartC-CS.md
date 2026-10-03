@@ -191,15 +191,15 @@ Higher priority = runs first. Default is 0.
 | Handler | Priority | Assembly |
 |---------|----------|----------|
 | `PreparedCommandHandler` | 1,000,000,000 | CommandR |
+| `InvalidationGuard` | 999,999,000 | Fusion |
 | `CommandTracer` | 998,000,000 | CommandR |
 | `LocalCommandRunner` | 900,000,000 | CommandR |
 | `RpcCommandHandler` | 800,000,000 | CommandR |
 | `OperationReprocessor` | 100,000 | Fusion |
-| `NestedOperationLogger` | 11,000 | Fusion |
-| `InMemoryOperationScopeProvider` | 10,000 | Fusion |
-| `DbOperationScopeProvider` | 1,000 | Fusion.EF |
+| `TransientOperationScopeProvider` | 10,000 | Fusion |
+| `DbOperationScopeProvider` | 9,900 | Fusion.EF |
+| `DeferredInvalidationScopeProvider` | 9,000 | Fusion |
 | Your handlers | 0 | - |
-| `InvalidatingCommandCompletionHandler` | 100 | Fusion |
 | `CompletionTerminator` | -1,000,000,000 | Fusion |
 
 ## Local Commands
@@ -230,21 +230,19 @@ public record CreateOrderCommand(...) : IPreparedCommand, ICommand<Order>
 ## With Operations Framework
 
 ```cs
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 [CommandHandler]
 public virtual async Task<Order> CreateOrder(
     CreateOrderCommand command, CancellationToken ct)
 {
-    // Invalidation block (runs on all hosts)
-    if (Invalidation.IsActive) {
-        _ = GetOrders(command.UserId, default);
-        return default!;
-    }
-
-    // Main logic (runs on originating host only)
+    // Main logic
     await using var db = await DbHub.CreateOperationDbContext(ct);
     var order = new Order { ... };
     db.Orders.Add(order);
     await db.SaveChangesAsync(ct);
+
+    // Invalidation - the block runs after the commit
+    Invalidation.Defer(() => _ = GetOrders(command.UserId, default));
     return order;
 }
 ```

@@ -29,6 +29,7 @@ await db.SaveChangesAsync();
 ## Fusion Approach
 
 ```csharp
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : IComputeService
 {
     [ComputeMethod]
@@ -39,13 +40,9 @@ public class UserService : IComputeService
     }
 
     [CommandHandler]
-    public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {
-        if (Invalidation.IsActive)
-        {
-            _ = GetUser(cmd.UserId, default);  // All observers notified
-            return;
-        }
+        Invalidation.Defer(() => _ = GetUser(cmd.UserId, default));  // All observers notified
 
         await using var db = DbHub.CreateDbContext();
         var user = await db.Users.FindAsync(cmd.UserId, ct);
@@ -113,13 +110,13 @@ var user = await db.Users.FindAsync(userId);
 user.Bio = newBio;
 await db.SaveChangesAsync();  // EF generates: UPDATE Users SET Bio = @p0 WHERE Id = @p1
 
-// Fusion handles: notifying everyone who cares
-if (Invalidation.IsActive)
-{
+// Fusion handles: notifying everyone who cares (inside a [CommandHandler] method
+// tagged [DeferredInvalidationMode(DeferredInvalidationMode.Local)])
+Invalidation.Defer(() => {
     _ = GetUser(userId, default);        // Profile page refreshes
     _ = GetUserSummary(userId, default); // Sidebar refreshes
     _ = GetTeamMembers(teamId, default); // Team list refreshes
-}
+});
 ```
 
 ## Fusion + EF Core Together
@@ -127,6 +124,7 @@ if (Invalidation.IsActive)
 Fusion and EF Core are complementary:
 
 ```csharp
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : IComputeService
 {
     [ComputeMethod]
@@ -141,13 +139,9 @@ public class UserService : IComputeService
     }
 
     [CommandHandler]
-    public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {
-        if (Invalidation.IsActive)
-        {
-            _ = GetUser(cmd.UserId, default);
-            return;
-        }
+        Invalidation.Defer(() => _ = GetUser(cmd.UserId, default));
 
         await using var db = DbHub.CreateDbContext();
         var user = await db.Users.FindAsync(cmd.UserId, ct);
@@ -164,6 +158,7 @@ public class UserService : IComputeService
 Fusion provides EF Core integration that simplifies this pattern:
 
 ```csharp
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : DbServiceBase<AppDbContext>, IComputeService
 {
     [ComputeMethod]
@@ -174,13 +169,9 @@ public class UserService : DbServiceBase<AppDbContext>, IComputeService
     }
 
     [CommandHandler]
-    public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {
-        if (Invalidation.IsActive)
-        {
-            _ = GetUser(cmd.UserId, default);
-            return;
-        }
+        Invalidation.Defer(() => _ = GetUser(cmd.UserId, default));
 
         await using var db = await DbHub.CreateDbContext(ct);
         // ... update and save

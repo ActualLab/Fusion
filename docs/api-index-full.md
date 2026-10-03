@@ -1931,7 +1931,7 @@ An `IRpcMiddleware` that validates inbound call routing for distributed and clie
 
 Marker interface for message serializers that require item size to be included in the serialized output.
 
-###### `RpcArgumentSerializer`
+###### `ArgumentListSerializer`
 
 Base class for serializers that encode and decode RPC method argument lists.
 
@@ -1955,9 +1955,9 @@ This type is used to serialize null values for polymorphic arguments. You should
 
 Serializes batches of RPC messages into frame buffers and parses messages back out of them.
 
-###### `RpcByteArgumentSerializerV4`
+###### `ByteArgumentListSerializerV4`
 
-V4 binary `RpcArgumentSerializer` that supports polymorphic argument serialization.
+V4 binary `ArgumentListSerializer` that supports polymorphic argument serialization.
 
 ###### `RpcByteMessageSerializerV4`, `RpcByteMessageSerializerV5`
 
@@ -1971,13 +1971,13 @@ Compact variant of `RpcByteMessageSerializerV4` that transmits method references
 
 Compact variant of `RpcByteMessageSerializerV5` that transmits method references as hash codes only.
 
-###### `RpcTextArgumentSerializerV4`
+###### `TextArgumentListSerializerV4`
 
-V4 text-based `RpcArgumentSerializer` that uses a unit-separator delimiter between arguments.
+V4 text-based `ArgumentListSerializer` that uses a unit-separator delimiter between arguments.
 
-###### `RpcTextArgumentSerializerV4NP`
+###### `TextArgumentListSerializerV4NP`
 
-A non-polymorphic variant of `RpcTextArgumentSerializerV4` that rejects polymorphic serialization.
+A non-polymorphic variant of `TextArgumentListSerializerV4` that rejects polymorphic serialization.
 
 ###### `RpcTextMessageSerializerV3`
 
@@ -2227,6 +2227,10 @@ An `Interceptor` that guards command service proxy calls, ensuring they are invo
 
 ### ActualLab.CommandR.Operations
 
+###### `IOperationCompletionListener`
+
+A listener that is notified when an operation completes, enabling side-effect processing such as invalidation.
+
 ###### `IOperationEventSource`
 
 Defines the contract for objects that can produce an `OperationEvent`.
@@ -2235,17 +2239,33 @@ Defines the contract for objects that can produce an `OperationEvent`.
 
 Defines the contract for an operation scope that manages the lifecycle of an `Operation` within a command pipeline.
 
-###### `NestedOperation` (record)
-
-Represents a nested command operation recorded during execution of a parent operation.
-
 ###### `Operation`
 
-Represents a recorded operation (a completed command execution) with its nested operations, events, and metadata.
+Represents a recorded operation (a completed command execution) with its invalidations, events, and metadata. `InvalidationCalls` is the `ImmutableList<ServiceCall>` it carries - `AddInvalidationCall`, `AddInvalidationCalls`, `RemoveInvalidationCall` and `RemoveInvalidationCalls` maintain it, as `AddEvent`, `RemoveEvent` and `RemoveEvents` do for `Events`.
+
+###### `OperationCompletion` (record)
+
+A command carrying an operation's `ServiceCall`s to whichever host applies them, and so the recovery carrier for an operation whose origin host didn't finish applying them itself. Its `Command` is never executed - it's there so the host application can route the event and identify it in an audit.
+
+###### `OperationCompletionHandler`
+
+Executes the `ServiceCall`s an `Operation` carries, on whichever host applies it. Registered via `CommanderBuilder.AddOperationCompletionHandler`; this one can't invalidate by itself, and `AddFusion()` replaces it with `FusionOperationCompletionHandler`, which can.
 
 ###### `OperationEvent`
 
-Represents an event recorded during an `Operation`, typically used for eventual consistency and event replay.
+Represents an event recorded during an `Operation`, typically used for eventual consistency and at-least-once event delivery.
+
+###### `OperationStoreMode` (enum)
+
+What an `Operation`'s committed row is, and thus who reads it back: `None` (nobody - the row exists solely to verify the commit), `Operation` (the operation log, which every host reads and processes), or `Event` (the event log, whose entry exactly one host claims).
+
+###### `ServiceCall` (record)
+
+A recorded call to a service method: everything needed to reproduce it on this or another host. Deferred invalidation records what it invalidates as these.
+
+###### `ServiceTypeResolver`
+
+Maps a service implementation type to the type it's registered as in the container, and back - `TryResolveServiceType` and `TryResolveImplementationType`.
 
 ### ActualLab.CommandR.Rpc
 
@@ -2430,7 +2450,27 @@ Provides default delegate instances used by Fusion infrastructure.
 
 ###### `Invalidation`
 
-Provides static helpers to check whether invalidation is active and to begin invalidation scopes.
+Provides static helpers to check whether invalidation is active, to begin invalidation scopes, and to defer invalidation blocks.
+
+###### `DeferredInvalidationMode` (enum)
+
+Describes how far a command handler's deferred invalidation reaches: `Local`, `Replicated`, `Distributed`. The mode of an operation comes from the first handler that defers a block; handlers that defer nothing have no say, and two that disagree are an error. There is no "unset" member and no app-wide default.
+
+###### `DeferredInvalidationModeAttribute`
+
+Declares the `DeferredInvalidationMode` of a single `[CommandHandler]` method, or of every command handler declared by a service type - its implementation class or the interface it's registered as.
+
+###### `DeferredInvalidationModeResolver`
+
+Resolves the `DeferredInvalidationMode` of a command handler: its method's attribute, then the attribute of the implementation the container maps its service type to, then of the method's declaring type. There is no fallback: an undeclared mode throws.
+
+###### `DeferredInvalidationContext`
+
+Collector of deferred invalidation blocks, all sharing its mode. Its `Scope` activates it and closes it; what happens to the blocks afterwards is up to whoever opened that scope.
+
+###### `DeferredInvalidationContextExt`
+
+The two things one can do with a closed `DeferredInvalidationContext`'s blocks: `Apply` runs them under an invalidation pass, `CollectInvalidationCalls` captures the `ServiceCall`s they'd make without running them.
 
 ###### `StateCategories`
 
@@ -2720,17 +2760,23 @@ A strongly-typed `ConsolidatingComputeMethodFunction` that creates `Consolidatin
 
 ### ActualLab.Fusion.Operations
 
-###### `IOperationCompletionListener`
-
-A listener that is notified when an operation completes, enabling side-effect processing such as invalidation.
-
 ###### `Completion<TCommand>` (record)
 
 Default implementation of `ICompletion<TCommand>` carrying the completed operation.
 
+###### `DeferredInvalidationHelper`
+
+The Operations Framework side of deferred invalidation: `SetInvalidationsAndStoreMode` freezes an operation's recorded `ServiceCall`s at commit time and resolves what its committed row must be.
+
 ###### `IOperationCompletionNotifier`, `OperationCompletionNotifier`
 
 Notifies registered operation-completion listeners, deduplicating operations by UUID before dispatch.
+
+### ActualLab.Fusion.Operations.Internal
+
+###### `InvalidationGuard`
+
+A command filter at priority 999,999,000 that rejects any command about to run while an invalidation pass is active. Deferred invalidation never replays a command handler, so such a command would otherwise mutate without an operation, events or invalidations.
 
 ### ActualLab.Fusion.Operations.Reprocessing
 
@@ -3097,6 +3143,14 @@ Entity Framework entity representing a persisted operation event in the "_Events
 ###### `DbEventProcessor<TDbContext>`
 
 Processes `OperationEvent` instances stored as `DbEvent` entries, dispatching command events via the `ICommander`.
+
+###### `DbLogEntrySerializer`
+
+How the `_Operations` and `_Events` tables serialize their payloads. Every payload has a text and a binary column; `Format` is a `DataFormat` and decides which one new rows use (`Bytes`, i.e. MessagePack, by default), and a read takes whichever one carries the payload. `TextSerializer` and `ByteSerializer` are set independently of `Format`. DI-registered and replaceable; the static `Default` is what a log entry serializing itself outside DI falls back to.
+
+###### `DbLogEntryModelBuilderExt`
+
+`ModelBuilder.IgnoreUnusedOperationsFrameworkColumns()` maps away the payload columns the current `Format` doesn't write, leaving one column per payload. It trades the migration-free format switch for the leaner schema.
 
 ###### `DbOperation`
 

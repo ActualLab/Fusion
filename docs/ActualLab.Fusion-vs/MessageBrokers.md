@@ -41,6 +41,7 @@ public class OrderAnalyticsHandler : IMessageHandler<OrderCreatedEvent>
 
 ```csharp
 // Service with automatic client notifications
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class OrderService : IComputeService
 {
     [ComputeMethod]
@@ -48,13 +49,9 @@ public class OrderService : IComputeService
         => await _db.Orders.Where(o => o.UserId == userId).ToArrayAsync(ct);
 
     [CommandHandler]
-    public async Task<Order> CreateOrder(CreateOrderCommand cmd, CancellationToken ct)
+    public virtual async Task<Order> CreateOrder(CreateOrderCommand cmd, CancellationToken ct)
     {
-        if (Invalidation.IsActive)
-        {
-            _ = GetUserOrders(cmd.UserId, default);  // UI clients automatically notified
-            return default!;
-        }
+        Invalidation.Defer(() => _ = GetUserOrders(cmd.UserId, default));  // UI clients automatically notified
         var order = new Order { ... };
         await _db.Orders.AddAsync(order, ct);
         return order;
@@ -116,16 +113,13 @@ Message brokers and Fusion serve different purposes and work well together:
 
 ```csharp
 // Fusion service for client-facing real-time
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class OrderService : IComputeService
 {
     [CommandHandler]
-    public async Task<Order> CreateOrder(CreateOrderCommand cmd, CancellationToken ct)
+    public virtual async Task<Order> CreateOrder(CreateOrderCommand cmd, CancellationToken ct)
     {
-        if (Invalidation.IsActive)
-        {
-            _ = GetUserOrders(cmd.UserId, default);
-            return default!;
-        }
+        Invalidation.Defer(() => _ = GetUserOrders(cmd.UserId, default));
 
         var order = new Order { ... };
         await _db.Orders.AddAsync(order, ct);
@@ -151,17 +145,17 @@ public class OrderService : IComputeService
 │        (Fusion)         │      (Message Broker)              │
 │                         │                                    │
 │  ┌─────────┐            │            ┌─────────────┐         │
-│  │ Blazor  │◀──realtime─┤            │ Notification│         │
-│  │ Client  │            │    ┌──────▶│  Service    │         │
+│  │ Blazor  │<──realtime─┤            │ Notification│         │
+│  │ Client  │            │    ┌──────>│  Service    │         │
 │  └─────────┘            │    │       └─────────────┘         │
 │        │                │    │                               │
 │        ▼                │    │       ┌─────────────┐         │
 │  ┌─────────┐            │  message   │  Analytics  │         │
-│  │ Fusion  │────────────┼───broker──▶│  Service    │         │
+│  │ Fusion  │────────────┼───broker──>│  Service    │         │
 │  │ Server  │            │    │       └─────────────┘         │
 │  └─────────┘            │    │                               │
 │                         │    │       ┌─────────────┐         │
-│                         │    └──────▶│  Inventory  │         │
+│                         │    └──────>│  Inventory  │         │
 │                         │            │  Service    │         │
 │                         │            └─────────────┘         │
 └─────────────────────────┴────────────────────────────────────┘

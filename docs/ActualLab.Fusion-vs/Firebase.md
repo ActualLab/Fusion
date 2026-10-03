@@ -27,6 +27,7 @@ await updateDoc(doc(db, 'users', userId), { name: 'New Name' });
 
 ```csharp
 // Server-side — you control the backend
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : IComputeService
 {
     [ComputeMethod]
@@ -34,11 +35,10 @@ public class UserService : IComputeService
         => await _db.Users.FindAsync(userId, ct);
 
     [CommandHandler]
-    public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {
         await _db.Users.UpdateAsync(cmd.UserId, cmd.Data, ct);
-        if (Invalidation.IsActive)
-            _ = GetUser(cmd.UserId, default);
+        Invalidation.Defer(() => _ = GetUser(cmd.UserId, default));
     }
 }
 

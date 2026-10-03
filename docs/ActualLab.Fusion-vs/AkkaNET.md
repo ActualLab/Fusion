@@ -48,6 +48,7 @@ system.EventStream.Subscribe<UserUpdated>(Self);
 
 ```csharp
 // Compute service — standard .NET service with caching
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : IComputeService
 {
     [ComputeMethod]
@@ -63,11 +64,10 @@ public class UserService : IComputeService
     }
 
     [CommandHandler]
-    public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {
         await _db.Users.UpdateAsync(cmd.Id, cmd.Data, ct);
-        if (Invalidation.IsActive)
-            _ = GetUser(cmd.Id, default);  // Dashboard auto-invalidates
+        Invalidation.Defer(() => _ = GetUser(cmd.Id, default));  // Dashboard auto-invalidates
     }
 }
 

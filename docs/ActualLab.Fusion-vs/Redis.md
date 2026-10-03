@@ -41,6 +41,7 @@ public async Task UpdateUser(string id, UpdateRequest request)
 
 ```csharp
 // Automatic caching with dependency tracking
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : IComputeService
 {
     [ComputeMethod]
@@ -55,11 +56,10 @@ public class UserService : IComputeService
     }
 
     [CommandHandler]
-    public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {
         await _db.Users.UpdateAsync(cmd.Id, cmd.Data, ct);
-        if (Invalidation.IsActive)
-            _ = GetUser(cmd.Id, default);  // GetUserProfile auto-invalidates too
+        Invalidation.Defer(() => _ = GetUser(cmd.Id, default));  // GetUserProfile auto-invalidates too
     }
 }
 ```
@@ -225,19 +225,16 @@ For distributed caching with Fusion:
 
 ```csharp
 // Operations Framework propagates invalidations across servers
+[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]
 [CommandHandler]
-public async Task UpdateProduct(UpdateProductCommand cmd, CancellationToken ct)
+public virtual async Task UpdateProduct(UpdateProductCommand cmd, CancellationToken ct)
 {
-    if (Invalidation.IsActive)
-    {
-        _ = GetProduct(cmd.Id, default);
-        return;
-    }
+    Invalidation.Defer(() => _ = GetProduct(cmd.Id, default));
 
     await using var operation = await Commander.Start(cmd, ct);
     await _db.Products.UpdateAsync(cmd.Id, cmd.Data, ct);
     await operation.Commit(ct);
-    // Invalidation replayed on all servers via Operations Framework
+    // Invalidation carried to all servers via Operations Framework
 }
 ```
 

@@ -43,6 +43,7 @@ while (true)
 
 ```csharp
 // Server - compute service
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class UserService : IComputeService
 {
     [ComputeMethod]
@@ -50,11 +51,10 @@ public class UserService : IComputeService
         => await _db.Users.FindAsync(id, ct);
 
     [CommandHandler]
-    public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+    public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
     {
         await _db.Users.UpdateAsync(cmd.Id, cmd.Data, ct);
-        if (Invalidation.IsActive)
-            _ = GetUser(cmd.Id, default);  // Observers automatically notified
+        Invalidation.Defer(() => _ = GetUser(cmd.Id, default));  // Observers automatically notified
     }
 }
 
@@ -171,12 +171,12 @@ With Fusion, this is automatic:
 
 ```csharp
 // Server
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 [CommandHandler]
-public async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
+public virtual async Task UpdateUser(UpdateUserCommand cmd, CancellationToken ct)
 {
     await _db.Users.UpdateAsync(cmd.Id, cmd.Data, ct);
-    if (Invalidation.IsActive)
-        _ = GetUser(cmd.Id, default);  // That's it
+    Invalidation.Defer(() => _ = GetUser(cmd.Id, default));  // That's it
 }
 
 // Client - already subscribed via computed.Changes()
