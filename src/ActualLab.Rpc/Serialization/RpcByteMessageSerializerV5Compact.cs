@@ -82,7 +82,7 @@ public class RpcByteMessageSerializerV5Compact(RpcPeer peer) : RpcByteMessageSer
             throw Errors.Format("Header count must not exceed 31.");
 
         var writer = new SpanWriter(buffer.GetSpan(32 + 4));
-        writer.Remaining[0] = (byte)(headers.Length | (message.MethodDef.CallType.Id << 5));
+        writer.Remaining[0] = (byte)(headers.Length | (message.CallTypeId << 5));
         writer.WriteVarUInt64((ulong)message.RelatedId, 1);
         writer.WriteUInt32((uint)message.MethodDef.Ref.HashCode);
 
@@ -94,7 +94,7 @@ public class RpcByteMessageSerializerV5Compact(RpcPeer peer) : RpcByteMessageSer
         var oldContext = RpcOutboundContext.Current;
         RpcOutboundContext.Current = message.Context;
         try {
-            message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
+            message.ArgumentListSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
         }
         finally {
             RpcOutboundContext.Current = oldContext;
@@ -121,7 +121,7 @@ public class RpcByteMessageSerializerV5Compact(RpcPeer peer) : RpcByteMessageSer
         if (headers.Length > 31)
             throw Errors.Format("Header count must not exceed 31.");
 
-        writer.Remaining[0] = (byte)(headers.Length | (message.MethodDef.CallType.Id << 5));
+        writer.Remaining[0] = (byte)(headers.Length | (message.CallTypeId << 5));
 
         // RelatedId
         writer.WriteVarUInt64((ulong)message.RelatedId, 1);
@@ -211,7 +211,7 @@ public class RpcByteMessageSerializerV5Compact(RpcPeer peer) : RpcByteMessageSer
             throw Errors.Format("Header count must not exceed 31.");
 
         var writer = new SpanWriter(buffer.GetSpan(32 + 4));
-        writer.Remaining[0] = (byte)(headers.Length | (message.MethodDef.CallType.Id << 5));
+        writer.Remaining[0] = (byte)(headers.Length | (message.CallTypeId << 5));
         writer.WriteVarUInt64((ulong)message.RelatedId, 1);
         writer.WriteNativeUInt32((uint)message.MethodDef.Ref.HashCode);
 
@@ -223,7 +223,7 @@ public class RpcByteMessageSerializerV5Compact(RpcPeer peer) : RpcByteMessageSer
         var oldContext = RpcOutboundContext.Current;
         RpcOutboundContext.Current = message.Context;
         try {
-            message.ArgumentSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
+            message.ArgumentListSerializer.Serialize(message.Arguments!, message.NeedsPolymorphism, buffer);
         }
         finally {
             RpcOutboundContext.Current = oldContext;
@@ -250,7 +250,7 @@ public class RpcByteMessageSerializerV5Compact(RpcPeer peer) : RpcByteMessageSer
         if (headers.Length > 31)
             throw Errors.Format("Header count must not exceed 31.");
 
-        writer.Remaining[0] = (byte)(headers.Length | (message.MethodDef.CallType.Id << 5));
+        writer.Remaining[0] = (byte)(headers.Length | (message.CallTypeId << 5));
 
         // RelatedId
         writer.WriteVarUInt64((ulong)message.RelatedId, 1);

@@ -22,7 +22,7 @@ public sealed record JsonRpcMessage(
     [ThreadStatic] private static List<RpcHeader>? _headerBuffer;
 
     public JsonRpcMessage(RpcOutboundMessage source)
-        : this(source.MethodDef.CallType.Id, source.RelatedId, source.MethodDef.Ref.Target!.FullName, FormatHeaders(source.Headers))
+        : this(source.CallTypeId, source.RelatedId, source.MethodDef.Ref.Target!.FullName, FormatHeaders(source.Headers))
     { }
 
     public static List<string>? FormatHeaders(RpcHeader[]? headers)

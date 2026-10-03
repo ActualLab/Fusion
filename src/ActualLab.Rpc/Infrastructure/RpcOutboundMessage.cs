@@ -1,4 +1,5 @@
 using ActualLab.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc.Infrastructure;
@@ -18,12 +19,13 @@ public sealed class RpcOutboundMessage(
 {
     public readonly RpcOutboundContext Context = context;
     public readonly RpcMethodDef MethodDef = methodDef;
+    public readonly byte CallTypeId = context.CallTypeId ?? methodDef.CallType.Id;
     public readonly long RelatedId = relatedId;
     public readonly bool NeedsPolymorphism = needsPolymorphism;
     public readonly ReadOnlyMemory<byte> ArgumentData = argumentData;
     public readonly ArgumentList? Arguments = context.Arguments;
     public readonly RpcHeader[]? Headers = headers;
-    public readonly RpcArgumentSerializer ArgumentSerializer = context.Peer!.ArgumentSerializer;
+    public readonly ArgumentListSerializer ArgumentListSerializer = context.Peer!.ArgumentListSerializer;
     public readonly RpcTransportSendHandler? SendHandler = sendHandler;
 
     public bool HasArguments => !ReferenceEquals(Arguments, null);
@@ -43,7 +45,7 @@ public sealed class RpcOutboundMessage(
     public override string ToString()
     {
         var headers = Headers.OrEmpty();
-        return $"{nameof(RpcOutboundMessage)} #{RelatedId}/{MethodDef.CallType.Id}: {MethodDef.Ref.FullName}, "
+        return $"{nameof(RpcOutboundMessage)} #{RelatedId}/{CallTypeId}: {MethodDef.Ref.FullName}, "
             + (HasArguments ? $"Arguments: {Arguments}, " : "")
             + (HasArgumentData ? $"ArgumentData: {new ByteString(ArgumentData).ToString(16)}, " : "")
             + (headers.Length > 0 ? $"Headers: {headers.ToDelimitedString()}" : "");

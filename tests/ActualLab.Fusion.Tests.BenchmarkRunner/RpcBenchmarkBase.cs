@@ -1,4 +1,5 @@
 using ActualLab.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Serialization;
@@ -52,9 +53,9 @@ public abstract class RpcBenchmarkBase
 
     protected ReadOnlyMemory<byte> Serialize(ArgumentList arguments, bool needsPolymorphism)
     {
-        var buffer = RpcArgumentSerializer.GetWriteBuffer();
-        Peer.ArgumentSerializer.Serialize(arguments, needsPolymorphism, buffer);
-        return RpcArgumentSerializer.GetWriteBufferMemory(buffer);
+        var buffer = ArgumentListSerializer.GetWriteBuffer();
+        Peer.ArgumentListSerializer.Serialize(arguments, needsPolymorphism, buffer);
+        return ArgumentListSerializer.GetWriteBufferMemory(buffer);
     }
 
     protected RpcOutboundCall PrepareOutboundCall(long key)

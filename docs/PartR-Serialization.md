@@ -134,11 +134,11 @@ Each `RpcSerializationFormat` consists of:
 ```cs
 public sealed class RpcSerializationFormatExample(
     string key,
-    Func<RpcArgumentSerializer> argumentSerializerFactory,
+    Func<ArgumentListSerializer> argumentSerializerFactory,
     Func<RpcPeer, RpcMessageSerializer> messageSerializerFactory)
 {
     public string Key { get; } = key;
-    public RpcArgumentSerializer ArgumentSerializer { get; } = argumentSerializerFactory();
+    public ArgumentListSerializer ArgumentListSerializer { get; } = argumentSerializerFactory();
     public Func<RpcPeer, RpcMessageSerializer> MessageSerializerFactory { get; } = messageSerializerFactory;
 }
 ```
@@ -202,7 +202,7 @@ var lz4 = new RpcCompressionFormat("lz4",
     static () => new LZ4ByteDecompressor(),
     new RpcCompressionOptions { MinCompressedFrameSize = 1024 });
 var format = new RpcSerializationFormat("msgpack6c-lz4-1k",
-    () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+    () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
     peer => new RpcByteMessageSerializerV5Compact(peer),
     lz4, RpcCompressionMode.ServerToClient);
 ```
@@ -226,7 +226,7 @@ RpcNerdbankSerializationFormat.Register();
 RpcSerializationFormat.All = RpcSerializationFormat.All.Add(
     new RpcSerializationFormat(
         "custom",
-        () => new MyArgumentSerializer(),
+        () => new MyArgumentListSerializer(),
         peer => new MyMessageSerializer(peer)));
 ```
 <!-- endSnippet -->
@@ -308,7 +308,7 @@ By default, ActualLab.Rpc treats abstract types and `object` as polymorphic.
 When a method argument or result is polymorphic, the serializer wraps it with a `TypeRef`
 so the actual runtime type can be restored on the other side.
 
-This is determined by `RpcArgumentSerializer.IsPolymorphic(Type)`:
+This is determined by `ArgumentListSerializer.IsPolymorphic(Type)`:
 
 ```cs
 // These are considered polymorphic by default:
@@ -376,7 +376,7 @@ public partial class ShapeRect : Shape
 ```
 <!-- endSnippet -->
 
-With this attribute, `RpcArgumentSerializer.IsPolymorphic(typeof(Shape))` returns `false`,
+With this attribute, `ArgumentListSerializer.IsPolymorphic(typeof(Shape))` returns `false`,
 so methods like `Task<Shape> GetShape(...)` use regular serialization.
 The discriminated union support in each serializer takes care of preserving
 the actual runtime type.

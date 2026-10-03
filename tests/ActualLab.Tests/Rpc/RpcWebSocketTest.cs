@@ -323,7 +323,7 @@ public class RpcWebSocketTest : RpcTestBase
         // Create a fake format with a key the server doesn't know,
         // reusing json5's serializers so the client can construct its peer.
         var bogusFormat = new RpcSerializationFormat("bogus-format",
-            () => RpcSerializationFormat.SystemJsonV5.ArgumentSerializer,
+            () => RpcSerializationFormat.SystemJsonV5.ArgumentListSerializer,
             RpcSerializationFormat.SystemJsonV5.MessageSerializerFactory);
         var formats = new[] { bogusFormat };
 
@@ -356,7 +356,7 @@ public class RpcWebSocketTest : RpcTestBase
         await using var _ = await WebHost.Serve();
 
         var bogusFormat = new RpcSerializationFormat("bogus-format",
-            () => RpcSerializationFormat.SystemJsonV5.ArgumentSerializer,
+            () => RpcSerializationFormat.SystemJsonV5.ArgumentListSerializer,
             RpcSerializationFormat.SystemJsonV5.MessageSerializerFactory);
         var formats = new[] { bogusFormat };
 

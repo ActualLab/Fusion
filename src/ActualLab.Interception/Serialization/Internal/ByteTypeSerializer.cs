@@ -1,10 +1,10 @@
 using System.Buffers;
 using System.Buffers.Binary;
+using ActualLab.Interception.Internal;
 using ActualLab.IO.Internal;
 using ActualLab.OS;
-using Errors = ActualLab.Rpc.Internal.Errors;
 
-namespace ActualLab.Rpc.Serialization.Internal;
+namespace ActualLab.Interception.Serialization.Internal;
 
 /// <summary>
 /// Serializes and deserializes .NET type references as compact binary representations for polymorphic RPC arguments.

@@ -1,6 +1,7 @@
 using System.Reflection;
 using ActualLab.Channels;
 using ActualLab.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Caching;
 using ActualLab.Rpc.Infrastructure;
@@ -42,21 +43,21 @@ public class RpcHandshakeAuditTest
     }
 
     [Fact]
-    public void RpcArgumentSerializerStabilizesCacheKeyStorage()
+    public void ArgumentListSerializerStabilizesCacheKeyStorage()
     {
-        var smallBuffer = RpcArgumentSerializer.GetWriteBuffer();
+        var smallBuffer = ArgumentListSerializer.GetWriteBuffer();
         smallBuffer.Advance(1);
-        var smallMemory = RpcArgumentSerializer.GetWriteBufferMemory(smallBuffer);
+        var smallMemory = ArgumentListSerializer.GetWriteBufferMemory(smallBuffer);
         MemoryMarshal.TryGetArray(smallMemory, out var smallData).Should().BeTrue();
         smallData.Array.Should().NotBeSameAs(smallBuffer.Array);
 
-        var largeBuffer = RpcArgumentSerializer.GetWriteBuffer();
-        largeBuffer.Advance(RpcArgumentSerializer.CopyThreshold + 1);
-        var largeMemory = RpcArgumentSerializer.GetWriteBufferMemory(largeBuffer);
+        var largeBuffer = ArgumentListSerializer.GetWriteBuffer();
+        largeBuffer.Advance(ArgumentListSerializer.CopyThreshold + 1);
+        var largeMemory = ArgumentListSerializer.GetWriteBufferMemory(largeBuffer);
         MemoryMarshal.TryGetArray(largeMemory, out var largeData).Should().BeTrue();
         largeData.Array.Should().BeSameAs(largeBuffer.Array);
 
-        var nextBuffer = RpcArgumentSerializer.GetWriteBuffer();
+        var nextBuffer = ArgumentListSerializer.GetWriteBuffer();
         nextBuffer.Array.Should().NotBeSameAs(largeBuffer.Array);
     }
 

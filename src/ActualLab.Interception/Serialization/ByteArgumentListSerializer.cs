@@ -1,12 +1,11 @@
-using ActualLab.Interception;
-using ActualLab.Rpc.Serialization.Internal;
+using ActualLab.Interception.Serialization.Internal;
 
-namespace ActualLab.Rpc.Serialization;
+namespace ActualLab.Interception.Serialization;
 
 /// <summary>
-/// V4 binary <see cref="RpcArgumentSerializer"/> that supports polymorphic argument serialization.
+/// V4 binary <see cref="ArgumentListSerializer"/> that supports polymorphic argument serialization.
 /// </summary>
-public sealed class RpcByteArgumentSerializerV4(IByteSerializer baseSerializer) : RpcArgumentSerializer
+public sealed class ByteArgumentListSerializer(IByteSerializer baseSerializer) : ArgumentListSerializer
 {
     public override void Serialize(ArgumentList arguments, bool needsPolymorphism, ArrayPoolBuffer<byte> buffer)
     {

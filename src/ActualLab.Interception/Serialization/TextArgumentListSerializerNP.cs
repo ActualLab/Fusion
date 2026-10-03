@@ -1,15 +1,14 @@
-using ActualLab.Interception;
+using ActualLab.Interception.Internal;
 using ActualLab.IO.Internal;
-using ActualLab.Rpc.Internal;
 
-namespace ActualLab.Rpc.Serialization;
+namespace ActualLab.Interception.Serialization;
 
 /// <summary>
-/// A "no polymorphism" variant of <see cref="RpcTextArgumentSerializerV4"/>
+/// A "no polymorphism" variant of <see cref="TextArgumentListSerializer"/>
 /// that throws when polymorphic serialization is requested.
 /// </summary>
 // ReSharper disable once InconsistentNaming
-public sealed class RpcTextArgumentSerializerV4NP(ITextSerializer baseSerializer) : RpcArgumentSerializer
+public sealed class TextArgumentListSerializerNP(ITextSerializer baseSerializer) : ArgumentListSerializer
 {
     private static readonly byte Delimiter = 0x1F;
 

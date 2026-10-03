@@ -1,4 +1,5 @@
 using ActualLab.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Interception.Trimming;
 using ActualLab.Rpc.Clients;
 using ActualLab.Rpc.Diagnostics;
@@ -42,7 +43,7 @@ public class RpcProxyCodeKeeperExtension : ProxyCodeKeeper.IExtension
         CodeKeeper.Keep<RpcConfiguration>();
         CodeKeeper.Keep<RpcSerializationFormat>();
         CodeKeeper.Keep<RpcSerializationFormatResolver>();
-        CodeKeeper.Keep<RpcByteArgumentSerializerV4>();
+        CodeKeeper.Keep<ByteArgumentListSerializer>();
         CodeKeeper.Keep<RpcByteMessageSerializerV4>();
         CodeKeeper.Keep<RpcDefaultCallTracer>();
 

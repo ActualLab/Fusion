@@ -8,6 +8,11 @@ namespace ActualLab.Rpc.Internal;
 /// </summary>
 public static class Errors
 {
+    public static Exception InvalidResultType(Type expectedType, Type? actualType)
+        => new SerializationException(
+            $"Invalid call result type: expected '{expectedType.GetName()}', " +
+            $"but got '{actualType?.GetName() ?? "null"}'.");
+
     public static Exception UnknownCallType(byte callTypeId)
         => new KeyNotFoundException($"Unknown CallTypeId: {callTypeId}.");
 
@@ -95,24 +100,8 @@ public static class Errors
 
     public static Exception InvalidItemSize()
         => new SerializationException("Invalid item size. The remainder of the message will be dropped.");
-    public static Exception InvalidItemTypeFormat()
-        => new SerializationException("Invalid item type format.");
     public static Exception CannotDeserializeInboundCallArguments(Exception innerException)
         => new SerializationException("Cannot deserialize inbound call arguments.", innerException);
-    public static Exception CannotDeserializeUnexpectedArgumentType(Type expectedType, Type actualType)
-        => new SerializationException($"Cannot deserialize unexpected argument type: " +
-            $"expected '{expectedType.GetName()}' (exact match), got '{actualType.GetName()}'.");
-    public static Exception CannotDeserializeUnexpectedPolymorphicArgumentType(Type expectedType, Type actualType)
-        => new SerializationException($"Cannot deserialize polymorphic argument type: " +
-            $"expected '{expectedType.GetName()}' or its descendant, got '{actualType.GetName()}'.");
-    public static Exception InvalidResultType(Type expectedType, object? actualResult)
-        => new SerializationException(
-            $"Got invalid RPC call result type: " +
-            $"expected '{expectedType.GetName()}', got '{actualResult?.GetType().GetName() ?? "null"}'.");
-    public static Exception PolymorphicObjectButNonPolymorphicSerializer(Type expectedType, Type actualType)
-        => new SerializationException(
-            $"An object of type '{actualType.GetName()}' is polymorphic descendant of '{expectedType.GetName()}', "
-            + $"but polymorphic serialization is not allowed by the selected serialization format.");
 
     public static Exception ConnectTimeout(RpcRef rpcRef, TimeSpan? timeout = null)
         => ConnectTimeout(rpcRef.GetRemotePartyName(), timeout);

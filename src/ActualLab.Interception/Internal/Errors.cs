@@ -37,4 +37,19 @@ public static class Errors
     public static Exception InvalidInterceptorBinding()
         => new ArgumentOutOfRangeException("value",
             "The binding's method table doesn't match this proxy's method table.");
+
+    // Serialization
+
+    public static Exception InvalidItemTypeFormat()
+        => new SerializationException("Invalid item type format.");
+    public static Exception CannotDeserializeUnexpectedArgumentType(Type expectedType, Type actualType)
+        => new SerializationException($"Cannot deserialize unexpected argument type: " +
+            $"expected '{expectedType.GetName()}' (exact match), got '{actualType.GetName()}'.");
+    public static Exception CannotDeserializeUnexpectedPolymorphicArgumentType(Type expectedType, Type actualType)
+        => new SerializationException($"Cannot deserialize polymorphic argument type: " +
+            $"expected '{expectedType.GetName()}' or its descendant, got '{actualType.GetName()}'.");
+    public static Exception PolymorphicObjectButNonPolymorphicSerializer(Type expectedType, Type actualType)
+        => new SerializationException(
+            $"An object of type '{actualType.GetName()}' is polymorphic descendant of '{expectedType.GetName()}', "
+            + $"but polymorphic serialization is not allowed by the selected serialization format.");
 }

@@ -1,3 +1,4 @@
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc;
 using ActualLab.Rpc.Compression;
 using ActualLab.Rpc.Serialization;
@@ -9,25 +10,25 @@ namespace ActualLab.Serialization;
 public static class RpcNerdbankSerializationFormat
 {
     public static readonly RpcSerializationFormat NerdbankMessagePackV6 = new("nmsgpack6",
-        () => new RpcByteArgumentSerializerV4(NerdbankMessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(NerdbankMessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5(peer));
     public static readonly RpcSerializationFormat NerdbankMessagePackV6C = new("nmsgpack6c",
-        () => new RpcByteArgumentSerializerV4(NerdbankMessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(NerdbankMessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5Compact(peer));
     public static readonly RpcSerializationFormat NerdbankMessagePackV6_LZ4 = new("nmsgpack6-lz4",
-        () => new RpcByteArgumentSerializerV4(NerdbankMessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(NerdbankMessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.ServerToClient);
     public static readonly RpcSerializationFormat NerdbankMessagePackV6C_LZ4 = new("nmsgpack6c-lz4",
-        () => new RpcByteArgumentSerializerV4(NerdbankMessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(NerdbankMessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5Compact(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.ServerToClient);
     public static readonly RpcSerializationFormat NerdbankMessagePackV6_LZ4F = new("nmsgpack6-lz4f",
-        () => new RpcByteArgumentSerializerV4(NerdbankMessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(NerdbankMessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.Full);
     public static readonly RpcSerializationFormat NerdbankMessagePackV6C_LZ4F = new("nmsgpack6c-lz4f",
-        () => new RpcByteArgumentSerializerV4(NerdbankMessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(NerdbankMessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5Compact(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.Full);
 

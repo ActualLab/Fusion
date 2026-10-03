@@ -31,6 +31,12 @@ public class RpcRoute : IEquatable<RpcRoute>
     public static RpcRoute NewStatic(RpcRef rpcRef)
         => new(rpcRef);
 
+    // May still return None - RpcPeer maps that to Remote, and a test for Local doesn't care
+    public RpcPeerConnectionKind GetConnectionKind(RpcPeerOptions options)
+        => ConnectionKind is RpcPeerConnectionKind.None
+            ? options.ConnectionKindDetector.Invoke(this)
+            : ConnectionKind;
+
     public RpcRoute(RpcRef rpcRef, CancellationTokenSource? changedTokenSource = null)
     {
         Ref = rpcRef;

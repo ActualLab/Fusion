@@ -1,10 +1,10 @@
 using ActualLab.Caching;
 using ActualLab.Interception;
+using ActualLab.Interception.Serialization;
 using ActualLab.Internal;
 using ActualLab.OS;
 using ActualLab.Rpc.Diagnostics;
 using ActualLab.Rpc.Infrastructure;
-using ActualLab.Rpc.Serialization;
 
 namespace ActualLab.Rpc;
 
@@ -67,10 +67,9 @@ public partial class RpcMethodDef : MethodDef
         Service = service;
         Hub = service.Hub;
         NoWait = UnwrappedReturnType == typeof(RpcNoWait);
-        var nameSuffix = $":{ParameterTypes.Length}";
-        Name = MethodInfo.Name + nameSuffix;
-        HasPolymorphicArguments = ParameterTypes.Any(RpcArgumentSerializer.IsPolymorphic);
-        HasPolymorphicResult = RpcArgumentSerializer.IsPolymorphic(UnwrappedReturnType);
+        Name = MethodInfo.GetRpcStyleName();
+        HasPolymorphicArguments = ParameterTypes.Any(ArgumentListSerializer.IsPolymorphic);
+        HasPolymorphicResult = ArgumentListSerializer.IsPolymorphic(UnwrappedReturnType);
 
         if (!IsAsyncMethod) { // Invalid method
             IsValid = false;
@@ -109,7 +108,7 @@ public partial class RpcMethodDef : MethodDef
             .Or(Service.LocalExecutionMode);
         RemoteExecutionMode = NoWait ? 0
             : Attribute?.RemoteExecutionMode ?? Service.RemoteExecutionMode;
-        LegacyNames = new LegacyNames(MethodInfo, nameSuffix);
+        LegacyNames = new LegacyNames(MethodInfo, $":{ParameterTypes.Length}");
 
         // Call tracing
         Tracer = Hub.DiagnosticsOptions.CallTracerFactory.Invoke(this);

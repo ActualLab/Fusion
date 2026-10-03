@@ -1,3 +1,4 @@
+using ActualLab.Interception.Serialization;
 using ActualLab.Rpc.Compression;
 using ActualLab.Rpc.Serialization;
 
@@ -10,7 +11,7 @@ namespace ActualLab.Rpc;
 /// </summary>
 public sealed class RpcSerializationFormat(
     string key,
-    Func<RpcArgumentSerializer> argumentSerializerFactory,
+    Func<ArgumentListSerializer> argumentSerializerFactory,
     Func<RpcPeer, RpcMessageSerializer> messageSerializerFactory,
     RpcCompressionFormat? compressionFormat = null,
     RpcCompressionMode compressionMode = RpcCompressionMode.None)
@@ -19,83 +20,83 @@ public sealed class RpcSerializationFormat(
 
     // "json5" - System.Text.Json
     public static readonly RpcSerializationFormat SystemJsonV5 = new("json5",
-        () => new RpcTextArgumentSerializerV4(SystemJsonSerializer.Default),
+        () => new TextArgumentListSerializer(SystemJsonSerializer.Default),
         peer => new RpcTextMessageSerializerV3(peer));
     // "json5np" - System.Text.Json, no polymorphism
     public static readonly RpcSerializationFormat SystemJsonV5NP = new("json5np",
-        () => new RpcTextArgumentSerializerV4NP(SystemJsonSerializer.Default),
+        () => new TextArgumentListSerializerNP(SystemJsonSerializer.Default),
         peer => new RpcTextMessageSerializerV3(peer));
 
     // "njson5" - Newtonsoft.Json
     public static readonly RpcSerializationFormat NewtonsoftJsonV5 = new("njson5",
-        () => new RpcTextArgumentSerializerV4(NewtonsoftJsonSerializer.Default),
+        () => new TextArgumentListSerializer(NewtonsoftJsonSerializer.Default),
         peer => new RpcTextMessageSerializerV3(peer));
     // "njson5np" - Newtonsoft.Json, no polymorphism
     public static readonly RpcSerializationFormat NewtonsoftJsonV5NP = new("njson5np",
-        () => new RpcTextArgumentSerializerV4NP(NewtonsoftJsonSerializer.Default),
+        () => new TextArgumentListSerializerNP(NewtonsoftJsonSerializer.Default),
         peer => new RpcTextMessageSerializerV3(peer));
 
     // "mempack5" - MemoryPack (legacy)
     public static readonly RpcSerializationFormat MemoryPackV5 = new("mempack5",
-        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV4(peer));
     public static readonly RpcSerializationFormat MemoryPackV5C = new("mempack5c",
-        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV4Compact(peer));
 
     // "msgpack5" - MessagePack (legacy)
     public static readonly RpcSerializationFormat MessagePackV5 = new("msgpack5",
-        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV4(peer));
     public static readonly RpcSerializationFormat MessagePackV5C = new("msgpack5c",
-        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV4Compact(peer));
 
     // "mempack6" - MemoryPack (current)
     public static readonly RpcSerializationFormat MemoryPackV6 = new("mempack6",
-        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5(peer));
     public static readonly RpcSerializationFormat MemoryPackV6C = new("mempack6c",
-        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5Compact(peer));
     public static readonly RpcSerializationFormat MemoryPackV6_LZ4 = new("mempack6-lz4",
-        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.ServerToClient);
     public static readonly RpcSerializationFormat MemoryPackV6C_LZ4 = new("mempack6c-lz4",
-        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5Compact(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.ServerToClient);
     public static readonly RpcSerializationFormat MemoryPackV6_LZ4F = new("mempack6-lz4f",
-        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.Full);
     public static readonly RpcSerializationFormat MemoryPackV6C_LZ4F = new("mempack6c-lz4f",
-        () => new RpcByteArgumentSerializerV4(MemoryPackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MemoryPackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5Compact(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.Full);
 
     // "msgpack6" - MessagePack (current)
     public static readonly RpcSerializationFormat MessagePackV6 = new("msgpack6",
-        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5(peer));
     public static readonly RpcSerializationFormat MessagePackV6C = new("msgpack6c",
-        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5Compact(peer));
     public static readonly RpcSerializationFormat MessagePackV6_LZ4 = new("msgpack6-lz4",
-        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.ServerToClient);
     public static readonly RpcSerializationFormat MessagePackV6C_LZ4 = new("msgpack6c-lz4",
-        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5Compact(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.ServerToClient);
     public static readonly RpcSerializationFormat MessagePackV6_LZ4F = new("msgpack6-lz4f",
-        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.Full);
     public static readonly RpcSerializationFormat MessagePackV6C_LZ4F = new("msgpack6c-lz4f",
-        () => new RpcByteArgumentSerializerV4(MessagePackByteSerializer.Default),
+        () => new ByteArgumentListSerializer(MessagePackByteSerializer.Default),
         peer => new RpcByteMessageSerializerV5Compact(peer),
         RpcCompressionFormat.LZ4, RpcCompressionMode.Full);
 
@@ -109,10 +110,10 @@ public sealed class RpcSerializationFormat(
 
     // Instance members
 
-    private readonly Lazy<RpcArgumentSerializer> _argumentSerializerLazy = new(argumentSerializerFactory);
+    private readonly Lazy<ArgumentListSerializer> _argumentSerializerLazy = new(argumentSerializerFactory);
 
     public string Key { get; } = key;
-    public RpcArgumentSerializer ArgumentSerializer => _argumentSerializerLazy.Value;
+    public ArgumentListSerializer ArgumentListSerializer => _argumentSerializerLazy.Value;
     public Func<RpcPeer, RpcMessageSerializer> MessageSerializerFactory => messageSerializerFactory;
     public RpcCompressionFormat? CompressionFormat { get; }
         = compressionMode != RpcCompressionMode.None ? compressionFormat : null;
