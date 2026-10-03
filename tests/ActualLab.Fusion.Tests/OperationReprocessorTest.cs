@@ -68,9 +68,6 @@ public class ReprocessTester(IServiceProvider services) : DbServiceBase<TestDbCo
     [CommandHandler]
     public virtual async Task<int> OnRun(ReprocessTester_Run command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive)
-            return 0;
-
         var dbContext = await DbHub.CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
 

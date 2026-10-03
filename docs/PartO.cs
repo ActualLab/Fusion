@@ -61,21 +61,20 @@ public class PreOfChatService(IServiceProvider services) : DbServiceBase<AppDbCo
 }
 
 // Sample service demonstrating command handler pattern
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class ChatService(IServiceProvider services) : DbServiceBase<AppDbContext>(services), IComputeService
 {
     #region PartO_PostOfHandler
     [CommandHandler]
+    [DeferredInvalidationMode(DeferredInvalidationMode.Local)]
     public virtual async Task<ChatMessage> PostMessage(
         PostMessageCommand command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
-            _ = PseudoGetAnyChatTail();
-            return default!;
-        }
-
         await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
         // Actual code...
         var message = await PostMessageImpl(dbContext, command, cancellationToken);
+
+        Invalidation.Defer(() => _ = PseudoGetAnyChatTail());
         return message;
     }
     #endregion
@@ -96,6 +95,7 @@ public record KeyValueService_Set(string Key, string Value) : ICommand<Unit>;
 #endregion
 
 #region PartO_TestInvalidation_Service
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class KeyValueService : IComputeService
 {
     private readonly ConcurrentDictionary<string, string> _values = new();
@@ -113,19 +113,18 @@ public class KeyValueService : IComputeService
     [CommandHandler]
     public virtual Task<Unit> Set(KeyValueService_Set command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
-            // Every mutating command handler must invalidate BOTH the entity-specific
-            // query it directly affects AND every aggregate query whose result may change --
-            // dependency tracking alone won't discover an omitted root call.
+        // Requests an operation scope, so this in-memory command commits like a stored
+        // one does -- see TransientOperationScopeProvider
+        TransientOperationScope.Require();
+        _values[command.Key] = command.Value;
+
+        // Every mutating command handler must invalidate BOTH the entity-specific
+        // query it directly affects AND every aggregate query whose result may change --
+        // dependency tracking alone won't discover an omitted root call.
+        Invalidation.Defer(() => {
             _ = Get(command.Key, default);
             _ = Count(default);
-            return Task.FromResult(Unit.Default);
-        }
-
-        // Requests an operation scope so this in-memory command gets completion
-        // notifications (and therefore an invalidation replay) -- see InMemoryOperationScopeProvider
-        InMemoryOperationScope.Require();
-        _values[command.Key] = command.Value;
+        });
         return Task.FromResult(Unit.Default);
     }
 }
@@ -167,13 +166,13 @@ public class PartO : DocPart
 
         // 3. Invalidation - for checking/starting invalidation mode
         _ = typeof(Invalidation); // "Invalidation" from docs
-        _ = Invalidation.IsActive; // "Invalidation.IsActive" from docs
+        // Still public, but an Operations Framework handler no longer branches on it:
+        // Invalidation.Defer(...) is what declares an invalidation now
+        _ = Invalidation.IsActive;
 
         // 4. CommandContext - context for current command
         _ = typeof(CommandContext); // "CommandContext" from docs
         // CommandContext.GetCurrent() - for getting current context
-        // CommandContext.Operation.Items - for passing data to invalidation
-
         // 5. ICommand<TResult> - command interface
         _ = typeof(ICommand<Unit>); // "ICommand<TResult>" from docs
 
@@ -185,25 +184,24 @@ public class PartO : DocPart
         _ = CommanderCommandHandlerPriority.RpcRoutingCommandHandler; // Priority: 800_000_000
 
         // FusionOperationsCommandHandlerPriority (ActualLab.Fusion)
+        _ = FusionOperationsCommandHandlerPriority.InvalidationGuard; // Priority: 999_999_000
         _ = FusionOperationsCommandHandlerPriority.OperationReprocessor; // Priority: 100_000
-        _ = FusionOperationsCommandHandlerPriority.NestedCommandLogger; // Priority: 11_000
-        _ = FusionOperationsCommandHandlerPriority.InMemoryOperationScopeProvider; // Priority: 10_000
-        _ = FusionOperationsCommandHandlerPriority.InvalidatingCommandCompletionHandler; // Priority: 100
+        _ = FusionOperationsCommandHandlerPriority.TransientOperationScopeProvider; // Priority: 10_000
+        _ = FusionOperationsCommandHandlerPriority.DeferredInvalidationScopeProvider; // Priority: 9_000
         _ = FusionOperationsCommandHandlerPriority.CompletionTerminator; // Priority: -1_000_000_000
 
         // FusionEntityFrameworkCommandHandlerPriority (ActualLab.Fusion.EntityFramework)
-        _ = FusionEntityFrameworkCommandHandlerPriority.DbOperationScopeProvider; // Priority: 1000
+        _ = FusionEntityFrameworkCommandHandlerPriority.DbOperationScopeProvider; // Priority: 9900
 
         // 7. PreparedCommandHandler - validates IPreparedCommand
         _ = typeof(PreparedCommandHandler); // "PreparedCommandHandler" from docs
         _ = typeof(IPreparedCommand); // "IPreparedCommand" from docs
 
-        // 8. NestedOperationLogger - logs nested commands (was "NestedCommandLogger" in docs)
-        _ = typeof(NestedOperationLogger); // "NestedCommandLogger" from docs - RENAMED
-        _ = typeof(NestedOperation); // Nested operations are logged into Operation.NestedOperations
+        // 8. TransientOperationScopeProvider - catch-all operation scope
+        _ = typeof(TransientOperationScopeProvider); // "TransientOperationScopeProvider" from docs
 
-        // 9. InMemoryOperationScopeProvider - catch-all operation scope (was "TransientOperationScopeProvider" in docs)
-        _ = typeof(InMemoryOperationScopeProvider); // "TransientOperationScopeProvider" from docs - RENAMED
+        // 9. DeferredInvalidationScopeProvider - opens the deferred invalidation scope
+        _ = typeof(DeferredInvalidationScopeProvider);
 
         // 10. OperationCompletionNotifier - notifies completion listeners
         _ = typeof(OperationCompletionNotifier); // "OperationCompletionNotifier" from docs
@@ -218,8 +216,8 @@ public class PartO : DocPart
         _ = typeof(Completion<>); // "Completion<TCommand>" from docs
         _ = typeof(ICompletion<>); // "ICompletion<TCommand>" from docs
 
-        // 14. InvalidatingCommandCompletionHandler - runs invalidation on completion (was "InvalidateOnCompletionCommandHandler")
-        _ = typeof(InvalidatingCommandCompletionHandler); // "InvalidateOnCompletionCommandHandler" from docs - RENAMED
+        // 14. OperationCompletionHandler - applies recorded invalidation calls
+        _ = typeof(OperationCompletionHandler);
 
         // 15. DbOperationLogReader - reads operation log
         _ = typeof(DbOperationLogReader<>); // "DbOperationLogReader" from docs
@@ -240,17 +238,19 @@ public class PartO : DocPart
         WriteLine();
 
         StartSnippetOutput("Name Changes from Documentation");
-        WriteLine("- NestedCommandLogger -> NestedOperationLogger");
-        WriteLine("- TransientOperationScopeProvider -> InMemoryOperationScopeProvider");
-        WriteLine("- InvalidateOnCompletionCommandHandler -> InvalidatingCommandCompletionHandler");
+        WriteLine("- InMemoryOperationScopeProvider -> TransientOperationScopeProvider");
+        WriteLine("- InMemoryOperationScope -> TransientOperationScope");
+        WriteLine("- InvocationRecord -> ServiceCall (now in ActualLab.CommandR.Operations)");
+        WriteLine("- Operation.Items / nested operations -> Operation.InvalidationCalls");
         WriteLine("- DbServiceBase.CreateOperationDbContext() -> DbHub.CreateOperationDbContext()");
         WriteLine("- AgentInfo -> HostId (moved to ActualLab.Core)");
 
         StartSnippetOutput("Command Handler Priorities");
         WriteLine($"- PreparedCommandHandler: {CommanderCommandHandlerPriority.PreparedCommandHandler:N0}");
-        WriteLine($"- NestedCommandLogger: {FusionOperationsCommandHandlerPriority.NestedCommandLogger:N0}");
-        WriteLine($"- InMemoryOperationScopeProvider: {FusionOperationsCommandHandlerPriority.InMemoryOperationScopeProvider:N0}");
-        WriteLine($"- InvalidatingCommandCompletionHandler: {FusionOperationsCommandHandlerPriority.InvalidatingCommandCompletionHandler:N0}");
+        WriteLine($"- InvalidationGuard: {FusionOperationsCommandHandlerPriority.InvalidationGuard:N0}");
+        WriteLine($"- TransientOperationScopeProvider: {FusionOperationsCommandHandlerPriority.TransientOperationScopeProvider:N0}");
+        WriteLine($"- DeferredInvalidationScopeProvider: {FusionOperationsCommandHandlerPriority.DeferredInvalidationScopeProvider:N0}");
+        WriteLine($"- CompletionTerminator: {FusionOperationsCommandHandlerPriority.CompletionTerminator:N0}");
 
         await Task.CompletedTask;
     }
@@ -286,31 +286,21 @@ public class PartO : DocPart
     #endregion
 }
 
-// Example: Command with operation items pattern
+// Example: a handler whose invalidation depends on what the mutation discovered
 #region PartO_SignOutCommand
 public record SignOutCommand(Session Session, bool Force = false) : ICommand<Unit>;
 #endregion
 
-// Example: Service demonstrating operation items usage
+// Example: Service demonstrating conditional invalidation
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class AuthServiceExample(IServiceProvider services) : DbServiceBase<AppDbContext>(services), IComputeService
 {
     #region PartO_SignOutHandler
+    [CommandHandler]
+    [DeferredInvalidationMode(DeferredInvalidationMode.Local)]
     public virtual async Task SignOut(
         SignOutCommand command, CancellationToken cancellationToken = default)
     {
-        // ...
-        var context = CommandContext.GetCurrent();
-        if (Invalidation.IsActive) {
-            // Fetch operation item
-            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo is not null) {
-                // Use it
-                _ = GetUser(invSessionInfo.UserId, default);
-                _ = GetUserSessions(invSessionInfo.UserId, default);
-            }
-            return;
-        }
-
         await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
 
         var dbSessionInfo = await Sessions.FindOrCreate(dbContext, command.Session, cancellationToken).ConfigureAwait(false);
@@ -318,9 +308,13 @@ public class AuthServiceExample(IServiceProvider services) : DbServiceBase<AppDb
         if (sessionInfo.IsSignOutForced)
             return;
 
-        // Store operation item for invalidation logic
-        context.Operation.Items.KeylessSet(sessionInfo);
         // ...
+
+        // What to invalidate depends on what the mutation found, so it's an ordinary closure
+        Invalidation.Defer(() => {
+            _ = GetUser(sessionInfo.UserId, default);
+            _ = GetUserSessions(sessionInfo.UserId, default);
+        });
     }
     #endregion
 
@@ -353,15 +347,3 @@ public static class CompletionExample
     #endregion
 }
 
-// Example: InvalidatingCommandCompletionHandler signature
-public class InvalidatingHandlerExample
-{
-    #region PartO_InvalidatingHandler
-    [CommandHandler(Priority = 100, IsFilter = true)]
-    public async Task OnCommand(
-      ICompletion command, CommandContext context, CancellationToken cancellationToken)
-    {
-        //  ...
-    }
-    #endregion
-}

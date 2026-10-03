@@ -3,6 +3,7 @@ using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Fusion.EntityFramework.Operations.LogProcessing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ActualLab.CommandR.Operations;
 
 namespace ActualLab.Fusion.EntityFramework;
 
@@ -34,6 +35,9 @@ public readonly struct DbOperationsBuilder<TDbContext>
         }
 
         services.Add(AddedTagDescriptor);
+
+        // How _Operations and _Events serialize their payloads - replaceable via DI
+        services.TryAddSingleton(c => DbLogEntrySerializer.Default);
 
         // DbOperationScope & its CommandR handler
         services.TryAddSingleton<DbOperationScope<TDbContext>.Options>();

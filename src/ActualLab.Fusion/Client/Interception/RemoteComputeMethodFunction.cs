@@ -64,7 +64,22 @@ public abstract class RemoteComputeMethodFunction(
         var input = new ComputeMethodInput(this, MethodDef, invocation);
         var cancellationToken = invocation.Arguments.GetCancellationToken(CancellationTokenIndex); // Auto-handles -1 index
         try {
-            var task = input.GetOrProduceValuePromise(ComputeContext.Current, ComputedSynchronizer.Current, cancellationToken);
+            var context = ComputeContext.Current;
+            // Must precede GetOrProduceValuePromise: CaptureInvalidation implies GetExisting, and
+            // TryUseExisting short-circuits on that - so the call would be silently unrecorded.
+            if (context.CallOptions.HasFlag(CallOptions.CaptureInvalidation)) {
+                context.CaptureInvalidation(NewServiceCall(invocation.Arguments));
+                return MethodDef.DefaultResult;
+            }
+            if (context.CallOptions.HasFlag(CallOptions.RouteInvalidation)) {
+                // The call result is default too, but since the remote result type may differ,
+                // and the only thing that matters is whether it failed or not,
+                // we return the expected default or throw an error here.
+                var whenInvalidated = RouteInvalidation(input, invocation, context);
+                return MethodDef.AwaitAndReturnDefaultResult.Invoke(whenInvalidated);
+            }
+
+            var task = input.GetOrProduceValuePromise(context, ComputedSynchronizer.Current, cancellationToken);
             return MethodDef.WrapAsyncInvokerResultOfAsyncMethodUntyped(task);
         }
         finally {
@@ -74,6 +89,8 @@ public abstract class RemoteComputeMethodFunction(
                 invocation.Arguments.SetCancellationToken(CancellationTokenIndex, default);
         }
     }
+
+    // Protected methods
 
     protected internal override async ValueTask<Computed> ProduceComputedImpl(
         ComputedInput input, Computed? existing, CancellationToken cancellationToken)
@@ -86,7 +103,7 @@ public abstract class RemoteComputeMethodFunction(
 
         // If we're here, it's either a client or distributed service, i.e., it can't be a pure server.
         // So the only possible routing modes are Inbound and Outbound, but not Prerouted.
-        var routingMode = (context.CallOptions & CallOptions.InboundRpc) != 0
+        var routingMode = context.CallOptions.HasFlag(CallOptions.InboundRpc)
             ? RpcRoutingMode.Inbound
             : RpcRoutingMode.Outbound;
         while (true) {
@@ -163,6 +180,28 @@ public abstract class RemoteComputeMethodFunction(
                     .ConfigureAwait(false);
             }
         }
+    }
+
+    // Invalidates the value on the host that owns it: the same routing an ordinary call gets,
+    // so a shard that moved is followed, and a target that resolves to this host is invalidated
+    // in place. The RPC is awaited - its caller needs a failure to surface, not to be swallowed.
+    protected async Task RouteInvalidation(
+        ComputeMethodInput input, Invocation invocation, ComputeContext context)
+    {
+        // ProduceContext consumes an ambient RpcOutboundCallSetup, so a caller that pinned
+        // the target peer keeps it; otherwise this routes exactly like an ordinary call
+        var outboundContext = RpcOutboundCallSetup.ProduceContext();
+        // Not a Compute call: this one wants no result, no cache entry and no invalidation
+        // subscription - just "invalidate it there", with an error if that didn't happen
+        outboundContext.CallTypeId = RpcInvalidateCallType.Value.Id;
+        var call = outboundContext.PrepareCall(RpcMethodDef, invocation.Arguments);
+        if (call is null) {
+            // Routed to this host: there is a real ComputeMethodComputed here, so invalidate it
+            ComputedImpl.TryUseExisting(input.GetExistingComputed(), context);
+            return;
+        }
+
+        await call.Invoke().ConfigureAwait(false);
     }
 
     public async Task<Computed> ComputeRpc(

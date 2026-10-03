@@ -1,3 +1,5 @@
+using ActualLab.CommandR.Operations;
+
 namespace ActualLab.CommandR;
 
 /// <summary>
@@ -10,4 +12,7 @@ public static class ServiceCollectionExt
 
     public static IServiceCollection AddCommander(this IServiceCollection services, Action<CommanderBuilder> configure)
         => new CommanderBuilder(services, configure).Services;
+
+    public static ServiceTypeResolver AddServiceTypeResolver(this IServiceCollection services)
+        => services.FindOrAddInstance(() => new ServiceTypeResolver(), addInFront: true);
 }

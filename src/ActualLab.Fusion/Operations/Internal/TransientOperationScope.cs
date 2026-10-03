@@ -6,7 +6,7 @@ namespace ActualLab.Fusion.Operations.Internal;
 /// Provides Operation for commands relying on in-memory state
 /// to ensure they get <see cref="ICompletion"/>-based notifications.
 /// </summary>
-public sealed class InMemoryOperationScope : IOperationScope
+public sealed class TransientOperationScope : IOperationScope
 {
     private IServiceProvider Services => CommandContext.Services;
     private ILogger Log => field ??= Services.LogFor(GetType());
@@ -16,26 +16,26 @@ public sealed class InMemoryOperationScope : IOperationScope
     public bool IsTransient => true;
     public bool IsUsed => true;
     public bool? IsCommitted { get; private set; }
-    public bool MustStoreOperation { get; set; }
+    public OperationStoreMode? StoreMode { get; set; }
     public bool HasStoredOperation => false;
     public bool HasStoredEvents { get; private set; }
     public ImmutableList<Func<IOperationScope, Task>> CompletionHandlers { get; set; }
         = ImmutableList<Func<IOperationScope, Task>>.Empty;
 
-    public static InMemoryOperationScope? TryGet(CommandContext context)
-        => context.TryGetOperation()?.Scope as InMemoryOperationScope;
+    public static TransientOperationScope? TryGet(CommandContext context)
+        => context.TryGetOperation()?.Scope as TransientOperationScope;
 
-    public static InMemoryOperationScope GetOrCreate(CommandContext context)
+    public static TransientOperationScope GetOrCreate(CommandContext context)
     {
         var operation = context.TryGetOperation();
         if (operation is not null)
-            return operation.Scope as InMemoryOperationScope
-                ?? throw Errors.WrongOperationScopeType(typeof(InMemoryOperationScope), operation.Scope?.GetType());
+            return operation.Scope as TransientOperationScope
+                ?? throw Errors.WrongOperationScopeType(typeof(TransientOperationScope), operation.Scope?.GetType());
 
         if (Invalidation.IsActive)
             throw Errors.NewOperationScopeIsRequestedFromInvalidationCode();
 
-        return new InMemoryOperationScope(context.OutermostContext);
+        return new TransientOperationScope(context.OutermostContext);
     }
 
     public static void Require(CommandContext? context = null)
@@ -44,7 +44,7 @@ public sealed class InMemoryOperationScope : IOperationScope
         GetOrCreate(context);
     }
 
-    public InMemoryOperationScope(CommandContext outermostContext)
+    public TransientOperationScope(CommandContext outermostContext)
     {
         CommandContext = outermostContext;
         Operation = Operation.NewTransient(this);
@@ -71,13 +71,16 @@ public sealed class InMemoryOperationScope : IOperationScope
         }
     }
 
-    public Task Commit(CancellationToken cancellationToken = default)
+    public async Task Commit(CancellationToken cancellationToken = default)
     {
+        await DeferredInvalidationHelper.SetInvalidationsAndStoreMode(Operation).ConfigureAwait(false);
         Close(true);
         if (IsCommitted == true)
             HasStoredEvents = Operation.Events.Any(x => x.Value is not null);
-        return Task.CompletedTask;
     }
+
+    public Task TryCompleteStoredEvent(CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 
     // Private methods
 

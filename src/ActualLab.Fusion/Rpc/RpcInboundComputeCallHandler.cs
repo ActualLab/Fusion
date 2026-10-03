@@ -14,9 +14,15 @@ namespace ActualLab.Fusion.Rpc;
 public class RpcInboundComputeCallHandler : IRpcMiddleware
 {
     public static Func<RpcMethodDef, bool> DefaultFilter { get; set; } = _ => true;
+    // What an inbound invalidation does when it lands on a host that doesn't own the value -
+    // i.e. when the shard moved between the routing and the arrival. Doing nothing is right by
+    // default: the new owner has no value to invalidate, and the old one dropped its own when it
+    // lost the shard. Set it to true to surface the misroute as a reroute instead.
+    public static bool DefaultMustRerouteInvalidations { get; set; }
 
     public double Priority { get; init; } = RpcInboundMiddlewarePriority.Final;
     public Func<RpcMethodDef, bool> Filter { get; init; } = DefaultFilter;
+    public bool MustRerouteInvalidations { get; init; } = DefaultMustRerouteInvalidations;
 
     public Func<RpcInboundCall, Task<T>> Create<T>(RpcMiddlewareContext<T> context, Func<RpcInboundCall, Task<T>> next)
     {
@@ -34,8 +40,20 @@ public class RpcInboundComputeCallHandler : IRpcMiddleware
             return _ => throw Errors.PureClientCannotProcessInboundCalls(methodDef.Service.Name);
 
         return async call => {
+            if (call is IRpcInboundInvalidateCall) {
+                call.Context.Peer.Ref.RequireBackend();
+                if (!methodDef.IsLocalCall(call.Arguments!))
+                    return MustRerouteInvalidations
+                        ? throw RpcRerouteException.MustRerouteInbound()
+                        : default(T)!;
+
+                var source = new InvalidationSource($"Routed invalidation from {call.Context.Peer.Ref}");
+                using var _1 = Invalidation.Begin(source);
+                _ = next.Invoke(call); // Invalidation calls complete synchronously
+                return default!;
+            }
+
             var typedCall = (RpcInboundComputeCall<T>)call;
-            Debug.Assert(ComputeContext.Current == ComputeContext.None);
 
             // We can't use RpcOutgoingCallSettings for the same purpose here, because ProduceComputedImpl
             // is typically called from a post-async-lock block, so the original RpcOutgoingCallSettings.Peer

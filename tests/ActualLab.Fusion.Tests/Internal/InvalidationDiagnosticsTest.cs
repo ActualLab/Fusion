@@ -1,53 +1,29 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using ActualLab.Diagnostics;
 using ActualLab.Fusion.Diagnostics;
 using ActualLab.Fusion.Operations.Internal;
+using ActualLab.Interception;
 using ActualLab.Reflection;
+using ActualLab.Serialization;
+using ActualLab.CommandR.Operations;
 
 namespace ActualLab.Fusion.Tests.Internal;
 
 public sealed class InvalidationDiagnosticsTest(ITestOutputHelper @out) : SimpleFusionTestBase(@out)
 {
     [Fact]
-    public async Task PayloadCaptureTest()
+    public async Task PassMetricsTest()
     {
-        var defaultCommand = new InvalidationDiagnosticsCommand("default");
-        var defaultActivity = await Run(defaultCommand, false, ActivitySamplingResult.AllDataAndRecorded);
-        var commandName = typeof(InvalidationDiagnosticsCommand).GetName();
-        defaultCommand.FormatCount.Should().Be(0);
-        defaultActivity.OperationName.Should().Be($"-inv.{DiagnosticsExt.FixName(commandName)}");
-        defaultActivity.GetTagItem("command.name").Should().Be(commandName);
-        GetEventTag(defaultActivity, "command.payload").Should().BeNull();
-
-        var propagationCommand = new InvalidationDiagnosticsCommand("propagation");
-        var propagationActivity = await Run(propagationCommand, true, ActivitySamplingResult.PropagationData);
-        propagationActivity.IsAllDataRequested.Should().BeFalse();
-        propagationCommand.FormatCount.Should().Be(0);
-        GetEventTag(propagationActivity, "command.payload").Should().BeNull();
-
-        var capturedCommand = new InvalidationDiagnosticsCommand("captured");
-        var capturedActivity = await Run(capturedCommand, true, ActivitySamplingResult.AllDataAndRecorded);
-        capturedCommand.FormatCount.Should().Be(1);
-        GetEventTag(capturedActivity, "command.payload").Should().Be("captured");
-
-        var throwingCommand = new InvalidationDiagnosticsCommand("unused") { MustThrowOnFormat = true };
-        var throwingActivity = await Run(throwingCommand, true, ActivitySamplingResult.AllDataAndRecorded);
-        throwingCommand.FormatCount.Should().Be(1);
-        throwingActivity.Events.Should().Contain(x => x.Name == "command.payload.error");
-    }
-
-    [Fact]
-    public async Task FailureAndPassMetricsTest()
-    {
-        var activities = new ConcurrentQueue<Activity>();
+        // Read before the listener is installed: FusionInstruments' static ctor creates the
+        // ActivitySource, which notifies every listener already present - and ShouldListenTo would
+        // then read the static field that same ctor hasn't assigned yet
         var activitySourceName = FusionInstruments.ActivitySource.Name;
-        var commandName = typeof(InvalidationDiagnosticsCommand).GetName();
+        var activities = new ConcurrentQueue<Activity>();
         using var activityListener = new ActivityListener {
             ShouldListenTo = source => source.Name == activitySourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = activity => {
-                if (Equals(activity.GetTagItem("command.name"), commandName))
+                if (activity.OperationName.StartsWith("inv.pass.", StringComparison.Ordinal))
                     activities.Enqueue(activity);
             },
         };
@@ -55,14 +31,14 @@ public sealed class InvalidationDiagnosticsTest(ITestOutputHelper @out) : Simple
 
         var measurements = new ConcurrentQueue<Measurement>();
         var duration = FusionInstruments.InvalidationPassDuration;
-        var commandCount = FusionInstruments.InvalidationPassCommandCount;
+        var callCount = FusionInstruments.InvalidationPassCallCount;
         duration.Name.Should().Be("invalidation.pass.duration");
         duration.Unit.Should().Be("ms");
-        commandCount.Name.Should().Be("invalidation.pass.command.count");
-        commandCount.Unit.Should().Be("{command}");
+        callCount.Name.Should().Be("invalidation.pass.call.count");
+        callCount.Unit.Should().Be("{call}");
         using var meterListener = new MeterListener();
         meterListener.InstrumentPublished = (instrument, listener) => {
-            if (ReferenceEquals(instrument, duration) || ReferenceEquals(instrument, commandCount))
+            if (ReferenceEquals(instrument, duration) || ReferenceEquals(instrument, callCount))
                 listener.EnableMeasurementEvents(instrument);
         };
         meterListener.SetMeasurementEventCallback<double>((instrument, value, tags, _) =>
@@ -71,63 +47,72 @@ public sealed class InvalidationDiagnosticsTest(ITestOutputHelper @out) : Simple
             measurements.Enqueue(NewMeasurement(instrument.Name, value, tags)));
         meterListener.Start();
 
-        using var services = CreateDiagnosticServices(false);
-        await services.Commander().Call(new InvalidationDiagnosticsCommand("success"));
-        await services.Commander().Call(new InvalidationDiagnosticsCommand("failure") { MustFail = true });
+        using var services = CreateDiagnosticServices();
+        var handler = services.GetRequiredService<FusionOperationCompletionHandler>();
+        var calls = ImmutableList.Create(NewInvocation("Get"));
 
+        await handler.ApplyLocalInvalidations(calls);
+        services.GetRequiredService<InvalidationFailureInjector>().MustFail = true;
+        await handler.ApplyLocalInvalidations(calls);
+
+        // Both passes now carry the same generated source, so the failure tag is what tells
+        // them apart
         activities.Should().HaveCount(2);
-        var failedActivity = activities.Single(x => x.Status == ActivityStatusCode.Error);
+        var failedActivity = activities.Single(x => Equals(x.GetTagItem("invalidation.partial_failure"), true));
         failedActivity.GetTagItem("invalidation.partial_failure").Should().Be(true);
         failedActivity.GetTagItem("invalidation.failure.count").Should().Be(1);
-        failedActivity.Events.Should().Contain(x =>
-            x.Name == "exception"
-            && x.Tags.Any(t => t.Key == "exception.type"));
 
-        var ownMeasurements = measurements.Where(x => x.CommandName == commandName).ToArray();
-        var durations = ownMeasurements.Where(x => x.InstrumentName == duration.Name).ToArray();
+        var durations = measurements.Where(x => x.InstrumentName == duration.Name).ToArray();
         durations.Should().HaveCount(2);
         durations.Should().OnlyContain(x => x.Value >= 0);
         durations.Select(x => x.Outcome).Should().BeEquivalentTo("success", "error");
-        var counts = ownMeasurements.Where(x => x.InstrumentName == commandCount.Name).ToArray();
+        var counts = measurements.Where(x => x.InstrumentName == callCount.Name).ToArray();
         counts.Should().HaveCount(2);
         counts.Should().OnlyContain(x => x.Value == 1);
         counts.Select(x => x.Outcome).Should().BeEquivalentTo("success", "error");
-        ownMeasurements.Should().OnlyContain(x => x.TagCount == 2);
+        measurements.Should().OnlyContain(x => x.Kind == "local" && x.TagCount == 2);
     }
 
-    private async Task<Activity> Run(
-        InvalidationDiagnosticsCommand command,
-        bool captureCommandPayload,
-        ActivitySamplingResult samplingResult)
+    [Fact]
+    public async Task DropMetricTest()
     {
-        Activity? completedActivity = null;
-        var activitySourceName = FusionInstruments.ActivitySource.Name;
-        var commandName = typeof(InvalidationDiagnosticsCommand).GetName();
-        using var listener = new ActivityListener {
-            ShouldListenTo = source => source.Name == activitySourceName,
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => samplingResult,
-            ActivityStopped = activity => {
-                if (Equals(activity.GetTagItem("command.name"), commandName))
-                    completedActivity = activity;
-            },
+        using var services = CreateDiagnosticServices();
+        var handler = services.GetRequiredService<FusionOperationCompletionHandler>();
+        // Read before the listener is installed - see PassMetricsTest. Here the re-entrancy is
+        // silent rather than fatal: the field is still null while its own instrument is published,
+        // so the listener never enables it and the test sees no measurements at all.
+        var dropCount = FusionInstruments.DeferredInvalidationDropCount;
+        var drops = 0L;
+        using var meterListener = new MeterListener();
+        meterListener.InstrumentPublished = (instrument, listener) => {
+            if (ReferenceEquals(instrument, dropCount))
+                listener.EnableMeasurementEvents(instrument);
         };
-        ActivitySource.AddActivityListener(listener);
-        using var services = CreateDiagnosticServices(captureCommandPayload);
+        meterListener.SetMeasurementEventCallback<long>((_, value, _, _) => Interlocked.Add(ref drops, value));
+        meterListener.Start();
 
-        await services.Commander().Call(command);
-        completedActivity.Should().NotBeNull();
-        return completedActivity!;
+        // An unresolvable method can't be applied, and a local pass has no one to throw to
+        await handler.ApplyLocalInvalidations(ImmutableList.Create(NewInvocation("NoSuchMethod")));
+
+        Volatile.Read(ref drops).Should().Be(1);
     }
 
-    private ServiceProvider CreateDiagnosticServices(bool captureCommandPayload)
+    // Private methods
+
+    private ServiceProvider CreateDiagnosticServices()
         => CreateServices(services => {
-            services.AddFusion().AddService<IInvalidationDiagnosticsService, InvalidationDiagnosticsService>();
-            services.AddSingleton(new InvalidatingCommandCompletionHandler.Options() {
-                LogLevel = LogLevel.None,
-                CaptureCommandPayload = captureCommandPayload,
-            });
-            services.AddSingleton(new CompletionProducer.Options() { LogLevel = LogLevel.None });
+            services.AddSingleton<InvalidationFailureInjector>();
+            services.AddFusion().AddService<InvalidationDiagnosticsService>();
+            services.AddSingleton<FusionOperationCompletionHandler>(
+                c => new InjectedFailureHandler(c));
         });
+
+    private static ServiceCall NewInvocation(string methodName)
+        => new() {
+            ServiceType = new TypeRef(typeof(InvalidationDiagnosticsService)).WithoutAssemblyVersions(),
+            MethodName = $"{methodName}:1",
+            Arguments = ArgumentList.New(default(CancellationToken)),
+        };
 
     private static Measurement NewMeasurement(
         string instrumentName,
@@ -136,7 +121,7 @@ public sealed class InvalidationDiagnosticsTest(ITestOutputHelper @out) : Simple
         => new(
             instrumentName,
             value,
-            GetTag(tags, "command.name"),
+            GetTag(tags, "invalidation.kind"),
             GetTag(tags, "outcome"),
             tags.Length);
 
@@ -149,62 +134,37 @@ public sealed class InvalidationDiagnosticsTest(ITestOutputHelper @out) : Simple
         return "";
     }
 
-    private static object? GetEventTag(Activity activity, string name)
-        => activity.Events
-            .SelectMany(x => x.Tags)
-            .FirstOrDefault(x => x.Key == name)
-            .Value;
+    // Nested types
 
-    public interface IInvalidationDiagnosticsService : IComputeService
+    public sealed class InvalidationFailureInjector
+    {
+        public bool MustFail { get; set; }
+    }
+
+    public class InvalidationDiagnosticsService : IComputeService
     {
         [ComputeMethod]
-        Task<int> Get(CancellationToken cancellationToken = default);
-
-        [CommandHandler]
-        Task OnRun(InvalidationDiagnosticsCommand command, CancellationToken cancellationToken = default);
-    }
-
-    public class InvalidationDiagnosticsService : IInvalidationDiagnosticsService
-    {
         public virtual Task<int> Get(CancellationToken cancellationToken = default)
             => Task.FromResult(0);
-
-        public virtual Task OnRun(
-            InvalidationDiagnosticsCommand command,
-            CancellationToken cancellationToken = default)
-        {
-            if (Invalidation.IsActive) {
-                if (command.MustFail)
-                    throw new InvalidOperationException("Invalidation failed.");
-
-                _ = Get(default);
-                return Task.CompletedTask;
-            }
-
-            InMemoryOperationScope.Require();
-            return Task.CompletedTask;
-        }
     }
 
-    public sealed class InvalidationDiagnosticsCommand(string payload) : ICommand<Unit>
+    private sealed class InjectedFailureHandler(IServiceProvider services)
+        : FusionOperationCompletionHandler(services)
     {
-        private int _formatCount;
+        private InvalidationFailureInjector Injector { get; }
+            = services.GetRequiredService<InvalidationFailureInjector>();
 
-        public int FormatCount => _formatCount;
-        public bool MustFail { get; init; }
-        public bool MustThrowOnFormat { get; init; }
-
-        public override string ToString()
-        {
-            Interlocked.Increment(ref _formatCount);
-            return MustThrowOnFormat ? throw new InvalidOperationException("Formatting failed.") : payload;
-        }
+        protected override Task ApplyInvalidation(
+            ServiceCall call, bool mustResolve = false, CancellationToken cancellationToken = default)
+            => Injector.MustFail
+                ? Task.FromException(new InvalidOperationException("Injected invalidation failure."))
+                : base.ApplyInvalidation(call, mustResolve, cancellationToken);
     }
 
     private sealed record Measurement(
         string InstrumentName,
         double Value,
-        string CommandName,
+        string Kind,
         string Outcome,
         int TagCount);
 }

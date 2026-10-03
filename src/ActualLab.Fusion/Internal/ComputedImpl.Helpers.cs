@@ -35,11 +35,11 @@ public static partial class ComputedImpl
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static bool TryUseExistingWithCallOptions(Computed? existing, ComputeContext context) {
         var callOptions = context.CallOptions;
-        var mustGetExisting = (callOptions & CallOptions.GetExisting) != 0;
+        var mustGetExisting = callOptions.HasFlag(CallOptions.GetExisting);
         if (existing is null)
             return mustGetExisting;
 
-        var mustInvalidate = (callOptions & CallOptions.Invalidate) == CallOptions.Invalidate;
+        var mustInvalidate = callOptions.HasFlag(CallOptions.Invalidate);
         if (mustInvalidate) {
             // CallOptions.Invalidate is:
             // - always paired with CallOptions.GetExisting

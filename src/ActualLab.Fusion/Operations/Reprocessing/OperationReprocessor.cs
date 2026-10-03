@@ -119,7 +119,7 @@ public class OperationReprocessor : IOperationReprocessor
         }
 
         var operation = CommandContext.TryGetOperation();
-        if (operation is not { Scope: not InMemoryOperationScope })
+        if (operation is not { Scope: not TransientOperationScope })
             return false;
 
         if (operation.Scope is { IsCommitted: true }) {

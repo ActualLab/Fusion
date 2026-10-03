@@ -32,6 +32,7 @@ public partial record KeyValueService_Set<TValue>(
     [property: DataMember, MemoryPackOrder(1), Key(1)] TValue Value
 ) : ICommand<Unit>;
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class KeyValueService<TValue> : IKeyValueService<TValue>
 {
     private readonly ConcurrentDictionary<string, TValue> _values = new(StringComparer.Ordinal);
@@ -68,27 +69,25 @@ public class KeyValueService<TValue> : IKeyValueService<TValue>
 
     public virtual Task SetCmd(KeyValueService_Set<TValue> cmd, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
+        TransientOperationScope.Require();
+        _values[cmd.Key] = cmd.Value;
+
+        Invalidation.Defer(() => {
             _ = TryGet(cmd.Key, default).AssertCompleted();
             _ = Get(cmd.Key, default).AssertCompleted();
-            return Task.CompletedTask;
-        }
-
-        InMemoryOperationScope.Require();
-        _values[cmd.Key] = cmd.Value;
+        });
         return Task.CompletedTask;
     }
 
     public virtual Task RemoveCmd(KeyValueService_Remove cmd, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
+        TransientOperationScope.Require();
+        _values.TryRemove(cmd.Key, out _);
+
+        Invalidation.Defer(() => {
             _ = TryGet(cmd.Key, default).AssertCompleted();
             _ = Get(cmd.Key, default).AssertCompleted();
-            return Task.CompletedTask;
-        }
-
-        InMemoryOperationScope.Require();
-        _values.TryRemove(cmd.Key, out _);
+        });
         return Task.CompletedTask;
     }
 }

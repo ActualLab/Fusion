@@ -2,6 +2,7 @@ using ActualLab.Fusion.EntityFramework;
 
 namespace Samples.HelloCart.V2;
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]
 public class DbCartService(IServiceProvider services)
     : DbServiceBase<AppDbContext>(services), ICartService
 {
@@ -12,11 +13,6 @@ public class DbCartService(IServiceProvider services)
         var (cartId, cart) = command;
         if (string.IsNullOrEmpty(cartId))
             throw new ArgumentOutOfRangeException(nameof(command));
-
-        if (Invalidation.IsActive) {
-            _ = Get(cartId, default);
-            return;
-        }
 
         await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
         var dbCart = await dbContext.Carts.FindAsync(DbKey.Compose(cartId), cancellationToken);
@@ -54,6 +50,8 @@ public class DbCartService(IServiceProvider services)
                 });
         }
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        Invalidation.Defer(() => _ = Get(cartId, default));
     }
 
     public virtual async Task<Cart?> Get(string id, CancellationToken cancellationToken = default)

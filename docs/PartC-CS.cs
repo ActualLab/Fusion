@@ -193,6 +193,7 @@ public record ValidatedOrderCommand(long UserId, List<OrderItem> Items)
 }
 #endregion
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class OperationsFrameworkExampleService : IComputeService
 {
     #region PartCCS_WithOperationsFramework
@@ -200,18 +201,15 @@ public class OperationsFrameworkExampleService : IComputeService
     public virtual async Task<Order> CreateOrder(
         CreateOrderCommand command, CancellationToken ct)
     {
-        // Invalidation block (runs on all hosts)
-        if (Invalidation.IsActive) {
-            _ = GetOrders(command.UserId, default);
-            return default!;
-        }
-
-        // Main logic (runs on originating host only)
+        // Main logic
         // await using var db = await DbHub.CreateOperationDbContext(ct);
         var order = new Order();
         // db.Orders.Add(order);
         // await db.SaveChangesAsync(ct);
         await Task.CompletedTask;
+
+        // Invalidation - the block runs after the commit
+        Invalidation.Defer(() => _ = GetOrders(command.UserId, default));
         return order;
     }
     #endregion

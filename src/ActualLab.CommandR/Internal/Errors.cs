@@ -1,3 +1,5 @@
+using ActualLab.CommandR.Operations;
+
 namespace ActualLab.CommandR.Internal;
 
 /// <summary>
@@ -56,4 +58,17 @@ public static class Errors
         => new InvalidOperationException("This action cannot be performed on completed or inactive Operation.");
     public static Exception TransientScopeOperationCannotHaveEvents()
         => new NotSupportedException("An operation from transient scope cannot have events.");
+
+    // ServiceCall
+
+    public static Exception ServiceCallCannotBeApplied(string call, string reason)
+        => new InvalidOperationException(
+            $"A {nameof(ServiceCall)} can't be applied ({reason}): {call}. " +
+            "Its caller has no second chance to apply it, so it must not be dropped.");
+
+    public static Exception InvalidationCallsRequireFusion(Type handlerType)
+        => new NotSupportedException(
+            $"'{handlerType.GetName()}' can't apply {nameof(Operation)}.{nameof(Operation.InvalidationCalls)}: " +
+            "only Fusion knows what invalidating a computed value means. AddFusion() registers a " +
+            "handler that does.");
 }

@@ -44,6 +44,7 @@ public class ListIdsServiceProblem : IComputeService
 // Pseudo-Methods for Batch Invalidation
 // ============================================================================
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class ListIdsServiceSolution : IComputeService
 {
     #region PartFPatterns_PseudoMethod
@@ -67,18 +68,17 @@ public class ListIdsServiceSolution : IComputeService
         => Task.FromResult(Array.Empty<Ulid>());
 
     #region PartFPatterns_InvalidatePseudo
+    [DeferredInvalidationMode(DeferredInvalidationMode.Local)]
     [CommandHandler]
     public virtual async Task AddItem(AddItemCommand command, CancellationToken ct = default)
     {
         var folder = command.Folder;
-        if (Invalidation.IsActive) {
-            // This invalidates ALL ListIds(folder, <any_limit>) calls
-            _ = PseudoListIds(folder);
-            return;
-        }
 
         // Actual implementation
         await AddItemToDb(command, ct);
+
+        // This invalidates ALL ListIds(folder, <any_limit>) calls
+        Invalidation.Defer(() => _ = PseudoListIds(folder));
     }
     #endregion
 
@@ -126,6 +126,7 @@ public class HierarchicalDependenciesService : IComputeService
 // ============================================================================
 
 #region PartFPatterns_CompleteTodoService
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class TodoService : IComputeService
 {
     // Pseudo-method for batch invalidation
@@ -147,16 +148,17 @@ public class TodoService : IComputeService
     public virtual async Task<TodoItem> AddOrUpdate(AddTodoCommand command, CancellationToken ct = default)
     {
         var session = command.Session;
-        if (Invalidation.IsActive) {
+
+        // Actual implementation
+        var todo = await SaveTodo(command, ct);
+
+        Invalidation.Defer(() => {
             _ = Get(session, command.Todo.Id, default);
             // Invalidate all ListIds variants for this session
             _ = PseudoListIds(session);
             _ = GetSummary(session, default);
-            return null!;
-        }
-
-        // Actual implementation
-        return await SaveTodo(command, ct);
+        });
+        return todo;
     }
 
     [ComputeMethod]

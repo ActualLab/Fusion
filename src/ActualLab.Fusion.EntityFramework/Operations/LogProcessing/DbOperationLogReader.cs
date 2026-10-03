@@ -20,18 +20,22 @@ public class DbOperationLogReader<TDbContext>
     }
 
     protected IOperationCompletionNotifier OperationCompletionNotifier { get; }
+    protected DbLogEntrySerializer LogEntrySerializer { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public DbOperationLogReader(Options settings, IServiceProvider services)
         : base(settings, services)
-        => OperationCompletionNotifier = services.GetRequiredService<IOperationCompletionNotifier>();
+    {
+        OperationCompletionNotifier = services.GetRequiredService<IOperationCompletionNotifier>();
+        LogEntrySerializer = services.GetRequiredService<DbLogEntrySerializer>();
+    }
 
     protected override Task Process(string shard, DbOperation entry, CancellationToken cancellationToken)
     {
         var isLocal = string.Equals(entry.HostId, DbHub.HostId.Id, StringComparison.Ordinal);
         return isLocal
             ? Task.CompletedTask
-            : OperationCompletionNotifier.NotifyCompleted(entry.ToModel(), null);
+            : OperationCompletionNotifier.NotifyCompleted(entry.ToModel(LogEntrySerializer), commandContext: null);
     }
 
     protected override void ReportProcessingDelay(string shard, DbOperation entry, string path)

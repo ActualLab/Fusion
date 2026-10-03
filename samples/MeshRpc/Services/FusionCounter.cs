@@ -42,16 +42,12 @@ public class FusionCounter(Host ownHost) : IFusionCounter
     // [CommandHandler]
     public virtual async Task<CounterWithOrigin> Increment(FusionCounter_Increment command, CancellationToken cancellationToken)
     {
-        if (Invalidation.IsActive) {
-            Console.WriteLine($"Invalidating: {command}".Pastel(ConsoleColor.DarkGray));
-            return default!; // No need to invalidate anything, CounterStorage.Increment already does that
-        }
-
         var delay = CounterIncrementDelay.Next();
         if (delay > TimeSpan.Zero)
             await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
 
-        InMemoryOperationScope.Require(); // That's one way to trigger operation-style invalidation handling
+        TransientOperationScope.Require(); // Triggers OF invalidation handling
+        // Nothing to defer here: CounterStorage.Increment invalidates what it changes
         var counter = CounterStorage.Increment(command.Key);
         return new CounterWithOrigin(counter, ownHost.Id);
     }

@@ -4,6 +4,7 @@ using ActualLab.Fusion.Client.Interception;
 using ActualLab.Fusion.Interception;
 using ActualLab.Interception;
 using ActualLab.Rpc;
+using ActualLab.CommandR.Operations;
 
 namespace ActualLab.Fusion.Internal;
 
@@ -31,6 +32,8 @@ public sealed class FusionHub(IServiceProvider services) : IHasServices
         = services.GetRequiredService<ComputedOptionsProvider>();
     public ComputedOutputEqualityComparer ComputedOutputEqualityComparer { get; }
         = services.GetRequiredService<ComputedOutputEqualityComparer>();
+    public ServiceTypeResolver ServiceTypeResolver { get; }
+        = services.GetRequiredService<ServiceTypeResolver>();
     public ComputeServiceInterceptor ComputeServiceInterceptor
         => field ??= Services.GetRequiredService<ComputeServiceInterceptor>();
 

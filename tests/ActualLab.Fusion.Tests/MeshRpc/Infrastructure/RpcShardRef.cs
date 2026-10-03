@@ -15,6 +15,9 @@ public sealed class RpcShardRef : RpcRef
         ShardIndex = shardIndex;
         HostInfo = $"#{shardIndex}";
         UseReferentialEquality = true;
+        // A mesh host is another host of the same app, not a client - and only a backend peer may
+        // route an invalidation to the host that owns the value
+        IsBackend = true;
         Initialize();
     }
 

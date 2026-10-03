@@ -7,6 +7,8 @@ using ActualLab.Resilience;
 using ActualLab.Rpc;
 using ActualLab.Versioning;
 
+using ActualLab.CommandR.Operations;
+
 namespace ActualLab.CommandR;
 
 /// <summary>
@@ -42,6 +44,7 @@ public readonly struct CommanderBuilder
         // Core services
         services.TryAddSingleton<VersionGenerator<long>>(c => new ClockBasedVersionGenerator(c.Clocks().SystemClock));
         services.TryAddSingleton(_ => ChaosMaker.Default);
+        services.AddServiceTypeResolver();
 
         // Commander, handlers, etc.
         services.AddSingleton<ICommander>(c => new Commander(c));
@@ -66,6 +69,7 @@ public readonly struct CommanderBuilder
         AddHandlers<RpcCommandHandler>();
         services.AddSingleton(_ => new LocalCommandRunner());
         AddHandlers<LocalCommandRunner>();
+        AddOperationCompletionHandler(c => new OperationCompletionHandler(c));
 
         // ActualLab.Rpc middleware; .AddRpc().AddMiddleware() implies adding RPC as well, so we do this manually
         Services.TryAddEnumerable(
@@ -186,6 +190,36 @@ public readonly struct CommanderBuilder
         Services.TryAdd(descriptor);
         AddHandlers(serviceType, implementationType, priorityOverride);
         return this;
+    }
+
+    // AddOperationCompletionHandler
+
+    /// <summary>
+    /// Registers <typeparamref name="THandler"/> as the single handler of every
+    /// <see cref="OperationCompletion"/>, replacing whatever was registered before.
+    /// </summary>
+    /// <remarks>
+    /// An operation's completion must be handled exactly once: a second chain entry would apply its
+    /// invalidations twice, and a second <see cref="IOperationCompletionListener"/> would too. So
+    /// everything here hangs off <see cref="OperationCompletionHandler"/> rather than off
+    /// <typeparamref name="THandler"/> - the chain entry, the listener and the DI alias all resolve
+    /// that one type, which makes it the seam an override replaces.
+    /// </remarks>
+    public CommanderBuilder AddOperationCompletionHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] THandler>(
+        Func<IServiceProvider, THandler> factory)
+        where THandler : OperationCompletionHandler
+    {
+        Services.AddSingleton(factory);
+        if (typeof(THandler) != typeof(OperationCompletionHandler))
+            Services.AddSingleton<OperationCompletionHandler>(c => c.GetRequiredService<THandler>());
+        Services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IOperationCompletionListener, OperationCompletionHandler>(
+                c => c.GetRequiredService<OperationCompletionHandler>()));
+
+        // THandler may declare command handlers of its own, so the old ones go before the new scan
+        Handlers.RemoveWhere(x => x.CommandType == typeof(OperationCompletion));
+        return AddHandlers(typeof(OperationCompletionHandler), typeof(THandler));
     }
 
     // Low-level methods

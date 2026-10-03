@@ -18,4 +18,12 @@ public class AppDbContext(DbContextOptions options) : DbContextBase(options)
     // ActualLab.Fusion.EntityFramework.Operations tables
     public DbSet<DbOperation> Operations { get; protected set; } = null!;
     public DbSet<DbEvent> Events { get; protected set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        // This app never switches payload formats, so each _Operations / _Events payload needs
+        // only the column its serializer actually writes
+        modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DbLogEntrySerializer.Default.Format);
+    }
 }

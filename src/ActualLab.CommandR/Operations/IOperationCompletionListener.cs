@@ -1,6 +1,4 @@
-using ActualLab.CommandR.Operations;
-
-namespace ActualLab.Fusion.Operations;
+namespace ActualLab.CommandR.Operations;
 
 /// <summary>
 /// A listener that is notified when an operation completes, enabling side-effect processing

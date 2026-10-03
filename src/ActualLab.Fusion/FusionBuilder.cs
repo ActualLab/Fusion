@@ -12,6 +12,7 @@ using ActualLab.Fusion.UI;
 using ActualLab.Resilience;
 using ActualLab.Rpc;
 using Errors = ActualLab.Internal.Errors;
+using ActualLab.CommandR.Operations;
 
 namespace ActualLab.Fusion;
 
@@ -24,7 +25,9 @@ public readonly struct FusionBuilder
     public IServiceCollection Services { get; }
     public CommanderBuilder Commander { get; }
     public RpcBuilder Rpc { get; }
+    public ServiceTypeResolver ServiceTypeResolver { get; }
     public RpcServiceMode DefaultServiceMode { get; }
+    public FusionTag Tag { get; }
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "CodeKeepers are used only to retain the code")]
     [UnconditionalSuppressMessage("Trimming", "IL2110", Justification = "CodeKeepers are used only to retain the code")]
@@ -41,8 +44,10 @@ public readonly struct FusionBuilder
         Services = services;
         Commander = services.AddCommander();
         if (services.FindInstance<FusionTag>() is { } fusionTag) {
+            Tag = fusionTag;
             DefaultServiceMode = defaultServiceMode.Or(fusionTag.DefaultServiceMode);
             Rpc = services.AddRpc(DefaultServiceMode);
+            ServiceTypeResolver = services.AddServiceTypeResolver();
             if (saveDefaultServiceMode)
                 fusionTag.DefaultServiceMode = DefaultServiceMode;
 
@@ -52,7 +57,8 @@ public readonly struct FusionBuilder
 
         DefaultServiceMode = defaultServiceMode.Or(RpcServiceMode.Local);
         Rpc = services.AddRpc(DefaultServiceMode);
-        fusionTag = services.AddInstance(new FusionTag(), addInFront: true);
+        ServiceTypeResolver = services.AddServiceTypeResolver();
+        Tag = fusionTag = services.AddInstance(new FusionTag(), addInFront: true);
         if (saveDefaultServiceMode)
             fusionTag.DefaultServiceMode = DefaultServiceMode;
 
@@ -83,13 +89,25 @@ public readonly struct FusionBuilder
         // CommandR, command completion and invalidation
         var commander = Commander;
 
-        // Transient operation scope and its provider
-        services.AddSingleton(c => new InMemoryOperationScopeProvider(c));
-        commander.AddHandlers<InMemoryOperationScopeProvider>();
+        // Deferred invalidation: mode resolution + the registry used to apply recorded calls.
+        // An ordinary singleton, so it can still be replaced after AddFusion()
+        services.AddSingleton(c => new DeferredInvalidationModeResolver(
+            c.GetRequiredService<ServiceTypeResolver>()));
+        services.FindOrAddInstance(() => new ServiceTypeResolver(), addInFront: true);
+        // Replaces CommandR's default, which can't apply invalidation calls
+        commander.AddOperationCompletionHandler(c => new FusionOperationCompletionHandler(c));
 
-        // Nested command logger
-        services.AddSingleton(c => new NestedOperationLogger(c));
-        commander.AddHandlers<NestedOperationLogger>();
+        // Nothing may run a command while invalidating - see InvalidationGuard
+        services.AddSingleton(_ => new InvalidationGuard());
+        commander.AddHandlers<InvalidationGuard>();
+
+        // Transient operation scope and its provider
+        services.AddSingleton(c => new TransientOperationScopeProvider(c));
+        commander.AddHandlers<TransientOperationScopeProvider>();
+
+        // Activates the DeferredInvalidationContext below every operation scope provider
+        services.AddSingleton(_ => new DeferredInvalidationScopeProvider());
+        commander.AddHandlers<DeferredInvalidationScopeProvider>();
 
         // Operation completion - notifier & producer
         services.AddSingleton(_ => new OperationCompletionNotifier.Options());
@@ -99,12 +117,6 @@ public readonly struct FusionBuilder
         services.TryAddEnumerable(ServiceDescriptor.Singleton(
             typeof(IOperationCompletionListener),
             typeof(CompletionProducer)));
-
-        // Command completion handler performing invalidations
-        services.AddSingleton(_ => new InvalidatingCommandCompletionHandler.Options());
-        services.AddSingleton(c => new InvalidatingCommandCompletionHandler(
-            c.GetRequiredService<InvalidatingCommandCompletionHandler.Options>(), c));
-        commander.AddHandlers<InvalidatingCommandCompletionHandler>();
 
         // Completion terminator
         services.AddSingleton(_ => new CompletionTerminator());
@@ -130,6 +142,7 @@ public readonly struct FusionBuilder
         Services = fusion.Services;
         Commander = fusion.Commander;
         Rpc = fusion.Rpc;
+        ServiceTypeResolver = fusion.ServiceTypeResolver;
         DefaultServiceMode = defaultServiceMode;
         if (!setDefaultServiceMode)
             return;
@@ -484,7 +497,8 @@ public readonly struct FusionBuilder
     {
         public RpcServiceMode DefaultServiceMode {
             get;
-            set => field = value.Or(RpcServiceMode.Local);
+            internal set => field = value.Or(RpcServiceMode.Local);
         } = RpcServiceMode.Local;
+
     }
 }

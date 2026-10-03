@@ -50,6 +50,8 @@ public class FusionRpcServiceBuilder : RpcServiceBuilder
         // Any server
         var implementationResolver = ImplementationResolver?.Resolver;
         var implementationType = ImplementationResolver?.Type!;
+        if (ImplementationResolver?.Type is { } computeServiceType)
+            Fusion.ServiceTypeResolver.Register(serviceType, computeServiceType);
         switch (Mode) {
             case RpcServiceMode.Local:
                 // Local services are skipped during RpcServiceRegistry construction

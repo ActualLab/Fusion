@@ -14,6 +14,9 @@ public sealed class ComputeMethodDef : MethodDef
     private static readonly ConcurrentDictionary<Type, object> ConsolidationComparerCache = new();
 
     public ComputedOptions ComputedOptions { [MethodImpl(MethodImplOptions.AggressiveInlining)] get; init; } = ComputedOptions.Default;
+    // MethodDef.Type is the implementation type; this is what the service is registered as,
+    // i.e. what identifies the method on another host
+    public readonly Type ServiceType;
     public readonly bool IsOfHasDisposableStatusType;
     public readonly ComputeMethodDef? ConsolidationSourceMethodDef;
     public readonly ComputeMethodDef? ConsolidationTargetMethodDef;
@@ -26,6 +29,7 @@ public sealed class ComputeMethodDef : MethodDef
         ComputeMethodDef? consolidationTargetMethodDef = null
         ) : base(type, methodInfo)
     {
+        ServiceType = interceptor.Hub.ServiceTypeResolver.TryResolveServiceType(type) ?? type;
         if (!IsAsyncMethod) {
             IsValid = false;
             return;

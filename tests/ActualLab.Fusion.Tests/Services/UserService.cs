@@ -46,6 +46,8 @@ public partial record UserService_Delete(
     [property: DataMember, MemoryPackOrder(0), Key(0)] DbUser User
 ) : ICommand<bool>;
 
+// Multi-host tests read these values from every host, so the invalidation has to reach all of them
+[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]
 public class UserService : DbServiceBase<TestDbContext>, IPlainUserService
 {
     private readonly IDbEntityResolver<long, DbUser> _userResolver;
@@ -65,14 +67,6 @@ public class UserService : DbServiceBase<TestDbContext>, IPlainUserService
     {
         var (user, orUpdate) = command;
         var existingUser = (DbUser?) null;
-        var context = CommandContext.GetCurrent();
-        if (Invalidation.IsActive) {
-            _ = Get(user.Id, default).AssertCompleted();
-            existingUser = context.Operation.Items.KeylessGet<DbUser>();
-            if (existingUser is null)
-                _ = Count(default).AssertCompleted();
-            return;
-        }
 
         var dbContext = await CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
@@ -81,30 +75,36 @@ public class UserService : DbServiceBase<TestDbContext>, IPlainUserService
         var userId = user.Id;
         if (orUpdate) {
             existingUser = await dbContext.Users.FindAsync(DbKey.Compose(userId), cancellationToken);
-            if (IsComputeService)
-                context.Operation.Items.KeylessSet(existingUser);
             if (existingUser is not null)
                 dbContext.Users.Update(user);
         }
         if (existingUser is null)
             dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (!IsComputeService)
+            return;
+
+        var isNewUser = existingUser is null;
+        Invalidation.Defer(() => {
+            _ = Get(userId, default).AssertCompleted();
+            if (isNewUser)
+                _ = Count(default).AssertCompleted();
+        });
     }
 
     // [CommandHandler]
     public virtual async Task Update(UserService_Update command, CancellationToken cancellationToken = default)
     {
         var user = command.User;
-        if (Invalidation.IsActive) {
-            _ = Get(user.Id, default).AssertCompleted();
-            return;
-        }
-
         var dbContext = await CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         dbContext.Users.Update(user);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (IsComputeService)
+            Invalidation.Defer(() => _ = Get(user.Id, default).AssertCompleted());
     }
 
     // Not a CommandHandler!
@@ -116,36 +116,28 @@ public class UserService : DbServiceBase<TestDbContext>, IPlainUserService
 
         dbContext.Users.Update(user);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        if (Invalidation.IsActive)
-            _ = Get(user.Id, default).AssertCompleted();
     }
 
     public virtual async Task<bool> Delete(UserService_Delete command, CancellationToken cancellationToken = default)
     {
         var user = command.User;
-        var context = CommandContext.GetCurrent();
-        if (Invalidation.IsActive) {
-            var success = context.Operation.Items.KeylessGet<bool>();
-            if (success) {
-                _ = Get(user.Id, default).AssertCompleted();
-                _ = Count(default).AssertCompleted();
-            }
-            return false;
-        }
-
         var dbContext = await CreateOperationDbContext(cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
         dbContext.Users.Remove(user);
         try {
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            context.Operation.Items.KeylessSet(true);
-            return true;
         }
         catch (DbUpdateConcurrencyException) {
             return false;
         }
+
+        if (IsComputeService)
+            Invalidation.Defer(() => {
+                _ = Get(user.Id, default).AssertCompleted();
+                _ = Count(default).AssertCompleted();
+            });
+        return true;
     }
 
     public virtual async Task<DbUser?> Get(long userId, CancellationToken cancellationToken = default)

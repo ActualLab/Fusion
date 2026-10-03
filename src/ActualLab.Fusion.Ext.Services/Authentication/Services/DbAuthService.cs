@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ActualLab.CommandR.Operations;
 using ActualLab.Fusion.EntityFramework;
 
 namespace ActualLab.Fusion.Authentication.Services;
@@ -7,6 +8,7 @@ namespace ActualLab.Fusion.Authentication.Services;
 /// Database-backed implementation of <see cref="IAuth"/> and <see cref="IAuthBackend"/>
 /// using Entity Framework Core.
 /// </summary>
+[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]
 public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserId>(
     DbAuthService<TDbContext>.Options settings,
     IServiceProvider services
@@ -44,22 +46,6 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve(command);
-        if (Invalidation.IsActive) {
-            if (isKickCommand)
-                return;
-
-            _ = GetSessionInfo(session, default); // Must go first!
-            _ = GetAuthInfo(session, default);
-            if (force)
-                _ = IsSignOutForced(session, default);
-            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo is not null) {
-                _ = GetUser(shard, invSessionInfo.UserId, default);
-                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
-            }
-            return;
-        }
-
         // Let's handle special kinds of sign-out first, which only trigger "primary" sign-out version
         if (isKickCommand) {
             var user = await GetUser(session, cancellationToken).ConfigureAwait(false);
@@ -88,7 +74,8 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
 
         var dbSessionInfo = await Sessions.Get(dbContext, session.Id, true, cancellationToken).ConfigureAwait(false);
         if (dbSessionInfo is null) {
-            context.Operation.MustStore(false); // The session is gone (trimmed?), so there is nothing to log
+            // The session is gone (trimmed?), so there is nothing to log
+            context.Operation.StoreMode = OperationStoreMode.None;
             return;
         }
 
@@ -97,7 +84,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         if (sessionInfo is null || sessionInfo.IsSignOutForced)
             return;
 
-        context.Operation.Items.KeylessSet(sessionInfo);
+        var userId = sessionInfo.UserId;
         sessionInfo = sessionInfo with {
             LastSeenAt = Clocks.SystemClock.Now,
             AuthenticatedIdentity = "",
@@ -105,6 +92,15 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
             IsSignOutForced = force,
         };
         await Sessions.Upsert(dbContext, session.Id, sessionInfo, cancellationToken).ConfigureAwait(false);
+
+        Invalidation.Defer(() => {
+            _ = GetSessionInfo(session, default); // Must go first!
+            _ = GetAuthInfo(session, default);
+            if (force)
+                _ = IsSignOutForced(session, default);
+            _ = GetUser(shard, userId, default);
+            _ = GetUserSessions(shard, userId, default);
+        });
     }
 
     // [CommandHandler] inherited
@@ -112,15 +108,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
     {
         var session = command.Session.RequireValid();
 
-        var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve(command);
-        if (Invalidation.IsActive) {
-            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo is not null)
-                _ = GetUser(shard, invSessionInfo.UserId, default);
-            return;
-        }
-
         var sessionInfo = await GetSessionInfo(session, cancellationToken)
             .Require(SessionInfo.MustBeAuthenticated)
             .ConfigureAwait(false);
@@ -134,7 +122,8 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
             throw EntityFramework.Internal.Errors.EntityNotFound(Users.UserEntityType);
 
         await Users.Edit(dbContext, dbUser, command, cancellationToken).ConfigureAwait(false);
-        context.Operation.Items.KeylessSet(sessionInfo);
+
+        Invalidation.Defer(() => _ = GetUser(shard, sessionInfo.UserId, default));
     }
 
     public override async Task UpdatePresence(

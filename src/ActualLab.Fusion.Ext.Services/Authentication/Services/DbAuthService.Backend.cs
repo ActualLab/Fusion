@@ -14,19 +14,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var (session, user, authenticatedIdentity) = (command.Session, command.User, command.AuthenticatedIdentity);
         session.RequireValid();
 
-        var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve(command);
-        if (Invalidation.IsActive) {
-            _ = GetSessionInfo(session, default); // Must go first!
-            _ = GetAuthInfo(session, default);
-            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo is not null) {
-                _ = GetUser(shard, invSessionInfo.UserId, default);
-                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
-            }
-            return;
-        }
-
         if (!user.Identities.ContainsKey(authenticatedIdentity))
 #pragma warning disable MA0015
             throw new ArgumentOutOfRangeException(
@@ -69,8 +57,13 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         };
         await Sessions.Upsert(dbContext, session.Id, sessionInfo, cancellationToken).ConfigureAwait(false);
 
-        context.Operation.Items.KeylessSet(sessionInfo);
-        context.Operation.Items.KeylessSet(isNewUser);
+        var userId = sessionInfo.UserId;
+        Invalidation.Defer(() => {
+            _ = GetSessionInfo(session, default); // Must go first!
+            _ = GetAuthInfo(session, default);
+            _ = GetUser(shard, userId, default);
+            _ = GetUserSessions(shard, userId, default);
+        });
     }
 
     // [CommandHandler] inherited
@@ -80,22 +73,7 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         var (session, ipAddress, userAgent, options) = command;
         session.RequireValid();
 
-        var context = CommandContext.GetCurrent();
         var shard = ShardResolver.Resolve(command);
-        if (Invalidation.IsActive) {
-            var invSessionInfo = context.Operation.Items.KeylessGet<SessionInfo>();
-            if (invSessionInfo is null)
-                return null!;
-
-            _ = GetSessionInfo(session, default); // Must go first!
-            var invIsNew = context.Operation.Items.KeylessGet<bool>();
-            if (invIsNew)
-                _ = GetAuthInfo(session, default);
-            if (invSessionInfo.IsAuthenticated())
-                _ = GetUserSessions(shard, invSessionInfo.UserId, default);
-            return null!;
-        }
-
         var dbContext = await DbHub.CreateOperationDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
@@ -113,10 +91,15 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         dbSessionInfo = await Sessions
             .Upsert(dbContext, session.Id, sessionInfo, cancellationToken)
             .ConfigureAwait(false);
-        sessionInfo = SessionConverter.ToModel(dbSessionInfo);
-        context.Operation.Items.KeylessSet(sessionInfo); // invSessionInfo
-        context.Operation.Items.KeylessSet(isNew); // invIsNew
-        return sessionInfo!;
+        sessionInfo = SessionConverter.ToModel(dbSessionInfo)!;
+        Invalidation.Defer(() => {
+            _ = GetSessionInfo(session, default); // Must go first!
+            if (isNew)
+                _ = GetAuthInfo(session, default);
+            if (sessionInfo.IsAuthenticated())
+                _ = GetUserSessions(shard, sessionInfo.UserId, default);
+        });
+        return sessionInfo;
     }
 
     // [CommandHandler] inherited
@@ -127,11 +110,6 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
         session.RequireValid();
 
         var shard = ShardResolver.Resolve(command);
-        if (Invalidation.IsActive) {
-            _ = GetSessionInfo(session, default);
-            return;
-        }
-
         var dbContext = await DbHub.CreateOperationDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _1 = dbContext.ConfigureAwait(false);
 
@@ -145,6 +123,8 @@ public partial class DbAuthService<TDbContext, TDbSessionInfo, TDbUser, TDbUserI
             Options = options,
         };
         await Sessions.Upsert(dbContext, session.Id, sessionInfo, cancellationToken).ConfigureAwait(false);
+
+        Invalidation.Defer(() => _ = GetSessionInfo(session, default));
     }
 
     // Compute methods

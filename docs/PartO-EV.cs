@@ -37,18 +37,15 @@ public record Order
 
 public record OrderCreatedEvent(long OrderId, long CustomerId) : ICommand<Unit>;
 
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContextExtended>(services), IComputeService
 {
     #region PartOEV_AddingEvents
     [CommandHandler]
+    [DeferredInvalidationMode(DeferredInvalidationMode.Local)]
     public virtual async Task<Order> CreateOrder(
         CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
-        if (Invalidation.IsActive) {
-            _ = GetOrder(command.OrderId, default);
-            return default!;
-        }
-
         var context = CommandContext.GetCurrent();
         await using var dbContext = await DbHub.CreateOperationDbContext(cancellationToken);
 
@@ -59,6 +56,7 @@ public class OrderService(IServiceProvider services) : DbServiceBase<AppDbContex
         // Add an event to be processed after commit
         context.Operation.AddEvent(new OrderCreatedEvent(order.Id, order.CustomerId));
 
+        Invalidation.Defer(() => _ = GetOrder(command.OrderId, default));
         return order;
     }
     #endregion

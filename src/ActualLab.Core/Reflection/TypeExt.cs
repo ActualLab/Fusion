@@ -28,6 +28,8 @@ public static partial class TypeExt
 
     private static readonly ConcurrentDictionary<Type, Type> NonProxyTypeCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
+    private static readonly ConcurrentDictionary<Type, Type[]> InterfacesByDependencyCache
+        = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), string>> GetNameCache
         = new(HardwareInfo.ProcessorCountPo2, 131);
     private static readonly ConcurrentDictionary<(Type, bool, bool), LazySlim<(Type, bool, bool), string>> ToIdentifierNameCache
@@ -85,20 +87,34 @@ public static partial class TypeExt
             baseType = baseType.BaseType;
         }
         if (addInterfaces) {
-            var interfaces = type.GetInterfaces();
-            if (interfaces.Length == 0)
+            var orderedInterfaces = type.GetInterfacesByDependency();
+            if (orderedInterfaces.Length == 0)
                 yield break;
 
-            var orderedInterfaces = interfaces
-                .OrderBy(i => -i.GetInterfaces().Length)
-                .OrderByDependency(i => interfaces.Where(j => i != j && j.IsAssignableFrom(i)))
-                .Reverse();
             foreach (var @interface in orderedInterfaces)
                 yield return @interface;
         }
 
         yield return typeof(object);
     }
+
+    // A more derived interface comes before the ones it extends, ties broken by base count.
+    // Type.GetInterfaces() has no specified order, so a "first match wins" lookup over it - an
+    // attribute search, say - can otherwise resolve differently between runtimes or even runs.
+    [UnconditionalSuppressMessage("Trimming", "IL2070",
+        Justification = "We assume all base types and interfaces are preserved")]
+    public static Type[] GetInterfacesByDependency(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] this Type type)
+        => InterfacesByDependencyCache.GetOrAdd(type, static type => {
+            var interfaces = type.GetInterfaces();
+            return interfaces.Length <= 1
+                ? interfaces.ToArray()
+                : interfaces
+                    .OrderBy(i => -i.GetInterfaces().Length)
+                    .OrderByDependency(i => interfaces.Where(j => i != j && j.IsAssignableFrom(i)))
+                    .Reverse()
+                    .ToArray();
+        });
 
     [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "We assume all required methods are preserved")]
     public static IEnumerable<MethodInfo> GetAllInterfaceMethods(

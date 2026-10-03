@@ -13,12 +13,13 @@ public interface IOperationScope : IAsyncDisposable
     public bool IsTransient { get; }
     public bool IsUsed { get; }
     public bool? IsCommitted { get; }
-    public bool MustStoreOperation { get; set; }
+    public OperationStoreMode? StoreMode { get; set; } // null means auto (resolved at commit)
     public bool HasStoredOperation { get; }
     public bool HasStoredEvents { get; }
     public ImmutableList<Func<IOperationScope, Task>> CompletionHandlers { get; set; }
 
     public Task Commit(CancellationToken cancellationToken = default);
+    public Task TryCompleteStoredEvent(CancellationToken cancellationToken = default);
 }
 
 /// <summary>

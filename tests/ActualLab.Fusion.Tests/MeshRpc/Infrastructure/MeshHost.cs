@@ -52,6 +52,10 @@ public sealed class MeshHost : IHasServices, IServiceProvider, IAsyncDisposable
         // Fusion & RPC server setup
         var fusion = services.AddFusion();
         fusion.AddWebServer();
+        // Mesh hosts reach each other as backend peers - see RpcShardRef.IsBackend
+        services.AddSingleton(_ => RpcWebSocketServerOptions.Default with {
+            ExposeBackend = true,
+        });
         services.AddSingleton(_ => RpcOutboundCallOptions.Default with {
             RouterFactory = RouterFactory,
         });

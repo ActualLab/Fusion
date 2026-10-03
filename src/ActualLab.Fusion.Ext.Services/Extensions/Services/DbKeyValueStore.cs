@@ -6,6 +6,7 @@ namespace ActualLab.Fusion.Extensions.Services;
 /// <summary>
 /// Database-backed implementation of <see cref="IKeyValueStore"/> using Entity Framework Core.
 /// </summary>
+[DeferredInvalidationMode(DeferredInvalidationMode.Replicated)]
 public class DbKeyValueStore<TDbContext,
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TDbKeyValue>(
     IServiceProvider services)
@@ -23,12 +24,6 @@ public class DbKeyValueStore<TDbContext,
         var items = command.Items;
         var shard = command.Shard;
 
-        if (Invalidation.IsActive) {
-            foreach (var item in items)
-                PseudoGetAllPrefixes(shard, item.Key);
-            return;
-        }
-
         var dbContext = await DbHub.CreateOperationDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
         dbContext.EnableChangeTracking(false); // Just to speed up things a bit
@@ -43,7 +38,7 @@ public class DbKeyValueStore<TDbContext,
 #pragma warning disable CA1307, CA1309 // string.Equals is ok in LINQ query
             .Where(e => keys.Any(k => k.Equals(e.Key)))
 #pragma warning restore CA1307, CA1309
-            .ToDictionaryAsync(e => e.Key, cancellationToken)
+            .ToDictionaryAsync(e => e.Key, StringComparer.Ordinal, cancellationToken)
             .ConfigureAwait(false);
         foreach (var item in itemMap.Values) {
             var dbKeyValue = dbKeyValues.GetValueOrDefault(item.Key);
@@ -58,18 +53,17 @@ public class DbKeyValueStore<TDbContext,
             }
         }
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        Invalidation.Defer(() => {
+            foreach (var item in items)
+                PseudoGetAllPrefixes(shard, item.Key);
+        });
     }
 
     public virtual async Task Remove(KeyValueStore_Remove command, CancellationToken cancellationToken = default)
     {
         var keys = command.Keys;
         var shard = command.Shard;
-
-        if (Invalidation.IsActive) {
-            foreach (var key in keys)
-                PseudoGetAllPrefixes(shard, key);
-            return;
-        }
 
         var dbContext = await DbHub.CreateOperationDbContext(shard, cancellationToken).ConfigureAwait(false);
         await using var _ = dbContext.ConfigureAwait(false);
@@ -84,6 +78,11 @@ public class DbKeyValueStore<TDbContext,
         foreach (var dbKeyValue in dbKeyValues)
             dbContext.Remove(dbKeyValue);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        Invalidation.Defer(() => {
+            foreach (var key in keys)
+                PseudoGetAllPrefixes(shard, key);
+        });
     }
 
     // Queries

@@ -31,15 +31,19 @@ public class DbEventLogReader<TDbContext>
 
     protected DbEventProcessor<TDbContext> EventProcessor { get; }
     protected override IState<ImmutableHashSet<string>> WorkerShards => DbHub.ShardRegistry.EventProcessorShards;
+    protected DbLogEntrySerializer LogEntrySerializer { get; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public DbEventLogReader(Options settings, IServiceProvider services)
         : base(settings, services)
-        => EventProcessor = services.GetRequiredService<DbEventProcessor<TDbContext>>();
+    {
+        EventProcessor = services.GetRequiredService<DbEventProcessor<TDbContext>>();
+        LogEntrySerializer = services.GetRequiredService<DbLogEntrySerializer>();
+    }
 
     protected override Task Process(string shard, DbEvent entry, CancellationToken cancellationToken)
     {
-        var operationEvent = entry.ToModel();
+        var operationEvent = entry.ToModel(LogEntrySerializer);
         return EventProcessor.Process(operationEvent, cancellationToken);
     }
 }

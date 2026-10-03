@@ -4,6 +4,7 @@ using ActualLab.IO;
 using ActualLab.Fusion.Authentication;
 using ActualLab.Fusion.Client.Caching;
 using ActualLab.Fusion.EntityFramework;
+using ActualLab.Fusion.EntityFramework.Operations;
 using ActualLab.Fusion.EntityFramework.Npgsql;
 using ActualLab.Fusion.EntityFramework.Redis;
 using ActualLab.Fusion.Extensions;
@@ -37,6 +38,8 @@ public abstract class FusionTestBase : RpcTestBase
     public bool UseOperationLogChangeTracking { get; set; } = true;
     public bool UseRedisOperationLogChangeTracking { get; set; } = !TestRunnerInfo.IsBuildAgent();
     public bool UseNpgsqlOperationLogChangeTracking { get; set; } = !TestRunnerInfo.IsBuildAgent();
+    // Which payload columns the _Operations and _Events rows of this test use
+    public DataFormat LogEntryFormat { get; set; } = DbLogEntrySerializer.Default.Format;
     public bool UseInMemoryKeyValueStore { get; set; }
     public bool UseInMemoryAuthService { get; set; }
     public bool UseRemoteComputedCache { get; set; }
@@ -187,6 +190,10 @@ public abstract class FusionTestBase : RpcTestBase
                 db.EnableSensitiveDataLogging();
             });
             services.AddDbContextServices<TestDbContext>(db => {
+                // Registered after AddOperations' TryAddSingleton, so this is the one that resolves
+                db.Services.AddSingleton(_ => DbLogEntrySerializer.Default with {
+                    Format = LogEntryFormat,
+                });
                 var useRedis = UseOperationLogChangeTracking && UseRedisOperationLogChangeTracking;
                 var mustPickWatcher = UseOperationLogChangeTracking
                     && DbType == FusionTestDbType.PostgreSql

@@ -27,6 +27,11 @@ public abstract class DbOperationScope : IOperationScope
         public static IsolationLevel DefaultIsolationLevel { get; set; } = IsolationLevel.Unspecified;
 
         public IsolationLevel IsolationLevel { get; init; } = DefaultIsolationLevel;
+        public int InvalidationCountWarningThreshold { get; init; } = 1000;
+        // How long an OperationStoreMode.Event row waits before a reader may claim it. The origin
+        // host applies and routes its calls right after the commit and then completes the row;
+        // this delay is the window it gets to do so before the recovery completion becomes eligible.
+        public TimeSpan OperationAsEventRecoveryCompletionDelay { get; init; } = TimeSpan.FromSeconds(15);
         // Used only on the in-doubt commit path: a bounded, cancellation-immune read that verifies
         // whether the commit actually landed. TryTimeout bounds each attempt; the caller's token
         // is intentionally not used (see Commit).
@@ -47,7 +52,7 @@ public abstract class DbOperationScope : IOperationScope
     public bool IsTransient => false;
     public bool IsUsed => MasterDbContext is not null;
     public bool? IsCommitted { get; protected set; }
-    public bool MustStoreOperation { get; set; } = true;
+    public OperationStoreMode? StoreMode { get; set; }
     public bool HasStoredOperation { get; protected set; }
     public bool HasStoredEvents { get; protected set; }
     public ImmutableList<Func<IOperationScope, Task>> CompletionHandlers { get; set; }
@@ -64,6 +69,7 @@ public abstract class DbOperationScope : IOperationScope
 
     public abstract bool IsTransientFailure(Exception error);
     public abstract Task Commit(CancellationToken cancellationToken = default);
+    public abstract Task TryCompleteStoredEvent(CancellationToken cancellationToken = default);
     public abstract ValueTask DisposeAsync();
 }
 
@@ -89,6 +95,8 @@ public class DbOperationScope<TDbContext> : DbOperationScope
         => field ??= Services.GetRequiredService<IShardDbContextFactory<TDbContext>>();
     protected MomentClockSet Clocks { get; }
     protected Options Settings => field ??= Services.GetRequiredService<Options>();
+    protected DbLogEntrySerializer LogEntrySerializer
+        => field ??= Services.GetRequiredService<DbLogEntrySerializer>();
     protected ILogger Log { get; }
     protected ILogger? DebugLog => Log.IfEnabled(LogLevel.Debug);
 
@@ -216,6 +224,13 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
     public override async Task Commit(CancellationToken cancellationToken = default)
     {
+        // Must run before the lock & the DbOperation row is built: an operation's invalidation
+        // calls are frozen at commit time, the row is added inside the transaction below, and
+        // collecting them runs the deferred blocks - which mustn't happen under the lock.
+        // The guard mirrors the early-outs after the lock: a repeated or unused-scope Commit()
+        // is a no-op, and must not become a failure.
+        if (this is { IsUsed: true, IsCommitted: null })
+            await DeferredInvalidationHelper.SetInvalidationsAndStoreMode(Operation).ConfigureAwait(false);
         using var releaser = await AsyncLock.Lock(cancellationToken).ConfigureAwait(false);
         if (IsCommitted is { } isCommitted) {
             if (!isCommitted)
@@ -260,11 +275,33 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                 }
             }
 
-            // Creating either a DbOperation or DbEvent
-            HasStoredOperation = MustStoreOperation;
-            var dbCommitVerifier = MustStoreOperation
-                ? (object)new DbOperation(Operation)
-                : new DbEvent(Operation, versionGenerator);
+            // Creating the operation's own row - a DbOperation or a DbEvent, see OperationStoreMode
+            var storeMode = StoreMode ?? OperationStoreMode.Operation;
+            HasStoredOperation = storeMode is OperationStoreMode.Operation;
+            object dbCommitVerifier;
+            if (HasStoredOperation) {
+                var invalidationCount = Operation.InvalidationCalls.Count;
+                if (invalidationCount > Settings.InvalidationCountWarningThreshold)
+                    Log.LogWarning(
+                        "Transaction #{TransactionId} @ shard '{Shard}': storing {Count} invalidation calls, " +
+                        "which is above the {Threshold} threshold - consider invalidating a pseudo-method instead",
+                        TransactionId, Shard, invalidationCount, Settings.InvalidationCountWarningThreshold);
+                dbCommitVerifier = new DbOperation(Operation, LogEntrySerializer);
+            }
+            else if (storeMode is OperationStoreMode.Event) {
+                var cmd = OperationCompletion.New(Operation);
+                var delayUntil = Operation.LoggedAt + Settings.OperationAsEventRecoveryCompletionDelay;
+                dbCommitVerifier = new DbEvent(Operation, cmd, delayUntil, versionGenerator, LogEntrySerializer);
+                // This row is also the commit verifier, and its Uuid is what stops an
+                // OperationReprocessor retry from re-running a committed mutation - so the event
+                // log must keep processed entries (KeepProcessedItems, true by default).
+                // HasStoredEvents stays false on purpose: it would wake every host's event reader
+                // for a row none of them may claim until DeferredInvalidationReplayDelay elapses -
+                // by which time the origin has normally completed it. The reader's own CheckPeriod
+                // is what picks the row up in the case this row exists for: the origin died.
+            }
+            else
+                dbCommitVerifier = new DbEvent(Operation, versionGenerator);
             dbContext.Add(dbCommitVerifier);
 
             // Saving changes
@@ -363,6 +400,35 @@ public class DbOperationScope<TDbContext> : DbOperationScope
 
     // Protected methods
 
+    // Marks an OperationStoreMode.Event row processed, so its recovery replay never runs.
+    // Best-effort: a failure only costs a redundant replay on some other host.
+    public override async Task TryCompleteStoredEvent(CancellationToken cancellationToken = default)
+    {
+        if (StoreMode is not OperationStoreMode.Event || IsCommitted != true)
+            return;
+
+        // A fresh context: this scope's own one is disposed by the time the origin host is done
+        // applying and routing. Best-effort by design - if this doesn't land, the row's delay
+        // elapses and some host replays the same calls, which is redundant but not wrong.
+        try {
+            var uuid = string.Concat("~op-", Operation.Uuid);
+            var dbContext = await ContextFactory.CreateDbContextAsync(Shard, cancellationToken).ConfigureAwait(false);
+            await using var _ = dbContext.ConfigureAwait(false);
+            dbContext.EnableChangeTracking(true);
+            var dbEvent = await dbContext.FindAsync<DbEvent>(DbKey.Compose(uuid), cancellationToken).ConfigureAwait(false);
+            if (dbEvent is not { State: LogEntryState.New })
+                return;
+
+            dbEvent.State = LogEntryState.Processed;
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e) when (!e.IsCancellationOf(cancellationToken)) {
+            Log.LogWarning(e,
+                "Transaction #{TransactionId} @ shard '{Shard}': couldn't complete the invalidation event - "
+                + "it will be replayed", TransactionId, Shard);
+        }
+    }
+
     protected virtual Task<bool> VerifyCommit(object dbCommitVerifier)
     {
         var uuid = dbCommitVerifier switch {
@@ -420,7 +486,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
             var mustSave = false;
             var mustFlush = false;
             foreach (var e in events) {
-                var dbEvent = new DbEvent(e, versionGenerator);
+                var dbEvent = new DbEvent(e, versionGenerator, LogEntrySerializer);
                 var conflictStrategy = e.UuidConflictStrategy;
                 if (conflictStrategy == KeyConflictStrategy.Fail) {
                     dbEvents.Add(dbEvent);
@@ -441,7 +507,7 @@ public class DbOperationScope<TDbContext> : DbOperationScope
                         throw KeyConflictResolver.Error<DbEvent>();
 
                     dbEvents.Attach(existingDbEvent);
-                    existingDbEvent.UpdateFrom(e, versionGenerator);
+                    existingDbEvent.UpdateFrom(e, versionGenerator, LogEntrySerializer);
                     dbEvents.Update(existingDbEvent);
                     mustSave = true;
                     // The update is version-checked, so a concurrent Version bump fails it

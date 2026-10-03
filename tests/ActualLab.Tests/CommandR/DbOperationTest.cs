@@ -27,7 +27,10 @@ public class DbOperationTest : CommandRTestBase
         // ReSharper disable once MethodHasAsyncOverload
         await using var dbContext = f.CreateDbContext().ReadWrite(false);
         (await dbContext.Users.AsQueryable().CountAsync()).Should().Be(2);
-        (await dbContext.Operations.AsQueryable().CountAsync()).Should().Be(1);
+        // The command declares no invalidation and adds no events, so it needs no _Operations row -
+        // only the _Events commit verifier every committed operation gets
+        (await dbContext.Operations.AsQueryable().CountAsync()).Should().Be(0);
+        (await dbContext.Events.AsQueryable().CountAsync()).Should().Be(1);
     }
 
     [Fact]

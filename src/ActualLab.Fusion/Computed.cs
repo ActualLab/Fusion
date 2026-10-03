@@ -232,7 +232,7 @@ public abstract partial class Computed : IComputed, IGenericTimeoutHandler
     public Task UseUntyped(bool allowInconsistent, CancellationToken cancellationToken = default)
     {
         var context = ComputeContext.Current;
-        if ((context.CallOptions & CallOptions.GetExisting) != 0) // Neither GetExisting nor Invalidate can be used here
+        if (context.CallOptions.HasFlag(CallOptions.GetExisting)) // Neither GetExisting nor Invalidate can be used here
             throw Errors.InvalidContextCallOptions(context.CallOptions);
 
         // Slightly faster version of this.TryUseExistingFromLock(context)

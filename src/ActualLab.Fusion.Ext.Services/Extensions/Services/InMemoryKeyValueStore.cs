@@ -6,6 +6,7 @@ namespace ActualLab.Fusion.Extensions.Services;
 /// An in-memory implementation of <see cref="IKeyValueStore"/> suitable for
 /// client-side use cases and testing.
 /// </summary>
+[DeferredInvalidationMode(DeferredInvalidationMode.Local)]
 public class InMemoryKeyValueStore(
     InMemoryKeyValueStore.Options settings,
     IServiceProvider services
@@ -35,15 +36,14 @@ public class InMemoryKeyValueStore(
         var items = command.Items;
         var shard = command.Shard;
 
-        if (Invalidation.IsActive) {
-            foreach (var item in items)
-                PseudoGetAllPrefixes(shard, item.Key);
-            return Task.CompletedTask;
-        }
-
-        InMemoryOperationScope.Require();
+        TransientOperationScope.Require();
         foreach (var item in items)
             AddOrUpdate(shard, item.Key, item.Value, item.ExpiresAt);
+
+        Invalidation.Defer(() => {
+            foreach (var item in items)
+                PseudoGetAllPrefixes(shard, item.Key);
+        });
         return Task.CompletedTask;
     }
 
@@ -52,15 +52,14 @@ public class InMemoryKeyValueStore(
         var keys = command.Keys;
         var shard = command.Shard;
 
-        if (Invalidation.IsActive) {
-            foreach (var key in keys)
-                PseudoGetAllPrefixes(shard, key);
-            return Task.CompletedTask;
-        }
-
-        InMemoryOperationScope.Require();
+        TransientOperationScope.Require();
         foreach (var key in keys)
             Store.Remove((shard, key), out _);
+
+        Invalidation.Defer(() => {
+            foreach (var key in keys)
+                PseudoGetAllPrefixes(shard, key);
+        });
         return Task.CompletedTask;
     }
 

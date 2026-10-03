@@ -6,7 +6,7 @@ namespace ActualLab.Fusion.Operations.Internal;
 
 /// <summary>
 /// An <see cref="IOperationCompletionListener"/> that produces <see cref="ICompletion"/> commands
-/// for completed operations to trigger their invalidation pass.
+/// for completed operations to run their completion handlers.
 /// </summary>
 public class CompletionProducer(CompletionProducer.Options settings, IServiceProvider services)
     : IOperationCompletionListener

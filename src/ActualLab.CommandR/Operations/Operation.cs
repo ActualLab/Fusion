@@ -5,7 +5,7 @@ namespace ActualLab.CommandR.Operations;
 
 /// <summary>
 /// Represents a recorded operation (a completed command execution) with its
-/// nested operations, events, and metadata.
+/// invalidations, events, and metadata.
 /// </summary>
 public class Operation : IHasUuid, IHasId<string>
 {
@@ -18,14 +18,14 @@ public class Operation : IHasUuid, IHasId<string>
 #endif
     string IHasId<string>.Id => Uuid;
 
+    public IOperationScope? Scope { get; set; }
     public long? Index { get; set; }
     public string Uuid { get; set; }
     public string HostId { get; set; }
     public Moment LoggedAt { get; set; }
     public ICommand Command { get; set; }
-    public MutablePropertyBag Items { get; set; }
-    public ImmutableList<NestedOperation> NestedOperations { get; set; }
-    public IOperationScope? Scope { get; set; }
+    public ImmutableList<ServiceCall> InvalidationCalls { get; private set; }
+        = ImmutableList<ServiceCall>.Empty;
     public ImmutableList<OperationEvent> Events { get; private set; }
         = ImmutableList<OperationEvent>.Empty;
 
@@ -52,23 +52,76 @@ public class Operation : IHasUuid, IHasId<string>
         string hostId,
         Moment loggedAt = default,
         ICommand? command = null,
-        MutablePropertyBag? items = null,
-        ImmutableList<NestedOperation>? nestedOperations = null,
         IOperationScope? scope = null)
     {
         Uuid = uuid;
         HostId = hostId;
         LoggedAt = loggedAt;
         Command = command!;
-        Items = items ?? new();
-        NestedOperations = nestedOperations ?? ImmutableList<NestedOperation>.Empty;
         Scope = scope;
     }
 
-    public void MustStore(bool mustStore)
-        => Scope.RequireActive().MustStoreOperation = mustStore;
+    public OperationStoreMode? StoreMode {
+        get => Scope.RequireActive().StoreMode;
+        set => Scope.RequireActive().StoreMode = value;
+    }
 
-    // Add/Remove/ClearEvents
+    // Add/RemoveInvalidationCall(s)
+
+    // A call added here is applied after this operation commits, on every host that reads it.
+    // Adding one also makes the operation worth storing - see DeferredInvalidationHelper's
+    // GetDefaultStoreMode - which is what gets it to the other hosts in the first place.
+    // Anything beyond invalidation belongs in an OperationCompletionHandler of your own.
+    public Operation AddInvalidationCall(ServiceCall call)
+    {
+        lock (_lock)
+            InvalidationCalls = InvalidationCalls.Add(call);
+        return this;
+    }
+
+    public Operation AddInvalidationCalls(params ReadOnlySpan<ServiceCall> calls)
+    {
+        if (calls.Length == 0)
+            return this;
+
+        lock (_lock) {
+            var builder = InvalidationCalls.ToBuilder();
+            foreach (var call in calls)
+                builder.Add(call);
+            InvalidationCalls = builder.ToImmutable();
+        }
+        return this;
+    }
+
+    public Operation AddInvalidationCalls(IEnumerable<ServiceCall> calls)
+    {
+        lock (_lock)
+            InvalidationCalls = InvalidationCalls.AddRange(calls);
+        return this;
+    }
+
+    public bool RemoveInvalidationCall(ServiceCall call)
+    {
+        lock (_lock) {
+            var oldCalls = InvalidationCalls;
+            InvalidationCalls = oldCalls.Remove(call);
+            return InvalidationCalls != oldCalls;
+        }
+    }
+
+    public void RemoveInvalidationCalls()
+    {
+        lock (_lock)
+            InvalidationCalls = ImmutableList<ServiceCall>.Empty;
+    }
+
+    public void RemoveInvalidationCalls(Func<ServiceCall, bool> predicate)
+    {
+        lock (_lock)
+            InvalidationCalls = InvalidationCalls.RemoveAll(predicate.Invoke);
+    }
+
+    // Add/RemoveEvent(s)
 
     public OperationEvent AddEvent(object? value)
         => AddEvent(new OperationEvent(value));
@@ -115,7 +168,7 @@ public class Operation : IHasUuid, IHasId<string>
         }
     }
 
-    public void ClearEvents()
+    public void RemoveEvents()
     {
         var scope = Scope.RequireActive();
         if (scope.IsTransient)
@@ -123,6 +176,16 @@ public class Operation : IHasUuid, IHasId<string>
 
         lock (_lock)
             Events = ImmutableList<OperationEvent>.Empty;
+    }
+
+    public void RemoveEvents(Func<OperationEvent, bool> predicate)
+    {
+        var scope = Scope.RequireActive();
+        if (scope.IsTransient)
+            throw Errors.TransientScopeOperationCannotHaveEvents();
+
+        lock (_lock)
+            Events = Events.RemoveAll(predicate.Invoke);
     }
 
     // Add/RemoveCompletionHandler
@@ -137,14 +200,5 @@ public class Operation : IHasUuid, IHasId<string>
     {
         var scope = Scope.RequireActive();
         scope.CompletionHandlers = scope.CompletionHandlers.Remove(handler);
-    }
-
-    public ClosedDisposable<(Operation, ImmutableList<NestedOperation>)> SuppressNestedOperationLogging()
-    {
-        var nestedCommands = NestedOperations;
-        NestedOperations = ImmutableList<NestedOperation>.Empty;
-        return Disposable.NewClosed(
-            (Operation: this, OldNestedCommands: nestedCommands),
-            state => state.Operation.NestedOperations = state.OldNestedCommands);
     }
 }

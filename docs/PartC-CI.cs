@@ -83,18 +83,6 @@ public static class DelegatingCommandInternals
     }
     #endregion
 
-    #region PartCCI_IDelegatingCommandBypass
-    // In InvalidatingCommandCompletionHandler.IsRequired():
-    public static bool IsRequired(ICommand? command, out object? finalHandler)
-    {
-        if (command is null or IDelegatingCommand) {
-            finalHandler = null;
-            return false;  // No invalidation needed
-        }
-        finalHandler = null;
-        return true;
-    }
-    #endregion
 }
 
 #region PartCCI_IDelegatingCommandUsage
@@ -109,7 +97,7 @@ public static class ProcessBatchHandlerSketch
     public static async Task<BatchResult> ProcessBatch(
         ProcessBatchOrdersCommand command, CancellationToken ct)
     {
-        // No Invalidation.IsActive check needed!
+        // Nothing to invalidate here - each nested command declares its own
         var results = new List<OrderResult>();
         foreach (var orderId in command.OrderIds) {
             // Each ProcessOrderCommand runs as its own outermost command

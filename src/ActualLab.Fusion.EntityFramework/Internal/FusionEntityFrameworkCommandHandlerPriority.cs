@@ -5,5 +5,6 @@ namespace ActualLab.Fusion.EntityFramework.Internal;
 /// </summary>
 public static class FusionEntityFrameworkCommandHandlerPriority
 {
-    public const double DbOperationScopeProvider = 1000;
+    // Between TransientOperationScopeProvider (10_000) and DeferredInvalidationScopeProvider (9000)
+    public const double DbOperationScopeProvider = 9900;
 }
