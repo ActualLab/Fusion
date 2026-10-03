@@ -40,6 +40,33 @@ csharp_new_line_before_members_in_object_initializers = false
 csharp_new_line_before_open_brace = types,methods,local_functions
 csharp_new_line_between_query_expression_clauses = true
 
+# Blank lines (ReSharper) - every number here is a minimum, not a target
+# See CODING_STYLE.md -> Blank Lines
+
+resharper_csharp_blank_lines_before_single_line_comment = 0
+resharper_csharp_blank_lines_after_block_statements = 0
+resharper_csharp_blank_lines_after_start_comment = 0
+resharper_csharp_blank_lines_inside_region = 0
+resharper_csharp_blank_lines_after_control_transfer_statements = 1
+resharper_csharp_keep_blank_lines_in_declarations = 2
+resharper_csharp_keep_blank_lines_in_code = 1
+resharper_csharp_remove_blank_lines_near_braces_in_declarations = true
+resharper_csharp_remove_blank_lines_near_braces_in_code = true
+resharper_csharp_blank_lines_between_using_groups = 0
+resharper_csharp_blank_lines_after_using_list = 1
+resharper_csharp_blank_lines_around_namespace = 1
+resharper_csharp_blank_lines_inside_namespace = 0
+resharper_csharp_blank_lines_around_type = 1
+resharper_csharp_blank_lines_inside_type = 0
+resharper_csharp_blank_lines_around_field = 1
+resharper_csharp_blank_lines_around_single_line_field = 0
+resharper_csharp_blank_lines_around_property = 1
+resharper_csharp_blank_lines_around_single_line_property = 0
+resharper_csharp_blank_lines_around_auto_property = 1
+resharper_csharp_blank_lines_around_single_line_auto_property = 0
+resharper_csharp_blank_lines_around_invocable = 1
+resharper_csharp_blank_lines_around_single_line_invocable = 0
+
 # Organize usings
 # https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference#usings
 
