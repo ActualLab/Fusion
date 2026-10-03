@@ -706,20 +706,33 @@ public class TodoApi(IAuth auth, ITodoBackend backend) : ITodoApi
 - The override routes through an interceptor that owns caching, dependency tracking, invalidation.
 
 ---
-
+layout: two-cols-header
+---
 # Invalidation: write evicts read
 
-The DB-row question from Part 1 — the row changes, the cache finds out:
+The DB-row question from Part 1 — the row changes, the cache finds out.
+Calls inside either block **don't execute** — they mark results stale.
+<div class="pt-2"></div>
 
+::left::
+#### Now — `Invalidation.Begin()`
 ```csharp {2}
-// inside the command that writes the todo:
+// a value you know went stale:
 using (Invalidation.Begin()) // !!!
     _ = Get(scope, item.Id, ct);
 ```
 
-- Calls inside the block **don't execute** — they mark cached results invalid.
-- Selective: invalidate exactly the calls whose results actually changed.
-- The cascade does the rest — all the way up to the UI.
+- Immediate, in-process.
+
+::right::
+#### After the commit — `Invalidation.Defer()`
+```csharp {2}
+// inside the command that writes it:
+Invalidation.Defer(() =>     // !!!
+    _ = Get(scope, item.Id, default));
+```
+
+- `Local` / `Replicated` / `Distributed` — same block.
 
 ---
 
