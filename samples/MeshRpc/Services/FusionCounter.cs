@@ -3,7 +3,6 @@ using System.Runtime.Serialization;
 using ActualLab.Fusion.Operations.Internal;
 using MemoryPack;
 using MessagePack;
-using Pastel;
 using static Samples.MeshRpc.HostFactorySettings;
 
 namespace Samples.MeshRpc.Services;
