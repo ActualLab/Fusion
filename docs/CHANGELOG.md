@@ -11,6 +11,53 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.0.12+b453b5bef | npm: 14.4.14
+
+Release date: 2026-10-04
+
+**`IgnoreUnusedOperationsFrameworkColumns` no longer drops the column older events live in.** Under
+`DataFormat.Bytes` it mapped `DbEvent.ValueJson` away, and an event is the one payload whose rows can
+outlive a format change by an unbounded margin: a delayed event sits at `State = New` until its
+`DelayUntil` arrives, which may be months. Dropping that column stranded exactly those rows. **Take
+this one if you call that helper**, and especially if you took 15.0.8 and already did &mdash; this is
+a NuGet-only release, npm stays at `14.4.14`.
+
+`_Operations` is unaffected and needs no equivalent: its rows are consumed by the log readers and
+then removed by the trimmer on age, so nothing older than `MaxEntryAge` survives to be read.
+
+### Added
+
+- **`DbLogEntrySerializer.MustDeserializeLegacyEvents`**, `true` by default. It keeps
+  `DbEvent.ValueJson` mapped under `DataFormat.Bytes`, so an event written by an older version still
+  deserializes. Nothing else changes: `Bytes` remains the written format, and a read already
+  preferred `ValueData` and fell back to the text column, so the cost is one always-`NULL` column.
+  Under `DataFormat.Text` the property does nothing &mdash; `ValueJson` is the written column there
+  and mapped either way. Set it to `false` once no event predates your current format.
+- **An `IgnoreUnusedOperationsFrameworkColumns` overload taking the serializer** rather than a bare
+  `DataFormat`:
+
+  ```cs
+  modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DbLogEntrySerializer.Default);
+  ```
+
+  This removes the way the call could disagree with the serializer the app registered. Passing
+  `DataFormat.Text` because you "always used JSON", while the registered serializer still has its
+  default `Bytes`, unmaps the column the writer is using &mdash; and loses the payload silently. The
+  `DataFormat` overload remains, with an optional `mustDeserializeLegacyEvents` that defaults to
+  `true`, so existing calls compile unchanged and get the safe behaviour.
+
+### Documentation
+
+- [Migrating to 15.0](./MigrationTo15.md) no longer tells you to drain `_Events` to zero before
+  upgrading. That isn't something a deployment can always do &mdash; a delayed event won't clear
+  before it's due &mdash; and it was never needed for the payload to survive: 15.0 reads whichever
+  column holds it, and its text path is the same `NewtonsoftJsonSerializer` on the same
+  `typeof(object)` that 14.x wrote with. Draining is about not handing a 14.x *command* event to a
+  15.0 handler, and the step now says so, with a query that separates what's due from what isn't.
+- The guide also notes what a green build won't tell you: a missed EF migration for the
+  `_Operations` / `_Events` changes surfaces at runtime as
+  `column "CommandData" of relation "_Operations" does not exist` on the first command.
+
 ## 15.0.8+22fb34a25 | npm: 14.4.14
 
 Release date: 2026-10-03
