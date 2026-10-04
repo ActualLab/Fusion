@@ -128,11 +128,15 @@ before/after handler; this is the inventory.
   type, or on the service interface it's registered as. A handler that defers without a declared
   mode throws. Handlers that used `if (Invalidation.IsActive) { ... return ...; }` blocks should move
   those compute-method calls into `Invalidation.Defer(() => ...)` at the end of the body.
-- **Database migration.** `_Operations` drops `ItemsJson` and `NestedOperations`. Every payload now
-  has a text and a binary column declared, but only one is written, so the migration only needs the
-  family your `DbLogEntrySerializer.Format` names &mdash; binary by default, which means adding
-  `CommandData` / `InvalidationCallsData` / `ValueData` and dropping `CommandJson` / `ValueJson`.
-  Decide the format first; the guide has the per-format column lists.
+- **Database migration**, and it's easy to miss because the build stays green: `_Operations` drops
+  `ItemsJson` and `NestedOperations`, gains `CommandData` / `InvalidationCallsJson` /
+  `InvalidationCallsData`, and `_Events` gains `ValueData`; the `*Json` columns become nullable. If
+  you use EF migrations, that's a `dotnet ef migrations add` &mdash; without it the first command
+  fails with `column "CommandData" of relation "_Operations" does not exist`. **Declare both column
+  families and don't call `IgnoreUnusedOperationsFrameworkColumns` during the upgrade**: your
+  existing rows live in the `*Json` columns, and 15.0 reads whichever column holds a payload, so
+  unmapping that side is what would strand them. A delayed event can sit in `_Events` with
+  `DelayUntil` months out, so "drain everything first" isn't available as an alternative.
 - `Operation.Items` is removed: it existed to carry data into the replayed branch, and a deferred
   block closes over the handler's own locals instead. `Operation.NestedOperations`, the
   `NestedOperation` type and `Operation.SuppressNestedOperationLogging()` go with it &mdash; a nested

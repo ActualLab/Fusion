@@ -72,37 +72,36 @@ invalidation stays flat as hosts are added, which is what makes effectively unbo
 scaling possible. Replay fit `Replicated` naturally and `Distributed` badly; the new model is the
 other way round.
 
-## Step 1: Drain `_Events`
+## Step 1: Drain what you can from `_Events`
 
-Of the two tables, only `_Events` needs draining, and the reason is simply that a pending event is
-**work that hasn't happened yet**. A row with `State = 0` (`New`) is an event the processor still
-owes someone &ndash; and if its value is a command, processing it under 15.0 would hand a 14.x
-payload to a handler whose invalidation contract has changed underneath it. Let the deployment that
-wrote those rows finish them.
+**A 14.x event stays readable under 15.0**, so this step is about *when its work runs*, not about
+whether its payload survives. 15.0 reads whichever column holds a payload, and its text path is the
+same `NewtonsoftJsonSerializer` on the same `typeof(object)` that 14.x wrote with, so a row with only
+`ValueJson` deserializes unchanged. What draining buys you is that a pending event &ndash; one with
+`State = 0` (`New`) &ndash; is work that hasn't happened, and if its value is a *command*, running it
+under 15.0 hands it to a handler whose invalidation contract has changed underneath it. Where you can
+let the deployment that wrote those rows finish them, do.
+
+**You often can't finish them all.** A delayed event &ndash; `DelayUntil` in the future &ndash; is
+`State = New` and no amount of waiting clears it before it's due, which may be months out. That's
+normal, and it's why Step 3 keeps both column families: those rows have to survive the upgrade and
+be read by 15.0 later.
 
 1. **Stop accepting commands** on every 14.x host, but leave the hosts running so the event
-   processor keeps draining.
-2. **Confirm `_Events` has nothing pending:**
+   processor drains what's already due.
+2. **See what's left, and why:**
 
    ```sql
-   -- Must return 0 before you migrate
-   select count(*) from "_Events" where "State" = 0;
+   -- Pending overall, and the part that isn't due yet
+   select count(*) filter (where "DelayUntil" <= now()) as due_now,
+          count(*) filter (where "DelayUntil" > now())  as not_yet_due
+   from "_Events" where "State" = 0;
    ```
 
-   If it doesn't reach 0, check whether the remainder are *delayed* events &ndash; a `DelayUntil`
-   in the future is still `State = New`, and no amount of waiting for the processor will clear one
-   before it's due:
-
-   ```sql
-   -- Pending events that aren't due yet, and so won't drain on your schedule
-   select count(*) from "_Events" where "State" = 0 and "DelayUntil" > now();
-   ```
-
-   If that's zero and the first query still isn't, something is failing to process rather than
-   lagging &ndash; check the event processor's logs before going further. An event that has
-   exhausted its retries ends up `Discarded` (`State = 2`), not `New`, so it won't hold you here. If
-   you do have undue delayed events, see
-   [One exception](#one-exception-events-you-can-t-drain).
+   `due_now` should reach 0; if it stalls above 0, something is failing to process rather than
+   lagging, so check the event processor's logs before going further &ndash; an event that has
+   exhausted its retries ends up `Discarded` (`State = 2`), not `New`. A non-zero `not_yet_due` is
+   expected and not a blocker: those rows carry over and 15.0 will read them when they come due.
 3. **Stop every host**, decide the format (Step 2), apply the schema migration (Step 3), then deploy
    15.0.
 
@@ -150,32 +149,22 @@ services.AddSingleton(_ => DbLogEntrySerializer.Default with {
 });
 ```
 
-Then **map away the columns that format doesn't write**, from `OnModelCreating`:
+Whichever you pick, **declare both column families during the upgrade** &ndash; that is, don't call
+`IgnoreUnusedOperationsFrameworkColumns` yet. Your existing rows are all in `*Json`, and unmapping
+that column is what makes them unreadable. Trimming the unused side is
+[a later step](#dropping-the-unused-columns-later), once no 14.x row can remain.
 
-```cs
-protected override void OnModelCreating(ModelBuilder modelBuilder)
-{
-    // Must be the same format the registered DbLogEntrySerializer writes with:
-    // mapping away the column the writer uses loses the payload silently
-    modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DataFormat.Bytes);
-}
-```
-
-Mind the direction of that trap. If you reason "we've always used JSON" and pass `DataFormat.Text`
-while the serializer still has its default `Bytes`, you have just mapped away the column your writer
-is using.
-
-What you give up by doing this is the ability to change format later without a migration &ndash; a
-read normally takes whichever column holds the payload, so both formats coexist happily until one
-side is unmapped. If you'd rather keep that option, declare both column families and skip the
-`Ignore` call; everything below still applies, you just carry one always-`NULL` column per payload.
+The format only decides what *new* rows look like; a read takes whichever column actually holds the
+payload. That's what lets 14.x rows, 15.0 text rows and 15.0 binary rows sit in one table and all
+still deserialize.
 
 ## Step 3: The schema migration
 
-Only **one column family** is needed, the one your format writes. The old 14.x payloads don't have to
-survive: `_Operations` rows are inert after the upgrade (see
-[above](#operations-needs-no-draining)) and `_Events` was drained in Step 1, so nothing reads a
-14.x payload again.
+**Declare both column families**, whichever format you chose. 15.0 reads whichever column holds a
+payload, so a 14.x row written to `*Json` stays readable &ndash; and it has to, because
+[you can't drain every event](#step-1-drain-what-you-can-from-events). The cost is one always-`NULL`
+column per payload; dropping it is a [later step](#dropping-the-unused-columns-later), not part of
+this one.
 
 Both formats:
 
@@ -183,41 +172,43 @@ Both formats:
 |---|---|
 | `_Operations` | **drop** `ItemsJson` and `NestedOperations` |
 
-For `DataFormat.Bytes` (the default) &ndash; the binary columns, and the text ones go away:
-
 | Table | Change |
 |---|---|
-| `_Operations` | **add** `CommandData` (blob, null) and `InvalidationCallsData` (blob, null) |
-| `_Operations` | **drop** `CommandJson` |
-| `_Events` | **add** `ValueData` (blob, null) |
-| `_Events` | **drop** `ValueJson` |
-
-For `DataFormat.Text` &ndash; the text columns only, and `CommandJson` / `ValueJson` stay where they
-already are:
-
-| Table | Change |
-|---|---|
-| `_Operations` | **add** `InvalidationCallsJson` (text, null) |
+| `_Operations` | **add** `CommandData` (blob, null), `InvalidationCallsJson` (text, null), `InvalidationCallsData` (blob, null) |
 | `_Operations` | `CommandJson` becomes **nullable** |
+| `_Events` | **add** `ValueData` (blob, null) |
 | `_Events` | `ValueJson` becomes **nullable** |
 
 The `*Json` columns become nullable because a payload lives in exactly one of its two columns, and a
-row that carries it in the other one leaves this side empty. That holds even when you've unmapped the
-other side &ndash; the model allows null, the writer simply always fills it.
+row that carries it in the other one leaves this side empty.
 
-With EF migrations this is the usual `dotnet ef migrations add` against your `DbContext`, *after* the
-`Format` registration and the `IgnoreUnusedOperationsFrameworkColumns` call from Step 2 are in place
-&ndash; they're what makes the generated migration contain one column family instead of two. Read it
-before applying: if it mentions your own entities, that's a change you made, not one 15.0 asked for.
+With EF migrations this is the usual `dotnet ef migrations add` against your `DbContext`. Read the
+generated migration before applying it: it should contain exactly the rows above, and if it mentions
+your own entities, that's a change you made rather than one 15.0 asked for.
 
-### One exception: events you can't drain
+**This step is easy to skip and the build won't tell you.** The entity changes come from the package,
+so everything compiles; the failure arrives at runtime, as
+`column "CommandData" of relation "_Operations" does not exist` on the first command, or as EF's
+`PendingModelChangesWarning` if your tests check for it.
 
-A delayed event &ndash; one whose `DelayUntil` is still in the future &ndash; is `State = New` and
-won't drain on any timetable you control. If you have those and don't want to wait them out, 15.0 has
-to be able to read a 14.x payload after all, which means keeping `ValueJson` mapped: either choose
-`DataFormat.Text`, or declare both families on `_Events` and skip the `Ignore` call for it. The same
-caveat as Step 1 applies &ndash; a delayed *command* event will reach a 15.0 handler whose
-invalidation contract has changed.
+### Dropping the unused columns, later
+
+`IgnoreUnusedOperationsFrameworkColumns(format)` maps away the columns your format never writes, and
+it's worth doing eventually &ndash; it's just not part of the upgrade. Unmapping a column makes every
+row that holds its payload there unreadable, and right after the upgrade that's every row you had.
+
+When each table is safe to trim differs:
+
+- **`_Operations`** &ndash; its rows are history once the readers have caught up, and the log trimmer
+  removes them on age (`MaxEntryAge`, 30 minutes by default). After one trimming interval past the
+  upgrade, no 14.x row remains.
+- **`_Events`** &ndash; a delayed event can sit there with `DelayUntil` arbitrarily far in the
+  future. You're safe only once every 14.x event is due *and* processed, which for some schedules is
+  months away, and which nothing will tell you. If you're not certain, keep both columns.
+
+Either way, the format you pass has to be the one your registered `DbLogEntrySerializer` writes
+with. Reason about the direction: passing `DataFormat.Text` because you "always used JSON", while the
+serializer still has its default `Bytes`, unmaps the column your writer is using.
 
 [Operations Framework Serialization](./PartO-Serialization.md) covers the format switch, the
 serializers behind each column, and the deployment compatibility contract in full.

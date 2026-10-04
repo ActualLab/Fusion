@@ -87,6 +87,51 @@ public class DbLogEntrySerializerTest
         dbEvent.ToModel(serializer).Value.Should().BeNull();
     }
 
+    // A 14.x row is text-only, and 15.0 has to keep reading it: a delayed event can sit in
+    // _Events with DelayUntil far in the future, so "drain before upgrading" isn't something a
+    // deployment can always do. These build the row the way 14.x's own code did - its
+    // ITextSerializer was NewtonsoftJsonSerializer.Default and it always passed typeof(object) -
+    // rather than by round-tripping 15.0's own writer, so the cross-version contract is pinned
+    // even if 15.0's text path later changes.
+
+    [Fact]
+    public void ALegacyTextOnlyEventIsReadable()
+    {
+        var value = new KeyValueService_Set<string>("k", "v");
+        var dbEvent = new DbEvent {
+            Uuid = "e-1",
+            ValueJson = NewtonsoftJsonSerializer.Default.Write(value, typeof(object)),
+            ValueData = null, // 14.x had no such column
+        };
+
+        // Read with the default serializer, i.e. what an upgraded app has: Format = Bytes
+        var restored = dbEvent.ToModel(Bytes);
+
+        restored.Value.Should().BeOfType<KeyValueService_Set<string>>()
+            .Which.Key.Should().Be("k");
+    }
+
+    [Fact]
+    public void ALegacyTextOnlyOperationIsReadable()
+    {
+        var command = new KeyValueService_Set<string>("k", "v");
+        var dbOperation = new DbOperation {
+            Uuid = "op-1",
+            HostId = "host-1",
+            CommandJson = NewtonsoftJsonSerializer.Default.Write(command, typeof(ICommand)),
+            CommandData = null,
+        };
+
+        var restored = dbOperation.ToModel(Bytes);
+
+        restored.Command.Should().BeOfType<KeyValueService_Set<string>>()
+            .Which.Key.Should().Be("k");
+        // 14.x kept its invalidations in ItemsJson, which 15.0 neither reads nor has. The row is
+        // inert rather than broken - it applies nothing, which is right: every host restarts
+        // during the upgrade, so there is no warm cache for it to invalidate.
+        restored.InvalidationCalls.Should().BeEmpty();
+    }
+
     [Theory]
     [InlineData(DataFormat.Bytes, "CommandData", "CommandJson")]
     [InlineData(DataFormat.Text, "CommandJson", "CommandData")]
