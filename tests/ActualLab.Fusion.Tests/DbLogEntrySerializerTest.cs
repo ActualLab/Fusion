@@ -135,20 +135,71 @@ public class DbLogEntrySerializerTest
     [Theory]
     [InlineData(DataFormat.Bytes, "CommandData", "CommandJson")]
     [InlineData(DataFormat.Text, "CommandJson", "CommandData")]
-    public void IgnoreUnusedColumnsLeavesOneColumnPerPayload(
+    public void IgnoreUnusedColumnsLeavesOneColumnPerOperationPayload(
         DataFormat format, string mapped, string ignored)
     {
+        // An operation row is history the trimmer removes on age, so one column per payload is
+        // safe for it in either format - unlike an event, see below
         using var dbContext = new LogEntryDbContext(format);
         var operationType = dbContext.Model.FindEntityType(typeof(DbOperation))!;
-        var eventType = dbContext.Model.FindEntityType(typeof(DbEvent))!;
 
         operationType.FindProperty(mapped).Should().NotBeNull();
         operationType.FindProperty(ignored).Should().BeNull();
-        // ... and the same for the other two payloads
         operationType.FindProperty(mapped.Replace("Command", "InvalidationCalls")).Should().NotBeNull();
         operationType.FindProperty(ignored.Replace("Command", "InvalidationCalls")).Should().BeNull();
-        eventType.FindProperty(mapped.Replace("Command", "Value")).Should().NotBeNull();
-        eventType.FindProperty(ignored.Replace("Command", "Value")).Should().BeNull();
+    }
+
+    [Fact]
+    public void ValueJsonSurvivesIgnoreUnusedColumnsByDefault()
+    {
+        // The point of MustDeserializeLegacyEvents: a delayed event can outlive any upgrade
+        // window, so dropping the column its payload lives in would strand it
+        using var dbContext = new LogEntryDbContext(DataFormat.Bytes);
+        var eventType = dbContext.Model.FindEntityType(typeof(DbEvent))!;
+
+        eventType.FindProperty("ValueData").Should().NotBeNull();
+        eventType.FindProperty("ValueJson").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ValueJsonIsDroppedOnlyWhenTheAppSaysSo()
+    {
+        using var dbContext = new LogEntryDbContext(DataFormat.Bytes, mustDeserializeLegacyEvents: false);
+        var eventType = dbContext.Model.FindEntityType(typeof(DbEvent))!;
+
+        eventType.FindProperty("ValueData").Should().NotBeNull();
+        eventType.FindProperty("ValueJson").Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TheFlagDoesNothingUnderText(bool mustDeserializeLegacyEvents)
+    {
+        // Text writes ValueJson, so it's mapped either way and the flag has nothing to decide
+        using var dbContext = new LogEntryDbContext(DataFormat.Text, mustDeserializeLegacyEvents);
+        var eventType = dbContext.Model.FindEntityType(typeof(DbEvent))!;
+
+        eventType.FindProperty("ValueJson").Should().NotBeNull();
+        eventType.FindProperty("ValueData").Should().BeNull();
+    }
+
+    [Fact]
+    public void ALegacyEventIsStillReadableAfterIgnoreUnusedColumns()
+    {
+        // The two halves together: the column stays mapped, and a Bytes-format read still falls
+        // back to it. This is the case the property exists for.
+        var value = new KeyValueService_Set<string>("k", "v");
+        var dbEvent = new DbEvent {
+            Uuid = "e-1",
+            ValueJson = NewtonsoftJsonSerializer.Default.Write(value, typeof(object)),
+            ValueData = null,
+        };
+
+        using var dbContext = new LogEntryDbContext(DataFormat.Bytes);
+        dbContext.Model.FindEntityType(typeof(DbEvent))!.FindProperty("ValueJson").Should().NotBeNull();
+        dbEvent.ToModel(Bytes).Value.Should().BeOfType<KeyValueService_Set<string>>()
+            .Which.Key.Should().Be("k");
     }
 
     [Fact]
@@ -164,9 +215,11 @@ public class DbLogEntrySerializerTest
 
     // Nested types
 
-    private sealed class LogEntryDbContext(DataFormat? format) : DbContext
+    private sealed class LogEntryDbContext(DataFormat? format, bool mustDeserializeLegacyEvents = true)
+        : DbContext
     {
         public DataFormat? Format { get; } = format;
+        public bool MustDeserializeLegacyEvents { get; } = mustDeserializeLegacyEvents;
 
         public DbSet<DbOperation> Operations { get; set; } = null!;
         public DbSet<DbEvent> Events { get; set; } = null!;
@@ -181,7 +234,7 @@ public class DbLogEntrySerializerTest
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             if (Format is { } format)
-                modelBuilder.IgnoreUnusedOperationsFrameworkColumns(format);
+                modelBuilder.IgnoreUnusedOperationsFrameworkColumns(format, MustDeserializeLegacyEvents);
         }
     }
 
@@ -189,11 +242,13 @@ public class DbLogEntrySerializerTest
     {
 #if NET6_0_OR_GREATER
         public object Create(DbContext context, bool designTime)
-            => (context.GetType(), ((LogEntryDbContext)context).Format, designTime);
+            => (context.GetType(), ((LogEntryDbContext)context).Format,
+                ((LogEntryDbContext)context).MustDeserializeLegacyEvents, designTime);
 #else
         // IModelCacheKeyFactory gained its designTime parameter in EF Core 6
         public object Create(DbContext context)
-            => (context.GetType(), ((LogEntryDbContext)context).Format);
+            => (context.GetType(), ((LogEntryDbContext)context).Format,
+                ((LogEntryDbContext)context).MustDeserializeLegacyEvents);
 #endif
     }
 

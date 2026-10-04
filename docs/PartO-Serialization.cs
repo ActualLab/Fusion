@@ -59,9 +59,21 @@ public static class DbOperationStorage
     public static void IgnoreUnusedColumnsExample(ModelBuilder modelBuilder)
     {
         #region PartOSerialization_IgnoreUnusedColumns
-        // Drops the three columns this format doesn't write. It has to be the format the
-        // registered DbLogEntrySerializer writes with.
-        modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DataFormat.Bytes);
+        // Passing the serializer rather than a bare DataFormat: it can't disagree with the
+        // one the app registered, and mapping away the column the writer uses would lose
+        // the payload silently.
+        modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DbLogEntrySerializer.Default);
+        #endregion
+    }
+
+    public static void NoLegacyEventsExample(IServiceCollection services)
+    {
+        #region PartOSerialization_NoLegacyEvents
+        // Only once no event predates the current format: this drops DbEvent.ValueJson from
+        // the model, and with it every event whose payload still lives there.
+        services.AddSingleton(_ => DbLogEntrySerializer.Default with {
+            MustDeserializeLegacyEvents = false,
+        });
         #endregion
     }
 

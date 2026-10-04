@@ -145,7 +145,7 @@ context.Operation.AddEvent(new ScheduledEvent())
 context.Operation.AddEvent(new RateLimitedEvent())
     .SetDelayUntil(now, TimeSpan.FromMinutes(1), "rate-limit");
 // ... the same, on a lattice aligned to the quantum rather than offset by the prefix's hash
-context.Operation.AddEvent(new MyEvent())
+context.Operation.AddEvent(new RateLimitedEvent())
     .SetDelayUntil(now, TimeSpan.FromMinutes(1), TimeSpan.Zero, "rate-limit");
 ```
 <!-- endSnippet -->

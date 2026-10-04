@@ -28,6 +28,15 @@ public sealed record DbLogEntrySerializer
     // a serializer - that's TextSerializer and ByteSerializer, changed independently of this.
     public DataFormat Format { get; init; } = DataFormat.Bytes;
 
+    // Keeps DbEvent.ValueJson mapped even when Format is Bytes, so an event written by an older
+    // version stays readable. It matters for events and not for operations: an operation row is
+    // history the trimmer removes on age, while a delayed event can sit at State = New with
+    // DelayUntil months out - there is no point at which you can be sure none is left.
+    // Deserialization already prefers ValueData and falls back to ValueJson, so this costs one
+    // always-NULL column and nothing else. With Format = Text it does nothing: ValueJson is the
+    // written column then, and mapped regardless.
+    public bool MustDeserializeLegacyEvents { get; init; } = true;
+
     // For the *Data columns. Must be type-decorating: a payload is polymorphic - an ICommand, an
     // event's value - so the concrete type has to travel with it.
     public IByteSerializer ByteSerializer { get; init; } = MessagePackByteSerializer.DefaultTypeDecorating;

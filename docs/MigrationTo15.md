@@ -149,10 +149,10 @@ services.AddSingleton(_ => DbLogEntrySerializer.Default with {
 });
 ```
 
-Whichever you pick, **declare both column families during the upgrade** &ndash; that is, don't call
-`IgnoreUnusedOperationsFrameworkColumns` yet. Your existing rows are all in `*Json`, and unmapping
-that column is what makes them unreadable. Trimming the unused side is
-[a later step](#dropping-the-unused-columns-later), once no 14.x row can remain.
+Whichever you pick, your existing rows are all in the `*Json` columns and stay readable: a read
+takes whichever column holds the payload. The one call that could strand them,
+[`IgnoreUnusedOperationsFrameworkColumns`](#dropping-the-unused-columns), keeps `DbEvent.ValueJson`
+mapped by default for exactly that reason.
 
 The format only decides what *new* rows look like; a read takes whichever column actually holds the
 payload. That's what lets 14.x rows, 15.0 text rows and 15.0 binary rows sit in one table and all
@@ -160,11 +160,11 @@ still deserialize.
 
 ## Step 3: The schema migration
 
-**Declare both column families**, whichever format you chose. 15.0 reads whichever column holds a
-payload, so a 14.x row written to `*Json` stays readable &ndash; and it has to, because
-[you can't drain every event](#step-1-drain-what-you-can-from-events). The cost is one always-`NULL`
-column per payload; dropping it is a [later step](#dropping-the-unused-columns-later), not part of
-this one.
+**Declare both column families** for `_Events`, whichever format you chose &ndash; 15.0 reads
+whichever column holds a payload, and a 14.x row written to `ValueJson` has to stay readable because
+[you can't drain every event](#step-1-drain-what-you-can-from-events). If you call
+[`IgnoreUnusedOperationsFrameworkColumns`](#dropping-the-unused-columns) this is already what you
+get: it keeps `ValueJson` mapped by default.
 
 Both formats:
 
@@ -191,24 +191,43 @@ so everything compiles; the failure arrives at runtime, as
 `column "CommandData" of relation "_Operations" does not exist` on the first command, or as EF's
 `PendingModelChangesWarning` if your tests check for it.
 
-### Dropping the unused columns, later
+### Dropping the unused columns
 
-`IgnoreUnusedOperationsFrameworkColumns(format)` maps away the columns your format never writes, and
-it's worth doing eventually &ndash; it's just not part of the upgrade. Unmapping a column makes every
-row that holds its payload there unreadable, and right after the upgrade that's every row you had.
+`IgnoreUnusedOperationsFrameworkColumns` maps away the columns your format never writes, so each
+payload keeps one column instead of two:
 
-When each table is safe to trim differs:
+```cs
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+    // Taking the serializer rather than a bare DataFormat: it can't disagree with the one
+    // the app actually registered
+    modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DbLogEntrySerializer.Default);
+}
+```
 
-- **`_Operations`** &ndash; its rows are history once the readers have caught up, and the log trimmer
-  removes them on age (`MaxEntryAge`, 30 minutes by default). After one trimming interval past the
-  upgrade, no 14.x row remains.
-- **`_Events`** &ndash; a delayed event can sit there with `DelayUntil` arbitrarily far in the
-  future. You're safe only once every 14.x event is due *and* processed, which for some schedules is
-  months away, and which nothing will tell you. If you're not certain, keep both columns.
+**`DbEvent.ValueJson` is kept even under `Bytes`**, because `DbLogEntrySerializer`'s
+`MustDeserializeLegacyEvents` defaults to `true`. That's what makes this call safe during an
+upgrade: a delayed event can sit at `State = New` with `DelayUntil` months out, and dropping the
+column its payload lives in would strand it. A read prefers `ValueData` and falls back to
+`ValueJson`, so the only cost is one always-`NULL` column.
 
-Either way, the format you pass has to be the one your registered `DbLogEntrySerializer` writes
-with. Reason about the direction: passing `DataFormat.Text` because you "always used JSON", while the
-serializer still has its default `Bytes`, unmaps the column your writer is using.
+Set it to `false` once you're certain no event predates your current format &ndash; and only then:
+
+```cs
+services.AddSingleton(_ => DbLogEntrySerializer.Default with {
+    MustDeserializeLegacyEvents = false,
+});
+```
+
+`_Operations` needs no such latch. Its rows are history once the readers have caught up, and the
+trimmer removes them on age (`MaxEntryAge`, 30 minutes by default), so its `*Json` columns are
+dropped either way.
+
+Under `DataFormat.Text` the flag does nothing: `ValueJson` is the column being written, and mapped
+regardless. Mind the direction of the format argument in general &ndash; passing `DataFormat.Text`
+because you "always used JSON", while the serializer still has its default `Bytes`, unmaps the
+column your writer is using. The overload above avoids that by construction.
 
 [Operations Framework Serialization](./PartO-Serialization.md) covers the format switch, the
 serializers behind each column, and the deployment compatibility contract in full.

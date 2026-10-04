@@ -42,23 +42,41 @@ readable, and a deployment can move between the two without a data migration.
 
 ### Dropping the unused columns
 
-That safety costs one always-`NULL` column per payload. A schema that has only ever used one
-format can map the other away:
+That safety costs one always-`NULL` column per payload. A schema can map the ones its format never
+writes away:
 
 <!-- snippet: PartOSerialization_IgnoreUnusedColumns -->
 ```cs
-// Drops the three columns this format doesn't write. It has to be the format the
-// registered DbLogEntrySerializer writes with.
-modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DataFormat.Bytes);
+// Passing the serializer rather than a bare DataFormat: it can't disagree with the
+// one the app registered, and mapping away the column the writer uses would lose
+// the payload silently.
+modelBuilder.IgnoreUnusedOperationsFrameworkColumns(DbLogEntrySerializer.Default);
 ```
 <!-- endSnippet -->
 
-The format you pass has to be the one the registered `DbLogEntrySerializer` writes with: mapping
-away the column the writer uses loses the payload silently.
+**`DbEvent.ValueJson` is the exception: it stays mapped even under `DataFormat.Bytes`**, because
+`DbLogEntrySerializer.MustDeserializeLegacyEvents` defaults to `true`. An event is the one payload
+whose row can outlive a format change by an unbounded margin &ndash; a delayed event sits at
+`State = New` until `DelayUntil` arrives, which may be months &ndash; and a read prefers `ValueData`
+and falls back to `ValueJson`, so keeping it costs one always-`NULL` column and nothing else. Set the
+property to `false` once no event predates the current format:
 
-This trades the migration-free switch for the leaner schema: rows in the other format become
-unreadable, because the column holding them is no longer in the model. To change format later,
-stop calling this first, deploy, and only drop the old column once nothing needs it.
+<!-- snippet: PartOSerialization_NoLegacyEvents -->
+```cs
+// Only once no event predates the current format: this drops DbEvent.ValueJson from
+// the model, and with it every event whose payload still lives there.
+services.AddSingleton(_ => DbLogEntrySerializer.Default with {
+    MustDeserializeLegacyEvents = false,
+});
+```
+<!-- endSnippet -->
+
+`_Operations` needs no such latch: its rows are consumed by the readers and then removed by the
+trimmer on age, so nothing older than `MaxEntryAge` survives to be read.
+
+Otherwise this trades the migration-free switch for the leaner schema: rows in the other format
+become unreadable, because the column holding them is no longer in the model. To change format
+later, stop calling this first, deploy, and only drop the old column once nothing needs it.
 
 ### Serializers
 
