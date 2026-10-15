@@ -115,22 +115,27 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
     {
         try {
             var remotePeerId = connectionState.Handshake!.RemotePeerId;
-            var reconnectTasks = new List<Task>();
             foreach (var (_, weakRef) in _storage)
                 if (weakRef.TryGetTarget(out var target)) {
                     if (target.Id.HostId == remotePeerId)
-                        reconnectTasks.Add(target.Reconnect(cancellationToken));
+                        _ = Reconnect(target, cancellationToken); // Its synchronous part still runs before the first keep-alive
                     else
                         target.Disconnect();
                 }
-            await Task.WhenAll(reconnectTasks).ConfigureAwait(false);
 
             var hub = Peer.Hub;
             var systemCallSender = hub.SystemCallSender;
             while (true) {
                 await Task.Delay(Limits.KeepAlivePeriod, cancellationToken).ConfigureAwait(false);
-                var localIds = GetAliveLocalIds();
-                systemCallSender.KeepAlive(Peer, localIds);
+                try {
+                    var localIds = GetAliveLocalIds();
+                    systemCallSender.KeepAlive(Peer, localIds);
+                }
+                catch (Exception e) when (!cancellationToken.IsCancellationRequested) {
+                    // The remote side drops the connection after KeepAliveTimeout of silence,
+                    // so a single failed send must not end this loop.
+                    Peer.Log.LogWarning(e, "'{Route}': failed to send keep-alive", Peer.Route);
+                }
             }
         }
         catch {
@@ -160,6 +165,19 @@ public class RpcRemoteObjectTracker : RpcObjectTracker, IEnumerable<IRpcObject>
     }
 
     // Private methods
+
+    // Keep-alives must not wait for this: a reconnect that hangs or fails would otherwise
+    // leave the peer silent until the remote side drops the connection.
+    private async Task Reconnect(IRpcObject target, CancellationToken cancellationToken)
+    {
+        try {
+            await target.Reconnect(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e) when (!cancellationToken.IsCancellationRequested) {
+            Peer.Log.LogWarning(e, "'{Route}': failed to reconnect {Object}, disconnecting it", Peer.Route, target);
+            target.Disconnect();
+        }
+    }
 
     private long[] GetAliveLocalIds()
     {
@@ -237,6 +255,10 @@ public sealed class RpcSharedObjectTracker : RpcObjectTracker, IEnumerable<IRpcS
                 await Task.Delay(Limits.ObjectReleasePeriod, cancellationToken).ConfigureAwait(false);
                 var keepAliveDelay = Moment.Now - LastKeepAliveAt;
                 if (keepAliveDelay > Limits.KeepAliveTimeout) {
+                    // Disconnect drops the error, so without this the cut looks like a graceful close in the log
+                    Peer.Log.LogWarning(
+                        "'{Route}': no keep-alive for {KeepAliveDelay} (limit: {KeepAliveTimeout}), disconnecting",
+                        Peer.Route, keepAliveDelay, Limits.KeepAliveTimeout);
                     await Peer
                         .Disconnect(Internal.Errors.KeepAliveTimeout(), cancellationToken)
                         .ConfigureAwait(false);

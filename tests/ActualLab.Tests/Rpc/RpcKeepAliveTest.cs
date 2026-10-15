@@ -1,5 +1,7 @@
 using ActualLab.Collections;
 using ActualLab.Rpc;
+using ActualLab.Rpc.Diagnostics;
+using ActualLab.Rpc.Infrastructure;
 using ActualLab.Rpc.Testing;
 using ActualLab.Testing.Collections;
 
@@ -46,6 +48,61 @@ public class RpcKeepAliveTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     [Fact(Timeout = 30_000)]
+    public async Task KeepsConnectionAliveWhileRemoteObjectReconnectHangs()
+    {
+        await using var services = CreateServices(UseKeepAliveLimits());
+        var whenReconnectStarted = TaskCompletionSourceExt.New<Unit>();
+        var neverCompleted = TaskCompletionSourceExt.New<Unit>();
+        using var remoteObject = await RegisterRemoteObject(services, () => {
+            whenReconnectStarted.TrySetResult(default);
+            return neverCompleted.Task;
+        });
+
+        await ReconnectAndWait(services, whenReconnectStarted.Task);
+        await AssertConnectionSurvivesKeepAliveTimeout(services);
+    }
+
+    [Fact(Timeout = 30_000)]
+    public async Task KeepsConnectionAliveWhileRemoteObjectReconnectFails()
+    {
+        await using var services = CreateServices(UseKeepAliveLimits());
+        var whenReconnectStarted = TaskCompletionSourceExt.New<Unit>();
+        using var remoteObject = await RegisterRemoteObject(services, () => {
+            whenReconnectStarted.TrySetResult(default);
+            throw new InvalidOperationException("Reconnect failed.");
+        });
+
+        await ReconnectAndWait(services, whenReconnectStarted.Task);
+        await AssertConnectionSurvivesKeepAliveTimeout(services);
+    }
+
+    [Fact(Timeout = 30_000)]
+    public async Task KeepsConnectionAliveWhenKeepAliveSendFailsOnce()
+    {
+        var keepAliveSendCount = 0;
+        await using var services = CreateServices(configureServices => {
+            UseKeepAliveLimits()(configureServices);
+            configureServices.AddSingleton(_ => new RpcDiagnosticsOptions {
+                CallLoggerFactory = (peer, log, _) => new RpcCallLogger(peer, log, LogLevel.Debug) {
+                    Filter = (_, call) => {
+                        if (call.MethodDef.IsSystem
+                            && call.MethodDef.Name.StartsWith(nameof(IRpcSystemCalls.KeepAlive), StringComparison.Ordinal)
+                            && Interlocked.Increment(ref keepAliveSendCount) == 1)
+                            throw new InvalidOperationException("Keep-alive send failed.");
+
+                        return false;
+                    },
+                },
+            });
+        });
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+        (await client.Add(1, 1)).Should().Be(2); // Warm-up + ensures connected
+
+        await AssertConnectionSurvivesKeepAliveTimeout(services);
+        Volatile.Read(ref keepAliveSendCount).Should().BeGreaterThan(1, "the loop must outlive a failed send");
+    }
+
+    [Fact(Timeout = 30_000)]
     public async Task DropsConnectionWhenKeepAliveStops()
     {
         var gate = new ConnectionGate();
@@ -75,6 +132,40 @@ public class RpcKeepAliveTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
 
     // Private methods
 
+    private static async Task<StubRemoteObject> RegisterRemoteObject(ServiceProvider services, Func<Task> reconnect)
+    {
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var clientPeer = connection.ClientPeer;
+        var client = services.RpcHub().GetClient<ITestRpcService>();
+        (await client.Add(1, 1)).Should().Be(2); // Warm-up + ensures connected
+
+        var remotePeerId = clientPeer.ConnectionState.Value.Handshake!.RemotePeerId;
+        var remoteObject = new StubRemoteObject(new RpcObjectId(remotePeerId, 1), reconnect);
+        clientPeer.RemoteObjects.Register(remoteObject);
+        return remoteObject;
+    }
+
+    private static async Task ReconnectAndWait(ServiceProvider services, Task whenReconnectStarted)
+    {
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        await connection.Reconnect();
+        await whenReconnectStarted.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    private async Task AssertConnectionSurvivesKeepAliveTimeout(ServiceProvider services)
+    {
+        var connection = services.GetRequiredService<RpcTestClient>().GetConnection(x => !x.IsBackend);
+        var connectedState = connection.ClientPeer.ConnectionState.Value;
+        connectedState.IsConnected().Should().BeTrue();
+
+        // Without keep-alives the server's RpcSharedObjectTracker.Maintain drops the connection
+        await Delay((KeepAliveTimeout + KeepAlivePeriod).TotalSeconds);
+
+        connectedState.WhenDisconnected.IsCompleted.Should().BeFalse(
+            "keep-alives must flow no matter what happens to the remote objects or to a single send");
+        connection.ServerPeer.ConnectionState.Value.IsConnected().Should().BeTrue();
+    }
+
     private static Action<IServiceCollection> UseKeepAliveLimits(ConnectionGate? gate = null)
         => services => {
             services.AddSingleton(_ => new RpcLimits(false) {
@@ -102,6 +193,23 @@ public class RpcKeepAliveTest(ITestOutputHelper @out) : RpcLocalTestBase(@out)
     }
 
     // Nested types
+
+    private sealed class StubRemoteObject(RpcObjectId id, Func<Task> reconnect) : IRpcObject, IDisposable
+    {
+        public RpcObjectId Id { get; } = id;
+        public RpcObjectKind Kind => RpcObjectKind.Remote;
+        public bool AllowReconnect => true;
+
+        public Task Reconnect(CancellationToken cancellationToken)
+            => reconnect.Invoke();
+
+        public void Disconnect()
+        { }
+
+        // RpcRemoteObjectTracker holds weak references, so the test must keep the object alive
+        public void Dispose()
+            => GC.KeepAlive(this);
+    }
 
     private sealed class ConnectionGate
     {
