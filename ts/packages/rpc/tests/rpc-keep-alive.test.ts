@@ -143,6 +143,31 @@ describe('RPC KeepAlive', () => {
         expect(await calc.add(3, 4)).toBe(7);
     }, 25_000);
 
+    it('keeps sending $sys.KeepAlive after a failed send', async () => {
+        const { peer, clientHub } = setup();
+
+        const sender = clientHub.systemCallSender;
+        const originalKeepAlive = sender.keepAlive.bind(sender);
+        let sendCount = 0;
+        sender.keepAlive = (...args: Parameters<typeof originalKeepAlive>): void => {
+            if (++sendCount === 1)
+                throw new Error('Simulated send failure');
+
+            originalKeepAlive(...args);
+        };
+
+        peer.start();
+        await peer.whenConnected();
+
+        // Idle past the timeout: the first send fails, the later ones must still
+        // reach the server, otherwise it would stop sending keep-alives back
+        // (it only does so for a peer it has heard from) and the watchdog would fire.
+        await delay(KEEP_ALIVE_TIMEOUT_MS + KEEP_ALIVE_PERIOD_MS);
+
+        expect(sendCount).toBeGreaterThanOrEqual(3);
+        expect(peer.isConnected).toBe(true);
+    }, 20_000);
+
     // Private methods
 
     function setup(): {

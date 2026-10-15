@@ -1,4 +1,7 @@
+import { getLogs } from './logging.js';
 import type { IRpcObject } from './rpc-object.js';
+
+const { warnLog } = getLogs('RpcRemoteObjectTracker');
 
 export class RpcRemoteObjectTracker {
     private _objects = new Map<number, IRpcObject>();
@@ -40,8 +43,19 @@ export class RpcRemoteObjectTracker {
 
     reconnectAll(): void {
         for (const obj of this._objects.values()) {
-            if (obj.allowReconnect) obj.reconnect();
-            else obj.disconnect();
+            try {
+                if (obj.allowReconnect) obj.reconnect();
+                else obj.disconnect();
+            }
+            catch (e) {
+                warnLog?.log(`Failed to reconnect ${obj.id.localId}, disconnecting it`, e);
+                try {
+                    obj.disconnect();
+                }
+                catch (e2) {
+                    warnLog?.log(`Failed to disconnect ${obj.id.localId}`, e2);
+                }
+            }
         }
     }
 }

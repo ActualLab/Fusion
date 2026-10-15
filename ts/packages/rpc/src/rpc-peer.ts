@@ -777,9 +777,16 @@ export abstract class RpcPeer {
                 // cause the server to send $sys.Disconnect for IDs it doesn't recognize, which
                 // the client may misinterpret as a disconnect of its own shared objects (e.g.
                 // RpcStreamSender) when the IDs collide numerically.
-                this.hub.systemCallSender.keepAlive(conn, this.serializationFormat, [
-                    ...this.remoteObjects.keys(),
-                ]);
+                try {
+                    this.hub.systemCallSender.keepAlive(conn, this.serializationFormat, [
+                        ...this.remoteObjects.keys(),
+                    ]);
+                }
+                catch (e) {
+                    // One failed send must not break the timer: the next tick retries, and
+                    // the remote side tolerates a missed keep-alive (up to its timeout).
+                    warnLog?.log(`'${this.ref}': Failed to send keep-alive`, e);
+                }
             }
         }, this.keepAlivePeriodMs);
         // (Re)arm the silence watchdog.
