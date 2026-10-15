@@ -11,6 +11,42 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.0.17+ec689cffc | npm: 15.0.17
+
+Release date: 2026-10-14
+
+**A peer's keep-alive no longer depends on how its remote objects behave.** In `RpcRemoteObjectTracker`
+the loop that sends `$sys.KeepAlive` also reconnected every remote object and awaited all of them in
+one go, so a single reconnect that hung stalled the loop, and a single failed keep-alive send ended it.
+Either way the peer stopped sending keep-alives, and the other side dropped the connection at its
+`KeepAliveTimeout` &mdash; 25 seconds by default, seen as a cut at the 30-second check. **Take this
+one if you see connections dropped for no visible reason**, in particular right after a reconnect
+while a stream or another remote object is open. This release also ships the TypeScript client
+equivalent and moves npm to `15.0.17`, in line with NuGet.
+
+### Fixed
+
+- **RPC:** `RpcRemoteObjectTracker.Maintain` starts each object's reconnect without waiting for it,
+  disconnects an object whose reconnect fails, and catches a failed keep-alive send, logs it, and
+  tries again on the next period.
+- **RPC:** `RpcSharedObjectTracker` logs a warning with the keep-alive age and the limit before it
+  disconnects a peer that stopped sending keep-alives, so such a drop is now visible in the log.
+- **TypeScript RPC:** a failed `$sys.KeepAlive` send no longer throws out of the keep-alive timer;
+  it's logged and the next tick retries. `reconnectAll()` on the remote object tracker disconnects an
+  object whose `reconnect()` throws and still reconnects the others.
+
+### Changed
+
+- Updated to .NET 11 RC2 (`11.0.100-rc.2`). EF Core stays on RC1, as `efcore.pg` has no RC2 release
+  yet.
+- Updated `MessagePack` to `3.1.12` (`2.5.307` on the 2.x line) and `Nerdbank.MessagePack` to
+  `1.4.82`.
+
+### Tests
+
+- Added `RpcKeepAliveTest` cases for a remote object whose reconnect hangs or fails, and for a
+  failed keep-alive send; the TypeScript package got the matching keep-alive and tracker tests.
+
 ## 15.0.12+b453b5bef | npm: 14.4.14
 
 Release date: 2026-10-04
