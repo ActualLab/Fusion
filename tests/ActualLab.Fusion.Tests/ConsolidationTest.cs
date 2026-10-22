@@ -38,6 +38,32 @@ public class ConsolidationTest(ITestOutputHelper @out) : SimpleFusionTestBase(@o
     }
 
     [Fact]
+    public async Task InvalidationBeginShouldReachSourceAfterTargetInvalidation()
+    {
+        // arrange
+        var services = CreateServices();
+        var counterSum = services.GetRequiredService<CounterSumService>();
+        counterSum[0].Set(0);
+
+        var target = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC0(0));
+        var source = target.Source;
+        var callCount = counterSum.GetC0CallCount;
+
+        // act
+        target.Invalidate();
+        target.IsConsistent().Should().BeFalse();
+        source.IsConsistent().Should().BeTrue();
+        using (Invalidation.Begin())
+            _ = counterSum.GetC0(0);
+
+        // assert
+        source.IsConsistent().Should().BeFalse();
+        var refreshed = (ConsolidatingComputed<int>)await Computed.Capture(() => counterSum.GetC0(0));
+        refreshed.Value.Should().Be(0);
+        counterSum.GetC0CallCount.Should().BeGreaterThan(callCount);
+    }
+
+    [Fact]
     public async Task NoDelay_InvalidatesImmediately()
     {
         var services = CreateServices();

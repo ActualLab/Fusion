@@ -62,6 +62,13 @@ public abstract class ComputeMethodFunction(FusionHub hub, ComputeMethodDef meth
                 return MethodDef.DefaultResult;
             }
             if (context.CallOptions.HasFlag(CallOptions.Invalidate)) {
+                if (computed is null && this is ConsolidatingComputeMethodFunction consolidatingFunction) {
+                    var sourceInput = new ComputeMethodInput(
+                        consolidatingFunction.ConsolidationSourceFunction,
+                        consolidatingFunction.ConsolidationSourceMethodDef,
+                        invocation);
+                    computed = sourceInput.GetExistingComputed();
+                }
                 _ = ComputedImpl.TryUseExisting(computed, context);
                 return MethodDef.DefaultResult;
             }
