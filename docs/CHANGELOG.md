@@ -11,6 +11,66 @@ It isn't included into the NuGet package version.
 To track updates in real time, see ["Fusion/🎉Releases" on Voxt.ai](https://voxt.ai/chat/s-1KCdcYy9z2-uJVPKZsbEo).
 
 
+## 15.0.21+dc319975e | npm: 15.0.21
+
+Release date: 2026-10-24
+
+**An inbound call to a `Distributed` service no longer waits for its shard forever, and no longer holds
+its key while it waits.** A call that lands on a host that doesn't own the shard is retried in place
+&mdash; in `RemoteComputeMethodFunction` for compute methods, and in `RpcInterceptor` for regular
+methods whose shard moves mid-execution &mdash; while it holds the compute input lock of its key.
+If the caller was gone, nothing ended that wait until the server-side `RpcServerPeer` gave up on it
+(33% of the peer's age, clamped to 3&ndash;15 minutes). If the caller was alive but its shard map was
+stale, or the shard had moved for good, the wait never ended. Either way every other call with the
+same key, even a local one, waited with it. **Take this one if you run `Distributed` services** and
+see calls to the same key stuck after a node restart, a reconnect, or a shard move. This release
+ships the TypeScript client changes too and moves npm to `15.0.21`, in line with NuGet.
+
+### Breaking Changes
+
+- The inbound shard wait is now bounded: after `RpcOutboundCallOptions.MaxInboundReroutes` reroutes
+  (default 5, about 1.1 s with the default `ReroutingDelays`) the host answers with
+  `RpcRerouteException` and releases the key. A caller that can't reroute (a static route or a plain
+  client) now gets that exception after about 1.1 s instead of waiting. Such a client shouldn't call a
+  `Distributed` service anyway: if the shard is foreign from the start, the route validator already
+  answers with it at once. `int.MaxValue` restores the unlimited wait.
+- A call with `AllowReconnect` but without `AllowResend` &mdash; any method with a non-default
+  `RemoteExecutionMode` &mdash; used to hang forever when the peer reported it unknown after a
+  reconnect. It now fails with `RpcException` ("Outbound call failed: the peer doesn't know the call
+  after reconnect and `AllowResend` is not set."). Older .NET clients still hang there.
+- TypeScript clients: a server-side cancellation of a compute call used to be cached as an ordinary
+  error for about 1 second. It's now an `AbortError`: retried up to `COMPUTE_CALL_MAX_TRY_COUNT`,
+  never cached, and the call is unregistered at once. Regular calls keep a plain `RpcError`.
+
+### Added
+
+- **RPC:** `RpcOutboundCallOptions.MaxInboundReroutes`.
+- **RPC:** `Errors.OutboundCallFailedUnknownAfterReconnect`.
+
+### Fixed
+
+- **RPC:** an inbound call whose peer is disconnected, or that is no longer registered, is cancelled
+  on its next reroute attempt (`RpcInboundCall.TryAbortIfDisconnected`) instead of waiting for the
+  server-side peer to give up. The call is unregistered first, so a `$sys.Reconnect` arriving in
+  between reports it as unknown and the client re-sends it. A connected peer keeps the old behavior.
+- **RPC:** a cancellation result (`OperationCanceledException`, `RpcRerouteException` included)
+  invalidates the computed at once on the client, without waiting for `$sys.Invalidate`. The result
+  is never cached. The host still sends `$sys.Invalidate` for it, because older clients wait for it.
+- **RPC:** `RemoteComputeMethodFunction` checks for a cancellation result before binding the
+  computed to the call, then waits `RetryDelays[1]` and invalidates the cached computed, as before.
+- **TypeScript RPC:** a call the peer reports unknown after a same-peer reconnect fails the same way
+  when `AllowResend` is not set.
+
+### Documentation
+
+- `PartR-CallRouting.md`: the `AllowReconnect` / `AllowResend` rows of the flags table are reworded,
+  and there's a new "Inbound Rerouting Limit" section. `PartR-CO.md` lists `MaxInboundReroutes`.
+
+### Tests
+
+- `MeshInboundDisconnectTest` covers a disconnected caller and the reroute limit; the TypeScript
+  packages got matching reconnect-protocol and cancellation-result tests.
+
 ## 15.0.17+ec689cffc | npm: 15.0.17
 
 Release date: 2026-10-14
