@@ -173,6 +173,13 @@ public abstract class RemoteComputeMethodFunction(
             }
             catch (RpcRerouteException) {
                 Services.ThrowIfDisposedOrDisposing();
+                // An inbound call can't be rerouted, so it only waits for its shard to come back -
+                // pointless once the peer is gone, and it keeps the input lock for the whole wait.
+                if (routingMode is RpcRoutingMode.Inbound
+                    && RpcInboundContext.Current?.Call is { } inboundCall
+                    && inboundCall.TryAbortIfDisconnected())
+                    throw new OperationCanceledException(inboundCall.CallCancelToken);
+
                 ++rerouteCount;
                 Log.LogWarning("Rerouting #{RerouteCount}: {Input}", rerouteCount, typedInput);
                 await RpcHub.InternalServices.OutboundCallOptions.ReroutingDelayer

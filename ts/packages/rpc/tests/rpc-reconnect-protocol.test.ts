@@ -45,6 +45,15 @@ const SlowServiceDef = defineRpcService('SlowService', {
     },
 });
 
+const NoResendServiceDef = defineRpcService('NoResendService', {
+    delayed: {
+        args: [0, ''],
+        remoteExecutionMode:
+            RpcRemoteExecutionMode.AwaitForConnection |
+            RpcRemoteExecutionMode.AllowReconnect,
+    },
+});
+
 describe.each(FORMATS)('RPC $sys.Reconnect protocol [%s]', (formatKey) => {
     let serverHub: RpcHub;
     let clientHub: RpcHub;
@@ -151,6 +160,63 @@ describe.each(FORMATS)('RPC $sys.Reconnect protocol [%s]', (formatKey) => {
         const result = await promise;
         expect(result).toBe('forget:done');
         expect(invocationCounter.n).toBe(2);
+    });
+
+    it('Test 3.5 — a forgotten call without AllowResend fails instead of hanging', async () => {
+        serverHub.addService(NoResendServiceDef, {
+            delayed: async (msArg: unknown, marker: unknown) => {
+                invocationCounter.n++;
+                await delay(msArg as number);
+                return `${String(marker)}:done`;
+            },
+        });
+        const client = clientHub.addClient<ISlowService>(conn.clientPeer, NoResendServiceDef);
+
+        const promise = client.delayed(300, 'forget');
+        const outcome = promise.then(() => 'resolved', (e: unknown) => (e as Error).message);
+
+        await delay(20);
+        expect(invocationCounter.n).toBe(1);
+
+        await conn.disconnect(/* releaseServerPeer */ true);
+        await conn.connect(/* isPeerChanged */ false);
+
+        expect(await outcome).toContain('AllowResend is not set');
+        expect(invocationCounter.n).toBe(1);
+    });
+
+    it('Test 3.6 — a call without AllowResend stays pending when the reconciliation fails', async () => {
+        serverHub.addService(NoResendServiceDef, {
+            delayed: async (msArg: unknown, marker: unknown) => {
+                invocationCounter.n++;
+                await delay(msArg as number);
+                return `${String(marker)}:done`;
+            },
+        });
+        const client = clientHub.addClient<ISlowService>(conn.clientPeer, NoResendServiceDef);
+
+        // The server may still know the call, but we can't find that out
+        (conn.clientPeer as unknown as { _reconcileReconnect(): Promise<null> })
+            ._reconcileReconnect = () => Promise.resolve(null);
+
+        const promise = client.delayed(300, 'unsure');
+        let isSettled = false;
+        const outcome = promise.then(
+            (v: string) => { isSettled = true; return v; },
+            () => { isSettled = true; return 'rejected'; });
+
+        await delay(20);
+        expect(invocationCounter.n).toBe(1);
+
+        await conn.disconnect(/* releaseServerPeer */ true);
+        await conn.connect(/* isPeerChanged */ false);
+        await delay(100);
+
+        expect(isSettled).toBe(false);
+        expect(invocationCounter.n).toBe(1);
+        serverHub.close();
+        clientHub.close();
+        await outcome;
     });
 });
 

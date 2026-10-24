@@ -177,6 +177,9 @@ public static class Errors
     public static RpcException OutboundCallFailedCannotResend(Exception? innerException = null)
         => new("Outbound call failed: reconnected to a different peer and AllowResend is not set.", innerException);
 
+    public static RpcException OutboundCallFailedUnknownAfterReconnect(Exception? innerException = null)
+        => new("Outbound call failed: the peer doesn't know the call after reconnect and AllowResend is not set.", innerException);
+
     public static Exception CannotExecuteInterfaceCallLocally()
         => new InvalidOperationException(
             "Cannot execute interface call locally (no local call invoker). "

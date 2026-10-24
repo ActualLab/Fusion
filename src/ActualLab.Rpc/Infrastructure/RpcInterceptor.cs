@@ -160,6 +160,11 @@ public sealed class RpcInterceptor : Interceptor
             }
             catch (RpcRerouteException e) {
                 Services.ThrowIfDisposedOrDisposing();
+                if (mustRerouteUnlessLocal
+                    && RpcInboundContext.Current?.Call is { } inboundCall
+                    && inboundCall.TryAbortIfDisconnected())
+                    throw new OperationCanceledException(inboundCall.CallCancelToken);
+
                 ++rerouteCount;
                 RpcInstruments.RegisterReroute(methodDef, context.RoutingMode);
                 if (methodDef.CancellationTokenIndex >= 0)

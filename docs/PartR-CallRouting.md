@@ -351,8 +351,8 @@ It's a `[Flags]` enum, so values can be combined with `|`.
 | Flag | Value | When set | When unset |
 |------|-------|----------|------------|
 | `AwaitForConnection` | `1` | Wait for the peer to connect if it's disconnected when the call is made | The call fails immediately if the peer isn't connected |
-| `AllowReconnect` | `2` | Resend the call after reconnecting to the same peer | The call is aborted on disconnect |
-| `AllowResend` | `6` (`4 \| AllowReconnect`) | Resend the call even after reconnecting to a *different* peer (implies `AllowReconnect`) | The call is aborted when peer identity changes |
+| `AllowReconnect` | `2` | Keep the call after a disconnect and reconcile it with the same peer on reconnect (`$sys.Reconnect`); the call is resent only if the peer reports it as unknown and `AllowResend` is set, otherwise it fails | The call is aborted on disconnect |
+| `AllowResend` | `6` (`4 \| AllowReconnect`) | Resend the call when the peer doesn't know it: after reconnecting to a *different* peer, or when the same peer dropped it (implies `AllowReconnect`) | The call fails when peer identity changes or the peer doesn't know it after reconnect |
 | `Default` | `7` (`AwaitForConnection \| AllowResend`) | Wait, reconnect, and resend &mdash; the default for regular outbound calls | |
 
 Special cases:

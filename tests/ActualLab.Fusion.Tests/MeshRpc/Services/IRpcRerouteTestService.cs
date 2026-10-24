@@ -1,3 +1,5 @@
+using ActualLab.Rpc;
+
 namespace ActualLab.Fusion.Tests.MeshRpc;
 
 public interface IRpcRerouteTestService : IComputeService
@@ -6,6 +8,9 @@ public interface IRpcRerouteTestService : IComputeService
     public Task<ValueWithHostId> GetValue(int shardKey, string key, CancellationToken cancellationToken = default);
 
     public Task<ValueWithHostId> GetValueDirect(int shardKey, string key, CancellationToken cancellationToken = default);
+
+    [RpcMethod(RemoteExecutionMode = RpcRemoteExecutionMode.AwaitForConnection | RpcRemoteExecutionMode.AllowReconnect)]
+    public Task<ValueWithHostId> GetValueNoResend(int shardKey, string key, CancellationToken cancellationToken = default);
 
     [CommandHandler]
     public Task<ValueWithHostId> SetValue(RpcRerouteTestService_SetValue command, CancellationToken cancellationToken = default);
