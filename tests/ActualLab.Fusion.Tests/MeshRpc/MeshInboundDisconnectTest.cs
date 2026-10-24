@@ -12,9 +12,9 @@ public class MeshInboundDisconnectTest(ITestOutputHelper @out) : FusionTestBase(
         // arrange
         var hostMap = new MeshMap();
         var clientMap = new MeshMap();
-        await using var host0 = NewHost(hostMap, RpcServiceMode.Distributed);
-        await using var host1 = NewHost(hostMap, RpcServiceMode.Distributed);
-        await using var client = NewHost(clientMap, RpcServiceMode.Client);
+        await using var host0 = NewHost(hostMap, RpcServiceMode.Distributed, int.MaxValue);
+        await using var host1 = NewHost(hostMap, RpcServiceMode.Distributed, int.MaxValue);
+        await using var client = NewHost(clientMap, RpcServiceMode.Client, int.MaxValue);
         await Task.WhenAll(host0.WhenStarted, host1.WhenStarted, client.WhenStarted);
         hostMap.Reset(host1, host0); // Hosts: shard 0 is owned by host1
         clientMap.Reset(host0, host1); // The client is stale: it still sends shard 0 to host0
@@ -44,9 +44,9 @@ public class MeshInboundDisconnectTest(ITestOutputHelper @out) : FusionTestBase(
         // arrange
         var hostMap = new MeshMap();
         var clientMap = new MeshMap();
-        await using var host0 = NewHost(hostMap, RpcServiceMode.Distributed);
-        await using var host1 = NewHost(hostMap, RpcServiceMode.Distributed);
-        await using var client = NewHost(clientMap, RpcServiceMode.Client);
+        await using var host0 = NewHost(hostMap, RpcServiceMode.Distributed, int.MaxValue);
+        await using var host1 = NewHost(hostMap, RpcServiceMode.Distributed, int.MaxValue);
+        await using var client = NewHost(clientMap, RpcServiceMode.Client, int.MaxValue);
         await Task.WhenAll(host0.WhenStarted, host1.WhenStarted, client.WhenStarted);
         hostMap.Reset(host1, host0); // Hosts: shard 0 is owned by host1
         clientMap.Reset(host0, host1); // The client is stale: it still sends shard 0 to host0
@@ -63,7 +63,11 @@ public class MeshInboundDisconnectTest(ITestOutputHelper @out) : FusionTestBase(
         var hostResult = await hostCall.WaitAsync(TimeSpan.FromSeconds(20));
         hostResult.HostId.Should().Be(host1.Id);
         staleCall.IsCompleted.Should().BeFalse("the dropped call must not be answered, only re-sent");
+
+        // hostCall left host1's value cached on host0: it must be invalidated, or the re-sent call would reuse it
+        var cHostValue = await Computed.Capture(() => host0.GetRequiredService<IRpcRerouteTestService>().GetValue(0, "key"));
         hostMap.Reset(host0, host1);
+        await cHostValue.WhenInvalidated().WaitAsync(TimeSpan.FromSeconds(20));
         reconnectDelayer.ParkDelay = null;
         reconnectDelayer.CancelDelays();
 
@@ -78,9 +82,9 @@ public class MeshInboundDisconnectTest(ITestOutputHelper @out) : FusionTestBase(
         // arrange
         var hostMap = new MeshMap();
         var clientMap = new MeshMap();
-        await using var host0 = NewHost(hostMap, RpcServiceMode.Distributed);
-        await using var host1 = NewHost(hostMap, RpcServiceMode.Distributed);
-        await using var client = NewHost(clientMap, RpcServiceMode.Client);
+        await using var host0 = NewHost(hostMap, RpcServiceMode.Distributed, int.MaxValue);
+        await using var host1 = NewHost(hostMap, RpcServiceMode.Distributed, int.MaxValue);
+        await using var client = NewHost(clientMap, RpcServiceMode.Client, int.MaxValue);
         await Task.WhenAll(host0.WhenStarted, host1.WhenStarted, client.WhenStarted);
         hostMap.Reset(host0, host1); // Hosts: shard 0 is owned by host0
         clientMap.Reset(host0, host1);
@@ -107,10 +111,51 @@ public class MeshInboundDisconnectTest(ITestOutputHelper @out) : FusionTestBase(
         error.Which.Message.Should().Contain("AllowResend");
     }
 
+    [Fact(Timeout = 60_000)]
+    public async Task InboundCallShouldFailWithRerouteAndReleaseItsKeyWhileItsPeerIsConnected()
+    {
+        // arrange
+        var hostMap = new MeshMap();
+        var clientMap = new MeshMap();
+        await using var host0 = NewHost(hostMap, RpcServiceMode.Distributed);
+        await using var host1 = NewHost(hostMap, RpcServiceMode.Distributed);
+        await using var client = NewHost(clientMap, RpcServiceMode.Client);
+        await Task.WhenAll(host0.WhenStarted, host1.WhenStarted, client.WhenStarted);
+        hostMap.Reset(host1, host0); // Hosts: shard 0 is owned by host1
+        clientMap.Reset(host0, host1); // The client is stale: it still sends shard 0 to host0
+        var staleCall = client.GetRequiredService<IRpcRerouteTestService>().GetValue(0, "key");
+        _ = staleCall.ContinueWith(_ => { }, TaskScheduler.Default);
+        await Task.Delay(500); // The inbound call holds the key for ~1 s, so hostCall queues behind it
+        var hostCall = host0.GetRequiredService<IRpcRerouteTestService>().GetValue(0, "key");
+
+        // act & assert: host0 gives up waiting for the shard after a few reroutes, so the key is released;
+        // the client stays connected and keeps rerouting by its own (stale) map. Once hostCall has put host1's
+        // value into host0's cache, a retry may reuse it, so it's not asserted that staleCall is still pending.
+        var hostResult = await hostCall.WaitAsync(TimeSpan.FromSeconds(20));
+        hostResult.HostId.Should().Be(host1.Id);
+
+        // A rerouted call is invalidated at once: the client doesn't keep the failed attempts registered
+        await Task.Delay(3000);
+        var clientPeer = client.GetRequiredService<RpcHub>().GetPeer(clientMap.GetShardRef(0));
+        clientPeer.OutboundCalls.Count.Should().BeLessThanOrEqualTo(2);
+
+        // The client learns the new map and gets the result from the shard owner
+        clientMap.Reset(host1, host0);
+        var result = await staleCall.WaitAsync(TimeSpan.FromSeconds(20));
+        result.HostId.Should().Be(host1.Id);
+    }
+
     // Private methods
 
-    private static MeshHost NewHost(MeshMap meshMap, RpcServiceMode serviceMode)
+    private static MeshHost NewHost(MeshMap meshMap, RpcServiceMode serviceMode, int? maxInboundReroutes = null)
         => new(meshMap, serviceMode, serviceMode != RpcServiceMode.Client, (host, services) => {
+            if (maxInboundReroutes is { } maxReroutes) {
+                var descriptor = services.Last(x => x.ServiceType == typeof(RpcOutboundCallOptions));
+                services.Remove(descriptor);
+                services.AddSingleton(c => ((RpcOutboundCallOptions)descriptor.ImplementationFactory!.Invoke(c))
+                    with { MaxInboundReroutes = maxReroutes });
+            }
+
             var fusion = services.AddFusion();
             fusion.AddService<IRpcRerouteTestService, RpcRerouteTestService>(host.ServiceMode);
             if (host.ServiceMode == RpcServiceMode.Client)

@@ -10,6 +10,18 @@ export class RpcError extends Error {
     }
 }
 
+// .NET exception types a peer may answer a call with that mean "cancelled" (all derive from
+// OperationCanceledException). Such an answer never carries a cacheable value.
+const CANCELLATION_TYPE_NAMES = new Set([
+    'System.OperationCanceledException',
+    'System.Threading.Tasks.TaskCanceledException',
+    'ActualLab.Rpc.RpcRerouteException',
+]);
+
+export function isCancellationTypeName(typeName: string | undefined): boolean {
+    return typeName !== undefined && CANCELLATION_TYPE_NAMES.has(typeName);
+}
+
 // Assembly-qualified TypeRef of ActualLab's RemoteException — the type every
 // ActualLab peer can reconstruct from a single (string message) ctor. TS uses
 // it whenever it reports a JS error to a .NET peer ($sys.Error, stream $sys.End),

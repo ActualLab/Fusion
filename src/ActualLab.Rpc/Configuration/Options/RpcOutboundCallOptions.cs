@@ -14,6 +14,9 @@ public record RpcOutboundCallOptions
     public static RpcOutboundCallOptions Default { get; set; } = new();
 
     public RetryDelaySeq ReroutingDelays { get; init; } = RetryDelaySeq.Exp(0.1, 5);
+    // An inbound call that can't run here waits for its shard this many reroutes, then fails with
+    // RpcRerouteException, i.e. returns the decision to the caller and releases the input lock
+    public int MaxInboundReroutes { get; init; } = 5;
     // Delegate options
     public Func<RpcMethodDef, RpcCallTimeouts> TimeoutsProvider { get; init; }
     public Func<RpcOutboundCall, RpcPeer, RpcDelayedCallAction> DelayHandler { get; init; }

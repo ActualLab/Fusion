@@ -165,6 +165,9 @@ public sealed class RpcInterceptor : Interceptor
                     && inboundCall.TryAbortIfDisconnected())
                     throw new OperationCanceledException(inboundCall.CallCancelToken);
 
+                if (mustRerouteUnlessLocal && rerouteCount >= Hub.OutboundCallOptions.MaxInboundReroutes)
+                    throw;
+
                 ++rerouteCount;
                 RpcInstruments.RegisterReroute(methodDef, context.RoutingMode);
                 if (methodDef.CancellationTokenIndex >= 0)

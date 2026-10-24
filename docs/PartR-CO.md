@@ -107,6 +107,7 @@ Configures outbound RPC call behavior including routing, timeouts, and rerouting
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `ReroutingDelays` | `RetryDelaySeq` | `Exp(0.1, 5)` | Exponential backoff for rerouting delays (0.1s to 5s). See [Call Routing](./PartR-CallRouting.md). |
+| `MaxInboundReroutes` | `int` | `5` | How many times an inbound call to a `Distributed` service waits for its shard before it fails with `RpcRerouteException` (about 1.1 s with the default delays). See [Call Routing](./PartR-CallRouting.md). |
 | `TimeoutsProvider` | `Func<...>` | Based on method kind | Provides `RpcCallTimeouts` for specific methods |
 | `RouterFactory` | `Func<...>` | Routes to `RpcRef.Default` | Creates routers to select target peer. See [Call Routing](./PartR-CallRouting.md). |
 | `ReroutingDelayer` | `Func<...>` | `Task.Delay()` | Async function to apply rerouting delays |

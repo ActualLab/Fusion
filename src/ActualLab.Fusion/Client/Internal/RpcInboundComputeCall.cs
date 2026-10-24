@@ -84,6 +84,14 @@ public abstract class RpcInboundComputeCall : RpcInboundCall
             Unregister();
             return;
         }
+
+        // TODO(AY): Obsolete as of 2026-10-24, to be removed in ~6mo.
+        // A cancellation result (a canceled ResultTask or one faulted with OperationCanceledException,
+        // RpcRerouteException included) always invalidates the computed on the client at once, so
+        // $sys.Invalidate is redundant for it. It's still sent, since clients that predate this rule keep
+        // such a call registered until they get it. Once they are obsolete, skip ProcessStage2 for
+        // cancellation results: Unregister() and return, as for a regular call. Note that the TypeScript
+        // client recognizes only the known cancellation types (see rpc-error.ts), so check it before that.
         await ProcessStage2(cancellationToken).ConfigureAwait(false);
     }
 

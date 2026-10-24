@@ -441,6 +441,25 @@ services.AddSingleton(_ => RpcOutboundCallOptions.Default with {
 
 The delay sequence uses exponential backoff to avoid overwhelming the system during topology changes.
 
+### Inbound Rerouting Limit
+
+An inbound call to a `Distributed` service can't be forwarded to another host: if its shard isn't local, it waits
+here for the shard to arrive, holding the lock of its compute input. `MaxInboundReroutes` (default `5`, about 1.1 s with
+the default `ReroutingDelays`) limits that wait. After that many reroutes the host answers with `RpcRerouteException`,
+the lock is released, and the caller reroutes the call by its own routing table. A cancellation result
+(`RpcRerouteException` included) always invalidates the computed on the caller at once and is never cached;
+the host still sends `$sys.Invalidate` for it for now, because older callers wait for it.
+
+```cs
+services.AddSingleton(_ => RpcOutboundCallOptions.Default with {
+    MaxInboundReroutes = 5,
+});
+```
+
+If the caller disconnects while its inbound call waits, the call is dropped at once: it's unregistered before it is
+cancelled, so a `$sys.Reconnect` reports it as unknown, and the caller re-sends it (or fails it, if the method
+doesn't have `AllowResend`).
+
 ### Host URL Resolution
 
 When using custom `RpcRef` types, configure how to resolve the actual host URL.
