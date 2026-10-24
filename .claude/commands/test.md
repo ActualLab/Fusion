@@ -37,7 +37,7 @@ Notes:
 If the summary reports failures:
 1. Read the failing group's log in the run's results directory to get the errors.
 2. Rerun just the failed tests once, serially, with nothing else running:
-   `dotnet test <project> -c Debug -f net10.0 --no-build --filter "FullyQualifiedName~<Class1>|FullyQualifiedName~<Class2>"`
+   `dotnet test <project> -c Debug -f net11.0 --no-build --filter "FullyQualifiedName~<Class1>|FullyQualifiedName~<Class2>"`
 3. Tests that pass on the serial rerun are **flaky under parallel load** — report them separately
    (naming the class), and consider suggesting a `TimeSensitiveTests` collection marker for repeat
    offenders. Tests that fail again are real failures — report them with their error output.
