@@ -162,6 +162,13 @@ public abstract class RpcOutboundComputeCall : RpcOutboundCall
                     $"<FusionRpc>.{nameof(SetError)}: non-peer error";
                 SetInvalidatedUnsafe(!assumeCancelled, reason);
             }
+            else if (error is OperationCanceledException) {
+                // A cancellation (RpcRerouteException included) always invalidates the computed,
+                // so there is no $sys.Invalidate to wait for (a late one is ignored: the call is gone)
+                const string reason =
+                    $"<FusionRpc>.{nameof(SetError)}: cancellation from the peer";
+                SetInvalidatedUnsafe(notifyCancelled: false, reason);
+            }
         }
     }
 

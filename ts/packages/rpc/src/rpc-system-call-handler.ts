@@ -25,7 +25,7 @@
 //     DI.  TS uses a class with a handle() method.
 
 import { getLogs } from './logging.js';
-import { RpcError } from './rpc-error.js';
+import { RpcError, isCancellationTypeName } from './rpc-error.js';
 import { RpcSystemCalls, type RpcMessage } from './rpc-message.js';
 import type { RpcPeer } from './rpc-peer.js';
 import type { RpcStream } from './rpc-stream.js';
@@ -81,22 +81,31 @@ export class RpcSystemCallHandler {
                 // stays tracked so its error computed still observes
                 // $sys-c.Invalidate — C# RpcOutboundComputeCall.SetError
                 // (CompleteKeepRegistered). Local invalidation or reconnect
-                // cleans it up.
+                // cleans it up. A cancellation is the exception: it is invalidated at once.
                 call.completedStage |= RpcCallStage.ResultReady;
-                if (call.removeOnOk) {
-                    peer.outboundCalls.remove(relatedId);
-                }
                 const errorInfo = args[0] as
                         | Record<string, unknown>
                         | undefined;
+                const typeName = extractTypeName(errorInfo?.TypeRef ?? errorInfo?.typeRef);
+                const isCancelled = !call.removeOnOk && isCancellationTypeName(typeName); // Compute calls only
+                if (call.removeOnOk || isCancelled) {
+                    peer.outboundCalls.remove(relatedId);
+                }
                 const msg = (errorInfo?.Message ??
                         errorInfo?.message ??
                         'RPC error') as string;
-                const typeName = extractTypeName(errorInfo?.TypeRef ?? errorInfo?.typeRef);
                 // Mirrors RpcSystemCalls.cs:102 — surface RpcRerouteException.
                 if (typeName === 'ActualLab.Rpc.RpcRerouteException')
                     warnLog?.log('Got RpcRerouteException from remote peer:', msg);
-                call.result.reject(new RpcError(msg, typeName));
+                const error = new RpcError(msg, typeName);
+                if (isCancelled)
+                    error.name = 'AbortError'; // Recognized by isCancellation: retried, never cached
+                call.result.reject(error);
+
+                // A cancellation always invalidates the computed, so the peer sends no
+                // $sys-c.Invalidate for it and there is nothing to wait for
+                if (isCancelled)
+                    call.onDisconnect();
             }
             break;
         }

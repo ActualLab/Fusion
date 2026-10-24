@@ -229,6 +229,13 @@ export class FusionHub extends RpcHub {
                 // the caller never learns its value went stale (I1). .NET's equivalent
                 // is the strong RpcInboundComputeCall.Computed, released on Unregister.
                 retainInboundComputed(peer, callId, computed);
+                // TODO(AY): Obsolete as of 2026-10-24, to be removed in ~6mo.
+                // A cancellation result always invalidates the computed on the client at once, so this
+                // invalidation is redundant for it. It's still sent, since clients that predate this rule
+                // keep such a call registered until they get it. Once they are obsolete, skip it for
+                // cancellation results (like C# RpcInboundComputeCall.ProcessStage1Plus) - but only after
+                // isCancellationTypeName (rpc-error.ts) covers every cancellation type in use: a custom
+                // OperationCanceledException subclass isn't recognized there, and relies on this message.
                 // ProcessStage2 parity (F1): whenInvalidated() resolves immediately
                 // for an already-invalidated computed, so an invalidation landing
                 // during computation still produces the send.

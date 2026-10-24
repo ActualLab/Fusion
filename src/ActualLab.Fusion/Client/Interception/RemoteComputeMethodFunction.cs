@@ -180,6 +180,10 @@ public abstract class RemoteComputeMethodFunction(
                     && inboundCall.TryAbortIfDisconnected())
                     throw new OperationCanceledException(inboundCall.CallCancelToken);
 
+                if (routingMode is RpcRoutingMode.Inbound
+                    && rerouteCount >= RpcHub.InternalServices.OutboundCallOptions.MaxInboundReroutes)
+                    throw;
+
                 ++rerouteCount;
                 Log.LogWarning("Rerouting #{RerouteCount}: {Input}", rerouteCount, typedInput);
                 await RpcHub.InternalServices.OutboundCallOptions.ReroutingDelayer
@@ -373,19 +377,10 @@ public abstract class RemoteComputeMethodFunction(
             return;
         }
 
-        // 3. Bind the call to cachedComputed
-        if (!remoteCachedComputed.BindToCall(call)) {
-            // A weird case: cachedComputed is already invalidated (manually?).
-            // This means the call is already aborted (see BindToCall logic),
-            // and since we're performing a background update, we can just exit.
-            return;
-        }
-
-        // 4. Handle OperationCanceledException
+        // 3. Handle OperationCanceledException: the call is already invalidated (see RpcOutboundComputeCall.SetError)
         if (error is OperationCanceledException e) {
             // The call was cancelled on the server side - e.g. due to peer termination.
-            // Retrying is the best we can do here; and since this call is already bound to `cachedComputed`,
-            // we should invalidate the `call` rather than `cachedComputed`.
+            // Retrying is the best we can do here, so cachedComputed is invalidated after a delay.
             var cancellationReprocessingOptions = cachedComputed.Options.CancellationReprocessing;
             var delay = cancellationReprocessingOptions.RetryDelays[1];
             Log.LogWarning(e,
@@ -394,7 +389,15 @@ public abstract class RemoteComputeMethodFunction(
             await Task.Delay(delay).ConfigureAwait(false);
             const string reason =
                 $"<FusionRpc>.{nameof(ApplyRpcUpdate)}: {nameof(SendRpcCall)} got server-side cancellation";
-            call.SetInvalidated(true, reason);
+            cachedComputed.Invalidate(immediately: true, new InvalidationSource(reason));
+            return;
+        }
+
+        // 4. Bind the call to cachedComputed
+        if (!remoteCachedComputed.BindToCall(call)) {
+            // A weird case: cachedComputed is already invalidated (manually?).
+            // This means the call is already aborted (see BindToCall logic),
+            // and since we're performing a background update, we can just exit.
             return;
         }
 
