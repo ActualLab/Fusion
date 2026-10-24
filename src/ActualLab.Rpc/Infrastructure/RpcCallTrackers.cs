@@ -427,27 +427,30 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
             }
 
             if (isPeerChanged) {
-                Resend(sentCalls);
+                Resend(sentCalls, isReconciled: false);
                 return;
             }
 
-            var failedCalls = await TryReconnect(sentCalls).ConfigureAwait(false);
-            Resend(failedCalls);
+            var (failedCalls, isReconciled) = await TryReconnect(sentCalls).ConfigureAwait(false);
+            Resend(failedCalls, isReconciled);
         }
         catch {
             // Intended
         }
         return;
 
-        void Resend(List<RpcOutboundCall> calls) {
+        void Resend(List<RpcOutboundCall> calls, bool isReconciled) {
             foreach (var call in calls) {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (call.GetReconnectStage(isPeerChanged: true) is not null)
                     call.ResendRegistered();
+                else if (isReconciled && !call.MethodDef.RemoteExecutionMode.HasFlag(RpcRemoteExecutionMode.AllowResend))
+                    call.SetError(Internal.Errors.OutboundCallFailedUnknownAfterReconnect(connectionState.Error),
+                        context: null, assumeCancelled: false);
             }
         }
 
-        async Task<List<RpcOutboundCall>> TryReconnect(List<RpcOutboundCall> calls) {
+        async Task<(List<RpcOutboundCall> Calls, bool IsReconciled)> TryReconnect(List<RpcOutboundCall> calls) {
             try {
                 var completedStages = calls
                     .Select(call => (
@@ -458,7 +461,7 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                     .OrderBy(g => g.Key)
                     .ToDictionary(g => g.Key, g => IncreasingSeqCompressor.Serialize(g.OrderBy(x => x)));
                 if (completedStages.Count == 0)
-                    return calls; // All calls have to be re-sent
+                    return (calls, false); // All calls have to be re-sent
 
                 Task<byte[]> reconnectTask;
                 using (new RpcOutboundCallSetup(Peer).Activate()) // No "await" inside this block!
@@ -466,11 +469,11 @@ public sealed class RpcOutboundCallTracker : RpcCallTracker<RpcOutboundCall>
                         .Reconnect(connectionState.Handshake!.Index, completedStages, cancellationToken);
                 var failedCallData = await reconnectTask.ConfigureAwait(false);
                 var failedCallIds = IncreasingSeqCompressor.Deserialize(failedCallData).ToHashSet();
-                return calls.Where(x => failedCallIds.Contains(x.Id)).ToList();
+                return (calls.Where(x => failedCallIds.Contains(x.Id)).ToList(), true);
             }
             catch {
                 // If something fails, we re-send every call
-                return calls;
+                return (calls, false);
             }
         }
     }

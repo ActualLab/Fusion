@@ -271,6 +271,32 @@ public abstract class RpcInboundCall : RpcCall
     public void Cancel()
         => CallCancelSource.CancelAndDisposeSilently();
 
+    // Unregisters before cancelling: a reconnect arriving in between must report the call as unknown
+    // (the client re-sends it), not find a cancelled call that never sends a result.
+    public bool TryAbortIfDisconnected()
+    {
+        if (NoWait)
+            return false;
+
+        lock (Lock) {
+            // TryReprocess takes this Lock too, and runs only after Connected is published: either it
+            // ran first, and we see Connected (or a later disconnect, after which the client reconnects
+            // and gets the call reported as unknown), or it finds the call unregistered and reports it unknown
+            var inboundCalls = Context.Peer.InboundCalls;
+            if (inboundCalls.Get(Id) == this) {
+                if (Context.Peer.ConnectionState.Value.IsConnected())
+                    return false;
+
+                inboundCalls.Unregister(this);
+            }
+            // Otherwise the call is gone already (completed, cancelled or the peer was reset): nobody waits for it
+        }
+
+        Log.LogWarning("Dropping {Call}: the peer is disconnected or the call is gone", this);
+        CallCancelSource.CancelAndDisposeSilently();
+        return true;
+    }
+
     public void CompleteTrace(Exception? error)
     {
         // The lock-free null check is safe: Trace is assigned under Lock in Process

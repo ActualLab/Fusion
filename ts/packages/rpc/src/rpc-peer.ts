@@ -1344,8 +1344,10 @@ export class RpcClientPeer extends RpcPeer {
         // $sys.Reconnect — which uses `map<int, bin>` — is a future
         // enhancement; the JSON path covers ActualChat's primary use case.
         let unknownIds: Set<number> | null = null;
+        let isReconciled = false;
         if (!isPeerChanged && eligible.length > 0) {
             unknownIds = await this._reconcileReconnect(eligible, closedSignal);
+            isReconciled = unknownIds !== null;
         }
 
         // Yield-batched resend. Eligible can be hundreds after a long
@@ -1367,6 +1369,20 @@ export class RpcClientPeer extends RpcPeer {
                 // await the original call's $sys.Ok.
                 continue;
             }
+            if (!(call.remoteExecutionMode & 4)) {
+                // Not reconciled -> the server may still know the call, so it stays pending until the next reconnect
+                if (!isReconciled)
+                    continue;
+
+                // The server doesn't know this call (e.g. it dropped it), and AllowResend isn't set
+                if (!call.result.isCompleted)
+                    call.result.reject(new Error(
+                        'Outbound call failed: the peer does not know the call after reconnect and AllowResend is not set.'));
+                call.onDisconnect();
+                this.outboundCalls.remove(call.callId);
+                continue;
+            }
+
             call.sentAt = Date.now();
             this._sendWireData(call.serializedWireData);
             resentSinceYield++;
@@ -1380,7 +1396,8 @@ export class RpcClientPeer extends RpcPeer {
     /**
      * Ask the server which call IDs in `eligible` it no longer recognizes
      * via `$sys.Reconnect:3`. Returns the set of call IDs that need to be
-     * resent. On any failure, falls back to "resend everything".
+     * resent, or `null` if the reconciliation failed: the caller then
+     * resends everything that allows it.
      *
      * Wire format of the `completedStages` argument is chosen per wire format:
      *   - JSON (json5np): plain object `{"<stage>": "<base64-of-bytes>"}` —
@@ -1390,7 +1407,7 @@ export class RpcClientPeer extends RpcPeer {
      *     native msgpack `map<int, bin>`, matching .NET MessagePack-CSharp's
      *     default for `Dictionary<int, byte[]>`.
      */
-    private async _reconcileReconnect(eligible: RpcOutboundCall[], closedSignal?: AbortSignal): Promise<Set<number>> {
+    private async _reconcileReconnect(eligible: RpcOutboundCall[], closedSignal?: AbortSignal): Promise<Set<number> | null> {
         try {
             // Group by completedStage, sort IDs, compress per-stage.
             const byStage = new Map<number, number[]>();
@@ -1403,7 +1420,7 @@ export class RpcClientPeer extends RpcPeer {
             }
             if (byStage.size === 0) {
                 // Nothing to reconcile — fall back to resend-all.
-                return new Set(eligible.map(c => c.callId));
+                return null;
             }
 
             const isBinary = this.serializationFormat.isBinary;
@@ -1436,11 +1453,11 @@ export class RpcClientPeer extends RpcPeer {
             );
             const result = await reconnectCall.result;
             const bytes = _toBytes(result);
-            if (bytes === null) return new Set(eligible.map(c => c.callId));
+            if (bytes === null) return null;
             return new Set(IncreasingSeqCompressor.deserialize(bytes));
         } catch {
             // Reconciliation failed — resend everything.
-            return new Set(eligible.map(c => c.callId));
+            return null;
         }
     }
 

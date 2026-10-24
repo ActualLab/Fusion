@@ -21,6 +21,14 @@ public class RpcRerouteTestService(MeshHost ownHost) : IRpcRerouteTestService
         return Task.FromResult(new ValueWithHostId(value, ownHost.Id));
     }
 
+    public virtual async Task<ValueWithHostId> GetValueNoResend(int shardKey, string key, CancellationToken cancellationToken = default)
+    {
+        if (key == "block")
+            await Task.Delay(Timeout.Infinite, cancellationToken); // Ends once the shard is moved away
+
+        return await GetValueDirect(shardKey, key, cancellationToken);
+    }
+
     public virtual async Task<ValueWithHostId> SetValue(RpcRerouteTestService_SetValue command, CancellationToken cancellationToken = default)
     {
         var value = command.Value;
