@@ -8,10 +8,12 @@ namespace ActualLab.Fusion.Tests.TypeScriptRpc;
 public class RpcTypeScriptGeneratorTest
 {
     [Fact]
-    public async Task GeneratesInterfacesDefinitionsAndDtos()
+    public async Task GeneratorShouldEmitInterfacesDefinitionsAndDtos()
     {
+        // act
         var result = await Generate(typeof(ITsGenTestService));
 
+        // assert
         result.Warnings.Should().BeEmpty();
         result.Code.Should().NotContain("\r");
         result.Code.Should().Be(
@@ -73,25 +75,35 @@ public class RpcTypeScriptGeneratorTest
     }
 
     [Fact]
-    public async Task E2EContractsAreUpToDate()
+    public async Task E2EContractsShouldBeUpToDate()
     {
         // ts/e2e/ts-dotnet-e2e.ts uses these contracts, so TypeScriptRpcE2ETest verifies them on the wire
-        var result = await Generate(typeof(ITypeScriptTestService), typeof(ITypeScriptTestComputeService));
+        // arrange
+        var assembly = typeof(ITypeScriptTestService).Assembly;
         var path = Path.Combine(TypeScriptRunner.TsDir, "e2e", "contracts.generated.ts");
         var existingCode = File.Exists(path) ? (await File.ReadAllTextAsync(path)).ReplaceLineEndings("\n") : null;
-        if (string.Equals(existingCode, result.Code, StringComparison.Ordinal))
-            return;
 
-        await File.WriteAllTextAsync(path, result.Code);
-        Assert.Fail($"{path} was out of date, so it's regenerated now: review the change and rerun the test.");
+        // act
+        var result = await Generate(
+            assembly.GetName().Name!,
+            typeof(ITypeScriptTestService),
+            typeof(ITypeScriptTestComputeService));
+
+        // assert
+        existingCode.Should().Be(result.Code,
+            $"{path} must match the .NET contracts; regenerate it with "
+            + $"'dotnet run --project src/ActualLab.Rpc.TypeScript.Generator -- \"{assembly.Location}\" "
+            + $"-o \"{path}\" -s \"ITypeScriptTest*\"'");
     }
 
     [Fact]
-    public async Task MatchesHandWrittenE2EDefinitions()
+    public async Task GeneratorShouldMatchHandWrittenE2EDefinitions()
     {
         // Wire metadata of the hand-written definitions ts/e2e/ts-dotnet-e2e.ts used to have
+        // act
         var result = await Generate(typeof(ITypeScriptTestService), typeof(ITypeScriptTestComputeService));
 
+        // assert
         result.Warnings.Should().BeEmpty();
         result.Code.Should().ContainAll(
             "    'Add:2': { args: [0, 0], wireArgCount: 2 },\n",
@@ -107,10 +119,12 @@ public class RpcTypeScriptGeneratorTest
     }
 
     [Fact]
-    public async Task HandlesEdgeCases()
+    public async Task GeneratorShouldHandleEdgeCases()
     {
+        // act
         var result = await Generate(typeof(ITsGenEdgeService));
 
+        // assert
         result.Code.Should().ContainAll(
             "    GetBox(): Promise<TsGenBox_Int32>;\n",
             "export interface TsGenBox_Int32 {\n    value: number;\n}",
@@ -123,9 +137,33 @@ public class RpcTypeScriptGeneratorTest
         result.Warnings.Should().ContainSingle().Which.Should().Contain("ITsGenEdgeService.Renamed");
     }
 
+    [Fact]
+    public void ServiceFilterShouldMatchWildcardPatterns()
+    {
+        // arrange
+        Type[] types = [typeof(ITsGenTestService), typeof(ITsGenEdgeService), typeof(ITypeScriptTestService)];
+        var filter = new RpcTypeScriptServiceFilter(
+            " ITsGen*Service , ActualLab.Fusion.Tests.*.ITypeScriptTest*,IMissing,");
+
+        // act
+        var matches = types.Where(filter.IsMatch).ToList();
+        var unmatchedPatterns = filter.GetUnmatchedPatterns(types).ToList();
+
+        // assert
+        matches.Should().Equal(types);
+        unmatchedPatterns.Should().Equal("IMissing");
+        new RpcTypeScriptServiceFilter("ITsGenEdge*").IsMatch(typeof(ITsGenTestService)).Should().BeFalse();
+        new RpcTypeScriptServiceFilter("ITsGenTestService").IsMatch(typeof(ITsGenTestService)).Should().BeTrue();
+        new RpcTypeScriptServiceFilter("").Patterns.Should().Equal("*");
+        RpcTypeScriptServiceFilter.All.IsMatch(typeof(ITsGenEdgeService)).Should().BeTrue();
+    }
+
     // Private methods
 
-    private static async Task<RpcTypeScriptGeneratorResult> Generate(params Type[] serviceTypes)
+    private static Task<RpcTypeScriptGeneratorResult> Generate(params Type[] serviceTypes)
+        => Generate("", serviceTypes);
+
+    private static async Task<RpcTypeScriptGeneratorResult> Generate(string sourceName, params Type[] serviceTypes)
     {
         var services = new ServiceCollection();
         var fusion = services.AddFusion();
@@ -137,7 +175,10 @@ public class RpcTypeScriptGeneratorTest
         }
         await using var serviceProvider = services.BuildServiceProvider();
         var serviceRegistry = serviceProvider.RpcHub().ServiceRegistry;
-        return new RpcTypeScriptGenerator().Generate(serviceTypes.Select(t => serviceRegistry[t]));
+        var generator = new RpcTypeScriptGenerator(RpcTypeScriptGeneratorOptions.Default with {
+            SourceName = sourceName,
+        });
+        return generator.Generate(serviceTypes.Select(t => serviceRegistry[t]));
     }
 }
 

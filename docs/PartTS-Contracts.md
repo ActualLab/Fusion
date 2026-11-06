@@ -55,52 +55,40 @@ MessagePack formats use `[Key]`-s or property names as they're configured on the
 
 ## Usage
 
-The `actuallab-tsgen` .NET tool takes a compiled contracts assembly and generates contracts
-for every public `IRpcService` / `IComputeService` interface declared there, except `IBackendService`-s:
-
-```powershell
-dotnet tool install -g ActualLab.Rpc.TypeScript.Tool
-
-# Generate (writes the file only if its content changes)
-actuallab-tsgen MyApp.Contracts.dll --output ../web/src/contracts.generated.ts
-
-# Only some services
-actuallab-tsgen MyApp.Contracts.dll -o api.generated.ts --service ITodoApi --service IStockApi
-
-# Verify on CI: fails if the file is missing or out of date
-actuallab-tsgen MyApp.Contracts.dll -o ../web/src/contracts.generated.ts --check
-```
-
-Use the tool of the same version as the `ActualLab.*` packages your contracts reference.
-
-### Regenerating on Build
-
-The [TodoApp sample](https://github.com/ActualLab/Fusion/tree/master/samples/TodoApp) regenerates
-its TypeScript contracts every time its `Abstractions` project is built, and only verifies them on CI
-(GitHub Actions sets `CI=true`). Here is its MSBuild target, which you can adapt
-by replacing the tool's `ProjectReference` with `dotnet tool run actuallab-tsgen`:
+Reference the `ActualLab.Rpc.TypeScript.Generator` package from your contracts project
+and tell it where to write the file:
 
 ```xml
 <PropertyGroup>
-  <TypeScriptContractsTool>..\..\..\src\ActualLab.Rpc.TypeScript.Tool\ActualLab.Rpc.TypeScript.Tool.csproj</TypeScriptContractsTool>
-  <TypeScriptContractsOutput>..\TypeScriptUI\src\contracts.generated.ts</TypeScriptContractsOutput>
-  <DotNetHostPath>$(DOTNET_HOST_PATH)</DotNetHostPath>
-  <DotNetHostPath Condition="'$(DotNetHostPath)' == ''">dotnet</DotNetHostPath>
+  <RpcTypeScriptOutput>..\Web\src\contracts.generated.ts</RpcTypeScriptOutput>
 </PropertyGroup>
 <ItemGroup>
-  <ProjectReference Include="$(TypeScriptContractsTool)" ReferenceOutputAssembly="false" />
+  <PackageReference Include="ActualLab.Rpc.TypeScript.Generator" PrivateAssets="all" />
 </ItemGroup>
-<Target Name="GenerateTypeScriptContracts" AfterTargets="Build"
-        Condition="'$(GenerateTypeScriptContracts)' != 'false' and '$(DesignTimeBuild)' != 'true'">
-  <MSBuild Projects="$(TypeScriptContractsTool)" Targets="GetTargetPath">
-    <Output TaskParameter="TargetOutputs" PropertyName="_TypeScriptContractsToolPath" />
-  </MSBuild>
-  <PropertyGroup>
-    <_TypeScriptContractsCheck Condition="'$(CI)' == 'true'"> --check</_TypeScriptContractsCheck>
-  </PropertyGroup>
-  <Exec Command="&quot;$(DotNetHostPath)&quot; exec &quot;$(_TypeScriptContractsToolPath)&quot; &quot;$(TargetPath)&quot; --output &quot;$(TypeScriptContractsOutput)&quot;$(_TypeScriptContractsCheck)" />
-</Target>
 ```
+
+Every build of the project then regenerates the file from its assembly, and writes it only if its content changes.
+The generator covers every public `IRpcService` / `IComputeService` interface declared there,
+except `IBackendService`-s. The package is a development dependency: it adds no runtime references.
+
+| MSBuild property | Meaning |
+|------------------|---------|
+| `RpcTypeScriptOutput` | The file to generate, relative to the project. Generation is off when it's empty. |
+| `RpcTypeScriptServices` | Comma-separated service type name patterns, where `*` matches any sequence of characters, e.g. `ITodo*,IStockApi`. Each pattern is matched against both the short and the full type name. Default: `*`. |
+| `RpcTypeScriptCheck` | `true` fails the build if the file is missing or out of date instead of updating it. Default: `true` when `CI` is `true` (GitHub Actions and most other CI systems set it). |
+| `RpcTypeScriptTargetFramework` | The target framework to generate from when the project has many. Default: the first one. |
+
+Use the generator of the same version as the `ActualLab.*` packages your contracts reference:
+it loads the contracts assembly together with its own `ActualLab.*` assemblies.
+
+You can also run the generator on any compiled assembly by hand. In the Fusion repository, that's:
+
+```powershell
+dotnet run --project src/ActualLab.Rpc.TypeScript.Generator -- `
+    MyApp.Contracts.dll --output contracts.generated.ts --services "ITodo*,IStockApi"
+```
+
+Add `--check` to verify the file instead of writing it.
 
 ### Generating From Code
 

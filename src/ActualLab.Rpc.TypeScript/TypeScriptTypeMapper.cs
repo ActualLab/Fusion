@@ -142,18 +142,6 @@ public sealed class TypeScriptTypeMapper
         return Probe(type);
     }
 
-    private string DeclareObject(Type type, string preferredName)
-    {
-        if (_declaredNames.TryGetValue(type, out var name))
-            return name;
-
-        name = ReserveName(preferredName, type);
-        _declaredNames.Add(type, name);
-        var body = GetObjectBody(type);
-        _declarations.Add($"export interface {name} {body}");
-        return name;
-    }
-
     private string DeclareGenericInstance(Type type)
     {
         var definition = type.GetGenericTypeDefinition();
@@ -202,6 +190,18 @@ public sealed class TypeScriptTypeMapper
         finally {
             _typeParameterNames = oldTypeParameterNames;
         }
+        return name;
+    }
+
+    private string DeclareObject(Type type, string preferredName)
+    {
+        if (_declaredNames.TryGetValue(type, out var name))
+            return name;
+
+        name = ReserveName(preferredName, type);
+        _declaredNames.Add(type, name);
+        var body = GetObjectBody(type);
+        _declarations.Add($"export interface {name} {body}");
         return name;
     }
 

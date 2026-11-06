@@ -16,6 +16,13 @@
   <ItemGroup Condition="$(TargetFramework.StartsWith('netcore')) or $(TargetFramework.StartsWith('net5'))">
     <Compile Remove="MeshRpc\**" />
   </ItemGroup>
+  <!-- ActualLab.Rpc.TypeScript targets .NET 10+ only -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net11')) or $(TargetFramework.StartsWith('net10'))">
+    <ProjectReference Include="..\..\src\ActualLab.Rpc.TypeScript\ActualLab.Rpc.TypeScript.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="!($(TargetFramework.StartsWith('net11')) or $(TargetFramework.StartsWith('net10')))">
+    <Compile Remove="TypeScriptRpc\RpcTypeScriptGeneratorTest.cs" />
+  </ItemGroup>
 
   <ItemGroup Condition="!$(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="MemoryPack.Generator" PrivateAssets="all" />
@@ -102,7 +109,6 @@
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Blazor\ActualLab.Fusion.Blazor.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Blazor.Authentication\ActualLab.Fusion.Blazor.Authentication.csproj" />
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Server\ActualLab.Fusion.Server.csproj" />
-    <ProjectReference Include="..\..\src\ActualLab.Rpc.TypeScript\ActualLab.Rpc.TypeScript.csproj" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <ProjectReference Include="..\..\src\ActualLab.Fusion.Server.NetFx\ActualLab.Fusion.Server.NetFx.csproj" />

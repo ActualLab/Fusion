@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Each target framework is packed to tools/<tfm>/: the targets pick the one matching the contracts -->
+    <TargetFrameworks Condition="$(UseMultitargeting)">$(LatestTargetFrameworks)net10.0</TargetFrameworks>
+    <RollForward>LatestMajor</RollForward>
+    <UseAppHost>false</UseAppHost>
+    <IsTrimmable>false</IsTrimmable>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <PackageTags>actual_chat actual_lab actual_lab_fusion rpc typescript</PackageTags>
+    <Description>ActualLab.Rpc.TypeScript.Generator - an MSBuild target generating TypeScript contracts for ActualLab.Rpc and Fusion services on build.</Description>
+  </PropertyGroup>
+
+  <!-- Packaging: the generator goes to tools/<tfm>/, the targets running it - to build/ -->
+  <PropertyGroup>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddGeneratorToPackage</TargetsForTfmSpecificContentInPackage>
+    <!-- NU5128: no lib/ref assets is intended -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="build\**" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+  <Target Name="_AddGeneratorToPackage">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetDir)**\*" Exclude="$(TargetDir)**\*.pdb;$(TargetDir)**\*.xml"
+                              PackagePath="tools\$(TargetFramework)\%(RecursiveDir)" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <!-- Contracts assemblies may reference ASP.NET Core, which only this shared framework provides -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" PrivateAssets="all" />
+    <ProjectReference Include="..\ActualLab.Fusion\ActualLab.Fusion.csproj" />
+    <ProjectReference Include="..\ActualLab.Rpc.TypeScript\ActualLab.Rpc.TypeScript.csproj" />
+  </ItemGroup>
+
+</Project>

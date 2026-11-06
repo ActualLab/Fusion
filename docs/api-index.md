@@ -150,7 +150,8 @@ See also: [Full API Index](api-index-full.md) (~1000 lines).
 ## TypeScript Contracts — [`ActualLab.Rpc.TypeScript`] — [PartTS-Contracts.md](PartTS-Contracts.md)
 - `RpcTypeScriptGenerator` — generates TS interfaces, DTOs and `defineRpcService` definitions from `RpcServiceDef`-s
 - `TypeScriptTypeMapper` — maps .NET types to TS types via System.Text.Json metadata, collecting DTO declarations
-- `actuallab-tsgen` (`ActualLab.Rpc.TypeScript.Tool`) — .NET tool running the generator on a contracts assembly
+- `RpcTypeScriptServiceFilter` — selects services by comma-separated type name patterns with `*` wildcards
+- `ActualLab.Rpc.TypeScript.Generator` package — MSBuild target running the generator after each build of a contracts project
 
 
 ## CommandR (`ActualLab.CommandR`) — [PartC.md](PartC.md)

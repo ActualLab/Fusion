@@ -2113,6 +2113,10 @@ Options for `RpcTypeScriptGenerator`: JSON options defining the wire shape, know
 
 The generated module code plus warnings about skipped methods and types mapped to `unknown`.
 
+###### `RpcTypeScriptServiceFilter`
+
+Selects services by a comma-separated list of type name patterns like `ITodo*,IStockApi`, where `*` matches any sequence of characters.
+
 ###### `TypeScriptTypeMapper`
 
 Maps .NET types to TypeScript type expressions using System.Text.Json metadata, collecting declarations of the DTOs it meets.

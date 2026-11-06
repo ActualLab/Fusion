@@ -41,7 +41,8 @@ public sealed class RpcTypeScriptGenerator(RpcTypeScriptGeneratorOptions options
         sb.Append("// </auto-generated>\n");
         sb.Append("/* eslint-disable */\n\n");
         if (context.UsesAsyncContext)
-            sb.Append("import type { AsyncContext } from ").Append(TypeScriptSyntax.Quote(Options.CoreModule)).Append(";\n");
+            sb.Append("import type { AsyncContext } from ")
+                .Append(TypeScriptSyntax.Quote(Options.CoreModule)).Append(";\n");
         var rpcImports = new List<string> { "defineRpcService" };
         if (context.UsesRpcType)
             rpcImports.Add("RpcType");
@@ -74,7 +75,8 @@ public sealed class RpcTypeScriptGenerator(RpcTypeScriptGeneratorOptions options
 
             var colonIndex = method.Name.LastIndexOf(':');
             if (colonIndex < 0
-                || !int.TryParse(method.Name.AsSpan(colonIndex + 1), CultureInfo.InvariantCulture, out var wireArgCount)) {
+                || !int.TryParse(
+                    method.Name.AsSpan(colonIndex + 1), CultureInfo.InvariantCulture, out var wireArgCount)) {
                 context.Warnings.Add($"'{method.FullName}' is skipped: TypeScript clients require "
                     + "'Name:ArgumentCount' wire method names.");
                 continue;
@@ -123,8 +125,10 @@ public sealed class RpcTypeScriptGenerator(RpcTypeScriptGeneratorOptions options
                 entry.Add($"callTypeId: {method.CallType.Id.ToString(CultureInfo.InvariantCulture)}");
             if (wireArgCount != parameters.Count + 1)
                 entry.Add($"wireArgCount: {wireArgCount.ToString(CultureInfo.InvariantCulture)}");
-            if (!method.NoWait && method.RemoteExecutionMode != RpcRemoteExecutionMode.Default)
-                entry.Add($"remoteExecutionMode: {((int)method.RemoteExecutionMode).ToString(CultureInfo.InvariantCulture)}");
+            if (!method.NoWait && method.RemoteExecutionMode != RpcRemoteExecutionMode.Default) {
+                var mode = (int)method.RemoteExecutionMode;
+                entry.Add($"remoteExecutionMode: {mode.ToString(CultureInfo.InvariantCulture)}");
+            }
             var key = overloadedNames.Contains(name)
                 ? TypeScriptSyntax.Quote($"{name}:{wireArgCount.ToString(CultureInfo.InvariantCulture)}")
                 : TypeScriptSyntax.PropertyName(name);

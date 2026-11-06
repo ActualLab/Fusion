@@ -126,7 +126,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Fusion.Tests.Benc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Rpc.TypeScript", "src\ActualLab.Rpc.TypeScript\ActualLab.Rpc.TypeScript.csproj", "{7C10492E-108C-431D-9C87-217C3A7A56E7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Rpc.TypeScript.Tool", "src\ActualLab.Rpc.TypeScript.Tool\ActualLab.Rpc.TypeScript.Tool.csproj", "{3BCA93A6-9F69-4640-A9C3-4D4AC165F3DA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ActualLab.Rpc.TypeScript.Generator", "src\ActualLab.Rpc.TypeScript.Generator\ActualLab.Rpc.TypeScript.Generator.csproj", "{3BCA93A6-9F69-4640-A9C3-4D4AC165F3DA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
